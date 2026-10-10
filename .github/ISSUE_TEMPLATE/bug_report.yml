@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Wormhole doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Search the existing issues first; if it's there, add a 👍 or what's different for you.
+        Issues are public: remove credentials, tokens and private code from terminal output, logs and screenshots.
+  - type: input
+    id: version
+    attributes:
+      label: Wormhole version
+      description: Wormhole → About Wormhole.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 26.1"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a terminal in …
+        2. Run …
+        3. …
+  - type: input
+    id: agent
+    attributes:
+      label: Coding agent and shell, if they matter
+      placeholder: "Claude Code 2.1 in zsh"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: From ~/Library/Application Support/Wormhole/logs/ (start Wormhole with WORMHOLE_LOG=debug for more). Check them for anything private first.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or recordings
+      description: Drag them in here.

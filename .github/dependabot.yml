@@ -1,0 +1,13 @@
+# Keeps the workflows' actions current. Rust dependencies get security updates only (turned on in
+# the repository's settings): GPUI pins much of the tree, so routine bumps go through by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

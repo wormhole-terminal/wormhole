@@ -4,6 +4,8 @@ A native macOS terminal built for working with AI coding agents like
 Claude Code, Codex, Gemini CLI and many more. Written in Rust on [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) (Zed's UI framework)
 and GPUI Kit, with alacritty's terminal core.
 
+**[Download Wormhole](https://getwormhole.app)** (macOS 14 or later, Apple Silicon). It updates itself.
+
 ## Features
 
 - **Terminals sidebar** – every terminal (one shell, one row) is named after the agent's
@@ -111,6 +113,12 @@ macOS's own keys first; every menu shows its key, and Help → Keyboard Shortcut
 | ⌘/ | Show or hide the status bar |
 | ⌥⌘, / ⌘, | Theme Studio / Settings |
 | Esc | Close the diff view (or the Settings / Theme Studio window) |
+
+## Feedback
+
+Found a bug or missing something? [Open an issue](https://github.com/wormhole-terminal/wormhole/issues/new/choose).
+Security problems go through [a private report](https://github.com/wormhole-terminal/wormhole/security/advisories/new)
+instead (see `SECURITY.md`).
 
 ## Development
 
