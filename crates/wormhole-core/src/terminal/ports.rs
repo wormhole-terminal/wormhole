@@ -27,7 +27,9 @@ pub fn listening_ports(shell_pid: u32) -> Vec<u16> {
 /// The layout of `struct socket_fdinfo` (`<sys/proc_info.h>`) that matters here, as byte offsets
 /// into what `proc_pidfdinfo(PROC_PIDFDSOCKETINFO)` fills in. The libc crate has no binding for
 /// it; the offsets were taken with `offsetof` on the SDK's header, and a test on macOS listens on
-/// a socket of its own and finds it, which fails if they ever move.
+/// a socket of its own and finds it, which fails if they ever move. Only macOS reads sockets this way;
+/// the tests check the parsing everywhere.
+#[cfg(any(target_os = "macos", test))]
 mod socket {
     /// `sizeof(struct socket_fdinfo)`: the buffer the call needs.
     pub(super) const SIZE: usize = 792;
@@ -44,6 +46,7 @@ mod socket {
 
 /// The port a socket listens on, from what `proc_pidfdinfo` wrote (`raw`), or `None` for anything
 /// that isn't a TCP socket in the listen state (or a buffer too short to say).
+#[cfg(any(target_os = "macos", test))]
 fn listener_port(raw: &[u8]) -> Option<u16> {
     let int = |offset: usize| -> Option<i32> {
         Some(i32::from_ne_bytes(raw.get(offset..offset + 4)?.try_into().ok()?))

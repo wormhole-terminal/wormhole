@@ -81,7 +81,7 @@ git tag -a v0.4.0 -m "$(cat notes.md)"
 git push origin main v0.4.0
 ```
 
-The Release workflow builds for Apple Silicon, signs with the Developer ID certificate, notarizes,
+The Release workflow builds one app for Apple Silicon and Intel, signs with the Developer ID certificate, notarizes,
 signs the update archive with minisign and publishes everything as the GitHub Release `v0.4.0`. The
 app checks `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest
 release's `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is

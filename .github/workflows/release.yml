@@ -56,7 +56,7 @@ jobs:
           echo "published=$published" >> "$GITHUB_OUTPUT"
 
   release:
-    name: Release (Apple Silicon)
+    name: Release (Apple Silicon + Intel)
     needs: gate
     if: needs.gate.outputs.published != 'true'
     runs-on: macos-latest
@@ -125,9 +125,13 @@ jobs:
             exit 1
           fi
 
-      # The runner is Apple Silicon, so aarch64-apple-darwin is the host target and needs no install.
-      - name: Rust (the version in rust-toolchain.toml)
-        run: rustup toolchain install
+      # One universal app, as every release since 0.1.2: Intel Macs update from the same feed, and a
+      # release without darwin-x86_64 would leave them on the last one that had it. The runner is
+      # Apple Silicon, so only the Intel target needs adding.
+      - name: Rust (the version in rust-toolchain.toml) + the Intel target
+        run: |
+          rustup toolchain install
+          rustup target add x86_64-apple-darwin
       # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
       # cache saved under a tag is never found again and would just eat the repository's cache quota.
       - uses: Swatinem/rust-cache@v2
@@ -205,12 +209,12 @@ jobs:
           # bundle.sh validates it (App ID, team, entitlement, expiry) and embeds it.
           echo "APPLE_PROVISIONING_PROFILE_PATH=$profile" >> "$GITHUB_ENV"
 
-      - name: Bundle (Apple Silicon)
+      - name: Bundle (universal)
         env:
           # Compiled into the app: the updater's feed (PUBLIC_BASE_URL, set above) and the
           # Apple team a downloaded update must be signed by.
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-        run: scripts/bundle.sh
+        run: scripts/bundle.sh --universal
 
       - name: Notarize app
         env:
