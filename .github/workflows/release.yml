@@ -44,7 +44,7 @@ jobs:
     outputs:
       published: ${{ steps.check.outputs.published }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -61,6 +61,9 @@ jobs:
     name: Release (Apple Silicon + Intel)
     needs: gate
     if: needs.gate.outputs.published != 'true'
+    # The signing secrets live in this environment, which only main and v* tags may use: a workflow
+    # changed on any other branch can't reach them.
+    environment: release
     runs-on: macos-latest
     timeout-minutes: 120
     env:
@@ -70,7 +73,7 @@ jobs:
       ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE == 'true' }}
       PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || secrets.PUBLIC_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # the annotated tag object must be fetchable
 
@@ -146,7 +149,7 @@ jobs:
           rustup target add x86_64-apple-darwin
       # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
       # cache saved under a tag is never found again and would just eat the repository's cache quota.
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: release
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -168,7 +171,7 @@ jobs:
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          IDENTITY_OVERRIDE: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          IDENTITY_OVERRIDE: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           if [ -z "$APPLE_CERTIFICATE_P12" ]; then
             echo "::notice::No APPLE_CERTIFICATE_P12: bundle.sh will sign ad-hoc"
@@ -195,11 +198,16 @@ jobs:
               | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
           fi
           if [ -z "$identity" ]; then
-            security find-identity -v -p codesigning "$keychain"
+            # Count them instead of listing them: the list names the certificates' owners.
+            echo "$(security find-identity -v -p codesigning "$keychain" | grep -c '"') signing identities found"
             echo "::error::No 'Developer ID Application' identity in APPLE_CERTIFICATE_P12 (exported the right certificate, with its private key?)"
             exit 1
           fi
-          echo "Signing identity: $identity"
+          # The logs are public: hide the identity and the name in it (the Team ID is a secret already).
+          echo "::add-mask::$identity"
+          name="${identity#*: }" && name="${name% (*}"
+          [ -z "$name" ] || echo "::add-mask::$name"
+          echo "Signing identity: found"
           echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
           echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
@@ -225,7 +233,7 @@ jobs:
         env:
           # Compiled into the app: the updater's feed (PUBLIC_BASE_URL, set above) and the
           # Apple team a downloaded update must be signed by.
-          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: scripts/bundle.sh --universal
 
       - name: Notarize app
@@ -285,7 +293,7 @@ jobs:
           fi
           scripts/package.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wormhole-${{ steps.version.outputs.version }}-dist
           path: target/release/dist/
