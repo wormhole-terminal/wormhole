@@ -1,7 +1,5 @@
 # One Rust version for local builds and CI, so a new stable release (and its new lints) arrives as a
-# deliberate bump instead of a surprise red build. Bump it together with the
-# `dtolnay/rust-toolchain@<version>` lines in .github/workflows/; the CI `fmt` job fails when they
-# differ.
+# deliberate bump instead of a surprise red build. CI installs exactly this (`rustup toolchain install`).
 [toolchain]
 channel = "1.98.1"
 components = ["rustfmt", "clippy"]

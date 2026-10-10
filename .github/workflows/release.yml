@@ -125,9 +125,9 @@ jobs:
             exit 1
           fi
 
-      - uses: dtolnay/rust-toolchain@1.98.1
-        with:
-          targets: aarch64-apple-darwin
+      # The runner is Apple Silicon, so aarch64-apple-darwin is the host target and needs no install.
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
       # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
       # cache saved under a tag is never found again and would just eat the repository's cache quota.
       - uses: Swatinem/rust-cache@v2

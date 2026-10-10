@@ -26,9 +26,8 @@ env:
   # Line tables are enough for backtraces; full DWARF made the cached target dirs several times larger.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
 
-# The Rust version is pinned in rust-toolchain.toml (what `cargo` uses locally and in CI); the
-# toolchain action lines below install the same one, and the `fmt` job fails when they disagree
-# (release.yml included). Bump the file and all of them together.
+# The Rust version, its components and profile are rust-toolchain.toml's: `rustup toolchain install`
+# reads it, as cargo does locally, so a Rust bump is that one file.
 jobs:
   fmt:
     name: Format
@@ -37,16 +36,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Toolchain pins match rust-toolchain.toml
-        run: |
-          want=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
-          [ -n "$want" ] || { echo "no channel in rust-toolchain.toml"; exit 1; }
-          pins=$(grep -Hn 'uses: dtolnay/rust-toolchain[@]' .github/workflows/*.yml)
-          stray=$(printf '%s\n' "$pins" | grep -v -- "[@]$want\$" || true)
-          [ -z "$stray" ] || { printf '%s\nthese do not pin %s (rust-toolchain.toml)\n' "$stray" "$want"; exit 1; }
-      - uses: dtolnay/rust-toolchain@1.98.1
-        with:
-          components: rustfmt
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
       - run: cargo fmt --all --check
 
   # Everything that builds on macOS: the whole workspace (core included), not only the app crate.
@@ -57,9 +48,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.98.1
-        with:
-          components: clippy
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -88,9 +78,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends build-essential pkg-config git libfontconfig-dev libxkbcommon-dev libxkbcommon-x11-dev
-      - uses: dtolnay/rust-toolchain@1.98.1
-        with:
-          components: clippy
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -122,7 +111,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.98.1
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
