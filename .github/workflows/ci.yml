@@ -18,6 +18,10 @@ on:
 
 # A new push supersedes the run in progress, on a PR and on main alike: a burst of merges runs the
 # macOS job once, for the newest commit.
+# Read-only unless a job says otherwise (CodeQL: actions/missing-workflow-permissions).
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
