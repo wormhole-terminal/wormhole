@@ -1,0 +1,46 @@
+name: Accessibility barrier
+description: Something in Wormhole doesn't work with VoiceOver, the keyboard, or a macOS accessibility setting.
+labels: [accessibility, bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. A barrier is a bug: see [ACCESSIBILITY.md](https://github.com/wormhole-terminal/wormhole/blob/main/ACCESSIBILITY.md) for what is known already.
+  - type: textarea
+    id: what
+    attributes:
+      label: What got in the way
+      description: What you tried to do, what happened, and what you expected.
+    validations:
+      required: true
+  - type: dropdown
+    id: uses
+    attributes:
+      label: What you use
+      multiple: true
+      options:
+        - VoiceOver
+        - Keyboard only / Full Keyboard Access
+        - Increase Contrast
+        - Reduce Motion
+        - Reduce Transparency
+        - A larger text or interface size
+        - Zoom
+        - Voice Control
+        - Something else (say below)
+  - type: input
+    id: versions
+    attributes:
+      label: Wormhole and macOS versions
+      placeholder: "Wormhole 0.3.0, macOS 26.1"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: What VoiceOver said, a recording, or another app that gets this right.

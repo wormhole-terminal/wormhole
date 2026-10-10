@@ -523,7 +523,10 @@ fn no_chat_wording() {
     for dir in skills.iter().map(String::as_str).chain([".claude/agents", ".claude/rules", "tools/visual"]) {
         text_files(&root.join(dir), &mut files);
     }
-    files.extend(["README.md", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md"].map(|f| root.join(f)));
+    files.extend(
+        ["README.md", "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", "ACCESSIBILITY.md"]
+            .map(|f| root.join(f)),
+    );
     files.extend(files_in(&root.join("scripts")));
     assert!(files.len() > 200, "found only {} files: did the layout change?", files.len());
     let word = ["c", "hat"].concat();
