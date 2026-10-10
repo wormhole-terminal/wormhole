@@ -13,10 +13,13 @@
 #         builds on core, so a core change can break it). Plus `cargo deny check` for dependencies.
 #   app   crates/wormhole/** or a packaging file the app includes: fmt, clippy, tests and the
 #         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
-#   text  skills, agents, rules, scripts, tools/visual, the top-level .md files: only
+#   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
 #         design_rules (it scans their wording), never a compile of either crate.
 #   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench (its
 #         own workspace): nothing to run.
+# Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
+# the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
+# CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
 # Output is quiet (test names only when they fail), so an agent reads results, not progress.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -47,7 +50,7 @@ scope_of() {
     packaging/app.env|packaging/updater.pub|packaging/icon/*) echo app ;;
     # Scanned for wording by crates/wormhole/tests/design_rules.rs (banned words, the devctl docs).
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
-    README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md) echo text ;;
+    README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|CHANGELOG.md) echo text ;;
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
@@ -99,6 +102,14 @@ case "$scope" in
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check")
+
+# The history steps go first. They read the git history, so they run for every scope, `none` included.
+history=("python3 scripts/commits.py check-range $base..HEAD"
+         "python3 scripts/commits.py changelog-needed --include-worktree $base..HEAD")
+grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py check")
+grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
+grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
+steps=("${history[@]}" "${steps[@]+"${steps[@]}"}")
 
 n=$(grep -c . <<<"$changed")
 log "scope: $scope ($n changed file(s) since ${base:0:10}${why:+; widest: $why})"

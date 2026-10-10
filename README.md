@@ -121,6 +121,8 @@ Questions, ideas and show-and-tell go to [Discussions](https://github.com/wormho
 Security problems go through [a private report](https://github.com/wormhole-terminal/wormhole/security/advisories/new)
 instead (see `SECURITY.md`).
 
+What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
+
 ## Development
 
 ```sh

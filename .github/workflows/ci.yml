@@ -1,8 +1,8 @@
 name: CI
 
-# Pull requests get format, Linux (clippy, core tests) and licenses; a push to main gets the macOS
-# job (clippy, every test). Push and pull request runs are skipped while the repository is private,
-# where macOS minutes cost money; a run started by hand (Actions → CI → Run workflow, or
+# Pull requests get format, Linux (clippy, core tests), licenses and history (commit rules, changelog);
+# a push to main gets the macOS job (clippy, every test). Push and pull request runs are skipped while
+# the repository is private, where macOS minutes cost money; a run started by hand (Actions → CI → Run workflow, or
 # `gh workflow run CI`) always goes. Run `scripts/check.sh` before pushing all the same.
 on:
   push:
@@ -88,6 +88,58 @@ jobs:
       - run: cargo check --workspace --locked
       - uses: taiki-e/install-action@nextest
       - run: cargo nextest run -p wormhole-core --locked --profile ci
+
+  # The commit rules and the changelog (CONTRIBUTING.md: "Commits", "Changelog"), on Linux and in
+  # seconds. The title is checked because a squash merge uses it as the commit's header. Title and
+  # labels are read from the API, so "Re-run job" after editing the title or adding the label
+  # `no changelog` sees the change (the event payload of a re-run is the old one). Dependabot's
+  # pull requests are left out: its titles are its own.
+  history:
+    name: History
+    if: github.event_name != 'push' && github.actor != 'dependabot[bot]' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Selftests
+        run: |
+          python3 scripts/commits.py selftest
+          python3 scripts/changelog.py selftest
+      - name: CHANGELOG.md is well formed
+        if: ${{ !cancelled() }}
+        run: python3 scripts/changelog.py check
+      - name: Commits follow the rules
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/commits.py check-range "$BASE..$HEAD"
+      - name: Title and label
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # The title is untrusted input: it only ever goes through a variable and a file.
+          gh pr view "$PR" --json title --jq .title > "$RUNNER_TEMP/title.txt"
+          # 92, not 100: a squash merge adds " (#1234)" to the header.
+          python3 scripts/commits.py check-message --max-length 92 "$RUNNER_TEMP/title.txt"
+          if gh pr view "$PR" --json labels --jq '.labels[].name' | grep -qx 'no changelog'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: A user-visible change has a changelog entry
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.pr.outputs.skip != 'true' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/commits.py changelog-needed "$BASE..$HEAD"
 
   deny:
     name: Licenses & advisories

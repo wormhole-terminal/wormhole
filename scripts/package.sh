@@ -18,6 +18,11 @@
 #   GITHUB_REPOSITORY    owner/name whose Releases host the files (set in Actions; default
 #                        wormhole-terminal/wormhole)
 #   RELEASE_NOTES        Markdown notes for latest.json, or RELEASE_NOTES_FILE=path
+#   RELEASE_SEVERITY     critical|high|medium|low: this version is a security update, so latest.json gets
+#                        "security": {"severity": "<level>", "advisories": ["GHSA-…"]}. Without it
+#                        there is no "security" key. Both variables come from CHANGELOG.md
+#                        (scripts/changelog.py severity [--advisories]).
+#   RELEASE_ADVISORIES   the advisories' GHSA ids, one per line (none: an empty list)
 #   MINISIGN_SECRET_KEY  contents of the minisign secret key file (or a path to it)
 #   MINISIGN_PASSWORD    its password
 #     Without MINISIGN_SECRET_KEY the DEV key packaging/dev-updater.key (password
@@ -120,6 +125,13 @@ notes="${RELEASE_NOTES:-}"
 if [ -n "${RELEASE_NOTES_FILE:-}" ]; then notes="$(cat "$RELEASE_NOTES_FILE")"; fi
 [ -n "$notes" ] || notes="$APP_NAME $APP_VERSION"
 
+security=null
+if [ -n "${RELEASE_SEVERITY:-}" ]; then
+  case "$RELEASE_SEVERITY" in critical|high|medium|low) ;; *) die "RELEASE_SEVERITY must be critical, high, medium or low, not '$RELEASE_SEVERITY'" ;; esac
+  security="$(jq -n --arg severity "$RELEASE_SEVERITY" --arg advisories "${RELEASE_ADVISORIES:-}" \
+    '{severity: $severity, advisories: ($advisories | split("\n") | map(select(length > 0)))}')"
+fi
+
 url="$base_url/$ARCHIVE_NAME"
 jq -n \
   --arg version "$APP_VERSION" \
@@ -130,13 +142,14 @@ jq -n \
   --arg sha256 "$sha256" \
   --rawfile signature "$archive.minisig" \
   --argjson size "$size" \
+  --argjson security "$security" \
   --args '{
     version: $version,
     pub_date: $pub_date,
     notes: $notes,
     minimum_system_version: $min,
     platforms: ($ARGS.positional | sort | map({key: ., value: {url: $url, sha256: $sha256, signature: $signature, size: $size}}) | from_entries)
-  }' "${platforms[@]}" > "$dist/latest.json"
+  } + (if $security == null then {} else {security: $security} end)' "${platforms[@]}" > "$dist/latest.json"
 
 log "wrote $dist:"
 ls -l "$dist" >&2

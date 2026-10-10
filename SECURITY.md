@@ -10,7 +10,21 @@ Please report privately through GitHub: **Security → Report a vulnerability** 
 Don't open a public issue for it. Include what an attacker controls, what they gain, and the steps
 or a proof of concept.
 
+## Supported versions
+
 Only the latest release is supported: fixes ship as a new version through the built-in updater.
+
+## How a report is handled
+
+1. The report arrives privately, as a draft [GitHub Security Advisory](https://docs.github.com/en/code-security/security-advisories).
+2. The fix is written in the advisory's temporary private fork. It is never pushed to the public
+   repository, and no public issue or pull request mentions it, before the release.
+3. It ships as a patch release on the latest version (0.3.1, not 0.4.0), as soon as it is ready.
+4. The advisory is published with the release, and a CVE is requested through GitHub. The reporter is
+   credited if they want to be.
+5. [CHANGELOG.md](CHANGELOG.md) lists the fix under **Security** with its severity, the advisory and the
+   affected versions, and the release is marked as a security update in the update feed: the app shows
+   it as one.
 
 ## What counts
 

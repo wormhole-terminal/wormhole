@@ -3,8 +3,10 @@
 # PUBLIC_BASE_URL as a variable: the address the app checks for updates (<base>/stable/latest.json),
 # which redirects to the latest release's latest.json.
 #
-# - Push an annotated tag vX.Y.Z (must equal workspace.package.version; its message is the release
-#   notes) -> full release, unless that release already exists.
+# - Push an annotated tag vX.Y.Z (must equal workspace.package.version; scripts/release.sh makes the
+#   commit and the tag) -> full release, unless that release already exists. The release notes are the
+#   version's section of CHANGELOG.md (scripts/changelog.py notes); a Security entry there makes the
+#   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh).
 # - Run manually (workflow_dispatch) -> build + package only; tick "publish" to also create the
 #   GitHub Release.
 name: Release
@@ -70,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # annotated tag message = release notes
+          fetch-depth: 0 # the annotated tag object must be fetchable
 
       - name: Check version
         id: version
@@ -80,14 +82,24 @@ jobs:
           if [ "$GITHUB_REF_TYPE" = tag ]; then
             # actions/checkout fetches a tag's commit under the tag's name, which turns an annotated tag
             # into a lightweight one, and its message into the commit's. Fetch the tag object itself, and
-            # stop here (before the build) when there is no annotated tag: the release notes come from it.
+            # stop here (before the build) when there is no annotated tag (scripts/release.sh makes one).
             git fetch --force --tags origin
             [ "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag ] \
-              || { echo "::error::$GITHUB_REF_NAME is not an annotated tag, so it has no release notes (git tag -a)"; exit 1; }
+              || { echo "::error::$GITHUB_REF_NAME is not an annotated tag (git tag -a, or scripts/release.sh)"; exit 1; }
           fi
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match workspace.package.version $version in Cargo.toml"
             exit 1
+          fi
+          # The notes are CHANGELOG.md's section for this version: stop before the build when it is
+          # malformed or has none. A manual build that doesn't publish may do without.
+          python3 scripts/changelog.py check || exit 1
+          if ! python3 scripts/changelog.py notes "$version" >/dev/null 2>&1; then
+            if [ "$PUBLISH" = true ]; then
+              echo "::error::CHANGELOG.md has no section for $version (scripts/release.sh writes it from [Unreleased])"
+              exit 1
+            fi
+            echo "::warning::CHANGELOG.md has no section for $version: the build's notes will be just its name"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
@@ -224,17 +236,36 @@ jobs:
           REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
         run: scripts/notarize.sh target/release/Wormhole.app
 
+      # CHANGELOG.md is the one source of the notes: latest.json, the GitHub Release and the app's
+      # update window all show them. A Security entry also marks the update as a security update.
       - name: Release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           notes="$RUNNER_TEMP/notes.md"
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | sed '/-----BEGIN PGP SIGNATURE-----/,$d' > "$notes"
+          body="$RUNNER_TEMP/release-body.md"
+          if ! scripts/changelog.py notes "$VERSION" > "$notes"; then
+            [ "$PUBLISH" != true ] || { echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1; }
+            echo "Wormhole $VERSION" > "$notes"
           fi
-          if [ ! -s "$notes" ] || [ "$(tr -d '[:space:]' < "$notes")" = "" ]; then
-            echo "Wormhole ${{ steps.version.outputs.version }}" > "$notes"
+          RELEASE_SEVERITY="$(scripts/changelog.py severity "$VERSION" 2>/dev/null || true)"
+          RELEASE_ADVISORIES="$(scripts/changelog.py severity "$VERSION" --advisories 2>/dev/null || true)"
+          # The Release page opens with the warning; latest.json carries the severity separately.
+          : > "$body"
+          if [ -n "$RELEASE_SEVERITY" ]; then
+            echo "**Security update ($RELEASE_SEVERITY):** this version fixes a security problem; see Security below. Update as soon as you can." >> "$body"
+            echo >> "$body"
           fi
-          cat "$notes"
-          echo "RELEASE_NOTES_FILE=$notes" >> "$GITHUB_ENV"
+          cat "$notes" >> "$body"
+          cat "$body"
+          {
+            echo "RELEASE_NOTES_FILE=$notes"
+            echo "RELEASE_BODY_FILE=$body"
+            echo "RELEASE_SEVERITY=$RELEASE_SEVERITY"
+            echo "RELEASE_ADVISORIES<<EOF_ADVISORIES"
+            echo "$RELEASE_ADVISORIES"
+            echo "EOF_ADVISORIES"
+          } >> "$GITHUB_ENV"
 
       - name: Package (tar.gz, dmg, minisign, latest.json)
         env:
@@ -270,7 +301,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          flags=(--title "Wormhole $VERSION" --notes-file "$RELEASE_NOTES_FILE" --target "$GITHUB_SHA")
+          flags=(--title "Wormhole $VERSION" --notes-file "$RELEASE_BODY_FILE" --target "$GITHUB_SHA")
           if [ "$PRERELEASE" = true ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
           gh release create "v$VERSION" target/release/dist/* "${flags[@]}"
 
