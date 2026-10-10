@@ -6,6 +6,10 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      # Its tag is the Rust version: it moves with rust-toolchain.toml, by hand (ci.yml's fmt job
+      # fails when they differ).
+      - dependency-name: dtolnay/rust-toolchain
     groups:
       actions:
         patterns: ["*"]
