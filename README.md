@@ -117,6 +117,7 @@ macOS's own keys first; every menu shows its key, and Help → Keyboard Shortcut
 ## Feedback
 
 Found a bug or missing something? [Open an issue](https://github.com/wormhole-terminal/wormhole/issues/new/choose).
+Questions, ideas and show-and-tell go to [Discussions](https://github.com/wormhole-terminal/wormhole/discussions).
 Security problems go through [a private report](https://github.com/wormhole-terminal/wormhole/security/advisories/new)
 instead (see `SECURITY.md`).
 

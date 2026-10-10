@@ -2,6 +2,8 @@
 
 Thanks for helping. Bug reports, fixes and small improvements are welcome as issues and pull
 requests; for a larger feature, open an issue first so we can agree on the shape before you build it.
+Questions go to [Discussions](https://github.com/wormhole-terminal/wormhole/discussions). Everyone
+taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Building
 

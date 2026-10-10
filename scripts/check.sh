@@ -47,7 +47,7 @@ scope_of() {
     packaging/app.env|packaging/updater.pub|packaging/icon/*) echo app ;;
     # Scanned for wording by crates/wormhole/tests/design_rules.rs (banned words, the devctl docs).
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
-    README.md|CONTRIBUTING.md|SECURITY.md) echo text ;;
+    README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md) echo text ;;
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
