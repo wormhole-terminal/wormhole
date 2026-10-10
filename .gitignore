@@ -3,7 +3,7 @@ target/
 .DS_Store
 # Local-only test signing key for the updater (scripts/package.sh). Never commit a secret key.
 packaging/*.key
-# Where release.sh finds its 1Password references (the .example next to it is committed).
+# A maintainer's 1Password references for the release secrets (local only).
 packaging/release.op.env
 
 # Claude Code: agent worktrees and personal settings

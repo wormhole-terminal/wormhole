@@ -1,9 +1,13 @@
 name: CI
 
-# Runs only when started by hand (Actions → CI → Run workflow, or `gh workflow run CI`): macOS
-# runners are expensive. The gate is local: `scripts/check.sh` (fmt, clippy, every test, the build
-# without devctl) before every push.
+# Pull requests get format, Linux (clippy, core tests) and licenses; a push to main gets the macOS
+# job (clippy, every test). Push and pull request runs are skipped while the repository is private,
+# where macOS minutes cost money; a run started by hand (Actions → CI → Run workflow, or
+# `gh workflow run CI`) always goes. Run `scripts/check.sh` before pushing all the same.
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
     inputs:
       build_only:
@@ -28,7 +32,7 @@ env:
 jobs:
   fmt:
     name: Format
-    if: github.event_name != 'push' && !inputs.build_only
+    if: github.event_name != 'push' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -48,7 +52,7 @@ jobs:
   # Everything that builds on macOS: the whole workspace (core included), not only the app crate.
   macos:
     name: macOS (clippy, tests)
-    if: github.event_name != 'pull_request' && !inputs.build_only
+    if: github.event_name != 'pull_request' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -78,7 +82,7 @@ jobs:
   # job above after the merge.
   linux:
     name: Linux (clippy, core tests)
-    if: github.event_name != 'push' && !inputs.build_only
+    if: github.event_name != 'push' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -98,7 +102,7 @@ jobs:
 
   deny:
     name: Licenses & advisories
-    if: github.event_name != 'push' && !inputs.build_only
+    if: github.event_name != 'push' && !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

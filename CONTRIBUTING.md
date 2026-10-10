@@ -26,7 +26,8 @@ scripts/check.sh          # scoped to what changed since origin/main; --all for 
 It runs `cargo fmt --all`, `cargo clippy --workspace --all-targets --features devctl -- -D warnings`,
 the tests (`cargo test --workspace --features devctl`) and `cargo check --workspace` (the app as it
 ships, without the `devctl` test feature). After a dependency change also run `cargo deny check` and
-`scripts/gen-licenses.py`. CI only runs when started by hand, so please run the gate before you push.
+`scripts/gen-licenses.py`. CI runs the same checks on every pull request, but it is faster to find out
+locally.
 
 Changes to the terminal's rendering, the PTY filters or the snapshot are guarded by counting tests;
 also run `scripts/perf.sh` (a release build timed against your machine's baseline).
@@ -66,6 +67,23 @@ Build with `--features devctl` and start an isolated instance with `scripts/devc
 keeps all its data in a scratch folder, runs `/bin/cat` instead of a shell and never touches your
 real settings, repositories or agents. The commands are documented at the top of
 `crates/wormhole/src/devctl/mod.rs`. Never point tests at your real data folder or repositories.
+
+## Releases
+
+A release is a tag. Bump `version` under `[workspace.package]` in `Cargo.toml` (and run
+`scripts/gen-licenses.py` if a dependency changed), commit, then push an annotated tag whose message is
+the release notes in Markdown:
+
+```sh
+git tag -a v0.4.0 -m "$(cat notes.md)"
+git push origin main v0.4.0
+```
+
+The Release workflow builds for Apple Silicon, signs with the Developer ID certificate, notarizes,
+signs the update archive with minisign and publishes everything as the GitHub Release `v0.4.0`. The
+app checks `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest
+release's `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is
+never offered as an update.
 
 ## License
 

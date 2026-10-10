@@ -4,14 +4,19 @@
 #   dist/Wormhole-<v>-macos.app.tar.gz          update archive (what the updater downloads)
 #   dist/Wormhole-<v>-macos.app.tar.gz.minisig  minisign signature of the archive
 #   dist/Wormhole-<v>-macos.dmg                 human download (Developer ID signed + notarized when possible)
+#   dist/Wormhole-macos.dmg                     the same, under a name that stays put: what the website's
+#                                               "latest" link reaches through releases/latest/download/
 #   dist/SHA256SUMS
-#   dist/latest.json                              update feed, published as <BASE_URL>/<channel>/latest.json
+#   dist/latest.json                              update feed
+#
+# All of them go onto the GitHub Release vX.Y.Z. The app reads <PUBLIC_BASE_URL>/<channel>/latest.json,
+# which redirects to the latest release's latest.json, and that names the archive on its release.
 #
 #   scripts/package.sh [path/to/Wormhole.app] [dist-dir]
 #
 # Env:
-#   PUBLIC_BASE_URL      public download root, e.g. https://downloads.example.com/wormhole (required
-#                        for a real release; defaults to a placeholder with a warning)
+#   GITHUB_REPOSITORY    owner/name whose Releases host the files (set in Actions; default
+#                        wormhole-terminal/wormhole)
 #   RELEASE_NOTES        Markdown notes for latest.json, or RELEASE_NOTES_FILE=path
 #   MINISIGN_SECRET_KEY  contents of the minisign secret key file (or a path to it)
 #   MINISIGN_PASSWORD    its password
@@ -28,13 +33,7 @@ dist="${2:-$DIST_DEFAULT}"
 need minisign "Install it: brew install minisign"
 need jq
 
-base_url="${PUBLIC_BASE_URL:-}"
-if [ -z "$base_url" ]; then
-  [ "${REQUIRE_RELEASE_KEY:-0}" = 1 ] && die "PUBLIC_BASE_URL is not set"
-  base_url="https://downloads.example.com/wormhole"
-  warn "PUBLIC_BASE_URL not set: using placeholder $base_url in latest.json"
-fi
-base_url="${base_url%/}"
+base_url="https://github.com/${GITHUB_REPOSITORY:-wormhole-terminal/wormhole}/releases/download/v$APP_VERSION"
 
 bundled_version="$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")"
 [ "$bundled_version" = "${APP_VERSION%%[-+]*}" ] \
@@ -110,6 +109,7 @@ if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
   "$(dirname "$0")/notarize.sh" "$dmg"
 fi
 hdiutil verify -quiet "$dmg"
+cp "$dmg" "$dist/$APP_NAME-macos.dmg"
 
 # --- checksums + feed ---------------------------------------------------------
 (cd "$dist" && shasum -a 256 "$ARCHIVE_NAME" "$ARCHIVE_NAME.minisig" "$DMG_NAME" > SHA256SUMS)
@@ -120,7 +120,7 @@ notes="${RELEASE_NOTES:-}"
 if [ -n "${RELEASE_NOTES_FILE:-}" ]; then notes="$(cat "$RELEASE_NOTES_FILE")"; fi
 [ -n "$notes" ] || notes="$APP_NAME $APP_VERSION"
 
-url="$base_url/releases/$APP_VERSION/$ARCHIVE_NAME"
+url="$base_url/$ARCHIVE_NAME"
 jq -n \
   --arg version "$APP_VERSION" \
   --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

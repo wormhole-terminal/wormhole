@@ -9,8 +9,8 @@ allowed-tools: Bash(scripts/check.sh:*), Bash(cargo fmt:*), Bash(cargo clippy:*)
 A change is done when the gate passes: `cargo fmt --all`, clippy with
 `-D warnings`, the workspace tests with `--features devctl`, a plain `cargo check --workspace` (the app
 as it ships, without devctl: a devctl-only item re-exported without its gate only fails there), and
-`cargo deny check` if you touched dependencies or licenses. CI only runs when started by hand, so this is
-the only gate. After `cargo fmt --all`, check that `git diff` only holds
+`cargo deny check` if you touched dependencies or licenses. CI runs on pull requests and pushes to main
+only once the repository is public, so until then this is the only gate. After `cargo fmt --all`, check that `git diff` only holds
 your changes.
 
 ## Run only what the change needs
