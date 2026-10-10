@@ -16,15 +16,16 @@ on:
         type: boolean
         default: true
 
-# A new push supersedes the run in progress, on a PR and on main alike: a burst of merges runs the
-# macOS job once, for the newest commit.
+# A newer commit replaces a pull request's run in progress. On main, runs finish (a newer one
+# waits): only a finished run on main saves the build cache that every later run and pull request
+# starts from, and cancelling them left none.
 # Read-only unless a job says otherwise (CodeQL: actions/missing-workflow-permissions).
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,8 +47,10 @@ jobs:
       - run: cargo fmt --all --check
 
   # Everything that builds on macOS: the whole workspace (core included), not only the app crate.
-  macos:
-    name: macOS (clippy, tests)
+  # Clippy and the tests are two jobs side by side: they share little of their builds anyway (clippy
+  # stops before code generation), and each keeps a cache of its own.
+  clippy:
+    name: macOS (clippy)
     if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
     runs-on: macos-latest
     timeout-minutes: 30
@@ -57,8 +60,23 @@ jobs:
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          key: clippy
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo clippy --workspace --all-targets --features devctl --locked -- -D warnings
+
+  test:
+    name: macOS (tests)
+    if: ${{ !inputs.build_only && (github.event_name == 'workflow_dispatch' || !github.event.repository.private) }}
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: test
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: nextest
@@ -141,7 +159,7 @@ jobs:
   # inner zip; the app is not notarized, so right-click > Open on first launch.
   nightly:
     name: Nightly app (ad-hoc signed)
-    # No `needs: [macos]`: with build_only the checks are skipped, and a skipped dependency would skip
+    # No `needs: [clippy, test]`: with build_only the checks are skipped, and a skipped dependency would skip
     # this job too. The checks still run when the box is unticked, in parallel instead of first.
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
