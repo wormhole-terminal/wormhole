@@ -42,7 +42,7 @@ jobs:
     outputs:
       published: ${{ steps.check.outputs.published }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,7 +68,7 @@ jobs:
       ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE == 'true' }}
       PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || secrets.PUBLIC_BASE_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # annotated tag message = release notes
 
@@ -125,7 +125,7 @@ jobs:
             exit 1
           fi
 
-      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: aarch64-apple-darwin
       # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
@@ -250,7 +250,7 @@ jobs:
           fi
           scripts/package.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wormhole-${{ steps.version.outputs.version }}-dist
           path: target/release/dist/
