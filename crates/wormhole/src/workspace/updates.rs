@@ -27,7 +27,8 @@ pub(crate) enum UpdatePhase {
     Idle,
     Checking,
     UpToDate,
-    Available(Release),
+    /// Boxed: a release is far bigger than the other phases.
+    Available(Box<Release>),
     /// Newer version exists, but it needs a newer macOS.
     Unsupported(String),
     Downloading,
@@ -163,7 +164,7 @@ fn finish_check(result: Result<UpdateStatus, UpdateError>, manual: bool, cx: &mu
         ),
         Ok(UpdateStatus::Available(release)) => {
             tracing::info!(version = %release.version, "update available");
-            app_mut(cx).updates.phase = UpdatePhase::Available(release.clone());
+            app_mut(cx).updates.phase = UpdatePhase::Available(Box::new(release.clone()));
             if settings(cx).auto_update {
                 install_update(release, cx);
             }
@@ -239,6 +240,10 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
 }
 
 pub(crate) fn skip_update(release: &Release, cx: &mut App) {
+    // The button isn't shown for these; a skipped security update would be offered again anyway.
+    if release.is_security_update() {
+        return;
+    }
     let updates = &mut app_mut(cx).updates;
     updates.schedule.skip(&release.version);
     updates.phase = UpdatePhase::Idle;

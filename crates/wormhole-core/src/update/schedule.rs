@@ -22,6 +22,7 @@ pub struct UpdateSchedule {
     #[serde(default)]
     pub last_check: Option<u64>,
     /// Automatic checks stay quiet about exactly this version; a newer one is announced again.
+    /// A security update is never quiet, skipped or not.
     #[serde(default)]
     pub skipped_version: Option<Version>,
 }
@@ -57,10 +58,14 @@ impl UpdateSchedule {
     }
 
     /// Whether an *automatic* check should show this result. A check the user asked for
-    /// ("Check for Updates…") should show everything, skipped or not.
+    /// ("Check for Updates…") should show everything, skipped or not. Skipping is for ordinary
+    /// updates: a security update is shown even for the version the user skipped. The flag comes
+    /// from the unsigned feed, so the worst a forged one does is show a "skipped" version again.
     pub fn should_notify(&self, status: &UpdateStatus) -> bool {
         match status {
-            UpdateStatus::Available(release) => !self.is_skipped(&release.version),
+            UpdateStatus::Available(release) => {
+                release.is_security_update() || !self.is_skipped(&release.version)
+            }
             UpdateStatus::UpToDate | UpdateStatus::Unsupported { .. } => false,
         }
     }
@@ -130,6 +135,20 @@ mod tests {
         assert!(!s.should_notify(&v020));
         assert!(s.should_notify(&UpdateStatus::Available(sample_release("0.2.1"))));
         assert!(!s.should_notify(&UpdateStatus::UpToDate));
+    }
+
+    #[test]
+    fn a_skipped_version_is_still_offered_when_it_is_a_security_update() {
+        use crate::update::{Security, Severity};
+
+        let mut s = UpdateSchedule::default();
+        s.skip(&Version::new(0, 2, 1));
+        let mut release = sample_release("0.2.1");
+        assert!(!s.should_notify(&UpdateStatus::Available(release.clone())), "ordinary: stays skipped");
+        for severity in [Severity::Critical, Severity::Low, Severity::Unknown] {
+            release.security = Some(Security { severity, advisories: Vec::new() });
+            assert!(s.should_notify(&UpdateStatus::Available(release.clone())), "{severity:?}");
+        }
     }
 
     #[test]

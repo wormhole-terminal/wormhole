@@ -71,6 +71,7 @@ pub fn sample_release(version: &str) -> Release {
         pub_date: None,
         minimum_system_version: None,
         asset: Asset { url: String::new(), sha256: String::new(), signature: String::new(), size: 0 },
+        security: None,
     }
 }
 

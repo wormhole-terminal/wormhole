@@ -16,6 +16,7 @@ mod feed;
 mod http;
 mod install;
 mod schedule;
+mod security;
 
 #[cfg(test)]
 mod test_support;
@@ -29,6 +30,7 @@ pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Release, UpdateStatus, check};
 pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
 pub use schedule::UpdateSchedule;
+pub use security::{MAX_ADVISORIES, Security, Severity};
 
 /// Releases larger than this are refused before and during download.
 pub const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;

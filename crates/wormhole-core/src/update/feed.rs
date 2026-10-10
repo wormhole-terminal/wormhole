@@ -6,6 +6,7 @@ use std::io::Read as _;
 use semver::Version;
 use serde::Deserialize;
 
+use super::security::Security;
 use super::{UpdateError, UpdaterConfig, check_url, http, parse_lenient_version};
 
 /// The feed is a few KB; anything bigger is not our feed.
@@ -21,6 +22,15 @@ pub struct Release {
     pub minimum_system_version: Option<Version>,
     /// The build for [`UpdaterConfig::platform`].
     pub asset: Asset,
+    /// Set when the release fixes a security problem. Presentation only: the feed is unsigned,
+    /// so this never changes what is downloaded or how it is verified.
+    pub security: Option<Security>,
+}
+
+impl Release {
+    pub fn is_security_update(&self) -> bool {
+        self.security.is_some()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -54,6 +64,10 @@ struct Feed {
     #[serde(default)]
     minimum_system_version: Option<String>,
     platforms: HashMap<String, Asset>,
+    /// Kept as raw JSON: [`Security::from_feed`] reads it leniently, so a malformed value here
+    /// can't make the whole feed (and with it the update) unreadable.
+    #[serde(default)]
+    security: Option<serde_json::Value>,
 }
 
 /// Fetches the feed and decides. Network errors are `Network` (retry later); anything the server
@@ -112,6 +126,7 @@ pub(crate) fn evaluate(json: &[u8], config: &UpdaterConfig) -> Result<UpdateStat
         pub_date: feed.pub_date,
         minimum_system_version,
         asset,
+        security: Security::from_feed(feed.security.as_ref()),
     }))
 }
 
@@ -182,6 +197,44 @@ mod tests {
         assert_eq!(release.pub_date.as_deref(), Some("2026-10-01T12:00:00Z"));
         assert_eq!(release.minimum_system_version, Some(Version::new(13, 0, 0)));
         assert_eq!(release.asset.size, 1234);
+    }
+
+    #[test]
+    fn the_security_key_is_optional_and_never_breaks_the_feed() {
+        use crate::update::Severity;
+
+        let config = test_config("0.1.0", "unused");
+        let release_with = |security: serde_json::Value| {
+            let mut feed: serde_json::Value =
+                serde_json::from_str(&feed("0.2.0", "darwin-aarch64", "13.0", &sig())).unwrap();
+            if !security.is_null() {
+                feed["security"] = security;
+            }
+            match evaluate(feed.to_string().as_bytes(), &config).unwrap() {
+                UpdateStatus::Available(release) => release,
+                other => panic!("expected Available, got {other:?}"),
+            }
+        };
+        assert_eq!(release_with(serde_json::Value::Null).security, None);
+        let release = release_with(serde_json::json!({
+            "severity": "critical",
+            "advisories": ["GHSA-cfgh-2345-rvwx", "not an id"]
+        }));
+        assert!(release.is_security_update());
+        let security = release.security.unwrap();
+        assert_eq!(security.severity, Severity::Critical);
+        assert_eq!(security.advisories, ["ghsa-cfgh-2345-rvwx"]);
+        // Values from a newer or broken feed: still installable, still a security update.
+        for odd in [
+            serde_json::json!({ "severity": "apocalyptic" }),
+            serde_json::json!({ "severity": ["high"], "advisories": {"a": 1} }),
+            serde_json::json!("high"),
+            serde_json::json!(3),
+            serde_json::json!([]),
+        ] {
+            let security = release_with(odd.clone()).security;
+            assert_eq!(security.map(|s| s.severity), Some(Severity::Unknown), "{odd}");
+        }
     }
 
     #[test]
