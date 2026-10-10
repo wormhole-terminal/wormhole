@@ -1,0 +1,36 @@
+# Row actions on the sidebar: the context menu on "diff perf" (its focus ring),
+# the close × under the pointer on "zsh", renaming "diff perf" in place, and dragging "zsh" above
+# "sidebar polish" (the row lifts, the line shows where it lands).
+@fixture terminal
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new ~/terminal
+new ~/terminal
+new ~/api-server
+new ~/dotfiles
+@wait-idle
+# Agent detection looks every 2 s: let it find the agent in each new terminal.
+@sleep 2500
+rename 1 sidebar polish
+rename 2 diff perf
+rename 3 zsh
+activate 1
+hook 1 UserPromptSubmit
+hook 2 Notification Approve cargo test?
+# The rows take their new heights before the pointer acts on them.
+@wait-idle
+right-click 200 182
+@shot menu
+key escape
+hover 200 218
+@shot close-x
+double-click 200 170
+@shot rename
+key escape
+mouse-down 200 218
+mouse-drag 200 210
+mouse-drag 200 150
+@shot drag
+mouse-up 200 150
+@shot dropped

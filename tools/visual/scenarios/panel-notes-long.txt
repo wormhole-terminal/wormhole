@@ -1,0 +1,9 @@
+# Many next steps (50): more than five done ones fold into one "N done" row after
+# the open ones (24 open here, so the fold and the Notes band fit the window). The pinned band is
+# in panel-changes-many.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+task-seed 24 12
+panel-tab notes
+@shot steps

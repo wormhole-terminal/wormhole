@@ -1,0 +1,169 @@
+//! What each terminal's row shows, gathered once per frame from its terminal, git status and
+//! notes: the facts core's `Listing` and the rows are built from.
+use std::path::PathBuf;
+use std::time::{Duration, SystemTime};
+
+use wormhole_core::sidebar::command::{OutputFacts, ends_by_itself, has_new_output};
+
+use super::*;
+
+/// What a terminal's row shows, gathered once per frame.
+pub(super) struct RowInfo {
+    pub(super) ix: usize,
+    pub(super) id: i64,
+    pub(super) name: SharedString,
+    /// The agent in the terminal, if any; a row without one is a plain terminal.
+    pub(super) agent: Option<AgentId>,
+    pub(super) state: RowState,
+    pub(super) message: Option<String>,
+    /// How long the terminal has been in its status.
+    pub(super) since: Duration,
+    pub(super) cwd: Option<PathBuf>,
+    /// Its band: the repository it is in, else its folder (only looked up when grouped).
+    pub(super) folder: Option<PathBuf>,
+    /// The repository its folder is a worktree of, in the flat list (grouped, the band carries
+    /// the mark).
+    pub(super) worktree: Option<PathBuf>,
+    pub(super) branch: Option<String>,
+    /// The command in front of a plain terminal, and how long it has run: only for one that ends
+    /// by itself (a build, a test run), since the time an editor or a dev server has been open says
+    /// nothing.
+    pub(super) command: Option<String>,
+    pub(super) running: Option<Duration>,
+    pub(super) bell: bool,
+    /// The command is done and left output you haven't seen ("new output").
+    pub(super) unread: bool,
+    pub(super) pinned: bool,
+    /// Notes with something in them and tasks not done.
+    pub(super) open_items: usize,
+    /// The changed files the row itself counts: in the flat list the folder's, under a band only
+    /// one that means something else (a terminal comparing with another branch).
+    pub(super) changes: Option<usize>,
+}
+
+impl RowInfo {
+    pub(super) fn searchable(&self) -> Searchable<'_> {
+        Searchable {
+            name: &self.name,
+            state: self.state,
+            place: self.cwd.as_deref(),
+            branch: self.branch.as_deref(),
+            command: self.command.as_deref(),
+        }
+    }
+}
+
+/// What the Show filter makes of a terminal's status. A terminal with an agent shows the
+/// agent's; one without is working while a command runs and needs you while its bell counts.
+fn row_state(agent: bool, status: Status, command: bool) -> RowState {
+    match (agent, status) {
+        (_, Status::Exited) => RowState::Exited,
+        (_, Status::Attention) => RowState::NeedsYou,
+        (true, Status::Busy) => RowState::Working,
+        (true, Status::Done) => RowState::Finished,
+        (true, Status::Idle) => RowState::Idle,
+        (false, _) if command => RowState::Working,
+        (false, _) => RowState::Idle,
+    }
+}
+
+impl Workspace {
+    /// Every terminal's row facts, in the window's (manual) order.
+    pub(super) fn row_infos(&self, cx: &App) -> Vec<RowInfo> {
+        let grouped = self.sidebar.view.grouping == Grouping::Folder;
+        let now = SystemTime::now();
+        self.sessions
+            .iter()
+            .enumerate()
+            .map(|(ix, session)| {
+                let terminal = session.terminal().read(cx);
+                let status = terminal.status();
+                let foreground = terminal.foreground();
+                let agent = terminal.agent;
+                let command = foreground.map(|f| f.command.clone()).filter(|_| agent.is_none());
+                let program_running = command.is_some();
+                let git = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
+                let root = terminal.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
+                RowInfo {
+                    ix,
+                    id: session.id,
+                    name: session.name(cx),
+                    agent,
+                    state: row_state(agent.is_some(), status, command.is_some()),
+                    message: terminal.agent_message.clone(),
+                    since: terminal.status_since().elapsed(),
+                    cwd: terminal.cwd.clone(),
+                    worktree: root.as_deref().filter(|_| !grouped).and_then(|root| self.worktree_of(root)),
+                    folder: if grouped { root } else { None },
+                    branch: git.and_then(|status| status.branch.clone()),
+                    running: foreground
+                        .filter(|f| agent.is_none() && ends_by_itself(&f.command))
+                        .and_then(|f| now.duration_since(f.started).ok()),
+                    command,
+                    bell: agent.is_none() && terminal.bell_rang(),
+                    unread: has_new_output(OutputFacts {
+                        agent: agent.is_some(),
+                        // Seen on screen: the selected terminal and the panes shown with it.
+                        selected: self.on_screen(ix),
+                        program_running,
+                        unseen: matches!(status, Status::Busy | Status::Done),
+                    }),
+                    pinned: self.split_pinned(ix),
+                    open_items: session.open_items(cx),
+                    changes: git.and_then(|status| {
+                        let n = status.files.len();
+                        (n > 0 && (!grouped || status.compare.is_some())).then_some(n)
+                    }),
+                }
+            })
+            .collect()
+    }
+
+    /// Each session's branch and changes, in `sessions` order; `None` when it isn't in a
+    /// repository or its status is from a folder it has since left.
+    pub(super) fn session_git(&self, cx: &App) -> Vec<Option<SessionGit<'_>>> {
+        self.sessions
+            .iter()
+            .map(|session| {
+                let status = session.git.status.as_ref()?;
+                (session.git.cwd == session.terminal().read(cx).cwd).then(|| SessionGit {
+                    branch: status.branch.as_deref(),
+                    changes: status.files.len(),
+                    compared: status.compare.is_some(),
+                })
+            })
+            .collect()
+    }
+}
+
+/// What each row's times read now (compact rows, without a second line, show none).
+pub(super) fn row_times(infos: &[RowInfo], cx: &App) -> Vec<Option<String>> {
+    let compact = settings(cx).compact_sidebar;
+    infos.iter().map(|info| rows::time_text(info, compact)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use wormhole_core::sidebar::RowState;
+
+    use super::row_state;
+    use crate::terminal_view::Status;
+
+    #[test]
+    fn an_agents_status_is_its_rows_state() {
+        assert_eq!(row_state(true, Status::Busy, false), RowState::Working);
+        assert_eq!(row_state(true, Status::Attention, false), RowState::NeedsYou);
+        assert_eq!(row_state(true, Status::Done, false), RowState::Finished);
+        assert_eq!(row_state(true, Status::Idle, true), RowState::Idle, "the agent itself is the command");
+        assert_eq!(row_state(true, Status::Exited, false), RowState::Exited);
+    }
+
+    #[test]
+    fn a_plain_terminal_works_while_a_command_runs_and_needs_you_for_its_bell() {
+        assert_eq!(row_state(false, Status::Idle, true), RowState::Working);
+        assert_eq!(row_state(false, Status::Busy, false), RowState::Idle, "output alone is unread, not work");
+        assert_eq!(row_state(false, Status::Done, false), RowState::Idle);
+        assert_eq!(row_state(false, Status::Attention, true), RowState::NeedsYou);
+        assert_eq!(row_state(false, Status::Exited, true), RowState::Exited);
+    }
+}

@@ -1,0 +1,10 @@
+# Settings → Coding agents. No agent counts as installed in a visual instance (its PATH is the
+# Finder's and WORMHOLE_AGENT_PATH empty); `@shell <agent>` would make that one installed.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section agents
+@batch
+settings-resize 1024 1000
+@sleep 1500
+@shot agents settings

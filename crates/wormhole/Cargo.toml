@@ -1,0 +1,94 @@
+[package]
+name = "wormhole"
+description = "Wormhole: a terminal for working with AI coding agents."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# The binary name is what macOS shows in the menu bar and Dock.
+[[bin]]
+name = "Wormhole"
+path = "src/main.rs"
+
+[dependencies]
+wormhole-core.workspace = true
+# Inline images: core's decoded pixels become GPUI's frames (its own image type; the crate is in
+# the graph through GPUI with these features).
+image = { version = "0.25", default-features = false, features = ["png"] }
+gpui-kit = { version = "0.7.0", features = [
+    # Syntax highlighting in the diff view.
+    "tree-sitter-rust", "tree-sitter-typescript", "tree-sitter-tsx", "tree-sitter-javascript",
+    "tree-sitter-python", "tree-sitter-go", "tree-sitter-bash", "tree-sitter-toml",
+    "tree-sitter-yaml", "tree-sitter-markdown", "tree-sitter-css", "tree-sitter-html",
+    "tree-sitter-c", "tree-sitter-cpp", "tree-sitter-java", "tree-sitter-swift",
+] }
+anyhow.workspace = true
+# System-wide show/hide hotkey (Carbon RegisterEventHotKey on macOS; no extra permissions).
+# Cross-platform so the key-spec parser builds (and is tested) off macOS too.
+global-hotkey = "0.8.0"
+raw-window-handle = "0.6"
+serde.workspace = true
+serde_json.workspace = true
+semver = "1.0"
+smol.workspace = true
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6.2"
+objc2 = "0.6.4"
+objc2-foundation = { version = "0.3.2", features = ["NSGeometry", "NSError", "NSString", "NSArray", "NSObject", "NSSet", "NSBundle", "NSAttributedString", "NSRange", "NSDictionary", "NSData"] }
+# Notifications from the bundled app: interruption levels (Time Sensitive), threads, actions and
+# Reply, which GPUI's own notifications don't carry.
+objc2-user-notifications = { version = "0.3.2", default-features = false, features = [
+    "std", "block2", "bitflags", "UNNotification", "UNNotificationAction", "UNNotificationCategory",
+    "UNNotificationContent", "UNNotificationRequest", "UNNotificationResponse", "UNNotificationSettings",
+    "UNNotificationSound", "UNNotificationTrigger", "UNUserNotificationCenter",
+] }
+# Font pickers: which installed families are monospace (CoreText traits + advances);
+# the user's font files registered for this process (CTFontManager).
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString", "CFDictionary", "CFCGTypes", "CFURL", "CFError"] }
+objc2-core-text = { version = "0.3.2", default-features = false, features = ["std", "CTFont", "CTFontDescriptor", "CTFontTraits", "CTFontManager", "CTFontManagerErrors", "objc2-core-graphics"] }
+# Touch ID / password approval for trusting project folders.
+objc2-local-authentication = { version = "0.3.2", default-features = false, features = ["std", "block2", "LAContext", "LAError"] }
+# The intro's overlay: a CAMetalLayer drawn by our own shader (GPUI has no custom shaders).
+objc2-metal = { version = "0.3.2", default-features = false, features = [
+    "std", "MTLAllocation", "MTLBlitCommandEncoder", "MTLCommandBuffer", "MTLCommandEncoder",
+    "MTLCommandQueue", "MTLDevice", "MTLDrawable", "MTLLibrary", "MTLPixelFormat", "MTLRenderCommandEncoder",
+    "MTLRenderPass", "MTLRenderPipeline", "MTLResource", "MTLTexture", "MTLTypes",
+] }
+objc2-quartz-core = { version = "0.3.2", default-features = false, features = [
+    "std", "CALayer", "CAMetalLayer", "CATransform3D", "objc2-core-foundation", "objc2-metal",
+] }
+objc2-app-kit = { version = "0.3", features = [
+    "NSView", "NSResponder", "NSVisualEffectView", "NSGraphics",
+    # Where the traffic lights are (the title rows' chrome sits after them).
+    "NSWindow",
+    # Menu bar item.
+    "NSStatusBar", "NSStatusItem", "NSStatusBarButton", "NSButton", "NSControl", "NSMenu", "NSMenuItem",
+    "NSImage", "NSColor", "NSFont", "NSCell", "NSEvent",
+    # Dock badge and bounce; the status item's own drawing (dot, check, working frames).
+    "NSApplication", "NSDockTile", "NSBezierPath", "NSGraphicsContext", "NSGraphics", "block2",
+    # The menu rows' right-aligned times.
+    "NSAttributedString", "NSParagraphStyle", "NSText",
+    # Background mode's test instances: no Dock icon (an accessory app).
+    "NSRunningApplication",
+] }
+
+[dev-dependencies]
+# The view tests drive real windows through GPUI's test platform, so a plain `cargo test` (what CI
+# and contributors run) needs these without the devctl feature. Dev-dependency features are
+# never active in the shipped binary.
+gpui-kit = { version = "0.7.0", features = ["test-support"] }
+
+[features]
+# Dev-only control hook (screenshots + scripted input) for automated checks.
+devctl = ["gpui-kit/test-support"]
+# Inspect mode (⇧⌥⌘I) in release builds too; debug builds always have it.
+inspector = ["gpui-kit/inspector"]
+
+[lints]
+workspace = true

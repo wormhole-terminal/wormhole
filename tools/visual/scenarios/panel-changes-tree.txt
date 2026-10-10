@@ -1,0 +1,8 @@
+# The Changes tab as a folder tree: single-folder chains compacted, each
+# level 24 in.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+@config changes_tree=true
+changes
+@shot tree

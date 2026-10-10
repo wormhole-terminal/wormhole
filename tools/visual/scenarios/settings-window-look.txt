@@ -1,0 +1,18 @@
+# Settings → Appearance → Window: under Reduce Transparency the opacity slider is off
+# and a note says why; with the blur off below 95 % the blur's row warns.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section appearance
+# The settings window opens at the end of this tick: its follow-ups go in a later batch.
+@batch
+settings-resize 1024 900
+@batch
+settings-scroll 700
+reduce-transparency on
+@batch
+@shot reduced settings
+reduce-transparency off
+set blur=false
+@sleep 1500
+@shot blur-off settings

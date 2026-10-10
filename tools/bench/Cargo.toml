@@ -1,0 +1,26 @@
+[package]
+name = "wormhole-bench"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+description = "Terminal stress tests, throughput benchmarks and full-screen animations"
+
+# Its own workspace: a tool you run in any terminal, kept out of the app's build, lints and
+# dependency audit. Std only, so it builds anywhere in seconds.
+[workspace]
+
+[[bin]]
+name = "termbench"
+path = "src/main.rs"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "warn"
+dbg_macro = "warn"
+
+[profile.release]
+opt-level = 3
+debug = false

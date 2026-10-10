@@ -1,0 +1,14 @@
+# The Project tab once trusted: the quiet trust line with Revoke, then the switches,
+# the actions with their keys, the prompts (one hovered: paste, or copy into a note) and the
+# terminal layout with Open terminals.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+@env WORMHOLE_AUTH=allow
+project
+@wait-idle
+click 1180 390
+@sleep 1500
+@wait-idle
+hover 1200 640
+@shot trusted

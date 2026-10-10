@@ -1,0 +1,5 @@
+# The main window as it opens: one terminal in a repository with changes, the Notes panel.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+@shot window

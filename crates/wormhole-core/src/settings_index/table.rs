@@ -1,0 +1,798 @@
+//! The table: what every section and setting is called and says.
+
+use super::{Entry, Group, NavGroup, SectionId, SectionInfo};
+
+const fn entry(
+    id: &'static str,
+    label: &'static str,
+    description: &'static str,
+    keywords: &'static str,
+    keys: &'static [&'static str],
+) -> Entry {
+    Entry { id, label, description, keywords, keys }
+}
+
+const fn group(title: &'static str, entries: &'static [Entry]) -> Group {
+    Group { title, blurb: "", aside: "", entries }
+}
+
+pub(super) fn section(id: SectionId) -> &'static SectionInfo {
+    match id {
+        SectionId::Appearance => &SectionInfo {
+            title: "Appearance",
+            intro: "What every window looks like. Changes apply as you make them.",
+            nav: NavGroup::Look,
+        },
+        SectionId::Fonts => &SectionInfo {
+            title: "Fonts",
+            intro: "Terminal first: it's what you read most. Code follows it and Interface uses the \
+                    system font until you pick one.",
+            nav: NavGroup::Look,
+        },
+        SectionId::Terminal => &SectionInfo {
+            title: "Terminal",
+            intro: "How the terminal behaves. Its font is in Fonts.",
+            nav: NavGroup::Work,
+        },
+        SectionId::Sessions => &SectionInfo {
+            title: "Terminals & sidebar",
+            intro: "The Terminals list on the left: how it's grouped and what each row shows.",
+            nav: NavGroup::Work,
+        },
+        SectionId::Git => &SectionInfo {
+            title: "Changes & diffs",
+            intro: "The Changes panel and the diff view.",
+            nav: NavGroup::Work,
+        },
+        SectionId::Agents => &SectionInfo {
+            title: "Coding agents",
+            intro: "Wormhole recognises the agent running in each terminal. With status hooks it \
+                    knows exactly when it's working, waiting for you, or done.",
+            nav: NavGroup::Agents,
+        },
+        SectionId::Projects => &SectionInfo {
+            title: "Project folders",
+            intro: "Change the defaults for every project, or pick one to set it up just for you.",
+            nav: NavGroup::Preview,
+        },
+        SectionId::FeatureFlags => &SectionInfo {
+            title: "Feature flags",
+            intro: "Features still being built. They show here only in a development build; a \
+                    release build has them off until they're finished.",
+            nav: NavGroup::Preview,
+        },
+        SectionId::Notifications => &SectionInfo {
+            title: "Notifications",
+            intro: "What Wormhole tells you about terminals you aren't looking at.",
+            nav: NavGroup::App,
+        },
+        SectionId::MenuBar => &SectionInfo {
+            title: "Menu bar & hotkey",
+            intro: "Wormhole in the macOS menu bar, and a shortcut that works from any app.",
+            nav: NavGroup::App,
+        },
+        SectionId::Updates => &SectionInfo {
+            title: "Updates",
+            intro: "Signed releases, checked in the background.",
+            nav: NavGroup::App,
+        },
+        SectionId::Advanced => &SectionInfo {
+            title: "Advanced",
+            intro: "Files, folders and a way back to the defaults.",
+            nav: NavGroup::App,
+        },
+    }
+}
+
+pub(super) fn groups(id: SectionId) -> &'static [Group] {
+    match id {
+        SectionId::Appearance => APPEARANCE,
+        SectionId::Fonts => FONTS,
+        SectionId::Terminal => TERMINAL,
+        SectionId::Sessions => SESSIONS,
+        SectionId::Git => GIT,
+        SectionId::Agents => AGENTS,
+        SectionId::Projects => PROJECTS,
+        SectionId::Notifications => NOTIFICATIONS,
+        SectionId::MenuBar => MENU_BAR,
+        SectionId::FeatureFlags => FEATURE_FLAGS,
+        SectionId::Updates => UPDATES,
+        SectionId::Advanced => ADVANCED,
+    }
+}
+
+const APPEARANCE: &[Group] = &[
+    group("", &[entry("appearance-preview", "Live preview", "", "preview wallpaper window", &[])]),
+    group(
+        "Theme",
+        &[
+            entry(
+                "theme-mode",
+                "Mode",
+                "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode",
+                "dark light system appearance match night day",
+                &["theme_mode"],
+            ),
+            entry(
+                "theme",
+                "Theme",
+                "",
+                "colour color scheme palette dark light studio import ghostty iterm2 alacritty",
+                &["theme", "theme_light"],
+            ),
+        ],
+    ),
+    group(
+        "Accent",
+        &[entry(
+            "primary-color",
+            "Primary colour",
+            "Buttons, focus rings, selection and links; stays when you switch themes",
+            "accent highlight color colour swatch",
+            &["primary_color"],
+        )],
+    ),
+    group(
+        "Window",
+        &[
+            entry(
+                "opacity",
+                "Background opacity",
+                "30–100 %. Below 100 % the desktop shows through",
+                "transparency translucent see through",
+                &["opacity"],
+            ),
+            entry(
+                "blur",
+                "Blur what's behind the window",
+                "Only visible below 100 % opacity",
+                "vibrancy frosted",
+                &["blur"],
+            ),
+            entry(
+                "translucent",
+                "Also translucent",
+                "Use the opacity and blur above for these windows too",
+                "settings theme studio window",
+                &["settings_translucent", "studio_translucent"],
+            ),
+            entry(
+                "title-border",
+                "Line under the title row",
+                "Between the bar and the terminal: always, only when output is scrolled under the bar, \
+                 or never",
+                "border hairline rule separator title bar toolbar",
+                &["title_border"],
+            ),
+            entry(
+                "status-bar",
+                "Show status bar",
+                "Branch, agents and terminal size along the bottom of every window",
+                "bottom bar footer",
+                &["status_bar"],
+            ),
+        ],
+    ),
+    group(
+        "Title row",
+        &[
+            entry(
+                "title-branch-status",
+                "Branch status",
+                "A dot while the tree has uncommitted changes, and how many commits the branch is ahead \
+                 of or behind its upstream (↑2 ↓1)",
+                "git dirty uncommitted ahead behind upstream push pull sync commits chip",
+                &["title_branch_status"],
+            ),
+            entry(
+                "title-agent-gauge",
+                "Agent model and context",
+                "The model a coding agent runs and how much of its context window is used, when the \
+                 agent reports it (Claude Code does, through its status line)",
+                "claude model context window tokens percent compact meter usage",
+                &["title_agent_gauge"],
+            ),
+            entry(
+                "title-ports",
+                "Open ports",
+                "The ports a terminal's programs listen on, as chips that open localhost in your browser",
+                "localhost server dev http listen browser network",
+                &["title_ports"],
+            ),
+            entry(
+                "title-pull-request",
+                "Pull request",
+                "The branch's pull request as a link, asked of the GitHub CLI (gh). Only in a trusted \
+                 project, and only when gh is installed and signed in",
+                "github gh pr merge review link",
+                &["title_pull_request"],
+            ),
+        ],
+    ),
+    group(
+        "File icons",
+        &[
+            entry(
+                "icon-theme",
+                "File icons",
+                "In the Changes and History panels. Zed icon themes work too",
+                "icon theme",
+                &["icon_theme"],
+            ),
+            entry(
+                "icon-themes-folder",
+                "Icon themes folder",
+                "Put a Zed icon theme folder here; it's listed above within seconds",
+                "zed folder",
+                &[],
+            ),
+        ],
+    ),
+];
+
+const FONTS: &[Group] = &[
+    group("", &[entry("font-specimen", "Specimen", "", "preview sample", &[])]),
+    group(
+        "Terminal",
+        &[
+            entry(
+                "font-terminal",
+                "Font",
+                "The terminal grid",
+                "terminal font typeface size monospace jetbrains bundled",
+                &["font_family", "font_size"],
+            ),
+            entry(
+                "line-height",
+                "Line height",
+                "Terminal rows, as a multiple of the font size",
+                "spacing leading",
+                &["line_height"],
+            ),
+            entry(
+                "font-ligatures",
+                "Ligatures",
+                "Join sequences like => and != into one glyph",
+                "ligature",
+                &["font_ligatures"],
+            ),
+        ],
+    ),
+    Group {
+        title: "Code",
+        blurb: "",
+        aside: "Follows the terminal until you pick one",
+        entries: &[entry(
+            "font-code",
+            "Font",
+            "Diffs, commit hashes, file lists, Theme Studio",
+            "code font typeface size monospace diff",
+            &["code_font_family", "code_font_size"],
+        )],
+    },
+    group(
+        "Interface",
+        &[entry(
+            "font-interface",
+            "Font",
+            "Sidebar, panels, settings and controls. The size scales the whole interface",
+            "interface font typeface size system ui",
+            &["ui_font_family", "ui_font_size"],
+        )],
+    ),
+    group(
+        "Your fonts",
+        &[
+            entry(
+                "fonts-folder",
+                "Fonts folder",
+                "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put \
+                 .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within \
+                 seconds",
+                "custom bundled ttf otf ttc folder",
+                &[],
+            ),
+            entry("custom-fonts", "Custom fonts", "", "custom families", &[]),
+        ],
+    ),
+];
+
+const TERMINAL: &[Group] = &[
+    group(
+        "Behaviour",
+        &[
+            entry(
+                "scrollback",
+                "Scrollback",
+                "Lines kept per terminal (applies to new terminals)",
+                "history buffer lines",
+                &["scrollback_lines"],
+            ),
+            entry(
+                "minimap",
+                "Show minimap",
+                "The scrollback drawn small along the terminal's right edge. Click or drag it to \
+                 scroll",
+                "overview scrollbar map outline",
+                &["minimap"],
+            ),
+            entry(
+                "meta",
+                "Use Option as Meta",
+                "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some \
+                 keyboard layouts",
+                "alt option escape keyboard left right",
+                &["option_as_meta"],
+            ),
+            entry("terminal-font", "Font", "", "typeface size line height", &[]),
+        ],
+    ),
+    group(
+        "Opening",
+        &[
+            entry(
+                "open-in",
+                "Open folders in",
+                "The Open in… button in a terminal's title row opens its folder here; its menu lists \
+                 the others",
+                "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app",
+                &["open_in"],
+            ),
+            entry(
+                "default-terminal",
+                "Default terminal",
+                "Double-clicked .command files and programs run in a new Wormhole terminal instead \
+                 of Terminal",
+                "default terminal app command script executable finder open with launch services",
+                &[],
+            ),
+        ],
+    ),
+    group(
+        "Shell",
+        &[
+            entry(
+                "default-shell",
+                "Default shell",
+                "What a new terminal runs: your login shell, a shell on this Mac, or a profile \
+                 below. Right-click a + for the others",
+                "shell zsh bash fish nu nushell login program default",
+                &["default_shell"],
+            ),
+            entry(
+                "shells",
+                "Shells",
+                "Profiles for New Terminal With: a program with its arguments, listed \
+                 in config.json",
+                "shell profiles custom command arguments args claude program",
+                &["shells"],
+            ),
+        ],
+    ),
+    group(
+        "Worktrees",
+        &[entry(
+            "worktree-base",
+            "Worktrees folder",
+            "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in \
+             <name>-worktrees, or under the folder worktree_base names in config.json",
+            "worktree worktrees git branch folder base parallel agents",
+            &["worktree_base"],
+        )],
+    ),
+    group(
+        "Bell",
+        &[
+            entry(
+                "bell-sound",
+                "Play a sound",
+                "The system beep when a program in a terminal rings the bell",
+                "bell beep audible alert",
+                &["bell_sound"],
+            ),
+            entry(
+                "bell-visual",
+                "Flash the window edge",
+                "A short glow along the terminal's edge when it rings the bell",
+                "bell visual flash glow",
+                &["bell_visual"],
+            ),
+        ],
+    ),
+];
+
+const SESSIONS: &[Group] = &[
+    group("", &[entry("sidebar-preview", "Live preview", "", "preview sidebar", &[])]),
+    Group {
+        title: "Terminals list",
+        blurb: "",
+        aside: "Same values as the funnel in the Terminals header",
+        entries: &[
+            entry(
+                "sidebar-group",
+                "Group by",
+                "Folder puts terminals under a band per working folder; None is one list in your order",
+                "grouping folder band none flat",
+                &["sidebar_group"],
+            ),
+            entry(
+                "compact",
+                "Density",
+                "Compact: one line per terminal",
+                "compact comfortable rows",
+                &["compact_sidebar"],
+            ),
+            entry(
+                "cmd-hints",
+                "Show ⌘1–⌘9 while ⌘ is held",
+                "Keycaps on the first nine visible terminals after 250 ms; the shortcuts work either way",
+                "command keycaps shortcuts numbers hints",
+                &["sidebar_cmd_hints"],
+            ),
+        ],
+    },
+    group(
+        "Row details",
+        &[
+            entry(
+                "sidebar-branch",
+                "Branch",
+                "Chip on the folder band; under the name when not grouped by folder",
+                "git branch",
+                &["sidebar_branch"],
+            ),
+            entry(
+                "sidebar-changes",
+                "Changed files",
+                "±N uncommitted changes next to the branch",
+                "git changes count",
+                &["sidebar_changes"],
+            ),
+            entry(
+                "sidebar-dot",
+                "Status dot",
+                "Working, needs you, finished or idle, as a glyph on every terminal",
+                "status glyph agent",
+                &["sidebar_status_dot"],
+            ),
+            entry(
+                "status-position",
+                "Status dot position",
+                "Lead column, before the name, or the right edge of the first line",
+                "left right lead column",
+                &["sidebar_status_position"],
+            ),
+            entry(
+                "sidebar-agent",
+                "Agent logo",
+                "Which coding agent runs in the terminal; shown while it's idle",
+                "agent icon logo",
+                &["sidebar_agent_icon"],
+            ),
+            entry(
+                "sidebar-notes",
+                "Notes and tasks",
+                "Note icon with the number of notes and open tasks",
+                "notes tasks next steps count",
+                &["sidebar_notes"],
+            ),
+        ],
+    ),
+];
+
+const GIT: &[Group] = &[
+    group(
+        "Changes panel",
+        &[
+            entry(
+                "changes-view",
+                "File view",
+                "A flat list, or folders as a tree",
+                "folders files list tree",
+                &["changes_tree"],
+            ),
+            entry(
+                "group-untracked",
+                "Group untracked files separately",
+                "New files get their own section under the changes",
+                "untracked new files",
+                &["group_untracked"],
+            ),
+        ],
+    ),
+    group(
+        "Diff view",
+        &[
+            entry(
+                "diff-layout",
+                "Default layout",
+                "Split keeps old and new side by side, even for a new or deleted file. The diff's own \
+                 toolbar switches one diff",
+                "split unified side by side",
+                &["diff_split"],
+            ),
+            entry(
+                "diff-wrap",
+                "Wrap long lines",
+                "Otherwise the diff scrolls sideways",
+                "wrap",
+                &["diff_wrap"],
+            ),
+            entry("tab-width", "Tab width", "Spaces per tab in diffs", "indent tabs", &["tab_width"]),
+            entry(
+                "size-units",
+                "File sizes",
+                "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)",
+                "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal",
+                &["size_units"],
+            ),
+        ],
+    ),
+];
+
+const AGENTS: &[Group] = &[
+    group("", &[entry("agents-summary", "Agents found", "", "installed hooks repair path summary", &[])]),
+    group(
+        "Notifications",
+        &[entry(
+            "agents-notifications",
+            "Notify me when an agent needs you or finishes",
+            "These, and notifications about long commands and the bell, have their own section",
+            "notifications alerts banner",
+            &[],
+        )],
+    ),
+    group(
+        "Installed",
+        &[entry(
+            "agents-installed",
+            "Installed agents",
+            "",
+            "claude code codex gemini copilot cursor opencode aider amp goose qwen hooks status install \
+             remove repair",
+            &[],
+        )],
+    ),
+    group(
+        "Other agents",
+        &[entry(
+            "agents-other",
+            "Other agents",
+            "Agents Wormhole recognises that aren't on this Mac's PATH",
+            "not installed path",
+            &[],
+        )],
+    ),
+    group(
+        "How status works",
+        &[entry(
+            "agents-how",
+            "How status works",
+            "With status hooks the agent tells Wormhole the moment it starts working, waits for you or \
+             finishes; without them the status is read from the terminal output",
+            "hooks output heuristic backup",
+            &[],
+        )],
+    ),
+    Group {
+        title: "Command line",
+        blurb: "Scripts and agents can drive Wormhole with the Wormhole command: list terminals, read a \
+                status and send notifications.",
+        aside: "",
+        entries: &[entry(
+            "control-write",
+            "Let the command line type and open terminals",
+            "Wormhole send-text types into a terminal and new-terminal opens one, as a paste; never \
+             into the terminal that asks, nor one waiting for your answer",
+            "cli command line control api socket send-text new-terminal scripts agents automation \
+             remote type",
+            &["control_write"],
+        )],
+    },
+];
+
+const PROJECTS: &[Group] = &[group(
+    "",
+    &[entry(
+        "projects",
+        "Project folders",
+        "The .wormhole folder of a project: trust, and which of its files you use",
+        ".wormhole project folder trust touch id actions prompts layout notes theme settings",
+        &[],
+    )],
+)];
+
+const FEATURE_FLAGS: &[Group] = &[group(
+    "",
+    &[entry(
+        "feature-flags",
+        "Feature flags",
+        "Turn features that are still being built on or off in this development build",
+        "feature flag preview experimental development dev in progress beta project folders",
+        &["feature_flags"],
+    )],
+)];
+
+const NOTIFICATIONS: &[Group] = &[
+    group(
+        "macOS",
+        &[entry(
+            "notify-permission",
+            "Notifications in System Settings",
+            "",
+            "permission allow system settings send test banner",
+            &[],
+        )],
+    ),
+    group(
+        "Notify me when",
+        &[
+            entry(
+                "notify-needs-you",
+                "A terminal needs you",
+                "An agent asks a question or for permission",
+                "time sensitive focus question permission notifications",
+                &["notify_needs_you"],
+            ),
+            entry(
+                "notify-agent-done",
+                "An agent finishes",
+                "Its Stop hook, or its output settles",
+                "notifications done",
+                &["notify_agent_done"],
+            ),
+            entry(
+                "notify-command-done",
+                "A command finishes",
+                "Any foreground command, agent or not, that ran longer than",
+                "long build threshold seconds notifications",
+                &["notify_command_done", "notify_command_after"],
+            ),
+            entry(
+                "notify-bell",
+                "The terminal rings the bell",
+                "Terminals without an agent; at most once a minute each",
+                "bell notifications",
+                &["notify_bell"],
+            ),
+        ],
+    ),
+    group(
+        "Delivery",
+        &[
+            entry(
+                "notify-only-unseen",
+                "Only for terminals I’m not looking at",
+                "Off: the terminal in front notifies too",
+                "unseen front",
+                &["notify_only_unseen"],
+            ),
+            entry(
+                "notify-in-front",
+                "While Wormhole is in front",
+                "A system banner, or nothing",
+                "banner nothing front",
+                &["notify_in_front"],
+            ),
+            entry("notify-sound", "Sound", "", "sound alert", &["notify_sound"]),
+            entry(
+                "notify-group-bursts",
+                "Group bursts",
+                "Three or more within 10 s become one summary",
+                "summary bursts",
+                &["notify_group_bursts"],
+            ),
+        ],
+    ),
+    group(
+        "Dock",
+        &[
+            entry("dock-badge", "Badge", "The count on the Dock icon", "dock badge count", &["dock_badge"]),
+            entry(
+                "dock-bounce",
+                "Bounce once when a terminal needs you",
+                "Only while Wormhole isn’t the active app; never for a bell",
+                "dock bounce",
+                &["dock_bounce"],
+            ),
+        ],
+    ),
+];
+
+const MENU_BAR: &[Group] = &[
+    group(
+        "Menu bar",
+        &[
+            entry(
+                "menu-bar",
+                "Show Wormhole in the menu bar",
+                "Terminals by status and quick actions",
+                "status bar tray item menubar",
+                &["menu_bar"],
+            ),
+            entry(
+                "menu-bar-icon",
+                "Icon shows",
+                "The dot and count on the status item",
+                "status item icon count",
+                &["menu_bar_icon"],
+            ),
+            entry(
+                "menu-bar-animate",
+                "Animate menu bar icon while working",
+                "The prompt in the icon types itself out while something runs. Off: a still, filled icon",
+                "animation",
+                &["menu_bar_animate"],
+            ),
+        ],
+    ),
+    group(
+        "Global hotkey",
+        &[
+            entry(
+                "hotkey",
+                "Shortcut",
+                "Works from any app. Click, then press the keys",
+                "global shortcut quake record hotkey",
+                &["hotkey"],
+            ),
+            entry(
+                "hotkey-action",
+                "Hotkey opens",
+                "Pressing it again with the panel open shows Wormhole",
+                "quick panel toggle",
+                &["hotkey_action"],
+            ),
+            entry(
+                "jump-waiting-key",
+                "Jump to next waiting terminal",
+                "Inside Wormhole, in any window",
+                "needs you waiting shortcut",
+                &["jump_waiting_key"],
+            ),
+        ],
+    ),
+];
+
+const UPDATES: &[Group] = &[group(
+    "Updates",
+    &[
+        entry("version", "Version", "", "release build", &[]),
+        entry(
+            "auto-update",
+            "Update automatically",
+            "Checks in the background and installs on the next restart",
+            "download auto",
+            &["auto_update"],
+        ),
+        entry("update-status", "Check for updates", "", "install restart release notes check skip", &[]),
+    ],
+)];
+
+const ADVANCED: &[Group] = &[
+    group(
+        "Files",
+        &[
+            entry("open-config", "Settings file", "config.json: edits apply live", "json config", &[]),
+            entry("open-data", "Data folder", "Terminals, notes, themes, logs", "finder database", &[]),
+            entry("open-logs", "Logs", "Set WORMHOLE_LOG=debug for more detail", "debug log", &[]),
+            entry(
+                "reset-settings",
+                "Reset all settings",
+                "Your terminals, notes and themes are kept",
+                "defaults reset restore",
+                &[],
+            ),
+        ],
+    ),
+    group(
+        "Tips",
+        &[entry(
+            "reset-tips",
+            "Closed tips",
+            "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note",
+            "hints tips reset show again dismissed",
+            &[],
+        )],
+    ),
+];

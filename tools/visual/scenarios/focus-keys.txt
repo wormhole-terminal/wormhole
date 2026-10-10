@@ -1,0 +1,73 @@
+# The keyboard and what VoiceOver gets: F6, ⇥ and the arrows move the keys, and the
+# ring shows where they are: inset on a sidebar row (over the selection's tint, and on a band), on
+# a next step and on a Changes file with its diff open, outside an icon tab, a status bar item and
+# a title-row button. The instance's window is never in front, where the ring would hide, so it is
+# said to be (`window-front on`); the title row's buttons are ⇥ stops with Keyboard navigation on.
+# Then Increase Contrast: the high-contrast tokens on opaque windows, a 3 pt ring (on the
+# status bar's branch); last a Changes file opened with ↩, its diff open and the list keeping the keys.
+# A key is pressed after its batch, so each shot that follows one waits for the next batch.
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+@config status_bar=true
+new
+new
+@wait-idle
+rename 1 sidebar polish
+rename 2 diff perf
+rename 3 zsh
+activate 1
+task-seed 3 1
+panel-tab notes
+hook 1 UserPromptSubmit
+hook 2 Notification Approve cargo test?
+window-front on
+keyboard-navigation on
+@batch
+key shift-f6
+@batch
+key shift-f6
+@batch
+key down
+@batch
+@shot sidebar-row
+key up
+@batch
+@shot sidebar-selected
+key up
+@batch
+@shot sidebar-band
+key f6
+@batch
+key f6
+@batch
+key f6
+@batch
+@shot panel-tab
+key down
+@batch
+key down
+@batch
+@shot next-step
+key f6
+@batch
+@shot status-bar
+key tab
+@batch
+@shot title-button
+increase-contrast on
+@batch
+key shift-tab
+@batch
+@shot increase-contrast
+increase-contrast off
+panel-tab changes
+@wait-idle
+key shift-f6
+@batch
+key down
+@batch
+key enter
+@batch
+@shot changes-diff

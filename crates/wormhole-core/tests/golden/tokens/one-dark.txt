@@ -1,0 +1,197 @@
+# One Dark (Dark)
+agent.attention #e5c07b
+agent.attention.ring #e5c07b47
+agent.attention.text #e5c07b
+agent.attention.tint #e5c07b1f
+agent.done #98c379
+agent.done.text #98c379
+agent.exited #6a6f79
+agent.working #61afef
+band #abb2bf0d
+band.hover #abb2bf14
+band.solid #22262b
+banner.danger.background #e06c751a
+banner.danger.border #e06c7559
+banner.info.background #56b6c21a
+banner.info.border #56b6c259
+banner.success.background #98c3791a
+banner.success.border #98c37959
+banner.warning.background #e5c07b1a
+banner.warning.border #e5c07b59
+border #abb2bf1f
+border.focus #61afef
+border.strong #abb2bf3d
+button.background #2f333a
+button.hover #373c43
+button.text #abb2bf
+checkbox.background #1a1d22
+checkbox.border #6a6f79
+checkbox.checked #61afef
+chip.border #abb2bf3d
+chip.selected #61afef
+chip.tint #61afef29
+diff.added #98c379
+diff.added.background #323b36
+diff.filler #abb2bf1f
+diff.hunk.background #27333f
+diff.hunk.text #939aa4
+diff.line_number #7d838d
+diff.removed #ec767f
+diff.removed.background #3c2f35
+find.match #e5c07b52
+find.match.current #e5c07b
+find.match.current.text #000000
+git.branch #c48ad9
+git.branch.background #c48ad924
+input.background #1a1d22
+input.border #abb2bf3d
+input.border.focus #61afef
+input.placeholder #6a6f79
+list.selected #32414f
+list.selected.muted #a4abb6
+list.selected.text #63b1f1
+primary #61afef
+primary.hover #88c8ff
+resize.handle.active #61afef
+resize.handle.hover #61afef80
+scrollbar.thumb #abb2bf40
+selection.ui #61afef4d
+shadow #00000080
+sidebar.background #1b1e23
+sidebar.row.hover #abb2bf0d
+sidebar.row.selected #253340
+sidebar.row.selected.muted #9399a4
+sidebar.row.selected.text #61afef
+state.active #abb2bf1f
+state.highlight #61afef33
+state.hover #abb2bf0d
+state.selected #61afef24
+state.selected.inset #61afef3d
+status.danger #e06c75
+status.danger.text #ea757d
+status.info #56b6c2
+status.success #98c379
+status.success.text #98c379
+status.warning #e5c07b
+status.warning.text #e5c07b
+surface.elevated #2b2f35
+surface.overlay #00000080
+surface.panel #1b1e23
+surface.window #21252b
+switch.knob #ffffff
+tab.active.background #2b2f35
+tab.inactive.text #9096a1
+text.disabled #545961
+text.faint #6a6f79
+text.link #61afef
+text.muted #9096a1
+text.on_primary #000000
+text.on_selected #000000
+text.on_selected.muted #1e3a50
+text.primary #abb2bf
+titlebar.background #1b1e23
+tooltip.background #343940
+tooltip.text #abb2bf
+trust.command #56b6c2
+syntax.attribute #e5c07b italic
+syntax.boolean #e39678
+syntax.comment #7d838d italic
+syntax.comment.doc #7d838d italic
+syntax.constant #e39678
+syntax.constant.builtin #e39678
+syntax.constructor #e5c07b
+syntax.embedded #abb2bf
+syntax.emphasis #abb2bf italic
+syntax.emphasis.strong #abb2bf bold
+syntax.enum #e5c07b
+syntax.function #61afef
+syntax.function.builtin #56b6c2
+syntax.function.macro #56b6c2
+syntax.function.method #61afef
+syntax.keyword #d284ea
+syntax.keyword.control #d284ea
+syntax.keyword.operator #d284ea
+syntax.label #d284ea
+syntax.link_text #61afef
+syntax.link_uri #56b6c2 italic
+syntax.namespace #e5c07b
+syntax.number #e39678
+syntax.operator #78b4c1
+syntax.preproc #d284ea
+syntax.property #56b6c2
+syntax.punctuation #898f9a
+syntax.punctuation.bracket #898f9a
+syntax.punctuation.delimiter #898f9a
+syntax.punctuation.special #78b4c1
+syntax.string #98c379
+syntax.string.escape #56b6c2
+syntax.string.regex #56b6c2
+syntax.string.special #56b6c2
+syntax.tag #f57e87
+syntax.text.literal #98c379
+syntax.title #61afef bold
+syntax.type #e5c07b
+syntax.type.builtin #e5c07b
+syntax.variable #abb2bf
+syntax.variable.builtin #f57e87
+syntax.variable.parameter #abb2bf
+syntax.variable.special #f57e87
+syntax.variant #e39678
+metrics.radius_sm 4
+metrics.radius_chip 4
+metrics.radius 6
+metrics.radius_lg 10
+metrics.border_width 1
+metrics.focus_ring_width 2
+translucent 80% blur text.primary #abb2bf
+translucent 80% blur text.muted #a1a7b3
+translucent 80% blur text.faint #828791
+translucent 80% blur git.branch #dfa4f5
+translucent 80% blur sidebar.row.selected.text #6cbafb
+translucent 80% blur sidebar.row.selected.muted #aeb4bf
+translucent 80% no blur text.primary #bcc3d0
+translucent 80% no blur text.muted #bdc3ce
+translucent 80% no blur text.faint #9a9fa9
+translucent 80% no blur git.branch #eec4ff
+translucent 80% no blur sidebar.row.selected.text #a1d3ff
+translucent 80% no blur sidebar.row.selected.muted #c8ceda
+increase_contrast agent.exited #80868f
+increase_contrast band #c2c9d614
+increase_contrast band.hover #c2c9d621
+increase_contrast band.solid #282c32
+increase_contrast border #c2c9d652
+increase_contrast border.strong #c2c9d67a
+increase_contrast button.background #31353c
+increase_contrast button.hover #3b3f46
+increase_contrast button.text #c2c9d6
+increase_contrast checkbox.border #80868f
+increase_contrast chip.border #c2c9d67a
+increase_contrast diff.filler #c2c9d61f
+increase_contrast diff.hunk.text #a3a9b4
+increase_contrast diff.line_number #80868f
+increase_contrast diff.removed #fe868e
+increase_contrast git.branch #cc93e2
+increase_contrast git.branch.background #cc93e224
+increase_contrast input.border #c2c9d67a
+increase_contrast input.placeholder #80868f
+increase_contrast list.selected #384e62
+increase_contrast list.selected.muted #b5bcc7
+increase_contrast list.selected.text #79c2ff
+increase_contrast scrollbar.thumb #c2c9d640
+increase_contrast sidebar.row.hover #c2c9d61a
+increase_contrast sidebar.row.selected #2c4154
+increase_contrast sidebar.row.selected.muted #a4aab5
+increase_contrast sidebar.row.selected.text #62b0f0
+increase_contrast state.active #c2c9d629
+increase_contrast state.hover #c2c9d61a
+increase_contrast state.selected #61afef3d
+increase_contrast state.selected.inset #61afef47
+increase_contrast status.danger.text #fe868e
+increase_contrast tab.inactive.text #a3a9b4
+increase_contrast text.disabled #646971
+increase_contrast text.faint #80868f
+increase_contrast text.muted #a3a9b4
+increase_contrast text.primary #c2c9d6
+increase_contrast tooltip.background #383c43
+increase_contrast tooltip.text #c2c9d6
+increase_contrast metrics.focus_ring_width 3

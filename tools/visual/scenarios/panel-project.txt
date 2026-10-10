@@ -1,0 +1,8 @@
+# The Project tab of a project that isn't trusted yet: the full-width amber callout with
+# the commands, then the bands for the switches, actions, prompts and the terminal layout.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+project
+@wait-idle
+@shot untrusted

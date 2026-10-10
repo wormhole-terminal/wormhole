@@ -1,0 +1,8 @@
+# History on a branch that's gone: git log fails, so git's error
+# stands in status.danger where the list would be, and the branch select stays in reach.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+history old-spike
+@wait-idle
+@shot gone

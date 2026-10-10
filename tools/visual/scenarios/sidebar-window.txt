@@ -1,0 +1,35 @@
+# The sidebar: four folders (terminal, api-server open; dotfiles and website
+# folded, sharing a hairline), three agents (working, needs you, finished) and two idle ones; then
+# holding ⌘: keycaps on the first five terminals, the folded bands' counts at 40 %.
+@fixture terminal
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new ~/terminal
+new ~/terminal
+new ~/api-server
+new ~/api-server
+new ~/dotfiles
+new ~/dotfiles
+new ~/dotfiles
+new ~/website
+new ~/website
+@wait-idle
+# Agent detection looks every 2 s: let it find the agent in each new terminal.
+@sleep 2500
+rename 1 sidebar polish
+rename 2 diff perf
+rename 3 zsh
+rename 4 auth tokens
+rename 5 rate limits
+sidebar-fold dotfiles
+sidebar-fold website
+activate 1
+hook 1 UserPromptSubmit
+hook 2 Notification Approve cargo test?
+hook 4 Stop
+@shot window
+hold-cmd
+@sleep 500
+@shot cmd-held
+release-cmd

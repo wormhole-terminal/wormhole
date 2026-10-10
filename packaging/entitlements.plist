@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Hardened-runtime entitlements for Wormhole (signed with `codesign -o runtime`).
+
+Deliberately ABSENT (not needed, and each weakens the hardened runtime):
+- cs.allow-jit / cs.allow-unsigned-executable-memory: GPUI renders through Metal with
+  shaders precompiled at build time; nothing in the app generates machine code.
+- cs.disable-library-validation: the binary links only system frameworks and
+  libSystem (check with `otool -L`); no third-party dylibs or plugins are loaded.
+- cs.allow-dyld-environment-variables: DYLD_* only affects the app process itself;
+  shells spawned in the PTY are separate executables with their own signatures
+  and still receive the full environment.
+- App Sandbox: a terminal must run arbitrary user programs, so it cannot be sandboxed.
+
+PRESENT: the "resource access" entitlements below. macOS attributes privacy (TCC)
+requests from programs running inside a terminal to the terminal app, and under
+the hardened runtime such a request is denied outright unless the app holds the
+matching entitlement. Each one only makes the normal user-consent prompt possible
+(texts in Info.plist); it grants nothing by itself. Same set Ghostty/iTerm2 ship.
+
+CONDITIONAL, deliberately not in this file: scripts/bundle.sh signs with a copy that
+scripts/entitlements.sh generates from this one, adding the keys below, and only for a
+Developer ID build (APPLE_SIGNING_IDENTITY) that also has the matching provisioning
+profile (APPLE_PROVISIONING_PROFILE_PATH, embedded as Contents/embedded.provisionprofile).
+- com.apple.developer.usernotifications.time-sensitive: lets "needs you" notifications use
+  the Time Sensitive interruption level (breaks through Focus and the notification
+  summary). It is a restricted entitlement: macOS accepts it only when an embedded profile
+  authorizes it, and refuses to launch an ad-hoc, unsigned or profile-less build that
+  claims it. Hence it cannot live in the base file that every build, including local
+  and ad-hoc ones, is signed with. Builds without it deliver those notifications at Active.
+- com.apple.application-identifier (<TEAMID>.<bundle id>) and
+  com.apple.developer.team-identifier: how macOS ties the signature to the profile; the
+  profile's own values, so only valid together with it.
+Needs a provisioning profile that grants it; without one the app is signed without it.
+-->
+<plist version="1.0">
+<dict>
+	<!-- `osascript`, `open -a`, editors driving other apps, agent tools using AppleScript. -->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+	<!-- CLI tools recording audio (e.g. voice input for coding agents, ffmpeg). -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<!-- CLI tools using the camera (ffmpeg, imagesnap). -->
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<!-- Scripts reading Contacts / Calendars / Photos / Location via their frameworks. -->
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,123 @@
+//! The right panel's Usage tab: each coding agent's plan usage limits, as its status line last
+//! reported them (`wormhole_core::usage`). Claude Code only for now; one block per agent.
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use gpui_kit::component::progress::Progress;
+use wormhole_core::agents;
+use wormhole_core::usage::{self, Limit, Usage};
+
+use super::app::app;
+use super::*;
+
+/// From this share used on, a bar turns to the warning color, and at the limit to danger.
+const WARN_AT: f32 = 0.8;
+
+/// The Usage tab redraws this often while it shows, so "resets 34m" and "Updated 2m ago" move
+/// on (in ticks of the window, 400 ms each).
+pub(super) const REDRAW_TICKS: u64 = 25;
+
+impl Workspace {
+    pub(super) fn render_usage_tab(&self, cx: &Context<Self>) -> AnyElement {
+        let ui = ui(cx);
+        let reports = &app(cx).usage;
+        if reports.is_empty() {
+            return div()
+                .flex()
+                .flex_col()
+                .gap_3()
+                .px_4()
+                .py_2()
+                .text_body()
+                .text_color(ui.muted)
+                .child("Claude's plan usage limits show here after its next reply in a Wormhole terminal.")
+                .child(
+                    "They need a Pro or Max plan, Claude Code 2.1.80 or later, and the Claude \
+                     integration from Settings → Coding agents.",
+                )
+                .into_any_element();
+        }
+        let now = unix_now();
+        div()
+            .flex()
+            .flex_col()
+            .pb_4()
+            .children(reports.iter().map(|report| agent_block(report, now, ui)))
+            .into_any_element()
+    }
+}
+
+/// One agent: its name and when the numbers came, then a row and a bar per limit.
+fn agent_block(report: &Usage, now: i64, ui: UiColors) -> AnyElement {
+    let agent = agents::agent(report.agent);
+    let header = div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .h(px(style::TITLE_ROW_H))
+        .pl(px(style::PANEL_INSET))
+        .pr(px(style::PANEL_INSET))
+        .child(style::lead(style::agent_logo(agent.icon(), agent.monogram, style::GLYPH, ui.muted)))
+        .child(
+            div()
+                .min_w_0()
+                .truncate()
+                .text_body()
+                .font_weight(FontWeight::SEMIBOLD)
+                .child(agent.short_name()),
+        )
+        .child(div().flex_1())
+        .child(
+            div()
+                .flex_none()
+                .text_caption()
+                .tabular_nums()
+                .text_color(ui.muted)
+                .child(usage::updated(report.updated, now)),
+        );
+    div()
+        .flex()
+        .flex_col()
+        .child(header)
+        .child(div().px(px(style::PANEL_INSET)).pb_1().child(style::section_label(ui, "Plan usage limits")))
+        .children(Limit::ALL.into_iter().map(|limit| limit_row(report, limit, now, ui)))
+        .into_any_element()
+}
+
+/// "5-hour limit … 25% · resets 34m" over its bar.
+fn limit_row(report: &Usage, limit: Limit, now: i64, ui: UiColors) -> AnyElement {
+    let (share, words) = report.shown(limit, now);
+    let color = match share {
+        s if s >= 1.0 => ui.danger,
+        s if s >= WARN_AT => ui.warning,
+        _ => ui.primary,
+    };
+    let id = format!("usage-{:?}-{limit:?}", report.agent);
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .px(px(style::PANEL_INSET))
+        .py_2()
+        .child(
+            div()
+                .flex()
+                .items_baseline()
+                .gap_2()
+                .child(div().min_w_0().truncate().text_body().child(limit.label()))
+                .child(div().flex_1())
+                .child(
+                    div().flex_none().text_caption().tabular_nums().text_color(ui.muted).child(words.clone()),
+                ),
+        )
+        .child(
+            Progress::new(SharedString::from(id))
+                .value(share * 100.0)
+                .color(color)
+                .accessibility_label(format!("{}, {words}", limit.label())),
+        )
+        .into_any_element()
+}
+
+fn unix_now() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |since| since.as_secs() as i64)
+}

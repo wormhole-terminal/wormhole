@@ -1,0 +1,9 @@
+# The Changes tab with a modified file's diff open (split, highlighted).
+@fixture repo-basic
+@theme Catppuccin Latte
+@size 1440 900
+changes
+@wait-idle
+# The list is NOTES.md, src/lib.rs, src/log.rs in git's order: the second is the modified one.
+diff 2
+@shot diff

@@ -1,0 +1,33 @@
+# Each state of the diff card, with the binary and LFS cards, at full size: one
+# file each (see the fixture for the numbers). Then long lines scrolled sideways, wrapped, and
+# the unified view.
+@fixture repo-diff-states
+@theme Tokyo Night
+@size 1440 900
+changes
+@wait-idle
+diff 6
+@shot new-file
+diff 8
+@shot deleted
+diff 2
+@shot binary
+diff 3
+@shot mode
+diff 7
+@shot renamed
+diff 1
+@shot lfs
+diff 4
+@shot empty
+diff 5
+@shot long-lines
+diff-scroll-x 150
+@shot scrolled
+set diff_wrap=true
+@sleep 1500
+@shot wrap
+set diff_wrap=false
+split
+@sleep 1500
+@shot unified

@@ -1,0 +1,36 @@
+# The Theme Studio window and its states: a selected token with its uses outlined, an
+# expression that doesn't parse, a dark primary failing contrast with its fix, a metric, saving
+# (where it went, then a name that is taken), the Save theme menu, and closing with changes.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+studio
+# The Studio window opens at the end of this tick: its commands go in a later batch.
+@batch
+studio-select sidebar.row.selected
+@shot window studio
+studio-select state.highlight
+studio-set primery / 20%
+@shot expression-error studio
+studio-select primary
+studio-set #3d59a1
+studio-filter low
+@shot low-contrast studio
+studio-filter all
+studio-select primary
+studio-set
+studio-select metrics.radius_chip
+studio-set 6
+@shot metric studio
+studio-save
+@shot saved studio
+studio-set 5
+studio-save
+@shot name-taken studio
+studio-menu
+@batch
+@shot save-menu studio
+# The toggle closes the Studio, which asks first: the draft has a change since it was saved.
+studio
+@batch
+@shot close-question studio

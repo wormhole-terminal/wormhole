@@ -1,0 +1,95 @@
+# termbench
+
+Stress tests, benchmarks and full-screen animations for terminals. It runs in any terminal, so the
+same bytes can be measured in Wormhole, Ghostty, iTerm2, kitty, WezTerm, Alacritty or Terminal.app,
+and the animations are made to be recorded.
+
+It is its own Cargo workspace with no dependencies, kept out of the app's build, lints and
+dependency audit (`scripts/check.sh` skips it).
+
+```sh
+cd tools/bench
+cargo build --release
+alias termbench="$PWD/target/release/termbench"   # or copy it onto your PATH
+
+termbench list                 # the animations
+termbench wormhole             # one of them; q to quit
+termbench showcase             # all of them, 10 s each, with a title as each starts
+termbench bench --save wormhole.json
+termbench compare wormhole.json ghostty.json iterm2.json
+```
+
+Checks before a change here is done: `cargo fmt`, `cargo clippy --all-targets -- -D warnings` and
+`cargo test`, all in `tools/bench`.
+
+## Animations
+
+| Name | What | What it stresses |
+|---|---|---|
+| `wormhole` | a fly-through tunnel, violet to white-hot core, with sparks | every cell's two truecolor values, every frame (~450 KB/frame at 200×69) |
+| `plasma` | the demoscene plasma | the same, smooth gradients (banding shows) |
+| `starfield` | warp-speed stars in braille, a hyperspace jump every 10 s | sparse braille, glyph and color changes everywhere |
+| `fire` | the Doom fire; "WORMHOLE" burns in every 12 s | half-block truecolor with heavy churn at the bottom |
+| `matrix` | digital rain in half-width katakana | many fg color changes, text glyph cache |
+| `donut` | a spinning lit torus in ASCII, truecolor | per-cell fg + bg |
+| `mandelbrot` | an endless zoom into seahorse valley | truecolor, the CPU side too (multi-threaded) |
+| `life` | Conway's Game of Life in braille, colored by age | braille at full density |
+| `unicode` | emoji (ZWJ, flags, skin tones), CJK, combining marks, RTL, box drawing | text shaping and widths: a terminal that counts a width differently shows it here |
+| `dashboard` | a busy btop-style monitor with an agent log | a realistic TUI: boxes, sparklines, gradients |
+
+Options: `--fps <n>` (default 60; `0` draws as fast as the terminal reads, the real stress test),
+`--seconds <n>`, `--no-hud`, `--no-sync` (no synchronized output, mode 2026: shows tearing),
+`--titles`. Keys: `q`/Esc quit, space pauses, `h` the overlay, `+ - 0` speed, `← →` previous/next.
+
+The overlay in the top right shows the frames and bytes per second the terminal took in ("fps
+sent"). It is **not** the frame rate on screen: a terminal reads its output on a thread of its own
+and draws when it can, skipping frames it has already replaced, and no program can see from outside
+how many it drew. 60 fps sent with a stuttering picture means the terminal reads fast but draws
+slowly; that is a finding about the terminal, and the stutter is the thing to record. The number
+only drops when even the reading falls behind (the program then blocks writing).
+
+## Benchmarks
+
+`termbench bench` writes each workload's bytes (built in memory beforehand from a fixed seed, so
+every terminal gets the same ones), then asks for the cursor position (DSR 6). A terminal answers
+only after it has parsed everything before the question, so the clock stops when the work is really
+done, not when the bytes reach the PTY. Each test runs 3 times (`--runs`) and reports the median.
+
+| Test | Workload |
+|---|---|
+| `ascii` | plain log lines, like `cat` of a big file |
+| `unicode` | CJK, emoji, combining marks, box drawing |
+| `truecolor` | every character with its own 24-bit fg and bg |
+| `scroll-region` | lines pushed through a DECSTBM region with reverse index, like vim or tmux |
+| `cursor` | random cursor moves with short colored writes, like a full-screen TUI |
+| `long-lines` | lines of 5–50 thousand characters that wrap |
+| `frames` | full-screen redraws in synchronized output, in frames per second |
+| `latency` | 1,000 cursor-report round trips on an idle terminal: p50, p90, p99 |
+
+Options: `--size <MB>` per test (default 16), `--only ascii,latency`, `--runs <n>`,
+`--save <file.json>`, `--label <name>`. `compare` warns when the files differ in terminal size or
+machine: `scroll-region`, `cursor`, `truecolor` and `frames` depend on the size.
+
+`termbench flood [--kind ascii|truecolor|unicode|cursor|…] [--seconds n]` writes one of these
+workloads over and over, as fast as the terminal reads, until the time is up or `q` is pressed. It
+measures nothing itself: it is the load for watching a terminal from outside, as `scripts/perf.sh`
+does for Wormhole (draw time per frame, main-thread busy share and throughput against a baseline
+kept in `baselines/`, see the header of that script).
+
+What it doesn't measure: keypress-to-pixel latency (that needs a camera or a tool like
+`typometer`), and frames actually drawn on screen.
+
+## Recording for social media
+
+- **Same conditions for every terminal**: the same window size (the overlay shows cols×rows), font
+  size and machine, with nothing else busy. Quit other heavy apps; plug the laptop in.
+- **Clean frame**: hide Wormhole's sidebar and panel, a dark theme, `--no-hud` unless the numbers are
+  the point. macOS screen recording: ⇧⌘5, or `ffmpeg -f avfoundation` at 60 fps.
+- **Loops**: `termbench wormhole --seconds 12 --no-hud` gives a clip with a clean start and end; the
+  fire's word comes 2.5 s into every 12 s cycle.
+- **Tearing vs not**: record `termbench plasma --fps 0 --no-sync` next to `termbench plasma --fps 0`.
+- **Stress**: `--fps 0` with the overlay on shows how many frames and MB/s the terminal takes in;
+  side by side with another terminal, it is the most direct comparison.
+- **Numbers**: `termbench bench --save <name>.json` in each terminal, then
+  `termbench compare a.json b.json …` for one screen with them all, best marked, ratios to the first
+  file. The results screen paints its own background, so it looks the same in any theme.

@@ -1,0 +1,23 @@
+# Diff when narrow: at 670 the terminal's column is 320 and the card 288, too little for
+# two columns of 280, so the diff is unified, its header the lower one with a ×, and the Split
+# setting waits for room. Wrapped and not, then the binary and LFS cards in that width, and
+# the split view back at full width.
+@fixture repo-diff-states
+@theme Tokyo Night
+@size 670 900
+changes
+@wait-idle
+diff 5
+@shot long-lines
+set diff_wrap=true
+@sleep 1500
+@shot wrap
+set diff_wrap=false
+diff 2
+@sleep 1500
+@shot binary
+diff 1
+@shot lfs
+diff 5
+resize 1440 900
+@shot wide-again

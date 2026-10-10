@@ -1,0 +1,26 @@
+# Resizing the sidebar from its edge: the handle's line after a hover, the drag with its
+# readout, past 350 − 70 where letting go hides it, and the panel stopped by what the window can
+# spare.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1100 900
+# After the window has its size; GPUI notices the pointer entering an element on the move after
+# the frame that saw it arrive, so it moves twice.
+@wait-idle
+@batch
+hover 352 450
+@batch
+hover 350 450
+@sleep 400
+@shot hover
+mouse-down 350 450
+mouse-drag 400 450
+@shot drag-400
+mouse-drag 260 450
+@shot hide
+mouse-drag 350 450
+mouse-up 350 450
+mouse-down 740 450
+mouse-drag 500 450
+@shot panel-max
+mouse-up 500 450

@@ -1,0 +1,27 @@
+# The Theme Studio's gallery: every component of the design language in each of its states.
+# Shots step down the gallery 700 px at a time (the Studio window is 900 tall);
+# the gallery has sidebar, right panel, settings and ambient specimens.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+studio
+# The Studio window opens at the end of this tick: its commands go in a later batch.
+@batch
+studio-scroll 0
+@shot gallery-00000 studio
+studio-scroll 700
+@shot gallery-00700 studio
+studio-scroll 1400
+@shot gallery-01400 studio
+studio-scroll 2100
+@shot gallery-02100 studio
+studio-scroll 2800
+@shot gallery-02800 studio
+studio-scroll 3500
+@shot gallery-03500 studio
+studio-scroll 4200
+@shot gallery-04200 studio
+studio-scroll 4900
+@shot gallery-04900 studio
+studio-scroll 5600
+@shot gallery-05600 studio

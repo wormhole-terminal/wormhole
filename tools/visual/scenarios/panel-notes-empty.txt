@@ -1,0 +1,6 @@
+# The Notes tab with nothing in it: two bands without chevrons or counts.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+panel-tab notes
+@shot empty

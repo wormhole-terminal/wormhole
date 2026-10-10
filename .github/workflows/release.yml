@@ -1,0 +1,288 @@
+# Builds, signs, notarizes and publishes a Wormhole release.
+# Needs the signing certificates, the updater key, the notarization key and R2 as secrets/variables.
+#
+# - Push a tag vX.Y.Z (must equal workspace.package.version) -> full release, unless that version is
+#   already on R2 (scripts/release.sh publishes from a Mac, then pushes the tag, and this run stops
+#   at the first job instead of paying for a macOS runner: macOS minutes count 10x).
+# - Run manually (workflow_dispatch) -> build + package only; tick "publish" to
+#   also upload to R2 and create the GitHub Release. A trial run costs a full macOS build: prefer
+#   `scripts/release.sh --dry-run` on a Mac.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to R2 and create a GitHub Release (otherwise only build + package)"
+        type: boolean
+        default: false
+      run_tests:
+        description: "Run the whole test suite on the runner first (off: the local gate already ran it)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # gh release create
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # A cheap Linux job that decides whether the macOS one is needed at all.
+  gate:
+    name: Already published?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      published: ${{ steps.check.outputs.published }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || secrets.PUBLIC_BASE_URL }}
+        run: |
+          . scripts/lib.sh
+          published=false
+          url="${PUBLIC_BASE_URL%/}/releases/$APP_VERSION/$ARCHIVE_NAME"
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ -n "$PUBLIC_BASE_URL" ] && curl -fsI -o /dev/null "$url"; then
+            published=true
+            echo "::notice::$APP_VERSION is already on R2 ($url): nothing to build"
+          fi
+          echo "published=$published" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Release (Apple Silicon)
+    needs: gate
+    if: needs.gate.outputs.published != 'true'
+    runs-on: macos-latest
+    timeout-minutes: 120
+    env:
+      PUBLISH: ${{ github.event_name == 'push' || inputs.publish == true }}
+      # Set repository variable ALLOW_UNSIGNED_RELEASE=true to publish ad-hoc signed,
+      # un-notarized builds (e.g. before the Developer ID certificate exists).
+      ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE == 'true' }}
+      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || secrets.PUBLIC_BASE_URL }}
+      R2_BUCKET: ${{ vars.R2_BUCKET || secrets.R2_BUCKET }}
+      R2_PREFIX: ${{ vars.R2_PREFIX }}
+      R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID || secrets.R2_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # annotated tag message = release notes
+
+      - name: Check version
+        id: version
+        run: |
+          version="$(. scripts/lib.sh && echo "$APP_VERSION")"
+          echo "Cargo version: $version"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            # actions/checkout fetches a tag's commit under the tag's name, which turns an annotated tag
+            # into a lightweight one, and its message into the commit's. Fetch the tag object itself, and
+            # stop here (before the build) when there is no annotated tag: the release notes come from it.
+            git fetch --force --tags origin
+            [ "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag ] \
+              || { echo "::error::$GITHUB_REF_NAME is not an annotated tag, so it has no release notes (git tag -a)"; exit 1; }
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match workspace.package.version $version in Cargo.toml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+
+      - name: Check release configuration
+        env:
+          HAS_CERT: ${{ secrets.APPLE_CERTIFICATE_P12 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+          HAS_NOTARY: ${{ secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER != '' && secrets.APPLE_API_KEY_P8 != '' }}
+          HAS_MINISIGN: ${{ secrets.MINISIGN_SECRET_KEY != '' }}
+          HAS_R2: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
+          HAS_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE != '' }}
+        run: |
+          # Optional, never blocks a release: only changes how "needs you" notifications are delivered.
+          [ "$HAS_PROFILE" = true ] || echo "::notice::APPLE_PROVISIONING_PROFILE secret missing: the app has no Time Sensitive entitlement, so 'needs you' notifications are delivered at Active"
+          problems=()
+          [ "$HAS_CERT" = true ] || problems+=("APPLE_CERTIFICATE_P12 / APPLE_CERTIFICATE_PASSWORD secrets missing: app will be ad-hoc signed")
+          [ "$HAS_NOTARY" = true ] || problems+=("APPLE_API_KEY_ID / APPLE_API_ISSUER / APPLE_API_KEY_P8 secrets missing: no notarization")
+          if [ "$PUBLISH" != true ]; then
+            for p in "${problems[@]+"${problems[@]}"}"; do echo "::warning::$p"; done
+            echo "Not publishing: build + package only."
+            exit 0
+          fi
+          fatal=()
+          if [ "$ALLOW_UNSIGNED" = true ]; then
+            for p in "${problems[@]+"${problems[@]}"}"; do echo "::warning::$p (allowed by ALLOW_UNSIGNED_RELEASE)"; done
+          else
+            fatal+=("${problems[@]+"${problems[@]}"}")
+          fi
+          [ "$HAS_MINISIGN" = true ] || fatal+=("MINISIGN_SECRET_KEY secret missing (and MINISIGN_PASSWORD): cannot sign the update")
+          [ "$HAS_R2" = true ] || fatal+=("R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY secrets missing")
+          [ -n "$R2_ACCOUNT_ID" ] || fatal+=("R2_ACCOUNT_ID variable/secret missing")
+          [ -n "$R2_BUCKET" ] || fatal+=("R2_BUCKET variable missing")
+          [ -n "$PUBLIC_BASE_URL" ] || fatal+=("PUBLIC_BASE_URL variable missing")
+          if cmp -s packaging/updater.pub packaging/dev-updater.pub; then
+            fatal+=("packaging/updater.pub is still the DEV key: generate the real key and commit its .pub")
+          fi
+          if [ ${#fatal[@]} -gt 0 ]; then
+            for p in "${fatal[@]}"; do echo "::error::$p"; done
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: aarch64-apple-darwin
+      # Restores from main's cache (a tag run can read it); only a run on main writes one, since a
+      # cache saved under a tag is never found again and would just eat the repository's cache quota.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install tools
+        run: |
+          brew install minisign
+          # GPUI compiles its Metal shaders at build time; newer Xcodes ship the
+          # Metal toolchain as a separate download.
+          xcrun -sdk macosx metal --version >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain
+
+      # Off unless asked for: it compiles the workspace in debug just for the tests, which the release
+      # build below reuses nothing of, and the local gate (the `verify` skill) has already run them.
+      - name: Test
+        if: ${{ inputs.run_tests == true }}
+        run: cargo test --workspace --locked
+
+      - name: Import Developer ID certificate
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY_OVERRIDE: ${{ vars.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE_P12" ]; then
+            echo "::notice::No APPLE_CERTIFICATE_P12: bundle.sh will sign ad-hoc"
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          kc_pass="$(openssl rand -base64 24)"
+          security create-keychain -p "$kc_pass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$kc_pass" "$keychain"
+          printf '%s' "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$RUNNER_TEMP/cert.p12"
+          # The .p12 usually holds only the leaf; add Apple's Developer ID intermediate.
+          curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"
+          security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$keychain" || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$IDENTITY_OVERRIDE"
+          if [ -z "$identity" ]; then
+            identity="$(security find-identity -v -p codesigning "$keychain" \
+              | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
+          fi
+          if [ -z "$identity" ]; then
+            security find-identity -v -p codesigning "$keychain"
+            echo "::error::No 'Developer ID Application' identity in APPLE_CERTIFICATE_P12 (exported the right certificate, with its private key?)"
+            exit 1
+          fi
+          echo "Signing identity: $identity"
+          echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Install provisioning profile
+        env:
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          if [ -z "$APPLE_PROVISIONING_PROFILE" ]; then
+            echo "::notice::No APPLE_PROVISIONING_PROFILE: no Time Sensitive entitlement, 'needs you' is delivered at Active"
+            exit 0
+          fi
+          if [ -z "${APPLE_SIGNING_IDENTITY:-}" ]; then
+            # A restricted entitlement without a Developer ID signature would stop the app from launching.
+            echo "::notice::Ad-hoc signed build: not embedding APPLE_PROVISIONING_PROFILE"
+            exit 0
+          fi
+          profile="$RUNNER_TEMP/wormhole.provisionprofile"
+          printf '%s' "$APPLE_PROVISIONING_PROFILE" | base64 --decode > "$profile"
+          # bundle.sh validates it (App ID, team, entitlement, expiry) and embeds it.
+          echo "APPLE_PROVISIONING_PROFILE_PATH=$profile" >> "$GITHUB_ENV"
+
+      - name: Bundle (Apple Silicon)
+        env:
+          # Compiled into the app: the updater's feed (PUBLIC_BASE_URL, set above) and the
+          # Apple team a downloaded update must be signed by.
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: scripts/bundle.sh
+
+      - name: Notarize app
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
+        run: scripts/notarize.sh target/release/Wormhole.app
+
+      - name: Release notes
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            git tag -l --format='%(contents)' "$GITHUB_REF_NAME" | sed '/-----BEGIN PGP SIGNATURE-----/,$d' > "$notes"
+          fi
+          if [ ! -s "$notes" ] || [ "$(tr -d '[:space:]' < "$notes")" = "" ]; then
+            echo "Wormhole ${{ steps.version.outputs.version }}" > "$notes"
+          fi
+          cat "$notes"
+          echo "RELEASE_NOTES_FILE=$notes" >> "$GITHUB_ENV"
+
+      - name: Package (tar.gz, dmg, minisign, latest.json)
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          REQUIRE_RELEASE_KEY: ${{ env.PUBLISH == 'true' && '1' || '0' }}
+          REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
+        run: |
+          if [ -z "$MINISIGN_SECRET_KEY" ] && [ "$REQUIRE_RELEASE_KEY" != 1 ]; then
+            # Not publishing and no real key: package.sh falls back to the (git-ignored)
+            # dev key, so create a throwaway one with the dev password to still exercise signing.
+            printf 'wormhole-dev\nwormhole-dev\n' \
+              | minisign -G -f -p packaging/dev-updater.pub -s packaging/dev-updater.key >/dev/null
+          fi
+          scripts/package.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wormhole-${{ steps.version.outputs.version }}-dist
+          path: target/release/dist/
+          if-no-files-found: error
+
+      - name: Publish to R2
+        if: env.PUBLISH == 'true'
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: scripts/publish-r2.sh
+
+      - name: GitHub Release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          flags=(--title "Wormhole $VERSION" --notes-file "$RELEASE_NOTES_FILE" --target "$GITHUB_SHA")
+          [ "$PRERELEASE" = true ] && flags+=(--prerelease)
+          gh release create "v$VERSION" target/release/dist/* "${flags[@]}"
+
+      - name: Remove signing keychain
+        if: always()
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN" || true; fi

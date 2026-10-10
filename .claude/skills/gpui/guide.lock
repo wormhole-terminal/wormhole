@@ -1,0 +1,5 @@
+# gpui-kit version, then the github.com/longbridge/gpui-kit commit whose docs the gpui skill
+# may read for it (the release tag v<version>). The guide is refused for any other commit.
+# After a gpui-kit bump: `scripts/gpui-docs pin` prints the new line; review the docs at that
+# commit, then add it here.
+0.7.0 0c830f4d257e69fdd17200650533ab4ca9a40cc0

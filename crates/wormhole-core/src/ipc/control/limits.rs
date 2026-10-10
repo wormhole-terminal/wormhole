@@ -1,0 +1,101 @@
+//! How often a caller may ask. A script in a loop, or an agent that keeps notifying, must not
+//! flood the user with banners, type endlessly into other terminals or open terminals until the
+//! window is full: each kind of request gets a budget per caller (the tab it runs in, or
+//! "outside" for a shell elsewhere) over a sliding minute. Reading (`list`, `status`) is free.
+
+use std::collections::{HashMap, VecDeque};
+use std::time::{Duration, Instant};
+
+/// The requests that have a budget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Limited {
+    Notify,
+    SendText,
+    NewTerminal,
+}
+
+impl Limited {
+    /// How many a caller gets per [`WINDOW`].
+    pub const fn budget(self) -> usize {
+        match self {
+            Limited::Notify => 10,
+            Limited::SendText => 30,
+            Limited::NewTerminal => 5,
+        }
+    }
+}
+
+/// The sliding window the budgets apply to.
+pub const WINDOW: Duration = Duration::from_secs(60);
+
+/// Who asked: a tab's id, or `None` for a shell outside the app.
+type Caller = Option<i64>;
+
+/// Each caller's recent requests of each kind.
+#[derive(Debug, Default)]
+pub struct RateLimits {
+    recent: HashMap<(Limited, Caller), VecDeque<Instant>>,
+}
+
+impl RateLimits {
+    /// Whether `caller` may make a `kind` request at `now`; if so it counts against the budget.
+    pub fn allow(&mut self, kind: Limited, caller: Caller, now: Instant) -> bool {
+        let recent = self.recent.entry((kind, caller)).or_default();
+        while recent.front().is_some_and(|at| now.saturating_duration_since(*at) >= WINDOW) {
+            recent.pop_front();
+        }
+        if recent.len() >= kind.budget() {
+            return false;
+        }
+        recent.push_back(now);
+        true
+    }
+
+    /// How long until `caller` may make a `kind` request again, for the error's words.
+    pub fn retry_after(&self, kind: Limited, caller: Caller, now: Instant) -> Duration {
+        self.recent
+            .get(&(kind, caller))
+            .and_then(|recent| recent.front())
+            .map(|oldest| WINDOW.saturating_sub(now.saturating_duration_since(*oldest)))
+            .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::{Limited, RateLimits, WINDOW};
+
+    #[test]
+    fn each_caller_has_a_budget_per_minute_and_per_kind() {
+        let mut limits = RateLimits::default();
+        let t0 = Instant::now();
+        for n in 0..Limited::NewTerminal.budget() {
+            assert!(limits.allow(Limited::NewTerminal, Some(1), t0 + Duration::from_secs(n as u64)), "{n}");
+        }
+        assert!(
+            !limits.allow(Limited::NewTerminal, Some(1), t0 + Duration::from_secs(10)),
+            "the budget is spent"
+        );
+        // Another caller, and another kind for the same caller, have their own.
+        assert!(limits.allow(Limited::NewTerminal, Some(2), t0 + Duration::from_secs(10)));
+        assert!(limits.allow(Limited::NewTerminal, None, t0 + Duration::from_secs(10)), "a shell outside");
+        assert!(limits.allow(Limited::Notify, Some(1), t0 + Duration::from_secs(10)));
+        // The window slides: the oldest request falls out of it after a minute.
+        let retry = limits.retry_after(Limited::NewTerminal, Some(1), t0 + Duration::from_secs(10));
+        assert_eq!(retry, Duration::from_secs(50));
+        assert!(!limits.allow(Limited::NewTerminal, Some(1), t0 + WINDOW - Duration::from_millis(1)));
+        assert!(limits.allow(Limited::NewTerminal, Some(1), t0 + WINDOW));
+        assert!(!limits.allow(Limited::NewTerminal, Some(1), t0 + WINDOW), "only one fell out");
+        assert!(limits.allow(Limited::NewTerminal, Some(1), t0 + WINDOW + Duration::from_secs(1)));
+    }
+
+    #[test]
+    fn the_budgets_are_small_enough_to_notice_a_loop() {
+        assert!(Limited::Notify.budget() <= 10);
+        assert!(Limited::NewTerminal.budget() <= 5);
+        assert!(Limited::SendText.budget() <= 30);
+        assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
+    }
+}

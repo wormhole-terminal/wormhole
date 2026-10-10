@@ -1,0 +1,72 @@
+{
+  "skill_name": "gpui",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "For Wormhole's GPUI code: write a view struct `Search` that owns a FocusHandle and has a method `focus_soon(&mut self, window: &mut Window, cx: &mut Context<Self>)` which waits 150 ms on GPUI's timer and then focuses the view. Calling it again must cancel the pending wait. Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "A Search view that keeps its FocusHandle and the pending Task in fields; focus_soon awaits GPUI's timer, then focuses through the window.",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "Stores the Task in a field, so a second call drops (cancels) the first",
+        "Focuses with window.focus(&handle, cx) or handle.focus(window, cx) inside update_in"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "For Wormhole's GPUI code: write a view `Rows` that renders 10,000 fixed-height text rows efficiently (only visible rows are built) and has a method `reveal(&mut self, ix: usize, cx: &mut Context<Self>)` that scrolls row `ix` into view. Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "A Rows view built on uniform_list with a UniformListScrollHandle; reveal calls scroll_to_item.",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "Uses uniform_list (only visible rows are built), not a plain scrolling div",
+        "reveal calls scroll_to_item on the handle passed to track_scroll"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "For Wormhole's GPUI code: there is a GPUI global `struct Settings { prefix: String }`. Write a view `Status { text: SharedString }` with a method `refresh(&mut self, cx: &mut Context<Self>)` that runs `fn compute() -> String` on a background thread, then (back on the main thread, via the async context) reads `Settings.prefix` and stores `prefix + result` in `text`, re-rendering the view. If the view has been dropped by then, do nothing. The work must not be cancelled when `refresh` returns. Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "refresh spawns a task that awaits background_spawn, then updates the view through its WeakEntity, reads the Settings global, notifies, and is detached.",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "The heavy work runs in background_spawn (or background_executor().spawn)",
+        "The task is detached or stored, not dropped",
+        "A failed update of the dropped view is ignored (e.g. .ok()), not unwrapped"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "For Wormhole's GPUI code: write a headless GPUI test (the way this repository writes GPUI tests) for an entity `Counter { n: usize }`: create it, increment it twice through `update` (notifying), and assert that it reads 2. Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "A #[gpui_kit::test] taking &mut TestAppContext that creates the entity with cx.new, updates it twice and asserts 2.",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "Uses #[gpui_kit::test], not #[gpui::test] or #[test] with a hand-made app",
+        "Imports GPUI items by name (with AppContext for cx.new), not use gpui_kit::* next to the test attribute"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "For Wormhole's GPUI code: define actions `MoveUp` and `MoveDown` in the namespace `menu`, a function `bind(cx: &mut App)` that binds the up and down keys to them in the key context `Menu`, and a view `Menu { selected: usize, focus_handle: FocusHandle }` whose render tracks focus, sets the key context, and handles both actions with cx.listener (changing `selected` and re-rendering). Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "actions!(menu, [MoveUp, MoveDown]); bind() binds up/down with KeyBinding::new(..., Some(\"Menu\")); Menu renders with track_focus, key_context(\"Menu\") and on_action(cx.listener(...)).",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "key_context and on_action are on the same element as track_focus",
+        "Handlers change selected and call cx.notify()"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "For Wormhole's GPUI code: write an entity `Picker { choice: Option<usize> }` that emits a custom event `Picked(usize)` from a method `pick(&mut self, ix: usize, cx: &mut Context<Self>)`, and a view `Panel { picker: Entity<Picker>, last: Option<usize>, _subscriptions: Vec<Subscription> }` with a constructor `fn new(cx: &mut Context<Self>) -> Self` that creates the picker and subscribes to its event, storing the picked index in `last` and re-rendering. Panel must implement Render. Answer with exactly one ```rust code block containing only Rust items (use statements, structs, impls, fns; no fn main) that depend only on the gpui_kit crate exactly as this repository uses it (no Wormhole modules), then at most 3 short bullet notes. It must compile against the GPUI version this repository locks. Do not create or edit any files in the repository.",
+      "expected_output": "Picker implements EventEmitter<Picked> and emits from pick; Panel::new creates the picker with cx.new and keeps the cx.subscribe(...) Subscription in _subscriptions.",
+      "files": [],
+      "assertions": [
+        "The last ```rust block compiles with `.claude/skills/gpui/scripts/gpui-docs check`",
+        "The Subscription is stored in _subscriptions, not dropped",
+        "The subscriber callback sets last and calls cx.notify()"
+      ]
+    }
+  ]
+}

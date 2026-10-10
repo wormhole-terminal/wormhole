@@ -1,0 +1,190 @@
+//! Updates: the version, automatic updates, and where an update stands in every phase
+//! (up to date, checking, available with its notes, downloading with a meter, installed,
+//! development build, failed), its status and actions on one row.
+
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use gpui_kit::component::progress::Progress;
+
+use super::super::super::updates::UpdatePhase;
+use super::*;
+
+pub(super) const SETTINGS: &[Setting] = &[
+    Setting::custom("version", |_, cx| {
+        let ui = ui(cx);
+        div()
+            .text_body()
+            .tabular_nums()
+            .text_color(ui.muted)
+            .child(env!("CARGO_PKG_VERSION"))
+            .into_any_element()
+    }),
+    toggle!("auto-update", auto_update),
+    Setting::block("update-status", draw_status),
+];
+
+/// The meter of a download.
+const METER_W: f32 = 120.0;
+
+/// "Checked 4 minutes ago", from the last check's time.
+fn checked_ago(last: u64, now: u64) -> String {
+    let minutes = now.saturating_sub(last) / 60;
+    match minutes {
+        0 => "Checked just now.".into(),
+        1 => "Checked a minute ago.".into(),
+        2..=59 => format!("Checked {minutes} minutes ago."),
+        60..=119 => "Checked an hour ago.".into(),
+        _ if minutes < 48 * 60 => format!("Checked {} hours ago.", minutes / 60),
+        _ => format!("Checked {} days ago.", minutes / (24 * 60)),
+    }
+}
+
+/// Where an update stands, with the button for the next step and the release notes.
+fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let updates = &app(cx).updates;
+    let (phase, busy, available, (done, total), last) = (
+        updates.phase.clone(),
+        updates.busy(),
+        updates.available(),
+        updates.progress(),
+        updates.last_check(),
+    );
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
+
+    let status: SharedString = match &phase {
+        UpdatePhase::Idle if !available => "Development build: updates only work in released builds.".into(),
+        UpdatePhase::Idle => match last {
+            Some(last) => checked_ago(last, now).into(),
+            None => "Not checked yet.".into(),
+        },
+        UpdatePhase::Checking => "Checking…".into(),
+        UpdatePhase::UpToDate => match last {
+            Some(last) => format!("Wormhole is up to date. {}", checked_ago(last, now)).into(),
+            None => "Wormhole is up to date.".into(),
+        },
+        UpdatePhase::Available(release) => format!("Version {} is available.", release.version).into(),
+        UpdatePhase::Unsupported(message) | UpdatePhase::Failed(message) => message.clone().into(),
+        UpdatePhase::Downloading => "Downloading…".into(),
+        UpdatePhase::Installed(version) => {
+            format!("Version {version} is installed. Restart to use it.").into()
+        }
+    };
+    let status_color = match phase {
+        UpdatePhase::Failed(_) | UpdatePhase::Unsupported(_) => ui.warning_text,
+        UpdatePhase::Installed(_) | UpdatePhase::UpToDate => ui.success_text,
+        UpdatePhase::Available(_) => ui.text,
+        _ => ui.muted,
+    };
+
+    let mut actions = div().flex().items_center().gap_2();
+    match &phase {
+        UpdatePhase::Available(release) => {
+            let (install, skip) = (release.clone(), release.clone());
+            actions = actions
+                .child(Button::new("update-skip").ghost().small().label("Skip this version").on_click(
+                    cx.listener(move |_, _, _, cx| crate::workspace::updates::skip_update(&skip, cx)),
+                ))
+                .child(Button::new("update-install").primary().small().label("Install update").on_click(
+                    cx.listener(move |_, _, _, cx| {
+                        crate::workspace::updates::install_update(install.clone(), cx)
+                    }),
+                ));
+        }
+        UpdatePhase::Installed(_) => {
+            actions =
+                actions.child(
+                    Button::new("update-restart").primary().small().label("Restart now").on_click(
+                        cx.listener(|_, _, _, cx| crate::workspace::updates::restart_to_update(cx)),
+                    ),
+                );
+        }
+        UpdatePhase::Checking => {
+            actions = actions.child(Button::new("update-checking").ghost().small().loading(true).label(""));
+        }
+        UpdatePhase::Downloading => {
+            let percent = (done * 100).checked_div(total).unwrap_or(0);
+            actions = actions
+                .child(div().w(px(METER_W)).child(Progress::new("update-meter").value(percent as f32)))
+                .child(div().text_caption().tabular_nums().text_color(ui.muted).child(format!("{percent}%")));
+        }
+        UpdatePhase::Idle if !available => {}
+        _ => {
+            actions = actions.child(Button::new("update-check").small().label("Check now").on_click(
+                cx.listener(move |_, _, _, cx| {
+                    if !busy {
+                        crate::workspace::updates::check_for_updates(true, cx);
+                    }
+                }),
+            ));
+        }
+    }
+
+    let notes = match &phase {
+        UpdatePhase::Available(release) if !release.notes.trim().is_empty() => {
+            Some((release.version.to_string(), release.notes.clone()))
+        }
+        _ => None,
+    };
+
+    div()
+        .flex()
+        .flex_col()
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap_4()
+                .min_h(px(style::SETTING_ROW_MIN_H))
+                .py_2()
+                .rule_top(ui)
+                .child(div().text_body().text_color(status_color).child(status))
+                .child(actions),
+        )
+        .children(notes.map(|(version, notes)| {
+            div()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .py_3()
+                .rule_top(ui)
+                .child(
+                    div()
+                        .text_caption()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(ui.muted)
+                        .child(format!("What's new in {version}")),
+                )
+                .children(
+                    notes
+                        .lines()
+                        .map(|line| line.trim().trim_start_matches(['-', '*']).trim().to_string())
+                        .filter(|line| !line.is_empty())
+                        .map(|line| {
+                            div()
+                                .flex()
+                                .gap_2()
+                                .text_body()
+                                .text_color(ui.muted)
+                                .child(div().flex_none().text_color(ui.faint).child("–"))
+                                .child(div().min_w_0().child(line))
+                        }),
+                )
+        }))
+        .into_any_element()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::checked_ago;
+
+    #[test]
+    fn the_last_check_reads_as_an_age() {
+        assert_eq!(checked_ago(1000, 1010), "Checked just now.");
+        assert_eq!(checked_ago(0, 4 * 60), "Checked 4 minutes ago.");
+        assert_eq!(checked_ago(0, 3 * 3600), "Checked 3 hours ago.");
+        assert_eq!(checked_ago(0, 3 * 86400), "Checked 3 days ago.");
+        assert_eq!(checked_ago(100, 0), "Checked just now.", "a clock that went back");
+    }
+}

@@ -1,0 +1,16 @@
+# 1,284 changed files: 182 changes and 1,102 untracked, the tab's badge capped at 999+;
+# the list scrolled with the Changes band pinned at the top; then Changes folded by a click on
+# its band, which shows the Untracked section folded for its size and the note saying where its
+# files are.
+@fixture repo-many
+@theme Tokyo Night
+@size 1440 900
+changes
+@wait-idle
+@shot many
+panel-scroll 400
+@shot many-scrolled
+panel-scroll -400
+@batch
+click 1200 100
+@shot many-folded

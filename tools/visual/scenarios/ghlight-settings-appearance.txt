@@ -1,0 +1,8 @@
+# Settings → Appearance, the section the window opens with.
+@fixture repo-basic
+@theme GitHub Light
+@size 1440 900
+settings-section appearance
+# The settings window opens at the end of this tick: its shot goes in a later batch.
+@batch
+@shot appearance settings

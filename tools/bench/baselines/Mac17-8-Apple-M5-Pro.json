@@ -1,0 +1,137 @@
+{
+  "format": "wormhole-perf",
+  "format_version": 1,
+  "workloads": {
+    "wormhole": {
+      "draw_avg_ms": 1.58,
+      "draw_max_ms": 2.38,
+      "draw_avg_runs": [
+        1.58,
+        1.62,
+        1.49
+      ],
+      "draw_max_runs": [
+        2.38,
+        3.02,
+        2.22
+      ],
+      "main_busy_pct": 43.6,
+      "samples": 2488
+    },
+    "matrix": {
+      "draw_avg_ms": 2.16,
+      "draw_max_ms": 2.57,
+      "draw_avg_runs": [
+        2.11,
+        2.16,
+        2.2
+      ],
+      "draw_max_runs": [
+        2.57,
+        2.58,
+        2.56
+      ],
+      "main_busy_pct": 43.5,
+      "samples": 2720
+    },
+    "unicode": {
+      "draw_avg_ms": 1.96,
+      "draw_max_ms": 2.5,
+      "draw_avg_runs": [
+        1.97,
+        1.96,
+        1.95
+      ],
+      "draw_max_runs": [
+        2.48,
+        2.5,
+        2.73
+      ],
+      "main_busy_pct": 40.3,
+      "samples": 2468
+    },
+    "dashboard": {
+      "draw_avg_ms": 1.62,
+      "draw_max_ms": 1.99,
+      "draw_avg_runs": [
+        1.62,
+        1.64,
+        1.52
+      ],
+      "draw_max_runs": [
+        1.89,
+        2.18,
+        1.99
+      ],
+      "main_busy_pct": 32.6,
+      "samples": 2501
+    },
+    "flood-ascii": {
+      "draw_avg_ms": 6.37,
+      "draw_max_ms": 8.25,
+      "draw_avg_runs": [
+        6.29,
+        6.41,
+        6.37
+      ],
+      "draw_max_runs": [
+        8.52,
+        8.24,
+        8.25
+      ],
+      "main_busy_pct": 99.2,
+      "samples": 2500
+    },
+    "flood-truecolor": {
+      "draw_avg_ms": 4.92,
+      "draw_max_ms": 6.68,
+      "draw_avg_runs": [
+        5.06,
+        4.79,
+        4.92
+      ],
+      "draw_max_runs": [
+        6.78,
+        6.68,
+        6.54
+      ],
+      "main_busy_pct": 97.2,
+      "samples": 2522
+    }
+  },
+  "commit": "f5e0ab8-dirty",
+  "binary": "HEAD",
+  "machine_id": "Mac17-8-Apple-M5-Pro",
+  "model": "Mac17,8",
+  "cpu": "Apple M5 Pro",
+  "date": "2026-10-10T14:15:38Z",
+  "os": "27.0.1",
+  "window": "2400x1300",
+  "animation_fps": 0,
+  "display_asleep": 0,
+  "frames_per_run": 60,
+  "frame_runs": 3,
+  "sample_seconds": 5,
+  "throughput": {
+    "cols": 200,
+    "rows": 69,
+    "size_mb": 16,
+    "tests": {
+      "ascii": {
+        "mbps": 182.1,
+        "min": 177.1,
+        "max": 184.2
+      },
+      "truecolor": {
+        "mbps": 190.5,
+        "min": 186.4,
+        "max": 192.0
+      },
+      "cursor": {
+        "mbps": 163.1,
+        "min": 161.6,
+        "max": 163.2
+      }
+    }
+  }
+}

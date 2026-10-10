@@ -1,0 +1,37 @@
+# The command palette over the window, in its four states: nothing typed (Recent, then the
+# actions that fit here), a query grouped by kind ("theme"), the Actions scope (>) and the Terminals
+# scope (@), every window's terminals by who needs you. Files has no scope (backlog).
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new
+new
+new
+@wait-idle
+rename 1 sidebar polish
+rename 2 diff perf
+rename 3 auth tokens
+rename 4 theme shape metrics
+hook 1 UserPromptSubmit
+hook 2 Notification Approve cargo test?
+hook 3 Stop
+hook 4 UserPromptSubmit
+palette
+@batch
+@shot empty
+palette theme
+@batch
+@shot theme
+palette >
+@batch
+@shot actions
+palette @
+@batch
+@shot terminals
+palette ,
+@batch
+@shot settings
+palette #
+@batch
+@shot commits

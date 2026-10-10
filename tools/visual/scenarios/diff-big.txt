@@ -1,0 +1,8 @@
+# A long diff (about 2000 changed lines, highlighted): wait-idle has to wait until it is built.
+@fixture repo-big-diff
+@theme Tokyo Night
+@size 1440 900
+changes
+@wait-idle
+diff 1
+@shot diff

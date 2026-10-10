@@ -1,0 +1,9 @@
+# Settings → Appearance in Catppuccin Latte.
+@fixture repo-basic
+@theme Catppuccin Latte
+@size 1440 900
+settings-section appearance
+@batch
+settings-resize 1024 900
+@batch
+@shot appearance settings

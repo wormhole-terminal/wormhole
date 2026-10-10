@@ -1,0 +1,12 @@
+# Settings → Coding agents → Command line: the switch that lets `Wormhole send-text` and
+# `new-terminal` type into terminals and open them, at the foot of that page.
+# `set` turns it on, so the row shows its changed dot and the switch on.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+set control_write=true
+settings-section agents
+@batch
+settings-resize 1024 1300
+@sleep 1500
+@shot command-line settings

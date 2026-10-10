@@ -1,0 +1,17 @@
+# The main window at the default 80 % with blur in Tokyo Night: muted, faint, the branch and
+# the selected row's text as judged on what shows through, the selected row a tint over the
+# sidebar. The shot keeps the translucency in its alpha; the native blur isn't in it.
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@config opacity=0.8
+@config blur=true
+@size 1440 900
+new
+new
+@wait-idle
+hook 1 Notification Approve cargo test?
+hook 2 Stop
+hook 3 UserPromptSubmit
+task-seed 3 1
+@shot window

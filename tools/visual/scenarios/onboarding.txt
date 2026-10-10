@@ -1,0 +1,29 @@
+# The intro window: the welcome page, the three steps as its pages, the
+# no-agents primer, the window after Start with its sidebar note, and the welcome page shown again
+# from Help (a replay). No agent counts as installed in a visual instance (its PATH is the Finder's
+# and WORMHOLE_AGENT_PATH empty), so the agents step is the same on every Mac. Test instances play
+# no animation: the page is simply there.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+onboarding welcome
+@batch
+@shot welcome
+onboarding folder
+@batch
+@shot folder
+onboarding look
+@batch
+@shot look
+onboarding agents
+@sleep 1500
+@shot agents
+onboarding primer
+@batch
+@shot primer
+key enter
+@sleep 1000
+@shot first-run
+action app::ShowIntro
+@sleep 1000
+@shot replay

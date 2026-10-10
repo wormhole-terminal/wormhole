@@ -1,0 +1,11 @@
+# The size rules: a patch over 8 MB asks first (its size, git's line counts, Load diff and
+# Reveal in Finder), and one over 20 000 lines loads without highlighting.
+@fixture repo-diff-huge
+@theme Tokyo Night
+@size 1440 900
+changes
+@wait-idle
+diff 2
+@shot too-large
+diff 1
+@shot plain

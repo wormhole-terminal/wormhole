@@ -1,0 +1,556 @@
+//! A session: one terminal, a row of the sidebar, with the notes, tasks and git state that belong
+//! to it. Several of them may be shown together as a split (`splits.rs`); each is still a row of its
+//! own, with its own notes and tasks.
+use std::cell::RefCell;
+use std::sync::LazyLock;
+
+use wormhole_core::panes::PaneId;
+use wormhole_core::sidebar::{SplitId, names};
+
+use super::*;
+
+/// A session's terminal: what the shell's agent hooks report is its id.
+pub(super) struct Pane {
+    /// What the shell's agent hooks report (`WORMHOLE_TAB_ID`): the session's own id, unique
+    /// across every session of every window.
+    pub id: PaneId,
+    /// The shell profile it was opened with (core `shells`' key; `None`: the default), kept so a
+    /// restart and a restored session run the same thing.
+    pub shell: Option<String>,
+    pub terminal: Entity<TerminalView>,
+    _observer: Subscription,
+    _events: Subscription,
+    _focus: Subscription,
+}
+
+impl Pane {
+    pub(super) fn new(
+        id: PaneId,
+        shell: Option<String>,
+        terminal: Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) -> Self {
+        let observer = cx.observe(&terminal, |_, _, cx| cx.notify());
+        let events = cx.subscribe_in(&terminal, window, move |this, _, event: &TerminalEvent, window, cx| {
+            this.on_terminal_event(id, *event, window, cx)
+        });
+        // The keyboard coming into the terminal (a click, ⌥⌘arrow, F6) selects its row: the one
+        // whose notes, git state and keys the window is about, and ⌘D, ⌘W and the find bar act on.
+        let handle = terminal.read(cx).focus_handle.clone();
+        let focus = cx.on_focus(&handle, window, move |this, window, cx| this.pane_focused(id, window, cx));
+        Self { id, shell, terminal, _observer: observer, _events: events, _focus: focus }
+    }
+
+    /// The terminal's own name: the title its program set, else what runs in it, the agent,
+    /// the program in front or the shell.
+    pub(super) fn label(&self, cx: &App) -> SharedString {
+        names::process_name(&name_facts(self.terminal.read(cx))).into()
+    }
+}
+
+pub(super) struct Session {
+    /// The session's id, which is its terminal's too.
+    pub id: i64,
+    pub number: usize,
+    /// The name a project gave it (`layout.json`, a `session:<name>` action), which also finds it
+    /// again. People don't name terminals: a terminal is named after what runs in it.
+    pub custom_name: Option<String>,
+    /// Its terminal.
+    pub pane: Pane,
+    /// The split it is shown in with other terminals (the window's `splits`), if any.
+    pub split: Option<SplitId>,
+    pub notes: Vec<Note>,
+    /// The Notes tab's virtual list (bands, tasks and notes) and its folded done steps.
+    pub notes_list: notes::NotesList,
+    pub tasks: Vec<TaskItem>,
+    pub tasks_collapsed: bool,
+    /// The Notes section is folded up; the notes themselves are kept.
+    pub notes_collapsed: bool,
+    /// The task being written or edited in place, if any (see `tasks.rs`).
+    pub task_edit: Option<tasks::TaskEdit>,
+    pub git: changes::GitState,
+    /// Branch the Changes tab compares against (None = HEAD).
+    pub compare: Option<String>,
+    pub history: history::HistoryState,
+    /// Root of the `.wormhole/` project the terminal's folder belongs to.
+    pub project: Option<PathBuf>,
+    /// The project the session started in, which its notes sync with: unlike `project` it doesn't
+    /// change as the terminal goes to other folders.
+    pub notes_root: Option<PathBuf>,
+    /// Last notes/tasks state agreed with the project's notes.md (merge base).
+    pub notes_base: Option<wormhole_core::project::NotesDoc>,
+    /// Where the session's folder lives on disk, for grouping the sidebar by folder.
+    pub repo_root: RepoRoot,
+    /// Pinned to the top of its group in the sidebar (saved). Every member of a split carries it.
+    pub pinned: bool,
+    /// What the title row's extras know about it: its agent's model and context, its ports.
+    pub extras: super::title_extras::SessionExtras,
+}
+
+impl Session {
+    /// The session's terminal: what has the keyboard when the session is selected, and whose
+    /// folder the git panel shows.
+    pub(super) fn terminal(&self) -> &Entity<TerminalView> {
+        &self.pane.terminal
+    }
+
+    pub(super) fn status(&self, cx: &App) -> Status {
+        self.terminal().read(cx).status()
+    }
+
+    /// The session's name: the project's, else what runs in its terminal.
+    pub(super) fn name(&self, cx: &App) -> SharedString {
+        if let Some(name) = &self.custom_name {
+            return name.clone().into();
+        }
+        let name = self.pane.label(cx);
+        if name.is_empty() { format!("Terminal {}", self.number).into() } else { name }
+    }
+
+    /// Notes with something in them plus tasks not done yet.
+    pub(super) fn open_items(&self, cx: &App) -> usize {
+        let notes = self.notes.iter().filter(|note| !notes::is_blank_note(note.state.read(cx))).count();
+        notes + self.tasks.iter().filter(|t| !t.done).count()
+    }
+
+    /// Whether a program other than the shell is in the foreground.
+    pub(super) fn command_running(&self, cx: &App) -> bool {
+        self.terminal().read(cx).program_in_foreground()
+    }
+
+    /// The program running in the terminal, as its row names it ("claude", "npm run dev"): none
+    /// when the question already names its agent (`skip_agent`).
+    pub(super) fn running_programs(&self, skip_agent: bool, cx: &App) -> Vec<String> {
+        let foreground = self.terminal().read(cx).foreground().map(|f| f.command.clone());
+        foreground.into_iter().filter(|_| !skip_agent).collect()
+    }
+
+    /// Closing the session would cut something off: an agent at work or waiting for an answer, or
+    /// a command running. Notes and tasks alone never ask; they are the user's to keep or not.
+    pub(super) fn needs_close_confirmation(&self, cx: &App) -> bool {
+        close_needs_confirmation(self.status(cx), self.command_running(cx))
+    }
+
+    pub(super) fn record(&self, cx: &App) -> SessionRecord {
+        SessionRecord {
+            id: self.id,
+            name: self.custom_name.clone(),
+            tasks_collapsed: self.tasks_collapsed,
+            notes_collapsed: self.notes_collapsed,
+            notes: self
+                .notes
+                .iter()
+                .map(|note| NoteRecord {
+                    // From the rope: `value()` would copy the text into a `SharedString` first.
+                    body: note.state.read(cx).text().to_string(),
+                    collapsed: note.collapsed,
+                })
+                .collect(),
+            tasks: self
+                .tasks
+                .iter()
+                .map(|task| TaskRecord { text: task.text.to_string(), done: task.done })
+                .collect(),
+            pinned: self.pinned,
+            cwd: self.terminal().read(cx).cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
+            shell: self.pane.shell.clone(),
+            scrollback: None,
+            split_id: self.split,
+        }
+    }
+}
+
+/// What runs in a terminal, for its name.
+fn name_facts(terminal: &TerminalView) -> names::NameFacts<'_> {
+    names::NameFacts {
+        title: terminal.title.as_deref(),
+        agent: terminal.agent.map(|id| wormhole_core::agents::agent(id).command),
+        command: terminal.naming_command(),
+        shell: terminal.shell_name(),
+    }
+}
+/// The user's home folder, read from the environment once: asking costs an environment lock and
+/// an allocation, and terminal names are worked out on every frame.
+pub(super) fn home_dir() -> Option<&'static Path> {
+    static HOME: LazyLock<Option<PathBuf>> = LazyLock::new(|| std::env::var_os("HOME").map(PathBuf::from));
+    HOME.as_deref()
+}
+
+/// Whether closing a session whose terminal is in `status`, and which has a command running if
+/// `command_running`, asks first. Closing a window asks by the same rule for each of its
+/// sessions.
+fn close_needs_confirmation(status: Status, command_running: bool) -> bool {
+    command_running || matches!(status, Status::Busy | Status::Attention)
+}
+
+/// What the question before closing a session says is at stake: its agent by name, then the
+/// other programs that end with it (`programs`, without the agent's own).
+pub(super) fn close_session_detail(
+    agent: Option<&str>,
+    open_items: usize,
+    status: Status,
+    command_running: bool,
+    programs: &[String],
+) -> String {
+    let who = agent.unwrap_or("Its agent");
+    let mut sentences = Vec::new();
+    match status {
+        Status::Busy => sentences.push(format!("{who} is still working.")),
+        Status::Attention => sentences.push(format!("{who} is waiting for an answer.")),
+        Status::Idle | Status::Done | Status::Exited => {}
+    }
+    let ending = sentences.len() + programs_named(programs);
+    match running_list(programs) {
+        Some(list) => sentences.push(format!("Still running: {list}.")),
+        None if command_running && sentences.is_empty() => {
+            sentences.push("A command is still running.".to_string())
+        }
+        None => {}
+    }
+    sentences.push(match (sentences.is_empty(), ending) {
+        (true, _) => "Its shell ends.".to_string(),
+        (false, 0 | 1) => "Closing ends the process.".to_string(),
+        (false, _) => "Closing ends them.".to_string(),
+    });
+    if open_items > 0 {
+        sentences.push("Its notes and tasks are discarded.".to_string());
+    }
+    sentences.join(" ")
+}
+
+/// Longest program name a question keeps, and how many names it lists before "and N more".
+const PROGRAM_MAX: usize = 40;
+const PROGRAMS_LISTED: usize = 4;
+
+/// How many different programs `programs` holds.
+fn programs_named(programs: &[String]) -> usize {
+    let mut names: Vec<&String> = programs.iter().collect();
+    names.sort_unstable();
+    names.dedup();
+    names.len()
+}
+
+/// The programs that end, as Terminal's question lists them: "claude, npm run dev", each once, in
+/// the order of the terminals, a long command cut short and a long list ending in "and N more".
+fn running_list(programs: &[String]) -> Option<String> {
+    let mut names: Vec<&str> = Vec::new();
+    for program in programs {
+        if !names.contains(&program.as_str()) {
+            names.push(program);
+        }
+    }
+    let shown: Vec<String> = names
+        .iter()
+        .take(PROGRAMS_LISTED)
+        .map(|name| match name.char_indices().nth(PROGRAM_MAX) {
+            Some((cut, _)) => format!("{}…", &name[..cut]),
+            None => name.to_string(),
+        })
+        .collect();
+    let mut list = shown.join(", ");
+    if names.len() > PROGRAMS_LISTED {
+        list.push_str(&format!(" and {} more", names.len() - PROGRAMS_LISTED));
+    }
+    (!names.is_empty()).then_some(list)
+}
+
+/// The question before closing a session, naming it (“Close “sidebar polish”?”).
+pub(super) fn close_session_title(name: &str) -> String {
+    format!("Close \u{201c}{name}\u{201d}?")
+}
+
+/// What the question before closing a window says: how many terminals end, the most pressing
+/// thing still running among `running` (the lead status and whether a command runs, of each
+/// session that asks), the programs that end by name, and whether notes and tasks go with them.
+pub(super) fn close_window_detail(
+    terminals: usize,
+    running: &[(Status, bool)],
+    programs: &[String],
+    open_items: usize,
+) -> String {
+    let mut detail = match terminals {
+        1 => "The terminal in this window will end.".to_string(),
+        n => format!("The {n} terminals in this window will end."),
+    };
+    detail.push_str(&still_running(running, programs));
+    if open_items > 0 {
+        detail.push_str(" Their notes and tasks are discarded.");
+    }
+    detail
+}
+
+/// What the question before quitting says: the terminals come back, what runs in them doesn't.
+pub(super) fn quit_detail(running: &[(Status, bool)], programs: &[String]) -> String {
+    format!(
+        "Your terminals come back next time, but what runs in them ends.{}",
+        still_running(running, programs)
+    )
+}
+
+/// What still runs among sessions that ask before closing (`running`: each one's lead status and
+/// whether a command runs; `programs`: their terminals' programs), each sentence after a space: an
+/// agent waiting or working, then the programs by name.
+fn still_running(running: &[(Status, bool)], programs: &[String]) -> String {
+    let any = |status: Status| running.iter().any(|&(s, _)| s == status);
+    let mut detail = String::new();
+    if any(Status::Attention) {
+        detail.push_str(" An agent is waiting for an answer.");
+    } else if any(Status::Busy) {
+        detail.push_str(" An agent is still working.");
+    }
+    if let Some(list) = running_list(programs) {
+        detail.push_str(&format!(" Still running: {list}."));
+    } else if detail.is_empty() && running.iter().any(|&(_, command)| command) {
+        detail.push_str(" A command is still running.");
+    }
+    detail
+}
+
+/// The root of the repository `cwd` is in (else `cwd` itself), found on disk once per folder.
+/// `git::find_root` stats `.git` in every ancestor, which grouping the sidebar by folder asked
+/// for every session on every frame, and frames come as fast as a terminal prints.
+#[derive(Default)]
+pub(super) struct RepoRoot(RefCell<Option<(PathBuf, PathBuf)>>);
+
+impl RepoRoot {
+    pub(super) fn of(&self, cwd: &Path) -> PathBuf {
+        self.of_with(cwd, wormhole_core::git::find_root)
+    }
+
+    fn of_with(&self, cwd: &Path, find: impl FnOnce(&Path) -> Option<PathBuf>) -> PathBuf {
+        if let Some((from, root)) = &*self.0.borrow()
+            && from == cwd
+        {
+            return root.clone();
+        }
+        let root = find(cwd).unwrap_or_else(|| cwd.to_path_buf());
+        *self.0.borrow_mut() = Some((cwd.to_path_buf(), root.clone()));
+        root
+    }
+
+    /// Look again next time: a `git init` or a removed `.git` doesn't change the folder.
+    pub(super) fn forget(&self) {
+        self.0.take();
+    }
+}
+
+/// The selected session after session `closed` is removed from `len` sessions. `None`: it was the only one,
+/// so the caller starts a new session. `Some((ix, switched))`: the selection is now session `ix`, and
+/// `switched` says whether that is a different session from before (then its panels start fresh);
+/// closing another session in the background must leave the selected one exactly as it was.
+pub(super) fn session_after_close(active: usize, closed: usize, len: usize) -> Option<(usize, bool)> {
+    debug_assert!(active < len && closed < len);
+    if len < 2 {
+        return None;
+    }
+    Some(match closed.cmp(&active) {
+        // Everything after the closed session moves one place up, the selected one with it.
+        std::cmp::Ordering::Less => (active - 1, false),
+        // The session that slid into its place, or the last one if it was last.
+        std::cmp::Ordering::Equal => (active.min(len - 2), true),
+        std::cmp::Ordering::Greater => (active, false),
+    })
+}
+
+/// `active` moved by `delta` places, wrapping around `len` items.
+pub(super) fn step_wrapping(active: usize, delta: isize, len: usize) -> usize {
+    (active as isize + delta).rem_euclid(len as isize) as usize
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+    use std::path::{Path, PathBuf};
+
+    use super::{
+        RepoRoot, close_needs_confirmation, close_session_detail, close_session_title, close_window_detail,
+        quit_detail, running_list, session_after_close, step_wrapping,
+    };
+    use crate::terminal_view::Status;
+
+    #[test]
+    fn closing_sessions_keeps_the_selection_sensible() {
+        // The only session: nothing is left, a new one takes over.
+        assert_eq!(session_after_close(0, 0, 1), None);
+        // The selected session closes: the one below slides up and is new on screen...
+        assert_eq!(session_after_close(1, 1, 3), Some((1, true)));
+        // ...or the one above when it was the last.
+        assert_eq!(session_after_close(2, 2, 3), Some((1, true)));
+        assert_eq!(session_after_close(0, 0, 2), Some((0, true)));
+        // A session above the selected one closes: the selection moves up with its session, unchanged.
+        assert_eq!(session_after_close(2, 0, 4), Some((1, false)));
+        // One below it closes (a background session's ×): nothing changes at all.
+        assert_eq!(session_after_close(1, 3, 4), Some((1, false)));
+        assert_eq!(session_after_close(0, 1, 2), Some((0, false)));
+    }
+
+    #[test]
+    fn stepping_wraps_in_both_directions() {
+        assert_eq!(step_wrapping(0, 1, 3), 1);
+        assert_eq!(step_wrapping(2, 1, 3), 0);
+        assert_eq!(step_wrapping(0, -1, 3), 2);
+        assert_eq!(step_wrapping(1, -1, 3), 0);
+        assert_eq!(step_wrapping(0, 1, 1), 0);
+    }
+
+    #[test]
+    fn a_folders_root_is_looked_up_once_until_it_changes_or_is_forgotten() {
+        let lookups = Cell::new(0);
+        let cache = RepoRoot::default();
+        let find = |root: &'static str| {
+            let lookups = &lookups;
+            move |_: &Path| {
+                lookups.set(lookups.get() + 1);
+                Some(PathBuf::from(root))
+            }
+        };
+        let (a, b) = (Path::new("/work/app/src"), Path::new("/work/other"));
+        assert_eq!(cache.of_with(a, find("/work/app")), PathBuf::from("/work/app"));
+        // Every later frame for the same folder reads the cache; the finder must not run.
+        for _ in 0..100 {
+            assert_eq!(cache.of_with(a, |_| unreachable!("cached")), PathBuf::from("/work/app"));
+        }
+        assert_eq!(lookups.get(), 1);
+        // The session went somewhere else.
+        assert_eq!(cache.of_with(b, find("/work/other")), PathBuf::from("/work/other"));
+        assert_eq!(lookups.get(), 2);
+        // Back again, after being told to look afresh (a `.git` may have appeared).
+        cache.forget();
+        assert_eq!(cache.of_with(b, find("/work")), PathBuf::from("/work"));
+        assert_eq!(lookups.get(), 3);
+    }
+
+    #[test]
+    fn outside_a_repository_the_folder_is_its_own_root() {
+        let cache = RepoRoot::default();
+        let cwd = Path::new("/tmp/scratch");
+        assert_eq!(cache.of_with(cwd, |_| None), cwd);
+        assert_eq!(cache.of_with(cwd, |_| unreachable!("cached")), cwd);
+    }
+
+    /// What the cache saves: `find_root` on a deep folder (stat of `.git` in each ancestor) per
+    /// session and frame. Run with `--ignored --nocapture`.
+    #[test]
+    #[ignore = "micro-benchmark"]
+    #[allow(clippy::print_stdout, reason = "the numbers are the output")]
+    fn bench_root_lookup_per_frame() {
+        let mut deep = std::env::temp_dir().join(format!("hd-root-bench-{}", std::process::id()));
+        let base = deep.clone();
+        for level in 0..12 {
+            deep.push(format!("level{level}"));
+        }
+        std::fs::create_dir_all(&deep).expect("creates the folders");
+        let (sessions, frames) = (20, 1000);
+
+        let start = std::time::Instant::now();
+        for _ in 0..frames {
+            for _ in 0..sessions {
+                std::hint::black_box(wormhole_core::git::find_root(&deep));
+            }
+        }
+        let uncached = start.elapsed() / frames;
+
+        let caches: Vec<RepoRoot> = (0..sessions).map(|_| RepoRoot::default()).collect();
+        let start = std::time::Instant::now();
+        for _ in 0..frames {
+            for cache in &caches {
+                std::hint::black_box(cache.of(&deep));
+            }
+        }
+        let cached = start.elapsed() / frames;
+        std::fs::remove_dir_all(&base).expect("cleans up");
+        println!(
+            "grouped sidebar, {sessions} sessions at depth 15: {uncached:?} per frame uncached, {cached:?} cached"
+        );
+    }
+
+    fn names(programs: &[&str]) -> Vec<String> {
+        programs.iter().map(|p| p.to_string()).collect()
+    }
+
+    #[test]
+    fn closing_a_window_names_what_is_still_running() {
+        assert_eq!(
+            close_window_detail(3, &[(Status::Busy, false), (Status::Attention, false)], &[], 0),
+            "The 3 terminals in this window will end. An agent is waiting for an answer."
+        );
+        assert_eq!(
+            close_window_detail(1, &[(Status::Busy, true)], &names(&["claude", "npm run dev"]), 2),
+            "The terminal in this window will end. An agent is still working. Still running: claude, npm \
+             run dev. Their notes and tasks are discarded."
+        );
+        assert_eq!(
+            close_window_detail(2, &[(Status::Idle, true)], &names(&["cargo watch"]), 0),
+            "The 2 terminals in this window will end. Still running: cargo watch."
+        );
+        // A command whose name isn't known yet is still mentioned.
+        assert_eq!(
+            close_window_detail(2, &[(Status::Idle, true)], &[], 0),
+            "The 2 terminals in this window will end. A command is still running."
+        );
+    }
+
+    #[test]
+    fn quitting_says_the_terminals_come_back_but_their_programs_end() {
+        assert_eq!(
+            quit_detail(&[(Status::Idle, true)], &names(&["claude", "caffeinate"])),
+            "Your terminals come back next time, but what runs in them ends. Still running: claude, \
+             caffeinate."
+        );
+    }
+
+    #[test]
+    fn the_running_programs_are_listed_once_and_briefly() {
+        assert_eq!(running_list(&[]), None);
+        assert_eq!(running_list(&names(&["node", "claude", "node"])).as_deref(), Some("node, claude"));
+        assert_eq!(
+            running_list(&names(&["a", "b", "c", "d", "e", "f"])).as_deref(),
+            Some("a, b, c, d and 2 more")
+        );
+        let long = "x".repeat(50);
+        assert_eq!(running_list(&[long]), Some(format!("{}…", "x".repeat(40))));
+    }
+
+    #[test]
+    fn closing_a_session_asks_only_while_something_is_running() {
+        assert!(!close_needs_confirmation(Status::Idle, false), "a shell at its prompt");
+        assert!(!close_needs_confirmation(Status::Done, false), "a finished agent has nothing left to lose");
+        assert!(!close_needs_confirmation(Status::Exited, false));
+        assert!(close_needs_confirmation(Status::Busy, false), "an agent at work");
+        assert!(close_needs_confirmation(Status::Attention, false), "an agent waiting for an answer");
+        assert!(close_needs_confirmation(Status::Idle, true), "a command in the foreground");
+    }
+
+    #[test]
+    fn the_question_names_what_would_be_lost() {
+        assert_eq!(close_session_title("api"), "Close \u{201c}api\u{201d}?");
+        // The agent by name, then what closing does.
+        assert_eq!(
+            close_session_detail(Some("Claude"), 0, Status::Busy, true, &[]),
+            "Claude is still working. Closing ends the process."
+        );
+        assert_eq!(close_session_detail(None, 0, Status::Idle, false, &[]), "Its shell ends.");
+        assert_eq!(
+            close_session_detail(None, 3, Status::Idle, false, &[]),
+            "Its shell ends. Its notes and tasks are discarded."
+        );
+        assert_eq!(
+            close_session_detail(None, 0, Status::Idle, true, &[]),
+            "A command is still running. Closing ends the process."
+        );
+        assert_eq!(
+            close_session_detail(None, 0, Status::Idle, true, &names(&["npm run dev"])),
+            "Still running: npm run dev. Closing ends the process."
+        );
+        // The agent's other programs end with it.
+        assert_eq!(
+            close_session_detail(Some("Claude"), 0, Status::Busy, true, &names(&["cargo watch"])),
+            "Claude is still working. Still running: cargo watch. Closing ends them."
+        );
+        assert_eq!(
+            close_session_detail(Some("Codex"), 2, Status::Attention, false, &[]),
+            "Codex is waiting for an answer. Closing ends the process. Its notes and tasks are discarded."
+        );
+    }
+}

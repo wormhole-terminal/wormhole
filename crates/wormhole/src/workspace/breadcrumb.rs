@@ -1,0 +1,445 @@
+//! The terminal's title row content: where the selected
+//! terminal is and what it does, as the folder (cut in its middle where it is long, with the
+//! hover card of `path_card`), the branch chip, and the terminal's tool and name with its live
+//! status. It is one keyboard stop. Open in… and the splits sit at the right end of the row
+//! (`title_row`).
+//!
+//! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
+//! measures them, asks, and draws what is left.
+use gpui_kit::component::ActiveTheme as _;
+use wormhole_core::agents;
+use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
+
+use super::path_card::Over;
+use super::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use super::*;
+
+impl Workspace {
+    /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
+    pub(super) fn render_title_strip(
+        &self,
+        plan: &TitlePlan,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let ui = ui(cx);
+        // The strip is one keyboard stop; its ring round the breadcrumb.
+        let ring = self.ring(wormhole_core::focus::Area::Tabs, window);
+        let crumb = div()
+            .relative()
+            .min_w_0()
+            .flex()
+            .child(self.render_breadcrumb(plan, cx))
+            .when(ring, |d| d.child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius)));
+        let strip = div()
+            .id("title-strip")
+            // Clicks here are for the breadcrumb, not for dragging the window.
+            .occlude()
+            .flex()
+            .items_center()
+            .gap_1()
+            .min_w_0()
+            .max_w_full()
+            .overflow_hidden()
+            .child(crumb);
+        self.area_container(wormhole_core::focus::Area::Tabs, strip, cx).into_any_element()
+    }
+
+    /// What the title row says about the active terminal, as of now.
+    fn title_facts(&self, cx: &App) -> Facts {
+        let session = self.active_session();
+        let terminal = session.terminal().read(cx);
+        let folder = terminal.cwd.clone();
+        let shown = folder
+            .as_deref()
+            .map(|cwd| wormhole_core::sidebar::display_path(cwd, super::session::home_dir()));
+        // The branch only while git's answer is about the folder the terminal is in now.
+        let branch = session
+            .git
+            .status
+            .as_ref()
+            .filter(|_| session.git.cwd == terminal.cwd)
+            .map(|status| status.branch.clone());
+        Facts {
+            id: session.id,
+            folder,
+            shown,
+            status: terminal.status(),
+            agent: terminal.agent,
+            label: session.pane.label(cx),
+            words: crumb_words(terminal),
+            branch,
+            extras: self.extra_facts(cx),
+        }
+    }
+
+    /// Measures the row and asks core what it keeps: the whole of `fit_row`'s input.
+    pub(super) fn plan_title(
+        &self,
+        tint: Option<Tint>,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> TitlePlan {
+        let facts = self.title_facts(cx);
+        self.crumb_drawn.replace(facts.words.clone());
+        let measure = Measure::new(window, cx);
+        let steps = facts
+            .shown
+            .as_deref()
+            .map(|shown| {
+                path_steps(shown, PATH_LAST_MAX, |face, text| match face {
+                    Face::Parents => measure.label(text, FontWeight::NORMAL),
+                    Face::Last => measure.label(text, FontWeight::MEDIUM),
+                })
+            })
+            .unwrap_or_default();
+        let has_indicator = indicator_glyph(facts.agent.is_some(), facts.status).is_some();
+        // The split buttons are always there; Open in… and its chevron only for a terminal that
+        // has a folder to open.
+        let (group, folded) = match facts.folder {
+            Some(_) => (ROW_GAP + super::title_row::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
+            None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
+        };
+        // A crumb before the terminal brings a gap, the separator and a gap.
+        let before = 2.0 * CRUMB_GAP + style::GLYPH;
+        let (extras, ports_narrower) = Self::extras_wanted(&facts.extras, &measure);
+        let wants = RowWants {
+            path: steps.iter().map(|step| CRUMB_GAP + step.width).collect(),
+            words: facts.words.as_deref().map_or(0.0, |words| CRUMB_GAP + measure.caption(words)),
+            chip: facts.branch.as_ref().map(|branch| {
+                let text = branch.as_deref().unwrap_or("detached");
+                Chip {
+                    natural: (measure.caption_medium(text) + CHIP_CHROME).min(style::BRANCH_CHIP_MAX),
+                    icon: CHIP_ICON_W,
+                }
+            }),
+            extras,
+            ports_narrower,
+            group,
+            folded,
+            name: measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W),
+            name_min: CRUMB_TEXT_MIN,
+            // The padding, the folder's icon and its separator, the branch's separator, and the
+            // terminal's tool icon, status slot and the gap before its name.
+            fixed: 2.0 * CRUMB_PAD
+                + facts.folder.as_ref().map_or(0.0, |_| style::GLYPH + before)
+                + facts.branch.as_ref().map_or(0.0, |_| before)
+                + style::GLYPH
+                + if has_indicator { TOOL_GAP + style::ITEM_LEAD_W } else { 0.0 }
+                + CRUMB_GAP,
+        };
+        let fit = fit_row(self.title_row_width(window), &wants);
+        TitlePlan {
+            app: super::open_in::OpenIn::resolved(cx),
+            path_x: self.title_row_pads(window).0 + CRUMB_PAD,
+            facts,
+            steps,
+            fit,
+            tint,
+        }
+    }
+
+    /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.
+    /// The folder shows in Finder and its hover card has more; the branch opens the compare
+    /// picker; the name is what runs, with its live status next to the tool's icon.
+    fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
+        let ui = ui(cx);
+        let Facts { id, folder, status, agent, label, words, branch, .. } = &plan.facts;
+        let fit = &plan.fit;
+        // Under a tint the folder's icon and its parents step up to the main text color, so they
+        // keep their contrast on it.
+        let soft = if plan.tint.is_some() { ui.text } else { ui.muted };
+
+        let separator = || div().flex_none().text_color(ui.faint).child(style::icon(IconName::ChevronRight));
+        let path = folder.clone().map(|folder| {
+            let text = match fit.path {
+                PathShown::Step(ix) => Some(&plan.steps[ix].text),
+                PathShown::Icon | PathShown::None => None,
+            };
+            div()
+                .id("crumb-folder")
+                // Cut in the middle, the folder is still read whole.
+                .role(Role::Button)
+                .aria_label(format!(
+                    "Open folder {} in Finder",
+                    plan.facts.shown.as_deref().unwrap_or_default()
+                ))
+                .flex()
+                .flex_none()
+                .items_center()
+                .gap_2()
+                .text_label()
+                .font_weight(FontWeight::NORMAL)
+                .text_color(soft)
+                .cursor_pointer()
+                .hover(|d| d.text_color(ui.text))
+                .child(div().flex_none().child(style::icon(IconName::Folder)))
+                .children(text.map(|text| {
+                    div().flex().flex_none().child(div().flex_none().child(text.parents.clone())).child(
+                        div()
+                            .flex_none()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(ui.text)
+                            .child(text.last.clone()),
+                    )
+                }))
+                // The folder itself in Finder, not its parent with it selected.
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.path_card.reset();
+                    cx.open_with_system(&folder);
+                }))
+                .on_hover(
+                    cx.listener(|this, hovered: &bool, _, cx| this.hover_path(Over::Path, *hovered, cx)),
+                )
+        });
+        let branch = branch.as_ref().zip(fit.chip).map(|(branch, width)| {
+            let (color, fill, name) = match branch {
+                Some(branch) => (ui.branch, ui.branch_bg, branch.as_str()),
+                None => (ui.warning_text, ui.banner_warning, "detached"),
+            };
+            // Down to its glyph, which the chip keeps.
+            let text = width >= CHIP_CHROME + CRUMB_TEXT_MIN / 2.0;
+            div()
+                .id("crumb-branch")
+                .flex_none()
+                .w(px(width))
+                .cursor_pointer()
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .h(px(CHIP_H))
+                        .w_full()
+                        .gap_1()
+                        .pl_1()
+                        .when(text, |d| d.pr_2())
+                        .when(!text, |d| d.pr_1())
+                        .overflow_hidden()
+                        .rounded(ui.radius_chip)
+                        .bg(fill)
+                        .text_color(color)
+                        .text_caption()
+                        .font_weight(FontWeight::MEDIUM)
+                        .child(Icon::new(IconName::GitBranch).xsmall())
+                        .when(text, |d| d.child(div().min_w_0().truncate().child(name.to_string()))),
+                )
+                .on_click(cx.listener(|this, _, window, cx| {
+                    this.show_tab(RightTab::Changes, cx);
+                    this.toggle_picker(picker::Picker::Compare, window, cx);
+                }))
+        });
+
+        // The terminal: the tool's own icon (always in the text color: its status is the
+        // indicator beside it), the live status, the name and how it is doing.
+        let tool = match agent {
+            Some(agent) => {
+                let agent = agents::agent(*agent);
+                style::agent_logo(agent.icon(), agent.monogram, style::GLYPH, ui.text)
+            }
+            None => svg()
+                .path(crate::icons::glyph::TERMINAL)
+                .flex_none()
+                .size(px(style::GLYPH))
+                .text_color(ui.text)
+                .into_any_element(),
+        };
+        let indicator = indicator_glyph(agent.is_some(), *status)
+            .map(|glyph| style::status_glyph(("terminal-status", *id as u64), ui, glyph, cx));
+        let attention = *status == Status::Attention;
+        let process = div()
+            .id("crumb-process")
+            .flex()
+            .items_center()
+            .gap_2()
+            .min_w_0()
+            .overflow_hidden()
+            .child(div().flex().flex_none().items_center().gap_1().child(tool).children(indicator))
+            .child(
+                div()
+                    .min_w_0()
+                    .max_w(px(fit.name))
+                    .truncate()
+                    .text_label()
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(ui.text)
+                    .child(label.clone()),
+            )
+            .children(words.clone().filter(|_| fit.words).map(|words| {
+                div()
+                    .flex_none()
+                    .whitespace_nowrap()
+                    .text_caption()
+                    .text_color(if attention { ui.attention_text } else { ui.muted })
+                    .child(words)
+            }));
+
+        // The branch's status (a dot, ↑2 ↓1) follows its chip, before the separator.
+        let status = branch.is_some().then(|| self.render_branch_status(plan, cx)).flatten();
+        let mut crumbs: Vec<AnyElement> = Vec::new();
+        for part in [
+            path.map(|path| vec![path.into_any_element()]),
+            branch.map(|chip| std::iter::once(chip.into_any_element()).chain(status).collect()),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            crumbs.extend(part);
+            crumbs.push(separator().into_any_element());
+        }
+        crumbs.push(process.into_any_element());
+        div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .min_w_0()
+            .overflow_hidden()
+            .px_2()
+            .children(crumbs)
+            .into_any_element()
+    }
+}
+
+/// The breadcrumb's spacing (`gap_2`, `px_2`), and the least of a cut text worth showing (about
+/// three letters and the ellipsis).
+pub(super) const CRUMB_GAP: f32 = 8.0;
+const CRUMB_PAD: f32 = 8.0;
+const CRUMB_TEXT_MIN: f32 = 24.0;
+/// The gap between the terminal's tool icon and its status (`gap_1`).
+const TOOL_GAP: f32 = 4.0;
+/// A branch chip's glyph, gap and padding round its text, and its width when it is the glyph alone.
+const CHIP_CHROME: f32 = 28.0;
+const CHIP_ICON_W: f32 = 20.0;
+/// A branch chip's height: the chip height of a text line (`style::branch_chip`).
+const CHIP_H: f32 = 20.0;
+/// The last folder of the path is cut in its own middle when it alone is wider than this.
+const PATH_LAST_MAX: f32 = 240.0;
+
+/// How wide the breadcrumb's texts are in the interface font, in their type roles.
+pub(super) struct Measure<'a> {
+    window: &'a Window,
+    family: SharedString,
+}
+
+impl<'a> Measure<'a> {
+    fn new(window: &'a Window, cx: &App) -> Self {
+        Self { window, family: cx.theme().font_family.clone() }
+    }
+
+    fn width(&self, text: &str, size_rems: f32, weight: FontWeight) -> f32 {
+        if text.is_empty() {
+            return 0.0;
+        }
+        let run = TextRun {
+            len: text.len(),
+            font: Font { weight, ..font(self.family.clone()) },
+            ..Default::default()
+        };
+        let size = rems(size_rems).to_pixels(self.window.rem_size());
+        f32::from(self.window.text_system().layout_line(text, size, &[run], None).width).ceil()
+    }
+
+    /// `text_label` (13).
+    fn label(&self, text: &str, weight: FontWeight) -> f32 {
+        self.width(text, 0.8125, weight)
+    }
+
+    /// `text_caption` (12).
+    fn caption(&self, text: &str) -> f32 {
+        self.width(text, 0.75, FontWeight::NORMAL)
+    }
+
+    pub(super) fn caption_medium(&self, text: &str) -> f32 {
+        self.width(text, 0.75, FontWeight::MEDIUM)
+    }
+}
+
+impl Workspace {
+    /// On the tick: the breadcrumb's "working · 4m" moves on by itself once a minute, with nothing
+    /// else to redraw the window (an agent thinking quietly); redraw when it would read
+    /// differently.
+    pub(super) fn crumb_tick(&self, cx: &mut Context<Self>) {
+        let now = crumb_words(self.active_session().terminal().read(cx));
+        // Taken as drawn: if nothing draws it (a diff is over the title row), it asks once.
+        if self.crumb_drawn.replace(now.clone()) != now {
+            cx.notify();
+        }
+    }
+}
+
+/// What the breadcrumb says after a terminal's name: how it is doing, working time in whole
+/// minutes ("working · <1m", "working · 4m"), or nothing while it is idle.
+fn crumb_words(terminal: &TerminalView) -> Option<String> {
+    let took = || wormhole_core::layout::status_bar::elapsed(terminal.status_since().elapsed());
+    match terminal.status() {
+        Status::Busy => Some(format!("working · {}", took())),
+        Status::Attention => Some("needs you".to_string()),
+        Status::Done => Some(format!("done · {}", took())),
+        Status::Exited => Some("exited".to_string()),
+        Status::Idle => None,
+    }
+}
+
+/// The live status next to the tool's icon, the sidebar row's own glyph and motion (so one terminal
+/// never shows two states): an agent's working spinner, needs-you halo, finished check or idle
+/// ring; for a plain terminal only a running command (the spinner) or a ring bell. Nothing for an
+/// exited one, whose words say so.
+fn indicator_glyph(agent: bool, status: Status) -> Option<style::StatusGlyph> {
+    use style::StatusGlyph as G;
+    match (agent, status) {
+        (_, Status::Exited) => None,
+        (true, Status::Busy) => Some(G::Working),
+        (true, Status::Attention) => Some(G::NeedsYou),
+        (true, Status::Done) => Some(G::Done),
+        (true, Status::Idle) => Some(G::Idle),
+        (false, Status::Busy) => Some(G::Running),
+        (false, Status::Attention) => Some(G::Bell),
+        (false, Status::Done | Status::Idle) => None,
+    }
+}
+
+/// A terminal's status slot (16 pt): what it is and how it is doing in one place, so a change of
+/// status never moves the label. Shape tells the states apart, not only colour. A split's
+/// pane headers draw it too.
+pub(super) fn terminal_glyph(id: i64, status: Status, agent: bool, cx: &App) -> AnyElement {
+    let ui = ui(cx);
+    let glyph = match status {
+        Status::Busy if agent => style::StatusGlyph::Working,
+        Status::Busy => style::StatusGlyph::Running,
+        Status::Done => style::StatusGlyph::Done,
+        Status::Attention => {
+            return div()
+                .flex_none()
+                .flex()
+                .items_center()
+                .justify_center()
+                .size(px(style::ITEM_LEAD_W))
+                .text_color(ui.agent_attention)
+                .child(style::icon(IconName::CircleAlert))
+                .into_any_element();
+        }
+        Status::Idle | Status::Exited => style::StatusGlyph::Terminal { unread: false },
+    };
+    style::status_glyph(("terminal-status", id as u64), ui, glyph, cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::indicator_glyph;
+    use crate::style::StatusGlyph;
+    use crate::terminal_view::Status;
+
+    /// The sidebar row's glyphs for an agent; a plain terminal shows only what it is doing.
+    #[test]
+    fn the_indicator_is_the_sidebar_rows_glyph() {
+        assert_eq!(indicator_glyph(true, Status::Busy), Some(StatusGlyph::Working));
+        assert_eq!(indicator_glyph(true, Status::Attention), Some(StatusGlyph::NeedsYou));
+        assert_eq!(indicator_glyph(true, Status::Done), Some(StatusGlyph::Done));
+        assert_eq!(indicator_glyph(true, Status::Idle), Some(StatusGlyph::Idle));
+        assert_eq!(indicator_glyph(false, Status::Busy), Some(StatusGlyph::Running));
+        assert_eq!(indicator_glyph(false, Status::Attention), Some(StatusGlyph::Bell));
+        assert_eq!(indicator_glyph(false, Status::Idle), None);
+        assert_eq!(indicator_glyph(false, Status::Done), None);
+        assert_eq!(indicator_glyph(true, Status::Exited), None);
+        assert_eq!(indicator_glyph(false, Status::Exited), None);
+    }
+}

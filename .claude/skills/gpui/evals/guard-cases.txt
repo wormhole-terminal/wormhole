@@ -1,0 +1,109 @@
+Cases for `gpui-docs selftest`, which runs check's guard (scripts/snippet-guard.awk) on each without
+compiling it. A line `=== reject <what>` or `=== accept <what>` starts a snippet the guard has to refuse
+or let through. Every way found to make a snippet read a file or the environment belongs here.
+
+=== reject an include_str! renamed by a use
+use core::include_str as inc;
+compile_error!(inc!("/etc/hosts"));
+=== reject include_str and its bang on separate lines
+compile_error!(include_str
+!("/etc/hosts"));
+=== reject a comment between include_str and its bang
+compile_error!(include_str /* */ !("/etc/hosts"));
+=== reject include_str as a raw identifier
+compile_error!(r#include_str!("/etc/hosts"));
+=== reject include_bytes through a path
+const B: &[u8] = ::core::include_bytes!("/etc/hosts");
+=== reject include through a path
+::std::include!("/etc/hosts");
+=== reject include_str in a doc attribute
+#[doc = include_str!("/etc/hosts")]
+struct S;
+=== reject an env! renamed by a use
+use core::env as e;
+compile_error!(e!("HOME"));
+=== reject option_env
+const V: Option<&str> = option_env!("HOME");
+=== reject a module file chosen by cfg_attr(path)
+#[cfg_attr(all(), path = "/etc/hosts")]
+mod m;
+=== reject a module file chosen by #[path]
+#[path = "/etc/hosts"]
+mod m;
+=== reject a module file inside an inline module with #[path]
+#[path = "/etc"]
+mod etc {
+    mod hosts;
+}
+=== reject a module ended by a Greek question mark, which rustc reads as `;`
+#[path = "/etc/hosts"]
+mod m;
+=== reject a no-break space in code
+mod m;
+=== reject a full-width bang, which rustc reads as `!`
+#！[doc = "x"]
+=== reject icon_named, which lists a directory
+gpui_kit::component::icon_named!(Found, "/etc");
+=== reject debugger_visualizer, which reads a file
+#[debugger_visualizer(gdb_script_file = "/etc/hosts")]
+mod m {}
+=== reject an inner attribute
+#![doc = "x"]
+=== reject extern crate
+extern crate core as other;
+=== reject code after a string holding //, which a naive comment stripper drops
+const S: &str = "//"; compile_error!(include_str!("/etc/hosts"));
+=== reject code after a quote char literal, which a lexer without char literals misreads
+const C: char = '"'; const S: &str = "//"; compile_error!(include_str!("/etc/hosts"));
+=== reject an r" that is a number's suffix, not a raw string
+macro_rules! ignore { ($($t:tt)*) => {} }
+ignore!(1e5r"\" // "); compile_error!(include_str!("/etc/hosts"));
+=== reject an r" that is a char literal's suffix, not a raw string
+macro_rules! ignore { ($($t:tt)*) => {} }
+ignore!('a'r"\" // "); compile_error!(include_str!("/etc/hosts"));
+=== reject an r" that is a guarded string's suffix, not a raw string
+macro_rules! ignore { ($($t:tt)*) => {} }
+ignore!(#"x"#r"\" // "); compile_error!(include_str!("/etc/hosts"));
+=== reject an unterminated string
+const S: &str = "abc;
+=== reject an unterminated block comment
+/* /* */
+fn f() {}
+=== reject a non-ASCII identifier
+const É: u8 = 1;
+=== accept the words in comments, and nested comments
+// include the env; mod name; extern crate; #![attr]
+/* include_str!("x") /* nested */ env!("Y") */
+fn f() {}
+=== accept comment markers and quotes in strings and chars
+const URL: &str = "https://example.com/*";
+const Q: char = '"';
+const A: char = '\'';
+const SLASH: u8 = b'/';
+fn f<'a>(s: &'a str) -> &'a str { s }
+=== accept raw strings
+const R: &str = r#"a "quoted" // not a comment"#;
+const P: &str = r"C:\dir\";
+=== accept numbers and ranges
+const F: f64 = 1.5e-3;
+const H: u32 = 0xff_u32;
+fn g() -> usize { (0..2).len().max(1.max(2)) }
+=== accept non-ASCII in strings and comments
+// A label — with an ellipsis…
+const L: &str = "Settings…";
+=== accept inline modules and a GPUI test
+use gpui_kit::{AppContext as _, TestAppContext};
+struct Counter { n: usize }
+mod headless {
+    use super::Counter;
+    #[gpui_kit::test]
+    fn counts(cx: &mut gpui_kit::TestAppContext) {
+        let c = cx.new(|_| Counter { n: 0 });
+    }
+}
+=== accept the gpui skill's check example
+use gpui_kit::*;
+struct V { focus: FocusHandle }
+impl V {
+    fn go(&mut self, window: &mut Window, cx: &mut Context<Self>) { window.focus(&self.focus, cx); }
+}

@@ -1,0 +1,20 @@
+# The optional status bar (status_bar on), with three agents: one working, one waiting for an
+# answer, one done; then narrower windows, where its words (below 900) and the size (below 720) go.
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@config status_bar=true
+@size 1440 900
+new
+new
+@wait-idle
+# The first terminal in front, so the finished one isn't seen (and cleared) at once.
+activate 1
+hook 1 UserPromptSubmit
+hook 2 Notification Allow Bash?
+hook 3 Stop
+@shot w1440
+resize 880 900
+@shot w880
+resize 700 900
+@shot w700

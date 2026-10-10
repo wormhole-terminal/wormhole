@@ -1,0 +1,419 @@
+//! The Studio's component gallery: every element Wormhole draws, in each state,
+//! rendered with the live (previewed) tokens, in two columns that a filter narrows to one
+//! part of the app. What the selected token is drawn on is outlined (dashed, the primary)
+//! so an edit shows where it lands. Clicking a swatch or a labelled element selects its
+//! token. Each specimen is one file; `SPECIMENS` lists them in page order.
+
+mod ambient;
+mod buttons;
+mod chrome;
+mod diff;
+mod find;
+mod inputs;
+mod labels;
+mod metrics;
+mod navigation;
+mod panel;
+mod panes;
+mod selects;
+mod settings;
+mod shape;
+mod sidebar;
+mod syntax;
+mod terminal;
+mod typography;
+mod windows;
+
+pub(super) use syntax::CodeSample;
+
+use wormhole_core::tokens::{TOKEN_USES, uses_of};
+
+use super::token_editor::EDITOR_W;
+use super::token_list::LIST_W;
+use super::*;
+
+/// What a specimen draws with: the interface colors, the resolved tokens, and what the
+/// selected token is used by.
+struct Env<'a> {
+    ui: UiColors,
+    tokens: &'a ThemeTokens,
+    /// The ids (core `TOKEN_USES`) of what the selected token is drawn on.
+    uses: Vec<&'static str>,
+}
+
+impl Env<'_> {
+    fn tk(&self, name: &str) -> Hsla {
+        t(self.tokens, name)
+    }
+
+    /// `element`, outlined while the selected token is drawn on it. `id` is one of core's
+    /// `TOKEN_USES`: the token editor's "Used by" names the same things.
+    fn mark(&self, id: &'static str, element: impl IntoElement) -> AnyElement {
+        debug_assert!(TOKEN_USES.iter().any(|u| u.id == id), "{id} is not in TOKEN_USES");
+        div()
+            .relative()
+            .child(element)
+            .when(self.uses.contains(&id), |d| d.child(style::uses_outline(self.ui, self.ui.radius)))
+            .into_any_element()
+    }
+}
+
+/// The part of the app a specimen belongs to: the gallery's filter.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) enum Area {
+    #[default]
+    All,
+    Sidebar,
+    Panel,
+    Chrome,
+    Settings,
+    Ambient,
+}
+
+impl Area {
+    pub(super) const ALL: [Area; 6] =
+        [Area::All, Area::Sidebar, Area::Panel, Area::Chrome, Area::Settings, Area::Ambient];
+
+    pub(super) fn label(self) -> &'static str {
+        match self {
+            Area::All => "All",
+            Area::Sidebar => "Sidebar",
+            Area::Panel => "Panel",
+            Area::Chrome => "Chrome",
+            Area::Settings => "Settings",
+            Area::Ambient => "Ambient",
+        }
+    }
+
+    /// The part of the app core's `TOKEN_USES` names, which the token list keeps to; `None` for
+    /// All.
+    pub(super) fn part(self) -> Option<tokens::Area> {
+        Some(match self {
+            Area::All => return None,
+            Area::Sidebar => tokens::Area::Sidebar,
+            Area::Panel => tokens::Area::Panel,
+            Area::Chrome => tokens::Area::Chrome,
+            Area::Settings => tokens::Area::Settings,
+            Area::Ambient => tokens::Area::Ambient,
+        })
+    }
+}
+
+/// Which of the two columns a specimen stands in, or both: under them, the specimens that need
+/// a settings window's or the quick panel's width.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Column {
+    Left,
+    Right,
+    Both,
+}
+
+/// One section of the gallery page.
+struct Specimen {
+    title: &'static str,
+    description: &'static str,
+    /// Where it is shown besides All; `None` for the basics (type, terminal, code, sizes).
+    area: Option<Area>,
+    column: Column,
+    render: fn(&StudioWindow, &Env, &mut Context<StudioWindow>) -> AnyElement,
+}
+
+const SPECIMENS: &[Specimen] = &[
+    Specimen {
+        title: "Sidebar",
+        description: "bands, rows in every state, glyphs, status bar",
+        area: Some(Area::Sidebar),
+        column: Column::Left,
+        render: sidebar::render,
+    },
+    Specimen {
+        title: "Right panel",
+        description: "section bands, items, files, commits, icon tabs",
+        area: Some(Area::Panel),
+        column: Column::Right,
+        render: panel::render,
+    },
+    Specimen {
+        title: "Diff",
+        description: "header, hunk, context, removed, added, filler",
+        area: Some(Area::Panel),
+        column: Column::Right,
+        render: diff::render,
+    },
+    Specimen {
+        title: "Chrome",
+        description: "icons, icon buttons, the × and hit areas",
+        area: Some(Area::Chrome),
+        column: Column::Left,
+        render: chrome::render,
+    },
+    Specimen {
+        title: "Find",
+        description: "the find bar, matches and the current one",
+        area: Some(Area::Chrome),
+        column: Column::Both,
+        render: find::render,
+    },
+    Specimen {
+        title: "Panes",
+        description: "pane headers, focused and not, and the dividers",
+        area: Some(Area::Chrome),
+        column: Column::Both,
+        render: panes::render,
+    },
+    Specimen {
+        title: "Tabs and chips",
+        description: "tabs, chips, badges, rows, cards, tooltips",
+        area: Some(Area::Chrome),
+        column: Column::Left,
+        render: navigation::render,
+    },
+    Specimen {
+        title: "Labels",
+        description: "titles, section labels, empty notes, toolbars",
+        area: Some(Area::Chrome),
+        column: Column::Left,
+        render: labels::render,
+    },
+    Specimen {
+        title: "Shape",
+        description: "radii, the focus ring, everything chip-shaped",
+        area: Some(Area::Chrome),
+        column: Column::Left,
+        render: shape::render,
+    },
+    Specimen {
+        title: "Settings",
+        description: "rows, nav, controls, banners",
+        area: Some(Area::Settings),
+        column: Column::Both,
+        render: settings::render,
+    },
+    Specimen {
+        title: "Buttons",
+        description: "variants and sizes",
+        area: Some(Area::Settings),
+        column: Column::Right,
+        render: buttons::render,
+    },
+    Specimen {
+        title: "Inputs",
+        description: "fields, checkboxes and switches",
+        area: Some(Area::Settings),
+        column: Column::Right,
+        render: inputs::render,
+    },
+    Specimen {
+        title: "Menus",
+        description: "the select and the menu it opens",
+        area: Some(Area::Settings),
+        column: Column::Right,
+        render: selects::render,
+    },
+    Specimen {
+        title: "Windows",
+        description: "dialog, first-run sheet, About, Licenses",
+        area: Some(Area::Settings),
+        column: Column::Right,
+        render: windows::render,
+    },
+    Specimen {
+        title: "Notifications",
+        description: "quick panel and palette rows, readout",
+        area: Some(Area::Ambient),
+        column: Column::Both,
+        render: ambient::render,
+    },
+    Specimen {
+        title: "Terminal",
+        description: "16 ANSI, text, selection, cursor",
+        area: None,
+        column: Column::Left,
+        render: terminal::render,
+    },
+    Specimen {
+        title: "Code",
+        description: "highlighting from the syntax tokens",
+        area: None,
+        column: Column::Left,
+        render: syntax::render,
+    },
+    Specimen {
+        title: "Type",
+        description: "the text roles and colors",
+        area: None,
+        column: Column::Right,
+        render: typography::render,
+    },
+    Specimen {
+        title: "Sizes and motion",
+        description: "every size, limit, duration and easing",
+        area: None,
+        column: Column::Right,
+        render: metrics::render,
+    },
+];
+
+/// Narrower than this, the gallery is one column.
+const TWO_COLUMNS_MIN_W: f32 = 680.0;
+
+impl StudioWindow {
+    pub(super) fn render_gallery(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let ui = ui(cx);
+        let tokens = tokens_of(cx);
+        let uses = self.selected.as_deref().map(uses_of).unwrap_or_default();
+        let env = Env { ui, tokens: &tokens, uses: uses.iter().map(|u| u.id).collect() };
+        let width = f32::from(window.viewport_size().width) - LIST_W - EDITOR_W;
+        let shown = SPECIMENS.iter().filter(|s| self.area == Area::All || s.area == Some(self.area));
+        let (mut left, mut right, mut both) = (column(), column(), column());
+        for specimen in shown {
+            let content = (specimen.render)(self, &env, cx);
+            let section = section(ui, specimen.title, specimen.description, content);
+            match specimen.column {
+                Column::Right if width >= TWO_COLUMNS_MIN_W => right = right.child(section),
+                Column::Both => both = both.child(section),
+                _ => left = left.child(section),
+            }
+        }
+        div()
+            .id("studio-gallery")
+            .track_scroll(&self.gallery_scroll)
+            .flex_1()
+            .min_w_0()
+            .h_full()
+            .overflow_y_scroll()
+            .p_6()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .text_color(env.tk("text.primary"))
+            .child(self.gallery_header(&uses, ui, cx))
+            .child(div().flex().items_start().gap_6().child(left).child(right))
+            .child(both)
+            .into_any_element()
+    }
+
+    /// The filter, and how many things the selected token is drawn on.
+    fn gallery_header(&self, uses: &[&TokenUse], ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+        let mut filter = style::segmented(ui);
+        for area in Area::ALL {
+            filter = filter.child(
+                style::segment(
+                    SharedString::from(format!("studio-area-{}", area.label())),
+                    ui,
+                    area.label(),
+                    self.area == area,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.area = area;
+                    cx.notify();
+                })),
+            );
+        }
+        let count = self.selected.as_ref().map(|name| {
+            let text = match uses.len() {
+                0 => format!("Nothing draws {name} directly"),
+                1 => format!("1 use of {name}"),
+                n => format!("{n} uses of {name}"),
+            };
+            div()
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap_1()
+                .text_caption()
+                .text_color(if uses.is_empty() { ui.faint } else { ui.link })
+                .child(style::icon(IconName::Target))
+                .child(div().min_w_0().truncate().child(text))
+        });
+        div().flex().items_center().justify_between().gap_4().child(filter).children(count).into_any_element()
+    }
+}
+
+use wormhole_core::tokens::TokenUse;
+
+/// One of the gallery's columns.
+#[track_caller]
+fn column() -> Div {
+    div().flex_1().min_w_0().flex().flex_col().gap_6()
+}
+
+/// A specimen under its label and what it shows.
+#[track_caller]
+fn section(ui: UiColors, title: &'static str, description: &'static str, content: AnyElement) -> AnyElement {
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(
+            div()
+                .flex()
+                .items_baseline()
+                .gap_2()
+                .child(style::section_label(ui, title))
+                .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(description)),
+        )
+        // Whatever a specimen can't fit in its column is cut off rather than drawn over the other
+        // column; the inset leaves room for the uses outline round its edges.
+        .child(div().w_full().min_w_0().overflow_hidden().p_1().child(content))
+        .into_any_element()
+}
+
+#[cfg(test)]
+mod tests {
+    use wormhole_core::tokens::{self, TOKEN_USES};
+
+    use super::Area;
+
+    /// Every thing a token can be used by (the token editor's "Used by") is drawn and marked
+    /// in the gallery, so selecting any token outlines all of its uses.
+    #[test]
+    fn every_use_is_marked_in_the_gallery() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/workspace/studio/gallery");
+        let mut text = String::new();
+        for entry in std::fs::read_dir(&dir).expect("the gallery's folder") {
+            let path = entry.expect("an entry").path();
+            if path.extension().is_some_and(|e| e == "rs") {
+                text.push_str(&std::fs::read_to_string(&path).expect("a specimen"));
+            }
+        }
+        // rustfmt may break the call after its parenthesis.
+        let text = text.split_whitespace().collect::<Vec<_>>().join(" ").replace("mark( ", "mark(");
+        let missing: Vec<&str> =
+            TOKEN_USES.iter().map(|u| u.id).filter(|id| !text.contains(&format!("mark(\"{id}\""))).collect();
+        assert!(missing.is_empty(), "not marked in the gallery: {}", missing.join(", "));
+    }
+
+    /// Core's area of a use is the area of the specimen that draws it, so the token list under an
+    /// area shows what the gallery shows there. Read from `SPECIMENS` and each specimen's file.
+    #[test]
+    fn each_use_is_drawn_in_its_areas_specimen() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/workspace/studio/gallery");
+        let read = |name: &str| std::fs::read_to_string(dir.join(name)).expect("a gallery file");
+        let index = read("mod.rs");
+        let table = index.split("const SPECIMENS").nth(1).expect("SPECIMENS");
+        let mut checked = 0;
+        for specimen in table.split("Specimen {").skip(1) {
+            let field = |key: &str| {
+                specimen.split(key).nth(1).and_then(|rest| rest.split(',').next()).map(str::trim).expect(key)
+            };
+            let area = match field("area:") {
+                "None" => tokens::Area::Basics,
+                some => {
+                    let label = some.trim_start_matches("Some(Area::").trim_end_matches(')');
+                    let area = Area::ALL.into_iter().find(|a| format!("{a:?}") == label).expect(label);
+                    area.part().expect("a part")
+                }
+            };
+            let file = field("render:").trim_end_matches("::render");
+            let text = read(&format!("{file}.rs")).split_whitespace().collect::<Vec<_>>().join(" ");
+            let text = text.replace("mark( ", "mark(");
+            for id in text.split("mark(\"").skip(1).filter_map(|rest| rest.split('"').next()) {
+                let found = TOKEN_USES.iter().find(|u| u.id == id).expect(id);
+                assert_eq!(found.area, area, "{id} is drawn in {file}.rs");
+                checked += 1;
+            }
+        }
+        assert!(checked >= TOKEN_USES.len(), "only {checked} marks found");
+    }
+}

@@ -1,0 +1,5 @@
+# The main window as it opens in Catppuccin Latte: one terminal in a repository with changes, the Notes panel.
+@fixture repo-basic
+@theme Catppuccin Latte
+@size 1440 900
+@shot window

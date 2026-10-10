@@ -1,0 +1,13 @@
+# The History tab: two-line commits, the latest expanded with its files one level in;
+# then the branch picker open.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+history
+@wait-idle
+commit 1
+@wait-idle
+@shot expanded
+picker history
+@sleep 600
+@shot picker

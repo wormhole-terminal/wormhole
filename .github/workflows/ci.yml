@@ -1,0 +1,132 @@
+name: CI
+
+# Runs only when started by hand (Actions → CI → Run workflow, or `gh workflow run CI`): macOS
+# runners are expensive. The gate is local: `scripts/check.sh` (fmt, clippy, every test, the build
+# without devctl) before every push.
+on:
+  workflow_dispatch:
+    inputs:
+      build_only:
+        description: Only build the nightly app, skip fmt, clippy, tests and deny (cheapest)
+        type: boolean
+        default: true
+
+# A new push supersedes the run in progress, on a PR and on main alike: a burst of merges runs the
+# macOS job once, for the newest commit.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Line tables are enough for backtraces; full DWARF made the cached target dirs several times larger.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
+# The Rust version is pinned in rust-toolchain.toml (what `cargo` uses locally and in CI); the
+# toolchain action lines below install the same one, and the `fmt` job fails when they disagree
+# (release.yml included). Bump the file and all of them together.
+jobs:
+  fmt:
+    name: Format
+    if: github.event_name != 'push' && !inputs.build_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain pins match rust-toolchain.toml
+        run: |
+          want=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
+          [ -n "$want" ] || { echo "no channel in rust-toolchain.toml"; exit 1; }
+          pins=$(grep -Hn 'uses: dtolnay/rust-toolchain[@]' .github/workflows/*.yml)
+          stray=$(printf '%s\n' "$pins" | grep -v -- "[@]$want\$" || true)
+          [ -z "$stray" ] || { printf '%s\nthese do not pin %s (rust-toolchain.toml)\n' "$stray" "$want"; exit 1; }
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  # Everything that builds on macOS: the whole workspace (core included), not only the app crate.
+  macos:
+    name: macOS (clippy, tests)
+    if: github.event_name != 'pull_request' && !inputs.build_only
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --workspace --all-targets --features devctl --locked -- -D warnings
+      - uses: taiki-e/install-action@nextest
+      # devctl turns on GPUI's test support: the settings and view tests only compile with it.
+      # nextest runs every test in its own process and bounds the slow ones (.config/nextest.toml);
+      # it runs no doctests, and the workspace has none (the one fenced block is `text`).
+      - run: cargo nextest run --workspace --features devctl --locked --profile ci
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: junit
+          path: target/nextest/ci/junit.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The pull request gate: the Linux build (used by cloud sessions) and the core tests, which need no
+  # GPUI; the packages match .claude/hooks/session-start.sh. macOS-only code is verified by the macOS
+  # job above after the merge.
+  linux:
+    name: Linux (clippy, core tests)
+    if: github.event_name != 'push' && !inputs.build_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends build-essential pkg-config git libfontconfig-dev libxkbcommon-dev libxkbcommon-x11-dev
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo clippy --workspace --all-targets --features devctl --locked -- -D warnings
+      # The app as it ships: without devctl, which the gate otherwise never builds.
+      - run: cargo check --workspace --locked
+      - uses: taiki-e/install-action@nextest
+      - run: cargo nextest run -p wormhole-core --locked --profile ci
+
+  deny:
+    name: Licenses & advisories
+    if: github.event_name != 'push' && !inputs.build_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  # Ad-hoc signed app, built on demand (Actions > CI > Run workflow, "Only build" is on by default,
+  # `gh workflow run CI -f build_only=false` adds the checks): download it
+  # from the run's Artifacts (GitHub login required). Unzip the artifact, then the
+  # inner zip; the app is not notarized, so right-click > Open on first launch.
+  nightly:
+    name: Nightly app (ad-hoc signed)
+    # No `needs: [macos]`: with build_only the checks are skipped, and a skipped dependency would skip
+    # this job too. The checks still run when the box is unticked, in parallel instead of first.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: scripts/bundle.sh
+      # ditto keeps the executable bit and code signature; upload-artifact alone would not.
+      - run: ditto -c -k --keepParent target/release/Wormhole.app "Wormhole-nightly-${GITHUB_SHA::7}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wormhole-nightly-${{ github.sha }}
+          path: Wormhole-nightly-*.zip
+          retention-days: 14

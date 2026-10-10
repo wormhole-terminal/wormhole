@@ -1,0 +1,509 @@
+//! Filesystem primitives for everything that reads or writes user and project files.
+//!
+//! Two problems recur across the code base and are solved once here:
+//!
+//! - **Writes must be atomic and must not be steerable.** A fixed temp name next to the target
+//!   (`notes.md.tmp`) lets a cloned repository plant a symlink there and have us write through
+//!   it; a plain `fs::write` truncates in place and a crash leaves half a file. [`write_atomic`]
+//!   creates a uniquely named temp file (exclusive create, so a planted link is never followed),
+//!   syncs it, keeps the permissions of the file it replaces and renames over the target.
+//! - **Reads from a repository are untrusted input.** [`read_capped`] bounds the size, refuses
+//!   anything that is not a regular file (a FIFO would block forever) and, with
+//!   [`LinkPolicy::Within`], refuses paths that resolve outside the project root.
+//!
+//! [`FileStamp`] tells, from metadata alone, whether a file may have changed since it was read,
+//! so pollers re-read only what changed.
+
+use std::fmt;
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
+
+/// How symlinks are treated.
+#[derive(Clone, Copy, Debug)]
+pub enum LinkPolicy<'a> {
+    /// The user's own files (`config.json`, `~/.claude/settings.json`): a symlinked file is a
+    /// dotfiles setup, so writes go through the link and the link stays.
+    Follow,
+    /// Files that come from a repository: the path, with all links resolved, must stay inside
+    /// this root. Writes replace a symlinked final component instead of following it.
+    Within(&'a Path),
+}
+
+/// Why a read or write was refused rather than attempted. It travels inside the `io::Error`
+/// the functions here return (see [`refusal`]), so callers can tell it from a failing disk and
+/// word it for their users.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Refusal {
+    /// With links resolved, the path is outside this [`LinkPolicy::Within`] root.
+    OutsideRoot(PathBuf),
+    /// Bigger than the cap given to [`read_capped`].
+    TooLarge(u64),
+    /// A directory, FIFO, socket or device.
+    NotRegularFile,
+    /// [`read_to_string_capped`] only.
+    NotUtf8,
+}
+
+impl fmt::Display for Refusal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OutsideRoot(root) => write!(f, "resolves outside {}", root.display()),
+            Self::TooLarge(cap) if cap % (1 << 20) == 0 => write!(f, "is larger than {} MiB", cap >> 20),
+            Self::TooLarge(cap) if cap % (1 << 10) == 0 => write!(f, "is larger than {} KiB", cap >> 10),
+            Self::TooLarge(cap) => write!(f, "is larger than {cap} bytes"),
+            Self::NotRegularFile => f.write_str("is not a regular file"),
+            Self::NotUtf8 => f.write_str("is not valid UTF-8"),
+        }
+    }
+}
+
+/// The error payload behind [`refusal`].
+#[derive(Debug)]
+struct Refused {
+    path: PathBuf,
+    refusal: Refusal,
+}
+
+impl fmt::Display for Refused {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.path.display(), self.refusal)
+    }
+}
+
+impl std::error::Error for Refused {}
+
+fn refuse(path: &Path, refusal: Refusal) -> io::Error {
+    let kind = match refusal {
+        Refusal::OutsideRoot(_) => io::ErrorKind::PermissionDenied,
+        Refusal::NotRegularFile => io::ErrorKind::InvalidInput,
+        Refusal::TooLarge(_) | Refusal::NotUtf8 => io::ErrorKind::InvalidData,
+    };
+    io::Error::new(kind, Refused { path: path.to_path_buf(), refusal })
+}
+
+/// The reason, when `err` is a refusal by this module rather than an I/O failure.
+pub fn refusal(err: &io::Error) -> Option<&Refusal> {
+    err.get_ref()?.downcast_ref::<Refused>().map(|refused| &refused.refusal)
+}
+
+fn escapes(path: &Path, root: &Path) -> io::Error {
+    refuse(path, Refusal::OutsideRoot(root.to_path_buf()))
+}
+
+/// Replace `path` with `bytes`: readers (and a crash) see the old or the new content, never a mix.
+pub fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Result<()> {
+    let (mut dir, mut target) = locate_for_write(path, policy)?;
+    fs::create_dir_all(&dir)?;
+    // Re-check after creating: a missing directory chain could not be canonicalized before.
+    if let LinkPolicy::Within(root) = policy {
+        let real_dir = fs::canonicalize(&dir)?;
+        if !real_dir.starts_with(fs::canonicalize(root)?) {
+            return Err(escapes(path, root));
+        }
+        // Work in the directory that was checked, not one reached through links again later.
+        let name = target.file_name().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, format!("{} names no file", path.display()))
+        })?;
+        target = real_dir.join(name);
+        dir = real_dir;
+    }
+
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".wormhole-").suffix(".tmp");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // New files get the usual 0666 &! umask instead of the temp file's private 0600.
+        builder.permissions(fs::Permissions::from_mode(0o666));
+    }
+    let mut tmp = builder.tempfile_in(&dir)?;
+    tmp.write_all(bytes)?;
+    // Keep what the user had: a 0600 settings file must not become world-readable. Under
+    // `Within` a link is replaced, not followed, so its target's mode is none of our business.
+    let existing = match policy {
+        LinkPolicy::Follow => fs::metadata(&target),
+        LinkPolicy::Within(_) => fs::symlink_metadata(&target),
+    };
+    if let Ok(existing) = existing
+        && existing.is_file()
+    {
+        tmp.as_file().set_permissions(existing.permissions())?;
+    }
+    tmp.as_file().sync_all()?;
+    tmp.persist(&target).map_err(|e| e.error)?;
+    // Best effort: make the rename itself durable.
+    if let Ok(dir) = File::open(&dir) {
+        let _ = dir.sync_all();
+    }
+    Ok(())
+}
+
+/// The directory to put the temp file in and the path to rename onto.
+fn locate_for_write(path: &Path, policy: LinkPolicy<'_>) -> io::Result<(PathBuf, PathBuf)> {
+    let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    match policy {
+        LinkPolicy::Follow => {
+            let target = match fs::symlink_metadata(path) {
+                Ok(meta) if meta.file_type().is_symlink() => fs::canonicalize(path)?,
+                _ => path.to_path_buf(),
+            };
+            let dir = target.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+            Ok((dir.to_path_buf(), target))
+        }
+        LinkPolicy::Within(root) => {
+            // Resolve the deepest existing ancestor so a symlinked directory is caught even
+            // before the chain below it exists.
+            let mut existing = parent;
+            while !existing.exists() {
+                match existing.parent() {
+                    Some(up) if !up.as_os_str().is_empty() => existing = up,
+                    _ => break,
+                }
+            }
+            let real =
+                fs::canonicalize(if existing.as_os_str().is_empty() { Path::new(".") } else { existing })?;
+            if !real.starts_with(fs::canonicalize(root)?) {
+                return Err(escapes(path, root));
+            }
+            // The rename replaces a symlinked final component rather than following it.
+            Ok((parent.to_path_buf(), path.to_path_buf()))
+        }
+    }
+}
+
+/// Read at most `cap` bytes of a regular file; larger files are an error, not a truncation.
+pub fn read_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<Vec<u8>> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    let mut flags = libc::O_NONBLOCK; // opening a FIFO blocks until a writer shows up
+    let open_path = match policy {
+        LinkPolicy::Follow => path.to_path_buf(),
+        LinkPolicy::Within(root) => {
+            let real = fs::canonicalize(path)?;
+            if !real.starts_with(fs::canonicalize(root)?) {
+                return Err(escapes(path, root));
+            }
+            // Open what was checked; a link swapped in at the last component since then fails.
+            #[cfg(unix)]
+            {
+                flags |= libc::O_NOFOLLOW;
+            }
+            real
+        }
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(flags);
+    }
+    let file = options.open(&open_path)?;
+    let meta = file.metadata()?;
+    if !meta.is_file() {
+        return Err(refuse(path, Refusal::NotRegularFile));
+    }
+    if meta.len() > cap {
+        return Err(too_large(path, cap));
+    }
+    // The size can change between the check and the read; `take` keeps the cap honest.
+    // Pre-size from the file but never beyond a sane bound: the cap may be u64::MAX.
+    let mut bytes = Vec::with_capacity(usize::try_from(meta.len().min(1 << 20)).unwrap_or(0));
+    file.take(cap.saturating_add(1)).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > cap {
+        return Err(too_large(path, cap));
+    }
+    Ok(bytes)
+}
+
+/// [`read_capped`] as UTF-8 text.
+pub fn read_to_string_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<String> {
+    String::from_utf8(read_capped(path, cap, policy)?).map_err(|_| refuse(path, Refusal::NotUtf8))
+}
+
+fn too_large(path: &Path, cap: u64) -> io::Error {
+    refuse(path, Refusal::TooLarge(cap))
+}
+
+/// What a path looks like from outside, to notice a change without reading it: identity
+/// (device, inode), type, size and both change times, of the path itself and, for a symlink, of
+/// what it points to. Take it *before* reading, so a write racing the read shows up as a change
+/// next time instead of being missed.
+///
+/// `ctime` is in it because tools that restore `mtime` (`cp -p`, `rsync -t`, `touch -d`) can't
+/// set it, and the inode because `git checkout` and atomic saves replace the file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FileStamp {
+    path: MetaKey,
+    /// The link's target, for a symlink.
+    target: Option<MetaKey>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct MetaKey {
+    dev: u64,
+    ino: u64,
+    mode: u32,
+    len: u64,
+    mtime: (i64, i64),
+    ctime: (i64, i64),
+}
+
+impl MetaKey {
+    #[cfg(unix)]
+    fn of(meta: &fs::Metadata) -> Self {
+        use std::os::unix::fs::MetadataExt;
+        Self {
+            dev: meta.dev(),
+            ino: meta.ino(),
+            mode: meta.mode(),
+            len: meta.len(),
+            mtime: (meta.mtime(), meta.mtime_nsec()),
+            ctime: (meta.ctime(), meta.ctime_nsec()),
+        }
+    }
+
+    #[cfg(not(unix))]
+    fn of(meta: &fs::Metadata) -> Self {
+        let since_epoch = |t: io::Result<std::time::SystemTime>| {
+            t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or((0, 0), |d| {
+                (i64::try_from(d.as_secs()).unwrap_or(i64::MAX), i64::from(d.subsec_nanos()))
+            })
+        };
+        Self {
+            dev: 0,
+            ino: 0,
+            mode: u32::from(meta.is_dir()),
+            len: meta.len(),
+            mtime: since_epoch(meta.modified()),
+            ctime: since_epoch(meta.created()),
+        }
+    }
+}
+
+impl FileStamp {
+    /// `None` when nothing is there (or it can't be looked at): appearing later is a change too.
+    /// Costs one `lstat`, plus a `stat` for a symlink; never opens the file.
+    pub fn of(path: &Path) -> Option<Self> {
+        let meta = fs::symlink_metadata(path).ok()?;
+        let target = if meta.file_type().is_symlink() {
+            fs::metadata(path).ok().as_ref().map(MetaKey::of)
+        } else {
+            None
+        };
+        Some(Self { path: MetaKey::of(&meta), target })
+    }
+}
+
+#[cfg(test)]
+#[cfg(unix)]
+mod tests {
+    use std::os::unix::fs::{PermissionsExt, symlink};
+
+    use super::{
+        FileStamp, LinkPolicy, Refusal, fs, read_capped, read_to_string_capped, refusal, write_atomic,
+    };
+
+    fn names(dir: &std::path::Path) -> Vec<String> {
+        let mut names: Vec<_> = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn replaces_content_and_leaves_no_temp_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("a.json");
+        write_atomic(&file, b"one", LinkPolicy::Follow).unwrap();
+        write_atomic(&file, b"two", LinkPolicy::Follow).unwrap();
+        assert_eq!(fs::read_to_string(&file).unwrap(), "two");
+        assert_eq!(names(dir.path()), ["a.json"]);
+    }
+
+    #[test]
+    fn keeps_the_mode_of_the_file_it_replaces() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("settings.json");
+        fs::write(&file, "{}").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        write_atomic(&file, b"{\"k\":1}", LinkPolicy::Follow).unwrap();
+        assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn follow_writes_through_a_symlinked_file_and_keeps_the_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("dotfiles").join("config.json");
+        fs::create_dir_all(real.parent().unwrap()).unwrap();
+        fs::write(&real, "old").unwrap();
+        let link = dir.path().join("config.json");
+        symlink(&real, &link).unwrap();
+        write_atomic(&link, b"new", LinkPolicy::Follow).unwrap();
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert_eq!(fs::read_to_string(&real).unwrap(), "new");
+    }
+
+    #[test]
+    fn a_planted_temp_name_is_not_a_way_to_write_elsewhere() {
+        // The attack on the old fixed `notes.md.tmp`: a repository ships the link, we write the notes.
+        let repo = tempfile::tempdir().unwrap();
+        let victim_dir = tempfile::tempdir().unwrap();
+        let victim = victim_dir.path().join("authorized_keys");
+        fs::write(&victim, "original").unwrap();
+        symlink(&victim, repo.path().join("notes.md.tmp")).unwrap();
+        symlink(&victim, repo.path().join("notes.md.wormhole-tmp")).unwrap();
+        write_atomic(&repo.path().join("notes.md"), b"# notes", LinkPolicy::Within(repo.path())).unwrap();
+        assert_eq!(fs::read_to_string(&victim).unwrap(), "original");
+        assert_eq!(fs::read_to_string(repo.path().join("notes.md")).unwrap(), "# notes");
+    }
+
+    #[test]
+    fn within_replaces_a_symlinked_final_component_instead_of_following_it() {
+        let repo = tempfile::tempdir().unwrap();
+        let victim_dir = tempfile::tempdir().unwrap();
+        let victim = victim_dir.path().join("secret");
+        fs::write(&victim, "original").unwrap();
+        symlink(&victim, repo.path().join("notes.md")).unwrap();
+        write_atomic(&repo.path().join("notes.md"), b"# notes", LinkPolicy::Within(repo.path())).unwrap();
+        assert_eq!(fs::read_to_string(&victim).unwrap(), "original");
+        let meta = fs::symlink_metadata(repo.path().join("notes.md")).unwrap();
+        assert!(meta.file_type().is_file());
+    }
+
+    #[test]
+    fn within_does_not_take_over_the_mode_of_a_linked_outside_file() {
+        // Replacing the link must not leak the victim's metadata into the repository either.
+        let repo = tempfile::tempdir().unwrap();
+        let victim_dir = tempfile::tempdir().unwrap();
+        let victim = victim_dir.path().join("secret");
+        fs::write(&victim, "original").unwrap();
+        fs::set_permissions(&victim, fs::Permissions::from_mode(0o604)).unwrap();
+        symlink(&victim, repo.path().join("notes.md")).unwrap();
+        write_atomic(&repo.path().join("notes.md"), b"x", LinkPolicy::Within(repo.path())).unwrap();
+        write_atomic(&repo.path().join("fresh.md"), b"x", LinkPolicy::Within(repo.path())).unwrap();
+        let mode = |name: &str| fs::metadata(repo.path().join(name)).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode("notes.md"), mode("fresh.md"));
+        assert_eq!(fs::metadata(&victim).unwrap().permissions().mode() & 0o777, 0o604);
+    }
+
+    #[test]
+    fn within_refuses_a_directory_that_leaves_the_root() {
+        let repo = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), repo.path().join(".wormhole")).unwrap();
+        let err =
+            write_atomic(&repo.path().join(".wormhole/notes.md"), b"x", LinkPolicy::Within(repo.path()))
+                .unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
+        assert!(names(outside.path()).is_empty());
+    }
+
+    #[test]
+    fn within_creates_missing_directories_inside_the_root() {
+        let repo = tempfile::tempdir().unwrap();
+        let file = repo.path().join(".wormhole/deep/notes.md");
+        write_atomic(&file, b"x", LinkPolicy::Within(repo.path())).unwrap();
+        assert_eq!(fs::read_to_string(file).unwrap(), "x");
+    }
+
+    #[test]
+    fn reads_are_capped() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("big");
+        fs::write(&file, vec![b'a'; 11]).unwrap();
+        assert_eq!(read_capped(&file, 11, LinkPolicy::Follow).unwrap().len(), 11);
+        let err = read_capped(&file, 10, LinkPolicy::Follow).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(refusal(&err), Some(&Refusal::TooLarge(10)));
+        assert!(err.to_string().ends_with("big is larger than 10 bytes"), "{err}");
+        assert_eq!(Refusal::TooLarge(1 << 20).to_string(), "is larger than 1 MiB");
+        assert_eq!(Refusal::TooLarge(256 << 10).to_string(), "is larger than 256 KiB");
+        // A plain I/O error is not a refusal.
+        let missing = read_capped(&dir.path().join("missing"), 10, LinkPolicy::Follow).unwrap_err();
+        assert_eq!(refusal(&missing), None);
+        fs::write(&file, [0xff, 0xfe]).unwrap();
+        let err = read_to_string_capped(&file, 10, LinkPolicy::Follow).unwrap_err();
+        assert_eq!(refusal(&err), Some(&Refusal::NotUtf8));
+    }
+
+    #[test]
+    fn an_unbounded_cap_does_not_overflow() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("small");
+        fs::write(&file, b"abc").unwrap();
+        assert_eq!(read_capped(&file, u64::MAX, LinkPolicy::Follow).unwrap(), b"abc");
+    }
+
+    #[test]
+    fn within_refuses_a_symlink_to_a_file_outside_the_root() {
+        let repo = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let key = outside.path().join("id_ed25519");
+        fs::write(&key, "private").unwrap();
+        symlink(&key, repo.path().join("notes.md")).unwrap();
+        let err = read_to_string_capped(&repo.path().join("notes.md"), 1024, LinkPolicy::Within(repo.path()))
+            .unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
+        assert_eq!(refusal(&err), Some(&Refusal::OutsideRoot(repo.path().to_path_buf())));
+        // A link that stays inside the root is fine.
+        fs::write(repo.path().join("real.md"), "ok").unwrap();
+        symlink(repo.path().join("real.md"), repo.path().join("alias.md")).unwrap();
+        assert_eq!(
+            read_to_string_capped(&repo.path().join("alias.md"), 1024, LinkPolicy::Within(repo.path()))
+                .unwrap(),
+            "ok"
+        );
+    }
+
+    #[test]
+    fn a_fifo_is_refused_instead_of_blocking() {
+        let dir = tempfile::tempdir().unwrap();
+        let fifo = dir.path().join("pipe");
+        let made = std::process::Command::new("mkfifo").arg(&fifo).status();
+        if !made.is_ok_and(|s| s.success()) {
+            return; // no mkfifo on this machine
+        }
+        let err = read_capped(&fifo, 1024, LinkPolicy::Follow).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+        assert_eq!(refusal(&err), Some(&Refusal::NotRegularFile));
+    }
+
+    #[test]
+    fn stamps_change_with_content_identity_and_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("actions.json");
+        assert_eq!(FileStamp::of(&file), None);
+        fs::write(&file, "[]").unwrap();
+        let first = FileStamp::of(&file).unwrap();
+        assert_eq!(FileStamp::of(&file), Some(first), "stable while nothing changes");
+
+        fs::write(&file, "[1]").unwrap();
+        let edited = FileStamp::of(&file).unwrap();
+        assert_ne!(edited, first, "an edit in place");
+        // Same size, contents swapped by an atomic save (new inode), mtime put back.
+        let mtime = fs::metadata(&file).unwrap().modified().unwrap();
+        write_atomic(&file, b"[2]", LinkPolicy::Follow).unwrap();
+        fs::File::options().write(true).open(&file).unwrap().set_modified(mtime).unwrap();
+        assert_ne!(FileStamp::of(&file).unwrap(), edited, "a replaced file with its old mtime");
+
+        // A link: retargeting it, or editing what it points to, is a change.
+        let (a, b) = (dir.path().join("a.md"), dir.path().join("b.md"));
+        fs::write(&a, "a").unwrap();
+        fs::write(&b, "b").unwrap();
+        let link = dir.path().join("link.md");
+        symlink(&a, &link).unwrap();
+        let linked = FileStamp::of(&link).unwrap();
+        fs::write(&a, "aa").unwrap();
+        let target_edited = FileStamp::of(&link).unwrap();
+        assert_ne!(target_edited, linked);
+        fs::remove_file(&link).unwrap();
+        symlink(&b, &link).unwrap();
+        assert_ne!(FileStamp::of(&link).unwrap(), target_edited);
+
+        fs::remove_file(&file).unwrap();
+        assert_eq!(FileStamp::of(&file), None);
+    }
+}

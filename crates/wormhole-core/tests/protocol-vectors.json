@@ -1,0 +1,157 @@
+{
+  "$comment": "Conformance vectors for the agent status protocol. Run by crates/wormhole-core/tests/protocol_vectors.rs; another implementation can read the same file.",
+  "describe": [
+    {
+      "event": "Notification",
+      "expect_event": "Notification:idle_prompt",
+      "expect_message": "Claude is waiting for your input",
+      "payload": { "message": "Claude is waiting for your input", "notification_type": "idle_prompt" }
+    },
+    {
+      "event": "Notification",
+      "expect_event": "Notification",
+      "expect_message": null,
+      "payload": {}
+    },
+    {
+      "event": "PermissionRequest",
+      "expect_event": "PermissionRequest:Bash",
+      "expect_message": "Approve cargo test -p core?",
+      "payload": { "tool_input": { "command": "\ncargo test -p core\necho" }, "tool_name": "Bash" }
+    },
+    {
+      "event": "PermissionRequest",
+      "expect_event": "PermissionRequest:Edit",
+      "expect_message": "Approve editing main.rs?",
+      "payload": { "tool_input": { "file_path": "/repo/src/main.rs" }, "tool_name": "Edit" }
+    },
+    {
+      "event": "PermissionRequest",
+      "expect_event": "PermissionRequest:WebFetch",
+      "expect_message": "Approve fetching docs.rs?",
+      "payload": { "tool_input": { "url": "https://docs.rs/serde?x=1" }, "tool_name": "WebFetch" }
+    },
+    {
+      "event": "PermissionRequest",
+      "expect_event": "PermissionRequest:mcp__github__create_issue",
+      "expect_message": "Approve create_issue?",
+      "payload": { "tool_input": {}, "tool_name": "mcp__github__create_issue" }
+    },
+    {
+      "event": "PreToolUse",
+      "expect_event": "PreToolUse:AskUserQuestion",
+      "expect_message": "Which database?",
+      "payload": { "tool_input": { "questions": [{ "question": "Which database?" }] }, "tool_name": "AskUserQuestion" }
+    },
+    {
+      "event": "PreToolUse",
+      "expect_event": "PreToolUse:ExitPlanMode",
+      "expect_message": "Approve the plan?",
+      "payload": { "tool_input": { "plan": "..." }, "tool_name": "ExitPlanMode" }
+    },
+    {
+      "event": "PreToolUse",
+      "expect_event": "PreToolUse:Read",
+      "expect_message": null,
+      "payload": { "tool_name": "Read" }
+    },
+    {
+      "event": "Stop",
+      "expect_event": "Stop:background",
+      "expect_message": null,
+      "payload": { "background_tasks": [{ "id": "1", "status": "running", "type": "subagent" }] }
+    },
+    {
+      "event": "Stop",
+      "expect_event": "Stop",
+      "expect_message": null,
+      "payload": { "background_tasks": [{ "id": "1", "status": "running", "type": "shell" }] }
+    },
+    {
+      "event": "SessionEnd",
+      "expect_event": "SessionEnd:clear",
+      "expect_message": null,
+      "payload": { "reason": "clear" }
+    },
+    {
+      "event": "StopFailure",
+      "expect_event": "StopFailure:rate_limit",
+      "expect_message": null,
+      "payload": { "error": "rate_limit" }
+    }
+  ],
+  "messages": [
+    {
+      "line": "{\"kind\":\"hook\",\"tab\":\"7\",\"agent\":\"claude\",\"event\":\"Stop\",\"message\":null}"
+    },
+    {
+      "line": "{\"kind\":\"hook\",\"tab\":\"12\",\"agent\":\"codex\",\"event\":\"Notification:permission_prompt\",\"message\":\"needs input\"}"
+    },
+    {
+      "line": "{\"kind\":\"hook\",\"tab\":\"3\",\"agent\":\"opencode\",\"event\":\"session.idle\",\"message\":null}"
+    },
+    { "line": "{\"kind\":\"activate\"}" },
+    {
+      "line": "{\"kind\":\"usage\",\"usage\":{\"agent\":\"claude\",\"five_hour\":{\"used\":25.5,\"resets_at\":1800002040},\"seven_day\":null,\"updated\":1800000000}}"
+    },
+    {
+      "line": "{\"kind\":\"gauge\",\"tab\":\"7\",\"gauge\":{\"agent\":\"claude\",\"model\":\"Opus 4.5\",\"context\":41.5}}"
+    },
+    {
+      "line": "{\"kind\":\"control\",\"version\":1,\"from\":\"7\",\"action\":\"send_text\",\"target\":{\"kind\":\"tab\",\"id\":4},\"text\":\"hi\"}"
+    }
+  ],
+  "messages_accepted_as": [
+    {
+      "$comment": "Hooks installed before other agents were supported send neither agent nor message: the agent is Claude.",
+      "line": "{\"kind\":\"hook\",\"tab\":\"7\",\"event\":\"Stop\"}",
+      "becomes": "{\"kind\":\"hook\",\"tab\":\"7\",\"agent\":\"claude\",\"event\":\"Stop\",\"message\":null}"
+    }
+  ],
+  "messages_ignored": [
+    "not json",
+    "{\"kind\":\"from_the_future\"}",
+    "{\"kind\":\"hook\",\"tab\":\"7\",\"agent\":\"no-such-agent\",\"event\":\"Stop\"}",
+    "{\"kind\":\"hook\",\"event\":\"Stop\"}"
+  ],
+  "signals": [
+    { "agent": "claude", "event": "UserPromptSubmit", "signal": "busy" },
+    { "agent": "claude", "event": "PreToolUse:Read", "signal": "busy" },
+    { "agent": "claude", "event": "PostToolUse", "signal": "busy" },
+    { "agent": "claude", "event": "PreToolUse:AskUserQuestion", "signal": "attention" },
+    { "agent": "claude", "event": "PreToolUse:ExitPlanMode", "signal": "attention" },
+    { "agent": "claude", "event": "PermissionRequest:Bash", "signal": "attention" },
+    { "agent": "claude", "event": "Notification", "signal": "attention" },
+    { "agent": "claude", "event": "Notification:permission_prompt", "signal": "attention" },
+    { "agent": "claude", "event": "Notification:elicitation_dialog", "signal": "attention" },
+    { "agent": "claude", "event": "Notification:idle_prompt", "signal": null },
+    { "agent": "claude", "event": "Stop", "signal": "done" },
+    { "agent": "claude", "event": "Stop:background", "signal": "busy" },
+    { "agent": "claude", "event": "StopFailure:rate_limit", "signal": "done" },
+    { "agent": "claude", "event": "SessionEnd:clear", "signal": "quiet" },
+    { "agent": "claude", "event": "SessionEnd:resume", "signal": "quiet" },
+    { "agent": "claude", "event": "SessionEnd:logout", "signal": "ended" },
+    { "agent": "claude", "event": "SomethingNew", "signal": null },
+    { "agent": "qwen", "event": "PreToolUse", "signal": "busy" },
+    { "agent": "qwen", "event": "Stop", "signal": "done" },
+    { "agent": "droid", "event": "Notification:elicitation_dialog", "signal": "attention" },
+    { "agent": "codex", "event": "UserPromptSubmit", "signal": "busy" },
+    { "agent": "codex", "event": "PermissionRequest:Bash", "signal": "attention" },
+    { "agent": "codex", "event": "Stop", "signal": "done" },
+    { "agent": "gemini", "event": "BeforeAgent", "signal": "busy" },
+    { "agent": "gemini", "event": "Notification", "signal": "attention" },
+    { "agent": "gemini", "event": "AfterAgent", "signal": "done" },
+    { "agent": "copilot", "event": "preToolUse", "signal": "busy" },
+    { "agent": "copilot", "event": "notification:permission_prompt", "signal": "attention" },
+    { "agent": "copilot", "event": "notification:idle_prompt", "signal": null },
+    { "agent": "copilot", "event": "agentStop", "signal": "done" },
+    { "agent": "copilot", "event": "sessionEnd:resume", "signal": "quiet" },
+    { "agent": "goose", "event": "PostToolUse", "signal": "busy" },
+    { "agent": "goose", "event": "Stop", "signal": "done" },
+    { "agent": "opencode", "event": "session.busy", "signal": "busy" },
+    { "agent": "opencode", "event": "permission.asked", "signal": "attention" },
+    { "agent": "opencode", "event": "permission.replied", "signal": "busy" },
+    { "agent": "opencode", "event": "session.idle", "signal": "done" },
+    { "agent": "aider", "event": "Stop", "signal": null }
+  ]
+}

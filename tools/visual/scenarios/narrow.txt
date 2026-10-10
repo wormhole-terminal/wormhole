@@ -1,0 +1,13 @@
+# The fit rule: at 1000 the panel yields (330) so the terminal keeps 320; at 900 it hides
+# for room and its toggle wears the dot; 670 is the smallest window; the panel toggle there
+# hides the sidebar to make room.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1000 900
+@shot w1000
+resize 900 900
+@shot w900
+resize 670 900
+@shot w670
+toggle-panel
+@shot w670-panel

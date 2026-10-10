@@ -1,0 +1,13 @@
+# The sidebar with three agents: one needs you (its pulse held still), one finished, one working.
+# The shell is a copy of cat named `claude`, so agent detection keeps the hook-driven statuses.
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new
+new
+@wait-idle
+hook 1 Notification Allow Bash?
+hook 2 Stop
+hook 3 UserPromptSubmit
+@shot needs-you

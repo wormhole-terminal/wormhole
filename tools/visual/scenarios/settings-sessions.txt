@@ -1,0 +1,11 @@
+# Settings → Terminals & sidebar: the live preview with Compact previewed beside the current look, the list options and row details.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section sessions
+@batch
+settings-resize 1024 1000
+@batch
+settings-preview compact
+@batch
+@shot sessions-hover-compact settings

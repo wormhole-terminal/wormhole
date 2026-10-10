@@ -1,0 +1,7 @@
+# A very long note: open, it shows 12 lines, fades out, and offers "Show all · N lines".
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+note-add Why the nightly migration kept failing\nAgent kept retrying the migration because the lock wasn't released: see https://github.com/example/terminal/actions/runs/11893301245/job/33139872201#step:7:212 for the full log, then the second run, which passed after the cache was cleared and the runner image was bumped to macos-15. Agent kept retrying the migration because the lock wasn't released: see https://github.com/example/terminal/actions/runs/11893301245/job/33139872201#step:7:212 for the full log, then the second run, which passed after the cache was cleared and the runner image was bumped to macos-15.\n\nThen the third run failed again on the same step.
+panel-tab notes
+@shot note

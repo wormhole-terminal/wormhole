@@ -1,0 +1,15 @@
+# Terminals without an agent: bare shells at their prompt (one line, a faint terminal
+# symbol), and one in the background that rang its bell (the amber bell until it is seen).
+@fixture terminal
+@theme Tokyo Night
+@size 1440 900
+new ~/terminal
+new ~/dotfiles
+@wait-idle
+rename 1 prod
+rename 2 scratch
+rename 3 zsh
+activate 1
+type \a\r
+activate 3
+@shot plain

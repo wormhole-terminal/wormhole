@@ -1,0 +1,13 @@
+# Compared with a branch: vs ⎇ main lists everything since ui-unify split off; then the
+# compare picker open (HEAD first, the branches with their mark, the hint under them).
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+changes
+@wait-idle
+compare main
+@wait-idle
+@shot vs-main
+picker compare
+@sleep 600
+@shot picker

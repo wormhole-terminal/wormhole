@@ -1,0 +1,16 @@
+# The Notes tab: three next steps, one done, the second hovered (grip and actions); an open
+# note and a folded one.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+task Fix the flaky login test
+task Update README with setup steps
+task Tighten folder header spacing
+task-done 1
+note-add Sidebar ideas\nDrop the idle line on quiet rows.\nBranch as a chip next to the folder name.\n\nOne lead column: chevron, status, checkbox.
+note-add Release checklist\nTag, then publish.
+note-toggle 2
+panel-tab notes
+@batch
+hover 1300 118
+@shot notes

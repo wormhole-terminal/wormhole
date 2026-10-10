@@ -1,0 +1,9 @@
+# Settings → Fonts: the specimen, the terminal font with line height and ligatures, code, interface, your fonts.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section fonts
+@batch
+settings-resize 1024 1000
+@batch
+@shot fonts settings

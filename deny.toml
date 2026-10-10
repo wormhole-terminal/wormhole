@@ -1,0 +1,49 @@
+# cargo-deny: licenses, security advisories, banned/duplicate crates, sources.
+# Run locally with `cargo deny check` (install: `cargo install cargo-deny`).
+
+[graph]
+all-features = true
+
+[licenses]
+# Permissive licenses, plus MPL-2.0 (file-level copyleft; fine for an app).
+# GPL/LGPL only appear as alternatives in dual licenses, so cargo-deny picks
+# the permissive side and they're not needed here.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unlicense",
+    "CC0-1.0",
+    "0BSD",
+    "BSL-1.0",
+    "NCSA",
+    "bzip2-1.0.6",
+    "MPL-2.0",
+    # webpki-root-certs (Mozilla CA roots, via the updater's rustls-platform-verifier).
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+
+# Our own crates are GPL-3.0-or-later and never published: not checked against the list above.
+[licenses.private]
+ignore = true
+
+[advisories]
+# Unmaintained crates deep in GPUI's tree are warnings, not failures.
+unmaintained = "workspace"
+
+[bans]
+# GPUI pulls several versions of some crates; don't fail on that.
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,12 @@
+# The Changes tab: the branch chip · repository, vs HEAD and refresh; Changes and
+# Untracked bands; long names cut in the middle, folders at the front; an LFS file, a binary one.
+# Then one file's diff open: its row is the selected one.
+@fixture repo-panel
+@theme Tokyo Night
+@size 1440 900
+@config changes_tree=false
+changes
+@wait-idle
+@shot list
+diff 3
+@shot open

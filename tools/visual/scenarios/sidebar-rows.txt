@@ -1,0 +1,36 @@
+# Row display options on the sidebar's terminals: the default (glyph in the lead column, no
+# logo), the glyph on the right, the agent's logo with the glyph in the lead column (only the idle
+# agent shows it) and on the right, and the glyph off.
+@fixture terminal
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new ~/terminal
+new ~/terminal
+new ~/terminal
+@wait-idle
+# Agent detection looks every 2 s: let it find the agent in each new terminal.
+@sleep 2500
+rename 1 sidebar polish
+rename 2 diff perf
+rename 3 rate limits
+rename 4 zsh
+activate 1
+hook 1 UserPromptSubmit
+hook 2 Notification Approve cargo test?
+@shot default
+set sidebar_status_position="right"
+# config.json is read back by its watcher.
+@sleep 1500
+@shot right
+set sidebar_status_position="left"
+set sidebar_agent_icon=true
+@sleep 1500
+@shot logo-lead
+set sidebar_status_position="right"
+@sleep 1500
+@shot logo-right
+set sidebar_status_dot=false
+set sidebar_agent_icon=false
+@sleep 1500
+@shot no-dot

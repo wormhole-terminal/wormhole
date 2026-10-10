@@ -1,0 +1,25 @@
+# cargo-nextest settings; CI runs `cargo nextest run --workspace --features devctl --locked --profile ci`.
+# `cargo test --workspace --features devctl` stays the local gate and ignores this file.
+
+[profile.default]
+# A test that hangs is reported as slow after 15 s and killed after 60 s, instead of holding the job
+# until its timeout-minutes. Failures don't stop the run: one pass shows every broken test.
+slow-timeout = { period = "15s", terminate-after = 4 }
+fail-fast = false
+
+# Tests whose assertions race a wall clock (deadlines, grace periods, sleeps). Run at full
+# parallelism next to the PTY and GPUI tests on a loaded CI runner they miss their windows; two at
+# a time leave them the CPU.
+[test-groups]
+wall-clock = { max-threads = 2 }
+
+[[profile.default.overrides]]
+filter = 'test(/^ipc::server::/) | test(/^git::cmd::tests::a_/) | (binary(git_repo) & test(/stall|huge|too_large|without_commits/)) | test(/relaunch/)'
+test-group = 'wall-clock'
+
+[profile.ci]
+retries = 0
+
+# target/nextest/ci/junit.xml; the CI job uploads it.
+[profile.ci.junit]
+path = "junit.xml"

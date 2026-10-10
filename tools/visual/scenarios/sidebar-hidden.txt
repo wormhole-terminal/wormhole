@@ -1,0 +1,7 @@
+# The window with the sidebar hidden: the lights and the collapse button stay where they are,
+# the tabs start after them, the panel keeps its place.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+toggle-sidebar
+@shot hidden

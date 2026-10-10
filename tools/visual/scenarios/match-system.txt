@@ -1,0 +1,16 @@
+# Match system (Settings' Mode): Tokyo Night is the dark pick and Catppuccin Latte the light
+# one; the window shows the pick for the system's appearance and changes with it.
+@fixture repo-basic
+@theme Tokyo Night
+@config theme_light="Catppuccin Latte"
+@config theme_mode="system"
+@size 1440 900
+@shot dark
+appearance light
+@batch
+@shot light
+settings-section appearance
+@batch
+settings-resize 1024 900
+@batch
+@shot settings-light settings

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template: scripts/bundle.sh fills the @...@ placeholders from packaging/app.env and Cargo.toml. -->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>@APP_NAME@</string>
+	<key>CFBundleName</key>
+	<string>@APP_NAME@</string>
+	<key>CFBundleExecutable</key>
+	<string>@APP_BINARY@</string>
+	<key>CFBundleIdentifier</key>
+	<string>@BUNDLE_ID@</string>
+	<!-- The icon is Assets.car's AppIcon (compiled from packaging/icon/AppIcon.icon); AppIcon.icns is the fallback. -->
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<!-- Marketing version (X.Y.Z, pre-release suffix stripped) and build number. -->
+	<key>CFBundleShortVersionString</key>
+	<string>@SHORT_VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@BUILD_VERSION@</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>@MIN_MACOS@</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>@COPYRIGHT@</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+	<!--
+	What Wormhole opens (each in a new terminal; workspace/default_terminal.rs): scripts and
+	programs, which it runs once Settings → Terminal makes it the default terminal, and folders,
+	from Open With or the Dock icon. Alternate: never the default until the person asks.
+	-->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Shell Script</string>
+			<key>CFBundleTypeRole</key>
+			<string>Shell</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.apple.terminal.shell-script</string>
+				<string>public.unix-executable</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Folder</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.folder</string>
+			</array>
+		</dict>
+	</array>
+	<!--
+	Programs run inside the terminal are attributed to Wormhole by macOS privacy
+	(TCC) prompts, so these strings are what the user sees when e.g. a CLI tool in a
+	shell asks for the microphone. Without them macOS silently denies (or kills) the
+	child. They pair with the resource entitlements in entitlements.plist.
+	-->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>A program running in Wormhole wants to control another app with Apple Events.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>A program running in Wormhole wants to use the microphone.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>A program running in Wormhole wants to use the camera.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>A program running in Wormhole wants to access your contacts.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>A program running in Wormhole wants to access your calendars.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>A program running in Wormhole wants to access your reminders.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>A program running in Wormhole wants to access your photo library.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>A program running in Wormhole wants to use your location.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>A program running in Wormhole wants to access files on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>A program running in Wormhole wants to access files in your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>A program running in Wormhole wants to access files in your Downloads folder.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>A program running in Wormhole wants to access files on a removable volume.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>A program running in Wormhole wants to access files on a network volume.</string>
+</dict>
+</plist>

@@ -1,0 +1,22 @@
+# Edge cases: long terminal names (the right side never shrinks), a long folder and branch,
+# a worktree (its mark), a detached HEAD (amber chip), a plain folder (no chip), a single terminal
+# in a band; then 34 terminals scrolled so a band sticks under the header.
+@fixture terminal
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+new ~/terminal
+new ~/customer-onboarding-service
+new ~/terminal-worktrees/badge
+new ~/bisect
+new ~/dotfiles
+@wait-idle
+# Agent detection looks every 2 s: let it find the agent in each new terminal.
+@sleep 2500
+rename 1 investigate why the nightly integration suite times out on arm64
+rename 2 refactor the authentication middleware to use the session store
+rename 4 badge agent
+activate 6
+hook 1 Notification Allow network access to registry.npmjs.org for the lockfile refresh?
+hook 2 UserPromptSubmit
+@shot edges

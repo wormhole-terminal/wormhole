@@ -1,0 +1,26 @@
+# Catppuccin Latte at 80 % with blur: A in a light system; B under Reduce Transparency,
+# opaque as the light theme; D in a dark system. The shots don't carry the native material, so A
+# and D only differ there (light in both, as the material follows the theme).
+@fixture repo-basic
+@shell claude
+@theme Catppuccin Latte
+@config opacity=0.8
+@config blur=true
+@size 1440 900
+new
+new
+@wait-idle
+hook 1 Notification Approve cargo test?
+hook 2 Stop
+hook 3 UserPromptSubmit
+task-seed 3 1
+appearance light
+@batch
+@shot a-light
+reduce-transparency on
+@batch
+@shot b-reduced
+reduce-transparency off
+appearance dark
+@batch
+@shot d-dark-system

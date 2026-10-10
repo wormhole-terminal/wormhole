@@ -1,0 +1,48 @@
+# 34 terminals in five folders, in a window short enough to scroll far: scrolled into the
+# second folder, its band sticks under the header on the opaque band.solid; scrolled further, the
+# next band pushes it up.
+@fixture terminal
+@shell claude
+@theme Tokyo Night
+@size 1440 600
+new ~/terminal
+new ~/terminal
+new ~/terminal
+new ~/terminal
+new ~/terminal
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/api-server
+new ~/website
+new ~/website
+new ~/website
+new ~/website
+new ~/website
+new ~/website
+new ~/website
+new ~/website
+new ~/dotfiles
+new ~/dotfiles
+new ~/dotfiles
+new ~/dotfiles
+new ~/dotfiles
+new ~/dotfiles
+new ~/bisect
+new ~/bisect
+new ~/bisect
+new ~/bisect
+new ~/bisect
+new ~/bisect
+@wait-idle
+# Agent detection looks every 2 s: let it find the agent in each new terminal.
+@sleep 2500
+activate 1
+sidebar-scroll 300
+@shot sticky
+sidebar-scroll 140
+@shot pushed

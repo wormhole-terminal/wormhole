@@ -1,0 +1,14 @@
+# The keyboard-shortcuts sheet over the window: every section from the key table (⌥⌘/ is the
+# sheet's own key, ⌘/ the status bar's), then filtered by "split" and by a key.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+sheet
+@batch
+@shot sheet
+sheet split
+@batch
+@shot filtered
+sheet ⌘W
+@batch
+@shot key

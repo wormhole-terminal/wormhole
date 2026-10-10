@@ -1,0 +1,19 @@
+# Terminals as rows and splits: no tab strip, a title row with the
+# breadcrumb and the split buttons; ⌘T makes a terminal (three rows); a split of two shows both
+# rows in the sidebar with the bracket and one selected; an agent asking in the other pane shows
+# on its own row.
+@fixture repo-basic
+@shell claude
+@theme Tokyo Night
+@size 1440 900
+hook 1 UserPromptSubmit
+@shot one-terminal
+new
+new
+@wait-idle
+activate 1
+@shot three-rows
+pane-split right
+@wait-idle
+hook 2 Notification Allow Bash?
+@shot split
