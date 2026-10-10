@@ -23,6 +23,8 @@ pub(crate) const FIRST_LAUNCH: Style = Style::Voyage;
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Options {
     /// Whether the window was showing as it began (a replay) or never was (a first launch).
+    // Only the macOS overlay reads it; without one the intro doesn't play.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub start: Start,
     /// Whether the traffic lights fade away as the run begins: a replay over a window that is showing
     /// them. They are the window's chrome, and the page is what the run is about. The run never brings
