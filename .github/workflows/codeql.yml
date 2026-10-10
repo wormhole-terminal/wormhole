@@ -1,0 +1,41 @@
+name: CodeQL
+
+# GitHub's code scanning, set up here instead of GitHub's default setup so the languages are ours to
+# choose: the workflows (where a mistake could reach the signing keys), the Python scripts and the
+# Rust code, none of which needs a build. The two Swift files are build helpers for the icon and the
+# DMG and would need a macOS build, so they are left out. Findings: Security → Code scanning.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1" # Mondays: new queries find old code too
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload the findings
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, python, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}
