@@ -26,8 +26,8 @@ fn area(cx: &mut TestAppContext, window: &OpenWindow) -> Option<Area> {
 }
 
 #[gpui_kit::test]
-fn the_f16_keys_reach_their_actions(cx: &mut TestAppContext) {
-    if isolate_in(module_path!(), "the_f16_keys_reach_their_actions") {
+fn the_shortcut_keys_reach_their_actions(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_shortcut_keys_reach_their_actions") {
         return;
     }
     let window = start(cx, 1);

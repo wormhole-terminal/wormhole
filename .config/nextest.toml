@@ -20,6 +20,13 @@ test-group = 'wall-clock'
 [profile.ci]
 retries = 0
 
+# The app's window tests start real terminals whose reader thread can reach GPUI's deterministic test
+# scheduler, which fails a test now and then on a loaded runner (https://github.com/wormhole-terminal/wormhole/issues/3). One retry, reported as
+# FLAKY, until that is fixed; then remove this override.
+[[profile.ci.overrides]]
+filter = 'binary_id(wormhole::bin/Wormhole)'
+retries = 1
+
 # target/nextest/ci/junit.xml; the CI job uploads it.
 [profile.ci.junit]
 path = "junit.xml"

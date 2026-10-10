@@ -102,7 +102,7 @@ fn f40(now: Instant) -> MenuSnapshot {
 }
 
 #[test]
-fn the_menu_lists_terminals_by_status_as_f40_draws_it() {
+fn the_menu_lists_terminals_by_status() {
     let now = Instant::now();
     let model = build(&f40(now), now);
     assert_eq!(headers(&model.entries), ["Needs you", "Working", "Finished"]);
