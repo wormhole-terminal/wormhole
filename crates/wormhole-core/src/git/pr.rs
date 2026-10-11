@@ -88,6 +88,14 @@ pub const REFRESH_AFTER: Duration = Duration::from_secs(5 * 60);
 /// or red about when the checks finish.
 pub const PENDING_REFRESH: Duration = Duration::from_secs(60);
 
+/// How long to wait after the `n`th answer in a row that said the checks still run: a minute,
+/// then twice as long each time up to [`REFRESH_AFTER`], so a check that never reports (a required
+/// status nothing sends) doesn't have `gh` asked every minute for ever.
+fn pending_wait(n: u32) -> Duration {
+    let doubled = PENDING_REFRESH.saturating_mul(1 << n.saturating_sub(1).min(16));
+    doubled.min(REFRESH_AFTER)
+}
+
 /// After a failure (no `gh`, signed out, offline) nothing asks for this long.
 pub const RETRY_AFTER: Duration = Duration::from_secs(30 * 60);
 
@@ -357,6 +365,8 @@ struct Entry {
     due: Instant,
     /// A lookup is out.
     asked: bool,
+    /// How many answers in a row said its checks were still running.
+    pending: u32,
 }
 
 /// What `gh` said about each branch, so a terminal asks once in a long while, not at every
@@ -383,7 +393,7 @@ impl PrCache {
                 true
             }
             None => {
-                self.entries.insert(branch.clone(), Entry { found: None, due: now, asked: true });
+                self.entries.insert(branch.clone(), Entry { found: None, due: now, asked: true, pending: 0 });
                 true
             }
         }
@@ -396,8 +406,12 @@ impl PrCache {
         result: Result<Option<PullRequest>, PrError>,
         now: Instant,
     ) -> Option<Settled> {
-        let entry =
-            self.entries.entry(branch.clone()).or_insert(Entry { found: None, due: now, asked: false });
+        let entry = self.entries.entry(branch.clone()).or_insert(Entry {
+            found: None,
+            due: now,
+            asked: false,
+            pending: 0,
+        });
         entry.asked = false;
         let mut settled = None;
         match result {
@@ -416,7 +430,8 @@ impl PrCache {
                     _ => None,
                 });
                 let running = found.as_ref().is_some_and(|pr| pr.open_checks() == Some(Checks::Pending));
-                entry.due = now + if running { PENDING_REFRESH } else { REFRESH_AFTER };
+                entry.pending = if running { entry.pending.saturating_add(1) } else { 0 };
+                entry.due = now + if running { pending_wait(entry.pending) } else { REFRESH_AFTER };
                 entry.found = found;
             }
             // The last good answer stays; only the next try is put off.
@@ -447,7 +462,7 @@ mod tests {
 
     use super::{
         Branch, Checks, FIXED_ENV, PASSED_ENV, PENDING_REFRESH, PrCache, PrError, PrState, PullRequest,
-        REFRESH_AFTER, RETRY_AFTER, Review, Settled, environment, parse, pull_request,
+        REFRESH_AFTER, RETRY_AFTER, Review, Settled, environment, parse, pending_wait, pull_request,
     };
 
     const OPEN: &[u8] = br#"{"number":142,"state":"OPEN","url":"https://github.com/acme/app/pull/142"}"#;
@@ -502,6 +517,34 @@ mod tests {
         let merged = PullRequest { state: PrState::Merged, ..with_checks(7, Checks::Failing) };
         assert_eq!(merged.words(), "Pull request #7, merged");
         assert_eq!(merged.open_checks(), None);
+    }
+
+    #[test]
+    fn checks_that_keep_running_are_asked_about_less_and_less_often() {
+        assert_eq!(pending_wait(1), PENDING_REFRESH);
+        assert_eq!(pending_wait(2), PENDING_REFRESH * 2);
+        assert_eq!(pending_wait(3), PENDING_REFRESH * 4);
+        assert_eq!(pending_wait(30), REFRESH_AFTER, "never longer than a finished one's wait");
+        let (mut cache, main, mut now) = (PrCache::default(), branch("main"), Instant::now());
+        let mut waits = Vec::new();
+        for _ in 0..5 {
+            assert!(cache.begin(&main, now));
+            cache.finish(&main, Ok(Some(with_checks(9, Checks::Pending))), now);
+            let mut wait = Duration::ZERO;
+            while !cache.begin(&main, now + wait) {
+                wait += Duration::from_secs(30);
+            }
+            // `begin` marked it as out: answer as the lookup would, then go on from there.
+            cache.finish(&main, Ok(Some(with_checks(9, Checks::Pending))), now + wait);
+            waits.push(wait);
+            now += wait + REFRESH_AFTER;
+        }
+        assert!(waits.windows(2).all(|w| w[0] <= w[1]), "{waits:?}");
+        // Done running: back to the plain wait, and the next run starts at a minute again.
+        cache.finish(&main, Ok(Some(with_checks(9, Checks::Passing))), now);
+        assert!(cache.begin(&main, now + REFRESH_AFTER));
+        cache.finish(&main, Ok(Some(with_checks(9, Checks::Pending))), now + REFRESH_AFTER);
+        assert!(cache.begin(&main, now + REFRESH_AFTER + PENDING_REFRESH));
     }
 
     #[test]
