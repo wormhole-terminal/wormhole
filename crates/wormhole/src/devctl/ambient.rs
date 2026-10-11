@@ -104,6 +104,27 @@ pub(super) fn notify_log(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `notify-permission <not-asked|allowed|denied|outside|checking>`: pretend macOS said so, to see the
+/// welcome's (and Settings') page for each. A test instance has no macOS: asking (the welcome's Allow, or
+/// a banner turned on) is counted and taken as answered yes.
+pub(super) fn notify_permission(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let permission = match arg.trim() {
+        "not-asked" => notifications::Permission::NotAsked,
+        "allowed" => notifications::Permission::Allowed { time_sensitive: false },
+        "denied" => notifications::Permission::Denied,
+        "outside" => notifications::Permission::OutsideBundle,
+        "checking" => notifications::Permission::Checking,
+        other => {
+            return Err(anyhow!("permission {other:?}: not-asked, allowed, denied, outside or checking"));
+        }
+    };
+    later(ctx, move |cx| {
+        notifications::pretend_permission(permission, cx);
+        format!("permission={permission:?}\n")
+    });
+    Ok(String::new())
+}
+
 /// `quick-panel [close|where]`: open the hotkey's quick panel (or close it); `where` says where it
 /// is on its display (600 wide, centred, its top at 20 % of the screen).
 pub(super) fn quick_panel(ctx: &mut Ctx, arg: &str) -> Result<String> {

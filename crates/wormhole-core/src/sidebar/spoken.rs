@@ -123,7 +123,8 @@ pub fn band_label(
     parts.join(", ")
 }
 
-fn state_word(state: RowState) -> &'static str {
+/// A row's state as a word: "needs you", "working", "finished".
+pub fn state_word(state: RowState) -> &'static str {
     match state {
         RowState::NeedsYou => "needs you",
         RowState::Working => "working",

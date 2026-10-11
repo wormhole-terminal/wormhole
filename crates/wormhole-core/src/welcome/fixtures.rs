@@ -2,14 +2,12 @@
 
 use super::model::Welcome;
 use crate::agents::AgentId;
+use crate::config::NotifySound;
 use crate::intro::Handover;
 use crate::ipc::control::{
-    AgentFact, AgentsFacts, HooksFact, LookFacts, PlaceFact, PrimaryFact, ThemeFact, TrustFacts, WelcomeState,
+    AgentFact, AgentsFacts, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, ThemeFact,
+    WelcomeState,
 };
-
-pub fn place(name: &str, path: &str, detail: &str) -> PlaceFact {
-    PlaceFact { name: name.into(), path: path.into(), detail: detail.into() }
-}
 
 pub fn look() -> LookFacts {
     let theme = |name: &str, light: bool| ThemeFact { name: name.into(), light };
@@ -40,6 +38,16 @@ pub fn look() -> LookFacts {
     }
 }
 
+/// The defaults, with macOS not asked yet: the page offers Allow.
+pub fn notify() -> NotifyFacts {
+    NotifyFacts {
+        needs_you: true,
+        agent_done: true,
+        sound: NotifySound::NeedsYou,
+        permission: PermissionFact::NotAsked,
+    }
+}
+
 pub fn agent(id: AgentId, name: &str, hooks: HooksFact, path: Option<&str>) -> AgentFact {
     AgentFact { id, name: name.into(), hooks, path: path.map(Into::into) }
 }
@@ -62,35 +70,14 @@ pub fn state(handover: Handover) -> WelcomeState {
         reduce_motion: false,
         handover,
         first_run: true,
-        places: vec![
-            place("terminal", "/Users/me/Projects/terminal", "~/Projects"),
-            place("Home", "/Users/me", "~"),
-            place("Desktop", "/Users/me/Desktop", "~/Desktop"),
-            place("Documents", "/Users/me/Documents", "~/Documents"),
-        ],
         look: look(),
+        notify: Some(notify()),
         agents: Some(agents()),
-        trust: None,
         problem: None,
     }
 }
 
-pub fn trust() -> TrustFacts {
-    TrustFacts {
-        folder: "/Users/me/Projects/terminal".into(),
-        name: "terminal".into(),
-        dir: ".wormhole".into(),
-        commands: 2,
-        asking: false,
-    }
-}
-
-/// The same project with the Touch ID prompt up.
-pub fn trust_asking(trust: TrustFacts) -> TrustFacts {
-    TrustFacts { asking: true, ..trust }
-}
-
-/// A live welcome with a shell to hand over to.
+/// A live welcome.
 pub fn welcome(handover: Handover) -> Welcome {
-    Welcome::new(state(handover), true, true)
+    Welcome::new(state(handover), true)
 }

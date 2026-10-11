@@ -170,28 +170,55 @@ mod tests {
     }
 
     fn state() -> WelcomeOp {
-        WelcomeOp::State { folder: None }
+        WelcomeOp::State
     }
 
     fn install() -> WelcomeOp {
         WelcomeOp::InstallHooks { agent: crate::agents::AgentId::Claude }
     }
 
-    /// Every op is behind the same door: the right tab with its own token, while its welcome runs.
-    #[test]
-    fn every_op_needs_its_terminals_token() {
-        let ops = [
+    fn set_notify() -> WelcomeOp {
+        WelcomeOp::SetNotify {
+            needs_you: Some(true),
+            agent_done: None,
+            sound: Some(crate::config::NotifySound::All),
+            allow: true,
+        }
+    }
+
+    /// One of every op. The match fails to compile when an op is added without being listed here, so
+    /// none gets past the door tests unchecked.
+    fn every_op() -> Vec<WelcomeOp> {
+        let ops = vec![
             state(),
-            install(),
-            WelcomeOp::Trust { folder: "/work".into() },
             WelcomeOp::SetLook {
                 theme: Some("Nord".into()),
                 primary: None,
                 ligatures: None,
                 font_step: None,
             },
-            WelcomeOp::Finish { folder: None, skipped: true },
+            set_notify(),
+            install(),
+            WelcomeOp::Demo { show: true },
+            WelcomeOp::Finish { skipped: true },
         ];
+        for op in &ops {
+            match op {
+                WelcomeOp::State
+                | WelcomeOp::SetLook { .. }
+                | WelcomeOp::SetNotify { .. }
+                | WelcomeOp::InstallHooks { .. }
+                | WelcomeOp::Demo { .. }
+                | WelcomeOp::Finish { .. } => {}
+            }
+        }
+        ops
+    }
+
+    /// Every op is behind the same door: the right tab with its own token, while its welcome runs.
+    #[test]
+    fn every_op_needs_its_terminals_token() {
+        let ops = every_op();
         let registry = registry();
         for op in &ops {
             assert_eq!(registry.authorize(Some(7), "seven", op), Ok(()), "{op:?}");
@@ -210,7 +237,7 @@ mod tests {
         assert!(registry.running(7));
         registry.finish(7);
         assert!(!registry.running(7) && registry.running(9));
-        for op in [state(), install(), WelcomeOp::Finish { folder: None, skipped: false }] {
+        for op in every_op() {
             let err = registry.authorize(Some(7), "seven", &op).expect_err("shut");
             assert_eq!(err.code, ErrorCode::Refused, "{op:?}");
         }
@@ -230,8 +257,8 @@ mod tests {
     #[test]
     fn an_op_over_the_caps_is_refused_even_with_the_right_token() {
         let long = "x".repeat(crate::ipc::control::FIELD_MAX_BYTES + 1);
-        let err =
-            registry().authorize(Some(7), "seven", &WelcomeOp::Trust { folder: long }).expect_err("too long");
+        let look = WelcomeOp::SetLook { theme: Some(long), primary: None, ligatures: None, font_step: None };
+        let err = registry().authorize(Some(7), "seven", &look).expect_err("too long");
         assert_eq!(err.code, ErrorCode::TooLarge);
     }
 

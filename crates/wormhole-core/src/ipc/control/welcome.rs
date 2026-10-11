@@ -2,8 +2,8 @@
 //! that runs it (`Action::Welcome`), and the facts the app answers with.
 //!
 //! The welcome is a program in a terminal of the app, and the app is the one that can do things: read
-//! the machine's agents and the theme, write a theme or an agent's hooks, ask for Touch ID, remember
-//! that the first run is over. So every choice goes over the control socket.
+//! the machine's agents and the theme, write a theme or an agent's hooks, change what reaches you,
+//! remember that the first run is over. So every choice goes over the control socket.
 //!
 //! ## Who may ask
 //!
@@ -17,10 +17,15 @@
 //! welcome has ended finds the gate shut. The program removes the token from the environment before
 //! it hands the terminal to the shell.
 //!
-//! Nothing here installs or trusts behind the person's back: hooks are written for exactly the agent
-//! an `InstallHooks` names, which the program sends only from that agent's own Install press, and a
-//! folder is trusted only from a `Trust`, which shows Touch ID. Neither is ever part of moving
-//! through the steps (`welcome::model` and its tests drive every path to show it).
+//! Nothing here installs or changes what reaches you behind the person's back: hooks are written for
+//! exactly the agent an `InstallHooks` names, which the program sends only from that agent's own Install
+//! press, and a `SetNotify` goes out only from a press on a notification row (the only presses that make
+//! macOS ask for permission are the ones that turn a banner on, and the page's own Allow button). None
+//! is ever part of moving through the steps (`welcome::model` and its tests drive every path to show it).
+//!
+//! `Demo` is the one request that only shows something: while the sidebar step is up the app draws a
+//! small example band in the window's sidebar (never a terminal: not listed, not saved, not numbered)
+//! and takes it away when the step is left or the welcome ends.
 //!
 //! The mutating requests have budgets like the other actions' (`limits`), and every string is capped
 //! here, so a program that goes wrong cannot flood the app.
@@ -29,22 +34,18 @@ use serde::{Deserialize, Serialize};
 
 use super::{Error, ErrorCode};
 use crate::agents::AgentId;
+use crate::config::NotifySound;
 use crate::intro::Handover;
 
-/// The longest token, folder or theme name a request may carry.
+/// The longest theme name or colour a request may carry.
 pub const FIELD_MAX_BYTES: usize = 4096;
 
 /// What the program asks of the app.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum WelcomeOp {
-    /// Everything the pages are made of ([`WelcomeState`]). `folder` is the folder chosen so far,
-    /// whose trust the agents page shows: the program names it only on that page, and without one
-    /// there are no trust facts (answering them reads the project's files).
-    State {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        folder: Option<String>,
-    },
+    /// Everything the pages are made of ([`WelcomeState`]).
+    State,
     /// Change the look. Only what is named changes: a theme (by name), the primary colour (by hex,
     /// from the ones [`LookFacts::primaries`] offers; empty is the theme's own), the ligatures, and the
     /// terminal font's size by one step either way.
@@ -58,17 +59,29 @@ pub enum WelcomeOp {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         font_step: Option<i8>,
     },
+    /// Change what reaches you, as Settings → Notifications does. Only what is named changes: whether
+    /// a banner comes when an agent needs you, when one finishes, and which notifications play a
+    /// sound. Turning a banner on while macOS has not been asked yet makes the app ask; so does
+    /// `allow`, the page's own button for it. Nothing else ever does.
+    SetNotify {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        needs_you: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agent_done: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        sound: Option<NotifySound>,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        allow: bool,
+    },
     /// Write the status hooks of exactly this agent. Answered at once; the result is in the next
     /// [`WelcomeState`] (the agent's hooks, or the `problem`).
     InstallHooks { agent: AgentId },
-    /// Ask to trust exactly this folder's project: the app shows Touch ID. Answered at once; the
-    /// result is in the next [`WelcomeState`].
-    Trust { folder: String },
-    /// The welcome is over. On the first run the app remembers it; `folder` is where the shell is
-    /// about to start, `skipped` whether Esc ended it.
+    /// Show (`show`) or take away the example band in the window's sidebar, which the sidebar step
+    /// points at. The program sends it when the step is entered and left; the app also drops it when
+    /// the welcome finishes or its terminal goes.
+    Demo { show: bool },
+    /// The welcome is over. On the first run the app remembers it; `skipped` is whether Esc ended it.
     Finish {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        folder: Option<String>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         skipped: bool,
     },
@@ -78,10 +91,11 @@ impl WelcomeOp {
     /// What the op is called in the log.
     pub fn name(&self) -> &'static str {
         match self {
-            WelcomeOp::State { .. } => "state",
+            WelcomeOp::State => "state",
             WelcomeOp::SetLook { .. } => "set_look",
+            WelcomeOp::SetNotify { .. } => "set_notify",
             WelcomeOp::InstallHooks { .. } => "install_hooks",
-            WelcomeOp::Trust { .. } => "trust",
+            WelcomeOp::Demo { .. } => "demo",
             WelcomeOp::Finish { .. } => "finish",
         }
     }
@@ -94,10 +108,6 @@ impl WelcomeOp {
         };
         let long = |text: &Option<String>| text.as_ref().is_some_and(|text| text.len() > FIELD_MAX_BYTES);
         match self {
-            WelcomeOp::State { folder } | WelcomeOp::Finish { folder, .. } if long(folder) => {
-                Err(too_long("the folder"))
-            }
-            WelcomeOp::Trust { folder } if folder.len() > FIELD_MAX_BYTES => Err(too_long("the folder")),
             WelcomeOp::SetLook { theme, .. } if long(theme) => Err(too_long("the theme's name")),
             WelcomeOp::SetLook { primary, .. } if long(primary) => Err(too_long("the primary colour")),
             WelcomeOp::SetLook { font_step: Some(step), .. } if !(-1..=1).contains(step) => Err(Error {
@@ -119,27 +129,16 @@ pub struct WelcomeState {
     pub handover: Handover,
     /// The first run, which finishing is remembered of, or a replay.
     pub first_run: bool,
-    /// The folders the second step offers.
-    pub places: Vec<PlaceFact>,
     pub look: LookFacts,
+    /// What reaches you now; `None` for a tour, which has no app to ask.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notify: Option<NotifyFacts>,
     /// `None` while the agents are still being looked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agents: Option<AgentsFacts>,
-    /// The chosen folder's project, when it has one that is not trusted yet.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub trust: Option<TrustFacts>,
-    /// What went wrong with the last Install or Trust.
+    /// What went wrong with the last Install.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub problem: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PlaceFact {
-    /// "Desktop", or a recent folder's name.
-    pub name: String,
-    pub path: String,
-    /// Where it is, with the home folder as `~`.
-    pub detail: String,
 }
 
 /// What the look page offers and what is chosen.
@@ -175,6 +174,33 @@ pub struct PrimaryFact {
     /// theme); `None` for the theme's own.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ansi: Option<u8>,
+}
+
+/// What the notifications page offers and what is chosen now (Settings → Notifications' own switches,
+/// read through its master switch: with notifications off nothing is on).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NotifyFacts {
+    /// A banner when an agent needs you.
+    pub needs_you: bool,
+    /// A banner when an agent finishes.
+    pub agent_done: bool,
+    pub sound: NotifySound,
+    pub permission: PermissionFact,
+}
+
+/// Whether macOS lets Wormhole notify, as the page words it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PermissionFact {
+    /// Still being read.
+    Checking,
+    /// macOS has not been asked: the page offers the button.
+    NotAsked,
+    Allowed,
+    /// Off in System Settings, where only the person can turn it on.
+    Denied,
+    /// A build that is not the app bundle (`cargo run`, a test instance): banners go another way.
+    Outside,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -225,19 +251,6 @@ impl HooksFact {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TrustFacts {
-    /// The project's root.
-    pub folder: String,
-    /// Its name, and the folder it keeps its files in (`.wormhole`).
-    pub name: String,
-    pub dir: String,
-    /// How many commands its actions run (they wait for trust).
-    pub commands: usize,
-    /// The Touch ID prompt is up.
-    pub asking: bool,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,9 +259,6 @@ mod tests {
     fn the_caps_refuse_what_is_too_long_or_too_big() {
         let long = "x".repeat(FIELD_MAX_BYTES + 1);
         let ops = [
-            WelcomeOp::State { folder: Some(long.clone()) },
-            WelcomeOp::Trust { folder: long.clone() },
-            WelcomeOp::Finish { folder: Some(long.clone()), skipped: false },
             WelcomeOp::SetLook { theme: Some(long.clone()), primary: None, ligatures: None, font_step: None },
             WelcomeOp::SetLook { theme: None, primary: Some(long), ligatures: None, font_step: None },
         ];
@@ -264,13 +274,13 @@ mod tests {
             font_step: Some(-1),
         };
         assert!(fine.check_caps().is_ok());
-        assert!(WelcomeOp::State { folder: None }.check_caps().is_ok());
+        assert!(WelcomeOp::State.check_caps().is_ok());
     }
 
     #[test]
     fn an_ops_wire_form_is_stable() {
         let lines = [
-            (WelcomeOp::State { folder: None }, r#"{"kind":"state"}"#),
+            (WelcomeOp::State, r#"{"kind":"state"}"#),
             (
                 WelcomeOp::SetLook {
                     theme: Some("Nord".into()),
@@ -281,15 +291,25 @@ mod tests {
                 r#"{"kind":"set_look","theme":"Nord","ligatures":false}"#,
             ),
             (
+                WelcomeOp::SetNotify {
+                    needs_you: Some(true),
+                    agent_done: None,
+                    sound: Some(NotifySound::NeedsYou),
+                    allow: false,
+                },
+                r#"{"kind":"set_notify","needs_you":true,"sound":"needs_you"}"#,
+            ),
+            (
+                WelcomeOp::SetNotify { needs_you: None, agent_done: None, sound: None, allow: true },
+                r#"{"kind":"set_notify","allow":true}"#,
+            ),
+            (
                 WelcomeOp::InstallHooks { agent: AgentId::Claude },
                 r#"{"kind":"install_hooks","agent":"claude"}"#,
             ),
-            (WelcomeOp::Trust { folder: "/work/app".into() }, r#"{"kind":"trust","folder":"/work/app"}"#),
-            (
-                WelcomeOp::Finish { folder: Some("/work/app".into()), skipped: true },
-                r#"{"kind":"finish","folder":"/work/app","skipped":true}"#,
-            ),
-            (WelcomeOp::Finish { folder: None, skipped: false }, r#"{"kind":"finish"}"#),
+            (WelcomeOp::Demo { show: true }, r#"{"kind":"demo","show":true}"#),
+            (WelcomeOp::Finish { skipped: true }, r#"{"kind":"finish","skipped":true}"#),
+            (WelcomeOp::Finish { skipped: false }, r#"{"kind":"finish"}"#),
         ];
         for (op, line) in lines {
             assert_eq!(serde_json::to_string(&op).expect("serializes"), line);

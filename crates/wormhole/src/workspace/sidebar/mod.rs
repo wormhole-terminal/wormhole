@@ -20,6 +20,7 @@ use wormhole_core::sidebar::{
 
 mod band_menu;
 mod bands;
+mod demo;
 mod drag;
 mod facts;
 mod filter_popover;
@@ -72,6 +73,8 @@ pub(super) struct SidebarState {
     /// The times the rows showed when last drawn ("Working · 3m", "1:12"), so a tick redraws
     /// only when one of them would read differently.
     times_drawn: RefCell<Vec<Option<String>>>,
+    /// The terminal welcome's example band while its sidebar step is up (`demo`). Never saved.
+    pub(super) demo: Option<demo::Demo>,
 }
 
 impl SidebarState {
@@ -110,6 +113,7 @@ impl SidebarState {
             head_lookups: Vec::new(),
             worktrees: RefCell::default(),
             times_drawn: RefCell::default(),
+            demo: None,
         }
     }
 }
@@ -218,6 +222,8 @@ impl Workspace {
                 }
             });
         }
+        // After the person's own terminals: the welcome's example band, which is none of them.
+        items.extend(self.render_demo(&frame, cx));
         let filtered = self.sidebar.view.as_seen(sidebar_filter_on(cx)).filter.is_active();
         let sticky = self.sticky_band(&listing, &git, &frame, window, cx);
         let empty = listing.entries.is_empty() && filtered && !self.sessions.is_empty();

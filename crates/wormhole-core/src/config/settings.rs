@@ -618,6 +618,21 @@ impl Settings {
         }
     }
 
+    /// A notification kind's switch (`notify_needs_you`, …) as it is in effect: with the master switch
+    /// `notifications` off nothing is on, whatever the kinds say.
+    pub fn notify_kind_on(&self, switch: bool) -> bool {
+        self.notifications && switch
+    }
+
+    /// Change a notification kind's switch with `change`, and keep the master switch on while any kind
+    /// is on (turning every kind off turns it off). Settings → Notifications and the welcome both do
+    /// this, so a kind turned on there is never held back by a master switch left off.
+    pub fn change_notify_kind(&mut self, change: impl FnOnce(&mut Settings)) {
+        change(self);
+        self.notifications =
+            self.notify_needs_you || self.notify_agent_done || self.notify_command_done || self.notify_bell;
+    }
+
     /// Whether `folder` is one of the pinned folders.
     pub fn is_folder_pinned(&self, folder: &Path) -> bool {
         self.pinned_folders.iter().any(|pinned| Path::new(pinned) == folder)
@@ -731,6 +746,20 @@ mod tests {
     use crate::sidebar::Grouping;
     use crate::tokens::Color;
     use std::path::Path;
+
+    #[test]
+    fn the_master_notification_switch_is_on_while_any_kind_is() {
+        let mut s = Settings::default();
+        s.change_notify_kind(|s| s.notify_needs_you = false);
+        s.change_notify_kind(|s| s.notify_agent_done = false);
+        assert!(s.notifications, "commands still notify");
+        s.change_notify_kind(|s| s.notify_command_done = false);
+        assert!(!s.notifications, "all off = false (the bell is off by default)");
+        assert!(!s.notify_kind_on(true), "with the master off nothing is on, whatever a kind says");
+        s.change_notify_kind(|s| s.notify_bell = true);
+        assert!(s.notifications && s.notify_kind_on(s.notify_bell));
+        assert!(!s.notify_kind_on(false));
+    }
 
     #[test]
     fn every_setting_is_either_for_projects_or_app_wide() {

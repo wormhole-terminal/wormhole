@@ -17,8 +17,12 @@ pub enum Limited {
     WelcomeLook,
     /// The welcome's Install for an agent's hooks (a file write).
     WelcomeInstall,
-    /// The welcome's Trust (Touch ID).
-    WelcomeTrust,
+    /// The welcome's notification choices (a switch, the sound, Allow): a few presses, and the first
+    /// one that turns a banner on may show macOS's own question.
+    WelcomeNotify,
+    /// The welcome's example band in the sidebar going up and coming down: once for each time the
+    /// sidebar step is entered or left, so stepping back and forth sends many.
+    WelcomeDemo,
     /// The welcome's end, which is only ever sent once.
     WelcomeFinish,
 }
@@ -32,7 +36,8 @@ impl Limited {
             Limited::NewTerminal => 5,
             Limited::WelcomeLook => 240,
             Limited::WelcomeInstall => 12,
-            Limited::WelcomeTrust => 6,
+            Limited::WelcomeNotify => 30,
+            Limited::WelcomeDemo => 120,
             Limited::WelcomeFinish => 4,
         }
     }
@@ -109,8 +114,8 @@ mod tests {
         assert!(Limited::Notify.budget() <= 10);
         assert!(Limited::NewTerminal.budget() <= 5);
         assert!(Limited::SendText.budget() <= 30);
-        assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeTrust.budget() <= 6);
-        assert!(Limited::WelcomeFinish.budget() <= 4);
+        assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeNotify.budget() <= 30);
+        assert!(Limited::WelcomeDemo.budget() <= 120 && Limited::WelcomeFinish.budget() <= 4);
         assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
     }
 }

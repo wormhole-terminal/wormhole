@@ -1,7 +1,7 @@
 //! `Wormhole welcome [-- <shell argv…>]`: the hands of the program. It puts the terminal in raw mode,
 //! feeds `driver` the keys and the app's answers, writes what it says to draw, and at the end clears the
-//! screen, prints the banner and becomes the shell (`exec`, in the folder picked), so the terminal that
-//! showed the welcome goes on as the person's own, the same process.
+//! screen, prints the banner and becomes the shell (`exec`, where the terminal started), so the terminal
+//! that showed the welcome goes on as the person's own, the same process.
 //!
 //! It never traps the terminal: whatever goes wrong (no terminal, no raw mode, a panic) the shell is
 //! started or the program ends with the terminal as it was.
@@ -15,7 +15,6 @@ use std::time::{Duration, Instant};
 use super::banner;
 use super::driver::{Answer, Driver};
 use super::gate::TOKEN_VAR;
-use super::model::End;
 use super::render::Size;
 use super::tty::{self, RawMode};
 use crate::ipc::control::{Action, Request, WelcomeOp, exchange};
@@ -25,9 +24,10 @@ Wormhole welcome: the first-run welcome, in this terminal
 
   Wormhole welcome [-- <program> [<args>…]]
 
-Walks through where you work, how it looks and the coding agents, then clears the screen and starts
-<program> (your shell) in the folder you picked. Without <program> it only shows the pages. Run by
-Wormhole itself for the first terminal; Help → Welcome to Wormhole opens it again.
+Walks through how it looks, what should reach you, the sidebar with your coding agents and what else is
+here, then clears the screen and starts <program> (your shell) in this terminal. Without <program> it
+only shows the pages. Run by Wormhole itself for the first terminal; Help → Welcome to Wormhole opens
+it again.
 ";
 
 /// What the command line asked for.
@@ -146,20 +146,20 @@ pub fn run(args: &[String]) -> i32 {
     if !tty::is_terminal() {
         // Nothing to show on: never leave a terminal without its shell over it.
         if let Some(shell) = &args.shell {
-            return hand_over(shell, None);
+            return hand_over(shell);
         }
         let _ = writeln!(io::stderr(), "Wormhole: welcome runs in a terminal");
         return 2;
     }
     let Ok(mut raw) = RawMode::enter() else {
-        return args.shell.as_ref().map_or(1, |shell| hand_over(shell, None));
+        return args.shell.as_ref().map_or(1, |shell| hand_over(shell));
     };
     // A bug in the welcome must never leave a terminal without its shell: a panic ends the welcome as
     // a skip, and the shell starts all the same (the screen guard puts the screen back on the way out).
-    let end = {
+    {
         let _screen = Screen::take();
-        std::panic::catch_unwind(|| session(&args)).unwrap_or(End { folder: None, skipped: true })
-    };
+        let _ = std::panic::catch_unwind(session);
+    }
     let (cols, _) = tty::size().unwrap_or((80, 24));
     let _ = io::stdout().write_all(b"\x1b[2J\x1b[3J\x1b[H");
     raw.restore();
@@ -168,7 +168,7 @@ pub fn run(args: &[String]) -> i32 {
     let _ = stdout.write_all(b"\x1b[?25h");
     let _ = stdout.flush();
     match &args.shell {
-        Some(shell) => hand_over(shell, end.folder.as_deref()),
+        Some(shell) => hand_over(shell),
         None => 0,
     }
 }
@@ -195,13 +195,14 @@ impl Drop for Screen {
     }
 }
 
-/// The welcome itself, in raw mode: up to the moment it is over.
-fn session(args: &Args) -> End {
+/// The welcome itself, in raw mode: up to the moment it is over (or the terminal went away, which
+/// ends it quietly the same way).
+fn session() {
     let mut stdout = io::stdout();
 
     let worker = Link::from_env().and_then(Worker::start);
     let home = super::facts::home();
-    let mut driver = Driver::new(args.shell.is_some(), worker.is_some(), home);
+    let mut driver = Driver::new(worker.is_some(), home);
     let begin = Instant::now();
     let mut buf = [0u8; 256];
     loop {
@@ -209,10 +210,7 @@ fn session(args: &Args) -> End {
         let answers: Vec<Answer> = worker.iter().flat_map(|worker| worker.answers.try_iter()).collect();
         let (cols, rows) = tty::size().unwrap_or((80, 24));
         let wait = if driver.started(now) { TICK_MS } else { 50 };
-        let Some(n) = tty::read_input(&mut buf, wait) else {
-            // The terminal went away: end as a skip, quietly.
-            return End { folder: None, skipped: true };
-        };
+        let Some(n) = tty::read_input(&mut buf, wait) else { return };
         let tick = driver.tick(begin.elapsed(), Size { cols, rows }, &buf[..n], answers);
         if !tick.draw.is_empty() {
             let _ = stdout.write_all(&tick.draw);
@@ -223,11 +221,11 @@ fn session(args: &Args) -> End {
                 let _ = worker.ops.send(op);
             }
         }
-        if let Some(end) = tick.end {
+        if tick.end.is_some() {
             if let Some(worker) = &worker {
                 wait_for_finish(worker);
             }
-            return end;
+            return;
         }
     }
 }
@@ -244,17 +242,12 @@ fn wait_for_finish(worker: &Worker) {
     }
 }
 
-/// Become the shell: `shell[0]` with the rest as its arguments, in `folder` if there is one, without
-/// the welcome's token. Only comes back when no program could be started; then it says so and falls
-/// back to the login shell, so the terminal is never left dead.
-fn hand_over(shell: &[String], folder: Option<&Path>) -> i32 {
+/// Become the shell: `shell[0]` with the rest as its arguments, where the terminal started (the
+/// welcome never moves it), without the welcome's token. Only comes back when no program could be
+/// started; then it says so and falls back to the login shell, so the terminal is never left dead.
+fn hand_over(shell: &[String]) -> i32 {
     let start = |program: &str, args: &[String]| {
-        let mut command = std::process::Command::new(program);
-        command.args(args).env_remove(TOKEN_VAR);
-        if let Some(folder) = folder.filter(|folder| folder.is_dir()) {
-            command.current_dir(folder);
-        }
-        command.exec()
+        std::process::Command::new(program).args(args).env_remove(TOKEN_VAR).exec()
     };
     let Some((program, args)) = shell.split_first() else { return 1 };
     let err = start(program, args);

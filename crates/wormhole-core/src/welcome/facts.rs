@@ -1,26 +1,13 @@
-//! The facts the pages show, made from the machine: the folders on offer and the agents found (their
-//! hooks read, never written). The app answers the program's `State` with these, and a read-only tour
-//! makes its own, so a page reads the same either way.
+//! The facts the pages show, made from the machine: the agents found (their hooks read, never
+//! written). The app answers the program's `State` with these, and a read-only tour makes its own, so
+//! a page reads the same either way.
 
 use std::path::{Path, PathBuf};
 
 use crate::agents::integrations::{self, State};
 use crate::agents::{self, AGENTS};
 use crate::intro::Handover;
-use crate::ipc::control::{AgentFact, AgentsFacts, HooksFact, LookFacts, PlaceFact, WelcomeState};
-use crate::onboarding::{self, Place};
-
-/// The folders as the protocol carries them.
-pub fn place_facts(places: &[Place]) -> Vec<PlaceFact> {
-    places
-        .iter()
-        .map(|place| PlaceFact {
-            name: place.name.clone(),
-            path: place.path.to_string_lossy().into_owned(),
-            detail: place.detail.clone(),
-        })
-        .collect()
-}
+use crate::ipc::control::{AgentFact, AgentsFacts, HooksFact, LookFacts, WelcomeState};
 
 /// The agents on PATH, each with the state of its hooks under `home`, and how many others are
 /// recognised. A few hundred `stat`s and a few small reads, so off the UI thread.
@@ -47,16 +34,14 @@ pub fn scan_agents(home: &Path) -> AgentsFacts {
     facts
 }
 
-/// The state a read-only tour shows: nothing from an app, so the folders of a Finder, the agents
-/// the machine has, and no look to change.
+/// The state a read-only tour shows: nothing from an app, so the agents the machine has, and no look
+/// or notification choices to change.
 pub fn tour_state(home: &Path) -> WelcomeState {
-    let places = onboarding::places(home, &[], |path: &Path| path.is_dir());
     WelcomeState {
         wait_ms: 0,
         reduce_motion: false,
         handover: Handover::default(),
         first_run: true,
-        places: place_facts(&places),
         look: LookFacts {
             themes: Vec::new(),
             theme: String::new(),
@@ -66,8 +51,8 @@ pub fn tour_state(home: &Path) -> WelcomeState {
             font_size: 0.0,
             ligatures: false,
         },
+        notify: None,
         agents: Some(scan_agents(home)),
-        trust: None,
         problem: None,
     }
 }
@@ -111,13 +96,11 @@ mod tests {
     }
 
     #[test]
-    fn a_tour_offers_the_finders_folders_and_no_look() {
+    fn a_tour_offers_the_agents_and_no_choices() {
         let home = Home::new("tour");
         let state = tour_state(&home.0);
         assert!(state.first_run && state.wait_ms == 0 && !state.reduce_motion);
-        let names: Vec<&str> = state.places.iter().map(|place| place.name.as_str()).collect();
-        assert_eq!(names.first(), Some(&"Home"));
-        assert!(state.look.themes.is_empty() && state.trust.is_none());
+        assert!(state.look.themes.is_empty() && state.notify.is_none());
         assert!(state.agents.is_some());
     }
 }

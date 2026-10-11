@@ -67,15 +67,15 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("dock-bounce", dock_bounce),
 ];
 
-/// Change one kind's switch, keeping the master switch on while any kind is on.
+/// Change one kind's switch, keeping the master switch on while any kind is on (core's rule, which the
+/// terminal welcome follows too).
 fn set_kind(s: &mut Settings, change: impl FnOnce(&mut Settings)) {
-    change(s);
-    s.notifications = s.notify_needs_you || s.notify_agent_done || s.notify_command_done || s.notify_bell;
+    s.change_notify_kind(change);
 }
 
 /// A kind's switch, read through the master switch: with `notifications` off nothing is on.
 fn kind_on(s: &Settings, on: bool) -> bool {
-    s.notifications && on
+    s.notify_kind_on(on)
 }
 
 /// What the permission row says and offers, by state.
@@ -195,21 +195,7 @@ fn draw_command_done(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::config::Settings;
-
-    use super::{AFTER, after_label, after_step, set_kind};
-
-    #[test]
-    fn the_master_switch_is_on_while_any_kind_is() {
-        let mut s = Settings::default();
-        set_kind(&mut s, |s| s.notify_needs_you = false);
-        set_kind(&mut s, |s| s.notify_agent_done = false);
-        assert!(s.notifications, "commands still notify");
-        set_kind(&mut s, |s| s.notify_command_done = false);
-        assert!(!s.notifications, "all off = false (the bell is off by default)");
-        set_kind(&mut s, |s| s.notify_bell = true);
-        assert!(s.notifications);
-    }
+    use super::{AFTER, after_label, after_step};
 
     #[test]
     fn the_threshold_steps_through_its_list() {

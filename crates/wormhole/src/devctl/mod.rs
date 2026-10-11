@@ -232,6 +232,9 @@
 //!                   words); `post` also delivers it. Run the app with `WORMHOLE_NOTIFY=log` so
 //!                   nothing reaches the notification center, and read it back with `notify-log`
 //!   notify-log      the notifications the `log` route kept, and the permission macOS reports
+//!   notify-permission <not-asked|allowed|denied|outside|checking>   pretend macOS said so (the
+//!                   welcome's notification step shows Allow only while it hasn't been asked; asking
+//!                   is counted in `state` as `permission_asks` and taken as answered yes)
 //!   quick-panel [close|where] | quick-panel-shot <name> | quick-panel-key <keys> | quick-panel-text <text>
 //!                   open or close the hotkey's quick panel, draw it to <dir>/<name>.png,
 //!                   press a key in it (`down`, `cmd-enter`, `escape`), type into its field
@@ -443,6 +446,7 @@ fn command(name: &str) -> Option<Command> {
         "menubar-icons" => ambient::menubar_icons,
         "notify-sim" => ambient::notify_sim,
         "notify-log" => ambient::notify_log,
+        "notify-permission" => ambient::notify_permission,
         "quick-panel" => ambient::quick_panel,
         "quick-panel-shot" => ambient::quick_panel_shot,
         "quick-panel-key" => ambient::quick_panel_key,

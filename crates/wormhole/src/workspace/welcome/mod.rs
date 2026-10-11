@@ -9,10 +9,14 @@
 //! no ship, or the ship docks on a block-art logo), the terminal reporting where its cells are so the
 //! ship lands on the real one. Answering (`answers`): the program's requests come over the control
 //! socket, are let through only with that token from that terminal while its welcome runs, and are the
-//! app's to do: the look, an agent's hooks, a folder's trust (Touch ID), and remembering the first run.
+//! app's to do: the look, what reaches the person (and macOS' permission for banners, asked only from a
+//! press that turns one on), an agent's hooks, the example band in the sidebar, and remembering the
+//! first run.
 //!
-//! Nothing is installed or trusted behind the person's back: only the program's explicit Install or
-//! Trust requests do it, and the program sends those only from the press on that row.
+//! Nothing is installed or switched on behind the person's back: only the program's explicit Install or
+//! notification requests do it, and the program sends those only from the press on that row. The
+//! example band (`sidebar::demo`) is the one thing the window shows for the program without a press:
+//! it lives in the window's sidebar state, not in any list of terminals, and goes with the step.
 
 mod answers;
 
@@ -21,7 +25,7 @@ use std::time::Instant;
 use wormhole_core::agents::integrations;
 use wormhole_core::intro::{Handover, Start};
 use wormhole_core::ipc::control::AgentsFacts;
-use wormhole_core::onboarding::{self, ONBOARDED_KEY, should_show};
+use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
 use wormhole_core::welcome::{self, DockCell, Registry};
 
 pub(super) use answers::handle;
@@ -53,11 +57,9 @@ struct Run {
     handover: Handover,
     first_run: bool,
     play: Play,
-    /// The folders the second step offers, read when it began.
-    places: Vec<wormhole_core::ipc::control::PlaceFact>,
     /// The agents found; `None` until the search (off the UI thread) is done.
     agents: Option<AgentsFacts>,
-    /// What went wrong with the last Install or Trust, until the next one that works.
+    /// What went wrong with the last Install, until the next one that works.
     problem: Option<String>,
     /// devctl's `state` names it, so `welcome-probe` can send a request as the program would (and the
     /// tests do).
@@ -122,6 +124,11 @@ pub(crate) fn replay_in_front(handover: Handover, cx: &mut App) {
     });
 }
 
+/// Whether the welcome in `tab` is still running (its token still opens the door).
+pub(super) fn running(tab: i64, cx: &App) -> bool {
+    app(cx).welcomes.gates.running(tab)
+}
+
 /// A welcome terminal is gone (closed, or its window): its token opens nothing, and a first run that
 /// was closed unfinished counts as skipped, so the next launch doesn't start it all over.
 pub(super) fn forget(tab: i64, cx: &mut App) {
@@ -172,8 +179,18 @@ impl Workspace {
                 None => "scanning".to_string(),
                 Some(agents) => format!("{} found", agents.found.len()),
             };
+            let demo = match self.welcome_demo_rows(cx) {
+                None => "off".to_string(),
+                Some(rows) => rows
+                    .iter()
+                    .map(|row| {
+                        format!("{}={}", row.name, wormhole_core::sidebar::spoken::state_word(row.state))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(","),
+            };
             out += &format!(
-                "welcome terminal={} tab={} token={} handover={} first_run={} running={} play={:?} agents={agents}\n",
+                "welcome terminal={} tab={} token={} handover={} first_run={} running={} play={:?} agents={agents} demo={demo} permission_asks={}\n",
                 ix + 1,
                 session.id,
                 run.token,
@@ -181,6 +198,7 @@ impl Workspace {
                 run.first_run,
                 welcomes.gates.running(session.id),
                 run.play,
+                notifications::permission_asks(cx),
             );
         }
         out
@@ -266,8 +284,6 @@ impl Workspace {
             return;
         };
         let id = Self::alloc_id(cx);
-        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
-        let places = onboarding::places(&home, app(cx).menu.recent(), |path| path.is_dir());
         let scan = cx.spawn(async move |this, cx| {
             let agents = cx
                 .background_executor()
@@ -289,7 +305,6 @@ impl Workspace {
             handover: plan.handover,
             first_run: plan.first_run,
             play,
-            places: welcome::facts::place_facts(&places),
             agents: None,
             problem: None,
             #[cfg(any(test, feature = "devctl"))]
@@ -306,12 +321,14 @@ impl Workspace {
         self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_dock(dock, cx));
     }
 
-    /// The terminal the welcome ended in no longer reports a dock; the sidebar's note for a first run
-    /// that ended on the primer (no agent on PATH) comes up.
+    /// The terminal the welcome ended in no longer reports a dock, the sidebar's example band goes
+    /// with it, and the sidebar's note for a first run that ended on the primer (no agent on PATH)
+    /// comes up.
     fn welcome_ended(&mut self, tab: i64, primer: bool, cx: &mut Context<Self>) {
         if let Some(session) = self.sessions.iter().find(|s| s.id == tab) {
             session.terminal().update(cx, |terminal, cx| terminal.set_dock(None, cx));
         }
+        self.end_welcome_demo(tab);
         if primer {
             self.first_run.show_no_agents_note();
         }

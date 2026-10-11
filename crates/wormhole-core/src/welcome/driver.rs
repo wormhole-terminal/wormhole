@@ -18,9 +18,8 @@ use super::keys::{ESC_WAIT, Key, Parser};
 use super::model::{Effect, End, Welcome};
 use super::render::{self, Hit, Size, Target};
 use crate::ipc::control::{WelcomeOp, WelcomeState};
-use crate::onboarding::Step;
 
-/// How often the app is asked for its state: often enough that an Install or a Touch ID answer shows
+/// How often the app is asked for its state: often enough that an Install or a permission answer shows
 /// within a blink, and the end of the animation's wait is noticed.
 const POLL: Duration = Duration::from_millis(250);
 
@@ -45,7 +44,6 @@ pub struct Tick {
 }
 
 pub struct Driver {
-    has_shell: bool,
     /// There is a way to reach the app (a token, a tab and a socket).
     linked: bool,
     home: PathBuf,
@@ -55,6 +53,13 @@ pub struct Driver {
     text_start: Option<Duration>,
     polled_at: Option<Duration>,
     state_in_flight: bool,
+    /// A choice was sent while a state was on its way: that state was asked for before the choice, so
+    /// it may not show it yet.
+    stale_state: bool,
+    /// What the app was last told about the example band (it starts without one); `None` once a
+    /// request about it failed, which is asked again, and when that was.
+    demo_sent: Option<bool>,
+    demo_at: Option<Duration>,
     held_since: Option<Duration>,
     previous: Option<Grid>,
     hits: Vec<Hit>,
@@ -62,9 +67,8 @@ pub struct Driver {
 }
 
 impl Driver {
-    pub fn new(has_shell: bool, linked: bool, home: PathBuf) -> Self {
+    pub fn new(linked: bool, home: PathBuf) -> Self {
         Self {
-            has_shell,
             linked,
             home,
             model: None,
@@ -72,6 +76,9 @@ impl Driver {
             text_start: None,
             polled_at: None,
             state_in_flight: false,
+            stale_state: false,
+            demo_sent: Some(false),
+            demo_at: None,
             held_since: None,
             previous: None,
             hits: Vec::new(),
@@ -101,7 +108,7 @@ impl Driver {
         }
         // Nobody to ask: the tour begins at once.
         if self.model.is_none() && !self.linked {
-            self.model = Some(Welcome::new(facts::tour_state(&self.home), false, self.has_shell));
+            self.model = Some(Welcome::new(facts::tour_state(&self.home), false));
             self.text_start = Some(now);
         }
         self.ask_state(now, &mut tick);
@@ -119,6 +126,7 @@ impl Driver {
                 }
             }
         }
+        self.sync_demo(now, &mut tick);
 
         if self.started(now) && !self.ended {
             self.draw(now, size, &mut tick);
@@ -159,13 +167,17 @@ impl Driver {
     fn run_effects(&mut self, effects: Vec<Effect>, tick: &mut Tick) {
         for effect in effects {
             match effect {
-                Effect::Ask(op) => tick.ask.push(op),
+                Effect::Ask(op) => {
+                    if self.state_in_flight
+                        && matches!(op, WelcomeOp::SetLook { .. } | WelcomeOp::SetNotify { .. })
+                    {
+                        self.stale_state = true;
+                    }
+                    tick.ask.push(op);
+                }
                 Effect::End(end) => {
                     if self.model.as_ref().is_some_and(Welcome::live) {
-                        tick.ask.push(WelcomeOp::Finish {
-                            folder: end.folder.as_ref().map(|folder| folder.to_string_lossy().into_owned()),
-                            skipped: end.skipped,
-                        });
+                        tick.ask.push(WelcomeOp::Finish { skipped: end.skipped });
                     }
                     self.ended = true;
                     tick.end = Some(end);
@@ -181,18 +193,29 @@ impl Driver {
         }
         let due = self.polled_at.is_none_or(|at| now.saturating_sub(at) >= POLL);
         if due {
-            // Only the agents page shows a folder's trust, so only there is the app asked about it
-            // (it reads the project's files to answer).
-            let folder = self
-                .model
-                .as_ref()
-                .filter(|model| model.step() == Step::Agents)
-                .and_then(|model| model.folder())
-                .map(|path| path.to_string_lossy().into_owned());
-            tick.ask.push(WelcomeOp::State { folder });
+            tick.ask.push(WelcomeOp::State);
             self.polled_at = Some(now);
             self.state_in_flight = true;
         }
+    }
+
+    /// Tell the app when the example band should go up or come down: the moment the sidebar step is
+    /// entered or left. (The end needs no word: its `Finish` takes the band away.) A request that
+    /// failed is made again, not every frame but every so often, so the band is never left behind.
+    fn sync_demo(&mut self, now: Duration, tick: &mut Tick) {
+        if !self.linked || self.ended {
+            return;
+        }
+        let wanted = self.model.as_ref().is_some_and(Welcome::wants_demo);
+        if self.demo_sent == Some(wanted) {
+            return;
+        }
+        if self.demo_sent.is_none() && self.demo_at.is_some_and(|at| now.saturating_sub(at) < POLL) {
+            return;
+        }
+        tick.ask.push(WelcomeOp::Demo { show: wanted });
+        self.demo_sent = Some(wanted);
+        self.demo_at = Some(now);
     }
 
     fn answer(&mut self, now: Duration, answer: Answer) {
@@ -206,14 +229,12 @@ impl Driver {
             },
             ("state", Ok(None)) => self.state_failed("no state"),
             ("state", Err(why)) => self.state_failed(&why),
-            (_, Ok(_)) => {
-                if let Some(model) = &mut self.model {
-                    model.note_failure(None);
+            (op, result) => {
+                if op == "demo" && result.is_err() {
+                    self.demo_sent = None;
                 }
-            }
-            (_, Err(why)) => {
                 if let Some(model) = &mut self.model {
-                    model.note_failure(Some(why));
+                    model.note_failure(result.err());
                 }
             }
         }
@@ -221,14 +242,15 @@ impl Driver {
 
     fn take_state(&mut self, now: Duration, state: WelcomeState) {
         let start = now + Duration::from_millis(state.wait_ms);
+        let stale = std::mem::take(&mut self.stale_state);
         match &mut self.model {
             Some(model) => {
-                model.update(state);
+                model.update(state, stale);
                 // The app may shorten the wait (the animation was skipped), never lengthen it.
                 self.text_start = Some(self.text_start.map_or(start, |was| was.min(start)));
             }
             None => {
-                self.model = Some(Welcome::new(state, true, self.has_shell));
+                self.model = Some(Welcome::new(state, true));
                 self.text_start = Some(start);
             }
         }

@@ -1,19 +1,20 @@
 //! The welcome's state: which step is up, where the cursor is in its list, what the app last said,
-//! and what each key does. It wraps core's first-run model ([`Onboarding`]: the steps, Back, Continue,
-//! Skip, and what the app is asked to do), so the terminal's welcome and the intro window walk the same
-//! steps. Pure: keys in, effects out; the program in `run` does the asking and the drawing.
+//! and what each key does. It wraps the terminal welcome's own steps ([`Flow`]: Back, Continue, Skip),
+//! so the intro window and the terminal walk different sequences. Pure: keys in, effects out; the
+//! program in `run` does the asking and the drawing.
 //!
-//! Nothing here installs or trusts behind the person's back. An Install goes out only from Return (or a
-//! click) on that agent's own row, Trust only from the Trust row, and the cursor starts on Start: the
-//! tests walk every key from every step to show that moving through the steps asks for neither.
+//! Nothing here installs or changes what reaches you behind the person's back. An Install goes out
+//! only from Return (or a click) on that agent's own row, a notification choice only from a press on
+//! its own row, and the cursor starts on the step's button: the tests walk every key from every step
+//! to show that moving through the steps asks for neither.
 
-use std::path::PathBuf;
 use std::time::Duration;
 
+use super::flow::{Action, Event, Flow, Step};
 use super::keys::Key;
+use crate::config::NotifySound;
 use crate::intro::Handover;
-use crate::ipc::control::{AgentsFacts, LookFacts, PlaceFact, TrustFacts, WelcomeOp, WelcomeState};
-use crate::onboarding::{Action, Event, Onboarding, Step};
+use crate::ipc::control::{AgentsFacts, LookFacts, NotifyFacts, PermissionFact, WelcomeOp, WelcomeState};
 
 /// What the program does about a key.
 #[derive(Clone, Debug, PartialEq)]
@@ -25,38 +26,43 @@ pub enum Effect {
 }
 
 /// How the welcome ended.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct End {
-    /// The folder the shell is to start in, if one was picked.
-    pub folder: Option<PathBuf>,
     /// Esc (or Ctrl-C) ended it.
     pub skipped: bool,
+}
+
+/// A row of the notifications step the cursor can be on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NotifyRow {
+    /// Ask macOS to allow banners, offered only while it has not been asked.
+    Allow,
+    NeedsYou,
+    AgentDone,
+    Sound,
 }
 
 /// A line of a step's list that the cursor can be on.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Item {
-    Place(usize),
     Theme(usize),
+    Notify(NotifyRow),
     Agent(usize),
-    Trust,
-    /// The step's own button: Get started, Continue on a replay, Start.
+    /// The step's own button: Get started, Continue, Start.
     Start,
 }
 
 /// One welcome, from its first state to its end.
 #[derive(Clone, Debug)]
 pub struct Welcome {
-    flow: Onboarding,
+    flow: Flow,
     /// Talking to the app that started it: the choices work. Without, a read-only tour.
     live: bool,
-    /// There is a shell to hand the terminal to, so the folder step has a point.
-    has_shell: bool,
     facts: WelcomeState,
-    /// Where the cursor is in the folder list, and the theme list; `None` for the agents list is
-    /// Start, its last line.
-    folder_at: usize,
+    /// Where the cursor is in the theme list; `None` is the button, the last line, for the notification
+    /// rows and the agents list.
     theme_at: usize,
+    notify_at: Option<NotifyRow>,
     agents_at: Option<usize>,
     /// When the current step began, on the program's clock, and whether its entrance was cut short
     /// by a key. Steps seen before come in whole.
@@ -70,21 +76,16 @@ pub struct Welcome {
 
 impl Welcome {
     /// The welcome for the first state the app reported, `live`, or for a tour (`facts` made locally).
-    pub fn new(facts: WelcomeState, live: bool, has_shell: bool) -> Self {
-        let flow = if facts.first_run {
-            Onboarding::new(facts.agents.as_ref().is_none_or(|agents| !agents.found.is_empty()))
-        } else {
-            Onboarding::replay()
-        };
+    pub fn new(facts: WelcomeState, live: bool) -> Self {
+        let flow = if facts.first_run { Flow::new() } else { Flow::replay() };
         let theme_at = facts.look.themes.iter().position(|theme| theme.name == facts.look.theme).unwrap_or(0);
         Self {
             seen: vec![flow.step()],
             flow,
             live,
-            has_shell,
             facts,
-            folder_at: 0,
             theme_at,
+            notify_at: None,
             agents_at: None,
             step_since: Duration::ZERO,
             settled: false,
@@ -114,7 +115,7 @@ impl Welcome {
 
     /// A replay of the welcome: the welcome page alone.
     pub fn is_replay(&self) -> bool {
-        !self.facts.first_run
+        self.flow.is_replay()
     }
 
     #[cfg(test)]
@@ -122,28 +123,26 @@ impl Welcome {
         self.ended.as_ref()
     }
 
-    /// The folder picked so far, which the agents page's trust is about.
-    pub fn folder(&self) -> Option<&PathBuf> {
-        self.flow.folder()
-    }
-
-    pub fn places(&self) -> &[PlaceFact] {
-        &self.facts.places
+    /// Whether the app is to show its example band in the sidebar: while the sidebar step is up, in a
+    /// welcome that talks to the app and has not ended.
+    pub fn wants_demo(&self) -> bool {
+        self.live && self.ended.is_none() && self.flow.step() == Step::Sidebar
     }
 
     pub fn look(&self) -> &LookFacts {
         &self.facts.look
     }
 
+    /// What reaches the person now, when there is an app to ask.
+    pub fn notify(&self) -> Option<&NotifyFacts> {
+        self.facts.notify.as_ref().filter(|_| self.live)
+    }
+
     pub fn agents(&self) -> Option<&AgentsFacts> {
         self.facts.agents.as_ref()
     }
 
-    pub fn trust(&self) -> Option<&TrustFacts> {
-        self.facts.trust.as_ref().filter(|_| self.live)
-    }
-
-    /// What went wrong: the app's word about the last Install or Trust, else a request it refused.
+    /// What went wrong: the app's word about the last Install, else a request it refused.
     pub fn problem(&self) -> Option<&str> {
         self.facts.problem.as_deref().or(self.note.as_deref())
     }
@@ -156,22 +155,30 @@ impl Welcome {
     /// The lines of the current step's list the cursor can be on, in order.
     pub fn items(&self) -> Vec<Item> {
         match self.flow.step() {
-            Step::Welcome => vec![Item::Start],
+            Step::Welcome | Step::Extras => vec![Item::Start],
             // With nothing to list (a tour has no themes) the step still has its way on.
-            Step::Folder if self.facts.places.is_empty() => vec![Item::Start],
             Step::Look if self.facts.look.themes.is_empty() => vec![Item::Start],
-            Step::Folder => (0..self.facts.places.len()).map(Item::Place).collect(),
             Step::Look => (0..self.facts.look.themes.len()).map(Item::Theme).collect(),
-            Step::Agents => {
-                let found = self.facts.agents.as_ref().map_or(0, |agents| agents.found.len());
-                let mut items: Vec<Item> = (0..found).map(Item::Agent).collect();
-                if self.trust().is_some() {
-                    items.push(Item::Trust);
+            Step::Notify => {
+                let mut items = Vec::new();
+                if let Some(notify) = self.notify() {
+                    items.extend(
+                        [NotifyRow::NeedsYou, NotifyRow::AgentDone, NotifyRow::Sound].map(Item::Notify),
+                    );
+                    // Under the choices, while macOS has not been asked: the one press that asks.
+                    if notify.permission == PermissionFact::NotAsked {
+                        items.push(Item::Notify(NotifyRow::Allow));
+                    }
                 }
                 items.push(Item::Start);
                 items
             }
-            Step::Primer => vec![Item::Start],
+            Step::Sidebar => {
+                let found = self.facts.agents.as_ref().map_or(0, |agents| agents.found.len());
+                let mut items: Vec<Item> = (0..found).map(Item::Agent).collect();
+                items.push(Item::Start);
+                items
+            }
         }
     }
 
@@ -180,10 +187,13 @@ impl Welcome {
         let items = self.items();
         let last = items.len().saturating_sub(1);
         match self.flow.step() {
-            Step::Folder => self.folder_at.min(last),
             Step::Look => self.theme_at.min(last),
-            Step::Agents => self.agents_at.map_or(last, |at| at.min(last)),
-            Step::Welcome | Step::Primer => 0,
+            Step::Notify => self
+                .notify_at
+                .and_then(|row| items.iter().position(|item| *item == Item::Notify(row)))
+                .unwrap_or(last),
+            Step::Sidebar => self.agents_at.map_or(last, |at| at.min(last)),
+            Step::Welcome | Step::Extras => 0,
         }
     }
 
@@ -200,15 +210,22 @@ impl Welcome {
     // ---------------------------------------------------------------- the app's answers
 
     /// The app's latest state replaces the facts; what the person is in the middle of (the cursor, the
-    /// step) stays. The agents turning up, or not, moves the flow's third step.
-    pub fn update(&mut self, mut facts: WelcomeState) {
+    /// step) stays. `stale` says the state was asked for before the last choice was sent, so it may
+    /// still show what was there before: the choices on the page are kept as the person made them
+    /// (the next state corrects them if the app didn't take them).
+    pub fn update(&mut self, mut facts: WelcomeState, stale: bool) {
         // The handover and first-run flag are the app's word for the whole run: fixed at the start.
         facts.handover = self.facts.handover;
         facts.first_run = self.facts.first_run;
-        if let Some(agents) = &facts.agents
-            && self.flow.step() != Step::Primer
-        {
-            self.flow.set_agents_found(!agents.found.is_empty());
+        if stale {
+            let LookFacts { themes, primaries, .. } =
+                std::mem::replace(&mut facts.look, self.facts.look.clone());
+            facts.look.themes = themes;
+            facts.look.primaries = primaries;
+            facts.notify = match (self.facts.notify, facts.notify) {
+                (Some(mine), Some(theirs)) => Some(NotifyFacts { permission: theirs.permission, ..mine }),
+                (_, theirs) => theirs,
+            };
         }
         self.facts = facts;
     }
@@ -226,9 +243,9 @@ impl Welcome {
         match key {
             Key::Esc | Key::Interrupt => self.flow_event(Event::Skip, now),
             Key::Left | Key::Backspace => self.flow_event(Event::Back, now),
-            // → goes on where Return has nothing else to mean: not on the agents, where it would
-            // press an Install, and not on Start, which ends it.
-            Key::Right if matches!(step, Step::Welcome | Step::Folder | Step::Look) => self.activate(now),
+            // → goes on where Return might press a row (an Install, a choice) and so is no way to
+            // go on; it never presses one. The last step has nothing after it but the end.
+            Key::Right if step != Step::Extras => self.flow_event(Event::Continue, now),
             Key::Enter | Key::Char(' ') => self.activate(now),
             Key::Up | Key::Char('k') | Key::BackTab => self.step_cursor(-1),
             Key::Down | Key::Char('j') | Key::Tab => self.step_cursor(1),
@@ -256,14 +273,14 @@ impl Welcome {
     }
 
     fn set_cursor(&mut self, at: usize) {
-        match self.flow.step() {
-            Step::Folder => self.folder_at = at,
-            Step::Look => self.theme_at = at,
-            Step::Agents => {
-                let last = self.items().len().saturating_sub(1);
-                self.agents_at = (at != last).then_some(at);
-            }
-            Step::Welcome | Step::Primer => {}
+        let items = self.items();
+        let last = items.len().saturating_sub(1);
+        match (self.flow.step(), items.get(at)) {
+            (Step::Look, _) => self.theme_at = at,
+            (Step::Notify, Some(Item::Notify(row))) => self.notify_at = Some(*row),
+            (Step::Notify, _) => self.notify_at = None,
+            (Step::Sidebar, _) => self.agents_at = (at != last).then_some(at),
+            (Step::Welcome | Step::Extras, _) => {}
         }
     }
 
@@ -344,40 +361,48 @@ impl Welcome {
         let items = self.items();
         let Some(item) = items.get(self.cursor()).cloned() else { return Vec::new() };
         match item {
-            Item::Place(at) => {
-                let Some(place) = self.facts.places.get(at) else { return Vec::new() };
-                let folder = PathBuf::from(&place.path);
-                self.flow.apply(Event::PickFolder(folder));
-                self.flow_event(Event::Continue, now)
-            }
-            Item::Theme(_) => self.flow_event(Event::Continue, now),
+            Item::Theme(_) | Item::Start => self.flow_event(Event::Continue, now),
+            Item::Notify(row) => self.press_notify(row),
             Item::Agent(at) => {
                 let agent = self.facts.agents.as_ref().and_then(|agents| agents.found.get(at));
                 match agent {
                     Some(agent) if agent.hooks.installable() => {
-                        self.flow_event(Event::Install(agent.id), now)
+                        self.ask(WelcomeOp::InstallHooks { agent: agent.id })
                     }
                     _ => Vec::new(),
                 }
             }
-            Item::Trust => match self.trust().map(|trust| PathBuf::from(&trust.folder)) {
-                Some(folder) => self.flow_event(Event::Trust(folder), now),
-                None => Vec::new(),
-            },
-            Item::Start => self.flow_event(Event::Start, now),
         }
     }
 
-    /// Run `event` through the first-run model and turn what it asks into effects, skipping the folder
-    /// step when there is no shell to start in it.
+    /// A press on a notification row: the choice changes here at once, and the app is told. A switch
+    /// flips, the sound goes round, Allow asks macOS; the app asks macOS itself when the press turns a
+    /// banner on and it has not been asked.
+    fn press_notify(&mut self, row: NotifyRow) -> Vec<Effect> {
+        let Some(notify) = self.facts.notify.as_mut().filter(|_| self.live) else { return Vec::new() };
+        let (mut needs_you, mut agent_done, mut sound, mut allow) = (None, None, None, false);
+        match row {
+            NotifyRow::Allow => allow = true,
+            NotifyRow::NeedsYou => {
+                notify.needs_you = !notify.needs_you;
+                needs_you = Some(notify.needs_you);
+            }
+            NotifyRow::AgentDone => {
+                notify.agent_done = !notify.agent_done;
+                agent_done = Some(notify.agent_done);
+            }
+            NotifyRow::Sound => {
+                notify.sound = next_sound(notify.sound);
+                sound = Some(notify.sound);
+            }
+        }
+        vec![Effect::Ask(WelcomeOp::SetNotify { needs_you, agent_done, sound, allow })]
+    }
+
+    /// Run `event` through the flow and turn what it asks into effects.
     fn flow_event(&mut self, event: Event, now: Duration) -> Vec<Effect> {
         let before = self.flow.step();
-        let action = self.flow.apply(event.clone());
-        if self.flow.step() == Step::Folder && !self.has_shell {
-            // Nothing to hand over: the folder step is skipped, in whichever direction it was entered.
-            let onward = if before == Step::Welcome { Event::Continue } else { Event::Back };
-            self.flow.apply(onward);
-        }
+        let action = self.flow.apply(event);
         let step = self.flow.step();
         if step != before {
             self.step_since = now;
@@ -388,12 +413,7 @@ impl Welcome {
         }
         match action {
             Action::None => Vec::new(),
-            Action::Skip => self.end(None, true),
-            Action::Finish { folder } => self.end(folder, false),
-            Action::InstallHooks(agent) => self.ask(WelcomeOp::InstallHooks { agent }),
-            Action::Trust(folder) => {
-                self.ask(WelcomeOp::Trust { folder: folder.to_string_lossy().into_owned() })
-            }
+            Action::End { skipped } => self.end(skipped),
         }
     }
 
@@ -401,9 +421,34 @@ impl Welcome {
         if self.live { vec![Effect::Ask(op)] } else { Vec::new() }
     }
 
-    fn end(&mut self, folder: Option<PathBuf>, skipped: bool) -> Vec<Effect> {
-        let end = End { folder: folder.filter(|_| self.has_shell), skipped };
-        self.ended = Some(end.clone());
+    fn end(&mut self, skipped: bool) -> Vec<Effect> {
+        let end = End { skipped };
+        self.ended = Some(end);
         vec![Effect::End(end)]
+    }
+}
+
+/// The sound choices in the order Settings lists them, round again after the last.
+fn next_sound(sound: NotifySound) -> NotifySound {
+    match sound {
+        NotifySound::NeedsYou => NotifySound::All,
+        NotifySound::All => NotifySound::None,
+        NotifySound::None => NotifySound::NeedsYou,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_sound_goes_round_in_settings_order() {
+        let mut sound = NotifySound::NeedsYou;
+        let mut seen = Vec::new();
+        for _ in 0..4 {
+            seen.push(sound);
+            sound = next_sound(sound);
+        }
+        assert_eq!(seen, [NotifySound::NeedsYou, NotifySound::All, NotifySound::None, NotifySound::NeedsYou]);
     }
 }

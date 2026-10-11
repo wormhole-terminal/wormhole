@@ -2,9 +2,11 @@
 //!
 //! Where the intro window stands in for the terminal, this is the terminal: the app starts the first
 //! terminal's shell as `Wormhole welcome -- <the shell it would have run>`, the window and its sidebar
-//! show as usual, and the program types its greeting into the real PTY and offers the steps as keyboard
-//! menus (where you work, how it looks, coding agents). When it ends it clears the screen, prints a
-//! compact banner and `exec`s the shell, in the folder picked, in that same terminal.
+//! show as usual, and the program types its greeting into the real PTY and walks five steps as keyboard
+//! pages: the welcome (the sidebar's three lines), how it looks, what reaches you when an agent needs
+//! you, the sidebar (the app puts an example band in the real one while the page is up) with the
+//! coding agents and their hooks, and what else is here. When it ends it clears the screen, prints a
+//! compact banner and `exec`s the shell, in the terminal's own folder, in that same terminal.
 //!
 //! It plays into the start animation. The app's first answer says how long to wait (`wait_ms`: until
 //! the ship has docked, or, with no ship, until the light lifts away), and the three hand-overs differ in
@@ -18,11 +20,13 @@
 //!
 //! - `ansi`: the screen as a grid of styled cells and the bytes that draw it (palette colours only);
 //! - `keys`: keys, and SGR mouse clicks, read from the terminal's bytes;
-//! - `model`: the state: steps (core's `onboarding` model), cursors, and what each key does;
+//! - `flow`: the steps and where Back, Continue and Skip lead (its own, not the intro window's);
+//! - `model`: the state: the flow, cursors, and what each key does;
 //! - `render`: the pages, a pure function of the model, the size and the clock;
+//! - `demo`: the example rows the sidebar step shows in the window's sidebar, as data;
 //! - `art`: the mark's and the logo's places, and the logo's pixels;
 //! - `banner`: what the terminal shows at the hand-over;
-//! - `facts`: the folders and agents the pages list, read from the machine;
+//! - `facts`: the agents the pages list, read from the machine;
 //! - `gate`: the token rules;
 //! - `driver`: one tick of the program, without any I/O, so it can be scripted in tests;
 //! - `tty`: raw mode, the size and waiting for a key (the only `libc` here);
@@ -31,8 +35,10 @@
 mod ansi;
 mod art;
 mod banner;
+pub mod demo;
 mod driver;
 pub mod facts;
+mod flow;
 mod gate;
 mod keys;
 mod model;
@@ -48,6 +54,8 @@ pub use gate::{Gate, Registry, TOKEN_VAR, new_token};
 pub use render::TAGLINE;
 pub use run::{Args, HELP, command, parse_args, run};
 
+#[cfg(test)]
+mod driving;
 #[cfg(test)]
 mod fixtures;
 #[cfg(test)]

@@ -29,8 +29,8 @@ pub(crate) use cli::exchange;
 pub use cli::{Cli, HELP, Parsed, is_verb, parse, render, run};
 pub use limits::{Limited, RateLimits};
 pub use welcome::{
-    AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, PlaceFact, PrimaryFact, ThemeFact,
-    TrustFacts, WelcomeOp, WelcomeState,
+    AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact,
+    ThemeFact, WelcomeOp, WelcomeState,
 };
 
 use crate::notify::State;
@@ -524,7 +524,7 @@ mod tests {
             ),
             (
                 Request::new(
-                    Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State { folder: None } },
+                    Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State },
                     Some("4".into()),
                 ),
                 r#"{"version":1,"from":"4","action":"welcome","token":"0123abcd","op":{"kind":"state"}}"#,
@@ -580,8 +580,7 @@ mod tests {
         assert!(Action::SendText { target: Target::Tab(1), text: "x".into(), submit: false }.writes());
         assert!(Action::NewTerminal { folder: None, command: None, worktree: None, window: None }.writes());
         // The welcome's token is its switch, not Settings.
-        let welcome =
-            Action::Welcome { token: "t".into(), op: WelcomeOp::Finish { folder: None, skipped: false } };
+        let welcome = Action::Welcome { token: "t".into(), op: WelcomeOp::Finish { skipped: false } };
         assert!(!welcome.writes());
         assert_eq!(welcome.name(), "welcome");
     }

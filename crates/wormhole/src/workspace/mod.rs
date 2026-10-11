@@ -845,6 +845,7 @@ impl Workspace {
         let closed = self.sessions.remove(ix);
         notifications::dismiss(closed.pane.id, cx);
         welcome::forget(closed.id, cx);
+        self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
         // screen (its diff, branch picker and focused note), so only a real change of session

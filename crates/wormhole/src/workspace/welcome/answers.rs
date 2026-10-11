@@ -4,23 +4,26 @@
 //! window a terminal is in can be updated through `AppState::with_workspace`.
 //!
 //! Each op asks for one thing and gets exactly that: the look changes only to a theme, colour,
-//! ligature setting or font step the page offers; hooks are written for the one agent named, if it
-//! was found on PATH; a folder is trusted only through Touch ID, and only if it is a project root.
+//! ligature setting or font step the page offers; what reaches the person changes only by the switches
+//! and sound Settings → Notifications has (macOS is asked for permission only when a press turns a
+//! banner on or says Allow, and only if it has not been asked); hooks are written for the one agent
+//! named, if it was found on PATH; the example band goes up in the window's sidebar and comes down.
 
-use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
+use wormhole_core::config::NotifySound;
 use wormhole_core::fonts::FontSlot;
 use wormhole_core::ipc::control::{
-    AgentFact, ErrorCode, HooksFact, Limited, LookFacts, PrimaryFact, Reply, Target, ThemeFact, TrustFacts,
-    WelcomeOp, WelcomeState,
+    AgentFact, ErrorCode, HooksFact, Limited, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, Reply,
+    Target, ThemeFact, WelcomeOp, WelcomeState,
 };
-use wormhole_core::project::{self, TrustStatus};
 
 use super::{Play, Run, remember_first_run};
+use crate::settings::settings;
 use crate::workspace::control::{budget, find};
+use crate::workspace::notifications::{self, Permission};
 use crate::workspace::onboarding::{offered_primaries, offered_themes};
 use crate::workspace::settings_page::update_settings;
 use crate::workspace::{AppState, app, app_mut};
@@ -34,10 +37,11 @@ pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, cx: &mut A
     let Some(tab) = from else { return Reply::error(ErrorCode::Refused, "outside any terminal") };
     tracing::debug!(tab, op = op.name(), "welcome request");
     let limited = match &op {
-        WelcomeOp::State { .. } => None,
+        WelcomeOp::State => None,
         WelcomeOp::SetLook { .. } => Some(Limited::WelcomeLook),
+        WelcomeOp::SetNotify { .. } => Some(Limited::WelcomeNotify),
         WelcomeOp::InstallHooks { .. } => Some(Limited::WelcomeInstall),
-        WelcomeOp::Trust { .. } => Some(Limited::WelcomeTrust),
+        WelcomeOp::Demo { .. } => Some(Limited::WelcomeDemo),
         WelcomeOp::Finish { .. } => Some(Limited::WelcomeFinish),
     };
     if let Some(kind) = limited
@@ -46,21 +50,24 @@ pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, cx: &mut A
         return reply;
     }
     match op {
-        WelcomeOp::State { folder } => Reply::ok(state(tab, folder, cx)),
+        WelcomeOp::State => Reply::ok(state(tab, cx)),
         WelcomeOp::SetLook { theme, primary, ligatures, font_step } => {
             set_look(theme, primary, ligatures, font_step, cx)
         }
+        WelcomeOp::SetNotify { needs_you, agent_done, sound, allow } => {
+            set_notify(needs_you, agent_done, sound, allow, cx)
+        }
         WelcomeOp::InstallHooks { agent } => install(tab, agent, cx),
-        WelcomeOp::Trust { folder } => trust(tab, &folder, cx),
-        WelcomeOp::Finish { folder, skipped } => finish(tab, folder, skipped, cx),
+        WelcomeOp::Demo { show } => demo(tab, show, cx),
+        WelcomeOp::Finish { skipped } => finish(tab, skipped, cx),
     }
 }
 
 /// Everything the pages are made of.
-fn state(tab: i64, folder: Option<String>, cx: &mut App) -> WelcomeState {
+fn state(tab: i64, cx: &mut App) -> WelcomeState {
     let reduce_motion = cx.reduce_motion();
     let look = look_facts(cx);
-    let trust = trust_facts(folder.as_deref(), cx);
+    let notify = notify_facts(cx);
     let Some(run) = app(cx).welcomes.run(tab) else {
         // The gate and the run are made and dropped together; a gate without a run is a bug.
         return empty_state(tab);
@@ -70,10 +77,9 @@ fn state(tab: i64, folder: Option<String>, cx: &mut App) -> WelcomeState {
         reduce_motion,
         handover: run.handover,
         first_run: run.first_run,
-        places: run.places.clone(),
         look,
+        notify: Some(notify),
         agents: run.agents.clone(),
-        trust,
         problem: run.problem.clone(),
     }
 }
@@ -86,7 +92,6 @@ fn empty_state(tab: i64) -> WelcomeState {
         reduce_motion: false,
         handover: Default::default(),
         first_run: false,
-        places: Vec::new(),
         look: LookFacts {
             themes: Vec::new(),
             theme: String::new(),
@@ -96,8 +101,8 @@ fn empty_state(tab: i64) -> WelcomeState {
             font_size: 0.0,
             ligatures: false,
         },
+        notify: None,
         agents: None,
-        trust: None,
         problem: None,
     }
 }
@@ -151,25 +156,21 @@ fn ansi_name(ix: usize) -> &'static str {
     ["Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"][ix % 8]
 }
 
-/// The chosen folder's project, when it has one that isn't trusted: what trusting it would enable.
-fn trust_facts(folder: Option<&str>, cx: &App) -> Option<TrustFacts> {
-    if !crate::workspace::project::project_folders_on(cx) {
-        return None;
+/// What reaches the person, as Settings → Notifications has it, and what macOS says of banners.
+fn notify_facts(cx: &App) -> NotifyFacts {
+    let s = settings(cx);
+    NotifyFacts {
+        needs_you: s.notify_kind_on(s.notify_needs_you),
+        agent_done: s.notify_kind_on(s.notify_agent_done),
+        sound: s.notify_sound,
+        permission: match notifications::permission(cx) {
+            Permission::Checking => PermissionFact::Checking,
+            Permission::NotAsked => PermissionFact::NotAsked,
+            Permission::Allowed { .. } => PermissionFact::Allowed,
+            Permission::Denied => PermissionFact::Denied,
+            Permission::OutsideBundle => PermissionFact::Outside,
+        },
     }
-    // The program names the folder only on the page that shows it.
-    let folder = PathBuf::from(folder?);
-    let root = project::find_project(&folder)?.root;
-    let loaded = crate::workspace::project::load_project_info(&root, cx)?;
-    if loaded.status == TrustStatus::Trusted {
-        return None;
-    }
-    Some(TrustFacts {
-        folder: root.to_string_lossy().into_owned(),
-        name: root.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default(),
-        dir: project::dir_name_at(&root).to_string(),
-        commands: loaded.request.as_ref().map_or(0, |request| request.commands.len()),
-        asking: app(cx).hub.approving,
-    })
 }
 
 /// `SetLook`: a theme, colour, ligature switch or font step, if it is one the page offers.
@@ -209,6 +210,38 @@ fn set_look(
     Reply::ok(serde_json::json!({}))
 }
 
+/// `SetNotify`: the two switches and the sound Settings → Notifications has, nothing else. A press that
+/// turns a banner on (a switch going from off to on), or says Allow, makes macOS ask for permission
+/// if it has not been asked; no other request, and no page merely showing, ever does.
+fn set_notify(
+    needs_you: Option<bool>,
+    agent_done: Option<bool>,
+    sound: Option<NotifySound>,
+    allow: bool,
+    cx: &mut App,
+) -> Reply {
+    let before = settings(cx);
+    let (was_needs_you, was_agent_done) =
+        (before.notify_kind_on(before.notify_needs_you), before.notify_kind_on(before.notify_agent_done));
+    let turns_on =
+        (needs_you == Some(true) && !was_needs_you) || (agent_done == Some(true) && !was_agent_done);
+    update_settings(cx, |s| {
+        if let Some(on) = needs_you {
+            s.change_notify_kind(|s| s.notify_needs_you = on);
+        }
+        if let Some(on) = agent_done {
+            s.change_notify_kind(|s| s.notify_agent_done = on);
+        }
+        if let Some(sound) = sound {
+            s.notify_sound = sound;
+        }
+    });
+    if turns_on || allow {
+        notifications::ask_permission_if_new(cx);
+    }
+    Reply::ok(serde_json::json!({}))
+}
+
 /// `InstallHooks`: the hooks of this one agent, if it was found on PATH. Nothing else is touched.
 fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
     let found = app(cx)
@@ -245,33 +278,20 @@ fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
     }
 }
 
-/// `Trust`: ask for Touch ID to trust this folder's project. Only a project root, only with the
-/// project folders feature on; the answer is in the next state.
-fn trust(tab: i64, folder: &str, cx: &mut App) -> Reply {
-    if !crate::workspace::project::project_folders_on(cx) {
-        return Reply::error(ErrorCode::NotAllowed, "project folders are off");
-    }
-    let path = Path::new(folder);
-    if !path.is_absolute() || !path.is_dir() {
-        return Reply::error(ErrorCode::NotFound, format!("no folder at {folder}"));
-    }
-    let Some(root) = project::find_project(path)
-        .map(|found| found.root)
-        .filter(|root| root.as_path() == path.canonicalize().unwrap_or_default())
-    else {
-        return Reply::error(ErrorCode::NotFound, "that folder isn't a project root");
+/// `Demo`: the example band in the sidebar of the window the welcome's terminal is in. It is the
+/// window's own, drawn for as long as the welcome runs and the program asks (`Workspace::set_welcome_demo`).
+fn demo(tab: i64, show: bool, cx: &mut App) -> Reply {
+    let Some(found) = find(Target::Tab(tab), cx) else {
+        return Reply::error(ErrorCode::NotFound, "no such terminal");
     };
-    if let Some(run) = app_mut(cx).welcomes.run_mut(tab) {
-        run.problem = None;
-    }
-    crate::workspace::project::approve_project(&root, cx);
+    AppState::with_workspace(&found.window, cx, |ws, _, cx| ws.set_welcome_demo(tab, show, cx));
     Reply::ok(serde_json::json!({}))
 }
 
 /// `Finish`: the welcome is over. On a first run it is remembered, and the sidebar's note for a run
-/// that ended on the primer comes up; a run still playing is cut short.
-fn finish(tab: i64, folder: Option<String>, skipped: bool, cx: &mut App) -> Reply {
-    tracing::info!(tab, skipped, folder = ?folder, "the welcome finished");
+/// that ended on the primer comes up; the example band goes; a run still playing is cut short.
+fn finish(tab: i64, skipped: bool, cx: &mut App) -> Reply {
+    tracing::info!(tab, skipped, "the welcome finished");
     let (first_run, primer) = match app(cx).welcomes.run(tab) {
         Some(run) => (run.first_run, run.agents.as_ref().is_some_and(|agents| agents.found.is_empty())),
         None => (false, false),
