@@ -25,7 +25,7 @@ use crate::terminal_view::{
     ClearBuffer, CopyCommand, CopyOutput, FONT_SIZES, NextPrompt, PreviousPrompt, RerunCommand, SelectOutput,
     TerminalKeys, keystroke_spec,
 };
-use wormhole_core::intro::Style;
+use wormhole_core::intro::{Handover, Style};
 
 actions!(
     workspace,
@@ -105,6 +105,9 @@ actions!(
         PlayIntroAurora,
         PlayIntroTentacles,
         PlayIntroVoyage,
+        PlayWelcomeCursor,
+        PlayWelcomePortal,
+        PlayWelcomeLogo,
         ToggleCommandPalette,
         ShowKeyboardShortcuts,
         /// The greyed line in an empty submenu ("No Recent Folders"): nothing handles it, so
@@ -224,6 +227,9 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::PlayIntroAurora => Box::new(PlayIntroAurora),
         A::PlayIntroTentacles => Box::new(PlayIntroTentacles),
         A::PlayIntroVoyage => Box::new(PlayIntroVoyage),
+        A::PlayWelcomeCursor => Box::new(PlayWelcomeCursor),
+        A::PlayWelcomePortal => Box::new(PlayWelcomePortal),
+        A::PlayWelcomeLogo => Box::new(PlayWelcomeLogo),
         #[cfg(any(feature = "inspector", debug_assertions))]
         A::Inspector => Box::new(crate::inspector::Inspect),
         #[cfg(not(any(feature = "inspector", debug_assertions)))]
@@ -344,6 +350,9 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayIntroAurora, cx| crate::intro::play_in_front(Style::Aurora, cx));
     cx.on_action(|_: &PlayIntroTentacles, cx| crate::intro::play_in_front(Style::Tentacles, cx));
     cx.on_action(|_: &PlayIntroVoyage, cx| crate::intro::play_in_front(Style::Voyage, cx));
+    cx.on_action(|_: &PlayWelcomeCursor, cx| super::welcome::replay_in_front(Handover::Cursor, cx));
+    cx.on_action(|_: &PlayWelcomePortal, cx| super::welcome::replay_in_front(Handover::Portal, cx));
+    cx.on_action(|_: &PlayWelcomeLogo, cx| super::welcome::replay_in_front(Handover::Logo, cx));
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();
         cx.defer(move |cx| menu_bar::run_command(MenuCommand::OpenProject(root), cx));

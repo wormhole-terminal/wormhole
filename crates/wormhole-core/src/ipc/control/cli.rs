@@ -46,6 +46,9 @@ Wormhole: control the running app from the command line
   Wormhole new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]
       A new terminal in the front window (or --window), in a folder, running a command in its shell.
 
+  Wormhole welcome [-- <program> [<args>...]]
+      The first-run welcome, in this terminal; then it starts <program> (your shell) here.
+
   <target>: --terminal <id> | --tab <id> | --pane <id>, with the ids `list` prints.
   --json prints the reply as one JSON object; the exit code is 0 when it worked, 1 when the app
   would not or could not, 2 for a mistake in the arguments, 3 when Wormhole isn't running.
@@ -296,7 +299,7 @@ fn code_name(code: ErrorCode) -> String {
 
 /// Why no reply came.
 #[derive(Debug, PartialEq, Eq)]
-enum Exchange {
+pub(crate) enum Exchange {
     /// Nothing listens on the socket.
     NotRunning,
     /// The app took the request and said nothing: an older build that doesn't know control
@@ -310,11 +313,22 @@ enum Exchange {
 /// is starting up or an older build is running that never will.
 const REPLY_WAIT: Duration = Duration::from_secs(10);
 
-/// Send `request` to the app at `socket` and read its reply.
-fn exchange(socket: &Path, request: &Request) -> Result<Reply, Exchange> {
+impl Exchange {
+    /// What went wrong, in a sentence.
+    pub(crate) fn words(&self) -> String {
+        match self {
+            Exchange::NotRunning => "Wormhole isn't running".to_string(),
+            Exchange::NoAnswer => "the running Wormhole didn't answer".to_string(),
+            Exchange::Broken(why) => why.clone(),
+        }
+    }
+}
+
+/// Send `request` to the app at `socket` and read its reply, waiting at most `wait` for it.
+pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Result<Reply, Exchange> {
     let mut stream = UnixStream::connect(socket).map_err(|_| Exchange::NotRunning)?;
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-    let _ = stream.set_read_timeout(Some(REPLY_WAIT));
+    let _ = stream.set_read_timeout(Some(wait));
     let line = serde_json::to_string(&Message::Control(request.clone()))
         .map_err(|e| Exchange::Broken(e.to_string()))?;
     writeln!(stream, "{line}").map_err(|e| Exchange::Broken(e.to_string()))?;
@@ -365,7 +379,7 @@ pub fn run(args: &[String]) -> i32 {
     let request = Request::new(action, from);
     let socket =
         crate::ipc::tab_var("WORMHOLE_SOCKET").map(PathBuf::from).unwrap_or_else(super::super::socket_path);
-    let reply = match exchange(&socket, &request) {
+    let reply = match exchange(&socket, &request, REPLY_WAIT) {
         Ok(reply) => reply,
         Err(Exchange::NotRunning) => {
             print_err("Wormhole: Wormhole isn't running\n");

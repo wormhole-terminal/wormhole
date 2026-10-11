@@ -231,6 +231,23 @@ fn cursor_frame(
     Some(CursorPaint { rect, color, text })
 }
 
+/// Where the start animation's ship docks: the middle of the chevron of `dock` (in cells, from the
+/// grid's top left, so a cell's middle is `n + 0.5`) and how tall that chevron is, in window points.
+pub(super) fn dock_landing(
+    origin: Point<Pixels>,
+    cell: Size<Pixels>,
+    dock: wormhole_core::welcome::DockCell,
+) -> wormhole_core::intro::voyage::Landing {
+    let chevron = [f32::from(origin.x + cell.width * dock.col), f32::from(origin.y + cell.height * dock.row)];
+    wormhole_core::intro::voyage::Landing::on_chevron(chevron, f32::from(cell.height) * dock.rows)
+}
+
+/// Tell the start animation where its ship docks (`dock_landing`), every frame the grid is laid out.
+fn report_dock(cx: &App, origin: Point<Pixels>, cell: Size<Pixels>, dock: wormhole_core::welcome::DockCell) {
+    let landing = dock_landing(origin, cell, dock);
+    crate::intro::set_landing(cx, [landing.centre[0], landing.centre[1], landing.size]);
+}
+
 impl Render for TerminalView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.redraw.rendered();
@@ -256,6 +273,7 @@ impl Render for TerminalView {
         let selecting = self.selecting;
         let prepaint_state = self.render_state.clone();
         let top_inset = self.top_inset;
+        let dock = self.dock;
         let minimap = store.settings.minimap;
         let paint_state = self.render_state.clone();
         let weak = entity.downgrade();
@@ -280,6 +298,9 @@ impl Render for TerminalView {
                     cols,
                     rows,
                 });
+                if let Some(dock) = dock {
+                    report_dock(cx, bounds.origin, size(cell_width, line_height), dock);
+                }
                 // Rows just above the viewport, shown blurred under the title bar.
                 let overscan = ((top_inset + PADDING_Y) / f32::from(line_height)).ceil() as usize;
 

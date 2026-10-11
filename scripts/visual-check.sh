@@ -156,8 +156,10 @@ parse() {
 write_config() {
   local kv
   {
-    # No banners on the desktop, no update check: neither belongs in a screenshot.
-    printf '{\n  "notifications": false,\n  "auto_update": false'
+    # No banners on the desktop, no update check: neither belongs in a screenshot. The first terminal
+    # is a plain one, not the terminal welcome, whose banner would be in every picture: a scenario
+    # that wants the welcome says `@config feature_flags={"terminal_welcome":true}` (or `welcome …`).
+    printf '{\n  "notifications": false,\n  "auto_update": false,\n  "feature_flags": {"terminal_welcome": false}'
     for kv in ${configs[@]+"${configs[@]}"}; do printf ',\n  %s: %s' "$(json_string "${kv%%=*}")" "${kv#*=}"; done
     printf '\n}\n'
   } > "$1"

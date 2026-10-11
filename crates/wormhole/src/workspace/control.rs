@@ -1,5 +1,6 @@
 //! The control protocol's app side (`wormhole_core::ipc::control`): what
-//! `Wormhole list`, `status`, `notify`, `send-text` and `new-terminal` do here.
+//! `Wormhole list`, `status`, `notify`, `send-text` and `new-terminal` do here (and the first-run
+//! welcome's requests go on to `welcome`).
 //!
 //! Requests come from the socket thread through `AppState`'s message task (`app::dispatch_hook`),
 //! outside any window's update, so every window can be read and the one a request is about updated
@@ -49,6 +50,8 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
         Action::NewTerminal { folder, command, worktree, window } => {
             new_terminal(folder, command, worktree, window, from, cx)
         }
+        // Not behind `control_write`: the token the app put in the welcome terminal is the key.
+        Action::Welcome { token, op } => super::welcome::handle(token, op, from, cx),
     }
 }
 
@@ -205,7 +208,7 @@ fn new_terminal(
 }
 
 /// Count a `kind` request of `from` against its budget, or say when to try again.
-fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
+pub(super) fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
     let now = Instant::now();
     let budgets = &mut cx.default_global::<Budgets>().0;
     if budgets.allow(kind, from, now) {
@@ -223,13 +226,13 @@ fn not_found(target: Target) -> Reply {
 }
 
 /// Where a target is: its window, its terminal (session) and the tab the request means.
-struct Found {
-    window: OpenWindow,
+pub(super) struct Found {
+    pub(super) window: OpenWindow,
     terminal: i64,
     tab: i64,
 }
 
-fn find(target: Target, cx: &App) -> Option<Found> {
+pub(super) fn find(target: Target, cx: &App) -> Option<Found> {
     app(cx).windows.iter().find_map(|window| {
         let (terminal, tab) =
             window.workspace.read_with(cx, |ws, _| ws.control_find(target)).ok().flatten()?;

@@ -12,15 +12,26 @@
 //! never go into a terminal that is waiting for the user's answer or into the caller's own
 //! ([`send_text_check`]). Everything a caller sends is hostile input: capped in size here, rate
 //! limited in `limits`, and shown only through text cleaned like a program's own notification.
+//!
+//! One more kind of request is not a script's: `welcome` is the first-run program (`Wormhole welcome`,
+//! in a terminal the app started for it) talking to the app that runs it. A token the app put in that
+//! terminal's environment stands in for `control_write` (`welcome`'s module notes say why that is
+//! enough, and what it allows).
 
 mod cli;
 mod limits;
+mod welcome;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub(crate) use cli::exchange;
 pub use cli::{Cli, HELP, Parsed, is_verb, parse, render, run};
 pub use limits::{Limited, RateLimits};
+pub use welcome::{
+    AgentFact, AgentsFacts, FIELD_MAX_BYTES, HooksFact, LookFacts, PlaceFact, PrimaryFact, ThemeFact,
+    TrustFacts, WelcomeOp, WelcomeState,
+};
 
 use crate::notify::State;
 
@@ -93,6 +104,9 @@ pub enum Action {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<i64>,
     },
+    /// The first-run welcome program asking the app that runs it (`token` is the one in its
+    /// terminal's environment): state, choices, and the end.
+    Welcome { token: String, op: WelcomeOp },
 }
 
 impl Action {
@@ -104,10 +118,12 @@ impl Action {
             Action::Notify { .. } => "notify",
             Action::SendText { .. } => "send-text",
             Action::NewTerminal { .. } => "new-terminal",
+            Action::Welcome { .. } => "welcome",
         }
     }
 
     /// Whether the action types into a terminal or starts a program: off until `control_write`.
+    /// (`Welcome` neither types nor starts a program; its token is its switch.)
     pub fn writes(&self) -> bool {
         matches!(self, Action::SendText { .. } | Action::NewTerminal { .. })
     }
@@ -451,7 +467,7 @@ mod tests {
 
     use super::{
         Action, Error, ErrorCode, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, SendTarget, Summary,
-        Target, TerminalState, notice_text, send_text_check,
+        Target, TerminalState, WelcomeOp, notice_text, send_text_check,
     };
 
     /// Compiles only while every action is listed: a new one must get a golden line too.
@@ -462,6 +478,7 @@ mod tests {
             Action::Notify { .. } => "notify",
             Action::SendText { .. } => "send_text",
             Action::NewTerminal { .. } => "new_terminal",
+            Action::Welcome { .. } => "welcome",
         }
     }
 
@@ -505,13 +522,23 @@ mod tests {
                 ),
                 r#"{"version":1,"action":"new_terminal","folder":"/work/app","command":"claude","worktree":"fix/login","window":1}"#,
             ),
+            (
+                Request::new(
+                    Action::Welcome { token: "0123abcd".into(), op: WelcomeOp::State { folder: None } },
+                    Some("4".into()),
+                ),
+                r#"{"version":1,"from":"4","action":"welcome","token":"0123abcd","op":{"kind":"state"}}"#,
+            ),
         ]
     }
 
     #[test]
     fn every_action_has_a_golden_line() {
         let covered: BTreeSet<_> = golden().iter().map(|(request, _)| name(&request.action)).collect();
-        assert_eq!(covered, BTreeSet::from(["list", "status", "notify", "send_text", "new_terminal"]));
+        assert_eq!(
+            covered,
+            BTreeSet::from(["list", "status", "notify", "send_text", "new_terminal", "welcome"])
+        );
     }
 
     #[test]
@@ -552,6 +579,11 @@ mod tests {
         assert!(!Action::Notify { target: None, title: String::new(), body: "x".into() }.writes());
         assert!(Action::SendText { target: Target::Tab(1), text: "x".into(), submit: false }.writes());
         assert!(Action::NewTerminal { folder: None, command: None, worktree: None, window: None }.writes());
+        // The welcome's token is its switch, not Settings.
+        let welcome =
+            Action::Welcome { token: "t".into(), op: WelcomeOp::Finish { folder: None, skipped: false } };
+        assert!(!welcome.writes());
+        assert_eq!(welcome.name(), "welcome");
     }
 
     fn check(enabled: bool, text: &str, from: Option<i64>, state: TerminalState) -> Result<(), ErrorCode> {

@@ -48,6 +48,11 @@ pub const ICON_STROKE: f32 = 46.0;
 /// The middle of the chevron's own box on the icon's canvas: the ship's position is this point.
 pub const CHEVRON_CENTRE: [f32; 2] = [251.5, 289.0];
 
+/// The chevron's own extent on the icon's canvas, its stroke included: width and height. The ship's
+/// size is a canvas, so a target that is measured in its chevron's height (a terminal cell, a block-art
+/// logo) needs this to size the ship. A test derives it from [`ICON_CHEVRON`].
+pub const CHEVRON_EXTENT: [f32; 2] = [121.0, 196.0];
+
 /// How much of the image's box the icon's canvas fills. `AppIcon.svg`, which the page draws, puts the
 /// artwork on the macOS grid, a body 824 wide in a box of 1024, so the logo's box is bigger than the
 /// canvas the chevron is placed on. A test reads the SVG to keep this the same.
@@ -70,6 +75,22 @@ pub struct Landing {
 }
 
 impl Landing {
+    /// The landing that puts the ship's chevron with its middle at `chevron` and its height at
+    /// `height` (points from the screen's top left): for a target that is not an image of the icon,
+    /// like the terminal cell the welcome program draws its `>` in. The inverse of
+    /// [`chevron`](Self::chevron) and [`canvas`](Self::canvas).
+    pub fn on_chevron(chevron: [f32; 2], height: f32) -> Landing {
+        let canvas = height * ICON_CANVAS / CHEVRON_EXTENT[1];
+        let k = canvas / ICON_CANVAS;
+        Landing {
+            centre: [
+                chevron[0] - (CHEVRON_CENTRE[0] - ICON_CANVAS / 2.0) * k,
+                chevron[1] - (CHEVRON_CENTRE[1] - ICON_CANVAS / 2.0) * k,
+            ],
+            size: canvas / ICON_BODY,
+        }
+    }
+
     /// The side of the icon's canvas on screen: the artwork's box, inside the logo's. It is what the
     /// ship's size means, so a ship this big draws its chevron exactly as the logo does.
     pub fn canvas(&self) -> f32 {
@@ -300,6 +321,29 @@ mod tests {
             LOGO.centre[1] + (inset + ICON_BODY * CHEVRON_CENTRE[1] - ICON_CANVAS / 2.0) * k,
         ];
         assert!((chevron[0] - expect[0]).abs() < 1e-3 && (chevron[1] - expect[1]).abs() < 1e-3);
+    }
+
+    /// A chevron measured in its own height lands where asked, at the size asked: what the terminal
+    /// cell and the block-art logo need.
+    #[test]
+    fn a_landing_can_be_made_from_a_chevrons_middle_and_height() {
+        let landing = Landing::on_chevron([300.0, 120.0], 14.0);
+        let chevron = landing.chevron();
+        assert!((chevron[0] - 300.0).abs() < 1e-3 && (chevron[1] - 120.0).abs() < 1e-3, "{chevron:?}");
+        // The chevron is CHEVRON_EXTENT tall on a canvas, so its height on screen is that share.
+        let tall = landing.canvas() * CHEVRON_EXTENT[1] / ICON_CANVAS;
+        assert!((tall - 14.0).abs() < 1e-3, "{tall}");
+        assert!(landing.size > landing.canvas(), "the logo's box is bigger than its canvas");
+    }
+
+    #[test]
+    fn the_chevron_extent_is_the_icons_points_with_their_stroke() {
+        let xs = ICON_CHEVRON.map(|p| p[0]);
+        let ys = ICON_CHEVRON.map(|p| p[1]);
+        let span = |v: [f32; 3]| {
+            v.iter().cloned().fold(f32::MIN, f32::max) - v.iter().cloned().fold(f32::MAX, f32::min)
+        };
+        assert_eq!(CHEVRON_EXTENT, [span(xs) + ICON_STROKE, span(ys) + ICON_STROKE]);
     }
 
     #[test]

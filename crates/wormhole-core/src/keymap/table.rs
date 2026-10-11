@@ -213,6 +213,10 @@ pub(super) fn entries() -> Vec<Entry> {
         row(PlayIntroAurora, "Play Intro: Aurora", &[(CTRL_ALT_CMD, "5")]),
         row(PlayIntroTentacles, "Play Intro: Tentacles", &[(CTRL_ALT_CMD, "6")]),
         row(PlayIntroVoyage, "Play Intro: Voyage", &[(CTRL_ALT_CMD, "7")]),
+        // The terminal welcome's three hand-overs from the animation, on trial the same way.
+        row(PlayWelcomeCursor, "Play Welcome: Cursor", &[(CTRL_ALT_CMD, "8")]),
+        row(PlayWelcomePortal, "Play Welcome: Portal", &[(CTRL_ALT_CMD, "9")]),
+        row(PlayWelcomeLogo, "Play Welcome: Logo", &[(CTRL_ALT_CMD, "0")]),
         row(Inspector, "Inspector", &[(SHIFT_ALT_CMD, "i")]).debug_only().not_in_palette(),
         // The freed keys that stay Terminal.app's: nothing binds them, nobody else may.
         row(Print, "Print…", &[(CMD, "p")])

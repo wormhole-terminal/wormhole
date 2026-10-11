@@ -6,7 +6,7 @@
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
 //! first one gates the entire project-folder feature and its sidebar module, another the sidebar's
-//! funnel.
+//! funnel, a third the first-run welcome that runs in the terminal itself.
 
 use std::collections::BTreeMap;
 
@@ -24,16 +24,21 @@ pub enum FeatureFlag {
     /// idle, Group by, Density, Row details) and the "Filtered" chip. With it off the list is
     /// never filtered, whatever a window saved.
     SidebarFilter,
+    /// The first-run welcome as a program in the first terminal (`Wormhole welcome`), with the
+    /// window's sidebar and chrome showing, instead of the intro window that stands in for the
+    /// terminal. Off, the first launch and Help → Welcome to Wormhole open the intro window.
+    TerminalWelcome,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 2] = [Self::ProjectFolders, Self::SidebarFilter];
+    pub const ALL: [FeatureFlag; 3] = [Self::ProjectFolders, Self::SidebarFilter, Self::TerminalWelcome];
 
     /// The key this flag has under `feature_flags` in `config.json`.
     pub fn key(self) -> &'static str {
         match self {
             Self::ProjectFolders => "project_folders",
             Self::SidebarFilter => "sidebar_filter",
+            Self::TerminalWelcome => "terminal_welcome",
         }
     }
 
@@ -46,6 +51,7 @@ impl FeatureFlag {
         match self {
             Self::ProjectFolders => "Project folders",
             Self::SidebarFilter => "Sidebar filter",
+            Self::TerminalWelcome => "Terminal welcome",
         }
     }
 
@@ -60,6 +66,10 @@ impl FeatureFlag {
                 "The funnel in the Terminals header and its popover (search, Show, Hide idle, Group by, \
                  Density, Row details), and the \"Filtered\" chip."
             }
+            Self::TerminalWelcome => {
+                "The first-run welcome as a program in the first terminal, with the sidebar showing, \
+                 instead of the intro window."
+            }
         }
     }
 
@@ -69,6 +79,8 @@ impl FeatureFlag {
         match self {
             Self::ProjectFolders => false,
             Self::SidebarFilter => false,
+            // Until the user has seen it and approved: the intro window stays the first run.
+            Self::TerminalWelcome => false,
         }
     }
 }
@@ -121,6 +133,15 @@ mod tests {
         assert!(enabled_in(FeatureFlag::SidebarFilter, &BTreeMap::new(), true));
         // Switching one flag leaves the other alone.
         assert!(enabled_in(FeatureFlag::ProjectFolders, &off, true));
+    }
+
+    #[test]
+    fn the_terminal_welcome_is_on_in_a_dev_build_and_off_in_a_release() {
+        assert!(!FeatureFlag::TerminalWelcome.released());
+        assert!(enabled_in(FeatureFlag::TerminalWelcome, &BTreeMap::new(), true));
+        let on = BTreeMap::from([("terminal_welcome".to_string(), true)]);
+        assert!(!enabled_in(FeatureFlag::TerminalWelcome, &on, false), "a release ignores the map");
+        assert_eq!(FeatureFlag::from_key("terminal_welcome"), Some(FeatureFlag::TerminalWelcome));
     }
 
     #[test]

@@ -2,11 +2,15 @@
 //! first time Wormhole opens, and again from About. Seven styles are on trial, plus the still
 //! glow that stands in for all of them under Reduce Motion. This holds what doesn't need AppKit or
 //! Metal: how long each style runs, how the window itself moves, and how fast space streams past
-//! in the FTL jump. The app's overlay window and shader draw it.
+//! in the FTL jump. The app's overlay window and shader draw it. `handover` is how the Voyage run hands
+//! over to the terminal welcome instead of the intro window's page.
 
+pub mod handover;
 pub mod page;
 pub mod voyage;
 pub mod wormhole;
+
+pub use handover::Handover;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Style {

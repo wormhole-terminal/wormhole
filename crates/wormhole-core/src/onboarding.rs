@@ -18,6 +18,11 @@ use crate::agents::AgentId;
 /// The meta key in the store that says the sheet was finished or skipped.
 pub const ONBOARDED_KEY: &str = "onboarded";
 
+/// The themes the look step offers, if the build has them (more are in Settings): the window's step
+/// and the terminal welcome list the same.
+pub const LOOK_THEMES: [&str; 6] =
+    ["Tokyo Night", "Catppuccin Mocha", "Nord", "Rose Pine", "Gruvbox Dark", "GitHub Light"];
+
 /// The meta key in the store that lists the tips closed with "Don't show again".
 pub const DISMISSED_TIPS_KEY: &str = "dismissed_tips";
 

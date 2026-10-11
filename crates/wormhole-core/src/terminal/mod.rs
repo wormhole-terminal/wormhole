@@ -112,6 +112,10 @@ pub struct SpawnOptions {
     /// The program to run instead of the login shell: the tab's profile, a trusted project's
     /// shell or the default, decided by `shells::for_tab`.
     pub shell: Option<crate::shells::ShellCommand>,
+    /// Start the program through `Wormhole welcome -- <program>`: the first-run welcome in this
+    /// terminal, which becomes the program when it ends. The app also puts the welcome's token in
+    /// `env` (`welcome::TOKEN_VAR`).
+    pub welcome: bool,
 }
 
 /// A shell in a PTY with alacritty's grid and parser on their own thread. The

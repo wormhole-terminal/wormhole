@@ -39,13 +39,20 @@ pub(super) const INSTANCE_VARS: [&str; 12] = [
 /// on (`options.shell`: the tab's profile, a trusted project's shell or the default, see
 /// `shells::for_tab`), else the user's login shell.
 pub(super) fn shell(options: &SpawnOptions) -> tty::Shell {
-    match std::env::var("WORMHOLE_SHELL") {
-        Ok(program) => launch(program, Vec::new()),
+    let (program, args) = match std::env::var("WORMHOLE_SHELL") {
+        Ok(program) => (program, Vec::new()),
         Err(_) => {
             let ShellCommand { program, args, .. } = command(options);
-            launch(program, args)
+            (program, args)
         }
-    }
+    };
+    // The first run's welcome starts first and becomes whatever would have run (WORMHOLE_SHELL's
+    // `/bin/cat` in a test instance included).
+    let (program, args) = match std::env::current_exe() {
+        Ok(exe) if options.welcome => crate::welcome::command(&exe, program, args),
+        _ => (program, args),
+    };
+    launch(program, args)
 }
 
 /// The program `options` ask for, the login shell without one.

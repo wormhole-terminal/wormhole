@@ -12,6 +12,15 @@ pub enum Limited {
     Notify,
     SendText,
     NewTerminal,
+    /// The welcome's choices of a theme, a colour or a font size: a person stepping through a
+    /// list sends many, and each is a small settings change.
+    WelcomeLook,
+    /// The welcome's Install for an agent's hooks (a file write).
+    WelcomeInstall,
+    /// The welcome's Trust (Touch ID).
+    WelcomeTrust,
+    /// The welcome's end, which is only ever sent once.
+    WelcomeFinish,
 }
 
 impl Limited {
@@ -21,6 +30,10 @@ impl Limited {
             Limited::Notify => 10,
             Limited::SendText => 30,
             Limited::NewTerminal => 5,
+            Limited::WelcomeLook => 240,
+            Limited::WelcomeInstall => 12,
+            Limited::WelcomeTrust => 6,
+            Limited::WelcomeFinish => 4,
         }
     }
 }
@@ -96,6 +109,8 @@ mod tests {
         assert!(Limited::Notify.budget() <= 10);
         assert!(Limited::NewTerminal.budget() <= 5);
         assert!(Limited::SendText.budget() <= 30);
+        assert!(Limited::WelcomeInstall.budget() <= 12 && Limited::WelcomeTrust.budget() <= 6);
+        assert!(Limited::WelcomeFinish.budget() <= 4);
         assert_eq!(RateLimits::default().retry_after(Limited::Notify, None, Instant::now()), Duration::ZERO);
     }
 }

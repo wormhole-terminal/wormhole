@@ -7,8 +7,11 @@ use std::time::Duration;
 use gpui_kit::TestAppContext;
 use wormhole_core::onboarding::Step;
 
+use wormhole_core::features::FeatureFlag;
+
 use super::FADE_OUT;
 use crate::workspace::app::OpenWindow;
+use crate::workspace::settings_page::update_settings;
 use crate::workspace::view_tests::{draw, drive, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
@@ -107,6 +110,13 @@ fn the_intro_can_be_shown_again_as_the_welcome_page_alone(cx: &mut TestAppContex
         return;
     }
     let window = start(cx, 1);
+    // With the terminal welcome off (it is on by default in a development build), Help → Welcome
+    // to Wormhole is the intro window, as ever.
+    cx.update(|cx| {
+        update_settings(cx, |s| {
+            s.feature_flags.insert(FeatureFlag::TerminalWelcome.key().to_string(), false);
+        })
+    });
     drive(cx, &window, |ws, window, cx| ws.show_intro(window, cx));
     // A window that is showing leaves first, as for a replay.
     cx.executor().advance_clock(FADE_OUT + Duration::from_millis(50));

@@ -42,7 +42,8 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
             .map(|lights| format!("intro closed{}\n", say(lights)))
             .unwrap_or_default(),
     };
-    Ok(format!("{}focus {focus}\n{find}{studio}{intro}", ctx.workspace.debug_state(ctx.cx)))
+    let welcome = ctx.workspace.devctl_welcome_state(ctx.cx);
+    Ok(format!("{}focus {focus}\n{find}{studio}{intro}{welcome}", ctx.workspace.debug_state(ctx.cx)))
 }
 
 pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {

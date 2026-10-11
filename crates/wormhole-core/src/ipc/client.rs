@@ -21,6 +21,9 @@ pub enum Command<'a> {
     /// `list`, `status`, `notify`, `send-text`, `new-terminal` or `help`: a control request to
     /// the running app (the arguments from the verb on; `control::run`).
     Control(&'a [String]),
+    /// `welcome [-- <shell…>]`: the first-run welcome, a program in the terminal (the arguments
+    /// after `welcome`; `welcome::run`).
+    Welcome(&'a [String]),
     /// No command: start the app, or bring the running one forward.
     App,
     /// A command this build doesn't know: most likely one a newer build installed into an agent's
@@ -35,6 +38,7 @@ pub fn command(args: &[String]) -> Command<'_> {
     match args.get(1).map(String::as_str) {
         Some("hook") => Command::Hook(args.get(2..).unwrap_or_default()),
         Some("statusline") => Command::StatusLine,
+        Some("welcome") => Command::Welcome(args.get(2..).unwrap_or_default()),
         Some(verb) if super::control::is_verb(verb) => Command::Control(&args[1..]),
         None => Command::App,
         Some(arg) if arg.starts_with("-psn_") => Command::App,
@@ -236,6 +240,9 @@ mod tests {
         assert_eq!(command(&args(&["Wormhole"])), Command::App);
         assert_eq!(command(&args(&["Wormhole", "-psn_0_12345"])), Command::App);
         assert_eq!(command(&args(&["Wormhole", "statusline"])), Command::StatusLine);
+        let welcome = args(&["Wormhole", "welcome", "--", "/bin/zsh", "-l"]);
+        assert_eq!(command(&welcome), Command::Welcome(&welcome[2..]));
+        assert_eq!(command(&args(&["Wormhole", "welcome"])), Command::Welcome(&[]));
         let hook = args(&["Wormhole", "hook", "--agent", "codex", "Stop"]);
         assert_eq!(command(&hook), Command::Hook(&hook[2..]));
         assert_eq!(command(&args(&["Wormhole", "hook"])), Command::Hook(&[]));

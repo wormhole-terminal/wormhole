@@ -10,8 +10,8 @@ use std::rc::Rc;
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::intro::Start;
 use wormhole_core::intro::Style;
+use wormhole_core::intro::{Handover, Start};
 
 use crate::workspace::AppState;
 
@@ -30,6 +30,10 @@ pub(crate) struct Options {
     /// them. They are the window's chrome, and the page is what the run is about. The run never brings
     /// them back; the intro window does, when it is closed.
     pub lights: bool,
+    /// The run hands over to the terminal welcome, not the intro window's page (`None`): Portal has
+    /// no ship, and for the others the terminal says where the ship docks (`set_landing`).
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    pub handover: Option<Handover>,
 }
 
 /// How far the intro playing now has got, for what plays along with it (the intro window's page).
@@ -76,7 +80,8 @@ pub(crate) fn progress(cx: &App) -> Option<Progress> {
 }
 
 /// The page's logo is at `rect` (its middle's x and y in the window, and its side): where Voyage's ship
-/// docks. The page says it every frame it draws, so a window that is resized is followed.
+/// docks. The page says it every frame it draws, so a window that is resized is followed. The terminal
+/// welcome says it from the cell its program draws the mark in (`TerminalView`'s dock).
 pub(crate) fn set_landing(cx: &App, rect: [f32; 3]) {
     if let Some(run) = cx.try_global::<Playing>().and_then(|playing| playing.0.as_ref()) {
         run.landing.set(Some(rect));
@@ -265,7 +270,7 @@ pub(crate) mod devctl {
             let landing =
                 wormhole_core::intro::voyage::Landing { centre: [centre[0], origin[1] + 88.0], size: 96.0 };
             let (scene, trail) =
-                uniforms.at(style, t, time).with_ship(style, time, [w as f32, h as f32], landing);
+                uniforms.at(style, t, time).with_ship(style, true, time, [w as f32, h as f32], landing);
             let pixels = renderer.render_pixels(w, h, &scene, &trail)?;
             let motion = window_motion(style, t);
             let mut rgb_out = Vec::with_capacity(w * h * 3);
@@ -296,6 +301,65 @@ pub(crate) mod devctl {
 
     #[cfg(not(target_os = "macos"))]
     pub(crate) fn frames(_: &str, _: &Path, _: &mut App) -> Result<String> {
+        anyhow::bail!("the intro draws with Metal: macOS only")
+    }
+
+    /// `welcome-dock`: Voyage's ship at `landing` (where a terminal's dock says, in window points),
+    /// drawn over the window's own picture at four moments of the landing, to `<dir>/<name>-<n>.png`:
+    /// the ship on its way in, docked, at the touchdown, and dissolving into what is under it.
+    #[cfg(target_os = "macos")]
+    pub(crate) fn dock_frames(
+        window: &Window,
+        landing: wormhole_core::intro::voyage::Landing,
+        dir: &Path,
+        name: &str,
+        cx: &mut App,
+    ) -> Result<String> {
+        use super::metal::{Renderer, Uniforms};
+        use wormhole_core::intro::voyage;
+
+        let base = window.render_to_image()?;
+        let size = window.viewport_size();
+        let screen = [f32::from(size.width), f32::from(size.height)];
+        let scale = base.width() as f32 / screen[0];
+        let (w, h) = (base.width() as usize, base.height() as usize);
+        let renderer = Renderer::new()?;
+        let style = Style::Voyage;
+        let moments = [voyage::DOCK - 0.5, voyage::DOCK, voyage::LAND, voyage::LAND + 0.2];
+        let mut out = String::new();
+        for (n, time) in moments.into_iter().enumerate() {
+            // The window fills the picture, so the shader leaves all of it clear but the ship.
+            let uniforms = Uniforms::new(screen, [0.0, 0.0], screen, scale, super::colors(cx));
+            let (uniforms, trail) = uniforms
+                .at(style, time / style.seconds(), time)
+                .with_ship(style, true, time, screen, landing);
+            let pixels = renderer.render_pixels(w, h, &uniforms, &trail)?;
+            let mut shot = base.clone();
+            for (px, ship) in shot.pixels_mut().zip(pixels.as_chunks::<4>().0) {
+                let a = f32::from(ship[3]) / 255.0;
+                for (under, over) in px.0.iter_mut().zip(ship).take(3) {
+                    // The ship is premultiplied: it over the picture is the ship plus the rest.
+                    let lit = f32::from(*over) + f32::from(*under) * (1.0 - a);
+                    *under = lit.clamp(0.0, 255.0) as u8;
+                }
+            }
+            let path = dir.join(format!("{name}-{n}.png"));
+            shot.save(&path).with_context(|| path.display().to_string())?;
+            out += &format!("saved {} (ship at {time:.2}s)\n", path.display());
+        }
+        let [x, y] = landing.chevron();
+        out += &format!("chevron at ({x:.1}, {y:.1}) pt, canvas {:.1} pt\n", landing.canvas());
+        Ok(out)
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub(crate) fn dock_frames(
+        _: &Window,
+        _: wormhole_core::intro::voyage::Landing,
+        _: &Path,
+        _: &str,
+        _: &mut App,
+    ) -> Result<String> {
         anyhow::bail!("the intro draws with Metal: macOS only")
     }
 

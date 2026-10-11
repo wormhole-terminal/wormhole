@@ -55,6 +55,8 @@ const PIXEL_FORMAT: MTLPixelFormat = MTLPixelFormat::BGRA8Unorm;
 const CORNER_RADIUS: f32 = 12.0;
 /// The logo's side on the intro window's page, before it has been measured.
 const LOGO_FALLBACK: f32 = 96.0;
+/// Where a trail that is not to be seen is: far beyond any screen.
+const OFF_SCREEN: f32 = -1.0e5;
 /// Drawable pixels per point: the effect is soft, and a whole Retina screen of noise at 2x every
 /// frame costs four times as much for nothing anyone would see.
 const RENDER_SCALE: f32 = 1.0;
@@ -134,16 +136,22 @@ impl Uniforms {
     }
 
     /// Voyage's ship at `time`, and the comet trail behind it: the uniforms to draw them, over a screen
-    /// of `screen` points with the logo where `landing` says. Any other style has no ship.
+    /// of `screen` points with the logo where `landing` says. Any other style has no ship, and neither
+    /// has the Portal hand-over (`ship` false): its trail is moved off the screen, as the shader draws
+    /// the trail whatever the ship's opacity.
     pub(super) fn with_ship(
         mut self,
         style: Style,
+        ship: bool,
         time: f32,
         screen: [f32; 2],
         landing: Landing,
     ) -> (Self, [[f32; 2]; TRAIL_POINTS]) {
         if style != Style::Voyage {
             return (self, [[0.0; 2]; TRAIL_POINTS]);
+        }
+        if !ship {
+            return (self, [[OFF_SCREEN; 2]; TRAIL_POINTS]);
         }
         let ship = voyage::ship(time, screen, landing);
         self.ship = [ship.pos[0], ship.pos[1], ship.size, ship.heading];
@@ -294,6 +302,8 @@ pub(super) struct Overlay {
     /// Whether the intro fades the traffic lights away as it begins (a replay over a showing window).
     /// It never brings them back: they belong to the intro window, which does when it is closed.
     lights: bool,
+    /// Whether Voyage's ship flies: not in the terminal welcome's Portal hand-over.
+    ship: bool,
     uniforms: Uniforms,
     /// The window's top left on the screen, and the screen's size: where Voyage's ship flies.
     origin: [f32; 2],
@@ -407,6 +417,7 @@ impl Overlay {
         }
         let uniforms = Uniforms::new(screen, origin, size, RENDER_SCALE, colors);
         let (start, lights) = (options.start, options.lights);
+        let ship = options.handover.is_none_or(|handover| handover.ship());
         let overlay = Self {
             renderer,
             window,
@@ -417,6 +428,7 @@ impl Overlay {
             style,
             start,
             lights,
+            ship,
             uniforms,
             origin,
             screen,
@@ -452,7 +464,8 @@ impl Overlay {
         let mut uniforms = self.uniforms.at_from(self.style, frame.t, frame.time, self.start);
         // The shader leaves the window's rectangle clear as far as the window shows.
         (uniforms.win_scale, uniforms.win_alpha) = (motion.scale, motion.alpha);
-        let (mut uniforms, trail) = uniforms.with_ship(self.style, frame.time, self.screen, self.landing());
+        let (mut uniforms, trail) =
+            uniforms.with_ship(self.style, self.ship, frame.time, self.screen, self.landing());
         // After a skip the ship goes with the rest.
         if let Some((_, settled)) = frame.settling {
             uniforms.ship_fx[1] *= 1.0 - settled;
@@ -555,12 +568,45 @@ mod tests {
         ] {
             let (uniforms, trail) = uniforms.at(style, 0.5, 0.5).with_ship(
                 style,
+                true,
                 0.5 * style.seconds(),
                 [256.0, 240.0],
                 Landing { centre: [128.0, 80.0], size: 24.0 },
             );
             let pixels = renderer.render_pixels(256, 240, &uniforms, &trail).expect("a frame");
             assert!(pixels.as_chunks::<4>().0.iter().any(|px| px[3] > 0), "{style:?} drew nothing");
+        }
+    }
+
+    /// The Portal hand-over is the Voyage run without its ship: where the ship docks the picture is
+    /// empty (the window covers the whole screen, so nothing else is drawn there), and with the ship
+    /// it is not. The comet trail goes with it.
+    #[test]
+    fn a_voyage_without_a_ship_draws_none_where_it_docks() {
+        use wormhole_core::intro::voyage;
+
+        let renderer = Renderer::new().expect("the intro shader compiles");
+        let colors = [[0.4, 0.5, 1.0, 1.0], [0.7, 0.4, 1.0, 1.0], [0.7, 0.4, 0.9, 1.0]];
+        let screen = [256.0, 240.0];
+        let uniforms = Uniforms::new(screen, [0.0, 0.0], screen, 1.0, colors);
+        let landing = Landing { centre: [128.0, 96.0], size: 48.0 };
+        let [cx, cy] = landing.chevron();
+        let busiest = |ship: bool, time: f32| -> u8 {
+            let (uniforms, trail) = uniforms
+                .at(Style::Voyage, time / Style::Voyage.seconds(), time)
+                .with_ship(Style::Voyage, ship, time, screen, landing);
+            let pixels = renderer.render_pixels(256, 240, &uniforms, &trail).expect("a frame");
+            let mut most = 0;
+            for y in (cy as usize).saturating_sub(24)..(cy as usize + 24) {
+                for x in (cx as usize).saturating_sub(24)..(cx as usize + 24) {
+                    most = most.max(pixels[(y * 256 + x) * 4 + 3]);
+                }
+            }
+            most
+        };
+        for time in [voyage::DOCK, voyage::LAND] {
+            assert!(busiest(true, time) > 200, "the ship is there at {time}s");
+            assert!(busiest(false, time) < 8, "and with none it is not, at {time}s");
         }
     }
 }

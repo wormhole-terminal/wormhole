@@ -17,9 +17,9 @@ const PREVIEW_BAR: f32 = 3.0;
 const PREVIEW_PAD: f32 = 6.0;
 const PREVIEW_GAP: f32 = 4.0;
 const PREVIEW_RULE: f32 = 1.0;
-/// The themes the step offers, if the build has them (more are in Settings).
-const THEMES: [&str; 6] =
-    ["Tokyo Night", "Catppuccin Mocha", "Nord", "Rose Pine", "Gruvbox Dark", "GitHub Light"];
+/// The terminal colours that are offered as the primary, by their place in the 16: green, magenta,
+/// red, yellow and cyan.
+const PRIMARY_ANSI: [usize; 5] = [2, 5, 1, 3, 6];
 /// The terminal sample under the font.
 const SAMPLE: [&str; 4] =
     ["~/Projects/app on main", "$ git status --short", " M src/main.rs", "?? docs/notes.md"];
@@ -30,24 +30,7 @@ impl Workspace {
         let store = cx.global::<SettingsStore>();
         let s = &store.settings;
         let current = s.theme.clone();
-        let mut themes: Vec<&ThemeTokens> =
-            THEMES.iter().filter_map(|name| builtins().iter().find(|t| t.name == *name)).collect();
-        // A build without some of them fills up with the others.
-        for theme in builtins() {
-            if themes.len() >= THEMES.len() {
-                break;
-            }
-            if !themes.iter().any(|t| t.name == theme.name) {
-                themes.push(theme);
-            }
-        }
-        // The theme in use is always one of the cards.
-        if !themes.iter().any(|t| t.name == current)
-            && let Some(theme) = builtins().iter().find(|t| t.name == current)
-        {
-            themes.pop();
-            themes.push(theme);
-        }
+        let themes = offered_themes(&current);
         let cards =
             div().grid().grid_cols(3).gap_2().children(themes.into_iter().enumerate().map(|(ix, tokens)| {
                 let name = tokens.name.clone();
@@ -57,17 +40,8 @@ impl Workspace {
                 })
             }));
         let base = store.base_tokens();
-        let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
+        let (theme_primary, colors) = offered_primaries(base);
         let chosen = s.primary();
-        let mut colors = Vec::new();
-        for ix in [2, 5, 1, 3, 6] {
-            let color = base.terminal.ansi[ix].with_alpha(1.0);
-            if Some(color.to_hex()) != theme_primary.map(|c| c.to_hex())
-                && !colors.iter().any(|c: &wormhole_core::tokens::Color| c.to_hex() == color.to_hex())
-            {
-                colors.push(color);
-            }
-        }
         let swatches = div()
             .flex()
             .items_center()
@@ -76,7 +50,7 @@ impl Workspace {
                 style::swatch("onboarding-primary-theme", ui, hsla(primary), chosen.is_none())
                     .on_click(|_, _, cx| update_settings(cx, |s| s.primary_color.clear()))
             }))
-            .children(colors.into_iter().enumerate().map(|(ix, color)| {
+            .children(colors.into_iter().enumerate().map(|(ix, (_, color))| {
                 let hex = color.to_hex();
                 let picked = chosen.is_some_and(|c| c.to_hex() == hex);
                 style::swatch(("onboarding-primary", ix), ui, hsla(color), picked).on_click(
@@ -193,6 +167,48 @@ impl Workspace {
             .child(sample)
             .into_any_element()
     }
+}
+
+/// The themes the step offers, if the build has them (more are in Settings): core's list
+/// (`onboarding::LOOK_THEMES`), filled up with others where a build lacks some, and always with the
+/// theme in use (`current`) among them. The terminal welcome offers the same.
+pub(in crate::workspace) fn offered_themes(current: &str) -> Vec<&'static ThemeTokens> {
+    let wanted = onboarding::LOOK_THEMES;
+    let mut themes: Vec<&ThemeTokens> =
+        wanted.iter().filter_map(|name| builtins().iter().find(|t| t.name == *name)).collect();
+    for theme in builtins() {
+        if themes.len() >= wanted.len() {
+            break;
+        }
+        if !themes.iter().any(|t| t.name == theme.name) {
+            themes.push(theme);
+        }
+    }
+    if !themes.iter().any(|t| t.name == current)
+        && let Some(theme) = builtins().iter().find(|t| t.name == current)
+    {
+        themes.pop();
+        themes.push(theme);
+    }
+    themes
+}
+
+/// The primary colours the step offers for the theme `base`: the theme's own, and those of its
+/// terminal colours that differ from it, each with its place in the terminal's 16.
+pub(in crate::workspace) fn offered_primaries(
+    base: &ThemeTokens,
+) -> (Option<wormhole_core::tokens::Color>, Vec<(usize, wormhole_core::tokens::Color)>) {
+    let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
+    let mut colors: Vec<(usize, wormhole_core::tokens::Color)> = Vec::new();
+    for ix in PRIMARY_ANSI {
+        let color = base.terminal.ansi[ix].with_alpha(1.0);
+        if Some(color.to_hex()) != theme_primary.map(|c| c.to_hex())
+            && !colors.iter().any(|(_, c)| c.to_hex() == color.to_hex())
+        {
+            colors.push((ix, color));
+        }
+    }
+    (theme_primary, colors)
 }
 
 /// A theme on the Look step: a miniature in its own colors and its name in a strip.

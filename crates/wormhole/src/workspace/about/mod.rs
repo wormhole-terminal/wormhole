@@ -9,7 +9,7 @@ use crate::icons::APP_ICON;
 
 pub(crate) use licenses::open_licenses;
 
-pub(super) const TAGLINE: &str = "A terminal for working with AI coding agents.";
+pub(super) const TAGLINE: &str = wormhole_core::welcome::TAGLINE;
 const SIZE: (f32, f32) = (440.0, 420.0);
 const ICON: f32 = 112.0;
 

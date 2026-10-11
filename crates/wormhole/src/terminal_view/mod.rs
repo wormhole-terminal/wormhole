@@ -159,6 +159,9 @@ pub struct TerminalView {
     top_inset: f32,
     /// Where the pointer holds the minimap's slider, over its top, while it's dragged.
     minimap_grab: Option<f32>,
+    /// The cell the start animation's ship docks on while the terminal welcome plays around this
+    /// terminal: reported every frame, in window points, so a resize is followed (`set_dock`).
+    dock: Option<wormhole_core::welcome::DockCell>,
     /// Find in scrollback.
     find: find::Find,
     /// Command blocks: the hovered one, and where ⌘↑ / ⌘↓ last landed.
@@ -268,6 +271,7 @@ impl TerminalView {
             font_zoom: 0.0,
             top_inset: TOP_INSET,
             minimap_grab: None,
+            dock: None,
             find: find::Find::default(),
             blocks: blocks::Blocks::default(),
             _focus_watch: focus_watch,
@@ -371,7 +375,6 @@ impl TerminalView {
         }
     }
 
-    /// Paste text the way a real terminal does (bracketed if the app asked).
     /// Draw the text this many points over the size in Settings (⌘+, ⌘-, ⌘0).
     pub fn set_font_zoom(&mut self, zoom: f32, cx: &mut Context<Self>) {
         if self.font_zoom != zoom {
@@ -380,6 +383,24 @@ impl TerminalView {
         }
     }
 
+    /// The start animation's ship docks on this cell of the terminal's grid (the welcome program
+    /// draws its mark there), or on none. The cell's place in the window is reported as the grid is
+    /// laid out, so the ship follows a window that is resized or a font that changes.
+    pub fn set_dock(&mut self, dock: Option<wormhole_core::welcome::DockCell>, cx: &mut Context<Self>) {
+        if self.dock != dock {
+            self.dock = dock;
+            cx.notify();
+        }
+    }
+
+    /// Where the ship docks, from the last frame drawn (devctl's `welcome-dock` draws it there).
+    #[cfg(feature = "devctl")]
+    pub fn dock_landing(&self) -> Option<wormhole_core::intro::voyage::Landing> {
+        let layout = self.layout.get();
+        self.dock.map(|dock| render::dock_landing(layout.origin, layout.cell, dock))
+    }
+
+    /// Paste text the way a real terminal does (bracketed if the app asked).
     pub fn paste(&mut self, text: &str) {
         let Some(pty) = &self.pty else { return };
         let text = text.replace("\r\n", "\n").replace('\n', "\r");

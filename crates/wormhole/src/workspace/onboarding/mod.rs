@@ -26,6 +26,7 @@ mod steps;
 mod welcome;
 
 pub(crate) use keys::init;
+pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};
 
 use std::time::Duration;
 use wormhole_core::agents::integrations::{self, Spec, State};
@@ -124,6 +125,12 @@ impl FirstRun {
     pub(super) fn is_open(&self) -> bool {
         self.intro.is_some()
     }
+
+    /// The terminal welcome ended on the primer (no agent on PATH): the sidebar says so until an
+    /// agent shows, as after the intro window's primer.
+    pub(super) fn show_no_agents_note(&mut self) {
+        self.agents_note = AgentsNote::Shown;
+    }
 }
 
 /// How the window leaves as a replay begins, the page changing once it is gone (core's
@@ -158,6 +165,12 @@ impl Workspace {
 
     /// Welcome to Wormhole (Help menu, palette): the intro again, its welcome page alone.
     pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
+        // hand-over.
+        if super::welcome::enabled(cx) {
+            self.replay_welcome(wormhole_core::intro::Handover::Cursor, window, cx);
+            return;
+        }
         if self.first_run.is_open() {
             // It is up already: replay it.
             self.replay_intro(window, cx);
@@ -190,7 +203,7 @@ impl Workspace {
         crate::intro::play_with(
             window,
             crate::intro::FIRST_LAUNCH,
-            crate::intro::Options { start, lights: start == Start::Shown },
+            crate::intro::Options { start, lights: start == Start::Shown, handover: None },
             cx,
         );
         if start == Start::Hidden {
@@ -210,7 +223,7 @@ impl Workspace {
     }
 
     /// Run `then` once the window has left, as a replay begins.
-    fn after_fade(
+    pub(in crate::workspace) fn after_fade(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -232,7 +245,7 @@ impl Workspace {
         crate::intro::play_with(
             window,
             crate::intro::FIRST_LAUNCH,
-            crate::intro::Options { start: Start::Shown, lights: false },
+            crate::intro::Options { start: Start::Shown, lights: false, handover: None },
             cx,
         );
         self.after_fade(window, cx, |this, window, cx| {
@@ -311,9 +324,12 @@ impl Workspace {
         ))
     }
 
-    /// Close the intro window (devctl `onboarding close`), as Skip does but without remembering it.
+    /// Close the intro window (devctl `onboarding close`), as Skip does but without remembering it,
+    /// and skip a terminal welcome that is running (Esc, as the person would), so a fresh data dir's
+    /// first launch is out of the way whichever of the two it opens.
     #[cfg(feature = "devctl")]
     pub(crate) fn close_onboarding(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.skip_welcomes(cx);
         self.first_run.intro = None;
         self.first_run.swap = None;
         crate::traffic_lights::set_shown(window, true);

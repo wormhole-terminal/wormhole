@@ -138,6 +138,11 @@ pub enum ActionId {
     PlayIntroAurora,
     PlayIntroTentacles,
     PlayIntroVoyage,
+    /// The terminal welcome again, with each hand-over from the start animation on trial: the ship
+    /// docks on the mark's cell, no ship, the ship docks on a block-art logo.
+    PlayWelcomeCursor,
+    PlayWelcomePortal,
+    PlayWelcomeLogo,
     Inspector,
     // Kept free, as Terminal.app uses them.
     Print,

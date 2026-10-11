@@ -49,6 +49,7 @@ pub mod title_extras;
 pub mod tokens;
 pub mod update;
 pub mod usage;
+pub mod welcome;
 
 /// The terminal state engine, re-exported so the app uses exactly this
 /// version (and so a future swap to libghostty stays a core-only change).

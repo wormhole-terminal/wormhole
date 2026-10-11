@@ -100,6 +100,7 @@ mod updates;
 mod usage;
 #[cfg(test)]
 mod view_tests;
+mod welcome;
 mod window_bounds;
 mod windows;
 mod worktree;
@@ -280,6 +281,9 @@ pub struct Workspace {
     dirty: bool,
     /// The first-run sheet while it is open, and what it leaves behind.
     first_run: onboarding::FirstRun,
+    /// The terminal about to be made for a welcome (its session id and token): its shell is started
+    /// through `Wormhole welcome` with the token in its environment (`make_pane`).
+    pending_welcome: Option<(i64, String)>,
     /// The command palette or the shortcut sheet, while one is open over the window.
     overlay: Option<overlay::Overlay>,
     /// The sidebar or the right panel sliding in or out.
@@ -391,6 +395,7 @@ impl Workspace {
             discarded: false,
             dirty: false,
             first_run: Default::default(),
+            pending_welcome: None,
             overlay: None,
             slide: None,
             last_scrollback_save: Instant::now(),
@@ -403,7 +408,11 @@ impl Workspace {
         }
         this.restore_splits(&record.splits);
         if this.sessions.is_empty() {
-            this.new_session(window, cx);
+            // The very first launch, with the terminal welcome on: the first terminal is the welcome.
+            match app_mut(cx).first_welcome.take() {
+                Some(plan) => this.open_first_welcome(plan, window, cx),
+                None => this.new_session(window, cx),
+            }
         } else {
             this.activate(record.active.min(this.sessions.len() - 1), window, cx);
         }
@@ -765,7 +774,15 @@ impl Workspace {
             project_shell.as_deref(),
             settings(cx),
         );
-        let options = project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
+        let mut options = project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
+        // A welcome terminal: the shell starts through `Wormhole welcome`, and only this terminal's
+        // environment has the token that lets that program talk to the app as the welcome.
+        if let Some((_, token)) = self.pending_welcome.take_if(|(id, _)| *id == record.id) {
+            // (Not in the app's own tests: their binary is not Wormhole and would take `welcome` for
+            // a test name.)
+            options.welcome = !cfg!(test);
+            options.env.insert(wormhole_core::welcome::TOKEN_VAR.to_string(), token);
+        }
         let terminal = cx.new(|cx| TerminalView::new(options, window, cx));
         let zoom = self.font_zoom;
         terminal.update(cx, |terminal, cx| terminal.set_font_zoom(zoom, cx));
@@ -827,6 +844,7 @@ impl Workspace {
         let after = session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         notifications::dismiss(closed.pane.id, cx);
+        welcome::forget(closed.id, cx);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
         // screen (its diff, branch picker and focused note), so only a real change of session

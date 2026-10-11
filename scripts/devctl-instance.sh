@@ -15,13 +15,15 @@
 # of cat named like one puts it back); Touch ID is answered "cancel", notifications are logged
 # instead of shown, and it runs in background mode: it opens behind your windows and never takes
 # the focus. The first terminal opens in [start dir] (default: the scratch HOME). A fresh data dir
-# is a first launch: send `onboarding close` first. `stop` quits only the process this started, by
-# the PID in <scratch dir>/pid.
+# is a first launch, whose first terminal runs the welcome (`Wormhole welcome`, while its feature flag
+# is on, as in any development build) and no animation plays in a test instance: look at it, or send
+# `onboarding close` first, which skips it (and closes the intro window when that is what opened).
+# `stop` quits only the process this started, by the PID in <scratch dir>/pid.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-usage() { sed -n '2,19p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,22p' "$0"; exit "${1:-0}"; }
 
 # The process <scratch>/pid names, if it is still the binary this script started there.
 own_pid() {

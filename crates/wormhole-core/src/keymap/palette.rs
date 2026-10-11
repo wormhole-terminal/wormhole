@@ -112,9 +112,8 @@ pub fn section(id: ActionId) -> Section {
         | LayoutGrid | LayoutSingle => Section::View,
         About | CheckForUpdates | Settings | ThemeStudio | Hide | HideOthers | ShowAll | Quit | ShowLogs
         | Inspector | Help | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex
-        | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage => {
-            Section::App
-        }
+        | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage
+        | PlayWelcomeCursor | PlayWelcomePortal | PlayWelcomeLogo => Section::App,
         _ => Section::Terminal,
     }
 }

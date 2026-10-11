@@ -98,7 +98,7 @@ sleep 1; cat "$S/ctl/out.txt"
   `diff <n>`, `history`, `compare`, `double-click <x> <y>`, `settings-section <name>`, `settings-shot`,
   `settings-search [text]`, `settings-select <row>`, `settings-record <id> [keys]`,
   `settings-preview <density>`, `settings-scroll <px>`, `settings-resize <w> <h>`, `settings-reset-confirm`,
-  `onboarding <step|close>` (fresh data dirs open the intro window; `onboarding close` first),
+  `onboarding <step|close>` (fresh data dirs open the terminal welcome, a program in the first terminal, or the intro window with its flag off; `onboarding close` first skips either), `welcome <cursor|portal|logo> [hidden]` (replay the terminal welcome with the start animation's hand-over), `welcome-dock [name]` (the ship where it docks, over the window's picture), `welcome-probe <tab|-> <token> <op JSON>` (a request as the program sends it; `state` lists each welcome's token),
   `palette [query]` / `palette close` (⇧⌘P; prefixes `@ ~ # , >`), `sheet [filter]` / `sheet close` (⌥⌘/),
   `appearance dark` (under Match system, the default, a Mac in Light Mode shows the light pick),
   `studio`, `studio-shot`, `studio-select <token>`, `studio-set <value>` (typed into the token editor's

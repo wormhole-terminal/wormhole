@@ -317,5 +317,13 @@ pub(super) fn spawn_options(
     env: BTreeMapEnv,
     shell: ShellCommand,
 ) -> SpawnOptions {
-    SpawnOptions { cwd, tab_id: tab_id.to_string(), restore, scrollback_lines: 0, env, shell: Some(shell) }
+    SpawnOptions {
+        cwd,
+        tab_id: tab_id.to_string(),
+        restore,
+        scrollback_lines: 0,
+        env,
+        shell: Some(shell),
+        welcome: false,
+    }
 }

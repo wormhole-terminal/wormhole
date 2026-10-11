@@ -73,6 +73,11 @@ pub(crate) struct AppState {
     /// The side columns as they were last left, in any window: how a window opened with no
     /// layout of its own starts (`open_workspace_window`). Kept in the store's `meta`.
     pub last_panes: RememberedPanes,
+    /// The terminal welcomes running, and the doors to them (core's token rules).
+    pub welcomes: super::welcome::Welcomes,
+    /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
+    /// that window is being opened.
+    pub first_welcome: Option<super::welcome::Plan>,
     next_id: i64,
     next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
@@ -120,6 +125,8 @@ impl AppState {
             pr: Default::default(),
             worktrees: Worktrees::default(),
             last_panes: RememberedPanes::default(),
+            welcomes: Default::default(),
+            first_welcome: None,
             next_id,
             next_window_id: 2,
             applied_theme: None,
@@ -270,6 +277,8 @@ impl AppState {
             pr: Default::default(),
             worktrees,
             last_panes,
+            welcomes: Default::default(),
+            first_welcome: None,
             next_id,
             next_window_id,
             applied_theme: None,
@@ -319,8 +328,16 @@ impl AppState {
         .detach();
 
         if saved.is_empty() {
+            // With the terminal welcome on, the window's first terminal runs it and the run plays
+            // around the window; otherwise the intro window opens over a plain terminal.
+            let welcome = super::welcome::first_launch_plan(cx);
+            app_mut(cx).first_welcome = welcome;
             open_workspace_window(None, None, cx);
-            onboarding::start_if_first_launch(cx);
+            app_mut(cx).first_welcome = None;
+            match welcome {
+                Some(plan) => super::welcome::play_first(plan, cx),
+                None => onboarding::start_if_first_launch(cx),
+            }
         }
         for window in saved {
             open_workspace_window(Some(window), None, cx);

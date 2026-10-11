@@ -32,6 +32,8 @@ fn main() {
     match wormhole_core::ipc::command(&args) {
         Command::Hook(rest) => return wormhole_core::ipc::run_cli(rest),
         Command::StatusLine => return wormhole_core::ipc::run_status_line_cli(),
+        // The first-run welcome, a program in the first terminal: it talks to the app that started it.
+        Command::Welcome(rest) => std::process::exit(wormhole_core::welcome::run(rest)),
         // `Wormhole list`, `send-text`, …: a round trip to the running app.
         Command::Control(rest) => std::process::exit(wormhole_core::ipc::run_control_cli(rest)),
         // Most likely a command a newer build installed into an agent's settings: a launch would

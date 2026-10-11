@@ -120,7 +120,18 @@
 //!   new-window | close-window   open another window / close this one (`state` lists them)
 //!   onboarding <welcome|folder|look|agents|primer|close>   open the intro window at that step over this
 //!                   window with nothing played around it, whether or not it ran before (`close` closes
-//!                   it without remembering)
+//!                   it without remembering, and presses Esc in a terminal whose welcome runs: a fresh
+//!                   data dir's first launch opens the terminal welcome while its flag is on)
+//!   welcome <cursor|portal|logo> [hidden]   replay the terminal welcome: the window leaves into the wormhole and
+//!                   comes back with a new terminal running `Wormhole welcome`, the start animation
+//!                   handing over to it as that hand-over has it (the ship docks on the mark's `>`, on
+//!                   a block-art logo's chevron, or there is no ship); it plays even in a test instance; `hidden`
+//!                   starts the run as a first launch's, over a window that was never shown
+//!   welcome-dock [name]   the ship drawn at the welcome terminal's dock, over the window's picture, at
+//!                   four moments of the landing: <dir>/<name>-<n>.png (`frames 2` first, and the
+//!                   welcome's page should be in the window)
+//!   welcome-probe <tab|-> <token> <op as JSON>   a welcome request as the program sends it, from that
+//!                   tab (`-`: from outside any); the reply's JSON line is appended after the batch
 //!   menu-new-window | menu-updates   the Shell > New Window / Check for Updates… menu actions,
 //!                   dispatched through this window like a menu click
 //!   settings | settings-section <name> | settings-shot <name>   (the settings window)
@@ -246,6 +257,7 @@ mod shots;
 mod sidebar;
 mod studio;
 mod title;
+mod welcome;
 
 use std::collections::{HashSet, VecDeque};
 use std::fmt::Write as _;
@@ -356,6 +368,9 @@ fn command(name: &str) -> Option<Command> {
         "sidebar-scroll" => sidebar::scroll,
         "resize" => sessions::resize,
         "onboarding" => sessions::onboarding,
+        "welcome" => welcome::welcome,
+        "welcome-dock" => welcome::dock,
+        "welcome-probe" => welcome::probe,
         "title" => title::title,
         "path-card" => title::path_card,
         "toggle-sidebar" => sessions::toggle_sidebar,
