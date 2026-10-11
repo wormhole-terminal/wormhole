@@ -441,9 +441,9 @@ fn config_from_value(path: &Path, value: serde_json::Value) -> Result<ProjectCon
     Ok(ProjectConfig { settings, env, shell, color, color_error, color_locked, lock_error, worktree_setup })
 }
 
-/// `config.json`'s `worktree` object.
+/// `config.json`'s `worktree` object. A key this build doesn't know is left alone rather than
+/// refused: a project written for a newer Wormhole keeps its `env`, `shell` and colour here.
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
 struct WorktreeConfig {
     #[serde(default)]
     setup: Option<String>,

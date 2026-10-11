@@ -145,8 +145,12 @@ fn config_reads_the_worktree_setup_and_no_setting_from_it() {
         let (_tmp, p) = project(&[(CONFIG_FILE, nothing)]);
         assert_eq!(p.config().expect("ok").expect("present").worktree_setup, None, "{nothing}");
     }
-    for bad in [r#"{"worktree": {"setup": 1}}"#, r#"{"worktree": {"teardown": "x"}}"#, r#"{"worktree": "x"}"#]
-    {
+    // A key a newer build may add is no reason to drop the whole file.
+    let newer = r#"{"worktree": {"setup": "x", "teardown": "y"}, "shell": "/bin/zsh"}"#;
+    let (_tmp, p) = project(&[(CONFIG_FILE, newer)]);
+    let config = p.config().expect("ok").expect("present");
+    assert_eq!((config.worktree_setup.as_deref(), config.shell.as_deref()), (Some("x"), Some("/bin/zsh")));
+    for bad in [r#"{"worktree": {"setup": 1}}"#, r#"{"worktree": "x"}"#] {
         let (_tmp, p) = project(&[(CONFIG_FILE, bad)]);
         assert!(matches!(p.config(), Err(ProjectError::Invalid { .. })), "{bad}");
     }

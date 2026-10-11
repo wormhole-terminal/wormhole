@@ -16,7 +16,8 @@
 //! to its terminals as `WORMHOLE_PORT` and `WORMHOLE_PORTS` ([`Worktree::env`]), so the dev servers
 //! of several worktrees of one repository don't fight over the same port.
 
-use std::net::{Ipv4Addr, TcpListener};
+use std::io::ErrorKind;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, TcpListener};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result};
@@ -237,10 +238,21 @@ impl Worktrees {
     }
 }
 
-/// Whether nothing on this Mac listens on `port` (on the loopback address, where a dev server
-/// started without a host does too): it can be bound now.
+/// Whether nothing on this Mac listens on `port`: it can be bound on the loopback addresses and on
+/// every address, IPv4 and IPv6 alike. One bind is not enough: std's listeners reuse addresses, so
+/// on macOS `127.0.0.1` binds fine while a dev server listens on `0.0.0.0`, `::` (Node's default)
+/// or `::1` (`localhost` on a recent Node). A Mac without IPv6 has no IPv6 address to take.
 pub fn port_free(port: u16) -> bool {
-    TcpListener::bind((Ipv4Addr::LOCALHOST, port)).is_ok()
+    let hosts: [IpAddr; 4] = [
+        Ipv4Addr::LOCALHOST.into(),
+        Ipv4Addr::UNSPECIFIED.into(),
+        Ipv6Addr::LOCALHOST.into(),
+        Ipv6Addr::UNSPECIFIED.into(),
+    ];
+    hosts.into_iter().all(|host| match TcpListener::bind((host, port)) {
+        Ok(_) => true,
+        Err(err) => host.is_ipv6() && err.kind() == ErrorKind::AddrNotAvailable,
+    })
 }
 
 #[cfg(test)]
@@ -322,11 +334,21 @@ mod tests {
     }
 
     #[test]
-    fn a_bound_port_is_not_free() {
-        let listener = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).expect("bind");
-        let port = listener.local_addr().expect("addr").port();
-        assert!(!port_free(port));
-        drop(listener);
+    fn a_port_listened_on_at_any_address_is_not_free() {
+        use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, TcpListener};
+        let hosts: [IpAddr; 4] = [
+            Ipv4Addr::LOCALHOST.into(),
+            Ipv4Addr::UNSPECIFIED.into(),
+            Ipv6Addr::LOCALHOST.into(),
+            Ipv6Addr::UNSPECIFIED.into(),
+        ];
+        for host in hosts {
+            // A machine without IPv6 (some CI containers) can't listen there to begin with.
+            let Ok(listener) = TcpListener::bind((host, 0)) else { continue };
+            let port = listener.local_addr().expect("addr").port();
+            assert!(!port_free(port), "a listener on {host} leaves port {port} taken");
+            drop(listener);
+        }
     }
 
     #[test]

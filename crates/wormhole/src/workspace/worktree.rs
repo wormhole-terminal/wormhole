@@ -297,25 +297,48 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // The ports the other worktrees have, as they are now: the free block is found off the
+        // UI thread (up to a few thousand binds), next to the git work.
+        let others = app(cx).worktrees.clone();
         cx.spawn_in(window, async move |this, cx| {
             let made = plan.clone();
-            let result = cx.background_spawn(async move { worktree::add(&made) }).await;
+            let result = cx
+                .background_spawn(async move {
+                    worktree::add(&made).map(|()| others.free_ports(worktree::port_free))
+                })
+                .await;
             this.update_in(cx, |ws, window, cx| match result {
-                Ok(()) => {
+                Ok(port) => {
                     let mut plan = plan;
-                    // Its own ports, before its first terminal starts with them in its env.
-                    plan.port = app(cx).worktrees.free_ports(worktree::port_free);
+                    // Its own ports, before its first terminal starts with them in its env; a
+                    // worktree made meanwhile may have taken that block, and then this one asks
+                    // again here.
+                    let taken = |port: u16| {
+                        app(cx).worktrees.iter().any(|w| {
+                            w.port.is_some_and(|p| (p..p + worktree::PORT_BLOCK).contains(&port))
+                        })
+                    };
+                    plan.port = match port {
+                        Some(port) if !taken(port) => Some(port),
+                        _ => app(cx).worktrees.free_ports(worktree::port_free),
+                    };
                     tracing::info!(branch = plan.branch, folder = %plan.folder.display(), port = ?plan.port, "worktree made");
                     let setup = setup_command(&plan.repo, cx);
                     app_mut(cx).record_worktree(plan.clone());
                     let folder = plan.folder.to_string_lossy().into_owned();
                     let ix = ws.open_session(None, Some(folder), window, cx);
                     let terminal = ws.sessions[ix].id;
-                    // The project's setup first, then what was asked for: the shell reads them
-                    // in turn.
+                    // The project's setup first, then what was asked for, as one line: the command
+                    // starts once the setup has finished and only if it worked, and a setup that
+                    // asks a question doesn't get the command typed ahead as its answer.
                     let command = command.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
-                    let lines: Vec<String> = setup.into_iter().chain(command).collect();
-                    ws.control_send_lines(terminal, lines, cx);
+                    let line = match (setup, command) {
+                        (Some(setup), Some(command)) => Some(format!("{setup} && {command}")),
+                        (setup, command) => setup.or(command),
+                    };
+                    if let Some(line) = line {
+                        ws.control_send_text(terminal, &line, true, cx);
+                    }
                 }
                 Err(err) => {
                     tracing::warn!("making a worktree: {err:#}");

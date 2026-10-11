@@ -329,21 +329,6 @@ impl Workspace {
         true
     }
 
-    /// Each of `lines` typed into terminal `tab` and run, one after the other: each one's Return
-    /// is pressed before the next is pasted, so they never run together.
-    pub(super) fn control_send_lines(&mut self, tab: i64, lines: Vec<String>, cx: &mut Context<Self>) {
-        let Some(terminal) = self.pane_terminal(tab) else { return };
-        cx.spawn(async move |_, cx| {
-            for line in lines {
-                terminal.update(cx, |t, _| t.paste(&line));
-                cx.background_executor().timer(Duration::from_millis(60)).await;
-                terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-                cx.background_executor().timer(Duration::from_millis(60)).await;
-            }
-        })
-        .detach();
-    }
-
     /// A new terminal in `folder` (where the current one is without), selected, with `command`
     /// typed into its shell and run.
     pub(super) fn control_new_terminal(
