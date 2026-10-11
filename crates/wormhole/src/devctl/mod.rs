@@ -135,6 +135,8 @@
 //!   menu-new-window | menu-updates   the Shell > New Window / Check for Updates… menu actions,
 //!                   dispatched through this window like a menu click
 //!   settings | settings-section <name> | settings-shot <name>   (the settings window)
+//!   update-installed <version> [pending]   Settings → Updates as after an install: Restart, or with
+//!                   `pending` the line "Restarts when your terminals are idle."
 //!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)
 //!   picker <compare|history> [query]   open the branch select in the Changes / History tab
 //!   settings-project-menu [query]   open the project select in Settings → Project folders
@@ -414,6 +416,7 @@ fn command(name: &str) -> Option<Command> {
         "theme" => settings::theme,
         "settings" => settings::open,
         "settings-section" => settings::section,
+        "update-installed" => settings::update_installed,
         "settings-project" => settings::project,
         "settings-project-menu" => settings::project_menu,
         "settings-search" => settings::search,

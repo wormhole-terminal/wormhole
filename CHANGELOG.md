@@ -36,6 +36,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a
   security update is offered even if you skipped that version, and it can't be skipped.
+- Restart to update says what is still running first. When an agent or a command is running in
+  any terminal, "Restart now" in Settings → Updates lists those terminals and what runs in them,
+  and offers Restart, Restart When Idle (the app restarts once everything has been idle for 30
+  seconds; Settings shows the wait, with Restart now and Don't restart) or Later. With nothing
+  running it restarts at once, as before.
 
 ## [0.3.0] - 2026-10-10
 

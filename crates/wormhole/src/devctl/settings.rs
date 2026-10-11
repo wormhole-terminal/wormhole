@@ -20,6 +20,15 @@ pub(super) fn section(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `update-installed <version> [pending]`: Settings → Updates as it is once an update is installed
+/// (its Restart), with "Restart When Idle" chosen when `pending` is given.
+pub(super) fn update_installed(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let mut words = arg.split_whitespace();
+    let version = words.next().ok_or_else(|| anyhow!("expected a version, e.g. 0.3.1"))?;
+    crate::workspace::devctl_update_installed(version, words.next() == Some("pending"), ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn project(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.workspace.devctl_settings_project(arg.trim(), ctx.cx);
     Ok(String::new())

@@ -600,6 +600,7 @@ fn tick(cx: &mut App) {
     menu_bar::sync(cx);
     app_menu::sync(cx);
     updates::schedule_check(ticks, cx);
+    update_restart::tick(cx);
     if ticks.is_multiple_of(5) {
         project::prune_projects(cx);
         if crate::fonts::poll_custom(cx) {

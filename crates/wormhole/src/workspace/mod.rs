@@ -26,6 +26,8 @@ pub(crate) use focus::set_front;
 use gpui_kit::assets::IconName;
 #[cfg(feature = "devctl")]
 pub(crate) use project::devctl_trust_shot;
+#[cfg(feature = "devctl")]
+pub(crate) use updates::devctl_installed as devctl_update_installed;
 pub(crate) use windows::request_quit;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
@@ -96,6 +98,9 @@ mod title_extras;
 mod title_row;
 #[cfg(test)]
 mod title_tests;
+mod update_restart;
+#[cfg(test)]
+mod update_restart_tests;
 mod updates;
 mod usage;
 #[cfg(test)]

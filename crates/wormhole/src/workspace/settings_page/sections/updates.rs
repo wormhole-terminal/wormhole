@@ -75,12 +75,13 @@ fn security_color(ui: UiColors, severity: Severity) -> Hsla {
 fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let updates = &app(cx).updates;
-    let (phase, busy, available, (done, total), last) = (
+    let (phase, busy, available, (done, total), last, restart_pending) = (
         updates.phase.clone(),
         updates.busy(),
         updates.available(),
         updates.progress(),
         updates.last_check(),
+        updates.restart_pending(),
     );
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
 
@@ -98,6 +99,9 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         UpdatePhase::Available(release) => available_text(release).into(),
         UpdatePhase::Unsupported(message) | UpdatePhase::Failed(message) => message.clone().into(),
         UpdatePhase::Downloading => "Downloading…".into(),
+        UpdatePhase::Installed(version) if restart_pending => {
+            format!("Version {version} is installed. Restarts when your terminals are idle.").into()
+        }
         UpdatePhase::Installed(version) => {
             format!("Version {version} is installed. Restart to use it.").into()
         }
@@ -133,12 +137,25 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
             );
         }
         UpdatePhase::Installed(_) => {
-            actions =
-                actions.child(
-                    Button::new("update-restart").primary().small().label("Restart now").on_click(
-                        cx.listener(|_, _, _, cx| crate::workspace::updates::restart_to_update(cx)),
+            // Restarting asks first while something runs; waiting for the terminals to be idle
+            // can be called off, or cut short by restarting now (no second question: it was asked).
+            if restart_pending {
+                actions = actions.child(
+                    Button::new("update-restart-cancel").ghost().small().label("Don't restart").on_click(
+                        cx.listener(|_, _, _, cx| crate::workspace::updates::cancel_restart_when_idle(cx)),
                     ),
                 );
+            }
+            actions =
+                actions.child(Button::new("update-restart").primary().small().label("Restart now").on_click(
+                    cx.listener(move |_, _, window, cx| {
+                        if restart_pending {
+                            crate::workspace::updates::restart_to_update(cx);
+                        } else {
+                            crate::workspace::update_restart::request_restart(window, cx);
+                        }
+                    }),
+                ));
         }
         UpdatePhase::Checking => {
             actions = actions.child(Button::new("update-checking").ghost().small().loading(true).label(""));

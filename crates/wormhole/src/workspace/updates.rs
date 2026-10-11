@@ -17,6 +17,7 @@ use wormhole_core::update::{
 use wormhole_core::store::Store;
 
 use super::app::{app, app_mut};
+use super::update_restart::IdleWatch;
 use super::*;
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
@@ -44,6 +45,9 @@ pub(crate) struct Updates {
     /// Bytes downloaded / total (0 = unknown), written from the download thread.
     progress: Arc<(AtomicU64, AtomicU64)>,
     task: Option<Task<()>>,
+    /// "Restart When Idle" was chosen: the app restarts once its terminals have been idle for a
+    /// while (`update_restart::tick`). Not saved: a request lives as long as the run that made it.
+    restart_when_idle: Option<IdleWatch>,
 }
 
 impl Updates {
@@ -58,6 +62,7 @@ impl Updates {
             phase: UpdatePhase::Idle,
             progress: Default::default(),
             task: None,
+            restart_when_idle: None,
         }
     }
 
@@ -72,6 +77,15 @@ impl Updates {
 
     pub fn progress(&self) -> (u64, u64) {
         (self.progress.0.load(Ordering::Relaxed), self.progress.1.load(Ordering::Relaxed))
+    }
+
+    /// Whether the app is waiting for its terminals to be idle to restart.
+    pub fn restart_pending(&self) -> bool {
+        self.restart_when_idle.is_some()
+    }
+
+    pub(super) fn restart_watch(&mut self) -> Option<&mut IdleWatch> {
+        self.restart_when_idle.as_mut()
     }
 
     /// When the last check that reached the feed ended (Unix seconds).
@@ -251,16 +265,46 @@ pub(crate) fn skip_update(release: &Release, cx: &mut App) {
     notify_settings(cx);
 }
 
+/// Restart into the installed update now, whatever runs (the callers have asked, or checked).
 pub(crate) fn restart_to_update(cx: &mut App) {
-    let Some(bundle) = update::current_app_bundle() else { return };
+    // Whatever happens next, the request is answered: a failed restart is reported, not retried.
+    app_mut(cx).updates.restart_when_idle = None;
+    let Some(bundle) = update::current_app_bundle() else {
+        notify_settings(cx);
+        return;
+    };
     match update::relaunch(&bundle) {
         // Every window is saved on the way out.
         Ok(()) => cx.quit(),
         Err(err) => {
             app_mut(cx).updates.phase = UpdatePhase::Failed(format!("Couldn't restart: {err}"));
-            notify_settings(cx);
         }
     }
+    notify_settings(cx);
+}
+
+/// Restart once the terminals have been idle for a while (the tick settles it).
+pub(crate) fn restart_when_idle(cx: &mut App) {
+    let updates = &mut app_mut(cx).updates;
+    if matches!(updates.phase, UpdatePhase::Installed(_)) {
+        updates.restart_when_idle = Some(IdleWatch::default());
+        notify_settings(cx);
+    }
+}
+
+/// Drop the request to restart when idle.
+pub(crate) fn cancel_restart_when_idle(cx: &mut App) {
+    app_mut(cx).updates.restart_when_idle = None;
+    notify_settings(cx);
+}
+
+/// devctl `update-installed`: Settings → Updates as it is once an update is installed, with
+/// "Restart When Idle" chosen when `pending` (a dev build has no feed to install from).
+#[cfg(feature = "devctl")]
+pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
+    app_mut(cx).updates.phase = UpdatePhase::Installed(version.to_string());
+    app_mut(cx).updates.restart_when_idle = pending.then(IdleWatch::default);
+    notify_settings(cx);
 }
 
 fn save_update_schedule(cx: &App) {
