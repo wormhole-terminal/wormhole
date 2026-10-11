@@ -41,24 +41,25 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
-- Wormhole now uses its own name everywhere. At the first launch the data
-  folder moves to ~/Library/Application Support/Wormhole, with a copy of the
-  old database kept beside it; terminals, notes and settings come along.
+- The app is now named Wormhole. On first launch, it moves existing data to
+  ~/Library/Application Support/Wormhole and keeps a backup of the database.
+  Your terminals, notes and settings are preserved.
 - New project folders are called .wormhole; existing .andromeda folders keep
   working and stay trusted.
 - Terminals get WORMHOLE_* variables; the old ANDROMEDA_* ones are still
-  set, and agent hooks from earlier versions are updated by themselves.
-- macOS sees the app under a new identifier: it may ask again to send
-  notifications, and permissions granted in System Settings may need
-  granting again. Wormhole stays your default terminal if it was.
-- Updating from 0.2.0 or earlier: download this version from the website once.
+  set, and agent hooks from earlier versions are updated automatically.
+- The app's macOS identifier has changed. You may need to allow notifications
+  and grant other permissions again in System Settings. If Wormhole was your
+  default terminal, it remains the default.
+- To upgrade from 0.2.0 or earlier, download and install Wormhole from the
+  website. Later updates can be installed from the app.
 
 ## [0.2.1] - 2026-10-10
 
 ### Changed
 
-- This version can install the next one as an update, which moves the app
-  to its new identifier.
+- Enables automatic updating to 0.3.0, including the change to the app's
+  macOS identifier.
 
 ### Fixed
 
@@ -129,14 +130,15 @@ agents.
   - A sidebar of terminals with live agent status (working, finished,
     waiting for you), the agent's logo, git branch, changed files and
     open notes.
-  - Splits and several windows; everything comes back after a restart.
+  - Splits and multiple windows, with saved terminals, folders, notes and tasks
+    restored after a restart. Running commands and agents do not resume.
   - Shell profiles: zsh, bash, fish, nu or any program.
   - Command blocks with exit codes and timing, and jump between prompts.
   - Inline images (kitty, iTerm2 and Sixel), links, find in scrollback.
 - Coding agents
   - Claude Code, Codex, Gemini CLI, Copilot CLI, Cursor Agent, OpenCode,
     Aider, Amp, Goose, Qwen Code, Crush, Droid, Auggie, Kiro and Cline are
-    recognised; status is exact once their hooks are installed.
+    recognised. Supported agents can report status directly through installed hooks.
   - Notes and next steps per terminal, and a stash for the prompt you
     were typing.
   - Agent status in the menu bar, and a global show/hide shortcut.
