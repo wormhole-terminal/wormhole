@@ -400,6 +400,12 @@ impl TerminalView {
         self.dock.map(|dock| render::dock_landing(layout.origin, layout.cell, dock))
     }
 
+    /// Whether the program in front takes a paste as text (it turned bracketed paste on): without
+    /// it, every line of a paste is typed as if Return were pressed after it.
+    pub fn bracketed_paste(&self) -> bool {
+        self.pty.as_ref().is_some_and(|pty| pty.mode().contains(TermMode::BRACKETED_PASTE))
+    }
+
     /// Paste text the way a real terminal does (bracketed if the app asked).
     pub fn paste(&mut self, text: &str) {
         let Some(pty) = &self.pty else { return };

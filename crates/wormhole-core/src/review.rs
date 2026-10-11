@@ -5,7 +5,9 @@
 //! is pinned to a line of a file's diff as it is read in the diff view, comments gather per
 //! terminal across files, and [`Review::message`] turns them into one message that names each
 //! place (`src/orders.rs:42`), quotes the line and says what the person wrote. The app pastes it
-//! into the terminal's prompt; it never presses Return, so nothing runs that the person didn't see.
+//! into the terminal's prompt, and only into a program that takes a paste as text (bracketed
+//! paste): anywhere else each line would run as a command. The quoted line comes from the
+//! repository, which may be anyone's, so the message carries no control characters at all.
 
 /// Which side of the diff a line is on: the new file's (an added or unchanged line) or the old
 /// file's (a removed line, which has no number in the new file).
@@ -42,7 +44,8 @@ impl ReviewComment {
     }
 
     fn quote(&self) -> String {
-        let code = self.code.trim();
+        let code = printable(&self.code, false);
+        let code = code.trim();
         if code.chars().count() <= QUOTE_MAX_CHARS {
             return code.to_string();
         }
@@ -125,7 +128,7 @@ impl Review {
             if !quote.is_empty() {
                 out.push_str(&format!("   > {quote}\n"));
             }
-            for line in comment.text.trim().lines() {
+            for line in printable(&comment.text, true).trim().lines() {
                 out.push_str("   ");
                 out.push_str(line.trim_end());
                 out.push('\n');
@@ -133,6 +136,20 @@ impl Review {
         }
         Some(out.trim_end().to_string())
     }
+}
+
+/// `text` without control characters (C0, DEL and C1: escape sequences, the bell, a carriage
+/// return or ^C that a terminal would act on); a tab becomes a space, and line breaks stay only
+/// in a comment's own text (`lines`).
+fn printable(text: &str, lines: bool) -> String {
+    text.chars()
+        .filter_map(|c| match c {
+            '\n' if lines => Some('\n'),
+            '\t' => Some(' '),
+            c if c.is_control() => None,
+            c => Some(c),
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -187,6 +204,18 @@ mod tests {
         assert_eq!(review.summary(), "1 comment");
         review.clear();
         assert!(review.is_empty() && review.message().is_none());
+    }
+
+    /// A repository's line or a comment can't reach the terminal as anything but text.
+    #[test]
+    fn the_message_carries_no_control_characters() {
+        let mut review = Review::default();
+        let hostile = "x;\x1b[201~ rm -rf ~\r\x03\x07\u{9b}31m\tend";
+        review.put(comment("a.rs", LineSide::New, 1, hostile, "fix\r\x1b]0;title\x07 this\nplease"));
+        let message = review.message().expect("message");
+        assert!(!message.chars().any(|c| c.is_control() && c != '\n'), "{message:?}");
+        assert!(message.contains("   > x;[201~ rm -rf ~31m end\n"), "{message}");
+        assert!(message.ends_with("   fix]0;title this\n   please"), "{message}");
     }
 
     #[test]

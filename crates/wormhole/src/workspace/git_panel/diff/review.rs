@@ -1,8 +1,11 @@
 //! Comments on a diff's lines for the terminal's agent (core `review`): a click on a line opens a
 //! small dialog to write one, or to change or remove the one it has; commented lines wear a bar
 //! (`render`); and while the terminal has comments a bar under the rows gathers them, with Paste
-//! into Terminal. That pastes the review into the terminal's prompt and gives it the keys; it never
-//! presses Return, so the person reads what goes to the agent, and a plain shell runs nothing.
+//! into Terminal. That pastes the review into the terminal's prompt and gives it the keys, for the
+//! person to read and send. It pastes only into a program that takes a paste as text (bracketed
+//! paste, as coding agents and most shells ask for): anywhere else each line of the paste would
+//! run as a command, so the review goes to the clipboard instead. Comments are made only on a
+//! diff against the working tree, whose lines are the ones the agent edits.
 
 use std::rc::Rc;
 
@@ -27,6 +30,9 @@ const BAR_H: f32 = 40.0;
 
 /// The comment dialog while it is up: which line, and its field.
 pub(in crate::workspace) struct Commenting {
+    /// The terminal the comment is for: the one selected when the line was clicked, whatever is
+    /// selected by the time it is saved.
+    session: i64,
     path: String,
     at: LineAt,
     input: Entity<TextareaState>,
@@ -80,7 +86,8 @@ impl Workspace {
         }
         .location();
         let code = SharedString::from(at.code.trim().to_string());
-        self.commenting = Some(Commenting { path, at, input: input.clone(), _enter: enter });
+        let session = self.active_session().id;
+        self.commenting = Some(Commenting { session, path, at, input: input.clone(), _enter: enter });
         let weak = cx.weak_entity();
         let (font_family, _) = crate::fonts::code_font(cx);
         // As for the worktree dialog: nothing focused when it opens, so nothing is given the keys
@@ -187,7 +194,9 @@ impl Workspace {
             code: commenting.at.code.to_string(),
             text: commenting.input.read(cx).value().to_string(),
         };
-        self.sessions[self.active].review.put(comment);
+        if let Some(ix) = self.find_session(commenting.session) {
+            self.sessions[ix].review.put(comment);
+        }
         cx.notify();
     }
 
@@ -200,15 +209,34 @@ impl Workspace {
             code: String::new(),
             text: String::new(),
         };
-        self.sessions[self.active].review.put(empty);
+        if let Some(ix) = self.find_session(commenting.session) {
+            self.sessions[ix].review.put(empty);
+        }
         cx.notify();
     }
 
     /// Paste the active terminal's review into its prompt and give it the keys: the person
-    /// reads it there and presses Return. The comments are gone once pasted.
+    /// reads it there and presses Return. The comments are gone once pasted. A program that
+    /// doesn't take a paste as text would run each line, so then the review is copied instead and
+    /// the comments stay.
     pub(crate) fn paste_review(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(message) = self.active_session().review.message() else { return };
-        self.active_terminal().update(cx, |terminal, _| terminal.paste(&message));
+        let terminal = self.active_terminal();
+        if !terminal.read(cx).bracketed_paste() {
+            cx.write_to_clipboard(ClipboardItem::new_string(message));
+            dialog::open_alert(window, cx, |alert, _, _| {
+                alert
+                    .title("Copied the comments instead")
+                    .description(
+                        "The program in this terminal would run each line of a paste as a command, so \
+                         the comments are on the clipboard. Paste them into your agent's prompt.",
+                    )
+                    .show_cancel(false)
+                    .ok_text("OK")
+            });
+            return;
+        }
+        terminal.update(cx, |terminal, _| terminal.paste(&message));
         self.sessions[self.active].review.clear();
         self.close_diff(window, cx);
     }

@@ -26,7 +26,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Comment on a diff's lines for the agent: click a line in the diff view to write what should
   change there. The comments gather across files under the diff, and Paste into Terminal puts
   them in the terminal's prompt as one message, each with its file, line and the line quoted,
-  for you to send.
+  for you to send. Where the program in the terminal would run a paste line by line (a plain
+  shell without bracketed paste), they are copied to the clipboard instead.
 - The command line has a short name: `wh list`, `wh notify`, `wh send-text` and the rest work in
   every Wormhole terminal as they are, with no alias. For other terminals, Settings → Coding
   agents → Command line tool installs `wh` into `/usr/local/bin` or `~/.local/bin` (only when you

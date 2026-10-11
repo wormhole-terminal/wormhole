@@ -1,7 +1,8 @@
 //! Drawing the diff view: its rows (a line-number gutter, a +/− marker column
 //! and the code, on tinted rows; in split mode two equal columns, with hatched
 //! fillers where one side has no line) and the card around them. The rows are
-//! shared with the Theme Studio's sample. In the diff view a click on a line comments on it
+//! shared with the Theme Studio's sample. In a diff against the working tree a click on a line
+//! comments on it
 //! (`review`), and a line with a comment wears a primary bar along its left edge.
 
 use std::rc::Rc;
@@ -480,8 +481,9 @@ impl Workspace {
             scroll_x: 0.0,
             old_hatched,
             new_hatched,
-            on_line: Some(self.comment_click(view, cx)),
-            commented: Rc::new(self.commented_lines(view)),
+            // Only the working tree's lines are the ones the agent edits.
+            on_line: view.is_working_tree().then(|| self.comment_click(view, cx)),
+            commented: Rc::new(if view.is_working_tree() { self.commented_lines(view) } else { Vec::new() }),
         };
 
         // Sideways scrolling: as far as the longest line is wider than its column.
