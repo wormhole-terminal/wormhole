@@ -233,6 +233,14 @@ fn programs_named(programs: &[String]) -> usize {
     names.len()
 }
 
+/// A program's name, or a terminal's, as a question lists it: a long one cut short.
+pub(super) fn shortened(name: &str) -> String {
+    match name.char_indices().nth(PROGRAM_MAX) {
+        Some((cut, _)) => format!("{}…", &name[..cut]),
+        None => name.to_string(),
+    }
+}
+
 /// The programs that end, as Terminal's question lists them: "claude, npm run dev", each once, in
 /// the order of the terminals, a long command cut short and a long list ending in "and N more".
 fn running_list(programs: &[String]) -> Option<String> {
@@ -242,14 +250,7 @@ fn running_list(programs: &[String]) -> Option<String> {
             names.push(program);
         }
     }
-    let shown: Vec<String> = names
-        .iter()
-        .take(PROGRAMS_LISTED)
-        .map(|name| match name.char_indices().nth(PROGRAM_MAX) {
-            Some((cut, _)) => format!("{}…", &name[..cut]),
-            None => name.to_string(),
-        })
-        .collect();
+    let shown: Vec<String> = names.iter().take(PROGRAMS_LISTED).map(|name| shortened(name)).collect();
     let mut list = shown.join(", ");
     if names.len() > PROGRAMS_LISTED {
         list.push_str(&format!(" and {} more", names.len() - PROGRAMS_LISTED));

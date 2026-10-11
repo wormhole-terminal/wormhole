@@ -71,9 +71,24 @@ pub(crate) fn ask_before_closing_with(
     on_confirm: impl FnOnce(&mut Window, &mut App) + 'static,
     on_dismiss: impl FnOnce(&mut App) + 'static,
 ) {
+    ask_with_cancel(window, cx, question, "Cancel", also, on_confirm, on_dismiss);
+}
+
+/// [`ask_before_closing_with`] with the last button worded `cancel`, for a question that is about
+/// more than closing: the one before restarting to update lets you say "Later". It is still the
+/// button Esc presses, and it still does nothing.
+pub(crate) fn ask_with_cancel(
+    window: &mut Window,
+    cx: &mut App,
+    question: CloseQuestion,
+    cancel: &'static str,
+    also: Option<Also>,
+    on_confirm: impl FnOnce(&mut Window, &mut App) + 'static,
+    on_dismiss: impl FnOnce(&mut App) + 'static,
+) {
     let mut buttons = vec![PromptButton::ok(question.confirm)];
     buttons.extend(also.as_ref().map(|(label, _)| PromptButton::new(*label)));
-    buttons.push(PromptButton::cancel("Cancel"));
+    buttons.push(PromptButton::cancel(cancel));
     let answer = window.prompt(PromptLevel::Warning, &question.title, Some(&question.detail), &buttons, cx);
     window
         .spawn(cx, async move |cx| {
