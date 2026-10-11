@@ -1,4 +1,6 @@
 target/
+# Extra target dirs, e.g. a second build that shouldn't wait for the first's lock
+/target-*/
 .local/
 .DS_Store
 # Local-only test signing key for the updater (scripts/package.sh). Never commit a secret key.
