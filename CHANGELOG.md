@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The status bar shows how full the selected terminal's agent context window is: "Context",
+  a meter and the share used, in amber once it is nearly full. It needs Claude Code's status
+  line, like the title row's gauge.
+
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a
   security update is offered even if you skipped that version, and it can't be skipped.

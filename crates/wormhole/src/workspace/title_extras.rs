@@ -64,15 +64,18 @@ impl Workspace {
         let status = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
         ExtraFacts {
             branch: status.filter(|_| settings.title_branch_status).and_then(BranchStatus::of),
-            // Only the agent that reported it: another one in the same terminal has not (yet).
-            gauge: session
-                .extras
-                .gauge
-                .clone()
-                .filter(|gauge| settings.title_agent_gauge && terminal.agent == Some(gauge.agent)),
+            gauge: self.agent_gauge(cx).filter(|_| settings.title_agent_gauge).cloned(),
             ports: if settings.title_ports { session.extras.ports.clone() } else { Vec::new() },
             pull_request: self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned()),
         }
+    }
+
+    /// The model and context window the active terminal's agent last reported. Only the agent
+    /// that reported it: another one in the same terminal has not (yet).
+    pub(super) fn agent_gauge<'a>(&'a self, cx: &'a App) -> Option<&'a Gauge> {
+        let session = self.active_session();
+        let agent = session.terminal().read(cx).agent;
+        session.extras.gauge.as_ref().filter(|gauge| agent == Some(gauge.agent))
     }
 
     /// A terminal's agent reported its model and context window (a status line ran in it).

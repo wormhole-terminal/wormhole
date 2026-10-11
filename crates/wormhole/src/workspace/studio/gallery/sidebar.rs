@@ -7,6 +7,7 @@ use crate::workspace::folder_color;
 use style::{BandKind, BandParts, FolderLook, FolderMeta, RowTone, Section, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
+use wormhole_core::layout::status_bar::CONTEXT_METER_W;
 use wormhole_core::sidebar::Bracket;
 
 /// The sidebar's width (and its minimum in the app).
@@ -493,6 +494,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 .child("1 done"),
         )
         .child(div().flex_1())
+        .child(style::status_context(ui, CONTEXT_METER_W, true, 0.62, false, "62%"))
         .child(style::status_separator(ui))
         .child(style::status_text(ui).child("zsh · 90×40"));
 

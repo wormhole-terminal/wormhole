@@ -233,6 +233,25 @@ pub fn status_text(ui: UiColors) -> Div {
         .text_color(ui.muted)
 }
 
+/// The status bar's context meter for the selected terminal's agent: "Context" in muted type
+/// (dropped with the other items' words in a narrow window), a `width` meter and the share used,
+/// 12 / 600 in the text color.
+#[track_caller]
+pub fn status_context(
+    ui: UiColors,
+    width: f32,
+    words: bool,
+    share: f32,
+    warn: bool,
+    percent: impl Into<SharedString>,
+) -> Div {
+    status_text(ui)
+        .gap_2()
+        .when(words, |d| d.child("Context"))
+        .child(super::context_meter(ui, width, share, warn))
+        .child(div().text_color(ui.text).font_weight(FontWeight::SEMIBOLD).child(percent.into()))
+}
+
 /// The optional status bar along the bottom of a window: [`STATUS_BAR_H`]
 /// tall on the sidebar's surface with a hairline on top; its items start and end at the
 /// 16 pt inset (12 here, 4 inside each item).

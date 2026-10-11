@@ -157,6 +157,11 @@ pub fn status_branch(branch: &str, changes: usize) -> String {
     format!("{name}, {}", some_or_none(changes, "change", "changes"))
 }
 
+/// The context meter: "Agent context, 62 percent".
+pub fn status_context(percent: u32) -> String {
+    format!("Agent context, {percent} percent")
+}
+
 /// The size item: "zsh, 93 columns by 40 rows".
 pub fn status_size(shell: &str, cols: usize, rows: usize) -> String {
     format!("{shell}, {} by {}", count(cols, "column", "columns"), count(rows, "row", "rows"))
@@ -231,7 +236,7 @@ mod tests {
 
     use super::{
         Counted, PanelTab, command_block, panel_tab, section_band, spoken_elapsed, spoken_took,
-        status_branch, status_done, status_needs_you, status_size, status_working,
+        status_branch, status_context, status_done, status_needs_you, status_size, status_working,
     };
     use crate::layout::status_bar::{Activity, Detail, Entry, Summary};
     use crate::terminal::BlockState;
@@ -383,6 +388,7 @@ mod tests {
         assert_eq!(status_branch("HEAD", 2), "Detached HEAD, 2 changes");
         assert_eq!(status_size("zsh", 93, 40), "zsh, 93 columns by 40 rows");
         assert_eq!(status_size("fish", 1, 1), "fish, 1 column by 1 row");
+        assert_eq!(status_context(62), "Agent context, 62 percent");
     }
 
     #[test]

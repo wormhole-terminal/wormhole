@@ -18,7 +18,7 @@ pub const EXTRA_PAD: f32 = 8.0;
 pub const EXTRA_GAP: f32 = 4.0;
 /// The small icons inside the extras (`Icon::xsmall`).
 pub const EXTRA_ICON: f32 = 12.0;
-/// The context meter: its track.
+/// The context meter's track in the title row.
 pub const METER_W: f32 = 28.0;
 const METER_H: f32 = 4.0;
 /// The dot of a branch that has uncommitted changes.
@@ -123,25 +123,21 @@ pub fn agent_gauge(ui: UiColors, model: Option<SharedString>, context: Option<Co
                 .flex()
                 .items_center()
                 .gap_1()
-                .child(context_meter(ui, used.share, used.warn))
+                .child(context_meter(ui, METER_W, used.share, used.warn))
                 .child(div().tabular_nums().child(used.percent))
         }))
 }
 
-/// How full a coding agent's context window is: a [`METER_W`] track with the share used in the
-/// primary, or the warning color from `warn` on, which is early enough to compact.
+/// How full a coding agent's context window is: a `width` track ([`METER_W`] in the title row,
+/// wider in the status bar) with the share used in the primary, or the warning color from `warn`
+/// on, which is early enough to compact.
 #[track_caller]
-pub fn context_meter(ui: UiColors, used: f32, warn: bool) -> Div {
-    div()
-        .flex_none()
-        .w(px(METER_W))
-        .h(px(METER_H))
-        .rounded(ui.radius_sm)
-        .bg(ui.border)
-        .overflow_hidden()
-        .child(div().h_full().w(relative(used.clamp(0.0, 1.0))).rounded(ui.radius_sm).bg(if warn {
+pub fn context_meter(ui: UiColors, width: f32, used: f32, warn: bool) -> Div {
+    div().flex_none().w(px(width)).h(px(METER_H)).rounded(ui.radius_sm).bg(ui.border).overflow_hidden().child(
+        div().h_full().w(relative(used.clamp(0.0, 1.0))).rounded(ui.radius_sm).bg(if warn {
             ui.warning
         } else {
             ui.primary
-        }))
+        }),
+    )
 }

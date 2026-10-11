@@ -109,7 +109,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
                     None,
                     Some(style::ContextUse { share: 0.86, warn: true, percent: "86%".into() }),
                 ))
-                .child(style::context_meter(ui, 0.6, false))
+                .child(style::context_meter(ui, style::METER_W, 0.6, false))
                 .child(style::extra_chip(ui, true, Some((IconName::Globe, ui.text)), "localhost:3000"))
                 .child(style::extra_chip(ui, true, Some((IconName::GitPullRequest, ui.success_text)), "#142"))
                 .child(style::extra_chip(ui, false, None, "+1"))

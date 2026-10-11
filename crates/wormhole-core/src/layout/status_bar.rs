@@ -1,6 +1,6 @@
-//! The status bar (without the context meter): optional and
-//! hidden by default (`status_bar` in config.json). Along the bottom of a window it shows the
-//! branch, the agents of every window by what they are doing, and the terminal's size. This is
+//! The status bar: optional and hidden by default (`status_bar` in config.json). Along the
+//! bottom of a window it shows the branch, the agents of every window by what they are doing,
+//! how full the selected terminal's agent context window is, and the terminal's size. This is
 //! what it says, and how much of it fits a window's width.
 
 use std::time::{Duration, Instant};
@@ -10,6 +10,10 @@ use crate::sidebar::text::UNDER_A_MINUTE;
 
 /// The bar's height. The panes above it end there while it is shown.
 pub const STATUS_BAR_H: f32 = 28.0;
+
+/// The context meter's track in a wide window, and below [`STATUS_BAR_WORDS_MIN`].
+pub const CONTEXT_METER_W: f32 = 48.0;
+pub const CONTEXT_METER_W_NARROW: f32 = 32.0;
 
 /// How much the bar says at a window's width.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -40,6 +44,15 @@ impl Detail {
     /// Whether the terminal's size is shown.
     pub fn size(self) -> bool {
         self >= Detail::Numbers
+    }
+
+    /// How wide the context meter's track is, `None` where it goes with the size.
+    pub fn context_meter(self) -> Option<f32> {
+        match self {
+            Detail::Words => Some(CONTEXT_METER_W),
+            Detail::Numbers => Some(CONTEXT_METER_W_NARROW),
+            Detail::Lean => None,
+        }
     }
 }
 
@@ -164,6 +177,11 @@ pub fn elapsed(time: Duration) -> String {
     }
 }
 
+/// The context item's tooltip: "Context: 62% used".
+pub fn context_tooltip(percent: u32) -> String {
+    format!("Context: {percent}% used")
+}
+
 /// The terminal's size item: its shell and its grid ("zsh · 90×40").
 pub fn size(shell: &str, cols: usize, rows: usize) -> String {
     format!("{shell} · {cols}×{rows}")
@@ -173,7 +191,10 @@ pub fn size(shell: &str, cols: usize, rows: usize) -> String {
 mod tests {
     use std::time::{Duration, Instant};
 
-    use super::{Activity, Detail, Entry, STATUS_BAR_H, Summary, elapsed, pane_height, size};
+    use super::{
+        Activity, CONTEXT_METER_W, CONTEXT_METER_W_NARROW, Detail, Entry, STATUS_BAR_H, Summary,
+        context_tooltip, elapsed, pane_height, size,
+    };
 
     #[test]
     fn the_bar_sheds_detail_as_the_window_narrows() {
@@ -186,6 +207,15 @@ mod tests {
         assert_eq!(Detail::at(670.0), Detail::Lean);
         assert!(Detail::Words.words() && !Detail::Numbers.words() && !Detail::Lean.words());
         assert!(Detail::Words.size() && Detail::Numbers.size() && !Detail::Lean.size());
+    }
+
+    #[test]
+    fn the_context_meter_narrows_then_goes_with_the_size() {
+        assert_eq!(Detail::Words.context_meter(), Some(CONTEXT_METER_W));
+        assert_eq!(Detail::Numbers.context_meter(), Some(CONTEXT_METER_W_NARROW));
+        assert_eq!(Detail::Lean.context_meter(), None);
+        assert_eq!((CONTEXT_METER_W, CONTEXT_METER_W_NARROW), (48.0, 32.0));
+        assert_eq!(context_tooltip(62), "Context: 62% used");
     }
 
     #[test]

@@ -1,10 +1,10 @@
-//! The status bar along the bottom of the window (without the
-//! context meter). It is optional and hidden by default (`status_bar` in config.json, one switch
+//! The status bar along the bottom of the window. It is optional and hidden by default (`status_bar` in config.json, one switch
 //! for every window); then nothing of it is drawn and the panes reach the window's bottom.
 //!
 //! Shown, it has the branch and its changes (opens Changes), the agents of every window by what
 //! they do (working · needs you · done; each opens the first such terminal, needs you the one that
-//! has waited longest) and the terminal's size. What it says, and how much fits the window's
+//! has waited longest), how full the selected terminal's agent context window is (what its
+//! status line last reported, as the title row's gauge) and the terminal's size. What it says, and how much fits the window's
 //! width, is core's (`wormhole_core::layout::status_bar`).
 use std::time::Instant;
 
@@ -37,10 +37,22 @@ pub(super) struct StatusBar {
     working: Option<(String, i64)>,
     needs_you: Option<(String, String, i64)>,
     done: Option<(String, i64)>,
+    /// The selected terminal's agent context, while the window is wide enough.
+    context: Option<ContextItem>,
     /// The terminal's shell and grid, while the window is wide enough.
     size: Option<String>,
     /// What VoiceOver says for each item, whole whatever the width.
     spoken: Spoken,
+}
+
+/// The context meter as the bar draws it.
+#[derive(Clone, Debug, PartialEq)]
+struct ContextItem {
+    /// The meter's track: narrower with the other items' words gone.
+    width: f32,
+    words: bool,
+    percent: u32,
+    warn: bool,
 }
 
 /// The bar's items in words.
@@ -50,6 +62,7 @@ struct Spoken {
     working: Option<String>,
     needs_you: Option<String>,
     done: Option<String>,
+    context: Option<String>,
     size: Option<String>,
 }
 
@@ -137,12 +150,23 @@ impl Workspace {
         });
         let (cols, rows) = terminal.grid_size();
         let size = detail.size().then(|| rules::size(&terminal.shell(), cols, rows));
+        let gauge = self.agent_gauge(cx);
+        let context =
+            detail.context_meter().zip(gauge.and_then(|gauge| gauge.percent())).map(|(width, percent)| {
+                ContextItem {
+                    width,
+                    words: detail.words(),
+                    percent,
+                    warn: gauge.is_some_and(|gauge| gauge.warns()),
+                }
+            });
         let now = Instant::now();
         let spoken = Spoken {
             branch: branch.as_ref().map(|(name, changes)| spoken::status_branch(name, *changes)),
             working: spoken::status_working(&summary, &entries, now),
             needs_you: spoken::status_needs_you(&summary),
             done: spoken::status_done(&summary),
+            context: context.as_ref().map(|item| spoken::status_context(item.percent)),
             size: size.as_ref().map(|_| spoken::status_size(&terminal.shell(), cols, rows)),
         };
         Some(StatusBar {
@@ -155,6 +179,7 @@ impl Workspace {
                 .zip(tab(&summary.needs_you))
                 .map(|((words, tooltip), tab)| (words, tooltip, tab)),
             done: summary.done(detail).zip(tab(&summary.done)),
+            context,
             size,
         })
     }
@@ -294,6 +319,25 @@ impl Workspace {
             .children(needs_you)
             .children(done)
             .child(div().flex_1())
+            .children(bar.context.clone().map(|item| {
+                let tooltip = SharedString::from(rules::context_tooltip(item.percent));
+                let share = item.percent as f32 / 100.0;
+                style::status_context(
+                    ui,
+                    item.width,
+                    item.words,
+                    share,
+                    item.warn,
+                    format!("{}%", item.percent),
+                )
+                .id("status-context")
+                .role(Role::Meter)
+                .when_some(bar.spoken.context.clone(), |d, label| d.aria_label(label))
+                .aria_numeric_value(item.percent as f64)
+                .aria_min_numeric_value(0.0)
+                .aria_max_numeric_value(100.0)
+                .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
+            }))
             .children(bar.size.clone().map(|size| {
                 div().flex().items_center().gap_1().child(style::status_separator(ui)).child(
                     style::status_text(ui)
