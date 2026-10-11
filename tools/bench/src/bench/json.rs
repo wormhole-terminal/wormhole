@@ -1,5 +1,5 @@
 //! A small JSON reader and the string/number writers, for the results files only: std only, so
-//! it handles what `termbench --save` writes (and any well-formed JSON) and nothing fancier.
+//! it handles what `ttystorm --save` writes (and any well-formed JSON) and nothing fancier.
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {

@@ -1,6 +1,6 @@
 [package]
-name = "wormhole-bench"
-version = "0.1.0"
+name = "ttystorm"
+version = "0.2.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 publish = false
@@ -11,7 +11,7 @@ description = "Terminal stress tests, throughput benchmarks and full-screen anim
 [workspace]
 
 [[bin]]
-name = "termbench"
+name = "ttystorm"
 path = "src/main.rs"
 
 [lints.rust]

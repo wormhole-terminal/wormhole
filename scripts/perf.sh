@@ -4,8 +4,8 @@
 # so a later change can't silently undo the speedups of 11ed409 and 215284b.
 #
 #   scripts/perf.sh [options]
-#     --only <a,b>      run only these: wormhole, matrix, unicode, dashboard (termbench animations),
-#                       flood-ascii, flood-truecolor (termbench flood), throughput (termbench bench)
+#     --only <a,b>      run only these: warptunnel, matrix, unicode, dashboard (ttystorm animations),
+#                       flood-ascii, flood-truecolor (ttystorm flood), throughput (ttystorm bench)
 #     --save-baseline   write this run as the baseline of this machine (tools/bench/baselines/)
 #     --bin <path>      measure this prebuilt devctl binary instead of building HEAD
 #     --fps <n>         the animations' frame rate (default 0, see below)
@@ -16,7 +16,7 @@
 #   also without a baseline for this machine (it says how to save one).
 #
 # What is measured, per workload, in its own isolated instance (scripts/devctl-instance.sh, the
-# window resized to 2400x1300, a wrapper script as the "shell" that runs termbench):
+# window resized to 2400x1300, a wrapper script as the "shell" that runs ttystorm):
 #   A  draw time per frame: devctl `frames 60` (60 forced draws of the workspace, avg and max in ms),
 #      run 3 times; the medians are reported. It forces the draws, so it does not depend on the window
 #      being visible. The animations run with --fps 0: new output is then always pending, so every
@@ -34,7 +34,7 @@
 #      the window's frame callbacks, so the number can be lower than with it on screen (not measured
 #      here). The result file records whether the display slept, and the table warns when it differs
 #      from the baseline's.
-#   C  throughput: `termbench bench --only ascii,truecolor,cursor --size 16 --runs 3` inside an
+#   C  throughput: `ttystorm bench --only logflood,colorflood,cursorstorm --size 16 --runs 3` inside an
 #      instance, the medians in MB/s (terminal size 2400x1300 points, see the cols x rows printed).
 # The frame rate on screen (devctl `paints`) is NOT a metric: it is exactly what macOS throttles for a
 # window that isn't visible, so it would measure the display, not Wormhole.
@@ -60,9 +60,9 @@ THROUGHPUT_FLOOR=0.75  # MB/s may fall to this share of the baseline
 WINDOW_W=2400 WINDOW_H=1300
 FRAME_RUNS=3 FRAMES=60 SAMPLE_SECONDS=5
 SETTLE_SECONDS=4       # the workload runs this long before it is measured (caches, first frames)
-ANIMATIONS="wormhole matrix unicode dashboard"
+ANIMATIONS="warptunnel matrix unicode dashboard"
 ALL_WORKLOADS="$ANIMATIONS flood-ascii flood-truecolor throughput"
-BENCH_TESTS=ascii,truecolor,cursor
+BENCH_TESTS=logflood,colorflood,cursorstorm
 
 only="" save_baseline=0 bin="" keep=0 fps=0
 while [ $# -gt 0 ]; do
@@ -139,10 +139,10 @@ mkdir -p "$scratch/app"
 cp -c "$bin" "$scratch/app/$APP_BINARY" 2>/dev/null || cp "$bin" "$scratch/app/$APP_BINARY"
 bin="$scratch/app/$APP_BINARY"
 
-log "building termbench"
+log "building ttystorm"
 (cd "$ROOT/tools/bench" && cargo build --release --quiet)
-termbench="$ROOT/tools/bench/target/release/termbench"
-[ -x "$termbench" ] || die "no $termbench"
+ttystorm="$ROOT/tools/bench/target/release/ttystorm"
+[ -x "$ttystorm" ] || die "no $ttystorm"
 
 # ---------------------------------------------------------------- driving an instance
 
@@ -167,7 +167,7 @@ lines_in() { if [ -f "$1" ]; then wc -l < "$1" | tr -d ' '; else echo 0; fi; }
 # shellcheck disable=SC2329  # runs through wait_for
 lines_over() { [ "$(lines_in "$1")" -gt "$2" ]; }
 
-# start_workload <name> <termbench arguments>: an instance whose only terminal runs termbench once
+# start_workload <name> <ttystorm arguments>: an instance whose only terminal runs ttystorm once
 # the window has its size (the animations and the benchmark read the terminal's size when they
 # start), then cat. Sets $dir, $ctl, $pid.
 start_workload() {
@@ -177,7 +177,7 @@ start_workload() {
   cat > "$dir/shell.sh" <<EOF
 #!/bin/bash
 while [ ! -e "$dir/go" ]; do sleep 0.1; done
-"$termbench" $* 2>"$dir/termbench.err"
+"$ttystorm" $* 2>"$dir/ttystorm.err"
 exec /bin/cat
 EOF
   chmod +x "$dir/shell.sh"
@@ -225,7 +225,7 @@ run_busy_workload() {
 }
 
 run_throughput() {
-  log "throughput: termbench bench --only $BENCH_TESTS"
+  log "throughput: ttystorm bench --only $BENCH_TESTS"
   start_workload throughput "bench --only $BENCH_TESTS --size 16 --runs 3 --save $scratch/throughput/bench.json"
   wait_for 600 "the benchmark" test -f "$dir/bench.json"
   tools throughput "$dir/bench.json" > "$dir/throughput.json"
@@ -239,8 +239,8 @@ assemble_args=()
 for w in $workloads; do
   case "$w" in
     throughput) run_throughput ;;
-    flood-ascii) run_busy_workload "$w" "flood --kind ascii" ;;
-    flood-truecolor) run_busy_workload "$w" "flood --kind truecolor" ;;
+    flood-ascii) run_busy_workload "$w" "flood --kind logflood" ;;
+    flood-truecolor) run_busy_workload "$w" "flood --kind colorflood" ;;
     *) run_busy_workload "$w" "$w --fps $fps --no-hud" ;;
   esac
 done

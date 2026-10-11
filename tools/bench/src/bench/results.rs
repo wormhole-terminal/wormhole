@@ -2,6 +2,7 @@
 
 use super::json::{self, Value};
 use super::sysinfo::Machine;
+use super::workloads;
 
 pub const FORMAT_VERSION: u32 = 1;
 
@@ -78,7 +79,7 @@ impl Results {
     pub fn to_json(&self) -> String {
         let mut s = String::from("{\n");
         let mut field = |k: &str, v: String| s.push_str(&format!("  {}: {},\n", json::quote(k), v));
-        field("format", json::quote("termbench"));
+        field("format", json::quote("ttystorm"));
         field("format_version", FORMAT_VERSION.to_string());
         field("tool_version", json::quote(&self.version));
         field("label", json::quote(&self.label));
@@ -125,8 +126,9 @@ impl Results {
 
     pub fn from_json(text: &str) -> Result<Results, String> {
         let v = json::parse(text)?;
-        if v.get("format").and_then(Value::as_str) != Some("termbench") {
-            return Err("not a termbench results file".to_string());
+        // Files saved up to 0.1 say `termbench`, the tool's name then.
+        if !matches!(v.get("format").and_then(Value::as_str), Some("ttystorm" | "termbench")) {
+            return Err("not a ttystorm results file".to_string());
         }
         let text_of = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
         let num_of = |k: &str| v.get(k).and_then(Value::as_f64).unwrap_or(0.0);
@@ -148,7 +150,10 @@ impl Results {
             let n = |k: &str| t.get(k).and_then(Value::as_f64).unwrap_or(0.0);
             let unit_text = t.get("unit").and_then(Value::as_str).unwrap_or("");
             tests.push(TestResult {
-                name: t.get("name").and_then(Value::as_str).ok_or("a test has no name")?.to_string(),
+                name: workloads::current_name(
+                    t.get("name").and_then(Value::as_str).ok_or("a test has no name")?,
+                )
+                .to_string(),
                 unit: Unit::parse(unit_text).ok_or_else(|| format!("unknown unit `{unit_text}`"))?,
                 median: n("median"),
                 min: n("min"),
@@ -211,10 +216,10 @@ pub fn sample(label: &str, scale: f64) -> Results {
         size_mb: 16.0,
         runs: 3,
         tests: vec![
-            t("ascii", Unit::MBps, 800.0),
-            t("truecolor", Unit::MBps, 120.0),
-            t("frames", Unit::Fps, 90.0),
-            t("latency", Unit::Micros, 150.0),
+            t("logflood", Unit::MBps, 800.0),
+            t("colorflood", Unit::MBps, 120.0),
+            t("framerate", Unit::Fps, 90.0),
+            t("roundtrip", Unit::Micros, 150.0),
         ],
     }
 }
@@ -243,6 +248,7 @@ mod tests {
     fn other_json_is_refused() {
         assert!(Results::from_json("{\"a\": 1}").is_err());
         assert!(Results::from_json("nope").is_err());
+        assert!(Results::from_json("{\"format\": \"ttystorm\"}").is_err());
         assert!(Results::from_json("{\"format\": \"termbench\"}").is_err());
     }
 

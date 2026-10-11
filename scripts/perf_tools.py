@@ -5,8 +5,8 @@
       main-thread busy share of a macOS `sample` report, as JSON
   perf_tools.py workload <name> <frames.txt> <sample file>
       one workload's numbers (median draw avg/max of the `frames` lines, main-thread busy), as JSON
-  perf_tools.py throughput <termbench --save file>
-      the medians in MB/s of a `termbench bench --save` file, as JSON
+  perf_tools.py throughput <ttystorm --save file>
+      the medians in MB/s of a `ttystorm bench --save` file, as JSON
   perf_tools.py assemble <out> <key=value>... [--workload <name> <file>]... [--throughput <file>]
       the result file from the pieces above, plus the metadata given as key=value
   perf_tools.py display

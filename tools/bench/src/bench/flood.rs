@@ -1,4 +1,4 @@
-//! `termbench flood`: one benchmark workload written over and over, as fast as the terminal reads,
+//! `ttystorm flood`: one benchmark workload written over and over, as fast as the terminal reads,
 //! so something else (a profiler, `sample`, a stopwatch on the terminal's own draw time) can watch
 //! the terminal under load. Unlike `bench` it never waits for the terminal to answer.
 
@@ -14,14 +14,14 @@ const PASS_BYTES: usize = 8 * 1024 * 1024;
 const CHUNK: usize = 64 * 1024;
 
 pub struct FloodOptions {
-    /// The workload's name in `workloads::NAMES` (`ascii`, `truecolor`, `unicode`, ...).
+    /// The workload's name in `workloads::NAMES` (`logflood`, `colorflood`, `glyphstorm`, ...).
     pub kind: String,
     pub seconds: Option<f64>,
 }
 
-/// The workloads that make sense as an endless stream (`latency` sends nothing).
+/// The workloads that make sense as an endless stream (`roundtrip` sends nothing).
 pub fn kinds() -> Vec<&'static str> {
-    workloads::NAMES.iter().copied().filter(|n| *n != "latency").collect()
+    workloads::NAMES.iter().copied().filter(|n| *n != "roundtrip").collect()
 }
 
 pub fn run(opts: &FloodOptions) -> io::Result<()> {

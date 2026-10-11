@@ -19,10 +19,10 @@ fn boxed<D: Demo + Default + 'static>() -> Box<dyn Demo> {
 
 #[rustfmt::skip]
 pub const ALL: &[Entry] = &[
-    Entry { name: "wormhole", about: "a truecolor tunnel, two pixels per cell, every cell new every frame", make: boxed::<wormhole::Wormhole> },
+    Entry { name: "warptunnel", about: "a truecolor tunnel, two pixels per cell, every cell new every frame", make: boxed::<wormhole::Wormhole> },
     Entry { name: "plasma", about: "full-screen truecolor plasma, every cell new every frame", make: boxed::<plasma::Plasma> },
     Entry { name: "starfield", about: "warp-speed stars in braille, eight dots per cell", make: boxed::<starfield::Starfield> },
-    Entry { name: "fire", about: "the Doom fire, a palette of 37 colors climbing the screen", make: boxed::<fire::Fire> },
+    Entry { name: "doomfire", about: "the Doom fire, a palette of 37 colors climbing the screen", make: boxed::<fire::Fire> },
     Entry { name: "matrix", about: "digital rain in half-width katakana with truecolor trails", make: boxed::<matrix::Matrix> },
     Entry { name: "donut", about: "a spinning lit torus, ASCII shading in truecolor", make: boxed::<donut::Donut> },
     Entry { name: "mandelbrot", about: "an endless zoom into the Mandelbrot set, smooth coloring", make: boxed::<mandelbrot::Mandelbrot> },

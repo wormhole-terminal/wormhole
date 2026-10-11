@@ -30,6 +30,8 @@ pub struct Runner<'a, W: Write> {
     pub size: Size,
     pub bytes: usize,
     pub runs: usize,
+    /// No status line on top of the workload (`--plain`).
+    pub plain: bool,
 }
 
 pub enum Step {
@@ -46,7 +48,10 @@ impl<W: Write> Runner<'_, W> {
 
     /// A line along the top of the screen; the next reset wipes it.
     fn status(&mut self, text: &str) -> io::Result<()> {
-        write!(self.out, "\x1b[1;1H\x1b[0m\x1b[2K\x1b[38;2;130;180;255m termbench \x1b[0m{text}")?;
+        if self.plain {
+            return Ok(());
+        }
+        write!(self.out, "\x1b[1;1H\x1b[0m\x1b[2K\x1b[38;2;130;180;255m ttystorm \x1b[0m{text}")?;
         self.out.flush()
     }
 
@@ -58,7 +63,7 @@ impl<W: Write> Runner<'_, W> {
         let head = format!("{name} ({}/{total})", index + 1);
         self.reset()?;
         self.status(&format!("{head}  generating…"))?;
-        if name == "latency" {
+        if name == "roundtrip" {
             return self.latency(&head);
         }
         let Some(main) = workloads::payload(name, self.size, self.bytes) else {
@@ -142,7 +147,7 @@ pub fn time_payload(
 }
 
 fn unit_of(name: &str) -> (Unit, bool) {
-    if name == "frames" { (Unit::Fps, true) } else { (Unit::MBps, false) }
+    if name == "framerate" { (Unit::Fps, true) } else { (Unit::MBps, false) }
 }
 
 /// The run's rate in the test's unit: megabytes per second, or frames per second.
@@ -190,7 +195,7 @@ fn timeout_result(name: &str, p: &Payload) -> TestResult {
 
 fn latency_timeout() -> TestResult {
     TestResult {
-        name: "latency".to_string(),
+        name: "roundtrip".to_string(),
         unit: Unit::Micros,
         median: 0.0,
         min: 0.0,
@@ -207,7 +212,7 @@ fn latency_result(micros: &[f64]) -> TestResult {
     sorted.sort_by(|a, b| a.total_cmp(b));
     let (min, max) = stats::min_max(&sorted);
     TestResult {
-        name: "latency".to_string(),
+        name: "roundtrip".to_string(),
         unit: Unit::Micros,
         median: stats::percentile(&sorted, 50.0),
         min,
@@ -241,8 +246,8 @@ mod tests {
     #[test]
     fn throughput_uses_the_median_run() {
         let p = Payload { bytes: vec![0; 10_000_000], frames: 0 };
-        let rates: Vec<f64> = [0.5, 0.25, 1.0].iter().map(|s| rate("ascii", &p, *s)).collect();
-        let r = throughput_result("ascii", &p, &rates, &[0.5, 0.25, 1.0]);
+        let rates: Vec<f64> = [0.5, 0.25, 1.0].iter().map(|s| rate("logflood", &p, *s)).collect();
+        let r = throughput_result("logflood", &p, &rates, &[0.5, 0.25, 1.0]);
         assert!((r.median - 20.0).abs() < 1e-9);
         assert_eq!((r.min, r.max), (10.0, 40.0));
         assert_eq!(r.secs, 0.5);
@@ -251,8 +256,8 @@ mod tests {
     #[test]
     fn frames_count_frames_per_second() {
         let p = Payload { bytes: vec![0; 4_000_000], frames: 60 };
-        assert!((rate("frames", &p, 0.5) - 120.0).abs() < 1e-9);
-        let r = throughput_result("frames", &p, &[120.0], &[0.5]);
+        assert!((rate("framerate", &p, 0.5) - 120.0).abs() < 1e-9);
+        let r = throughput_result("framerate", &p, &[120.0], &[0.5]);
         assert_eq!(r.unit, Unit::Fps);
         assert!((r.extra("mbps").unwrap_or(0.0) - 8.0).abs() < 1e-9);
     }

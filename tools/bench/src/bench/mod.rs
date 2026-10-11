@@ -20,6 +20,7 @@ use results::Results;
 use runner::{Runner, Step};
 
 pub use flood::{FloodOptions, run as flood};
+pub use workloads::{NAMES, about, current_name};
 
 pub struct BenchOptions {
     pub size_mb: f64,
@@ -28,6 +29,8 @@ pub struct BenchOptions {
     pub label: Option<String>,
     /// Runs per throughput test; the median is reported.
     pub runs: usize,
+    /// No status line during the run and the results as plain text, not the painted panel.
+    pub plain: bool,
 }
 
 /// The tests to run, in running order, or why the request is wrong.
@@ -62,6 +65,7 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
             size,
             bytes: (opts.size_mb * 1e6) as usize,
             runs: opts.runs,
+            plain: opts.plain,
         };
         let mut tests = Vec::new();
         let mut interrupted = false;
@@ -98,7 +102,11 @@ pub fn run(opts: &BenchOptions) -> io::Result<()> {
     }
     let saved = opts.save.as_ref().map(|p| p.display().to_string());
     let mut out = Vec::new();
-    report::results_panel(&results, report::panel_width(size.cols), saved.as_deref()).write(&mut out);
+    if opts.plain {
+        out.extend_from_slice(report::results_plain(&results, saved.as_deref()).as_bytes());
+    } else {
+        report::results_panel(&results, report::panel_width(size.cols), saved.as_deref()).write(&mut out);
+    }
     if interrupted {
         out.extend_from_slice(b"  interrupted: only the finished tests are shown\n");
     }
@@ -136,13 +144,13 @@ mod tests {
     fn only_picks_tests_in_running_order() {
         let all = selected(&[]).unwrap_or_default();
         assert_eq!(all.len(), workloads::NAMES.len());
-        let some = selected(&["latency".to_string(), "ascii".to_string()]).unwrap_or_default();
-        assert_eq!(some, vec!["ascii", "latency"]);
+        let some = selected(&["roundtrip".to_string(), "logflood".to_string()]).unwrap_or_default();
+        assert_eq!(some, vec!["logflood", "roundtrip"]);
     }
 
     #[test]
     fn an_unknown_test_is_an_error_naming_the_choices() {
         let e = selected(&["asci".to_string()]).err().unwrap_or_default();
-        assert!(e.contains("asci") && e.contains("scroll-region"), "{e}");
+        assert!(e.contains("asci") && e.contains("scrollstorm"), "{e}");
     }
 }

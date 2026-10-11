@@ -8,21 +8,53 @@ use crate::canvas::{self, Pixels, Rgb, Rng};
 use crate::term::Size;
 
 /// The tests in the order they run.
-pub const NAMES: [&str; 8] =
-    ["ascii", "unicode", "truecolor", "scroll-region", "cursor", "long-lines", "frames", "latency"];
+pub const NAMES: [&str; 8] = [
+    "logflood",
+    "glyphstorm",
+    "colorflood",
+    "scrollstorm",
+    "cursorstorm",
+    "longlines",
+    "framerate",
+    "roundtrip",
+];
 
 pub fn about(name: &str) -> &'static str {
     match name {
-        "ascii" => "plain log lines, like cat of a big file",
-        "unicode" => "CJK, emoji, accents, box drawing",
-        "truecolor" => "every character with its own colors",
-        "scroll-region" => "a pinned header and footer, text scrolling between",
-        "cursor" => "random cursor moves and short colored writes",
-        "long-lines" => "lines of 5 to 50 thousand characters",
-        "frames" => "full-screen truecolor redraws, synchronized",
-        "latency" => "cursor report round trip on an idle terminal",
+        "logflood" => "plain log lines, like cat of a big file",
+        "glyphstorm" => "CJK, emoji, accents, box drawing",
+        "colorflood" => "every character with its own colors",
+        "scrollstorm" => "a pinned header and footer, text scrolling between",
+        "cursorstorm" => "random cursor moves and short colored writes",
+        "longlines" => "lines of 5 to 50 thousand characters",
+        "framerate" => "full-screen truecolor redraws, synchronized",
+        "roundtrip" => "cursor report round trip on an idle terminal",
         _ => "",
     }
+}
+
+/// What each test was called up to 0.1 (when ttystorm was termbench), before each became a command.
+const OLD_NAMES: [(&str, &str); 8] = [
+    ("ascii", "logflood"),
+    ("unicode", "glyphstorm"),
+    ("truecolor", "colorflood"),
+    ("scroll-region", "scrollstorm"),
+    ("cursor", "cursorstorm"),
+    ("long-lines", "longlines"),
+    ("frames", "framerate"),
+    ("latency", "roundtrip"),
+];
+
+/// A test's name today, given the name a results file saved before the rename uses.
+pub fn current_name(name: &str) -> &str {
+    OLD_NAMES.iter().find(|(old, _)| *old == name).map_or(name, |(_, new)| new)
+}
+
+/// The generator's seed for a test. It hashes the old name, so the bytes didn't change with the
+/// rename and results saved before it still compare.
+fn seed_of(name: &str) -> u64 {
+    let old = OLD_NAMES.iter().find(|(_, new)| *new == name).map_or(name, |(old, _)| old);
+    old.bytes().fold(0x9E37_79B9u64, |h, b| h.wrapping_mul(31).wrapping_add(b as u64))
 }
 
 /// What a throughput test sends, and how many screen frames that is (0 when it isn't frames).
@@ -31,21 +63,20 @@ pub struct Payload {
     pub frames: usize,
 }
 
-/// The bytes for the throughput test `name`, a little over `target` bytes. `None` for `latency`
+/// The bytes for the throughput test `name`, a little over `target` bytes. `None` for `roundtrip`
 /// (which sends nothing but questions) and for names that don't exist.
 pub fn payload(name: &str, size: Size, target: usize) -> Option<Payload> {
-    let seed = name.bytes().fold(0x9E37_79B9u64, |h, b| h.wrapping_mul(31).wrapping_add(b as u64));
-    let mut rng = Rng::new(seed);
+    let mut rng = Rng::new(seed_of(name));
     let mut out = Vec::with_capacity(target + 64 * 1024);
     let mut frames = 0;
     match name {
-        "ascii" => ascii(&mut rng, &mut out, target),
-        "unicode" => unicode(&mut rng, &mut out, target),
-        "truecolor" => truecolor(&mut rng, &mut out, target, size),
-        "scroll-region" => scroll_region(&mut rng, &mut out, target, size),
-        "cursor" => cursor(&mut rng, &mut out, target, size),
-        "long-lines" => long_lines(&mut rng, &mut out, target),
-        "frames" => frames = frames_stream(&mut out, target, size),
+        "logflood" => ascii(&mut rng, &mut out, target),
+        "glyphstorm" => unicode(&mut rng, &mut out, target),
+        "colorflood" => truecolor(&mut rng, &mut out, target, size),
+        "scrollstorm" => scroll_region(&mut rng, &mut out, target, size),
+        "cursorstorm" => cursor(&mut rng, &mut out, target, size),
+        "longlines" => long_lines(&mut rng, &mut out, target),
+        "framerate" => frames = frames_stream(&mut out, target, size),
         _ => return None,
     }
     Some(Payload { bytes: out, frames })
@@ -65,7 +96,7 @@ const WORDS: [&str; 40] = [
     "token",
     "refresh",
     "upstream",
-    "latency",
+    "roundtrip",
     "payload",
     "buffer",
     "worker",
@@ -253,6 +284,7 @@ fn scroll_region(rng: &mut Rng, out: &mut Vec<u8>, target: usize, size: Size) {
     out.extend_from_slice(b"\x1b[2J");
     if top > 1 {
         canvas::goto(out, 0, 0);
+        // The old names, kept so the bytes stay the same and older results still compare.
         out.extend_from_slice(b"\x1b[7m termbench scroll-region \x1b[0m");
         canvas::goto(out, 0, rows - 1);
         out.extend_from_slice(b"\x1b[7m -- INSERT -- \x1b[0m");
@@ -365,33 +397,44 @@ mod tests {
 
     #[test]
     fn every_throughput_test_reaches_its_size() {
-        for name in NAMES.iter().filter(|n| **n != "latency" && **n != "frames") {
+        for name in NAMES.iter().filter(|n| **n != "roundtrip" && **n != "framerate") {
             let p = make(name, 200_000);
             assert!(p.bytes.len() >= 200_000, "{name}: {}", p.bytes.len());
             assert!(p.bytes.len() < 200_000 + 120_000, "{name} overshoots: {}", p.bytes.len());
         }
-        assert!(payload("latency", SIZE, 1000).is_none());
+        assert!(payload("roundtrip", SIZE, 1000).is_none());
         assert!(payload("nope", SIZE, 1000).is_none());
     }
 
     #[test]
     fn the_same_name_gives_the_same_bytes() {
-        for name in NAMES.iter().filter(|n| **n != "latency") {
+        for name in NAMES.iter().filter(|n| **n != "roundtrip") {
             assert_eq!(make(name, 50_000).bytes, make(name, 50_000).bytes, "{name}");
         }
-        assert_ne!(make("ascii", 50_000).bytes, make("unicode", 50_000).bytes);
+        assert_ne!(make("logflood", 50_000).bytes, make("glyphstorm", 50_000).bytes);
+    }
+
+    #[test]
+    fn the_rename_kept_the_bytes() {
+        let old = "unicode".bytes().fold(0x9E37_79B9u64, |h, b| h.wrapping_mul(31).wrapping_add(b as u64));
+        assert_eq!(seed_of("glyphstorm"), old);
+        assert_eq!(current_name("unicode"), "glyphstorm");
+        assert_eq!(current_name("logflood"), "logflood");
+        assert!(OLD_NAMES.iter().all(|(_, new)| NAMES.contains(new)));
     }
 
     #[test]
     fn text_tests_are_valid_utf8() {
-        for name in ["ascii", "unicode", "truecolor", "scroll-region", "cursor", "long-lines", "frames"] {
+        for name in
+            ["logflood", "glyphstorm", "colorflood", "scrollstorm", "cursorstorm", "longlines", "framerate"]
+        {
             assert!(std::str::from_utf8(&make(name, 100_000).bytes).is_ok(), "{name}");
         }
     }
 
     #[test]
     fn ascii_lines_have_the_requested_lengths() {
-        let p = make("ascii", 20_000);
+        let p = make("logflood", 20_000);
         let text = String::from_utf8_lossy(&p.bytes);
         let lines: Vec<&str> = text.split("\r\n").filter(|l| !l.is_empty()).collect();
         assert!(lines.len() > 100);
@@ -402,14 +445,14 @@ mod tests {
 
     #[test]
     fn long_lines_are_long() {
-        let p = make("long-lines", 400_000);
+        let p = make("longlines", 400_000);
         let text = String::from_utf8_lossy(&p.bytes);
         assert!(text.split("\r\n").filter(|l| !l.is_empty()).all(|l| (5_000..=50_000).contains(&l.len())));
     }
 
     #[test]
     fn unicode_mixes_scripts() {
-        let text = String::from_utf8_lossy(&make("unicode", 50_000).bytes).to_string();
+        let text = String::from_utf8_lossy(&make("glyphstorm", 50_000).bytes).to_string();
         assert!(text.chars().any(|c| ('\u{4e00}'..='\u{9fa5}').contains(&c)));
         assert!(text.chars().any(|c| ('\u{1f600}'..='\u{1f64f}').contains(&c)));
         assert!(text.chars().any(|c| ('\u{2500}'..='\u{257f}').contains(&c)));
@@ -418,18 +461,18 @@ mod tests {
 
     #[test]
     fn scroll_region_sets_and_resets_the_region() {
-        let text = String::from_utf8_lossy(&make("scroll-region", 100_000).bytes).to_string();
+        let text = String::from_utf8_lossy(&make("scrollstorm", 100_000).bytes).to_string();
         assert!(text.contains("\x1b[3;28r"));
         assert!(text.contains("\x1bM"));
         assert!(text.ends_with("\x1b[?6l\x1b[r"));
         // Tiny screens get no header or footer and still a valid region.
-        let tiny = payload("scroll-region", Size { cols: 20, rows: 5, px_w: 0, px_h: 0 }, 10_000);
+        let tiny = payload("scrollstorm", Size { cols: 20, rows: 5, px_w: 0, px_h: 0 }, 10_000);
         assert!(tiny.is_some_and(|p| String::from_utf8_lossy(&p.bytes).contains("\x1b[1;5r")));
     }
 
     #[test]
     fn frames_are_whole_synchronized_screens() {
-        let p = make("frames", 1_000_000);
+        let p = make("framerate", 1_000_000);
         assert!(p.frames >= 30);
         let text = String::from_utf8_lossy(&p.bytes).to_string();
         assert_eq!(text.matches("\x1b[?2026h").count(), p.frames);
@@ -442,7 +485,7 @@ mod tests {
     fn tiny_terminals_do_not_panic() {
         for (cols, rows) in [(1, 1), (2, 2), (20, 5)] {
             let size = Size { cols, rows, px_w: 0, px_h: 0 };
-            for name in NAMES.iter().filter(|n| **n != "latency") {
+            for name in NAMES.iter().filter(|n| **n != "roundtrip") {
                 assert!(
                     payload(name, size, 5_000).is_some_and(|p| !p.bytes.is_empty()),
                     "{name} at {cols}x{rows}"

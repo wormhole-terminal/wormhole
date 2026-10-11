@@ -85,7 +85,7 @@ sleep 1; cat "$S/ctl/out.txt"
 - Speed: `frames <n>` records each forced draw's time in `frames.txt` (the same whether or not the
   window can be seen); `paints` reports terminal grids drawn per second, which only means something
   while the window is on screen (macOS throttles a hidden one to ~20). `scripts/perf.sh` runs both
-  under termbench's loads.
+  under ttystorm's loads.
 - Window N reads `cmdN` and writes `outN.txt` (`cmd2`/`out2.txt` for the second window).
 - The Studio and settings windows open on the next tick: send their follow-up commands in a later batch.
 - Debug builds: `inspect` (⇧⌥⌘I), `hover x y`, `click x y` open the inspector and report an element's file:line

@@ -1,4 +1,4 @@
-//! `termbench compare`: the saved results of several terminals side by side. Per test one bar for
+//! `ttystorm compare`: the saved results of several terminals side by side. Per test one bar for
 //! each terminal on a shared scale (the best fills it), the best marked, and how many times better
 //! than the first file each one is.
 
@@ -139,7 +139,7 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
     let base = &all[0];
     p.blank();
     let mut l = Line::new();
-    l.pad(2).gradient_text("termbench compare");
+    l.pad(2).gradient_text("ttystorm compare");
     l.text(&format!("  {} terminals", all.len()), DIM);
     if width >= 70 {
         l.right(&base.date, DIM, width - 2);
@@ -294,12 +294,12 @@ mod tests {
     #[test]
     fn the_best_is_found_whichever_way_the_unit_goes() {
         let all = three();
-        assert_eq!(best_of(&all, "ascii"), Some(1));
+        assert_eq!(best_of(&all, "logflood"), Some(1));
         // Latency: the second file has twice the microseconds, so the third (half) is best.
-        assert_eq!(best_of(&all, "latency"), Some(2));
+        assert_eq!(best_of(&all, "roundtrip"), Some(2));
         assert_eq!(best_of(&all, "nope"), None);
         // Timed out results never win.
-        assert_eq!(best_of(&all, "truecolor"), Some(1));
+        assert_eq!(best_of(&all, "colorflood"), Some(1));
     }
 
     #[test]
@@ -331,6 +331,6 @@ mod tests {
         let mut a = sample("a", 1.0);
         a.tests.reverse();
         let names = test_names(&[a]);
-        assert_eq!(names, vec!["ascii", "truecolor", "frames", "latency"]);
+        assert_eq!(names, vec!["logflood", "colorflood", "framerate", "roundtrip"]);
     }
 }

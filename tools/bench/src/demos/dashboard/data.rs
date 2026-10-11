@@ -87,7 +87,7 @@ pub const PROCS: [(&str, &str, f64); 24] = [
     ("zsh -il", "dev", 0.02),
     ("git status --porcelain=v2", "dev", 0.08),
     ("rust-analyzer", "dev", 0.4),
-    ("termbench dashboard --seconds 60", "dev", 0.2),
+    ("ttystorm dashboard --seconds 60", "dev", 0.2),
     ("Finder", "dev", 0.05),
     ("com.apple.WebKit.WebContent", "dev", 0.16),
     ("ssh-agent -l", "dev", 0.01),
@@ -137,7 +137,7 @@ pub const FILES: [&str; 8] = [
 pub const COMMITS: [&str; 6] = [
     "perf(release): build the release faster",
     "fix(sidebar): no stuck band flickering",
-    "feat(bench): termbench demos",
+    "feat(bench): ttystorm demos",
     "docs(releasing): download host cost",
     "refactor(panes): one split per layout",
     "chore: version 0.1.4",

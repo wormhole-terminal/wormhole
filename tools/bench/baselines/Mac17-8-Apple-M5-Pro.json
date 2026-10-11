@@ -2,7 +2,7 @@
   "format": "wormhole-perf",
   "format_version": 1,
   "workloads": {
-    "wormhole": {
+    "warptunnel": {
       "draw_avg_ms": 1.58,
       "draw_max_ms": 2.38,
       "draw_avg_runs": [
@@ -117,17 +117,17 @@
     "rows": 69,
     "size_mb": 16,
     "tests": {
-      "ascii": {
+      "logflood": {
         "mbps": 182.1,
         "min": 177.1,
         "max": 184.2
       },
-      "truecolor": {
+      "colorflood": {
         "mbps": 190.5,
         "min": 186.4,
         "max": 192.0
       },
-      "cursor": {
+      "cursorstorm": {
         "mbps": 163.1,
         "min": 161.6,
         "max": 163.2

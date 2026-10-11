@@ -31,7 +31,7 @@ October 2026) and the OSC tap reads colored output at about 2 GB/s. Keep them:
   green; find out what got slower, and if it is worth it say so in the commit.
 
 After a change here, and after any GPUI update, run `scripts/perf.sh` on a Mac: it builds a
-release, measures draw time per frame and main-thread load under termbench's workloads, and fails
+release, measures draw time per frame and main-thread load under ttystorm's workloads, and fails
 against the baseline in `tools/bench/baselines/`. To look deeper: `sample <pid> 5` on an isolated
 instance (see the `devctl` skill), devctl `frames <n>` (draw time, any window state) and `paints`
 (frames drawn on screen). `paints` means nothing while the window can't be seen (display asleep,

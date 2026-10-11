@@ -16,12 +16,12 @@ pub fn panel_width(cols: u16) -> usize {
 fn reference(name: &str, unit: Unit) -> f64 {
     match (unit, name) {
         (Unit::Fps, _) => 600.0,
-        (_, "ascii") => 400.0,
-        (_, "unicode") => 300.0,
-        (_, "truecolor") => 300.0,
-        (_, "scroll-region") => 400.0,
-        (_, "cursor") => 300.0,
-        (_, "long-lines") => 600.0,
+        (_, "logflood") => 400.0,
+        (_, "glyphstorm") => 300.0,
+        (_, "colorflood") => 300.0,
+        (_, "scrollstorm") => 400.0,
+        (_, "cursorstorm") => 300.0,
+        (_, "longlines") => 600.0,
         _ => 1000.0,
     }
 }
@@ -135,7 +135,7 @@ pub fn results_panel(r: &Results, width: usize, saved: Option<&str>) -> Panel {
     let inner = width.saturating_sub(4);
     p.blank();
     let mut l = Line::new();
-    l.pad(2).gradient_text("termbench").text("  terminal throughput & latency", DIM);
+    l.pad(2).gradient_text("ttystorm").text("  terminal throughput & latency", DIM);
     if width >= 70 {
         l.right(&r.date, DIM, width - 2);
     }
@@ -182,17 +182,57 @@ pub fn results_panel(r: &Results, width: usize, saved: Option<&str>) -> Panel {
     if let Some(path) = saved {
         let mut l = Line::new();
         let name = std::path::Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or(path);
-        l.pad(2).text(&fit(&format!("Saved to {name}  ·  termbench compare a.json b.json"), inner), FAINT);
+        l.pad(2).text(&fit(&format!("Saved to {name}  ·  ttystorm compare a.json b.json"), inner), FAINT);
         p.push(l);
     }
     p.blank();
     p
 }
 
+/// The results as plain text, without colors or escape sequences: `--plain`, for logs and scripts.
+pub fn results_plain(r: &Results, saved: Option<&str>) -> String {
+    let mut s = format!("{}  ·  {}\n", r.label, machine_line(r, usize::MAX));
+    s.push_str(&format!(
+        "{} MB per test  ·  median of {} runs  ·  ttystorm {}\n\n",
+        r.size_mb, r.runs, r.version
+    ));
+    for t in &r.tests {
+        let (num, unit) = value_parts(t);
+        let detail = match t.unit {
+            _ if t.timeout => String::new(),
+            Unit::Micros => format!(
+                "p90 {:.0}  p99 {:.0}",
+                t.extra("p90").unwrap_or(t.max),
+                t.extra("p99").unwrap_or(t.max)
+            ),
+            _ => format!("min {:.1}  max {:.1}", t.min, t.max),
+        };
+        let value = if t.timeout { "timed out".to_string() } else { format!("{num:>8} {unit:<5}") };
+        s.push_str(format!("{:<NAME_W$} {value}  {detail}", t.name).trim_end());
+        s.push('\n');
+    }
+    if let Some(path) = saved {
+        s.push_str(&format!("\nsaved to {path}\n"));
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::results::sample;
     use super::*;
+
+    #[test]
+    fn plain_results_name_each_test_without_escapes() {
+        let mut r = sample("Wormhole 0.3.0", 1.0);
+        r.tests[1].timeout = true;
+        let text = results_plain(&r, Some("w.json"));
+        assert!(!text.contains('\x1b'), "{text}");
+        for t in &r.tests {
+            assert!(text.lines().any(|l| l.starts_with(t.name.as_str())), "{}: {text}", t.name);
+        }
+        assert!(text.contains("timed out") && text.contains("p99") && text.contains("w.json"), "{text}");
+    }
 
     #[test]
     fn every_line_fits_the_panel() {
