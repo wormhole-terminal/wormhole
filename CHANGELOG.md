@@ -19,6 +19,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   waiting for you, so folding never hides a question.
 - Window → Go to Finished Terminal (⌥⇧⌘J) goes to the terminal that finished last and you
   haven't looked at yet, then the one before it: a way through everything ready for review.
+- Each worktree Wormhole makes gets ten ports of its own, in its terminals as `$WORMHOLE_PORT`
+  and `$WORMHOLE_PORTS`, so dev servers in several worktrees don't fight over one port.
+- A project can name a setup command for new worktrees (`"worktree": { "setup": "npm install" }`
+  in `.wormhole/config.json`); it runs once in the new worktree's terminal, after you trust it.
 
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a

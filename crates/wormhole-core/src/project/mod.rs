@@ -223,6 +223,10 @@ pub struct ProjectConfig {
     pub color_locked: bool,
     /// Why `project_color_locked` was set aside, when it is there and isn't true or false.
     pub lock_error: Option<String>,
+    /// `worktree.setup`: what a new worktree's terminal runs first (`npm install`, copying an
+    /// `.env`), once, when Wormhole makes a worktree of this repository. It runs a command, so it
+    /// needs trust like `shell` and `env`.
+    pub worktree_setup: Option<String>,
 }
 
 /// `layout.json`: sessions to open when the project is opened.
@@ -425,9 +429,24 @@ fn config_from_value(path: &Path, value: serde_json::Value) -> Result<ProjectCon
         Some(serde_json::Value::Bool(locked)) => (locked, None),
         Some(_) => (false, Some("\"project_color_locked\" must be true or false".to_string())),
     };
+    let worktree_setup = match settings.remove("worktree") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(worktree) => serde_json::from_value::<WorktreeConfig>(worktree)
+            .map_err(|e| ProjectError::invalid(path, format!("\"worktree\": {e}")))?
+            .setup
+            .filter(|setup| !setup.trim().is_empty()),
+    };
     // `$schema` is editor tooling, not a setting.
     settings.remove("$schema");
-    Ok(ProjectConfig { settings, env, shell, color, color_error, color_locked, lock_error })
+    Ok(ProjectConfig { settings, env, shell, color, color_error, color_locked, lock_error, worktree_setup })
+}
+
+/// `config.json`'s `worktree` object.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct WorktreeConfig {
+    #[serde(default)]
+    setup: Option<String>,
 }
 
 fn parse_layout(path: &Path, text: &str) -> Result<Layout, ProjectError> {

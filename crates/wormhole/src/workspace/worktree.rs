@@ -66,6 +66,22 @@ fn allowed(repo: &Path, cx: &mut App) -> Result<(), String> {
     }
 }
 
+/// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`, under the
+/// same conditions [`allowed`] checks (a project that isn't trusted with its settings on runs
+/// nothing). It is the repository's project that is asked, not the copy of `.wormhole/` the new
+/// worktree checks out: that one has not been trusted in its new folder.
+fn setup_command(repo: &Path, cx: &mut App) -> Option<String> {
+    if !project::project_folders_on(cx) {
+        return None;
+    }
+    let folder = wormhole_core::project::find_project(repo)?;
+    let project = project::load_project_info(&folder.root, cx)?;
+    if !app(cx).hub.enabled(&project, Feature::Settings) {
+        return None;
+    }
+    project.snapshot.config()?.worktree_setup.clone()
+}
+
 /// A path with the home folder as `~`.
 fn shown(path: &Path) -> String {
     wormhole_core::sidebar::display_path(path, session::home_dir())
@@ -286,14 +302,20 @@ impl Workspace {
             let result = cx.background_spawn(async move { worktree::add(&made) }).await;
             this.update_in(cx, |ws, window, cx| match result {
                 Ok(()) => {
-                    tracing::info!(branch = plan.branch, folder = %plan.folder.display(), "worktree made");
+                    let mut plan = plan;
+                    // Its own ports, before its first terminal starts with them in its env.
+                    plan.port = app(cx).worktrees.free_ports(worktree::port_free);
+                    tracing::info!(branch = plan.branch, folder = %plan.folder.display(), port = ?plan.port, "worktree made");
+                    let setup = setup_command(&plan.repo, cx);
                     app_mut(cx).record_worktree(plan.clone());
                     let folder = plan.folder.to_string_lossy().into_owned();
                     let ix = ws.open_session(None, Some(folder), window, cx);
-                    if let Some(command) = command.map(|c| c.trim().to_string()).filter(|c| !c.is_empty()) {
-                        let terminal = ws.sessions[ix].id;
-                        ws.control_send_text(terminal, &command, true, cx);
-                    }
+                    let terminal = ws.sessions[ix].id;
+                    // The project's setup first, then what was asked for: the shell reads them
+                    // in turn.
+                    let command = command.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+                    let lines: Vec<String> = setup.into_iter().chain(command).collect();
+                    ws.control_send_lines(terminal, lines, cx);
                 }
                 Err(err) => {
                     tracing::warn!("making a worktree: {err:#}");

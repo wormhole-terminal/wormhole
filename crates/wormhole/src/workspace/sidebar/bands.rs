@@ -5,6 +5,7 @@
 //! and pull request after the name). The band
 //! of the folder the list is scrolled into sticks under the header, pushed up 1:1 by the next one.
 use wormhole_core::git::pr::PullRequest;
+use wormhole_core::git::worktree::PORTS_VAR;
 use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::text::count;
 use wormhole_core::sidebar::text::{band_line_widths, band_widths};
@@ -57,6 +58,13 @@ impl Workspace {
         let changes = git.and_then(|g| g.changes).filter(|&n| frame.show_changes && n > 0);
         let worktree =
             band.folder.as_deref().filter(|_| git.is_some()).and_then(|root| self.worktree_of(root));
+        // A worktree Wormhole made has ports of its own: its mark's tooltip names them.
+        let ports = band
+            .folder
+            .as_deref()
+            .and_then(|folder| app(cx).worktrees.find(folder))
+            .and_then(|made| made.env().into_iter().find(|(name, _)| *name == PORTS_VAR))
+            .map(|(_, ports)| ports);
 
         let two_lines = band_has_second_line(band, frame);
         let pull_request = git.and(self.band_pull_request(band, cx));
@@ -71,7 +79,7 @@ impl Workspace {
             band,
             git,
             changes,
-            worktree.as_deref(),
+            (worktree.as_deref(), ports),
             two_lines,
             pr.take_if(|_| !two_lines),
             frame,
@@ -305,7 +313,7 @@ impl Workspace {
         band: &Band,
         git: Option<GroupGit>,
         changes: Option<usize>,
-        worktree: Option<&Path>,
+        (worktree, ports): (Option<&Path>, Option<String>),
         two_lines: bool,
         pull_request: Option<AnyElement>,
         frame: &Frame,
@@ -323,7 +331,8 @@ impl Workspace {
             let name = main
                 .file_name()
                 .map_or_else(|| main.display().to_string(), |n| n.to_string_lossy().into_owned());
-            let first = SharedString::from(format!("{} · worktree of {name}", band.label));
+            let ports = ports.as_deref().map(|ports| format!(" · ports {ports}")).unwrap_or_default();
+            let first = SharedString::from(format!("{} · worktree of {name}{ports}", band.label));
             let second = SharedString::from(
                 band.folder.as_deref().map(|f| display_path(f, home_dir())).unwrap_or_default(),
             );

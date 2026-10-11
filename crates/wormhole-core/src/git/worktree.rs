@@ -10,7 +10,13 @@
 //! files in it; git refuses too, as the remove is never forced), and the set of worktrees Wormhole
 //! made ([`Worktrees`], kept in the store across launches), so closing such a terminal can offer
 //! to remove it and the sidebar can mark it. A worktree the user made by hand is never removed.
+//!
+//! Each worktree Wormhole makes also gets ports of its own ([`Worktrees::free_ports`]): a block of
+//! [`PORT_BLOCK`] that no other of its worktrees has and nothing listened on when it was made, told
+//! to its terminals as `WORMHOLE_PORT` and `WORMHOLE_PORTS` ([`Worktree::env`]), so the dev servers
+//! of several worktrees of one repository don't fight over the same port.
 
+use std::net::{Ipv4Addr, TcpListener};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, Result};
@@ -25,12 +31,35 @@ pub const STORE_KEY: &str = "worktrees";
 /// The folder next to a repository that holds its worktrees: `<repo>-worktrees`.
 const SIBLING_SUFFIX: &str = "-worktrees";
 
+/// How many ports a worktree gets, and the range their blocks are taken from: high enough to stay
+/// clear of the usual dev-server defaults (3000, 5173, 8080, …), below the ephemeral ports macOS
+/// hands out (49152 on), and room for a hundred worktrees.
+pub const PORT_BLOCK: u16 = 10;
+pub const PORTS_FROM: u16 = 41000;
+pub const PORTS_TO: u16 = 42000;
+
+/// The variables a worktree's terminals get: its first port, and the whole block ("41000-41009").
+pub const PORT_VAR: &str = "WORMHOLE_PORT";
+pub const PORTS_VAR: &str = "WORMHOLE_PORTS";
+
 /// A worktree Wormhole made: of which repository (its main working tree), on which branch, where.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Worktree {
     pub repo: PathBuf,
     pub branch: String,
     pub folder: PathBuf,
+    /// The first of its [`PORT_BLOCK`] ports; `None` for one made before worktrees had ports.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<u16>,
+}
+
+impl Worktree {
+    /// What its terminals get in their environment: its ports, when it has some.
+    pub fn env(&self) -> Vec<(&'static str, String)> {
+        let Some(first) = self.port else { return Vec::new() };
+        let last = first.saturating_add(PORT_BLOCK - 1);
+        vec![(PORT_VAR, first.to_string()), (PORTS_VAR, format!("{first}-{last}"))]
+    }
 }
 
 /// `input` as a branch name git accepts (`git check-ref-format --branch`), trimmed, or why not,
@@ -101,7 +130,7 @@ pub fn plan(repo: &Path, branch: &str, base: Option<&Path>) -> Result<Worktree, 
     if folder.exists() {
         return Err(format!("{} already exists", folder.display()));
     }
-    Ok(Worktree { repo: repo.to_path_buf(), branch, folder })
+    Ok(Worktree { repo: repo.to_path_buf(), branch, folder, port: None })
 }
 
 /// Whether `repo` has a local branch called `branch`.
@@ -195,13 +224,33 @@ impl Worktrees {
     pub fn is_empty(&self) -> bool {
         self.made.is_empty()
     }
+
+    /// The first port of a block for a new worktree: the lowest in [`PORTS_FROM`]..[`PORTS_TO`]
+    /// that none of these worktrees has and of which `free` says every port is free. `None` when
+    /// every block is taken.
+    pub fn free_ports(&self, free: impl Fn(u16) -> bool) -> Option<u16> {
+        (PORTS_FROM..PORTS_TO).step_by(PORT_BLOCK as usize).find(|&first| {
+            let block = first..first + PORT_BLOCK;
+            !self.made.iter().any(|w| w.port.is_some_and(|port| block.contains(&port)))
+                && block.clone().all(&free)
+        })
+    }
+}
+
+/// Whether nothing on this Mac listens on `port` (on the loopback address, where a dev server
+/// started without a host does too): it can be bound now.
+pub fn port_free(port: u16) -> bool {
+    TcpListener::bind((Ipv4Addr::LOCALHOST, port)).is_ok()
 }
 
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{Worktree, Worktrees, add, branch_name, folder_for, is_dirty, plan, remove};
+    use super::{
+        PORT_BLOCK, PORT_VAR, PORTS_FROM, PORTS_VAR, Worktree, Worktrees, add, branch_name, folder_for,
+        is_dirty, plan, port_free, remove,
+    };
     use crate::git::testing::{git, repo_with, write};
     use crate::git::worktree_of;
 
@@ -238,6 +287,46 @@ mod tests {
         ] {
             assert!(branch_name(bad).is_err(), "{bad:?} must be refused");
         }
+    }
+
+    #[test]
+    fn each_worktree_gets_a_block_of_ports_no_other_has() {
+        let made = |port: u16| Worktree {
+            repo: PathBuf::from("/r"),
+            branch: format!("b{port}"),
+            folder: PathBuf::from(format!("/w/{port}")),
+            port: Some(port),
+        };
+        let mut set = Worktrees::default();
+        assert_eq!(set.free_ports(|_| true), Some(PORTS_FROM));
+        set.record(made(PORTS_FROM));
+        assert_eq!(set.free_ports(|_| true), Some(PORTS_FROM + PORT_BLOCK));
+        // A port something else listens on puts its whole block out of reach.
+        let busy = PORTS_FROM + PORT_BLOCK + 3;
+        assert_eq!(set.free_ports(|port| port != busy), Some(PORTS_FROM + 2 * PORT_BLOCK));
+        // A worktree that is gone gives its block back.
+        set.forget(Path::new(&format!("/w/{PORTS_FROM}")));
+        assert_eq!(set.free_ports(|_| true), Some(PORTS_FROM));
+        assert_eq!(set.free_ports(|_| false), None, "nothing free");
+
+        assert_eq!(
+            made(41020).env(),
+            [(PORT_VAR, "41020".to_string()), (PORTS_VAR, "41020-41029".to_string())]
+        );
+        assert!(Worktree { port: None, ..made(1) }.env().is_empty());
+        // Worktrees stored before ports existed still load, without one.
+        let old = r#"{"made":[{"repo":"/r","branch":"a","folder":"/w/a"}]}"#;
+        let loaded = Worktrees::from_json(old);
+        assert_eq!(loaded.iter().next().map(|w| w.port), Some(None));
+        assert_eq!(Worktrees::from_json(&set.to_json()), set);
+    }
+
+    #[test]
+    fn a_bound_port_is_not_free() {
+        let listener = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        assert!(!port_free(port));
+        drop(listener);
     }
 
     #[test]
@@ -329,9 +418,14 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let kept = dir.path().join("kept");
         std::fs::create_dir_all(&kept).expect("mkdir");
-        let one = Worktree { repo: PathBuf::from("/r"), branch: "a".into(), folder: kept.clone() };
-        let gone =
-            Worktree { repo: PathBuf::from("/r"), branch: "b".into(), folder: dir.path().join("gone") };
+        let one =
+            Worktree { repo: PathBuf::from("/r"), branch: "a".into(), folder: kept.clone(), port: None };
+        let gone = Worktree {
+            repo: PathBuf::from("/r"),
+            branch: "b".into(),
+            folder: dir.path().join("gone"),
+            port: None,
+        };
         let mut set = Worktrees::default();
         set.record(one.clone());
         set.record(gone.clone());

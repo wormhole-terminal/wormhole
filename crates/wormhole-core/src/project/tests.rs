@@ -136,6 +136,23 @@ fn config_splits_env_and_shell() {
 }
 
 #[test]
+fn config_reads_the_worktree_setup_and_no_setting_from_it() {
+    let (_tmp, p) = project(&[(CONFIG_FILE, r#"{"worktree": {"setup": "npm ci"}, "font_size": 13}"#)]);
+    let config = p.config().expect("ok").expect("present");
+    assert_eq!(config.worktree_setup.as_deref(), Some("npm ci"));
+    assert_eq!(serde_json::Value::Object(config.settings), json!({"font_size": 13}));
+    for nothing in [r#"{"worktree": {}}"#, r#"{"worktree": {"setup": "  "}}"#, r#"{"worktree": null}"#] {
+        let (_tmp, p) = project(&[(CONFIG_FILE, nothing)]);
+        assert_eq!(p.config().expect("ok").expect("present").worktree_setup, None, "{nothing}");
+    }
+    for bad in [r#"{"worktree": {"setup": 1}}"#, r#"{"worktree": {"teardown": "x"}}"#, r#"{"worktree": "x"}"#]
+    {
+        let (_tmp, p) = project(&[(CONFIG_FILE, bad)]);
+        assert!(matches!(p.config(), Err(ProjectError::Invalid { .. })), "{bad}");
+    }
+}
+
+#[test]
 fn config_errors_carry_position() {
     let (_tmp, p) = project(&[(CONFIG_FILE, "{\n  \"a\": 1\n  \"b\": 2\n}")]);
     match p.config() {

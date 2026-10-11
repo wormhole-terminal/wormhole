@@ -751,7 +751,11 @@ impl Workspace {
     /// `shells::for_terminal`), in the folder and with the scrollback the record has.
     fn make_pane(&mut self, record: &SessionRecord, window: &mut Window, cx: &mut Context<Self>) -> Pane {
         let cwd = record.cwd.as_ref().map(PathBuf::from);
-        let (env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
+        let (mut env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
+        // A worktree Wormhole made: its own ports, whatever the project says.
+        if let Some(made) = cwd.as_deref().and_then(|cwd| app(cx).worktrees.find(cwd)) {
+            env.extend(made.env().into_iter().map(|(name, value)| (name.to_string(), value)));
+        }
         let shell = wormhole_core::shells::for_terminal(
             record.shell.as_deref(),
             project_shell.as_deref(),

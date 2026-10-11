@@ -32,7 +32,12 @@ const CONFIG_TEMPLATE: &str = r##"// Settings for this project. Every key is opt
   // "env": { "RUST_LOG": "debug" },
 
   // The program new terminals here start. Wormhole asks before it takes effect.
-  // "shell": "/bin/zsh"
+  // "shell": "/bin/zsh",
+
+  // What a new worktree's terminal runs first, once (Shell → New Terminal in New Worktree…).
+  // The worktree's own ports are in $WORMHOLE_PORT and $WORMHOLE_PORTS. Wormhole asks before it
+  // takes effect.
+  // "worktree": { "setup": "npm install" }
 }
 "##;
 

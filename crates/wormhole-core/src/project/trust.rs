@@ -232,6 +232,9 @@ pub(super) fn request_for(snapshot: &ProjectSnapshot, files: Vec<PathBuf>) -> Tr
         for (name, value) in &config.env {
             commands.push(TrustLine::new("env:", format!("{name}={value}"), ""));
         }
+        if let Some(setup) = &config.worktree_setup {
+            commands.push(TrustLine::new("new worktree: run", setup, "in the worktree"));
+        }
     }
     let prompt_text = |file: &str| snapshot.action_prompt(file);
     for action in snapshot.actions() {
@@ -494,7 +497,8 @@ mod tests {
 
     #[test]
     fn request_lists_everything_and_binds_fingerprint() {
-        let config = r#"{"shell": "/bin/zsh", "env": {"A": "1"}, "font_size": 12}"#;
+        let config =
+            r#"{"shell": "/bin/zsh", "env": {"A": "1"}, "font_size": 12, "worktree": {"setup": "npm ci"}}"#;
         let layout =
             r#"{"sessions": [{"name": "Claude", "run": "claude", "cwd": "app"}, {"name": "Shell"}]}"#;
         let (_tmp, p) = project(&[(CONFIG_FILE, config), (ACTIONS_FILE, ACTIONS), (LAYOUT_FILE, layout)]);
@@ -504,14 +508,15 @@ mod tests {
             [
                 "shell: `/bin/zsh`",
                 "env: `A=1`",
+                "new worktree: run `npm ci` in the worktree",
                 "action t: run `cargo test` (current)",
                 "terminal Claude: run `claude` in app",
             ]
         );
         // What runs is kept apart from what runs it (the dialog colours it).
         let runs: Vec<&str> = request.commands.iter().map(|c| c.runs.as_str()).collect();
-        assert_eq!(runs, ["/bin/zsh", "A=1", "cargo test", "claude"]);
-        assert_eq!(request.commands[3].note, "in app");
+        assert_eq!(runs, ["/bin/zsh", "A=1", "npm ci", "cargo test", "claude"]);
+        assert_eq!(request.commands[4].note, "in app");
         assert_eq!(request.files.len(), 3);
 
         let data = TempDir::new().expect("tempdir");
