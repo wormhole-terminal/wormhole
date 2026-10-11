@@ -10,7 +10,8 @@
 #   scripts/devctl-instance.sh stop <scratch dir>
 #
 # Prints `ctl=<dir>` (write commands to <dir>/cmd, read <dir>/out.txt; screenshots land there) and
-# `pid=<pid>`. The instance keeps everything in <scratch dir>: data dir, HOME and agent home; it gets
+# `pid=<pid>`. The instance keeps everything in <scratch dir>: data dir, HOME, agent home and the
+# folder the command line tool installs `wh` into (cli-bin); it gets
 # the Finder's PATH and no agent counts as installed (`--env WORMHOLE_AGENT_PATH=<dir>` with a copy
 # of cat named like one puts it back); Touch ID is answered "cancel", notifications are logged
 # instead of shown, and it runs in background mode: it opens behind your windows and never takes
@@ -23,7 +24,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-usage() { sed -n '2,22p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,23p' "$0"; exit "${1:-0}"; }
 
 # The process <scratch>/pid names, if it is still the binary this script started there.
 own_pid() {

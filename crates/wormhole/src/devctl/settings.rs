@@ -80,6 +80,11 @@ pub(super) fn reset_confirm(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(String::new())
 }
 
+pub(super) fn cli_tool(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    ctx.workspace.devctl_settings_cli_tool(arg, ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn font_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.workspace.devctl_font_picker(arg, ctx.cx);
     Ok(String::new())

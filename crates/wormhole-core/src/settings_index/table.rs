@@ -578,18 +578,29 @@ const AGENTS: &[Group] = &[
     ),
     Group {
         title: "Command line",
-        blurb: "Scripts and agents can drive Wormhole with the Wormhole command: list terminals, read a \
+        blurb: "Scripts and agents can drive Wormhole from the command line: list terminals, read a \
                 status and send notifications.",
         aside: "",
-        entries: &[entry(
-            "control-write",
-            "Let the command line type and open terminals",
-            "Wormhole send-text types into a terminal and new-terminal opens one, as a paste; never \
-             into the terminal that asks, nor one waiting for your answer",
-            "cli command line control api socket send-text new-terminal scripts agents automation \
-             remote type",
-            &["control_write"],
-        )],
+        entries: &[
+            // The command's name is on the row itself (`ipc::control::COMMAND_NAME`); the keywords
+            // carry the names it has been called, so a search finds the row by either.
+            entry(
+                "cli-tool",
+                "Command line tool",
+                "The Wormhole command in any terminal",
+                "wh wht cli command install uninstall path shell alias symlink bin usr local terminal",
+                &[],
+            ),
+            entry(
+                "control-write",
+                "Let the command line type and open terminals",
+                "send-text types into a terminal and new-terminal opens one, as a paste; never into the \
+                 terminal that asks, nor one waiting for your answer",
+                "cli command line control api socket send-text new-terminal scripts agents automation \
+                 remote type",
+                &["control_write"],
+            ),
+        ],
     },
 ];
 

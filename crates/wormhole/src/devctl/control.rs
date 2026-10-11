@@ -4,7 +4,7 @@
 //! included) and appended to the results as the reply's one JSON line.
 
 use anyhow::{Result, anyhow};
-use wormhole_core::ipc::control::{HELP, Parsed, Request, parse};
+use wormhole_core::ipc::control::{Parsed, Request, help, parse};
 
 use super::Ctx;
 use super::ambient::later;
@@ -23,7 +23,7 @@ pub(super) fn control(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
     let cli = match parse(&words, &cwd, home.as_deref()).map_err(|mistake| anyhow!(mistake))? {
         Parsed::Run(cli) => cli,
-        Parsed::Help => return Ok(HELP.to_string()),
+        Parsed::Help => return Ok(help()),
     };
     let request = Request::new(cli.action, from);
     later(ctx, move |cx| {

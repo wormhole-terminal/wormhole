@@ -22,6 +22,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-installed", draw_installed),
     Setting::block("agents-other", draw_others),
     Setting::block("agents-how", draw_how),
+    cli_tool::SETTING,
     toggle!("control-write", control_write),
 ];
 

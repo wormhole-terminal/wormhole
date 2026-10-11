@@ -32,21 +32,30 @@ pub enum Parsed {
     Help,
 }
 
-pub const HELP: &str = "\
+/// What the command is called when someone types it: the name of the script that `cli_tool` puts in
+/// `PATH` for Wormhole's terminals and, on request, for any terminal. One constant, so the script's
+/// file name, the usage text, Settings and the docs' examples can't disagree.
+pub const COMMAND_NAME: &str = "wh";
+
+/// The usage text, with the command by the name it is called by (`COMMAND_NAME`), not the binary's.
+pub fn help() -> String {
+    let wh = COMMAND_NAME;
+    format!(
+        "\
 Wormhole: control the running app from the command line
 
-  Wormhole list
+  {wh} list
       Every window, terminal, tab and pane, with their ids.
-  Wormhole status [<target>]
+  {wh} status [<target>]
       One terminal's status: the target's, or this tab's inside a terminal; a summary otherwise.
-  Wormhole notify [<target>] [--title <text>] <body>...
+  {wh} notify [<target>] [--title <text>] <body>...
       A notification about a terminal (this tab without a target), in your words.
-  Wormhole send-text <target> [--submit] <text>... | -
+  {wh} send-text <target> [--submit] <text>... | -
       Type into a terminal, as a paste (`-` reads the text from stdin); --submit presses Return.
-  Wormhole new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]
+  {wh} new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]
       A new terminal in the front window (or --window), in a folder, running a command in its shell.
 
-  Wormhole welcome [-- <program> [<args>...]]
+  {wh} welcome [-- <program> [<args>...]]
       The first-run welcome, in this terminal; then it starts <program> (your shell) here.
 
   <target>: --terminal <id> | --tab <id> | --pane <id>, with the ids `list` prints.
@@ -56,7 +65,12 @@ Wormhole: control the running app from the command line
 Typing into terminals and opening them are off until Settings → Coding agents → \"Let the command
 line type and open terminals\" is on; listing, status and notify always work. Inside a terminal,
 WORMHOLE_TAB_ID says which tab asked.
-";
+
+{wh} runs in Wormhole's own terminals; for any other terminal, Settings → Coding agents → \"Command
+line tool\" installs it.
+"
+    )
+}
 
 /// Whether `word` as the first argument is this command line's (`Wormhole list …`).
 pub fn is_verb(word: &str) -> bool {
@@ -353,12 +367,12 @@ pub fn run(args: &[String]) -> i32 {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let cli = match parse(args, &cwd, home.as_deref()) {
         Ok(Parsed::Help) => {
-            print(HELP);
+            print(&help());
             return 0;
         }
         Ok(Parsed::Run(cli)) => cli,
         Err(mistake) => {
-            print_err(&format!("Wormhole: {mistake}\n\n{HELP}"));
+            print_err(&format!("Wormhole: {mistake}\n\n{}", help()));
             return 2;
         }
     };
@@ -536,7 +550,10 @@ mod tests {
         for list in [&[][..], &["help"], &["--help"], &["-h"], &["list", "--help"], &["send-text", "-h"]] {
             assert_eq!(parse(&words(list), Path::new("/"), None).expect("parses"), Parsed::Help, "{list:?}");
         }
-        assert!(super::HELP.contains("Wormhole list") && super::HELP.contains("--json"));
+        let help = super::help();
+        assert!(help.contains(&format!("{} list", super::COMMAND_NAME)) && help.contains("--json"));
+        // The usage names the command people type, never the binary's own name for it.
+        assert!(!help.contains("Wormhole list") && !help.contains("Wormhole send-text"));
     }
 
     #[test]

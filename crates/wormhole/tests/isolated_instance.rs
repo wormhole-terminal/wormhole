@@ -65,6 +65,11 @@ fn an_isolated_instance_gets_its_own_settings_and_a_fixed_path() {
     assert_eq!(value(&env, "WORMHOLE_DATA_DIR"), Some(in_run("data").as_str()));
     assert_eq!(value(&env, "WORMHOLE_DEVCTL"), Some(in_run("ctl").as_str()));
     assert_eq!(value(&env, "WORMHOLE_AGENT_HOME"), Some(in_run("agent-home").as_str()));
+    assert_eq!(
+        value(&env, "WORMHOLE_CLI_DIR"),
+        Some(in_run("cli-bin").as_str()),
+        "Settings -> Command line tool installs into the run dir, never /usr/local/bin"
+    );
     let home = run.join("home").canonicalize().expect("the scratch home exists");
     assert_eq!(value(&env, "HOME"), Some(home.display().to_string().as_str()));
     assert_eq!(value(&env, "WORMHOLE_START_DIR"), Some(scratch.display().to_string().as_str()));

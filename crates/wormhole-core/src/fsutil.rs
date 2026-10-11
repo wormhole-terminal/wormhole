@@ -93,6 +93,17 @@ fn escapes(path: &Path, root: &Path) -> io::Error {
 
 /// Replace `path` with `bytes`: readers (and a crash) see the old or the new content, never a mix.
 pub fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Result<()> {
+    write_file(path, bytes, policy, false)
+}
+
+/// [`write_atomic`] for a script that is run: the new file is executable (as far as the umask
+/// allows), and a file it replaces keeps its mode and gains execute wherever it could be read. Made
+/// executable before the rename, so there is never a moment the name holds a script that can't run.
+pub fn write_atomic_executable(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Result<()> {
+    write_file(path, bytes, policy, true)
+}
+
+fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: bool) -> io::Result<()> {
     let (mut dir, mut target) = locate_for_write(path, policy)?;
     fs::create_dir_all(&dir)?;
     // Re-check after creating: a missing directory chain could not be canonicalized before.
@@ -115,7 +126,7 @@ pub fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Re
     {
         use std::os::unix::fs::PermissionsExt;
         // New files get the usual 0666 &! umask instead of the temp file's private 0600.
-        builder.permissions(fs::Permissions::from_mode(0o666));
+        builder.permissions(fs::Permissions::from_mode(if executable { 0o777 } else { 0o666 }));
     }
     let mut tmp = builder.tempfile_in(&dir)?;
     tmp.write_all(bytes)?;
@@ -128,7 +139,14 @@ pub fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Re
     if let Ok(existing) = existing
         && existing.is_file()
     {
-        tmp.as_file().set_permissions(existing.permissions())?;
+        let mut mode = existing.permissions();
+        #[cfg(unix)]
+        if executable {
+            use std::os::unix::fs::PermissionsExt;
+            let bits = mode.mode();
+            mode.set_mode(bits | ((bits & 0o444) >> 2));
+        }
+        tmp.as_file().set_permissions(mode)?;
     }
     tmp.as_file().sync_all()?;
     tmp.persist(&target).map_err(|e| e.error)?;
@@ -302,6 +320,7 @@ mod tests {
 
     use super::{
         FileStamp, LinkPolicy, Refusal, fs, read_capped, read_to_string_capped, refusal, write_atomic,
+        write_atomic_executable,
     };
 
     fn names(dir: &std::path::Path) -> Vec<String> {
@@ -331,6 +350,26 @@ mod tests {
         fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
         write_atomic(&file, b"{\"k\":1}", LinkPolicy::Follow).unwrap();
         assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn an_executable_write_can_be_run_whether_the_file_is_new_or_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let mode = |file: &std::path::Path| fs::metadata(file).unwrap().permissions().mode() & 0o777;
+        let file = dir.path().join("tool");
+        write_atomic_executable(&file, b"#!/bin/sh\n", LinkPolicy::Follow).unwrap();
+        assert_eq!(mode(&file) & 0o100, 0o100, "new: executable by its owner");
+        // A plain file of the user's, 0640: it keeps who can read it and gains execute for them only.
+        let plain = dir.path().join("plain");
+        fs::write(&plain, "old").unwrap();
+        fs::set_permissions(&plain, fs::Permissions::from_mode(0o640)).unwrap();
+        write_atomic_executable(&plain, b"new", LinkPolicy::Follow).unwrap();
+        assert_eq!(mode(&plain), 0o750);
+        assert_eq!(fs::read_to_string(&plain).unwrap(), "new");
+        // The plain write leaves a new file as it was: not executable.
+        let data = dir.path().join("data");
+        write_atomic(&data, b"x", LinkPolicy::Follow).unwrap();
+        assert_eq!(mode(&data) & 0o111, 0);
     }
 
     #[test]

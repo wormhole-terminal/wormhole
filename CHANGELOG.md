@@ -27,6 +27,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   change there. The comments gather across files under the diff, and Paste into Terminal puts
   them in the terminal's prompt as one message, each with its file, line and the line quoted,
   for you to send.
+- The command line has a short name: `wh list`, `wh notify`, `wh send-text` and the rest work in
+  every Wormhole terminal as they are, with no alias. For other terminals, Settings → Coding
+  agents → Command line tool installs `wh` into `/usr/local/bin` or `~/.local/bin` (only when you
+  press Install, never over another `wh`, and Uninstall removes it) and shows the line to add to
+  your shell's startup file when that folder isn't on its `PATH`.
 
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a

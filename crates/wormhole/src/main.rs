@@ -63,6 +63,9 @@ fn main() {
         return;
     };
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting");
+    // The `wh` command for the terminals this app starts, pointing at the binary that runs now.
+    // Before any window opens a terminal.
+    wormhole_core::cli_tool::keep_current_at_launch();
 
     let application = gpui_kit::application().with_assets(icons::Assets);
     // From the launch on: a launch to open a file sends it before the windows are up.

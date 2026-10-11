@@ -53,7 +53,8 @@ profile_payload() {
 ISOLATED_PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # start_isolated <binary> <run dir> <start dir> <shell> [VAR=value ...]: start a devctl build of
-# Wormhole kept apart from the person's own setup: data dir, HOME and agent home in <run dir>,
+# Wormhole kept apart from the person's own setup: data dir, HOME, agent home and the command line
+# tool's folder (cli-bin, where Settings -> Command line tool puts `wh`: never /usr/local/bin) in <run dir>,
 # $ISOLATED_PATH for a PATH and no other place to find agents' commands (WORMHOLE_AGENT_PATH
 # empty), Touch ID answered "cancel", notifications logged instead of shown, and background mode
 # (it opens behind their windows and never takes the focus). Later VAR=value pairs win. Sets $pid
@@ -69,7 +70,8 @@ start_isolated() {
   env -u WORMHOLE_SOCKET -u WORMHOLE_TAB_ID -u WORMHOLE_BIN -u ANDROMEDA_SOCKET -u ANDROMEDA_TAB_ID -u ANDROMEDA_BIN \
     PATH="$ISOLATED_PATH" WORMHOLE_AGENT_PATH= \
     HOME="$home" WORMHOLE_DATA_DIR="$run/data" WORMHOLE_DEVCTL="$run/ctl" \
-    WORMHOLE_AGENT_HOME="$run/agent-home" WORMHOLE_SHELL="$shell" WORMHOLE_START_DIR="$start" \
+    WORMHOLE_AGENT_HOME="$run/agent-home" WORMHOLE_CLI_DIR="$run/cli-bin" \
+    WORMHOLE_SHELL="$shell" WORMHOLE_START_DIR="$start" \
     WORMHOLE_AUTH=cancel WORMHOLE_NOTIFY=log WORMHOLE_BACKGROUND=1 "$@" \
     "$bin" </dev/null >"$run/app.log" 2>&1 &
   pid=$!

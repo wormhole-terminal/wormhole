@@ -10,6 +10,7 @@ use crate::select::{Choice, SearchSelect, SelectTrigger};
 mod advanced;
 mod agents;
 mod appearance;
+mod cli_tool;
 mod feature_flags;
 mod fonts;
 mod git;
@@ -24,6 +25,7 @@ mod theme_picker;
 mod updates;
 
 pub(super) use agents::AgentsSnapshot;
+pub(super) use cli_tool::CliToolPanel;
 pub(super) use projects::ProjectPicker;
 pub(super) use theme_picker::ThemePicker;
 

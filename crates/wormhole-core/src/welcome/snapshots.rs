@@ -14,7 +14,7 @@ use super::model::Welcome;
 use super::render::{LINE_PAUSE, ROW_EVERY, Size, TYPE_NAME, TYPE_TEXT, Target, render};
 use crate::config::NotifySound;
 use crate::intro::Handover;
-use crate::ipc::control::PermissionFact;
+use crate::ipc::control::{COMMAND_NAME, PermissionFact};
 use crate::keymap::{self, ActionId};
 
 const END: Duration = Duration::MAX;
@@ -325,6 +325,13 @@ fn the_last_step_lists_what_else_is_here_with_the_keymaps_keys() {
             format!("  {notes}  Notes      notes and next steps for each terminal, kept with it."),
             format!("  {palette}  Worktrees  New Terminal in New Worktree… gives a branch a folder and a"),
             "                  terminal of its own.".to_string(),
+            format!(
+                "  {COMMAND_NAME}   Scripts    {COMMAND_NAME} help, in any of these terminals, lists what scripts and"
+            ),
+            format!(
+                "                  agents can ask of Wormhole. Settings → Coding agents puts {COMMAND_NAME}"
+            ),
+            "                  in other terminals too.".to_string(),
             String::new(),
             "  ❯ Start".to_string(),
         ]

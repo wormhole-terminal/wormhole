@@ -2,7 +2,7 @@
 //! the per-process queries (current folder) the UI polls.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
@@ -16,10 +16,10 @@ use crate::shells::{self, ShellCommand, program_name};
 /// The settings that make a process one instance of Wormhole: where it keeps its data, what it
 /// is told by devctl, whether it stays in the background, how it answers Touch ID and
 /// notifications, what it runs for a shell, where it starts, which git and `gh`, agent home and
-/// agent folders it uses and where it looks for updates. A tab's shell inherits none of them
-/// (`launch`). (`WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN` are the tab's own
-/// and are set in `tty_options`.)
-pub(super) const INSTANCE_VARS: [&str; 12] = [
+/// agent folders it uses, where it looks for updates and which folders its command line tool goes in.
+/// A tab's shell inherits none of them (`launch`). (`WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and
+/// `WORMHOLE_BIN` are the tab's own and are set in `tty_options`.)
+pub(super) const INSTANCE_VARS: [&str; 14] = [
     "WORMHOLE_DATA_DIR",
     "WORMHOLE_DEVCTL",
     "WORMHOLE_BACKGROUND",
@@ -32,6 +32,8 @@ pub(super) const INSTANCE_VARS: [&str; 12] = [
     "WORMHOLE_GIT_BIN",
     "WORMHOLE_GH_BIN",
     "WORMHOLE_UPDATE_URL",
+    crate::cli_tool::DIR_VAR,
+    crate::cli_tool::LOGIN_PATH_VAR,
 ];
 
 /// What a tab runs. WORMHOLE_SHELL replaces everything (e.g. `/bin/cat` for safe automated UI
@@ -62,6 +64,9 @@ fn command(options: &SpawnOptions) -> ShellCommand {
 
 /// The program that clears variables and then becomes the shell.
 const ENV: &str = "/usr/bin/env";
+
+/// The `PATH` a process gets from `launchd` (the Finder's), for an app that has none at all.
+const FALLBACK_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
 
 /// `program` as the PTY's shell, started so that none of [`INSTANCE_VARS`] reaches it. alacritty
 /// can add variables to a child's environment but not remove one it inherits, and the app itself
@@ -105,6 +110,13 @@ pub fn shell_name(options: &SpawnOptions) -> String {
 
 /// The PTY options for running `shell`: folder and environment.
 pub(super) fn tty_options(options: &SpawnOptions, shell: tty::Shell) -> tty::Options {
+    tty_options_with(options, shell, crate::cli_tool::terminal_dir().as_deref())
+}
+
+/// [`tty_options`] with the folder of the `wh` command given: put first on the shell's `PATH` so the
+/// command works in every terminal Wormhole starts. `None` when the script isn't there (its write
+/// at launch failed): the terminal starts all the same, without the command.
+fn tty_options_with(options: &SpawnOptions, shell: tty::Shell, command_dir: Option<&Path>) -> tty::Options {
     let SpawnOptions { cwd, tab_id, env: extra_env, .. } = options;
 
     let mut env = HashMap::new();
@@ -120,6 +132,14 @@ pub(super) fn tty_options(options: &SpawnOptions, shell: tty::Shell) -> tty::Opt
     }
     for (key, value) in extra_env {
         env.insert(key.clone(), value.clone());
+    }
+    // On top of the project's `PATH` when it sets one, else the app's own. A shell whose startup
+    // files rebuild `PATH` from scratch loses the folder; the docs name the alias as the way
+    // around that.
+    if let Some(dir) = command_dir {
+        let base = env.get("PATH").cloned().or_else(|| std::env::var("PATH").ok()).unwrap_or_default();
+        let base = if base.is_empty() { FALLBACK_PATH.to_string() } else { base };
+        env.insert("PATH".into(), crate::cli_tool::path_with_first(dir, &base));
     }
     // After the project's: what the hooks need to reach this tab can't be
     // redirected by a project's `config.json`.
@@ -261,7 +281,8 @@ fn signal_group(pid: u32, signal: libc::c_int) {
 #[cfg(test)]
 mod name_tests {
     use super::{
-        ENV, INSTANCE_VARS, ShellCommand, SpawnOptions, command, tty, tty_options, without_instance_vars,
+        ENV, INSTANCE_VARS, ShellCommand, SpawnOptions, command, tty, tty_options, tty_options_with,
+        without_instance_vars,
     };
 
     /// The profile the app decided on is what starts, and what the tab is named after; without
@@ -317,6 +338,52 @@ mod name_tests {
             assert!(env.contains_key(*name) || *name == "WORMHOLE_BIN", "{name}");
         }
         assert_eq!(env.get("ANDROMEDA_TAB_ID").map(String::as_str), Some("7"));
+    }
+
+    fn env_with_command_dir(options: &SpawnOptions, dir: Option<&std::path::Path>) -> Env {
+        tty_options_with(options, tty::Shell::new("/bin/sh".into(), Vec::new()), dir).env
+    }
+
+    type Env = std::collections::HashMap<String, String>;
+
+    #[test]
+    fn the_commands_folder_is_first_on_a_terminals_path() {
+        let dir = std::path::Path::new("/data/Wormhole/bin");
+        let env = env_with_command_dir(&SpawnOptions::default(), Some(dir));
+        let path = env.get("PATH").expect("a PATH is set for the terminal");
+        assert!(path.starts_with("/data/Wormhole/bin:"), "{path}");
+        let rest = &path["/data/Wormhole/bin:".len()..];
+        // Behind it, the app's own PATH: the terminal finds what it found before.
+        let own = std::env::var("PATH").unwrap_or_default();
+        assert_eq!(rest, if own.is_empty() { super::FALLBACK_PATH } else { own.as_str() });
+    }
+
+    #[test]
+    fn a_projects_own_path_keeps_its_entries_behind_the_commands_folder() {
+        let dir = std::path::Path::new("/data/Wormhole/bin");
+        let options = SpawnOptions {
+            env: [("PATH".to_string(), "/project/tools:/usr/bin".to_string())].into(),
+            ..SpawnOptions::default()
+        };
+        let env = env_with_command_dir(&options, Some(dir));
+        assert_eq!(env.get("PATH").map(String::as_str), Some("/data/Wormhole/bin:/project/tools:/usr/bin"));
+    }
+
+    /// The script could not be written at launch (a read-only data folder, a full disk): the
+    /// terminal opens all the same, inheriting the app's `PATH` as it always did.
+    #[test]
+    fn a_terminal_starts_without_the_command_when_its_script_is_not_there() {
+        let blocked = tempfile::tempdir().expect("temp dir");
+        std::fs::write(blocked.path().join("bin"), "a file where the folder should be").expect("file");
+        let failed = crate::cli_tool::keep_current_in(
+            &blocked.path().join("bin"),
+            std::path::Path::new("/opt/Wormhole"),
+        );
+        assert!(failed.is_err(), "the write fails, and the launch only logs it");
+
+        let env = env_with_command_dir(&SpawnOptions::default(), None);
+        assert!(!env.contains_key("PATH"), "the PATH is the app's own, untouched");
+        assert!(env.contains_key("TERM"), "everything else is set as usual");
     }
 
     #[test]

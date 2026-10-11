@@ -58,7 +58,10 @@ pub(super) fn isolate_in(module_path: &str, name: &str) -> bool {
         .env("HOME", &home)
         .env("WORMHOLE_DATA_DIR", &data)
         .env("WORMHOLE_SHELL", "/bin/cat")
-        .env("WORMHOLE_AGENT_HOME", data.join("agent-home"));
+        .env("WORMHOLE_AGENT_HOME", data.join("agent-home"))
+        // Where Settings → Command line tool would put `wh`, and what it reads to say whether it is
+        // there: never /usr/local/bin, never the person's shell.
+        .env("WORMHOLE_CLI_DIR", data.join("cli-bin"));
     // Run from a Wormhole tab (or its dev instance), the tests would otherwise find its socket,
     // its devctl folder (and take the commands meant for it), its scripted answers and where it
     // starts terminals.
@@ -179,7 +182,7 @@ fn a_view_test_keeps_to_its_scratch_dir(_: &mut TestAppContext) {
     let data = PathBuf::from(std::env::var_os("WORMHOLE_DATA_DIR").expect("a scratch data dir"));
     let inside = |var: &str| std::env::var_os(var).map(PathBuf::from).is_some_and(|p| p.starts_with(&data));
     // HOME is also where a terminal without a folder starts.
-    for var in ["HOME", "WORMHOLE_AGENT_HOME"] {
+    for var in ["HOME", "WORMHOLE_AGENT_HOME", "WORMHOLE_CLI_DIR"] {
         assert!(inside(var), "{var} is in the scratch dir");
     }
     assert!(wormhole_core::agents::integrations::home().starts_with(&data));

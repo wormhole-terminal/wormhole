@@ -1,0 +1,280 @@
+//! Coding agents → Command line → Command line tool: the `wh` command for terminals that aren't
+//! Wormhole's own (those have it already). Install writes a small script into `/usr/local/bin` or
+//! `~/.local/bin`, Uninstall takes it out again, and a folder that isn't on the login shell's `PATH`
+//! comes with the line to add. All of it is `wormhole_core::cli_tool`; this draws the row and calls it.
+//!
+//! The script is written only by the Install (or Update) button, never by opening the page.
+
+use std::path::{Path, PathBuf};
+
+use gpui_kit::component::Disableable as _;
+use wormhole_core::cli_tool::{self, Advice, COMMAND_NAME, Status, Targets};
+
+use super::*;
+
+pub(super) const SETTING: Setting = Setting::custom("cli-tool", draw).describe(describe).below(below);
+
+/// What the row shows, read when the window opens and after a button was pressed.
+pub(crate) struct CliToolPanel {
+    status: Status,
+    path: PathNote,
+    /// What the last press could not do, until the next one.
+    problem: Option<SharedString>,
+    /// The login shell's answer, on its way.
+    task: Option<Task<()>>,
+}
+
+/// Whether the installed script's folder is on the `PATH` a new terminal gets.
+enum PathNote {
+    /// Nothing installed, or not asked.
+    None,
+    Reading,
+    On(SharedString),
+    /// Not on it: the folder as the person would say it, and the line that puts it there.
+    Off(SharedString, Advice),
+    /// The shell wouldn't say.
+    Unknown(SharedString),
+}
+
+impl CliToolPanel {
+    pub(crate) fn read() -> Self {
+        Self { status: current_status(), path: PathNote::None, problem: None, task: None }
+    }
+}
+
+/// The running binary, which the script runs.
+fn binary() -> PathBuf {
+    std::env::current_exe().unwrap_or_default()
+}
+
+fn current_status() -> Status {
+    cli_tool::status(&Targets::from_env(), &binary())
+}
+
+/// `path` as a person says it (`~/.local/bin/wh`).
+fn shown(path: &Path) -> String {
+    wormhole_core::sidebar::display_path(path, crate::workspace::session::home_dir())
+}
+
+impl SettingsWindow {
+    /// Read where the tool stands, and, when it is installed, whether its folder is on a new
+    /// terminal's `PATH`. That asks the login shell, which reads the person's startup files: in the
+    /// background, and not again until a button changes something.
+    pub(in crate::workspace::settings_page) fn load_cli_tool(&mut self, cx: &mut Context<Self>) {
+        self.cli_tool.status = current_status();
+        self.cli_tool.task = None;
+        let Status::Installed { path, .. } = &self.cli_tool.status else {
+            self.cli_tool.path = PathNote::None;
+            cx.notify();
+            return;
+        };
+        let Some(dir) = path.parent().map(Path::to_path_buf) else { return };
+        self.cli_tool.path = PathNote::Reading;
+        self.cli_tool.task = Some(cx.spawn(async move |this, cx| {
+            let note = cx.background_executor().spawn(async move { path_note(&dir) }).await;
+            this.update(cx, |this, cx| {
+                this.cli_tool.path = note;
+                this.cli_tool.task = None;
+                cx.notify();
+            })
+            .ok();
+        }));
+        cx.notify();
+    }
+
+    pub(in crate::workspace::settings_page) fn install_cli_tool(&mut self, cx: &mut Context<Self>) {
+        self.cli_tool.problem = match cli_tool::install(&Targets::from_env(), &binary()) {
+            Ok(done) => {
+                tracing::info!(path = %done.path.display(), changed = done.changed, "installed the command line tool");
+                None
+            }
+            // The row already says whose `wh` is in the way.
+            Err(cli_tool::Error::Foreign(_)) => None,
+            Err(err) => {
+                tracing::warn!("installing the command line tool: {err}");
+                Some(format!("Couldn't install {COMMAND_NAME}: {err}").into())
+            }
+        };
+        self.load_cli_tool(cx);
+    }
+
+    pub(in crate::workspace::settings_page) fn uninstall_cli_tool(&mut self, cx: &mut Context<Self>) {
+        self.cli_tool.problem = match cli_tool::uninstall(&Targets::from_env()) {
+            Ok(removed) => {
+                tracing::info!(removed = removed.len(), "removed the command line tool");
+                None
+            }
+            Err(err) => {
+                tracing::warn!("removing the command line tool: {err}");
+                Some(format!("Couldn't remove {COMMAND_NAME}: {err}").into())
+            }
+        };
+        self.load_cli_tool(cx);
+    }
+}
+
+/// Ask the login shell for its `PATH` and compare it with `dir`.
+fn path_note(dir: &Path) -> PathNote {
+    let said = shown(dir);
+    let Some(path) = cli_tool::login_shell_path() else {
+        return PathNote::Unknown(said.into());
+    };
+    if cli_tool::on_path(dir, &path) {
+        return PathNote::On(said.into());
+    }
+    let advice =
+        cli_tool::advice(dir, &wormhole_core::shells::login_shell(), crate::workspace::session::home_dir());
+    PathNote::Off(said.into(), advice)
+}
+
+/// The row's words: what it is for, and where it stands.
+fn describe(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> Option<SharedString> {
+    Some(
+        match &window.cli_tool.status {
+            Status::NotInstalled => format!("{COMMAND_NAME} in any terminal. Not installed"),
+            Status::Installed { path, .. } => {
+                format!("{COMMAND_NAME} in any terminal. Installed at {}", shown(path))
+            }
+            Status::Foreign { path } => {
+                format!("{COMMAND_NAME} in any terminal. Another {COMMAND_NAME} is at {}", shown(path))
+            }
+        }
+        .into(),
+    )
+}
+
+/// Install, Update and Uninstall.
+fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let install = |label: &'static str, cx: &mut Context<SettingsWindow>| {
+        Button::new("cli-tool-install")
+            .small()
+            .primary()
+            .label(label)
+            .on_click(cx.listener(|this, _, _, cx| this.install_cli_tool(cx)))
+    };
+    let uninstall = |cx: &mut Context<SettingsWindow>| {
+        Button::new("cli-tool-uninstall")
+            .small()
+            .outline()
+            .label("Uninstall")
+            .on_click(cx.listener(|this, _, _, cx| this.uninstall_cli_tool(cx)))
+    };
+    let row = div().flex().items_center().gap_2();
+    match &window.cli_tool.status {
+        Status::NotInstalled => row
+            .child(install("Install", cx).tooltip(format!(
+                "Puts {COMMAND_NAME} in /usr/local/bin, or in ~/.local/bin when that can't be written"
+            )))
+            .into_any_element(),
+        Status::Installed { current, .. } => {
+            row.when(!current, |row| row.child(install("Update", cx))).child(uninstall(cx)).into_any_element()
+        }
+        Status::Foreign { .. } => row
+            .child(
+                install("Install", cx)
+                    .disabled(true)
+                    .tooltip(format!("Another {COMMAND_NAME} is in the way; Wormhole never replaces it")),
+            )
+            .into_any_element(),
+    }
+}
+
+/// What needs saying under the row: whose `wh` is in the way, an installed copy that runs another
+/// Wormhole, and whether new terminals will find it.
+fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let ui = ui(cx);
+    let panel = &window.cli_tool;
+    let note = |color: Hsla, text: SharedString| {
+        div().text_caption().text_color(color).child(text).into_any_element()
+    };
+    let mut lines: Vec<AnyElement> = Vec::new();
+    match &panel.status {
+        Status::NotInstalled => {}
+        Status::Foreign { .. } => lines.push(
+            style::banner(
+                ui,
+                style::BannerKind::Warning,
+                false,
+                format!(
+                    "Wormhole never replaces a command it didn't write. Move that {COMMAND_NAME} away to \
+                     install this one."
+                ),
+            )
+            .into_any_element(),
+        ),
+        Status::Installed { current, .. } => {
+            if !current {
+                lines.push(
+                    style::banner(
+                        ui,
+                        style::BannerKind::Info,
+                        false,
+                        format!(
+                            "The installed {COMMAND_NAME} runs a copy of Wormhole that is somewhere else. \
+                             Update points it at this one."
+                        ),
+                    )
+                    .into_any_element(),
+                );
+            }
+            match &panel.path {
+                PathNote::None => {}
+                PathNote::Reading => lines.push(note(ui.muted, "Checking your shell's PATH…".into())),
+                PathNote::On(dir) => lines.push(note(
+                    ui.success_text,
+                    format!("{dir} is on your shell's PATH: {COMMAND_NAME} works in new terminals.").into(),
+                )),
+                PathNote::Off(dir, advice) => {
+                    let line = advice.line.clone();
+                    let (code_font, _) = crate::fonts::code_font(cx);
+                    lines.push(
+                        style::banner(
+                            ui,
+                            style::BannerKind::Warning,
+                            false,
+                            format!(
+                                "{dir} isn't on your shell's PATH, so new terminals won't find {COMMAND_NAME}. \
+                                 Add this line to {}, then open a new terminal:",
+                                advice.file
+                            ),
+                        )
+                        .child(
+                            Button::new("cli-tool-copy-line")
+                                .ghost()
+                                .small()
+                                .icon(IconName::Copy)
+                                .label("Copy line")
+                                .on_click(move |_, _, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(line.clone()));
+                                }),
+                        )
+                        .into_any_element(),
+                    );
+                    lines.push(
+                        div()
+                            .px_3()
+                            .py_1()
+                            .rounded(ui.radius)
+                            .bg(ui.hover)
+                            .font_family(code_font)
+                            .text_caption()
+                            .text_color(ui.text)
+                            .child(advice.line.clone())
+                            .into_any_element(),
+                    );
+                }
+                PathNote::Unknown(dir) => lines.push(note(
+                    ui.muted,
+                    format!(
+                        "Couldn't read your shell's PATH. If {COMMAND_NAME} isn't found, add {dir} to it."
+                    )
+                    .into(),
+                )),
+            }
+        }
+    }
+    if let Some(problem) = &panel.problem {
+        lines.push(style::banner(ui, style::BannerKind::Danger, false, problem.clone()).into_any_element());
+    }
+    (!lines.is_empty()).then(|| div().flex().flex_col().gap_2().children(lines).into_any_element())
+}

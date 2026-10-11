@@ -1,5 +1,7 @@
-# Settings → Coding agents → Command line: the switch that lets `Wormhole send-text` and
-# `new-terminal` type into terminals and open them, at the foot of that page.
+# Settings → Coding agents → Command line: the Command line tool row (not installed: Install only
+# writes into the instance's own cli-bin folder, and its state names a path that differs per run, so the
+# installed states are looked at with devctl's `settings-cli-tool`, not here) and the switch that lets
+# `send-text` and `new-terminal` type into terminals and open them, at the foot of that page.
 # `set` turns it on, so the row shows its changed dot and the switch on.
 @fixture repo-basic
 @theme Tokyo Night

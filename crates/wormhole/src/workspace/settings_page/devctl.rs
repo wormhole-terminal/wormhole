@@ -76,6 +76,20 @@ impl Workspace {
         });
     }
 
+    /// devctl `settings-cli-tool [install|uninstall]`: the Command line tool row on its page, read
+    /// again, or with its Install / Uninstall pressed.
+    pub(crate) fn devctl_settings_cli_tool(&self, action: &str, cx: &mut App) {
+        let action = action.trim().to_string();
+        with_page(cx, move |page, _, cx| {
+            page.show_section(Section::Agents, cx);
+            match action.as_str() {
+                "install" => page.install_cli_tool(cx),
+                "uninstall" => page.uninstall_cli_tool(cx),
+                _ => page.load_cli_tool(cx),
+            }
+        });
+    }
+
     /// devctl `settings-select <id>`: open the select of the row `id` (scrollback, icon-theme).
     pub(crate) fn devctl_settings_select(&self, id: &str, cx: &mut App) {
         let id = super::sections::select_id(id);

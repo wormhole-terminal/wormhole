@@ -120,6 +120,8 @@ pub(crate) struct SettingsWindow {
     /// What the Agents page shows; read in the background (see `AgentsSnapshot`).
     agents: Option<sections::AgentsSnapshot>,
     agents_task: Option<Task<()>>,
+    /// Coding agents → Command line tool: where it stands.
+    cli_tool: sections::CliToolPanel,
     /// The window's rem size as of the last draw, for boxes that are sized in rems and drawn
     /// from a cache (the theme cards).
     rem: Pixels,
@@ -335,6 +337,7 @@ impl SettingsWindow {
             theme_picker,
             agents: None,
             agents_task: None,
+            cli_tool: sections::CliToolPanel::read(),
             rem: window.rem_size(),
             blur,
             focus_handle,
@@ -343,6 +346,7 @@ impl SettingsWindow {
         };
         // The nav marks an agent whose hooks need repair, so the agents are read up front.
         this.load_agents(cx);
+        this.load_cli_tool(cx);
         this
     }
 

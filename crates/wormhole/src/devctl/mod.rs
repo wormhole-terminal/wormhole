@@ -147,6 +147,8 @@
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
+//!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
+//!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)
 //!   panel-tab <changes|history|notes|usage|project>   show that tab of the right panel
 //!   project-init    what the Project tab's Create project folder button does for the active
 //!                   terminal's folder: `.wormhole/config.json` made off the UI thread (a tick
@@ -422,6 +424,7 @@ fn command(name: &str) -> Option<Command> {
         "settings-preview" => settings::preview,
         "settings-select" => settings::select,
         "settings-reset-confirm" => settings::reset_confirm,
+        "settings-cli-tool" => settings::cli_tool,
         "font-picker" => settings::font_picker,
         "a11y" => a11y::a11y,
         "keyboard-navigation" => a11y::keyboard_navigation,

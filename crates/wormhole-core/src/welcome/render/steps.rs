@@ -6,7 +6,7 @@ use super::super::keys::Key;
 use super::super::model::{Item, NotifyRow, Welcome};
 use super::{ACCENT, ATTENTION, BACK, DIM, ESC_SKIP, GOOD, Hint, Page, TITLE, Target, UP_DOWN, window_start};
 use crate::config::NotifySound;
-use crate::ipc::control::{HooksFact, NotifyFacts, PermissionFact};
+use crate::ipc::control::{COMMAND_NAME, HooksFact, NotifyFacts, PermissionFact};
 use crate::keymap::{self, ActionId};
 
 /// What the person is told when no coding agent is on PATH.
@@ -231,6 +231,14 @@ impl Page {
                 "notes and next steps for each terminal, kept with it.".to_string(),
             ),
             (palette, "Worktrees", format!("{worktree} gives a branch a folder and a terminal of its own.")),
+            (
+                COMMAND_NAME.to_string(),
+                "Scripts",
+                format!(
+                    "{COMMAND_NAME} help, in any of these terminals, lists what scripts and agents can ask of \
+                     Wormhole. Settings → Coding agents puts {COMMAND_NAME} in other terminals too."
+                ),
+            ),
         ];
         let key_w = lines.iter().map(|(keys, ..)| text_width(keys)).max().unwrap_or(0);
         let label_w = lines.iter().map(|(_, label, _)| text_width(label)).max().unwrap_or(0);
