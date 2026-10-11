@@ -33,7 +33,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   agents → Command line tool installs `wh` into `/usr/local/bin` or `~/.local/bin` (only when you
   press Install, never over another `wh`, and Uninstall removes it) and shows the line to add to
   your shell's startup file when that folder isn't on its `PATH`.
-
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a
   security update is offered even if you skipped that version, and it can't be skipped.
