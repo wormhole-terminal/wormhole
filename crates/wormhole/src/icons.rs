@@ -65,8 +65,11 @@ gpui_kit::assets::icon_assets!(
         CaseSensitive,
         WholeWord,
         Regex,
-        // The title row's pull request.
-        GitPullRequest
+        // The title row's pull request, and how its checks stand (passing and failing are
+        // GPUI Kit's own circles).
+        GitPullRequest,
+        GitPullRequestDraft,
+        CircleDashed,
     ]
 );
 

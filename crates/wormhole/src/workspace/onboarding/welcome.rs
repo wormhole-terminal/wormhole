@@ -181,6 +181,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             path_w: None,
             changes: Some(3),
             branch: Some(style::branch_tag(ui, Some("feature/auth")).into_any_element()),
+            pull_request: None,
         }),
     );
     style::palette_surface(ui, true)

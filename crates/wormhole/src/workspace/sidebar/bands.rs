@@ -1,14 +1,18 @@
 //! A folder band: chevron, folder name, the pin of a pinned folder and the
 //! worktree mark, the count while folded and the + under the pointer; and under the name a second
-//! line, the folder's path, the ±N of its changes and its branch chip (the "No folder" band, and
-//! every band in the compact density, stay one line with the chip and ±N after the name). The band
+//! line, the folder's path, the ±N of its changes, its branch chip and the branch's pull request
+//! (the "No folder" band, and every band in the compact density, stay one line with the chip, ±N
+//! and pull request after the name). The band
 //! of the folder the list is scrolled into sticks under the header, pushed up 1:1 by the next one.
+use wormhole_core::git::pr::PullRequest;
 use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::text::count;
 use wormhole_core::sidebar::text::{band_line_widths, band_widths};
 use wormhole_core::sidebar::{Band, GroupGit, display_path, group_git};
 
+use super::super::app::app;
 use super::super::focus::SidebarStop;
+use super::super::title_chips::pr_look;
 use super::rows::Frame;
 use super::*;
 use crate::style::{BandKind, BandParts, FolderLook, FolderMeta, Section};
@@ -55,7 +59,23 @@ impl Workspace {
             band.folder.as_deref().filter(|_| git.is_some()).and_then(|root| self.worktree_of(root));
 
         let two_lines = band_has_second_line(band, frame);
-        let detail = self.band_detail(band, git, changes, worktree.as_deref(), two_lines, frame);
+        let pull_request = git.and(self.band_pull_request(band, cx));
+        let pr = pull_request.as_ref().map(|pr| {
+            let look = pr_look(pr, ui);
+            let width = look.mark_w(frame.measure(&look.label, CAPTION_REM, FontWeight::MEDIUM, window));
+            (band_pr_mark(pr, look, ui), width)
+        });
+        let pr_w = pr.as_ref().map(|(_, w)| CHIP_GAP + w);
+        let mut pr = pr.map(|(mark, _)| mark);
+        let detail = self.band_detail(
+            band,
+            git,
+            changes,
+            worktree.as_deref(),
+            two_lines,
+            pr.take_if(|_| !two_lines),
+            frame,
+        );
         let folded = band.folded;
         let this = cx.weak_entity();
         let (on_toggle, on_add) = (this.clone(), this);
@@ -109,7 +129,7 @@ impl Workspace {
         // A tooltip only when the name, the path or the branch is cut off: the whole path,
         // then the branch, the changes and how many terminals.
         let BandLook { meta, cut } =
-            self.band_look(band, git, changes, worktree.is_some(), two_lines, frame, window);
+            self.band_look(band, git, changes, worktree.is_some(), two_lines, (pr, pr_w), frame, window);
         let tooltip = cut.then(|| {
             let path =
                 band.folder.as_deref().map_or_else(|| band.label.clone(), |f| display_path(f, home_dir()));
@@ -159,10 +179,13 @@ impl Workspace {
         changes: Option<usize>,
         has_worktree: bool,
         two_lines: bool,
+        (pull_request, pr_w): (Option<AnyElement>, Option<f32>),
         frame: &Frame,
         window: &Window,
     ) -> BandLook {
         let ui = frame.ui;
+        // The pull request's mark takes its room before the path and the chip share the rest.
+        let pr_w = pr_w.unwrap_or_default();
         let marks = usize::from(band.pinned) + usize::from(has_worktree);
         let folder_w = frame.measure(&band.label, LABEL_REM, FontWeight::SEMIBOLD, window);
         let shown = git.filter(|_| frame.show_branch);
@@ -175,7 +198,7 @@ impl Workspace {
 
         let Some(folder) = band.folder.as_deref().filter(|_| two_lines) else {
             // One line: the chip and ±N follow the name, and the chip gives way before it.
-            let avail = frame.width - BAND_LEAD_W - BAND_RIGHT_W - marks as f32 * MARK_W;
+            let avail = frame.width - BAND_LEAD_W - BAND_RIGHT_W - marks as f32 * MARK_W - pr_w;
             let chip_w = shown.filter(|git| git.branch.is_some()).map(chip_text);
             let fits = band_widths(
                 avail,
@@ -203,7 +226,7 @@ impl Workspace {
             .unwrap_or_default();
         let chip_natural = shown.map(|git| chip_text(git).max(style::BRANCH_CHIP_MIN));
         let line = band_line_widths(
-            frame.width - BAND_LEAD_W - style::SIDEBAR_INSET,
+            frame.width - BAND_LEAD_W - style::SIDEBAR_INSET - pr_w,
             path_natural,
             changes_w,
             chip_natural.map(|w| w.min(style::BRANCH_CHIP_MAX)),
@@ -216,7 +239,7 @@ impl Workspace {
             natural > style::BRANCH_CHIP_MAX || natural.min(style::BRANCH_CHIP_MAX) > drawn + 0.5
         });
         let branch = shown.map(|git| self.band_chip(band, git, chip_cut.then_some(line.chip).flatten(), ui));
-        let meta = FolderMeta { path, path_w: path_cut.then_some(line.path), changes, branch };
+        let meta = FolderMeta { path, path_w: path_cut.then_some(line.path), changes, branch, pull_request };
         BandLook { meta: Some(meta), cut: name_cut || path_cut || chip_cut }
     }
 
@@ -246,8 +269,18 @@ impl Workspace {
             .into_any_element()
     }
 
+    /// The pull request of a band's branch, as far as it is known: its terminals share the folder,
+    /// so the first one whose branch was asked about answers for all.
+    fn band_pull_request(&self, band: &Band, cx: &App) -> Option<PullRequest> {
+        let cache = &app(cx).pr;
+        band.members
+            .iter()
+            .find_map(|&ix| self.session_pr_branch(ix, cx).and_then(|branch| cache.get(&branch).cloned()))
+    }
+
     /// After a band's name: the pin of a pinned folder, the worktree mark and, on a band of one
-    /// line, the branch chip (a detached HEAD's names its commit) and ±N.
+    /// line, the branch chip (a detached HEAD's names its commit), ±N and the pull request.
+    #[allow(clippy::too_many_arguments)]
     fn band_detail(
         &self,
         band: &Band,
@@ -255,6 +288,7 @@ impl Workspace {
         changes: Option<usize>,
         worktree: Option<&Path>,
         two_lines: bool,
+        pull_request: Option<AnyElement>,
         frame: &Frame,
     ) -> Option<AnyElement> {
         let ui = frame.ui;
@@ -309,7 +343,12 @@ impl Workspace {
         let lone_changes = changes.filter(|_| chip.is_none() && !two_lines).map(|n| {
             div().flex_none().text_caption().tabular_nums().text_color(ui.muted).child(format!("±{n}"))
         });
-        if pin.is_none() && mark.is_none() && chip.is_none() && lone_changes.is_none() {
+        if pin.is_none()
+            && mark.is_none()
+            && chip.is_none()
+            && lone_changes.is_none()
+            && pull_request.is_none()
+        {
             return None;
         }
         Some(
@@ -322,6 +361,7 @@ impl Workspace {
                 .children(mark)
                 .children(chip)
                 .children(lone_changes)
+                .children(pull_request)
                 .into_any_element(),
         )
     }
@@ -384,4 +424,24 @@ fn band_has_second_line(band: &Band, frame: &Frame) -> bool {
 /// How tall `band` is drawn.
 fn band_height(band: &Band, frame: &Frame) -> f32 {
     if band_has_second_line(band, frame) { style::FOLDER_BAND_H } else { style::BAND_H }
+}
+
+/// A band's pull request: its mark, named and explained for VoiceOver and the tooltip. A click
+/// opens it and leaves the band folded or open as it was.
+fn band_pr_mark(pr: &PullRequest, look: style::PrLook, ui: UiColors) -> AnyElement {
+    let (url, words) = (pr.url.clone(), SharedString::from(pr.words()));
+    let tip = words.clone();
+    div()
+        .id("band-pull-request")
+        .flex_none()
+        .role(Role::Link)
+        .aria_label(words)
+        .cursor_pointer()
+        .child(style::pull_request_mark(ui, look))
+        .tooltip(move |window, cx| gpui_kit::component::tooltip::Tooltip::new(tip.clone()).build(window, cx))
+        .on_click(move |_, _, cx| {
+            cx.stop_propagation();
+            cx.open_url(&url);
+        })
+        .into_any_element()
 }

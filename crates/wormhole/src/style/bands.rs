@@ -102,6 +102,8 @@ pub struct FolderMeta {
     /// The branch: a `style::branch_tag`, with its tooltip and, on a narrow line, the `max_w` it
     /// is cut to.
     pub branch: Option<AnyElement>,
+    /// After the branch: its pull request, a `style::pull_request_mark`.
+    pub pull_request: Option<AnyElement>,
 }
 
 /// A sidebar folder band ([`BandKind::Folder`]) with its [`FolderLook`]. With a [`FolderMeta`] it
@@ -254,10 +256,10 @@ fn band_with(
         .children(meta.map(|meta| meta_line(ui, meta)))
 }
 
-/// A folder band's second line: its path, "±N" and branch, from the title's x.
+/// A folder band's second line: its path, "±N", branch and pull request, from the title's x.
 #[track_caller]
 fn meta_line(ui: UiColors, meta: FolderMeta) -> Div {
-    let FolderMeta { path, path_w, changes, branch } = meta;
+    let FolderMeta { path, path_w, changes, branch, pull_request } = meta;
     div()
         .flex()
         .items_center()
@@ -276,6 +278,7 @@ fn meta_line(ui: UiColors, meta: FolderMeta) -> Div {
             changes.map(|n| div().flex_none().tabular_nums().whitespace_nowrap().child(format!("±{n}"))),
         )
         .children(branch)
+        .children(pull_request)
 }
 
 /// A folder band's right side when the + takes the count's place: the + (its face less the room

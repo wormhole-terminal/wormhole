@@ -97,6 +97,14 @@ impl Workspace {
         Ok(folder)
     }
 
+    /// devctl `project-trust`: what the Project tab's trust button does for the active terminal's
+    /// project (Touch ID is answered by `WORMHOLE_AUTH`); says which folder it asked for.
+    pub(crate) fn devctl_project_trust(&mut self, cx: &mut Context<Self>) -> Result<PathBuf, &'static str> {
+        let root = self.active_session().project.clone().ok_or("the active terminal has no project")?;
+        self.approve_active_project(cx);
+        Ok(root)
+    }
+
     pub(crate) fn devctl_session_id(&self, ix: usize) -> i64 {
         self.sessions[ix].id
     }

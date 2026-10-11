@@ -8,14 +8,17 @@
 //!   agent has one, and the row shows nothing for it.
 //! - **Open ports** come from libproc for the shell's process tree (core `terminal::ports`), asked
 //!   on a background thread every few seconds and only for the terminal on screen.
-//! - **The pull request** is `gh`'s (core `git::pr`), asked at most every few minutes per branch,
-//!   and only in a project the person trusts: `gh` reads the repository's own git configuration.
+//! - **The pull request** is `gh`'s (core `git::pr`), asked at most every few minutes per branch
+//!   (every minute while its checks run), and only in a project the person trusts: `gh` reads the
+//!   repository's own git configuration. Every terminal's branch is asked for, not only the one on
+//!   screen: the sidebar's folder bands show theirs too.
 //!
 //! Each has a Settings switch; one that is off is not looked up at all.
 
 use std::time::{Duration, Instant};
 
-use wormhole_core::git::pr::{self, Branch, PullRequest};
+use wormhole_core::git::pr::{self, Branch, PullRequest, Settled};
+use wormhole_core::terminal::Notification;
 use wormhole_core::terminal::listening_ports;
 use wormhole_core::title_extras::BranchStatus;
 use wormhole_core::usage::Gauge;
@@ -163,21 +166,35 @@ impl Workspace {
     /// repository's git configuration and remotes, which a repository the person has not approved
     /// may have filled with anything.
     fn pull_request_branch(&self, cx: &App) -> Option<Branch> {
-        if !settings(cx).title_pull_request {
-            return None;
-        }
-        let session = self.active_session();
-        let status =
-            session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
-        let project = self.active_project(cx)?;
-        let name = status.branch.clone()?;
-        app(cx).hub.trusted(project).then(|| Branch { root: status.root.clone(), name })
+        self.session_pr_branch(self.active, cx)
     }
 
-    /// Ask `gh` for the active branch's pull request when the cache says it is time (a branch not
-    /// asked yet, or not for a few minutes), off the main thread.
+    /// [`Self::pull_request_branch`] for any of the window's terminals.
+    pub(super) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
+        if !settings(cx).title_pull_request || !super::project::project_folders_on(cx) {
+            return None;
+        }
+        let session = self.sessions.get(ix)?;
+        let status =
+            session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
+        let hub = &app(cx).hub;
+        let project = hub.projects.get(session.project.as_ref()?)?;
+        let name = status.branch.clone()?;
+        hub.trusted(project).then(|| Branch { root: status.root.clone(), name })
+    }
+
+    /// Ask `gh` for each terminal's branch's pull request when the cache says it is time (a branch
+    /// not asked yet, or not for a few minutes), off the main thread.
     fn poll_pull_request(&mut self, cx: &mut Context<Self>) {
-        let Some(branch) = self.pull_request_branch(cx) else { return };
+        // Terminals on the same branch ask once: the cache lets one lookup out per branch.
+        let branches: Vec<Branch> =
+            (0..self.sessions.len()).filter_map(|ix| self.session_pr_branch(ix, cx)).collect();
+        for branch in branches {
+            Self::ask_for_pull_request(branch, cx);
+        }
+    }
+
+    fn ask_for_pull_request(branch: Branch, cx: &mut Context<Self>) {
         if !app_mut(cx).pr.begin(&branch, Instant::now()) {
             return;
         }
@@ -186,14 +203,33 @@ impl Workspace {
             cx.background_executor().spawn(async move { pr::pull_request(&root) })
         };
         // The answer belongs to the app, not to this window: it is kept even if the window closed.
-        cx.spawn(async move |_, cx| {
+        cx.spawn(async move |this, cx| {
             let found = task.await;
-            cx.update(|cx| {
-                app_mut(cx).pr.finish(&branch, found, Instant::now());
+            let settled = cx.update(|cx| {
+                let settled = app_mut(cx).pr.finish(&branch, found, Instant::now());
                 // Every window may show it.
                 cx.refresh_windows();
+                settled
             });
+            if let Some(settled) = settled {
+                this.update(cx, |this, cx| this.tell_checks_settled(&branch, &settled, cx)).ok();
+            }
         })
         .detach();
+    }
+
+    /// A pull request's checks finished: the first terminal on its branch tells it the way a
+    /// program's own notification is told (`Wormhole notify`'s path), so the notification settings
+    /// and the sidebar's needs-you rules apply as they do to those.
+    fn tell_checks_settled(&mut self, branch: &Branch, settled: &Settled, cx: &mut Context<Self>) {
+        let Some(ix) =
+            (0..self.sessions.len()).find(|&ix| self.session_pr_branch(ix, cx).as_ref() == Some(branch))
+        else {
+            return;
+        };
+        let (title, body) = settled.notification(&branch.name);
+        self.sessions[ix]
+            .terminal()
+            .update(cx, |terminal, _| terminal.notice_from_control(Notification { title, body }));
     }
 }

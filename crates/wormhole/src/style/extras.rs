@@ -1,5 +1,6 @@
 //! The pieces of the title row's extras: the branch's status, the agent's
-//! context meter and the small chips the ports and the pull request are. They are drawn at the
+//! context meter and the small chips the ports and the pull request are (the pull request's
+//! mark on a folder band is here too). They are drawn at the
 //! row's own height, in its caption type, and each knows its own fixed widths so the row can
 //! measure them (`workspace::title_extras`) before it draws them.
 
@@ -56,6 +57,60 @@ pub fn extra_chip(
             icon.map(|(icon, color)| div().flex_none().text_color(color).child(Icon::new(icon).xsmall())),
         )
         .child(text.into())
+}
+
+/// How a pull request is drawn: its icon in the colour of how it stands, "#142", and its checks'
+/// icon and colour while it is open.
+#[derive(Clone, Debug)]
+pub struct PrLook {
+    pub icon: IconName,
+    pub color: Hsla,
+    pub label: SharedString,
+    pub checks: Option<(IconName, Hsla)>,
+}
+
+impl PrLook {
+    /// What the checks add to a chip's or a mark's width.
+    pub fn checks_w(&self) -> f32 {
+        if self.checks.is_some() { EXTRA_GAP + EXTRA_ICON } else { 0.0 }
+    }
+
+    /// The width of its [`pull_request_mark`], the label `text_w` wide.
+    pub fn mark_w(&self, text_w: f32) -> f32 {
+        EXTRA_ICON + EXTRA_GAP + text_w + self.checks_w()
+    }
+}
+
+#[track_caller]
+fn small_icon(icon: IconName, color: Hsla) -> Div {
+    div().flex_none().text_color(color).child(Icon::new(icon).xsmall())
+}
+
+/// The title row's pull request: an [`extra_chip`] with the checks' icon after the number. Its
+/// width is the chip's plus [`PrLook::checks_w`].
+#[track_caller]
+pub fn pull_request_chip(ui: UiColors, look: PrLook) -> Div {
+    extra_chip(ui, true, Some((look.icon, look.color)), look.label)
+        .children(look.checks.map(|(icon, color)| small_icon(icon, color)))
+}
+
+/// A pull request on a folder band, after its branch: the chip's parts without the chip, in muted
+/// caption type, [`PrLook::mark_w`] wide.
+#[track_caller]
+pub fn pull_request_mark(ui: UiColors, look: PrLook) -> Div {
+    div()
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap_1()
+        .text_caption()
+        .font_weight(FontWeight::MEDIUM)
+        .tabular_nums()
+        .whitespace_nowrap()
+        .text_color(ui.muted)
+        .child(small_icon(look.icon, look.color))
+        .child(look.label)
+        .children(look.checks.map(|(icon, color)| small_icon(icon, color)))
 }
 
 /// A branch's status after its chip: an amber dot while the tree has uncommitted changes, then

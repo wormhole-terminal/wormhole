@@ -46,6 +46,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         path_w,
         changes,
         branch: branch.map(|b| env.mark("branch.chip", style::branch_tag(ui, b)).into_any_element()),
+        pull_request: None,
     };
     let folder_parts = |title: &'static str, section, count: Option<&str>, interactive: bool| BandParts {
         kind: BandKind::Folder,

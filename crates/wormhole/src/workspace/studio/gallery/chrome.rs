@@ -111,9 +111,26 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
                 ))
                 .child(style::context_meter(ui, style::METER_W, 0.6, false))
                 .child(style::extra_chip(ui, true, Some((IconName::Globe, ui.text)), "localhost:3000"))
-                .child(style::extra_chip(ui, true, Some((IconName::GitPullRequest, ui.success_text)), "#142"))
+                .child(style::pull_request_chip(
+                    ui,
+                    style::PrLook {
+                        icon: IconName::GitPullRequest,
+                        color: ui.success_text,
+                        label: "#142".into(),
+                        checks: Some((IconName::CircleCheck, ui.success_text)),
+                    },
+                ))
+                .child(style::pull_request_mark(
+                    ui,
+                    style::PrLook {
+                        icon: IconName::GitPullRequestDraft,
+                        color: ui.muted,
+                        label: "#87".into(),
+                        checks: Some((IconName::CircleX, ui.danger_text)),
+                    },
+                ))
                 .child(style::extra_chip(ui, false, None, "+1"))
-                .child(note("← the title row's extras: branch status, context, a port, a pull request")),
+                .child(note("← the title row's extras: branch status, context, a port, a pull request and its mark on a band")),
         )
         .child(
             // The × that removes or closes what it sits on; shown here without the hover reveal.

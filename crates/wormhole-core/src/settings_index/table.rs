@@ -202,9 +202,11 @@ const APPEARANCE: &[Group] = &[
             entry(
                 "title-pull-request",
                 "Pull request",
-                "The branch's pull request as a link, asked of the GitHub CLI (gh). Only in a trusted \
-                 project, and only when gh is installed and signed in",
-                "github gh pr merge review link",
+                "The branch's pull request and how its checks and reviews stand: a link in the title \
+                 row and a mark on the folder's band in the sidebar, with a notification when its \
+                 checks finish. Asked of the GitHub CLI (gh), only in a trusted project, and only when \
+                 gh is installed and signed in",
+                "github gh pr merge review link ci checks actions build failed passed draft approved",
                 &["title_pull_request"],
             ),
         ],

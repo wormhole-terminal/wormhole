@@ -140,6 +140,8 @@
 //!   project-init    what the Project tab's Create project folder button does for the active
 //!                   terminal's folder: `.wormhole/config.json` made off the UI thread (a tick
 //!                   later `title`, `rows` and the tab show the project); prints the folder
+//!   project-trust   trust the active terminal's project as its trust button does, with Touch ID
+//!                   answered by `WORMHOLE_AUTH` (start the instance with `allow`); prints the folder
 //!   note-seed <count> <lines> | note-add <text> | note-toggle <n>   fill the terminal with long
 //!                   notes / add one note at the end, open / fold or unfold the n-th note
 //!   task-seed <open> <done> | task-done <n>   that many next steps (the done ones spread among
@@ -375,6 +377,7 @@ fn command(name: &str) -> Option<Command> {
         "trust-shot" => panels::trust_shot,
         "panel-tab" => panels::panel_tab,
         "project-init" => panels::project_init,
+        "project-trust" => panels::project_trust,
         "note-seed" => panels::note_seed,
         "note-add" => panels::note_add,
         "note-toggle" => panels::note_toggle,

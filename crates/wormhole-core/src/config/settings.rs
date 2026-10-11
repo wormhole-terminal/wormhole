@@ -311,7 +311,8 @@ pub struct Settings {
     pub open_in: String,
     /// The title row's extras (`title_extras`), each on its own switch: a dot and the ahead and
     /// behind counts beside the branch, an agent's model and how full its context window is, the
-    /// ports a terminal's programs listen on, and the branch's pull request.
+    /// ports a terminal's programs listen on, and the branch's pull request (which also puts its
+    /// mark on the folder's band and tells when its checks finish).
     pub title_branch_status: bool,
     pub title_agent_gauge: bool,
     pub title_ports: bool,

@@ -78,6 +78,15 @@ pub(super) fn project_init(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(format!("creating {}/.wormhole", folder.display()))
 }
 
+/// `project-trust`: trust the active terminal's project, as its trust button does.
+pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
+    if !project_folders_on(ctx) {
+        return Ok("project folders feature is off (feature_flags.project_folders)".into());
+    }
+    let root = ctx.workspace.devctl_project_trust(ctx.cx).map_err(|e| anyhow!(e))?;
+    Ok(format!("trusting {}", root.display()))
+}
+
 /// Whether the project-folder feature flag is on in this instance.
 fn project_folders_on(ctx: &Ctx) -> bool {
     use wormhole_core::features::FeatureFlag;

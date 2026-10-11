@@ -11,6 +11,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The status bar shows how full the selected terminal's agent context window is: "Context",
   a meter and the share used, in amber once it is nearly full. It needs Claude Code's status
   line, like the title row's gauge.
+- Pull requests show how their checks and reviews stand: a green check, a red cross or a
+  dashed circle while checks run, beside the number in the title row and now also on the
+  folder's band in the sidebar. A notification tells you when a pull request's checks pass
+  or fail. Drafts get their own icon; the tooltip names the review decision.
 
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a

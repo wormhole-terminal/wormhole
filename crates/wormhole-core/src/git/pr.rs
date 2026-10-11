@@ -1,5 +1,7 @@
-//! The pull request of the branch a terminal is on (the title row's PR link),
-//! asked of the GitHub CLI: `gh pr view --json number,url,state` in the repository.
+//! The pull request of the branch a terminal is on (the title row's PR link and the mark on its
+//! folder's band), asked of the GitHub CLI: `gh pr view --json
+//! number,url,state,isDraft,reviewDecision,statusCheckRollup` in the repository. Besides the
+//! number and whether it is open it says how its checks stand and what its reviewers decided.
 //!
 //! Wormhole has no network code of its own, and git here is local and read-only; `gh` is the one
 //! way this talks to a host, and only where the person has it installed and signed in. A repository
@@ -72,11 +74,19 @@ const PATH_TAIL: [&str; 6] =
 /// Long enough for a slow connection, short enough not to hold a worker for a stuck one.
 const TIMEOUT: Duration = Duration::from_secs(20);
 
-/// `gh pr view --json number,url,state` prints a few dozen bytes.
-const MAX_OUTPUT: u64 = 64 * 1024;
+/// What `gh pr view` is asked for.
+const FIELDS: &str = "number,url,state,isDraft,reviewDecision,statusCheckRollup";
+
+/// A pull request's JSON is a few hundred bytes, plus a few hundred for each of its checks: room
+/// for a repository with hundreds of them.
+const MAX_OUTPUT: u64 = 512 * 1024;
 
 /// What a lookup comes back to, after this long, whether it found a pull request or not.
 pub const REFRESH_AFTER: Duration = Duration::from_secs(5 * 60);
+
+/// While its checks run, a pull request is asked about again this soon, so the mark turns green
+/// or red about when the checks finish.
+pub const PENDING_REFRESH: Duration = Duration::from_secs(60);
 
 /// After a failure (no `gh`, signed out, offline) nothing asks for this long.
 pub const RETRY_AFTER: Duration = Duration::from_secs(30 * 60);
@@ -101,12 +111,83 @@ impl PrState {
     }
 }
 
+/// How a pull request's checks (CI runs and commit statuses together) stand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Checks {
+    /// Some are still queued or running, and none has failed.
+    Pending,
+    /// At least one failed, timed out or was cancelled.
+    Failing,
+    /// Every one finished without failing.
+    Passing,
+}
+
+impl Checks {
+    pub fn words(self) -> &'static str {
+        match self {
+            Self::Pending => "checks running",
+            Self::Failing => "checks failing",
+            Self::Passing => "checks passing",
+        }
+    }
+
+    /// The checks of `gh`'s `statusCheckRollup`: GitHub Actions runs (`status` and `conclusion`)
+    /// and commit statuses (`state`) alike. `None` without any check it can read.
+    fn of(rollup: &serde_json::Value) -> Option<Self> {
+        let mut seen = None;
+        for check in rollup.as_array()? {
+            let field = |name: &str| check.get(name).and_then(|v| v.as_str()).unwrap_or_default();
+            let this = match (field("status"), field("conclusion"), field("state")) {
+                (_, _, "PENDING" | "EXPECTED") => Self::Pending,
+                (_, _, "FAILURE" | "ERROR") => Self::Failing,
+                (_, _, "SUCCESS") => Self::Passing,
+                (_, "FAILURE" | "TIMED_OUT" | "CANCELLED" | "ACTION_REQUIRED" | "STARTUP_FAILURE", _) => {
+                    Self::Failing
+                }
+                ("COMPLETED", _, _) => Self::Passing,
+                ("QUEUED" | "IN_PROGRESS" | "WAITING" | "PENDING" | "REQUESTED", _, _) => Self::Pending,
+                _ => continue,
+            };
+            // One failure fails them all; one still running keeps the rest from passing.
+            seen = Some(match (seen, this) {
+                (Some(Self::Failing), _) | (_, Self::Failing) => Self::Failing,
+                (Some(Self::Pending), _) | (_, Self::Pending) => Self::Pending,
+                _ => Self::Passing,
+            });
+        }
+        seen
+    }
+}
+
+/// What the reviewers decided, where the repository asks for reviews.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Review {
+    Approved,
+    ChangesRequested,
+    /// Waiting for a review it needs.
+    Required,
+}
+
+impl Review {
+    pub fn words(self) -> &'static str {
+        match self {
+            Self::Approved => "approved",
+            Self::ChangesRequested => "changes requested",
+            Self::Required => "review required",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PullRequest {
     pub number: u64,
     /// Where it is on the host: an `https://` address, which is what a click opens.
     pub url: String,
     pub state: PrState,
+    /// Opened as a draft, not ready for review yet.
+    pub draft: bool,
+    pub checks: Option<Checks>,
+    pub review: Option<Review>,
 }
 
 impl PullRequest {
@@ -115,9 +196,42 @@ impl PullRequest {
         format!("#{}", self.number)
     }
 
-    /// For the tooltip and VoiceOver: "Pull request #142, merged".
+    /// For the tooltip and VoiceOver: "Pull request #142, open, checks failing, changes
+    /// requested". Checks and reviews are only said of an open one.
     pub fn words(&self) -> String {
-        format!("Pull request #{}, {}", self.number, self.state.label())
+        let mut words = format!("Pull request #{}, {}", self.number, self.state.label());
+        if self.state == PrState::Open {
+            let parts = [
+                self.draft.then_some("draft"),
+                self.checks.map(Checks::words),
+                self.review.map(Review::words),
+            ];
+            for part in parts.into_iter().flatten() {
+                words.push_str(", ");
+                words.push_str(part);
+            }
+        }
+        words
+    }
+
+    /// The checks worth a mark: an open pull request's.
+    pub fn open_checks(&self) -> Option<Checks> {
+        self.checks.filter(|_| self.state == PrState::Open)
+    }
+}
+
+/// A pull request's checks finished: they were running at the last look and now passed or failed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Settled {
+    pub pull_request: PullRequest,
+    pub checks: Checks,
+}
+
+impl Settled {
+    /// The notification's title and body: "Checks failed on #142", "feature/auth".
+    pub fn notification(&self, branch: &str) -> (String, String) {
+        let how = if self.checks == Checks::Failing { "failed" } else { "passed" };
+        (format!("Checks {how} on {}", self.pull_request.label()), branch.to_string())
     }
 }
 
@@ -147,7 +261,20 @@ pub fn parse(json: &[u8]) -> Option<PullRequest> {
     let usable = url.len() <= 2048
         && url.strip_prefix("https://").is_some_and(|rest| !rest.is_empty())
         && !url.chars().any(|c| c.is_control() || c.is_whitespace());
-    usable.then(|| PullRequest { number, url: url.to_string(), state })
+    let review = match value.get("reviewDecision").and_then(|v| v.as_str()) {
+        Some("APPROVED") => Some(Review::Approved),
+        Some("CHANGES_REQUESTED") => Some(Review::ChangesRequested),
+        Some("REVIEW_REQUIRED") => Some(Review::Required),
+        _ => None,
+    };
+    usable.then(|| PullRequest {
+        number,
+        url: url.to_string(),
+        state,
+        draft: value.get("isDraft").and_then(|v| v.as_bool()).unwrap_or(false),
+        checks: value.get("statusCheckRollup").and_then(Checks::of),
+        review,
+    })
 }
 
 /// The pull request of the branch checked out in `repo`, `Ok(None)` when there is none.
@@ -156,7 +283,7 @@ pub fn pull_request(repo: &Path) -> Result<Option<PullRequest>, PrError> {
     let mut command = Command::new(&gh);
     command
         .current_dir(repo)
-        .args(["pr", "view", "--json", "number,url,state"])
+        .args(["pr", "view", "--json", FIELDS])
         .env_clear()
         .envs(environment(std::env::vars_os(), &gh));
     let output = match run_bounded(&mut command, TIMEOUT, Limit::Stop(MAX_OUTPUT)) {
@@ -262,13 +389,36 @@ impl PrCache {
         }
     }
 
-    /// A lookup's answer.
-    pub fn finish(&mut self, branch: &Branch, result: Result<Option<PullRequest>, PrError>, now: Instant) {
+    /// A lookup's answer, and whether it says the pull request's checks have just finished.
+    pub fn finish(
+        &mut self,
+        branch: &Branch,
+        result: Result<Option<PullRequest>, PrError>,
+        now: Instant,
+    ) -> Option<Settled> {
         let entry =
             self.entries.entry(branch.clone()).or_insert(Entry { found: None, due: now, asked: false });
         entry.asked = false;
+        let mut settled = None;
         match result {
-            Ok(found) => (entry.found, entry.due) = (found, now + REFRESH_AFTER),
+            Ok(found) => {
+                // Only the same pull request's checks finishing is news; another one on the
+                // branch is not.
+                let was_running = |pr: &PullRequest| {
+                    entry.found.as_ref().is_some_and(|old| {
+                        old.number == pr.number && old.open_checks() == Some(Checks::Pending)
+                    })
+                };
+                settled = found.as_ref().filter(|pr| was_running(pr)).and_then(|pr| match pr.open_checks() {
+                    Some(checks @ (Checks::Passing | Checks::Failing)) => {
+                        Some(Settled { pull_request: pr.clone(), checks })
+                    }
+                    _ => None,
+                });
+                let running = found.as_ref().is_some_and(|pr| pr.open_checks() == Some(Checks::Pending));
+                entry.due = now + if running { PENDING_REFRESH } else { REFRESH_AFTER };
+                entry.found = found;
+            }
             // The last good answer stays; only the next try is put off.
             Err(_) => entry.due = now + RETRY_AFTER,
         }
@@ -285,6 +435,7 @@ impl PrCache {
                 None => break,
             };
         }
+        settled
     }
 }
 
@@ -295,8 +446,8 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::{
-        Branch, FIXED_ENV, PASSED_ENV, PrCache, PrError, PrState, PullRequest, REFRESH_AFTER, RETRY_AFTER,
-        environment, parse, pull_request,
+        Branch, Checks, FIXED_ENV, PASSED_ENV, PENDING_REFRESH, PrCache, PrError, PrState, PullRequest,
+        REFRESH_AFTER, RETRY_AFTER, Review, Settled, environment, parse, pull_request,
     };
 
     const OPEN: &[u8] = br#"{"number":142,"state":"OPEN","url":"https://github.com/acme/app/pull/142"}"#;
@@ -306,7 +457,87 @@ mod tests {
             number,
             url: format!("https://github.com/acme/app/pull/{number}"),
             state: PrState::Open,
+            draft: false,
+            checks: None,
+            review: None,
         }
+    }
+
+    fn with_checks(number: u64, checks: Checks) -> PullRequest {
+        PullRequest { checks: Some(checks), ..pr(number) }
+    }
+
+    #[test]
+    fn checks_and_reviews_are_read_from_the_rollup_and_the_decision() {
+        let json = |rollup: &str, extra: &str| {
+            format!(
+                r#"{{"number":5,"state":"OPEN","url":"https://github.com/a/b/pull/5","statusCheckRollup":{rollup}{extra}}}"#
+            )
+        };
+        let checks = |rollup: &str| parse(json(rollup, "").as_bytes()).and_then(|pr| pr.checks);
+        let passed = r#"{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SUCCESS"}"#;
+        let skipped = r#"{"__typename":"CheckRun","status":"COMPLETED","conclusion":"SKIPPED"}"#;
+        let running = r#"{"__typename":"CheckRun","status":"IN_PROGRESS","conclusion":""}"#;
+        let failed = r#"{"__typename":"CheckRun","status":"COMPLETED","conclusion":"FAILURE"}"#;
+        let status_ok = r#"{"__typename":"StatusContext","state":"SUCCESS"}"#;
+        let status_wait = r#"{"__typename":"StatusContext","state":"PENDING"}"#;
+        let status_err = r#"{"__typename":"StatusContext","state":"ERROR"}"#;
+        assert_eq!(checks("[]"), None);
+        assert_eq!(checks(r#"[{"name":"x"}]"#), None, "nothing it can read");
+        assert_eq!(checks(&format!("[{passed},{skipped},{status_ok}]")), Some(Checks::Passing));
+        assert_eq!(checks(&format!("[{passed},{running}]")), Some(Checks::Pending));
+        assert_eq!(checks(&format!("[{status_wait},{passed}]")), Some(Checks::Pending));
+        assert_eq!(checks(&format!("[{running},{failed},{passed}]")), Some(Checks::Failing));
+        assert_eq!(checks(&format!("[{status_err}]")), Some(Checks::Failing));
+        assert_eq!(parse(json("null", "").as_bytes()).map(|pr| pr.checks), Some(None));
+
+        let full = json(&format!("[{failed}]"), r#","isDraft":true,"reviewDecision":"CHANGES_REQUESTED""#);
+        let got = parse(full.as_bytes()).expect("pull request");
+        assert_eq!((got.draft, got.review), (true, Some(Review::ChangesRequested)));
+        assert_eq!(got.words(), "Pull request #5, open, draft, checks failing, changes requested");
+        let approved = parse(json("[]", r#","reviewDecision":"APPROVED""#).as_bytes()).expect("pr");
+        assert_eq!(approved.review, Some(Review::Approved));
+        assert_eq!(parse(json("[]", r#","reviewDecision":"" "#).as_bytes()).expect("pr").review, None);
+        // A merged one says only that, and has no checks to mark.
+        let merged = PullRequest { state: PrState::Merged, ..with_checks(7, Checks::Failing) };
+        assert_eq!(merged.words(), "Pull request #7, merged");
+        assert_eq!(merged.open_checks(), None);
+    }
+
+    #[test]
+    fn running_checks_are_looked_at_again_soon_and_their_end_is_told_once() {
+        let (mut cache, main, t0) = (PrCache::default(), branch("main"), Instant::now());
+        assert!(cache.begin(&main, t0));
+        assert_eq!(cache.finish(&main, Ok(Some(with_checks(9, Checks::Pending))), t0), None);
+        assert!(!cache.begin(&main, t0 + PENDING_REFRESH - Duration::from_secs(1)));
+        let t1 = t0 + PENDING_REFRESH;
+        assert!(cache.begin(&main, t1));
+        assert_eq!(
+            cache.finish(&main, Ok(Some(with_checks(9, Checks::Failing))), t1),
+            Some(Settled { pull_request: with_checks(9, Checks::Failing), checks: Checks::Failing })
+        );
+        let told = cache.get(&main).cloned().map(|pr| Settled { pull_request: pr, checks: Checks::Failing });
+        assert_eq!(
+            told.map(|settled| settled.notification("main")),
+            Some(("Checks failed on #9".into(), "main".into()))
+        );
+        let passed = Settled { pull_request: pr(9), checks: Checks::Passing };
+        assert_eq!(passed.notification("main").0, "Checks passed on #9");
+        // Finished: back to the long wait, and nothing more to tell.
+        assert!(!cache.begin(&main, t1 + PENDING_REFRESH));
+        let t2 = t1 + REFRESH_AFTER;
+        assert!(cache.begin(&main, t2));
+        assert_eq!(cache.finish(&main, Ok(Some(with_checks(9, Checks::Failing))), t2), None);
+        // Another pull request on the branch is news of its own, not the end of the first one's
+        // checks.
+        let (feature, t3) = (branch("feature"), t2 + REFRESH_AFTER);
+        assert!(cache.begin(&feature, t3));
+        cache.finish(&feature, Ok(Some(with_checks(3, Checks::Pending))), t3);
+        assert!(cache.begin(&feature, t3 + PENDING_REFRESH));
+        assert_eq!(
+            cache.finish(&feature, Ok(Some(with_checks(4, Checks::Passing))), t3 + PENDING_REFRESH),
+            None
+        );
     }
 
     fn branch(name: &str) -> Branch {
@@ -480,7 +711,7 @@ mod tests {
             let tools = tempfile::tempdir().expect("tempdir");
             let repo = tempfile::tempdir().expect("tempdir");
             let script = format!(
-                "[ \"$*\" = 'pr view --json number,url,state' ] || exit 9\n\
+                "[ \"$*\" = 'pr view --json number,url,state,isDraft,reviewDecision,statusCheckRollup' ] || exit 9\n\
                  [ \"$PWD\" = \"$(cd '{}' && pwd -P)\" ] || exit 8\n\
                  [ \"$GH_PROMPT_DISABLED\" = 1 ] || exit 7\n\
                  echo '{{\"number\":142,\"state\":\"OPEN\",\"url\":\"https://github.com/acme/app/pull/142\"}}'",

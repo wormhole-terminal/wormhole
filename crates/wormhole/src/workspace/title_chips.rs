@@ -10,7 +10,7 @@
 use gpui_kit::component::Selectable;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
-use wormhole_core::git::pr::{PrState, PullRequest};
+use wormhole_core::git::pr::{Checks, PrState, PullRequest};
 use wormhole_core::layout::title_row::{Extra, Extras};
 use wormhole_core::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
 use wormhole_core::usage::Gauge;
@@ -76,7 +76,8 @@ impl Workspace {
             narrower = (1..shown.len()).rev().map(ports).collect();
         }
         if let Some(pr) = &facts.pull_request {
-            extras = extras.with(Extra::PullRequest, Some(CHIP_GAP + chip(true, text(&pr.label()))));
+            let checks = if pr.open_checks().is_some() { style::EXTRA_GAP + style::EXTRA_ICON } else { 0.0 };
+            extras = extras.with(Extra::PullRequest, Some(CHIP_GAP + chip(true, text(&pr.label())) + checks));
         }
         (extras, narrower)
     }
@@ -232,13 +233,27 @@ fn gauge_chip(gauge: &Gauge, ui: UiColors) -> AnyElement {
         .into_any_element()
 }
 
-/// The branch's pull request: its number, in the colour of how it stands. A click opens it.
-fn pull_request_chip(pr: &PullRequest, ui: UiColors) -> AnyElement {
-    let color = match pr.state {
-        PrState::Open => ui.success_text,
-        PrState::Merged => ui.branch,
-        PrState::Closed => ui.danger_text,
+/// How a pull request is drawn, in the title row and on its folder's band: its icon in the colour
+/// of how it stands (a draft's muted), and while it is open its checks: a green check once they
+/// pass, a red cross when one fails, a dashed circle while they run.
+pub(super) fn pr_look(pr: &PullRequest, ui: UiColors) -> style::PrLook {
+    let (icon, color) = match pr.state {
+        PrState::Open if pr.draft => (IconName::GitPullRequestDraft, ui.muted),
+        PrState::Open => (IconName::GitPullRequest, ui.success_text),
+        PrState::Merged => (IconName::GitPullRequest, ui.branch),
+        PrState::Closed => (IconName::GitPullRequest, ui.danger_text),
     };
+    let checks = pr.open_checks().map(|checks| match checks {
+        Checks::Passing => (IconName::CircleCheck, ui.success_text),
+        Checks::Failing => (IconName::CircleX, ui.danger_text),
+        Checks::Pending => (IconName::CircleDashed, ui.muted),
+    });
+    style::PrLook { icon, color, label: pr.label().into(), checks }
+}
+
+/// The branch's pull request: its number, in the colour of how it stands, and its checks. A click
+/// opens it.
+fn pull_request_chip(pr: &PullRequest, ui: UiColors) -> AnyElement {
     let (url, words) = (pr.url.clone(), SharedString::from(pr.words()));
     let tip = words.clone();
     div()
@@ -247,7 +262,7 @@ fn pull_request_chip(pr: &PullRequest, ui: UiColors) -> AnyElement {
         .role(Role::Link)
         .aria_label(words)
         .cursor_pointer()
-        .child(style::extra_chip(ui, true, Some((IconName::GitPullRequest, color)), pr.label()))
+        .child(style::pull_request_chip(ui, pr_look(pr, ui)))
         .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
         .on_click(move |_, _, cx| cx.open_url(&url))
         .into_any_element()

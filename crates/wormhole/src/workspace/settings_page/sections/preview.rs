@@ -206,6 +206,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                 path_w: None,
                 changes: look.changes.then_some(folder.changes),
                 branch: look.branch.then(|| style::branch_tag(ui, Some(folder.branch)).into_any_element()),
+                pull_request: None,
             });
             column = column.child(style::folder_band(
                 SharedString::from(format!("preview-{id}-band-{fx}")),
@@ -300,6 +301,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                 path_w: None,
                 changes: None,
                 branch: None,
+                pull_request: None,
             }),
         ));
     }
