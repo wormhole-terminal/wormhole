@@ -82,6 +82,7 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ("Previous / next terminal", &[PreviousTerminal, NextTerminal], Each),
             ("Terminals 1–9 (hold ⌘ to see them)", &TERMINALS, Range),
             ("Go to the terminal that needs you", &[GoToWaiting], Each),
+            ("Go to the terminal that finished", &[GoToFinished], Each),
         ],
     ),
     (

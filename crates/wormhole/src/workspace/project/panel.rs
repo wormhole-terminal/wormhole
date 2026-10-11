@@ -457,6 +457,7 @@ fn section_band(id: &'static str, title: &'static str, count: Option<usize>, ui:
             title: title.into(),
             detail: None,
             count: count.map(|n| count_grouped(n).into()),
+            waiting: None,
             add: None,
             on_toggle: None,
             drop_target: false,

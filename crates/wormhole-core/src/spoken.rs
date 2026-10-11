@@ -216,7 +216,7 @@ pub fn spoken_elapsed(time: Duration) -> String {
 }
 
 /// "2 terminals need you"; the status bar and an announced burst say it alike.
-pub(crate) fn terminals_need_you(n: usize) -> String {
+pub fn terminals_need_you(n: usize) -> String {
     if n == 1 { "1 terminal needs you".to_string() } else { format!("{n} terminals need you") }
 }
 

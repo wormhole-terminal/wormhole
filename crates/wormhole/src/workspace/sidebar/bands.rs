@@ -77,6 +77,15 @@ impl Workspace {
             frame,
         );
         let folded = band.folded;
+        // A terminal folded away that needs you: the amber dot before the count (F-15), until the
+        // band is opened or the terminal answered.
+        let waiting = band
+            .members
+            .iter()
+            .filter(|&&ix| {
+                self.sessions.get(ix).is_some_and(|s| s.terminal().read(cx).status() == Status::Attention)
+            })
+            .count();
         let this = cx.weak_entity();
         let (on_toggle, on_add) = (this.clone(), this);
         let (fold_folder, add_folder) = (band.folder.clone(), band.folder.clone());
@@ -86,6 +95,13 @@ impl Workspace {
             title: band.label.clone().into(),
             detail,
             count: Some(style::count_label(band.matches).into()),
+            waiting: (folded && waiting > 0).then(|| {
+                let id = ElementId::Name(SharedString::from(format!(
+                    "band-waiting-{}",
+                    wormhole_core::sidebar::folder_key(band.folder.as_deref())
+                )));
+                style::status_glyph(id, ui, style::StatusGlyph::NeedsYou, cx)
+            }),
             add: Some((
                 "New terminal here",
                 Box::new(move |_, window, cx| {
@@ -115,7 +131,7 @@ impl Workspace {
                 wormhole_core::sidebar::folder_key(band.folder.as_deref())
             )))
         };
-        let label = spoken::band_label(
+        let mut label = spoken::band_label(
             &band.label,
             band.pinned,
             colored.map(|(name, _)| name),
@@ -125,6 +141,9 @@ impl Workspace {
             position,
             of,
         );
+        if folded && waiting > 0 {
+            label = format!("{label}, {}", wormhole_core::spoken::terminals_need_you(waiting));
+        }
 
         // A tooltip only when the name, the path or the branch is cut off: the whole path,
         // then the branch, the changes and how many terminals.

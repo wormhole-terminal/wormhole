@@ -262,6 +262,7 @@ impl NotesView {
                 detail: None,
                 // The steps still to do; done ones don't count.
                 count: (open > 0).then(|| count_grouped(open).into()),
+                waiting: None,
                 add: Some((
                     "Add next step",
                     Box::new(move |_, window, cx| {

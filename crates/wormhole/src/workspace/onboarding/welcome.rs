@@ -167,6 +167,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             title: "api-server".into(),
             detail: None,
             count: Some("3".into()),
+            waiting: None,
             add: None,
             on_toggle: None,
             drop_target: false,

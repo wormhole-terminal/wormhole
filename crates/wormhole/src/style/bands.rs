@@ -42,6 +42,9 @@ pub struct BandParts {
     pub detail: Option<AnyElement>,
     /// The count badge's text (`style::count_label`); `None` leaves it out.
     pub count: Option<SharedString>,
+    /// Before the count of a folded folder: the needs-you dot (a `style::status_glyph`) while a
+    /// terminal folded away in it needs you.
+    pub waiting: Option<AnyElement>,
     /// The + at the right edge: its tooltip and what it does. Its click leaves the band's
     /// own state alone.
     pub add: Option<(&'static str, ClickHandler)>,
@@ -133,8 +136,19 @@ fn band_with(
 ) -> Stateful<Div> {
     let two_lines = meta.is_some();
     let dim_count = look.cmd_held;
-    let BandParts { kind, section, title, detail, count, add, on_toggle, drop_target, sticky, joined } =
-        parts;
+    let BandParts {
+        kind,
+        section,
+        title,
+        detail,
+        count,
+        waiting,
+        add,
+        on_toggle,
+        drop_target,
+        sticky,
+        joined,
+    } = parts;
     let group = SharedString::from(format!("band-{id}"));
     let (fill, hairline) = match (drop_target, sticky) {
         (true, _) => (ui.highlight, ui.primary),
@@ -226,6 +240,7 @@ fn band_with(
                 .pr_4()
                 // Room for the + where there is no count to stand in for.
                 .when(swap, |d| d.relative().min_w(px(SWAP_SLOT)))
+                .children(waiting.filter(|_| section.is_collapsed()))
                 .children(count)
                 .children(add),
         );

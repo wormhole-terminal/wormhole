@@ -15,6 +15,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   dashed circle while checks run, beside the number in the title row and now also on the
   folder's band in the sidebar. A notification tells you when a pull request's checks pass
   or fail. Drafts get their own icon; the tooltip names the review decision.
+- A folded folder in the sidebar shows the amber needs-you dot while a terminal inside it is
+  waiting for you, so folding never hides a question.
+- Window → Go to Finished Terminal (⌥⇧⌘J) goes to the terminal that finished last and you
+  haven't looked at yet, then the one before it: a way through everything ready for review.
 
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a

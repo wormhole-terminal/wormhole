@@ -118,6 +118,7 @@ impl NotesView {
                 title: "Notes".into(),
                 detail: None,
                 count: (self.filled_notes > 0).then(|| count_grouped(self.filled_notes).into()),
+                waiting: None,
                 add: Some((
                     NEW_NOTE_TOOLTIP.as_str(),
                     Box::new(move |_, window, cx| {

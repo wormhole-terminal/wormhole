@@ -59,6 +59,9 @@ pub enum ActionId {
     LayoutGrid,
     LayoutSingle,
     GoToWaiting,
+    /// The terminal whose agent or command finished last and that you haven't looked at, then the
+    /// one before it on every press: going through what is ready for review.
+    GoToFinished,
     Minimize,
     Zoom,
     BringAllToFront,

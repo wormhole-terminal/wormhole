@@ -25,6 +25,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
                 title: title.into(),
                 detail: None,
                 count: count.map(SharedString::from),
+                waiting: None,
                 add: Some(("Add", Box::new(|_, _, _| {}))),
                 on_toggle: Some(Box::new(|_, _, _| {})),
                 drop_target: false,

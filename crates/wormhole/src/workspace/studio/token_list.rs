@@ -111,6 +111,7 @@ impl StudioWindow {
                     detail: Some(marks.into_any_element()),
                     // The group's size in the area, also while a filter lists fewer of it.
                     count: Some(group_size(group, area).to_string().into()),
+                    waiting: None,
                     add: None,
                     on_toggle: (!filtering).then(|| -> style::ClickHandler {
                         let this = cx.weak_entity();

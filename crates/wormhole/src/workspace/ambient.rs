@@ -165,6 +165,12 @@ struct Jumped(Option<i64>);
 
 impl Global for Jumped {}
 
+/// Where ⇧⌥⌘J went last.
+#[derive(Default)]
+struct JumpedFinished(Option<i64>);
+
+impl Global for JumpedFinished {}
+
 /// ⌥⌘J: raise the window of the terminal that has waited longest, in any window, and
 /// select it; again, the next one. Nothing waiting: nothing happens. Runs outside any window's
 /// update (defer it from a key handler).
@@ -175,6 +181,19 @@ pub(crate) fn jump_to_waiting(cx: &mut App) {
     let last = cx.default_global::<Jumped>().0;
     let Some(tab) = notify::next_waiting(&waiting, last) else { return };
     cx.default_global::<Jumped>().0 = Some(tab);
+    crate::background::activate(cx);
+    open_tab(tab, cx);
+}
+
+/// ⇧⌥⌘J: the terminal that finished last and hasn't been looked at, then on each press the one
+/// that finished before it (looking at one clears its "finished", so the next press moves on).
+pub(crate) fn jump_to_finished(cx: &mut App) {
+    let terminals = terminals(cx);
+    let finished: Vec<i64> =
+        notify::sections(&terminals).finished.iter().map(|&ix| terminals[ix].tab).collect();
+    let last = cx.default_global::<JumpedFinished>().0;
+    let Some(tab) = notify::next_waiting(&finished, last) else { return };
+    cx.default_global::<JumpedFinished>().0 = Some(tab);
     crate::background::activate(cx);
     open_tab(tab, cx);
 }

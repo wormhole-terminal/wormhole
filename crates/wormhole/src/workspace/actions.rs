@@ -83,6 +83,7 @@ actions!(
         About,
         OpenFolder,
         GoToWaiting,
+        GoToFinished,
         OpenSettings,
         ToggleThemeStudio,
         ToggleStatusBar,
@@ -228,6 +229,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         #[cfg(not(any(feature = "inspector", debug_assertions)))]
         A::Inspector => return None,
         A::GoToWaiting => Box::new(GoToWaiting),
+        A::GoToFinished => Box::new(GoToFinished),
         A::CommandPalette => Box::new(ToggleCommandPalette),
         A::KeyboardShortcuts => Box::new(ShowKeyboardShortcuts),
         A::Help | A::Print | A::ExportText => return None,
@@ -306,6 +308,8 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &OpenFolder, cx| cx.defer(menu_bar::open_folder));
     // ⌥⌘J: the terminal that has waited longest, in any window.
     cx.on_action(|_: &GoToWaiting, cx| cx.defer(ambient::jump_to_waiting));
+    // ⇧⌥⌘J: the terminal that finished last, then the one before it, in any window.
+    cx.on_action(|_: &GoToFinished, cx| cx.defer(ambient::jump_to_finished));
     cx.on_action(|_: &ToggleThemeStudio, cx| cx.defer(theme_studio));
     // ⇧⌘P and ⌥⌘/: over the window in front, from any window and the terminal too.
     cx.on_action(|_: &ToggleCommandPalette, cx| cx.defer(command_palette::toggle));

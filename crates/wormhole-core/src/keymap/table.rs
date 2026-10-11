@@ -129,6 +129,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(LayoutSingle, "Single Pane", &[]).named("Layout: Single Pane"),
         // The default: the user may record another key (`jump_waiting_key`), which the app binds.
         row(GoToWaiting, "Go to Waiting Terminal", &[(ALT_CMD, "j")]),
+        row(GoToFinished, "Go to Finished Terminal", &[(SHIFT_ALT_CMD, "j")]),
         row(Minimize, "Minimize", &[(CMD, "m")]),
         row(Zoom, "Zoom", &[]),
         row(BringAllToFront, "Bring All to Front", &[]),

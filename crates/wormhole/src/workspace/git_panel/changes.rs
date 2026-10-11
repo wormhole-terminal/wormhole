@@ -490,6 +490,7 @@ impl ChangesView {
                 title: group.title().into(),
                 detail: None,
                 count: Some(count_grouped(count).into()),
+                waiting: None,
                 add: None,
                 on_toggle: Some(Box::new(move |_, _, cx| {
                     this.update(cx, |this, cx| this.toggle_section(group, count, cx)).ok();

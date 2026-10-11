@@ -54,6 +54,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         title: title.into(),
         detail: None,
         count: count.map(SharedString::from),
+        waiting: None,
         add: if interactive { Some(("New terminal here", Box::new(|_, _, _| {}))) } else { None },
         on_toggle: if interactive { Some(Box::new(|_, _, _| {})) } else { None },
         drop_target: false,
@@ -124,7 +125,12 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .child(style::folder_band(
             "g-band-website",
             ui,
-            BandParts { joined: true, ..folder_parts("website", Section::Collapsed, Some("2"), true) },
+            // A terminal folded away in it needs you: the amber dot before the count.
+            BandParts {
+                joined: true,
+                waiting: Some(glyph("g-band-waiting", StatusGlyph::NeedsYou)),
+                ..folder_parts("website", Section::Collapsed, Some("2"), true)
+            },
             FolderLook::default(),
             Some(meta("~/Projects/website", None, Some(Some("main")), None)),
         ));
@@ -226,6 +232,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                     .into_any_element(),
             ),
             count: None,
+            waiting: None,
             ..folder_parts("notes", Section::Open, None, true)
         },
         FolderLook::default(),

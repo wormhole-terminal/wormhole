@@ -406,6 +406,7 @@ Window
   Next Terminal  ⌃⌘↓
   Previous Terminal  ⌃⌘↑
   Go to Waiting Terminal  ⌥⌘J
+  Go to Finished Terminal  ⌥⇧⌘J
   Select Pane ▸
     Left  ⌥⌘←
     Right  ⌥⌘→
