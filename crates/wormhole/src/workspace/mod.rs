@@ -273,6 +273,8 @@ pub struct Workspace {
     closing_session_prompt: bool,
     /// The New Terminal in New Worktree dialog, while it is up.
     worktree_ask: Option<worktree::Asking>,
+    /// The comment dialog of a diff line, while it is up.
+    commenting: Option<git_panel::diff::Commenting>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
@@ -385,6 +387,7 @@ impl Workspace {
             folder_projects: Default::default(),
             closing_session_prompt: false,
             worktree_ask: None,
+            commenting: None,
             discarded: false,
             dirty: false,
             first_run: Default::default(),
@@ -724,6 +727,7 @@ impl Workspace {
             repo_root: Default::default(),
             pinned: record.pinned,
             extras: Default::default(),
+            review: Default::default(),
         });
         let ix = self.sessions.len() - 1;
         for note in record.notes {

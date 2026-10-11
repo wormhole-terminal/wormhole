@@ -23,6 +23,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   and `$WORMHOLE_PORTS`, so dev servers in several worktrees don't fight over one port.
 - A project can name a setup command for new worktrees (`"worktree": { "setup": "npm install" }`
   in `.wormhole/config.json`); it runs once in the new worktree's terminal, after you trust it.
+- Comment on a diff's lines for the agent: click a line in the diff view to write what should
+  change there. The comments gather across files under the diff, and Paste into Terminal puts
+  them in the terminal's prompt as one message, each with its file, line and the line quoted,
+  for you to send.
 
 - Security updates say so. When a new version fixes a security issue, Settings → Updates shows
   "Security update available", how severe the issue is, and links to the published advisories; a

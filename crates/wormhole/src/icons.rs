@@ -70,6 +70,8 @@ gpui_kit::assets::icon_assets!(
         GitPullRequest,
         GitPullRequestDraft,
         CircleDashed,
+        // A diff line under the pointer can be commented on.
+        MessageSquarePlus,
     ]
 );
 

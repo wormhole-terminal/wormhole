@@ -10,6 +10,7 @@ mod highlight;
 mod load;
 mod notes;
 pub(crate) mod render;
+mod review;
 mod rows;
 
 use std::cell::Cell as StdCell;
@@ -30,6 +31,7 @@ use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side}
 use wormhole_core::limits;
 
 pub(super) use load::Observed;
+pub(in crate::workspace) use review::Commenting;
 
 /// What a diff shows: one file between two sides of a repository.
 #[derive(Clone, Debug, PartialEq)]

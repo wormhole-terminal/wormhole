@@ -32,6 +32,7 @@ pub mod panel;
 pub mod panes;
 pub mod project;
 pub mod reorder;
+pub mod review;
 pub mod search;
 pub mod settings_index;
 pub mod shells;

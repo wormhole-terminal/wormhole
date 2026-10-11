@@ -1,10 +1,14 @@
 //! Drawing the diff view: its rows (a line-number gutter, a +/− marker column
 //! and the code, on tinted rows; in split mode two equal columns, with hatched
 //! fillers where one side has no line) and the card around them. The rows are
-//! shared with the Theme Studio's sample.
+//! shared with the Theme Studio's sample. In the diff view a click on a line comments on it
+//! (`review`), and a line with a comment wears a primary bar along its left edge.
 
+use std::rc::Rc;
 use std::sync::Arc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -16,6 +20,7 @@ use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
 use wormhole_core::git::{LineKind, Side};
+use wormhole_core::review::LineSide;
 use wormhole_core::tokens::ThemeTokens;
 
 /// How far the card sits in from the terminal's column, left, right and below.
@@ -43,6 +48,33 @@ const BAR_BOTTOM: f32 = 3.0;
 const THUMB_MIN: f32 = 24.0;
 /// The room after the code in its column (`pr_3`).
 const CODE_END_PAD: f32 = 12.0;
+/// The bar along a commented line's left edge.
+const COMMENT_BAR_W: f32 = 2.0;
+/// What rows under the pointer share, so a line shows it can be commented on.
+const LINE_GROUP: &str = "diff-line";
+
+/// A line a click comments on: which side it is on, its number there and its text.
+#[derive(Clone, Debug)]
+pub(crate) struct LineAt {
+    pub side: LineSide,
+    pub line: u32,
+    pub code: SharedString,
+}
+
+impl LineAt {
+    /// A line as a comment pins it: an added or unchanged line by its number in the new file, a
+    /// removed one by its number in the old.
+    fn of(line: &RenderedLine) -> Option<Self> {
+        let (side, number) = match line.kind {
+            LineKind::Removed => (LineSide::Old, line.old?),
+            LineKind::Added | LineKind::Context => (LineSide::New, line.new?),
+        };
+        Some(Self { side, line: number, code: line.text.clone() })
+    }
+}
+
+/// What a click on a line does: the diff view opens the comment for it.
+pub(crate) type OnLine = Rc<dyn Fn(LineAt, &mut Window, &mut App)>;
 
 /// A diff row's height for a code font size: roomy, like an editor with
 /// generous line spacing, so tinted rows read as bands rather than stripes.
@@ -69,6 +101,8 @@ pub(crate) struct DiffColors {
     /// The sideways scroll bar: its track and its thumb.
     pub track: Hsla,
     pub thumb: Hsla,
+    /// A commented line's bar and the comment icon under the pointer.
+    pub comment: Hsla,
 }
 
 impl DiffColors {
@@ -88,6 +122,7 @@ impl DiffColors {
             divider: t("border"),
             track: t("state.hover"),
             thumb: t("scrollbar.thumb"),
+            comment: t("primary"),
         }
     }
 
@@ -116,6 +151,10 @@ pub(crate) struct RowStyle {
     /// old side): its fillers stay clear so the stripes aren't drawn twice.
     pub old_hatched: bool,
     pub new_hatched: bool,
+    /// A click on a line comments on it; the Studio's sample has no comments.
+    pub on_line: Option<OnLine>,
+    /// The lines that have a comment.
+    pub commented: Rc<Vec<(LineSide, u32)>>,
 }
 
 impl RowStyle {
@@ -141,8 +180,9 @@ pub(crate) fn hatch(colors: DiffColors, row_height: f32) -> Background {
     pattern_slash(colors.filler, HATCH_STRIPE, period - HATCH_STRIPE)
 }
 
-pub(crate) fn render_row(row: &Row, colors: DiffColors, style: &RowStyle) -> Div {
+pub(crate) fn render_row(ix: usize, row: &Row, colors: DiffColors, style: &RowStyle) -> Stateful<Div> {
     let base = div()
+        .id(("diff-row", ix))
         .flex()
         .w_full()
         .font_family(style.font_family.clone())
@@ -158,24 +198,58 @@ pub(crate) fn render_row(row: &Row, colors: DiffColors, style: &RowStyle) -> Div
             .child(div().flex_1().min_w_0().px_3().overflow_hidden().truncate().child(header.clone()))
             // In split mode the header keeps to the old column, clear of the divider.
             .when(style.split, |d| d.child(div().flex_1())),
-        Row::Unified(line) => base
+        Row::Unified(line) => commentable(base, line, colors, style)
             .bg(colors.line_bg(line.kind))
             .child(gutter(colors, style, line.old))
             .child(gutter(colors, style, line.new))
             .child(marker(colors, line.kind))
             .child(code(colors, style, line)),
         Row::Split(old, new) => base
-            .child(half(colors, style, old, true).self_stretch())
-            .child(half(colors, style, new, false).self_stretch()),
+            .child(half(ix, colors, style, old, true).self_stretch())
+            .child(half(ix, colors, style, new, false).self_stretch()),
     }
 }
 
-fn half(colors: DiffColors, style: &RowStyle, cell: &Cell, old_side: bool) -> Div {
+/// `row` showing `line`: in the diff view a click comments on it, the pointer over it shows the
+/// comment icon at its left edge, and with a comment it has the primary bar there.
+fn commentable(
+    row: Stateful<Div>,
+    line: &RenderedLine,
+    colors: DiffColors,
+    style: &RowStyle,
+) -> Stateful<Div> {
+    let (Some(on_line), Some(at)) = (style.on_line.clone(), LineAt::of(line)) else { return row };
+    let commented = style.commented.contains(&(at.side, at.line));
+    let edge = || div().absolute().top_0().left_0();
+    row.relative()
+        .group(LINE_GROUP)
+        .cursor_pointer()
+        .when(commented, |d| d.child(edge().bottom_0().w(px(COMMENT_BAR_W)).bg(colors.comment)))
+        .child(
+            edge()
+                .h(px(style.row_height))
+                .pl_1()
+                .flex()
+                .items_center()
+                .text_color(colors.comment)
+                .invisible()
+                .group_hover(LINE_GROUP, |s| s.visible())
+                .child(style::icon(IconName::MessageSquarePlus).xsmall()),
+        )
+        .on_click(move |_, window, cx| on_line(at.clone(), window, cx))
+}
+
+fn half(ix: usize, colors: DiffColors, style: &RowStyle, cell: &Cell, old_side: bool) -> Stateful<Div> {
     // `flex_1` has a zero basis: both halves are exactly half the row, whatever they hold.
-    let side = div().flex().flex_1().min_w_0().overflow_hidden();
+    let side = div()
+        .id((if old_side { "diff-old" } else { "diff-new" }, ix))
+        .flex()
+        .flex_1()
+        .min_w_0()
+        .overflow_hidden();
     let side = if style.wrap { side.items_start() } else { side.items_center() };
     match cell {
-        Cell::Line(line) => side
+        Cell::Line(line) => commentable(side, line, colors, style)
             .bg(colors.line_bg(line.kind))
             .child(gutter(colors, style, if old_side { line.old } else { line.new }))
             .child(marker(colors, line.kind))
@@ -301,10 +375,12 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
         scroll_x: 0.0,
         old_hatched: false,
         new_hatched: false,
+        on_line: None,
+        commented: Rc::default(),
     };
     let mut body = div().relative().flex().flex_col();
-    for row in &rows {
-        body = body.child(render_row(row, colors, &style));
+    for (ix, row) in rows.iter().enumerate() {
+        body = body.child(render_row(ix, row, colors, &style));
     }
     div()
         .flex()
@@ -346,7 +422,8 @@ impl Workspace {
             .outlined(ui, ui.border)
             .bg(colors.surface)
             .child(header)
-            .child(body);
+            .child(body)
+            .children(self.render_review_bar(ui, cx));
         Some(
             div()
                 .id("diff-view")
@@ -403,6 +480,8 @@ impl Workspace {
             scroll_x: 0.0,
             old_hatched,
             new_hatched,
+            on_line: Some(self.comment_click(view, cx)),
+            commented: Rc::new(self.commented_lines(view)),
         };
 
         // Sideways scrolling: as far as the longest line is wider than its column.
@@ -458,14 +537,14 @@ impl Workspace {
         } else if wrap {
             list(view.wrap_list.clone(), move |ix, _window, cx| {
                 let colors = DiffColors::new(&cx.global::<SettingsStore>().tokens);
-                render_row(&rows[ix], colors, &style).into_any_element()
+                render_row(ix, &rows[ix], colors, &style).into_any_element()
             })
             .size_full()
             .into_any_element()
         } else {
             let mut list = uniform_list("diff-rows", rows.len(), move |range, _window, cx| {
                 let colors = DiffColors::new(&cx.global::<SettingsStore>().tokens);
-                range.map(|ix| render_row(&rows[ix], colors, &style).into_any_element()).collect()
+                range.map(|ix| render_row(ix, &rows[ix], colors, &style).into_any_element()).collect()
             })
             .track_scroll(&view.scroll)
             .size_full();

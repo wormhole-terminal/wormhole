@@ -86,6 +86,8 @@ pub(super) struct Session {
     pub pinned: bool,
     /// What the title row's extras know about it: its agent's model and context, its ports.
     pub extras: super::title_extras::SessionExtras,
+    /// The comments written on its diffs and not pasted into its terminal yet.
+    pub review: wormhole_core::review::Review,
 }
 
 impl Session {

@@ -140,6 +140,8 @@
 //!   project-init    what the Project tab's Create project folder button does for the active
 //!                   terminal's folder: `.wormhole/config.json` made off the UI thread (a tick
 //!                   later `title`, `rows` and the tab show the project); prints the folder
+//!   comment <text>  the open comment dialog of a diff line (click a line first): its field set to
+//!                   <text> and saved, as Add Comment does; prints the terminal's review summary
 //!   project-trust   trust the active terminal's project as its trust button does, with Touch ID
 //!                   answered by `WORMHOLE_AUTH` (start the instance with `allow`); prints the folder
 //!   note-seed <count> <lines> | note-add <text> | note-toggle <n>   fill the terminal with long
@@ -378,6 +380,10 @@ fn command(name: &str) -> Option<Command> {
         "panel-tab" => panels::panel_tab,
         "project-init" => panels::project_init,
         "project-trust" => panels::project_trust,
+        "comment" => |ctx, arg| {
+            let said = ctx.workspace.devctl_comment(arg, ctx.window, ctx.cx).map_err(|e| anyhow!(e))?;
+            Ok(said)
+        },
         "note-seed" => panels::note_seed,
         "note-add" => panels::note_add,
         "note-toggle" => panels::note_toggle,
