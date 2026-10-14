@@ -33,6 +33,7 @@ mod process;
 pub mod program_status;
 mod pty_filter;
 mod restore;
+pub mod sequences;
 mod snapshot;
 mod text;
 
