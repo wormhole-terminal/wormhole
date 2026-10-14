@@ -60,6 +60,7 @@ fn every_event_is_worth_what_the_spec_says() {
             Signal::Busy => "busy",
             Signal::Attention => "attention",
             Signal::Done => "done",
+            Signal::Failed => "failed",
             Signal::Quiet => "quiet",
             Signal::Ended => "ended",
         });

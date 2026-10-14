@@ -1,6 +1,6 @@
 //! The status item's glyph, drawn rather than taken from SF Symbols: the terminal
-//! outline (filled while something works), with the needs-you dot or the finished check as a badge
-//! on its top-right corner behind a cut-out ring, and the four frames of the optional working
+//! outline (filled while something works), with the needs-you dot, the failed dot or the finished
+//! check as a badge on its top-right corner behind a cut-out ring, and the four frames of the optional working
 //! animation, in which the prompt's line types itself out.
 //!
 //! Every state uses the same canvas with the box centred in it, so the glyph never shifts, resizes
@@ -35,7 +35,7 @@ const RADIUS: f64 = 2.6;
 const STROKE: f64 = 1.9;
 /// The cut-out ring that sets a badge off from whatever is under it.
 const RING: f64 = 1.3;
-/// The needs-you dot.
+/// The needs-you and the failed dot.
 const DOT: f64 = 6.0;
 /// The finished check, drawn in its own stroke.
 const CHECK: f64 = 2.6;
@@ -56,6 +56,7 @@ pub(super) fn image(
         glyph(filled, frame, &ink);
         match mark {
             Mark::NeedsYou => dot(colors.attention),
+            Mark::Failed => dot(colors.danger),
             Mark::Finished => check(colors.done),
             Mark::None => {}
         }
@@ -118,7 +119,7 @@ fn glyph(filled: bool, frame: Option<usize>, ink: &NSColor) {
     compositing(NSCompositingOperation::SourceOver);
 }
 
-/// The amber dot, a badge tucked onto the box's top-right corner inside a ring cut out of what is
+/// The amber dot (needs you) or the danger one (failed), a badge tucked onto the box's top-right corner inside a ring cut out of what is
 /// under it.
 fn dot(rgba: Rgba) {
     let center = (BOX.origin.x + BOX.size.width - 0.1, DOT / 2.0 + RING);
@@ -155,7 +156,7 @@ pub(super) fn save_all(
     prefix: &str,
     colors: StatusColors,
 ) -> anyhow::Result<Vec<std::path::PathBuf>> {
-    let states: [(&str, bool, Option<usize>, Mark); 8] = [
+    let states: [(&str, bool, Option<usize>, Mark); 9] = [
         ("idle", false, None, Mark::None),
         ("working", true, None, Mark::None),
         ("working-0", true, Some(0), Mark::None),
@@ -163,6 +164,7 @@ pub(super) fn save_all(
         ("working-2", true, Some(2), Mark::None),
         ("working-3", true, Some(3), Mark::None),
         ("needs-you", false, None, Mark::NeedsYou),
+        ("failed", false, None, Mark::Failed),
         ("finished", false, None, Mark::Finished),
     ];
     let mut saved = Vec::new();

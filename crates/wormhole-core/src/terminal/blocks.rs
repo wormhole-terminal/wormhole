@@ -18,7 +18,7 @@ use alacritty_terminal::term::cell::Flags;
 use alacritty_terminal::term::{Term, TermMode};
 
 use super::marks::{self, RowMark};
-use super::pty_filter::Mark;
+use super::pty_filter::{BODY_MAX_CHARS, Mark, clean};
 
 /// How many commands the log remembers. A block older than that (a prompt pressed Enter at tens
 /// of thousands of times ago) reads as finished without a code or a time.
@@ -237,6 +237,55 @@ fn command_text<T: EventListener>(term: &Term<T>, line: Line, id: u64, out: &mut
     out.push_str(text.trim_end());
 }
 
+/// What a command that has just finished with a failing exit code left, for telling about it
+/// outside the grid (a banner, a row): the command line, how long it ran and the last thing it
+/// printed. Text from the program, so cleaned like its notifications are.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Ended {
+    pub command: String,
+    pub took: Option<Duration>,
+    /// The last non-blank line of its output, if it printed any and it is still on the grid.
+    pub last_line: Option<String>,
+}
+
+/// How many lines at the end of a command's output are looked through for its last line.
+const LAST_LINE_WINDOW: i32 = 40;
+
+/// The command that most recently finished with exit code `code`, if its block is on the grid.
+/// The shell has printed its next prompt by the time anyone asks, so the finished block is the
+/// last one or the one before it.
+pub(super) fn ended<T: EventListener>(term: &Term<T>, log: &CommandLog, code: i32) -> Option<Ended> {
+    if term.mode().contains(TermMode::ALT_SCREEN) {
+        return None;
+    }
+    let mut at = term.bottommost_line();
+    let newest = loop {
+        if at < term.topmost_line() {
+            return None;
+        }
+        if let Some(mark) = marks::mark_at(term, at) {
+            break mark.id;
+        }
+        at -= 1;
+    };
+    let block = [newest, newest.saturating_sub(1)]
+        .into_iter()
+        .filter_map(|id| block(term, id, log))
+        .find(|block| matches!(block.state, BlockState::Finished { code: Some(c), .. } if c == code))?;
+    let took = match block.state {
+        BlockState::Finished { took, .. } => took,
+        _ => None,
+    };
+    let last_line = block.output_lines().and_then(|(first, last)| {
+        let first = first.max(Line(last.0 - LAST_LINE_WINDOW));
+        let text = lines_text(term, first, last);
+        let line =
+            text.lines().rev().map(|line| clean(line, BODY_MAX_CHARS)).find(|line| !line.is_empty())?;
+        Some(line)
+    });
+    Some(Ended { command: clean(&block.command, BODY_MAX_CHARS), took, last_line })
+}
+
 /// The text of lines `first..=last`, trailing blanks trimmed, for copying a block's output (an
 /// image's placeholders aren't text).
 pub(super) fn lines_text<T: EventListener>(term: &Term<T>, first: Line, last: Line) -> String {
@@ -276,7 +325,9 @@ pub(super) mod tests {
     use alacritty_terminal::term::{Config, Term};
     use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
 
-    use super::{BlockState, CommandLog, block, block_at, blocks, lines_text, readout_text, took_text};
+    use super::{
+        BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, readout_text, took_text,
+    };
     use crate::terminal::GridSize;
     use crate::terminal::pty_filter::{Mark, Osc, PromptKind, tapped};
 
@@ -324,6 +375,52 @@ pub(super) mod tests {
         assert_eq!(block_at(&term, Line(9), &log), None, "below the last block");
         assert_eq!(block(&term, 2, &log).map(|b| (b.start.0, b.end.0)), Some((3, 4)));
         assert_eq!(block(&term, 7, &log), None);
+    }
+
+    #[test]
+    fn a_command_that_just_failed_is_read_back_with_its_last_line() {
+        // `make` exited 2 and printed "error" (and a blank line); the prompt after it is the newest
+        // block, so the failed one is the one before.
+        let (term, log) = shown(10, SESSION);
+        let found = ended(&term, &log, 2).expect("the failed block is on the grid");
+        assert_eq!(
+            found,
+            Ended { command: "make".into(), took: found.took, last_line: Some("error".into()) }
+        );
+        assert!(found.took.is_some());
+        // Another code is another command; `ls` (exit 0) is two blocks back, further than a command
+        // that just finished can be.
+        assert_eq!(ended(&term, &log, 3), None);
+        assert_eq!(ended(&term, &log, 0), None);
+    }
+
+    #[test]
+    fn what_a_command_printed_is_cleaned_and_only_the_end_of_it_is_read() {
+        let mut session = b"\x1b]133;A\x07$ \x1b]133;B\x07build\r\n\x1b]133;C\x07".to_vec();
+        for n in 0..60 {
+            session.extend_from_slice(format!("line {n}\r\n").as_bytes());
+        }
+        // Direction overrides and the like are not shown; the last line that has anything in it.
+        session.extend_from_slice("boom \u{202e}here\r\n   \r\n".as_bytes());
+        session.extend_from_slice(b"\x1b]133;D;101\x07\x1b]133;A\x07$ \x1b]133;B\x07");
+        let (term, log) = shown(10, &session);
+        let found = ended(&term, &log, 101).expect("on the grid");
+        assert_eq!(found.last_line.as_deref(), Some("boom here"));
+        // A command that printed nothing has no last line.
+        let (term, log) = shown(
+            10,
+            b"\x1b]133;A\x07$ \x1b]133;B\x07false\r\n\x1b]133;C\x07\x1b]133;D;1\x07\x1b]133;A\x07$ \x1b]133;B\x07",
+        );
+        let found = ended(&term, &log, 1).expect("on the grid");
+        assert_eq!((found.command.as_str(), found.last_line), ("false", None));
+    }
+
+    #[test]
+    fn a_full_screen_program_or_a_forgotten_block_has_nothing_to_read() {
+        let (term, log) = shown(10, b"\x1b[?1049h\x1b]133;A\x07$ ");
+        assert_eq!(ended(&term, &log, 1), None, "the alternate screen has no blocks");
+        let (term, log) = shown(10, b"plain text, no marks at all");
+        assert_eq!(ended(&term, &log, 1), None);
     }
 
     #[test]

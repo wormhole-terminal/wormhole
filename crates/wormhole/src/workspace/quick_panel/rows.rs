@@ -131,7 +131,7 @@ pub(crate) fn rows(terminals: &[Terminal], items: &[Do], query: &str) -> Vec<Row
 mod tests {
     use std::time::{Duration, Instant};
 
-    use wormhole_core::notify::{State, Terminal};
+    use wormhole_core::notify::{Source, State, Terminal};
 
     use super::{Do, Row, rows};
     use crate::menubar::ActionItem;
@@ -143,10 +143,12 @@ mod tests {
             name: name.into(),
             state,
             since: Instant::now() - Duration::from_secs(secs),
-            agent: None,
+            source: Source::Plain,
+            who: None,
             message: None,
             command: None,
             took: None,
+            exit: None,
             changed: None,
             folder: None,
             branch: None,

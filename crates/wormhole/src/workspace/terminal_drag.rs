@@ -80,12 +80,13 @@ impl TerminalDrag {
 }
 
 /// The status glyph a pane's header says its terminal has: the same states as its slot.
-pub(super) fn pane_glyph(status: crate::terminal_view::Status, agent: bool) -> StatusGlyph {
+pub(super) fn pane_glyph(status: crate::terminal_view::Status, told: bool) -> StatusGlyph {
     use crate::terminal_view::Status;
     match status {
-        Status::Busy if agent => StatusGlyph::Working,
+        Status::Busy if told => StatusGlyph::Working,
         Status::Busy => StatusGlyph::Running,
         Status::Done => StatusGlyph::Done,
+        Status::Failed => StatusGlyph::Failed,
         Status::Attention => StatusGlyph::NeedsYou,
         Status::Idle | Status::Exited => StatusGlyph::Terminal { unread: false },
     }

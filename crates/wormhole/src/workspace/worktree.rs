@@ -378,10 +378,15 @@ impl Workspace {
         let (status, command) = (session.status(cx), session.command_running(cx));
         let dirty = session.git.status.as_ref().is_some_and(|status| !status.files.is_empty());
         let mut detail = if needs {
-            let agent =
-                session.terminal().read(cx).agent.map(|id| wormhole_core::agents::agent(id).short_name());
+            let agent = session.told_name(cx);
             let programs = session.running_programs(matches!(status, Status::Busy | Status::Attention), cx);
-            session::close_session_detail(agent, session.open_items(cx), status, command, &programs) + " "
+            session::close_session_detail(
+                agent.as_deref(),
+                session.open_items(cx),
+                status,
+                command,
+                &programs,
+            ) + " "
         } else {
             String::new()
         };

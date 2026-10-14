@@ -232,6 +232,11 @@ pub enum TerminalState {
     Working,
     NeedsYou,
     Finished,
+    /// A command ended with a non-zero exit code, or an agent or program stopped on an error, and
+    /// nobody has looked yet. A binary built before this state existed can't read a reply that
+    /// has it; the protocol version stays, since moving it would turn away every script that
+    /// still runs the older one.
+    Failed,
     Exited,
 }
 
@@ -242,6 +247,7 @@ impl From<State> for TerminalState {
             State::Working => TerminalState::Working,
             State::NeedsYou => TerminalState::NeedsYou,
             State::Done => TerminalState::Finished,
+            State::Failed => TerminalState::Failed,
             State::Exited => TerminalState::Exited,
         }
     }
@@ -254,6 +260,7 @@ impl TerminalState {
             TerminalState::Working => "working",
             TerminalState::NeedsYou => "needs you",
             TerminalState::Finished => "finished",
+            TerminalState::Failed => "failed",
             TerminalState::Exited => "exited",
         }
     }
@@ -341,6 +348,9 @@ pub struct Summary {
     pub needs_you: usize,
     pub working: usize,
     pub finished: usize,
+    /// Added with the failed state: absent in an older app's reply.
+    #[serde(default)]
+    pub failed: usize,
     pub idle: usize,
     pub exited: usize,
 }
@@ -355,6 +365,7 @@ impl Summary {
                 TerminalState::NeedsYou => summary.needs_you += 1,
                 TerminalState::Working => summary.working += 1,
                 TerminalState::Finished => summary.finished += 1,
+                TerminalState::Failed => summary.failed += 1,
                 TerminalState::Idle => summary.idle += 1,
                 TerminalState::Exited => summary.exited += 1,
             }
@@ -438,7 +449,9 @@ pub fn send_text_check(
             ),
         ),
         TerminalState::Exited => refuse(ErrorCode::Refused, format!("tab {}'s shell has ended", target.tab)),
-        TerminalState::Idle | TerminalState::Working | TerminalState::Finished => Ok(()),
+        TerminalState::Idle | TerminalState::Working | TerminalState::Finished | TerminalState::Failed => {
+            Ok(())
+        }
     }
 }
 
@@ -555,7 +568,7 @@ mod tests {
         let ok = Reply::ok(Summary::of(1, [TerminalState::Working, TerminalState::NeedsYou]));
         assert_eq!(
             serde_json::to_string(&ok).expect("serializes"),
-            r#"{"version":1,"ok":true,"result":{"windows":1,"terminals":2,"needs_you":1,"working":1,"finished":0,"idle":0,"exited":0}}"#
+            r#"{"version":1,"ok":true,"result":{"windows":1,"terminals":2,"needs_you":1,"working":1,"finished":0,"failed":0,"idle":0,"exited":0}}"#
         );
         let error = Reply::error(ErrorCode::NotFound, "no tab 9");
         let line = serde_json::to_string(&error).expect("serializes");
@@ -597,6 +610,7 @@ mod tests {
         assert_eq!(check(true, "hi", None, TerminalState::Idle), Ok(()));
         assert_eq!(check(true, "hi", Some(2), TerminalState::Working), Ok(()), "another agent at work");
         assert_eq!(check(true, "hi", None, TerminalState::Finished), Ok(()));
+        assert_eq!(check(true, "hi", None, TerminalState::Failed), Ok(()), "back at its prompt");
         // Never the caller's own tab.
         assert_eq!(check(true, "y", Some(5), TerminalState::Idle), Err(ErrorCode::Refused));
         // Never a terminal waiting for the user: that is the permission prompt.
@@ -637,8 +651,22 @@ mod tests {
             assert_eq!(code.exit_code(), 1, "{code:?}");
         }
         assert_eq!(TerminalState::from(crate::notify::State::Done), TerminalState::Finished);
+        assert_eq!(TerminalState::from(crate::notify::State::Failed), TerminalState::Failed);
         assert_eq!(TerminalState::NeedsYou.word(), "needs you");
+        assert_eq!(TerminalState::Failed.word(), "failed");
+        assert_eq!(serde_json::to_string(&TerminalState::Failed).expect("serializes"), r#""failed""#);
         assert_eq!(serde_json::to_string(&TerminalState::NeedsYou).expect("serializes"), r#""needs_you""#);
         assert_eq!((Target::Pane(4).id(), Target::Pane(4).kind()), (4, "pane"));
+    }
+
+    /// An app that has no failed count yet answers without it; the command line reads that as none.
+    #[test]
+    fn a_summary_from_an_older_app_has_no_failed_count() {
+        let older =
+            r#"{"windows":1,"terminals":2,"needs_you":0,"working":1,"finished":1,"idle":0,"exited":0}"#;
+        let summary: Summary = serde_json::from_str(older).expect("reads");
+        assert_eq!(summary.failed, 0);
+        let counted = Summary::of(1, [TerminalState::Failed, TerminalState::Failed, TerminalState::Idle]);
+        assert_eq!((counted.failed, counted.idle, counted.terminals), (2, 1, 3));
     }
 }

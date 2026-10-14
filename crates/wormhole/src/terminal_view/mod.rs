@@ -16,12 +16,14 @@ use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge::token;
 use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::notify::Source;
 use wormhole_core::terminal::input::app_selection::AppSelection;
 use wormhole_core::terminal::input::{file_drop, keys, mouse};
 use wormhole_core::terminal::program_status::Summary as Reported;
 use wormhole_core::terminal::{GridSize, Mark, Notification, Pty, PtyEvent, SpawnOptions};
 
 mod blocks;
+mod failed;
 mod find;
 mod find_bar;
 mod input;
@@ -30,6 +32,7 @@ mod render;
 mod reported;
 mod status;
 
+pub use failed::Failure;
 pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]
 pub(crate) use render::PAINTS;
@@ -138,6 +141,11 @@ pub struct TerminalView {
     /// The shell said a command finished (OSC 133 `D`): the status settles on the next tick
     /// instead of waiting for the output to go quiet.
     finished_mark: bool,
+    /// The last command's failure (a failing exit code), until the next command starts: the
+    /// row says it even after the status has been seen.
+    failure: Option<Failure>,
+    /// How many failures this terminal has had (numbers them: [`Failure::serial`]).
+    failures: u64,
     /// The program's last notification of its own (OSC 9/99/777), for the notification sweep.
     notice: Option<ProgramNotice>,
     /// The summary as last announced with `TerminalEvent::SummaryChanged`.
@@ -232,6 +240,8 @@ impl TerminalView {
             cwd: cwd.clone(),
             agent: None,
             agent_message: None,
+            source: Source::Plain,
+            failed: None,
         };
         Self {
             focus_handle,
@@ -269,6 +279,8 @@ impl TerminalView {
             bell_counted: None,
             at_prompt: None,
             finished_mark: false,
+            failure: None,
+            failures: 0,
             notice: None,
             announced,
             saved_scrollback: RefCell::new(restored),

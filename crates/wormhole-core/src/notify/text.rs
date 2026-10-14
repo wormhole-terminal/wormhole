@@ -12,19 +12,24 @@ use crate::sidebar::text::{ago, clock, took};
 pub struct About<'a> {
     /// The terminal's name, as the sidebar shows it.
     pub name: &'a str,
-    /// The agent's name ("Claude Code"), if one runs there.
-    pub agent: Option<&'a str>,
+    /// The agent's name ("Claude Code"), or a reporting program's ("brew"), if one runs there.
+    pub who: Option<&'a str>,
     /// The command that ran ("cargo build --release"), for a terminal without an agent.
     pub command: Option<&'a str>,
     /// The folder's name and the branch.
     pub folder: Option<&'a str>,
     pub branch: Option<&'a str>,
-    /// The agent's question, or the body of a program's own notification.
+    /// The agent's or program's question or last words, or the body of a program's own
+    /// notification.
     pub message: Option<&'a str>,
     /// The title a program gave its notification.
     pub title: Option<&'a str>,
     /// How long the agent worked, or the command ran.
     pub took: Option<Duration>,
+    /// The exit code of a command that failed.
+    pub exit: Option<i32>,
+    /// The last line a failed command printed, if it could be read.
+    pub last_line: Option<&'a str>,
     /// Files changed in the terminal's repository, when known.
     pub changed: Option<usize>,
 }
@@ -43,15 +48,18 @@ pub fn text(kind: Kind, about: &About) -> Text {
     match kind {
         Kind::NeedsYou => Text {
             title: format!("{name} needs you"),
-            subtitle: joined([about.agent, about.folder, about.branch]),
+            subtitle: joined([about.who, about.folder, about.branch]),
             body: words(about.message).unwrap_or("Waiting for your answer").to_string(),
         },
         Kind::AgentDone => {
             let changed = about.changed.filter(|&n| n > 0).map(files_changed);
-            let body = joined([about.took.map(duration).as_deref(), changed.as_deref()]);
+            // A program's own last words ("Upgraded 12 packages") lead; an agent's turn ends
+            // without any.
+            let body =
+                joined([words(about.message), about.took.map(duration).as_deref(), changed.as_deref()]);
             Text {
                 title: format!("{name} finished"),
-                subtitle: joined([about.agent, about.folder, about.branch]),
+                subtitle: joined([about.who, about.folder, about.branch]),
                 body: if body.is_empty() { "Finished".to_string() } else { body },
             }
         }
@@ -61,6 +69,30 @@ pub fn text(kind: Kind, about: &About) -> Text {
                 title: format!("{command} finished"),
                 subtitle: joined([Some(name).filter(|n| *n != command), about.folder]),
                 body: about.took.map_or_else(|| "Finished".to_string(), duration),
+            }
+        }
+        Kind::CommandFailed => {
+            let after = about.took.map(|took| format!("after {}", duration(took)));
+            let body = joined([after.as_deref(), about.last_line]);
+            Text {
+                title: match about.exit {
+                    Some(code) => format!("{name} failed · exit {code}"),
+                    None => format!("{name} failed"),
+                },
+                subtitle: joined([about.command, about.folder, about.branch]),
+                body: if body.is_empty() { "Failed".to_string() } else { body },
+            }
+        }
+        Kind::AgentFailed => {
+            let after = about.took.map(|took| format!("after {}", duration(took)));
+            let body = match words(about.message) {
+                Some(words) => words.to_string(),
+                None => joined([Some("Stopped on an error"), after.as_deref()]),
+            };
+            Text {
+                title: format!("{name} failed"),
+                subtitle: joined([about.who, about.folder, about.branch]),
+                body,
             }
         }
         Kind::Bell => Text {
@@ -78,7 +110,7 @@ pub fn text(kind: Kind, about: &About) -> Text {
             };
             let subtitle = joined([
                 Some(name).filter(|n| *n != title),
-                about.agent.or(words(about.command)),
+                about.who.or(words(about.command)),
                 about.folder,
             ]);
             Text { title, subtitle, body }
@@ -91,8 +123,10 @@ pub fn text(kind: Kind, about: &About) -> Text {
 pub fn summary(kinds: &[Kind], names: &[String]) -> Text {
     let n = names.len();
     let finished = kinds.iter().all(|k| matches!(k, Kind::AgentDone | Kind::CommandDone));
+    let failed = kinds.iter().all(|k| matches!(k, Kind::AgentFailed | Kind::CommandFailed));
     let title = match () {
         _ if finished => format!("{n} terminals finished"),
+        _ if failed => format!("{n} terminals failed"),
         _ if kinds.iter().all(|k| *k == Kind::Bell) => format!("{n} terminals rang the bell"),
         _ => format!("{n} terminals"),
     };
@@ -110,13 +144,13 @@ pub fn duration(d: Duration) -> String {
 }
 
 /// A row's time in the menu, the Dock menu and the quick panel: how long it has waited
-/// ("2m", "now"), how long it has run ("4:12"), or when it ended ("12m ago"). `None` for a
-/// terminal that is idle or ended.
+/// ("2m", "now"), how long it has run ("4:12"), or when it ended or failed ("12m ago"). `None` for
+/// a terminal that is idle or ended.
 pub fn elapsed(state: State, since: Duration) -> Option<String> {
     match state {
         State::NeedsYou => Some(took(since).unwrap_or_else(|| "now".to_string())),
         State::Working => Some(clock(since)),
-        State::Done => Some(ago(since)),
+        State::Done | State::Failed => Some(ago(since)),
         State::Idle | State::Exited => None,
     }
 }
@@ -149,7 +183,7 @@ mod tests {
     fn needs_you_names_the_terminal_and_quotes_the_agent() {
         let about = About {
             name: "diff perf",
-            agent: Some("Claude Code"),
+            who: Some("Claude Code"),
             folder: Some("terminal"),
             branch: Some("ui-unify"),
             message: Some("Claude wants to run cargo test -p wormhole-core"),
@@ -171,7 +205,7 @@ mod tests {
     fn an_agent_finishing_says_how_long_and_what_changed() {
         let about = About {
             name: "sidebar polish",
-            agent: Some("Claude Code"),
+            who: Some("Claude Code"),
             folder: Some("terminal"),
             branch: Some("ui-unify"),
             took: Some(secs(252)),
@@ -185,6 +219,15 @@ mod tests {
         );
         let bare = About { name: "x", ..About::default() };
         assert_eq!(text(Kind::AgentDone, &bare).body, "Finished");
+        // A program that reports it is done says so in its own words first.
+        let brew = About {
+            name: "upgrade",
+            who: Some("brew"),
+            message: Some("Upgraded 12 packages"),
+            took: Some(secs(252)),
+            ..About::default()
+        };
+        assert_eq!(text(Kind::AgentDone, &brew).body, "Upgraded 12 packages · 4m 12s");
         assert_eq!(text(Kind::AgentDone, &bare).subtitle, "");
     }
 
@@ -237,13 +280,79 @@ mod tests {
         );
         let title_only = About { message: None, ..about };
         assert_eq!(text(Kind::Notice, &title_only).body, "Release");
-        let agent = About { agent: Some("Claude Code"), ..about };
+        let agent = About { who: Some("Claude Code"), ..about };
         assert_eq!(text(Kind::Notice, &agent).subtitle, "deploy · Claude Code · terminal");
         let bare = About { name: "x", ..About::default() };
         assert_eq!(
             text(Kind::Notice, &bare),
             Text { title: "x".into(), subtitle: String::new(), body: "Needs your attention".into() }
         );
+    }
+
+    #[test]
+    fn a_failed_command_says_its_exit_code_how_long_it_ran_and_what_it_last_printed() {
+        let about = About {
+            name: "build",
+            command: Some("cargo build"),
+            folder: Some("scratch"),
+            took: Some(secs(38)),
+            exit: Some(101),
+            last_line: Some("error[E0425]: cannot find value `tab_ix`"),
+            ..About::default()
+        };
+        assert_eq!(
+            text(Kind::CommandFailed, &about),
+            Text {
+                title: "build failed · exit 101".into(),
+                subtitle: "cargo build · scratch".into(),
+                body: "after 38s · error[E0425]: cannot find value `tab_ix`".into(),
+            }
+        );
+        // Without the output, the duration; without that, the bare fact.
+        let quiet = About { last_line: None, ..about };
+        assert_eq!(text(Kind::CommandFailed, &quiet).body, "after 38s");
+        let bare = About { name: "build", exit: Some(2), ..About::default() };
+        let t = text(Kind::CommandFailed, &bare);
+        assert_eq!(
+            (t.title.as_str(), t.subtitle.as_str(), t.body.as_str()),
+            ("build failed · exit 2", "", "Failed")
+        );
+        let no_code = About { exit: None, ..about };
+        assert_eq!(text(Kind::CommandFailed, &no_code).title, "build failed");
+    }
+
+    #[test]
+    fn an_agent_or_program_that_stopped_on_an_error_says_what_went_wrong() {
+        let about = About {
+            name: "deploy",
+            who: Some("terraform"),
+            folder: Some("infra"),
+            branch: Some("main"),
+            message: Some("Error: state lock held"),
+            took: Some(secs(252)),
+            ..About::default()
+        };
+        assert_eq!(
+            text(Kind::AgentFailed, &about),
+            Text {
+                title: "deploy failed".into(),
+                subtitle: "terraform · infra · main".into(),
+                body: "Error: state lock held".into(),
+            }
+        );
+        let silent = About { message: Some("  "), ..about };
+        assert_eq!(text(Kind::AgentFailed, &silent).body, "Stopped on an error · after 4m 12s");
+        let bare = About { name: "x", ..About::default() };
+        assert_eq!(text(Kind::AgentFailed, &bare).body, "Stopped on an error");
+    }
+
+    #[test]
+    fn a_program_that_reports_is_named_where_an_agent_would_be() {
+        let about =
+            About { name: "upgrade", who: Some("brew"), folder: Some("dotfiles"), ..About::default() };
+        assert_eq!(text(Kind::NeedsYou, &about).subtitle, "brew · dotfiles");
+        assert_eq!(text(Kind::AgentDone, &about).subtitle, "brew · dotfiles");
+        assert_eq!(text(Kind::AgentDone, &about).title, "upgrade finished");
     }
 
     #[test]
@@ -271,6 +380,10 @@ mod tests {
         let mixed = summary(&[Kind::AgentDone, Kind::Bell, Kind::CommandDone], &names);
         assert_eq!((mixed.title.as_str(), mixed.subtitle.as_str()), ("3 terminals", "Wormhole"));
         assert_eq!(mixed.body, "a, b, c");
+        let failed = [Kind::CommandFailed, Kind::AgentFailed, Kind::CommandFailed];
+        assert_eq!(summary(&failed, &names).title, "3 terminals failed");
+        let results = [Kind::CommandFailed, Kind::AgentDone, Kind::AgentDone];
+        assert_eq!(summary(&results, &names).title, "3 terminals", "finished and failed are not one word");
     }
 
     #[test]
@@ -287,6 +400,7 @@ mod tests {
         assert_eq!(elapsed(State::Working, secs(252)).as_deref(), Some("4:12"));
         assert_eq!(elapsed(State::Done, secs(720)).as_deref(), Some("12m ago"));
         assert_eq!(elapsed(State::Done, secs(5)).as_deref(), Some("just now"));
+        assert_eq!(elapsed(State::Failed, secs(120)).as_deref(), Some("2m ago"));
         assert_eq!(elapsed(State::Idle, secs(5)), None);
         assert_eq!(elapsed(State::Exited, secs(5)), None);
     }

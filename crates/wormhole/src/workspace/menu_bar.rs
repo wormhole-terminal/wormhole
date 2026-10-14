@@ -242,6 +242,7 @@ fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
             attention: rgba(ui.agent_attention),
             done: rgba(ui.agent_done),
             working: rgba(ui.agent_working),
+            danger: rgba(ui.danger),
             running: rgba(ui.muted),
         },
     }
@@ -280,7 +281,7 @@ fn animate_icon(animate: bool, cx: &mut App) {
 /// The Dock's badge (`dock_badge`) and its menu.
 fn sync_dock(terminals: &[Terminal], cx: &mut App) {
     let counts = Counts::of(terminals);
-    let badge = notify::dock_badge(settings(cx).dock_badge, counts.needs_you, counts.finished);
+    let badge = notify::dock_badge(settings(cx).dock_badge, counts.needs_you, counts.results());
     crate::dock::set_badge(badge, cx);
     let menu = model::dock_menu(terminals, Instant::now());
     if app(cx).menu.dock_menu.as_ref() == Some(&menu) {

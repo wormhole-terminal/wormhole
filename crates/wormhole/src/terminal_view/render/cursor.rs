@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn an_exited_shell_has_no_cursor() {
         assert!(!drawn(Status::Exited));
-        for status in [Status::Idle, Status::Busy, Status::Done, Status::Attention] {
+        for status in [Status::Idle, Status::Busy, Status::Done, Status::Failed, Status::Attention] {
             assert!(drawn(status), "{status:?}");
         }
     }

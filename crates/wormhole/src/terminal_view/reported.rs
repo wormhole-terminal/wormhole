@@ -5,7 +5,9 @@
 //! (`PtyEvent::ProgramStatus`); this reads the one record that needs you most (`Reported`) and
 //! turns it into a status. While any program holds a record, the status is the program's: it is
 //! exact, where the output heuristics only guess, so those stand aside ([`TerminalView::reported`]).
-//! An agent's hooks report the same way and whichever spoke last wins.
+//! An agent's hooks report the same way and whichever spoke last wins. Any program may report, not
+//! only the coding agents: one that is none (`brew`, a deploy script) is a `Source::Program` and
+//! shows in the row, the bar and the notifications like an agent does, under its own name.
 
 use super::*;
 use wormhole_core::terminal::program_status::{Kind, State};
@@ -133,18 +135,33 @@ impl TerminalView {
 }
 
 /// The status and the words a program's record amounts to. A blocked program needs you, with its
-/// own words or a short default for what it waits for; working is busy, and done is done. There is
-/// no status for a failure (yet): an error is a finished result for the user to look at, like done,
-/// with what went wrong as its words.
+/// own words or a short default for what it waits for; working is busy, done is done, and an error
+/// is failed, with what went wrong as its words. How far along a working or blocked program says it
+/// is follows its words ("Installing · 40%"); a result has no progress to show.
 pub(super) fn status_of(summary: &Reported) -> (Status, Option<String>) {
     let message = summary.message();
     match summary.state {
         State::Blocked => {
-            (Status::Attention, Some(message.unwrap_or_else(|| waiting_for(summary.kind).to_string())))
+            let words = message.unwrap_or_else(|| waiting_for(summary.kind).to_string());
+            (Status::Attention, Some(with_progress(words, summary.progress)))
         }
-        State::Error | State::Done => (Status::Done, message),
-        State::Working => (Status::Busy, message),
+        State::Error => (Status::Failed, message),
+        State::Done => (Status::Done, message),
+        // Without words of its own, only the percentage is worth saying: the row's "Working · 3m"
+        // can't carry it.
+        State::Working => match (message, summary.progress) {
+            (None, Some(_)) => (Status::Busy, Some(with_progress("Working".to_string(), summary.progress))),
+            (message, progress) => (Status::Busy, message.map(|words| with_progress(words, progress))),
+        },
         State::Idle => (Status::Idle, None),
+    }
+}
+
+/// `words` with how far along it is, if it says: "Installing updates · 40%".
+fn with_progress(words: String, progress: Option<u8>) -> String {
+    match progress {
+        Some(percent) => format!("{words} · {percent}%"),
+        None => words,
     }
 }
 
@@ -167,6 +184,10 @@ mod tests {
 
     fn summary(state: State, kind: Option<Kind>, msg: Option<&str>) -> Summary {
         Summary { state, kind, progress: None, app: None, title: None, msg: msg.map(str::to_string) }
+    }
+
+    fn with_progress(state: State, progress: u8, msg: Option<&str>) -> Summary {
+        Summary { progress: Some(progress), ..summary(state, None, msg) }
     }
 
     #[test]
@@ -202,9 +223,39 @@ mod tests {
             (Status::Done, Some("Upgraded 12 packages".into()))
         );
         assert_eq!(of(State::Idle, Some("ignored")), (Status::Idle, None));
-        // No Error status: a failure is a finished result, with its words.
-        assert_eq!(of(State::Error, Some("rsync failed")), (Status::Done, Some("rsync failed".into())));
-        assert_eq!(of(State::Error, None), (Status::Done, None));
+        // An error is a failure of its own, with its words.
+        assert_eq!(of(State::Error, Some("rsync failed")), (Status::Failed, Some("rsync failed".into())));
+        assert_eq!(of(State::Error, None), (Status::Failed, None));
+    }
+
+    #[test]
+    fn progress_follows_the_words_of_a_program_that_works_or_waits() {
+        let of = |summary: Summary| status_of(&summary);
+        assert_eq!(
+            of(with_progress(State::Working, 40, Some("Installing updates"))),
+            (Status::Busy, Some("Installing updates · 40%".into()))
+        );
+        // No words: the percentage is all there is to say, and the row's own "Working" goes with it.
+        assert_eq!(of(with_progress(State::Working, 7, None)), (Status::Busy, Some("Working · 7%".into())));
+        assert_eq!(
+            of(with_progress(State::Blocked, 90, Some("Apply 3 to add?"))),
+            (Status::Attention, Some("Apply 3 to add? · 90%".into()))
+        );
+        assert_eq!(
+            of(with_progress(State::Blocked, 90, None)),
+            (Status::Attention, Some("Waiting for you · 90%".into()))
+        );
+        // A result has finished: no progress to show, even if the report carried one.
+        assert_eq!(of(with_progress(State::Done, 100, Some("Done"))), (Status::Done, Some("Done".into())));
+        assert_eq!(
+            of(with_progress(State::Error, 60, Some("Failed"))),
+            (Status::Failed, Some("Failed".into()))
+        );
+        assert_eq!(of(with_progress(State::Idle, 5, None)), (Status::Idle, None));
+        assert_eq!(
+            of(with_progress(State::Working, 0, Some("Starting"))).1.as_deref(),
+            Some("Starting · 0%")
+        );
     }
 
     #[test]

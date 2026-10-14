@@ -2,9 +2,9 @@
 //! Dock badge and bounce, and the status item. Pure, so every rule is tested here with a fake
 //! clock; the app gathers the facts and posts or draws what comes out.
 //!
-//! Plain shells are first-class: a long command that ends and the bell are told like an agent's
-//! question or its finishing. Whatever needs exit codes (the failed state) waits for shell
-//! integration (see the backlog).
+//! Plain shells are first-class: a long command that ends (or fails, with its exit code, where the
+//! shell has integration) and the bell are told like an agent's question or its finishing. So are
+//! programs that report their own status (OSC 7501) without being a coding agent.
 
 mod announce;
 mod burst;
@@ -45,7 +45,31 @@ pub enum State {
     NeedsYou,
     /// Finished while nobody was looking, and not seen since.
     Done,
+    /// A command ended with a non-zero exit code, or an agent or program stopped on an error,
+    /// while nobody was looking, and not seen since.
+    Failed,
     Exited,
+}
+
+/// What tells a terminal's state, which decides what a change of it means: the same "needs you"
+/// is a question from an agent or a program, and a bell from a terminal without either.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum Source {
+    /// Neither: the output, the bell and the shell's marks are all there is.
+    #[default]
+    Plain,
+    /// A coding agent, by its hooks or its own reports.
+    Agent,
+    /// A program that reports its own status (OSC 7501) and is no known coding agent: `brew`, a
+    /// deploy script, a build tool. Its word is as good as an agent's.
+    Program,
+}
+
+impl Source {
+    /// The state is told by the program in the terminal, not guessed from what the terminal does.
+    pub fn told(self) -> bool {
+        self != Source::Plain
+    }
 }
 
 /// What happened in a terminal that may be worth telling.
@@ -57,6 +81,10 @@ pub enum Kind {
     AgentDone,
     /// A command in a terminal without an agent ran past the threshold and ended.
     CommandDone,
+    /// A command ended with a non-zero exit code (shell integration), past the same threshold.
+    CommandFailed,
+    /// An agent or a program stopped on an error (its hook, or its own report).
+    AgentFailed,
     /// A terminal without an agent rang its bell.
     Bell,
     /// A program sent a notification of its own (OSC 9, 99 or 777), with its words: the bell
@@ -75,13 +103,15 @@ pub enum Level {
 }
 
 /// The level a kind is delivered at: needs you is Time Sensitive when the build is entitled to
-/// it (a Developer ID build with the provisioning profile), else Active; an agent finishing and
-/// a program's own notification are Active; a command finishing and the bell are Passive. A
-/// grouped summary is Active.
+/// it (a Developer ID build with the provisioning profile), else Active; an agent finishing, a
+/// failure of any kind and a program's own notification are Active; a command finishing and the
+/// bell are Passive. A grouped summary is Active.
 pub fn interruption_level(kind: Kind, has_time_sensitive: bool) -> Level {
     match kind {
         Kind::NeedsYou if has_time_sensitive => Level::TimeSensitive,
-        Kind::NeedsYou | Kind::AgentDone | Kind::Notice => Level::Active,
+        Kind::NeedsYou | Kind::AgentDone | Kind::CommandFailed | Kind::AgentFailed | Kind::Notice => {
+            Level::Active
+        }
         Kind::CommandDone | Kind::Bell => Level::Passive,
     }
 }
@@ -105,13 +135,16 @@ pub struct Seen {
 
 /// Whether the settings ask to hear about `kind` at all (`notifications` is the master switch).
 /// A program's own notification asks for you on purpose, so it follows "needs you" rather than
-/// the bell, which is off by default because programs ring it by accident.
+/// the bell, which is off by default because programs ring it by accident. A command that fails
+/// has its own switch; an agent or program that stops on an error is the end of its work like a
+/// finish is, so it follows "an agent finishes".
 pub fn wanted(kind: Kind, settings: &Settings) -> bool {
     settings.notifications
         && match kind {
             Kind::NeedsYou | Kind::Notice => settings.notify_needs_you,
-            Kind::AgentDone => settings.notify_agent_done,
+            Kind::AgentDone | Kind::AgentFailed => settings.notify_agent_done,
             Kind::CommandDone => settings.notify_command_done,
+            Kind::CommandFailed => settings.notify_command_failed,
             Kind::Bell => settings.notify_bell,
         }
 }
@@ -153,36 +186,57 @@ pub enum Change {
     Keep,
 }
 
-/// A tab went from `before` to `after`; `agent`: a coding agent runs there. Needing you is an
-/// agent's question, or the bell where no agent runs; finishing counts only for an agent (a plain
-/// terminal's output settling isn't news; its command ending is, see [`command_finished`]).
-pub fn on_state(before: State, after: State, agent: bool) -> Change {
+/// A tab went from `before` to `after`, told by `source`. Needing you is the question of an agent
+/// or a program that reports, or the bell where there is neither; finishing and failing count only
+/// for those two (a plain terminal's output settling isn't news; its command ending is, see
+/// [`command_finished`] and [`command_failed`]).
+pub fn on_state(before: State, after: State, source: Source) -> Change {
     if before == after {
         return Change::Keep;
     }
-    match after {
-        State::NeedsYou if agent => Change::Post(Kind::NeedsYou),
-        State::NeedsYou => Change::Post(Kind::Bell),
-        State::Done if agent => Change::Post(Kind::AgentDone),
-        State::Done => Change::Keep,
-        State::Working | State::Idle | State::Exited => Change::Retract,
+    match (after, source.told()) {
+        (State::NeedsYou, true) => Change::Post(Kind::NeedsYou),
+        (State::NeedsYou, false) => Change::Post(Kind::Bell),
+        (State::Done, true) => Change::Post(Kind::AgentDone),
+        (State::Failed, true) => Change::Post(Kind::AgentFailed),
+        (State::Done | State::Failed, false) => Change::Keep,
+        (State::Working | State::Idle | State::Exited, _) => Change::Retract,
     }
 }
 
 /// Whether a command that left the foreground after `took` is worth a "finished" notice: only in
-/// a terminal without an agent (never an agent's own work), only past the threshold
-/// (`notify_command_after`, seconds), and never a program you sit in (vim, less, ssh) or leave
-/// running (a dev server), which `sidebar::command::ends_by_itself` knows.
-pub fn command_finished(command: &str, took: Duration, after_secs: u32, agent: bool) -> bool {
-    !agent
+/// a terminal whose state nothing tells (`told`: an agent, or a program reporting its own status,
+/// says when it is done itself, and its own work is not a command of the user's), only past the
+/// threshold (`notify_command_after`, seconds), and never a program you sit in (vim, less, ssh)
+/// or leave running (a dev server), which `sidebar::command::ends_by_itself` knows.
+pub fn command_finished(command: &str, took: Duration, after_secs: u32, told: bool) -> bool {
+    !told
         && !command.trim().is_empty()
         && took >= Duration::from_secs(after_secs.into())
         && crate::sidebar::command::ends_by_itself(command)
 }
 
+/// Whether a command that ended with a non-zero exit code is worth a "failed" notice: the same
+/// rule as [`command_finished`], so a short failure only changes the row, as a short success does.
+pub fn command_failed(command: &str, took: Duration, after_secs: u32, told: bool) -> bool {
+    command_finished(command, took, after_secs, told)
+}
+
+/// The exit code shells give a foreground job that Ctrl-C ended: the job dies of SIGINT (signal
+/// 2), and a shell reports a death by signal as 128 plus its number.
+pub const INTERRUPTED: i32 = 130;
+
+/// The exit code of a command that failed, if it did: any non-zero one but [`INTERRUPTED`]. The
+/// user pressed Ctrl-C themselves, so it is not news and not an error to look at; a program that
+/// handles SIGINT and exits 130 on purpose is the same to them. `None` for success, an
+/// interrupt, or an exit the shell gave no code for.
+pub fn failed_exit(code: Option<i32>) -> Option<i32> {
+    code.filter(|&code| code != 0 && code != INTERRUPTED)
+}
+
 /// The Dock icon's badge: terminals that need you (bells of terminals without an agent
-/// included), with "needs you + finished" also the finished ones nobody has seen. Working never
-/// badges; `None` clears it.
+/// included), with "needs you + finished" also the finished and failed ones nobody has seen
+/// (`done` counts both: [`Counts::results`]). Working never badges; `None` clears it.
 pub fn dock_badge(mode: DockBadge, needs_you: usize, done: usize) -> Option<String> {
     let n = match mode {
         DockBadge::Off => 0,
@@ -223,12 +277,21 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        Change, Delivery, Kind, Level, Seen, State, bounces, command_finished, delivery, dock_badge,
-        interruption_level, notice_id, notice_tab, on_state, sound, thread_id, wanted,
+        Change, Delivery, Kind, Level, Seen, Source, State, bounces, command_failed, command_finished,
+        delivery, dock_badge, failed_exit, interruption_level, notice_id, notice_tab, on_state, sound,
+        thread_id, wanted,
     };
     use crate::config::{DockBadge, InFront, NotifySound, Settings};
 
-    const KINDS: [Kind; 5] = [Kind::NeedsYou, Kind::AgentDone, Kind::CommandDone, Kind::Bell, Kind::Notice];
+    const KINDS: [Kind; 7] = [
+        Kind::NeedsYou,
+        Kind::AgentDone,
+        Kind::CommandDone,
+        Kind::CommandFailed,
+        Kind::AgentFailed,
+        Kind::Bell,
+        Kind::Notice,
+    ];
     const AWAY: Seen = Seen { looking: false, app_active: false };
     const IN_FRONT: Seen = Seen { looking: false, app_active: true };
     const LOOKING: Seen = Seen { looking: true, app_active: true };
@@ -245,6 +308,8 @@ mod tests {
         for entitled in [true, false] {
             assert_eq!(interruption_level(Kind::AgentDone, entitled), Level::Active);
             assert_eq!(interruption_level(Kind::Notice, entitled), Level::Active, "a program meant it");
+            assert_eq!(interruption_level(Kind::CommandFailed, entitled), Level::Active);
+            assert_eq!(interruption_level(Kind::AgentFailed, entitled), Level::Active);
             assert_eq!(interruption_level(Kind::CommandDone, entitled), Level::Passive);
             assert_eq!(interruption_level(Kind::Bell, entitled), Level::Passive);
         }
@@ -295,6 +360,13 @@ mod tests {
         s.notify_command_done = false;
         assert!(!wanted(Kind::AgentDone, &s) && !wanted(Kind::CommandDone, &s));
         assert!(!wanted(Kind::Bell, &Settings::default()), "the bell is off by default");
+        // A failed command has its own switch; an agent or program that stopped on an error follows
+        // the one for an agent finishing.
+        assert!(wanted(Kind::CommandFailed, &Settings::default()), "a failed command is on by default");
+        assert!(!wanted(Kind::AgentFailed, &s), "follows an agent finishing");
+        assert!(wanted(Kind::CommandFailed, &s), "and a command failing is its own");
+        s.notify_command_failed = false;
+        assert!(!wanted(Kind::CommandFailed, &s));
         assert!(wanted(Kind::Notice, &Settings::default()), "a program's own notification is on");
         assert!(!wanted(Kind::Notice, &s), "and follows needs you");
         let off = Settings { notifications: false, ..settings() };
@@ -315,17 +387,45 @@ mod tests {
 
     #[test]
     fn a_state_change_posts_retracts_or_keeps() {
+        use Source::{Agent, Plain};
         use State::*;
-        assert_eq!(on_state(Working, NeedsYou, true), Change::Post(Kind::NeedsYou));
-        assert_eq!(on_state(Idle, NeedsYou, false), Change::Post(Kind::Bell), "a plain terminal's bell");
-        assert_eq!(on_state(Working, Done, true), Change::Post(Kind::AgentDone));
-        assert_eq!(on_state(Working, Done, false), Change::Keep, "output settling isn't news");
+        assert_eq!(on_state(Working, NeedsYou, Agent), Change::Post(Kind::NeedsYou));
+        assert_eq!(on_state(Idle, NeedsYou, Plain), Change::Post(Kind::Bell), "a plain terminal's bell");
+        assert_eq!(on_state(Working, Done, Agent), Change::Post(Kind::AgentDone));
+        assert_eq!(on_state(Working, Done, Plain), Change::Keep, "output settling isn't news");
+        assert_eq!(on_state(Working, Failed, Agent), Change::Post(Kind::AgentFailed));
+        assert_eq!(on_state(Working, Failed, Plain), Change::Keep, "a command's failure is told by its exit");
         for after in [Working, Idle, Exited] {
-            assert_eq!(on_state(NeedsYou, after, true), Change::Retract, "{after:?}");
+            assert_eq!(on_state(NeedsYou, after, Agent), Change::Retract, "{after:?}");
+            assert_eq!(on_state(Failed, after, Plain), Change::Retract, "looked at: {after:?}");
         }
-        for state in [Idle, Working, NeedsYou, Done, Exited] {
-            assert_eq!(on_state(state, state, true), Change::Keep, "{state:?}");
+        for state in [Idle, Working, NeedsYou, Done, Failed, Exited] {
+            assert_eq!(on_state(state, state, Agent), Change::Keep, "{state:?}");
         }
+    }
+
+    /// A program that reports its own status is told like an agent: not a bell, not silence.
+    #[test]
+    fn a_reporting_program_asks_finishes_and_fails_like_an_agent() {
+        use State::*;
+        for (after, kind) in
+            [(NeedsYou, Kind::NeedsYou), (Done, Kind::AgentDone), (Failed, Kind::AgentFailed)]
+        {
+            assert_eq!(on_state(Working, after, Source::Program), Change::Post(kind), "{after:?}");
+            assert_eq!(on_state(Working, after, Source::Program), on_state(Working, after, Source::Agent));
+        }
+        assert!(Source::Program.told() && Source::Agent.told() && !Source::Plain.told());
+    }
+
+    #[test]
+    fn only_a_failure_the_user_did_not_cause_counts() {
+        assert_eq!(failed_exit(Some(1)), Some(1));
+        assert_eq!(failed_exit(Some(101)), Some(101));
+        assert_eq!(failed_exit(Some(-1)), Some(-1));
+        assert_eq!(failed_exit(Some(0)), None);
+        assert_eq!(failed_exit(None), None, "the shell gave no code");
+        assert_eq!(failed_exit(Some(130)), None, "Ctrl-C is the user's own doing");
+        assert_eq!(failed_exit(Some(131)), Some(131));
     }
 
     #[test]
@@ -338,6 +438,11 @@ mod tests {
         assert!(!command_finished("npm run dev", long, 10, false), "a dev server is stopped, not done");
         assert!(!command_finished("cargo test", long, 10, true), "an agent's own work");
         assert!(!command_finished("  ", long, 10, false));
+        // A failure is held to the same rules.
+        assert!(command_failed("cargo build", long, 10, false));
+        assert!(!command_failed("cargo build", Duration::from_secs(2), 10, false), "too quick to tell");
+        assert!(!command_failed("vim src/main.rs", long, 10, false));
+        assert!(!command_failed("cargo build", long, 10, true));
     }
 
     #[test]
@@ -355,7 +460,7 @@ mod tests {
         assert!(bounces(Kind::NeedsYou, false, true));
         assert!(!bounces(Kind::NeedsYou, true, true), "Wormhole is in front");
         assert!(!bounces(Kind::NeedsYou, false, false), "switched off");
-        for kind in [Kind::Bell, Kind::AgentDone, Kind::CommandDone, Kind::Notice] {
+        for kind in KINDS.into_iter().filter(|kind| *kind != Kind::NeedsYou) {
             assert!(!bounces(kind, false, true), "{kind:?}");
         }
     }

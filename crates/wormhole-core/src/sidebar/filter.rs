@@ -15,6 +15,9 @@ pub enum RowState {
     Working,
     /// An agent finished and nobody has looked yet.
     Finished,
+    /// A command ended with a non-zero exit code, or an agent or program stopped on an error, and
+    /// nobody has looked yet.
+    Failed,
     /// Nothing happening: an agent waiting for a prompt, a shell at its prompt.
     Idle,
     /// The shell ended.
@@ -70,7 +73,9 @@ impl Show {
             Show::All => true,
             Show::NeedsYou => state == RowState::NeedsYou,
             Show::Working => state == RowState::Working,
-            Show::Finished => state == RowState::Finished,
+            // A result to look at is a result to look at, whether it went well or not: there is
+            // no filter of its own for the failed ones (a terminal is "Finished" with an error).
+            Show::Finished => matches!(state, RowState::Finished | RowState::Failed),
             Show::Idle => state.is_idle(),
         }
     }
@@ -184,18 +189,25 @@ mod tests {
 
     #[test]
     fn show_keeps_one_state_and_idle_includes_an_ended_shell() {
-        let states =
-            [RowState::NeedsYou, RowState::Working, RowState::Finished, RowState::Idle, RowState::Exited];
+        let states = [
+            RowState::NeedsYou,
+            RowState::Working,
+            RowState::Finished,
+            RowState::Failed,
+            RowState::Idle,
+            RowState::Exited,
+        ];
         let kept =
             |show| states.iter().filter(|&&state| filter(show, false, "").admits(&row("x", state))).count();
-        assert_eq!(kept(Show::All), 5);
-        for show in [Show::NeedsYou, Show::Working, Show::Finished] {
+        assert_eq!(kept(Show::All), 6);
+        for show in [Show::NeedsYou, Show::Working] {
             assert_eq!(kept(show), 1, "{show:?}");
         }
+        assert_eq!(kept(Show::Finished), 2, "a terminal that failed is among the finished");
         assert_eq!(kept(Show::Idle), 2);
-        // Hiding idle terminals under All keeps the three that have something going on.
+        // Hiding idle terminals under All keeps the four that have something going on.
         let busy = states.iter().filter(|&&s| filter(Show::All, true, "").admits(&row("x", s))).count();
-        assert_eq!(busy, 3);
+        assert_eq!(busy, 4);
         // ...and only there: under Idle it would hide everything Show asked for.
         assert!(filter(Show::Idle, true, "").admits(&row("x", RowState::Idle)));
         assert!(!filter(Show::Working, true, "").admits(&row("x", RowState::Idle)));

@@ -127,7 +127,7 @@
     { "agent": "claude", "event": "Notification:idle_prompt", "signal": null },
     { "agent": "claude", "event": "Stop", "signal": "done" },
     { "agent": "claude", "event": "Stop:background", "signal": "busy" },
-    { "agent": "claude", "event": "StopFailure:rate_limit", "signal": "done" },
+    { "agent": "claude", "event": "StopFailure:rate_limit", "signal": "failed" },
     { "agent": "claude", "event": "SessionEnd:clear", "signal": "quiet" },
     { "agent": "claude", "event": "SessionEnd:resume", "signal": "quiet" },
     { "agent": "claude", "event": "SessionEnd:logout", "signal": "ended" },

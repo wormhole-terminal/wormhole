@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use wormhole_core::config::MenuBarIcon;
 use wormhole_core::keyspec::KeySpec;
-use wormhole_core::notify::{ItemState, State, Terminal};
+use wormhole_core::notify::{ItemState, Source, State, Terminal};
 
 use super::{
     DockEntry, Entry, Glyph, ItemModel, KeyEquivalent, MAX_SESSIONS, Mark, build, dock_menu, dump,
@@ -18,10 +18,12 @@ fn terminal(tab: i64, state: State, waited: u64, now: Instant) -> Terminal {
         name: format!("t{tab}"),
         state,
         since: now - Duration::from_secs(waited),
-        agent: None,
+        source: Source::Plain,
+        who: None,
         message: None,
         command: None,
         took: None,
+        exit: None,
         changed: None,
         folder: None,
         branch: None,
@@ -29,7 +31,8 @@ fn terminal(tab: i64, state: State, waited: u64, now: Instant) -> Terminal {
 }
 
 fn agent(mut t: Terminal, message: Option<&str>) -> Terminal {
-    t.agent = Some("Claude Code".into());
+    t.source = Source::Agent;
+    t.who = Some("Claude Code".into());
     t.message = message.map(str::to_string);
     t
 }
@@ -65,7 +68,7 @@ fn key(spec: &str) -> Option<KeyEquivalent> {
     KeyEquivalent::from_spec(&spec.parse::<KeySpec>().expect("valid spec"))
 }
 
-/// The status item's menu: two waiting, two working, two finished and four others.
+/// The status item's menu: two waiting, two working, one finished, one failed and four others.
 fn f40(now: Instant) -> MenuSnapshot {
     let mut diff = agent(terminal(1, State::NeedsYou, 130, now), Some("Approve cargo test?"));
     diff.name = "diff perf".into();
@@ -77,10 +80,11 @@ fn f40(now: Instant) -> MenuSnapshot {
     let mut tests = terminal(4, State::Working, 72, now);
     tests.name = "tests".into();
     tests.command = Some("cargo test -p wormhole-core".into());
-    let mut build = terminal(5, State::Done, 120, now);
+    let mut build = terminal(5, State::Failed, 120, now);
     build.name = "build".into();
     build.command = Some("cargo build".into());
     build.took = Some(Duration::from_secs(38));
+    build.exit = Some(101);
     let mut auth = agent(terminal(6, State::Done, 720, now), None);
     auth.name = "auth tokens".into();
     auth.changed = Some(7);
@@ -118,10 +122,10 @@ fn the_menu_lists_terminals_by_status() {
             ("diff perf", Some("2m"), Some("Claude Code · Approve cargo test?"), Some(Glyph::NeedsYou)),
             ("sidebar polish", Some("4:12"), Some("Claude Code · Editing sidebar.rs…"), Some(Glyph::Working)),
             ("tests", Some("1:12"), Some("cargo test -p wormhole-core"), Some(Glyph::Running)),
-            ("build", Some("2m ago"), Some("cargo build · after 38s"), Some(Glyph::Done)),
+            ("build", Some("2m ago"), Some("cargo build · exit 101 · after 38s"), Some(Glyph::Failed)),
             ("auth tokens", Some("12m ago"), Some("Claude Code · 7 files changed"), Some(Glyph::Done)),
         ],
-        "longest waiting, longest running, newest finished first"
+        "longest waiting, longest running, newest finished first; a failed one among the finished"
     );
     // Choosing a row goes to its tab.
     assert_eq!(items(&model.entries)[0].command, Some(MenuCommand::OpenTab(2)));
@@ -207,11 +211,49 @@ fn the_status_item_shows_the_most_urgent_state_its_way() {
 
     let finished = status_icon(&[terminal(1, State::Done, 0, now)], MenuBarIcon::StatusCount, false);
     assert_eq!((finished.state, finished.mark, finished.count), (ItemState::Finished, Mark::Finished, None));
+    // Failed outranks finished and working, and needing you outranks failed.
+    let mixed = [
+        terminal(1, State::Done, 0, now),
+        terminal(2, State::Failed, 0, now),
+        terminal(3, State::Working, 0, now),
+    ];
+    let failed = status_icon(&mixed, MenuBarIcon::StatusCount, false);
+    assert_eq!((failed.state, failed.mark, failed.count), (ItemState::Failed, Mark::Failed, None));
+    assert_eq!(failed.tooltip, "Wormhole — 1 failed · 1 working · 1 finished");
+    let asks = [terminal(4, State::NeedsYou, 0, now), mixed[1].clone()];
+    assert_eq!(status_icon(&asks, MenuBarIcon::StatusCount, false).mark, Mark::NeedsYou);
+    let plain_failed = status_icon(&mixed, MenuBarIcon::Plain, false);
+    assert_eq!(plain_failed.mark, Mark::None, "the plain icon is never coloured");
     let working = status_icon(&[terminal(1, State::Working, 0, now)], MenuBarIcon::StatusCount, true);
     assert_eq!((working.state, working.mark), (ItemState::Working, Mark::None));
     assert!(working.animate);
     let many: Vec<_> = (0..12).map(|i| terminal(i, State::NeedsYou, 0, now)).collect();
     assert_eq!(status_icon(&many, MenuBarIcon::StatusCount, false).count.as_deref(), Some("9+"));
+}
+
+/// A program that reports its own status is listed like an agent, under its own name.
+#[test]
+fn a_reporting_program_reads_like_an_agent_in_the_menu() {
+    let now = Instant::now();
+    let mut brew = terminal(1, State::NeedsYou, 130, now);
+    brew.source = Source::Program;
+    brew.who = Some("brew".into());
+    brew.message = Some("Password:".into());
+    let mut deploy = terminal(2, State::Failed, 60, now);
+    deploy.source = Source::Program;
+    deploy.who = Some("deploy.sh".into());
+    deploy.message = Some("rsync failed".into());
+    let model = build(&MenuSnapshot { terminals: vec![brew, deploy], ..MenuSnapshot::default() }, now);
+    let rows: Vec<_> =
+        items(&model.entries).into_iter().take(2).map(|i| (i.subtitle.as_deref(), i.glyph)).collect();
+    assert_eq!(
+        rows,
+        [
+            (Some("brew · Password:"), Some(Glyph::NeedsYou)),
+            (Some("deploy.sh · Failed · rsync failed"), Some(Glyph::Failed)),
+        ],
+        "a question, not a bell"
+    );
 }
 
 #[test]

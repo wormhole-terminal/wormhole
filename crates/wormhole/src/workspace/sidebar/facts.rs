@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
+use wormhole_core::notify::Source;
 use wormhole_core::sidebar::command::{OutputFacts, ends_by_itself, has_new_output};
 
 use super::*;
@@ -12,8 +13,11 @@ pub(super) struct RowInfo {
     pub(super) ix: usize,
     pub(super) id: i64,
     pub(super) name: SharedString,
-    /// The agent in the terminal, if any; a row without one is a plain terminal.
+    /// The agent in the terminal, if any.
     pub(super) agent: Option<AgentId>,
+    /// What tells the row's state: an agent, a program that reports its own status (it takes an
+    /// agent's kind of row, without the logo), or neither (a plain terminal).
+    pub(super) source: Source,
     pub(super) state: RowState,
     pub(super) message: Option<String>,
     /// How long the terminal has been in its status.
@@ -31,6 +35,9 @@ pub(super) struct RowInfo {
     pub(super) command: Option<String>,
     pub(super) running: Option<Duration>,
     pub(super) bell: bool,
+    /// The last command failed (a failing exit code) and the next one hasn't started: the row's
+    /// cue, whether or not anyone has seen it yet.
+    pub(super) failure: Option<RowFailure>,
     /// The command is done and left output you haven't seen ("new output").
     pub(super) unread: bool,
     pub(super) pinned: bool,
@@ -41,7 +48,21 @@ pub(super) struct RowInfo {
     pub(super) changes: Option<usize>,
 }
 
+/// A plain terminal's last failed command, as its row says it ("cargo build · exit 101").
+pub(super) struct RowFailure {
+    pub(super) code: i32,
+    pub(super) command: Option<String>,
+    /// How long ago the shell said so.
+    pub(super) since: Duration,
+}
+
 impl RowInfo {
+    /// A row whose status something tells (an agent or a program that reports) says it in words;
+    /// a plain terminal says what runs in it.
+    pub(super) fn told(&self) -> bool {
+        self.source.told()
+    }
+
     pub(super) fn searchable(&self) -> Searchable<'_> {
         Searchable {
             name: &self.name,
@@ -53,16 +74,19 @@ impl RowInfo {
     }
 }
 
-/// What the Show filter makes of a terminal's status. A terminal with an agent shows the
-/// agent's; one without is working while a command runs and needs you while its bell counts.
-fn row_state(agent: bool, status: Status, command: bool) -> RowState {
-    match (agent, status) {
+/// What the Show filter makes of a terminal's status. A terminal whose status is told (`told`: an
+/// agent's, or a program's own report) shows it; one without is working while a command runs,
+/// needs you while its bell counts, and has failed when its last command did and nobody has seen.
+fn row_state(told: bool, status: Status, command: bool) -> RowState {
+    match (told, status) {
         (_, Status::Exited) => RowState::Exited,
         (_, Status::Attention) => RowState::NeedsYou,
         (true, Status::Busy) => RowState::Working,
         (true, Status::Done) => RowState::Finished,
+        (true, Status::Failed) => RowState::Failed,
         (true, Status::Idle) => RowState::Idle,
         (false, _) if command => RowState::Working,
+        (false, Status::Failed) => RowState::Failed,
         (false, _) => RowState::Idle,
     }
 }
@@ -80,7 +104,9 @@ impl Workspace {
                 let status = terminal.status();
                 let foreground = terminal.foreground();
                 let agent = terminal.agent;
-                let command = foreground.map(|f| f.command.clone()).filter(|_| agent.is_none());
+                let source = terminal.source();
+                let told = source.told();
+                let command = foreground.map(|f| f.command.clone()).filter(|_| !told);
                 let program_running = command.is_some();
                 let git = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
                 let root = terminal.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
@@ -89,7 +115,8 @@ impl Workspace {
                     id: session.id,
                     name: session.name(cx),
                     agent,
-                    state: row_state(agent.is_some(), status, command.is_some()),
+                    source,
+                    state: row_state(told, status, command.is_some()),
                     message: terminal.agent_message.clone(),
                     since: terminal.status_since().elapsed(),
                     cwd: terminal.cwd.clone(),
@@ -97,12 +124,17 @@ impl Workspace {
                     folder: if grouped { root } else { None },
                     branch: git.and_then(|status| status.branch.clone()),
                     running: foreground
-                        .filter(|f| agent.is_none() && ends_by_itself(&f.command))
+                        .filter(|f| !told && ends_by_itself(&f.command))
                         .and_then(|f| now.duration_since(f.started).ok()),
                     command,
-                    bell: agent.is_none() && terminal.bell_rang(),
+                    bell: !told && terminal.bell_rang(),
+                    failure: terminal.failure().filter(|_| !told).map(|failure| RowFailure {
+                        code: failure.code,
+                        command: failure.command.clone(),
+                        since: failure.at.elapsed(),
+                    }),
                     unread: has_new_output(OutputFacts {
-                        agent: agent.is_some(),
+                        agent: told,
                         // Seen on screen: the selected terminal and the panes shown with it.
                         selected: self.on_screen(ix),
                         program_running,
@@ -148,6 +180,17 @@ mod tests {
 
     use super::row_state;
     use crate::terminal_view::Status;
+
+    #[test]
+    fn a_failure_is_a_row_state_for_agents_programs_and_plain_terminals() {
+        assert_eq!(row_state(true, Status::Failed, false), RowState::Failed);
+        assert_eq!(row_state(false, Status::Failed, false), RowState::Failed);
+        // A plain terminal that runs a command again is working, whatever its last one did.
+        assert_eq!(row_state(false, Status::Failed, true), RowState::Working);
+        // Seen, it is a result nobody has left to look at.
+        assert_eq!(row_state(false, Status::Idle, false), RowState::Idle);
+        assert_eq!(row_state(true, Status::Attention, false), RowState::NeedsYou, "asking outranks");
+    }
 
     #[test]
     fn an_agents_status_is_its_rows_state() {

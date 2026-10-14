@@ -53,9 +53,16 @@ fn kind(name: &str) -> Result<Kind> {
         "needs-you" => Kind::NeedsYou,
         "agent-done" => Kind::AgentDone,
         "command-done" => Kind::CommandDone,
+        "command-failed" => Kind::CommandFailed,
+        "agent-failed" => Kind::AgentFailed,
         "bell" => Kind::Bell,
         "notice" => Kind::Notice,
-        other => return Err(anyhow!("kind {other:?}: needs-you, agent-done, command-done, bell or notice")),
+        other => {
+            return Err(anyhow!(
+                "kind {other:?}: needs-you, agent-done, agent-failed, command-done, command-failed, bell or \
+                 notice"
+            ));
+        }
     })
 }
 

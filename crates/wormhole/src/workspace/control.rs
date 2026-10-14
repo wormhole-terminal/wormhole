@@ -351,7 +351,7 @@ impl Workspace {
 
 /// A terminal's state as the sidebar counts it.
 fn tab_state(terminal: &TerminalView) -> TerminalState {
-    state_of(terminal.status(), terminal.agent.is_some(), terminal.foreground()).into()
+    state_of(terminal.status(), terminal.source().told(), terminal.foreground()).into()
 }
 
 #[cfg(test)]

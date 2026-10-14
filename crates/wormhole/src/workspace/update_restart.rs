@@ -89,7 +89,7 @@ pub(super) fn is_idle(status: Status, command_running: bool, agent_in_front: boo
     match status {
         Status::Busy | Status::Attention => false,
         Status::Exited => true,
-        Status::Idle | Status::Done => !command_running || agent_in_front,
+        Status::Idle | Status::Done | Status::Failed => !command_running || agent_in_front,
     }
 }
 
@@ -288,6 +288,8 @@ mod tests {
         assert!(is_idle(Status::Done, true, true), "codex, finished and unseen");
         assert!(is_idle(Status::Idle, false, false), "a shell at its prompt");
         assert!(is_idle(Status::Done, false, false));
+        assert!(is_idle(Status::Failed, false, false), "a failure nobody has seen is no work");
+        assert!(!is_idle(Status::Failed, true, false), "a command still in front");
         assert!(is_idle(Status::Exited, true, false), "nothing runs in an ended shell");
     }
 

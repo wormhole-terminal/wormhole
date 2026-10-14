@@ -226,7 +226,7 @@ pub fn render(reply: &Reply, home: Option<&Path>) -> Result<String, String> {
     }
     if let Ok(summary) = serde_json::from_value::<Summary>(result.clone()) {
         return Ok(format!(
-            "{} {}, {} {}: {} needs you, {} working, {} finished, {} idle, {} exited\n",
+            "{} {}, {} {}: {} needs you, {} working, {} finished, {} failed, {} idle, {} exited\n",
             summary.windows,
             plural(summary.windows, "window"),
             summary.terminals,
@@ -234,6 +234,7 @@ pub fn render(reply: &Reply, home: Option<&Path>) -> Result<String, String> {
             summary.needs_you,
             summary.working,
             summary.finished,
+            summary.failed,
             summary.idle,
             summary.exited
         ));
@@ -638,8 +639,9 @@ mod tests {
         let summary = Summary::of(2, [TerminalState::Working, TerminalState::Idle, TerminalState::NeedsYou]);
         assert_eq!(
             render(&Reply::ok(summary), home).expect("renders"),
-            "2 windows, 3 terminals: 1 needs you, 1 working, 0 finished, 1 idle, 0 exited\n"
+            "2 windows, 3 terminals: 1 needs you, 1 working, 0 finished, 0 failed, 1 idle, 0 exited\n"
         );
+
         let one = Summary::of(1, [TerminalState::Idle]);
         assert!(render(&Reply::ok(one), home).expect("renders").starts_with("1 window, 1 terminal:"));
         let opened = Opened {

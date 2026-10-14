@@ -334,6 +334,9 @@ pub struct Settings {
     pub notify_agent_done: bool,
     /// When a command that ran for at least `notify_command_after` finishes.
     pub notify_command_done: bool,
+    /// When a command that ran for at least `notify_command_after` ends with a non-zero exit code
+    /// (needs a shell with integration).
+    pub notify_command_failed: bool,
     /// Seconds a command must run before its end is worth a notification, 5..=300.
     pub notify_command_after: u32,
     /// When a terminal without an agent rings its bell.
@@ -429,6 +432,7 @@ impl Default for Settings {
             notify_needs_you: true,
             notify_agent_done: true,
             notify_command_done: true,
+            notify_command_failed: true,
             notify_command_after: 10,
             notify_bell: false,
             notify_only_unseen: true,
@@ -525,6 +529,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "notify_needs_you",
     "notify_agent_done",
     "notify_command_done",
+    "notify_command_failed",
     "notify_command_after",
     "notify_bell",
     "notify_only_unseen",
@@ -629,8 +634,11 @@ impl Settings {
     /// this, so a kind turned on there is never held back by a master switch left off.
     pub fn change_notify_kind(&mut self, change: impl FnOnce(&mut Settings)) {
         change(self);
-        self.notifications =
-            self.notify_needs_you || self.notify_agent_done || self.notify_command_done || self.notify_bell;
+        self.notifications = self.notify_needs_you
+            || self.notify_agent_done
+            || self.notify_command_done
+            || self.notify_command_failed
+            || self.notify_bell;
     }
 
     /// Whether `folder` is one of the pinned folders.
@@ -754,6 +762,8 @@ mod tests {
         s.change_notify_kind(|s| s.notify_agent_done = false);
         assert!(s.notifications, "commands still notify");
         s.change_notify_kind(|s| s.notify_command_done = false);
+        assert!(s.notifications, "a failing command still notifies");
+        s.change_notify_kind(|s| s.notify_command_failed = false);
         assert!(!s.notifications, "all off = false (the bell is off by default)");
         assert!(!s.notify_kind_on(true), "with the master off nothing is on, whatever a kind says");
         s.change_notify_kind(|s| s.notify_bell = true);
@@ -814,6 +824,7 @@ mod tests {
         assert_eq!(unset.theme_mode, ThemeMode::System);
         assert_eq!(unset.theme_light, "Catppuccin Latte");
         assert!(unset.notify_needs_you && unset.notify_agent_done && unset.notify_command_done);
+        assert!(unset.notify_command_failed, "a failing command is told unless switched off");
         assert_eq!(unset.notify_command_after, 10);
         assert!(!unset.notify_bell && unset.notify_only_unseen && unset.notify_group_bursts);
         assert_eq!(unset.notify_in_front, InFront::None, "in front, the window itself says nothing");

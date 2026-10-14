@@ -161,14 +161,20 @@ impl Workspace {
         cx.notify();
         // By id: sessions may come and go while the question is up.
         let id = session.id;
-        let agent = session.terminal().read(cx).agent.map(|id| wormhole_core::agents::agent(id).short_name());
+        let agent = session.told_name(cx);
         let (status, command) = (session.status(cx), session.command_running(cx));
         // The agent the question names is not listed again among the programs.
         let programs = session.running_programs(matches!(status, Status::Busy | Status::Attention), cx);
         let question = dialog::CloseQuestion {
             title: session::close_session_title(&session.name(cx)).into(),
-            detail: session::close_session_detail(agent, session.open_items(cx), status, command, &programs)
-                .into(),
+            detail: session::close_session_detail(
+                agent.as_deref(),
+                session.open_items(cx),
+                status,
+                command,
+                &programs,
+            )
+            .into(),
             confirm: "Close",
         };
         let (confirm, dismiss) = (cx.weak_entity(), cx.weak_entity());

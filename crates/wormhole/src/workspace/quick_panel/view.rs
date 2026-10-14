@@ -266,10 +266,13 @@ impl QuickPanel {
         let detail_color = match terminal.state {
             State::NeedsYou => ui.attention_text,
             State::Done => ui.done_text,
+            State::Failed => ui.danger_text,
             _ if selected => ui.list_selected_muted,
             _ => ui.muted,
         };
-        let plain_command = terminal.agent.is_none() && terminal.state == State::Working;
+        // A command line, running or failed, reads in the code font; a program's words don't.
+        let plain_command =
+            !terminal.source.told() && matches!(terminal.state, State::Working | State::Failed);
         let (code_font, _) = crate::fonts::code_font(cx);
         let elapsed =
             notify::elapsed(terminal.state, Instant::now().saturating_duration_since(terminal.since));

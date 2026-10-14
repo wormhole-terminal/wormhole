@@ -18,7 +18,7 @@ fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
 }
 
-fn terminal(cx: &mut TestAppContext, window: &OpenWindow, ix: usize) -> Entity<TerminalView> {
+pub(super) fn terminal(cx: &mut TestAppContext, window: &OpenWindow, ix: usize) -> Entity<TerminalView> {
     read(cx, window, |ws: &Workspace| ws.sessions[ix].terminal().clone())
 }
 
@@ -41,7 +41,7 @@ fn base64(text: &str) -> String {
 
 /// `OSC 7501 ; body ST` for the terminal, with a message given as plain text where the body says
 /// `{msg:text}`.
-fn report(cx: &mut TestAppContext, terminal: &Entity<TerminalView>, body: &str) {
+pub(super) fn report(cx: &mut TestAppContext, terminal: &Entity<TerminalView>, body: &str) {
     let body = match body.split_once("{msg:") {
         Some((before, rest)) => {
             let (text, after) = rest.split_once('}').expect("a closing brace");
@@ -52,18 +52,18 @@ fn report(cx: &mut TestAppContext, terminal: &Entity<TerminalView>, body: &str) 
     cx.update(|cx| terminal.update(cx, |t, cx| t.report_for_test(&body, cx)));
 }
 
-fn now(cx: &mut TestAppContext, terminal: &Entity<TerminalView>) -> (Status, Option<String>) {
+pub(super) fn now(cx: &mut TestAppContext, terminal: &Entity<TerminalView>) -> (Status, Option<String>) {
     terminal.read_with(cx, |t, _| {
         let summary = t.summary();
         (summary.status, summary.agent_message)
     })
 }
 
-fn words(text: &str) -> Option<String> {
+pub(super) fn words(text: &str) -> Option<String> {
     Some(text.to_string())
 }
 
-fn event(cx: &mut TestAppContext, terminal: &Entity<TerminalView>, event: PtyEvent) {
+pub(super) fn event(cx: &mut TestAppContext, terminal: &Entity<TerminalView>, event: PtyEvent) {
     cx.update(|cx| terminal.update(cx, |t, cx| t.event_for_test(event, cx)));
 }
 
@@ -83,9 +83,9 @@ fn a_programs_report_is_the_terminals_status_and_words(cx: &mut TestAppContext) 
     assert_eq!(now(cx, &t), (Status::Busy, words("Installing updates")));
     report(cx, &t, "state=done:app=brew:msg={msg:Upgraded 12 packages}");
     assert_eq!(now(cx, &t), (Status::Done, words("Upgraded 12 packages")));
-    // There is no Error status: a failure is a finished result, with what went wrong.
+    // An error is a failure of its own, with what went wrong.
     report(cx, &t, "state=error:msg={msg:rsync failed}");
-    assert_eq!(now(cx, &t), (Status::Done, words("rsync failed")));
+    assert_eq!(now(cx, &t), (Status::Failed, words("rsync failed")));
     report(cx, &t, "state=idle");
     assert_eq!(now(cx, &t), (Status::Idle, None));
     // Everything it said is gone: nothing left of the status either.
@@ -196,8 +196,10 @@ fn a_reported_question_stays_and_a_finished_result_goes_when_looked_at(cx: &mut 
     assert_eq!(now(cx, &t).0, Status::Idle);
     // The same for a failure.
     report(cx, &t, "state=error");
+    assert_eq!(now(cx, &t).0, Status::Failed);
     assert!(look(cx));
-    assert_eq!(now(cx, &t).0, Status::Idle);
+    assert_eq!(now(cx, &t), (Status::Idle, None));
+    assert_eq!(t.read_with(cx, |t, _| t.records_for_test()), 0);
 
     // A worker still going keeps the status busy when the root's result is seen.
     report(cx, &t, "state=working:id=worker");
@@ -235,7 +237,7 @@ fn a_prompt_or_the_programs_exit_ends_work_but_not_what_finished(cx: &mut TestAp
     assert_eq!(now(cx, &t), (Status::Idle, None));
     report(cx, &t, "state=error:msg={msg:rsync failed}");
     assert!(!left(cx));
-    assert_eq!(now(cx, &t), (Status::Done, words("rsync failed")), "an error outlives its process");
+    assert_eq!(now(cx, &t), (Status::Failed, words("rsync failed")), "an error outlives its process");
 }
 
 #[gpui_kit::test]
@@ -261,7 +263,7 @@ fn hooks_and_reports_take_turns_and_the_last_one_wins(cx: &mut TestAppContext) {
 }
 
 /// Banners while Wormhole is in front (the test window always is): the default there is nothing.
-fn banners_in_front(cx: &mut TestAppContext) {
+pub(super) fn banners_in_front(cx: &mut TestAppContext) {
     cx.update(|cx| SettingsStore::update(cx, |s| s.notify_in_front = InFront::Banner));
 }
 

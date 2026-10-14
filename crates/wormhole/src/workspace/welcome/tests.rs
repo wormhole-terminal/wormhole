@@ -215,8 +215,11 @@ fn what_reaches_you_changes_only_for_the_welcomes_own_terminal_and_token(cx: &mu
 
     // Both kinds off turns the master switch off, and the page reads it as nothing on.
     assert!(ask(cx, Some(tab), &token, set_notify(Some(false), None, None, false)).ok);
+    // The kinds the welcome has no switch for (a command finishing or failing, the bell) keep the
+    // master switch on until they are off too.
     cx.update(|cx| {
         update_settings(cx, |s| s.change_notify_kind(|s| s.notify_command_done = false));
+        update_settings(cx, |s| s.change_notify_kind(|s| s.notify_command_failed = false));
     });
     let facts = state_of(&ask(cx, Some(tab), &token, state())).notify.expect("notify facts");
     assert!(!facts.needs_you && !facts.agent_done);

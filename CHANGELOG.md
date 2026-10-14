@@ -12,6 +12,18 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   report through it show working, needs you and done in the sidebar exactly, with no hooks
   installed and also over ssh. A program's question or its finishing reaches you as a
   notification, at most once in a few seconds per terminal.
+- A terminal can now be failed. A command that ends with a non-zero exit code (in a shell with
+  integration), and an agent or program that stops on an error, show a red cross in the sidebar
+  and the tab, a red dot on the menu bar item and a "failed" count in the status bar, until you
+  open the terminal. The row keeps "command · exit 101" and when it ended until the next command
+  starts; Ctrl-C isn't a failure. A banner tells you about it, with the exit code and the last line
+  the command printed, once it ran past the same time as a finishing command does. Settings →
+  Notifications has a switch for it ("A command fails"), and the Dock badge set to "Needs you +
+  finished" counts failed terminals too.
+- Programs that report through OSC 7501 need not be coding agents. A script, `brew` or a build
+  tool that says it works, waits for you, is done or failed shows that in its row, the status bar
+  and the menu bar under the name it gives (or the command's), with the percentage it reports,
+  and reaches you as a notification like an agent's question, finish or error does.
 - The status bar shows how full the selected terminal's agent context window is: "Context",
   a meter and the share used, in amber once it is nearly full. It needs Claude Code's status
   line, like the title row's gauge.

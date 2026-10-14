@@ -29,6 +29,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::custom("notify-command-done", draw_command_done),
     Setting::toggle(
+        "notify-command-failed",
+        |s| kind_on(s, s.notify_command_failed),
+        |s, on| set_kind(s, |s| s.notify_command_failed = on),
+    ),
+    Setting::toggle(
         "notify-bell",
         |s| kind_on(s, s.notify_bell),
         |s, on| set_kind(s, |s| s.notify_bell = on),

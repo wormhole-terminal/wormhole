@@ -650,8 +650,8 @@ const NOTIFICATIONS: &[Group] = &[
             entry(
                 "notify-agent-done",
                 "An agent finishes",
-                "Its Stop hook, or its output settles",
-                "notifications done",
+                "Its Stop hook, or its output settles. A program that reports it is done or failed counts too",
+                "notifications done program report failed error",
                 &["notify_agent_done"],
             ),
             entry(
@@ -660,6 +660,13 @@ const NOTIFICATIONS: &[Group] = &[
                 "Any foreground command, agent or not, that ran longer than",
                 "long build threshold seconds notifications",
                 &["notify_command_done", "notify_command_after"],
+            ),
+            entry(
+                "notify-command-failed",
+                "A command fails",
+                "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)",
+                "failed failure error exit code build notifications",
+                &["notify_command_failed"],
             ),
             entry(
                 "notify-bell",

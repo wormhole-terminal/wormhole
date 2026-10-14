@@ -402,11 +402,11 @@ impl Workspace {
     ) -> AnyElement {
         let ui = ui(cx);
         let id = pane.id;
-        let (status, agent, folder) = {
+        let (status, told, folder) = {
             let terminal = pane.terminal.read(cx);
             let folder =
                 terminal.cwd.as_deref().map(|cwd| wormhole_core::sidebar::display_path(cwd, home_dir()));
-            (terminal.status(), terminal.agent.is_some(), folder)
+            (terminal.status(), terminal.source().told(), folder)
         };
         let name = pane.label(cx);
         let zoomed = split.layout.zoomed() == Some(id);
@@ -417,7 +417,7 @@ impl Workspace {
         let dragged_name =
             self.find_session(id).map_or_else(|| name.clone(), |ix| self.sessions[ix].name(cx));
         let dragged =
-            DraggedTerminal::new(id, DragOrigin::PaneHeader, dragged_name, pane_glyph(status, agent));
+            DraggedTerminal::new(id, DragOrigin::PaneHeader, dragged_name, pane_glyph(status, told));
         let this = cx.weak_entity();
         let close_tip = keymap::with_key("Close pane", ActionId::CloseTerminal);
         style::pane_header(("pane-header", id as u64), ui, focused)
@@ -436,7 +436,7 @@ impl Workspace {
                 .ok();
                 cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
             })
-            .child(terminal_glyph(id, status, agent, cx))
+            .child(terminal_glyph(id, status, told, cx))
             // The name keeps its room; the folder gives way first.
             .child(
                 div()

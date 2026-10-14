@@ -19,16 +19,19 @@ pub const MAX_SESSIONS: usize = 20;
 /// shapes of the sidebar's lead column.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Glyph {
-    /// An agent needs you: an amber dot.
+    /// An agent or a program that reports needs you: an amber dot.
     NeedsYou,
-    /// A terminal without an agent rang its bell: an amber bell.
+    /// A terminal that nothing tells the state of rang its bell: an amber bell.
     Bell,
-    /// An agent works.
+    /// An agent, or a program that reports, works.
     Working,
-    /// A command runs in a terminal without an agent: the same, neutral.
+    /// A command runs in a terminal that nothing tells the state of: the same, neutral.
     Running,
     /// Finished: a check.
     Done,
+    /// Failed (a command's exit code, or an agent or program that stopped on an error): a crossed
+    /// circle in the danger colour.
+    Failed,
     /// Idle: a ring.
     Idle,
     Exited,
@@ -36,12 +39,13 @@ pub enum Glyph {
 
 impl Glyph {
     fn of(terminal: &Terminal) -> Self {
-        match (terminal.state, terminal.agent.is_some()) {
+        match (terminal.state, terminal.source.told()) {
             (State::NeedsYou, true) => Glyph::NeedsYou,
             (State::NeedsYou, false) => Glyph::Bell,
             (State::Working, true) => Glyph::Working,
             (State::Working, false) => Glyph::Running,
             (State::Done, _) => Glyph::Done,
+            (State::Failed, _) => Glyph::Failed,
             (State::Idle, _) => Glyph::Idle,
             (State::Exited, _) => Glyph::Exited,
         }
@@ -131,6 +135,8 @@ pub enum Mark {
     NeedsYou,
     /// The `agent.done` check.
     Finished,
+    /// The `status.danger` dot.
+    Failed,
 }
 
 /// What the status bar button shows. The glyph is a template (it follows the bar's light and
@@ -154,13 +160,14 @@ pub struct MenuModel {
 }
 
 /// The status item for `terminals`, as `mode` (`menu_bar_icon`) wants it shown. Most urgent
-/// wins: needs you › finished › working › idle.
+/// wins: needs you › failed › finished › working › idle.
 pub fn status_icon(terminals: &[Terminal], mode: MenuBarIcon, animate: bool) -> StatusIcon {
     let counts = Counts::of(terminals);
     let state = notify::item_state(counts);
     let mark = match (mode, state) {
         (MenuBarIcon::Plain, _) => Mark::None,
         (_, ItemState::NeedsYou) => Mark::NeedsYou,
+        (_, ItemState::Failed) => Mark::Failed,
         (_, ItemState::Finished) => Mark::Finished,
         _ => Mark::None,
     };

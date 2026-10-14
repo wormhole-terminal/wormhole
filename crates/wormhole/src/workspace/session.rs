@@ -116,6 +116,16 @@ impl Session {
         notes + self.tasks.iter().filter(|t| !t.done).count()
     }
 
+    /// Who a question about closing it names as at stake: the agent by its short name, else the
+    /// program that reports its own status ("brew is still working").
+    pub(super) fn told_name(&self, cx: &App) -> Option<String> {
+        let terminal = self.terminal().read(cx);
+        terminal
+            .agent
+            .map(|id| wormhole_core::agents::agent(id).short_name().to_string())
+            .or_else(|| terminal.program_name())
+    }
+
     /// Whether a program other than the shell is in the foreground.
     pub(super) fn command_running(&self, cx: &App) -> bool {
         self.terminal().read(cx).program_in_foreground()
@@ -200,7 +210,7 @@ pub(super) fn close_session_detail(
     match status {
         Status::Busy => sentences.push(format!("{who} is still working.")),
         Status::Attention => sentences.push(format!("{who} is waiting for an answer.")),
-        Status::Idle | Status::Done | Status::Exited => {}
+        Status::Idle | Status::Done | Status::Failed | Status::Exited => {}
     }
     let ending = sentences.len() + programs_named(programs);
     match running_list(programs) {

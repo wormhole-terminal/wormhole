@@ -182,6 +182,14 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 None,
             ))
             .child(row(
+                id("g-r2-failed", "g-r1-failed"),
+                glyph(id("g-g2-failed", "g-g1-failed"), StatusGlyph::Failed),
+                line("Failed · rsync failed"),
+                RowTone::Failed,
+                false,
+                None,
+            ))
+            .child(row(
                 id("g-r2-hint", "g-r1-hint"),
                 glyph(id("g-g2-hint", "g-g1-hint"), StatusGlyph::Working),
                 line("Editing sidebar.rs…"),

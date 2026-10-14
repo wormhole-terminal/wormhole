@@ -68,6 +68,8 @@ pub enum Activity {
     Working,
     NeedsYou,
     Done,
+    /// Ended on an error (a non-zero exit code, an agent or program that failed) and not seen.
+    Failed,
     /// Idle or exited: not counted.
     Quiet,
 }
@@ -78,20 +80,21 @@ pub struct Entry<'a> {
     pub activity: Activity,
     /// When it started doing that.
     pub since: Instant,
-    /// The agent's name ("Claude Code"), if one runs there.
+    /// The agent's name ("Claude Code"), or a reporting program's ("brew"), if one runs there.
     pub agent: Option<&'a str>,
     /// The terminal's name, for the needs-you item's tooltip.
     pub name: &'a str,
 }
 
-/// The terminals each agent item counts, as indices into the entries: working and done in the
-/// order given (each item opens the first), needing you the longest waiting first (that item
+/// The terminals each agent item counts, as indices into the entries: working, done and failed in
+/// the order given (each item opens the first), needing you the longest waiting first (that item
 /// opens the one that has waited longest).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Summary {
     pub working: Vec<usize>,
     pub needs_you: Vec<usize>,
     pub done: Vec<usize>,
+    pub failed: Vec<usize>,
 }
 
 impl Summary {
@@ -102,6 +105,7 @@ impl Summary {
                 Activity::Working => summary.working.push(ix),
                 Activity::NeedsYou => summary.needs_you.push(ix),
                 Activity::Done => summary.done.push(ix),
+                Activity::Failed => summary.failed.push(ix),
                 Activity::Quiet => {}
             }
         }
@@ -161,6 +165,15 @@ impl Summary {
         match self.done.len() {
             0 => None,
             n if detail.words() => Some(format!("{n} done")),
+            n => Some(n.to_string()),
+        }
+    }
+
+    /// The failed item: "1 failed", only "1" when narrow.
+    pub fn failed(&self, detail: Detail) -> Option<String> {
+        match self.failed.len() {
+            0 => None,
+            n if detail.words() => Some(format!("{n} failed")),
             n => Some(n.to_string()),
         }
     }
@@ -277,7 +290,23 @@ mod tests {
         assert_eq!(summary.working(&entries, Detail::Words, now), None);
         assert_eq!(summary.needs_you(), None);
         assert_eq!(summary.done(Detail::Words), None);
+        assert_eq!(summary.failed(Detail::Words), None);
         assert_eq!(summary.needs_you_tooltip(&entries), None);
+    }
+
+    #[test]
+    fn a_failed_terminal_has_its_own_item() {
+        let now = Instant::now();
+        let entries = [
+            entry(Activity::Failed, now, None, "build"),
+            entry(Activity::Done, now, Some("Codex"), "auth tokens"),
+            entry(Activity::Failed, now, Some("brew"), "upgrade"),
+        ];
+        let summary = Summary::of(&entries);
+        assert_eq!((summary.failed.as_slice(), summary.done.as_slice()), (&[0, 2][..], &[1][..]));
+        assert_eq!(summary.failed(Detail::Words).as_deref(), Some("2 failed"));
+        assert_eq!(summary.failed(Detail::Numbers).as_deref(), Some("2"));
+        assert_eq!(summary.done(Detail::Words).as_deref(), Some("1 done"), "not counted as done");
     }
 
     #[test]

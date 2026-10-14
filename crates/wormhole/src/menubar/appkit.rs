@@ -261,6 +261,7 @@ fn glyph_image(glyph: Glyph, colors: StatusColors) -> Option<Retained<NSImage>> 
         Glyph::Working => (&["progress.indicator", "circle.dotted"], ns_color(colors.working), "Working"),
         Glyph::Running => (&["progress.indicator", "circle.dotted"], ns_color(colors.running), "Running"),
         Glyph::Done => (&["checkmark"], ns_color(colors.done), "Finished"),
+        Glyph::Failed => (&["xmark.circle", "exclamationmark.circle"], ns_color(colors.danger), "Failed"),
         Glyph::Idle => (&["circle"], NSColor::secondaryLabelColor(), "Idle"),
         Glyph::Exited => (&["minus.circle"], NSColor::secondaryLabelColor(), "Exited"),
     };

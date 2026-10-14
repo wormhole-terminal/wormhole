@@ -167,6 +167,7 @@ fn glyph_of(state: RowState) -> StatusGlyph {
         RowState::Working => StatusGlyph::Working,
         RowState::NeedsYou => StatusGlyph::NeedsYou,
         RowState::Finished => StatusGlyph::Done,
+        RowState::Failed => StatusGlyph::Failed,
         RowState::Idle | RowState::Exited => StatusGlyph::Idle,
     }
 }

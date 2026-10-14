@@ -16,8 +16,15 @@ pub enum RowSpeech<'a> {
     /// state word ("Approve cargo test?", "Editing sidebar.rs…").
     Agent { state: RowState, detail: Option<&'a str> },
     /// A terminal without an agent: the command in front (none: a bare shell), how long it has
-    /// run, whether it rang its bell or printed while you weren't looking.
-    Plain { command: Option<&'a str>, running: Option<Duration>, bell: bool, unread: bool },
+    /// run, whether it rang its bell or printed while you weren't looking, and the exit code of
+    /// the last command if it failed.
+    Plain {
+        command: Option<&'a str>,
+        running: Option<Duration>,
+        bell: bool,
+        unread: bool,
+        failed: Option<i32>,
+    },
 }
 
 /// Where a row sits and what it is to the user.
@@ -62,7 +69,7 @@ pub fn row_label_in_split(name: &str, speech: RowSpeech, place: Place, split: Op
             parts.push(state_word(state).to_string());
             parts.extend(detail.map(str::trim).filter(|d| !d.is_empty()).map(str::to_string));
         }
-        RowSpeech::Plain { command, running, bell, unread } => {
+        RowSpeech::Plain { command, running, bell, unread, failed } => {
             match command.and_then(|command| command.split_whitespace().next()) {
                 Some(program) => parts.push(format!("running {program}")),
                 None => parts.push("shell, nothing running".to_string()),
@@ -73,6 +80,9 @@ pub fn row_label_in_split(name: &str, speech: RowSpeech, place: Place, split: Op
             }
             if unread {
                 parts.push("unread output".to_string());
+            }
+            if let Some(code) = failed {
+                parts.push(format!("last command failed, exit {code}"));
             }
         }
     }
@@ -123,12 +133,13 @@ pub fn band_label(
     parts.join(", ")
 }
 
-/// A row's state as a word: "needs you", "working", "finished".
+/// A row's state as a word: "needs you", "working", "finished", "failed".
 pub fn state_word(state: RowState) -> &'static str {
     match state {
         RowState::NeedsYou => "needs you",
         RowState::Working => "working",
         RowState::Finished => "finished",
+        RowState::Failed => "failed",
         RowState::Idle => "idle",
         RowState::Exited => "exited",
     }
@@ -173,6 +184,11 @@ mod tests {
         );
         let idle = RowSpeech::Agent { state: RowState::Idle, detail: None };
         assert_eq!(row_label("zsh", idle, place(false, 3, None)), "zsh, idle, 3 of 3");
+        let failed = RowSpeech::Agent { state: RowState::Failed, detail: Some("Rate limit reached") };
+        assert_eq!(
+            row_label("deploy", failed, place(false, 1, Some(1))),
+            "deploy, failed, Rate limit reached, 1 of 3, Command 1"
+        );
     }
 
     #[test]
@@ -182,18 +198,31 @@ mod tests {
             running: Some(Duration::from_secs(72)),
             bell: false,
             unread: false,
+            failed: None,
         };
         assert_eq!(
             row_label("tests", tests, place(false, 1, None)),
             "tests, running cargo, 1 minute 12, 1 of 3"
         );
-        let prod =
-            RowSpeech::Plain { command: Some("ssh deploy@prod-1"), running: None, bell: true, unread: false };
+        let prod = RowSpeech::Plain {
+            command: Some("ssh deploy@prod-1"),
+            running: None,
+            bell: true,
+            unread: false,
+            failed: None,
+        };
         assert_eq!(row_label("prod", prod, place(false, 2, None)), "prod, running ssh, bell rang, 2 of 3");
-        let shell = RowSpeech::Plain { command: None, running: None, bell: false, unread: true };
+        let shell =
+            RowSpeech::Plain { command: None, running: None, bell: false, unread: true, failed: None };
         assert_eq!(
             row_label("zsh", shell, place(false, 3, Some(4))),
             "zsh, shell, nothing running, unread output, 3 of 3, Command 4"
+        );
+        let failed =
+            RowSpeech::Plain { command: None, running: None, bell: false, unread: true, failed: Some(101) };
+        assert_eq!(
+            row_label("build", failed, place(false, 1, None)),
+            "build, shell, nothing running, unread output, last command failed, exit 101, 1 of 3"
         );
     }
 
@@ -210,7 +239,8 @@ mod tests {
             "claude · tests, needs you, in a split with 1 other, on screen, 2 of 3, Command 2"
         );
         // The selected one is not "on screen": it is selected, and says so after the split.
-        let plain = RowSpeech::Plain { command: None, running: None, bell: false, unread: false };
+        let plain =
+            RowSpeech::Plain { command: None, running: None, bell: false, unread: false, failed: None };
         assert_eq!(
             row_label_in_split("zsh", plain, place(true, 1, Some(1)), split(2, false)),
             "zsh, shell, nothing running, in a split with 2 others, selected, 1 of 3, Command 1"

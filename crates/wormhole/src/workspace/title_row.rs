@@ -34,6 +34,8 @@ pub(super) struct Facts {
     pub(super) shown: Option<String>,
     pub(super) status: Status,
     pub(super) agent: Option<AgentId>,
+    /// Something tells the status: an agent, or a program that reports its own.
+    pub(super) told: bool,
     /// The terminal's name: its title, else what runs in it.
     pub(super) label: SharedString,
     /// How it is doing after the name ("working · 4m"); nothing while it is idle.

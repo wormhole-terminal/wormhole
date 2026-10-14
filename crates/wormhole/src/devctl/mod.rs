@@ -231,9 +231,9 @@
 //!   menubar | dock  the status item's icon and menu / the Dock's badge, bounces and menu
 //!                   as text, as they would be built now (appended after the batch)
 //!   menubar-icons [prefix]   the status item's icon in every state, as TIFFs in <dir>
-//!   notify-sim <needs-you|agent-done|command-done|bell> <n> [post]   what the notification rules
-//!                   decide for that event in the n-th terminal (delivery, level, sound, bounce, the
-//!                   words); `post` also delivers it. Run the app with `WORMHOLE_NOTIFY=log` so
+//!   notify-sim <needs-you|agent-done|agent-failed|command-done|command-failed|bell|notice> <n> [post]
+//!                   what the notification rules decide for that event in the n-th terminal
+//!                   (delivery, level, sound, bounce, the words); `post` also delivers it. Run the app with `WORMHOLE_NOTIFY=log` so
 //!                   nothing reaches the notification center, and read it back with `notify-log`
 //!   notify-log      the notifications the `log` route kept, and the permission macOS reports
 //!   notify-permission <not-asked|allowed|denied|outside|checking>   pretend macOS said so (the

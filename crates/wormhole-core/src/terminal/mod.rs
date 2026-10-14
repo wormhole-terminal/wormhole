@@ -53,7 +53,7 @@ use alacritty_terminal::term::color::Colors;
 use alacritty_terminal::term::{Config, Term, TermMode};
 use alacritty_terminal::tty;
 
-pub use blocks::{Block, BlockState, readout_text, took_text};
+pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
 use events::EventProxy;
 use events::Shared;
 pub use events::{ColorFormatter, PtyEvent, PtyEvents, Reply, TextFormatter};
@@ -516,6 +516,14 @@ impl Pty {
     pub fn block(&self, id: u64) -> Option<Block> {
         let term = self.term.lock();
         blocks::block(&term, id, &self.shared.commands())
+    }
+
+    /// The command that most recently finished with exit code `code`: what it was, how long it ran
+    /// and what it last printed. Looks only at the newest blocks, so it costs a few lines of the
+    /// grid, not a scan of the history; for the moment a command is found to have failed.
+    pub fn ended(&self, code: i32) -> Option<Ended> {
+        let term = self.term.lock();
+        blocks::ended(&term, &self.shared.commands(), code)
     }
 
     /// The grid's last line (the live screen's bottom row).

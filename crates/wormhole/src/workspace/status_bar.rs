@@ -2,8 +2,8 @@
 //! for every window); then nothing of it is drawn and the panes reach the window's bottom.
 //!
 //! Shown, it has the branch and its changes (opens Changes), the agents of every window by what
-//! they do (working · needs you · done; each opens the first such terminal, needs you the one that
-//! has waited longest), how full the selected terminal's agent context window is (what its
+//! they do (working · needs you · done · failed; each opens the first such terminal, needs you the
+//! one that has waited longest), how full the selected terminal's agent context window is (what its
 //! status line last reported, as the title row's gauge) and the terminal's size. What it says, and how much fits the window's
 //! width, is core's (`wormhole_core::layout::status_bar`).
 use std::time::Instant;
@@ -23,7 +23,8 @@ pub(super) struct Counted {
     tab: i64,
     activity: Activity,
     since: Instant,
-    agent: Option<&'static str>,
+    /// The agent's short name, or the name of the program that reports its status.
+    agent: Option<SharedString>,
     name: SharedString,
 }
 
@@ -37,6 +38,7 @@ pub(super) struct StatusBar {
     working: Option<(String, i64)>,
     needs_you: Option<(String, String, i64)>,
     done: Option<(String, i64)>,
+    failed: Option<(String, i64)>,
     /// The selected terminal's agent context, while the window is wide enough.
     context: Option<ContextItem>,
     /// The terminal's shell and grid, while the window is wide enough.
@@ -62,6 +64,7 @@ struct Spoken {
     working: Option<String>,
     needs_you: Option<String>,
     done: Option<String>,
+    failed: Option<String>,
     context: Option<String>,
     size: Option<String>,
 }
@@ -73,6 +76,7 @@ pub(super) enum StatusItem {
     Working(i64),
     NeedsYou,
     Done(i64),
+    Failed(i64),
 }
 
 impl Workspace {
@@ -88,10 +92,14 @@ impl Workspace {
                         Status::Busy => Activity::Working,
                         Status::Attention => Activity::NeedsYou,
                         Status::Done => Activity::Done,
+                        Status::Failed => Activity::Failed,
                         Status::Idle | Status::Exited => Activity::Quiet,
                     },
                     since: terminal.status_since(),
-                    agent: terminal.agent.map(|id| wormhole_core::agents::agent(id).short_name()),
+                    agent: terminal
+                        .agent
+                        .map(|id| SharedString::from(wormhole_core::agents::agent(id).short_name()))
+                        .or_else(|| terminal.program_name().map(SharedString::from)),
                     name: session.name(cx),
                 }
             })
@@ -135,7 +143,7 @@ impl Workspace {
         }
         let entries: Vec<Entry> = counted
             .iter()
-            .map(|c| Entry { activity: c.activity, since: c.since, agent: c.agent, name: &c.name })
+            .map(|c| Entry { activity: c.activity, since: c.since, agent: c.agent.as_deref(), name: &c.name })
             .collect();
         let summary = Summary::of(&entries);
         let detail = Detail::at(self.window_width);
@@ -166,6 +174,7 @@ impl Workspace {
             working: spoken::status_working(&summary, &entries, now),
             needs_you: spoken::status_needs_you(&summary),
             done: spoken::status_done(&summary),
+            failed: spoken::status_failed(&summary),
             context: context.as_ref().map(|item| spoken::status_context(item.percent)),
             size: size.as_ref().map(|_| spoken::status_size(&terminal.shell(), cols, rows)),
         };
@@ -179,6 +188,7 @@ impl Workspace {
                 .zip(tab(&summary.needs_you))
                 .map(|((words, tooltip), tab)| (words, tooltip, tab)),
             done: summary.done(detail).zip(tab(&summary.done)),
+            failed: summary.failed(detail).zip(tab(&summary.failed)),
             context,
             size,
         })
@@ -215,6 +225,7 @@ impl Workspace {
             bar.working.as_ref().map(|(_, tab)| StatusItem::Working(*tab)),
             bar.needs_you.as_ref().map(|_| StatusItem::NeedsYou),
             bar.done.as_ref().map(|(_, tab)| StatusItem::Done(*tab)),
+            bar.failed.as_ref().map(|(_, tab)| StatusItem::Failed(*tab)),
         ]
         .into_iter()
         .flatten()
@@ -230,7 +241,9 @@ impl Workspace {
     ) {
         match item {
             StatusItem::Branch => self.show_tab(RightTab::Changes, cx),
-            StatusItem::Working(tab) | StatusItem::Done(tab) => self.go_to_tab(tab, window, cx),
+            StatusItem::Working(tab) | StatusItem::Done(tab) | StatusItem::Failed(tab) => {
+                self.go_to_tab(tab, window, cx)
+            }
             StatusItem::NeedsYou => cx.defer(super::ambient::jump_to_waiting),
         }
     }
@@ -265,7 +278,8 @@ impl Workspace {
             .tooltip(|window, cx| Tooltip::new("Branch and changes").build(window, cx))
             .on_click(cx.listener(|this, _, _, cx| this.show_tab(RightTab::Changes, cx)))
         });
-        let agents = bar.working.is_some() || bar.needs_you.is_some() || bar.done.is_some();
+        let agents =
+            bar.working.is_some() || bar.needs_you.is_some() || bar.done.is_some() || bar.failed.is_some();
         let working = bar.working.clone().map(|(words, tab)| {
             let item = StatusItem::Working(tab);
             spoken(
@@ -302,6 +316,17 @@ impl Workspace {
                 .child(words)
                 .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
         });
+        let failed = bar.failed.clone().map(|(words, tab)| {
+            let item = StatusItem::Failed(tab);
+            spoken(
+                style::status_item("status-failed", ui, false, ring && keyed(item)),
+                &bar.spoken.failed,
+                item,
+            )
+            .child(div().text_color(ui.danger_text).child(style::icon(IconName::CircleX)))
+            .child(words)
+            .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
+        });
         let bar_element = style::status_bar(ui)
             .id("status-bar")
             // A toolbar, there only while the bar is shown.
@@ -318,6 +343,7 @@ impl Workspace {
             .children(working)
             .children(needs_you)
             .children(done)
+            .children(failed)
             .child(div().flex_1())
             .children(bar.context.clone().map(|item| {
                 let tooltip = SharedString::from(rules::context_tooltip(item.percent));

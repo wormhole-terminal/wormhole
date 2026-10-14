@@ -62,6 +62,8 @@ pub struct StatusColors {
     pub done: Rgba,
     /// `agent.working`: an agent at work.
     pub working: Rgba,
+    /// `status.danger`: failed.
+    pub danger: Rgba,
     /// `text.muted`: a command running without an agent.
     pub running: Rgba,
 }

@@ -100,15 +100,71 @@ pub(super) struct Place {
 
 /// The glyph a terminal's state is drawn with.
 pub(super) fn glyph_for(info: &RowInfo) -> StatusGlyph {
-    match (info.agent.is_some(), info.state) {
+    match (info.told(), info.state) {
         (_, RowState::Exited) => StatusGlyph::Shell,
         (true, RowState::Working) => StatusGlyph::Working,
         (true, RowState::NeedsYou) => StatusGlyph::NeedsYou,
         (true, RowState::Finished) => StatusGlyph::Done,
+        (_, RowState::Failed) => StatusGlyph::Failed,
         (true, RowState::Idle) => StatusGlyph::Idle,
-        (false, _) if info.unread => StatusGlyph::Terminal { unread: true },
         (false, _) if info.command.is_some() => StatusGlyph::Terminal { unread: false },
+        // The last command failed and nothing runs now: the row keeps saying so until the next one
+        // (seen or not), in place of the quiet terminal and its output.
+        (false, _) if info.failure.is_some() => StatusGlyph::Failed,
+        (false, _) if info.unread => StatusGlyph::Terminal { unread: true },
         (false, _) => StatusGlyph::Shell,
+    }
+}
+
+/// A row's second line: its words, their color, whether they are a command or a path (code font),
+/// and what sits at the line's right.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct SecondLine {
+    pub(super) text: Option<String>,
+    pub(super) tone: RowTone,
+    pub(super) mono: bool,
+    pub(super) trail: Option<String>,
+}
+
+/// The second line of every comfortable row: what the terminal has to report comes first; a quiet
+/// one says where it is (`whereabouts`), and where even that is unknown it says what it is, so no
+/// row is a single line. A compact row has none.
+pub(super) fn second_line(
+    info: &RowInfo,
+    compact: bool,
+    whereabouts: impl FnOnce() -> Option<String>,
+) -> SecondLine {
+    let line = |text: Option<String>, tone, mono, trail| SecondLine { text, tone, mono, trail };
+    if compact {
+        return line(None, RowTone::Plain, false, None);
+    }
+    if info.told() {
+        // An agent's, or a program's own report: its state in words.
+        return match agent_detail(info.state, info.message.as_deref(), info.since) {
+            Some(text) => line(Some(text), tone_of(info.state), false, None),
+            None => match whereabouts() {
+                Some(place) => line(Some(place), RowTone::Plain, true, None),
+                None => line(Some("Idle".to_string()), RowTone::Plain, false, None),
+            },
+        };
+    }
+    let trail = if info.unread { Some("new output".to_string()) } else { info.running.map(clock) };
+    match (&info.command, &info.failure) {
+        (Some(command), _) => line(Some(command.clone()), RowTone::Plain, true, trail),
+        // The last command failed: what it was and how it ended, in danger, and when, until the
+        // next command starts.
+        (None, Some(failure)) => {
+            let exit = format!("exit {}", failure.code);
+            let text = match &failure.command {
+                Some(command) => format!("{command} · {exit}"),
+                None => exit,
+            };
+            line(Some(text), RowTone::Failed, true, Some(ago(failure.since)))
+        }
+        (None, None) => match whereabouts() {
+            Some(place) => line(Some(place), RowTone::Plain, true, None),
+            None => line(Some("Shell".to_string()), RowTone::Plain, false, None),
+        },
     }
 }
 
@@ -118,10 +174,10 @@ pub(super) fn time_text(info: &RowInfo, compact: bool) -> Option<String> {
     if compact {
         return None;
     }
-    match (info.agent.is_some(), info.state) {
+    match (info.told(), info.state) {
         (true, RowState::Working) if info.message.is_none() => took(info.since),
-        (true, RowState::Finished) => Some(ago(info.since)),
-        (false, _) => info.running.map(clock),
+        (true, RowState::Finished | RowState::Failed) if info.message.is_none() => Some(ago(info.since)),
+        (false, _) => info.running.map(clock).or_else(|| info.failure.as_ref().map(|f| ago(f.since))),
         _ => None,
     }
 }
@@ -212,26 +268,8 @@ impl Workspace {
         let branch = info.branch.as_deref().filter(|_| frame.show_branch);
         let whereabouts =
             || place_detail(info.cwd.as_deref(), place.band.as_deref(), branch, home_dir(), PLACE_CHARS);
-        let (detail, tone, mono, detail_trail) = if frame.compact {
-            (None, RowTone::Plain, false, None)
-        } else if info.agent.is_some() {
-            match agent_detail(info.state, info.message.as_deref(), info.since) {
-                Some(text) => (Some(text), tone_of(info.state), false, None),
-                None => match whereabouts() {
-                    Some(place) => (Some(place), RowTone::Plain, true, None),
-                    None => (Some("Idle".to_string()), RowTone::Plain, false, None),
-                },
-            }
-        } else {
-            let trail = if info.unread { Some("new output".to_string()) } else { info.running.map(clock) };
-            match &info.command {
-                Some(command) => (Some(command.clone()), RowTone::Plain, true, trail),
-                None => match whereabouts() {
-                    Some(place) => (Some(place), RowTone::Plain, true, None),
-                    None => (Some("Shell".to_string()), RowTone::Plain, false, None),
-                },
-            }
-        };
+        let SecondLine { text: detail, tone, mono, trail: detail_trail } =
+            second_line(info, frame.compact, whereabouts);
 
         let hint = place.number.filter(|_| frame.hints).map(|n| SharedString::from(keycap(n)));
         // After the name: the pin, and the worktree mark the band carries too, with the
@@ -306,17 +344,19 @@ impl Workspace {
 
         let label = spoken::row_label_in_split(
             &info.name,
-            match info.agent {
-                Some(_) => RowSpeech::Agent {
+            if info.told() {
+                RowSpeech::Agent {
                     state: info.state,
                     detail: info.message.as_deref().filter(|_| info.state != RowState::Idle),
-                },
-                None => RowSpeech::Plain {
+                }
+            } else {
+                RowSpeech::Plain {
                     command: info.command.as_deref(),
                     running: info.running,
                     bell: info.bell,
                     unread: info.unread,
-                },
+                    failed: info.failure.as_ref().map(|failure| failure.code),
+                }
             },
             spoken::Place { selected, position: place.position, of: place.of, number: place.number },
             SplitSpeech::of(place.marks),
@@ -427,6 +467,7 @@ fn tone_of(state: RowState) -> RowTone {
     match state {
         RowState::NeedsYou => RowTone::Attention,
         RowState::Finished => RowTone::Done,
+        RowState::Failed => RowTone::Failed,
         RowState::Working | RowState::Idle | RowState::Exited => RowTone::Plain,
     }
 }
@@ -445,8 +486,11 @@ mod tests {
     use wormhole_core::agents::AgentId;
     use wormhole_core::sidebar::RowState;
 
-    use super::{RowInfo, glyph_for, time_text};
-    use crate::style::StatusGlyph;
+    use wormhole_core::notify::Source;
+
+    use super::super::facts::RowFailure;
+    use super::{RowInfo, SecondLine, glyph_for, second_line, time_text};
+    use crate::style::{RowTone, StatusGlyph};
 
     fn info(agent: bool, state: RowState) -> RowInfo {
         RowInfo {
@@ -454,6 +498,7 @@ mod tests {
             id: 1,
             name: "t".into(),
             agent: agent.then_some(AgentId::Claude),
+            source: if agent { Source::Agent } else { Source::Plain },
             state,
             message: None,
             since: Duration::from_secs(180),
@@ -464,11 +509,21 @@ mod tests {
             command: None,
             running: None,
             bell: false,
+            failure: None,
             unread: false,
             pinned: false,
             open_items: 0,
             changes: None,
         }
+    }
+
+    /// A program that reports its own status, no agent: the row of an agent without its logo.
+    fn program(state: RowState) -> RowInfo {
+        RowInfo { source: Source::Program, ..info(false, state) }
+    }
+
+    fn failed(code: i32, command: Option<&str>, secs: u64) -> RowFailure {
+        RowFailure { code, command: command.map(str::to_string), since: Duration::from_secs(secs) }
     }
 
     #[test]
@@ -483,6 +538,80 @@ mod tests {
         assert_eq!(glyph_for(&running), StatusGlyph::Terminal { unread: false });
         let unread = RowInfo { unread: true, ..info(false, RowState::Idle) };
         assert_eq!(glyph_for(&unread), StatusGlyph::Terminal { unread: true });
+    }
+
+    #[test]
+    fn a_failure_is_a_danger_glyph_for_everyone_until_the_next_command() {
+        assert_eq!(glyph_for(&info(true, RowState::Failed)), StatusGlyph::Failed);
+        assert_eq!(glyph_for(&program(RowState::Failed)), StatusGlyph::Failed);
+        assert_eq!(glyph_for(&info(false, RowState::Failed)), StatusGlyph::Failed);
+        // Seen, the status is idle but the row still says the last command failed.
+        let seen =
+            RowInfo { failure: Some(failed(101, Some("cargo build"), 120)), ..info(false, RowState::Idle) };
+        assert_eq!(glyph_for(&seen), StatusGlyph::Failed);
+        // A new command is running: the terminal glyph; the failure is history.
+        let again = RowInfo { command: Some("cargo build".into()), ..info(false, RowState::Working) };
+        assert_eq!(glyph_for(&again), StatusGlyph::Terminal { unread: false });
+    }
+
+    #[test]
+    fn a_program_that_reports_gets_an_agents_glyphs_and_words() {
+        assert_eq!(glyph_for(&program(RowState::Working)), StatusGlyph::Working);
+        assert_eq!(glyph_for(&program(RowState::NeedsYou)), StatusGlyph::NeedsYou);
+        assert_eq!(glyph_for(&program(RowState::Finished)), StatusGlyph::Done);
+        let asks = RowInfo { message: Some("Password:".into()), ..program(RowState::NeedsYou) };
+        assert_eq!(
+            second_line(&asks, false, || None),
+            SecondLine {
+                text: Some("Needs you · Password:".into()),
+                tone: RowTone::Attention,
+                mono: false,
+                trail: None
+            }
+        );
+        let done = RowInfo { message: Some("Upgraded 12 packages".into()), ..program(RowState::Finished) };
+        assert_eq!(
+            second_line(&done, false, || None).text.as_deref(),
+            Some("Finished · Upgraded 12 packages")
+        );
+        assert_eq!(time_text(&done, false), None, "its words don't move");
+        let broke = RowInfo { message: Some("rsync failed".into()), ..program(RowState::Failed) };
+        let line = second_line(&broke, false, || None);
+        assert_eq!((line.text.as_deref(), line.tone), (Some("Failed · rsync failed"), RowTone::Failed));
+        let mute = program(RowState::Failed);
+        assert_eq!(second_line(&mute, false, || None).text.as_deref(), Some("Failed · 3m ago"));
+        assert_eq!(time_text(&mute, false).as_deref(), Some("3m ago"));
+        let busy = RowInfo { message: Some("Installing · 40%".into()), ..program(RowState::Working) };
+        assert_eq!(second_line(&busy, false, || None).text.as_deref(), Some("Installing · 40%"));
+    }
+
+    /// F-08: danger glyph, "command · exit N" in danger, and when it ended.
+    #[test]
+    fn a_failed_command_says_what_ended_how_and_when() {
+        let build =
+            RowInfo { failure: Some(failed(101, Some("cargo build"), 120)), ..info(false, RowState::Failed) };
+        assert_eq!(
+            second_line(&build, false, || Some("~/scratch".into())),
+            SecondLine {
+                text: Some("cargo build · exit 101".into()),
+                tone: RowTone::Failed,
+                mono: true,
+                trail: Some("2m ago".into()),
+            }
+        );
+        assert_eq!(time_text(&build, false).as_deref(), Some("2m ago"));
+        // Seen: the cue stays, though the state is idle now.
+        let seen = RowInfo { state: RowState::Idle, ..build };
+        assert_eq!(second_line(&seen, false, || None).tone, RowTone::Failed);
+        // The shell gave no command: the exit code alone.
+        let bare = RowInfo { failure: Some(failed(2, None, 5)), ..info(false, RowState::Failed) };
+        assert_eq!(second_line(&bare, false, || None).text.as_deref(), Some("exit 2"));
+        // The next command starts: the cue is gone, and the row says what runs.
+        let next = RowInfo { command: Some("cargo test".into()), ..info(false, RowState::Working) };
+        let line = second_line(&next, false, || None);
+        assert_eq!((line.text.as_deref(), line.tone), (Some("cargo test"), RowTone::Plain));
+        // Compact rows have no second line.
+        assert_eq!(second_line(&bare, true, || None).text, None);
     }
 
     #[test]

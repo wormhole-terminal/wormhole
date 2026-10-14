@@ -1,17 +1,21 @@
-//! A terminal's status (idle, busy, done, needs you, exited) from its output,
+//! A terminal's status (idle, busy, done, failed, needs you, exited) from its output,
 //! its agent's hooks and what programs report about themselves (`reported`), what the rest of
 //! the app shows about it, and when it redraws.
 
 use super::*;
 
-/// A terminal's status (idle, busy, done, needs you, exited), from its output, its agent's hooks
-/// and what its programs report.
+/// A terminal's status (idle, busy, done, failed, needs you, exited), from its output, its
+/// agent's hooks and what its programs report.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Status {
     Idle,
     Busy,
     /// Finished producing output while you weren't looking.
     Done,
+    /// A command ended with a failing exit code (the shell's marks), or an agent or program
+    /// stopped on an error (its hooks, or its own report), while you weren't looking. Seen like
+    /// `Done`: opening the terminal clears it.
+    Failed,
     /// Rang the bell while you weren't looking, or its agent asks something.
     Attention,
     Exited,
@@ -26,6 +30,10 @@ pub struct TerminalSummary {
     pub cwd: Option<PathBuf>,
     pub agent: Option<AgentId>,
     pub agent_message: Option<String>,
+    /// What tells the status; a program that reports takes the row's agent-style second line.
+    pub source: Source,
+    /// The exit code of the last command, while it counts as failed (the row's cue).
+    pub failed: Option<i32>,
 }
 
 /// A program's own notification (OSC 9/99/777), numbered so the notification sweep sees each
@@ -58,6 +66,8 @@ impl TerminalView {
             cwd: self.cwd.clone(),
             agent: self.agent,
             agent_message: self.agent_message.clone(),
+            source: self.source(),
+            failed: self.failure.as_ref().map(|failure| failure.code),
         }
     }
 
@@ -102,7 +112,7 @@ impl TerminalView {
             self.status = status;
             self.status_since = Instant::now();
             // Seen, or at work again: the finished command is history.
-            if status != Status::Done {
+            if !matches!(status, Status::Done | Status::Failed) {
                 self.finished_command = None;
             }
         }
@@ -129,7 +139,10 @@ impl TerminalView {
     pub fn naming_command(&self) -> Option<&str> {
         match &self.foreground {
             Some(foreground) => Some(&foreground.command),
-            None => self.finished_command.as_deref().filter(|_| self.status == Status::Done),
+            None => self
+                .finished_command
+                .as_deref()
+                .filter(|_| matches!(self.status, Status::Done | Status::Failed)),
         }
     }
 
@@ -202,6 +215,7 @@ impl TerminalView {
             Signal::Attention if asked => (Status::Attention, self.agent_message.take()),
             Signal::Attention => (Status::Attention, message),
             Signal::Done => (Status::Done, None),
+            Signal::Failed => (Status::Failed, message),
             Signal::Quiet | Signal::Ended => (Status::Idle, None),
         };
         self.set_status(status);
@@ -222,17 +236,31 @@ impl TerminalView {
         true
     }
 
-    /// Called periodically by the workspace to settle busy → idle/done: once the output has been
-    /// quiet for a while, or at once when the shell's marks said the command finished.
+    /// Called periodically by the workspace to settle busy → idle/done/failed: once the output has
+    /// been quiet for a while, or at once when the shell's marks said the command finished. Seen
+    /// at once, there is nothing to settle into: the result is on screen (and a failure's cue stays
+    /// on the row, see [`Failure`]).
     pub fn tick(&mut self, is_active: bool, window_active: bool) -> bool {
         if self.reported() {
             return false;
         }
         let finished = std::mem::take(&mut self.finished_mark);
+        let looking = is_active && window_active;
+        // `failure` is this command's when the mark just came: it replaced the last one's.
+        let failed = finished && self.failure.is_some();
         if self.status == Status::Busy
             && (finished || self.last_output.elapsed() > Duration::from_millis(1800))
         {
-            self.set_status(if is_active && window_active { Status::Idle } else { Status::Done });
+            self.set_status(match (looking, failed) {
+                (true, _) => Status::Idle,
+                (false, true) => Status::Failed,
+                (false, false) => Status::Done,
+            });
+            return true;
+        }
+        // A command that went quiet counts as done; its exit code, when it comes, can say it failed.
+        if failed && !looking && self.status == Status::Done {
+            self.set_status(Status::Failed);
             return true;
         }
         false
@@ -253,6 +281,8 @@ impl TerminalView {
             Mark::PromptStart(_) | Mark::CommandStart => self.at_prompt = Some(true),
             Mark::OutputStart => {
                 self.at_prompt = Some(false);
+                // The next command: the last one's failure is history.
+                self.failure = None;
                 if heuristics {
                     self.finished_mark = false;
                     self.last_output = Instant::now();
@@ -261,9 +291,14 @@ impl TerminalView {
                     }
                 }
             }
-            Mark::Finished(_) => {
+            Mark::Finished(code) => {
                 self.at_prompt = Some(true);
                 self.finished_mark |= heuristics;
+                // A program that reports itself says how it went (the status is its own); a
+                // command's exit code is only ever a command's.
+                if heuristics {
+                    self.command_ended(code);
+                }
             }
         }
     }
@@ -294,7 +329,7 @@ impl TerminalView {
         self.notice = Some(ProgramNotice { serial, notification });
     }
 
-    /// Clear "done"/"attention" and the bell once the user looks at this terminal. Returns
+    /// Clear "done"/"failed"/"attention" and the bell once the user looks at this terminal. Returns
     /// whether anything the sidebar shows changed (a bell that didn't count as "needs you" changes
     /// only the row's bell).
     pub fn acknowledge(&mut self) -> bool {
@@ -304,7 +339,7 @@ impl TerminalView {
         if (self.hook_driven || self.blocked_by_program()) && self.status == Status::Attention {
             return rang;
         }
-        let seen = matches!(self.status, Status::Done | Status::Attention);
+        let seen = matches!(self.status, Status::Done | Status::Failed | Status::Attention);
         if seen {
             // What a program reported as finished has been seen: forgotten, so the next derivation
             // doesn't bring "done" back. What it still has going on is the status now, if it is

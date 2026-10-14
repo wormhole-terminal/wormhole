@@ -66,6 +66,7 @@ impl Workspace {
             shown,
             status: terminal.status(),
             agent: terminal.agent,
+            told: terminal.source().told(),
             label: session.pane.label(cx),
             words: crumb_words(terminal),
             branch,
@@ -93,7 +94,7 @@ impl Workspace {
                 })
             })
             .unwrap_or_default();
-        let has_indicator = indicator_glyph(facts.agent.is_some(), facts.status).is_some();
+        let has_indicator = indicator_glyph(facts.told, facts.status).is_some();
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
@@ -144,7 +145,7 @@ impl Workspace {
     /// picker; the name is what runs, with its live status next to the tool's icon.
     fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let Facts { id, folder, status, agent, label, words, branch, .. } = &plan.facts;
+        let Facts { id, folder, status, agent, told, label, words, branch, .. } = &plan.facts;
         let fit = &plan.fit;
         // Under a tint the folder's icon and its parents step up to the main text color, so they
         // keep their contrast on it.
@@ -243,9 +244,10 @@ impl Workspace {
                 .text_color(ui.text)
                 .into_any_element(),
         };
-        let indicator = indicator_glyph(agent.is_some(), *status)
+        let indicator = indicator_glyph(*told, *status)
             .map(|glyph| style::status_glyph(("terminal-status", *id as u64), ui, glyph, cx));
         let attention = *status == Status::Attention;
+        let failed = *status == Status::Failed;
         let process = div()
             .id("crumb-process")
             .flex()
@@ -269,7 +271,11 @@ impl Workspace {
                     .flex_none()
                     .whitespace_nowrap()
                     .text_caption()
-                    .text_color(if attention { ui.attention_text } else { ui.muted })
+                    .text_color(match () {
+                        _ if attention => ui.attention_text,
+                        _ if failed => ui.danger_text,
+                        _ => ui.muted,
+                    })
                     .child(words)
             }));
 
@@ -374,22 +380,29 @@ fn crumb_words(terminal: &TerminalView) -> Option<String> {
         Status::Busy => Some(format!("working · {}", took())),
         Status::Attention => Some("needs you".to_string()),
         Status::Done => Some(format!("done · {}", took())),
+        // The exit code when the shell gave one; else how long ago, as for done.
+        Status::Failed => Some(match terminal.failure() {
+            Some(failure) => format!("failed · exit {}", failure.code),
+            None => format!("failed · {}", took()),
+        }),
         Status::Exited => Some("exited".to_string()),
         Status::Idle => None,
     }
 }
 
 /// The live status next to the tool's icon, the sidebar row's own glyph and motion (so one terminal
-/// never shows two states): an agent's working spinner, needs-you halo, finished check or idle
-/// ring; for a plain terminal only a running command (the spinner) or a ring bell. Nothing for an
-/// exited one, whose words say so.
-fn indicator_glyph(agent: bool, status: Status) -> Option<style::StatusGlyph> {
+/// never shows two states): the working spinner, needs-you halo, finished check or idle ring of
+/// an agent or a program that reports its status (`told`); for a plain terminal only a running
+/// command (the spinner), a ring bell or a command that failed. Nothing for an exited one, whose
+/// words say so.
+fn indicator_glyph(told: bool, status: Status) -> Option<style::StatusGlyph> {
     use style::StatusGlyph as G;
-    match (agent, status) {
+    match (told, status) {
         (_, Status::Exited) => None,
         (true, Status::Busy) => Some(G::Working),
         (true, Status::Attention) => Some(G::NeedsYou),
         (true, Status::Done) => Some(G::Done),
+        (_, Status::Failed) => Some(G::Failed),
         (true, Status::Idle) => Some(G::Idle),
         (false, Status::Busy) => Some(G::Running),
         (false, Status::Attention) => Some(G::Bell),
@@ -400,12 +413,13 @@ fn indicator_glyph(agent: bool, status: Status) -> Option<style::StatusGlyph> {
 /// A terminal's status slot (16 pt): what it is and how it is doing in one place, so a change of
 /// status never moves the label. Shape tells the states apart, not only colour. A split's
 /// pane headers draw it too.
-pub(super) fn terminal_glyph(id: i64, status: Status, agent: bool, cx: &App) -> AnyElement {
+pub(super) fn terminal_glyph(id: i64, status: Status, told: bool, cx: &App) -> AnyElement {
     let ui = ui(cx);
     let glyph = match status {
-        Status::Busy if agent => style::StatusGlyph::Working,
+        Status::Busy if told => style::StatusGlyph::Working,
         Status::Busy => style::StatusGlyph::Running,
         Status::Done => style::StatusGlyph::Done,
+        Status::Failed => style::StatusGlyph::Failed,
         Status::Attention => {
             return div()
                 .flex_none()
@@ -434,6 +448,8 @@ mod tests {
         assert_eq!(indicator_glyph(true, Status::Busy), Some(StatusGlyph::Working));
         assert_eq!(indicator_glyph(true, Status::Attention), Some(StatusGlyph::NeedsYou));
         assert_eq!(indicator_glyph(true, Status::Done), Some(StatusGlyph::Done));
+        assert_eq!(indicator_glyph(true, Status::Failed), Some(StatusGlyph::Failed));
+        assert_eq!(indicator_glyph(false, Status::Failed), Some(StatusGlyph::Failed));
         assert_eq!(indicator_glyph(true, Status::Idle), Some(StatusGlyph::Idle));
         assert_eq!(indicator_glyph(false, Status::Busy), Some(StatusGlyph::Running));
         assert_eq!(indicator_glyph(false, Status::Attention), Some(StatusGlyph::Bell));

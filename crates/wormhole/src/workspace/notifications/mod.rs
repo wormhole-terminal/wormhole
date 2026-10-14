@@ -240,12 +240,12 @@ pub(crate) fn sweep(cx: &mut App) {
         return;
     }
     let settings = settings(cx).clone();
-    let mut said = Vec::new();
+    let mut heard = Vec::new();
     for event in events {
         match event {
             Event::Post { tab, kind, took, command } => {
                 if let Some(facts) = tabs.iter().find(|facts| facts.tab == tab) {
-                    said.push(Said { tab, name: &facts.name, kind, question: spoken_words(kind, facts) });
+                    heard.push((tab, facts.name.as_str(), kind, spoken_words(kind, facts)));
                     let happened = Happened { kind, facts, took, command: command.as_deref() };
                     announce(happened, app_active, &settings, cx);
                 }
@@ -253,8 +253,12 @@ pub(crate) fn sweep(cx: &mut App) {
             Event::Retract(tab) | Event::Seen(tab) => dismiss(tab, cx),
         }
     }
-    // VoiceOver hears every terminal that needs you or finished, the one on screen too: unlike a
-    // banner, nothing else would read it out.
+    // VoiceOver hears every terminal that needs you, finished or failed, the one on screen too:
+    // unlike a banner, nothing else would read it out.
+    let said: Vec<Said> = heard
+        .iter()
+        .map(|(tab, name, kind, words)| Said { tab: *tab, name, kind: *kind, question: words.as_deref() })
+        .collect();
     for spoken in notifier(cx).announcer.announce(Instant::now(), &said) {
         crate::a11y::announce(&spoken.text, spoken.priority == Priority::High);
     }
@@ -274,35 +278,40 @@ impl Happened<'_> {
         let command = self.command.or(facts.foreground.as_ref().map(|f| f.command.as_str()));
         // A program's own notification speaks with its words, not the agent's question.
         let notice = facts.notice.as_ref().filter(|_| self.kind == Kind::Notice).map(|n| &n.notification);
+        // A failed command: the exit code, and what the shell's blocks could say it last printed.
+        let failure = facts.failure.as_ref().filter(|_| self.kind == Kind::CommandFailed);
         notify::text(
             self.kind,
             &About {
                 name: &facts.name,
-                agent: facts.agent_name(),
-                command,
+                who: facts.who(),
+                command: failure.and_then(|f| f.command.as_deref()).or(command),
                 folder: facts.folder.as_deref(),
                 branch: facts.branch.as_deref(),
                 message: notice.map(|n| n.body.as_str()).or(facts.message.as_deref()),
                 title: notice.map(|n| n.title.as_str()),
-                took: self.took,
+                took: self.took.or(failure.and_then(|f| f.took)),
+                exit: failure.map(|f| f.code),
+                last_line: failure.and_then(|f| f.last_line.as_deref()),
                 changed: facts.changed,
             },
         )
     }
 }
 
-/// What VoiceOver reads of an event: a program's notification in its words, else the agent's
-/// question.
-fn spoken_words(kind: Kind, facts: &TabFacts) -> Option<&str> {
+/// What VoiceOver reads of an event: a program's notification in its words, a failed command's
+/// exit code, else the agent's question (or what a program that failed said).
+fn spoken_words(kind: Kind, facts: &TabFacts) -> Option<String> {
     match kind {
         Kind::Notice => {
             let notice = facts.notice.as_ref()?;
             [&notice.notification.body, &notice.notification.title]
                 .into_iter()
                 .find(|s| !s.is_empty())
-                .map(String::as_str)
+                .cloned()
         }
-        _ => facts.message.as_deref(),
+        Kind::CommandFailed => facts.failure.as_ref().map(|failure| format!("exit {}", failure.code)),
+        _ => facts.message.clone(),
     }
 }
 
@@ -313,7 +322,7 @@ fn announce(happened: Happened, app_active: bool, settings: &Settings, cx: &mut 
     // A program that reports its own state can flip it as fast as it can write: its questions and
     // its finishing are each told at most once in a while, banner, sound and Dock bounce alike.
     if facts.reported
-        && matches!(kind, Kind::NeedsYou | Kind::AgentDone)
+        && matches!(kind, Kind::NeedsYou | Kind::AgentDone | Kind::AgentFailed)
         && !notifier(cx)
             .reports
             .get_or_insert_with(report_rate)
@@ -344,10 +353,15 @@ fn report_rate() -> Throttle {
     Throttle::new(notify::REPORT_RATE)
 }
 
-/// One clock per terminal and kind: asking and finishing in quick turn are both told, a program
-/// repeating either is not.
+/// One clock per terminal and kind: asking, finishing and failing in quick turn are all told, a
+/// program repeating any of them is not.
 fn report_key(session: i64, kind: Kind) -> i64 {
-    session.saturating_mul(2).saturating_add(i64::from(kind == Kind::NeedsYou))
+    let slot = match kind {
+        Kind::NeedsYou => 1,
+        Kind::AgentFailed => 2,
+        _ => 0,
+    };
+    session.saturating_mul(3).saturating_add(slot)
 }
 
 fn banner(happened: &Happened, settings: &Settings, cx: &mut App) {
@@ -396,7 +410,9 @@ fn category(kind: Kind) -> Category {
     match kind {
         Kind::NeedsYou => Category::NeedsYou,
         Kind::AgentDone => Category::Finished,
-        Kind::CommandDone | Kind::Bell | Kind::Notice => Category::Plain,
+        Kind::CommandDone | Kind::CommandFailed | Kind::AgentFailed | Kind::Bell | Kind::Notice => {
+            Category::Plain
+        }
     }
 }
 
@@ -690,10 +706,39 @@ fn osascript(notice: &Notice) -> Command {
 
 #[cfg(test)]
 mod tests {
-    use gpui_kit::{SystemNotificationResponse, TestAppContext};
-    use wormhole_core::notify::Level;
+    use std::time::{Duration, Instant};
 
-    use super::{Category, Notice, dismiss, init, logs, osascript, post, tag};
+    use gpui_kit::{SystemNotificationResponse, TestAppContext};
+    use wormhole_core::notify::{Kind, Level, Source, State};
+
+    use super::{
+        Category, Happened, Notice, category, dismiss, init, logs, osascript, post, spoken_words, tag,
+    };
+    use crate::terminal_view::Failure;
+    use crate::workspace::ambient::TabFacts;
+
+    fn facts(state: State) -> TabFacts {
+        TabFacts {
+            session: 1,
+            tab: 7,
+            name: "build".into(),
+            state,
+            since: Instant::now(),
+            agent: None,
+            source: Source::Plain,
+            program: None,
+            message: None,
+            reported: false,
+            failure: None,
+            notice: None,
+            foreground: None,
+            folder: Some("scratch".into()),
+            branch: None,
+            changed: Some(3),
+            selected: false,
+            key: false,
+        }
+    }
 
     fn notice(tab: i64, title: &str, body: &str) -> Notice {
         Notice {
@@ -706,6 +751,64 @@ mod tests {
             sound: false,
             category: Category::Finished,
         }
+    }
+
+    /// F-41: "build failed · exit 101", the command and folder under it, and after how long and the
+    /// last line it printed.
+    #[test]
+    fn a_failed_command_is_told_with_its_exit_code_and_last_line() {
+        let mut build = facts(State::Failed);
+        build.failure = Some(Failure {
+            serial: 1,
+            code: 101,
+            at: Instant::now(),
+            command: Some("cargo build".into()),
+            took: Some(Duration::from_secs(38)),
+            last_line: Some("error[E0425]: cannot find value `tab_ix`".into()),
+        });
+        let happened = Happened {
+            kind: Kind::CommandFailed,
+            facts: &build,
+            took: Some(Duration::from_secs(38)),
+            command: Some("cargo build"),
+        };
+        let text = happened.text();
+        assert_eq!(text.title, "build failed · exit 101");
+        assert_eq!(text.subtitle, "cargo build · scratch");
+        assert_eq!(text.body, "after 38s · error[E0425]: cannot find value `tab_ix`");
+        assert_eq!(spoken_words(Kind::CommandFailed, &build).as_deref(), Some("exit 101"));
+        assert_eq!(category(Kind::CommandFailed), Category::Plain, "a click opens the terminal");
+        // The last line is the shell's; without it the duration is what there is.
+        build.failure = build.failure.map(|f| Failure { last_line: None, ..f });
+        let happened = Happened { kind: Kind::CommandFailed, facts: &build, took: None, command: None };
+        assert_eq!(happened.text().body, "after 38s");
+    }
+
+    /// A program that reports itself is named where an agent would be, its words are the body, and it
+    /// has no repository changes of its own to count.
+    #[test]
+    fn a_reporting_programs_banner_names_it_and_quotes_it() {
+        let mut brew = facts(State::Done);
+        brew.source = Source::Program;
+        brew.program = Some("brew".into());
+        brew.message = Some("Upgraded 12 packages".into());
+        brew.changed = None;
+        let happened = Happened {
+            kind: Kind::AgentDone,
+            facts: &brew,
+            took: Some(Duration::from_secs(252)),
+            command: None,
+        };
+        let text = happened.text();
+        assert_eq!(text.title, "build finished");
+        assert_eq!(text.subtitle, "brew · scratch");
+        assert_eq!(text.body, "Upgraded 12 packages · 4m 12s");
+        brew.state = State::Failed;
+        brew.message = Some("Error: no such formula".into());
+        let happened = Happened { kind: Kind::AgentFailed, facts: &brew, took: None, command: None };
+        assert_eq!(happened.text().title, "build failed");
+        assert_eq!(happened.text().body, "Error: no such formula");
+        assert_eq!(spoken_words(Kind::AgentFailed, &brew).as_deref(), Some("Error: no such formula"));
     }
 
     #[test]

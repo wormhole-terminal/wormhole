@@ -7,9 +7,11 @@ use std::time::Duration;
 use super::filter::RowState;
 use super::group::{display_path, place_in_folder};
 
-/// What an agent's second line says, or `None` for a one-line row: "Needs you · Approve cargo
-/// test?", "Editing sidebar.rs…" (the agent's own words) or "Working · 3m" ("Working · <1m" in
-/// the first minute), "Finished · 12m ago". `since` is how long the agent has been in `state`.
+/// What the second line of a row whose status something tells (an agent, or a program that
+/// reports its own) says, or `None` for a one-line row: "Needs you · Approve cargo test?",
+/// "Editing sidebar.rs…" (its own words) or "Working · 3m" ("Working · <1m" in the first minute),
+/// "Finished · 12m ago", "Failed · rate limit reached". `since` is how long it has been in
+/// `state`. A result with words of its own ("Upgraded 12 packages") says them in place of when.
 pub fn agent_detail(state: RowState, message: Option<&str>, since: Duration) -> Option<String> {
     let message = message.map(str::trim).filter(|m| !m.is_empty());
     match state {
@@ -21,7 +23,10 @@ pub fn agent_detail(state: RowState, message: Option<&str>, since: Duration) -> 
             Some(message) => message.to_string(),
             None => format!("Working · {}", took(since).as_deref().unwrap_or(UNDER_A_MINUTE)),
         }),
-        RowState::Finished => Some(format!("Finished · {}", ago(since))),
+        RowState::Finished => {
+            Some(format!("Finished · {}", message.map_or_else(|| ago(since), str::to_string)))
+        }
+        RowState::Failed => Some(format!("Failed · {}", message.map_or_else(|| ago(since), str::to_string))),
         RowState::Exited => Some("Exited".to_string()),
         RowState::Idle => None,
     }
@@ -246,6 +251,17 @@ mod tests {
         assert_eq!(agent_detail(RowState::Finished, None, mins(12)).as_deref(), Some("Finished · 12m ago"));
         assert_eq!(agent_detail(RowState::Finished, None, mins(0)).as_deref(), Some("Finished · just now"));
         assert_eq!(agent_detail(RowState::Idle, ask, mins(5)), None, "an idle agent is one line");
+        // A result says its own words when it has them, else when it happened.
+        assert_eq!(
+            agent_detail(RowState::Finished, Some("Upgraded 12 packages"), mins(2)).as_deref(),
+            Some("Finished · Upgraded 12 packages")
+        );
+        assert_eq!(agent_detail(RowState::Failed, None, mins(2)).as_deref(), Some("Failed · 2m ago"));
+        assert_eq!(
+            agent_detail(RowState::Failed, Some("rsync failed"), mins(2)).as_deref(),
+            Some("Failed · rsync failed")
+        );
+        assert_eq!(agent_detail(RowState::Failed, Some(" "), mins(0)).as_deref(), Some("Failed · just now"));
     }
 
     #[test]

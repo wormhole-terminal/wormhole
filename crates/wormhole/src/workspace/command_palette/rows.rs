@@ -152,7 +152,7 @@ fn state_title(state: State) -> &'static str {
     match state {
         State::NeedsYou => "Needs you",
         State::Working => "Working",
-        State::Done => "Finished",
+        State::Done | State::Failed => "Finished",
         State::Idle | State::Exited => "Idle",
     }
 }
@@ -381,7 +381,7 @@ fn found(snapshot: &Snapshot, scope: Scope, query: &str) -> Vec<Row> {
             let terminal = &t.terminal;
             let mut candidate = Candidate::new(&terminal.name);
             for text in
-                [&terminal.folder, &terminal.branch, &terminal.command, &terminal.agent, &terminal.message]
+                [&terminal.folder, &terminal.branch, &terminal.command, &terminal.who, &terminal.message]
                     .into_iter()
                     .flatten()
             {
@@ -444,10 +444,17 @@ pub(crate) fn terminal_detail(item: &TerminalItem, scoped: bool, now: Instant) -
     let doing = match terminal.state {
         State::NeedsYou => Some("Needs you".to_string()),
         State::Done => Some("Finished".to_string()),
+        State::Failed => Some("Failed".to_string()),
         State::Working | State::Idle | State::Exited => terminal.folder.clone(),
     };
+    let exit = terminal.exit.map(|code| format!("exit {code}"));
     let words = match terminal.state {
         State::NeedsYou | State::Working => terminal.message.clone().or_else(|| terminal.command.clone()),
+        // What went wrong: a program's own words, else the command and how it exited.
+        State::Failed => terminal.message.clone().or_else(|| {
+            let parts: Vec<String> = [terminal.command.clone(), exit].into_iter().flatten().collect();
+            (!parts.is_empty()).then(|| parts.join(" · "))
+        }),
         _ => None,
     };
     [doing, words].into_iter().flatten().collect::<Vec<_>>().join(" · ")
@@ -460,8 +467,8 @@ pub(crate) fn question(item: &TerminalItem) -> Option<String> {
         return None;
     }
     let message = terminal.message.as_deref()?;
-    Some(match &terminal.agent {
-        Some(agent) => format!("{agent} is asking: {message}"),
+    Some(match &terminal.who {
+        Some(who) => format!("{who} is asking: {message}"),
         None => message.to_string(),
     })
 }
@@ -474,7 +481,7 @@ mod tests {
     use wormhole_core::keymap::ActionId;
     use wormhole_core::keymap::menus::MenuState;
     use wormhole_core::keymap::palette;
-    use wormhole_core::notify::{State, Terminal};
+    use wormhole_core::notify::{Source, State, Terminal};
     use wormhole_core::search::Scope;
 
     use wormhole_core::shells::ShellChoice;
@@ -491,10 +498,12 @@ mod tests {
                 name: name.into(),
                 state,
                 since: Instant::now() - Duration::from_secs(secs),
-                agent: None,
+                source: Source::Plain,
+                who: None,
                 message: None,
                 command: None,
                 took: None,
+                exit: None,
                 changed: None,
                 folder: Some("terminal".into()),
                 branch: None,
@@ -728,7 +737,8 @@ mod tests {
     fn a_terminal_says_where_it_is_in_a_scope_and_what_it_does_elsewhere() {
         let now = Instant::now();
         let mut waiting = terminal(2, "diff perf", State::NeedsYou, 0);
-        waiting.terminal.agent = Some("Claude Code".into());
+        waiting.terminal.source = Source::Agent;
+        waiting.terminal.who = Some("Claude Code".into());
         waiting.terminal.message = Some("Approve cargo test?".into());
         assert_eq!(terminal_detail(&waiting, false, now), "Needs you · Approve cargo test?");
         assert!(terminal_detail(&waiting, true, now).starts_with("Window 1 · terminal"));
@@ -736,5 +746,27 @@ mod tests {
         let working = terminal(1, "sidebar polish", State::Working, 0);
         assert_eq!(terminal_detail(&working, false, now), "terminal");
         assert_eq!(question(&working), None);
+    }
+
+    #[test]
+    fn a_failed_terminal_says_what_went_wrong() {
+        let now = Instant::now();
+        let mut build = terminal(1, "build", State::Failed, 0);
+        build.terminal.command = Some("cargo build".into());
+        build.terminal.exit = Some(101);
+        assert_eq!(terminal_detail(&build, false, now), "Failed · cargo build · exit 101");
+        // A program that reports says it in its own words, and is asking nothing.
+        let mut deploy = terminal(2, "deploy", State::Failed, 0);
+        deploy.terminal.source = Source::Program;
+        deploy.terminal.who = Some("deploy.sh".into());
+        deploy.terminal.message = Some("rsync failed".into());
+        assert_eq!(terminal_detail(&deploy, false, now), "Failed · rsync failed");
+        assert_eq!(question(&deploy), None);
+        // A program's question reads like an agent's.
+        let mut brew = terminal(3, "upgrade", State::NeedsYou, 0);
+        brew.terminal.source = Source::Program;
+        brew.terminal.who = Some("brew".into());
+        brew.terminal.message = Some("Password:".into());
+        assert_eq!(question(&brew).as_deref(), Some("brew is asking: Password:"));
     }
 }

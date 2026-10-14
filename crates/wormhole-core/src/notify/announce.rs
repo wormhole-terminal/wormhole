@@ -1,7 +1,7 @@
 //! What VoiceOver announces when a terminal changes. GPUI has no live regions, so the app
 //! posts these as NSAccessibility announcements: a terminal that needs you interrupts what
-//! VoiceOver is saying, one that finished waits its turn, and a burst is said as one count, as
-//! the notifications' summary groups it.
+//! VoiceOver is saying, one that finished or failed waits its turn, and a burst is said as one
+//! count, as the notifications' summary groups it.
 //!
 //! Working never announces: it would talk over everything while agents run, and the sweep only
 //! hands over the changes notifications treat as news (a [`Kind`]), so working, idle and ended
@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use super::{Kind, NOTIFY_BURST, NOTIFY_BURST_WINDOW};
 use crate::elide::ELLIPSIS;
-use crate::spoken::{terminals_finished, terminals_need_you};
+use crate::spoken::{terminals_failed, terminals_finished, terminals_need_you};
 
 /// How many characters of an agent's question are read out. A permission prompt can quote a whole
 /// command; past a sentence or so the listener has what they need to go and answer it.
@@ -23,7 +23,7 @@ const QUESTION_MAX: usize = 100;
 pub enum Priority {
     /// Interrupts what VoiceOver is saying (needs you).
     High,
-    /// Waits its turn (finished).
+    /// Waits its turn (finished, failed).
     Medium,
 }
 
@@ -42,7 +42,7 @@ pub struct Said<'a> {
     /// The terminal's name, as the sidebar shows it.
     pub name: &'a str,
     pub kind: Kind,
-    /// The agent's question, for needs you.
+    /// The agent's question, for needs you; what went wrong, for a failure ("exit 101").
     pub question: Option<&'a str>,
 }
 
@@ -59,12 +59,13 @@ struct Told {
     heard: Heard,
 }
 
-/// What an announcement is about. Needs you and finished are counted apart: a burst of agents
-/// finishing doesn't turn the next question into a count.
+/// What an announcement is about. Needs you, finished and failed are counted apart: a burst of
+/// agents finishing doesn't turn the next question into a count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Heard {
     NeedsYou,
     Finished,
+    Failed,
 }
 
 impl Heard {
@@ -73,6 +74,7 @@ impl Heard {
             // A program's own notification is the one it meant to send: heard like a question.
             Kind::NeedsYou | Kind::Notice => Some(Heard::NeedsYou),
             Kind::AgentDone | Kind::CommandDone => Some(Heard::Finished),
+            Kind::AgentFailed | Kind::CommandFailed => Some(Heard::Failed),
             // A bell is not announced: it already sounded, and a terminal without an agent
             // can ring it far more often than anyone wants to hear about.
             Kind::Bell => None,
@@ -82,21 +84,22 @@ impl Heard {
     fn priority(self) -> Priority {
         match self {
             Heard::NeedsYou => Priority::High,
-            Heard::Finished => Priority::Medium,
+            Heard::Finished | Heard::Failed => Priority::Medium,
         }
     }
 }
 
 impl Announcer {
     /// What VoiceOver says for the changes one sweep found (in the order given), at `at`: at most
-    /// one announcement for needs you, then at most one for finished. A single terminal is named
-    /// ("diff perf needs you: Approve cargo test?", "auth tokens finished"); several in this sweep,
+    /// one announcement for needs you, then at most one each for finished and failed. A single
+    /// terminal is named ("diff perf needs you: Approve cargo test?", "auth tokens finished",
+    /// "build failed: exit 101"); several in this sweep,
     /// or from the [`NOTIFY_BURST`]th terminal within [`NOTIFY_BURST_WINDOW`] on, are said as the
     /// burst's count ("3 terminals need you"). A terminal heard again inside the window is still
     /// one terminal.
     pub fn announce(&mut self, at: Instant, changes: &[Said]) -> Vec<Announcement> {
         self.recent.retain(|told| at.saturating_duration_since(told.at) < NOTIFY_BURST_WINDOW);
-        [Heard::NeedsYou, Heard::Finished]
+        [Heard::NeedsYou, Heard::Finished, Heard::Failed]
             .into_iter()
             .filter_map(|heard| self.say(at, heard, changes))
             .collect()
@@ -112,6 +115,7 @@ impl Announcer {
             _ if alone && burst < NOTIFY_BURST => named(first),
             Heard::NeedsYou => terminals_need_you(burst),
             Heard::Finished => terminals_finished(burst),
+            Heard::Failed => terminals_failed(burst),
         };
         Some(Announcement { text, priority: heard.priority() })
     }
@@ -137,6 +141,8 @@ fn named(said: &Said) -> String {
         (Some(Heard::NeedsYou), None) if said.kind == Kind::Notice => format!("{name} sent a notification"),
         (Some(Heard::NeedsYou), Some(question)) => format!("{name} needs you: {question}"),
         (Some(Heard::NeedsYou), None) => format!("{name} needs you"),
+        (Some(Heard::Failed), Some(words)) => format!("{name} failed: {words}"),
+        (Some(Heard::Failed), None) => format!("{name} failed"),
         _ => format!("{name} finished"),
     }
 }
@@ -319,6 +325,25 @@ mod tests {
         // The third of one kind is.
         assert_eq!(announcer.announce(t0 + secs(5), &[done(5, "e")]), [medium("3 terminals finished")]);
         assert_eq!(announcer.announce(t0 + secs(6), &[needs(6, "f", None)]), [high("3 terminals need you")]);
+    }
+
+    #[test]
+    fn a_failure_is_named_with_what_went_wrong_and_counted_apart() {
+        let t0 = Instant::now();
+        let failed = |tab, name, question| Said { tab, name, kind: Kind::CommandFailed, question };
+        let mut announcer = Announcer::default();
+        assert_eq!(
+            announcer.announce(t0, &[failed(1, "build", Some("exit 101"))]),
+            [medium("build failed: exit 101")]
+        );
+        let agent = Said { tab: 2, name: "deploy", kind: Kind::AgentFailed, question: None };
+        assert_eq!(announcer.announce(t0 + secs(1), &[agent]), [medium("deploy failed")]);
+        // Failures and finishes don't make a burst of each other.
+        assert_eq!(announcer.announce(t0 + secs(2), &[done(3, "tests")]), [medium("tests finished")]);
+        assert_eq!(
+            announcer.announce(t0 + secs(3), &[failed(4, "lint", None)]),
+            [medium("3 terminals failed")]
+        );
     }
 
     #[test]

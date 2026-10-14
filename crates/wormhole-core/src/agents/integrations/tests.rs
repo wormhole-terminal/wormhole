@@ -191,7 +191,8 @@ fn events_map_to_statuses() {
     assert_eq!(signal(AgentId::Claude, "PreToolUse:ExitPlanMode"), Some(Attention));
     assert_eq!(signal(AgentId::Claude, "PreToolUse:Bash"), Some(Busy));
     assert_eq!(signal(AgentId::Claude, "Stop:background"), Some(Busy));
-    assert_eq!(signal(AgentId::Claude, "StopFailure:rate_limit"), Some(Done));
+    assert_eq!(signal(AgentId::Claude, "StopFailure:rate_limit"), Some(Failed));
+    assert_eq!(signal(AgentId::Claude, "StopFailure"), Some(Failed));
     assert_eq!(signal(AgentId::Claude, "SessionEnd:clear"), Some(Quiet));
     assert_eq!(signal(AgentId::Claude, "SessionEnd:prompt_input_exit"), Some(Ended));
     assert_eq!(signal(AgentId::Codex, "PermissionRequest"), Some(Attention));

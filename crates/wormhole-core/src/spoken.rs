@@ -197,6 +197,12 @@ pub fn status_done(summary: &Summary) -> Option<String> {
     (n > 0).then(|| terminals_finished(n))
 }
 
+/// The failed item: "1 terminal failed", "3 terminals failed".
+pub fn status_failed(summary: &Summary) -> Option<String> {
+    let n = summary.failed.len();
+    (n > 0).then(|| terminals_failed(n))
+}
+
 /// A spoken duration at the bar's minute granularity ("4m" on screen, "<1m" in the first
 /// minute): "less than a minute", "4 minutes", "1 hour 5 minutes", and "2 hours" rather than "2
 /// hours 0 minutes".
@@ -225,6 +231,11 @@ pub(crate) fn terminals_finished(n: usize) -> String {
     format!("{} finished", count(n, "terminal", "terminals"))
 }
 
+/// "3 terminals failed".
+pub(crate) fn terminals_failed(n: usize) -> String {
+    format!("{} failed", count(n, "terminal", "terminals"))
+}
+
 /// "1 file", "3 files", and "no files" for none.
 fn some_or_none(n: usize, one: &str, many: &str) -> String {
     if n == 0 { format!("no {many}") } else { count(n, one, many) }
@@ -236,7 +247,8 @@ mod tests {
 
     use super::{
         Counted, PanelTab, command_block, panel_tab, section_band, spoken_elapsed, spoken_took,
-        status_branch, status_context, status_done, status_needs_you, status_size, status_working,
+        status_branch, status_context, status_done, status_failed, status_needs_you, status_size,
+        status_working,
     };
     use crate::layout::status_bar::{Activity, Detail, Entry, Summary};
     use crate::terminal::BlockState;
@@ -347,11 +359,16 @@ mod tests {
             entry(Activity::Done, now, None, "e"),
             entry(Activity::Done, now, None, "f"),
             entry(Activity::Done, now, None, "g"),
+            entry(Activity::Failed, now, None, "h"),
+            entry(Activity::Failed, now, Some("brew"), "i"),
         ];
         let summary = Summary::of(&entries);
         assert_eq!(status_working(&summary, &entries, now).as_deref(), Some("2 terminals working"));
         assert_eq!(status_needs_you(&summary).as_deref(), Some("2 terminals need you"));
         assert_eq!(status_done(&summary).as_deref(), Some("3 terminals finished"));
+        assert_eq!(status_failed(&summary).as_deref(), Some("2 terminals failed"));
+        let one_failed = Summary::of(&entries[7..8]);
+        assert_eq!(status_failed(&one_failed).as_deref(), Some("1 terminal failed"));
         // A command without an agent says it is one terminal.
         let one = [entry(Activity::Working, now - Duration::from_secs(9), None, "cargo test")];
         assert_eq!(

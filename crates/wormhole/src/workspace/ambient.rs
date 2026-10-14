@@ -6,12 +6,12 @@
 use std::time::{Instant, SystemTime};
 
 use wormhole_core::agents::Foreground;
-use wormhole_core::notify::{self, State};
+use wormhole_core::notify::{self, Source, State};
 use wormhole_core::sidebar::command::ends_by_itself;
 
 use super::app::{app, open_tab};
 use super::*;
-use crate::terminal_view::ProgramNotice;
+use crate::terminal_view::{Failure, ProgramNotice};
 
 /// One terminal of one window, as read on this tick.
 #[derive(Clone, Debug)]
@@ -25,9 +25,15 @@ pub(crate) struct TabFacts {
     /// When it started doing that (a plain terminal's command: when the command started).
     pub since: Instant,
     pub agent: Option<AgentId>,
+    /// What tells the state: an agent, a program that reports its own status (`program` names it),
+    /// or neither.
+    pub source: Source,
+    pub program: Option<String>,
     pub message: Option<String>,
     /// The state is what a program reported about itself last (OSC 7501), which anyone may send.
     pub reported: bool,
+    /// The last command's failure, until the next command starts (a failing exit code).
+    pub failure: Option<Failure>,
     /// The program's last notification of its own (OSC 9/99/777), numbered.
     pub notice: Option<ProgramNotice>,
     pub foreground: Option<Foreground>,
@@ -49,18 +55,26 @@ impl TabFacts {
     pub(crate) fn agent_name(&self) -> Option<&'static str> {
         self.agent.map(|id| wormhole_core::agents::agent(id).name)
     }
+
+    /// Who the terminal's agent-style words are about: the coding agent's name, or the name of the
+    /// program that reports its own status.
+    pub(crate) fn who(&self) -> Option<&str> {
+        self.agent_name().or(self.program.as_deref())
+    }
 }
 
-/// What a tab is doing, as the ambient surfaces count it. A command in a terminal without an
-/// agent counts as work while it runs, even when it prints nothing (a long build), unless it is
-/// a program you sit in (vim, ssh), whose terminal says what its output says.
-pub(crate) fn state_of(status: Status, agent: bool, foreground: Option<&Foreground>) -> State {
+/// What a tab is doing, as the ambient surfaces count it. A command in a terminal that nothing
+/// tells the state of counts as work while it runs, even when it prints nothing (a long build),
+/// unless it is a program you sit in (vim, ssh), whose terminal says what its output says. An
+/// agent or a program that reports says it itself.
+pub(crate) fn state_of(status: Status, told: bool, foreground: Option<&Foreground>) -> State {
     match status {
         Status::Attention => State::NeedsYou,
         Status::Exited => State::Exited,
-        _ if !agent && foreground.is_some_and(|f| ends_by_itself(&f.command)) => State::Working,
+        _ if !told && foreground.is_some_and(|f| ends_by_itself(&f.command)) => State::Working,
         Status::Busy => State::Working,
         Status::Done => State::Done,
+        Status::Failed => State::Failed,
         Status::Idle => State::Idle,
     }
 }
@@ -80,9 +94,10 @@ impl Workspace {
             let status = session.git.status.as_ref();
             let terminal = session.terminal().read(cx);
             let foreground = terminal.foreground().cloned();
-            let state = state_of(terminal.status(), terminal.agent.is_some(), foreground.as_ref());
-            let since = match (&foreground, state, terminal.agent) {
-                (Some(f), State::Working, None) => instant_of(f.started),
+            let source = terminal.source();
+            let state = state_of(terminal.status(), source.told(), foreground.as_ref());
+            let since = match (&foreground, state, source) {
+                (Some(f), State::Working, Source::Plain) => instant_of(f.started),
                 _ => terminal.status_since(),
             };
             // The status is the one read for the folder the terminal is in.
@@ -94,8 +109,11 @@ impl Workspace {
                 state,
                 since,
                 agent: terminal.agent,
+                source,
+                program: terminal.program_name(),
                 message: terminal.agent_message.clone(),
                 reported: terminal.reported_by_program(),
+                failure: terminal.failure().cloned(),
                 notice: terminal.notice().cloned(),
                 foreground,
                 folder: terminal
@@ -104,7 +122,8 @@ impl Workspace {
                     .and_then(|cwd| cwd.file_name())
                     .map(|name| name.to_string_lossy().into_owned()),
                 branch: status.filter(|_| same_folder).and_then(|g| g.branch.clone()),
-                changed: status.filter(|_| same_folder).map(|g| g.files.len()),
+                // What a program that reports did is not the repository's state of the moment.
+                changed: status.filter(|_| same_folder && source != Source::Program).map(|g| g.files.len()),
                 selected: self.on_screen(ix),
                 key,
             });
@@ -141,9 +160,16 @@ pub(crate) fn terminal(
     finished: Option<&(String, std::time::Duration)>,
 ) -> notify::Terminal {
     let running = facts.foreground.as_ref().map(|f| f.command.clone());
+    // A failed command says what the shell's blocks know of it; the last one seen leaving the
+    // foreground is the fallback.
+    let failure = facts.failure.as_ref().filter(|_| facts.state == State::Failed);
     let (command, took) = match (running, facts.state, finished) {
         (Some(command), _, _) => (Some(command), None),
-        (None, State::Done, Some((command, took))) => (Some(command.clone()), Some(*took)),
+        (None, State::Done | State::Failed, finished) => {
+            let seen = finished.map(|(command, took)| (command.clone(), *took));
+            let command = failure.and_then(|f| f.command.clone()).or(seen.as_ref().map(|(c, _)| c.clone()));
+            (command, failure.and_then(|f| f.took).or(seen.map(|(_, took)| took)))
+        }
         _ => (None, None),
     };
     notify::Terminal {
@@ -152,10 +178,12 @@ pub(crate) fn terminal(
         name: facts.name.clone(),
         state: facts.state,
         since: facts.since,
-        agent: facts.agent_name().map(str::to_string),
+        source: facts.source,
+        who: facts.who().map(str::to_string),
         message: facts.message.clone(),
         command,
         took,
+        exit: failure.map(|f| f.code),
         changed: facts.changed,
         folder: facts.folder.clone(),
         branch: facts.branch.clone(),
@@ -226,5 +254,14 @@ mod tests {
         assert_eq!(state_of(Status::Exited, false, None), State::Exited);
         assert_eq!(state_of(Status::Busy, false, None), State::Working);
         assert_eq!(state_of(Status::Done, true, None), State::Done);
+    }
+
+    #[test]
+    fn a_failure_is_failed_unless_a_command_is_running_again() {
+        let build = running("cargo build");
+        assert_eq!(state_of(Status::Failed, false, None), State::Failed);
+        assert_eq!(state_of(Status::Failed, true, None), State::Failed, "an agent that stopped on an error");
+        assert_eq!(state_of(Status::Failed, false, Some(&build)), State::Working, "a new command runs");
+        assert_eq!(state_of(Status::Failed, true, Some(&build)), State::Failed);
     }
 }

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant, SystemTime};
 
 use wormhole_core::agents::Foreground;
-use wormhole_core::notify::{self, Change, Kind, State};
+use wormhole_core::notify::{self, Change, Kind, Source, State};
 use wormhole_core::sidebar::command::ends_by_itself;
 
 use crate::workspace::ambient::TabFacts;
@@ -16,10 +16,12 @@ use crate::workspace::ambient::TabFacts;
 struct Memory {
     state: State,
     since: Instant,
-    agent: bool,
+    source: Source,
     foreground: Option<Foreground>,
     /// The number of the program's last notification (0: none).
     notice: u64,
+    /// The number of the last command failure told about (0: none).
+    failure: u64,
 }
 
 /// Something worth acting on.
@@ -56,26 +58,32 @@ impl Watch {
         let mut events = Vec::new();
         for facts in tabs {
             let notice = facts.notice.as_ref().map_or(0, |n| n.serial);
+            let failure = facts.failure.as_ref().map_or(0, |f| f.serial);
             let now = Memory {
                 state: facts.state,
                 since: facts.since,
-                agent: facts.agent.is_some(),
+                source: facts.source,
                 foreground: facts.foreground.clone(),
                 notice,
+                failure,
             };
             let before = self.memory.insert(facts.tab, now).unwrap_or(Memory {
                 state: State::Idle,
                 since: facts.since,
-                agent: false,
+                source: Source::Plain,
                 foreground: None,
                 notice: 0,
+                failure: 0,
             });
-            // An agent that quit between two looks still made the change it was there for.
-            let agent = before.agent || facts.agent.is_some();
+            // An agent or program that quit between two looks still made the change it was there
+            // for.
+            let source = if facts.source.told() { facts.source } else { before.source };
             let worked =
                 (before.state == State::Working).then(|| facts.since.saturating_duration_since(before.since));
             let noticed = notice != 0 && notice != before.notice;
-            match notify::on_state(before.state, facts.state, agent) {
+            // A failing exit code the shell gave since the last look.
+            let failed = facts.failure.as_ref().filter(|f| f.serial != before.failure);
+            match notify::on_state(before.state, facts.state, source) {
                 // The program's notification asked for you with its own words: it is told
                 // instead of the bell or question its arrival counted as.
                 Change::Post(Kind::Bell | Kind::NeedsYou) if noticed => {}
@@ -88,22 +96,56 @@ impl Watch {
             if noticed {
                 events.push(Event::Post { tab: facts.tab, kind: Kind::Notice, took: None, command: None });
             }
+            let mut failure_told = false;
             if let Some(ended) = before.foreground
                 && facts.foreground.as_ref().map(|f| f.started) != Some(ended.started)
             {
-                let took = wall.duration_since(ended.started).unwrap_or_default();
-                if !agent && ends_by_itself(&ended.command) {
-                    self.finished.insert(facts.tab, (ended.command.clone(), took));
+                let ran = wall.duration_since(ended.started).unwrap_or_default();
+                let told = source.told();
+                if !told && ends_by_itself(&ended.command) {
+                    self.finished.insert(facts.tab, (ended.command.clone(), ran));
                 }
-                if notify::command_finished(&ended.command, took, command_after, agent) {
-                    let command = Some(ended.command);
-                    events.push(Event::Post {
-                        tab: facts.tab,
-                        kind: Kind::CommandDone,
-                        took: Some(took),
-                        command,
-                    });
+                // The shell's exit code, when it gave one since the command began, says how it
+                // ended: a command that failed did not "finish", whichever look told about it.
+                let its_failure = facts.failure.as_ref().filter(|f| f.at.elapsed() <= ran);
+                match its_failure {
+                    Some(failure) => {
+                        failure_told = true;
+                        let took = failure.took.unwrap_or(ran);
+                        if failed.is_some()
+                            && notify::command_failed(&ended.command, took, command_after, told)
+                        {
+                            events.push(Event::Post {
+                                tab: facts.tab,
+                                kind: Kind::CommandFailed,
+                                took: Some(took),
+                                command: Some(ended.command),
+                            });
+                        }
+                    }
+                    None if notify::command_finished(&ended.command, ran, command_after, told) => {
+                        events.push(Event::Post {
+                            tab: facts.tab,
+                            kind: Kind::CommandDone,
+                            took: Some(ran),
+                            command: Some(ended.command),
+                        });
+                    }
+                    None => {}
                 }
+            }
+            // The shell's word without a command seen leaving the foreground (the mark came first,
+            // or the command was gone before anyone looked): the command it names is the one.
+            if let (Some(failure), false) = (failed, failure_told)
+                && let (Some(command), Some(took)) = (failure.command.as_deref(), failure.took)
+                && notify::command_failed(command, took, command_after, source.told())
+            {
+                events.push(Event::Post {
+                    tab: facts.tab,
+                    kind: Kind::CommandFailed,
+                    took: Some(took),
+                    command: Some(command.to_string()),
+                });
             }
             if facts.looking(app_active) {
                 events.push(Event::Seen(facts.tab));
@@ -120,11 +162,11 @@ mod tests {
     use std::time::{Duration, Instant, SystemTime};
 
     use wormhole_core::agents::{AgentId, Foreground};
-    use wormhole_core::notify::{Kind, State};
+    use wormhole_core::notify::{Kind, Source, State};
     use wormhole_core::terminal::Notification;
 
     use super::{Event, Watch};
-    use crate::terminal_view::ProgramNotice;
+    use crate::terminal_view::{Failure, ProgramNotice};
     use crate::workspace::ambient::TabFacts;
 
     fn tab(state: State, since: Instant) -> TabFacts {
@@ -135,8 +177,11 @@ mod tests {
             state,
             since,
             agent: None,
+            source: Source::Plain,
+            program: None,
             message: None,
             reported: false,
+            failure: None,
             notice: None,
             foreground: None,
             folder: None,
@@ -190,6 +235,7 @@ mod tests {
         let mut watch = Watch::default();
         let mut facts = tab(State::Working, t0);
         facts.agent = Some(AgentId::Claude);
+        facts.source = Source::Agent;
         watch.observe(&[facts.clone()], false, 10, SystemTime::now());
         facts.state = State::Done;
         facts.since = t0 + Duration::from_secs(252);
@@ -244,6 +290,125 @@ mod tests {
         assert!(events.iter().any(|e| matches!(e, Event::Post { kind: Kind::CommandDone, .. })));
     }
 
+    fn failure(serial: u64, code: i32, took: Option<Duration>) -> Failure {
+        Failure {
+            serial,
+            code,
+            at: Instant::now(),
+            command: Some("cargo build".into()),
+            took,
+            last_line: Some("error[E0425]".into()),
+        }
+    }
+
+    /// The command leaves the foreground at the look the shell's exit code arrives at: one
+    /// "failed", and no "finished".
+    #[test]
+    fn a_command_that_fails_is_told_as_failed_and_not_as_finished() {
+        let wall = SystemTime::now();
+        let mut watch = Watch::default();
+        let mut facts = tab(State::Working, Instant::now());
+        facts.foreground =
+            Some(Foreground { command: "cargo build".into(), started: wall - Duration::from_secs(38) });
+        watch.observe(&[facts.clone()], false, 10, wall);
+        facts.foreground = None;
+        facts.state = State::Failed;
+        facts.failure = Some(failure(1, 101, Some(Duration::from_secs(38))));
+        let events = watch.observe(&[facts.clone()], false, 10, wall);
+        assert_eq!(
+            events,
+            [Event::Post {
+                tab: 7,
+                kind: Kind::CommandFailed,
+                took: Some(Duration::from_secs(38)),
+                command: Some("cargo build".into()),
+            }]
+        );
+        // The same failure is not told twice; opening the tab takes the notice down.
+        assert!(watch.observe(&[facts.clone()], false, 10, wall).is_empty());
+        facts.state = State::Idle;
+        assert_eq!(watch.observe(&[facts], false, 10, wall), [Event::Retract(7)]);
+    }
+
+    /// The shell's word comes a look before the command is seen leaving the foreground (the marks
+    /// are exact, the process list is polled): told then, and not again as "finished" when the
+    /// foreground catches up.
+    #[test]
+    fn a_failure_told_before_the_foreground_catches_up_is_not_finished_afterwards() {
+        let wall = SystemTime::now();
+        let mut watch = Watch::default();
+        let mut facts = tab(State::Working, Instant::now());
+        facts.foreground =
+            Some(Foreground { command: "cargo build".into(), started: wall - Duration::from_secs(38) });
+        watch.observe(&[facts.clone()], false, 10, wall);
+        facts.state = State::Failed;
+        facts.failure = Some(failure(1, 101, Some(Duration::from_secs(38))));
+        let events = watch.observe(&[facts.clone()], false, 10, wall);
+        assert_eq!(events.len(), 1);
+        assert!(matches!(events[0], Event::Post { kind: Kind::CommandFailed, .. }), "{events:?}");
+        facts.foreground = None;
+        let events = watch.observe(&[facts], false, 10, wall);
+        assert!(events.is_empty(), "already told: {events:?}");
+    }
+
+    #[test]
+    fn a_quick_failure_changes_the_row_and_tells_nothing() {
+        let wall = SystemTime::now();
+        let mut watch = Watch::default();
+        let mut facts = tab(State::Idle, Instant::now());
+        watch.observe(&[facts.clone()], false, 10, wall);
+        facts.state = State::Failed;
+        facts.failure = Some(failure(1, 1, Some(Duration::from_secs(2))));
+        assert!(watch.observe(&[facts.clone()], false, 10, wall).is_empty(), "past the threshold only");
+        // Another one, long this time, is.
+        facts.failure = Some(failure(2, 2, Some(Duration::from_secs(40))));
+        let events = watch.observe(&[facts], false, 10, wall);
+        assert!(matches!(events[..], [Event::Post { kind: Kind::CommandFailed, .. }]), "{events:?}");
+    }
+
+    /// A program that reports itself (no known agent) is told like an agent: it asks, finishes
+    /// and fails by what it says, never by the bell or the command-finished rule.
+    #[test]
+    fn a_reporting_program_asks_finishes_and_fails_like_an_agent() {
+        let wall = SystemTime::now();
+        let t0 = Instant::now();
+        let mut watch = Watch::default();
+        let mut facts = tab(State::Working, t0);
+        facts.source = Source::Program;
+        facts.program = Some("brew".into());
+        facts.foreground =
+            Some(Foreground { command: "brew upgrade".into(), started: wall - Duration::from_secs(60) });
+        watch.observe(&[facts.clone()], false, 10, wall);
+        facts.state = State::NeedsYou;
+        facts.since = t0 + Duration::from_secs(5);
+        let events = watch.observe(&[facts.clone()], false, 10, wall);
+        let five = Some(Duration::from_secs(5));
+        assert_eq!(events, [Event::Post { tab: 7, kind: Kind::NeedsYou, took: five, command: None }]);
+        facts.state = State::Working;
+        assert_eq!(watch.observe(&[facts.clone()], false, 10, wall), [Event::Retract(7)]);
+        facts.state = State::Done;
+        facts.since = t0 + Duration::from_secs(65);
+        let events = watch.observe(&[facts.clone()], false, 10, wall);
+        assert_eq!(
+            events,
+            [Event::Post {
+                tab: 7,
+                kind: Kind::AgentDone,
+                took: Some(Duration::from_secs(60)),
+                command: None
+            }]
+        );
+        facts.state = State::Working;
+        watch.observe(&[facts.clone()], false, 10, wall);
+        facts.state = State::Failed;
+        let events = watch.observe(&[facts.clone()], false, 10, wall);
+        assert!(matches!(events[..], [Event::Post { kind: Kind::AgentFailed, .. }]), "{events:?}");
+        // The command ending is the program's own business: no "finished" for brew itself.
+        facts.foreground = None;
+        let events = watch.observe(&[facts], false, 10, wall);
+        assert!(events.is_empty(), "{events:?}");
+    }
+
     #[test]
     fn looking_at_a_tab_takes_its_notices_down_and_closed_tabs_are_forgotten() {
         let mut watch = Watch::default();
@@ -260,6 +425,7 @@ mod tests {
         watch.observe(&[], true, 10, SystemTime::now());
         facts.state = State::Done;
         facts.agent = Some(AgentId::Claude);
+        facts.source = Source::Agent;
         let events = watch.observe(&[facts], false, 10, SystemTime::now());
         assert_eq!(events, [Event::Post { tab: 7, kind: Kind::AgentDone, took: None, command: None }]);
     }

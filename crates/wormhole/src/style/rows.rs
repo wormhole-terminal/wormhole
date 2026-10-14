@@ -61,6 +61,8 @@ pub enum RowTone {
     Attention,
     /// The agent finished: green.
     Done,
+    /// A command or an agent failed: `status.danger`, as text.
+    Failed,
 }
 
 /// One terminal in the sidebar: the status glyph in the lead column, the
@@ -138,6 +140,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         RowTone::Plain => ui.muted,
         RowTone::Attention => ui.attention_text,
         RowTone::Done => ui.done_text,
+        RowTone::Failed => ui.danger_text,
     };
     // What's happening reads a step heavier than a finished result or a question.
     let detail_weight =

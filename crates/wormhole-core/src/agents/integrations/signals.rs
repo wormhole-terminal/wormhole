@@ -11,6 +11,8 @@ pub enum Signal {
     Attention,
     /// It finished its turn.
     Done,
+    /// Its turn ended on an error (an API failure: rate limit, overload, …) instead of finishing.
+    Failed,
     /// Back at its prompt with nothing to report: you interrupted it, or `/clear` started over.
     Quiet,
     /// The session ended; back to the output heuristic.
@@ -46,7 +48,7 @@ pub fn signal(agent: AgentId, event: &str) -> Option<Signal> {
         (Claude | Qwen | Droid, "Stop") if kind == "background" => Some(Busy),
         (Claude | Qwen | Droid, "Stop") => Some(Done),
         // The turn ended on an API error (rate limit, overload, …) instead of `Stop`.
-        (Claude, "StopFailure") => Some(Done),
+        (Claude, "StopFailure") => Some(Failed),
         (Codex, "UserPromptSubmit" | "PreToolUse" | "PostToolUse") => Some(Busy),
         (Codex, "PermissionRequest") => Some(Attention),
         (Codex, "Stop") => Some(Done),

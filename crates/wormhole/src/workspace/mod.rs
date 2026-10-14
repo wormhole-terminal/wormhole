@@ -51,6 +51,8 @@ mod devctl;
 mod dialog;
 #[cfg(test)]
 mod drag_tests;
+#[cfg(test)]
+mod failed_tests;
 mod focus;
 mod folder_color;
 #[cfg(test)]
@@ -544,7 +546,7 @@ impl Workspace {
         let before = terminal.read(cx).status();
         let status = terminal.update(cx, |t, _| t.apply_signal(agent, signal, message.clone()));
         let looking = self.on_screen(ix) && window.is_window_active();
-        if looking && status == Status::Done {
+        if looking && matches!(status, Status::Done | Status::Failed) {
             terminal.update(cx, |t, _| t.acknowledge());
         }
         if status != before {
@@ -637,11 +639,15 @@ impl Workspace {
                 " "
             };
             out.push_str(&format!(
-                "{marker}{} id={} {:?} agent={:?} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?}\n",
+                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?}\n",
                 ix + 1,
                 session.id,
                 terminal.status(),
                 terminal.agent,
+                // A program that reports its own status and is no agent, and a failed command's
+                // exit code (the row's cue).
+                terminal.program_name().map(|name| format!(" program={name:?}")).unwrap_or_default(),
+                terminal.failure().map(|failure| format!(" failed=exit {}", failure.code)).unwrap_or_default(),
                 session.name(cx),
                 terminal.cwd,
                 if session.pinned { " pinned" } else { "" },
