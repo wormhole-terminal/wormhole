@@ -8,7 +8,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
-- Wormhole answers the Program Status Protocol (OSC 7501). Claude Code and other programs that
+- Wormhole answers the Program Status Protocol (OSC 7501). Coding agents and other programs that
   report through it show working, needs you and done in the sidebar exactly, with no hooks
   installed and also over ssh. A program's question or its finishing reaches you as a
   notification, at most once in a few seconds per terminal.
@@ -25,7 +25,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   and the menu bar under the name it gives (or the command's), with the percentage it reports,
   and reaches you as a notification like an agent's question, finish or error does.
 - The status bar shows how full the selected terminal's agent context window is: "Context",
-  a meter and the share used, in amber once it is nearly full. It needs Claude Code's status
+  a meter and the share used, in amber once it is nearly full. It needs the agent's status
   line, like the title row's gauge.
 - Pull requests show how their checks and reviews stand: a green check, a red cross or a
   dashed circle while checks run, beside the number in the title row and now also on the
@@ -63,8 +63,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Closing a terminal ends the program running in it, not only its shell. Before, an agent or
   another program in the foreground could stay behind with its shell, using memory, until you
   quit Wormhole.
-- Switching to another app no longer posts "Claude finished" (or another agent's) for an agent
-  that was idle or still working. Without the agent's hooks installed, its redraw when Wormhole
+- Switching to another app no longer posts that an agent finished when it
+  was idle or still working. Without the agent's hooks installed, its redraw when Wormhole
   went behind counted as work that then finished.
 
 ## [0.3.0] - 2026-10-10
