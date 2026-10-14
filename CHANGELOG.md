@@ -47,6 +47,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Closing a terminal ends the program running in it, not only its shell. Before, an agent or
   another program in the foreground could stay behind with its shell, using memory, until you
   quit Wormhole.
+- Switching to another app no longer posts "Claude finished" (or another agent's) for an agent
+  that was idle or still working. Without the agent's hooks installed, its redraw when Wormhole
+  went behind counted as work that then finished.
 
 ## [0.3.0] - 2026-10-10
 

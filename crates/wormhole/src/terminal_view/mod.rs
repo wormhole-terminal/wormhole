@@ -91,6 +91,8 @@ pub struct TerminalView {
     shell: SharedString,
     last_input: Instant,
     last_resize: Instant,
+    /// When the program was last told the terminal gained or lost focus.
+    last_focus_report: Instant,
     last_output: Instant,
     layout: Rc<Cell<Layout>>,
     render_state: Rc<RefCell<render::RenderState>>,
@@ -236,6 +238,7 @@ impl TerminalView {
             shell,
             last_input: now,
             last_resize: now,
+            last_focus_report: now,
             last_output: now,
             layout: Rc::default(),
             render_state: Rc::default(),
@@ -292,6 +295,7 @@ impl TerminalView {
         if let Some(pty) = &self.pty
             && let Some(bytes) = keys::focus_report(focused, pty.mode())
         {
+            self.last_focus_report = Instant::now();
             pty.write(bytes);
         }
     }

@@ -357,12 +357,11 @@ impl TerminalView {
         match event {
             PtyEvent::Output => {
                 self.check_cwd_soon(cx);
-                // Ignore echo of our own typing and redraws caused by resizes, and whatever a
-                // shell with integration prints at its prompt.
+                // Ignore what answers us, and whatever a shell with integration prints at its
+                // prompt.
                 let quiet = self.hook_driven
                     || self.at_prompt == Some(true)
-                    || self.last_input.elapsed() < Duration::from_millis(300)
-                    || self.last_resize.elapsed() < Duration::from_millis(700);
+                    || answers_us(Instant::now(), self.last_input, self.last_resize, self.last_focus_report);
                 if !quiet && self.status != Status::Exited {
                     self.last_output = Instant::now();
                     if self.status != Status::Attention {
@@ -532,13 +531,23 @@ impl RedrawGate {
     }
 }
 
+/// Whether output arriving `now` answers something Wormhole did rather than being the program's
+/// own work: the echo of typing, or the redraw after a resize or a focus report. An agent without
+/// hooks redraws when Wormhole goes behind; counted as work, that settles into "done" and a
+/// notification nothing finished for.
+fn answers_us(now: Instant, input: Instant, resize: Instant, focus: Instant) -> bool {
+    now.saturating_duration_since(input) < Duration::from_millis(300)
+        || now.saturating_duration_since(resize) < Duration::from_millis(700)
+        || now.saturating_duration_since(focus) < Duration::from_millis(700)
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
     use std::time::Instant;
 
-    use super::{Bell, RedrawGate, Status, TITLE_EVERY, TitleGate, on_bell};
+    use super::{Bell, RedrawGate, Status, TITLE_EVERY, TitleGate, answers_us, on_bell};
 
     #[test]
     fn the_bell_asks_for_you_only_where_it_means_something() {
@@ -619,5 +628,17 @@ mod tests {
         // A reset is a change like any other.
         assert_eq!(gate.offer(None, later + TITLE_EVERY), None);
         assert_eq!(gate.take_due(later + TITLE_EVERY), Some(None));
+    }
+
+    #[test]
+    fn a_redraw_after_a_focus_report_is_not_work() {
+        let long_ago = Instant::now();
+        let at = |ms| long_ago + Duration::from_secs(60) + Duration::from_millis(ms);
+        // Wormhole went behind and told the program; it redraws: no work, so no "done" later.
+        assert!(answers_us(at(200), long_ago, long_ago, at(0)));
+        assert!(answers_us(at(100), at(0), long_ago, long_ago), "the echo of typing");
+        assert!(answers_us(at(500), long_ago, at(0), long_ago), "a resize's redraw");
+        // Output well after any of them is the program's own.
+        assert!(!answers_us(at(800), at(0), at(0), at(0)));
     }
 }
