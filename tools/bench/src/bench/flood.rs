@@ -11,7 +11,6 @@ use crate::term::{self, AltScreen, Input, Key, RawMode};
 /// One pass of the stream. Big enough that the terminal never idles between passes, small enough to
 /// build in a fraction of a second.
 const PASS_BYTES: usize = 8 * 1024 * 1024;
-const CHUNK: usize = 64 * 1024;
 
 pub struct FloodOptions {
     /// The workload's name in `workloads::NAMES` (`logflood`, `colorflood`, `glyphstorm`, ...).
@@ -43,12 +42,16 @@ pub fn run(opts: &FloodOptions) -> io::Result<()> {
     };
     let started = Instant::now();
     let limit = opts.seconds.map(Duration::from_secs_f64);
-    let mut out = io::stdout().lock();
+    let mut out = super::unbuffered_stdout()?;
     loop {
-        for chunk in payload.bytes.chunks(CHUNK) {
+        for chunk in payload.writes() {
             // A blocking write: the pty's buffer is full whenever the terminal is behind, so this is
             // exactly "as fast as the terminal reads".
             out.write_all(chunk)?;
+            if payload.chunks.is_some() {
+                // Tiny writes stay tiny: one call to the kernel each, as an agent's output would be.
+                out.flush()?;
+            }
             if input.keys().iter().any(|k| matches!(k, Key::CtrlC | Key::Esc | Key::Char('q'))) {
                 return Ok(());
             }

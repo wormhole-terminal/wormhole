@@ -1,10 +1,12 @@
 [package]
 name = "ttystorm"
-version = "0.2.0"
+version = "1.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 publish = false
 description = "Terminal stress tests, throughput benchmarks and full-screen animations"
+repository = "https://github.com/wormhole-terminal/ttystorm"
+readme = "README.md"
 
 # Its own workspace: a tool you run in any terminal, kept out of the app's build, lints and
 # dependency audit. Std only, so it builds anywhere in seconds.

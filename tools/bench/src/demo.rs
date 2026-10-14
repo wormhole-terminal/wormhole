@@ -37,6 +37,8 @@ pub struct Options {
     pub fps: f64,
     /// Stop after this many seconds (per demo in a showcase).
     pub seconds: Option<f64>,
+    /// The fps / MB/s overlay. Off unless asked for: an animation is for watching first, and `h`
+    /// shows the numbers when they are the point.
     pub hud: bool,
     /// Wrap frames in DEC mode 2026 (synchronized output). Off shows what tearing looks like.
     pub sync: bool,
@@ -46,7 +48,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Self { fps: 60.0, seconds: None, hud: true, sync: true, titles: false }
+        Self { fps: 60.0, seconds: None, hud: false, sync: true, titles: false }
     }
 }
 

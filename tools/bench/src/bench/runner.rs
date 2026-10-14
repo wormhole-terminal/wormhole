@@ -1,18 +1,25 @@
 //! Runs the tests against the terminal on the other end of the pty.
 //!
-//! A test writes its bytes in 64 KiB chunks, then asks where the cursor is. The terminal answers
-//! only after it has parsed everything written before the question, so the time to the answer is
-//! the time the terminal took to consume the whole payload, not the time the kernel took to buffer it.
+//! A test writes its bytes in 64 KiB chunks (or the sizes its payload names), then asks where the
+//! cursor is. The terminal answers only after it has parsed everything written before the question,
+//! so the time to the answer is the time the terminal took to consume the whole payload, not the
+//! time the kernel took to buffer it.
+//!
+//! Every write is timed too: a write that blocks is the terminal not reading, and the wait for the
+//! answer after the last write is the terminal still parsing (see `diag`).
 
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{self, BufWriter, Write};
 use std::time::{Duration, Instant};
 
+use super::compose;
+use super::diag::{self, RunDiag, TestDiag, Timed, WriteEvent};
+use super::procinfo::{self, Terminal};
 use super::results::{TestResult, Unit};
 use super::stats;
 use super::workloads::{self, Payload};
 use crate::term::{Input, Key, Size};
 
-const CHUNK: usize = 64 * 1024;
 /// A run that takes longer than this is reported as a timeout.
 const RUN_TIMEOUT: Duration = Duration::from_secs(60);
 /// How long a terminal gets to catch up after a timeout before we give up on it.
@@ -32,6 +39,10 @@ pub struct Runner<'a, W: Write> {
     pub runs: usize,
     /// No status line on top of the workload (`--plain`).
     pub plain: bool,
+    /// The terminal's process, whose CPU time and memory are read around each run.
+    pub process: Option<Terminal>,
+    /// Every write of every measured run, as JSON Lines (`--trace`).
+    pub trace: Option<BufWriter<File>>,
 }
 
 pub enum Step {
@@ -69,17 +80,18 @@ impl<W: Write> Runner<'_, W> {
         let Some(main) = workloads::payload(name, self.size, self.bytes) else {
             return Err(io::Error::other(format!("no test called {name}")));
         };
-        let warm = workloads::payload(name, self.size, WARMUP_BYTES)
-            .unwrap_or(Payload { bytes: Vec::new(), frames: 0 });
+        let warm = workloads::payload(name, self.size, WARMUP_BYTES).unwrap_or_default();
 
         // Warm up: fonts, glyph caches and the pty buffers are cold on the first bytes.
         self.reset()?;
-        if time_payload(self.input, &mut self.out, &warm.bytes, RUN_TIMEOUT)?.is_none() {
+        if time_payload(self.input, &mut self.out, &warm, RUN_TIMEOUT)?.is_none() {
             return Ok(Step::Done(Box::new(timeout_result(name, &main))));
         }
 
+        let composition = compose::analyze(&main.bytes, main.write_count());
         let mut rates = Vec::new();
         let mut times = Vec::new();
+        let mut runs = Vec::new();
         for run in 0..self.runs {
             if self.interrupted() {
                 return Ok(Step::Interrupted);
@@ -87,17 +99,24 @@ impl<W: Write> Runner<'_, W> {
             if !self.reset()? {
                 return Ok(Step::Done(Box::new(timeout_result(name, &main))));
             }
-            let Some(secs) = time_payload(self.input, &mut self.out, &main.bytes, RUN_TIMEOUT)? else {
+            let before = self.process.as_ref().and_then(|p| procinfo::sample(p.pid));
+            let Some(timed) = time_payload(self.input, &mut self.out, &main, RUN_TIMEOUT)? else {
                 return Ok(Step::Done(Box::new(timeout_result(name, &main))));
             };
-            let rate = rate(name, &main, secs);
+            let after = self.process.as_ref().and_then(|p| procinfo::sample(p.pid));
+            if let Some(trace) = &mut self.trace {
+                diag::write_trace(trace, name, run + 1, &timed)?;
+            }
+            let rate = rate(name, &main, timed.secs);
             rates.push(rate);
-            times.push(secs);
-            let (unit, _) = unit_of(name);
+            times.push(timed.secs);
+            runs.push(RunDiag::from_timed(&timed, before, after));
+            let unit = unit_of(name);
             self.reset()?;
             self.status(&format!("{head}  run {}/{}  {:.1} {}", run + 1, self.runs, rate, unit.label()))?;
         }
-        Ok(Step::Done(Box::new(throughput_result(name, &main, &rates, &times))))
+        let diag = TestDiag { composition, runs, median_run: nearest(&rates, stats::median(&rates)) };
+        Ok(Step::Done(Box::new(throughput_result(name, &main, &rates, &times, Some(diag)))))
     }
 
     fn latency(&mut self, head: &str) -> io::Result<Step> {
@@ -122,49 +141,93 @@ impl<W: Write> Runner<'_, W> {
     }
 }
 
-/// Writes `payload` and returns the seconds until the terminal had parsed all of it, or `None` when
-/// it took longer than `timeout`.
+/// Writes `payload` and returns how long until the terminal had parsed all of it, and the timing of
+/// every write, or `None` when it took longer than `timeout`.
+///
+/// Each write is flushed so it is one call to the kernel: that is what is timed, and on a PTY a
+/// write only returns when the terminal has read enough to make room.
 pub fn time_payload(
     input: &mut Input,
     out: &mut impl Write,
-    payload: &[u8],
+    payload: &Payload,
     timeout: Duration,
-) -> io::Result<Option<f64>> {
+) -> io::Result<Option<Timed>> {
+    let mut events = Vec::with_capacity(payload.write_count());
     let start = Instant::now();
     let deadline = start + timeout;
-    for chunk in payload.chunks(CHUNK) {
+    let mut last = start;
+    for chunk in payload.writes() {
         out.write_all(chunk)?;
-        if Instant::now() > deadline {
+        out.flush()?;
+        let now = Instant::now();
+        events.push(WriteEvent {
+            end_ns: (now - start).as_nanos() as u64,
+            took_ns: (now - last).as_nanos() as u64,
+            bytes: chunk.len(),
+        });
+        last = now;
+        if now > deadline {
             // Let it drain, so the next test doesn't start inside this one's backlog.
-            out.flush()?;
             let _ = input.sync(out, RECOVER)?;
             return Ok(None);
         }
     }
-    out.flush()?;
-    let left = deadline.saturating_duration_since(Instant::now()).max(Duration::from_secs(1));
-    Ok(input.sync(out, left)?.map(|_| start.elapsed().as_secs_f64()))
+    let written = Instant::now();
+    let left = deadline.saturating_duration_since(written).max(Duration::from_secs(1));
+    Ok(input.sync(out, left)?.map(|_| {
+        let done = Instant::now();
+        Timed {
+            secs: (done - start).as_secs_f64(),
+            dsr_wait_s: (done - written).as_secs_f64(),
+            writes: events,
+        }
+    }))
 }
 
-fn unit_of(name: &str) -> (Unit, bool) {
-    if name == "framerate" { (Unit::Fps, true) } else { (Unit::MBps, false) }
+fn unit_of(name: &str) -> Unit {
+    match name {
+        "framerate" | "agentredraw" | "agentscreen" => Unit::Fps,
+        "screenswap" => Unit::PerSec,
+        _ => Unit::MBps,
+    }
 }
 
-/// The run's rate in the test's unit: megabytes per second, or frames per second.
+/// The run's rate in the test's unit: megabytes per second, or screens per second.
 fn rate(name: &str, p: &Payload, secs: f64) -> f64 {
     let secs = secs.max(1e-9);
-    if unit_of(name).1 { p.frames as f64 / secs } else { p.bytes.len() as f64 / 1e6 / secs }
+    if unit_of(name) == Unit::MBps { p.bytes.len() as f64 / 1e6 / secs } else { p.frames as f64 / secs }
 }
 
-fn throughput_result(name: &str, p: &Payload, rates: &[f64], times: &[f64]) -> TestResult {
-    let (unit, frames) = unit_of(name);
+/// The index of the value closest to `target` (the first on a tie).
+fn nearest(values: &[f64], target: f64) -> usize {
+    let mut best = (0, f64::INFINITY);
+    for (i, v) in values.iter().enumerate() {
+        if (v - target).abs() < best.1 {
+            best = (i, (v - target).abs());
+        }
+    }
+    best.0
+}
+
+fn throughput_result(
+    name: &str,
+    p: &Payload,
+    rates: &[f64],
+    times: &[f64],
+    diag: Option<TestDiag>,
+) -> TestResult {
+    let unit = unit_of(name);
     let median = stats::median(rates);
     let (min, max) = stats::min_max(rates);
     let secs = stats::median(times);
     let mut extra = Vec::new();
-    if frames {
+    if unit != Unit::MBps {
         extra.push(("mbps".to_string(), p.bytes.len() as f64 / 1e6 / secs.max(1e-9)));
-        extra.push(("frames".to_string(), p.frames as f64));
+        extra.push((if unit == Unit::Fps { "frames" } else { "swaps" }.to_string(), p.frames as f64));
+    }
+    if p.chunks.is_some() {
+        extra.push(("writes_per_s".to_string(), p.write_count() as f64 / secs.max(1e-9)));
+        extra.push(("writes".to_string(), p.write_count() as f64));
     }
     TestResult {
         name: name.to_string(),
@@ -176,13 +239,14 @@ fn throughput_result(name: &str, p: &Payload, rates: &[f64], times: &[f64]) -> T
         bytes: p.bytes.len() as u64,
         timeout: false,
         extra,
+        diag,
     }
 }
 
 fn timeout_result(name: &str, p: &Payload) -> TestResult {
     TestResult {
         name: name.to_string(),
-        unit: unit_of(name).0,
+        unit: unit_of(name),
         median: 0.0,
         min: 0.0,
         max: 0.0,
@@ -190,6 +254,7 @@ fn timeout_result(name: &str, p: &Payload) -> TestResult {
         bytes: p.bytes.len() as u64,
         timeout: true,
         extra: Vec::new(),
+        diag: None,
     }
 }
 
@@ -204,6 +269,7 @@ fn latency_timeout() -> TestResult {
         bytes: 0,
         timeout: true,
         extra: Vec::new(),
+        diag: None,
     }
 }
 
@@ -225,6 +291,7 @@ fn latency_result(micros: &[f64]) -> TestResult {
             ("p99".to_string(), stats::percentile(&sorted, 99.0)),
             ("samples".to_string(), sorted.len() as f64),
         ],
+        diag: None,
     }
 }
 
@@ -245,9 +312,9 @@ mod tests {
 
     #[test]
     fn throughput_uses_the_median_run() {
-        let p = Payload { bytes: vec![0; 10_000_000], frames: 0 };
+        let p = Payload { bytes: vec![0; 10_000_000], ..Payload::default() };
         let rates: Vec<f64> = [0.5, 0.25, 1.0].iter().map(|s| rate("logflood", &p, *s)).collect();
-        let r = throughput_result("logflood", &p, &rates, &[0.5, 0.25, 1.0]);
+        let r = throughput_result("logflood", &p, &rates, &[0.5, 0.25, 1.0], None);
         assert!((r.median - 20.0).abs() < 1e-9);
         assert_eq!((r.min, r.max), (10.0, 40.0));
         assert_eq!(r.secs, 0.5);
@@ -255,10 +322,38 @@ mod tests {
 
     #[test]
     fn frames_count_frames_per_second() {
-        let p = Payload { bytes: vec![0; 4_000_000], frames: 60 };
+        let p = Payload { bytes: vec![0; 4_000_000], frames: 60, chunks: None };
         assert!((rate("framerate", &p, 0.5) - 120.0).abs() < 1e-9);
-        let r = throughput_result("framerate", &p, &[120.0], &[0.5]);
+        let r = throughput_result("framerate", &p, &[120.0], &[0.5], None);
         assert_eq!(r.unit, Unit::Fps);
         assert!((r.extra("mbps").unwrap_or(0.0) - 8.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn swaps_count_per_second_and_tiny_writes_count_writes() {
+        let p = Payload { bytes: vec![0; 1_000_000], frames: 100, chunks: None };
+        assert!((rate("screenswap", &p, 0.5) - 200.0).abs() < 1e-9);
+        let r = throughput_result("screenswap", &p, &[200.0], &[0.5], None);
+        assert_eq!((r.unit, r.extra("swaps")), (Unit::PerSec, Some(100.0)));
+        let p = Payload { bytes: vec![0; 1000], frames: 0, chunks: Some(vec![10; 100]) };
+        let r = throughput_result("agentstream", &p, &[0.002], &[0.5], None);
+        assert_eq!(r.unit, Unit::MBps);
+        assert_eq!((r.extra("writes"), r.extra("writes_per_s")), (Some(100.0), Some(200.0)));
+    }
+
+    #[test]
+    fn the_median_run_is_the_one_nearest_the_median() {
+        assert_eq!(nearest(&[10.0, 30.0, 20.0], 20.0), 2);
+        assert_eq!(nearest(&[], 1.0), 0);
+    }
+
+    #[test]
+    fn writes_follow_the_payload_sizes() {
+        let p = Payload { bytes: (0..10).collect(), frames: 0, chunks: Some(vec![3, 3, 4]) };
+        let w: Vec<&[u8]> = p.writes().collect();
+        assert_eq!(w.iter().map(|c| c.len()).collect::<Vec<_>>(), vec![3, 3, 4]);
+        let big = Payload { bytes: vec![0; workloads::CHUNK * 2 + 5], ..Payload::default() };
+        assert_eq!(big.writes().count(), 3);
+        assert_eq!(big.write_count(), 3);
     }
 }

@@ -3,31 +3,73 @@
 //! depend on its size, so compare terminals at the same size).
 //!
 //! Lines end in CR LF: the benchmark runs in raw mode, where a bare LF would not return the carriage.
+//!
+//! Every payload leaves the terminal as it found it (SGR, scroll region, cursor shape, and the
+//! alternate screen entered and left the same number of times), so the next test starts clean.
+
+mod agent;
+mod features;
+mod realistic;
 
 use crate::canvas::{self, Pixels, Rgb, Rng};
 use crate::term::Size;
 
-/// The tests in the order they run.
-pub const NAMES: [&str; 8] = [
+/// The tests in the order they run: what real programs print, then the throughput stress tests, the
+/// feature stress tests, and the two that measure something other than bytes per second.
+pub const NAMES: [&str; 17] = [
+    "buildlog",
+    "agentstream",
+    "agentredraw",
+    "agentscreen",
+    "diffscroll",
+    "editstorm",
     "logflood",
     "glyphstorm",
     "colorflood",
     "scrollstorm",
     "cursorstorm",
     "longlines",
+    "stylestorm",
+    "linkstorm",
     "framerate",
+    "screenswap",
     "roundtrip",
 ];
 
+/// The tests that are what real programs print, as opposed to stress tests.
+pub const REALISTIC: [&str; 6] =
+    ["buildlog", "agentstream", "agentredraw", "agentscreen", "diffscroll", "editstorm"];
+
+/// The named groups `--only` and `suite` accept: `realistic`, `stress` (everything else but
+/// `roundtrip`) and `all`.
+pub fn suite(name: &str) -> Option<Vec<&'static str>> {
+    let pick = |f: &dyn Fn(&str) -> bool| NAMES.iter().copied().filter(|n| f(n)).collect();
+    match name {
+        "realistic" => Some(pick(&|n| REALISTIC.contains(&n))),
+        "stress" => Some(pick(&|n| !REALISTIC.contains(&n) && n != "roundtrip")),
+        "all" => Some(NAMES.to_vec()),
+        _ => None,
+    }
+}
+
 pub fn about(name: &str) -> &'static str {
     match name {
+        "buildlog" => "a cargo-style build: colored lines, diagnostics, a progress bar redrawn in place",
+        "agentstream" => "an AI agent's answer as 2-16 byte writes, up to 2 MB (per-write cost)",
+        "agentredraw" => "a coding agent's classic UI: live region redrawn in place, transcript repainted",
+        "agentscreen" => "a coding agent's fullscreen UI: alternate screen, synchronized cell diffs",
+        "diffscroll" => "paging through a colored git diff in a pager, a full redraw per page",
+        "editstorm" => "an editor at work: scroll region, insert/delete lines and chars, status line",
         "logflood" => "plain log lines, like cat of a big file",
         "glyphstorm" => "CJK, emoji, accents, box drawing",
         "colorflood" => "every character with its own colors",
         "scrollstorm" => "a pinned header and footer, text scrolling between",
         "cursorstorm" => "random cursor moves and short colored writes",
         "longlines" => "lines of 5 to 50 thousand characters",
+        "stylestorm" => "every SGR attribute, densely mixed: underline styles, colors, blink, conceal",
+        "linkstorm" => "OSC 8 hyperlinks on short spans, thousands of distinct URLs",
         "framerate" => "full-screen truecolor redraws, synchronized",
+        "screenswap" => "opening and closing a full-screen program: alternate screen in, paint, out",
         "roundtrip" => "cursor report round trip on an idle terminal",
         _ => "",
     }
@@ -57,29 +99,95 @@ fn seed_of(name: &str) -> u64 {
     old.bytes().fold(0x9E37_79B9u64, |h, b| h.wrapping_mul(31).wrapping_add(b as u64))
 }
 
-/// What a throughput test sends, and how many screen frames that is (0 when it isn't frames).
+/// What a throughput test sends, and how many screens that is (0 when it isn't a screen test).
+#[derive(Default)]
 pub struct Payload {
     pub bytes: Vec<u8>,
+    /// Screens drawn: frames for `framerate` and the agent redraws, swaps for `screenswap`.
     pub frames: usize,
+    /// The size of each write, when the test is about writes rather than bytes (`agentstream`, and a
+    /// frame per write for the agent redraws). They add up to `bytes.len()`. `None`: the bytes go out
+    /// in `CHUNK`-sized writes.
+    pub chunks: Option<Vec<usize>>,
 }
+
+/// How big the writes of an ordinary payload are.
+pub const CHUNK: usize = 64 * 1024;
+
+impl Payload {
+    /// The writes the payload goes out in, in order.
+    pub fn writes(&self) -> Writes<'_> {
+        Writes { rest: &self.bytes, sizes: self.chunks.as_ref().map(|c| c.iter()) }
+    }
+
+    /// How many writes that is.
+    pub fn write_count(&self) -> usize {
+        self.chunks.as_ref().map_or(self.bytes.len().div_ceil(CHUNK), Vec::len)
+    }
+}
+
+pub struct Writes<'a> {
+    rest: &'a [u8],
+    sizes: Option<std::slice::Iter<'a, usize>>,
+}
+
+impl<'a> Iterator for Writes<'a> {
+    type Item = &'a [u8];
+
+    fn next(&mut self) -> Option<&'a [u8]> {
+        if self.rest.is_empty() {
+            return None;
+        }
+        let want = match &mut self.sizes {
+            Some(sizes) => sizes.next().copied().unwrap_or(self.rest.len()),
+            None => CHUNK,
+        };
+        let (head, tail) = self.rest.split_at(want.clamp(1, self.rest.len()));
+        self.rest = tail;
+        Some(head)
+    }
+}
+
+/// The most `agentstream` sends: tiny writes are slow, and 2 MB of them is already a long test.
+pub const AGENT_MAX_BYTES: usize = 2_000_000;
 
 /// The bytes for the throughput test `name`, a little over `target` bytes. `None` for `roundtrip`
 /// (which sends nothing but questions) and for names that don't exist.
 pub fn payload(name: &str, size: Size, target: usize) -> Option<Payload> {
     let mut rng = Rng::new(seed_of(name));
-    let mut out = Vec::with_capacity(target + 64 * 1024);
+    let mut out = Vec::with_capacity(target.min(64 << 20) + 64 * 1024);
     let mut frames = 0;
+    let mut chunks = None;
     match name {
+        "buildlog" => realistic::buildlog(&mut rng, &mut out, target),
+        "agentstream" => {
+            chunks = Some(realistic::agentstream(&mut rng, &mut out, target.min(AGENT_MAX_BYTES), size))
+        }
+        "agentredraw" => {
+            let sizes = agent::agentredraw(&mut rng, &mut out, target, size);
+            frames = sizes.len();
+            chunks = Some(sizes);
+        }
+        "agentscreen" => {
+            let sizes = agent::agentscreen(&mut rng, &mut out, target, size);
+            frames = sizes.len();
+            chunks = Some(sizes);
+        }
+        "diffscroll" => realistic::diffscroll(&mut rng, &mut out, target, size),
+        "editstorm" => realistic::editstorm(&mut rng, &mut out, target, size),
         "logflood" => ascii(&mut rng, &mut out, target),
         "glyphstorm" => unicode(&mut rng, &mut out, target),
         "colorflood" => truecolor(&mut rng, &mut out, target, size),
         "scrollstorm" => scroll_region(&mut rng, &mut out, target, size),
         "cursorstorm" => cursor(&mut rng, &mut out, target, size),
         "longlines" => long_lines(&mut rng, &mut out, target),
+        "stylestorm" => features::stylestorm(&mut rng, &mut out, target),
+        "linkstorm" => features::linkstorm(&mut rng, &mut out, target),
         "framerate" => frames = frames_stream(&mut out, target, size),
+        "screenswap" => frames = features::screenswap(&mut rng, &mut out, target, size),
         _ => return None,
     }
-    Some(Payload { bytes: out, frames })
+    Some(Payload { bytes: out, frames, chunks })
 }
 
 const WORDS: [&str; 40] = [
@@ -392,12 +500,13 @@ mod tests {
     const SIZE: Size = Size { cols: 100, rows: 30, px_w: 0, px_h: 0 };
 
     fn make(name: &str, target: usize) -> Payload {
-        payload(name, SIZE, target).unwrap_or_else(|| Payload { bytes: Vec::new(), frames: 0 })
+        payload(name, SIZE, target).unwrap_or_default()
     }
 
     #[test]
     fn every_throughput_test_reaches_its_size() {
-        for name in NAMES.iter().filter(|n| **n != "roundtrip" && **n != "framerate") {
+        let by_frames = ["roundtrip", "framerate", "screenswap", "agentredraw", "agentscreen"];
+        for name in NAMES.iter().filter(|n| !by_frames.contains(n)) {
             let p = make(name, 200_000);
             assert!(p.bytes.len() >= 200_000, "{name}: {}", p.bytes.len());
             assert!(p.bytes.len() < 200_000 + 120_000, "{name} overshoots: {}", p.bytes.len());
@@ -425,9 +534,7 @@ mod tests {
 
     #[test]
     fn text_tests_are_valid_utf8() {
-        for name in
-            ["logflood", "glyphstorm", "colorflood", "scrollstorm", "cursorstorm", "longlines", "framerate"]
-        {
+        for name in NAMES.iter().filter(|n| **n != "roundtrip") {
             assert!(std::str::from_utf8(&make(name, 100_000).bytes).is_ok(), "{name}");
         }
     }
@@ -479,6 +586,71 @@ mod tests {
         assert_eq!(text.matches("\x1b[?2026l").count(), p.frames);
         assert_eq!(frame_count(1, 1000), 30);
         assert_eq!(frame_count(usize::MAX / 2, 1000), 600);
+    }
+
+    /// FNV-1a of the first 100 KB (at 100×30) of each test that existed in 1.1, taken from that code.
+    const OLD_FINGERPRINTS: [(&str, u64); 7] = [
+        ("logflood", 0x1e0f_552f_989e_4e7a),
+        ("glyphstorm", 0x477d_faa4_bf74_a8fe),
+        ("colorflood", 0x540c_8103_2923_e2c4),
+        ("scrollstorm", 0xfdbe_60bc_4d92_5513),
+        ("cursorstorm", 0x0e20_2966_386a_f263),
+        ("longlines", 0xdc56_b7ae_6276_0be7),
+        ("framerate", 0x9f8e_41ca_7002_88fe),
+    ];
+
+    #[test]
+    fn the_old_payloads_are_byte_identical() {
+        // Fingerprints of the first 100 KB of every test that existed before the realistic ones, made
+        // with the code of 1.1: a change here breaks the comparison with results saved earlier.
+        let fingerprint = |name: &str| {
+            make(name, 100_000)
+                .bytes
+                .iter()
+                .fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ *b as u64).wrapping_mul(0x100_0000_01b3))
+        };
+        for (name, expected) in OLD_FINGERPRINTS {
+            assert_eq!(fingerprint(name), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn agentstream_is_capped_and_keeps_its_write_sizes() {
+        let p = make("agentstream", 50_000_000);
+        assert!((AGENT_MAX_BYTES..AGENT_MAX_BYTES + 1000).contains(&p.bytes.len()), "{}", p.bytes.len());
+        let sizes = p.chunks.as_ref().map(|c| c.iter().sum::<usize>());
+        assert_eq!(sizes, Some(p.bytes.len()));
+        assert!(p.chunks.iter().flatten().all(|n| (2..=16).contains(n)));
+        assert_eq!(p.writes().count(), p.write_count());
+        assert!(p.writes().all(|w| (2..=16).contains(&w.len())));
+        assert!(make("logflood", 1000).chunks.is_none());
+    }
+
+    #[test]
+    fn screens_are_counted_for_swaps_and_frames() {
+        let p = make("screenswap", 1_000_000);
+        assert!(p.frames >= 30);
+        assert!(make("framerate", 1_000_000).frames >= 30);
+        for name in ["agentredraw", "agentscreen"] {
+            let p = make(name, 1_000_000);
+            assert!(p.frames >= 30, "{name}: {}", p.frames);
+            // One write per frame.
+            assert_eq!(p.chunks.as_ref().map(Vec::len), Some(p.frames), "{name}");
+            assert_eq!(p.write_count(), p.frames, "{name}");
+        }
+        assert_eq!(make("buildlog", 10_000).frames, 0);
+    }
+
+    #[test]
+    fn payloads_leave_the_terminal_as_they_found_it() {
+        for name in NAMES.iter().filter(|n| **n != "roundtrip") {
+            let text = String::from_utf8_lossy(&make(name, 60_000).bytes).to_string();
+            assert_eq!(text.matches("\x1b[?1049h").count(), text.matches("\x1b[?1049l").count(), "{name}");
+            // Whatever was set last is not left on.
+            if let Some(i) = text.rfind("\x1b[0m") {
+                assert!(!text[i..].contains("\x1b[1m") && !text[i..].contains("\x1b[7m"), "{name}");
+            }
+        }
     }
 
     #[test]

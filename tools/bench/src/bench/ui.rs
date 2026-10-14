@@ -1,5 +1,5 @@
 //! The pieces the result screens are drawn with: a dark panel (so a screenshot looks the same in
-//! any theme), lines that know their width, and gradient bars with eighth-cell precision.
+//! any theme), lines that know their width, and flat bars in one accent with eighth-cell precision.
 
 use crate::canvas::{self, Rgb};
 
@@ -10,17 +10,11 @@ pub const DIM: Rgb = Rgb(124, 134, 164);
 pub const FAINT: Rgb = Rgb(58, 66, 92);
 pub const GOOD: Rgb = Rgb(110, 231, 160);
 pub const BAD: Rgb = Rgb(251, 113, 133);
+/// The one color the bars and the title are drawn in: amber, so it is neither GOOD nor BAD.
+pub const ACCENT: Rgb = Rgb(229, 170, 72);
 
 /// Left eighth blocks: index n fills n eighths of a cell.
 const PARTIAL: [char; 9] = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
-
-/// The bar's colors from its start (0) to its end (1): sky, indigo, violet, pink.
-pub fn gradient(t: f64) -> Rgb {
-    const STOPS: [Rgb; 4] = [Rgb(56, 189, 248), Rgb(129, 140, 248), Rgb(192, 132, 252), Rgb(244, 114, 182)];
-    let x = t.clamp(0.0, 1.0) * (STOPS.len() - 1) as f64;
-    let i = (x.floor() as usize).min(STOPS.len() - 2);
-    STOPS[i].lerp(STOPS[i + 1], x - i as f64)
-}
 
 /// How many eighths of each cell a bar of `frac` (0..=1) of `width` cells fills. Anything above
 /// zero shows at least one eighth, so a tiny result is still visible.
@@ -72,18 +66,9 @@ impl Line {
         self
     }
 
-    /// Text colored along the gradient, character by character.
-    pub fn gradient_text(&mut self, s: &str) -> &mut Self {
-        let n = s.chars().count().max(2) - 1;
-        self.buf.extend_from_slice(b"\x1b[1m");
-        for (i, ch) in s.chars().enumerate() {
-            canvas::fg(&mut self.buf, gradient(i as f64 / n as f64));
-            let mut b = [0u8; 4];
-            self.buf.extend_from_slice(ch.encode_utf8(&mut b).as_bytes());
-            self.w += 1;
-        }
-        self.buf.extend_from_slice(b"\x1b[22m");
-        self
+    /// The screen's title: bold, in the accent.
+    pub fn title(&mut self, s: &str) -> &mut Self {
+        self.bold(s, ACCENT)
     }
 
     pub fn pad(&mut self, n: usize) -> &mut Self {
@@ -103,15 +88,13 @@ impl Line {
         self.text(s, c)
     }
 
-    /// A bar of `frac` of `width` cells on a dim track; `dim` (0..=1) darkens it for the losers.
+    /// A flat bar of `frac` of `width` cells on a dim track; `dim` (0..=1) darkens it for the losers.
     pub fn bar(&mut self, frac: f64, width: usize, dim: f64) -> &mut Self {
-        let cells = eighths(frac, width);
-        let last = width.max(2) - 1;
         canvas::bg(&mut self.buf, TRACK);
-        for (i, e) in cells.iter().enumerate() {
-            canvas::fg(&mut self.buf, gradient(i as f64 / last as f64).scale(dim));
+        canvas::fg(&mut self.buf, ACCENT.scale(dim));
+        for e in eighths(frac, width) {
             let mut b = [0u8; 4];
-            self.buf.extend_from_slice(PARTIAL[*e as usize].encode_utf8(&mut b).as_bytes());
+            self.buf.extend_from_slice(PARTIAL[e as usize].encode_utf8(&mut b).as_bytes());
         }
         canvas::bg(&mut self.buf, BG);
         self.w += width;
@@ -177,16 +160,18 @@ mod tests {
     }
 
     #[test]
-    fn the_gradient_runs_from_sky_to_pink() {
-        assert_eq!(gradient(0.0), Rgb(56, 189, 248));
-        assert_eq!(gradient(1.0), Rgb(244, 114, 182));
-        assert_eq!(gradient(7.0), gradient(1.0));
+    fn bars_are_one_flat_color() {
+        let mut l = Line::new();
+        l.bar(1.0, 8, 1.0);
+        let text = String::from_utf8_lossy(&l.buf);
+        assert_eq!(text.matches("\x1b[38;2;").count(), 1, "{text:?}");
+        assert!(text.contains("229;170;72"), "{text:?}");
     }
 
     #[test]
     fn lines_count_their_cells() {
         let mut l = Line::new();
-        l.pad(2).text("héllo", TEXT).bold("ab", DIM).bar(0.5, 10, 1.0).gradient_text("xyz");
+        l.pad(2).text("héllo", TEXT).bold("ab", DIM).bar(0.5, 10, 1.0).title("xyz");
         assert_eq!(l.width(), 2 + 5 + 2 + 10 + 3);
         let mut r = Line::new();
         r.text("ab", TEXT).right("xy", DIM, 10);

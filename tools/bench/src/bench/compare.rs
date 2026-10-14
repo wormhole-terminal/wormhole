@@ -1,6 +1,7 @@
 //! `ttystorm compare`: the saved results of several terminals side by side. Per test one bar for
 //! each terminal on a shared scale (the best fills it), the best marked, and how many times better
-//! than the first file each one is.
+//! than the first file each one is. `--markdown` prints the same as a table to paste into an issue
+//! or a README instead.
 
 use super::report::{push_value, value_parts};
 use super::results::{Results, TestResult};
@@ -132,6 +133,68 @@ fn terminal_row(
     l
 }
 
+/// What makes the files hard to compare: different machines or window sizes.
+fn warnings(all: &[Results]) -> Vec<&'static str> {
+    let base = &all[0];
+    let same = |f: fn(&Results) -> String| all.iter().all(|r| f(r) == f(base));
+    let mut warnings = Vec::new();
+    if !same(|r| r.machine.cpu.clone()) {
+        warnings.push("These results come from different machines.");
+    }
+    if !same(|r| format!("{}×{}", r.cols, r.rows)) {
+        warnings.push("Terminal sizes differ, which changes the scrolling, cursor and frame tests.");
+    }
+    warnings
+}
+
+/// A cell's text in a markdown table: the unit with the number, `|` kept from ending the cell.
+fn escape_cell(s: &str) -> String {
+    s.replace('|', "\\|")
+}
+
+fn markdown_cell(t: Option<&TestResult>, best: bool) -> String {
+    match t {
+        None => "—".to_string(),
+        Some(t) if t.timeout => "timed out".to_string(),
+        Some(t) => {
+            let (num, unit) = value_parts(t);
+            if best { format!("**{num} {unit}**") } else { format!("{num} {unit}") }
+        }
+    }
+}
+
+/// The comparison as a markdown table: a row per test, a column per terminal, the best of each row
+/// in bold and the overall ratio to the first file last. A note above says when the files differ in
+/// machine or window size.
+pub fn compare_markdown(all: &[Results]) -> String {
+    let mut s = String::new();
+    let warnings = warnings(all);
+    if !warnings.is_empty() {
+        s.push_str(&format!("> Note: {}\n\n", warnings.join(" ")));
+    }
+    let labels: Vec<String> = all.iter().map(|r| escape_cell(&r.label)).collect();
+    s.push_str(&format!("| Test | {} |\n", labels.join(" | ")));
+    s.push_str(&format!("|---|{}\n", "--:|".repeat(all.len())));
+    for name in test_names(all) {
+        let best = best_of(all, &name);
+        let cells: Vec<String> =
+            all.iter().enumerate().map(|(i, r)| markdown_cell(find(r, &name), best == Some(i))).collect();
+        s.push_str(&format!("| {} | {} |\n", escape_cell(&name), cells.join(" | ")));
+    }
+    let scores: Vec<Option<f64>> = all.iter().map(|r| overall(r, &all[0])).collect();
+    let top = scores.iter().flatten().cloned().fold(0.0f64, f64::max);
+    let cells: Vec<String> = scores
+        .iter()
+        .map(|sc| match sc {
+            Some(x) if *x >= top && top > 0.0 => format!("**{}**", ratio_text(*x)),
+            Some(x) => ratio_text(*x),
+            None => "—".to_string(),
+        })
+        .collect();
+    s.push_str(&format!("| Overall vs {} | {} |\n", escape_cell(&all[0].label), cells.join(" | ")));
+    s
+}
+
 pub fn compare_panel(all: &[Results], width: usize) -> Panel {
     let mut p = Panel::new(width);
     let inner = width.saturating_sub(4);
@@ -139,7 +202,7 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
     let base = &all[0];
     p.blank();
     let mut l = Line::new();
-    l.pad(2).gradient_text("ttystorm compare");
+    l.pad(2).title("ttystorm compare");
     l.text(&format!("  {} terminals", all.len()), DIM);
     if width >= 70 {
         l.right(&base.date, DIM, width - 2);
@@ -159,14 +222,7 @@ pub fn compare_panel(all: &[Results], width: usize) -> Panel {
         l.pad(2).text(&fit(&detail, room), DIM);
         p.push(l);
     }
-    let same = |f: fn(&Results) -> String| all.iter().all(|r| f(r) == f(base));
-    let mut warnings = Vec::new();
-    if !same(|r| r.machine.cpu.clone()) {
-        warnings.push("These results come from different machines.");
-    }
-    if !same(|r| format!("{}×{}", r.cols, r.rows)) {
-        warnings.push("Terminal sizes differ, which changes the scrolling, cursor and frame tests.");
-    }
+    let warnings = warnings(all);
     for w in warnings {
         let mut l = Line::new();
         l.pad(2).text(&fit(w, inner), BAD);
@@ -332,5 +388,44 @@ mod tests {
         a.tests.reverse();
         let names = test_names(&[a]);
         assert_eq!(names, vec!["logflood", "colorflood", "framerate", "roundtrip"]);
+    }
+
+    #[test]
+    fn the_markdown_table_is_a_table_with_the_best_in_bold() {
+        let md = compare_markdown(&three());
+        let rows: Vec<&str> = md.lines().filter(|l| l.starts_with('|')).collect();
+        // header, rule, one row per test, overall
+        assert_eq!(rows.len(), 2 + 4 + 1, "{md}");
+        let bars = |l: &str| l.matches('|').count();
+        assert!(rows.iter().all(|r| bars(r) == bars(rows[0])), "{md}");
+        assert_eq!(bars(rows[0]), 5);
+        assert!(rows[0].contains("Wormhole") && rows[0].contains("Fast one") && rows[0].contains("Slow"));
+        let logflood = rows.iter().find(|r| r.starts_with("| logflood")).copied().unwrap_or_default();
+        assert!(logflood.contains("**1600 MB/s**") && logflood.contains("| 800 MB/s |"), "{logflood}");
+        // Latency: lower is better, so the third file's 75 µs wins.
+        let rt = rows.iter().find(|r| r.starts_with("| roundtrip")).copied().unwrap_or_default();
+        assert!(rt.contains("**75 µs**"), "{rt}");
+        let colorflood = rows.iter().find(|r| r.starts_with("| colorflood")).copied().unwrap_or_default();
+        assert!(colorflood.contains("timed out"), "{colorflood}");
+        let overall_row = rows.last().copied().unwrap_or_default();
+        assert!(
+            overall_row.starts_with("| Overall vs Wormhole | ×1.00 |") && overall_row.contains("**×1.41**"),
+            "{overall_row}"
+        );
+        assert!(!md.contains("> Note"));
+    }
+
+    #[test]
+    fn the_markdown_notes_differences_in_one_line() {
+        let mut all = three();
+        all[1].machine.cpu = "Intel".to_string();
+        all[2].cols = 80;
+        let md = compare_markdown(&all);
+        let note: Vec<&str> = md.lines().filter(|l| l.starts_with('>')).collect();
+        assert_eq!(note.len(), 1);
+        assert!(note[0].contains("different machines") && note[0].contains("sizes differ"));
+        let mut odd = three();
+        odd[0].label = "a|b".to_string();
+        assert!(compare_markdown(&odd).contains("a\\|b"));
     }
 }

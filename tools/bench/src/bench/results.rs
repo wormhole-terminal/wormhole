@@ -1,6 +1,8 @@
 //! What a benchmark run produced, and its JSON file (`--save`, read back by `compare`).
 
+use super::diag::{DIAG_VERSION, TestDiag};
 use super::json::{self, Value};
+use super::procinfo::Terminal;
 use super::sysinfo::Machine;
 use super::workloads;
 
@@ -11,6 +13,8 @@ pub enum Unit {
     MBps,
     Fps,
     Micros,
+    /// Things done per second (`screenswap`'s swaps).
+    PerSec,
 }
 
 impl Unit {
@@ -19,11 +23,23 @@ impl Unit {
             Unit::MBps => "MB/s",
             Unit::Fps => "fps",
             Unit::Micros => "µs",
+            Unit::PerSec => "/s",
+        }
+    }
+
+    /// The unit's name in a results file. The first three are what older files say, so they still
+    /// read; `per_s` is new.
+    pub fn json_name(self) -> &'static str {
+        match self {
+            Unit::PerSec => "per_s",
+            other => other.label(),
         }
     }
 
     pub fn parse(s: &str) -> Option<Unit> {
-        [Unit::MBps, Unit::Fps, Unit::Micros].into_iter().find(|u| u.label() == s)
+        [Unit::MBps, Unit::Fps, Unit::Micros, Unit::PerSec]
+            .into_iter()
+            .find(|u| u.json_name() == s || u.label() == s)
     }
 
     pub fn higher_is_better(self) -> bool {
@@ -43,8 +59,11 @@ pub struct TestResult {
     pub secs: f64,
     pub bytes: u64,
     pub timeout: bool,
-    /// More numbers worth keeping: p90 and p99 for latency, MB/s for frames.
+    /// More numbers worth keeping: p90 and p99 for latency, MB/s for frames, writes per second for
+    /// `agentstream`.
     pub extra: Vec<(String, f64)>,
+    /// Where the time went, run by run (`None` for latency and for files saved before 1.2).
+    pub diag: Option<TestDiag>,
 }
 
 impl TestResult {
@@ -72,6 +91,8 @@ pub struct Results {
     pub version: String,
     pub size_mb: f64,
     pub runs: usize,
+    /// The terminal's process, when it could be found.
+    pub process: Option<Terminal>,
     pub tests: Vec<TestResult>,
 }
 
@@ -101,15 +122,17 @@ impl Results {
         field("date", json::quote(&self.date));
         field("size_mb", json::number(self.size_mb));
         field("runs", self.runs.to_string());
+        field("diag_version", DIAG_VERSION.to_string());
+        field("terminal_process", self.process.as_ref().map_or("null".to_string(), Terminal::to_json));
         s.push_str("  \"tests\": [\n");
         for (i, t) in self.tests.iter().enumerate() {
             let extra: Vec<String> =
                 t.extra.iter().map(|(k, v)| format!("{}: {}", json::quote(k), json::number(*v))).collect();
             s.push_str(&format!(
                 "    {{\"name\": {}, \"unit\": {}, \"median\": {}, \"min\": {}, \"max\": {}, \"secs\": {}, \
-                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}}}{}\n",
+                 \"bytes\": {}, \"timeout\": {}, \"extra\": {{{}}}, \"diag\": {}}}{}\n",
                 json::quote(&t.name),
-                json::quote(t.unit.label()),
+                json::quote(t.unit.json_name()),
                 json::number(t.median),
                 json::number(t.min),
                 json::number(t.max),
@@ -117,6 +140,7 @@ impl Results {
                 t.bytes,
                 t.timeout,
                 extra.join(", "),
+                t.diag.as_ref().map_or("null".to_string(), TestDiag::to_json),
                 if i + 1 < self.tests.len() { "," } else { "" }
             ));
         }
@@ -167,6 +191,7 @@ impl Results {
                     }
                     _ => Vec::new(),
                 },
+                diag: t.get("diag").and_then(TestDiag::from_value),
             });
         }
         let terminal = text_of("terminal");
@@ -181,6 +206,7 @@ impl Results {
             version: text_of("tool_version"),
             size_mb: num_of("size_mb"),
             runs: num_of("runs") as usize,
+            process: v.get("terminal_process").and_then(Terminal::from_value),
             tests,
         })
     }
@@ -198,6 +224,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         bytes: 16_000_000,
         timeout: false,
         extra: vec![("p99".to_string(), v * 2.0)],
+        diag: None,
     };
     Results {
         label: label.to_string(),
@@ -215,6 +242,7 @@ pub fn sample(label: &str, scale: f64) -> Results {
         version: "0.1.0".to_string(),
         size_mb: 16.0,
         runs: 3,
+        process: None,
         tests: vec![
             t("logflood", Unit::MBps, 800.0),
             t("colorflood", Unit::MBps, 120.0),
@@ -250,6 +278,37 @@ mod tests {
         assert!(Results::from_json("nope").is_err());
         assert!(Results::from_json("{\"format\": \"ttystorm\"}").is_err());
         assert!(Results::from_json("{\"format\": \"termbench\"}").is_err());
+    }
+
+    #[test]
+    fn per_second_has_its_own_name_and_old_names_still_read() {
+        assert_eq!(Unit::PerSec.label(), "/s");
+        for u in [Unit::MBps, Unit::Fps, Unit::Micros, Unit::PerSec] {
+            assert_eq!(Unit::parse(u.json_name()), Some(u));
+        }
+        let mut r = sample("x", 1.0);
+        r.tests[2].unit = Unit::PerSec;
+        let json = r.to_json();
+        assert!(json.contains("\"unit\": \"per_s\"") && json.contains("\"unit\": \"MB/s\""));
+        assert_eq!(Results::from_json(&json).expect("reads back"), r);
+        // A file from before the diagnostics has neither the process nor a diag.
+        let old =
+            json.replace("\"diag_version\"", "\"x_diag_version\"").replace("\"terminal_process\"", "\"x\"");
+        assert!(Results::from_json(&old).expect("reads").process.is_none());
+    }
+
+    #[test]
+    fn diagnostics_and_the_process_survive_the_file() {
+        use super::super::compose::Composition;
+        use super::super::diag::RunDiag;
+        let mut r = sample("x", 1.0);
+        r.process = Some(Terminal { pid: 9, command: "kitty".to_string(), note: None });
+        r.tests[0].diag = Some(TestDiag {
+            composition: Composition { bytes: 5, ..Composition::default() },
+            runs: vec![RunDiag { secs: 1.0, timeline: vec![1.0, 2.0], ..RunDiag::default() }],
+            median_run: 0,
+        });
+        assert_eq!(Results::from_json(&r.to_json()).expect("reads back"), r);
     }
 
     #[test]
