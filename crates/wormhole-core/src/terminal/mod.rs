@@ -129,6 +129,9 @@ pub struct Pty {
     event_loop: Option<EventLoopThread>,
     size: GridSize,
     pid: u32,
+    /// A second handle on the PTY's master, which outlives alacritty's, for closing the tab (see
+    /// `process::close`).
+    master: Option<std::fs::File>,
     /// How long the shell gets to exit after the hangup once the tab is closed (a field so a test
     /// can shorten it).
     hangup_grace: Duration,
@@ -189,6 +192,7 @@ impl Pty {
             tty::new(&process::tty_options(options, shell), size.window_size(), 0)?
         };
         let pid = pty.child().id();
+        let master = process::drain_handle(pty.file());
         let pty = pty_filter::FilteredPty::new(pty, proxy.clone());
         let event_loop = EventLoop::new(term.clone(), proxy, pty, true, false)?;
         let sender = event_loop.channel();
@@ -203,6 +207,7 @@ impl Pty {
                 event_loop,
                 size,
                 pid,
+                master,
                 hangup_grace: process::HANGUP_GRACE,
                 reported_cwd: Mutex::new(None),
             },
@@ -579,7 +584,7 @@ impl Drop for Pty {
     fn drop(&mut self) {
         let _ = self.sender.send(Msg::Shutdown);
         if let Some(event_loop) = self.event_loop.take() {
-            process::close(event_loop, self.pid(), self.hangup_grace);
+            process::close(event_loop, self.pid(), self.master.take(), self.hangup_grace);
         }
     }
 }

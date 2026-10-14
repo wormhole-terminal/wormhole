@@ -405,6 +405,65 @@ fn closing_a_tab_ends_a_shell_that_ignores_hangups() {
     }
 }
 
+/// A shell with job control runs the program in the foreground in a process group of its own, so
+/// the shell's group never reaches it; and once the tab is gone nobody reads the PTY, so a program
+/// that keeps printing blocks on the full buffer, which keeps its shell from ever finishing exiting.
+#[test]
+fn closing_a_tab_ends_the_program_in_the_foreground_and_its_shell() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let pid_file = dir.path().join("job.pid");
+    // The job ignores the hangup and floods the screen; `echo done` keeps the shell from
+    // replacing itself with the job.
+    let job = format!(
+        r#"trap "" HUP; echo $$ > {}; while :; do echo flood flood flood flood; done"#,
+        pid_file.display()
+    );
+    let script = format!("set -m; sh -c '{job}'; echo done");
+    let (mut pty, _events) = spawn("/bin/sh", &["-c", &script]);
+    pty.hangup_grace = Duration::from_millis(300);
+    let mut job_pid = None;
+    wait_until("the job's pid", || {
+        job_pid = std::fs::read_to_string(&pid_file).ok().and_then(|text| text.trim().parse::<u32>().ok());
+        job_pid.is_some()
+    });
+    let job_pid = job_pid.expect("the job started");
+    let shell_pid = pty.pid;
+    assert!(exists(shell_pid) && running(job_pid));
+    // Without job control the job would share the shell's group and this would prove nothing.
+    assert_ne!(ps("pgid", job_pid), ps("pgid", shell_pid), "the job leads a group of its own");
+    drop(pty);
+    // The test is the shell's parent, so the shell is gone once it is reaped. The job's parent was
+    // the shell: whoever adopts it reaps it, if that is a container's init it may never, so a
+    // zombie job is gone too.
+    let deadline = Instant::now() + Duration::from_secs(8);
+    while exists(shell_pid) || running(job_pid) {
+        if Instant::now() >= deadline {
+            let (shell_left, job_left) = (exists(shell_pid), running(job_pid));
+            // A failed run must not leave a program printing into the void behind.
+            for pid in [shell_pid, job_pid] {
+                let _ = std::process::Command::new("kill").args(["-9", &pid.to_string()]).status();
+            }
+            panic!("left behind: shell {shell_pid} {shell_left}, job {job_pid} {job_left}");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// A column of `ps` for a process, empty when there is none.
+fn ps(column: &str, pid: u32) -> String {
+    let output = std::process::Command::new("ps")
+        .args(["-o", &format!("{column}="), "-p", &pid.to_string()])
+        .stderr(std::process::Stdio::null())
+        .output();
+    output.map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned()).unwrap_or_default()
+}
+
+/// Whether a process runs: it exists and is not a zombie waiting to be reaped.
+fn running(pid: u32) -> bool {
+    let state = ps("stat", pid);
+    !state.is_empty() && !state.starts_with('Z')
+}
+
 #[test]
 fn the_exit_code_is_reported() {
     let (_pty, events) = spawn("/bin/sh", &["-c", "exit 3"]);

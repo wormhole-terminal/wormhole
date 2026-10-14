@@ -2,11 +2,14 @@
 //! the per-process queries (current folder) the UI polls.
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
+use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use alacritty_terminal::tty;
 
@@ -232,26 +235,77 @@ fn read_hostname() -> Option<String> {
 /// How long a closed tab's shell gets to exit before it is killed.
 pub(super) const HANGUP_GRACE: Duration = Duration::from_secs(3);
 
-/// End a closed tab's shell. alacritty's PTY handle, dropped once its event
-/// loop thread has ended, sends the shell one SIGHUP and then waits for it,
-/// without escalating: a shell or program that ignores SIGHUP (`trap '' HUP`,
-/// `nohup`) kept running, and kept that thread and the PTY alive with it. The
-/// shell's process group (it leads one) gets the hangup, and SIGKILL when
-/// anything is still there after `grace` ([`HANGUP_GRACE`]; a parameter so a
-/// test need not wait seconds). `pid` is `None` once the shell has exited (its
-/// pid may belong to someone else by then).
-pub(super) fn close<T: Send + 'static>(event_loop: JoinHandle<T>, pid: Option<u32>, grace: Duration) {
+/// How long [`close`] waits for output before it looks at the clock and the groups again; also
+/// how late the dup of the PTY's master is let go once the shell is reaped.
+const WATCH_STEP: Duration = Duration::from_millis(100);
+
+/// How long [`close`] keeps watching after the SIGKILL. A process that is still there by then is
+/// stuck in the kernel, where nothing it is sent or read can help it.
+const WATCH_AFTER_KILL: Duration = Duration::from_secs(10);
+
+/// End a closed tab's shell and the program running in it. alacritty's PTY handle, dropped once
+/// its event loop thread has ended, sends the shell one SIGHUP and then waits for it, without
+/// escalating, and two things kept that wait from ever ending:
+///
+/// - A shell or program that ignores SIGHUP (`trap '' HUP`, `nohup`) kept running. The shell's
+///   process group (it leads one) gets the hangup, and SIGKILL when anything is still there
+///   after `grace` ([`HANGUP_GRACE`]; a parameter so a test need not wait seconds). A shell with
+///   job control runs the program in the foreground in a group of its own, which the shell's
+///   group never reaches, so the terminal's foreground group gets both signals too. While the
+///   shell lives that group is asked for (`tcgetpgrp` on the master) right before each signal:
+///   the kernel only reports a group of this terminal's own session, so a group id that was
+///   reused meanwhile cannot be hit. A shell that goes at the hangup takes the terminal's answer
+///   with it, so the group from the hangup is then killed after `grace` if it is still there: a
+///   group id is not given out again while the group has members, and the watch checks every
+///   [`WATCH_STEP`] that it has.
+/// - Nobody reads the PTY any more, and a session leader that exits waits in the kernel for its
+///   terminal's output to drain: with the master open and unread that never ends (the shell sits
+///   in state E), and a program that prints blocks on the full buffer. So `master`, a dup of the
+///   PTY's master ([`drain_handle`]), is read and thrown away until the shell is reaped. The dup
+///   is let go then, since an open master keeps the terminal from hanging up.
+///
+/// `pid` is `None` once the shell has exited (its pid may belong to someone else by then).
+pub(super) fn close<T: Send + 'static>(
+    event_loop: JoinHandle<T>,
+    pid: Option<u32>,
+    master: Option<File>,
+    grace: Duration,
+) {
     let Some(pid) = pid else { return };
-    signal_group(pid, libc::SIGHUP);
+    let mut foreground = signal_session(pid, master.as_ref(), libc::SIGHUP);
     let reaped = Arc::new(AtomicBool::new(false));
     let watchdog = {
         let reaped = reaped.clone();
         move || {
-            std::thread::sleep(grace);
-            // Until the wait below returns the shell's pid can't be reused, so
-            // this can't reach anyone else's processes.
-            if !reaped.load(Ordering::Acquire) {
-                signal_group(pid, libc::SIGKILL);
+            let mut master = master;
+            let started = Instant::now();
+            let mut killed = false;
+            loop {
+                let shell_reaped = reaped.load(Ordering::Acquire);
+                if shell_reaped {
+                    master = None;
+                }
+                foreground = foreground.filter(|&group| group_exists(group));
+                let waited = started.elapsed();
+                if (shell_reaped && foreground.is_none()) || waited >= grace + WATCH_AFTER_KILL {
+                    return;
+                }
+                if !killed && waited >= grace {
+                    killed = true;
+                    if !shell_reaped {
+                        // Until the wait in the closer returns the shell's pid can't be reused,
+                        // so this can't reach anyone else's processes.
+                        signal_session(pid, master.as_ref(), libc::SIGKILL);
+                    }
+                    if let Some(group) = foreground {
+                        signal_group(group, libc::SIGKILL);
+                    }
+                }
+                let step = if killed { WATCH_STEP } else { WATCH_STEP.min(grace.saturating_sub(waited)) };
+                // A hung-up terminal has nothing left to read (and polls as ready at once).
+                if !master.as_ref().is_some_and(|master| discard_output(master, step)) {
+                    std::thread::sleep(step);
+                }
             }
         }
     };
@@ -269,9 +323,85 @@ pub(super) fn close<T: Send + 'static>(event_loop: JoinHandle<T>, pid: Option<u3
     }
 }
 
+/// A second handle on the PTY's master for [`close`] to drain and to ask for the foreground
+/// group. Taken while the terminal runs, because the master's descriptor number may belong to
+/// something else once alacritty has dropped its PTY. Non-blocking, so a read never waits for
+/// output (alacritty sets the same flag on the master, which the handle shares).
+pub(super) fn drain_handle(master: &File) -> Option<File> {
+    let kept = master.try_clone().and_then(|handle| set_nonblocking(&handle).map(|()| handle));
+    kept.inspect_err(|err| tracing::warn!("could not keep a handle on the PTY: {err}")).ok()
+}
+
+#[allow(unsafe_code)] // libc FFI; the descriptor is open as long as `file` is.
+fn set_nonblocking(file: &File) -> std::io::Result<()> {
+    let fd = file.as_raw_fd();
+    // SAFETY: fcntl with F_GETFL and F_SETFL only reads and writes the descriptor's status flags.
+    unsafe {
+        let flags = libc::fcntl(fd, libc::F_GETFL);
+        if flags < 0 || libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+    }
+    Ok(())
+}
+
+/// Read and throw away what the terminal prints, waiting up to `wait` for it. `false` when
+/// there will be nothing more: the terminal hung up or could not be polled.
+#[allow(unsafe_code)] // libc FFI; the pollfd lives through the call.
+fn discard_output(master: &File, wait: Duration) -> bool {
+    let mut poll = libc::pollfd { fd: master.as_raw_fd(), events: libc::POLLIN, revents: 0 };
+    // Rounded up: a wait of under a millisecond is still a wait, not a spin.
+    let millis = libc::c_int::try_from(wait.as_millis() + 1).unwrap_or(libc::c_int::MAX);
+    // SAFETY: one valid pollfd, and the count says so.
+    let ready = unsafe { libc::poll(&mut poll, 1, millis) };
+    if ready < 0 {
+        return std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted;
+    }
+    if ready == 0 {
+        return true;
+    }
+    let mut scratch = [0u8; 16 * 1024];
+    match (&*master).read(&mut scratch) {
+        Ok(read) => read > 0,
+        Err(err) => matches!(err.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::Interrupted),
+    }
+}
+
+/// Signal the shell's process group and the terminal's foreground group, when that is another;
+/// the foreground group is returned. It is read first, while the shell can still be asked.
+fn signal_session(pid: u32, master: Option<&File>, signal: libc::c_int) -> Option<libc::pid_t> {
+    let shell = libc::pid_t::try_from(pid).ok()?;
+    let foreground = master.and_then(foreground_group).filter(|&group| group != shell);
+    signal_group(shell, signal);
+    if let Some(group) = foreground {
+        signal_group(group, signal);
+    }
+    foreground
+}
+
+/// The group in the foreground of the terminal whose master this is, if it says.
+#[allow(unsafe_code)] // libc FFI; the descriptor is open as long as `master` is.
+fn foreground_group(master: &File) -> Option<libc::pid_t> {
+    // SAFETY: tcgetpgrp only reads the terminal's state.
+    let group = unsafe { libc::tcgetpgrp(master.as_raw_fd()) };
+    // Not 0, 1 or below: killpg(0) would be our own group.
+    (group > 1).then_some(group)
+}
+
+/// Whether a process group still has a member (`killpg` with no signal), a zombie included.
 #[allow(unsafe_code)] // libc FFI; the arguments are plain integers.
-fn signal_group(pid: u32, signal: libc::c_int) {
-    let Ok(pgid) = libc::pid_t::try_from(pid) else { return };
+fn group_exists(pgid: libc::pid_t) -> bool {
+    // SAFETY: signal 0 only checks that the group can be signalled.
+    let sent = unsafe { libc::killpg(pgid, 0) } == 0;
+    // EPERM: it exists, and is not ours to signal.
+    sent || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
+#[allow(unsafe_code)] // libc FFI; the arguments are plain integers.
+fn signal_group(pgid: libc::pid_t, signal: libc::c_int) {
+    if pgid <= 1 {
+        return;
+    }
     // SAFETY: killpg only sends a signal; a group that no longer exists fails with ESRCH.
     unsafe {
         libc::killpg(pgid, signal);

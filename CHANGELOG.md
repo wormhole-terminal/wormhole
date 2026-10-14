@@ -42,6 +42,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   seconds; Settings shows the wait, with Restart now and Don't restart) or Later. With nothing
   running it restarts at once, as before.
 
+### Fixed
+
+- Closing a terminal ends the program running in it, not only its shell. Before, an agent or
+  another program in the foreground could stay behind with its shell, using memory, until you
+  quit Wormhole.
+
 ## [0.3.0] - 2026-10-10
 
 ### Changed
