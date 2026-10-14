@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-15
+
 ### Added
 
 - Wormhole answers the Program Status Protocol (OSC 7501). Coding agents and other programs that
@@ -187,4 +189,5 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/commits/main
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/wormhole-terminal/wormhole/releases/tag/v0.4.0
