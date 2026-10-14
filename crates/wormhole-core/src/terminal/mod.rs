@@ -12,6 +12,7 @@
 //! - `find`: find in scrollback, on a copy of the grid's text;
 //! - `pty_filter`: what runs on the PTY's output before alacritty parses it (`clear` erasing the
 //!   scrollback too; the shell-integration and notification OSCs alacritty drops);
+//! - `program_status`: what programs report about themselves (OSC 7501), and the records kept;
 //! - `marks`: where a command block's parts are, read back from the grid;
 //! - `blocks`: each prompt with its command and output, and how the command went;
 //! - `input`: keys, mouse and dropped files → bytes for the PTY;
@@ -29,6 +30,7 @@ mod marks;
 pub mod minimap;
 mod ports;
 mod process;
+pub mod program_status;
 mod pty_filter;
 mod restore;
 mod snapshot;
@@ -469,6 +471,14 @@ impl Pty {
     /// The progress a program reports (OSC 9;4), until it removes it.
     pub fn progress(&self) -> Option<Progress> {
         self.shared.progress()
+    }
+
+    /// What programs in this terminal report about themselves (OSC 7501). The PTY thread keeps it
+    /// (a hostile program's reports pile up in 256 records, not in a queue), and a
+    /// [`PtyEvent::ProgramStatus`] says it changed. The lock is held for a lookup or an update,
+    /// never across a wait.
+    pub fn program_status(&self) -> std::sync::MutexGuard<'_, program_status::ProgramStatus> {
+        self.shared.program_status()
     }
 
     /// The lines where prompts start (OSC 133 `A`), oldest first: negative lines are in the

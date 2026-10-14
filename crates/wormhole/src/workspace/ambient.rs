@@ -26,6 +26,8 @@ pub(crate) struct TabFacts {
     pub since: Instant,
     pub agent: Option<AgentId>,
     pub message: Option<String>,
+    /// The state is what a program reported about itself last (OSC 7501), which anyone may send.
+    pub reported: bool,
     /// The program's last notification of its own (OSC 9/99/777), numbered.
     pub notice: Option<ProgramNotice>,
     pub foreground: Option<Foreground>,
@@ -93,6 +95,7 @@ impl Workspace {
                 since,
                 agent: terminal.agent,
                 message: terminal.agent_message.clone(),
+                reported: terminal.reported_by_program(),
                 notice: terminal.notice().cloned(),
                 foreground,
                 folder: terminal

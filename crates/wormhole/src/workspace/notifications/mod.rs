@@ -148,6 +148,8 @@ struct Notifier {
     watch: Watch,
     bursts: Bursts,
     bells: Option<Throttle>,
+    /// What programs' own reports (OSC 7501) may ask for: see [`report_key`].
+    reports: Option<Throttle>,
     /// What VoiceOver was told lately, so a burst is said as a count.
     announcer: Announcer,
     /// The ids of the notifications that are up, so taking one down asks the system only when
@@ -187,6 +189,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.set_global(Notifier {
         route,
         bells: Some(Throttle::new(notify::BELL_RATE)),
+        reports: Some(Throttle::new(notify::REPORT_RATE)),
         permission: Some(permission),
         #[cfg(target_os = "macos")]
         center,
@@ -307,6 +310,17 @@ fn spoken_words(kind: Kind, facts: &TabFacts) -> Option<&str> {
 /// summary) or nothing, and the Dock's bounce.
 fn announce(happened: Happened, app_active: bool, settings: &Settings, cx: &mut App) {
     let Happened { kind, facts, .. } = happened;
+    // A program that reports its own state can flip it as fast as it can write: its questions and
+    // its finishing are each told at most once in a while, banner, sound and Dock bounce alike.
+    if facts.reported
+        && matches!(kind, Kind::NeedsYou | Kind::AgentDone)
+        && !notifier(cx)
+            .reports
+            .get_or_insert_with(report_rate)
+            .allow(report_key(facts.session, kind), Instant::now())
+    {
+        return;
+    }
     if notify::bounces(kind, app_active, settings.dock_bounce) {
         crate::dock::bounce(cx);
     }
@@ -324,6 +338,16 @@ fn announce(happened: Happened, app_active: bool, settings: &Settings, cx: &mut 
 
 fn bell_rate() -> Throttle {
     Throttle::new(notify::BELL_RATE)
+}
+
+fn report_rate() -> Throttle {
+    Throttle::new(notify::REPORT_RATE)
+}
+
+/// One clock per terminal and kind: asking and finishing in quick turn are both told, a program
+/// repeating either is not.
+fn report_key(session: i64, kind: Kind) -> i64 {
+    session.saturating_mul(2).saturating_add(i64::from(kind == Kind::NeedsYou))
 }
 
 fn banner(happened: &Happened, settings: &Settings, cx: &mut App) {

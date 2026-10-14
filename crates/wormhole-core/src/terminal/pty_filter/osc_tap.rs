@@ -310,13 +310,18 @@ impl Perform for Tap {
         self.saw = true;
     }
 
-    fn esc_dispatch(&mut self, _: &[u8], _: bool, _: u8) {
+    fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
         self.saw = true;
+        // RIS, `ESC c`, resets everything, the program-reported status included. DECSTR (`CSI ! p`)
+        // is a soft reset that keeps it, and arrives as a CSI sequence, not here.
+        if byte == b'c' && intermediates.is_empty() && !ignore {
+            self.events.push(Osc::FullReset);
+        }
     }
 
-    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
+    fn osc_dispatch(&mut self, params: &[&[u8]], bell_terminated: bool) {
         self.saw = true;
-        let Some(osc) = osc::parse(params, &mut self.kitty) else { return };
+        let Some(osc) = osc::parse(params, bell_terminated, &mut self.kitty) else { return };
         match osc {
             Osc::HyperlinkEnd => {
                 if let Some(part) = self.open {
@@ -352,6 +357,7 @@ mod tests {
     use super::{OscTap, QUIET_MAX, SLICE};
     use crate::terminal::GridSize;
     use crate::terminal::marks::{Part, prompt_id, uri};
+    use crate::terminal::program_status::{Report, State};
 
     /// Hands out fixed chunks, then reports `WouldBlock` like a drained PTY.
     struct Chunks(VecDeque<Vec<u8>>);
@@ -459,6 +465,53 @@ mod tests {
         }
     }
 
+    #[test]
+    fn program_status_sequences_are_reported_in_order_whatever_ends_them() {
+        let input = b"\x1b]7501;?\x1b\\\x1b[c\x1b]7501;state=working:app=x\x07\x1b]7501;state=clear\x1b\\";
+        for buf_len in [3, 64, 4096] {
+            let (out, events) = tapped(&[input], buf_len);
+            assert_eq!(out, input, "buffer {buf_len}: the bytes pass unchanged");
+            assert!(
+                matches!(
+                    &events[..],
+                    [
+                        Osc::ProgramStatusQuery,
+                        Osc::ProgramStatus(Report::Set { id: None, record }),
+                        Osc::ProgramStatus(Report::Clear { id: None }),
+                    ] if record.state == State::Working && record.app.as_deref() == Some("x")
+                ),
+                "buffer {buf_len}: {events:?}"
+            );
+        }
+        // Split across reads anywhere, it is still read once.
+        let chunks: Vec<&[u8]> = input.chunks(5).collect();
+        assert_eq!(tapped(&chunks, 64).1.len(), 3);
+    }
+
+    #[test]
+    fn a_report_over_the_sequence_limit_is_ignored_by_its_terminator() {
+        // 4096 bytes in all with ESC \ is the longest legal sequence; BEL saves a byte.
+        let pad = |body_len: usize| format!("state=idle:x={}", "y".repeat(body_len - "state=idle:x=".len()));
+        let sequence = |body: &str, end: &[u8]| [b"\x1b]7501;", body.as_bytes(), end].concat();
+        let count = |bytes: Vec<u8>| tapped(&[&bytes], 64).1.len();
+        assert_eq!(count(sequence(&pad(4096 - 7 - 2), b"\x1b\\")), 1);
+        assert_eq!(count(sequence(&pad(4096 - 7 - 2 + 1), b"\x1b\\")), 0);
+        assert_eq!(count(sequence(&pad(4096 - 7 - 1), b"\x07")), 1);
+        assert_eq!(count(sequence(&pad(4096 - 7 - 1 + 1), b"\x07")), 0);
+    }
+
+    #[test]
+    fn a_full_reset_is_reported_and_a_soft_reset_is_not() {
+        // RIS is `ESC c`. DECSTR (`CSI ! p`), a charset designation that ends in `c` (`ESC ( c`)
+        // and a `c` inside a CSI sequence or text are not.
+        let (out, events) = tapped(&[b"a\x1bcb"], 64);
+        assert_eq!((out.as_slice(), &events[..]), (&b"a\x1bcb"[..], &[Osc::FullReset][..]));
+        let (_, events) = tapped(&[b"\x1b[!p\x1b(c\x1b)c\x1b[c\x1b[0cc\x1b]0;\x07c"], 64);
+        assert_eq!(events, []);
+        // Cut across reads, still once.
+        assert_eq!(tapped(&[b"\x1b", b"c"], 64).1, [Osc::FullReset]);
+    }
+
     /// A small seeded generator (xorshift), so a failure can be replayed.
     struct Rng(u64);
 
@@ -498,6 +551,7 @@ mod tests {
             b"\x1b[ q",
             b"\x1b[>4;1m",
             b"\x1b[38:2::1:2:3m",
+            b"\x1b[!p",
         ];
         const MARKS: &[&[u8]] = &[
             b"\x1b]133;A\x07",
@@ -513,6 +567,9 @@ mod tests {
             b"\x1b]0;title\x07",
             b"\x1b]9;note\x07",
             b"\x1b]777;notify;a;b\x07",
+            b"\x1b]7501;state=working:app=x:msg=aGk=\x07",
+            b"\x1b]7501;?\x1b\\",
+            b"\x1bc",
             b"\x1bP+q544e\x1b\\",
             b"\x1b_Gf=24,s=1,v=1;AAAA\x1b\\",
             b"\x1b7",

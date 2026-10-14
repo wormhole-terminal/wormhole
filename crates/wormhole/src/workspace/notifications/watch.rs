@@ -136,6 +136,7 @@ mod tests {
             since,
             agent: None,
             message: None,
+            reported: false,
             notice: None,
             foreground: None,
             folder: None,

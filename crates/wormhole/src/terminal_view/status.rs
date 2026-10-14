@@ -1,10 +1,11 @@
-//! A terminal's status (idle, busy, done, needs you, exited) from its output
-//! and its agent's hooks, what the rest of the app shows about it, and when
-//! it redraws.
+//! A terminal's status (idle, busy, done, needs you, exited) from its output,
+//! its agent's hooks and what programs report about themselves (`reported`), what the rest of
+//! the app shows about it, and when it redraws.
 
 use super::*;
 
-/// A terminal's status (idle, busy, done, needs you, exited), from its output and its agent's hooks.
+/// A terminal's status (idle, busy, done, needs you, exited), from its output, its agent's hooks
+/// and what its programs report.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Status {
     Idle,
@@ -96,7 +97,7 @@ impl TerminalView {
         self.status_since
     }
 
-    fn set_status(&mut self, status: Status) {
+    pub(super) fn set_status(&mut self, status: Status) {
         if status != self.status {
             self.status = status;
             self.status_since = Instant::now();
@@ -145,7 +146,9 @@ impl TerminalView {
     /// Re-detect the foreground agent and command. Returns true when either changed.
     pub fn refresh_agent(&mut self) -> bool {
         let Some(pty) = &self.pty else { return false };
-        self.program_in_foreground = pty.program_in_foreground() == Some(true);
+        let in_front = pty.program_in_foreground();
+        let left = program_left_the_terminal(self.program_in_foreground, in_front);
+        self.program_in_foreground = in_front == Some(true);
         let foreground = if self.program_in_foreground { pty.foreground_command() } else { None };
         let command_changed = foreground != self.foreground;
         if command_changed {
@@ -155,15 +158,17 @@ impl TerminalView {
                 Some(_) => None,
             };
         }
-        command_changed | self.refresh_foreground_agent()
+        let dropped = left && self.program_left();
+        command_changed | dropped | self.refresh_foreground_agent()
     }
 
     fn refresh_foreground_agent(&mut self) -> bool {
         let Some(pty) = &self.pty else { return false };
         let agent = pty.foreground_agent();
-        // An agent reporting through hooks is known even when its process
-        // doesn't look like one; forget it only once the shell is back.
-        if agent == self.agent || (agent.is_none() && self.hook_driven && !pty.shell_in_foreground()) {
+        // An agent reporting through hooks, or a program saying what it is, is known even when its
+        // process doesn't look like one (it may run over ssh); forget it only once the shell is
+        // back.
+        if agent == self.agent || (agent.is_none() && self.reported() && !pty.shell_in_foreground()) {
             return false;
         }
         // Hooks can't report an agent that has quit (or crashed): hand the
@@ -186,6 +191,8 @@ impl TerminalView {
         }
         self.agent = Some(agent);
         self.hook_driven = signal != Signal::Ended;
+        // The last word is the hook's: a program's records, if any, don't reset what it set.
+        self.program_driven = false;
         // The prompt's own words ("Approve cargo test?") beat the notification that the same
         // prompt is still waiting, which comes seconds later.
         let asked = self.status == Status::Attention && self.agent_message.is_some();
@@ -218,7 +225,7 @@ impl TerminalView {
     /// Called periodically by the workspace to settle busy → idle/done: once the output has been
     /// quiet for a while, or at once when the shell's marks said the command finished.
     pub fn tick(&mut self, is_active: bool, window_active: bool) -> bool {
-        if self.hook_driven {
+        if self.reported() {
             return false;
         }
         let finished = std::mem::take(&mut self.finished_mark);
@@ -238,19 +245,25 @@ impl TerminalView {
         if self.hook_driven || self.status == Status::Exited {
             return;
         }
+        // Where the shell is stays known while a program's reports decide the status (they end
+        // with the program, and the heuristics then need to know whether it is at its prompt); the
+        // reports' records themselves end with a prompt in the terminal's PTY thread.
+        let heuristics = !self.reported();
         match mark {
             Mark::PromptStart(_) | Mark::CommandStart => self.at_prompt = Some(true),
             Mark::OutputStart => {
                 self.at_prompt = Some(false);
-                self.finished_mark = false;
-                self.last_output = Instant::now();
-                if self.status != Status::Attention {
-                    self.set_status(Status::Busy);
+                if heuristics {
+                    self.finished_mark = false;
+                    self.last_output = Instant::now();
+                    if self.status != Status::Attention {
+                        self.set_status(Status::Busy);
+                    }
                 }
             }
             Mark::Finished(_) => {
                 self.at_prompt = Some(true);
-                self.finished_mark = true;
+                self.finished_mark |= heuristics;
             }
         }
     }
@@ -259,11 +272,11 @@ impl TerminalView {
     /// whether it counts as needing you (an agent's hooks already say when), and the sweep tells
     /// about it with the program's text (`Kind::Notice`).
     fn on_notice(&mut self, notification: Notification) {
-        if self.hook_driven || self.status == Status::Exited {
+        if self.reported() || self.status == Status::Exited {
             return;
         }
         let since = self.bell_counted.map(|at| at.elapsed());
-        let bell = on_bell(self.status, self.hook_driven, self.agent.is_some(), since);
+        let bell = on_bell(self.status, self.reported(), self.agent.is_some(), since);
         self.bell_rang |= bell.mark;
         if bell.needs_you {
             self.bell_counted = Some(Instant::now());
@@ -286,13 +299,20 @@ impl TerminalView {
     /// only the row's bell).
     pub fn acknowledge(&mut self) -> bool {
         let rang = std::mem::take(&mut self.bell_rang);
-        // A pending agent question stays visible until the agent moves on.
-        if self.hook_driven && self.status == Status::Attention {
+        // A pending question, from an agent's hooks or a program's own report, stays visible until
+        // the program moves on.
+        if (self.hook_driven || self.blocked_by_program()) && self.status == Status::Attention {
             return rang;
         }
         let seen = matches!(self.status, Status::Done | Status::Attention);
         if seen {
-            self.set_status(Status::Idle);
+            // What a program reported as finished has been seen: forgotten, so the next derivation
+            // doesn't bring "done" back. What it still has going on is the status now, if it is
+            // the program's status at all.
+            self.acknowledge_reported();
+            if !self.program_driven {
+                self.set_status(Status::Idle);
+            }
         }
         rang || seen
     }
@@ -359,7 +379,7 @@ impl TerminalView {
                 self.check_cwd_soon(cx);
                 // Ignore what answers us, and whatever a shell with integration prints at its
                 // prompt.
-                let quiet = self.hook_driven
+                let quiet = self.reported()
                     || self.at_prompt == Some(true)
                     || answers_us(Instant::now(), self.last_input, self.last_resize, self.last_focus_report);
                 if !quiet && self.status != Status::Exited {
@@ -378,9 +398,12 @@ impl TerminalView {
             }
             PtyEvent::Mark(mark) => self.on_mark(mark),
             PtyEvent::Notify(notification) => self.on_notice(notification),
+            PtyEvent::ProgramStatus => {
+                self.sync_reported(true);
+            }
             PtyEvent::Bell => {
                 let since = self.bell_counted.map(|at| at.elapsed());
-                let bell = on_bell(self.status, self.hook_driven, self.agent.is_some(), since);
+                let bell = on_bell(self.status, self.reported(), self.agent.is_some(), since);
                 self.bell_rang |= bell.mark;
                 if bell.needs_you {
                     self.bell_counted = Some(Instant::now());
@@ -421,6 +444,13 @@ impl TerminalView {
     }
 }
 
+/// The shell has the terminal back after a program had it: that program's process is gone, and with
+/// it whatever only it could say (a crash leaves no word of its own). `now` is `None` where the
+/// platform can't tell, which says nothing either way.
+fn program_left_the_terminal(was_in_front: bool, now: Option<bool>) -> bool {
+    was_in_front && now == Some(false)
+}
+
 /// What a bell does to a terminal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Bell {
@@ -433,13 +463,13 @@ struct Bell {
 /// How often a terminal without an agent may count as needing you for its bell.
 const BELL_COUNTS_EVERY: Duration = Duration::from_secs(60);
 
-/// What the bell does. An agent that reports through its hooks is ignored: the hooks say
-/// exactly when it needs you. An agent without hooks rings to ask, so it needs you. A terminal
-/// without an agent marks the bell until you look, and counts as needing you at most once a
-/// minute (`since_counted`: how long ago it last did), so a program ringing in a loop doesn't keep
-/// asking. An ended shell ignores it.
-fn on_bell(status: Status, hook_driven: bool, agent: bool, since_counted: Option<Duration>) -> Bell {
-    match (status, hook_driven, agent) {
+/// What the bell does. A terminal whose status is told (`reported`: an agent's hooks, or a
+/// program's own reports) ignores it: they say exactly when it needs you. An agent without hooks
+/// rings to ask, so it needs you. A terminal without an agent marks the bell until you look, and
+/// counts as needing you at most once a minute (`since_counted`: how long ago it last did), so a
+/// program ringing in a loop doesn't keep asking. An ended shell ignores it.
+fn on_bell(status: Status, reported: bool, agent: bool, since_counted: Option<Duration>) -> Bell {
+    match (status, reported, agent) {
         (Status::Exited, _, _) | (_, true, _) => Bell { mark: false, needs_you: false },
         (_, false, true) => Bell { mark: false, needs_you: true },
         (_, false, false) => {
@@ -547,7 +577,17 @@ mod tests {
 
     use std::time::Instant;
 
-    use super::{Bell, RedrawGate, Status, TITLE_EVERY, TitleGate, answers_us, on_bell};
+    use super::{
+        Bell, RedrawGate, Status, TITLE_EVERY, TitleGate, answers_us, on_bell, program_left_the_terminal,
+    };
+
+    #[test]
+    fn a_program_has_left_when_the_shell_has_the_terminal_back() {
+        assert!(program_left_the_terminal(true, Some(false)));
+        assert!(!program_left_the_terminal(true, Some(true)), "still there");
+        assert!(!program_left_the_terminal(false, Some(false)), "never seen in front");
+        assert!(!program_left_the_terminal(true, None), "the platform can't tell");
+    }
 
     #[test]
     fn the_bell_asks_for_you_only_where_it_means_something() {
@@ -556,7 +596,11 @@ mod tests {
             Bell { mark: false, needs_you: true },
             Bell { mark: true, needs_you: true },
         );
-        assert_eq!(on_bell(Status::Busy, true, true, None), quiet, "hooks say when an agent needs you");
+        assert_eq!(
+            on_bell(Status::Busy, true, true, None),
+            quiet,
+            "hooks or reports say when an agent needs you"
+        );
         assert_eq!(on_bell(Status::Busy, false, true, None), ask, "an agent without hooks rings to ask");
         assert_eq!(
             on_bell(Status::Idle, false, false, None),

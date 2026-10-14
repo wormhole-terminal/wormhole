@@ -28,6 +28,10 @@ pub const NOTIFY_BURST: usize = 3;
 pub const NOTIFY_BURST_WINDOW: Duration = Duration::from_secs(10);
 /// A terminal without an agent tells about its bell at most this often.
 pub const BELL_RATE: Duration = Duration::from_secs(60);
+/// A terminal whose status a program reports (OSC 7501) asks for you, and tells you it finished,
+/// at most this often each: the program can change state as fast as it can write, and each change
+/// would otherwise be a banner and a sound.
+pub const REPORT_RATE: Duration = Duration::from_secs(5);
 /// The optional working animation of the status item: four frames, a quarter second each.
 pub const MENU_ANIM_FRAMES: usize = 4;
 pub const MENU_ANIM_FRAME: Duration = Duration::from_millis(250);

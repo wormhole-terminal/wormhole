@@ -18,6 +18,7 @@ use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::terminal::input::app_selection::AppSelection;
 use wormhole_core::terminal::input::{file_drop, keys, mouse};
+use wormhole_core::terminal::program_status::Summary as Reported;
 use wormhole_core::terminal::{GridSize, Mark, Notification, Pty, PtyEvent, SpawnOptions};
 
 mod blocks;
@@ -26,6 +27,7 @@ mod find_bar;
 mod input;
 mod links;
 mod render;
+mod reported;
 mod status;
 
 pub use input::{TerminalKeys, keystroke_spec};
@@ -84,6 +86,13 @@ pub struct TerminalView {
     hook_driven: bool,
     /// Latest notification text from the agent ("Claude needs permission…").
     pub agent_message: Option<String>,
+    /// What the programs in the terminal report about themselves (OSC 7501), as last read from the
+    /// terminal: the record that needs you most. `Some` while any program holds a record, which
+    /// makes the status the program's own (see `reported`).
+    program: Option<Reported>,
+    /// The status and message last came from `program` (rather than from hooks or the heuristics),
+    /// so the program saying it is done reporting hands them back.
+    program_driven: bool,
     status: Status,
     /// When `status` last changed (how long an agent has worked, or waited for you).
     status_since: Instant,
@@ -233,6 +242,8 @@ impl TerminalView {
             agent: None,
             hook_driven: false,
             agent_message: None,
+            program: None,
+            program_driven: false,
             status: Status::Idle,
             status_since: now,
             shell,

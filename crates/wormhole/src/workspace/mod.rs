@@ -78,6 +78,8 @@ mod panes;
 mod path_card;
 mod project;
 pub(crate) mod quick_panel;
+#[cfg(test)]
+mod reported_tests;
 mod resize;
 mod session;
 mod settings_page;

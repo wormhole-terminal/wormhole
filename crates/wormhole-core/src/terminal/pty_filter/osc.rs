@@ -1,7 +1,8 @@
 //! What the OSC sequences alacritty ignores say: the shell's folder (OSC 7, ConEmu's OSC 9;9),
 //! FinalTerm's semantic prompt marks (OSC 133), a program's notification (OSC 9, OSC 777, kitty's
-//! OSC 99) and its progress (OSC 9;4). This is parsing only, from the `;`-separated parameters
-//! `vte` hands over; `osc_tap` runs it on the PTY thread and acts on the result.
+//! OSC 99), its progress (OSC 9;4) and its status (OSC 7501, `program_status`). This is parsing
+//! only, from the `;`-separated parameters `vte` hands over; `osc_tap` runs it on the PTY thread
+//! and acts on the result.
 //!
 //! Everything here is untrusted program output: text is stripped of control and formatting
 //! characters and cut to a length a banner can show, paths must decode to UTF-8, numbers are
@@ -10,6 +11,8 @@
 use std::path::PathBuf;
 
 use base64::Engine;
+
+use crate::terminal::program_status::{self, Parsed};
 
 /// One sequence the terminal acts on.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -28,6 +31,13 @@ pub(crate) enum Osc {
     Progress(Option<Progress>),
     /// OSC 8 with an empty URI: the program ended its hyperlink (the tap re-arms a prompt mark).
     HyperlinkEnd,
+    /// OSC 7501: a program reports its status.
+    ProgramStatus(program_status::Report),
+    /// OSC 7501 `?`: a program asks whether the terminal speaks the protocol.
+    ProgramStatusQuery,
+    /// RIS (`ESC c`): a full reset. The tap sees it where alacritty resets the screen. (A soft
+    /// reset, DECSTR, is not one.)
+    FullReset,
 }
 
 /// FinalTerm's semantic prompt marks (OSC 133), as shells with integration send them.
@@ -91,8 +101,9 @@ const KITTY_PENDING_MAX: usize = 4;
 
 /// Parse one OSC's parameters (`params[0]` is its number). `None` for anything the terminal
 /// doesn't act on, including what alacritty handles itself. Kitty's chunked notifications
-/// accumulate in `kitty` and come out with their last chunk.
-pub(super) fn parse(params: &[&[u8]], kitty: &mut KittyChunks) -> Option<Osc> {
+/// accumulate in `kitty` and come out with their last chunk. `bell`: the sequence ended with BEL
+/// rather than `ESC \` (OSC 7501 limits the sequence's length, terminator included).
+pub(super) fn parse(params: &[&[u8]], bell: bool, kitty: &mut KittyChunks) -> Option<Osc> {
     match params {
         [b"7", rest @ ..] => cwd(&join(rest)),
         [b"8", _, uri @ ..] if join(uri).is_empty() => Some(Osc::HyperlinkEnd),
@@ -108,8 +119,21 @@ pub(super) fn parse(params: &[&[u8]], kitty: &mut KittyChunks) -> Option<Osc> {
         [b"99", metadata, payload @ ..] => kitty.chunk(metadata, &join(payload)).map(Osc::Notify),
         [b"133", mark, rest @ ..] => self::mark(mark, rest).map(|mark| Osc::Mark(mark, 0)),
         [b"777", b"notify", title, body @ ..] => notification(&text(title), &join(body)).map(Osc::Notify),
+        [b"7501", body @ ..] if !body.is_empty() => {
+            // Bytes, not text: the protocol's characters are ASCII and anything else must be seen
+            // as the bytes it is (and counted as many).
+            match program_status::parse(&join_bytes(body), if bell { 1 } else { 2 })? {
+                Parsed::Query => Some(Osc::ProgramStatusQuery),
+                Parsed::Report(report) => Some(Osc::ProgramStatus(report)),
+            }
+        }
         _ => None,
     }
+}
+
+/// [`join`] without making text of it.
+fn join_bytes(params: &[&[u8]]) -> Vec<u8> {
+    params.join(&b';')
 }
 
 /// The parameters after a split at `;`, joined again: the payload may contain `;` itself.
@@ -350,10 +374,11 @@ mod tests {
         BODY_MAX_CHARS, KittyChunks, Mark, Notification, Osc, Progress, ProgressState, PromptKind,
         TITLE_MAX_CHARS, clean, parse,
     };
+    use crate::terminal::program_status::{Record, Report, State};
 
     fn osc(params: &[&str]) -> Option<Osc> {
         let params: Vec<&[u8]> = params.iter().map(|p| p.as_bytes()).collect();
-        parse(&params, &mut KittyChunks::default())
+        parse(&params, false, &mut KittyChunks::default())
     }
 
     fn notify(title: &str, body: &str) -> Option<Osc> {
@@ -447,7 +472,7 @@ mod tests {
         let mut kitty = KittyChunks::default();
         let send = |kitty: &mut KittyChunks, params: &[&str]| {
             let params: Vec<&[u8]> = params.iter().map(|p| p.as_bytes()).collect();
-            parse(&params, kitty)
+            parse(&params, false, kitty)
         };
         assert_eq!(send(&mut kitty, &["99", "", "hello"]), notify("hello", ""));
         // Title in two chunks, then the body ends it.
@@ -474,18 +499,18 @@ mod tests {
         let big = "x".repeat(3000);
         for _ in 0..10 {
             let params: Vec<&[u8]> = vec![b"99", b"i=1:d=0", big.as_bytes()];
-            assert_eq!(parse(&params, &mut kitty), None);
+            assert_eq!(parse(&params, false, &mut kitty), None);
         }
         assert!(kitty.pending[0].title.len() <= 4096);
         // More pending ids than allowed: the oldest makes room.
         for id in ["i=2:d=0", "i=3:d=0", "i=4:d=0", "i=5:d=0"] {
             let params: Vec<&[u8]> = vec![b"99", id.as_bytes(), b"t"];
-            parse(&params, &mut kitty);
+            parse(&params, false, &mut kitty);
         }
         assert_eq!(kitty.pending.len(), 4);
         assert_eq!(kitty.pending[0].id, "2");
         let params: Vec<&[u8]> = vec![b"99", b"i=1", b"gone"];
-        assert_eq!(parse(&params, &mut kitty), notify("gone", ""), "id 1 starts over");
+        assert_eq!(parse(&params, false, &mut kitty), notify("gone", ""), "id 1 starts over");
     }
 
     #[test]
@@ -503,5 +528,46 @@ mod tests {
         let huge = "y ".repeat(1000);
         assert_eq!(clean(&huge, BODY_MAX_CHARS).chars().count(), BODY_MAX_CHARS + 1);
         assert_eq!(clean("\u{1b}\u{7f}\u{9b}", 10), "");
+    }
+
+    #[test]
+    fn program_status_reports_and_queries() {
+        let record = Record {
+            state: State::Working,
+            kind: None,
+            progress: None,
+            app: Some("brew".into()),
+            title: None,
+            msg: Some("hi".into()),
+        };
+        assert_eq!(
+            osc(&["7501", "state=working:app=brew:msg=aGk="]),
+            Some(Osc::ProgramStatus(Report::Set { id: None, record }))
+        );
+        assert_eq!(
+            osc(&["7501", "state=clear:id=a/b"]),
+            Some(Osc::ProgramStatus(Report::Clear { id: Some("a/b".into()) }))
+        );
+        assert_eq!(osc(&["7501", "?"]), Some(Osc::ProgramStatusQuery));
+        // Nothing to report, or nothing the protocol knows.
+        for none in [&["7501"][..], &["7501", ""], &["7501", "app=brew"], &["7501", "state=nope"]] {
+            assert_eq!(osc(none), None, "{none:?}");
+        }
+        // vte splits at `;`, which the protocol has no use for: joined again it is part of a pair's
+        // value, and a byte outside the value set makes the pair malformed.
+        assert_eq!(osc(&["7501", "state=working", "app=brew"]), None);
+        assert_eq!(osc(&["7501", "app=brew", "state=idle"]), None);
+    }
+
+    #[test]
+    fn program_status_counts_its_terminator_in_the_sequence_limit() {
+        let body = format!("state=idle:x={}", "y".repeat(4096 - 7 - 2 - "state=idle:x=".len()));
+        let params: Vec<&[u8]> = vec![b"7501", body.as_bytes()];
+        let report = |bell| parse(&params, bell, &mut KittyChunks::default());
+        assert!(report(false).is_some(), "ESC \\ takes 2 bytes: 4096 in all");
+        let longer = format!("{body}y");
+        let params: Vec<&[u8]> = vec![b"7501", longer.as_bytes()];
+        assert!(parse(&params, true, &mut KittyChunks::default()).is_some(), "BEL takes 1: 4096 in all");
+        assert!(parse(&params, false, &mut KittyChunks::default()).is_none(), "ESC \\: 4097");
     }
 }

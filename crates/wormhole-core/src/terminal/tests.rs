@@ -337,6 +337,96 @@ fn notifications_and_progress_are_reported() {
     assert_eq!(pty.screen_text().trim_end(), "sent", "none of it shows on the screen");
 }
 
+#[test]
+fn the_program_status_reply_is_written_before_the_device_attributes_reply() {
+    // A program asks `OSC 7501 ; ?` and sends `CSI c` right after it, and takes the device
+    // attributes reply arriving first as "the protocol is not supported". The reply to the query
+    // is written by the PTY filter, before alacritty parses the `CSI c` that follows. Read back
+    // with ESC shown as `E`: the 10 bytes of the first, then the 5 of the second.
+    let script = r#"stty raw -echo; printf '\033]7501;?\033\\\033[c'; r=$(dd bs=1 count=15 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    // Nobody reads `events`: the replies come from the PTY thread alone.
+    let (pty, _events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("both replies, the status one first", || pty.screen_text().contains(r"E]7501;?E\E[?6c"));
+}
+
+#[test]
+fn the_program_status_reply_comes_first_whichever_way_the_query_ends() {
+    let script = r#"stty raw -echo; printf '\033]7501;?\007\033[c'; r=$(dd bs=1 count=15 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    let (pty, _events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("both replies", || pty.screen_text().contains(r"E]7501;?E\E[?6c"));
+}
+
+/// The state, kind and message of what programs report, as the UI would read it.
+fn reported(pty: &Pty) -> Option<(program_status::State, Option<program_status::Kind>, Option<String>)> {
+    pty.program_status().summary().map(|s| (s.state, s.kind, s.message()))
+}
+
+use super::program_status;
+
+#[test]
+fn reports_reach_the_store_wake_the_ui_once_and_a_prompt_ends_the_work() {
+    // The root works and a child asks (both before the UI looks), then a prompt begins and the child's
+    // question turns out to have been answered: it reports done.
+    let script = r#"printf '\033]7501;state=working:app=deploy\033\\'; printf '\033]7501;state=blocked:kind=permission:id=eu:msg=QXBwcm92ZT8=\007'; printf 'reported\n'; sleep 1; printf '\033]7501;state=done:id=eu\007\033]133;A\007'; printf 'prompt\n'; sleep 5"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("the reports", || pty.screen_text().contains("reported"));
+    assert_eq!(
+        reported(&pty),
+        Some((
+            program_status::State::Blocked,
+            Some(program_status::Kind::Permission),
+            Some("Approve?".into())
+        ))
+    );
+    assert_eq!(pty.program_status().summary().and_then(|s| s.app).as_deref(), Some("deploy"), "inherited");
+    // Two reports, one event: the UI looks once and reads the store.
+    let wakes = |events: &super::PtyEvents| {
+        drain(events).iter().filter(|e| matches!(e, PtyEvent::ProgramStatus)).count()
+    };
+    assert_eq!(wakes(&events), 1);
+
+    wait_until("the prompt", || pty.screen_text().contains("prompt"));
+    // The root's work is over with the prompt; the child's done record stays for the user to see.
+    assert_eq!(reported(&pty), Some((program_status::State::Done, None, None)));
+    assert_eq!(pty.program_status().len(), 1);
+    assert_eq!(wakes(&events), 1, "and the UI is told again, as it had looked");
+}
+
+#[test]
+fn a_flood_of_reports_costs_the_ui_one_event_and_the_store_256_records() {
+    let script = r#"i=0; while [ $i -lt 3000 ]; do printf '\033]7501;state=working:id=r%s:msg=SGk=\007' $i; i=$((i+1)); done; printf flooded; sleep 5"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("the flood", || pty.screen_text().contains("flooded"));
+    let wakes = drain(&events).iter().filter(|e| matches!(e, PtyEvent::ProgramStatus)).count();
+    assert_eq!(wakes, 1, "the UI never looked in between");
+    let store = pty.program_status();
+    assert_eq!(store.len(), program_status::RECORDS_MAX);
+    drop(store);
+    // The least recently updated made room: the last one reported is there.
+    assert_eq!(reported(&pty), Some((program_status::State::Working, None, Some("Hi".into()))));
+}
+
+#[test]
+fn a_full_reset_ends_every_record_and_a_soft_reset_does_not() {
+    // RIS (`ESC c`) wipes the screen too, so the script waits for the test between the two.
+    let script = r#"printf '\033]7501;state=done:app=x\007'; sleep 1; printf '\033[!psoft'; sleep 2; printf '\033c'; sleep 5"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("the report", || !pty.program_status().is_empty());
+    wait_until("the soft reset", || pty.screen_text().contains("soft"));
+    assert!(!pty.program_status().is_empty(), "DECSTR keeps the records");
+    wait_until("the full reset", || pty.program_status().is_empty());
+    assert!(drain(&events).iter().any(|e| matches!(e, PtyEvent::ProgramStatus)));
+}
+
+#[test]
+fn the_shells_exit_ends_the_work_but_not_what_finished() {
+    let script = r#"printf '\033]7501;state=working:id=a\007\033]7501;state=done:id=b\007\033]7501;state=blocked:id=c\007'; exit 0"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    wait_until("the exit", || matches!(events.try_recv(), Some(PtyEvent::Exited(_))));
+    assert_eq!(reported(&pty), Some((program_status::State::Done, None, None)));
+    assert_eq!(pty.program_status().len(), 1);
+}
+
 /// The variables that configure an instance (its data folder, its devctl folder, background mode, …)
 /// stay with the instance: `cargo run` in a test instance's tab would otherwise start a second
 /// instance on the first one's data and take commands meant for it. A process's environment can't be

@@ -27,7 +27,8 @@ use alacritty_terminal::vte::ansi::Rgb;
 use super::blocks::CommandLog;
 use super::images::{self, DECODES_MAX, Format, ImageStore, Limits};
 use super::process;
-use super::pty_filter::{Mark, Notification, Osc, Progress, ProgressState};
+use super::program_status::{self, ProgramStatus};
+use super::pty_filter::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
 
 /// Turns the color a program asked for into the escape sequence it expects.
 pub type ColorFormatter = Arc<dyn Fn(Rgb) -> String + Sync + Send + 'static>;
@@ -54,6 +55,11 @@ pub enum PtyEvent {
     Mark(Mark),
     /// OSC 9 / 99 / 777: a program's own notification.
     Notify(Notification),
+    /// What programs report about themselves (OSC 7501) changed since the UI took the last one:
+    /// a report, a full reset, or a prompt dropping what only the running program could say.
+    /// Read it with `Pty::program_status`. Like `Output`, one is in flight at a time, so a
+    /// program reporting as fast as it can writes costs the UI one look per turn.
+    ProgramStatus,
     /// The shell exited (sent once), with its exit code when the system reported one.
     Exited(Option<i32>),
 }
@@ -71,6 +77,7 @@ impl std::fmt::Debug for PtyEvent {
             PtyEvent::Cwd => f.write_str("Cwd"),
             PtyEvent::Mark(mark) => write!(f, "Mark({mark:?})"),
             PtyEvent::Notify(notification) => write!(f, "Notify({notification:?})"),
+            PtyEvent::ProgramStatus => f.write_str("ProgramStatus"),
             PtyEvent::Exited(code) => write!(f, "Exited({code:?})"),
         }
     }
@@ -172,6 +179,11 @@ pub(super) struct Shared {
     commands: Mutex<CommandLog>,
     /// OSC 9;4: the progress, as `(state + 1) << 8 | percent`; 0 when there is none.
     progress: AtomicU32,
+    /// OSC 7501: what programs report, applied here on the PTY thread in the order the bytes came
+    /// (so a prompt after a report drops it, and the UI never holds a queue of them).
+    program_status: Mutex<ProgramStatus>,
+    /// A `ProgramStatus` event is queued and the UI hasn't taken it yet.
+    program_status_pending: AtomicBool,
     /// The inline images, and how many are being decoded right now.
     images: Mutex<ImageStore>,
     decoding: AtomicUsize,
@@ -217,6 +229,10 @@ impl Shared {
     /// The commands' log (the lock is held for a lookup, never across a wait).
     pub(super) fn commands(&self) -> MutexGuard<'_, CommandLog> {
         self.commands.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(super) fn program_status(&self) -> MutexGuard<'_, ProgramStatus> {
+        self.program_status.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
     /// The inline images (the lock is held for a lookup or an insert, never across a decode).
@@ -354,7 +370,16 @@ impl EventProxy {
     /// The shell is gone: say so once.
     fn exited(&self, code: Option<i32>) {
         if !self.shared.exited.swap(true, Ordering::AcqRel) {
+            // The process the programs' work ran in is over (the UI shows the exit itself).
+            self.shared.program_status().on_process_exit();
             self.send(PtyEvent::Exited(code));
+        }
+    }
+
+    /// What programs report changed: one event until the UI has looked.
+    fn program_status_changed(&self) {
+        if !self.shared.program_status_pending.swap(true, Ordering::AcqRel) {
+            self.send(PtyEvent::ProgramStatus);
         }
     }
 
@@ -414,9 +439,31 @@ impl EventProxy {
             Osc::Mark(mark, prompt) => {
                 self.shared.mark(mark, prompt);
                 self.send(PtyEvent::Mark(mark));
+                // A new prompt: whatever program was reporting is over.
+                if mark == Mark::PromptStart(PromptKind::Initial) && self.shared.program_status().on_prompt()
+                {
+                    self.program_status_changed();
+                }
             }
             Osc::Notify(notification) => self.send(PtyEvent::Notify(notification)),
+            // Nothing shows this yet. Once something does, it must stop mapping it to a status
+            // after the first OSC 7501 report, until the next full reset: a mapped 9;4 would
+            // replace a real report's kind and msg.
             Osc::Progress(progress) => self.shared.set_progress(progress),
+            // Answered here, on the PTY thread and before alacritty parses what follows, so the
+            // reply goes out ahead of the reply to the primary device attributes a program sends
+            // right after the query: it takes that one arriving first as "not supported".
+            Osc::ProgramStatusQuery => self.shared.write_reply(program_status::QUERY_REPLY.to_vec()),
+            Osc::ProgramStatus(report) => {
+                if self.shared.program_status().apply(report) {
+                    self.program_status_changed();
+                }
+            }
+            Osc::FullReset => {
+                if self.shared.program_status().reset() {
+                    self.program_status_changed();
+                }
+            }
             // The tap acts on it itself (re-arming a prompt mark).
             Osc::HyperlinkEnd => {}
         }
@@ -479,8 +526,10 @@ impl PtyEvents {
     fn taken(&self, event: PtyEvent) -> PtyEvent {
         // Cleared before the UI reads the grid, so output that lands after this
         // point sends a fresh `Output` instead of being missed.
-        if matches!(event, PtyEvent::Output) {
-            self.shared.output_pending.store(false, Ordering::Release);
+        match event {
+            PtyEvent::Output => self.shared.output_pending.store(false, Ordering::Release),
+            PtyEvent::ProgramStatus => self.shared.program_status_pending.store(false, Ordering::Release),
+            _ => {}
         }
         event
     }

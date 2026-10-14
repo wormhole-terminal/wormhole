@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Wormhole answers the Program Status Protocol (OSC 7501). Claude Code and other programs that
+  report through it show working, needs you and done in the sidebar exactly, with no hooks
+  installed and also over ssh. A program's question or its finishing reaches you as a
+  notification, at most once in a few seconds per terminal.
 - The status bar shows how full the selected terminal's agent context window is: "Context",
   a meter and the share used, in amber once it is nearly full. It needs Claude Code's status
   line, like the title row's gauge.
