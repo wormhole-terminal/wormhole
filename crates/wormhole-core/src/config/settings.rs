@@ -10,7 +10,7 @@ use crate::features::{self, FeatureFlag};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
-use crate::sidebar::Grouping;
+use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
 use crate::tokens::Color;
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
@@ -279,6 +279,12 @@ pub struct Settings {
     pub sidebar_notes: bool,
     /// How a new window's sidebar groups its terminals (each window keeps its own after that).
     pub sidebar_group: Grouping,
+    /// How the terminal list keeps its order: stable (pinned first, then first made to last,
+    /// nothing moves on its own) or classic (up to 0.4).
+    pub sidebar_order: SidebarOrder,
+    /// What ⌘1–9 count along: the terminal (a number stays with it) or the list (the first nine
+    /// rows you can see, up to 0.4).
+    pub sidebar_numbers: SidebarNumbers,
     /// Folders whose band stays at the top of the terminal list, grouped by folder, even with no
     /// terminal in it (absolute paths, in the order they were pinned). One list for every window;
     /// the band's menu pins and unpins, there is no row for it in Settings.
@@ -412,6 +418,8 @@ impl Default for Settings {
             sidebar_changes: true,
             sidebar_notes: false,
             sidebar_group: Grouping::Folder,
+            sidebar_order: SidebarOrder::default(),
+            sidebar_numbers: SidebarNumbers::default(),
             pinned_folders: Vec::new(),
             folder_colors: BTreeMap::new(),
             sidebar_cmd_hints: true,
@@ -517,6 +525,10 @@ pub const APP_SETTINGS: &[&str] = &[
     "studio_translucent",
     "status_bar",
     "minimap",
+    // The person's own habits: where a terminal sits in the list and what ⌘1–9 reach, whatever
+    // project is in front.
+    "sidebar_order",
+    "sidebar_numbers",
     // The window's chrome, one look for every window; and the programs the person opens folders in.
     "title_border",
     "open_in",
@@ -751,7 +763,7 @@ mod tests {
     use crate::folder_color::FolderColor;
     use crate::fonts;
     use crate::jsonc;
-    use crate::sidebar::Grouping;
+    use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
     use crate::tokens::Color;
     use std::path::Path;
 
@@ -787,6 +799,8 @@ mod tests {
             // One switch for every window, so View → Show Status Bar says the same everywhere.
             "status_bar",
             "minimap",
+            "sidebar_order",
+            "sidebar_numbers",
             "dock_badge",
             "hotkey_action",
             "jump_waiting_key",
@@ -818,6 +832,10 @@ mod tests {
         assert!(!unset.minimap, "so is the minimap");
         assert!(unset.bell_sound && unset.bell_visual);
         assert_eq!(unset.sidebar_group, Grouping::Folder);
+        assert_eq!(
+            (unset.sidebar_order, unset.sidebar_numbers),
+            (SidebarOrder::Stable, SidebarNumbers::Terminal)
+        );
         assert!(unset.sidebar_cmd_hints);
         assert!(!unset.sidebar_notes, "the rows are drawn without the notes and tasks count");
         assert!(unset.sidebar_branch && unset.sidebar_changes);
@@ -991,6 +1009,7 @@ mod tests {
         let text = r#"{
             "status_bar": true, "bell_sound": false, "bell_visual": false,
             "sidebar_group": "none", "sidebar_cmd_hints": false,
+            "sidebar_order": "classic", "sidebar_numbers": "list",
             "theme_mode": "light", "theme_light": "GitHub Light",
             "notify_command_after": 30, "notify_in_front": "banner", "notify_sound": "all",
             "dock_badge": "needs_you_done", "menu_bar_icon": "status_count",
@@ -999,6 +1018,10 @@ mod tests {
         let settings: Settings = jsonc::parse(text).expect("valid jsonc");
         assert!(settings.status_bar && !settings.bell_sound && !settings.bell_visual);
         assert_eq!(settings.sidebar_group, Grouping::None);
+        assert_eq!(
+            (settings.sidebar_order, settings.sidebar_numbers),
+            (SidebarOrder::Classic, SidebarNumbers::List)
+        );
         assert_eq!(settings.theme_mode, ThemeMode::Light);
         assert_eq!(settings.notify_in_front, InFront::Banner);
         assert_eq!(settings.notify_sound, NotifySound::All);
@@ -1007,6 +1030,8 @@ mod tests {
         let json = serde_json::to_value(&settings).expect("serializes");
         for (key, value) in [
             ("sidebar_group", "none"),
+            ("sidebar_order", "classic"),
+            ("sidebar_numbers", "list"),
             ("theme_mode", "light"),
             ("notify_in_front", "banner"),
             ("notify_sound", "all"),

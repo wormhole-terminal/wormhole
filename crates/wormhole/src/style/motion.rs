@@ -17,6 +17,8 @@ pub const MOTION_FAST: Duration = Duration::from_millis(120);
 pub const MOTION_POPOVER: Duration = Duration::from_millis(150);
 /// A band or note folding, a chevron turning, a drop settling.
 pub const MOTION_BASE: Duration = Duration::from_millis(160);
+/// A row sliding to its new place in the terminal list (pinned, dropped, one coming or going).
+pub const MOTION_MOVE: Duration = Duration::from_millis(180);
 /// Panels going away (GPUI Kit's sidebar): 0.8× their entrance.
 pub const MOTION_PANEL_EXIT: Duration = Duration::from_millis(200);
 /// The sidebar and the right panel coming in.

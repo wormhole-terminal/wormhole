@@ -13,15 +13,21 @@ mod git;
 mod group;
 pub mod hints;
 mod listing;
+pub mod motion;
 pub mod names;
 pub mod order;
 mod split;
 pub mod spoken;
+#[cfg(test)]
+mod stable_tests;
 pub mod text;
 
 pub use drop::{Part, RowDrop, resolve_row_drop};
 pub use filter::{Filter, RowState, Searchable, Show, hidden_label};
 pub use git::{GroupGit, SessionGit, group_git};
-pub use group::{Group, Grouping, NO_FOLDER, display_path, group_by_folder, place_in_folder};
+pub use group::{
+    Group, Grouping, NO_FOLDER, display_path, group_by_folder, group_by_folder_in, place_in_folder,
+};
 pub use listing::{Band, Entry, ListInput, Listing, NUMBERED, WindowSidebar, folder_key};
+pub use order::{SidebarNumbers, SidebarOrder};
 pub use split::{Bracket, SplitId, SplitMarks, Splits, gather_splits, split_of};

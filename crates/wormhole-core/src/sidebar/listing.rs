@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use super::filter::{Filter, Searchable};
-use super::group::{Grouping, group_by_folder};
-use super::order::with_pins;
+use super::group::{Grouping, group_by_folder_in};
+use super::order::{SidebarNumbers, SidebarOrder, stay_numbered, with_pins};
 use super::split::{self, SplitMarks, Splits};
 
 /// How many terminals get a ⌘ number.
@@ -75,6 +75,12 @@ pub struct ListInput<'a> {
     /// Who is in which split, and which terminal is selected: what makes a split's members sit
     /// together and show their marks. The default has none, so every terminal stands alone.
     pub splits: Splits<'a>,
+    /// How the list keeps its order and what the ⌘ numbers count along (the two Settings rows).
+    pub order: SidebarOrder,
+    pub numbers: SidebarNumbers,
+    /// The order the bands that aren't pinned folders keep (`order::settle_bands`), used under
+    /// [`SidebarOrder::Stable`]; empty means the order of each band's first terminal.
+    pub band_order: &'a [PathBuf],
 }
 
 /// One folder band.
@@ -125,13 +131,29 @@ pub struct Listing {
     pub idle: usize,
     /// Every terminal, as listed without folding or filter (pins applied).
     order: Vec<usize>,
+    /// The terminals that carry a ⌘ number, in number order.
+    numbered: Vec<usize>,
 }
 
 impl Listing {
     /// The list. A split's members sit together in their band, pinning one pins all of them, a
     /// filter that keeps one keeps all, and each row's marks say how it belongs.
     pub fn build(input: &ListInput) -> Self {
-        let ListInput { grouping, folders, pinned_folders, rows, pinned, sidebar, home, splits } = *input;
+        let ListInput {
+            grouping,
+            folders,
+            pinned_folders,
+            rows,
+            pinned,
+            sidebar,
+            home,
+            splits,
+            order: order_mode,
+            numbers: numbers_mode,
+            band_order,
+        } = *input;
+        // Classic orders the bands by their first terminal, as they stand now.
+        let band_order = if order_mode == SidebarOrder::Stable { band_order } else { &[] };
         let filter = &sidebar.filter;
         let ids = split::normalised(splits.split_of, rows.len());
         let admitted =
@@ -154,7 +176,7 @@ impl Listing {
                 listing.push_rows(&shown, None);
             }
             Grouping::Folder => {
-                for group in group_by_folder(folders, pinned_folders, home) {
+                for group in group_by_folder_in(folders, pinned_folders, home, band_order) {
                     // Gathered within the band, so a terminal never leaves its folder for its split.
                     let members = split::gather_splits(&with_pins(&group.sessions, is_pinned), &ids);
                     order_band.extend(std::iter::repeat_n(Some(listing.bands.len()), members.len()));
@@ -191,6 +213,16 @@ impl Listing {
                 }
             }
         }
+        listing.numbered = match numbers_mode {
+            SidebarNumbers::List => listing.visible().take(NUMBERED).collect(),
+            SidebarNumbers::Terminal => stay_numbered(rows.len(), NUMBERED, is_pinned),
+        };
+        let numbered = listing.numbered.clone();
+        for entry in &mut listing.entries {
+            if let Entry::Row { session, number, .. } = entry {
+                *number = numbered.iter().position(|ix| ix == session).map(|at| at + 1);
+            }
+        }
         let mut shown = vec![false; rows.len()];
         for ix in listing.visible() {
             shown[ix] = true;
@@ -207,8 +239,8 @@ impl Listing {
     fn push_rows(&mut self, sessions: &[usize], band: Option<usize>) {
         let of = sessions.len();
         for (n, &session) in sessions.iter().enumerate() {
-            let numbered = self.entries.iter().filter(|e| matches!(e, Entry::Row { .. })).count();
-            let number = (numbered < NUMBERED).then_some(numbered + 1);
+            // The numbers are set once the whole list is known (`build`).
+            let number = None;
             let marks = SplitMarks::default();
             self.entries.push(Entry::Row { session, band, position: n + 1, of, number, marks });
         }
@@ -228,7 +260,7 @@ impl Listing {
 
     /// The terminals that carry a ⌘ number, in number order.
     pub fn numbered(&self) -> Vec<usize> {
-        self.visible().take(NUMBERED).collect()
+        self.numbered.clone()
     }
 
     /// Every terminal top to bottom, folded or filtered out ones included (pins applied).
@@ -267,7 +299,7 @@ impl Listing {
 mod tests {
     use super::{Entry, ListInput, Listing, WindowSidebar, folder_key};
     use crate::sidebar::filter::{Filter, RowState, Searchable, Show};
-    use crate::sidebar::{Grouping, NO_FOLDER, SplitMarks, Splits};
+    use crate::sidebar::{Grouping, NO_FOLDER, SidebarNumbers, SidebarOrder, SplitMarks, Splits};
     use std::path::{Path, PathBuf};
 
     const NAMES: [&str; 12] = ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11"];
@@ -317,6 +349,9 @@ mod tests {
             sidebar,
             home: None,
             splits: Splits::default(),
+            order: SidebarOrder::Classic,
+            numbers: SidebarNumbers::List,
+            band_order: &[],
         })
     }
 
@@ -466,6 +501,9 @@ mod tests {
             sidebar: &WindowSidebar::default(),
             home: Some(Path::new("/Users/me")),
             splits: Splits::default(),
+            order: SidebarOrder::Classic,
+            numbers: SidebarNumbers::List,
+            band_order: &[],
         });
         assert_eq!(shape(&listing), ["[~/a/app]", "[~/b/app]", "0:1", "1:2"]);
         assert!(listing.bands[0].pinned && !listing.bands[1].pinned);

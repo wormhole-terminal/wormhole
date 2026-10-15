@@ -92,6 +92,8 @@ mod sidebar;
 mod slide;
 mod spawn;
 mod splits;
+#[cfg(test)]
+mod stable_list_tests;
 mod status_bar;
 mod studio;
 mod tasks;

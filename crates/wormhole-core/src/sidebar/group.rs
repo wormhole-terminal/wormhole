@@ -33,7 +33,7 @@ impl Grouping {
         match self {
             Grouping::None => (0..folders.len()).collect(),
             Grouping::Folder => {
-                bucket(folders, pinned_folders).into_iter().flat_map(|bucket| bucket.sessions).collect()
+                bucket(folders, pinned_folders, &[]).into_iter().flat_map(|bucket| bucket.sessions).collect()
             }
         }
     }
@@ -57,7 +57,19 @@ pub struct Group {
 /// appears, so a new session never reshuffles the sections above it; sessions with no known
 /// folder come last.
 pub fn group_by_folder(folders: &[Option<PathBuf>], pinned: &[PathBuf], home: Option<&Path>) -> Vec<Group> {
-    let buckets = bucket(folders, pinned);
+    group_by_folder_in(folders, pinned, home, &[])
+}
+
+/// [`group_by_folder`] with the bands that aren't pinned in `band_order` (see
+/// `order::settle_bands`) instead of the order their first terminal gives: a folder not in it
+/// goes after those that are.
+pub fn group_by_folder_in(
+    folders: &[Option<PathBuf>],
+    pinned: &[PathBuf],
+    home: Option<&Path>,
+    band_order: &[PathBuf],
+) -> Vec<Group> {
+    let buckets = bucket(folders, pinned, band_order);
     let names: Vec<String> =
         buckets.iter().map(|bucket| folder_name(bucket.folder.as_deref(), home)).collect();
     let mut seen: HashMap<&str, usize> = HashMap::new();
@@ -84,7 +96,7 @@ struct Bucket {
     pinned: bool,
 }
 
-fn bucket(folders: &[Option<PathBuf>], pinned: &[PathBuf]) -> Vec<Bucket> {
+fn bucket(folders: &[Option<PathBuf>], pinned: &[PathBuf], band_order: &[PathBuf]) -> Vec<Bucket> {
     let mut buckets: Vec<Bucket> = Vec::new();
     for folder in pinned {
         // Pinned twice (a hand-edited list) is still one band.
@@ -98,8 +110,13 @@ fn bucket(folders: &[Option<PathBuf>], pinned: &[PathBuf]) -> Vec<Bucket> {
             None => buckets.push(Bucket { folder: folder.clone(), sessions: vec![ix], pinned: false }),
         }
     }
-    // Stable, so the pinned folders keep their pin order and the others their first-seen order.
-    buckets.sort_by_key(|bucket| bucket.folder.is_none());
+    // Stable, so the pinned folders keep their pin order and the others their first-seen order
+    // (or the place `band_order` gives them).
+    buckets.sort_by_key(|bucket| match &bucket.folder {
+        _ if bucket.pinned => (0, 0),
+        None => (2, 0),
+        Some(folder) => (1, band_order.iter().position(|known| known == folder).unwrap_or(usize::MAX)),
+    });
     buckets
 }
 

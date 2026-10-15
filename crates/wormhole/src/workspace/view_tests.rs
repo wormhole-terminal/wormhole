@@ -17,7 +17,7 @@ use gpui_kit::{
 use wormhole_core::agents::AgentId;
 use wormhole_core::config::InFront;
 use wormhole_core::git::{ChangeKind, DiffSpec, FileChange};
-use wormhole_core::sidebar::{Entry, Grouping, Show, WindowSidebar};
+use wormhole_core::sidebar::{Entry, Grouping, Show, SidebarNumbers, SidebarOrder, WindowSidebar};
 use wormhole_core::store::{SessionRecord, WindowRecord};
 
 use super::app::{AppState, OpenWindow, app, open_workspace_window};
@@ -110,12 +110,28 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(SettingsStore::load());
         cx.set_global(AppState::for_test(100));
+        // These tests were written for the order and numbers up to 0.4; the stable ones have their
+        // own (`stable_list_tests`), which switch back with `use_stable`.
+        super::settings_page::update_settings(cx, |settings| {
+            settings.sidebar_order = SidebarOrder::Classic;
+            settings.sidebar_numbers = SidebarNumbers::List;
+        });
         super::actions::init(cx);
         notifications::init(cx);
         open_workspace_window(Some(record), None, cx);
     });
     cx.run_until_parked();
     cx.update(|cx| app(cx).windows.first().cloned()).expect("the window opened")
+}
+
+/// The stable order and the numbers that stay with a terminal (the defaults).
+pub(super) fn use_stable(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        super::settings_page::update_settings(cx, |settings| {
+            settings.sidebar_order = SidebarOrder::Stable;
+            settings.sidebar_numbers = SidebarNumbers::Terminal;
+        });
+    });
 }
 
 /// Run `f` on the window's workspace, then let everything it set in motion finish.

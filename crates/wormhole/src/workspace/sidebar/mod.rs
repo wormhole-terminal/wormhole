@@ -14,8 +14,9 @@ use super::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::git::HeadCommit;
 use wormhole_core::sidebar::hints::CmdHold;
+use wormhole_core::sidebar::order::settle_bands;
 use wormhole_core::sidebar::{
-    Entry, ListInput, Listing, RowState, Searchable, SessionGit, Splits, WindowSidebar,
+    Entry, ListInput, Listing, RowState, Searchable, SessionGit, SidebarOrder, Splits, WindowSidebar,
 };
 
 mod band_menu;
@@ -26,11 +27,13 @@ mod facts;
 mod filter_popover;
 mod hints;
 mod keys;
+mod motion;
 mod row_menu;
 mod rows;
 mod tick;
 
 use facts::{RowInfo, row_times};
+use motion::{ItemKey, ListMotion, band_key};
 pub(super) use row_menu::reveal_in_finder;
 
 /// Whether the funnel and what it filters exist (the `SidebarFilter` flag). Off, the list is
@@ -68,6 +71,11 @@ pub(super) struct SidebarState {
     /// Detached HEADs' commits by repository, looked up off the UI thread: when, and what.
     heads: HashMap<PathBuf, (u64, Option<HeadCommit>)>,
     head_lookups: Vec<Task<()>>,
+    /// The order the folder bands keep under the stable order: a band stays where it appeared
+    /// while it has a terminal (`order::settle_bands`).
+    band_order: RefCell<Vec<PathBuf>>,
+    /// The list's lines as last drawn and the slide of those that moved.
+    motion: ListMotion,
     /// Which repository a worktree belongs to, by its root (read from disk once per refresh).
     worktrees: RefCell<HashMap<PathBuf, Option<PathBuf>>>,
     /// The times the rows showed when last drawn ("Working · 3m", "1:12"), so a tick redraws
@@ -111,6 +119,8 @@ impl SidebarState {
             active_band: None,
             heads: HashMap::new(),
             head_lookups: Vec::new(),
+            band_order: RefCell::default(),
+            motion: ListMotion::default(),
             worktrees: RefCell::default(),
             times_drawn: RefCell::default(),
             demo: None,
@@ -134,6 +144,15 @@ impl Workspace {
         let pinned: Vec<bool> = infos.iter().map(|info| info.pinned).collect();
         let split_of = self.split_ids();
         let view = self.sidebar.view.as_seen(sidebar_filter_on(cx));
+        let (order, numbers) = (settings(cx).sidebar_order, settings(cx).sidebar_numbers);
+        let band_order = match (self.sidebar.view.grouping, order) {
+            (Grouping::Folder, SidebarOrder::Stable) => {
+                let settled = settle_bands(&self.sidebar.band_order.borrow(), &folders);
+                self.sidebar.band_order.replace(settled.clone());
+                settled
+            }
+            _ => Vec::new(),
+        };
         Listing::build(&ListInput {
             grouping: self.sidebar.view.grouping,
             folders: &folders,
@@ -143,6 +162,9 @@ impl Workspace {
             sidebar: &view,
             home: home_dir(),
             splits: Splits { split_of: &split_of, selected: Some(self.active) },
+            order,
+            numbers,
+            band_order: &band_order,
         })
     }
 
@@ -199,11 +221,21 @@ impl Workspace {
         {
             self.sidebar.scroll.scroll_to_item(at);
         }
+        let keys: Vec<ItemKey> = listing
+            .entries
+            .iter()
+            .map(|entry| match *entry {
+                Entry::Band { band, .. } => band_key(listing.bands[band].folder.as_deref()),
+                Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
+            })
+            .collect();
+        self.plan_list_motion(keys.clone(), cx);
         let frame = rows::Frame::new(self, width, window, cx);
         let git = self.session_git(cx);
+        let held = cx.has_active_drag().then(|| self.terminal_drag.as_ref().map(|drag| drag.id)).flatten();
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
         for (at, entry) in listing.entries.iter().enumerate() {
-            items.push(match *entry {
+            let line = match *entry {
                 Entry::Band { band, position, of } => {
                     // Two bands in a row (the first folded) share one hairline.
                     let joined = at > 0 && matches!(listing.entries[at - 1], Entry::Band { .. });
@@ -220,7 +252,9 @@ impl Workspace {
                     };
                     self.render_row(&infos[session], &place, &listing, &frame, window, cx)
                 }
-            });
+            };
+            let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
+            items.push(self.with_list_motion(keys[at].clone(), line, is_held));
         }
         // After the person's own terminals: the welcome's example band, which is none of them.
         items.extend(self.render_demo(&frame, cx));

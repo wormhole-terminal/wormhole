@@ -158,7 +158,10 @@ mod tests {
         Bracket, SplitMarks, Splits, admitted_with_splits, gather_splits, normalised, pinned_with_splits,
     };
     use super::{marks as marks_of, split_of};
-    use crate::sidebar::{Filter, Grouping, ListInput, Listing, RowState, Searchable, Show, WindowSidebar};
+    use crate::sidebar::{
+        Filter, Grouping, ListInput, Listing, RowState, Searchable, Show, SidebarNumbers, SidebarOrder,
+        WindowSidebar,
+    };
     use std::path::{Path, PathBuf};
 
     const NAMES: [&str; 8] = ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"];
@@ -216,6 +219,9 @@ mod tests {
             sidebar: &case.sidebar,
             home: None,
             splits: Splits { split_of: case.ids, selected: case.selected },
+            order: SidebarOrder::Classic,
+            numbers: SidebarNumbers::List,
+            band_order: &[],
         };
         Listing::build(&input)
     }
@@ -453,6 +459,9 @@ mod tests {
             sidebar: &case.sidebar,
             home: None,
             splits: Splits::default(),
+            order: SidebarOrder::Classic,
+            numbers: SidebarNumbers::List,
+            band_order: &[],
         };
         assert_eq!(Listing::build(&input).entries, with.entries);
         assert_eq!(Listing::build(&input).order(), with.order());

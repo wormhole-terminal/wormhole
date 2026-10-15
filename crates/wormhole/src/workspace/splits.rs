@@ -11,7 +11,7 @@
 use wormhole_core::panes::{
     Axis, DropError, Leave, PANE_MIN_H, PANE_MIN_W, PaneId, Preset, Room, TabPanes, Zone,
 };
-use wormhole_core::sidebar::SplitId;
+use wormhole_core::sidebar::{SidebarOrder, SplitId};
 use wormhole_core::store::{SessionRecord, SplitRecord};
 
 use super::*;
@@ -231,7 +231,14 @@ impl Workspace {
 
     /// Put session `ix` next to the other members of its split in the window's order, after the
     /// last of them: a split's members are adjacent, so they save and come back together.
-    fn keep_adjacent(&mut self, ix: usize) {
+    ///
+    /// Only under the classic order. The stable one leaves every terminal where it was made and
+    /// lets the list gather a split's rows (`Listing`), so a terminal that leaves its split is
+    /// back in its own place and the others' places and ⌘ numbers never move for a split.
+    fn keep_adjacent(&mut self, ix: usize, cx: &App) {
+        if settings(cx).sidebar_order != SidebarOrder::Classic {
+            return;
+        }
         let Some(split) = self.sessions[ix].split else { return };
         let Some(last) = self.members(split).into_iter().filter(|&member| member != ix).max() else { return };
         if ix == last + 1 {
@@ -340,7 +347,7 @@ impl Workspace {
         self.sessions[anchor].split = Some(id);
         self.sessions[joiner].split = Some(id);
         self.sessions[joiner].pinned = pinned;
-        self.keep_adjacent(joiner);
+        self.keep_adjacent(joiner, cx);
         self.dirty = true;
     }
 
@@ -385,7 +392,7 @@ impl Workspace {
             for ix in joined {
                 self.sessions[ix].split = Some(split_id);
                 self.sessions[ix].pinned = pinned;
-                self.keep_adjacent(ix);
+                self.keep_adjacent(ix, cx);
             }
             let focused = self.split_with(split_id).map_or(anchor_id, |split| split.layout.focused());
             self.dirty = true;

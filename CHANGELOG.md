@@ -6,6 +6,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- The terminal list stays put: pinned terminals first, then the rest from first made to last, and
+  nothing moves when you open a terminal, split a pane, change folder or change status; a band
+  keeps its place while it has a terminal. The ⌘1–⌘9 numbers stay with their terminal too, whatever
+  the list hides or folds, and change only when you pin, unpin, drag or close. Rows now slide to
+  their new place (not with Reduce Motion). Settings → Terminals & sidebar has Order (Stable or
+  Classic) and ⌘1–⌘9 numbers (Stay with the terminal or Follow the list) to bring the old behaviour back.
+
 ## [0.4.2] - 2026-10-15
 
 ### Fixed

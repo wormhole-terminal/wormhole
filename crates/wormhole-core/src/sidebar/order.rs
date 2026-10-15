@@ -6,6 +6,71 @@
 //! the top of their group and keep their manual order among themselves. A drag moves a
 //! terminal inside its group, and inside its pinned or unpinned block of it.
 
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+
+/// How the terminal list keeps its order (Settings → Terminals & sidebar).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SidebarOrder {
+    /// Pinned terminals first, then first created to last; under "By folder" the bands keep the
+    /// order they appeared in. Nothing moves when a terminal is created, changes folder or status.
+    #[default]
+    Stable,
+    /// Up to 0.4: a split pulls its new terminal next to it, and the bands are ordered by their
+    /// first terminal as things are now, so a terminal that changes folder can move other bands.
+    Classic,
+}
+
+impl SidebarOrder {
+    pub const ALL: [SidebarOrder; 2] = [SidebarOrder::Stable, SidebarOrder::Classic];
+}
+
+/// What ⌘1–9 count along (Settings → Terminals & sidebar).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SidebarNumbers {
+    /// A terminal keeps its number: they count the window's terminals, pinned first and then in
+    /// the order they were made, whatever the list shows (bands, folds, the Show filter).
+    #[default]
+    Terminal,
+    /// Up to 0.4: the first nine rows you can see, top to bottom, so a number follows the list.
+    List,
+}
+
+impl SidebarNumbers {
+    pub const ALL: [SidebarNumbers; 2] = [SidebarNumbers::Terminal, SidebarNumbers::List];
+}
+
+/// The terminals that carry a ⌘ number when the numbers stay with the terminal: the first
+/// `count` of `len` terminals, pinned ones first, each block in the window's order. Splits are not
+/// gathered here, so making a split never renumbers a terminal that is not in it.
+pub fn stay_numbered(len: usize, count: usize, pinned: impl Fn(usize) -> bool) -> Vec<usize> {
+    let mut order = with_pins(&(0..len).collect::<Vec<_>>(), pinned);
+    order.truncate(count);
+    order
+}
+
+/// The order folder bands keep, given the order they had (`previous`) and the folder each
+/// terminal is in now: a band stays where it was while it has a terminal, a new one goes last
+/// (the first-seen order among new ones), one with no terminal left is forgotten. Terminals
+/// with no known folder have no band of their own here (they are last, always).
+pub fn settle_bands(previous: &[PathBuf], folders: &[Option<PathBuf>]) -> Vec<PathBuf> {
+    let mut settled: Vec<PathBuf> = Vec::new();
+    for folder in previous {
+        if folders.iter().flatten().any(|present| present == folder) && !settled.contains(folder) {
+            settled.push(folder.clone());
+        }
+    }
+    for folder in folders.iter().flatten() {
+        if !settled.contains(folder) {
+            settled.push(folder.clone());
+        }
+    }
+    settled
+}
+
 /// The session ⌘`n` (1-based) selects among `numbered`, the sessions that carry a number, top to
 /// bottom: the `n`-th, or the last one when there are fewer (⌘9 is "the last", as in a browser).
 pub fn shortcut_target(numbered: &[usize], n: usize) -> Option<usize> {
@@ -74,7 +139,11 @@ pub fn follow(order: &[usize], ix: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{drop_position, follow, move_in_block, regroup, shortcut_target, with_pins};
+    use super::{
+        drop_position, follow, move_in_block, regroup, settle_bands, shortcut_target, stay_numbered,
+        with_pins,
+    };
+    use std::path::PathBuf;
 
     #[test]
     fn command_digits_count_down_the_list_and_past_the_end_mean_the_last() {
@@ -141,5 +210,34 @@ mod tests {
         // The flat list is one group with every place.
         assert_eq!(regroup(3, &[2, 0, 1]), [2, 0, 1]);
         assert_eq!(regroup(3, &[]), [0, 1, 2]);
+    }
+
+    #[test]
+    fn numbers_that_stay_count_pinned_first_then_the_window_order() {
+        let pinned = |ix: usize| ix == 3;
+        assert_eq!(stay_numbered(5, 9, pinned), [3, 0, 1, 2, 4]);
+        assert_eq!(stay_numbered(12, 3, |_| false), [0, 1, 2], "only the first few carry one");
+        assert!(stay_numbered(0, 9, pinned).is_empty());
+        // A terminal made later takes the next number and moves nobody.
+        assert_eq!(stay_numbered(6, 9, pinned)[..5], stay_numbered(5, 9, pinned));
+    }
+
+    #[test]
+    fn bands_keep_their_order_while_terminals_come_and_go() {
+        let dirs = |paths: &[Option<&str>]| -> Vec<Option<PathBuf>> {
+            paths.iter().map(|p| p.map(PathBuf::from)).collect()
+        };
+        let paths = |paths: &[&str]| -> Vec<PathBuf> { paths.iter().map(PathBuf::from).collect() };
+        let first = settle_bands(&[], &dirs(&[Some("/w/b"), Some("/w/a"), Some("/w/b")]));
+        assert_eq!(first, paths(&["/w/b", "/w/a"]), "the first time: as first seen");
+        // The first terminal of /w/b goes to /w/c: /w/b keeps its place above /w/a, /w/c is last.
+        let moved = settle_bands(&first, &dirs(&[Some("/w/c"), Some("/w/a"), Some("/w/b")]));
+        assert_eq!(moved, paths(&["/w/b", "/w/a", "/w/c"]));
+        // A band nobody is in is forgotten, and comes back last.
+        let gone = settle_bands(&moved, &dirs(&[Some("/w/c"), Some("/w/a")]));
+        assert_eq!(gone, paths(&["/w/a", "/w/c"]));
+        let back = settle_bands(&gone, &dirs(&[Some("/w/b"), Some("/w/c"), Some("/w/a")]));
+        assert_eq!(back, paths(&["/w/a", "/w/c", "/w/b"]));
+        assert!(settle_bands(&first, &dirs(&[None])).is_empty());
     }
 }

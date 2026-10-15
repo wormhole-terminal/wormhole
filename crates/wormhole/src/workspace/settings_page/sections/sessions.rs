@@ -2,13 +2,25 @@
 //! the ⌘ hints, and what each row shows.
 
 use wormhole_core::config::StatusPosition;
-use wormhole_core::sidebar::Grouping;
+use wormhole_core::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
 
 use super::*;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
     Setting::custom("sidebar-group", draw_grouping),
+    Setting::segmented(
+        "sidebar-order",
+        &[Segment::text("Stable"), Segment::text("Classic")],
+        |s| usize::from(s.sidebar_order == SidebarOrder::Classic),
+        |s, ix| s.sidebar_order = if ix == 0 { SidebarOrder::Stable } else { SidebarOrder::Classic },
+    ),
+    Setting::segmented(
+        "sidebar-numbers",
+        &[Segment::text("Stay with the terminal"), Segment::text("Follow the list")],
+        |s| usize::from(s.sidebar_numbers == SidebarNumbers::List),
+        |s, ix| s.sidebar_numbers = if ix == 0 { SidebarNumbers::Terminal } else { SidebarNumbers::List },
+    ),
     Setting::custom("compact", draw_density),
     toggle!("cmd-hints", sidebar_cmd_hints),
     toggle!("sidebar-branch", sidebar_branch),

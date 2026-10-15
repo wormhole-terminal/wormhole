@@ -418,6 +418,20 @@ const SESSIONS: &[Group] = &[
                 &["sidebar_group"],
             ),
             entry(
+                "sidebar-order",
+                "Order",
+                "Stable: pinned first, then oldest to newest, nothing moves on its own; Classic: the order of earlier versions",
+                "order sort stable classic pinned created position move",
+                &["sidebar_order"],
+            ),
+            entry(
+                "sidebar-numbers",
+                "⌘1–⌘9 numbers",
+                "Stay with the terminal: a number is kept when others come or go; Follow the list: the first nine rows you can see",
+                "command shortcuts numbers stay follow list stable classic",
+                &["sidebar_numbers"],
+            ),
+            entry(
                 "compact",
                 "Density",
                 "Compact: one line per terminal",
@@ -427,7 +441,7 @@ const SESSIONS: &[Group] = &[
             entry(
                 "cmd-hints",
                 "Show ⌘1–⌘9 while ⌘ is held",
-                "Keycaps on the first nine visible terminals after 250 ms; the shortcuts work either way",
+                "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way",
                 "command keycaps shortcuts numbers hints",
                 &["sidebar_cmd_hints"],
             ),
