@@ -15,3 +15,7 @@ doctest = false
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# The socket bench sets SO_SNDBUF/SO_RCVBUF (already in the dependency graph; not a dependency of the crate).
+libc.workspace = true
