@@ -28,7 +28,8 @@ base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
 # kitty's graphics protocol may send its pixels deflated.
 flate2 = "1.1"
-smol.workspace = true
+# The events from the PTY thread to the UI (what `smol::channel` is, without the rest of smol).
+async-channel = "2"
 
 [features]
 # `testing`: terminals without a PTY, for the app's render tests (its dev-dependencies turn this

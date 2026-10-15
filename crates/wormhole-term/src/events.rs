@@ -359,13 +359,13 @@ impl Shared {
 /// lock it again); `engine` turns the engine's own events into calls on this.
 #[derive(Clone)]
 pub(crate) struct EventProxy {
-    tx: smol::channel::Sender<PtyEvent>,
+    tx: async_channel::Sender<PtyEvent>,
     shared: Arc<Shared>,
 }
 
 impl EventProxy {
     pub(super) fn new() -> (Self, PtyEvents) {
-        let (tx, rx) = smol::channel::unbounded();
+        let (tx, rx) = async_channel::unbounded();
         let shared = Arc::new(Shared::default());
         (Self { tx, shared: shared.clone() }, PtyEvents { rx, shared })
     }
@@ -450,7 +450,7 @@ impl EventProxy {
 
 /// The UI's end: taking an `Output` re-arms the next one.
 pub struct PtyEvents {
-    rx: smol::channel::Receiver<PtyEvent>,
+    rx: async_channel::Receiver<PtyEvent>,
     shared: Arc<Shared>,
 }
 

@@ -9211,6 +9211,7 @@ name = "wormhole-term"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "async-channel",
  "base64 0.22.1",
  "flate2",
  "image",
@@ -9218,7 +9219,6 @@ dependencies = [
  "polling",
  "regex",
  "serde",
- "smol",
  "tempfile",
  "tracing",
  "wormhole-vt",
