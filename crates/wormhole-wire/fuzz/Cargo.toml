@@ -1,0 +1,33 @@
+[package]
+name = "wormhole-wire-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+wormhole-wire = { path = ".." }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "wire_frame"
+path = "fuzz_targets/wire_frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "wire_message"
+path = "fuzz_targets/wire_message.rs"
+test = false
+doc = false
+bench = false
+
+# Its own workspace: the fuzz crate needs a nightly toolchain and is run by hand, so the
+# repository's workspace (and `cargo check --workspace`) must not see it.
+[workspace]

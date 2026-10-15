@@ -1,0 +1,2 @@
+# libFuzzer jobs write their logs where they start (scripts/fuzz.sh).
+/fuzz-*.log

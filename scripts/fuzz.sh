@@ -1,25 +1,34 @@
 #!/bin/bash
-# Coverage-guided fuzzing of wormhole-vt (cargo fuzz, libFuzzer; nightly Rust). By hand: it is not in
-# scripts/check.sh and not in CI. The targets and what they check are in crates/wormhole-vt/fuzz/README.md.
+# Coverage-guided fuzzing of wormhole-vt and wormhole-wire (cargo fuzz, libFuzzer; nightly Rust). By hand:
+# it is not in scripts/check.sh and not in CI. The targets and what they check are in
+# crates/wormhole-vt/fuzz/README.md and crates/wormhole-wire/fuzz/README.md.
 #
-#   scripts/fuzz.sh seeds                     # (re)make the starting corpus from the .vtt cases and corpora
+#   scripts/fuzz.sh seeds                     # (re)make the starting corpus (.vtt cases and corpora; the wire samples)
 #   scripts/fuzz.sh run [target...] [-m MIN] [-j JOBS]
-#                                             # fuzz (default: every target, 10 minutes, 4 processes in all)
+#                                             # fuzz (default: every target, 10 minutes, 4 processes at a time)
 #   scripts/fuzz.sh repro <target> <file>     # run one saved input (fuzz/artifacts/<target>/crash-*)
 #   scripts/fuzz.sh min                       # shrink the corpus (cargo fuzz cmin) before keeping it
 #   scripts/fuzz.sh list                      # the targets
 #
-# The processes are split evenly over the targets (at least one each), never more than 4 in all, and
-# run at a low priority. A crash is saved to crates/wormhole-vt/fuzz/artifacts/<target>/; turn it into a
-# regression test in the engine's tests, then fix the engine.
+# The processes are split evenly over the targets (at least one each), never more than 4 at a time, and
+# run at a low priority; more targets than processes run in batches, MIN minutes each. A crash is saved to
+# the crate's fuzz/artifacts/<target>/; turn it into a regression test in that crate's tests, then fix it.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
 
-FUZZ=crates/wormhole-vt/fuzz
-TARGETS=(parser split term graphics)
-# Bound the work an input may cause: a hang or a huge allocation is a finding.
-LIBFUZZER=(-max_len=3000 -timeout=10 -rss_limit_mb=2048 -dict="$ROOT/$FUZZ/escape.dict")
+# Each target belongs to a crate whose fuzz folder holds it; `wire_*` are the wire protocol's.
+TARGETS=(parser split term graphics wire_frame wire_message)
+crate_of() { case "$1" in wire_*) echo wormhole-wire ;; *) echo wormhole-vt ;; esac; }
+fuzz_dir() { echo "crates/$(crate_of "$1")/fuzz"; }
+# Bound the work an input may cause: a hang or a huge allocation is a finding. A wire frame is up to
+# 64 KiB of data, so its inputs are longer than the engine's.
+libfuzzer_args() {
+  case "$(crate_of "$1")" in
+    wormhole-wire) echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-wire/fuzz/wire.dict" ;;
+    *) echo "-max_len=3000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-vt/fuzz/escape.dict" ;;
+  esac
+}
 # Nightly builds with sanitizers get their own target dir, so they never invalidate the normal one.
 BASE_TARGET="${CARGO_TARGET_DIR:-$ROOT/target}"
 export CARGO_TARGET_DIR="$BASE_TARGET/fuzz-nightly"
@@ -30,7 +39,8 @@ rustup toolchain list | grep -q '^nightly' || die "no nightly toolchain. Install
 cmd="${1:-}"; [ $# -gt 0 ] && shift
 case "$cmd" in
   seeds)
-    CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-vt-bench --bin fuzz-seeds -- "$ROOT/$FUZZ/corpus"
+    CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-vt-bench --bin fuzz-seeds -- "$ROOT/crates/wormhole-vt/fuzz/corpus" || exit 1
+    CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-wire --example seeds -- "$ROOT/crates/wormhole-wire/fuzz/corpus"
     ;;
   list) printf '%s\n' "${TARGETS[@]}" ;;
   run)
@@ -45,38 +55,48 @@ case "$cmd" in
     done
     [ ${#targets[@]} -gt 0 ] || targets=("${TARGETS[@]}")
     [ "$jobs" -le 4 ] || die "at most 4 processes (-j 4)"
-    each=$(( jobs / ${#targets[@]} )); [ "$each" -ge 1 ] || each=1
-    [ -d "$ROOT/$FUZZ/corpus" ] || scripts/fuzz.sh seeds || exit 1
-    (cd "$ROOT/crates/wormhole-vt" && cargo +nightly fuzz build) || exit 1
-    # One process per target runs plain; more run as libFuzzer jobs (which write fuzz-N.log in the
-    # folder they start in, so that is only used when a single target gets them all).
-    pids=()
-    for t in "${targets[@]}"; do
-      workers=()
-      [ "$each" -gt 1 ] && workers=(-jobs="$each" -workers="$each")
-      (cd "$ROOT/crates/wormhole-vt" && exec nice -n 10 cargo +nightly fuzz run "$t" -- "${LIBFUZZER[@]}" \
-        -max_total_time=$(( minutes * 60 )) "${workers[@]+"${workers[@]}"}" >"fuzz/fuzz-$t.log" 2>&1) &
-      pids+=($!)
+    # Build and seed each crate the chosen targets touch, once.
+    crates=$(for t in "${targets[@]}"; do crate_of "$t"; done | sort -u)
+    for c in $crates; do
+      [ -d "$ROOT/crates/$c/fuzz/corpus" ] || scripts/fuzz.sh seeds || exit 1
+      (cd "$ROOT/crates/$c" && cargo +nightly fuzz build) || exit 1
     done
     status=0
-    for p in "${pids[@]}"; do wait "$p" || status=1; done
-    crashes=$(find "$ROOT/$FUZZ/artifacts" -type f 2>/dev/null | sort)
+    # Batches of at most $jobs targets; in each, one process per target runs plain, and a target
+    # that gets several runs them as libFuzzer jobs (which write fuzz-N.log in the folder they start
+    # in, so that is only used when a single target gets them all).
+    for ((i = 0; i < ${#targets[@]}; i += jobs)); do
+      batch=("${targets[@]:i:jobs}")
+      each=$(( jobs / ${#batch[@]} )); [ "$each" -ge 1 ] || each=1
+      pids=()
+      for t in "${batch[@]}"; do
+        workers=()
+        [ "$each" -gt 1 ] && workers=(-jobs="$each" -workers="$each")
+        # shellcheck disable=SC2046  # libfuzzer_args is a list of words on purpose
+        (cd "$ROOT/crates/$(crate_of "$t")" && exec nice -n 10 cargo +nightly fuzz run "$t" -- $(libfuzzer_args "$t") \
+          -max_total_time=$(( minutes * 60 )) "${workers[@]+"${workers[@]}"}" >"fuzz/fuzz-$t.log" 2>&1) &
+        pids+=($!)
+      done
+      for p in "${pids[@]}"; do wait "$p" || status=1; done
+    done
+    crashes=$(for c in $crates; do find "$ROOT/crates/$c/fuzz/artifacts" -type f 2>/dev/null; done | sort)
     if [ -n "$crashes" ]; then
       warn "findings:"; echo "$crashes" >&2; status=1
     else
-      log "no findings in $minutes min on ${targets[*]} ($each process(es) each)"
+      log "no findings in $minutes min on ${targets[*]} (up to $jobs process(es) at a time)"
     fi
     exit $status
     ;;
   repro)
     t="${1:?repro <target> <file>}"; f="${2:?repro <target> <file>}"
-    (cd "$ROOT/crates/wormhole-vt" && cargo +nightly fuzz run "$t" "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")")
+    (cd "$ROOT/crates/$(crate_of "$t")" && cargo +nightly fuzz run "$t" "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")")
     ;;
   min)
     for t in "${TARGETS[@]}"; do
-      (cd "$ROOT/crates/wormhole-vt" && cargo +nightly fuzz cmin "$t" -- "${LIBFUZZER[@]}") || exit 1
+      # shellcheck disable=SC2046
+      (cd "$ROOT/crates/$(crate_of "$t")" && cargo +nightly fuzz cmin "$t" -- $(libfuzzer_args "$t")) || exit 1
     done
-    du -sh "$ROOT/$FUZZ/corpus"/* >&2
+    du -sh "$ROOT"/crates/wormhole-*/fuzz/corpus/* >&2
     ;;
   *) sed -n '2,15p' "$0"; exit 1 ;;
 esac
