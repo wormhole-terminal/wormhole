@@ -31,8 +31,8 @@ impl SidebarOrder {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SidebarNumbers {
-    /// A terminal keeps its number: they count the window's terminals, pinned first and then in
-    /// the order they were made, whatever the list shows (bands, folds, the Show filter).
+    /// A terminal keeps its number: they are dealt top to bottom and frozen (`FrozenNumbers`), so a
+    /// new terminal takes the next free one and nothing the list does on its own renumbers anyone.
     #[default]
     Terminal,
     /// Up to 0.4: the first nine rows you can see, top to bottom, so a number follows the list.
@@ -43,13 +43,59 @@ impl SidebarNumbers {
     pub const ALL: [SidebarNumbers; 2] = [SidebarNumbers::Terminal, SidebarNumbers::List];
 }
 
-/// The terminals that carry a ⌘ number when the numbers stay with the terminal: the first
-/// `count` of `len` terminals, pinned ones first, each block in the window's order. Splits are not
-/// gathered here, so making a split never renumbers a terminal that is not in it.
-pub fn stay_numbered(len: usize, count: usize, pinned: impl Fn(usize) -> bool) -> Vec<usize> {
-    let mut order = with_pins(&(0..len).collect::<Vec<_>>(), pinned);
-    order.truncate(count);
-    order
+/// The ⌘ numbers when they stay with the terminal: dealt top to bottom as the list stands, then
+/// frozen. A terminal made later takes the next free number and keeps it (even in a band in the
+/// middle); a folder change, a status change, the Show filter, a fold or a split's gathering never
+/// renumber anyone, and a hidden terminal keeps its number. They are dealt again, top to bottom,
+/// only when the person changes the order (a pin, an unpin, a drag), a terminal is closed (so
+/// there is no gap), or a setting that orders the list changes.
+#[derive(Clone, Debug)]
+pub struct FrozenNumbers<K> {
+    /// Who holds ⌘1, ⌘2 … in that order.
+    held: Vec<K>,
+    /// The window's terminals and their pins when last settled, to tell a new terminal from a
+    /// changed order.
+    seen: Option<Vec<(K, bool)>>,
+    /// What the settings that order the list said then.
+    tag: u8,
+}
+
+impl<K> Default for FrozenNumbers<K> {
+    fn default() -> Self {
+        FrozenNumbers { held: Vec::new(), seen: None, tag: 0 }
+    }
+}
+
+impl<K: Clone + PartialEq> FrozenNumbers<K> {
+    /// The holders of ⌘1… now. `window` is every terminal in the window's order with whether it is
+    /// pinned, `tag` stands for the settings that order the list (grouping, order, numbers) and
+    /// `dealt` is every terminal top to bottom as the list stands (used when the numbers are dealt).
+    pub fn settle(&mut self, window: &[(K, bool)], tag: u8, dealt: &[K], count: usize) -> Vec<K> {
+        let unchanged_prefix = |seen: &Vec<(K, bool)>| {
+            seen.len() <= window.len() && seen.iter().zip(window).all(|(before, now)| before == now)
+        };
+        match &self.seen {
+            Some(seen) if self.tag == tag && unchanged_prefix(seen) => {
+                // Only terminals made since, at the end: the next free numbers.
+                let made = &window[seen.len()..];
+                for (key, _) in made {
+                    if self.held.len() < count {
+                        self.held.push(key.clone());
+                    }
+                }
+            }
+            _ => self.held = dealt.iter().take(count).cloned().collect(),
+        }
+        self.seen = Some(window.to_vec());
+        self.tag = tag;
+        self.held.clone()
+    }
+
+    /// Forget the numbers: the next settle deals them again.
+    pub fn reset(&mut self) {
+        self.seen = None;
+        self.held.clear();
+    }
 }
 
 /// The order folder bands keep, given the order they had (`previous`) and the folder each
@@ -140,7 +186,7 @@ pub fn follow(order: &[usize], ix: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        drop_position, follow, move_in_block, regroup, settle_bands, shortcut_target, stay_numbered,
+        FrozenNumbers, drop_position, follow, move_in_block, regroup, settle_bands, shortcut_target,
         with_pins,
     };
     use std::path::PathBuf;
@@ -213,13 +259,36 @@ mod tests {
     }
 
     #[test]
-    fn numbers_that_stay_count_pinned_first_then_the_window_order() {
-        let pinned = |ix: usize| ix == 3;
-        assert_eq!(stay_numbered(5, 9, pinned), [3, 0, 1, 2, 4]);
-        assert_eq!(stay_numbered(12, 3, |_| false), [0, 1, 2], "only the first few carry one");
-        assert!(stay_numbered(0, 9, pinned).is_empty());
-        // A terminal made later takes the next number and moves nobody.
-        assert_eq!(stay_numbered(6, 9, pinned)[..5], stay_numbered(5, 9, pinned));
+    fn numbers_are_dealt_top_to_bottom_then_frozen_until_the_order_changes() {
+        // Window order 1..=4, shown 1, 3, 2, 4 (two bands); nobody pinned.
+        let window = |ids: &[i32]| ids.iter().map(|&id| (id, false)).collect::<Vec<_>>();
+        let mut numbers = FrozenNumbers::default();
+        assert_eq!(numbers.settle(&window(&[1, 2, 3, 4]), 0, &[1, 3, 2, 4], 9), [1, 3, 2, 4]);
+        // A terminal made later takes the next free number, wherever the list puts it.
+        assert_eq!(numbers.settle(&window(&[1, 2, 3, 4, 5]), 0, &[1, 5, 3, 2, 4], 9), [1, 3, 2, 4, 5]);
+        // The list moving on its own (a folder change) renumbers nobody.
+        assert_eq!(numbers.settle(&window(&[1, 2, 3, 4, 5]), 0, &[5, 4, 3, 2, 1], 9), [1, 3, 2, 4, 5]);
+        // A pin is the person's: dealt again from the list as it stands.
+        let pinned = [(1, false), (2, false), (3, false), (4, false), (5, true)];
+        assert_eq!(numbers.settle(&pinned, 0, &[5, 1, 3, 2, 4], 9), [5, 1, 3, 2, 4]);
+        // So is a drag, which changes the window's order ...
+        assert_eq!(numbers.settle(&window(&[2, 1, 3, 4, 5]), 0, &[2, 1, 3, 4, 5], 9), [2, 1, 3, 4, 5]);
+        // ... and a close, so no number is left empty.
+        assert_eq!(numbers.settle(&window(&[2, 3, 4, 5]), 0, &[2, 3, 4, 5], 9), [2, 3, 4, 5]);
+        // A setting that orders the list.
+        assert_eq!(numbers.settle(&window(&[2, 3, 4, 5]), 1, &[5, 4, 3, 2], 9), [5, 4, 3, 2]);
+        numbers.reset();
+        assert_eq!(numbers.settle(&window(&[2, 3, 4, 5]), 1, &[3, 2, 4, 5], 9), [3, 2, 4, 5]);
+    }
+
+    #[test]
+    fn only_the_first_nine_carry_a_number_and_a_new_one_past_them_has_none() {
+        let window = |n: i32| (0..n).map(|id| (id, false)).collect::<Vec<_>>();
+        let order = |n: i32| (0..n).collect::<Vec<_>>();
+        let mut numbers = FrozenNumbers::default();
+        assert_eq!(numbers.settle(&window(8), 0, &order(8), 9).len(), 8);
+        assert_eq!(numbers.settle(&window(10), 0, &order(10), 9), order(9), "the ninth, not the tenth");
+        assert_eq!(numbers.settle(&window(11), 0, &order(11), 9).len(), 9);
     }
 
     #[test]

@@ -13,10 +13,12 @@ use super::*;
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::git::HeadCommit;
+use wormhole_core::sidebar::NUMBERED;
 use wormhole_core::sidebar::hints::CmdHold;
-use wormhole_core::sidebar::order::settle_bands;
+use wormhole_core::sidebar::order::{FrozenNumbers, settle_bands};
 use wormhole_core::sidebar::{
-    Entry, ListInput, Listing, RowState, Searchable, SessionGit, SidebarOrder, Splits, WindowSidebar,
+    Entry, ListInput, Listing, RowState, Searchable, SessionGit, SidebarNumbers, SidebarOrder, Splits,
+    WindowSidebar,
 };
 
 mod band_menu;
@@ -74,6 +76,8 @@ pub(super) struct SidebarState {
     /// The order the folder bands keep under the stable order: a band stays where it appeared
     /// while it has a terminal (`order::settle_bands`).
     band_order: RefCell<Vec<PathBuf>>,
+    /// The ⌘ numbers frozen to their terminals (by id) under "Stay with the terminal".
+    numbers: RefCell<FrozenNumbers<i64>>,
     /// The list's lines as last drawn and the slide of those that moved.
     motion: ListMotion,
     /// Which repository a worktree belongs to, by its root (read from disk once per refresh).
@@ -120,6 +124,7 @@ impl SidebarState {
             heads: HashMap::new(),
             head_lookups: Vec::new(),
             band_order: RefCell::default(),
+            numbers: RefCell::default(),
             motion: ListMotion::default(),
             worktrees: RefCell::default(),
             times_drawn: RefCell::default(),
@@ -153,7 +158,7 @@ impl Workspace {
             }
             _ => Vec::new(),
         };
-        Listing::build(&ListInput {
+        let mut listing = Listing::build(&ListInput {
             grouping: self.sidebar.view.grouping,
             folders: &folders,
             pinned_folders: &pinned_folders,
@@ -165,7 +170,27 @@ impl Workspace {
             order,
             numbers,
             band_order: &band_order,
-        })
+        });
+        self.freeze_numbers(&mut listing, infos, order, cx);
+        listing
+    }
+
+    /// Under "Stay with the terminal", the numbers the listing dealt are replaced by the frozen ones:
+    /// kept while the terminals are only added to, dealt again when the person changes the order,
+    /// closes one or changes a setting that orders the list (`FrozenNumbers`).
+    fn freeze_numbers(&self, listing: &mut Listing, infos: &[RowInfo], order: SidebarOrder, cx: &App) {
+        let mut frozen = self.sidebar.numbers.borrow_mut();
+        if settings(cx).sidebar_numbers != SidebarNumbers::Terminal {
+            frozen.reset();
+            return;
+        }
+        let tag = u8::from(self.sidebar.view.grouping == Grouping::Folder)
+            | (u8::from(order == SidebarOrder::Classic) << 1);
+        let window: Vec<(i64, bool)> = infos.iter().map(|info| (info.id, info.pinned)).collect();
+        let dealt: Vec<i64> = listing.order().iter().map(|&ix| infos[ix].id).collect();
+        let held = frozen.settle(&window, tag, &dealt, NUMBERED);
+        let at = |id: &i64| infos.iter().position(|info| info.id == *id);
+        listing.set_numbers(held.iter().filter_map(at).collect());
     }
 
     /// The listing without drawing it (shortcuts, devctl).

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use super::filter::{Filter, Searchable};
 use super::group::{Grouping, group_by_folder_in};
-use super::order::{SidebarNumbers, SidebarOrder, stay_numbered, with_pins};
+use super::order::{SidebarNumbers, SidebarOrder, with_pins};
 use super::split::{self, SplitMarks, Splits};
 
 /// How many terminals get a ⌘ number.
@@ -215,14 +215,11 @@ impl Listing {
         }
         listing.numbered = match numbers_mode {
             SidebarNumbers::List => listing.visible().take(NUMBERED).collect(),
-            SidebarNumbers::Terminal => stay_numbered(rows.len(), NUMBERED, is_pinned),
+            // Dealt top to bottom, every terminal counted; the app freezes them (`FrozenNumbers`)
+            // and hands the frozen ones back through `set_numbers`.
+            SidebarNumbers::Terminal => listing.order.iter().copied().take(NUMBERED).collect(),
         };
-        let numbered = listing.numbered.clone();
-        for entry in &mut listing.entries {
-            if let Entry::Row { session, number, .. } = entry {
-                *number = numbered.iter().position(|ix| ix == session).map(|at| at + 1);
-            }
-        }
+        listing.number_rows();
         let mut shown = vec![false; rows.len()];
         for ix in listing.visible() {
             shown[ix] = true;
@@ -234,6 +231,22 @@ impl Listing {
             }
         }
         listing
+    }
+
+    /// The ⌘ numbers go to `numbered` (terminals, in number order) instead of the ones the list dealt:
+    /// those that stay with their terminal (see `order::FrozenNumbers`).
+    pub fn set_numbers(&mut self, numbered: Vec<usize>) {
+        self.numbered = numbered;
+        self.number_rows();
+    }
+
+    fn number_rows(&mut self) {
+        let numbered = &self.numbered;
+        for entry in &mut self.entries {
+            if let Entry::Row { session, number, .. } = entry {
+                *number = numbered.iter().position(|ix| ix == session).map(|at| at + 1);
+            }
+        }
     }
 
     fn push_rows(&mut self, sessions: &[usize], band: Option<usize>) {

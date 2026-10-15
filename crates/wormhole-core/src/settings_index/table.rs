@@ -427,7 +427,7 @@ const SESSIONS: &[Group] = &[
             entry(
                 "sidebar-numbers",
                 "⌘1–⌘9 numbers",
-                "Stay with the terminal: a number is kept when others come or go; Follow the list: the first nine rows you can see",
+                "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",
                 "command shortcuts numbers stay follow list stable classic",
                 &["sidebar_numbers"],
             ),
