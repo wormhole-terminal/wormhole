@@ -17,6 +17,7 @@ mod glyphs;
 mod images;
 mod minimap;
 mod rows;
+mod scrollbar;
 mod underline;
 mod words;
 
@@ -27,12 +28,14 @@ mod guards;
 
 use self::frame::{FrameCache, Geometry};
 use self::rows::{Segment, Style};
+pub(super) use self::scrollbar::ScrollbarState;
 use self::underline::{UnderlinePaint, underline_paint};
 use self::words::{Glyph, Shaped, WordCache};
 use super::blocks;
 use super::input::TerminalCommand;
 use super::*;
 use crate::palette::Palette;
+use crate::scroller::ScrollerPrefs;
 use crate::style::{Edges, TextRole};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -86,6 +89,8 @@ pub(super) struct RenderState {
     minimap: wormhole_core::terminal::minimap::MinimapSnapshot,
     /// Where the minimap was last drawn, for clicks on it.
     minimap_bounds: Bounds<Pixels>,
+    /// Where the scrollbar was last drawn, if it was, for the pointer.
+    scrollbar: Option<scrollbar::ScrollbarLayout>,
     /// The inline images as GPUI frames, one conversion per image.
     images: images::ImageCache,
 }
@@ -707,6 +712,8 @@ impl Render for TerminalView {
             .on_drop(cx.listener(Self::drop_files))
             .child(grid)
             .when(minimap, |this| this.child(self.render_minimap(cx)))
+            // The minimap is the scroller when it is shown.
+            .when(!minimap, |this| this.child(self.render_scrollbar(cx)))
             .children(self.render_block_readout(cx))
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
@@ -746,9 +753,10 @@ fn paint_blocks(
 
 impl TerminalView {
     /// How far the grid stays from the pane's right edge: the padding, and the minimap when it is
-    /// shown. The find bar lines up with it.
+    /// shown or the scrollbar's gutter (the legacy style; the overlay one takes no room). The
+    /// find bar lines up with it.
     pub fn right_inset(cx: &App) -> f32 {
-        PADDING_X + if settings(cx).minimap { minimap::MINIMAP_W } else { 0.0 }
+        PADDING_X + if settings(cx).minimap { minimap::MINIMAP_W } else { ScrollerPrefs::gutter(cx) }
     }
 
     /// The bar along the bottom of a pane whose shell has ended: what ended and how, a

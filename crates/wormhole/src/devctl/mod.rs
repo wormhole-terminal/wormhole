@@ -213,6 +213,8 @@
 //!   reduce-motion [on|off|system]   hold animations still as the system's Reduce Motion does (the
 //!                   spinner's three dots, the steady needs-you halo, cuts for slides and folds),
 //!                   for screenshots that don't depend on when they were taken, or follow the system
+//!   scroller overlay|legacy|system   say the system shows scroll bars only while scrolling
+//!                   (overlay: thin thumbs that fade) or always (legacy: a gutter), or follow it
 //!   appearance [light|dark|system]   say the system is in Light or Dark Mode (Match system shows
 //!                   that pick), or follow the system again; without one, what it is
 //!   reduce-transparency [on|off|system]   say Reduce Transparency is on or off (every window
@@ -434,6 +436,7 @@ fn command(name: &str) -> Option<Command> {
         "window-front" => a11y::window_front,
         "front" => sessions::front,
         "reduce-motion" => settings::reduce_motion,
+        "scroller" => settings::scroller,
         "appearance" => settings::appearance,
         "reduce-transparency" => settings::reduce_transparency,
         "increase-contrast" => settings::increase_contrast,

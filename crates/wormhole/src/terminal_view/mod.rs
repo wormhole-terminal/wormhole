@@ -202,6 +202,8 @@ pub struct TerminalView {
     top_inset: f32,
     /// Where the pointer holds the minimap's slider, over its top, while it's dragged.
     minimap_grab: Option<f32>,
+    /// The scrollbar: its idle time, the pointer on it and the thumb held.
+    scrollbar: render::ScrollbarState,
     /// The cell the start animation's ship docks on while the terminal welcome plays around this
     /// terminal: reported every frame, in window points, so a resize is followed (`set_dock`).
     dock: Option<wormhole_core::welcome::DockCell>,
@@ -332,6 +334,7 @@ impl TerminalView {
             font_zoom: 0.0,
             top_inset: TOP_INSET,
             minimap_grab: None,
+            scrollbar: Default::default(),
             dock: None,
             find: find::Find::default(),
             blocks: blocks::Blocks::default(),

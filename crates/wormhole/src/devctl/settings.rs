@@ -4,9 +4,11 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 
+use wormhole_core::terminal::scrollbar::ScrollerStyle;
 use wormhole_core::tokens::Appearance;
 
 use super::Ctx;
+use crate::scroller::ScrollerPrefs;
 use crate::settings::SettingsStore;
 use crate::workspace::AppState;
 
@@ -153,6 +155,19 @@ fn switch(arg: &str) -> Result<Option<bool>> {
 
 fn on_off(on: bool) -> &'static str {
     if on { "on" } else { "off" }
+}
+
+/// `scroller overlay|legacy|system`: stand in for the system's "Show scroll bars" (overlay: thin
+/// thumbs that fade; legacy: a gutter that is always there), or follow the system again.
+pub(super) fn scroller(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let style = match arg.trim() {
+        "overlay" => Some(ScrollerStyle::Overlay),
+        "legacy" => Some(ScrollerStyle::Legacy),
+        "system" => None,
+        other => return Err(anyhow!("expected overlay|legacy|system, got {other:?}")),
+    };
+    ScrollerPrefs::stand_in(ctx.cx, style);
+    Ok(String::new())
 }
 
 /// `appearance light|dark|system`: stand in for the system's Light or Dark Mode (what Match

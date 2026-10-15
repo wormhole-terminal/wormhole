@@ -6,6 +6,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Terminals have a scrollbar that follows System Settings: with "Show scroll bars" on automatically it
+  is a thin thumb over the right edge that shows while you scroll and fades out after a second (it
+  widens under the pointer), and with "Always" it is a gutter beside the text. Clicking the track
+  pages or jumps to the spot as "Click in the scroll bar to" says (Option does the other one), and the
+  thumb can be dragged. It is hidden on the alternate screen and while the minimap is shown.
+
 ## [1.0.0] - 2026-10-15
 
 ### Added

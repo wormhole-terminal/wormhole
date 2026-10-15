@@ -13,6 +13,7 @@ mod intro;
 mod logging;
 mod menubar;
 mod palette;
+mod scroller;
 mod select;
 mod settings;
 mod style;

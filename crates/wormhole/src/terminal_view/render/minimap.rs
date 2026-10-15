@@ -115,12 +115,7 @@ impl TerminalView {
     }
 
     fn scroll_minimap_to(&mut self, geometry: MinimapGeometry, view_top: usize, cx: &mut Context<Self>) {
-        let Some(pty) = &self.pty else { return };
-        let lines = geometry.display_offset(view_top) as i32 - pty.display_offset() as i32;
-        if lines != 0 {
-            pty.scroll(Scroll::Delta(lines));
-            cx.notify();
-        }
+        self.scroll_to_offset(geometry.display_offset(view_top), cx);
     }
 }
 

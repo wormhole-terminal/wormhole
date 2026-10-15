@@ -474,6 +474,17 @@ impl TerminalView {
         cx.notify();
     }
 
+    /// Scroll the view to `offset` lines back from the live screen (the minimap's and the
+    /// scrollbar's way of scrolling).
+    pub(super) fn scroll_to_offset(&mut self, offset: usize, cx: &mut Context<Self>) {
+        let Some(pty) = &self.pty else { return };
+        let lines = offset as i32 - pty.display_offset() as i32;
+        if lines != 0 {
+            pty.scroll(Scroll::Delta(lines));
+            cx.notify();
+        }
+    }
+
     /// Sideways trackpad scrolling, reported as wheel-left/right to apps
     /// that asked for mouse events.
     pub(super) fn report_horizontal_scroll(&mut self, event: &ScrollWheelEvent) {

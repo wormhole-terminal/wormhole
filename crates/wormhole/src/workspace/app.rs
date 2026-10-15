@@ -289,6 +289,7 @@ impl AppState {
         // Before the first frame, so windows don't open in the default colors (nor in the
         // dark pick when Match system and a light system ask for the light one).
         sync_system_look(cx);
+        crate::scroller::ScrollerPrefs::install(cx);
         apply_theme(cx);
         cx.spawn(async move |cx| {
             while display_options.recv().await.is_ok() {
