@@ -204,7 +204,7 @@ mod tests {
     use wormhole_core::git::{ChangeKind, FileChange};
 
     fn file(kind: ChangeKind, added: Option<u32>, removed: Option<u32>, lfs: bool) -> FileChange {
-        FileChange { path: "a/b.rs".into(), original_path: None, kind, added, removed, lfs }
+        FileChange { path: "a/b.rs".into(), original_path: None, kind, added, removed, lfs, submodule: None }
     }
 
     fn renamed_file(from: &str, to: &str) -> FileChange {
@@ -215,6 +215,7 @@ mod tests {
             added: Some(1),
             removed: Some(1),
             lfs: false,
+            submodule: None,
         }
     }
 

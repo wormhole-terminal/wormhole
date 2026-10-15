@@ -7,6 +7,7 @@ use anyhow::Result;
 use super::cmd::classify;
 use super::lfs::mark_lfs;
 use super::status::{changed_files, resolves};
+use super::submodule::annotate_files;
 use super::{Commit, DiffSpec, EMPTY_TREE, FileChange, GitCmd, GitError, has_head};
 
 /// Local branches (current first), then remote-tracking branches.
@@ -82,22 +83,23 @@ fn branch_gone(message: &str) -> String {
 }
 
 pub(crate) fn parse_log(text: &str) -> Vec<Commit> {
-    text.split('\x1e')
-        .filter_map(|record| {
-            let fields: Vec<&str> = record.trim_start_matches('\n').split('\x1f').collect();
-            if fields.len() < 6 {
-                return None;
-            }
-            Some(Commit {
-                sha: fields[0].to_string(),
-                short: fields[1].to_string(),
-                parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
-                author: fields[3].to_string(),
-                time: fields[4].parse().unwrap_or(0),
-                subject: fields[5].to_string(),
-            })
-        })
-        .collect()
+    text.split('\x1e').filter_map(|record| parse_record(record.trim_start_matches('\n'))).collect()
+}
+
+/// One commit of `--format=%H%x1f%h%x1f%P%x1f%an%x1f%at%x1f%s`.
+pub(crate) fn parse_record(record: &str) -> Option<Commit> {
+    let fields: Vec<&str> = record.split('\x1f').collect();
+    if fields.len() < 6 {
+        return None;
+    }
+    Some(Commit {
+        sha: fields[0].to_string(),
+        short: fields[1].to_string(),
+        parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
+        author: fields[3].to_string(),
+        time: fields[4].parse().unwrap_or(0),
+        subject: fields[5].to_string(),
+    })
 }
 
 /// Files touched by a commit (vs its first parent).
@@ -106,6 +108,7 @@ pub fn commit_files(root: &Path, commit: &Commit) -> Result<Vec<FileChange>> {
     let mut files = changed_files(root, parent, Some(&commit.sha))?;
     files.sort_by(|a, b| a.path.cmp(&b.path));
     mark_lfs(root, &mut files);
+    annotate_files(root, &mut files);
     Ok(files)
 }
 

@@ -172,7 +172,7 @@ pub fn item_action(
     id: impl Into<ElementId>,
     ui: UiColors,
     icon: IconName,
-    tooltip: &'static str,
+    tooltip: impl Into<SharedString>,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> AnyElement {
     icon_button(id, ui, icon, tooltip)

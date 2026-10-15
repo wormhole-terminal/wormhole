@@ -15,6 +15,7 @@ use super::job::{Job, Ticket, Wanted};
 use super::open_file::OpenTarget;
 use super::picker::{Picker, PickerChip};
 use super::problem::{self, GitTab};
+use super::submodule_row::submodule_row;
 use crate::settings::UiColors;
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
@@ -283,8 +284,15 @@ impl Workspace {
         let (id, ticket) = (session.id, wanted.ticket());
         let task = cx.background_executor().spawn(async move {
             let observed = watched.map(Observed::of);
-            // A compare branch that was deleted falls back to HEAD there, and says so.
-            (git::status(&cwd, compare.as_deref()), observed)
+            // A compare branch that was deleted falls back to HEAD there, and says so. Submodules get
+            // their commits looked up here too: a process only for a pair not seen before.
+            let status = git::status(&cwd, compare.as_deref()).map(|status| {
+                status.map(|mut status| {
+                    git::annotate(&mut status);
+                    status
+                })
+            });
+            (status, observed)
         });
         cx.spawn(async move |this, cx| {
             let (status, observed) = task.await;
@@ -478,6 +486,7 @@ impl Workspace {
         let view = Rc::new(ChangesView {
             files,
             open: OpenTarget::new(&status.root, cx),
+            root: status.root.clone(),
             open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
             width: self.columns().panel,
             // The compare picker and refresh button sit in the first card's head, where the
@@ -525,6 +534,8 @@ impl Workspace {
 /// What the Changes list's rows draw from, captured for the render callback.
 struct ChangesView {
     files: Rc<Vec<FileChange>>,
+    /// The repository, which a submodule's folder is under.
+    root: PathBuf,
     /// The file whose diff is open: its row is the selected one.
     open_path: Option<String>,
     /// The icon that opens a file in the editor.
@@ -576,12 +587,17 @@ impl ChangesView {
                     selected: self.open_path.as_deref() == Some(file.path.as_str()),
                     width: self.width,
                 };
-                let row = change_row(file, place, ui, window, cx);
-                // A deleted file has nothing to open.
-                let row = if file.kind == git::ChangeKind::Deleted {
-                    row
-                } else {
-                    self.open.file(&file.path).on_row(row, ui, &format!("change-{}", file.path))
+                let row = match file.submodule {
+                    Some(_) => submodule_row(file, place, &self.root, self.this.clone(), ui, cx),
+                    None => {
+                        let row = change_row(file, place, ui, window, cx);
+                        // A deleted file has nothing to open.
+                        if file.kind == git::ChangeKind::Deleted {
+                            row
+                        } else {
+                            self.open.file(&file.path).on_row(row, ui, &format!("change-{}", file.path))
+                        }
+                    }
                 };
                 row.on_click(move |_, _, cx| {
                     this.update(cx, |this, cx| this.open_change(clicked.clone(), cx)).ok();

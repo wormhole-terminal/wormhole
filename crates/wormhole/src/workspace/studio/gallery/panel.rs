@@ -218,6 +218,23 @@ pub(super) fn render(
                 false,
                 0,
             ))
+            // A submodule says what moved in words; its button (under the pointer) opens a terminal in it.
+            .child(style::submodule_row(
+                "g-file-submodule",
+                ui,
+                style::SubmoduleRow {
+                    name: "wormhole-vt".into(),
+                    folder: "crates".into(),
+                    what: "2 new commits · uncommitted changes".into(),
+                    kind: ChangeKind::Modified,
+                    depth: 0,
+                    selected: false,
+                    enter: Some(style::Enter {
+                        tooltip: "Open a terminal in wormhole-vt".into(),
+                        on_click: Box::new(|_, _, _| {}),
+                    }),
+                },
+            ))
             // A folder of the tree view, and a file one level in.
             .child(style::folder_row(
                 "g-file-folder",

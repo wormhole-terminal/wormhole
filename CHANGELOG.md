@@ -8,6 +8,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Submodules get their own rows in Changes and History, with a folder-and-git icon and what changed
+  in words ("2 new commits", "1 commit back", "uncommitted changes", "not checked out") where a file
+  has line counts. A click lists the commits between the commit the repository records and the one
+  the submodule is at, newest first, with each commit's subject, hash, author and age (and the
+  commits left behind when the pointer went back), instead of git's two `Subproject commit` lines.
+  The button on a row opens a terminal in the submodule.
+- A terminal inside a submodule says whose it is in the title row ("in terminal").
 - A small icon opens a file of the git panel in the editor chosen for Open in…: on the right of a
   Changes row while the pointer is over it, over a diff line (the file opens at that line, where
   the editor can: VS Code and its forks, Zed, Sublime Text and the JetBrains IDEs), in the diff's

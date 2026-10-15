@@ -11,7 +11,15 @@ use wormhole_core::git::discover::Sighting;
 use wormhole_core::git::{ChangeKind, FileChange, GitError, RepoStatus};
 
 fn change(path: &str, kind: ChangeKind) -> FileChange {
-    FileChange { path: path.to_string(), original_path: None, kind, added: None, removed: None, lfs: false }
+    FileChange {
+        path: path.to_string(),
+        original_path: None,
+        kind,
+        added: None,
+        removed: None,
+        lfs: false,
+        submodule: None,
+    }
 }
 
 fn modified(paths: &[&str]) -> Vec<FileChange> {
@@ -28,6 +36,7 @@ fn status(files: Vec<FileChange>, compare: Option<&str>) -> RepoStatus {
         compare_missing: None,
         dirty: false,
         upstream: None,
+        superproject: None,
     }
 }
 
@@ -429,4 +438,33 @@ fn compared_with_a_branch_there_is_one_group_with_the_untracked_files_in_it() {
     // A compare branch that is gone falls back to HEAD (`compare` is cleared): bands again.
     let fell_back = RepoStatus { compare: None, compare_missing: Some("main".into()), ..compared };
     assert_eq!(bands(&fell_back, false, true), [(Group::Changes, 2), (Group::Untracked, 1)]);
+}
+
+#[test]
+fn a_submodule_is_a_row_like_any_file_and_the_diff_steps_through_it() {
+    use wormhole_core::git::Submodule;
+    let mut lib = change("vendor/lib", ChangeKind::Modified);
+    lib.submodule = Some(Submodule {
+        old: Some("a".repeat(40)),
+        new: None,
+        commit_changed: true,
+        removed: false,
+        tracked: false,
+        untracked: false,
+        log: None,
+    });
+    let files = vec![change("src/a.rs", ChangeKind::Modified), lib.clone()];
+    let set = HashSet::new();
+    let rows = build_rows(&files, false, false, Folded { set: &set, session: 1 }, &HashMap::new());
+    let listed: Vec<usize> = rows
+        .iter()
+        .filter_map(|row| match row {
+            ChangeRow::File { ix, .. } => Some(*ix),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(listed, [0, 1], "the submodule has a row of its own");
+    let order = display_order(&status(files, None), false, false);
+    assert_eq!(order.last().and_then(|f| f.submodule.as_ref()), lib.submodule.as_ref());
+    assert_eq!(order.last().map(|f| f.path.as_str()), Some("vendor/lib"));
 }

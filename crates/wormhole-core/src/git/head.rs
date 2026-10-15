@@ -9,7 +9,7 @@ use super::{GitCmd, GitError};
 use crate::fsutil::{LinkPolicy, read_capped};
 
 /// A worktree's `.git` file is one line.
-const POINTER_CAP: u64 = 4096;
+pub(super) const POINTER_CAP: u64 = 4096;
 
 /// The main repository of the worktree whose top is `root`, or `None` for an ordinary
 /// repository (whose `.git` is a folder) or a submodule. Read from the `.git` file alone, without a
@@ -27,13 +27,13 @@ pub fn worktree_of(root: &Path) -> Option<PathBuf> {
 }
 
 /// The path a `.git` file points to: `gitdir: /repo/.git/worktrees/name`.
-fn pointed_dir(text: &str) -> Option<&str> {
+pub(super) fn pointed_dir(text: &str) -> Option<&str> {
     text.lines().find_map(|line| line.strip_prefix("gitdir:")).map(str::trim).filter(|dir| !dir.is_empty())
 }
 
 /// The working tree of a repository's common git dir: its parent when it is a `.git` folder,
 /// the dir itself for a bare repository.
-fn main_tree(common: &Path) -> PathBuf {
+pub(super) fn main_tree(common: &Path) -> PathBuf {
     match common.file_name() {
         Some(name) if name == ".git" => common.parent().unwrap_or(common).to_path_buf(),
         _ => common.to_path_buf(),
@@ -41,7 +41,7 @@ fn main_tree(common: &Path) -> PathBuf {
 }
 
 /// `a/b/../c` as `a/c`, without touching the disk (the repository may be elsewhere).
-fn normalize(path: &Path) -> PathBuf {
+pub(super) fn normalize(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for part in path.components() {
         match part {

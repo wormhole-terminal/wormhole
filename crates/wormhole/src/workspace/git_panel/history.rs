@@ -13,6 +13,7 @@ use super::job::{Job, Ticket, Wanted};
 use super::open_file::OpenTarget;
 use super::picker::{Picker, PickerChip};
 use super::problem::GitTab;
+use super::submodule_row::submodule_row;
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
@@ -515,6 +516,7 @@ impl Workspace {
                 _ => None,
             }),
             error: history.error.clone(),
+            root: history.root.clone(),
             open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
             code_font: crate::fonts::code_font_in(&self.profile, cx).0,
             now: std::time::SystemTime::now()
@@ -573,6 +575,8 @@ struct HistoryView {
     /// Why they could not be listed.
     files_error: Option<SharedString>,
     error: Option<SharedString>,
+    /// The repository, which a submodule's folder is under.
+    root: Option<PathBuf>,
     open_path: Option<String>,
     code_font: SharedString,
     now: i64,
@@ -650,13 +654,18 @@ impl HistoryView {
                     selected: self.open_path.as_deref() == Some(file.path.as_str()),
                     width: self.width,
                 };
-                let row = change_row(&file, place, ui, window, cx);
-                // The file as it is now: none for one that is gone from the working tree.
-                let row = match (&self.open, &self.present) {
-                    (Some(open), Some(present)) if present.contains(&file.path) => {
-                        open.file(&file.path).on_row(row, ui, &format!("history-{}", file.path))
+                let row = match (&file.submodule, &self.root) {
+                    (Some(_), Some(root)) => submodule_row(&file, place, root, self.this.clone(), ui, cx),
+                    _ => {
+                        let row = change_row(&file, place, ui, window, cx);
+                        // The file as it is now: none for one that is gone from the working tree.
+                        match (&self.open, &self.present) {
+                            (Some(open), Some(present)) if present.contains(&file.path) => {
+                                open.file(&file.path).on_row(row, ui, &format!("history-{}", file.path))
+                            }
+                            _ => row,
+                        }
                     }
-                    _ => row,
                 };
                 row.on_click(move |_, _, cx| {
                     this.update(cx, |this, cx| this.open_commit_file(commit.clone(), clicked.clone(), cx))

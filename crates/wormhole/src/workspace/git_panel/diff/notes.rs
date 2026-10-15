@@ -205,6 +205,7 @@ mod tests {
             added: None,
             removed: None,
             lfs: false,
+            submodule: None,
         };
         let spec = DiffSpec { old: "HEAD".into(), new: None };
         let request = Request { root: PathBuf::from("/repo"), file, spec, limits: DiffLimits::default() };

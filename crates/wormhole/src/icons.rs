@@ -82,6 +82,8 @@ gpui_kit::assets::icon_assets!(
         AppWindow,
         ArrowRightLeft,
         Trash,
+        // A submodule's row in the Changes and History lists.
+        FolderGit2,
     ]
 );
 

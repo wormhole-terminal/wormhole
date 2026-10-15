@@ -228,6 +228,7 @@ fn esc_closes_a_diff_over_the_terminal_first(cx: &mut TestAppContext) {
             added: Some(1),
             removed: Some(0),
             lfs: false,
+            submodule: None,
         };
         let spec = wormhole_core::git::DiffSpec { old: "HEAD".into(), new: None };
         ws.open_diff("/nonexistent".into(), change, spec, std::rc::Rc::default(), None, cx);

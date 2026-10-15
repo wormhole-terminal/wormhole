@@ -25,6 +25,7 @@ fn change(path: &str) -> FileChange {
         added: Some(1),
         removed: Some(0),
         lfs: false,
+        submodule: None,
     }
 }
 
@@ -284,6 +285,7 @@ fn status(files: Vec<FileChange>) -> RepoStatus {
         compare_missing: None,
         dirty: false,
         upstream: None,
+        superproject: None,
     }
 }
 
@@ -461,4 +463,41 @@ fn a_gesture_moves_the_code_sideways_or_the_rows_up_and_down_never_both() {
     assert_eq!(view.sideways(point(px(-8.0), px(3.0)), TouchPhase::Moved, true), -8.0);
     // A mouse wheel's notches have no gesture: its sideways part is used as it is.
     assert_eq!(view.sideways(point(px(-20.0), px(0.0)), TouchPhase::Moved, false), -20.0);
+}
+
+/// A submodule's "diff" is the commits between its two sides, not git's text: the load answers
+/// with them, and there is no file to watch for edits.
+#[test]
+fn a_submodule_loads_its_commits_not_a_patch() {
+    use wormhole_core::git::{Checkout, Range, Submodule};
+    let dir = std::env::temp_dir().join(format!("hd-submodule-load-{}", std::process::id()));
+    std::fs::create_dir_all(dir.join("libs/lib")).expect("mkdir");
+    let mut file = change("libs/lib");
+    file.submodule = Some(Submodule {
+        old: Some("a".repeat(40)),
+        new: Some("b".repeat(40)),
+        commit_changed: true,
+        removed: false,
+        tracked: false,
+        untracked: false,
+        log: None,
+    });
+    let request = Request {
+        root: dir.clone(),
+        file,
+        spec: DiffSpec { old: "HEAD".into(), new: None },
+        limits: DiffLimits::default(),
+    };
+    let mut view = view(request.clone());
+    assert_eq!(view.watched_path(), None, "a folder is not a file that gets edited");
+    let (wanted, work) = view.begin_load(KEY).expect("starts");
+    let ticket = wanted.ticket();
+    let theme = HighlightTheme::default_dark();
+    // The folder has no repository in it: nothing to ask git, and it is said so.
+    let outcome = run(work, KEY, &theme, &wanted).expect("answers");
+    let Outcome::Submodule(log) = outcome else { panic!("expected the submodule's commits") };
+    assert_eq!((log.checkout, &log.range), (Checkout::NotCheckedOut, &Range::Unavailable));
+    assert!(view.finish(ticket, Outcome::Submodule(log)));
+    assert!(view.submodule.is_some() && view.diff.is_none() && !view.loading);
+    std::fs::remove_dir_all(dir).ok();
 }
