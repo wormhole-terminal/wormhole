@@ -24,7 +24,7 @@ use super::WindowSize;
 use super::blocks::CommandLog;
 use super::images::{DECODES_MAX, ImageStore};
 use super::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
-use super::process;
+use super::procinfo;
 use super::program_status::{self, ProgramStatus};
 use wormhole_vt::term::WindowOp;
 
@@ -410,7 +410,7 @@ impl EventProxy {
             // A folder on another machine (ssh) or one that isn't here is no folder to show;
             // polling the shell's process stays the fallback for those.
             Osc::Cwd { host, path } => {
-                if process::is_this_host(&host) && path.is_dir() {
+                if procinfo::is_this_host(&host) && path.is_dir() {
                     self.shared.report_cwd(path);
                     self.send(PtyEvent::Cwd);
                 }

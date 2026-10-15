@@ -9,7 +9,7 @@ use wormhole_vt::types::Line;
 
 use super::{
     BlockState, Direction, GridSize, Mark, Notification, Progress, ProgressState, PromptKind, Pty, PtyEvent,
-    SpawnOptions,
+    StartOptions,
 };
 
 const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
@@ -23,7 +23,7 @@ pub(in crate::terminal) fn wait_until(what: &str, mut done: impl FnMut() -> bool
 }
 
 pub(in crate::terminal) fn spawn(program: &str, args: &[&str]) -> (Pty, super::PtyEvents) {
-    Pty::spawn_program(SIZE, &SpawnOptions::default(), program, args).expect("spawn")
+    Pty::spawn_program(SIZE, &StartOptions::default(), program, args).expect("spawn")
 }
 
 #[test]
@@ -197,21 +197,6 @@ fn an_exited_shell_keeps_its_screen_and_forgets_its_process() {
     assert_eq!(pty.program_in_foreground(), None);
 }
 
-#[test]
-fn a_project_env_cannot_redirect_the_hooks() {
-    let mut options = SpawnOptions { tab_id: "real-tab".into(), ..SpawnOptions::default() };
-    options.env.insert("WORMHOLE_TAB_ID".into(), "spoofed".into());
-    options.env.insert("WORMHOLE_SOCKET".into(), "/tmp/elsewhere.sock".into());
-    options.env.insert("PROJECT_FLAG".into(), "on".into());
-    let script = r#"printf '[%s] [%s] [%s] [%s %s]\n' "$WORMHOLE_TAB_ID" "$PROJECT_FLAG" "$WORMHOLE_SOCKET" "$TERM_PROGRAM" "$TERM_PROGRAM_VERSION"; sleep 5"#;
-    let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", script]).expect("spawn");
-    wait_until("the output", || pty.screen_text().contains("[real-tab] [on]"));
-    let screen = pty.screen_text();
-    assert!(!screen.contains("elsewhere"), "{screen}");
-    let version = env!("CARGO_PKG_VERSION");
-    assert!(screen.contains(&format!("[Wormhole {version}]")), "{screen}");
-}
-
 /// Everything `events` has queued right now, in order.
 pub(in crate::terminal) fn drain(events: &super::PtyEvents) -> Vec<PtyEvent> {
     std::iter::from_fn(|| events.try_recv()).collect()
@@ -301,7 +286,7 @@ fn prompt_marks_follow_their_lines_into_the_history() {
         "printf '{prompt}'; printf 'seq\\n\\033]133;C\\a'; i=0; while [ $i -lt 40 ]; do echo \"line $i\"; i=$((i+1)); done; \
          printf '\\033]133;D;0\\a{prompt}'; printf 'ready'; sleep 5"
     );
-    let options = SpawnOptions { scrollback_lines: 1000, ..SpawnOptions::default() };
+    let options = StartOptions { scrollback_lines: 1000, ..StartOptions::default() };
     let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", &script]).expect("spawn");
     wait_until("the second prompt", || pty.screen_text().contains("$ ready"));
     let mut snapshot = super::ScreenSnapshot::default();
@@ -439,48 +424,6 @@ fn the_shells_exit_ends_the_work_but_not_what_finished() {
     wait_until("the exit", || matches!(events.try_recv(), Some(PtyEvent::Exited(_))));
     assert_eq!(reported(&pty), Some((program_status::State::Done, None, None)));
     assert_eq!(pty.program_status().len(), 1);
-}
-
-/// The variables that configure an instance (its data folder, its devctl folder, background mode, …)
-/// stay with the instance: `cargo run` in a test instance's tab would otherwise start a second
-/// instance on the first one's data and take commands meant for it. A process's environment can't be
-/// changed from inside a test, so the check runs again in a child process that has them all.
-#[test]
-fn a_shell_does_not_inherit_the_instances_own_settings() {
-    const CHILD: &str = "WORMHOLE_SCRUB_TEST_CHILD";
-    const TEST: &str = "terminal::tests::a_shell_does_not_inherit_the_instances_own_settings";
-    if std::env::var_os(CHILD).is_none() {
-        let exe = std::env::current_exe().expect("finds the test binary");
-        let mut command = std::process::Command::new(exe);
-        command.args([TEST, "--exact", "--test-threads=1"]).env(CHILD, "1");
-        for var in super::process::INSTANCE_VARS {
-            command.env(var, "/leaked");
-        }
-        // Not the instance's: a person's own log level reaches their shell.
-        command.env("WORMHOLE_LOG", "debug");
-        let output = command.output().expect("runs the test binary");
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(
-            output.status.success() && stdout.contains("1 passed"),
-            "{TEST} failed in its child process:\n{stdout}\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        return;
-    }
-    let options = SpawnOptions { tab_id: "real-tab".into(), ..SpawnOptions::default() };
-    let shows: String = super::process::INSTANCE_VARS
-        .iter()
-        .chain(&["WORMHOLE_LOG", "WORMHOLE_TAB_ID"])
-        .map(|var| format!(" \"{var}=${{{var}-unset}}\""))
-        .collect();
-    let script = format!("printf '%s\\n'{shows}; sleep 5");
-    let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", &script]).expect("spawn");
-    wait_until("the output", || pty.screen_text().contains("WORMHOLE_TAB_ID=real-tab"));
-    let screen = pty.screen_text();
-    for var in super::process::INSTANCE_VARS {
-        assert!(screen.contains(&format!("{var}=unset")), "{var} reached the shell:\n{screen}");
-    }
-    assert!(screen.contains("WORMHOLE_LOG=debug"), "a setting that isn't the instance's stays:\n{screen}");
 }
 
 /// Whether a process exists (`kill -0`), without unsafe code in the test.

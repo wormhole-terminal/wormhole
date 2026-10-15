@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use wormhole_vt::types::{Cell, Column, Flags, Line, Point, RowExtras};
 
 use super::osc::percent_decode;
-use super::process;
+use super::procinfo;
 use super::screen::Screen;
 
 /// The most rows one wrapped line is searched over, each way.
@@ -254,7 +254,7 @@ impl Openable {
                 let rest = rest.strip_prefix("//")?;
                 let (host, path) = rest.find('/').map(|at| rest.split_at(at))?;
                 let path = path.split(['?', '#']).next().unwrap_or(path);
-                if !process::is_this_host(host) {
+                if !procinfo::is_this_host(host) {
                     return None;
                 }
                 let path = percent_decode(path.as_bytes())?;

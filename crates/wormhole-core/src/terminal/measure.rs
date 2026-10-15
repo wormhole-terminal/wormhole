@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use wormhole_vt::parser::Parser;
 
 use super::screen::Screen;
-use super::{GridSize, Pty, PtyEvent, SpawnOptions};
+use super::{GridSize, Pty, PtyEvent, StartOptions};
 
 /// `ttystorm bench` (`tools/bench`, built with `cargo build --release`) inside a terminal of
 /// this crate, end to end: the PTY layer, the host and the parser, without a window.
@@ -20,7 +20,7 @@ fn ttystorm_throughput() {
     let runs = std::env::var("RUNS").unwrap_or_else(|_| "3".into());
     let size = GridSize { cols: 200, rows: 60, cell_width: 8.0, cell_height: 16.0 };
     let args = ["bench", "--plain", "--only", only.as_str(), "--size", "16", "--runs", runs.as_str()];
-    let (pty, events) = Pty::spawn_program(size, &SpawnOptions::default(), &bin, &args).expect("spawns");
+    let (pty, events) = Pty::spawn_program(size, &StartOptions::default(), &bin, &args).expect("spawns");
     let deadline = Instant::now() + Duration::from_secs(300);
     loop {
         match events.try_recv() {
@@ -138,7 +138,7 @@ fn ui_lock_under_a_flood() {
     let script = format!("yes '{line}' | head -c 104857600; echo; echo flood-done");
     let size = GridSize { cols: 200, rows: 60, cell_width: 8.0, cell_height: 16.0 };
     let (pty, events) =
-        Pty::spawn_program(size, &SpawnOptions::default(), "/bin/sh", &["-c", script.as_str()])
+        Pty::spawn_program(size, &StartOptions::default(), "/bin/sh", &["-c", script.as_str()])
             .expect("spawns");
     let mut waits = Vec::new();
     let started = Instant::now();

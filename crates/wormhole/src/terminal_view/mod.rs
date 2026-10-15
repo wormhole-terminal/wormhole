@@ -225,7 +225,7 @@ impl TerminalView {
         options.colors = Some(palette.engine_colors());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
-        let (pty, events) = match Pty::spawn(initial, &options) {
+        let (pty, events) = match wormhole_core::terminal::spawn(initial, &options) {
             Ok((pty, events)) => (Some(pty), Some(events)),
             Err(err) => {
                 tracing::error!("failed to spawn shell: {err:#}");

@@ -11,8 +11,7 @@ use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-use wormhole_core::shells::ShellCommand;
-use wormhole_core::terminal::{GridSize, Pty, SpawnOptions};
+use wormhole_core::terminal::{GridSize, Launch, Pty, Shell, StartOptions};
 
 /// Allocations made by the reader thread so far.
 static READER_ALLOCATIONS: AtomicUsize = AtomicUsize::new(0);
@@ -62,17 +61,14 @@ const SIZE: GridSize = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_hei
 /// does, was still growing it at the 2,000th pass); the end of the program, with its exit event,
 /// is still far off at the second.
 fn reader_allocations(script: &str) -> usize {
-    let options = SpawnOptions {
-        shell: Some(ShellCommand {
-            program: "/bin/sh".into(),
-            args: vec!["-c".into(), script.into()],
-            name: "sh".into(),
-        }),
-        ..SpawnOptions::default()
+    let launch = Launch {
+        shell: Shell::new("/bin/sh".into(), vec!["-c".into(), script.into()]),
+        cwd: None,
+        env: Default::default(),
     };
     // The events stay unread: taking them would let the reader send more, and the channel
     // allocates a block of them now and then.
-    let (pty, _events) = Pty::spawn(SIZE, &options).expect("starts");
+    let (pty, _events) = Pty::start(SIZE, &StartOptions::default(), launch).expect("starts");
     let deadline = Instant::now() + Duration::from_secs(120);
     let (mut from, mut to) = (None, None);
     while to.is_none() {

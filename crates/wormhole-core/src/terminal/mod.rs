@@ -34,6 +34,7 @@
 //! - `links`: OSC 8 hyperlinks and URLs in the text, and which may be opened;
 //! - `glyphs`: geometry of the characters the UI paints as shapes.
 
+pub mod agents;
 mod blocks;
 mod engine;
 mod events;
@@ -47,6 +48,7 @@ pub mod minimap;
 mod osc;
 mod ports;
 mod process;
+mod procinfo;
 pub mod program_status;
 mod pty;
 mod restore;
@@ -54,6 +56,7 @@ mod screen;
 pub mod scrollbar;
 pub mod sequences;
 mod snapshot;
+mod spawn;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
 mod text;
@@ -85,8 +88,10 @@ pub use osc::{
 pub use ports::listening_ports;
 pub use process::shell_name;
 use pty::FairLock;
+pub use pty::{Launch, Shell};
 use screen::Screen;
 pub use snapshot::{BlockSpan, ScreenSnapshot, SnapshotCursor, SnapshotRow};
+pub use spawn::{SpawnOptions, spawn};
 pub use text::prompt_in;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -118,14 +123,12 @@ pub(crate) struct WindowSize {
     pub cell_height: u16,
 }
 
-/// How to start a tab's shell.
-#[derive(Clone, Debug, Default)]
-pub struct SpawnOptions {
-    pub cwd: Option<PathBuf>,
-    /// The tab this shell belongs to, as `WORMHOLE_TAB_ID`: what its agent hooks report.
-    pub tab_id: String,
+/// How to start the engine behind a terminal: what the screen is given before the program's first
+/// byte. Where the program comes from, and its folder and environment, are the [`Launch`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct StartOptions<'a> {
     /// Previous session text, replayed dimmed before the shell starts.
-    pub restore: Option<String>,
+    pub restore: Option<&'a str>,
     pub scrollback_lines: usize,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.
@@ -133,19 +136,10 @@ pub struct SpawnOptions {
     /// Let the program act on the window (XTWINOPS: move, resize, minimise, …; DECCOLM changing the
     /// width) and read its title back (`allow_window_ops`); the engine ignores both otherwise.
     pub allow_window_ops: bool,
-    /// Extra environment, e.g. from a trusted project's `config.json`.
-    pub env: std::collections::BTreeMap<String, String>,
-    /// The program to run instead of the login shell: the tab's profile, a trusted project's
-    /// shell or the default, decided by `shells::for_tab`.
-    pub shell: Option<crate::shells::ShellCommand>,
-    /// Start the program through `Wormhole welcome -- <program>`: the first-run welcome in this
-    /// terminal, which becomes the program when it ends. The app also puts the welcome's token in
-    /// `env` (`welcome::TOKEN_VAR`).
-    pub welcome: bool,
     /// The theme's colors, which the engine answers a program's color queries (OSC 4, 10, 11, 12)
     /// with from its first byte; without them it answers with xterm's until
     /// [`Pty::set_default_colors`] is called, which a terminal that was never drawn has not yet.
-    pub colors: Option<Box<[types::Rgb; types::COLOR_COUNT]>>,
+    pub colors: Option<&'a [types::Rgb; types::COLOR_COUNT]>,
 }
 
 /// A shell in a PTY with a grid and a parser on the PTY's own thread. The grid stays behind this
@@ -172,31 +166,15 @@ struct ReportedCwd {
 }
 
 impl Pty {
-    pub fn spawn(size: GridSize, options: &SpawnOptions) -> anyhow::Result<(Self, PtyEvents)> {
-        Self::spawn_shell(size, options, process::shell(options))
-    }
-
-    /// `spawn` with an explicit program instead of the user's shell.
-    #[cfg(test)]
-    pub(crate) fn spawn_program(
+    /// Start `launch` in a PTY of `size`, with the engine set up by `options`.
+    pub fn start(
         size: GridSize,
-        options: &SpawnOptions,
-        program: &str,
-        args: &[&str],
-    ) -> anyhow::Result<(Self, PtyEvents)> {
-        let args = args.iter().map(|arg| arg.to_string()).collect();
-        Self::spawn_shell(size, options, process::launch(program.into(), args))
-    }
-
-    fn spawn_shell(
-        size: GridSize,
-        options: &SpawnOptions,
-        shell: pty::Shell,
+        options: &StartOptions,
+        launch: Launch,
     ) -> anyhow::Result<(Self, PtyEvents)> {
         let (proxy, events) = EventProxy::new();
         let shared = proxy.shared().clone();
         shared.set_size(size.window_size());
-        let launch = process::launch_options(options, shell);
         let engine::Spawned { screen, io, pid } = engine::spawn(size, options, &launch, proxy, &shared)?;
         Ok((
             Self {
@@ -210,6 +188,24 @@ impl Pty {
             },
             events,
         ))
+    }
+
+    /// `start` with an explicit program, in the environment a terminal's program has (the TERM it
+    /// is told, its folder), without the app's launch around it.
+    #[cfg(test)]
+    pub(crate) fn spawn_program(
+        size: GridSize,
+        options: &StartOptions,
+        program: &str,
+        args: &[&str],
+    ) -> anyhow::Result<(Self, PtyEvents)> {
+        let shell = Shell::new(program.into(), args.iter().map(|arg| arg.to_string()).collect());
+        let env = [("TERM", "xterm-256color"), ("COLORTERM", "truecolor"), ("TERM_PROGRAM", "Wormhole")]
+            .into_iter()
+            .map(|(name, value)| (name.to_string(), value.to_string()))
+            .collect();
+        let cwd = std::env::var_os("HOME").map(PathBuf::from);
+        Self::start(size, options, Launch { shell, cwd, env })
     }
 
     pub fn write(&self, bytes: impl Into<Cow<'static, [u8]>>) {
@@ -477,7 +473,7 @@ impl Pty {
     /// (ssh) or of a folder that isn't here never get this far (`EventProxy::osc`), so those
     /// terminals show the local shell's folder, as before.
     pub fn cwd(&self) -> Option<PathBuf> {
-        let polled = process::process_cwd(self.pid()?);
+        let polled = procinfo::process_cwd(self.pid()?);
         let mut reported = self.reported_cwd.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(path) = self.shared.take_cwd_report() {
             *reported = Some(ReportedCwd { path, polled_then: polled.clone() });
@@ -586,24 +582,24 @@ impl Pty {
     }
 
     /// The coding agent running in the foreground, if any.
-    pub fn foreground_agent(&self) -> Option<crate::agents::AgentId> {
-        crate::agents::foreground_agent(self.pid()?)
+    pub fn foreground_agent(&self) -> Option<agents::AgentId> {
+        agents::foreground_agent(self.pid()?)
     }
 
     /// Whether the shell is back at its prompt (nothing else in the foreground).
     pub fn shell_in_foreground(&self) -> bool {
-        self.pid().is_some_and(crate::agents::shell_in_foreground)
+        self.pid().is_some_and(agents::shell_in_foreground)
     }
 
     /// Whether a program other than the shell holds the terminal; `None` where
     /// the platform can't tell. While one does, the shell's folder can't change.
     pub fn program_in_foreground(&self) -> Option<bool> {
-        crate::agents::shell_holds_terminal(self.pid()?).map(|shell| !shell)
+        agents::shell_holds_terminal(self.pid()?).map(|shell| !shell)
     }
 
     /// The program in the foreground and since when, unless it's the shell.
-    pub fn foreground_command(&self) -> Option<crate::agents::Foreground> {
-        crate::agents::foreground_command(self.pid()?)
+    pub fn foreground_command(&self) -> Option<agents::Foreground> {
+        agents::foreground_command(self.pid()?)
     }
 }
 

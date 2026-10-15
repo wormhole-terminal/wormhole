@@ -23,7 +23,7 @@ mod tests;
 pub use parse::{Parsed, SEQUENCE_MAX, parse};
 pub use store::{ProgramStatus, RECORDS_MAX, Summary};
 
-use crate::agents::{AGENTS, AgentId};
+use crate::terminal::agents::{AGENTS, AgentId};
 
 /// The terminal's answer to `OSC 7501 ; ? ST`. A plain `?`: an absent `states` or `kinds` list
 /// means exactly the default ones, which are all supported, so there is nothing to list.

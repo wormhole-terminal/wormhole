@@ -26,7 +26,7 @@ use wormhole_vt::parser::Parser;
 use super::events::{EventProxy, Shared};
 use super::pty::{self, FairLock, Feed};
 use super::screen::{Hold, SYNC_TIMEOUT, Screen};
-use super::{GridSize, SpawnOptions, restore};
+use super::{GridSize, StartOptions, restore};
 use host::Host;
 #[cfg(any(test, feature = "test-support"))]
 pub(super) use host::mark_of;
@@ -85,7 +85,7 @@ pub(super) struct Spawned {
 /// Start `launch` in a PTY of `size`, with the engine's terminal and parser on the reader thread.
 pub(super) fn spawn(
     size: GridSize,
-    options: &SpawnOptions,
+    options: &StartOptions,
     launch: &pty::Launch,
     proxy: EventProxy,
     shared: &Arc<Shared>,
@@ -94,11 +94,11 @@ pub(super) fn spawn(
     screen.set_screen_checksum(options.allow_screen_checksum);
     screen.set_window_ops(options.allow_window_ops);
     // Before the program's first byte: a terminal nobody has drawn yet is queried too.
-    if let Some(colors) = options.colors.as_deref() {
+    if let Some(colors) = options.colors {
         screen.set_default_colors(colors);
     }
     // Replay the previous session's text (dimmed) before the shell starts.
-    if let Some(text) = options.restore.as_deref() {
+    if let Some(text) = options.restore {
         restore::replay(&mut screen, text);
     }
     let screen = Arc::new(FairLock::new(screen));

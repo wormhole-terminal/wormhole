@@ -8,8 +8,7 @@
 
 use std::time::Duration;
 
-use wormhole_core::shells::ShellCommand;
-use wormhole_core::terminal::{GridSize, Pty, SpawnOptions};
+use wormhole_core::terminal::{GridSize, Launch, Pty, Shell, StartOptions};
 
 const SIZE: GridSize = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 16.0 };
 
@@ -26,15 +25,12 @@ fn cpu_time() -> Duration {
 }
 
 fn terminal(script: &str) -> Pty {
-    let options = SpawnOptions {
-        shell: Some(ShellCommand {
-            program: "/bin/sh".into(),
-            args: vec!["-c".into(), script.into()],
-            name: "sh".into(),
-        }),
-        ..SpawnOptions::default()
+    let launch = Launch {
+        shell: Shell::new("/bin/sh".into(), vec!["-c".into(), script.into()]),
+        cwd: None,
+        env: Default::default(),
     };
-    Pty::spawn(SIZE, &options).expect("starts").0
+    Pty::start(SIZE, &StartOptions::default(), launch).expect("starts").0
 }
 
 /// CPU time used over the next second, after a moment for the terminal to settle.

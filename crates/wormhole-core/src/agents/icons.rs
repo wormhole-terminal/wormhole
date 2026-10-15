@@ -1,7 +1,5 @@
 //! The bundled agent logos.
 
-use super::AgentId;
-
 /// Bundled logos (monochrome, tinted by the UI), served by the app's asset
 /// source under `agent-icons/`.
 pub const ICON_PREFIX: &str = "agent-icons/";
@@ -16,21 +14,23 @@ macro_rules! icon {
     };
 }
 
-static ICONS: &[(AgentId, (&str, &[u8]))] = &[
-    (AgentId::Claude, icon!("claude")),
-    (AgentId::Gemini, icon!("gemini")),
-    (AgentId::Copilot, icon!("copilot")),
-    (AgentId::Cursor, icon!("cursor")),
-    (AgentId::OpenCode, icon!("opencode")),
-    (AgentId::Qwen, icon!("qwen")),
-    (AgentId::Cline, icon!("cline")),
+static ICONS: &[(&str, &[u8])] = &[
+    icon!("claude"),
+    icon!("gemini"),
+    icon!("copilot"),
+    icon!("cursor"),
+    icon!("opencode"),
+    icon!("qwen"),
+    icon!("cline"),
 ];
-
-pub(super) fn icon_asset(id: AgentId) -> Option<&'static str> {
-    ICONS.iter().find(|(agent, _)| *agent == id).map(|(_, (key, _))| *key)
-}
 
 /// The SVG bytes behind an `agent-icons/…` asset key.
 pub fn icon_bytes(key: &str) -> Option<&'static [u8]> {
-    ICONS.iter().find(|(_, (k, _))| *k == key).map(|(_, (_, bytes))| *bytes)
+    ICONS.iter().find(|(k, _)| *k == key).map(|(_, bytes)| *bytes)
+}
+
+/// The keys of the bundled logos (a test checks each belongs to an agent).
+#[cfg(test)]
+pub(super) fn keys() -> impl Iterator<Item = &'static str> {
+    ICONS.iter().map(|(key, _)| *key)
 }

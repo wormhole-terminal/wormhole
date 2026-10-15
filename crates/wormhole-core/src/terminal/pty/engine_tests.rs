@@ -3,12 +3,12 @@
 
 use std::time::{Duration, Instant};
 
-use crate::terminal::{GridSize, Pty, PtyEvent, SpawnOptions};
+use crate::terminal::{GridSize, Pty, PtyEvent, StartOptions};
 
 const SIZE: GridSize = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 16.0 };
 
 fn spawn(script: &str) -> (Pty, crate::terminal::PtyEvents) {
-    Pty::spawn_program(SIZE, &SpawnOptions::default(), "/bin/sh", &["-c", script]).expect("spawn")
+    Pty::spawn_program(SIZE, &StartOptions::default(), "/bin/sh", &["-c", script]).expect("spawn")
 }
 
 fn wait_until(what: &str, within: Duration, mut done: impl FnMut() -> bool) {

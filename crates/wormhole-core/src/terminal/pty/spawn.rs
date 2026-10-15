@@ -18,7 +18,7 @@ use std::process::{Child, Command, Stdio};
 
 /// The program a terminal runs.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::terminal) struct Shell {
+pub struct Shell {
     /// The executable, by path or by name to look up in `PATH`.
     pub program: String,
     /// Its arguments, after the program's own name.
@@ -27,14 +27,14 @@ pub(in crate::terminal) struct Shell {
 
 impl Shell {
     /// `program` with `args`.
-    pub(in crate::terminal) fn new(program: String, args: Vec<String>) -> Self {
+    pub fn new(program: String, args: Vec<String>) -> Self {
         Self { program, args }
     }
 }
 
 /// How to start it.
 #[derive(Clone, Debug)]
-pub(in crate::terminal) struct Launch {
+pub struct Launch {
     /// The program.
     pub shell: Shell,
     /// Where it starts. A folder that is not there is not an error: the program starts where the

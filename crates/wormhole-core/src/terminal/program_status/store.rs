@@ -2,7 +2,7 @@
 //! thing the UI shows of them.
 
 use super::{Kind, Record, Report, State, agent_for_app};
-use crate::agents::AgentId;
+use crate::terminal::agents::AgentId;
 use crate::terminal::clean;
 
 /// Records per terminal. The spec asks for at least 64.
@@ -463,7 +463,7 @@ mod tests {
             }
             .agent()
         };
-        use crate::agents::AgentId;
+        use crate::terminal::agents::AgentId;
         assert_eq!(agent("claude-code"), Some(AgentId::Claude));
         assert_eq!(agent("Claude"), Some(AgentId::Claude));
         assert_eq!(agent("codex"), Some(AgentId::Codex));

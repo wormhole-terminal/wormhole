@@ -45,7 +45,7 @@ use reader::Reader;
 pub(in crate::terminal) use hangup::HANGUP_GRACE;
 pub(in crate::terminal) use lock::FairLock;
 pub(in crate::terminal) use parse::Feed;
-pub(in crate::terminal) use spawn::{Launch, Shell};
+pub use spawn::{Launch, Shell};
 
 /// A running terminal's input, size and end, for the app's side. The thread outlives it when the
 /// terminal is closed, until the program is gone.

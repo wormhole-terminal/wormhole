@@ -9,12 +9,12 @@ use wormhole_vt::types::{COLOR_COUNT, Column, Line, Point, Rgb, SelectionType, S
 
 use crate::terminal::testing::TestTerm;
 use crate::terminal::tests::{drain, wait_until};
-use crate::terminal::{GridSize, Pty, PtyEvent, ScreenSnapshot, SpawnOptions};
+use crate::terminal::{GridSize, Pty, PtyEvent, ScreenSnapshot, StartOptions};
 
 const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 
-fn options() -> SpawnOptions {
-    SpawnOptions { scrollback_lines: 1000, ..SpawnOptions::default() }
+fn options() -> StartOptions<'static> {
+    StartOptions { scrollback_lines: 1000, ..StartOptions::default() }
 }
 
 fn spawn(script: &str) -> (Pty, crate::terminal::PtyEvents) {
@@ -41,14 +41,14 @@ fn the_engine_answers_color_queries_with_the_themes_colors_unless_the_program_se
 fn the_engine_answers_a_screen_checksum_request_once_the_host_allows_it() {
     // DECRQCRA of the one cell holding "A", read back raw (the reply is 11 bytes).
     let script = r#"sleep 0.3; stty raw -echo; printf 'A\033[5;0;1;1;1;1*y'; r=$(dd bs=1 count=11 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
-    let allowed = SpawnOptions { allow_screen_checksum: true, ..options() };
+    let allowed = StartOptions { allow_screen_checksum: true, ..options() };
     let (pty, _events) = Pty::spawn_program(SIZE, &allowed, "/bin/sh", &["-c", script]).expect("spawn");
     wait_until("the checksum", || pty.screen_text().contains("EP5!~0041E\\"));
 }
 
 /// The window operations the program in `script` asked for, as the UI hears them, once its output
 /// has shown `done`.
-fn window_ops(options: &SpawnOptions, script: &str) -> (Pty, Vec<crate::terminal::WindowOp>) {
+fn window_ops(options: &StartOptions, script: &str) -> (Pty, Vec<crate::terminal::WindowOp>) {
     let (pty, events) = Pty::spawn_program(SIZE, options, "/bin/sh", &["-c", script]).expect("spawn");
     wait_until("the output", || pty.screen_text().contains("done"));
     let mut ops = Vec::new();
@@ -67,7 +67,7 @@ fn window_operations_reach_the_ui_only_when_the_host_allows_them() {
     let script = "printf '\\033[8;30;100t\\033[2t'; printf done; sleep 5";
     let (_pty, ops) = window_ops(&options(), script);
     assert!(ops.is_empty(), "off by default: {ops:?}");
-    let allowed = SpawnOptions { allow_window_ops: true, ..options() };
+    let allowed = StartOptions { allow_window_ops: true, ..options() };
     let (pty, ops) = window_ops(&allowed, script);
     assert_eq!(
         ops,
@@ -81,7 +81,7 @@ fn window_operations_reach_the_ui_only_when_the_host_allows_them() {
 fn deccolm_asks_the_ui_for_the_width_when_window_operations_are_allowed() {
     use crate::terminal::{Extent, WindowOp};
 
-    let allowed = SpawnOptions { allow_window_ops: true, ..options() };
+    let allowed = StartOptions { allow_window_ops: true, ..options() };
     let (_pty, ops) = window_ops(&allowed, "printf '\\033[?40h\\033[?3h'; printf done; sleep 5");
     assert_eq!(ops, [WindowOp::ResizeCells { rows: Extent::Keep, cols: Extent::Size(132) }]);
 }
@@ -250,7 +250,7 @@ fn a_program_that_asks_at_once_gets_the_themes_colors_before_any_paint() {
     let mut colors = Box::new([Rgb { r: 0, g: 0, b: 0 }; COLOR_COUNT]);
     colors[256] = Rgb { r: 0x10, g: 0x20, b: 0x30 };
     colors[257] = Rgb { r: 0xfa, g: 0xfb, b: 0xfc };
-    let options = SpawnOptions { colors: Some(colors), ..options() };
+    let options = StartOptions { colors: Some(&*colors), ..options() };
     let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", script]).expect("spawn");
     wait_until("both replies", || {
         pty.screen_text().contains("E]11;rgb:fafa/fbfb/fcfcBE]10;rgb:1010/2020/3030B")

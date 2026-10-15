@@ -182,7 +182,7 @@ mod sys {
             return None;
         }
         buf.truncate(size);
-        crate::agents::identify::parse_procargs(&buf)
+        super::identify::parse_procargs(&buf)
     }
 }
 

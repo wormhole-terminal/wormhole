@@ -149,7 +149,7 @@ fn claude_code_as_it_reports_itself() {
 
     assert!(send(&mut store, "state=idle:app=claude-code"));
     assert_eq!(shown(&store), (State::Idle, app.clone(), None));
-    assert_eq!(agent(&store), Some(crate::agents::AgentId::Claude));
+    assert_eq!(agent(&store), Some(crate::terminal::agents::AgentId::Claude));
 
     assert!(send(&mut store, "state=working:app=claude-code"));
     assert!(send(
