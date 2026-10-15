@@ -1,0 +1,17 @@
+[package]
+name = "wormhole-wire"
+description = "The wire protocol between the Wormhole app and a terminal's session host: frames, messages, version rules. Bytes in, messages out; no I/O of its own."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+# No dependencies on purpose: the host links this crate, and the host stays small and auditable.
+[dependencies]
+
+[lints]
+workspace = true

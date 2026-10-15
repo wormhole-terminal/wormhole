@@ -9227,6 +9227,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "wormhole-wire"
+version = "1.0.0"
+
+[[package]]
 name = "writeable"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
