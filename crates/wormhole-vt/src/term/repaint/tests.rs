@@ -131,6 +131,12 @@ fn a_cluster_that_can_still_grow() {
 }
 
 #[test]
+fn a_cluster_in_the_last_column_with_autowrap_off() {
+    same("\x1b[?7labcdefghijklmnopqrstu");
+    same("\x1b[?7labcdefghijklmnopqrst\u{e9}");
+}
+
+#[test]
 fn the_last_character_for_repeat() {
     same("xyz\r\n\x1b[2;1H");
 }

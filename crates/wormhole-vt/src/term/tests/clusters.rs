@@ -97,3 +97,18 @@ fn zalgo_stays_bounded() {
     let marks = rig.term.grid().marks_at(crate::types::Point::new(Line(0), crate::types::Column(0))).len();
     assert_eq!(marks, crate::grid::MAX_MARKS);
 }
+
+#[test]
+fn a_character_overwriting_the_last_column_without_autowrap_heads_its_cluster() {
+    // DECAWM off: the character lands on the last cell, and a mark that follows joins it there.
+    // The same for an ASCII run and for a character that is not ASCII.
+    for text in ["abcde", "abcd\u{e9}", "abcdefg"] {
+        let mut rig = Rig::new(5, 2);
+        rig.feed("\x1b[?7l\x1b[?2027h");
+        rig.feed(text);
+        rig.feed("\u{308}");
+        let last = text.chars().last().map(String::from).unwrap_or_default();
+        assert_eq!(cell(&rig, 4).0, format!("{last}\u{308}"), "{text:?}: the mark joins the last column");
+        assert_eq!(cell(&rig, 3).0, "d", "{text:?}: and not the column before");
+    }
+}

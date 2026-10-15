@@ -31,9 +31,9 @@ impl Terminal {
         }
         let Some(&last) = run.last() else { return };
         self.last_char = Some(char::from(last));
-        self.write_ascii(run);
+        let head = self.write_ascii(run);
         if self.modes.contains(Modes::GRAPHEME_CLUSTERS) {
-            self.start_cluster_after_ascii(char::from(last));
+            self.start_cluster_after_ascii(char::from(last), head);
         }
     }
 
@@ -57,8 +57,10 @@ impl Terminal {
         }
     }
 
-    /// Write ASCII at the cursor, wrapping at the right edge.
-    fn write_ascii(&mut self, mut run: &[u8]) {
+    /// Write ASCII at the cursor, wrapping at the right edge. Returns the column the last byte
+    /// went to: the cursor alone cannot say (it also stands at the right edge after a write that
+    /// ended one column short of it, and after one that filled it with autowrap off).
+    fn write_ascii(&mut self, mut run: &[u8]) -> usize {
         let autowrap = self.modes.contains(Modes::AUTOWRAP);
         let insert = self.modes.contains(Modes::INSERT);
         while !run.is_empty() {
@@ -80,7 +82,7 @@ impl Terminal {
             let end = x + head.len();
             if end <= right {
                 self.cursor.x = end;
-                return;
+                return end - 1;
             }
             self.cursor.x = right;
             if autowrap {
@@ -90,10 +92,11 @@ impl Terminal {
                 if let Some(&last) = rest.last() {
                     self.grid.write_ascii(y, right, &[last], &self.pen);
                 }
-                return;
+                return right;
             }
             run = rest;
         }
+        self.cursor.x
     }
 
     /// The delayed wrap happens: the row is marked as continuing, and the cursor goes to the start
@@ -192,13 +195,12 @@ impl Terminal {
 
     /// After a run of ASCII the last byte is a cluster that later marks extend.
     #[inline]
-    fn start_cluster_after_ascii(&mut self, last: char) {
+    fn start_cluster_after_ascii(&mut self, last: char, head: usize) {
         self.cluster.state = GraphemeState::AFTER_ASCII;
         self.cluster.open = true;
         self.cluster.width = 1;
         self.cluster.last = last;
-        // The head is the cell before the cursor (or the cursor's, with a wrap pending).
-        self.cluster.head = if self.cursor.pending { self.cursor.x } else { self.cursor.x.saturating_sub(1) };
+        self.cluster.head = head;
     }
 
     #[inline]

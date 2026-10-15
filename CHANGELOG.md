@@ -21,6 +21,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Resizing the window while a full-screen program (vim, less, an agent's interface) is showing no
   longer lets that screen collect lines above it and leaves the terminal's scrollback limit on the wrong
   screen; the full-screen program has no history and the shell's scrollback keeps its configured size.
+- With autowrap off and grapheme clustering on, a combining mark or emoji modifier sent after a
+  character in the last column joins that character, not the one before it.
 
 ## [1.0.0] - 2026-10-15
 

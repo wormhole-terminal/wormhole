@@ -90,9 +90,7 @@ bitflags! {
         /// A zero-width character on a cell with no character, in the last column.
         const MARK = 1 << 12;
         /// The last character printed can still be extended, and either insert mode is on, which
-        /// printing it again to say so would act on, or the cluster is not what its cell holds
-        /// (the engine keeps the head of the cluster one column short when autowrap is off and a
-        /// character fills the last column).
+        /// printing it again to say so would act on, or the cluster is not what its cell holds.
         const CLUSTER = 1 << 13;
         /// No character was ever printed (`last_char` is none) but the screen holds text: it
         /// came from DECALN or DECFRA, and printing it in a repaint sets `last_char`.
