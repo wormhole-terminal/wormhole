@@ -1,0 +1,42 @@
+[package]
+name = "wormhole-term"
+description = "Wormhole's terminal layer: a program in a PTY, the engine's host side and the screen it draws. No UI, no app state."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+# The value types the screen is read and driven in (the engine's boundary).
+wormhole-vt.workspace = true
+anyhow.workspace = true
+libc.workspace = true
+# The agent registry's ids are stored and sent by name.
+serde.workspace = true
+tracing.workspace = true
+# Find in scrollback: Unicode word boundaries, which a lazy DFA can't do (already in the dependency
+# graph through other crates).
+regex = "1.13"
+# The PTY reader thread waits on the master, the child's exit and its inbox with it (kqueue on
+# macOS).
+polling = "3.8"
+# kitty's notifications (OSC 99) may carry their text base64-encoded, and OSC 52 replies are.
+base64 = "0.22"
+# Inline images (kitty's graphics protocol, iTerm2's `1337;File`): PNG, JPEG and GIF decoded
+# under memory limits (GPUI already depends on it with these features and more).
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
+# kitty's graphics protocol may send its pixels deflated.
+flate2 = "1.1"
+smol.workspace = true
+
+[features]
+# `testing`: terminals without a PTY, for the app's render tests (its dev-dependencies turn this
+# on, through core's feature of the same name, so the shipped build never has it).
+test-support = []
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = "3"

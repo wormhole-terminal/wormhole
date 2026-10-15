@@ -10,21 +10,12 @@ publish.workspace = true
 [dependencies]
 # The value types the screen is read and driven in (the engine's boundary).
 wormhole-vt.workspace = true
+# The terminal layer (a program in a PTY and the screen it draws), which core re-exports as `terminal`.
+wormhole-term.workspace = true
 anyhow.workspace = true
 dirs.workspace = true
 libc.workspace = true
 plist.workspace = true
-# Find in scrollback: Unicode word boundaries, which a lazy DFA can't do (already in the dependency
-# graph through other crates).
-regex = "1.13"
-# The PTY reader thread waits on the master, the child's exit and its inbox with it (kqueue on
-# macOS).
-polling = "3.8"
-# kitty's notifications (OSC 99) may carry their text base64-encoded, and OSC 52 replies are.
-base64 = "0.22"
-# Inline images (kitty's graphics protocol, iTerm2's `1337;File`): PNG, JPEG and GIF decoded
-# under memory limits (GPUI already depends on it with these features and more).
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
 rusqlite.workspace = true
 serde.workspace = true
 # Config files we edit for agents (~/.claude/settings.json, …) keep their key
@@ -51,7 +42,7 @@ ureq = { version = "3.4", default-features = false, features = ["rustls-no-provi
 [features]
 # `terminal::testing`: terminals without a PTY, for the app's render tests (its dev-dependencies
 # turn this on, so the shipped build never has it).
-test-support = []
+test-support = ["wormhole-term/test-support"]
 
 [lints]
 workspace = true

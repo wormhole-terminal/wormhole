@@ -9182,16 +9182,12 @@ name = "wormhole-core"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "dirs 7.0.0",
  "flate2",
- "image",
  "libc",
  "minisign",
  "minisign-verify",
  "plist",
- "polling",
- "regex",
  "rusqlite",
  "rustls",
  "semver",
@@ -9206,6 +9202,25 @@ dependencies = [
  "toml 1.1.6+spec-1.1.0",
  "tracing",
  "ureq",
+ "wormhole-term",
+ "wormhole-vt",
+]
+
+[[package]]
+name = "wormhole-term"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "flate2",
+ "image",
+ "libc",
+ "polling",
+ "regex",
+ "serde",
+ "smol",
+ "tempfile",
+ "tracing",
  "wormhole-vt",
 ]
 

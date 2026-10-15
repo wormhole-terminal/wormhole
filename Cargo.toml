@@ -12,6 +12,7 @@ publish = false
 
 [workspace.dependencies]
 wormhole-core = { path = "crates/wormhole-core" }
+wormhole-term = { path = "crates/wormhole-term" }
 wormhole-vt = { path = "crates/wormhole-vt" }
 wormhole-wire = { path = "crates/wormhole-wire" }
 anyhow = "1"
