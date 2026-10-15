@@ -1,0 +1,14 @@
+esctest	ghostty	ok		1.3.1	25x80	yes	3.72	0	134
+esctest	alacritty	ok		0.17.0	25x80	no	3.78	0	96
+esctest	kitty	ok		0.49.2	25x80	yes	3.85	0	106
+esctest	wezterm	ok		20240203-110809-5046fc22	25x80	no	3.94	0	278
+ucs-detect	ghostty	ok		1.3.1	25x80	yes	3.54	0	7
+ucs-detect	alacritty	ok		0.17.0	25x80	no	3.65	0	8
+ucs-detect	kitty	ok		0.49.2	25x80	yes	3.82	0	165
+ucs-detect	wezterm	failed	no result within 1800s	20240203-110809-5046fc22	?	yes	3.73		1930
+esctest	wormhole	ok		5e2f529c (this checkout)	25x80	yes	3.84	0	87
+esctest	iterm2	ok		3.7.4	25x80	yes	2.82	0	132
+esctest	terminal	ok		2.15	25x80	yes	3.76	0	267
+ucs-detect	wormhole	ok		5e2f529c (this checkout)	25x80	no	3.36	0	21
+ucs-detect	iterm2	ok		3.7.4	25x80	no	3.33	0	485
+ucs-detect	terminal	ok		2.15	25x80	no	3.87	0	57

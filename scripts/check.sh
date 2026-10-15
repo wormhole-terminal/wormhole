@@ -15,11 +15,13 @@
 #         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
 #   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
 #         design_rules (it scans their wording), never a compile of either crate.
-#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench (its
-#         own workspace): nothing to run.
+#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench and
+#         tools/vt-compare (their own workspaces): nothing to run.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
+# The engine's outside suites (esctest2, ucs-detect; scripts/suites-gate.sh) run last, against a committed
+# expectation, when crates/wormhole-vt, the bench crate or core's terminal layer changed, and with --all.
 # Output is quiet (test names only when they fail), so an agent reads results, not progress.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -52,8 +54,8 @@ scope_of() {
     scripts/*|tools/visual/*|.claude/skills/*|.claude/agents/*|.claude/rules/*) echo text ;;
     README.md|CONTRIBUTING.md|SECURITY.md|CODE_OF_CONDUCT.md|ACCESSIBILITY.md|CHANGELOG.md) echo text ;;
     .github/*|.claude/hooks/*|.claude/settings*.json|.claude/worktrees/*|.gitignore|LICENSE|packaging/*) echo none ;;
-    # Its own workspace, built and checked on its own (tools/bench/README.md).
-    tools/bench/*) echo none ;;
+    # Their own workspaces, built and checked on their own (tools/bench/README.md, tools/vt-compare/README.md).
+    tools/bench/*|tools/vt-compare/*) echo none ;;
     *) echo all ;;   # unknown: safer to run everything than to miss a test that reads it
   esac
 }
@@ -77,6 +79,11 @@ while IFS= read -r path; do
   if [ "$(rank "$s")" -gt "$(rank "$scope")" ]; then scope=$s why=$path; fi
 done <<<"$changed"
 [ "$force_all" = 1 ] && { scope=all; why="--all"; }
+
+# The outside suites test the engine, its bench host and what feeds it; their own files too.
+suites=0
+grep -Eq '^(crates/wormhole-vt/|crates/wormhole-vt-bench/|crates/wormhole-core/src/terminal/|scripts/suites-gate\.sh$|tools/vt-compare/(gate\.py|expected/|suites\.pin|suites/|ucs-headless\.py|fetch-suites\.sh))' <<<"$changed" && suites=1
+[ "$force_all" = 1 ] && suites=1
 
 rust_changed=0
 grep -q '\.rs$' <<<"$changed" && rust_changed=1
@@ -102,6 +109,7 @@ case "$scope" in
     ;;
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check")
+[ "$suites" = 1 ] && steps+=("scripts/suites-gate.sh")
 
 # The history steps go first. They read the git history, so they run for every scope, `none` included.
 history=("python3 scripts/commits.py check-range $base..HEAD"

@@ -1,0 +1,9 @@
+# What fetch-ghostty.sh builds and build.rs links. Read by both; key=value, no spaces.
+#
+# rev: a commit of ghostty-org/ghostty. Not a release tag: v1.3.1 (the latest) has a libghostty-vt
+# that only exposes the OSC, SGR, key and paste helpers; the terminal itself (ghostty_terminal_new,
+# vt_write, grid references) is in the C headers from after it, so a commit of main is pinned.
+rev=ad97d331459a0762f7aea5f56fe86748e03b860f
+# zig: the compiler that commit asks for (minimum_zig_version in its build.zig.zon, matched
+# exactly: a newer Zig does not build it). Fetched into the cache when the installed one differs.
+zig=0.16.0

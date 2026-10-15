@@ -1,0 +1,569 @@
+{"checksum": null, "cpr": true, "cpr_ms": 0, "csi_14t": [750, 1280], "csi_16t": [30, 16], "csi_18t": [25, 80], "da1": "<ESC>[?62;22;52c", "da2": "<ESC>[>1;10;0c", "decrqcra": false, "decrqcra_sums": {"a": null, "erased": null, "untouched": null}, "label": "ghostty", "tty_size": [25, 80], "type": "probe"}
+{"class": "APCTests", "ms": 1, "name": "APCTests.test_APC_8bit", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "APCTests", "ms": 0, "name": "APCTests.test_APC_Basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 3, "name": "BSTests.test_BS_AfterNoWrappedInlines", "reason": "TestFailure: Test failed: expected 'Point(x=5, y=3)' but got 'Point(x=1, y=4)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_AfterOneWrappedInline", "reason": "TestFailure: Test failed: expected 'Point(x=9, y=3)' but got 'Point(x=1, y=6)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 0, "name": "BSTests.test_BS_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 0, "name": "BSTests.test_BS_CursorStartsInDoWrapPosition", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 0, "name": "BSTests.test_BS_InitialReverseWraparound", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 0, "name": "BSTests.test_BS_MovesLeftWhenLeftOfLeftMargin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 0, "name": "BSTests.test_BS_NoWrapByDefault", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_ReverseWrapGoesToBottom", "reason": "TestFailure: Test failed: expected 'Point(x=80, y=5)' but got 'Point(x=1, y=2)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 1, "name": "BSTests.test_BS_ReverseWrapRequiresDECAWM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 1, "name": "BSTests.test_BS_ReverseWrapStartingInDoWrapPosition", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_ReverseWrapWithLeftRight", "reason": "TestFailure: Test failed: expected 'Point(x=10, y=2)' but got 'Point(x=5, y=3)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_ReversewrapFromLeftEdgeToRightMargin", "reason": "TestFailure: Test failed: expected 'Point(x=10, y=2)' but got 'Point(x=1, y=3)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_StopsAtLeftMargin", "reason": "TestFailure: Test failed: expected 'Point(x=5, y=1)' but got 'Point(x=5, y=2)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_StopsAtOrigin", "reason": "TestFailure: Test failed: expected 'Point(x=1, y=1)' but got 'Point(x=1, y=2)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "BSTests", "ms": 2, "name": "BSTests.test_BS_WrapsInWraparoundMode", "reason": "TestFailure: Test failed: expected 'Point(x=80, y=2)' but got 'Point(x=1, y=3)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CBTTests", "ms": 0, "name": "CBTTests.test_CBT_ExplicitParameter", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CBTTests", "ms": 1, "name": "CBTTests.test_CBT_IgnoresRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CBTTests", "ms": 0, "name": "CBTTests.test_CBT_OneTabStopByDefault", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CBTTests", "ms": 1, "name": "CBTTests.test_CBT_StopsAtLeftEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 0, "name": "CHATests.test_CHA_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 2, "name": "CHATests.test_CHA_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 1, "name": "CHATests.test_CHA_IgnoresScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 0, "name": "CHATests.test_CHA_OutOfBoundsLarge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 1, "name": "CHATests.test_CHA_RespectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "CHATests", "ms": 0, "name": "CHATests.test_CHA_ZeroParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHTTests", "ms": 1, "name": "CHTTests.test_CHT_ExplicitParameter", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHTTests", "ms": 1, "name": "CHTTests.test_CHT_IgnoresScrollingRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CHTTests", "ms": 0, "name": "CHTTests.test_CHT_OneTabStopByDefault", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CNLTests", "ms": 0, "name": "CNLTests.test_CNL_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CNLTests", "ms": 0, "name": "CNLTests.test_CNL_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CNLTests", "ms": 1, "name": "CNLTests.test_CNL_StopsAtBottomLine", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CNLTests", "ms": 0, "name": "CNLTests.test_CNL_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CNLTests", "ms": 1, "name": "CNLTests.test_CNL_StopsAtBottomMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CPLTests", "ms": 1, "name": "CPLTests.test_CPL_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CPLTests", "ms": 1, "name": "CPLTests.test_CPL_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CPLTests", "ms": 2, "name": "CPLTests.test_CPL_StopsAtTopLine", "reason": "TestFailure: Test failed: expected '1' but got '2'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CPLTests", "ms": 1, "name": "CPLTests.test_CPL_StopsAtTopLineWhenBegunAboveScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CPLTests", "ms": 0, "name": "CPLTests.test_CPL_StopsAtTopMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CRTests", "ms": 1, "name": "CRTests.test_CR_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CRTests", "ms": 0, "name": "CRTests.test_CR_MovesToLeftMarginWhenLeftOfLeftMarginInOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "CRTests", "ms": 1, "name": "CRTests.test_CR_MovesToLeftMarginWhenRightOfLeftMargin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CRTests", "ms": 1, "name": "CRTests.test_CR_MovesToLeftOfScreenWhenLeftOfLeftMargin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CRTests", "ms": 1, "name": "CRTests.test_CR_StaysPutWhenAtLeftMargin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 2, "name": "CUBTests.test_CUB_AfterNoWrappedInlines", "reason": "TestFailure: Test failed: expected 'Point(x=5, y=3)' but got 'Point(x=1, y=5)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 2, "name": "CUBTests.test_CUB_AfterOneWrappedInline", "reason": "TestFailure: Test failed: expected 'Point(x=9, y=3)' but got 'Point(x=1, y=2)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 1, "name": "CUBTests.test_CUB_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 1, "name": "CUBTests.test_CUB_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 1, "name": "CUBTests.test_CUB_StopsAtLeftEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 1, "name": "CUBTests.test_CUB_StopsAtLeftEdgeWhenBegunLeftOfScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUBTests", "ms": 1, "name": "CUBTests.test_CUB_StopsAtLeftMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUDTests", "ms": 1, "name": "CUDTests.test_CUD_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUDTests", "ms": 4, "name": "CUDTests.test_CUD_ExplicitParam", "reason": "TestFailure: Test failed: expected '5' but got '4'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CUDTests", "ms": 2, "name": "CUDTests.test_CUD_StopsAtBottomLine", "reason": "TestFailure: Test failed: expected '25' but got '4'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "CUDTests", "ms": 1, "name": "CUDTests.test_CUD_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUDTests", "ms": 1, "name": "CUDTests.test_CUD_StopsAtBottomMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUFTests", "ms": 1, "name": "CUFTests.test_CUF_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUFTests", "ms": 0, "name": "CUFTests.test_CUF_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUFTests", "ms": 1, "name": "CUFTests.test_CUF_StopsAtRightEdgeWhenBegunRightOfScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUFTests", "ms": 1, "name": "CUFTests.test_CUF_StopsAtRightMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUFTests", "ms": 1, "name": "CUFTests.test_CUF_StopsAtRightSide", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_ColumnOnly", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_OutOfBoundsParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_RespectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_RowOnly", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUPTests", "ms": 1, "name": "CUPTests.test_CUP_ZeroIsTreatedAsOne", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUUTests", "ms": 1, "name": "CUUTests.test_CUU_DefaultParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUUTests", "ms": 0, "name": "CUUTests.test_CUU_ExplicitParam", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUUTests", "ms": 1, "name": "CUUTests.test_CUU_StopsAtTopLine", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUUTests", "ms": 1, "name": "CUUTests.test_CUU_StopsAtTopLineWhenBegunAboveScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "CUUTests", "ms": 1, "name": "CUUTests.test_CUU_StopsAtTopMarginInScrollRegion", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 5, "name": "ChangeColorTests.test_ChangeColor_CIELab", "reason": "TestFailure: Test failed: expected ';0;rgb:6c6c/6767/6767' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_CIELuv", "reason": "TestFailure: Test failed: expected ';0;rgb:1616/1414/0e0e' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_CIEXYZ", "reason": "TestFailure: Test failed: expected ';0;rgb:ffff/ffff/ffff' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_CIEuvY", "reason": "TestFailure: Test failed: expected ';0;rgb:ffff/ffff/ffff' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_CIExyY", "reason": "TestFailure: Test failed: expected ';0;rgb:ffff/ffff/ffff' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_Hash12", "reason": "TestFailure: Test failed: expected ';0;rgb:f0f0/f0f0/f0f0' but got ';0;rgb:efef/efef/efef'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_Hash3", "reason": "TestFailure: Test failed: expected ';0;rgb:f0f0/f0f0/f0f0' but got ';0;rgb:ffff/ffff/ffff'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 1, "name": "ChangeColorTests.test_ChangeColor_Hash6", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_Hash9", "reason": "TestFailure: Test failed: expected ';0;rgb:f0f0/f0f0/f0f0' but got ';0;rgb:efef/efef/efef'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 1, "name": "ChangeColorTests.test_ChangeColor_Multiple", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 1, "name": "ChangeColorTests.test_ChangeColor_RGB", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_RGBI", "reason": "TestFailure: Test failed: expected ';0;rgb:c1c1/bbbb/bbbb' but got ';0;rgb:7f7f/7f7f/7f7f'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeColorTests", "ms": 2, "name": "ChangeColorTests.test_ChangeColor_TekHVC", "reason": "TestFailure: Test failed: expected ';0;rgb:1a1a/1313/0f0f' but got ';0;rgb:1d1d/1f1f/2121'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 4, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_CIELab", "reason": "TestFailure: Test failed: expected ';rgb:6c6c/6767/6767' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_CIELuv", "reason": "TestFailure: Test failed: expected ';rgb:1616/1414/0e0e' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_CIEXYZ", "reason": "TestFailure: Test failed: expected ';rgb:ffff/ffff/ffff' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_CIEuvY", "reason": "TestFailure: Test failed: expected ';rgb:ffff/ffff/ffff' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_CIExyY", "reason": "TestFailure: Test failed: expected ';rgb:ffff/ffff/ffff' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_Hash12", "reason": "TestFailure: Test failed: expected ';rgb:f0f0/f0f0/f0f0' but got ';rgb:efef/efef/efef'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_Hash3", "reason": "TestFailure: Test failed: expected ';rgb:f0f0/f0f0/f0f0' but got ';rgb:ffff/ffff/ffff'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 1, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_Hash6", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_Hash9", "reason": "TestFailure: Test failed: expected ';rgb:f0f0/f0f0/f0f0' but got ';rgb:efef/efef/efef'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 1, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_Multiple", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 1, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_RGB", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_RGBI", "reason": "TestFailure: Test failed: expected ';rgb:c1c1/bbbb/bbbb' but got ';rgb:7f7f/7f7f/7f7f'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeDynamicColorTests", "ms": 2, "name": "ChangeDynamicColorTests.test_ChangeDynamicColor_TekHVC", "reason": "TestFailure: Test failed: expected ';rgb:1a1a/1313/0f0f' but got ';rgb:0000/0000/0000'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1012, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_CIELab", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1002, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_CIELuv", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1007, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_CIEXYZ", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_CIEuvY", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_CIExyY", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Hash12", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1004, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Hash3", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Hash6", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Hash9", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1004, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Multiple", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_Multiple2", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_RGB", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_RGBI", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ChangeSpecialColorTests", "ms": 1006, "name": "ChangeSpecialColorTests.test_ChangeSpecialColor_TekHVC", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DA2Tests", "ms": 2, "name": "DA2Tests.test_DA2_0", "reason": "TestFailure: Test failed: expected '64' but got '1'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DA2Tests", "ms": 1, "name": "DA2Tests.test_DA2_NoParameter", "reason": "TestFailure: Test failed: expected '64' but got '1'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DATests", "ms": 2, "name": "DATests.test_DA_0", "reason": "TestFailure: Test failed: expected '13' but got '3'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DATests", "ms": 2, "name": "DATests.test_DA_NoParameter", "reason": "TestFailure: Test failed: expected '13' but got '3'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_DeleteAllWithMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_DoesNothingOutsideLeftRightMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_RespectsMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCHTests", "ms": 0, "name": "DCHTests.test_DCH_WorksOutsideTopBottomMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DCSTests", "ms": 0, "name": "DCSTests.test_DCS_Unrecognized", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECALNTests", "ms": 1, "name": "DECALNTests.test_DECALN_ClearsMargins", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECALNTests", "ms": 1, "name": "DECALNTests.test_DECALN_FillsScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECALNTests", "ms": 1, "name": "DECALNTests.test_DECALN_MovesCursorHome", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECBITests", "ms": 2, "name": "DECBITests.test_DECBI_Basic", "reason": "TestFailure: Test failed: expected 'Point(x=4, y=6)' but got 'Point(x=5, y=6)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECBITests", "ms": 2, "name": "DECBITests.test_DECBI_LeftOfMargin", "reason": "TestFailure: Test failed: expected 'Point(x=1, y=1)' but got 'Point(x=2, y=1)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECBITests", "ms": 0, "name": "DECBITests.test_DECBI_NoWrapOnLeftEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECBITests", "ms": 1, "name": "DECBITests.test_DECBI_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECBITests", "ms": 0, "name": "DECBITests.test_DECBI_WholeScreenScrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_cursorDoesNotMove", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_defaultValuesInDest", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_defaultValuesInSource", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 1, "name": "DECCRATests.test_DECCRA_destinationPartiallyOffscreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_ignoresMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_invalidSourceRectDoesNothing", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_nonOverlappingSourceAndDest", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 1, "name": "DECCRATests.test_DECCRA_overlappingSourceAndDest", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_overlyLargeSourceClippedToScreenSize", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECCRATests", "ms": 0, "name": "DECCRATests.test_DECCRA_respectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_CursorWithinTopBottom", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 1, "name": "DECDCTests.test_DECDC_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_DeleteAll", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_DeleteAllWithLeftRightMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_DeleteWithLeftRightMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDCTests", "ms": 0, "name": "DECDCTests.test_DECDC_IsNoOpWhenCursorBeginsOutsideScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1006, "name": "DECDSRTests.test_DECDSR_DECCKSR", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1006, "name": "DECDSRTests.test_DECDSR_DECMSR", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1007, "name": "DECDSRTests.test_DECDSR_DECXCPR", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1002, "name": "DECDSRTests.test_DECDSR_DSRDECLocatorStatus", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1006, "name": "DECDSRTests.test_DECDSR_DSRDataIntegrity", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1007, "name": "DECDSRTests.test_DECDSR_DSRKeyboard", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1007, "name": "DECDSRTests.test_DECDSR_DSRMultipleSessionStatus", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1005, "name": "DECDSRTests.test_DECDSR_DSRPrinterPort", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1004, "name": "DECDSRTests.test_DECDSR_DSRUDKLocked", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECDSRTests", "ms": 1006, "name": "DECDSRTests.test_DECDSR_LocatorType", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 0, "name": "DECERATests.test_DECERA_basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 0, "name": "DECERATests.test_DECERA_cursorDoesNotMove", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 1, "name": "DECERATests.test_DECERA_defaultArgs", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 1, "name": "DECERATests.test_DECERA_ignoresMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 0, "name": "DECERATests.test_DECERA_invalidRectDoesNothing", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 1, "name": "DECERATests.test_DECERA_overlyLargeSourceClippedToScreenSize", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECERATests", "ms": 0, "name": "DECERATests.test_DECERA_respectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFITests", "ms": 2, "name": "DECFITests.test_DECFI_Basic", "reason": "TestFailure: Test failed: expected 'Point(x=6, y=6)' but got 'Point(x=5, y=6)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECFITests", "ms": 1, "name": "DECFITests.test_DECFI_NoWrapOnRightEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECFITests", "ms": 2, "name": "DECFITests.test_DECFI_RightOfMargin", "reason": "TestFailure: Test failed: expected 'Point(x=7, y=1)' but got 'Point(x=6, y=1)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECFITests", "ms": 1, "name": "DECFITests.test_DECFI_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFITests", "ms": 1, "name": "DECFITests.test_DECFI_WholeScreenScrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_cursorDoesNotMove", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_defaultArgs", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_ignoresMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_invalidRectDoesNothing", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_overlyLargeSourceClippedToScreenSize", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECFRATests", "ms": 1, "name": "DECFRATests.test_DECFRA_respectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 0, "name": "DECICTests.test_DECIC_CursorWithinTopBottom", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_IsNoOpWhenCursorBeginsOutsideScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_ScrollEntirelyOffRightEdge", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_ScrollOffRightEdge", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECICTests", "ms": 1, "name": "DECICTests.test_DECIC_ScrollOffRightMarginInScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECIDTests", "ms": 1007, "name": "DECIDTests.test_DECID_8bit", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECIDTests", "ms": 1, "name": "DECIDTests.test_DECID_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_AltVsMain", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 0, "name": "DECRCTests.test_SaveRestoreCursor_InsertNotAffected", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_MoveToHomeWhenNotSaved", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_Reset", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_ResetsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 0, "name": "DECRCTests.test_SaveRestoreCursor_ReverseWrapNotAffected", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_WorksInLRM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRCTests", "ms": 1, "name": "DECRCTests.test_SaveRestoreCursor_Wrap", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1007, "name": "DECRQMTests.test_DECRQM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1007, "name": "DECRQMTests.test_DECRQM_ANSI_EBM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1005, "name": "DECRQMTests.test_DECRQM_ANSI_FEAM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1002, "name": "DECRQMTests.test_DECRQM_ANSI_FETM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1006, "name": "DECRQMTests.test_DECRQM_ANSI_GATM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1008, "name": "DECRQMTests.test_DECRQM_ANSI_HEM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1003, "name": "DECRQMTests.test_DECRQM_ANSI_IRM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1006, "name": "DECRQMTests.test_DECRQM_ANSI_KAM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1002, "name": "DECRQMTests.test_DECRQM_ANSI_LNM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1007, "name": "DECRQMTests.test_DECRQM_ANSI_MATM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1004, "name": "DECRQMTests.test_DECRQM_ANSI_PUM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1003, "name": "DECRQMTests.test_DECRQM_ANSI_SATM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1005, "name": "DECRQMTests.test_DECRQM_ANSI_SRM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1005, "name": "DECRQMTests.test_DECRQM_ANSI_SRTM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1006, "name": "DECRQMTests.test_DECRQM_ANSI_TSM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1007, "name": "DECRQMTests.test_DECRQM_ANSI_TTM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1007, "name": "DECRQMTests.test_DECRQM_ANSI_VEM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECAAM", "reason": "TestFailure: Test failed: expected '[100, 2]' but got '[100, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECARM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECARSM", "reason": "TestFailure: Test failed: expected '[98, 2]' but got '[98, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECAWM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECBKM", "reason": "TestFailure: Test failed: expected '[67, 2]' but got '[67, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECCANSM", "reason": "TestFailure: Test failed: expected '[101, 2]' but got '[101, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECCKM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECCOLM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECCRTSM", "reason": "TestFailure: Test failed: expected '[97, 2]' but got '[97, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECESKM", "reason": "TestFailure: Test failed: expected '[104, 2]' but got '[104, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECHCCM", "reason": "TestFailure: Test failed: expected '[60, 4]' but got '[60, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECHDPXM", "reason": "TestFailure: Test failed: expected '[103, 2]' but got '[103, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECHEBM", "reason": "TestFailure: Test failed: expected '[35, 2]' but got '[35, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 3, "name": "DECRQMTests.test_DECRQM_DEC_DECHEM", "reason": "TestFailure: Test failed: expected '[36, 2]' but got '[36, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECKBUM", "reason": "TestFailure: Test failed: expected '[68, 2]' but got '[68, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 3, "name": "DECRQMTests.test_DECRQM_DEC_DECKPM", "reason": "TestFailure: Test failed: expected '[81, 2]' but got '[81, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECLRMM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECMCM", "reason": "TestFailure: Test failed: expected '[99, 2]' but got '[99, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECNAKB", "reason": "TestFailure: Test failed: expected '[57, 2]' but got '[57, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECNCSM", "reason": "TestFailure: Test failed: expected '[95, 2]' but got '[95, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECNKM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECNRCM", "reason": "TestFailure: Test failed: expected '[42, 2]' but got '[42, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 3, "name": "DECRQMTests.test_DECRQM_DEC_DECNULM", "reason": "TestFailure: Test failed: expected '[102, 2]' but got '[102, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECOM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECOSCNM", "reason": "TestFailure: Test failed: expected '[106, 2]' but got '[106, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECPCCM", "reason": "TestFailure: Test failed: expected '[64, 2]' but got '[64, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECPEX", "reason": "TestFailure: Test failed: expected '[19, 2]' but got '[19, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECPFF", "reason": "TestFailure: Test failed: expected '[18, 2]' but got '[18, 0]'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECRLCM", "reason": "TestFailure: Test failed: expected '[96, 2]' but got '[96, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECRLM", "reason": "TestFailure: Test failed: expected '[34, 2]' but got '[34, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECSCLM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECSCNM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 1, "name": "DECRQMTests.test_DECRQM_DEC_DECTCEM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECVCCM", "reason": "TestFailure: Test failed: expected '[61, 2]' but got '[61, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQMTests", "ms": 2, "name": "DECRQMTests.test_DECRQM_DEC_DECXRLM", "reason": "TestFailure: Test failed: expected '[73, 2]' but got '[73, 0]'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECELF", "reason": "TestFailure: Test failed: expected '1$r0+q' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECLFKC", "reason": "TestFailure: Test failed: expected '1$r0*}' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSACE", "reason": "TestFailure: Test failed: expected '1$r0*x' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSASD", "reason": "TestFailure: Test failed: expected '1$r0$}' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 1, "name": "DECRQSSTests.test_DECRQSS_DECSCA", "reason": "TestFailure: Test failed: expected '1$r1\"q' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSCL", "reason": "TestFailure: Test failed: expected '1$r65;1\"p' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 0, "name": "DECRQSSTests.test_DECRQSS_DECSCUSR", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 1, "name": "DECRQSSTests.test_DECRQSS_DECSLPP", "reason": "TestFailure: Test failed: expected '1$r27t' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 1, "name": "DECRQSSTests.test_DECRQSS_DECSLRM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSMKR", "reason": "TestFailure: Test failed: expected '1$r0+r' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": true}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSNLS", "reason": "TestFailure: Test failed: expected '1$r24*|' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 2, "name": "DECRQSSTests.test_DECRQSS_DECSSDT", "reason": "TestFailure: Test failed: expected '1$r0$~' but got '0$r'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 1, "name": "DECRQSSTests.test_DECRQSS_DECSTBM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECRQSSTests", "ms": 0, "name": "DECRQSSTests.test_DECRQSS_SGR", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSCLTests", "ms": 1003, "name": "DECSCLTests.test_DECSCL_Level2DoesntSupportDECRQM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSCLTests", "ms": 1, "name": "DECSCLTests.test_DECSCL_Level4_SupportsDECSLRMDoesntSupportDECNCSM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSCLTests", "ms": 1, "name": "DECSCLTests.test_DECSCL_Level5_SupportsDECNCSM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSCLTests", "ms": 1, "name": "DECSCLTests.test_DECSCL_RISOnChange", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": true}
+{"class": "DECSCLTests", "ms": 0, "name": "DECSCLTests.test_DSCSCL_Level2Supports7BitControls", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSCLTests", "ms": 1007, "name": "DECSCLTests.test_DSCSCL_Level3_SupportsDECRQMDoesntSupportDECSLRM", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_0", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_0_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_0_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_0_WithScrollRegion_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_1", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_1_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_1_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_1_WithScrollRegion_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_2", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_2_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_2_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_2_WithScrollRegion_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_3", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_3_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_DECSCA_2", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_Default", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 1, "name": "DECSEDTests.test_DECSED_Default_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSEDTests", "ms": 0, "name": "DECSEDTests.test_DECSED_doesNotRespectISOProtect", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": true}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_0", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_0_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 0, "name": "DECSELTests.test_DECSEL_1", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 0, "name": "DECSELTests.test_DECSEL_1_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 0, "name": "DECSELTests.test_DECSEL_2", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 0, "name": "DECSELTests.test_DECSEL_2_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 0, "name": "DECSELTests.test_DECSEL_Default", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_Default_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_IgnoresScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_IgnoresScrollRegion_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSELTests", "ms": 1, "name": "DECSELTests.test_DECSEL_doesNotRespectISOProtect", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": true}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_cursorDoesNotMove", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_defaultArgs", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 0, "name": "DECSERATests.test_DECSERA_doesNotRespectISOProtect", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_ignoresMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_invalidRectDoesNothing", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 1, "name": "DECSERATests.test_DECSERA_overlyLargeSourceClippedToScreenSize", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSERATests", "ms": 0, "name": "DECSERATests.test_DECSERA_respectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_ALTBUF", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 4, "name": "DECSETTests.test_DECSET_Allow80To132", "reason": "TestFailure: Test failed: expected '132' but got '80'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECAWM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 2, "name": "DECSETTests.test_DECSET_DECAWM_CursorAtRightMargin", "reason": "TestFailure: Test failed: expected '80' but got '81'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECAWM_NoLineWrapOnTabWithLeftRightMargin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECAWM_OffRespectsLeftRightMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECAWM_OnRespectsLeftRightMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 2, "name": "DECSETTests.test_DECSET_DECAWM_TabDoesNotWrapAround", "reason": "TestFailure: Test failed: expected '80' but got '132'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 2, "name": "DECSETTests.test_DECSET_DECCOLM", "reason": "TestFailure: Test failed: expected '132' but got '80'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_DECLRMM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECLRMM_MarginsResetByDECSTR", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECLRMM_ModeResetByDECSTR", "reason": "TestFailure: Test failed: expected '6' but got '3'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECNCSM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_DECOM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_DECOM_DECRQCRA", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_DECOM_SoftReset", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 2, "name": "DECSETTests.test_DECSET_MoreFix", "reason": "TestFailure: Test failed: expected '9' but got '132'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_OPT_ALTBUF", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_OPT_ALTBUF_CURSOR", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_ResetReverseWraparoundDisablesIt", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_ReverseWraparoundLastCol_BS", "reason": "TestFailure: Test failed: expected '80' but got '81'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 2, "name": "DECSETTests.test_DECSET_ReverseWraparound_BS", "reason": "TestFailure: Test failed: expected '80' but got '1'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 1, "name": "DECSETTests.test_DECSET_ReverseWraparound_Multi", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_ReverseWraparound_RequiresDECAWM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTests", "ms": 0, "name": "DECSETTests.test_DECSET_SaveRestoreCursor", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_AltVsMain", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 0, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 0, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_InsertNotAffected", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_MoveToHomeWhenNotSaved", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_Reset", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 0, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_ResetsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_ReverseWrapNotAffected", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_WorksInLRM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSETTiteInhibitTests", "ms": 1, "name": "DECSETTiteInhibitTests.test_SaveRestoreCursor_Wrap", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_BottomOfZeroIsBottomOfScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_CursorBelowRegionAtBottomTriesToScroll", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_DefaultRestores", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 0, "name": "DECSTBMTests.test_DECSTBM_MaxSizeOfRegionIsPageSize", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_MovsCursorToOrigin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_NewlineBelowRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_ScrollsOnNewline", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_TopBelowBottom", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTBMTests", "ms": 1, "name": "DECSTBMTests.test_DECSTBM_TopOfZeroIsTopOfScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 1, "name": "DECSTRTests.test_DECSTR_CursorStaysPut", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 2, "name": "DECSTRTests.test_DECSTR_DECAWM", "reason": "TestFailure: Test failed: expected '2' but got '82'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 2, "name": "DECSTRTests.test_DECSTR_DECLRMM", "reason": "TestFailure: Test failed: expected '7' but got '6'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 0, "name": "DECSTRTests.test_DECSTR_DECOM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 0, "name": "DECSTRTests.test_DECSTR_DECRLM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 1, "name": "DECSTRTests.test_DECSTR_DECSASD", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 2, "name": "DECSTRTests.test_DECSTR_DECSC", "reason": "TestFailure: Test failed: expected 'Point(x=1, y=1)' but got 'Point(x=5, y=6)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 0, "name": "DECSTRTests.test_DECSTR_DECSCA", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 1, "name": "DECSTRTests.test_DECSTR_IRM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 0, "name": "DECSTRTests.test_DECSTR_ReverseWraparound", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "DECSTRTests", "ms": 2, "name": "DECSTRTests.test_DECSTR_STBM", "reason": "TestFailure: Test failed: expected '5' but got '4'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_ClearOutLeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_DeleteMoreThanVisible", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_InLeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_InLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_InScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_OutsideLeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 1, "name": "DLTests.test_DL_OutsideLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "DLTests", "ms": 0, "name": "DLTests.test_DL_OutsideScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 0, "name": "ECHTests.test_ECH_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 0, "name": "ECHTests.test_ECH_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 0, "name": "ECHTests.test_ECH_IgnoresScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 1, "name": "ECHTests.test_ECH_OutsideScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 0, "name": "ECHTests.test_ECH_doesNotRespectDECPRotection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ECHTests", "ms": 0, "name": "ECHTests.test_ECH_respectsISOProtection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 0, "name": "EDTests.test_ED_0", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_0_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_1", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_1_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_2", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_2_WithScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_3", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 0, "name": "EDTests.test_ED_Default", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 0, "name": "EDTests.test_ED_doesNotRespectDECProtection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "EDTests", "ms": 1, "name": "EDTests.test_ED_respectsISOProtection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_0", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_1", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_2", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_Default", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_IgnoresScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 0, "name": "ELTests.test_EL_doesNotRespectDECProtection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ELTests", "ms": 1, "name": "ELTests.test_EL_respectsISOProtection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 0, "name": "FFTests.test_FF_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 1, "name": "FFTests.test_FF_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 1, "name": "FFTests.test_FF_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 1, "name": "FFTests.test_FF_ScrollsInTopBottomRegionStartingAbove", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 1, "name": "FFTests.test_FF_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "FFTests", "ms": 1, "name": "FFTests.test_FF_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "HPATests", "ms": 1, "name": "HPATests.test_HPA_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HPATests", "ms": 0, "name": "HPATests.test_HPA_DoesNotChangeRow", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HPATests", "ms": 1, "name": "HPATests.test_HPA_IgnoresOriginMode", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HPATests", "ms": 2, "name": "HPATests.test_HPA_StopsAtRightEdge", "reason": "TestFailure: Test failed: expected '80' but got '90'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "HPRTests", "ms": 1, "name": "HPRTests.test_HPR_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HPRTests", "ms": 1, "name": "HPRTests.test_HPR_DoesNotChangeRow", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HPRTests", "ms": 0, "name": "HPRTests.test_HPR_IgnoresOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "HPRTests", "ms": 5, "name": "HPRTests.test_HPR_StopsAtRightEdge", "reason": "TestFailure: Test failed: expected '80' but got '95'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "HTSTests", "ms": 2, "name": "HTSTests.test_HTS_8bit", "reason": "TestFailure: Test failed: expected '20' but got '132'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "HTSTests", "ms": 0, "name": "HTSTests.test_HTS_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 1, "name": "HVPTests.test_HVP_ColumnOnly", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 1, "name": "HVPTests.test_HVP_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 3, "name": "HVPTests.test_HVP_OutOfBoundsParams", "reason": "TestFailure: Test failed: expected '80' but got '90'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 1, "name": "HVPTests.test_HVP_RespectsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 1, "name": "HVPTests.test_HVP_RowOnly", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "HVPTests", "ms": 1, "name": "HVPTests.test_HVP_ZeroIsTreatedAsOne", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 1, "name": "ICHTests.test_ICH_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 1, "name": "ICHTests.test_ICH_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 0, "name": "ICHTests.test_ICH_IsNoOpWhenCursorBeginsOutsideScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 1, "name": "ICHTests.test_ICH_ScrollEntirelyOffRightEdge", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 1, "name": "ICHTests.test_ICH_ScrollOffRightEdge", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ICHTests", "ms": 1, "name": "ICHTests.test_ICH_ScrollOffRightMarginInScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_AboveScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_RespectsScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_RespectsScrollRegion_Over", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ILTests", "ms": 1, "name": "ILTests.test_IL_ScrollsOffBottom", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 4, "name": "INDTests.test_IND_8bit", "reason": "TestFailure: Test failed: expected '4' but got '3'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 1, "name": "INDTests.test_IND_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 1, "name": "INDTests.test_IND_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 1, "name": "INDTests.test_IND_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 1, "name": "INDTests.test_IND_ScrollsInTopBottomRegionStartingAbove", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 1, "name": "INDTests.test_IND_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "INDTests", "ms": 0, "name": "INDTests.test_IND_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 1, "name": "LFTests.test_LF_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 1, "name": "LFTests.test_LF_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 1, "name": "LFTests.test_LF_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 1, "name": "LFTests.test_LF_ScrollsInTopBottomRegionStartingAbove", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 0, "name": "LFTests.test_LF_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "LFTests", "ms": 1, "name": "LFTests.test_LF_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ManipulateSelectionDataTests", "name": "ManipulateSelectionDataTests.test_ManipulateSelectionData_default", "reason": "would overwrite the clipboard", "status": "skip", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 5, "name": "NELTests.test_NEL_8bit", "reason": "TestFailure: Test failed: expected '1' but got '5'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 1, "name": "NELTests.test_NEL_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 0, "name": "NELTests.test_NEL_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 1, "name": "NELTests.test_NEL_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 1, "name": "NELTests.test_NEL_ScrollsInTopBottomRegionStartingAbove", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 1, "name": "NELTests.test_NEL_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "NELTests", "ms": 1, "name": "NELTests.test_NEL_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "PMTests", "ms": 0, "name": "PMTests.test_PM_8bit", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "PMTests", "ms": 1, "name": "PMTests.test_PM_Basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "REPTests", "ms": 0, "name": "REPTests.test_REP_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "REPTests", "ms": 0, "name": "REPTests.test_REP_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "REPTests", "ms": 1, "name": "REPTests.test_REP_RespectsLeftRightMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "REPTests", "ms": 1, "name": "REPTests.test_REP_RespectsTopBottomMargins", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 0, "name": "RISTests.test_RIS_ClearsScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 1, "name": "RISTests.test_RIS_CursorToOrigin", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 0, "name": "RISTests.test_RIS_ExitAltScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 1, "name": "RISTests.test_RIS_RemoveMargins", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 2, "name": "RISTests.test_RIS_ResetDECCOLM", "reason": "TestFailure: Test failed: expected '132' but got '80'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 1, "name": "RISTests.test_RIS_ResetDECOM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 0, "name": "RISTests.test_RIS_ResetTabs", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "RISTests", "ms": 1006, "name": "RISTests.test_RIS_ResetTitleMode", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 2, "name": "RITests.test_RI_8bit", "reason": "TestFailure: Test failed: expected '5' but got '6'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 1, "name": "RITests.test_RI_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 1, "name": "RITests.test_RI_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 2, "name": "RITests.test_RI_Scrolls", "reason": "TestFailure: Test failed: expected '1' but got '2'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 1, "name": "RITests.test_RI_ScrollsInTopBottomRegionStartingBelow", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 1, "name": "RITests.test_RI_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RITests", "ms": 1, "name": "RITests.test_RI_StopsAtTopLineWhenBegunAboveScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "RMTests", "ms": 1, "name": "RMTests.test_RM_IRM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "ResetColorTests", "ms": 1, "name": "ResetColorTests.test_ResetColor_All", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ResetColorTests", "ms": 1, "name": "ResetColorTests.test_ResetColor_Standard", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "ResetSpecialColorTests", "ms": 5, "name": "ResetSpecialColorTests.test_ResetSpecialColor_Dynamic", "reason": "TestFailure: Test failed: expected ';rgb:0000/0000/0000' but got ';rgb:ffff/ffff/ffff'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ResetSpecialColorTests", "ms": 1002, "name": "ResetSpecialColorTests.test_ResetSpecialColor_Multiple", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ResetSpecialColorTests", "ms": 1006, "name": "ResetSpecialColorTests.test_ResetSpecialColor_Multiple2", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ResetSpecialColorTests", "ms": 1006, "name": "ResetSpecialColorTests.test_ResetSpecialColor_Single", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "ResetSpecialColorTests", "ms": 1007, "name": "ResetSpecialColorTests.test_ResetSpecialColor_Single2", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "S8C1TTests", "ms": 2, "name": "S8C1TTests.test_S8C1T_CSI", "reason": "TestFailure: Test failed: expected 'Point(x=1, y=2)' but got 'Point(x=6, y=1)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "S8C1TTests", "ms": 1004, "name": "S8C1TTests.test_S8C1T_DCS", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "S8C1TTests", "ms": 1, "name": "S8C1TTests.test_S8C1T_SPA_EPA", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_AltVsMain", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_InsertNotAffected", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 0, "name": "SCORCTests.test_SaveRestoreCursor_MoveToHomeWhenNotSaved", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_Protection", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_Reset", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_ResetsOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 0, "name": "SCORCTests.test_SaveRestoreCursor_ReverseWrapNotAffected", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_WorksInLRM", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SCORCTests", "ms": 1, "name": "SCORCTests.test_SaveRestoreCursor_Wrap", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 0, "name": "SDTests.test_SD_BigScrollLeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_CanClearScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_LeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_OutsideLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_OutsideTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 1, "name": "SDTests.test_SD_RespectsLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SDTests", "ms": 0, "name": "SDTests.test_SD_RespectsTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SMTests", "ms": 1, "name": "SMTests.test_SM_IRM", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SMTests", "ms": 1, "name": "SMTests.test_SM_IRM_DoesNotWrapUnlessCursorAtMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SMTests", "ms": 1, "name": "SMTests.test_SM_IRM_TruncatesAtRightMargin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SMTests", "ms": 5, "name": "SMTests.test_SM_LNM", "reason": "TestFailure: Test failed: expected 'Point(x=1, y=2)' but got 'Point(x=5, y=2)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "SMTitleTests", "ms": 1007, "name": "SMTitleTests.test_SMTitle_SetHexQueryHex", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "SMTitleTests", "ms": 1004, "name": "SMTitleTests.test_SMTitle_SetHexQueryUTF8", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "SMTitleTests", "ms": 1007, "name": "SMTitleTests.test_SMTitle_SetUTF8QueryHex", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "SMTitleTests", "ms": 1006, "name": "SMTitleTests.test_SMTitle_SetUTF8QueryUTF8", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "SOSTests", "ms": 1, "name": "SOSTests.test_SOS_8bit", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SOSTests", "ms": 0, "name": "SOSTests.test_SOS_Basic", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_BigScrollLeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_CanClearScreen", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 0, "name": "SUTests.test_SU_DefaultParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_ExplicitParam", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_LeftRightAndTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_OutsideLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 1, "name": "SUTests.test_SU_OutsideTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 0, "name": "SUTests.test_SU_RespectsLeftRightScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "SUTests", "ms": 0, "name": "SUTests.test_SU_RespectsTopBottomScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "TBCTests", "ms": 1, "name": "TBCTests.test_TBC_0", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "TBCTests", "ms": 1, "name": "TBCTests.test_TBC_3", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "TBCTests", "ms": 4, "name": "TBCTests.test_TBC_Default", "reason": "TestFailure: Test failed: expected '17' but got '9'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "TBCTests", "ms": 2, "name": "TBCTests.test_TBC_NoOp", "reason": "TestFailure: Test failed: expected '17' but got '10'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "VPATests", "ms": 1, "name": "VPATests.test_VPA_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPATests", "ms": 1, "name": "VPATests.test_VPA_DoesNotChangeColumn", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPATests", "ms": 1, "name": "VPATests.test_VPA_IgnoresOriginMode", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPATests", "ms": 1, "name": "VPATests.test_VPA_StopsAtBottomEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPRTests", "ms": 0, "name": "VPRTests.test_VPR_DefaultParams", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPRTests", "ms": 1, "name": "VPRTests.test_VPR_DoesNotChangeColumn", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VPRTests", "ms": 0, "name": "VPRTests.test_VPR_IgnoresOriginMode", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "VPRTests", "ms": 0, "name": "VPRTests.test_VPR_StopsAtBottomEdge", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_Basic", "reason": null, "status": "pass", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_MovesDoesNotScrollOutsideLeftRight", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_Scrolls", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_ScrollsInTopBottomRegionStartingAbove", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_ScrollsInTopBottomRegionStartingWithin", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "VTTests", "ms": 1, "name": "VTTests.test_VT_StopsAtBottomLineWhenBegunBelowScrollRegion", "reason": "DECRQCRA unanswered", "status": "unmeasurable", "type": "test", "xterm_known_bug": false}
+{"class": "XtermSaveTests", "ms": 4, "name": "XtermSaveTests.test_XtermSave_SaveResetState", "reason": "TestFailure: Test failed: expected '80' but got '82'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermSaveTests", "ms": 1, "name": "XtermSaveTests.test_XtermSave_SaveSetState", "reason": "TestFailure: Test failed: expected '2' but got '82'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1006, "name": "XtermWinopsTests.test_XtermWinops_DECSLPP", "reason": "TestFailure: Test failed: expected 'Size(width=90, height=10)' but got 'Size(width=80, height=25)'", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_Fullscreen", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 2007, "name": "XtermWinopsTests.test_XtermWinops_IconifyDeiconfiy", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1003, "name": "XtermWinopsTests.test_XtermWinops_MaximizeWindow_Horizontally", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 2006, "name": "XtermWinopsTests.test_XtermWinops_MaximizeWindow_HorizontallyAndVertically", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_MaximizeWindow_Vertically", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1111, "name": "XtermWinopsTests.test_XtermWinops_MoveToXY", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1112, "name": "XtermWinopsTests.test_XtermWinops_MoveToXY_Defaults", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1003, "name": "XtermWinopsTests.test_XtermWinops_PushIconAndWindow_PopIcon", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1003, "name": "XtermWinopsTests.test_XtermWinops_PushIconAndWindow_PopIconAndWindow", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1006, "name": "XtermWinopsTests.test_XtermWinops_PushIconAndWindow_PopWindow", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_PushIconThenWindowThenPopBoth", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_PushIcon_PopIcon", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1004, "name": "XtermWinopsTests.test_XtermWinops_PushMultiplePopMultiple_Icon", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1006, "name": "XtermWinopsTests.test_XtermWinops_PushMultiplePopMultiple_Window", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_PushWindow_PopWindow", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1006, "name": "XtermWinopsTests.test_XtermWinops_ReportIconLabel", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1004, "name": "XtermWinopsTests.test_XtermWinops_ReportWindowLabel", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1005, "name": "XtermWinopsTests.test_XtermWinops_ResizeChars_BothParameters", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_ResizeChars_DefaultHeight", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1002, "name": "XtermWinopsTests.test_XtermWinops_ResizeChars_DefaultWidth", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1004, "name": "XtermWinopsTests.test_XtermWinops_ResizeChars_ZeroHeight", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_ResizeChars_ZeroWidth", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1006, "name": "XtermWinopsTests.test_XtermWinops_ResizePixels_BothParameters", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_ResizePixels_OmittedHeight", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_ResizePixels_OmittedWidth", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1004, "name": "XtermWinopsTests.test_XtermWinops_ResizePixels_ZeroHeight", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"class": "XtermWinopsTests", "ms": 1007, "name": "XtermWinopsTests.test_XtermWinops_ResizePixels_ZeroWidth", "reason": "no reply", "status": "fail", "type": "test", "xterm_known_bug": false}
+{"counts": {"fail": 185, "pass": 141, "skip": 1, "unmeasurable": 240}, "seconds": 104.2, "type": "summary"}

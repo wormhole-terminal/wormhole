@@ -1,0 +1,47 @@
+[package]
+name = "vt-compare"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+description = "Wormhole's terminal engine tooling pointed at other engines: Ghostty, WezTerm, vt100 and alacritty, in a conformance matrix and a throughput table, plus the differential tests against alacritty"
+build = "build.rs"
+
+# Its own workspace, like tools/bench: kept out of the app's Cargo.lock, lints and dependency
+# audit (scripts/check.sh skips it). It depends on crates/wormhole-vt-bench by path.
+[workspace]
+
+[lib]
+doctest = false
+
+[dependencies]
+wormhole-vt-bench = { path = "../../crates/wormhole-vt-bench" }
+# The parser benchmark and the selection tests use the engine directly.
+wormhole-vt = { path = "../../crates/wormhole-vt" }
+serde_json = "1"
+# The engines to compare with. Each is a black box behind its public API.
+# Wormhole ran on alacritty_terminal until its own engine replaced it; its `vte` is what the
+# parser benchmark measures against.
+alacritty_terminal = "0.26.0"
+vt100 = "0.16"
+# WezTerm's terminal model is not on crates.io; the commit is the head of main on 2026-10-15 (the
+# last release, 20240203-110809-5046fc22, is over two and a half years old).
+wezterm-term = { git = "https://github.com/wezterm/wezterm", rev = "e2a98e1b8af156988ad0ac778658ac27b60a55fb" }
+wezterm-surface = { git = "https://github.com/wezterm/wezterm", rev = "e2a98e1b8af156988ad0ac778658ac27b60a55fb" }
+
+[build-dependencies]
+cc = "1"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+unwrap_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+print_stdout = "warn"
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = "thin"
