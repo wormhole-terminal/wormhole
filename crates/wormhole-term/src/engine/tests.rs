@@ -95,12 +95,14 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     let (pty, _events) = spawn(&script);
     wait_until("the output", || pty.screen_text().contains("done"));
     let mut snapshot = ScreenSnapshot::default();
-    wait_until("the decode", || pty.images().len() == 1);
+    wait_until("the reservation", || pty.images().len() == 1);
     pty.snapshot(&mut snapshot, 0);
     let [placement] = snapshot.placements() else { panic!("one placement: {:?}", snapshot.placements()) };
     assert_eq!((placement.cols, placement.rows, placement.line, placement.column), (3, 2, Line(0), 0));
     let key = crate::engine::image_key(placement.image);
     assert_eq!(pty.images().dimensions(key), Some((1, 1)));
+    // The store counts the picture from its reservation; the pixels come from the decoder thread.
+    wait_until("the pixels", || pty.images().get(key).is_some());
     assert_eq!(pty.images().get(key).map(|image| image.rgba.len()), Some(4));
     // The picture's cells hold no text, so a copy of everything has none of it.
     pty.select_all();
@@ -138,7 +140,7 @@ fn placeholder_cells_find_their_picture_through_the_virtual_placement() {
     );
     let (pty, _events) = spawn(&script);
     wait_until("the output", || pty.screen_text().contains("done"));
-    wait_until("the decode", || pty.images().len() == 1);
+    wait_until("the reservation", || pty.images().len() == 1);
     let tiles = pty.virtual_placement(5, 0).expect("a virtual placement");
     assert_eq!((tiles.cols, tiles.rows), (4, 2));
     assert!(pty.images().contains(tiles.key));
