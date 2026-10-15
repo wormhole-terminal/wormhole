@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-15
+
 ### Added
 
 - Blinking text (SGR 5 and 6) now blinks, fading once a second while the window is in front, and
@@ -263,7 +265,8 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.2...v1.0.0
 [0.4.2]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/wormhole-terminal/wormhole/releases/tag/v0.4.0
