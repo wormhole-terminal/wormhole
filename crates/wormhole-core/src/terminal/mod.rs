@@ -24,6 +24,7 @@
 //! - `restore`: replaying a previous session's text;
 //! - `snapshot`: what the UI draws, copied under a short lock;
 //! - `minimap`: the history drawn small, and where a click on it scrolls to;
+//! - `scrollbar`: the scrollbar's thumb, what clicks and drags on it do, and when it shows and fades;
 //! - `text`: the screen and scrollback as plain text;
 //! - `find`: find in scrollback, on a copy of the grid's text;
 //! - `program_status`: what programs report about themselves (OSC 7501), and the records kept;
@@ -50,6 +51,7 @@ pub mod program_status;
 mod pty;
 mod restore;
 mod screen;
+pub mod scrollbar;
 pub mod sequences;
 mod snapshot;
 #[cfg(any(test, feature = "test-support"))]
