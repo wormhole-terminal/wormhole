@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-15
+
 ### Fixed
 
 - The About window and the welcome page show the new app icon, light or dark with the theme, and the
@@ -200,6 +202,7 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/wormhole-terminal/wormhole/releases/tag/v0.4.0
