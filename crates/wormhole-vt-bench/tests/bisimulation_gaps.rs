@@ -75,17 +75,6 @@ fn a_last_character_with_no_free_cell_and_none_on_screen() {
 }
 
 #[test]
-fn resizing_on_the_alternate_screen_leaves_it_a_history() {
-    let input = b"main\x1b[?1049h1\r\n2\r\n3";
-    let s = scenario(input, 10, 4, &[(input.len(), 8, 2)]);
-    let seen = probe(&s, input.len(), |_| {});
-    assert!(seen.gaps.contains(Gaps::ALT_HISTORY | Gaps::LIMIT), "{:?}", seen.gaps);
-    let unmasked = seen.unmasked.unwrap_or_default();
-    assert!(unmasked.contains("alternate/limit"), "{unmasked}");
-    assert!(seen.masked.is_none(), "{:?}", seen.masked);
-}
-
-#[test]
 fn a_conformance_level_below_vt300_has_no_cursor_information() {
     gap_is_visible(&scenario(b"\x1b[61;1\"p\x0e", 10, 3, &[]), Gaps::LOW_LEVEL, "a/charsets");
 }

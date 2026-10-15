@@ -53,7 +53,7 @@ impl Terminal {
         self.margins = Margins::full(self.cols, self.rows);
         self.tabs.resize(self.cols);
         self.cluster.open = false;
-        self.grid.set_scrollback_limit(super::history_bytes(self.scrollback_lines, self.cols));
+        self.apply_history_limit();
     }
 
     /// Mode 3 (DECCOLM) set or reset.

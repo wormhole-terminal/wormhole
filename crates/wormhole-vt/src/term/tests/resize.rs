@@ -114,3 +114,15 @@ fn a_new_terminal_clamps_a_silly_size() {
     assert!(rig.term.columns() <= crate::grid::MAX_COLS && rig.term.screen_lines() <= crate::grid::MAX_ROWS);
     rig.feed("still works\r\n");
 }
+
+#[test]
+fn the_history_limit_belongs_to_the_main_screen_whichever_one_shows() {
+    let mut rig = Rig::new(10, 4);
+    rig.feed("\x1b[?1049h");
+    rig.term.resize(12, 5);
+    assert_eq!(rig.term.grid().scrollback_limit(), 0, "the alternate screen has no history");
+    rig.term.set_scrollback_lines(7);
+    assert_eq!(rig.term.grid().scrollback_limit(), 0);
+    rig.feed("\x1b[?1049l");
+    assert_eq!(rig.term.grid().scrollback_limit(), super::super::history_bytes(7, 12));
+}

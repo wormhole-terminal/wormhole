@@ -434,7 +434,14 @@ impl Terminal {
     /// Change how much history is kept; lines over it are dropped now.
     pub fn set_scrollback_lines(&mut self, lines: usize) {
         self.scrollback_lines = lines;
-        self.grid.set_scrollback_limit(history_bytes(lines, self.cols));
+        self.apply_history_limit();
+    }
+
+    /// Give the main screen the history the configuration asks for at the current width. The
+    /// alternate screen never has any, so the grid that is not showing is the main one while it shows.
+    fn apply_history_limit(&mut self) {
+        let main = if self.on_alt_screen() { &mut self.other } else { &mut self.grid };
+        main.set_scrollback_limit(history_bytes(self.scrollback_lines, self.cols));
     }
 
     /// The modes as programs set them.

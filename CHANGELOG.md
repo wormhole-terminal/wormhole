@@ -18,6 +18,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - The secondary device attributes reply (`CSI > c`) carries an xterm-style version (777) again, as
   programs like vim expect; since 1.0.0 it sent 10000. Wormhole's own version is still in XTVERSION.
+- Resizing the window while a full-screen program (vim, less, an agent's interface) is showing no
+  longer lets that screen collect lines above it and leaves the terminal's scrollback limit on the wrong
+  screen; the full-screen program has no history and the shell's scrollback keeps its configured size.
 
 ## [1.0.0] - 2026-10-15
 

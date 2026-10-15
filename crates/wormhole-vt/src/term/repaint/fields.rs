@@ -127,7 +127,7 @@ const GRID: &[(&str, Coverage)] = &[
     ("rows", Host("the receiver's size")),
     ("pages", Written("the rows, by RowView")),
     ("end", Scratch("the serial of the next row; only placements and pins read it")),
-    ("limit", Host("the history cap (Gaps::LIMIT when the sender's is stale)")),
+    ("limit", Host("the history cap")),
     ("offset", Viewer("how far the view is scrolled")),
     ("next_uid", Scratch("page ids")),
     ("spare", Scratch("a page kept for reuse")),

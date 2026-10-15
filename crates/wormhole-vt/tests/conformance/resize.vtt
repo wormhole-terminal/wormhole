@@ -123,3 +123,11 @@ feed ab日cd
 resize 3 4
 lines
 |ab日cd|
+
+test resize on the alternate screen leaves it without history
+spec xterm ctlseqs: the alternate screen buffer has no scrollback (CSI ? 1049 h)
+size 5 3
+feed \e[?1049h
+resize 5 4
+feed 1\n2\n3\n4\n5\n6\n
+scrollback-len 0

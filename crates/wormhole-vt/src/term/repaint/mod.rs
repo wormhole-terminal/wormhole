@@ -97,13 +97,6 @@ bitflags! {
         /// No character was ever printed (`last_char` is none) but the screen holds text: it
         /// came from DECALN or DECFRA, and printing it in a repaint sets `last_char`.
         const LAST_CHAR = 1 << 14;
-        /// The alternate screen holds lines above its screen, which a resize left there; VT has
-        /// no way to put lines in a history that is not kept.
-        const ALT_HISTORY = 1 << 15;
-        /// The main screen's history cap is not the one a receiver of this size has (the engine
-        /// left a stale one when it was resized on the alternate screen). The caps are the
-        /// receiver's own setting, not state a stream can carry.
-        const LIMIT = 1 << 16;
         /// A cell's characters make a cell of another width or shape in the receiver, whether it
         /// clusters characters or not.
         const CELL = 1 << 17;
@@ -116,11 +109,9 @@ bitflags! {
 impl Gaps {
     /// The gaps whose left-out state steers what later bytes do: a receiver made from a repaint
     /// with one of these drifts from the sender as the stream goes on (a pending wrap that is not
-    /// there, a cap on the history, a cluster that cannot grow). The others only leave a field
+    /// there, a cluster that cannot grow). The others only leave a field
     /// different (pictures, `last_char`) or matter to a resize.
     pub const STICKY: Gaps = Gaps::LOW_LEVEL
-        .union(Gaps::ALT_HISTORY)
-        .union(Gaps::LIMIT)
         .union(Gaps::CLUSTER)
         .union(Gaps::COLUMNS_132)
         .union(Gaps::SAVED_MODES)
@@ -272,16 +263,6 @@ impl<'a> Writer<'a> {
         }
         if t.graphics.has_images() {
             self.gaps |= Gaps::IMAGES;
-        }
-        // A resize on the alternate screen hands the history limit to the wrong grid: the
-        // alternate one then keeps lines that scroll off, and the main one keeps a stale cap. A
-        // receiver that was never resized there has neither.
-        let (main, alt) = if t.on_alt_screen() { (&t.other, &t.grid) } else { (&t.grid, &t.other) };
-        if alt.scrollback_limit() != 0 || alt.history_len() > 0 {
-            self.gaps |= Gaps::ALT_HISTORY;
-        }
-        if main.scrollback_limit() != super::history_bytes(t.scrollback_lines, t.cols) {
-            self.gaps |= Gaps::LIMIT;
         }
         // The contents. The main screen first, then the other one, both with the receiver's
         // modes at their defaults (autowrap on, no margins, no origin), which is what the cells
