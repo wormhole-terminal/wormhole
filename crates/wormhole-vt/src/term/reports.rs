@@ -23,16 +23,14 @@ use super::modes::{Modes, Status};
 /// The most reply bytes kept for a host that does not collect them.
 const REPLIES_MAX: usize = 1 << 20;
 
-/// The version in DA2 and XTVERSION: Wormhole's, as the crate says it.
+/// The version in XTVERSION: Wormhole's, as the crate says it.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// `major * 10000 + minor * 100 + patch`, the number a secondary DA reply carries.
-fn version_number() -> u32 {
-    let mut parts = VERSION.split('.').map(|part| part.parse::<u32>().unwrap_or(0));
-    let (major, minor, patch) =
-        (parts.next().unwrap_or(0), parts.next().unwrap_or(0), parts.next().unwrap_or(0));
-    major * 10_000 + minor * 100 + patch
-}
+/// The version a secondary DA reply carries: an xterm patch level, not Wormhole's version.
+/// Programs that ask (vim, esctest) compare it with xterm's patch numbers, which run from about
+/// 300 to 999; Wormhole's own version is XTVERSION's answer. It stays fixed so a release never
+/// changes what programs conclude about the terminal (1.0.0 would have sent 10000).
+const DA2_VERSION: u32 = 777;
 
 /// What DA1 lists, with the conformance level a family needs to have it. Each is a feature that is
 /// there: 132 columns (DECCOLM, with mode 40), sixel graphics, selective erase, national
@@ -159,9 +157,8 @@ impl Terminal {
     /// DA2: the terminal type of the conformance level's family, the version, and no ROM
     /// cartridge (0).
     pub(super) fn secondary_attributes(&mut self) {
-        let version = version_number();
         let kind = self.level.terminal_type();
-        self.reply(format_args!("\x1b[>{kind};{version};0c"));
+        self.reply(format_args!("\x1b[>{kind};{DA2_VERSION};0c"));
     }
 
     /// DA3: the unit id, eight hex digits (zero: a terminal that is not a physical unit).

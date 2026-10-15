@@ -14,6 +14,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   pages or jumps to the spot as "Click in the scroll bar to" says (Option does the other one), and the
   thumb can be dragged. It is hidden on the alternate screen and while the minimap is shown.
 
+### Fixed
+
+- The secondary device attributes reply (`CSI > c`) carries an xterm-style version (777) again, as
+  programs like vim expect; since 1.0.0 it sent 10000. Wormhole's own version is still in XTVERSION.
+
 ## [1.0.0] - 2026-10-15
 
 ### Added

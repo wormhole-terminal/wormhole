@@ -127,6 +127,15 @@ fn secondary_device_attributes_name_the_family_of_the_level() {
 }
 
 #[test]
+fn secondary_device_attributes_carry_an_xterm_patch_level() {
+    // Programs compare DA2's version with xterm's patch numbers (esctest wants 314 to 999), so a
+    // 1.x release must not send its own version there.
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b[>c");
+    assert_eq!(rig.replies(), "\x1b[>64;777;0c");
+}
+
+#[test]
 fn maximize_and_full_screen_ask_for_each_of_their_forms() {
     // xterm ctlseqs XTWINOPS 9;0..3 (restore, both, vertically, horizontally) and 10;0..2 (undo, enter, toggle).
     let mut rig = Rig::new(20, 5);
