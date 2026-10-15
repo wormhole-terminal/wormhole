@@ -1,0 +1,347 @@
+# Rectangular attribute changes: DECCARA and DECRARA, and DECSACE, which says whether they reach
+# the stream of cells from the first corner to the second (the default) or the rectangle.
+#
+# The cases run on a five by three screen of letters. The area is as in rect.vtt.
+
+test DECCARA in rectangle extent changes the rectangle
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; DECSACE 2: all the character positions in the rectangular area
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[1;2;2;3;1$r
+cell 1,1 attrs=none
+cell 1,2 attrs=bold
+cell 1,3 attrs=bold
+cell 1,4 attrs=none
+cell 1,5 attrs=none
+cell 2,1 attrs=none
+cell 2,2 attrs=bold
+cell 2,3 attrs=bold
+cell 2,4 attrs=none
+cell 2,5 attrs=none
+cell 3,2 attrs=none
+row 1 |abcde|
+row 2 |fghij|
+test DECCARA in stream extent changes the stream
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; DECSACE 0: the stream of character positions from the first position to the second
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;3;2;3;7$r
+cell 1,2 attrs=none
+cell 1,3 attrs=inverse
+cell 1,4 attrs=inverse
+cell 1,5 attrs=inverse
+cell 2,1 attrs=inverse
+cell 2,3 attrs=inverse
+cell 2,4 attrs=none
+cell 3,1 attrs=none
+test DECSACE 1 is the stream too
+spec VT510 DECSACE: Ps 1 is the same as 0
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[1*x\e[1;3;2;3;7$r
+cell 1,2 attrs=none
+cell 1,3 attrs=inverse
+cell 2,3 attrs=inverse
+cell 2,4 attrs=none
+test DECSACE 2 and back to the stream
+spec VT510 DECSACE: Ps 2 is the rectangle, Ps 0 the stream
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[0*x\e[1;3;2;3;7$r
+cell 1,5 attrs=inverse
+cell 2,1 attrs=inverse
+test DECSACE with another value changes nothing
+spec VT510 DECSACE: Ps is 0, 1 or 2
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[3*x\e[1;3;2;3;7$r
+cell 1,5 attrs=none
+cell 2,2 attrs=none
+cell 2,3 attrs=inverse
+test DECCARA in stream extent on one line
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; DECSACE 0
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2;2;2;4;4$r
+cell 2,1 attrs=none
+cell 2,2 attrs=underline
+cell 2,4 attrs=underline
+cell 2,5 attrs=none
+test DECCARA in stream extent needs a top not below its bottom
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle: Pt must not exceed Pb
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2;1;1;5;7$r
+cell 1,1 attrs=none
+cell 2,1 attrs=none
+test DECCARA keeps the characters
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle: changes only visual attributes, not character values
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;3;5;1$r
+screen
+|abcde|
+|fghij|
+|klmno|
+test DECCARA 0 clears bold, underline, blink and negative image
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle: 0 turns the attributes off, no bold, underline or blink, and positive image
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;3;4;5;7mabc\e[0m\e[1;1;1;3;0$r
+cell 1,1 attrs=italic
+cell 1,3 attrs=italic
+cell 1,4 attrs=none
+test DECCARA without attributes is the same as 0
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle: 0 (default)
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4mab\e[0m\e[1;1;1;3$r
+cell 1,1 attrs=none
+cell 1,2 attrs=none
+test DECCARA 22 clears bold
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 22 turns off bold
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4;5;7ma\e[0m\e[1;1;1;1;22$r
+cell 1,1 attrs=underline,blink,inverse
+test DECCARA 24 clears underline
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 24 turns off underline
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4;5;7ma\e[0m\e[1;1;1;1;24$r
+cell 1,1 attrs=bold,blink,inverse
+test DECCARA 25 clears blink
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 25 turns off blink
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4;5;7ma\e[0m\e[1;1;1;1;25$r
+cell 1,1 attrs=bold,underline,inverse
+test DECCARA 27 clears inverse
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 27 turns off inverse
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4;5;7ma\e[0m\e[1;1;1;1;27$r
+cell 1,1 attrs=bold,underline,blink
+test DECCARA 1 sets bold
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 1 is bold
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;1$r
+cell 1,1 attrs=bold
+cell 1,2 attrs=bold
+cell 1,3 attrs=none
+test DECCARA 4 sets underline
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 4 is underline
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;4$r
+cell 1,1 attrs=underline
+cell 1,2 attrs=underline
+cell 1,3 attrs=none
+test DECCARA 5 sets blink
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 5 is blink
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;5$r
+cell 1,1 attrs=blink
+cell 1,2 attrs=blink
+cell 1,3 attrs=none
+test DECCARA 7 sets inverse
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 7 is inverse
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;7$r
+cell 1,1 attrs=inverse
+cell 1,2 attrs=inverse
+cell 1,3 attrs=none
+test DECCARA 8 sets hidden
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 8 is hidden; 8 is an xterm extension
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;8$r
+cell 1,1 attrs=hidden
+cell 1,2 attrs=hidden
+cell 1,3 attrs=none
+test DECCARA 28 clears hidden
+spec xterm ctlseqs DECCARA: setting SGR 8 is an xterm extension, it may be reset with SGR 28
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[8mabc\e[0m\e[1;1;1;2;28$r
+cell 1,1 attrs=none
+cell 1,3 attrs=hidden
+test DECCARA applies the attributes in order
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; the attributes are applied one after the other
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;1;1;22$r\e[1;2;1;2;22;1$r
+cell 1,1 attrs=none
+cell 1,2 attrs=bold
+test DECCARA ignores an attribute it does not know
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle: other values are ignored
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;3;3;31;1$r
+cell 1,1 attrs=bold
+cell 1,1 fg=default
+test DECCARA replaces another underline style
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; 4 is underline (one style at a time, as in SGR)
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[4:2mab\e[0m\e[1;1;1;1;4$r
+cell 1,1 attrs=underline
+cell 1,2 attrs=double-underline
+test DECCARA changes blank cells in rectangle extent
+spec VT510 DECCARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ r changes the attributes in the rectangle; DECSACE 2: all the character positions in the rectangle
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2J\e[2*x\e[1;1;1;3;7$r
+cell 1,1 attrs=inverse
+cell 1,3 attrs=inverse
+cell 1,4 attrs=none
+test DECCARA does not change the rendition of new text
+spec VT510 DECCARA: it does not change the active rendition
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;3;1$r\e[3;1Hz
+cell 3,1 attrs=none
+test DECCARA with a top below its bottom does nothing
+spec VT510 DECCARA, the area's parameters: Pt must not exceed Pb
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[3;1;2;5;1$r
+cell 2,1 attrs=none
+cell 3,1 attrs=none
+test DECCARA in rectangle extent needs a left not right of its right
+spec VT510 DECCARA, the area's parameters: Pl must not exceed Pr
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[1;4;3;2;1$r
+cell 1,3 attrs=none
+cell 2,3 attrs=none
+test DECCARA counts from the region in origin mode
+spec VT510 DECCARA: the area is affected by the origin mode (DECOM)
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[?69h\e[2;5s\e[2;3r\e[?6h\e[1;1;1;2;1$r
+cell 1,2 attrs=none
+cell 2,2 attrs=bold
+cell 2,3 attrs=bold
+cell 2,4 attrs=none
+cell 3,2 attrs=none
+test DECCARA ignores the margins
+spec VT510 DECCARA: page margins are ignored
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[?69h\e[2;4s\e[2;2r\e[3;1;3;5;1$r
+cell 3,1 attrs=bold
+cell 3,5 attrs=bold
+test DECCARA leaves the cursor where it is
+spec VT510 DECCARA: the cursor does not move
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2;3H\e[1;1;3;5;1$r
+cursor 2,3
+test DECCARA is cut to the screen
+spec VT510 DECCARA: values beyond the page's width or height are treated as that dimension
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[3;5;99;99;1$r
+cell 3,4 attrs=none
+cell 3,5 attrs=bold
+test DECRARA reverses bold
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 1 is bold
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1mab\e[0mcd\e[1;1;1;4;1$t
+cell 1,1 attrs=none
+cell 1,2 attrs=none
+cell 1,3 attrs=bold
+cell 1,4 attrs=bold
+cell 1,5 attrs=none
+test DECRARA 4 reverses underline
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 4 is underline
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[4ma\e[0m\e[1;1;1;2;4$t
+cell 1,1 attrs=none
+cell 1,2 attrs=underline
+test DECRARA 5 reverses blink
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 5 is blink
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[5ma\e[0m\e[1;1;1;2;5$t
+cell 1,1 attrs=none
+cell 1,2 attrs=blink
+test DECRARA 7 reverses inverse
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 7 is inverse
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[7ma\e[0m\e[1;1;1;2;7$t
+cell 1,1 attrs=none
+cell 1,2 attrs=inverse
+test DECRARA 8 reverses hidden
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 8 is hidden; 8 is an xterm extension
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[8ma\e[0m\e[1;1;1;2;8$t
+cell 1,1 attrs=none
+cell 1,2 attrs=hidden
+test DECRARA 0 reverses bold, underline, blink and negative image
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 0 reverses all of them
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[4ma\e[0m\e[1;1;1;2;0$t
+cell 1,1 attrs=bold,blink,inverse
+cell 1,2 attrs=bold,underline,blink,inverse
+cell 1,3 attrs=none
+test DECRARA without attributes is the same as 0
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 0 (default)
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;1$t
+cell 1,1 attrs=bold,underline,blink,inverse
+test DECRARA twice for the same attribute reverses it back
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; the attributes are applied one after the other
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;2;1;1$t
+cell 1,1 attrs=none
+test DECRARA reverses an underline style to none
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; 4 is underline
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[4:3ma\e[0m\e[1;1;1;1;4$t
+cell 1,1 attrs=none
+test DECRARA ignores an attribute it does not know
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle: other values are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;1;1;1;3$t
+cell 1,1 attrs=none
+test DECRARA in stream extent reverses the stream
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; DECSACE 0: the stream of character positions
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[1;4;2;2;7$t
+cell 1,3 attrs=none
+cell 1,4 attrs=inverse
+cell 1,5 attrs=inverse
+cell 2,1 attrs=inverse
+cell 2,2 attrs=inverse
+cell 2,3 attrs=none
+test DECRARA in rectangle extent reverses the rectangle
+spec VT510 DECRARA: CSI Pt ; Pl ; Pb ; Pr ; Ps1 ; ... ; Psn $ t reverses the attributes in the rectangle; DECSACE 2: all the character positions in the rectangle
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[1;4;2;5;7$t
+cell 1,3 attrs=none
+cell 1,4 attrs=inverse
+cell 2,5 attrs=inverse
+cell 2,3 attrs=none
+cell 3,4 attrs=none
+test RIS selects the stream extent again
+spec VT510 RIS: returns the terminal to its initial state (DECSACE 0)
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\ecabcde\r\nfghij\r\nklmno\e[1;3;2;3;7$r
+cell 1,5 attrs=inverse
+cell 2,1 attrs=inverse
+test DECSTR leaves the extent as DECSACE set it
+spec VT510 DECSTR: the table of what a soft reset resets does not list DECSACE
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 5 3
+feed abcde\r\nfghij\r\nklmno\e[H\e[2*x\e[!p\e[1;3;2;3;7$r
+cell 1,5 attrs=none
+cell 2,1 attrs=none
+cell 2,3 attrs=inverse

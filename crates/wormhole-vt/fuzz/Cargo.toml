@@ -1,0 +1,47 @@
+[package]
+name = "wormhole-vt-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+wormhole-vt = { path = ".." }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "parser"
+path = "fuzz_targets/parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "term"
+path = "fuzz_targets/term.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "split"
+path = "fuzz_targets/split.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "graphics"
+path = "fuzz_targets/graphics.rs"
+test = false
+doc = false
+bench = false
+
+# Its own workspace: the fuzz crate needs a nightly toolchain and is run by hand, so the
+# repository's workspace (and `cargo check --workspace`) must not see it.
+[workspace]

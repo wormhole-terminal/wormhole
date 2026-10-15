@@ -1,0 +1,125 @@
+# Resizing: the screen reflows, the cursor stays on its text.
+#
+# xterm itself does not reflow (it cuts and pads lines); Wormhole's engine does, as the design in
+# docs/engine.md says, so these cases are conventions of the engine rather than of a published
+# text. They pin down what must stay true: the text, its order and where the cursor is.
+
+test widening joins a wrapped row
+convention rows that were wrapped by autowrap are one line again when the screen is wide enough
+size 5 4
+feed abcdefgh
+resize 10 4
+screen
+|abcdefgh|
+cursor 1,9
+wrapped 1 no
+
+test narrowing keeps the text of a long row
+convention a line longer than the new width wraps onto further rows; the text and its order do not change
+size 10 4
+feed abcdefghijkl
+resize 5 4
+lines
+|abcdefghijkl|
+cursor *,3
+
+test narrowing keeps the rows on screen when they fit
+convention rows that still fit the screen after reflow stay on it; they are not pushed into the history
+known-fail: alacritty – reflow keeps the cursor on its screen row and pushes the rows above it into the history even when everything fits
+size 10 4
+feed abcdefghijkl
+resize 5 4
+screen
+|abcde|
+|fghij|
+|kl|
+cursor 3,3
+wrapped 1 yes
+wrapped 2 yes
+wrapped 3 no
+scrollback-len 0
+
+test widening keeps rows that ended with a line break apart
+convention only autowrapped rows are joined
+size 5 4
+feed ab\r\ncd
+resize 10 4
+lines
+|ab|
+|cd|
+screen
+|ab|
+|cd|
+
+test narrowing and widening again restores the line
+convention reflow is lossless for plain text
+size 10 4
+feed abcdefghijkl
+resize 5 4
+resize 10 4
+lines
+|abcdefghijkl|
+cursor *,3
+
+test growing the height adds blank rows below
+convention with no history the new rows are blank and the content stays where it was
+size 10 2
+feed A\r\nB
+resize 10 4
+screen
+|A|
+|B|
+cursor 2,2
+
+test shrinking the height keeps the cursor row on screen
+convention lines above the cursor move into the history so that the cursor row stays visible
+size 10 4
+feed A\r\nB\r\nC\r\nD
+resize 10 2
+screen
+|C|
+|D|
+cursor 2,2
+scrollback
+|A|
+|B|
+
+test the cursor stays inside after narrowing
+convention the cursor is clamped to the new size
+size 10 4
+feed \e[1;10H
+resize 5 4
+cursor 1,5
+
+test resizing keeps the rendition of the text
+convention reflow keeps the cell attributes with the text
+size 5 4
+feed \e[31mabcdefg
+resize 10 4
+cell 1,7 text=g fg=idx:1
+cell 1,1 text=a fg=idx:1
+
+test resizing does not leave the alternate screen
+convention resize is not a mode change
+size 10 4
+feed \e[?1049h
+resize 6 3
+alt-screen on
+feed \e[?1049l
+alt-screen off
+
+test resizing resets the scrolling region
+convention a resize returns the margins to the whole screen, as DECSLPP/DECSCPP do
+size 10 4
+feed \e[2;3r
+resize 10 6
+feed \e[6;1H\n
+scrollback-len 1
+
+test wide characters are not split by narrowing
+convention a wide character that does not fit at the end of a row moves to the next one whole
+size 6 4
+feed ab日cd
+resize 3 4
+lines
+|ab日cd|

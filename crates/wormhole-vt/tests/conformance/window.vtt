@@ -1,0 +1,103 @@
+# The window: XTWINOPS reports, the operations a host must allow, the title and the icon name, the
+# title stack and the title modes.
+
+test XTWINOPS reports the text area, the cell and the window state
+spec xterm ctlseqs: CSI 14 t text area in pixels, 16 t cell in pixels, 18 t text area in characters, 11 t window state, 13 t position
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+size 20 5
+feed \e[18t\e[11t\e[13t
+reply \e[8;5;20t\e[1t\e[3;0;0t
+feed \e[14t\e[16t
+reply~ \e[4;*;*t\e[6;*;*t
+
+test the window title is not reported unless the host allows it
+spec xterm ctlseqs: CSI 21 t reports the title; xterm leaves it off by default as a program's title is text of its choosing
+size 20 5
+feed \e]2;secret\a\e[21t\e[20t
+reply none
+
+test the title and the icon name are reported when the host allows it
+spec xterm ctlseqs: CSI 20 t is OSC L icon ST, CSI 21 t is OSC l title ST; OSC 0 sets both, OSC 1 the icon name, OSC 2 the title
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e]0;both\a\e[20t\e[21t
+reply \e]Lboth\e\\\e]lboth\e\\
+feed \e]1;icon\a\e]2;title\a\e[20t\e[21t
+reply \e]Licon\e\\\e]ltitle\e\\
+
+test controls are taken out of a reported title
+spec xterm ctlseqs: the title reports can be used to put text in a program's input, which is why they are off by default
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e]2;a\u{85}b\a\e[21t
+reply \e]la b\e\\
+
+test the title stack keeps the title and the icon name together or apart
+spec xterm ctlseqs: CSI 22 ; Ps t saves (0 both, 1 icon name, 2 title), CSI 23 ; Ps t restores
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e]1;i1\a\e]2;t1\a\e[22;0t\e]1;i2\a\e]2;t2\a\e[23;1t\e[20t\e[21t
+reply \e]Li1\e\\\e]lt2\e\\
+feed \e[23;2t\e[21t
+reply \e]lt2\e\\
+
+test a pop takes the slot that holds what it asks for
+spec xterm ctlseqs: CSI 22 and 23 with the icon name and the title saved by separate pushes
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e]1;i1\a\e]2;t1\a\e[22;1t\e[22;2t\e]1;x\a\e]2;y\a\e[23;0t\e[20t\e[21t
+reply \e]Li1\e\\\e]lt1\e\\
+
+test the title modes read and report in hexadecimal
+spec xterm ctlseqs: CSI > Ps t sets title modes, 0 hexadecimal set, 1 hexadecimal query; CSI > Ps T resets
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e[>0;1t\e]2;6162\a\e[21t
+reply \e]l6162\e\\
+feed \e[>0;1T\e[21t
+reply \e]lab\e\\
+
+test a full reset clears the title modes and the stack
+spec xterm ctlseqs: RIS
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e[>0;1t\ec\e]2;ab\a\e[21t
+reply \e]lab\e\\
+
+test the window operations do nothing unless the host allows them
+spec xterm ctlseqs: window manipulation is controlled by the allowWindowOps resource, which is off by default
+size 20 5
+feed \e[8;10;40t\e[18t
+reply \e[8;5;20t
+
+test the sizes in cells take effect at once when allowed
+convention the engine resizes to the size asked for before the host has changed its window, so that the program reads the size it asked for (esctest2 DECRQSS_DECSLPP)
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e[8;10;40t\e[18t
+reply \e[8;10;40t
+feed \e[27t\e[18t\eP$qt\e\\
+reply \e[8;27;40t\eP1$r27t\e\\
+feed \e[24*|\eP$q*|\e\\
+reply \eP1$r24*|\e\\
+
+test DECSNLS and DECSLPP are refused unless the host allows them
+spec VT510 DECSNLS, DECSLPP: change the number of lines; here a window operation
+size 20 5
+feed \e[24*|\e[40t\e[18t
+reply \e[8;5;20t
+
+test a size past what the screen holds is cut
+convention a program asking for more cells than the host's screen has gets what fits, and without a screen the engine cuts at 500
+known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
+window-ops allow
+size 20 5
+feed \e[8;9999;9999t\e[18t
+reply \e[8;500;500t

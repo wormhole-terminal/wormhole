@@ -1,0 +1,171 @@
+# Resets and the screen alignment pattern: RIS, DECSTR, DECALN.
+
+test RIS clears the screen and homes the cursor
+spec VT510 RIS actions: clears the screen, returns the cursor to the upper-left corner
+size 10 4
+feed abc\r\ndef\ec
+screen
+||
+cursor 1,1
+
+test RIS returns the rendition to normal
+spec VT510 RIS actions: sets SGR to normal rendition
+size 10 4
+feed \e[1;31;44m\ecx
+cell 1,1 text=x attrs=none fg=default bg=default
+
+test RIS clears the history
+spec VT510 RIS actions: clears page memory, all data stored in it is lost
+size 10 2
+feed 1\r\n2\r\n3\r\n4\ec
+scrollback-len 0
+screen
+||
+
+test RIS leaves the alternate screen
+spec VT510 RIS: returns the terminal to its initial state, which shows the main screen
+size 10 4
+feed main\e[?1049hALT\ec
+alt-screen off
+
+test RIS removes the scrolling region
+spec VT510 RIS: initial state has no margins
+size 10 4
+feed A\r\nB\r\nC\r\nD\e[2;3r\ec\e[3;1H\n
+cursor 4,1
+
+test RIS ends origin mode
+spec VT510 RIS: initial state is absolute origin
+size 10 4
+feed \e[2;3r\e[?6h\ec\e[1;1Hx
+screen
+|x|
+
+test RIS ends insert mode
+spec VT510 RIS: initial state is replace mode
+size 10 4
+feed \e[4h\ecabc\e[1;1Hx
+screen
+|xbc|
+
+test RIS ends new line mode
+spec VT510 RIS: initial state is line feed, not new line
+size 10 4
+feed \e[20h\ecab\ncd
+screen
+|ab|
+|  cd|
+
+test RIS turns the cursor on and autowrap on
+convention the initial state shows the cursor and wraps (terminfo xterm-256color: am, xenl)
+size 10 4
+feed \e[?25l\e[?7l\ecabcdefghijk
+cursor 2,2 visible
+screen
+|abcdefghij|
+|k|
+
+test RIS resets the title stack and modes seen by DECRQM
+spec VT510 RIS: replaces all set-up features with their saved settings
+size 10 4
+feed \e[?1h\e[?2004h\e[?1000h\ec\e[?1$p\e[?2004$p\e[?1000$p
+reply \e[?1;2$y\e[?2004;2$y\e[?1000;2$y
+
+test RIS forgets the saved cursor
+spec VT510 RIS: initial state
+size 10 4
+feed \e[3;3H\e7\ec\e8x
+screen
+|x|
+
+test DECSTR keeps what is on the screen
+spec VT510 DECSTR Table 5-9 lists the settings it resets; the screen contents are not among them
+size 10 4
+feed abc\r\ndef\e[!p
+screen
+|abc|
+|def|
+
+test DECSTR keeps the cursor position
+convention DECSTR resets modes, not the position (Table 5-9 lists no cursor position)
+size 10 4
+feed abc\e[!p
+cursor 1,4
+
+test DECSTR returns the rendition to normal
+spec VT510 DECSTR Table 5-9: SGR normal rendition
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed \e[1;31;44m\e[!px
+cell 1,1 text=x attrs=none fg=default bg=default
+
+test DECSTR ends origin mode and removes the margins
+spec VT510 DECSTR Table 5-9: origin absolute, top margin 1, bottom margin the page length
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed A\r\nB\r\nC\r\nD\e[2;3r\e[?6h\e[!p\e[1;1Hx\e[3;1H\n
+screen
+|x|
+|B|
+|C|
+|D|
+cursor 4,1
+
+test DECSTR ends insert mode
+spec VT510 DECSTR Table 5-9: replace mode
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed abc\e[4h\e[!p\e[1;1Hx
+screen
+|xbc|
+
+test DECSTR shows the cursor
+spec VT510 DECSTR Table 5-9: text cursor enabled
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed \e[?25l\e[!p
+cursor 1,1 visible
+
+test DECSTR ends selective erase protection
+spec VT510 DECSTR Table 5-9: DECSCA normal, erasable by DECSEL and DECSED
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed \e[1"q\e[!pA\e[1;1H\e[?2K
+screen
+||
+
+test DECSTR resets modes seen by DECRQM
+spec VT510 DECSTR Table 5-9: cursor keys normal
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 4
+feed \e[?1h\e[!p\e[?1$p
+reply \e[?1;2$y
+
+test DECALN fills the screen with E
+spec VT100 User Guide DECALN: fills the entire screen area with uppercase Es
+size 10 4
+feed abc\e#8
+screen
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+
+test DECALN homes the cursor
+spec VT510 DECALN: moves the cursor to the home position
+known-fail: alacritty – DECALN leaves the cursor where it is
+size 10 4
+feed \e[3;5H\e#8
+cursor 1,1
+
+test DECALN removes the margins
+spec VT510 DECALN: sets the margins to the extremes of the page
+known-fail: alacritty – DECALN leaves the scrolling region set
+size 10 4
+feed \e[2;3r\e#8\e[3;1H\n
+screen
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+|EEEEEEEEEE|
+cursor 4,1

@@ -1,0 +1,254 @@
+# Left and right margins: DECLRMM (mode 69) and DECSLRM, and what they limit.
+#
+# In several cases all four rows hold "abcdefghij" and the margins are columns 3 to 6 ("cdef").
+
+test DECSLRM sets the margins and homes the cursor
+spec VT510 DECSLRM: moves the cursor to column 1, line 1; recognized only if DECLRMM is set
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[1;1H\e[3;4H\e[3;6s
+cursor 1,1
+
+test DECSLRM is not recognized without DECLRMM
+spec VT510 DECSLRM: the terminal only recognizes this control function if DECLRMM is set
+size 10 4
+feed \e[1;5H\e[3;6s\e[9C
+cursor 1,10
+
+test the right margin stops cursor forward
+spec VT100 User Guide CUF: the cursor stops at the right margin
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;4H\e[9C
+cursor 1,6
+
+test the left margin stops cursor backward
+spec VT100 User Guide CUB: the cursor stops at the left margin
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;5H\e[9D
+cursor 1,3
+
+test backspace at the left margin does nothing
+spec VT510 Table 4-1 BS: if the cursor is at the left margin, no action occurs
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;3H\b
+cursor 1,3
+
+test carriage return goes to the left margin
+spec VT510 Table 4-1 CR: moves the cursor to the left margin on the current line
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;5H\r
+cursor 1,3
+
+test a tab stops at the right margin
+spec VT510 Table 4-1 HT: if there are no more tab stops, the cursor moves to the right margin
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;3H\t
+cursor 1,6
+
+test absolute positioning ignores the margins
+spec VT510 DECOM: with origin mode reset the cursor can move outside the margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;9H
+cursor 1,9
+
+test wrapping goes from the right margin to the left margin
+convention the right margin acts as the end of the line for autowrap
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[1;3Habcdef
+screen
+|  abcd|
+|  ef|
+
+test ICH shifts only up to the right margin
+spec VT510 ICH: text between the cursor and the right margin moves right, characters past the right margin are lost
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;3H\e[@
+screen
+|ab cdeghij|
+cursor 1,3
+
+test DCH shifts only up to the right margin
+spec VT510 DCH: the remaining characters between the cursor and the right margin move left, blanks are added at the margin
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;3H\e[P
+screen
+|abdef ghij|
+
+test ICH outside the margins does nothing
+spec VT510 ICH: no effect outside the scrolling margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;1H\e[@
+screen
+|abcdefghij|
+
+test DCH outside the margins does nothing
+spec VT510 DCH: no effect outside the scrolling margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;8H\e[P
+screen
+|abcdefghij|
+
+test insert mode shifts only up to the right margin
+spec VT510 IRM: new characters move characters to the right; the right margin ends the scrolling region
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;3H\e[4hX
+screen
+|abXcdeghij|
+
+test IL moves only the columns between the margins
+convention the scrolling region is the rectangle between the top, bottom, left and right margins (VT510 DECSLRM)
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nklmnopqrst\r\nuvwxyzABCD\r\nEFGHIJKLMN\e[?69h\e[3;6s\e[2;3H\e[L
+screen
+|abcdefghij|
+|kl    qrst|
+|uvmnopABCD|
+|EFwxyzKLMN|
+
+test DL moves only the columns between the margins
+convention the scrolling region is the rectangle between the top, bottom, left and right margins (VT510 DECSLRM)
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nklmnopqrst\r\nuvwxyzABCD\r\nEFGHIJKLMN\e[?69h\e[3;6s\e[2;3H\e[M
+screen
+|abcdefghij|
+|klwxyzqrst|
+|uvGHIJABCD|
+|EF    KLMN|
+
+test line feed at the bottom margin scrolls only the margin columns
+convention the scrolling region is the rectangle between the margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nklmnopqrst\r\nuvwxyzABCD\r\nEFGHIJKLMN\e[?69h\e[3;6s\e[4;3H\n
+screen
+|abmnopghij|
+|klwxyzqrst|
+|uvGHIJABCD|
+|EF    KLMN|
+
+test SU moves only the columns between the margins
+convention the scrolling region is the rectangle between the margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nklmnopqrst\r\nuvwxyzABCD\r\nEFGHIJKLMN\e[?69h\e[3;6s\e[S
+screen
+|abmnopghij|
+|klwxyzqrst|
+|uvGHIJABCD|
+|EF    KLMN|
+
+test erasing ignores the margins
+convention ED and EL work on the whole line, unlike scrolling
+size 10 4
+feed abcdefghij\e[?69h\e[3;6s\e[1;4H\e[K
+screen
+|abc|
+
+test DECIC inserts columns inside the margins
+spec VT510 DECIC: columns between the cursor and the right margin move right
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nabcdefghij\r\nabcdefghij\r\nabcdefghij\e[?69h\e[3;6s\e[1;3H\e[2'}
+screen
+|ab  cdghij|
+|ab  cdghij|
+|ab  cdghij|
+|ab  cdghij|
+
+test DECDC deletes columns inside the margins
+spec VT510 DECDC: the remaining columns between the cursor and the right margin move left
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed abcdefghij\r\nabcdefghij\r\nabcdefghij\r\nabcdefghij\e[?69h\e[3;6s\e[1;3H\e[2'~
+screen
+|abef  ghij|
+|abef  ghij|
+|abef  ghij|
+|abef  ghij|
+
+test forward index moves the cursor right
+spec VT510 DECFI: moves the cursor forward one column
+known-fail: alacritty – ESC 9 (DECFI) is ignored
+size 10 4
+feed \e[?69h\e[3;6s\e[1;4H\e9
+cursor 1,5
+
+test forward index at the right margin scrolls the margins left
+spec VT510 DECFI: if the cursor is at the right margin all screen data within the margins moves one column left
+known-fail: alacritty – ESC 9 (DECFI) is ignored
+size 10 4
+feed abcdefghij\r\nabcdefghij\e[?69h\e[3;6s\e[1;6H\e9
+screen
+|abdef ghij|
+|abdef ghij|
+cursor 1,6
+
+test back index moves the cursor left
+spec VT510 DECBI: moves the cursor backward one column
+known-fail: alacritty – ESC 6 (DECBI) is ignored
+size 10 4
+feed \e[?69h\e[3;6s\e[1;5H\e6
+cursor 1,4
+
+test back index at the left margin scrolls the margins right
+spec VT510 DECBI: if the cursor is at the left margin all screen data within the margins moves one column right
+known-fail: alacritty – ESC 6 (DECBI) is ignored
+size 10 4
+feed abcdefghij\r\nabcdefghij\e[?69h\e[3;6s\e[1;3H\e6
+screen
+|ab cdeghij|
+|ab cdeghij|
+cursor 1,3
+
+test resetting DECLRMM removes the margins
+spec VT510 DECLRMM: when reset the margins are set to the page borders
+size 10 4
+feed \e[?69h\e[3;6s\e[?69l\e[1;1H\e[99C
+cursor 1,10
+
+test DECSLRM with a missing right margin uses the last column
+spec VT510 DECSLRM: the right margin defaults to the page width
+size 10 4
+feed \e[?69h\e[3s\e[1;4H\e[99C
+cursor 1,10
+
+test DECSLRM needs the left margin below the right
+spec VT510 DECSLRM: the left margin must be less than the right margin
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[5;4s\e[1;4H\e[99C
+cursor 1,6
+
+test DECSLRM needs at least two columns
+spec VT510 DECSLRM: the minimum size of the scrolling region is two columns
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[5;5s\e[1;4H\e[99C
+cursor 1,6
+
+test origin mode with margins starts at the margins
+spec VT510 DECOM: the home position is the upper-left corner within the margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[2;3r\e[?6h\e[1;1H
+cursor 2,3
+
+test origin mode with margins clamps to them
+spec VT510 DECOM: the cursor cannot move outside of the margins
+known-fail: alacritty – DECLRMM (mode 69) is not supported: DECRQM answers 0 and CSI Pl ; Pr s sets no margins
+size 10 4
+feed \e[?69h\e[3;6s\e[2;3r\e[?6h\e[9;9H
+cursor 3,6

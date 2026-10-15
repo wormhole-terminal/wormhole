@@ -1,0 +1,286 @@
+# Erasing: ED, EL, ECH, and the selective erasers DECSED and DECSEL with DECSCA protection.
+#
+# Erased cells take the current background color (the "bce" capability xterm-256color declares)
+# and nothing else of the current rendition.
+
+test ED 0 erases from the cursor to the end of the screen
+spec xterm ctlseqs: CSI Ps J, Ps = 0 (default), "Erase Below"
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\r\nDDDDDDDDDD\e[2;5H\e[J
+screen
+|AAAAAAAAAA|
+|BBBB      |
+|          |
+|          |
+cursor 2,5
+
+test ED 1 erases from the start of the screen to the cursor inclusive
+spec xterm ctlseqs: CSI Ps J, Ps = 1, "Erase Above"
+known-fail: alacritty – ED 1 leaves the rows above the cursor row alone (seen with the cursor on row 2)
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\r\nDDDDDDDDDD\e[2;5H\e[1J
+screen
+|          |
+|     BBBBB|
+|CCCCCCCCCC|
+|DDDDDDDDDD|
+cursor 2,5
+
+test ED 2 erases the whole screen and leaves the cursor
+spec xterm ctlseqs: CSI Ps J, Ps = 2, "Erase All"
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\r\nDDDDDDDDDD\e[2;5H\e[2J
+screen
+|          |
+|          |
+|          |
+|          |
+cursor 2,5
+
+test ED 3 erases the saved lines and keeps the screen
+spec xterm ctlseqs: CSI Ps J, Ps = 3, "Erase Saved Lines"
+size 10 3
+feed 1\r\n2\r\n3\r\n4\r\n5
+scrollback
+|1|
+|2|
+feed \e[3J
+scrollback-len 0
+screen
+|3|
+|4|
+|5|
+cursor 3,2
+
+test ED 0 at the first cell clears everything
+spec xterm ctlseqs: CSI J
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\e[H\e[J
+screen
+|          |
+|          |
+
+test ED with a background color fills with it
+convention terminfo(5) bce, declared by xterm-256color: erasing uses the current background color
+size 10 4
+feed \e[44m\e[2J
+cell 1,1 text=\s bg=idx:4 fg=default attrs=none
+cell 4,10 bg=idx:4
+screen
+|          |
+
+test ED erased cells keep only the background of the current rendition
+convention terminfo(5) bce: the erased cells take the background color and no other attribute
+size 10 4
+feed \e[1;3;4;31;42m\e[2J
+cell 2,2 bg=idx:2 fg=default attrs=none
+
+test EL 0 erases from the cursor to the end of the row
+spec xterm ctlseqs: CSI Ps K, Ps = 0, "Erase to Right"
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\e[2;5H\e[K
+screen
+|AAAAAAAAAA|
+|BBBB      |
+|CCCCCCCCCC|
+cursor 2,5
+
+test EL 1 erases from the start of the row to the cursor inclusive
+spec xterm ctlseqs: CSI Ps K, Ps = 1, "Erase to Left"
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\e[2;5H\e[1K
+screen
+|AAAAAAAAAA|
+|     BBBBB|
+|CCCCCCCCCC|
+cursor 2,5
+
+test EL 2 erases the whole row
+spec xterm ctlseqs: CSI Ps K, Ps = 2, "Erase All"
+size 10 4
+feed AAAAAAAAAA\r\nBBBBBBBBBB\r\nCCCCCCCCCC\e[2;5H\e[2K
+screen
+|AAAAAAAAAA|
+|          |
+|CCCCCCCCCC|
+cursor 2,5
+
+test EL with a background color fills the row with it
+convention terminfo(5) bce, declared by xterm-256color
+size 10 4
+feed ab\e[44m\e[2K
+cell 1,1 text=\s bg=idx:4
+cell 1,10 bg=idx:4
+cell 2,1 bg=default
+screen
+|          |
+
+test ECH erases characters without moving the cursor
+spec xterm ctlseqs: CSI Ps X, "Erase Ps Character(s)"
+size 10 4
+feed BBBBBBBBBB\e[1;3H\e[4X
+screen
+|BB    BBBB|
+cursor 1,3
+
+test ECH defaults to one character
+spec ECMA-48 8.3.38: the default is 1
+size 10 4
+feed BBBBBBBBBB\e[1;3H\e[X
+screen
+|BB BBBBBBB|
+
+test ECH stops at the end of the row
+spec xterm ctlseqs: CSI Ps X
+size 10 4
+feed BBBBBBBBBB\e[1;8H\e[99X
+screen
+|BBBBBBB   |
+cursor 1,8
+
+test ECH uses the background color
+convention terminfo(5) bce, declared by xterm-256color
+size 10 4
+feed BBBBBBBBBB\e[41m\e[1;3H\e[2X
+cell 1,3 text=\s bg=idx:1
+cell 1,4 bg=idx:1
+cell 1,5 text=B bg=default
+
+test ECH does not shift the rest of the row
+spec ECMA-48 8.3.38: erase, not delete
+size 10 4
+feed abcdefghij\e[1;2H\e[3X
+screen
+|a   efghij|
+
+test DECSCA protection keeps a character from DECSEL
+spec VT510 DECSCA, DECSEL: CSI ? Ps K erases unprotected characters only
+known-fail: alacritty – DECSEL (CSI ? Ps K) is ignored: nothing is erased
+size 10 4
+feed \e[1"qAB\e[0"qCD\e[1;1H\e[?2K
+screen
+|AB        |
+
+test DECSEL 0 erases unprotected characters to the right
+spec VT510 DECSEL: CSI ? 0 K
+known-fail: alacritty – DECSEL (CSI ? Ps K) is ignored: nothing is erased
+size 10 4
+feed A\e[1"qB\e[0"qCD\e[1;1H\e[?0K
+screen
+| B        |
+
+test DECSEL 1 erases unprotected characters to the left
+spec VT510 DECSEL: CSI ? 1 K
+known-fail: alacritty – DECSEL (CSI ? Ps K) is ignored: nothing is erased
+size 10 4
+feed A\e[1"qB\e[0"qCDE\e[1;4H\e[?1K
+screen
+| B  E     |
+
+test DECSED 2 erases every unprotected character on the screen
+spec VT510 DECSED: CSI ? 2 J
+known-fail: alacritty – DECSED (CSI ? Ps J) is ignored: nothing is erased
+size 10 4
+feed \e[1"qP\e[0"qQ\r\nRS\e[?2J
+screen
+|P         |
+
+test DECSED 0 erases unprotected characters below the cursor
+spec VT510 DECSED: CSI ? 0 J
+known-fail: alacritty – DECSED (CSI ? Ps J) is ignored: nothing is erased
+size 10 4
+feed ab\r\n\e[1"qc\e[0"qd\r\nef\e[1;2H\e[?0J
+screen
+|a         |
+|c         |
+
+test EL erases protected characters too
+spec VT510 DECSCA: only DECSED and DECSEL cannot erase protected characters
+size 10 4
+feed \e[1"qAB\e[0"qCD\e[1;1H\e[2K
+screen
+|          |
+
+test ED erases protected characters too
+spec VT510 DECSCA: only DECSED and DECSEL cannot erase protected characters
+size 10 4
+feed \e[1"qAB\r\nCD\e[2J
+screen
+|          |
+
+test DECSCA 2 ends protection
+spec VT510 DECSCA: Ps = 0 or 2 means not protected
+known-fail: alacritty – DECSEL (CSI ? Ps K) is ignored: nothing is erased
+size 10 4
+feed \e[1"qA\e[2"qB\e[1;1H\e[?2K
+screen
+|A         |
+
+
+test EL ends a pending wrap
+convention xterm clears the wrap flag when it changes the line under the cursor ("with the right part cleared, we can't wrap"): the next character lands where the erased one was
+known-fail: alacritty – the wrap stays pending after EL: the next character wraps
+size 10 4
+feed abcdefghij\e[Kk
+screen
+|abcdefghik|
+cursor 1,10
+
+test ED ends a pending wrap
+convention xterm clears the wrap flag when it changes the screen under the cursor
+known-fail: alacritty – the wrap stays pending after ED: the next character wraps
+size 10 4
+feed abcdefghij\e[Jk
+screen
+|abcdefghik|
+
+test ED 2 keeps the text it clears as history
+convention terminals that keep saved lines (kitty, iTerm2, alacritty) move the screen into them on ED 2, and Wormhole has always done so: ^L leaves the old screen to scroll back to
+size 10 3
+feed A\r\nB\e[2J
+scrollback
+|A|
+|B|
+screen
+||
+
+test ED 2 on a blank screen adds nothing to the history
+convention there is nothing to keep
+known-fail: alacritty – the blank screen is pushed into the history
+size 10 4
+feed \e[2J
+scrollback-len 0
+
+test ED 3 before ED 2 leaves no history
+convention macOS clear sends ESC[3J ESC[H ESC[2J and expects an empty scrollback and screen afterwards
+known-fail: alacritty – ED 2 pushes the screen into the history after ED 3 emptied it
+size 10 3
+feed 1\r\n2\r\n3\r\n4\r\n5\e[3J\e[H\e[2J
+scrollback-len 0
+screen
+||
+
+test ED, EL and ECH leave a guarded area alone
+spec ECMA-48 8.3.129 SPA, 8.3.54 EPA, and ED/EL/ECH: the characters of a guarded area are not erased
+known-fail: alacritty – no guarded areas (SPA, EPA): ED, EL and ECH erase them
+size 10 4
+feed ab\eVc\eW\e[1;1H\e[3X
+screen
+|  c       |
+feed \e[K
+screen
+|  c       |
+feed \e[J
+screen
+|  c       |
+
+test DECSCA protection is not a guarded area
+spec VT510 DECSCA: only the selective erasers respect it; ECMA-48 8.3.129 for SPA
+known-fail: alacritty – no guarded areas (SPA, EPA): ED, EL and ECH erase them
+size 10 4
+feed ab\e[1"qc\e[0"q\e[1;1H\e[?K
+screen
+|  c       |
+feed \e[K
+screen
+|          |

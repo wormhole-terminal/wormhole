@@ -1,0 +1,137 @@
+# The alternate screen: modes 47, 1047, 1048 and 1049.
+
+test mode 1049 switches to a blank alternate screen
+spec xterm ctlseqs CSI ? 1 0 4 9 h: switch to the Alternate Screen Buffer, clearing it first
+size 10 4
+feed main\e[?1049h
+alt-screen on
+screen
+| |
+
+test mode 1049 brings the normal screen back
+spec xterm ctlseqs CSI ? 1 0 4 9 l: use Normal Screen Buffer and restore the cursor
+size 10 4
+feed main\e[?1049hALT\e[?1049l
+alt-screen off
+screen
+|main|
+
+test mode 1049 saves the cursor and restores it
+spec xterm ctlseqs 1049: save the cursor as in DECSC on entry, restore as in DECRC on exit
+size 10 4
+feed \e[2;3Hmain\e[?1049h\e[4;4Hx\e[?1049l
+cursor 2,7
+
+test mode 1049 leaves the cursor where it is
+spec xterm ctlseqs 1049 combines 1047 and 1048, neither of which moves the cursor
+size 10 4
+feed \e[2;3H\e[?1049hx
+screen
+| |
+|  x|
+cursor 2,4
+
+test mode 1049 clears the alternate screen each time
+spec xterm ctlseqs 1049: clearing it first
+size 10 4
+feed \e[?1049hX\e[?1049l\e[?1049h
+screen
+| |
+
+test mode 1049 restores the rendition saved with the cursor
+spec xterm ctlseqs 1049: save and restore the cursor as in DECSC and DECRC (which keep the SGR attributes)
+size 10 4
+feed \e[31m\e[?1049h\e[0m\e[?1049lx
+cell 1,1 text=x fg=idx:1
+
+test the normal screen is not touched while the alternate one shows
+spec xterm ctlseqs: two screen buffers
+size 10 4
+feed main\e[?1049h\e[2J\e[HALT\e[?1049l
+screen
+|main|
+
+test the alternate screen has no saved lines
+spec xterm ctlseqs, The Alternate Screen Buffer: contains no additional saved lines
+size 10 3
+feed \e[?1049h1\r\n2\r\n3\r\n4\r\n5
+screen
+|3|
+|4|
+|5|
+scrollback-len 0
+
+test the normal screen's saved lines survive a visit to the alternate screen
+spec xterm ctlseqs, The Alternate Screen Buffer: the Normal Screen Buffer keeps its saved lines
+size 10 3
+feed 1\r\n2\r\n3\r\n4\e[?1049h5\r\n6\r\n7\r\n8\e[?1049l
+scrollback
+|1|
+
+test mode 1047 clears the alternate screen when leaving it
+spec xterm ctlseqs CSI ? 1 0 4 7 l: clear the screen first if in the Alternate Screen Buffer
+known-fail: alacritty – CSI ? 1047 h/l is ignored: the alternate screen never shows
+size 10 4
+feed \e[?1047hX\e[?1047l\e[?1047h
+alt-screen on
+screen
+| |
+
+test mode 1047 does not save the cursor
+spec xterm ctlseqs: 1047 only switches the buffer; 1048 is the one that saves the cursor
+size 10 4
+feed \e[2;3H\e[?1047h\e[4;4H\e[?1047l
+cursor 4,4
+
+test mode 1047 brings back the normal screen
+spec xterm ctlseqs CSI ? 1 0 4 7 l: Use Normal Screen Buffer
+known-fail: alacritty – CSI ? 1047 h/l is ignored: the alternate screen never shows
+size 10 4
+feed main\e[?1047hALT\e[?1047l
+alt-screen off
+screen
+|main|
+
+test mode 1048 saves and restores the cursor
+spec xterm ctlseqs 1048: save the cursor as in DECSC, restore it as in DECRC
+known-fail: alacritty – CSI ? 1048 h/l is ignored: the cursor is not restored
+size 10 4
+feed \e[2;3H\e[?1048h\e[4;4H\e[?1048l
+cursor 2,3
+alt-screen off
+
+test mode 47 uses the alternate screen
+spec xterm ctlseqs CSI ? 4 7 h: Use Alternate Screen Buffer (only the buffer changes: the cursor stays, as for 1047 and 1049); CSI ? 4 7 l: Use Normal Screen Buffer
+known-fail: alacritty – CSI ? 47 h/l is ignored: the alternate screen never shows
+size 10 4
+feed main\e[?47hALT
+alt-screen on
+screen
+|    ALT|
+feed \e[?47l
+alt-screen off
+screen
+|main|
+
+test mode 47 keeps what the alternate screen showed
+convention the xterm text only says 1049 and 1047 clear; 47 just switches buffers
+size 10 4
+feed \e[?47hX\e[?47l\e[?47h
+screen
+|X|
+
+test leaving the alternate screen twice is harmless
+convention a reset of a mode that is already reset changes nothing
+size 10 4
+feed main\e[?1049h\e[?1049l\e[?47lx
+alt-screen off
+screen
+|mainx|
+
+test mode 1049 again on the alternate screen changes nothing
+spec xterm ctlseqs 1049: use the Alternate Screen Buffer, clearing it first; the clearing belongs to the switch, which asking again does not make
+size 10 4
+feed \e[?1049hX\e[?1049h
+alt-screen on
+screen
+|X|

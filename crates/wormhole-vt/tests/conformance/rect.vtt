@@ -1,0 +1,686 @@
+# Rectangular editing: DECERA, DECSERA, DECFRA and DECCRA (the area as CSI Pt ; Pl ; Pb ; Pr).
+#
+# The cases run on an eight by eight screen filled with 64 different characters, so that a cell
+# shows where it came from. An area counts from the screen's corner, or from the scrolling
+# region's with origin mode, and is cut to the screen; the margins do not limit it and the cursor
+# does not move (VT510, the page of each function). The attributes are in rect-attributes.vtt.
+
+test DECERA acts on the rectangle
+spec VT510 DECERA: CSI Pt ; Pl ; Pb ; Pr $ z erases the characters in the rectangle
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[5;5;7;7$z
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD   H|
+|IJKL   P|
+|QRST   X|
+|YZ6789!@|
+test DECERA without an area takes the whole page
+spec VT510 DECCARA, the area's parameters: Pt and Pl default to 1, Pb and Pr to the last line and column of the page
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[$z
+screen
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+test DECERA with a top below its bottom does nothing
+spec VT510 DECCARA, the area's parameters: Pt must not exceed Pb
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[5;5;4;4$z
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECERA with a left right of its right does nothing
+spec VT510 DECCARA, the area's parameters: Pl must not exceed Pr
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;5;4;4$z
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECERA is cut to the screen
+spec VT510 DECCARA, the area's parameters: values beyond the page's width or height are treated as that dimension
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[7;7;99;99$z
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUV  |
+|YZ6789  |
+test DECERA counts from the region in origin mode
+spec VT510 DECERA, DECFRA, DECCRA: the area is affected by the origin mode (DECOM)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[2;8s\e[2;8r\e[?6h\e[1;1;3;3$z
+screen
+|abcdefgh|
+|i   mnop|
+|q   uvwx|
+|y   2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECERA ignores the margins
+spec VT510 DECCARA, the area's parameters: page margins are ignored
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[3;6s\e[3;6r\e[5;5;7;7$z
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD   H|
+|IJKL   P|
+|QRST   X|
+|YZ6789!@|
+test DECERA leaves the cursor where it is
+spec VT510 DECCARA, the area's parameters: the cursor does not move
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[4;3H\e[2;2;4;4$z
+cursor 4,3
+screen
+|abcdefgh|
+|i   mnop|
+|q   uvwx|
+|y   2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECERA also erases protected characters
+spec VT510 DECERA, DECSERA: DECSERA is the selective one, which leaves protected characters
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[1;1H\e[1\x22qAB\e[0\x22q\e[1;1;1;3$z
+screen
+|   defgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECERA gives the cells the current background
+spec convention: erased cells take the current background and nothing else (bce)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[44;1m\e[1;1;1;2$z
+cell 1,1 text=\s bg=idx:4 attrs=none
+cell 1,2 text=\s bg=idx:4
+cell 1,3 text=c bg=default
+test DECERA through half a wide character blanks both halves
+spec convention: a wide character is never left in halves (VT510: two columns)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\u{65e5}b\e[1;2;1;2$z
+row 1 |  b|
+test DECSERA acts on the rectangle
+spec VT510 DECSERA: CSI Pt ; Pl ; Pb ; Pr $ { erases the unprotected characters in the rectangle
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[5;5;7;7${
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD   H|
+|IJKL   P|
+|QRST   X|
+|YZ6789!@|
+test DECSERA without an area takes the whole page
+spec VT510 DECCARA, the area's parameters: Pt and Pl default to 1, Pb and Pr to the last line and column of the page
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[${
+screen
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+|        |
+test DECSERA with a top below its bottom does nothing
+spec VT510 DECCARA, the area's parameters: Pt must not exceed Pb
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[5;5;4;4${
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECSERA with a left right of its right does nothing
+spec VT510 DECCARA, the area's parameters: Pl must not exceed Pr
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;5;4;4${
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECSERA is cut to the screen
+spec VT510 DECCARA, the area's parameters: values beyond the page's width or height are treated as that dimension
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[7;7;99;99${
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUV  |
+|YZ6789  |
+test DECSERA counts from the region in origin mode
+spec VT510 DECERA, DECFRA, DECCRA: the area is affected by the origin mode (DECOM)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[2;8s\e[2;8r\e[?6h\e[1;1;3;3${
+screen
+|abcdefgh|
+|i   mnop|
+|q   uvwx|
+|y   2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECSERA ignores the margins
+spec VT510 DECCARA, the area's parameters: page margins are ignored
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[3;6s\e[3;6r\e[5;5;7;7${
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD   H|
+|IJKL   P|
+|QRST   X|
+|YZ6789!@|
+test DECSERA leaves the cursor where it is
+spec VT510 DECCARA, the area's parameters: the cursor does not move
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[4;3H\e[2;2;4;4${
+cursor 4,3
+screen
+|abcdefgh|
+|i   mnop|
+|q   uvwx|
+|y   2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECSERA leaves protected characters
+spec VT510 DECSERA: protected characters (DECSCA) are not erased
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\e[1\x22qAB\e[0\x22qCD\e[1;1;1;4${
+screen
+|AB|
+test DECSERA without an area erases the unprotected characters of the page
+spec VT510 DECSERA: the area defaults to the page; DECSCA protected characters stay
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\e[1\x22qP\e[0\x22qQ\r\nRS\e[${
+screen
+|P|
+test DECFRA acts on the rectangle
+spec VT510 DECFRA: CSI Pc ; Pt ; Pl ; Pb ; Pr $ x fills the rectangle with the character whose code is Pc
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[37;5;5;7;7$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD%%%H|
+|IJKL%%%P|
+|QRST%%%X|
+|YZ6789!@|
+test DECFRA without an area takes the whole page
+spec VT510 DECCARA, the area's parameters: Pt and Pl default to 1, Pb and Pr to the last line and column of the page
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[37$x
+screen
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+|%%%%%%%%|
+test DECFRA with a top below its bottom does nothing
+spec VT510 DECCARA, the area's parameters: Pt must not exceed Pb
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[37;5;5;4;4$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA with a left right of its right does nothing
+spec VT510 DECCARA, the area's parameters: Pl must not exceed Pr
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[37;2;5;4;4$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA is cut to the screen
+spec VT510 DECCARA, the area's parameters: values beyond the page's width or height are treated as that dimension
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[37;7;7;99;99$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUV%%|
+|YZ6789%%|
+test DECFRA counts from the region in origin mode
+spec VT510 DECERA, DECFRA, DECCRA: the area is affected by the origin mode (DECOM)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[2;8s\e[2;8r\e[?6h\e[37;1;1;3;3$x
+screen
+|abcdefgh|
+|i%%%mnop|
+|q%%%uvwx|
+|y%%%2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA ignores the margins
+spec VT510 DECCARA, the area's parameters: page margins are ignored
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[3;6s\e[3;6r\e[37;5;5;7;7$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCD%%%H|
+|IJKL%%%P|
+|QRST%%%X|
+|YZ6789!@|
+test DECFRA leaves the cursor where it is
+spec VT510 DECCARA, the area's parameters: the cursor does not move
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[4;3H\e[37;2;2;4;4$x
+cursor 4,3
+screen
+|abcdefgh|
+|i%%%mnop|
+|q%%%uvwx|
+|y%%%2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA fills with the current rendition
+spec VT510 DECFRA: the character is filled with the current attributes of the cursor
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[1;31m\e[37;1;1;1;2$x\e[0m
+cell 1,1 text=% fg=idx:1 attrs=bold
+cell 1,2 text=% fg=idx:1 attrs=bold
+cell 1,3 text=c fg=default attrs=none
+test DECFRA takes a character from the right-hand half
+spec VT510 DECFRA: Pc is a code of the 7-bit or the 8-bit set, 160 to 255 are the right-hand half
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[169;1;1;1;2$x
+row 1 |\u{a9}\u{a9}cdefgh|
+test DECFRA with a control character does nothing
+spec VT510 DECFRA: Pc must be a printable character (32 to 126 or 160 to 255)
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[7;1;1;1;2$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA with DEL does nothing
+spec VT510 DECFRA: Pc must be a printable character (32 to 126 or 160 to 255)
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[127;1;1;1;2$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA with no code does nothing
+spec VT510 DECFRA: Pc must be a printable character (32 to 126 or 160 to 255)
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[;1;1;1;2$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA with a C1 control does nothing
+spec VT510 DECFRA: Pc must be a printable character (32 to 126 or 160 to 255)
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[128;1;1;1;2$x
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECFRA over half a wide character blanks the other half
+spec convention: a wide character is never left in halves (VT510: two columns)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\u{65e5}b\e[37;1;2;1;2$x
+row 1 | %b|
+test DECCRA copies a rectangle
+spec VT510 DECCRA: CSI Pts ; Pls ; Pbs ; Prs ; Pps ; Ptd ; Pld ; Ppd $ v copies the source rectangle to the target position
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4;1;5;5;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDjklH|
+|IJKLrstP|
+|QRSTz01X|
+|YZ6789!@|
+test DECCRA copies as if the source were read whole first when the areas overlap downwards
+spec VT510 DECCRA: the copy is not changed by the source and the target overlapping
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4;1;3;3;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrjklvwx|
+|yzrst345|
+|ABz01FGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA copies as if the source were read whole first when the areas overlap upwards
+spec VT510 DECCRA: the copy is not changed by the source and the target overlapping
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[3;3;5;5;1;2;2;1$v
+screen
+|abcdefgh|
+|istumnop|
+|q012uvwx|
+|yCDE2345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA copies within a row to the right
+spec VT510 DECCRA: the copy is not changed by the source and the target overlapping
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[1;1;1;4;1;1;3;1$v
+screen
+|ababcdgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA copies within a row to the left
+spec VT510 DECCRA: the copy is not changed by the source and the target overlapping
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[1;3;1;6;1;1;1;1$v
+screen
+|cdefefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA is cut at the screen's edge
+spec VT510 DECCRA: what does not fit on the page is not copied
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4;1;7;7;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVjk|
+|YZ6789rs|
+test DECCRA with the default source takes it from the corner
+spec VT510 DECCRA: Pts and Pls default to 1
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[;;2;2;;5;5$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDabGH|
+|IJKLijOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA with the default target copies to the corner
+spec VT510 DECCRA: Ptd and Pld default to 1
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4$v
+screen
+|jkldefgh|
+|rstlmnop|
+|z01tuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA with a source top below its bottom does nothing
+spec VT510 DECCARA, the area's parameters: Pt must not exceed Pb
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;1;1;1;5;5;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA with a source beyond the screen is cut to it
+spec VT510 DECCRA: values beyond the page's width or height are treated as that dimension
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[8;8;99;99;1;7;7;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUV@X|
+|YZ6789!@|
+test DECCRA counts both corners from the region in origin mode
+spec VT510 DECCRA: the source and the target are affected by the origin mode (DECOM)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[2;8s\e[2;8r\e[?6h\e[1;1;3;3;1;4;4;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDjklH|
+|IJKLrstP|
+|QRSTz01X|
+|YZ6789!@|
+test DECCRA ignores the margins
+spec VT510 DECCARA, the area's parameters: page margins are ignored
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[?69h\e[3;6s\e[3;6r\e[2;2;4;4;1;5;5;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDjklH|
+|IJKLrstP|
+|QRSTz01X|
+|YZ6789!@|
+test DECCRA leaves the cursor where it is
+spec VT510 DECCARA, the area's parameters: the cursor does not move
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[4;3H\e[2;2;4;4;1;5;5;1$v
+cursor 4,3
+test DECCRA from another page than the first does nothing
+spec VT510 DECCRA: Pps and Ppd are page numbers; the terminal has one page
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4;2;5;5;1$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA to another page than the first does nothing
+spec VT510 DECCRA: Pps and Ppd are page numbers; the terminal has one page
+size 8 8
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyz012345\r\nABCDEFGH\r\nIJKLMNOP\r\nQRSTUVWX\r\nYZ6789!@\e[2;2;4;4;1;5;5;2$v
+screen
+|abcdefgh|
+|ijklmnop|
+|qrstuvwx|
+|yz012345|
+|ABCDEFGH|
+|IJKLMNOP|
+|QRSTUVWX|
+|YZ6789!@|
+test DECCRA copies the rendition and the link
+spec VT510 DECCRA: copies the characters with their attributes; OSC 8 hyperlinks are a cell attribute
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\e[1;31m\e]8;;http://a.test\e\\L\e]8;;\e\\\e[0m\e[1;1;1;1;1;3;4;1$v
+cell 3,4 text=L fg=idx:1 attrs=bold link=http://a.test
+cell 1,1 text=L link=http://a.test
+test DECCRA of half a wide character leaves a blank
+spec convention: a wide character is never left in halves (VT510: two columns)
+size 8 8
+feed \e[2J\e[H\u{65e5}\e[1;2;1;2;1;2;1;1$v\e[1;1;1;1;1;3;1;1$v
+row 2 ||
+row 3 ||
+test DECCRA copies a whole wide character
+spec VT510 DECCRA: copies the characters with their attributes (a wide one is two columns)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\u{65e5}x\e[1;1;1;3;1;2;1;1$v
+row 2 |\u{65e5}x|
+cell 2,1 width=2
+cell 2,2 width=0
+test DECCRA onto the second half of a wide character blanks the first
+spec convention: a wide character is never left in halves (VT510: two columns)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\u{65e5}\r\nxy\e[2;1;2;1;1;1;2;1$v
+row 1 | x|
+test DECCRA onto the first half of a wide character blanks the second
+spec convention: a wide character is never left in halves (VT510: two columns)
+known-fail: alacritty – no rectangular editing: DECERA, DECSERA, DECFRA and DECCRA are ignored
+size 8 8
+feed \e[2J\e[H\u{65e5}b\r\nxy\e[2;2;2;2;1;1;1;1$v
+row 1 |y b|
+cell 1,3 text=b

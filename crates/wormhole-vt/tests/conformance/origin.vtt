@@ -1,0 +1,90 @@
+# Origin mode (DECOM): positions counted from the scrolling region.
+
+test setting origin mode moves the cursor to the home of the region
+spec VT100 User Guide DECOM: the cursor is moved to the new home position when the mode is set
+size 10 5
+feed \e[2;4r\e[4;5H\e[?6h
+cursor 2,1
+
+test resetting origin mode moves the cursor to the home of the screen
+spec VT100 User Guide DECOM: the cursor is moved to the new home position when the mode is reset
+known-fail: alacritty – resetting DECOM leaves the cursor where it is
+size 10 5
+feed \e[2;4r\e[?6h\e[3;3H\e[?6l
+cursor 1,1
+
+test CUP counts from the top of the region
+spec VT100 User Guide DECOM: line numbers are relative to the margin settings
+size 10 5
+feed \e[2;4r\e[?6h\e[1;1Hx\e[2;3Hy
+screen
+||
+|x|
+|  y|
+
+test HVP counts from the top of the region
+spec VT100 User Guide DECOM: CUP and HVP are relative in origin mode
+size 10 5
+feed \e[2;4r\e[?6h\e[2;2fx
+screen
+||
+||
+| x|
+
+test the cursor cannot leave the region in origin mode
+spec VT100 User Guide DECOM: the cursor is not allowed to be positioned outside the margins
+size 10 5
+feed \e[2;4r\e[?6h\e[9;9H
+cursor 4,9
+
+test VPA counts from the top of the region
+spec VT100 User Guide DECOM: line numbers are relative; xterm ctlseqs CSI Ps d
+size 10 5
+feed \e[2;4r\e[?6h\e[2d
+cursor 3,1
+
+test CPR is relative to the region
+spec VT100 User Guide CPR: the numbering of lines depends on the state of origin mode
+known-fail: alacritty – CPR reports the absolute row while origin mode is set
+size 10 5
+feed \e[2;4r\e[?6h\e[2;3H\e[6n
+reply \e[2;3R
+
+test DECSTBM in origin mode puts the cursor at the new home
+spec VT100 User Guide DECSTBM: the cursor is placed in the home position (see DECOM)
+size 10 5
+feed \e[?6h\e[3;5r
+cursor 3,1
+
+test CUP is absolute when origin mode is off
+spec VT100 User Guide DECOM: the cursor may be positioned outside the margins
+size 10 5
+feed \e[2;4r\e[1;1Hx\e[5;1Hy
+screen
+|x|
+||
+||
+||
+|y|
+
+test origin mode survives a scroll
+convention origin mode is a mode, not a position
+size 10 5
+feed \e[2;3r\e[?6h\e[2;1H\n\n\e[1;1Hz
+screen
+||
+|z|
+
+test a soft reset ends origin mode
+spec VT510 DECSTR Table 5-9: origin mode absolute
+known-fail: alacritty – DECSTR (CSI ! p) is not implemented
+size 10 5
+feed \e[2;4r\e[?6h\e[!p\e[1;1Hx
+screen
+|x|
+
+test DECSTBM with only a top margin in origin mode puts the cursor at the top of the region
+spec VT510 DECSTBM: the bottom margin defaults to the last line, and the cursor goes to the home position, which DECOM puts at the top margin
+size 10 5
+feed \e[?6h\e[3r
+cursor 3,1

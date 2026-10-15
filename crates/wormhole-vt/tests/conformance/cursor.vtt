@@ -1,0 +1,411 @@
+# Cursor movement: CUP, HVP, CUU, CUD, CUF, CUB, CNL, CPL, CHA, VPA, HPA, HPR, VPR and the C0
+# controls that move the cursor.
+
+test CUP with no parameters goes home
+spec xterm ctlseqs: CSI Ps ; Ps H (default 1;1)
+size 10 4
+feed abc\e[3;5H\e[H
+cursor 1,1
+screen
+|abc       |
+
+test CUP moves to row;column
+spec xterm ctlseqs: CSI Ps ; Ps H
+size 10 4
+feed \e[3;5Hx
+cursor 3,6
+screen
+|          |
+|          |
+|    x     |
+
+test CUP clamps to the screen
+convention every terminal stops at the last row and column; the DEC manuals and ECMA-48 do not say
+size 10 4
+feed \e[99;99H
+cursor 4,10
+
+test CUP treats 0 as 1
+spec ECMA-48 8.3.21: a parameter of 0 selects the default
+size 10 4
+feed \e[3;5H\e[0;0H
+cursor 1,1
+
+test CUP with only a row keeps column 1
+spec xterm ctlseqs: omitted parameters default to 1
+size 10 4
+feed \e[3;5H\e[2H
+cursor 2,1
+
+test CUP with only a column keeps row 1
+spec xterm ctlseqs: omitted parameters default to 1
+size 10 4
+feed \e[3;5H\e[;7H
+cursor 1,7
+
+test HVP is CUP
+spec xterm ctlseqs: CSI Ps ; Ps f
+size 10 4
+feed \e[2;4fx
+cursor 2,5
+screen
+|          |
+|   x      |
+
+test CUU moves up
+spec xterm ctlseqs: CSI Ps A
+size 10 4
+feed \e[4;5H\e[2A
+cursor 2,5
+
+test CUU stops at the top row
+spec xterm ctlseqs: CSI Ps A
+size 10 4
+feed \e[2;5H\e[99A
+cursor 1,5
+
+test CUU defaults to 1 and treats 0 as 1
+spec ECMA-48 8.3.22
+size 10 4
+feed \e[4;1H\e[A
+cursor 3,1
+feed \e[0A
+cursor 2,1
+
+test CUD moves down
+spec xterm ctlseqs: CSI Ps B
+size 10 4
+feed \e[2;5H\e[2B
+cursor 4,5
+
+test CUD stops at the bottom row
+spec xterm ctlseqs: CSI Ps B
+size 10 4
+feed \e[2;5H\e[99B
+cursor 4,5
+
+test CUD defaults to 1
+spec ECMA-48 8.3.19
+size 10 4
+feed \e[B
+cursor 2,1
+feed \e[0B
+cursor 3,1
+
+test CUF moves right
+spec xterm ctlseqs: CSI Ps C
+size 10 4
+feed \e[1;3H\e[4C
+cursor 1,7
+
+test CUF stops at the last column without wrapping
+spec VT100 User Guide CUF: the cursor stops at the right margin
+size 10 4
+feed \e[2;5H\e[99C
+cursor 2,10
+
+test CUF defaults to 1
+spec ECMA-48 8.3.20
+size 10 4
+feed \e[C
+cursor 1,2
+feed \e[0C
+cursor 1,3
+
+test CUB moves left
+spec xterm ctlseqs: CSI Ps D
+size 10 4
+feed \e[1;8H\e[3D
+cursor 1,5
+
+test CUB stops at the first column without wrapping back
+spec VT100 User Guide CUB: the cursor stops at the left margin
+size 10 4
+feed \e[2;3H\e[99D
+cursor 2,1
+
+test CUB defaults to 1
+spec ECMA-48 8.3.18
+size 10 4
+feed \e[1;5H\e[D
+cursor 1,4
+
+test CNL moves down and to column 1
+spec xterm ctlseqs: CSI Ps E
+size 10 4
+feed \e[1;5H\e[2E
+cursor 3,1
+
+test CNL stops at the bottom row
+spec xterm ctlseqs: CSI Ps E
+size 10 4
+feed \e[1;5H\e[99E
+cursor 4,1
+
+test CPL moves up and to column 1
+spec xterm ctlseqs: CSI Ps F
+size 10 4
+feed \e[4;5H\e[2F
+cursor 2,1
+
+test CPL stops at the top row
+spec xterm ctlseqs: CSI Ps F
+size 10 4
+feed \e[2;5H\e[99F
+cursor 1,1
+
+test CHA moves to a column
+spec xterm ctlseqs: CSI Ps G
+size 10 4
+feed \e[2;5H\e[3G
+cursor 2,3
+
+test CHA defaults to column 1 and clamps
+spec xterm ctlseqs: CSI Ps G
+size 10 4
+feed \e[2;5H\e[G
+cursor 2,1
+feed \e[99G
+cursor 2,10
+
+test HPA moves to a column
+spec xterm ctlseqs: CSI Ps ` (HPA)
+size 10 4
+feed \e[2;5H\e[8`
+cursor 2,8
+
+test HPR moves right
+spec ECMA-48 8.3.59 HPR; xterm ctlseqs CSI Ps a
+size 10 4
+feed \e[2;3H\e[4a
+cursor 2,7
+
+test VPA moves to a row and keeps the column
+spec xterm ctlseqs: CSI Ps d
+size 10 4
+feed \e[2;5H\e[4d
+cursor 4,5
+
+test VPA clamps to the bottom row
+spec xterm ctlseqs: CSI Ps d
+size 10 4
+feed \e[1;5H\e[99d
+cursor 4,5
+
+test VPR moves down
+spec ECMA-48 8.3.160 VPR; xterm ctlseqs CSI Ps e
+size 10 4
+feed \e[1;5H\e[2e
+cursor 3,5
+
+test CUU stops at the top margin when the cursor is inside the region
+spec VT510 CUU: the cursor stops at the top margin
+known-fail: alacritty – CUU and CUD ignore the scrolling margins and run to the edge of the screen
+size 10 5
+feed \e[2;4r\e[4;1H\e[9A
+cursor 2,1
+
+test CUD stops at the bottom margin when the cursor is inside the region
+spec VT510 CUD: the cursor stops at the bottom margin
+known-fail: alacritty – CUU and CUD ignore the scrolling margins and run to the edge of the screen
+size 10 5
+feed \e[2;4r\e[2;1H\e[9B
+cursor 4,1
+
+test CUU above the region goes on to the first row
+spec VT510 CUU: above the top margin the cursor stops at the top line
+size 10 5
+feed \e[3;4r\e[2;1H\e[9A
+cursor 1,1
+
+test CUD above the region still stops at the bottom margin
+spec VT510 CUD: the cursor stops at the bottom margin
+known-fail: alacritty – CUU and CUD ignore the scrolling margins and run to the edge of the screen
+size 10 5
+feed \e[2;3r\e[1;1H\e[9B
+cursor 3,1
+
+test CUD below the region goes on to the last row
+spec VT510 CUD: below the bottom margin the cursor stops at the bottom line
+size 10 5
+feed \e[2;3r\e[4;1H\e[9B
+cursor 5,1
+
+test backspace moves left one column
+spec VT510 control table BS: moves the cursor one position to the left; ECMA-48 8.3.5
+size 10 4
+feed ab\b
+cursor 1,2
+screen
+|ab        |
+
+test backspace stops at the first column
+spec VT510 control table BS: at the left margin no action occurs
+size 10 4
+feed \b\b
+cursor 1,1
+
+test carriage return goes to the first column
+spec ECMA-48 8.3.15 CR
+size 10 4
+feed abc\r
+cursor 1,1
+
+test line feed moves down and keeps the column
+spec VT510 LNM: with LNM reset the cursor moves to the current column of the next line
+size 10 4
+feed ab\ncd
+screen
+|ab        |
+|  cd      |
+cursor 2,5
+
+test vertical tab and form feed act as line feed
+spec VT510 LNM: LF, FF and VT move the cursor to the next line
+size 10 4
+feed a\vb\fc
+screen
+|a         |
+| b        |
+|  c       |
+
+test new line mode makes line feed also return the carriage
+spec VT510 LNM: with LNM set LF, FF and VT move to the first column of the next line
+known-fail: alacritty – LF does not return the carriage when LNM (CSI 20 h) is set
+size 10 4
+feed \e[20hab\ncd
+screen
+|ab        |
+|cd        |
+cursor 2,3
+
+test NEL moves to the start of the next line
+spec ECMA-48 8.3.86 NEL: ESC E
+size 10 4
+feed ab\eEcd
+screen
+|ab        |
+|cd        |
+
+test IND moves down and keeps the column
+spec VT100 User Guide IND: ESC D
+size 10 4
+feed ab\eDcd
+screen
+|ab        |
+|  cd      |
+
+test RI moves up and keeps the column
+spec ECMA-48 8.3.104 RI: ESC M
+size 10 4
+feed \e[3;4H\eMx
+cursor 2,5
+screen
+|          |
+|   x      |
+
+test control characters inside a sequence still act
+spec vt100.net/emu/dec_ansi_parser: C0 controls are executed during a control sequence
+size 10 4
+feed ab\e[2\n;3Hx
+screen
+|ab        |
+|  x       |
+cursor 2,4
+
+test NUL and DEL are ignored
+spec vt100.net/emu/dec_ansi_parser: NUL is executed (no effect), DEL (7F) is ignored; ECMA-48 8.3.88 NUL
+size 10 4
+feed a\x00b\x7fc
+screen
+|abc       |
+cursor 1,4
+
+test bell prints nothing and does not move the cursor
+spec ECMA-48 8.3.3 BEL
+size 10 4
+feed a\ab
+screen
+|ab        |
+cursor 1,3
+
+test IND at the bottom margin does not scroll a cursor outside the left and right margins
+spec VT510 IND with DECLRMM: the region scrolls only for a cursor inside its columns; esctest2 IND_MovesDoesNotScrollOutsideLeftRight
+known-fail: alacritty – the region scrolls although the cursor is outside the left and right margins
+size 10 6
+feed \e[2;5r\e[?69h\e[2;5s\e[5;3Hx\e[5;6H\eD
+cell 5,3 text=x
+cursor 5,6
+feed \e[5;1H\eD
+cursor 5,1
+cell 5,3 text=x
+
+test RI at the top margin does not scroll a cursor outside the left and right margins
+spec VT510 RI with DECLRMM: the region scrolls only for a cursor inside its columns
+known-fail: alacritty – the region scrolls although the cursor is outside the left and right margins
+size 10 6
+feed \e[2;5r\e[?69h\e[2;5s\e[2;3Hx\e[2;6H\eM
+cell 2,3 text=x
+cursor 2,6
+
+test CBT goes past the left margin
+spec esctest2 CBT_IgnoresRegion: the tab stops before the cursor are all the stops there are, margins or not
+size 40 4
+feed \e[?69h\e[5;30s\e[1;7H\e[2Z
+cursor 1,1
+
+test BS and CUB go back to the line above with reverse wraparound (45) only if it wrapped
+spec xterm ctlseqs: CSI ? 45 h, reverse-wraparound mode (needs DECAWM); only to a line that wrapped into this one
+known-fail: alacritty – no reverse wraparound (modes 45 and 1045)
+size 10 4
+feed abcdefghijkl\e[?45h\b\b\b
+cursor 1,10
+feed \e[2;1H\b
+cursor 1,10
+feed \r\n\e[3;1H\b
+cursor 3,1
+
+test reverse wraparound (1045) goes back over a line that did not wrap and round the top
+spec xterm ctlseqs: CSI ? 1045 h, extended reverse-wraparound mode
+known-fail: alacritty – no reverse wraparound (modes 45 and 1045)
+size 10 4
+feed \e[?1045h\e[3;1H\b
+cursor 2,10
+feed \e[1;1H\b
+cursor 4,10
+feed \e[2;3r\e[2;1H\b
+cursor 3,10
+
+test reverse wraparound goes to the right margin
+spec xterm ctlseqs: CSI ? 1045 h with left and right margins
+known-fail: alacritty – no reverse wraparound (modes 45 and 1045)
+size 20 4
+feed \e[?1045h\e[?69h\e[5;10s\e[3;5H\b
+cursor 2,10
+feed \e[3;1H\b
+cursor 2,10
+
+test reverse wraparound needs autowrap
+spec xterm ctlseqs: reverse-wraparound mode only works in conjunction with DECAWM
+size 10 4
+feed \e[?7l\e[?45h\e[?1045h\e[3;1H\b
+cursor 3,1
+
+test a backspace in the delayed wrap with reverse wraparound only ends the wait
+convention the cursor waiting to wrap is one column beyond the last, so BS lands on the last column (esctest2 ReverseWrapStartingInDoWrapPosition)
+known-fail: alacritty – no reverse wraparound (modes 45 and 1045)
+size 10 4
+feed \e[?45habcdefghij\bX
+screen
+|abcdefghiX|
+feed \e[?45l\e[2;1Habcdefghij\bX
+screen
+|abcdefghiX|
+|abcdefghXj|
+
+test CUB with reverse wraparound walks back like backspace
+spec xterm ctlseqs: reverse-wraparound applies to CUB (esctest2 DECSET_ReverseWraparound_Multi)
+known-fail: alacritty – no reverse wraparound (modes 45 and 1045)
+size 10 4
+feed \e[1;9Habcd\e[?45h\e[4D
+cursor 1,9

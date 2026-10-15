@@ -1,0 +1,16 @@
+[package]
+name = "wormhole-vt"
+description = "Wormhole's terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+bitflags = "2"
+# The parser's and the grid's byte searches (SIMD; already in the dependency graph).
+memchr = "2.8"
+
+[lints]
+workspace = true
