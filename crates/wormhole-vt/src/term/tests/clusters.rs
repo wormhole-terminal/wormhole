@@ -99,6 +99,19 @@ fn zalgo_stays_bounded() {
 }
 
 #[test]
+fn a_wide_character_that_does_not_fit_without_autowrap_leaves_no_trace() {
+    // DECAWM off, one cell left: the wide character is dropped (the engine's convention, as
+    // xterm leaves the cell alone), so REP has nothing new to repeat and no cluster is open.
+    for clusters in ["h", "l"] {
+        let mut rig = Rig::new(5, 2);
+        rig.feed(&format!("\x1b[?7l\x1b[?2027{clusters}abcd\u{4e2d}"));
+        assert_eq!(cell(&rig, 4).0, "", "{clusters}: nothing was printed");
+        rig.feed("\x1b[b");
+        assert_eq!(cell(&rig, 4).0, "d", "{clusters}: REP repeats the last character that was printed");
+    }
+}
+
+#[test]
 fn a_character_overwriting_the_last_column_without_autowrap_heads_its_cluster() {
     // DECAWM off: the character lands on the last cell, and a mark that follows joins it there.
     // The same for an ASCII run and for a character that is not ASCII.

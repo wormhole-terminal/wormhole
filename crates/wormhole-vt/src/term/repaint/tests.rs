@@ -134,6 +134,8 @@ fn a_cluster_that_can_still_grow() {
 fn a_cluster_in_the_last_column_with_autowrap_off() {
     same("\x1b[?7labcdefghijklmnopqrstu");
     same("\x1b[?7labcdefghijklmnopqrst\u{e9}");
+    // A wide character with one cell left is dropped, and is not what REP repeats.
+    same("\x1b[?7labcdefghijklmnopqrst\u{4e2d}");
 }
 
 #[test]

@@ -128,14 +128,17 @@ impl Terminal {
         match unicode::width(c) {
             0 => self.attach_mark(c),
             width => {
-                self.put_char(c, width);
-                self.last_char = Some(c);
+                if self.put_char(c, width) {
+                    self.last_char = Some(c);
+                }
             }
         }
     }
 
-    /// Put `c` of `width` 1 or 2 at the cursor and move past it.
-    fn put_char(&mut self, c: char, width: u8) {
+    /// Put `c` of `width` 1 or 2 at the cursor and move past it. False when nothing was printed:
+    /// a wide character with one cell left and autowrap off is dropped, and then it is not the
+    /// last character printed nor a cluster to extend.
+    fn put_char(&mut self, c: char, width: u8) -> bool {
         let autowrap = self.modes.contains(Modes::AUTOWRAP);
         if self.cursor.pending {
             if autowrap {
@@ -148,7 +151,7 @@ impl Terminal {
         if width == 2 && self.cursor.x >= right {
             // Only one cell is left: the wide character goes to the next line, leaving a blank.
             if !autowrap {
-                return;
+                return false;
             }
             if right == self.cols - 1 {
                 self.grid.write_spacer_head(self.cursor.y, &self.pen);
@@ -164,6 +167,7 @@ impl Terminal {
         self.grid.write_cluster(y, x, c, &[], width, &self.pen);
         self.cluster.head = x;
         self.advance_past(x + usize::from(width), right);
+        true
     }
 
     /// The cursor after a write that ended just before column `end`.
@@ -217,9 +221,11 @@ impl Terminal {
             self.attach_mark(c);
         } else {
             // `put_char` sets the head; the automaton already moved past `c`.
-            self.put_char(c, step.width);
-            self.last_char = Some(c);
-            self.cluster.open = true;
+            let printed = self.put_char(c, step.width);
+            if printed {
+                self.last_char = Some(c);
+            }
+            self.cluster.open = printed;
             self.cluster.width = step.width;
             self.cluster.last = c;
         }
