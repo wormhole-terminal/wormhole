@@ -7,7 +7,7 @@
 
 mod wormhole;
 
-pub use wormhole::WormholeEngine;
+pub use wormhole::{WormholeEngine, host_terminal};
 
 use crate::engine::Engine;
 

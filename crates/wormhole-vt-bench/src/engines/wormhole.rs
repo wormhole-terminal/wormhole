@@ -53,6 +53,26 @@ fn attrs(flags: Flags) -> Attrs {
     out
 }
 
+/// A terminal set up the way the tools use it: xterm's palette and the fixed defaults for color
+/// queries, and a cell of [`CELL_PIXELS`]. The bisimulation harness makes both of its terminals
+/// this way, as a host would configure the engine and its replica alike.
+pub fn host_terminal(cols: usize, rows: usize, scrollback: usize) -> Terminal {
+    let mut term = Terminal::new(cols, rows, scrollback);
+    let mut palette = [Rgb::default(); COLOR_COUNT];
+    for (slot, color) in palette.iter_mut().enumerate().take(256) {
+        let (r, g, b) = xterm_palette(slot as u8);
+        *color = Rgb { r, g, b };
+    }
+    for (slot, (r, g, b)) in
+        [NamedColor::Foreground, NamedColor::Background, NamedColor::Cursor].into_iter().zip(DEFAULT_COLORS)
+    {
+        palette[slot as usize] = Rgb { r, g, b };
+    }
+    term.set_default_colors(&palette);
+    term.set_cell_size(CELL_PIXELS.0 as u16, CELL_PIXELS.1 as u16);
+    term
+}
+
 impl WormholeEngine {
     /// The line of history `index` (0 is the oldest the adapter shows).
     fn history_line(&self, index: usize) -> Line {
@@ -64,21 +84,7 @@ impl Engine for WormholeEngine {
     const NAME: &'static str = "wormhole";
 
     fn new(cols: usize, rows: usize, scrollback: usize) -> Self {
-        let mut term = Terminal::new(cols, rows, scrollback);
-        // The colors the tools answer queries with: xterm's palette and the fixed defaults.
-        let mut palette = [Rgb::default(); COLOR_COUNT];
-        for (slot, color) in palette.iter_mut().enumerate().take(256) {
-            let (r, g, b) = xterm_palette(slot as u8);
-            *color = Rgb { r, g, b };
-        }
-        for (slot, (r, g, b)) in [NamedColor::Foreground, NamedColor::Background, NamedColor::Cursor]
-            .into_iter()
-            .zip(DEFAULT_COLORS)
-        {
-            palette[slot as usize] = Rgb { r, g, b };
-        }
-        term.set_default_colors(&palette);
-        term.set_cell_size(CELL_PIXELS.0 as u16, CELL_PIXELS.1 as u16);
+        let term = host_terminal(cols, rows, scrollback);
         WormholeEngine { term, parser: Parser::new(), replies: Vec::new(), scrollback }
     }
 

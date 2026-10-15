@@ -6,6 +6,8 @@
 //! `engines/` and one line in [`engines::for_each_engine`].
 //!
 //! - [`bench`]: throughput and allocation measurement, what `vtbench` runs;
+//! - [`bisim`]: the repaint's bisimulation: an engine and a replica made from its repaint must stay
+//!   equal, at every cut of a stream;
 //! - [`corpus`]: deterministic generators of realistic byte streams;
 //! - [`diff`]: the differential harness (two engines, one stream) and a random stream generator;
 //! - [`vtt`]: the `.vtt` conformance format (`crates/wormhole-vt/tests/conformance/README.md`)
@@ -15,6 +17,7 @@
 //! its tools.
 
 pub mod bench;
+pub mod bisim;
 pub mod corpus;
 pub mod diff;
 pub mod engine;
