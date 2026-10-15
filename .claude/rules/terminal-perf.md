@@ -39,7 +39,7 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
 After a change here, and after any GPUI update, run `scripts/perf.sh` on a Mac: it builds a
 release, measures draw time per frame and main-thread load under ttystorm's workloads, and fails
 against the baseline in `tools/bench/baselines/`. The engine alone: `vtbench`, and against other
-engines `tools/vt-compare` (`.local/repo-docs/docs/performance.md`). To look deeper: `sample <pid> 5`
+engines `tools/vt-compare` (`../repo-docs/docs/performance.md`). To look deeper: `sample <pid> 5`
 on an isolated instance (see the `devctl` skill), devctl `frames <n>` (draw time, any window state) and `paints`
 (frames drawn on screen). `paints` means nothing while the window can't be seen (display asleep,
 covered): macOS throttles it to ~20 per second.

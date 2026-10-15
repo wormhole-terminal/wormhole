@@ -201,8 +201,7 @@ mod tests {
     /// is, so the list people read is the one the code keeps.
     #[test]
     fn the_doc_shows_this_table() {
-        let doc =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.local/repo-docs/docs/escape-sequences.md");
+        let doc = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../repo-docs/docs/escape-sequences.md");
         let Ok(text) = std::fs::read_to_string(&doc) else { return };
         let (start, end) = ("<!-- sequences:start -->\n", "<!-- sequences:end -->");
         let from = text.find(start).expect("the start marker") + start.len();

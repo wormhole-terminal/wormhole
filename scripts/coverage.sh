@@ -13,7 +13,7 @@
 # Test code that sits in the engine's own files counts as run, so the numbers are a little high;
 # files under tests/ folders and the invariant checkers (check.rs: only their error
 # branches are unrun) are left out. The Unicode table builders (unicode/grapheme.rs) run when the crate
-# is compiled, so they show as unrun. The numbers per module are in .local/repo-docs/docs/engine.md ("Coverage").
+# is compiled, so they show as unrun. The numbers per module are in ../repo-docs/docs/engine.md ("Coverage").
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
