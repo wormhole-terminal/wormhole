@@ -33,7 +33,7 @@ pub(super) const ROW_ACTIONS_OVERHANG: f32 = (HIT_MIN - ROW_BUTTON) / 2.0 + 4.0;
 /// in the element's state; that is why it needs an `id`. Nor is it made invisible: GPUI keeps
 /// that state up to date only for an element it paints, and clipping to no width hides it anyway.
 #[track_caller]
-pub(super) fn row_actions(
+pub(crate) fn row_actions(
     id: impl Into<ElementId>,
     group: impl Into<SharedString>,
     shown: bool,
@@ -160,6 +160,13 @@ impl IconButton {
     /// clickable across [`HIT_MIN`].
     pub fn in_row(mut self) -> Self {
         (self.glyph, self.face) = (GLYPH, ROW_BUTTON);
+        self
+    }
+
+    /// What VoiceOver calls the button where its tooltip alone would make a list of identical ones
+    /// (the open-in-editor icon on every file row names the file).
+    pub fn spoken(mut self, label: impl Into<SharedString>) -> Self {
+        self.button = self.button.accessibility_label(label);
         self
     }
 

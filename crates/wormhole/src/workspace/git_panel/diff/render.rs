@@ -21,6 +21,7 @@ use crate::settings::{settings_in, store_in, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
+use crate::workspace::git_panel::open_file::OpenFile;
 use wormhole_core::git::{LineKind, Side};
 use wormhole_core::review::LineSide;
 use wormhole_core::tokens::ThemeTokens;
@@ -157,6 +158,15 @@ pub(crate) struct RowStyle {
     pub on_line: Option<OnLine>,
     /// The lines that have a comment.
     pub commented: Rc<Vec<(LineSide, u32)>>,
+    /// The icon over a line that opens the file at it in the editor; the Studio's sample has none.
+    pub open: Option<LineOpen>,
+}
+
+/// What the icon over a line needs: the file, and the colors its button is drawn with.
+#[derive(Clone)]
+pub(crate) struct LineOpen {
+    pub file: OpenFile,
+    pub ui: UiColors,
 }
 
 impl RowStyle {
@@ -200,7 +210,7 @@ pub(crate) fn render_row(ix: usize, row: &Row, colors: DiffColors, style: &RowSt
             .child(div().flex_1().min_w_0().px_3().overflow_hidden().truncate().child(header.clone()))
             // In split mode the header keeps to the old column, clear of the divider.
             .when(style.split, |d| d.child(div().flex_1())),
-        Row::Unified(line) => commentable(base, line, colors, style)
+        Row::Unified(line) => openable(commentable(base, line, colors, style), line, style, ix, "uni")
             .bg(colors.line_bg(line.kind))
             .child(gutter(colors, style, line.old))
             .child(gutter(colors, style, line.new))
@@ -241,6 +251,25 @@ fn commentable(
         .on_click(move |_, window, cx| on_line(at.clone(), window, cx))
 }
 
+/// `row` with the icon at its right end that opens the file at this line in the editor, shown
+/// while the pointer is over the row (the comment icon sits at the left end). `part` tells the
+/// halves of a split row apart.
+fn openable(
+    row: Stateful<Div>,
+    line: &RenderedLine,
+    style: &RowStyle,
+    ix: usize,
+    part: &'static str,
+) -> Stateful<Div> {
+    let (Some(open), Some(number)) = (&style.open, line.open_line) else { return row };
+    // The ids differ by part and row, as the rows' own do.
+    let ids = (
+        ElementId::from((SharedString::from(format!("diff-open-{part}")), ix)),
+        ElementId::from((SharedString::from(format!("diff-open-box-{part}")), ix)),
+    );
+    open.file.on_line(row, open.ui, LINE_GROUP, ids, number, style.row_height)
+}
+
 fn half(ix: usize, colors: DiffColors, style: &RowStyle, cell: &Cell, old_side: bool) -> Stateful<Div> {
     // `flex_1` has a zero basis: both halves are exactly half the row, whatever they hold.
     let side = div()
@@ -251,11 +280,19 @@ fn half(ix: usize, colors: DiffColors, style: &RowStyle, cell: &Cell, old_side: 
         .overflow_hidden();
     let side = if style.wrap { side.items_start() } else { side.items_center() };
     match cell {
-        Cell::Line(line) => commentable(side, line, colors, style)
-            .bg(colors.line_bg(line.kind))
-            .child(gutter(colors, style, if old_side { line.old } else { line.new }))
-            .child(marker(colors, line.kind))
-            .child(code(colors, style, line)),
+        Cell::Line(line) => {
+            openable(
+                commentable(side, line, colors, style),
+                line,
+                style,
+                ix,
+                if old_side { "old" } else { "new" },
+            )
+        }
+        .bg(colors.line_bg(line.kind))
+        .child(gutter(colors, style, if old_side { line.old } else { line.new }))
+        .child(marker(colors, line.kind))
+        .child(code(colors, style, line)),
         Cell::Filler => {
             let underneath = if old_side { style.old_hatched } else { style.new_hatched };
             side.when(!underneath, |d| d.bg(hatch(colors, style.row_height)))
@@ -379,6 +416,7 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
         new_hatched: false,
         on_line: None,
         commented: Rc::default(),
+        open: None,
     };
     let mut body = div().relative().flex().flex_col();
     for (ix, row) in rows.iter().enumerate() {
@@ -487,6 +525,12 @@ impl Workspace {
             // Only the working tree's lines are the ones the agent edits.
             on_line: view.is_working_tree().then(|| self.comment_click(view, cx)),
             commented: Rc::new(if view.is_working_tree() { self.commented_lines(view) } else { Vec::new() }),
+            // The same lines, and only a file that is in the working tree now to open.
+            open: view
+                .is_working_tree()
+                .then(|| view.open_file(cx))
+                .flatten()
+                .map(|file| LineOpen { file, ui }),
         };
 
         // Sideways scrolling: as far as the longest line is wider than its column.

@@ -150,6 +150,13 @@ pub fn pane(name: &str, folder: Option<&str>, position: usize, of: usize, focuse
     parts.join(", ")
 }
 
+/// The icon that opens a file in the editor, which shows when a row or line is hovered: its
+/// tooltip (`open_file::tooltip`) with the file's name after it, so a list of them isn't a list
+/// of identical buttons: "Open in Zed at line 12, main.rs".
+pub fn open_file(tooltip: &str, file: &str) -> String {
+    format!("{tooltip}, {file}")
+}
+
 /// The profile item of a window that is not in the profile Wormhole is in: "Window in profile Work".
 pub fn status_profile(name: &str) -> String {
     format!("Window in profile {name}")
@@ -270,13 +277,18 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::{
-        Counted, PanelTab, command_block, panel_tab, section_band, spoken_elapsed, spoken_took,
+        Counted, PanelTab, command_block, open_file, panel_tab, section_band, spoken_elapsed, spoken_took,
         status_attention, status_counted, status_done, status_failed, status_needs_you, status_size,
         status_working,
     };
     use super::{profile_chip, profile_choice};
     use crate::layout::status_bar::{Activity, Entry, Summary};
     use crate::terminal::BlockState;
+
+    #[test]
+    fn the_open_icon_is_named_for_its_file() {
+        assert_eq!(open_file("Open in Zed at line 12", "main.rs"), "Open in Zed at line 12, main.rs");
+    }
 
     #[test]
     fn a_command_block_is_said_with_its_result_and_its_time() {

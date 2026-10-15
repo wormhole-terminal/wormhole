@@ -190,6 +190,30 @@ fn locate_for_write(path: &Path, policy: LinkPolicy<'_>) -> io::Result<(PathBuf,
     }
 }
 
+/// The real path of the regular file `relative` names inside `root`: for handing a repository's
+/// file to another program (an editor), which then opens whatever the path leads to. `relative`
+/// must be a plain relative path (no `..`, no root, no NUL); with every link resolved the result
+/// must still be inside `root`, so a link a cloned repository planted can't point an editor at a
+/// file elsewhere on the disk. The result is the resolved path, which is what was checked.
+pub fn resolve_within(root: &Path, relative: &str) -> io::Result<PathBuf> {
+    use std::path::Component;
+    let plain = !relative.is_empty()
+        && !relative.contains('\0')
+        && Path::new(relative).components().all(|part| matches!(part, Component::Normal(_)));
+    if !plain {
+        return Err(escapes(Path::new(relative), root));
+    }
+    let wanted = root.join(relative);
+    let real = fs::canonicalize(&wanted)?;
+    if !real.starts_with(fs::canonicalize(root)?) {
+        return Err(escapes(&wanted, root));
+    }
+    if !fs::metadata(&real)?.is_file() {
+        return Err(refuse(&wanted, Refusal::NotRegularFile));
+    }
+    Ok(real)
+}
+
 /// Read at most `cap` bytes of a regular file; larger files are an error, not a truncation.
 pub fn read_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<Vec<u8>> {
     let file = open_regular(path, policy)?;
@@ -336,8 +360,8 @@ mod tests {
     use std::os::unix::fs::{PermissionsExt, symlink};
 
     use super::{
-        FileStamp, LinkPolicy, Refusal, fs, read_capped, read_to_string_capped, refusal, write_atomic,
-        write_atomic_executable,
+        FileStamp, LinkPolicy, Refusal, fs, read_capped, read_to_string_capped, refusal, resolve_within,
+        write_atomic, write_atomic_executable,
     };
 
     fn names(dir: &std::path::Path) -> Vec<String> {
@@ -525,6 +549,41 @@ mod tests {
                 .unwrap(),
             "ok"
         );
+    }
+
+    #[test]
+    fn resolve_within_gives_the_real_path_of_a_file_inside_the_root_only() {
+        let repo = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::create_dir(repo.path().join("src")).unwrap();
+        fs::write(repo.path().join("src/a.rs"), "x").unwrap();
+        fs::write(outside.path().join("secret"), "x").unwrap();
+        let real = fs::canonicalize(repo.path()).unwrap();
+        assert_eq!(resolve_within(repo.path(), "src/a.rs").unwrap(), real.join("src/a.rs"));
+
+        let refused = |relative: &str| resolve_within(repo.path(), relative).unwrap_err();
+        // Not a plain relative path: nothing is even looked at.
+        for bad in ["", "/etc/hosts", "../x", "src/../../x", "src/\0a.rs", "./../x"] {
+            assert_eq!(
+                refusal(&refused(bad)),
+                Some(&Refusal::OutsideRoot(repo.path().to_path_buf())),
+                "{bad:?}"
+            );
+        }
+        // A link out of the root, to a file or a folder, however it is reached.
+        symlink(outside.path().join("secret"), repo.path().join("link")).unwrap();
+        symlink(outside.path(), repo.path().join("dir-link")).unwrap();
+        assert_eq!(refusal(&refused("link")), Some(&Refusal::OutsideRoot(repo.path().to_path_buf())));
+        assert_eq!(
+            refusal(&refused("dir-link/secret")),
+            Some(&Refusal::OutsideRoot(repo.path().to_path_buf()))
+        );
+        // A link that stays inside is followed to the file it names.
+        symlink(repo.path().join("src/a.rs"), repo.path().join("alias.rs")).unwrap();
+        assert_eq!(resolve_within(repo.path(), "alias.rs").unwrap(), real.join("src/a.rs"));
+        // Gone, and not a file.
+        assert_eq!(refused("src/missing.rs").kind(), std::io::ErrorKind::NotFound);
+        assert_eq!(refusal(&refused("src")), Some(&Refusal::NotRegularFile));
     }
 
     #[test]

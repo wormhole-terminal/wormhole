@@ -23,6 +23,7 @@ use gpui_kit::*;
 
 use super::changes::display_order;
 use super::job::Job;
+use super::open_file::{OpenFile, OpenTarget};
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::workspace::Workspace;
@@ -166,6 +167,12 @@ impl DiffView {
     /// gone since the commit.
     fn on_disk(&self) -> Option<PathBuf> {
         self.on_disk.then(|| self.request.root.join(&self.request.file.path))
+    }
+
+    /// The file as the icon that opens it in the editor names it: its path in the repository,
+    /// when it is in the working tree (a deleted file has nothing to open).
+    fn open_file(&self, cx: &App) -> Option<OpenFile> {
+        self.on_disk.then(|| OpenTarget::new(&self.request.root, cx).file(&self.request.file.path))
     }
 
     /// What the Reveal button says: in History and compare the file on disk may not be what the

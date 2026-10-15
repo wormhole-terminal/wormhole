@@ -4,6 +4,7 @@
 //! background executor (see `load`).
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Range;
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use gpui_kit::*;
 use super::highlight::Highlights;
 use wormhole_core::config::Settings;
 use wormhole_core::git::{self, DiffLine, FileDiff, LineKind, SplitRow};
+use wormhole_core::open_file;
 use wormhole_core::tokens::{Appearance, ThemeTokens};
 
 pub(crate) struct RenderedLine {
@@ -22,12 +24,15 @@ pub(crate) struct RenderedLine {
     pub text: SharedString,
     pub highlights: Vec<(Range<usize>, HighlightStyle)>,
     pub no_newline: bool,
+    /// The line of the file as it is now that the icon over this line opens in the editor: its
+    /// number on the new side; for a removed line, where its text used to be.
+    pub open_line: Option<u32>,
 }
 
 impl RenderedLine {
     /// A line without syntax colors (the Studio's sample).
     pub fn plain(kind: LineKind, old: Option<u32>, new: Option<u32>, text: &'static str) -> Self {
-        Self { kind, old, new, text: text.into(), highlights: Vec::new(), no_newline: false }
+        Self { kind, old, new, text: text.into(), highlights: Vec::new(), no_newline: false, open_line: new }
     }
 }
 
@@ -97,6 +102,16 @@ pub(super) fn build_rows(
     key: BuildKey,
     highlights: Option<&Highlights>,
 ) -> (Vec<Row>, RowStats) {
+    // Removed lines have no number in the new file: the nearest one, found per hunk, keyed by the
+    // line itself (the split rows hand out references into the hunks).
+    let mut nearest: HashMap<*const DiffLine, u32> = HashMap::new();
+    for hunk in &diff.hunks {
+        for (line, found) in hunk.lines.iter().zip(open_file::lines_in_new_file(&hunk.lines)) {
+            if let (None, Some(found)) = (line.new, found) {
+                nearest.insert(line, found);
+            }
+        }
+    }
     let render = |line: &DiffLine| -> Arc<RenderedLine> {
         let expanded = expand_tabs(&line.text, key.tab_width);
         let colors = highlights.map(|h| h.line(line)).unwrap_or_default();
@@ -112,6 +127,7 @@ pub(super) fn build_rows(
             text: expanded.text.into(),
             highlights,
             no_newline: line.no_newline,
+            open_line: line.new.or_else(|| nearest.get(&std::ptr::from_ref(line)).copied()),
         })
     };
 
@@ -297,6 +313,26 @@ mod tests {
         let (rows, _) = build_rows(&sample_diff(), key(true), None);
         assert_eq!(rows.len(), 1 + 3 + 1 + 1);
         assert!(matches!(rows.last(), Some(Row::Split(Cell::Filler, Cell::Line(_)))));
+    }
+
+    #[test]
+    fn every_line_knows_which_line_of_the_file_to_open() {
+        let open_lines = |split| {
+            let (rows, _) = build_rows(&sample_diff(), key(split), None);
+            let lines: Vec<Option<u32>> = rows
+                .iter()
+                .flat_map(|row| match row {
+                    Row::Unified(line) => vec![line.open_line],
+                    // The old side of a replaced pair is the removed line.
+                    Row::Split(Cell::Line(old), Cell::Line(new)) => vec![old.open_line, new.open_line],
+                    Row::Split(..) | Row::Hunk(_) => Vec::new(),
+                })
+                .collect();
+            lines
+        };
+        // "two" was removed at old line 2: it opens where "TWO" now is.
+        assert_eq!(open_lines(false), [Some(1), Some(2), Some(2), Some(3), Some(10)]);
+        assert_eq!(open_lines(true), [Some(1), Some(1), Some(2), Some(2), Some(3), Some(3)]);
     }
 
     #[test]

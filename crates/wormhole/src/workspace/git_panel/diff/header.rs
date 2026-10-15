@@ -202,6 +202,7 @@ impl Workspace {
                     .child(div().text_color(colors.added).child(added))
                     .child(div().text_color(colors.removed).child(removed))
             }))
+            .children(view.open_file(cx).map(|file| file.header_button(ui)))
             .when(controls.wrap, |d| {
                 d.child(
                     style::icon_button("diff-wrap", ui, IconName::TextWrap, "Wrap long lines")

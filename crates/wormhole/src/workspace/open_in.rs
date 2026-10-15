@@ -90,6 +90,11 @@ pub(crate) fn open(bundle: &str, folder: &Path) {
     }
 }
 
+/// Where the app with this bundle identifier is installed.
+pub(crate) fn app_path(bundle: &str) -> Option<std::path::PathBuf> {
+    system::app_path(bundle)
+}
+
 /// The bundle identifier of the app at `path` (an `.app` the person picked), if it is one.
 pub(crate) fn bundle_of(path: &Path) -> Option<String> {
     system::bundle_of(path)
