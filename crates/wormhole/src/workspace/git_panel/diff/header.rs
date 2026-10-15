@@ -93,6 +93,10 @@ impl Workspace {
         if renamed_from.is_some() || view.file().kind == ChangeKind::Renamed {
             badges.push((ui.primary, "Renamed".into()));
         }
+        if let Some(sub) = &view.file().submodule {
+            // What changed, in the row's words, where a file has "New file" or "Renamed".
+            badges.push((ui.muted, sub.label(view.file().kind).into()));
+        }
         if view.gone {
             // The diff stays as it was read; the status no longer lists the file.
             badges.push((ui.muted, "No longer changed".into()));
@@ -119,7 +123,9 @@ impl Workspace {
         });
         // A binary file has no lines to count, and an LFS pointer's lines say nothing.
         let pointers = diff.is_some_and(|d| d.lfs.is_some());
-        let controls = controls(split_fits, !binary && !pointers);
+        // A submodule's commits have no lines to count, wrap or lay out in two columns.
+        let lines = !binary && !pointers && view.file().submodule.is_none();
+        let controls = controls(split_fits && lines, lines);
         let counts = controls.counts.then(|| {
             let (added, removed) = view.counts;
             (format!("+{}", count_grouped(added)), format!("−{}", count_grouped(removed)))

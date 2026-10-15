@@ -95,6 +95,7 @@ mod tests {
             compare_missing: None,
             dirty,
             upstream: upstream.map(|(ahead, behind)| Upstream { name: "origin/main".into(), ahead, behind }),
+            superproject: None,
         }
     }
 

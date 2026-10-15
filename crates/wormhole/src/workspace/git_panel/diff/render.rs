@@ -495,6 +495,9 @@ impl Workspace {
         if let Some(err) = &view.error {
             return body.child(style::empty_note(ui, err.clone()));
         }
+        if let Some(log) = &view.submodule {
+            return body.child(self.render_submodule_body(view, log, ui, cx));
+        }
         if view.too_large() {
             return body.child(self.render_too_large(view, ui, cx));
         }

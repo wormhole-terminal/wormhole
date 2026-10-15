@@ -23,6 +23,8 @@ mod log;
 pub mod pr;
 mod split;
 mod status;
+mod status_parse;
+mod submodule;
 #[cfg(test)]
 pub(crate) mod testing;
 pub mod worktree;
@@ -46,6 +48,10 @@ pub use lfs::{LfsChange, LfsPointer, parse_pointer};
 pub use log::{LOG_LIMIT, branches, commit_files, commit_spec, is_ancestor, log, log_failure};
 pub use split::{Cell, Side, SplitRow, sides, split_rows};
 pub use status::{changed_files, status, status_summary};
+pub use submodule::{
+    COMMITS_SHOWN, Checkout, Range, Submodule, SubmoduleLog, Superproject, annotate, annotate_files, short,
+    submodule_log, superproject,
+};
 
 /// Largest file we read into memory to count its lines or to show as highlighting source.
 pub(crate) const MAX_TEXT_BYTES: u64 = 4 << 20;
@@ -87,6 +93,23 @@ pub struct FileChange {
     pub removed: Option<u32>,
     /// Stored with Git LFS: the counts are the pointer's, not the file's.
     pub lfs: bool,
+    /// A submodule, not a file: what the parent sees of it (`added`/`removed` say nothing then).
+    pub submodule: Option<Submodule>,
+}
+
+impl FileChange {
+    /// A change to `path` that nothing is known about yet: no counts, no old name.
+    pub fn new(path: impl Into<String>, kind: ChangeKind) -> Self {
+        Self {
+            path: path.into(),
+            original_path: None,
+            kind,
+            added: None,
+            removed: None,
+            lfs: false,
+            submodule: None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -109,6 +132,8 @@ pub struct RepoStatus {
     /// title row's ahead and behind cost no process. `None` for a detached HEAD, a branch with no
     /// upstream, or one whose upstream is gone.
     pub upstream: Option<Upstream>,
+    /// The repository this one is a submodule of, read from its `.git` file: no process.
+    pub superproject: Option<Superproject>,
 }
 
 /// A branch's upstream and how far apart they are (what `git status` calls `branch.ab`). Only what
@@ -131,7 +156,7 @@ pub struct DiffSpec {
     pub new: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Commit {
     pub sha: String,
     pub short: String,

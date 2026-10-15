@@ -12,6 +12,7 @@ mod notes;
 pub(crate) mod render;
 mod review;
 mod rows;
+mod submodule;
 
 use std::cell::Cell as StdCell;
 use std::path::PathBuf;
@@ -29,7 +30,7 @@ use crate::settings::{settings_in, store_in, ui_in};
 use crate::workspace::Workspace;
 use load::{Ask, Stamp};
 use rows::{BuildKey, Row, RowStats};
-use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side};
+use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};
 use wormhole_core::limits;
 use wormhole_core::profile::ProfileId;
 
@@ -64,6 +65,8 @@ pub struct DiffView {
     /// Why the last refresh failed; the diff on screen is from before it.
     refresh_error: Option<SharedString>,
     diff: Option<Arc<FileDiff>>,
+    /// For a submodule: the commits between its two sides, in place of a diff.
+    submodule: Option<Arc<SubmoduleLog>>,
     /// The working-tree file as the diff was read, to notice that it was edited since.
     stamp: Option<Stamp>,
     /// The file was in the working tree when the diff was read: Reveal in Finder has something
@@ -114,6 +117,7 @@ impl DiffView {
             error: None,
             refresh_error: None,
             diff: None,
+            submodule: None,
             stamp: None,
             on_disk: false,
             gone: false,

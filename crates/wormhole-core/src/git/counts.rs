@@ -141,14 +141,7 @@ mod tests {
     use crate::git::{ChangeKind, FileChange};
 
     fn untracked(path: &str) -> FileChange {
-        FileChange {
-            path: path.into(),
-            original_path: None,
-            kind: ChangeKind::Untracked,
-            added: None,
-            removed: None,
-            lfs: false,
-        }
+        FileChange::new(path, ChangeKind::Untracked)
     }
 
     fn reads() -> usize {

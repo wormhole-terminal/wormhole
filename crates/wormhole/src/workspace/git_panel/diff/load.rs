@@ -23,7 +23,7 @@ use crate::settings::{settings_in, store_in};
 use crate::workspace::Workspace;
 use crate::workspace::git_panel::changes::display_order;
 use crate::workspace::git_panel::job::{Ticket, Wanted};
-use wormhole_core::git::{self, DiffLimits, FileChange, FileDiff, LineKind, RepoStatus};
+use wormhole_core::git::{self, DiffLimits, FileChange, FileDiff, LineKind, RepoStatus, SubmoduleLog};
 use wormhole_core::tokens::ThemeTokens;
 
 /// What a request fetches.
@@ -57,6 +57,8 @@ pub(super) enum Outcome {
         built: Built,
     },
     Rebuilt(Built),
+    /// A submodule: the commits between its two sides.
+    Submodule(Arc<SubmoduleLog>),
     /// With the stamp taken before reading, so a failure is not retried until the file changes.
     Failed {
         message: String,
@@ -127,6 +129,13 @@ pub(super) fn run(
         return None;
     }
     match work {
+        Work::Load(request) if request.file.submodule.is_some() => {
+            let sub = request.file.submodule.as_ref()?;
+            Some(match git::submodule_log(&request.root, &request.file.path, sub) {
+                Ok(log) => Outcome::Submodule(log),
+                Err(err) => Outcome::Failed { message: format!("{err:#}"), stamp: None },
+            })
+        }
         Work::Load(request) => {
             // One look at the file: whether it is there, and for a working-tree diff its stamp,
             // taken before reading so an edit that lands while git runs shows up as a newer
@@ -211,6 +220,7 @@ impl DiffView {
                 self.stamp = stamp;
                 self.on_disk = on_disk;
                 self.diff = Some(diff);
+                self.submodule = None;
                 self.loading = false;
                 self.error = None;
                 self.refresh_error = None;
@@ -222,12 +232,19 @@ impl DiffView {
                 self.install(built, false);
                 true
             }
+            Outcome::Submodule(log) => {
+                let changed = self.submodule.as_ref() != Some(&log) || self.loading || self.error.is_some();
+                self.submodule = Some(log);
+                self.counts = (0, 0);
+                (self.loading, self.error, self.refresh_error, self.gone) = (false, None, None, false);
+                changed
+            }
             Outcome::Failed { message, stamp } => {
                 self.loading = false;
                 // Without the stamp, every status poll would see the file as edited since and
                 // run the failing load again. A real edit (or a new status entry) still retries.
                 self.stamp = stamp;
-                if self.diff.is_some() {
+                if self.diff.is_some() || self.submodule.is_some() {
                     // A refresh failed. What is on screen is still a true diff of an earlier
                     // state; the header says it is out of date.
                     tracing::warn!("diff refresh failed: {message}");
@@ -269,7 +286,9 @@ impl DiffView {
     /// The file on disk, for a diff of the working tree: what `refresh_git`
     /// looks at to notice an edit. `None` for a commit's file.
     pub(crate) fn watched_path(&self) -> Option<PathBuf> {
-        self.is_working_tree().then(|| self.request.root.join(&self.request.file.path))
+        // A submodule has no file to edit: its folder's state is in the status.
+        (self.is_working_tree() && self.request.file.submodule.is_none())
+            .then(|| self.request.root.join(&self.request.file.path))
     }
 
     pub(super) fn is_working_tree(&self) -> bool {

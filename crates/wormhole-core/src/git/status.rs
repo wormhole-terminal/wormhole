@@ -7,8 +7,9 @@ use anyhow::Result;
 
 use super::counts::count_untracked_lines;
 use super::lfs::mark_lfs;
+use super::status_parse::{parse_numstat, parse_porcelain, parse_raw};
 use super::{
-    ChangeKind, EMPTY_TREE, FileChange, GitCmd, GitError, RepoStatus, Upstream, has_head, repo_root,
+    ChangeKind, EMPTY_TREE, FileChange, GitCmd, GitError, RepoStatus, has_head, repo_root, superproject,
 };
 
 /// How much of the picture a status call fills in.
@@ -79,11 +80,13 @@ fn status_with(cwd: &Path, compare: Option<&str>, detail: Detail) -> Result<Opti
     if compare.is_some() && head {
         // Tracked files come from the diff against the merge-base; keep only
         // untracked (and conflicted) entries from `status`.
+        let in_status: Vec<FileChange> = files.iter().filter(|f| f.submodule.is_some()).cloned().collect();
         files.retain(|f| matches!(f.kind, ChangeKind::Untracked | ChangeKind::Conflicted));
         files.extend(match detail {
             Detail::Full => changed_files(&root, &base_rev, None)?,
             Detail::Summary => changed_paths(&root, &base_rev, None)?,
         });
+        carry_submodule_state(&mut files, &in_status);
     } else if detail == Detail::Full {
         let numstat = GitCmd::diff(&root)
             .args(["--numstat", "-z", "-M"])
@@ -97,6 +100,7 @@ fn status_with(cwd: &Path, compare: Option<&str>, detail: Detail) -> Result<Opti
         mark_lfs(&root, &mut files);
     }
     files.sort_by(|a, b| a.path.cmp(&b.path));
+    let superproject = superproject(&root);
     Ok(Some(RepoStatus {
         root,
         branch,
@@ -106,6 +110,7 @@ fn status_with(cwd: &Path, compare: Option<&str>, detail: Detail) -> Result<Opti
         compare_missing,
         dirty,
         upstream: parsed.upstream,
+        superproject,
     }))
 }
 
@@ -153,266 +158,35 @@ pub fn changed_files(root: &Path, old: &str, new: Option<&str>) -> Result<Vec<Fi
 /// [`changed_files`] without the line counts.
 fn changed_paths(root: &Path, old: &str, new: Option<&str>) -> Result<Vec<FileChange>> {
     let range: Vec<&str> = std::iter::once(old).chain(new).collect();
-    let names =
-        GitCmd::diff(root).args(["--name-status", "-z", "-M"]).revs(&range).paths::<_, &str>([]).run()?;
-    Ok(parse_name_status(&names))
+    // `--raw` rather than `--name-status`: the modes and ids say which entries are submodules.
+    let names = GitCmd::diff(root)
+        .args(["--raw", "-z", "-M", "--no-abbrev"])
+        .revs(&range)
+        .paths::<_, &str>([])
+        .run()?;
+    Ok(parse_raw(&names))
 }
 
-/// Parse `git diff --name-status -z -M`: `M\0path\0`, `R100\0old\0new\0`.
-pub(crate) fn parse_name_status(raw: &[u8]) -> Vec<FileChange> {
-    let text = String::from_utf8_lossy(raw);
-    let mut fields = text.split('\0').filter(|f| !f.is_empty());
-    let mut files = Vec::new();
-    while let Some(status) = fields.next() {
-        let (kind, original) = match status.chars().next() {
-            Some('A') => (ChangeKind::Added, None),
-            Some('D') => (ChangeKind::Deleted, None),
-            Some('R') | Some('C') => (ChangeKind::Renamed, fields.next().map(str::to_string)),
-            Some('U') => (ChangeKind::Conflicted, None),
-            _ => (ChangeKind::Modified, None),
-        };
-        let Some(path) = fields.next() else { break };
-        files.push(FileChange {
-            path: path.to_string(),
-            original_path: original,
-            kind,
-            added: None,
-            removed: None,
-            lfs: false,
-        });
-    }
-    files
-}
-
-/// What `git status --porcelain=v2 --branch -z` says.
-struct Porcelain {
-    branch: Option<String>,
-    /// From `# branch.oid`: `(initial)` means no commit yet. `None` if the header is missing.
-    has_head: Option<bool>,
-    /// From `# branch.upstream` and `# branch.ab`, which git prints only for a branch whose
-    /// upstream exists.
-    upstream: Option<Upstream>,
-    files: Vec<FileChange>,
-}
-
-/// Parse `git status --porcelain=v2 --branch -z`.
-fn parse_porcelain(raw: &[u8]) -> Porcelain {
-    let text = String::from_utf8_lossy(raw);
-    let mut fields = text.split('\0').peekable();
-    let mut branch = None;
-    let mut has_head = None;
-    let mut upstream_name = None;
-    let mut counts = None;
-    let mut files = Vec::new();
-
-    let kind_from_xy = |xy: &str| -> ChangeKind {
-        let mut chars = xy.chars();
-        let (x, y) = (chars.next().unwrap_or('.'), chars.next().unwrap_or('.'));
-        if x == 'A' {
-            ChangeKind::Added
-        } else if x == 'D' || y == 'D' {
-            ChangeKind::Deleted
-        } else {
-            ChangeKind::Modified
-        }
-    };
-
-    while let Some(entry) = fields.next() {
-        if entry.is_empty() {
-            continue;
-        }
-        let mut parts = entry.splitn(2, ' ');
-        let tag = parts.next().unwrap_or_default();
-        let rest = parts.next().unwrap_or_default();
-        match tag {
-            "#" => {
-                if let Some(head) = rest.strip_prefix("branch.head ")
-                    && head != "(detached)"
-                {
-                    branch = Some(head.to_string());
-                } else if let Some(oid) = rest.strip_prefix("branch.oid ") {
-                    has_head = Some(oid != "(initial)");
-                } else if let Some(name) = rest.strip_prefix("branch.upstream ") {
-                    upstream_name = Some(name.to_string());
-                } else if let Some(ab) = rest.strip_prefix("branch.ab ") {
-                    counts = parse_ahead_behind(ab);
-                }
-            }
-            // 1 XY sub mH mI mW hH hI path
-            "1" => {
-                let cols: Vec<&str> = rest.splitn(8, ' ').collect();
-                if cols.len() == 8 {
-                    files.push(FileChange {
-                        path: cols[7].to_string(),
-                        original_path: None,
-                        kind: kind_from_xy(cols[0]),
-                        added: None,
-                        removed: None,
-                        lfs: false,
-                    });
-                }
-            }
-            // 2 XY sub mH mI mW hH hI Xscore path \0 origPath
-            "2" => {
-                let cols: Vec<&str> = rest.splitn(9, ' ').collect();
-                let original = fields.next().map(str::to_string);
-                if cols.len() == 9 {
-                    files.push(FileChange {
-                        path: cols[8].to_string(),
-                        original_path: original,
-                        kind: ChangeKind::Renamed,
-                        added: None,
-                        removed: None,
-                        lfs: false,
-                    });
-                }
-            }
-            // u XY sub m1 m2 m3 mW h1 h2 h3 path
-            "u" => {
-                let cols: Vec<&str> = rest.splitn(10, ' ').collect();
-                if cols.len() == 10 {
-                    files.push(FileChange {
-                        path: cols[9].to_string(),
-                        original_path: None,
-                        kind: ChangeKind::Conflicted,
-                        added: None,
-                        removed: None,
-                        lfs: false,
-                    });
-                }
-            }
-            "?" => files.push(FileChange {
-                path: rest.to_string(),
-                original_path: None,
-                kind: ChangeKind::Untracked,
-                added: None,
-                removed: None,
-                lfs: false,
-            }),
-            _ => {}
-        }
-    }
-    // Both lines or nothing: an upstream that is gone has a name but no counts.
-    let upstream = upstream_name.zip(counts).map(|(name, (ahead, behind))| Upstream { name, ahead, behind });
-    Porcelain { branch, has_head, upstream, files }
-}
-
-/// `+2 -1`, what `# branch.ab` says: commits ahead of and behind the upstream.
-fn parse_ahead_behind(text: &str) -> Option<(u32, u32)> {
-    let (ahead, behind) = text.split_once(' ')?;
-    Some((ahead.strip_prefix('+')?.parse().ok()?, behind.strip_prefix('-')?.parse().ok()?))
-}
-
-/// Parse `git diff --numstat -z [-M]`: `added\tremoved\tpath\0`, or for
-/// renames `added\tremoved\t\0old\0new\0` (keyed by the new path).
-pub(crate) fn parse_numstat(raw: &[u8]) -> Vec<(String, Option<u32>, Option<u32>)> {
-    let text = String::from_utf8_lossy(raw);
-    let mut fields = text.split('\0');
-    let mut out = Vec::new();
-    while let Some(entry) = fields.next() {
-        let mut cols = entry.splitn(3, '\t');
-        let (Some(added), Some(removed), Some(path)) = (cols.next(), cols.next(), cols.next()) else {
+/// With "Compare with", the tracked files come from a diff against the merge-base, which knows a
+/// submodule's commits but not what `git status` found inside its folder: take that from the
+/// status's own entry for it.
+fn carry_submodule_state(files: &mut [FileChange], from_status: &[FileChange]) {
+    for file in files.iter_mut() {
+        let (Some(sub), Some(seen)) =
+            (file.submodule.as_mut(), from_status.iter().find(|f| f.path == file.path))
+        else {
             continue;
         };
-        let path = if path.is_empty() {
-            let _old = fields.next();
-            fields.next().unwrap_or_default()
-        } else {
-            path
-        };
-        out.push((path.to_string(), added.parse().ok(), removed.parse().ok()));
+        if let Some(seen) = &seen.submodule {
+            (sub.tracked, sub.untracked, sub.removed) = (seen.tracked, seen.untracked, seen.removed);
+        }
     }
-    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parses_porcelain_v2() {
-        let raw = b"# branch.oid abc\0# branch.head main\0\
-1 .M N... 100644 100644 100644 aaa bbb src/main.rs\0\
-1 A. N... 000000 100644 100644 000 ccc new file.txt\0\
-1 .D N... 100644 100644 000000 ddd ddd gone.rs\0\
-2 R. N... 100644 100644 100644 eee eee R100 renamed.rs\0old.rs\0\
-u UU N... 100644 100644 100644 100644 a b c conflict.rs\0\
-? notes/todo.md\0";
-        let Porcelain { branch, files, .. } = parse_porcelain(raw);
-        assert_eq!(branch.as_deref(), Some("main"));
-        let kinds: Vec<_> = files.iter().map(|f| (f.path.as_str(), f.kind)).collect();
-        assert_eq!(
-            kinds,
-            vec![
-                ("src/main.rs", ChangeKind::Modified),
-                ("new file.txt", ChangeKind::Added),
-                ("gone.rs", ChangeKind::Deleted),
-                ("renamed.rs", ChangeKind::Renamed),
-                ("conflict.rs", ChangeKind::Conflicted),
-                ("notes/todo.md", ChangeKind::Untracked),
-            ]
-        );
-        assert_eq!(files[3].original_path.as_deref(), Some("old.rs"));
-    }
-
-    #[test]
-    fn detached_head_has_no_branch() {
-        let branch = parse_porcelain(b"# branch.head (detached)\0").branch;
-        assert_eq!(branch, None);
-    }
-
-    #[test]
-    fn parses_numstat() {
-        let counts = parse_numstat(b"3\t1\tsrc/main.rs\0-\t-\timage.png\0");
-        assert_eq!(counts[0], ("src/main.rs".into(), Some(3), Some(1)));
-        assert_eq!(counts[1], ("image.png".into(), None, None));
-    }
-
-    #[test]
-    fn parses_numstat_with_renames() {
-        let counts = parse_numstat(b"2\t0\t\0old.rs\0new.rs\0");
-        assert_eq!(counts, vec![("new.rs".into(), Some(2), Some(0))]);
-    }
-
-    #[test]
-    fn parses_name_status() {
-        let files = parse_name_status(b"M\0a.rs\0R087\0old.rs\0new.rs\0A\0b.rs\0D\0c.rs\0");
-        let kinds: Vec<_> = files.iter().map(|f| (f.path.as_str(), f.kind)).collect();
-        assert_eq!(
-            kinds,
-            vec![
-                ("a.rs", ChangeKind::Modified),
-                ("new.rs", ChangeKind::Renamed),
-                ("b.rs", ChangeKind::Added),
-                ("c.rs", ChangeKind::Deleted),
-            ]
-        );
-        assert_eq!(files[1].original_path.as_deref(), Some("old.rs"));
-    }
-
-    #[test]
-    fn the_branch_header_says_whether_there_is_a_commit() {
-        let initial = parse_porcelain(b"# branch.oid (initial)\0# branch.head main\0");
-        assert_eq!((initial.has_head, initial.branch.as_deref()), (Some(false), Some("main")));
-        let born =
-            parse_porcelain(b"# branch.oid 4b825dc642cb6eb9a060e54bf8d69288fbee4904\0# branch.head main\0");
-        assert_eq!(born.has_head, Some(true));
-        assert_eq!(parse_porcelain(b"? a\0").has_head, None, "no header: ask git");
-    }
-
-    #[test]
-    fn the_branch_header_carries_the_upstream_and_how_far_apart_they_are() {
-        let tracked =
-            parse_porcelain(b"# branch.head main\0# branch.upstream origin/main\0# branch.ab +2 -1\0");
-        assert_eq!(tracked.upstream, Some(Upstream { name: "origin/main".into(), ahead: 2, behind: 1 }));
-        // No upstream: git prints neither line. An upstream that is gone: only the name.
-        assert_eq!(parse_porcelain(b"# branch.head main\0").upstream, None);
-        let gone = parse_porcelain(b"# branch.head main\0# branch.upstream origin/old\0");
-        assert_eq!(gone.upstream, None, "no counts to show");
-        // Not numbers: nothing rather than a wrong count.
-        let odd = parse_porcelain(b"# branch.upstream origin/main\0# branch.ab 2 1\0");
-        assert_eq!(odd.upstream, None);
-    }
+    use crate::git::Upstream;
 
     /// A repository with a bare upstream, one commit ahead and one behind, and a file edited since.
     #[test]
@@ -464,14 +238,7 @@ u UU N... 100644 100644 100644 100644 a b c conflict.rs\0\
 
     #[test]
     fn counts_are_matched_by_path_first_entry_wins() {
-        let file = |path: &str| FileChange {
-            path: path.into(),
-            original_path: None,
-            kind: ChangeKind::Modified,
-            added: None,
-            removed: None,
-            lfs: false,
-        };
+        let file = |path: &str| FileChange::new(path, ChangeKind::Modified);
         let mut files = vec![file("a"), file("b"), file("c")];
         let counts = vec![
             ("b".to_string(), Some(2), Some(1)),
@@ -495,14 +262,7 @@ u UU N... 100644 100644 100644 100644 a b c conflict.rs\0\
             counts
                 .iter()
                 .rev()
-                .map(|(path, ..)| FileChange {
-                    path: path.clone(),
-                    original_path: None,
-                    kind: ChangeKind::Modified,
-                    added: None,
-                    removed: None,
-                    lfs: false,
-                })
+                .map(|(path, ..)| FileChange::new(path.clone(), ChangeKind::Modified))
                 .collect()
         };
         let mut files = fresh();

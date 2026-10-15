@@ -24,6 +24,7 @@ fn file(path: &str) -> FileChange {
         added: Some(1),
         removed: Some(0),
         lfs: false,
+        submodule: None,
     }
 }
 
@@ -288,4 +289,24 @@ fn which_files_are_in_the_working_tree_is_kept_with_their_commit_and_dropped_wit
     history.toggle("aaa");
     history.files_loaded("zzz", Ok(vec![file("y")]));
     assert!(history.present.keys().all(|sha| history.files.contains_key(sha)));
+}
+
+#[test]
+fn a_commits_submodule_keeps_the_commits_it_moves_between() {
+    use wormhole_core::git::Submodule;
+    let mut lib = file("libs/lib");
+    lib.submodule = Some(Submodule {
+        old: Some("a".repeat(40)),
+        new: Some("b".repeat(40)),
+        commit_changed: true,
+        removed: false,
+        tracked: false,
+        untracked: false,
+        log: None,
+    });
+    let mut history = HistoryState::default();
+    history.files.insert("aaa".into(), CommitFiles::Loading);
+    history.files_loaded("aaa", Ok(vec![file("a.rs"), lib.clone()]));
+    let files = history.loaded("aaa").expect("loaded");
+    assert_eq!(files[1].submodule, lib.submodule, "the diff opened from the row asks these two commits");
 }

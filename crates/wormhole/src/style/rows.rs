@@ -556,13 +556,7 @@ pub struct FileRow {
 pub fn file_row(id: impl Into<ElementId>, ui: UiColors, row: FileRow) -> Stateful<Div> {
     let FileRow { icon, name, folder, renamed_from, moved, kind, lines, depth, selected } = row;
     let muted = if selected { ui.selected_muted } else { ui.muted };
-    let letter_color = match kind {
-        ChangeKind::Modified => ui.warning_text,
-        ChangeKind::Added | ChangeKind::Untracked => ui.success_text,
-        ChangeKind::Deleted | ChangeKind::Conflicted => ui.danger_text,
-        // The primary as text, judged on the selected tint as well as on the panel.
-        ChangeKind::Renamed => ui.selected_text,
-    };
+    let letter_color = kind_color(ui, kind);
     flush_row(id, ui, selected)
         .pl(px(CARD_INSET + depth as f32 * INDENT))
         .pr(px(CARD_INSET))
@@ -618,6 +612,17 @@ pub fn file_row(id: impl Into<ElementId>, ui: UiColors, row: FileRow) -> Statefu
                 .text_color(letter_color)
                 .child(kind.letter()),
         )
+}
+
+/// The color of a change's kind letter.
+pub(super) fn kind_color(ui: UiColors, kind: ChangeKind) -> Hsla {
+    match kind {
+        ChangeKind::Modified => ui.warning_text,
+        ChangeKind::Added | ChangeKind::Untracked => ui.success_text,
+        ChangeKind::Deleted | ChangeKind::Conflicted => ui.danger_text,
+        // The primary as text, judged on the selected tint as well as on the panel.
+        ChangeKind::Renamed => ui.selected_text,
+    }
 }
 
 /// "bin" or "LFS" where a file row's line counts go.

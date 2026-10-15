@@ -7,6 +7,7 @@
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
 use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::component::tooltip::Tooltip;
 use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
 use super::path_card::Over;
@@ -59,6 +60,13 @@ impl Workspace {
             .as_ref()
             .filter(|_| session.git.cwd == terminal.cwd)
             .map(|status| status.branch.clone());
+        let parent = session
+            .git
+            .status
+            .as_ref()
+            .filter(|_| session.git.cwd == terminal.cwd)
+            .and_then(|status| status.superproject.as_ref())
+            .map(|parent| parent.phrase());
         Facts {
             id: session.id,
             folder,
@@ -70,6 +78,7 @@ impl Workspace {
             // Shown, the status bar has the state at its end; the title row doesn't repeat it.
             words: crumb_words(terminal).filter(|_| !settings_in(&self.profile, cx).status_bar),
             branch,
+            parent,
             extras: self.extra_facts(cx),
         }
     }
@@ -105,7 +114,12 @@ impl Workspace {
         let (extras, ports_narrower) = Self::extras_wanted(&facts.extras, &measure);
         let wants = RowWants {
             path: steps.iter().map(|step| CRUMB_GAP + step.width).collect(),
-            words: facts.words.as_deref().map_or(0.0, |words| CRUMB_GAP + measure.caption(words)),
+            // The status words and, in a submodule, whose it is: they give way together.
+            words: [facts.words.as_deref(), facts.parent.as_deref()]
+                .into_iter()
+                .flatten()
+                .map(|text| CRUMB_GAP + measure.caption(text))
+                .sum(),
             chip: facts.branch.as_ref().map(|branch| {
                 let text = branch.as_deref().unwrap_or("detached");
                 Chip {
@@ -143,7 +157,7 @@ impl Workspace {
     /// picker; the name is what runs, with its live status next to the tool's icon.
     fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let Facts { id, folder, status, agent, told, label, words, branch, .. } = &plan.facts;
+        let Facts { id, folder, status, agent, told, label, words, branch, parent, .. } = &plan.facts;
         let fit = &plan.fit;
         // Under a tint the folder's icon and its parents step up to the main text color, so they
         // keep their contrast on it.
@@ -272,10 +286,23 @@ impl Workspace {
 
         // The branch's status (a dot, ↑2 ↓1) follows its chip, before the separator.
         let status = branch.is_some().then(|| self.render_branch_status(plan, cx)).flatten();
+        // A terminal in a submodule says whose it is, after the branch: "in terminal".
+        let whose = parent.clone().filter(|_| fit.words).map(|phrase| {
+            let tip = SharedString::from(format!("A submodule: {phrase}"));
+            div()
+                .id("crumb-superproject")
+                .flex_none()
+                .whitespace_nowrap()
+                .text_caption()
+                .text_color(ui.muted)
+                .tooltip(move |window, cx| Tooltip::new(tip.clone()).build(window, cx))
+                .child(phrase)
+                .into_any_element()
+        });
         let mut crumbs: Vec<AnyElement> = Vec::new();
         for part in [
             path.map(|path| vec![path.into_any_element()]),
-            branch.map(|chip| std::iter::once(chip.into_any_element()).chain(status).collect()),
+            branch.map(|chip| std::iter::once(chip.into_any_element()).chain(whose).chain(status).collect()),
         ]
         .into_iter()
         .flatten()

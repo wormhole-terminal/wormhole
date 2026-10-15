@@ -170,6 +170,7 @@ fn some_change() -> FileChange {
         added: Some(1),
         removed: Some(0),
         lfs: false,
+        submodule: None,
     }
 }
 

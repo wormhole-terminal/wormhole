@@ -40,6 +40,8 @@ pub(super) struct Facts {
     pub(super) words: Option<String>,
     /// The branch of the folder: `Some(None)` is a detached HEAD.
     pub(super) branch: Option<Option<String>>,
+    /// For a terminal in a submodule, whose it is: "in terminal".
+    pub(super) parent: Option<String>,
     /// The extras beside it (`title_extras`): its status, the agent's model and context, the ports
     /// and the pull request, each only if its setting is on and there is something to say.
     pub(super) extras: ExtraFacts,
