@@ -38,32 +38,34 @@ pub const LIFT: f32 = if AURORA { 8.7 } else { 7.2 };
 const _: () = assert!(wormhole::ARRIVE < SWOOP + 0.2 && SWOOP + 0.9 < DOCK && DOCK < LAND);
 const _: () = assert!(LAND + DISSOLVE + 0.5 < LIFT && SECONDS - LIFT >= 1.0);
 
-/// The app icon's canvas, in its own units (`packaging/icon/gen-icon.py`).
+/// The app icon's canvas, in its own units (`packaging/icon/AppIcon.icon`).
 pub const ICON_CANVAS: f32 = 1024.0;
-/// The icon's `>` as gen-icon.py draws it: a round-capped polyline through these three points, with
-/// the cursor's width, on the icon's canvas. A test reads the generator to keep these the same.
-pub const ICON_CHEVRON: [[f32; 2]; 3] = [[214.0, 214.0], [289.0, 289.0], [214.0, 364.0]];
-pub const ICON_STROKE: f32 = 46.0;
+/// The icon's `>` as its layer (`AppIcon.icon/Assets/chevron.svg`) draws it: a round-capped polyline
+/// through these three points, with the cursor's width, on the icon's canvas. A test reads the layer
+/// to keep these the same.
+pub const ICON_CHEVRON: [[f32; 2]; 3] = [[378.6, 397.0], [498.2, 512.0], [378.6, 627.0]];
+pub const ICON_STROKE: f32 = 62.0;
 
 /// The middle of the chevron's own box on the icon's canvas: the ship's position is this point.
-pub const CHEVRON_CENTRE: [f32; 2] = [251.5, 289.0];
+pub const CHEVRON_CENTRE: [f32; 2] = [438.4, 512.0];
 
 /// The chevron's own extent on the icon's canvas, its stroke included: width and height. The ship's
 /// size is a canvas, so a target that is measured in its chevron's height (a terminal cell, a block-art
 /// logo) needs this to size the ship. A test derives it from [`ICON_CHEVRON`].
-pub const CHEVRON_EXTENT: [f32; 2] = [121.0, 196.0];
+pub const CHEVRON_EXTENT: [f32; 2] = [181.6, 292.0];
 
-/// How much of the image's box the icon's canvas fills. `AppIcon.svg`, which the page draws, puts the
-/// artwork on the macOS grid, a body 824 wide in a box of 1024, so the logo's box is bigger than the
-/// canvas the chevron is placed on. A test reads the SVG to keep this the same.
+/// How much of the image's box the icon's canvas fills. `AppIcon.png`, which the page draws, has the
+/// artwork on the macOS grid (`make-iconset.swift` lays it out), a body 824 wide in a box of 1024, so
+/// the logo's box is bigger than the canvas the chevron is placed on. A test reads the script to keep
+/// this the same.
 pub const ICON_BODY: f32 = 824.0 / ICON_CANVAS;
 
 /// The ship's drawing, in canvas units about [`CHEVRON_CENTRE`], turned to point up: the apex, and the
 /// tail's two ends at ±`ARM_X`. (The icon's chevron points right; a quarter turn anticlockwise makes
 /// `(u, v)` into `(v, -u)`.)
-pub const APEX_Y: f32 = -37.5;
-pub const ARM_X: f32 = 75.0;
-pub const ARM_Y: f32 = 37.5;
+pub const APEX_Y: f32 = -59.8;
+pub const ARM_X: f32 = 115.0;
+pub const ARM_Y: f32 = 59.8;
 
 /// Where the ship lands: the logo's box on screen, in points from the screen's top left.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -127,9 +129,11 @@ pub struct Ship {
 }
 
 /// How big the ship is in front of the camera: the side of the icon box it would be drawn in, as a
-/// fraction of the screen's height. The chevron is a fifth of that box's width, so this is several
-/// screens; it was a box of 0.9 screens when the icon's chevron was twice as big in it.
-const BIG: f32 = 2.05;
+/// fraction of the screen's height, made so that its chevron is [`WIDE`] screens wide whatever share of
+/// the box the icon gives it.
+const BIG: f32 = WIDE * ICON_CANVAS / (2.0 * ARM_X + ICON_STROKE);
+/// How wide the ship's chevron is in front of the camera, as a fraction of the screen's height.
+const WIDE: f32 = 0.3924;
 /// Where in the screen the ship hovers, rises to and cruises, as fractions of its height below the
 /// funnel's centre.
 const HOVER: f32 = 0.30;
@@ -305,14 +309,15 @@ mod tests {
         assert!((after.size - LOGO.canvas()).abs() < 0.5);
     }
 
-    /// The page draws `AppIcon.svg` in the logo's box: its artwork sits on the macOS grid, so the chevron
+    /// The page draws `AppIcon.png` in the logo's box: its artwork sits on the macOS grid, so the chevron
     /// is where the canvas says only after the canvas is scaled to the body and centred in the box.
     #[test]
     fn the_logo_box_holds_the_icon_canvas_on_the_macos_grid() {
-        let svg = include_str!("../../../../packaging/icon/AppIcon.svg");
+        let script = include_str!("../../../../packaging/icon/make-iconset.swift");
         let inset = (ICON_CANVAS - 824.0) / 2.0;
-        let transform = format!("translate({inset} {inset}) scale({ICON_BODY:.6})");
-        assert!(svg.contains(&transform), "AppIcon.svg no longer places its artwork with {transform}");
+        let body = format!("x: {inset} * s, y: {inset} * s, width: 824 * s, height: 824 * s");
+        assert!(script.contains(&body), "make-iconset.swift no longer lays the artwork out as {body}");
+        assert_eq!(ICON_BODY, 824.0 / ICON_CANVAS);
         // The canvas's middle stays the box's middle, and the chevron lands inside the box.
         let chevron = LOGO.chevron();
         let k = LOGO.size / ICON_CANVAS;
@@ -336,6 +341,12 @@ mod tests {
         assert!(landing.size > landing.canvas(), "the logo's box is bigger than its canvas");
     }
 
+    /// The canvas units the constants are written in carry a decimal, so they are compared to what they
+    /// are derived from within a rounding.
+    fn near(a: [f32; 2], b: [f32; 2]) -> bool {
+        (a[0] - b[0]).abs() < 1e-3 && (a[1] - b[1]).abs() < 1e-3
+    }
+
     #[test]
     fn the_chevron_extent_is_the_icons_points_with_their_stroke() {
         let xs = ICON_CHEVRON.map(|p| p[0]);
@@ -343,14 +354,14 @@ mod tests {
         let span = |v: [f32; 3]| {
             v.iter().cloned().fold(f32::MIN, f32::max) - v.iter().cloned().fold(f32::MAX, f32::min)
         };
-        assert_eq!(CHEVRON_EXTENT, [span(xs) + ICON_STROKE, span(ys) + ICON_STROKE]);
+        let extent = [span(xs) + ICON_STROKE, span(ys) + ICON_STROKE];
+        assert!(near(CHEVRON_EXTENT, extent), "{extent:?}");
     }
 
     #[test]
     fn the_chevron_is_where_the_icon_draws_it() {
         // The box's middle is the canvas's; the chevron's own box is left of it.
-        assert!(LOGO.chevron()[1] < LOGO.centre[1], "a touch higher than the box's middle");
-        assert!(LOGO.chevron()[0] < LOGO.centre[0], "and left of it");
+        assert!(LOGO.chevron()[0] < LOGO.centre[0], "left of the box's middle");
         // The icon's three points, with the stroke, fill the box about `CHEVRON_CENTRE`.
         let xs = ICON_CHEVRON.map(|p| p[0]);
         let ys = ICON_CHEVRON.map(|p| p[1]);
@@ -363,35 +374,34 @@ mod tests {
             ys.iter().cloned().fold(f32::MAX, f32::min) - half,
             ys.iter().cloned().fold(f32::MIN, f32::max) + half,
         );
-        assert_eq!([(min_x + max_x) / 2.0, (min_y + max_y) / 2.0], CHEVRON_CENTRE);
+        assert!(near([(min_x + max_x) / 2.0, (min_y + max_y) / 2.0], CHEVRON_CENTRE));
         // Turned to point up: the apex above, the tail's ends below to either side.
         let [a, b, c] = ICON_CHEVRON;
         let turned = |p: [f32; 2]| [p[1] - CHEVRON_CENTRE[1], -(p[0] - CHEVRON_CENTRE[0])];
-        assert_eq!(turned(b), [0.0, APEX_Y]);
-        assert_eq!(turned(a), [-ARM_X, ARM_Y]);
-        assert_eq!(turned(c), [ARM_X, ARM_Y]);
+        assert!(near(turned(b), [0.0, APEX_Y]), "{:?}", turned(b));
+        assert!(near(turned(a), [-ARM_X, ARM_Y]), "{:?}", turned(a));
+        assert!(near(turned(c), [ARM_X, ARM_Y]), "{:?}", turned(c));
     }
 
-    /// The icon generator is the source of the chevron: if it changes, the ship has to follow.
+    /// The icon's chevron layer is the source of the chevron: if it changes, the ship has to follow.
     #[test]
-    fn the_icon_generator_draws_the_same_chevron() {
-        let source = include_str!("../../../../packaging/icon/gen-icon.py");
-        let line = source.lines().find(|l| l.starts_with("CHEVRON = ")).expect("gen-icon.py has a CHEVRON");
-        let numbers: Vec<f32> = line
-            .split(|c: char| !c.is_ascii_digit())
+    fn the_icons_layer_draws_the_same_chevron() {
+        let layer = include_str!("../../../../packaging/icon/AppIcon.icon/Assets/chevron.svg");
+        let attribute = |name: &str| -> &str {
+            let from = layer.find(&format!("{name}=\"")).expect("an attribute") + name.len() + 2;
+            &layer[from..from + layer[from..].find('"').expect("its end")]
+        };
+        let numbers: Vec<f32> = attribute("d")
+            .split(|c: char| !(c.is_ascii_digit() || c == '.'))
             .filter(|part| !part.is_empty())
             .map(|part| part.parse().expect("a number"))
             .collect();
         let ours: Vec<f32> = ICON_CHEVRON.iter().flatten().copied().collect();
         assert_eq!(
             numbers, ours,
-            "gen-icon.py's CHEVRON changed: update voyage::ICON_CHEVRON and CHEVRON_CENTRE"
+            "chevron.svg changed: update voyage::ICON_CHEVRON and what follows from it"
         );
-        let stroke = source.lines().find(|l| l.starts_with("STROKE = ")).expect("a STROKE");
-        assert_eq!(
-            stroke.trim_start_matches("STROKE = ").trim().parse::<f32>().expect("a number"),
-            ICON_STROKE
-        );
+        assert_eq!(attribute("stroke-width").parse::<f32>().expect("a number"), ICON_STROKE);
     }
 
     #[test]

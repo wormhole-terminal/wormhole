@@ -3,13 +3,15 @@
 #   packaging/Assets.car   the icon for macOS 26+ (Liquid Glass; light, dark, tinted and clear looks)
 #                          and the flattened renders older macOS reads through CFBundleIconName
 #   packaging/AppIcon.icns the CFBundleIconFile fallback
-# Needs Xcode (actool, swift, iconutil) and Icon Composer.app (ictool). Both outputs are committed, so this
+#   packaging/icon/AppIcon.png, AppIcon-dark.png
+#                          the same tile at 512 px, light and dark, for what the app draws itself (the About
+#                          window, the intro's logo)
+# Needs Xcode (actool, swift, iconutil) and Icon Composer.app (ictool). The outputs are committed, so this
 # only runs when the icon changes.
 #
 # actool's own AppIcon.icns is a flat approximation: it drops the glass, the specular highlights and the blur
 # the icon is made of. So the .icns comes from Icon Composer's own render of the document (ictool), laid on
-# the standard macOS tile with its shadow by make-iconset.swift. Without Icon Composer it falls back to
-# actool's copy, with a warning.
+# the standard macOS tile with its shadow by make-iconset.swift.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 packaging="$(cd "$here/.." && pwd)"
@@ -44,8 +46,16 @@ if [ -x "$ictool" ]; then
   }
   swift "$here/make-iconset.swift" "$work/render.png" "$work/AppIcon.iconset"
   iconutil -c icns "$work/AppIcon.iconset" -o "$packaging/AppIcon.icns"
+  cp "$work/AppIcon.iconset/icon_256x256@2x.png" "$here/AppIcon.png"
+  "$ictool" "$here/AppIcon.icon" --export-image --output-file "$work/render-dark.png" --platform macOS \
+    --rendition Dark --width 1024 --height 1024 --scale 1 --design-generation 27 >"$work/ictool.log" 2>&1 || {
+    cat "$work/ictool.log" >&2
+    exit 1
+  }
+  swift "$here/make-iconset.swift" "$work/render-dark.png" "$work/AppIcon-dark.iconset"
+  cp "$work/AppIcon-dark.iconset/icon_256x256@2x.png" "$here/AppIcon-dark.png"
 else
-  echo "warning: Icon Composer.app not found, using actool's flat AppIcon.icns" >&2
-  cp "$work/AppIcon.icns" "$packaging/AppIcon.icns"
+  echo "error: Icon Composer.app not found: it renders AppIcon.png and AppIcon-dark.png" >&2
+  exit 1
 fi
-echo "wrote $packaging/Assets.car and $packaging/AppIcon.icns"
+echo "wrote $packaging/Assets.car, $packaging/AppIcon.icns, $here/AppIcon.png and $here/AppIcon-dark.png"

@@ -118,7 +118,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
         .items_center()
         .gap_1()
         .p_4()
-        .child(img(crate::icons::APP_ICON).size(px(ABOUT_ICON)).flex_none())
+        .child(img(crate::icons::app_icon_for(env.tokens.appearance)).size(px(ABOUT_ICON)).flex_none())
         .child(div().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
         .child(div().text_caption().text_color(ui.muted).child("Version 0.1.0"))
         .child(

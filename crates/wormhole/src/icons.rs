@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use gpui_kit::*;
 use wormhole_core::icon_theme::{self, IconSource, IconTheme, RenderMode};
+use wormhole_core::tokens::Appearance;
 
 use crate::settings::SettingsStore;
 
@@ -96,14 +97,32 @@ const GLYPHS: [(&str, &[u8]); 5] = [
 /// GPUI Kit's assets plus the bundled icon theme's SVGs and the agent logos.
 pub struct Assets;
 
-/// Path of the app icon for `img()` (the About window): the source of the bundle's icon.
-pub const APP_ICON: &str = "wormhole/app-icon.svg";
-const APP_ICON_SVG: &[u8] = include_bytes!("../../../packaging/icon/AppIcon.svg");
+/// The app icon as the Dock shows it, light and dark (`packaging/icon/build-icns.sh` renders them from
+/// the bundle's icon), for what the app draws itself: the About window and the intro's logo.
+const APP_ICON_LIGHT: &str = "wormhole/app-icon.png";
+const APP_ICON_DARK: &str = "wormhole/app-icon-dark.png";
+const APP_ICON_PNGS: [(&str, &[u8]); 2] = [
+    (APP_ICON_LIGHT, include_bytes!("../../../packaging/icon/AppIcon.png")),
+    (APP_ICON_DARK, include_bytes!("../../../packaging/icon/AppIcon-dark.png")),
+];
+
+/// Path of the app icon for `img()`, in the look that goes with the theme's appearance.
+pub fn app_icon(cx: &App) -> &'static str {
+    app_icon_for(cx.global::<SettingsStore>().tokens.appearance)
+}
+
+/// Path of the app icon for `img()` on a theme of `appearance`.
+pub fn app_icon_for(appearance: Appearance) -> &'static str {
+    match appearance {
+        Appearance::Light => APP_ICON_LIGHT,
+        Appearance::Dark => APP_ICON_DARK,
+    }
+}
 
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> Result<Option<Cow<'static, [u8]>>> {
-        if path == APP_ICON {
-            return Ok(Some(Cow::Borrowed(APP_ICON_SVG)));
+        if let Some((_, bytes)) = APP_ICON_PNGS.iter().find(|(icon, _)| *icon == path) {
+            return Ok(Some(Cow::Borrowed(bytes)));
         }
         if path.starts_with(icon_theme::BUILTIN_PREFIX) {
             return Ok(icon_theme::builtin_asset(path).map(Cow::Borrowed));

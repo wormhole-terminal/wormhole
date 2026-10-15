@@ -5,7 +5,7 @@ mod licenses;
 
 use super::aux_window;
 use super::*;
-use crate::icons::APP_ICON;
+use crate::icons::app_icon;
 
 pub(crate) use licenses::open_licenses;
 
@@ -92,7 +92,7 @@ impl Render for AboutWindow {
             .text_color(ui.text)
             // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
             .child(aux_window::drag_strip())
-            .child(img(APP_ICON).size(px(ICON)).flex_none())
+            .child(img(app_icon(cx)).size(px(ICON)).flex_none())
             .child(
                 div()
                     .mt_3()

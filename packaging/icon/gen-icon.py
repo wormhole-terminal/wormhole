@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Writes the Wormhole app icon: the Icon Composer bundle funnel.icon and the flat AppIcon.svg.
+"""Writes the funnel icon, an earlier Wormhole app icon: the Icon Composer bundle funnel.icon and the flat
+funnel-flat.svg.
 
 The icon is Terminal's `>_` over the textbook wormhole drawing: a wireframe funnel dipping into a
 throat, in thin blue lines on a dark tile. Made the way macOS 26 icons are: one quiet tile, crisp
@@ -7,9 +8,9 @@ linework, glass only on the prompt.
 
 funnel.icon (open it in Icon Composer.app) was the shipped icon until the lens icon replaced it: the
 shipped one is now AppIcon.icon, which build-icns.sh compiles with actool into Assets.car (macOS 26+: Liquid
-Glass, dark, tinted and clear looks) and AppIcon.icns (older macOS). To ship this one again, swap the two
-folders' names. AppIcon.svg is this artwork flattened, still what the About window and the intro draw with
-GPUI.
+Glass, dark, tinted and clear looks) and AppIcon.icns (older macOS), and renders into AppIcon.png and
+AppIcon-dark.png for what the app draws itself. To ship this one again, swap the two folders' names.
+funnel-flat.svg is this artwork flattened.
 
 Tweak the glass, shadows and colors in Icon Composer if you like, but rerunning this script rewrites
 icon.json, so carry such a change over into this file.
@@ -41,8 +42,7 @@ RINGS, SPOKES = 7, 12
 FUNNEL_SCALE, FUNNEL_SHIFT = 0.78, 40.0
 
 # The prompt, sized and placed like Terminal's: top left, with room around it. The `>` is a round-capped
-# polyline through CHEVRON, the `_` a line between CURSOR's ends, both STROKE wide. The intro's Voyage
-# ship docks on this chevron (wormhole-core intro/voyage.rs reads these two lines in a test).
+# polyline through CHEVRON, the `_` a line between CURSOR's ends, both STROKE wide.
 CHEVRON = ((214, 214), (289, 289), (214, 364))
 CURSOR = ((352, 364), (457, 364))
 STROKE = 46
@@ -130,7 +130,7 @@ def document():
 
 # -------------------------------------------------------------------------------------------- flat SVG
 def flat_svg(funnel_body):
-    """Both layers on the standard macOS grid (an 824 px body inside 1024), for GPUI's About window."""
+    """Both layers on the standard macOS grid (an 824 px body inside 1024)."""
     k = "%.6f" % (824.0 / 1024)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">\n'
@@ -168,9 +168,9 @@ def main():
     with open(os.path.join(HERE, "funnel.icon", "icon.json"), "w") as f:
         # Icon Composer's own layout (sorted keys, " : ", no final newline): saving it there is a no-op.
         f.write(json.dumps(document(), indent=2, sort_keys=True, separators=(",", " : ")))
-    with open(os.path.join(HERE, "AppIcon.svg"), "w") as f:
+    with open(os.path.join(HERE, "funnel-flat.svg"), "w") as f:
         f.write(flat_svg(funnel_body))
-    print("wrote funnel.icon and AppIcon.svg")
+    print("wrote funnel.icon and funnel-flat.svg")
 
 
 if __name__ == "__main__":

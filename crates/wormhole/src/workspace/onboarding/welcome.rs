@@ -7,7 +7,7 @@ use wormhole_core::intro::page::Entrance;
 
 use super::page::Entering;
 use super::*;
-use crate::icons::APP_ICON;
+use crate::icons::app_icon;
 use crate::workspace::about::TAGLINE;
 use crate::workspace::aux_window;
 
@@ -34,7 +34,7 @@ impl Workspace {
             .flex()
             .flex_col()
             .items_center()
-            .child(logo(entrance.logo))
+            .child(logo(entrance.logo, app_icon(cx)))
             .child(
                 div()
                     .mt_6()
@@ -110,7 +110,7 @@ impl Workspace {
 /// The app's mark, which the ship of the voyage intro docks on: it comes in by fading, in place (the
 /// ship lands exactly there), and says where it is every frame, so the ship flies to the real spot.
 #[track_caller]
-fn logo(progress: f32) -> Div {
+fn logo(progress: f32, icon: &'static str) -> Div {
     div()
         .relative()
         .size(px(MARK))
@@ -133,7 +133,7 @@ fn logo(progress: f32) -> Div {
             .absolute()
             .size_full(),
         )
-        .child(img(APP_ICON).size(px(MARK)).opacity(progress))
+        .child(img(icon).size(px(MARK)).opacity(progress))
 }
 
 /// A few lines of the real sidebar, in the three states an agent is in: what the app is for, shown

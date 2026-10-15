@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Fixed
+
+- The About window and the welcome page show the new app icon, light or dark with the theme, and the
+  intro's ship docks on its `>`.
+
 ## [0.4.1] - 2026-10-15
 
 ### Changed
