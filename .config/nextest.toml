@@ -20,6 +20,12 @@ test-group = 'wall-clock'
 [profile.ci]
 retries = 0
 
+# The repaint's bisimulation replays every case and corpus thousands of times: about 30 s in a debug
+# build on a laptop, past a minute on a loaded runner. Slow by design, not hung; give it four minutes.
+[[profile.ci.overrides]]
+filter = 'binary_id(wormhole-vt-bench::bisimulation)'
+slow-timeout = { period = "60s", terminate-after = 4 }
+
 # The app's window tests start real terminals whose reader thread can reach GPUI's deterministic test
 # scheduler, which fails a test now and then on a loaded runner (https://github.com/wormhole-terminal/wormhole/issues/3). One retry, reported as
 # FLAKY, until that is fixed; then remove this override.
