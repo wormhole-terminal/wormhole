@@ -6,21 +6,17 @@
   ],
   "fill-specializations" : [
     {
-      "value" : {
-        "solid" : "extended-gray:1.00000,1.00000"
-      }
+      "value" : "system-dark"
     },
     {
       "appearance" : "dark",
-      "value" : {
-        "solid" : "gray:0.10507,1.00000"
-      }
+      "value" : "system-dark"
     }
   ],
   "groups" : [
     {
       "blend-mode" : "normal",
-      "blur-material" : 1,
+      "blur-material" : null,
       "hidden" : false,
       "layers" : [
         {
@@ -38,23 +34,23 @@
           "fill" : {
             "solid" : "extended-gray:1.00000,1.00000"
           },
-          "glass" : false,
+          "glass" : true,
           "image-name" : "chevron.svg",
           "name" : "chevron",
           "opacity" : 1
         }
       ],
-      "lighting" : "combined",
+      "lighting" : "individual",
       "name" : "Group 3",
       "opacity" : 1,
       "refractivity" : {
         "depth" : 0,
-        "enabled" : false,
+        "enabled" : true,
         "strength" : 1
       },
       "shadow" : {
-        "kind" : "none",
-        "opacity" : 0
+        "kind" : "neutral",
+        "opacity" : 0.1
       },
       "specular" : "outside",
       "translucency" : {
@@ -63,41 +59,51 @@
       }
     },
     {
-      "blend-mode" : "darken",
-      "blur-material" : 0.15000000000000002,
+      "blend-mode" : "normal",
+      "blur-material-specializations" : [
+        {
+          "value" : 0.77
+        },
+        {
+          "appearance" : "tinted",
+          "value" : 0.2
+        }
+      ],
       "hidden" : false,
       "layers" : [
         {
           "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "value" : {
-                "solid" : "gray:1.00000,0.20000"
-              }
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "gray:1.00000,0.80000"
-              }
-            },
-            {
-              "appearance" : "tinted",
-              "value" : {
-                "solid" : "gray:1.00000,0.60000"
-              }
-            }
-          ],
+          "fill" : {
+            "solid" : "extended-gray:1.00000,1.00000"
+          },
           "glass" : true,
           "hidden" : true,
-          "image-name" : "stars.svg",
-          "name" : "stars",
+          "image-name" : "lens.svg",
+          "name" : "lens",
           "opacity" : 1,
           "position" : {
-            "scale" : 0.6,
+            "scale" : 0.95,
             "translation-in-points" : [
               0,
-              51
+              0
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "solid" : "extended-gray:1.00000,1.00000"
+          },
+          "glass" : true,
+          "hidden" : true,
+          "image-name" : "lens.svg",
+          "name" : "lens",
+          "opacity" : 0,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
             ]
           }
         },
@@ -110,61 +116,9 @@
           "hidden" : false,
           "image-name" : "lens.svg",
           "name" : "lens",
-          "opacity" : 0.39,
+          "opacity" : 0,
           "position" : {
-            "scale" : 0.95,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : "system-light",
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "lens.svg",
-          "name" : "lens",
-          "opacity" : 0.23,
-          "position" : {
-            "scale" : 0.4,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-gray:1.00000,0.90000"
-          },
-          "glass" : false,
-          "hidden" : true,
-          "image-name" : "teal.png",
-          "name" : "Layer",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 1.28,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-gray:0.00000,1.00000"
-          },
-          "glass" : false,
-          "hidden" : true,
-          "image-name" : "lens.svg",
-          "name" : "lens",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 0.96,
+            "scale" : 2,
             "translation-in-points" : [
               0,
               0
@@ -186,10 +140,21 @@
         "enabled" : true,
         "strength" : 0.5
       },
-      "shadow" : {
-        "kind" : "layer-color",
-        "opacity" : 0.5
-      },
+      "shadow-specializations" : [
+        {
+          "value" : {
+            "kind" : "none",
+            "opacity" : 2
+          }
+        },
+        {
+          "appearance" : "dark",
+          "value" : {
+            "kind" : "neutral",
+            "opacity" : 0.5
+          }
+        }
+      ],
       "specular" : "outside",
       "translucency" : {
         "enabled" : true,
@@ -215,22 +180,9 @@
         },
         {
           "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "value" : {
-                "solid" : "srgb:0.01680,0.19835,1.00000,1.00000"
-              }
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "linear-gradient" : [
-                  "extended-srgb:0.00000,0.53333,1.00000,1.00000",
-                  "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-                ]
-              }
-            }
-          ],
+          "fill" : {
+            "solid" : "srgb:0.01569,0.19835,1.00000,1.00000"
+          },
           "glass" : true,
           "hidden" : false,
           "image-name" : "arms-center.png",
@@ -246,50 +198,6 @@
           ],
           "position" : {
             "scale" : 2.35,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-srgb:0.00000,0.78431,0.70196,1.00000"
-          },
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "arms-center.png",
-          "name" : "arms",
-          "opacity-specializations" : [
-            {
-              "value" : 1
-            },
-            {
-              "appearance" : "dark",
-              "value" : 0.7
-            }
-          ],
-          "position" : {
-            "scale" : 6.93,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-          },
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "arms-center.png",
-          "name" : "arms",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 6.93,
             "translation-in-points" : [
               0,
               0
