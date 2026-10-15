@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-15
+
 ### Changed
 
 - A new app icon: the `>_` prompt in glass over a blue wormhole swirl, deeper blue in dark mode.
@@ -193,5 +195,6 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/wormhole-terminal/wormhole/releases/tag/v0.4.0
