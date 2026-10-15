@@ -11,6 +11,7 @@
 #   all   crates/wormhole-core/** and crates/wormhole-term/**, Cargo.toml/Cargo.lock, toolchain, lint and build config, a script
 #         core includes (lib.sh, package.sh), or any path not listed here: the whole gate (the app
 #         builds on core, so a core change can break it). Plus `cargo deny check` for dependencies.
+#   wire  crates/wormhole-wire/** alone (nothing depends on it yet): fmt, clippy and tests of that crate.
 #   app   crates/wormhole/** or a packaging file the app includes: fmt, clippy, tests and the
 #         no-devctl check for the app alone. Core's tests can't see the app, so they're skipped.
 #   text  skills, agents, rules, scripts, tools/visual, the top-level .md files (CHANGELOG.md too): only
@@ -48,6 +49,7 @@ scope_of() {
     crates/wormhole-core/*|crates/wormhole-term/*) echo all ;;
     # include_str!'d by core's updater tests; lib.sh also runs in the app's isolated_instance test.
     scripts/lib.sh|scripts/package.sh) echo all ;;
+    crates/wormhole-wire/*) echo wire ;;
     crates/wormhole/*) echo app ;;
     # include_bytes!/include_str!'d by the app.
     packaging/app.env|packaging/updater.pub|packaging/icon/*) echo app ;;
@@ -61,7 +63,7 @@ scope_of() {
   esac
 }
 
-rank() { case "$1" in all) echo 3 ;; app) echo 2 ;; text) echo 1 ;; *) echo 0 ;; esac; }
+rank() { case "$1" in all) echo 4 ;; app) echo 3 ;; wire) echo 2 ;; text) echo 1 ;; *) echo 0 ;; esac; }
 
 if [ -z "$base" ]; then
   upstream=origin/main
@@ -97,6 +99,11 @@ case "$scope" in
     steps+=("cargo test --quiet --workspace --features devctl")
     steps+=("cargo check --quiet --workspace")
     ;;
+  wire)
+    steps+=("cargo fmt --all")
+    steps+=("cargo clippy --quiet -p wormhole-wire --all-targets -- -D warnings")
+    steps+=("cargo test --quiet -p wormhole-wire")
+    ;;
   app)
     steps+=("cargo fmt --all")
     steps+=("cargo clippy --quiet -p wormhole --all-targets --features devctl -- -D warnings")
@@ -116,6 +123,7 @@ esac
 history=("python3 scripts/commits.py check-range $base..HEAD"
          "python3 scripts/commits.py changelog-needed --include-worktree $base..HEAD")
 grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py check")
+grep -Eqx '(scripts/worktree\.sh|crates/[^/]+/Cargo\.toml)' <<<"$changed" && history+=("scripts/worktree.sh --selftest")
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
 grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
 steps=("${history[@]}" "${steps[@]+"${steps[@]}"}")
