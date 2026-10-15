@@ -47,7 +47,8 @@
 #
 # Everything lives in a scratch dir under $TMPDIR (never the repository, never your data dir); the
 # script stops only the instances it started, by PID, also when it fails or is interrupted. The release
-# build goes to $CARGO_TARGET_DIR/perf-build (target/perf-build), not into target/release.
+# build goes to $CARGO_TARGET_DIR/perf-build (target/perf-build), not into target/release;
+# ttystorm (tools/bench, its own workspace) to $CARGO_TARGET_DIR/ttystorm-build, set or not.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -140,8 +141,9 @@ cp -c "$bin" "$scratch/app/$APP_BINARY" 2>/dev/null || cp "$bin" "$scratch/app/$
 bin="$scratch/app/$APP_BINARY"
 
 log "building ttystorm"
-(cd "$ROOT/tools/bench" && cargo build --release --quiet)
-ttystorm="$ROOT/tools/bench/target/release/ttystorm"
+# Its own workspace, so its own target dir: an inherited CARGO_TARGET_DIR would send it into the app's.
+(cd "$ROOT/tools/bench" && CARGO_TARGET_DIR="$TARGET_DIR/ttystorm-build" cargo build --release --quiet)
+ttystorm="$TARGET_DIR/ttystorm-build/release/ttystorm"
 [ -x "$ttystorm" ] || die "no $ttystorm"
 
 # ---------------------------------------------------------------- driving an instance
