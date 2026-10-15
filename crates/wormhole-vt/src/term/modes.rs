@@ -275,6 +275,11 @@ const RECORDED: [u16; 22] = [
     106, // DECOSCNM: overscan
 ];
 
+/// The numbers of the [`RECORDED`] modes whose bits are set in `bits`.
+pub(super) fn recorded_modes(bits: u32) -> impl Iterator<Item = u16> {
+    RECORDED.iter().enumerate().filter(move |(at, _)| bits & (1 << at) != 0).map(|(_, &n)| n)
+}
+
 /// The bit that remembers DEC private mode `n` if it is one of the [`RECORDED`] ones.
 pub(super) fn recorded_bit(n: u16) -> Option<u32> {
     RECORDED.iter().position(|&mode| mode == n).map(|at| 1 << at)

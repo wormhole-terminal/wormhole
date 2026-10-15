@@ -110,6 +110,39 @@ impl Graphics {
         Ok(())
     }
 
+    /// Everything the pictures hold as text, for the state dump (the transfer under way and the
+    /// held replies included: a repaint has to cut at a point where there are none).
+    #[cfg(any(test, feature = "state-dump"))]
+    pub(super) fn describe(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("a/graphics/last_handle", self.last_handle.to_string()),
+            ("a/graphics/transfer", format!("{} {}", self.transfer.is_some(), self.multipart.is_some())),
+            ("a/graphics/gate", format!("{:?}", self.gate)),
+            ("a/graphics/tables", format!("{:?}", self.tables)),
+        ]
+    }
+
+    /// Whether a picture is half-received: a chunk of a kitty transmission or of an iTerm2 image
+    /// has been read and the rest has not.
+    pub(super) fn in_transfer(&self) -> bool {
+        self.transfer.is_some() || self.multipart.is_some()
+    }
+
+    /// Whether either screen holds a picture.
+    pub(super) fn has_images(&self) -> bool {
+        self.tables.iter().any(|table| !table.is_empty())
+    }
+
+    /// The last handle given out.
+    pub(super) fn last_handle(&self) -> u64 {
+        self.last_handle
+    }
+
+    /// Start numbering handles after `n`.
+    pub(super) fn seed_handle(&mut self, n: u64) {
+        self.last_handle = n;
+    }
+
     fn next_handle(&mut self) -> ImageHandle {
         self.last_handle += 1;
         ImageHandle(self.last_handle)

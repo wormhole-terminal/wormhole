@@ -45,6 +45,10 @@ pub(super) struct ImageTable {
 }
 
 impl ImageTable {
+    pub fn is_empty(&self) -> bool {
+        self.list.is_empty()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Image> {
         self.list.iter()
     }

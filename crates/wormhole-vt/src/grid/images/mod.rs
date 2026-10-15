@@ -151,6 +151,18 @@ impl Grid {
         true
     }
 
+    /// Every placement, history included, one line each with its top row counted from the live
+    /// screen's (negative in the history): the state dump compares these as text.
+    #[cfg(any(test, feature = "state-dump"))]
+    pub fn describe_placements(&self) -> Vec<String> {
+        let top = self.top_serial() as i64;
+        self.placements
+            .list
+            .iter()
+            .map(|p| format!("line {} col {} {:?}", p.top - top, p.col, p.spec))
+            .collect()
+    }
+
     /// Whether a placement of `image` is anywhere in the grid.
     pub fn is_placed(&self, image: ImageHandle) -> bool {
         self.placements.list.iter().any(|p| p.spec.image == image)

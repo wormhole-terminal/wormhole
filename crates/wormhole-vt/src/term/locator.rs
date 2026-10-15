@@ -66,6 +66,7 @@ pub struct Pointer {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(u8)]
 enum Reporting {
     #[default]
     Off,
@@ -91,6 +92,18 @@ struct Filter {
     right: u32,
 }
 
+/// What the sequences set of the locator, without the pointer the host moves.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Settings {
+    /// DECELR's first parameter: 0 off, 1 on, 2 once.
+    pub(super) reporting: u8,
+    pub(super) pixels: bool,
+    pub(super) on_down: bool,
+    pub(super) on_up: bool,
+    /// DECEFR: top, left, bottom and right in the unit in force.
+    pub(super) filter: Option<[u32; 4]>,
+}
+
 /// The locator's settings and what is known of the pointer.
 #[derive(Clone, Debug, Default)]
 pub(super) struct Locator {
@@ -107,6 +120,17 @@ pub(super) struct Locator {
 }
 
 impl Locator {
+    /// What the sequences set, without the pointer the host moves: for the state dump.
+    pub(super) fn settings(&self) -> Settings {
+        Settings {
+            reporting: self.reporting as u8,
+            pixels: self.units == Units::Pixels,
+            on_down: self.on_down,
+            on_up: self.on_up,
+            filter: self.filter.map(|f| [f.top, f.left, f.bottom, f.right]),
+        }
+    }
+
     /// Whether a program asked for reports.
     pub(super) fn enabled(&self) -> bool {
         self.reporting != Reporting::Off

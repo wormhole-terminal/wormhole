@@ -49,6 +49,11 @@ impl Default for KeyboardFlags {
 }
 
 impl KeyboardFlags {
+    /// The whole stack, base entry first.
+    pub(super) fn entries(&self) -> &[u8] {
+        &self.stack
+    }
+
     /// The flags in force.
     pub(super) fn current(&self) -> u8 {
         self.stack.last().copied().unwrap_or(0)

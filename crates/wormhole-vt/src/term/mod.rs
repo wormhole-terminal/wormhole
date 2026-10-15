@@ -39,6 +39,7 @@
 //! | `reset` | RIS, DECSTR, DECALN |
 //! | `resize` | the window changing size, DECCOLM |
 //! | `snapshot` | what the host draws from |
+//! | `repaint/` | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered; `dump` (feature `state-dump`) is the whole state as named text, for the tests that compare two terminals |
 //! | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //!
 //! # Choices
@@ -81,6 +82,8 @@ mod control;
 mod csi;
 mod cursor;
 mod dcs;
+#[cfg(any(test, feature = "state-dump"))]
+mod dump;
 mod edit;
 mod esc;
 mod event;
@@ -97,6 +100,7 @@ mod oscs;
 mod presentation;
 mod print;
 mod rect;
+pub mod repaint;
 mod reports;
 mod reset;
 mod resize;
@@ -122,6 +126,8 @@ use kitty::KeyboardFlags;
 use tabs::TabStops;
 
 pub use checksum::ScreenChecksum;
+#[cfg(any(test, feature = "state-dump"))]
+pub use dump::StateDump;
 pub use event::{Event, Progress, ProgressState, PromptKind, ShellMark, Terminator};
 pub use graphics::{
     Compression, IMAGE_BUDGET_BYTES, ImageError, ImageFormat, ImageUpload, MAX_IMAGES, PLACEHOLDER,

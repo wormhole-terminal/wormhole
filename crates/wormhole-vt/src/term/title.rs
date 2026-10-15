@@ -21,6 +21,13 @@ use super::event::Event;
 use super::oscs::fill;
 use super::{TITLE_MAX, TITLE_STACK, Terminal};
 
+impl TitleModes {
+    /// Each mode with the parameter of `CSI > Ps t` that switches it on.
+    pub(super) fn parts(self) -> [(bool, usize); 2] {
+        [(self.contains(TitleModes::SET_HEX), 0), (self.contains(TitleModes::QUERY_HEX), 1)]
+    }
+}
+
 bitflags! {
     /// The title modes a program switched on.
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,8 +42,8 @@ bitflags! {
 /// One slot of the title stack: the parts a save asked for.
 #[derive(Clone, Debug)]
 pub(super) struct SavedTitles {
-    window: Option<Option<String>>,
-    icon: Option<Option<String>>,
+    pub(super) window: Option<Option<String>>,
+    pub(super) icon: Option<Option<String>>,
 }
 
 /// Which of the two XTWINOPS 22 and 23 mean: `0` both, `1` the icon name, `2` the title.

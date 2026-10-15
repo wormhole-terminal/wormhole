@@ -12,5 +12,10 @@ bitflags = "2"
 # The parser's and the grid's byte searches (SIMD; already in the dependency graph).
 memchr = "2.8"
 
+[features]
+# `Terminal::dump_state`: everything observable about a terminal as named text, for the
+# bisimulation tests of the repaint writer (`wormhole-vt-bench`). Not part of the shipped engine.
+state-dump = []
+
 [lints]
 workspace = true

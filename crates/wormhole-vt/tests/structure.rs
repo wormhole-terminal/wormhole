@@ -286,3 +286,123 @@ fn the_engine_has_no_unsafe_code() {
     let lib = fs::read_to_string(crate_dir().join("src/lib.rs")).expect("lib.rs");
     assert!(lib.contains("#![forbid(unsafe_code)]"), "src/lib.rs must keep #![forbid(unsafe_code)]");
 }
+
+// ---- the repaint covers every piece of state ----
+
+/// `text` without a leading `pub` or `pub(…)`.
+fn without_visibility(text: &str) -> &str {
+    match text.strip_prefix("pub") {
+        None => text,
+        Some(rest) => match rest.strip_prefix('(') {
+            Some(inner) => inner.split_once(')').map_or(rest, |(_, after)| after.trim_start()),
+            None => rest.trim_start(),
+        },
+    }
+}
+
+/// The names of the fields of `struct name { … }` in `source`, in order.
+fn struct_fields(source: &str, name: &str) -> Option<Vec<String>> {
+    let lines: Vec<&str> = source.lines().collect();
+    let start = lines.iter().position(|line| {
+        without_visibility(line.trim_start())
+            .strip_prefix("struct ")
+            .and_then(|rest| rest.strip_prefix(name))
+            .is_some_and(|rest| rest.trim_start().starts_with('{') || rest.starts_with("<'a> {"))
+    })?;
+    let mut depth = 0i32;
+    let mut fields = Vec::new();
+    for (i, line) in lines[start..].iter().enumerate() {
+        let code = line.split("//").next().unwrap_or("");
+        if i > 0 && depth == 1 {
+            let text = without_visibility(code.trim_start());
+            if let Some((field, _)) = text.split_once(':')
+                && !field.is_empty()
+                && field.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            {
+                fields.push(field.to_string());
+            }
+        }
+        depth += code.matches('{').count() as i32 - code.matches('}').count() as i32;
+        if i > 0 && depth == 0 {
+            break;
+        }
+    }
+    Some(fields)
+}
+
+/// A new field of the engine's state without a repaint case fails here: the author says how a
+/// repaint writes it, or why it need not (`term/repaint/fields.rs`). The repaint is what keeps a
+/// replica equal to the engine, and a state it forgets is a replica that drifts without a sound.
+#[test]
+fn every_field_of_the_engines_state_has_a_repaint_case() {
+    use wormhole_vt::term::repaint::FIELDS;
+    let mut wrong = Vec::new();
+    for entry in FIELDS {
+        let path = crate_dir().join("src").join(entry.file);
+        let source = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        let Some(found) = struct_fields(&source, entry.name) else {
+            wrong.push(format!("{}: no `struct {}` in {}", entry.name, entry.name, entry.file));
+            continue;
+        };
+        let listed: Vec<&str> = entry.fields.iter().map(|(name, _)| *name).collect();
+        for field in &found {
+            if !listed.contains(&field.as_str()) {
+                wrong.push(format!(
+                    "{}.{field} is a field of the engine's state with no case in term/repaint/fields.rs: \
+                     say how a repaint writes it, or why it need not",
+                    entry.name
+                ));
+            }
+        }
+        for name in &listed {
+            if !found.iter().any(|f| f == name) {
+                wrong.push(format!(
+                    "{}.{name} is listed in fields.rs but is not a field any more",
+                    entry.name
+                ));
+            }
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "the repaint's field list is out of step with the engine:\n{}",
+        wrong.join("\n")
+    );
+}
+
+#[test]
+fn every_mode_has_a_repaint_case() {
+    use wormhole_vt::term::Modes;
+    use wormhole_vt::term::repaint::MODES;
+    let flags: Vec<&str> = Modes::all().iter_names().map(|(name, _)| name).collect();
+    let listed: Vec<&str> = MODES.iter().map(|(name, _)| *name).collect();
+    for flag in &flags {
+        assert!(listed.contains(flag), "mode {flag} has no case in term/repaint/fields.rs (MODES)");
+    }
+    for name in &listed {
+        assert!(flags.contains(name), "MODES lists {name}, which is not a mode");
+    }
+}
+
+#[test]
+fn every_cell_flag_has_a_repaint_case() {
+    use wormhole_vt::term::repaint::CELL_FLAGS;
+    let flags = wormhole_vt::grid::flag_names();
+    for flag in &flags {
+        assert!(
+            CELL_FLAGS.iter().any(|(name, _)| name == flag),
+            "cell flag {flag} has no case in term/repaint/fields.rs (CELL_FLAGS)"
+        );
+    }
+    for (name, _) in CELL_FLAGS {
+        assert!(flags.contains(name), "CELL_FLAGS lists {name}, which is not a flag");
+    }
+}
+
+#[test]
+fn the_field_reader_reads_a_struct() {
+    let source = "/// doc\n#[derive(Debug)]\npub(super) struct Demo<'a> {\n    /// a\n    pub(super) one: u8,\n    two: Vec<(u8, u8)>, // c\n    #[allow(dead_code)]\n    three: [u8; 2],\n}\nstruct Other {\n    x: u8,\n}\n";
+    assert_eq!(struct_fields(source, "Demo"), Some(vec!["one".into(), "two".into(), "three".into()]));
+    assert_eq!(struct_fields(source, "Other"), Some(vec!["x".into()]));
+    assert_eq!(struct_fields(source, "Nope"), None);
+}

@@ -100,6 +100,13 @@ const _: () = {
 /// The three layout flags (wide, tail, head) as one mask.
 const LAYOUT: CellFlags = CellFlags::WIDE.union(CellFlags::SPACER_TAIL).union(CellFlags::SPACER_HEAD);
 
+/// The names of the cell's flags, for the test that every one has a case in the repaint
+/// (`term::repaint::CELL_FLAGS`).
+#[doc(hidden)]
+pub fn flag_names() -> Vec<&'static str> {
+    CellFlags::all().iter_names().map(|(name, _)| name).collect()
+}
+
 /// Which cells an erase leaves alone.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Spare {
@@ -272,9 +279,15 @@ impl Cell {
         self.flag_set().intersects(CellFlags::SIDE_ENTRY)
     }
 
+    /// The flags other than the tab mark: what makes a blank more than a blank.
+    #[inline]
+    pub const fn flags_but_tab(self) -> u16 {
+        self.flags() & !CellFlags::TAB.bits()
+    }
+
     /// A tab (HT) started on this cell; see [`CellFlags::TAB`].
     #[inline]
-    pub(super) const fn is_tab_start(self) -> bool {
+    pub const fn is_tab_start(self) -> bool {
         self.flag_set().contains(CellFlags::TAB)
     }
 

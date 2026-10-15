@@ -59,6 +59,7 @@ mod read;
 mod rect;
 mod resize;
 mod row;
+mod rowview;
 mod scroll;
 mod search;
 mod side_tables;
@@ -71,13 +72,14 @@ mod words;
 
 use std::collections::VecDeque;
 
-pub use cell::{Cell, Content, Spare, StyleId};
+pub use cell::{Cell, Content, Spare, StyleId, flag_names};
 pub use copy::ViewRow;
 pub use images::MAX_PLACEMENTS;
 pub(crate) use images::NewPlacement;
 pub use links::LinkSpan;
 pub use pins::PinId;
 pub use row::{Pen, Region, RowMark};
+pub use rowview::RowView;
 pub use search::{CopiedLine, TextCopy};
 pub use side_tables::MAX_MARKS;
 pub use style::Style;
