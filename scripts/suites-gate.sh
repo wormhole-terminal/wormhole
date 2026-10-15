@@ -14,7 +14,8 @@
 # The suites are fetched at their pinned commits into a cache outside the repository
 # (tools/vt-compare/fetch-suites.sh). With no cache and no network (cloud sessions, a plane) the
 # step is skipped with a warning, never failed. scripts/check.sh runs it when the engine
-# (crates/wormhole-vt), the bench crate or core's terminal layer changed, and with --all.
+# (crates/wormhole-vt), the bench crate or the terminal layer (crates/wormhole-term) changed, and
+# with --all.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh

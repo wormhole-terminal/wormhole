@@ -8,7 +8,7 @@
 #
 # Why the generated .cargo/config.toml matters:
 # - Cargo hashes workspace crates by their workspace-relative path, so every worktree gets the SAME
-#   unit hash for wormhole-core and wormhole. Sharing a target dir then lets one worktree's
+#   unit hash for wormhole-core, wormhole-term and wormhole. Sharing a target dir then lets one worktree's
 #   build be linked into another's (false green or red). A distinct, harmless codegen-units value
 #   per worktree gives each its own hash; third-party dependencies keep theirs and stay shared.
 # - `strip` must be repeated in each package table (a package with its own table does not inherit
@@ -42,6 +42,10 @@ cat > "$dir/.cargo/config.toml" <<TOML
 strip = "debuginfo"
 
 [profile.dev.package.wormhole-core]
+codegen-units = $n
+strip = "debuginfo"
+
+[profile.dev.package.wormhole-term]
 codegen-units = $n
 strip = "debuginfo"
 

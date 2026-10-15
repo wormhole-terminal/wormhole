@@ -20,7 +20,7 @@ plus staged, unstaged and untracked files). The widest scope any file needs wins
 
 | Changed | Runs |
 | --- | --- |
-| `crates/wormhole-core/**`, `Cargo.toml`/`Cargo.lock`, toolchain/lint config, `scripts/lib.sh`/`package.sh`, anything unlisted | the whole gate (the app builds on core); `cargo deny check` for dependency files |
+| `crates/wormhole-core/**`, `crates/wormhole-term/**`, `Cargo.toml`/`Cargo.lock`, toolchain/lint config, `scripts/lib.sh`/`package.sh`, anything unlisted | the whole gate (the app builds on core); `cargo deny check` for dependency files |
 | `crates/wormhole/**`, `packaging/app.env`, `updater.pub`, `icon/` | fmt, clippy, tests and the no-devctl check for `-p wormhole` only |
 | docs, skills, agents, rules, `scripts/`, `tools/visual/`, top-level `.md` | only `design_rules` (it scans their wording); nothing compiles |
 | `.github/`, `.claude/hooks`, settings, the rest of `packaging/` | nothing |
@@ -38,7 +38,8 @@ Run it once when the work is done, not after every edit; while working, use the 
 
 ## Fast loop while working
 
-- Core only (no GPUI, seconds): `cargo test -p wormhole-core <name filter>`
+- Core only (no GPUI, seconds): `cargo test -p wormhole-core <name filter>`; the terminal layer
+  (PTY, engine host, screen) is its own crate: `cargo test -p wormhole-term <name filter>`
 - Whole workspace type-check: `cargo check --workspace --features devctl`
 - One app test: `cargo test -p wormhole --features devctl <name filter>` (with devctl it reuses the
   gate's build; without, the app compiles a second time)
@@ -73,7 +74,7 @@ worktree built last. Never run it for a devctl session straight from there; copy
 The script writes an untracked `.cargo/config.toml` that every shared-target setup needs:
 
 - **A distinct build identity.** Cargo hashes workspace crates by their workspace-relative path, so
-  `wormhole-core` and `wormhole` get the *same* unit hash in every worktree. Worktrees sharing a
+  `wormhole-core`, `wormhole-term` and `wormhole` get the *same* unit hash in every worktree. Worktrees sharing a
   target dir then overwrite each other's artifacts, and a build can silently link another worktree's
   code (false green or false red). A unique `codegen-units` value per worktree gives each its own hash;
   dependencies keep theirs and stay shared.

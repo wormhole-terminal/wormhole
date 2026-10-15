@@ -514,7 +514,12 @@ const CHAT_ALLOWED: [&str; 2] = ["aider-chat", "kiro-cli-chat"];
 fn no_chat_wording() {
     let root = repo();
     let mut files = Vec::new();
-    for dir in ["crates/wormhole/src", "crates/wormhole-core/src", "crates/wormhole-core/assets"] {
+    for dir in [
+        "crates/wormhole/src",
+        "crates/wormhole-core/src",
+        "crates/wormhole-core/assets",
+        "crates/wormhole-term/src",
+    ] {
         text_files(&root.join(dir), &mut files);
     }
     // The repo's own skills only: anything else in .claude/skills is a contributor's personal,

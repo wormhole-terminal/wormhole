@@ -131,8 +131,9 @@ cargo test -p wormhole-core                 # fast: the UI-independent core only
 cargo test --workspace --features devctl    # everything
 ```
 
-`crates/wormhole-core` holds everything that doesn't need the UI (terminal engine, git, config,
-storage, agent hooks) and is tested on its own; `crates/wormhole` is the GPUI app. Lints live in the
+`crates/wormhole-core` holds everything that doesn't need the UI (git, config, storage, agent hooks)
+and is tested on its own, on top of `crates/wormhole-term` (a program in a PTY and the screen it
+draws) and the engine, `crates/wormhole-vt`; `crates/wormhole` is the GPUI app. Lints live in the
 workspace `Cargo.toml`, and `crates/wormhole/tests/design_rules.rs` checks the design rules (spacing
 grid, corner radii, colors from design tokens). See `CONTRIBUTING.md`.
 

@@ -2,9 +2,9 @@
 paths:
   - "crates/wormhole/src/terminal_view/render/**"
   - "crates/wormhole-vt/src/**"
-  - "crates/wormhole-core/src/terminal/pty/**"
-  - "crates/wormhole-core/src/terminal/engine/**"
-  - "crates/wormhole-core/src/terminal/snapshot.rs"
+  - "crates/wormhole-term/src/pty/**"
+  - "crates/wormhole-term/src/engine/**"
+  - "crates/wormhole-term/src/snapshot.rs"
   - "Cargo.toml"
   - "Cargo.lock"
 ---
@@ -26,11 +26,11 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
   per frame what didn't change, and don't add a character to `stands_alone` that a font can
   shape contextually (Latin, Arabic, marks, emoji).
 - **The engine's hot paths allocate nothing**: printing, scrolling, styles and links reuse the
-  grid's pages and tables. `crates/wormhole-core/tests/pty_allocations.rs`
+  grid's pages and tables. `crates/wormhole-term/tests/pty_allocations.rs`
   (`reading_and_parsing_allocates_nothing`) pins the reader thread at zero allocations in floods,
   and `vtbench` (`crates/wormhole-vt-bench`) shows allocations per MB for each corpus.
 - **The PTY reader re-reads an empty master for 50 µs after output** before it sleeps
-  (`terminal/pty/reader.rs`): macOS hands the reader 1 KiB at a time, and an engine faster than the
+  (`crates/wormhole-term/src/pty/reader.rs`): macOS hands the reader 1 KiB at a time, and an engine faster than the
   writer would otherwise sleep and be woken for every refill. Measure before changing it.
 - The counting tests in `render/guards.rs`, `render/bench.rs`
   (`frames_stay_within_their_allocations`) and `pty_allocations.rs` are the guard: if one fails,

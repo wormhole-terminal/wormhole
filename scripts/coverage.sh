@@ -34,7 +34,7 @@ need cargo-llvm-cov "Install it with: cargo install cargo-llvm-cov"
 rustup toolchain list | grep -q '^nightly' || die "no nightly toolchain: rustup toolchain install nightly --profile minimal -c llvm-tools-preview"
 
 # What counts: the engine's sources; the tests' own folders and everything else are left out.
-IGNORE='(/tests/|/tests\.rs|/check\.rs|wormhole-vt-bench|/\.cargo/|/rustc/|crates/wormhole-core|crates/wormhole/)'
+IGNORE='(/tests/|/tests\.rs|/check\.rs|wormhole-vt-bench|/\.cargo/|/rustc/|crates/wormhole-core|crates/wormhole-term|crates/wormhole/)'
 PACKAGES=(-p wormhole-vt -p wormhole-vt-bench)
 work="$(mktemp -d "${TMPDIR:-/tmp}/coverage.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
