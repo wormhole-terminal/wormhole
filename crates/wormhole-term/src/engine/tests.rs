@@ -89,7 +89,7 @@ fn deccolm_asks_the_ui_for_the_width_when_window_operations_are_allowed() {
 #[test]
 fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     let script = format!(
-        "printf '\\033_Ga=T,f=100,i=7,c=3,r=2,q=2;{PNG}\\033\\\\'; printf 'done\\n'; sleep 4; \
+        "printf '\\033_Ga=T,f=100,i=7,c=3,r=2,q=2;{PNG}\\033\\\\'; printf 'done\\n'; read go; \
          printf '\\033_Ga=d,d=I,i=7\\033\\\\'; printf 'freed'; sleep 5"
     );
     let (pty, _events) = spawn(&script);
@@ -105,6 +105,8 @@ fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     // The picture's cells hold no text, so a copy of everything has none of it.
     pty.select_all();
     assert!(!pty.selection_text().unwrap_or_default().contains('\u{10EEEE}'));
+    // The program waits for this line, so no machine load can free the picture before it was checked.
+    pty.write(b"\n".to_vec());
     wait_until("the delete", || pty.screen_text().contains("freed"));
     wait_until("the pixels to go", || pty.images().is_empty());
     pty.snapshot(&mut snapshot, 0);

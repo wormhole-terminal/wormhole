@@ -15,7 +15,8 @@ use super::{
 const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 
 pub(crate) fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
-    let deadline = Instant::now() + Duration::from_secs(10);
+    // Generous: it only matters when the condition never comes, and a loaded machine is slow, not wrong.
+    let deadline = Instant::now() + Duration::from_secs(30);
     while !done() {
         assert!(Instant::now() < deadline, "timed out waiting for {what}");
         std::thread::sleep(Duration::from_millis(10));
@@ -212,7 +213,7 @@ fn the_shells_reported_folder_wins_while_its_process_stays_put() {
     let script = format!(
         "printf '\\033]7;file://localhost{}\\a'; printf 'reported\\n'; \
          printf '\\033]7;file://build.example.com/etc\\033\\\\'; printf '\\033]7;file:///no/such/folder\\a'; \
-         printf 'ignored\\n'; sleep 1; cd /; printf 'moved\\n'; sleep 5",
+         printf 'ignored\\n'; read go; cd /; printf 'moved\\n'; sleep 5",
         reported.display()
     );
     let (pty, events) = spawn("/bin/sh", &["-c", &script]);
@@ -222,6 +223,7 @@ fn the_shells_reported_folder_wins_while_its_process_stays_put() {
     wait_until("the ignored reports", || pty.screen_text().contains("ignored"));
     assert_eq!(pty.cwd(), Some(reported.clone()));
     assert!(!drain(&events).iter().any(|e| matches!(e, PtyEvent::Cwd)), "nothing to report");
+    pty.write(b"\n".to_vec());
     // Polling sees the move: a shell without integration is in charge now.
     wait_until("the move", || pty.screen_text().contains("moved"));
     wait_until("polling to win", || pty.cwd() == Some(PathBuf::from("/")));
@@ -366,7 +368,7 @@ use super::program_status;
 fn reports_reach_the_store_wake_the_ui_once_and_a_prompt_ends_the_work() {
     // The root works and a child asks (both before the UI looks), then a prompt begins and the child's
     // question turns out to have been answered: it reports done.
-    let script = r#"printf '\033]7501;state=working:app=deploy\033\\'; printf '\033]7501;state=blocked:kind=permission:id=eu:msg=QXBwcm92ZT8=\007'; printf 'reported\n'; sleep 1; printf '\033]7501;state=done:id=eu\007\033]133;A\007'; printf 'prompt\n'; sleep 5"#;
+    let script = r#"printf '\033]7501;state=working:app=deploy\033\\'; printf '\033]7501;state=blocked:kind=permission:id=eu:msg=QXBwcm92ZT8=\007'; printf 'reported\n'; read go; printf '\033]7501;state=done:id=eu\007\033]133;A\007'; printf 'prompt\n'; sleep 5"#;
     let (pty, events) = spawn("/bin/sh", &["-c", script]);
     wait_until("the reports", || pty.screen_text().contains("reported"));
     assert_eq!(
@@ -384,6 +386,7 @@ fn reports_reach_the_store_wake_the_ui_once_and_a_prompt_ends_the_work() {
     };
     assert_eq!(wakes(&events), 1);
 
+    pty.write(b"\n".to_vec());
     wait_until("the prompt", || pty.screen_text().contains("prompt"));
     // The root's work is over with the prompt; the child's done record stays for the user to see.
     assert_eq!(reported(&pty), Some((program_status::State::Done, None, None)));
@@ -408,11 +411,12 @@ fn a_flood_of_reports_costs_the_ui_one_event_and_the_store_256_records() {
 #[test]
 fn a_full_reset_ends_every_record_and_a_soft_reset_does_not() {
     // RIS (`ESC c`) wipes the screen too, so the script waits for the test between the two.
-    let script = r#"printf '\033]7501;state=done:app=x\007'; sleep 1; printf '\033[!psoft'; sleep 2; printf '\033c'; sleep 5"#;
+    let script = r#"printf '\033]7501;state=done:app=x\007'; sleep 1; printf '\033[!psoft'; read go; printf '\033c'; sleep 5"#;
     let (pty, events) = spawn("/bin/sh", &["-c", script]);
     wait_until("the report", || !pty.program_status().is_empty());
     wait_until("the soft reset", || pty.screen_text().contains("soft"));
     assert!(!pty.program_status().is_empty(), "DECSTR keeps the records");
+    pty.write(b"\n".to_vec());
     wait_until("the full reset", || pty.program_status().is_empty());
     assert!(drain(&events).iter().any(|e| matches!(e, PtyEvent::ProgramStatus)));
 }
