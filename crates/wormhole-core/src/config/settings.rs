@@ -368,6 +368,14 @@ pub struct Settings {
     /// Let `Wormhole send-text` type into terminals and `Wormhole new-terminal` open them (and
     /// start programs). Off, the command line can only list, report and notify.
     pub control_write: bool,
+    /// Answer a program's request for the checksum of a rectangle of the screen (DECRQCRA). Off:
+    /// it lets any program, also one over ssh, read the screen back cell by cell. Terminals started
+    /// after the change use it.
+    pub allow_screen_checksum: bool,
+    /// Let programs act on the window (move, resize, minimise, raise, full screen: XTWINOPS) and
+    /// read its title back. Off: a program can only ask for sizes and the window's place. Terminals
+    /// started after the change use it.
+    pub allow_window_ops: bool,
     /// Where New Terminal in New Worktree puts a worktree: under this folder (in a folder named
     /// after the repository), or, empty, beside the repository in `<name>-worktrees`.
     pub worktree_base: String,
@@ -454,6 +462,8 @@ impl Default for Settings {
             hotkey_action: HotkeyAction::default(),
             jump_waiting_key: "alt-cmd-j".into(),
             control_write: false,
+            allow_screen_checksum: false,
+            allow_window_ops: false,
             worktree_base: String::new(),
             feature_flags: BTreeMap::new(),
         }
@@ -562,6 +572,12 @@ pub const APP_SETTINGS: &[&str] = &[
     // Whether scripts may type into terminals and open them: a cloned repository must not be
     // able to turn that on for itself.
     "control_write",
+    // Whether programs may read the screen back with DECRQCRA: a cloned repository must not be
+    // able to turn that on for itself.
+    "allow_screen_checksum",
+    // Whether programs may move and resize the window and read its title: a cloned repository must
+    // not be able to turn that on for itself.
+    "allow_window_ops",
     // Where worktrees go is the person's own folder layout; a repository must not pick it.
     "worktree_base",
     // The folders the person pinned in the terminal list, one list for every window: a project
@@ -856,6 +872,8 @@ mod tests {
         assert_eq!(unset.title_border, TitleBorder::Scrolled, "the line shows once output is under the bar");
         assert!(unset.open_in.is_empty(), "Open in… picks an editor until one is chosen");
         assert!(!unset.control_write, "the command line can't type into terminals until asked");
+        assert!(!unset.allow_screen_checksum, "programs can't read the screen back until asked");
+        assert!(!unset.allow_window_ops, "programs can't move the window or read its title until asked");
         assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
     }
 
@@ -900,6 +918,13 @@ mod tests {
     #[test]
     fn a_project_cannot_let_scripts_type_into_terminals() {
         assert!(APP_SETTINGS.contains(&"control_write") && !PROJECT_SETTINGS.contains(&"control_write"));
+        assert!(
+            APP_SETTINGS.contains(&"allow_screen_checksum")
+                && !PROJECT_SETTINGS.contains(&"allow_screen_checksum")
+        );
+        assert!(
+            APP_SETTINGS.contains(&"allow_window_ops") && !PROJECT_SETTINGS.contains(&"allow_window_ops")
+        );
         let overrides = serde_json::json!({ "control_write": true });
         let serde_json::Value::Object(map) = overrides else { unreachable!() };
         let (merged, applied) = Settings::default().with_overrides_reported(&map);

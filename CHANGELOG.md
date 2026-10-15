@@ -6,6 +6,57 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- Blinking text (SGR 5 and 6) now blinks, fading once a second while the window is in front, and
+  stays steady when Reduce Motion is on; overlined text (SGR 53) gets its line along the top of
+  the cell, in the underline color when the program set one.
+- Programs can edit rectangles of the screen: fill (DECFRA), erase (DECERA, and DECSERA, which
+  keeps protected cells), copy (DECCRA) and change or reverse attributes (DECCARA, DECRARA, with
+  DECSACE choosing the stream of cells or the rectangle). They count from the scrolling region in
+  origin mode and are cut to the screen.
+- A program can ask for the checksum of part of the screen (DECRQCRA), which test suites such as
+  esctest2 read the screen back with. It is off: it also lets a program, over ssh too, read the
+  screen cell by cell. Settings → Terminal → "Let programs read the screen back" (or
+  `allow_screen_checksum` in `config.json`) turns it on for new terminals.
+- A program can move, resize, minimise, raise and full-screen the window and read its title back
+  (xterm's window operations, `CSI … t`). It is off, because a title is text a program chose and
+  reading it back types it into the next program: Settings → Terminal → "Let programs control the
+  window" (or `allow_window_ops` in `config.json`) turns it on for new terminals. A size in rows
+  and columns resizes the window so that the terminal that asked gets that size. Reports of the
+  window's size and place are always answered.
+- Colors a program sets (OSC 4, 5, 10 to 19) also paint the pane's padding and are reset by
+  OSC 104, 105 and 110 to 119; a `#` color is read as the X11 convention does (`#3a7` is
+  `#3000a0007000`).
+- Programs can switch to 8-bit controls (S8C1T) and set a conformance level (DECSCL), and
+  reverse wraparound (modes 45 and 1045) works for backspace and cursor-left.
+- National replacement character sets (German, French, Swedish and the rest of the VT200 family,
+  after `CSI ? 42 h`), the DEC Technical and DEC Supplemental sets and the ISO Latin-1 supplement
+  can be designated and shifted into place (SCS, SO, SI, LS2, LS3, SS2, SS3). Shifting columns
+  sideways (SL, SR), the DEC locator (DECELR, DECSLE, DECRQLP, DECEFR: the mouse answers as a
+  locator when a program asks for it) and the state reports (DECRQPSR for the cursor and the tab
+  stops, DECRQTSR, with DECRSPS and DECRSTS to put them back, DECRQDE) are understood too. The
+  device attributes (DA1) now list exactly these and the rest of what the engine does.
+
+### Changed
+
+- Wormhole runs on its own terminal engine, written from the specifications, in place of
+  alacritty's. It reads program output about three times as fast (2.85 times alacritty's core in
+  the engine benchmark), and in our comparison of seven terminals on the same Mac the app is the
+  fastest overall, six times as fast as Terminal.app. It passes every case of its own conformance
+  suite, 544 of 567 esctest2 tests and every ucs-detect category, and adds what alacritty's core
+  lacked: left and right margins (DECLRMM), selective erase, every DEC character set, setting and
+  terminfo reports (DECRQSS, XTGETTCAP), and pictures that live in the grid, so kitty, Sixel and
+  iTerm2 images scroll and reflow with the text.
+- Text is sized as Unicode 18 says, and the sizing matches ucs-detect's in every category. A
+  conjunct of an Indic script or Khmer, a base with a spacing vowel sign (Bengali, Burmese,
+  Javanese, Thai, Lao and more) and the Arabic number sign take the cells they are drawn in, and
+  an emoji followed by the text selector (a watch or a heart with U+FE0E) steps back to one cell.
+- Grapheme clustering (mode 2027) is on from the start, as in Ghostty, and after a reset. Emoji
+  sequences, flags and the scripts above are one character of their own width to the terminal
+  without the program asking; a program that counts code points can turn it off with
+  `CSI ? 2027 l`.
+
 ### Fixed
 
 - The terminal list stays put: pinned terminals first, then the rest from first made to last, and

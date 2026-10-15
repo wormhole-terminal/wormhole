@@ -14,10 +14,7 @@ use std::cell::Cell as StdCell;
 use std::time::Instant;
 
 use gpui_kit::{Font, SharedString, TextRun, font, point, px};
-use wormhole_core::alacritty_terminal::event::VoidListener;
-use wormhole_core::alacritty_terminal::term::{Config, Term};
-use wormhole_core::alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-use wormhole_core::terminal::GridSize;
+use wormhole_core::terminal::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
 use super::text_run;
@@ -76,9 +73,8 @@ const SCROLLING_FRAME_ALLOCATIONS: usize = 300;
 const COLS: usize = 200;
 const ROWS: usize = 60;
 
-fn term() -> Term<VoidListener> {
-    let size = GridSize { cols: COLS as u16, rows: ROWS as u16, cell_width: 8.4, cell_height: 18.0 };
-    let mut term = Term::new(Config { scrolling_history: 10_000, ..Config::default() }, &size, VoidListener);
+fn term() -> TestTerm {
+    let mut term = TestTerm::new(COLS as u16, ROWS as u16, 10_000);
     let mut bytes = Vec::new();
     for i in 0..400 {
         let line = format!(
@@ -99,8 +95,8 @@ fn term() -> Term<VoidListener> {
     term
 }
 
-fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-    Processor::<StdSyncHandler>::new().advance(term, bytes);
+fn feed(term: &mut TestTerm, bytes: &[u8]) {
+    term.feed(bytes);
 }
 
 /// A line as the renderer hands it to the text system: the text moves into a
@@ -126,7 +122,7 @@ struct FrameCounts {
 /// Everything prepaint does except the text system's shaping.
 fn frame(
     cache: &mut FrameCache<u8, Fed>,
-    term: &mut Term<VoidListener>,
+    term: &mut TestTerm,
     palette: &Palette,
     base_font: &Font,
 ) -> FrameCounts {
@@ -137,7 +133,7 @@ fn frame(
         scale: 2.0,
         font_size: 14.0,
     };
-    cache.snapshot.update(term, 3);
+    term.snapshot(&mut cache.snapshot, 3);
     let mut counts = FrameCounts::default();
     let stats = cache.prepare(
         0,

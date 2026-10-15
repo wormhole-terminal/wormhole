@@ -79,6 +79,9 @@ objc2-app-kit = { version = "0.3", features = [
 ] }
 
 [dev-dependencies]
+# The render tests build terminals without a PTY (`terminal::testing`), which the shipped build
+# never has: dev-dependency features are off in it.
+wormhole-core = { workspace = true, features = ["test-support"] }
 # The view tests drive real windows through GPUI's test platform, so a plain `cargo test` (what CI
 # and contributors run) needs these without the devctl feature. Dev-dependency features are
 # never active in the shipped binary.

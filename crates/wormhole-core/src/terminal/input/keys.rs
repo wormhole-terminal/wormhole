@@ -11,7 +11,7 @@
 //! events, so `REPORT_EVENT_TYPES` has no visible effect (press is the default
 //! event type and is always omitted from the sequence).
 
-use alacritty_terminal::term::TermMode;
+use wormhole_vt::types::TermMode;
 
 /// A GUI-independent key press.
 ///
@@ -317,7 +317,7 @@ fn csi(term: Term, code_parts: &[u32], mods: u32, text: Option<&str>) -> Vec<u8>
 mod tests {
     use super::*;
 
-    const NONE: TermMode = TermMode::NONE;
+    const NONE: TermMode = TermMode::empty();
     const DIS: TermMode = TermMode::DISAMBIGUATE_ESC_CODES;
 
     fn k<'a>(key: &'a str, key_char: Option<&'a str>) -> KeyInput<'a> {

@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use wormhole_core::alacritty_terminal::index::Line;
 use wormhole_core::limits::count_grouped;
 use wormhole_core::terminal::ScreenSnapshot;
 use wormhole_core::terminal::find::{FindOption, FindQuery, FindResults};
+use wormhole_core::terminal::types::Line;
 
 use super::find_bar::FindBar;
 use super::*;
@@ -282,7 +282,10 @@ impl TerminalView {
         let offset = snapshot.display_offset as i32;
         let cols = snapshot.columns();
         let row_of = |line: Line| usize::try_from(line.0 - grown + offset).ok();
-        let cells = |line: Line| Some(snapshot.rows().get(row_of(line)?)?.cells());
+        let cells = |line: Line| {
+            let row = snapshot.rows().get(row_of(line)?)?;
+            Some((row.cells(), row.extras()))
+        };
         let mut rows = vec![Vec::new(); snapshot.rows().len()];
         for (row, found) in rows.iter_mut().enumerate() {
             let line = Line(row as i32 - offset + grown);

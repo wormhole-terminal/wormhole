@@ -1,5 +1,6 @@
 //! Terminal: scrollback, the minimap, Option as Meta per side, the font in use (set in
-//! Fonts), the shell a new terminal runs and the profiles config.json lists, and the bell.
+//! Fonts), the shell a new terminal runs and the profiles config.json lists, the bell and
+//! whether programs may read the screen back and control the window.
 
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::shells::{self, ShellChoice, ShellKind};
@@ -46,6 +47,8 @@ pub(super) const SETTINGS: &[Setting] = &[
     .describe(describe_worktree_base),
     toggle!("bell-sound", bell_sound),
     toggle!("bell-visual", bell_visual),
+    toggle!("screen-checksum", allow_screen_checksum),
+    toggle!("window-ops", allow_window_ops),
 ];
 
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.

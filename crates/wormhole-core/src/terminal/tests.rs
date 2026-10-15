@@ -5,8 +5,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use alacritty_terminal::index::Line;
-use alacritty_terminal::vte::ansi::Rgb;
+use wormhole_vt::types::Line;
 
 use super::{
     BlockState, Direction, GridSize, Mark, Notification, Progress, ProgressState, PromptKind, Pty, PtyEvent,
@@ -15,7 +14,7 @@ use super::{
 
 const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 
-fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
+pub(in crate::terminal) fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !done() {
         assert!(Instant::now() < deadline, "timed out waiting for {what}");
@@ -23,7 +22,7 @@ fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
     }
 }
 
-fn spawn(program: &str, args: &[&str]) -> (Pty, super::PtyEvents) {
+pub(in crate::terminal) fn spawn(program: &str, args: &[&str]) -> (Pty, super::PtyEvents) {
     Pty::spawn_program(SIZE, &SpawnOptions::default(), program, args).expect("spawn")
 }
 
@@ -61,36 +60,58 @@ fn terminal_queries_are_answered_without_the_ui() {
 }
 
 #[test]
-fn a_color_reply_from_the_ui_comes_before_a_cursor_reply_asked_after_it() {
-    // Programs ask for the background (OSC 11) and then the cursor position, and take the cursor
-    // reply arriving first as "no color support"; the color reply then landed at the prompt.
-    let script = r#"stty raw -echo; printf '\033]11;?\007\033[6n'; r=$(dd bs=1 count=30 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033\007' EB; sleep 5"#;
+fn a_reply_the_ui_gives_comes_before_a_cursor_reply_asked_after_it() {
+    // A program reads the clipboard (OSC 52, which the UI answers) and then asks for the cursor
+    // position; the cursor reply must not overtake the clipboard's, or the program takes it for
+    // the answer to the first and the clipboard reply, landing after, is typed at the prompt. The
+    // reply is `ESC ] 52 ; c ; aGk= ESC \` (13 bytes) and `ESC [ 1 ; 1 R` (6).
+    let script = r#"stty raw -echo; printf '\033]52;c;?\033\\\033[6n'; r=$(dd bs=1 count=19 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
     let (pty, events) = spawn("/bin/sh", &["-c", script]);
     let deadline = Instant::now() + Duration::from_secs(10);
     let (format, reply) = loop {
-        assert!(Instant::now() < deadline, "timed out waiting for the color request");
+        assert!(Instant::now() < deadline, "timed out waiting for the clipboard request");
         match events.try_recv() {
-            Some(PtyEvent::ColorRequest(257, format, reply)) => break (format, reply),
+            Some(PtyEvent::ClipboardLoad(format, reply)) => break (format, reply),
             Some(_) => {}
             None => std::thread::sleep(Duration::from_millis(10)),
         }
     };
     // A busy UI: the cursor reply is long done on the PTY thread by now.
     std::thread::sleep(Duration::from_millis(200));
-    reply.send(format(Rgb { r: 1, g: 2, b: 3 }).into_bytes());
-    wait_until("both replies", || pty.screen_text().contains("E]11;rgb:0101/0202/0303BE[1;1R"));
+    reply.send(format("hi").into_bytes());
+    wait_until("both replies", || pty.screen_text().contains(r"E]52;c;aGk=E\E[1;1R"));
+}
+
+#[test]
+fn a_cursor_reply_asked_before_a_clipboard_read_in_the_same_read_comes_first() {
+    // Both sequences arrive in one read of the master. The cursor reply is `ESC [ 1 ; 1 R` (6
+    // bytes), the clipboard's `ESC ] 52 ; c ; aGk= ESC \` (13).
+    let script = r#"stty raw -echo; printf '\033[6n\033]52;c;?\033\\'; r=$(dd bs=1 count=19 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let (format, reply) = loop {
+        assert!(Instant::now() < deadline, "timed out waiting for the clipboard request");
+        match events.try_recv() {
+            Some(PtyEvent::ClipboardLoad(format, reply)) => break (format, reply),
+            Some(_) => {}
+            None => std::thread::sleep(Duration::from_millis(10)),
+        }
+    };
+    std::thread::sleep(Duration::from_millis(200));
+    reply.send(format("hi").into_bytes());
+    wait_until("both replies", || pty.screen_text().contains(r"E[1;1RE]52;c;aGk=E\"));
 }
 
 #[test]
 fn a_query_the_ui_drops_lets_the_replies_behind_it_go() {
-    let script = r#"stty raw -echo; printf '\033]11;?\007\033[6n'; r=$(dd bs=1 count=6 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    let script = r#"stty raw -echo; printf '\033]52;c;?\033\\\033[6n'; r=$(dd bs=1 count=6 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
     let (pty, events) = spawn("/bin/sh", &["-c", script]);
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        assert!(Instant::now() < deadline, "timed out waiting for the color request");
+        assert!(Instant::now() < deadline, "timed out waiting for the clipboard request");
         match events.try_recv() {
             // Dropped unanswered, as when the view is gone.
-            Some(PtyEvent::ColorRequest(..)) => break,
+            Some(PtyEvent::ClipboardLoad(..)) => break,
             Some(_) => {}
             None => std::thread::sleep(Duration::from_millis(10)),
         }
@@ -136,7 +157,7 @@ fn the_scrollback_source_works_from_another_thread() {
     assert_eq!(text.as_deref(), Some("one\ntwo"));
 }
 
-/// UI wakeups for streaming output: alacritty's wakeups (each one an event in
+/// UI wakeups for streaming output: the engine's wakeups (each one an event in
 /// the queue before coalescing) against the events delivered now, with a UI
 /// that looks every 16 ms. Run with `--ignored --nocapture`.
 #[test]
@@ -192,7 +213,7 @@ fn a_project_env_cannot_redirect_the_hooks() {
 }
 
 /// Everything `events` has queued right now, in order.
-fn drain(events: &super::PtyEvents) -> Vec<PtyEvent> {
+pub(in crate::terminal) fn drain(events: &super::PtyEvents) -> Vec<PtyEvent> {
     std::iter::from_fn(|| events.try_recv()).collect()
 }
 
@@ -293,28 +314,6 @@ fn prompt_marks_follow_their_lines_into_the_history() {
 }
 
 #[test]
-fn inline_images_land_at_the_cursor_and_decode_off_the_thread() {
-    // A 2×1 RGB picture by kitty's protocol (six zero bytes), then a one-column Sixel on the next
-    // row: a placeholder cell each in the grid, the pixels in the store.
-    let script = "printf '\\033_Ga=T,f=24,s=2,v=1,i=7,q=2;AAAAAAAA\\033\\\\'; printf '\\n\\033Pq#1;2;100;0;0~\\033\\\\'; printf 'done'; sleep 5";
-    let (pty, _events) = spawn("/bin/sh", &["-c", script]);
-    wait_until("the output", || pty.screen_text().contains("done"));
-    let screen = pty.screen_text();
-    let placeholders = screen.chars().filter(|c| *c == super::images::PLACEHOLDER).count();
-    assert_eq!(placeholders, 2, "{screen}");
-    assert_eq!(screen.lines().nth(2).map(str::trim), Some("done"), "under the Sixel:\n{screen}");
-    wait_until("the decode", || pty.images().get(7).is_some());
-    let mut store = pty.images();
-    assert_eq!(store.dimensions(7), Some((2, 1)));
-    assert_eq!(store.get(7).map(|image| image.rgba.len()), Some(8));
-    assert_eq!(store.len(), 2, "the Sixel is decoded in place");
-    drop(store);
-    // Placeholders aren't text.
-    pty.select_all();
-    assert!(!pty.selection_text().unwrap_or_default().contains(super::images::PLACEHOLDER));
-}
-
-#[test]
 fn notifications_and_progress_are_reported() {
     let script = "printf '\\033]9;Build finished\\a'; printf '\\033]777;notify;Deploy;done in 3m\\033\\\\'; \
                   printf '\\033]99;i=1:d=0;Hel\\a\\033]99;i=1:d=0;lo\\a\\033]99;i=1:p=body;World\\a'; \
@@ -337,23 +336,38 @@ fn notifications_and_progress_are_reported() {
     assert_eq!(pty.screen_text().trim_end(), "sent", "none of it shows on the screen");
 }
 
+/// How many bytes the reply to `OSC 7501 ; ?` and the primary device attributes make, and the
+/// attributes as the test prints them (ESC as `E`): what the engine can do (sixel, selective
+/// erase, color, the clipboard).
+fn da1() -> (usize, &'static str) {
+    (51, "E[?65;1;4;6;9;15;16;17;18;21;22;28;29;52c")
+}
+
 #[test]
 fn the_program_status_reply_is_written_before_the_device_attributes_reply() {
     // A program asks `OSC 7501 ; ?` and sends `CSI c` right after it, and takes the device
     // attributes reply arriving first as "the protocol is not supported". The reply to the query
-    // is written by the PTY filter, before alacritty parses the `CSI c` that follows. Read back
+    // is written by the host before it writes the engine's reply to the `CSI c` that follows. Read back
     // with ESC shown as `E`: the 10 bytes of the first, then the 5 of the second.
-    let script = r#"stty raw -echo; printf '\033]7501;?\033\\\033[c'; r=$(dd bs=1 count=15 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    let (read, device_attributes) = da1();
+    let script = format!(
+        r#"stty raw -echo; printf '\033]7501;?\033\\\033[c'; r=$(dd bs=1 count={read} 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#
+    );
     // Nobody reads `events`: the replies come from the PTY thread alone.
-    let (pty, _events) = spawn("/bin/sh", &["-c", script]);
-    wait_until("both replies, the status one first", || pty.screen_text().contains(r"E]7501;?E\E[?6c"));
+    let (pty, _events) = spawn("/bin/sh", &["-c", &script]);
+    wait_until("both replies, the status one first", || {
+        pty.screen_text().contains(&format!(r"E]7501;?E\{device_attributes}"))
+    });
 }
 
 #[test]
 fn the_program_status_reply_comes_first_whichever_way_the_query_ends() {
-    let script = r#"stty raw -echo; printf '\033]7501;?\007\033[c'; r=$(dd bs=1 count=15 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
-    let (pty, _events) = spawn("/bin/sh", &["-c", script]);
-    wait_until("both replies", || pty.screen_text().contains(r"E]7501;?E\E[?6c"));
+    let (read, device_attributes) = da1();
+    let script = format!(
+        r#"stty raw -echo; printf '\033]7501;?\007\033[c'; r=$(dd bs=1 count={read} 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#
+    );
+    let (pty, _events) = spawn("/bin/sh", &["-c", &script]);
+    wait_until("both replies", || pty.screen_text().contains(&format!(r"E]7501;?E\{device_attributes}")));
 }
 
 /// The state, kind and message of what programs report, as the UI would read it.

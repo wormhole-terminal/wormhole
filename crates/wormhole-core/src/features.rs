@@ -95,7 +95,8 @@ pub fn dev_build() -> bool {
 /// Whether `flag` is on, from the `feature_flags` map of `config.json` and whether this is a dev
 /// build. A dev build reads the map and a flag with no entry there defaults **on**, so a dev
 /// build behaves as it always has and a person must switch a flag off to see what a release user
-/// gets. A release build ignores the map and uses the flag's release default.
+/// gets. A release build ignores the map
+/// and uses the flag's release default.
 pub fn enabled_in(flag: FeatureFlag, flags: &BTreeMap<String, bool>, dev: bool) -> bool {
     if dev { flags.get(flag.key()).copied().unwrap_or(true) } else { flag.released() }
 }
@@ -151,6 +152,16 @@ mod tests {
             let same = FeatureFlag::ALL.iter().filter(|other| other.key() == flag.key()).count();
             assert_eq!(same, 1, "{flag:?}");
         }
+    }
+
+    #[test]
+    fn a_retired_flags_key_in_config_json_changes_nothing() {
+        // The own engine was a flag until it became the only engine; a config.json from then may
+        // still carry its key.
+        let old = BTreeMap::from([("own_engine".to_string(), false), ("project_folders".to_string(), false)]);
+        assert_eq!(FeatureFlag::from_key("own_engine"), None);
+        assert!(!enabled_in(FeatureFlag::ProjectFolders, &old, true));
+        assert!(enabled_in(FeatureFlag::SidebarFilter, &old, true));
     }
 
     #[test]

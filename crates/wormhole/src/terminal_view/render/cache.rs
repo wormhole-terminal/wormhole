@@ -6,15 +6,16 @@
 //! "changes" but all except the new ones were built a frame ago, one line up.
 //! Only rows with new content are built (and shaped) again.
 
-use wormhole_core::alacritty_terminal::term::cell::Cell;
-use wormhole_core::alacritty_terminal::vte::ansi::Color;
 use wormhole_core::terminal::ScreenSnapshot;
+use wormhole_core::terminal::types::{Cell, Color, RowExtras};
 
 use super::rows::Marks;
 
 struct Entry<T> {
-    /// What the row was built from: compared before reusing it elsewhere.
+    /// What the row was built from: compared before reusing it elsewhere. (A row without extras,
+    /// nearly all of them, keeps an empty `RowExtras`, which owns no memory.)
     cells: Vec<Cell>,
+    extras: RowExtras,
     marks: Marks,
     hash: u64,
     value: T,
@@ -52,7 +53,7 @@ impl<K: PartialEq, T> RowCache<K, T> {
         key: K,
         snapshot: &ScreenSnapshot,
         found: &[Vec<(usize, usize, bool)>],
-        mut build: impl FnMut(&[Cell], &Marks) -> T,
+        mut build: impl FnMut(&[Cell], &RowExtras, &Marks) -> T,
     ) -> SyncStats {
         if self.key.as_ref() != Some(&key) {
             self.rows.clear();
@@ -81,11 +82,13 @@ impl<K: PartialEq, T> RowCache<K, T> {
             }
         }
         for row in stale {
-            let cells = rows[row].cells();
+            let (cells, extras) = (rows[row].cells(), rows[row].extras());
             let marks = marks(row);
-            let hash = row_hash(cells, &marks);
-            let reusable =
-                self.pool.iter().position(|e| e.hash == hash && e.marks == marks && e.cells == cells);
+            let hash = row_hash(cells, extras, &marks);
+            let reusable = self
+                .pool
+                .iter()
+                .position(|e| e.hash == hash && e.marks == marks && e.cells == cells && e.extras == *extras);
             self.rows[row] = Some(match reusable {
                 Some(index) => {
                     stats.moved += 1;
@@ -93,8 +96,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
                 }
                 None => {
                     stats.built += 1;
-                    let value = build(cells, &marks);
-                    Entry { cells: cells.to_vec(), marks, hash, value }
+                    let value = build(cells, extras, &marks);
+                    Entry { cells: cells.to_vec(), extras: extras.clone(), marks, hash, value }
                 }
             });
         }
@@ -115,18 +118,26 @@ impl<K: PartialEq, T> RowCache<K, T> {
 
 /// A quick fingerprint of a row (FxHash-style mixing): a full hash per changed
 /// row would cost ten times more, and every hit is confirmed by comparing cells.
-fn row_hash(cells: &[Cell], marks: &Marks) -> u64 {
+fn row_hash(cells: &[Cell], extras: &RowExtras, marks: &Marks) -> u64 {
     let mut hash = 0u64;
     let mut mix = |value: u64| hash = (hash.rotate_left(5) ^ value).wrapping_mul(0x517c_c1b7_2722_0a95);
     let color = |color: Color| match color {
         Color::Named(named) => named as u64,
         Color::Indexed(index) => 0x1000 | u64::from(index),
-        Color::Spec(rgb) => 0x0100_0000 | u64::from(rgb.r) << 16 | u64::from(rgb.g) << 8 | u64::from(rgb.b),
+        Color::Rgb(rgb) => 0x0100_0000 | u64::from(rgb.r) << 16 | u64::from(rgb.g) << 8 | u64::from(rgb.b),
     };
     for cell in cells {
         mix(cell.c as u64 | u64::from(cell.flags.bits()) << 32);
         mix(color(cell.fg) << 32 | color(cell.bg));
-        for c in cell.zerowidth().unwrap_or_default() {
+    }
+    // Hyperlinks are left out: they change nothing that is drawn, and a hit is confirmed by
+    // comparing the rows whole anyway.
+    for (col, extra) in extras.cells() {
+        mix(col as u64);
+        if let Some(c) = extra.underline_color {
+            mix(color(c));
+        }
+        for c in extra.zerowidth {
             mix(*c as u64);
         }
     }
@@ -141,29 +152,25 @@ fn row_hash(cells: &[Cell], marks: &Marks) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::alacritty_terminal::event::VoidListener;
-    use wormhole_core::alacritty_terminal::index::{Column, Line, Point, Side};
-    use wormhole_core::alacritty_terminal::selection::{Selection, SelectionType};
-    use wormhole_core::alacritty_terminal::term::{Config, Term};
-    use wormhole_core::alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-    use wormhole_core::terminal::{GridSize, ScreenSnapshot};
+    use wormhole_core::terminal::ScreenSnapshot;
+    use wormhole_core::terminal::testing::TestTerm;
+    use wormhole_core::terminal::types::{Column, Line, Point, SelectionType, Side};
 
     use super::{RowCache, SyncStats};
 
-    fn term(cols: u16, rows: u16) -> Term<VoidListener> {
-        let size = GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 };
-        Term::new(Config { scrolling_history: 100, ..Config::default() }, &size, VoidListener)
+    fn term(cols: u16, rows: u16) -> TestTerm {
+        TestTerm::new(cols, rows, 100)
     }
 
-    fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(term, bytes);
+    fn feed(term: &mut TestTerm, bytes: &[u8]) {
+        term.feed(bytes);
     }
 
     /// Syncs a cache of row texts and returns what it did.
-    fn sync(cache: &mut RowCache<u32, String>, term: &mut Term<VoidListener>, key: u32) -> SyncStats {
+    fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, key: u32) -> SyncStats {
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(term, 0);
-        let stats = cache.sync(key, &snapshot, &[], |cells, _| cells.iter().map(|c| c.c).collect());
+        term.snapshot(&mut snapshot, 0);
+        let stats = cache.sync(key, &snapshot, &[], |cells, _, _| cells.iter().map(|c| c.c).collect());
         for (row, text) in cache.rows() {
             let expected: String = snapshot.rows()[row].cells().iter().map(|c| c.c).collect();
             assert_eq!(*text, expected, "row {row} shows stale content");
@@ -202,11 +209,10 @@ mod tests {
         let mut cache = RowCache::default();
         feed(&mut term, b"a\r\nb\r\nc\r\nd");
         sync(&mut cache, &mut term, 0);
-        let mut selection = Selection::new(SelectionType::Simple, Point::new(Line(1), Column(0)), Side::Left);
-        selection.update(Point::new(Line(1), Column(3)), Side::Right);
-        term.selection = Some(selection);
+        term.start_selection(SelectionType::Simple, Point::new(Line(1), Column(0)), Side::Left);
+        term.update_selection(Point::new(Line(1), Column(3)), Side::Right);
         assert_eq!(sync(&mut cache, &mut term, 0).built, 1);
-        term.selection = None;
+        term.clear_selection();
         assert_eq!(sync(&mut cache, &mut term, 0).built, 1);
     }
 
@@ -216,10 +222,10 @@ mod tests {
         let mut cache: RowCache<u32, String> = RowCache::default();
         feed(&mut term, b"a\r\nb\r\nc\r\nd");
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         let mut sync = |found: &[Vec<(usize, usize, bool)>]| {
-            snapshot.update(&mut term, 0);
-            cache.sync(0, &snapshot, found, |cells, _| cells.iter().map(|c| c.c).collect()).built
+            term.snapshot(&mut snapshot, 0);
+            cache.sync(0, &snapshot, found, |cells, _, _| cells.iter().map(|c| c.c).collect()).built
         };
         sync(&[]);
         assert_eq!(sync(&[vec![], vec![(0, 0, true)]]), 1, "the row with a match");

@@ -2,23 +2,19 @@
 //!
 //! The PTY thread parses output while it holds the same lock, so the UI should
 //! hold it only to copy cells, never while it shapes or paints. The copy is
-//! incremental: alacritty records which lines changed since the last snapshot
+//! incremental: the engine records which lines changed since the last snapshot
 //! (its "damage"), and only those rows are copied again. Each row says whether
 //! it changed, so the UI can keep everything it built for the others.
 
 use std::ops::Range;
 
-use alacritty_terminal::event::EventListener;
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::selection::SelectionRange;
-use alacritty_terminal::term::cell::{Cell, Flags};
-use alacritty_terminal::term::color::Colors;
-use alacritty_terminal::term::{Term, TermDamage, TermMode};
-use alacritty_terminal::vte::ansi::CursorShape;
+use wormhole_vt::types::{
+    Cell, Colors, CursorShape, ImagePlacement, Line, Point, RowExtras, SelectionRange, TermMode,
+};
 
 use super::blocks::BlockState;
 use super::marks::{self, RowMark};
+use super::screen::Screen;
 
 /// How far above the viewport the block its top row continues is looked for: a run of unmarked
 /// rows this long (blank lines, or lines a program printed as links) ends the block's mark.
@@ -28,6 +24,8 @@ const BLOCK_ABOVE_MAX: i32 = 1024;
 #[derive(Default)]
 pub struct SnapshotRow {
     cells: Vec<Cell>,
+    /// What the cells carry beside them: zero-width characters, underline colors, hyperlinks.
+    extras: RowExtras,
     changed: bool,
     /// What the row carries of a command block, as of its last copy.
     mark: Option<RowMark>,
@@ -36,6 +34,11 @@ pub struct SnapshotRow {
 impl SnapshotRow {
     pub fn cells(&self) -> &[Cell] {
         &self.cells
+    }
+
+    /// What the cells carry beside them (empty for almost every row).
+    pub fn extras(&self) -> &RowExtras {
+        &self.extras
     }
 
     /// Whether the row was copied anew in the last snapshot (its content may
@@ -85,6 +88,9 @@ pub struct ScreenSnapshot {
     pub colors: Colors,
     /// The command blocks in view, top to bottom.
     spans: Vec<BlockSpan>,
+    /// The pictures placed in the grid that touch the view, in drawing order (kitty's Unicode
+    /// placeholders are cells, not placements).
+    placements: Vec<ImagePlacement>,
     /// A block mark was seen at some point: the shell has integration, so blocks are looked for.
     saw_marks: bool,
 }
@@ -103,6 +109,7 @@ impl Default for ScreenSnapshot {
             history_size: 0,
             colors: Colors::default(),
             spans: Vec::new(),
+            placements: Vec::new(),
             saw_marks: false,
         }
     }
@@ -121,6 +128,13 @@ impl ScreenSnapshot {
     /// full-screen program has the screen).
     pub fn block_spans(&self) -> &[BlockSpan] {
         &self.spans
+    }
+
+    /// The pictures placed in the grid that touch the view, lowest `z` first: draw them in this
+    /// order. Their lines are grid lines; add [`display_offset`](Self::display_offset) for the
+    /// viewport row.
+    pub fn placements(&self) -> &[ImagePlacement] {
+        &self.placements
     }
 
     /// The block viewport `row` belongs to.
@@ -160,27 +174,24 @@ impl ScreenSnapshot {
         (first <= last).then_some((first, last))
     }
 
-    /// Bring the copy up to date with `term`. `above` is how many rows above
-    /// the viewport to copy as well. This reads and resets the terminal's
+    /// Bring the copy up to date with the screen. `above` is how many rows above
+    /// the viewport to copy as well. This reads and resets the screen's
     /// damage, so only one snapshot may follow a terminal (`Pty::snapshot`).
-    pub fn update<T: EventListener>(&mut self, term: &mut Term<T>, above: usize) {
-        let (cols, lines) = (term.columns(), term.screen_lines());
-        let display_offset = term.grid().display_offset();
+    pub(super) fn update(&mut self, screen: &mut Screen, above: usize) {
+        let (cols, lines) = (screen.columns(), screen.screen_lines());
+        // A synchronized update shows nothing until it ends; the damage waits in the screen.
+        if screen.held_back() && cols == self.cols && lines == self.rows.len() {
+            for row in &mut self.rows {
+                row.changed = false;
+            }
+            return;
+        }
+        let display_offset = screen.display_offset();
         // Clearing the history moves the view without damaging any line.
         let mut full = cols != self.cols || lines != self.rows.len() || display_offset != self.display_offset;
         self.damaged.clear();
         self.damaged.resize(lines, false);
-        match term.damage() {
-            TermDamage::Full => full = true,
-            TermDamage::Partial(damage) => {
-                for line in damage {
-                    if let Some(row) = self.damaged.get_mut(line.line) {
-                        *row = true;
-                    }
-                }
-            }
-        }
-        term.reset_damage();
+        full |= screen.take_damage(&mut self.damaged);
 
         self.cols = cols;
         self.display_offset = display_offset;
@@ -188,64 +199,58 @@ impl ScreenSnapshot {
         for (row, snapshot) in self.rows.iter_mut().enumerate() {
             snapshot.changed = full || self.damaged[row];
             if snapshot.changed {
-                let grid_row = &term.grid()[Line(row as i32 - display_offset as i32)];
-                snapshot.cells.clear();
-                snapshot.cells.extend((0..cols).map(|col| grid_row[Column(col)].clone()));
-                snapshot.mark = marks::row_mark(&snapshot.cells);
+                let line = Line(row as i32 - display_offset as i32);
+                snapshot.mark = screen.copy_row(line, &mut snapshot.cells, Some(&mut snapshot.extras));
                 self.saw_marks |= snapshot.mark.is_some();
             }
         }
-        self.resolve_blocks(term);
+        self.resolve_blocks(screen);
 
         self.above.truncate(above);
-        let topmost = term.topmost_line().0;
+        let topmost = screen.topmost_line().0;
         let mut kept = 0;
         for k in 1..=above as i32 {
             let line = -(display_offset as i32) - k;
             if line < topmost {
                 break;
             }
-            let grid_row = &term.grid()[Line(line)];
             if self.above.len() <= kept {
                 self.above.push(Vec::with_capacity(cols));
             }
-            let copy = &mut self.above[kept];
-            copy.clear();
-            copy.extend((0..cols).map(|col| grid_row[Column(col)].clone()));
+            screen.copy_row(Line(line), &mut self.above[kept], None);
             kept += 1;
         }
         self.above.truncate(kept);
 
-        let content = term.renderable_content();
-        self.mode = content.mode;
-        self.selection = content.selection;
-        self.colors = *content.colors;
-        let cursor = content.cursor;
-        let blinking = term.cursor_style().blinking;
+        self.mode = screen.mode();
+        self.selection = screen.selection_range();
+        self.colors = screen.colors();
+        let cursor = screen.cursor();
         self.cursor = cursor_row(cursor.point, display_offset, lines)
             .filter(|_| cursor.shape != CursorShape::Hidden)
             .map(|row| SnapshotCursor {
                 row,
                 col: cursor.point.column.0,
                 shape: cursor.shape,
-                wide: term.grid()[cursor.point].flags.contains(Flags::WIDE_CHAR),
-                blinking,
+                wide: cursor.wide,
+                blinking: cursor.blinking,
             });
-        self.history_size = term.grid().history_size();
+        self.history_size = screen.history_size();
+        screen.placements(&mut self.placements);
     }
 
     /// Which block each row is in, from the rows' own marks: a row without one continues the
     /// block above it (a blank line), the top row the nearest marked line above the viewport. On
     /// the live screen the blank rows under the last block are nobody's. States are filled in
     /// later (`set_block_states`).
-    fn resolve_blocks<T: EventListener>(&mut self, term: &Term<T>) {
+    fn resolve_blocks(&mut self, screen: &Screen) {
         self.spans.clear();
-        if !self.saw_marks || term.mode().contains(TermMode::ALT_SCREEN) {
+        if !self.saw_marks || screen.mode().contains(TermMode::ALT_SCREEN) {
             return;
         }
         // Also when the top row is marked: a prompt row whose block began above (a secondary
         // prompt) doesn't start it.
-        let mut current = block_above(term, Line(-(self.display_offset as i32)));
+        let mut current = block_above(screen, Line(-(self.display_offset as i32)));
         let last_marked = self.rows.iter().rposition(|row| row.mark.is_some());
         let live_screen = self.display_offset == 0;
         for (row, snapshot) in self.rows.iter().enumerate() {
@@ -269,11 +274,11 @@ impl ScreenSnapshot {
 }
 
 /// The block the line above `top` belongs to: the nearest marked line above, within reach.
-fn block_above<T: EventListener>(term: &Term<T>, top: Line) -> Option<u64> {
-    let lowest = term.topmost_line().max(Line(top.0 - BLOCK_ABOVE_MAX));
+fn block_above(screen: &Screen, top: Line) -> Option<u64> {
+    let lowest = screen.topmost_line().max(Line(top.0 - BLOCK_ABOVE_MAX));
     let mut line = top - 1;
     while line >= lowest {
-        if let Some(mark) = marks::mark_at(term, line) {
+        if let Some(mark) = marks::mark_at(screen, line) {
             return Some(mark.id);
         }
         line -= 1;
@@ -289,23 +294,17 @@ fn cursor_row(point: Point, display_offset: usize, lines: usize) -> Option<usize
 
 #[cfg(test)]
 mod tests {
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::grid::Scroll;
-    use alacritty_terminal::index::{Column, Line, Point, Side};
-    use alacritty_terminal::selection::{Selection, SelectionType};
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use wormhole_vt::types::{Column, Line, Point, Scroll, SelectionType, Side};
 
     use super::ScreenSnapshot;
-    use crate::terminal::GridSize;
+    use crate::terminal::testing::TestTerm;
 
-    fn term(cols: u16, rows: u16) -> Term<VoidListener> {
-        let size = GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 };
-        Term::new(Config { scrolling_history: 100, ..Config::default() }, &size, VoidListener)
+    fn term(cols: u16, rows: u16) -> TestTerm {
+        TestTerm::new(cols, rows, 100)
     }
 
-    fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(term, bytes);
+    fn feed(term: &mut TestTerm, bytes: &[u8]) {
+        term.feed(bytes);
     }
 
     fn row_text(snapshot: &ScreenSnapshot, row: usize) -> String {
@@ -321,16 +320,16 @@ mod tests {
         let mut term = term(10, 4);
         feed(&mut term, b"one\r\ntwo\r\n$ ");
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(changed(&snapshot), [0, 1, 2, 3], "the first copy is complete");
         assert_eq!(row_text(&snapshot, 1), "two");
 
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         // Nothing printed: at most the cursor's row is reported.
         assert!(changed(&snapshot).iter().all(|&row| row == 2));
 
         feed(&mut term, b"ls");
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(changed(&snapshot), [2]);
         assert_eq!(row_text(&snapshot, 2), "$ ls");
         assert_eq!(row_text(&snapshot, 0), "one", "untouched rows keep their copy");
@@ -341,20 +340,20 @@ mod tests {
         let mut term = term(10, 3);
         let mut snapshot = ScreenSnapshot::default();
         feed(&mut term, b"1\r\n2\r\n3\r\n4\r\n5");
-        snapshot.update(&mut term, 2);
+        term.snapshot(&mut snapshot, 2);
         assert_eq!(row_text(&snapshot, 0), "3");
         assert!(snapshot.has_content_above());
         let above: Vec<char> = snapshot.above().iter().map(|row| row[0].c).collect();
         assert_eq!(above, ['2', '1'], "nearest first");
 
         term.scroll_display(Scroll::Delta(1));
-        snapshot.update(&mut term, 2);
+        term.snapshot(&mut snapshot, 2);
         assert_eq!(changed(&snapshot), [0, 1, 2]);
         assert_eq!(row_text(&snapshot, 0), "2");
         assert_eq!(snapshot.display_offset, 1);
 
-        term.grid_mut().clear_history();
-        snapshot.update(&mut term, 2);
+        term.clear_history();
+        term.snapshot(&mut snapshot, 2);
         assert_eq!(changed(&snapshot), [0, 1, 2], "the view moved without damage");
         assert_eq!(row_text(&snapshot, 0), "3");
         assert!(!snapshot.has_content_above());
@@ -365,11 +364,10 @@ mod tests {
     fn selection_spans_per_row() {
         let mut term = term(10, 3);
         feed(&mut term, b"aaaa\r\nbbbb\r\ncccc");
-        let mut selection = Selection::new(SelectionType::Simple, Point::new(Line(0), Column(2)), Side::Left);
-        selection.update(Point::new(Line(1), Column(1)), Side::Right);
-        term.selection = Some(selection);
+        term.start_selection(SelectionType::Simple, Point::new(Line(0), Column(2)), Side::Left);
+        term.update_selection(Point::new(Line(1), Column(1)), Side::Right);
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(snapshot.selected_columns(0), Some((2, 9)));
         assert_eq!(snapshot.selected_columns(1), Some((0, 1)));
         assert_eq!(snapshot.selected_columns(2), None);
@@ -385,7 +383,7 @@ mod tests {
         use crate::terminal::blocks::tests::{SESSION, shown};
         let (mut term, _) = shown(10, SESSION);
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         // Rows: `$ ls` / a.rs / b.rs / `$ make` / error / blank / `$ ` / blank …: the blank row
         // after `error` is the block's (a blank line it printed), the rows under the prompt nobody's.
         assert_eq!(spans(&snapshot), [(1, 0..3, true), (2, 3..6, true), (3, 6..7, true)]);
@@ -393,7 +391,7 @@ mod tests {
         assert_eq!(snapshot.block_at_row(8), None);
         // A full-screen program: no blocks.
         feed(&mut term, b"\x1b[?1049hvim");
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert!(snapshot.block_spans().is_empty());
     }
 
@@ -403,16 +401,16 @@ mod tests {
         let (mut term, _) = shown(3, SESSION);
         let mut snapshot = ScreenSnapshot::default();
         // The live screen shows `error`, blank, `$ `: the first row is inside block 2.
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(spans(&snapshot), [(2, 0..2, false), (3, 2..3, true)]);
         // Scrolled up by one: `$ make` is the top row and starts its block in view.
         term.scroll_display(Scroll::Delta(1));
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(spans(&snapshot), [(2, 0..3, true)]);
         // Scrolled to the top: `$ ls` and its output.
         term.scroll_display(Scroll::Bottom);
         term.scroll_display(Scroll::Delta(4));
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(spans(&snapshot), [(1, 0..3, true)]);
     }
 
@@ -421,7 +419,7 @@ mod tests {
         let mut term = term(10, 3);
         feed(&mut term, b"plain\r\noutput");
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert!(!snapshot.saw_marks && snapshot.block_spans().is_empty());
     }
 
@@ -430,12 +428,72 @@ mod tests {
         let mut term = term(10, 3);
         feed(&mut term, "1\r\n2\r\n3\r\n日".as_bytes());
         let mut snapshot = ScreenSnapshot::default();
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         let cursor = snapshot.cursor.expect("cursor");
         assert_eq!((cursor.row, cursor.col, cursor.wide), (2, 2, false));
         // Scrolled up far enough, the cursor's row leaves the screen.
         term.scroll_display(Scroll::Delta(1));
-        snapshot.update(&mut term, 0);
+        term.snapshot(&mut snapshot, 0);
         assert_eq!(snapshot.cursor, None);
+    }
+
+    /// What a full copy of a 200×60 screen of colored text costs (every row damaged: scrolling the
+    /// view does it). Run with `cargo test --release -p wormhole-core full_copy -- --ignored
+    /// --nocapture`.
+    #[test]
+    #[ignore = "measurement; run with --release --ignored --nocapture"]
+    fn full_copy_cost() {
+        let text: Vec<u8> = (0..120)
+            .flat_map(|i| {
+                format!(
+                    "\x1b[1;34m●\x1b[0m \x1b[38;2;{};90;200mline {i}\x1b[0m lorem ipsum {}\r\n",
+                    i % 256,
+                    "x".repeat(150)
+                )
+                .into_bytes()
+            })
+            .collect();
+        // Every cell its own two true colors (the `wormhole` demo): nothing repeats.
+        let blocks: Vec<u8> = (0..120usize)
+            .flat_map(|row| {
+                let mut line = String::new();
+                for col in 0..200usize {
+                    let (r, g, b) = ((row * 7 + col) % 256, (col * 13) % 256, (row * 29 + col * 3) % 256);
+                    line.push_str(&format!("\x1b[38;2;{r};{g};{b};48;2;{b};{r};{g}m▀"));
+                }
+                line.push_str("\x1b[0m\r\n");
+                line.into_bytes()
+            })
+            .collect();
+        // Output of a shell with integration: every cell carries the output mark's link.
+        let marked: Vec<u8> = (0..120)
+            .flat_map(|i| {
+                format!(
+                    "\x1b]8;id=wormhole-prompt-{};wormhole:output\x07line {i} lorem ipsum {}\x1b]8;;\x07\r\n",
+                    i / 10 + 1,
+                    "x".repeat(150)
+                )
+                .into_bytes()
+            })
+            .collect();
+        for (name, bytes) in
+            [("colored text", text), ("true color blocks", blocks), ("marked output", marked)]
+        {
+            let mut term = term(200, 60);
+            feed(&mut term, &bytes);
+            let mut snapshot = ScreenSnapshot::default();
+            term.snapshot(&mut snapshot, 3);
+            let rounds = 20_000;
+            let start = std::time::Instant::now();
+            for round in 0..rounds {
+                term.scroll_display(Scroll::Delta(if round % 2 == 0 { 1 } else { -1 }));
+                term.snapshot(&mut snapshot, 3);
+            }
+            let per_copy = start.elapsed() / rounds;
+            eprintln!(
+                "full copy of 200x60, {name}: {per_copy:?} ({:.2} ns per cell)",
+                per_copy.as_nanos() as f64 / 12_000.0
+            );
+        }
     }
 }

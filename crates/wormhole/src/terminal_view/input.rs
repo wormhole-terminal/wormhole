@@ -257,6 +257,9 @@ impl TerminalView {
         modifiers: Modifiers,
     ) -> bool {
         let mode = self.mode;
+        if self.pty.is_some() && mouse::wants_locator(mode) && !modifiers.shift {
+            return self.report_locator(button, action, position);
+        }
         if self.pty.is_none() || !mouse::wants_mouse(mode) || modifiers.shift {
             return false;
         }
@@ -290,6 +293,37 @@ impl TerminalView {
                 }
                 _ => {}
             }
+        }
+        true
+    }
+
+    /// The pointer for a program that asked for the DEC locator: buttons and movement go to it as
+    /// the locator's events, which it chose (`CSI Pm ' {`), not as mouse reports. Pixels are the
+    /// window's own units, from the text area's corner.
+    fn report_locator(
+        &mut self,
+        button: mouse::MouseButton,
+        action: mouse::MouseAction,
+        position: Point<Pixels>,
+    ) -> bool {
+        use mouse::MouseButton::{Left, Middle, Right};
+        let Some((col, row)) = self.viewport_cell(position) else { return true };
+        let layout = self.layout.get();
+        let at = mouse::LocatorPointer {
+            col,
+            row,
+            x: f32::from(position.x - layout.origin.x).max(0.0) as u32,
+            y: f32::from(position.y - layout.origin.y).max(0.0) as u32,
+        };
+        let change = match (action, button) {
+            (mouse::MouseAction::Motion, _) => None,
+            (mouse::MouseAction::Press, Left | Middle | Right) => Some((button, true)),
+            (mouse::MouseAction::Release, Left | Middle | Right) => Some((button, false)),
+            // The wheel is not a locator button.
+            _ => return true,
+        };
+        if let Some(pty) = &self.pty {
+            pty.locator(change, at);
         }
         true
     }
@@ -504,7 +538,13 @@ mod tests {
     use super::{TerminalCommand, drag_scroll_lines, keystroke_spec, platform_command};
 
     fn layout() -> Layout {
-        Layout { origin: point(px(10.0), px(42.0)), cell: size(px(8.0), px(18.0)), cols: 80, rows: 24 }
+        Layout {
+            origin: point(px(10.0), px(42.0)),
+            cell: size(px(8.0), px(18.0)),
+            cols: 80,
+            rows: 24,
+            frame: (0.0, 0.0),
+        }
     }
 
     #[test]

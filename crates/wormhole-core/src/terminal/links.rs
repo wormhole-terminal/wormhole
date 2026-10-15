@@ -8,13 +8,11 @@
 use std::ops::Range;
 use std::path::PathBuf;
 
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::term::Term;
-use alacritty_terminal::term::cell::Flags;
+use wormhole_vt::types::{Cell, Column, Flags, Line, Point, RowExtras};
 
-use super::pty_filter::percent_decode;
-use super::{marks, process};
+use super::osc::percent_decode;
+use super::process;
+use super::screen::Screen;
 
 /// The most rows one wrapped line is searched over, each way.
 const MAX_WRAPPED_ROWS: usize = 16;
@@ -43,85 +41,106 @@ impl Link {
     }
 }
 
+/// The grid line a search is looking at, copied once for as long as it stays on it.
+struct Rows<'a> {
+    screen: &'a Screen,
+    line: Option<Line>,
+    cells: Vec<Cell>,
+    extras: RowExtras,
+}
+
+impl<'a> Rows<'a> {
+    fn new(screen: &'a Screen) -> Self {
+        Self { screen, line: None, cells: Vec::new(), extras: RowExtras::default() }
+    }
+
+    fn load(&mut self, line: Line) {
+        if self.line != Some(line) {
+            self.screen.copy_row(line, &mut self.cells, Some(&mut self.extras));
+            self.line = Some(line);
+        }
+    }
+}
+
 /// The link at `point`: the program's hyperlink there, else a URL in the text around it.
-pub(super) fn link_at<T>(term: &Term<T>, point: Point) -> Option<Link> {
-    if point.line < term.topmost_line() || point.line > term.bottommost_line() {
+pub(super) fn link_at(screen: &Screen, point: Point) -> Option<Link> {
+    if point.line < screen.topmost_line() || point.line > screen.bottommost_line() {
         return None;
     }
-    if point.column.0 >= term.columns() {
+    if point.column.0 >= screen.columns() {
         return None;
     }
-    hyperlink_at(term, point).or_else(|| url_at(term, point))
+    let mut rows = Rows::new(screen);
+    hyperlink_at(&mut rows, point).or_else(|| url_at(&mut rows, point))
 }
 
 /// The cells around `point` that carry the same OSC 8 hyperlink.
-fn hyperlink_at<T>(term: &Term<T>, point: Point) -> Option<Link> {
-    let grid = term.grid();
-    // The tap's block marks are hyperlinks too (`marks`), but nothing to open: a URL written in
-    // a prompt or printed by a command is still found in its text.
-    let link = grid[point].hyperlink().filter(|link| !marks::is_mark(link.uri()))?;
-    let cols = term.columns();
+fn hyperlink_at(rows: &mut Rows, point: Point) -> Option<Link> {
+    // The shell integration's block marks are hyperlinks to the engine, but nothing to open (and
+    // not among a row's hyperlinks): a URL written in a prompt or printed by a command is still
+    // found in its text.
+    rows.load(point.line);
+    let link = rows.extras.hyperlink(point.column.0).cloned()?;
+    let cols = rows.screen.columns();
     let budget = cols * MAX_WRAPPED_ROWS;
-    let same = |p: Point| grid[p].hyperlink().as_ref() == Some(&link);
+    let same = |rows: &mut Rows, p: Point| {
+        rows.load(p.line);
+        rows.extras.hyperlink(p.column.0) == Some(&link)
+    };
 
     let mut start = point;
     for _ in 0..budget {
-        let Some(prev) = step_back(term, start) else { break };
-        if !same(prev) {
+        let Some(prev) = step_back(rows, start) else { break };
+        if !same(rows, prev) {
             break;
         }
         start = prev;
     }
     let mut end = point;
     for _ in 0..budget {
-        let Some(next) = step_forward(term, end) else { break };
-        if !same(next) {
+        let Some(next) = step_forward(rows, end) else { break };
+        if !same(rows, next) {
             break;
         }
         end = next;
     }
-    let uri = link.uri();
-    (uri.len() <= MAX_URI_LEN).then(|| Link { uri: uri.to_string(), start, end, explicit: true })
+    (link.uri.len() <= MAX_URI_LEN).then(|| Link { uri: link.uri.to_string(), start, end, explicit: true })
 }
 
 /// The cell before `point` on the same wrapped line.
-fn step_back<T>(term: &Term<T>, point: Point) -> Option<Point> {
+fn step_back(rows: &mut Rows, point: Point) -> Option<Point> {
     if point.column.0 > 0 {
         return Some(Point::new(point.line, point.column - 1));
     }
     let above = Line(point.line.0 - 1);
-    let last = term.last_column();
-    let grid = term.grid();
-    (above >= term.topmost_line() && grid[above][last].flags.contains(Flags::WRAPLINE))
-        .then_some(Point::new(above, last))
+    let last = rows.screen.last_column();
+    (above >= rows.screen.topmost_line() && rows.screen.wraps(above)).then_some(Point::new(above, last))
 }
 
 /// The cell after `point` on the same wrapped line.
-fn step_forward<T>(term: &Term<T>, point: Point) -> Option<Point> {
-    let last = term.last_column();
+fn step_forward(rows: &mut Rows, point: Point) -> Option<Point> {
+    let last = rows.screen.last_column();
     if point.column < last {
         return Some(Point::new(point.line, point.column + 1));
     }
-    (point.line < term.bottommost_line() && term.grid()[point.line][last].flags.contains(Flags::WRAPLINE))
+    (point.line < rows.screen.bottommost_line() && rows.screen.wraps(point.line))
         .then_some(Point::new(Line(point.line.0 + 1), Column(0)))
 }
 
 /// A URL written in the text of the wrapped line around `point`.
-fn url_at<T>(term: &Term<T>, point: Point) -> Option<Link> {
-    let grid = term.grid();
-    let last = term.last_column();
-    let wraps = |line: Line| grid[line][last].flags.contains(Flags::WRAPLINE);
+fn url_at(rows: &mut Rows, point: Point) -> Option<Link> {
+    let (top, bottom) = (rows.screen.topmost_line(), rows.screen.bottommost_line());
     let mut first = point.line;
     for _ in 0..MAX_WRAPPED_ROWS {
         let above = Line(first.0 - 1);
-        if above < term.topmost_line() || !wraps(above) {
+        if above < top || !rows.screen.wraps(above) {
             break;
         }
         first = above;
     }
     let mut final_line = point.line;
     for _ in 0..MAX_WRAPPED_ROWS {
-        if final_line >= term.bottommost_line() || !wraps(final_line) {
+        if final_line >= bottom || !rows.screen.wraps(final_line) {
             break;
         }
         final_line = Line(final_line.0 + 1);
@@ -131,8 +150,8 @@ fn url_at<T>(term: &Term<T>, point: Point) -> Option<Link> {
     let mut chars: Vec<(char, Point)> = Vec::new();
     for line in first.0..=final_line.0 {
         let line = Line(line);
-        for col in 0..term.columns() {
-            let cell = &grid[line][Column(col)];
+        rows.load(line);
+        for (col, cell) in rows.cells.iter().enumerate() {
             if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
                 continue;
             }
@@ -250,13 +269,10 @@ impl Openable {
 mod tests {
     use std::path::PathBuf;
 
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::index::{Column, Line, Point};
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use wormhole_vt::types::{Column, Line, Point};
 
     use super::{Openable, find_urls, link_at};
-    use crate::terminal::GridSize;
+    use crate::terminal::testing::TestTerm;
 
     fn urls(text: &str) -> Vec<String> {
         let chars: Vec<char> = text.chars().collect();
@@ -307,13 +323,12 @@ mod tests {
         }
     }
 
-    fn term(cols: u16) -> Term<VoidListener> {
-        let size = GridSize { cols, rows: 4, cell_width: 8.0, cell_height: 16.0 };
-        Term::new(Config::default(), &size, VoidListener)
+    fn term(cols: u16) -> TestTerm {
+        TestTerm::new(cols, 4, 100)
     }
 
-    fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(term, bytes);
+    fn feed(term: &mut TestTerm, bytes: &[u8]) {
+        term.feed(bytes);
     }
 
     fn at(line: i32, col: usize) -> Point {
@@ -324,25 +339,23 @@ mod tests {
     fn a_hyperlink_covers_its_cells_across_a_wrap() {
         let mut term = term(10);
         feed(&mut term, b"ab\x1b]8;;https://example.com\x1b\\0123456789xyz\x1b]8;;\x1b\\ c");
-        let link = link_at(&term, at(1, 1)).expect("the hyperlink");
+        let link = link_at(term.screen(), at(1, 1)).expect("the hyperlink");
         assert_eq!(link.uri, "https://example.com");
         assert!(link.explicit);
         assert_eq!((link.start, link.end), (at(0, 2), at(1, 4)));
         assert_eq!(link.columns_on(Line(0), 10), Some(2..10));
         assert_eq!(link.columns_on(Line(1), 10), Some(0..5));
-        assert_eq!(link_at(&term, at(0, 1)), None, "before the link");
-        assert_eq!(link_at(&term, at(1, 6)), None, "after it");
+        assert_eq!(link_at(term.screen(), at(0, 1)), None, "before the link");
+        assert_eq!(link_at(term.screen(), at(1, 6)), None, "after it");
     }
 
     #[test]
     fn a_prompt_mark_is_no_link_but_a_url_in_the_prompt_is() {
-        let mut term = term(40);
-        feed(
-            &mut term,
-            b"\x1b]8;id=wormhole-prompt-1;wormhole:prompt\x1b\\$ see https://a.io \x1b]8;;\x1b\\",
-        );
-        assert_eq!(link_at(&term, at(0, 0)), None, "the prompt itself");
-        let link = link_at(&term, at(0, 10)).expect("the URL");
+        // The engine keeps the shell's marks on the rows, not as hyperlinks.
+        let mut term = TestTerm::new(40, 4, 100);
+        feed(&mut term, b"\x1b]133;A\x07$ see https://a.io \x1b]133;B\x07");
+        assert_eq!(link_at(term.screen(), at(0, 0)), None, "the prompt itself");
+        let link = link_at(term.screen(), at(0, 10)).expect("the URL");
         assert_eq!((link.uri.as_str(), link.explicit), ("https://a.io", false));
     }
 
@@ -350,12 +363,12 @@ mod tests {
     fn a_url_in_the_text_is_found_across_a_wrap() {
         let mut term = term(12);
         feed(&mut term, b"go https://x.io/abcdef now");
-        let link = link_at(&term, at(1, 2)).expect("the URL");
+        let link = link_at(term.screen(), at(1, 2)).expect("the URL");
         assert_eq!(link.uri, "https://x.io/abcdef");
         assert!(!link.explicit);
         assert_eq!((link.start, link.end), (at(0, 3), at(1, 9)));
-        assert_eq!(link_at(&term, at(0, 0)), None);
-        assert_eq!(link_at(&term, at(3, 0)), None, "an empty row");
-        assert_eq!(link_at(&term, at(9, 0)), None, "off the grid");
+        assert_eq!(link_at(term.screen(), at(0, 0)), None);
+        assert_eq!(link_at(term.screen(), at(3, 0)), None, "an empty row");
+        assert_eq!(link_at(term.screen(), at(9, 0)), None, "off the grid");
     }
 }

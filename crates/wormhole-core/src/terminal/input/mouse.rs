@@ -4,7 +4,7 @@
 //! (`MOUSE_DRAG`) and 1003 (`MOUSE_MOTION`), and the encodings X10 (default),
 //! UTF-8 (1005, `UTF8_MOUSE`) and SGR (1006, `SGR_MOUSE`).
 
-use alacritty_terminal::term::TermMode;
+use wormhole_vt::types::TermMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {
@@ -37,6 +37,25 @@ pub struct MouseInput {
     pub shift: bool,
     pub alt: bool,
     pub control: bool,
+}
+
+/// Where the pointer is for the DEC locator (DECELR): the cell, and the pixel inside the text area.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LocatorPointer {
+    /// 0-based viewport column.
+    pub col: usize,
+    /// 0-based viewport row.
+    pub row: usize,
+    /// 0-based pixels from the text area's left edge.
+    pub x: u32,
+    /// 0-based pixels from the text area's top edge.
+    pub y: u32,
+}
+
+/// Whether a program asked for the pointer as a DEC locator (it then gets
+/// [`Pty::locator`](crate::terminal::Pty::locator) events instead of mouse reports).
+pub fn wants_locator(mode: TermMode) -> bool {
+    mode.contains(TermMode::LOCATOR)
 }
 
 /// Whether the application has requested any kind of mouse reporting.
@@ -140,7 +159,7 @@ mod tests {
 
     #[test]
     fn wants_mouse_modes() {
-        assert!(!wants_mouse(TermMode::NONE));
+        assert!(!wants_mouse(TermMode::empty()));
         assert!(!wants_mouse(SGR | UTF8));
         assert!(wants_mouse(CLICK));
         assert!(wants_mouse(DRAG));
@@ -150,7 +169,7 @@ mod tests {
     #[test]
     fn nothing_without_tracking() {
         assert_eq!(encode(&ev(B::Left, Press, 0, 0), SGR), None);
-        assert_eq!(encode(&ev(B::Left, Press, 0, 0), TermMode::NONE), None);
+        assert_eq!(encode(&ev(B::Left, Press, 0, 0), TermMode::empty()), None);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Command blocks: each prompt with its command line and output, as a shell with integration
 //! (OSC 133) divides them.
 //!
-//! Where a block is comes from the grid (`marks`: the tap's hyperlinks on the cells), so it moves
+//! Where a block is comes from the grid (`marks`: the shell's marks on the cells), so it moves
 //! with the text through scrolling, reflow and the history filling up. What the grid can't hold,
 //! when the command ran and how it ended, the PTY thread writes into a [`CommandLog`] as the
 //! marks arrive, keyed by the prompt's number, which is also the cells' id. The two meet in
@@ -11,14 +11,11 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use alacritty_terminal::event::EventListener;
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::term::cell::Flags;
-use alacritty_terminal::term::{Term, TermMode};
+use wormhole_vt::types::{Column, Line, Point, TermMode};
 
-use super::marks::{self, RowMark};
-use super::pty_filter::{BODY_MAX_CHARS, Mark, clean};
+use super::marks::{self, Part, RowMark};
+use super::osc::{BODY_MAX_CHARS, Mark, clean};
+use super::screen::Screen;
 
 /// How many commands the log remembers. A block older than that (a prompt pressed Enter at tens
 /// of thousands of times ago) reads as finished without a code or a time.
@@ -133,10 +130,10 @@ impl Block {
 }
 
 /// Every block on the grid, oldest first; none while a full-screen program has the screen.
-pub(super) fn blocks<T: EventListener>(term: &Term<T>, log: &CommandLog) -> Vec<Block> {
+pub(super) fn blocks(screen: &Screen, log: &CommandLog) -> Vec<Block> {
     let mut out = Vec::new();
-    for start in marks::prompt_lines(term) {
-        if let Some(block) = block_from(term, start, log) {
+    for start in marks::prompt_lines(screen) {
+        if let Some(block) = block_from(screen, start, log) {
             out.push(block);
         }
     }
@@ -144,39 +141,39 @@ pub(super) fn blocks<T: EventListener>(term: &Term<T>, log: &CommandLog) -> Vec<
 }
 
 /// The block whose text `line` is in, if any.
-pub(super) fn block_at<T: EventListener>(term: &Term<T>, line: Line, log: &CommandLog) -> Option<Block> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn block_at(screen: &Screen, line: Line, log: &CommandLog) -> Option<Block> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return None;
     }
     // The nearest marked row at or above `line` says which block, and the block's prompt is the
     // nearest prompt start at or above that.
-    let mut at = line.min(term.bottommost_line());
+    let mut at = line.min(screen.bottommost_line());
     let id = loop {
-        if at < term.topmost_line() {
+        if at < screen.topmost_line() {
             return None;
         }
-        if let Some(mark) = marks::mark_at(term, at) {
+        if let Some(mark) = marks::mark_at(screen, at) {
             break mark.id;
         }
         at -= 1;
     };
-    let start = marks::prompt_line(term, at + 1, marks::Direction::Up)?;
-    let block = block_from(term, start, log)?;
+    let start = marks::prompt_line(screen, at + 1, marks::Direction::Up)?;
+    let block = block_from(screen, start, log)?;
     (block.id == id && block.end >= line).then_some(block)
 }
 
 /// The block with this id, if its cells are still on the grid.
-pub(super) fn block<T: EventListener>(term: &Term<T>, id: u64, log: &CommandLog) -> Option<Block> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn block(screen: &Screen, id: u64, log: &CommandLog) -> Option<Block> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return None;
     }
     // Newer blocks are nearer the bottom: the search starts there.
-    let mut line = term.bottommost_line();
-    while line >= term.topmost_line() {
-        match marks::mark_at(term, line) {
+    let mut line = screen.bottommost_line();
+    while line >= screen.topmost_line() {
+        match marks::mark_at(screen, line) {
             Some(mark) if mark.id == id => {
-                let start = marks::prompt_line(term, line + 1, marks::Direction::Up)?;
-                return block_from(term, start, log).filter(|block| block.id == id);
+                let start = marks::prompt_line(screen, line + 1, marks::Direction::Up)?;
+                return block_from(screen, start, log).filter(|block| block.id == id);
             }
             Some(mark) if mark.id < id => return None,
             _ => line -= 1,
@@ -186,17 +183,17 @@ pub(super) fn block<T: EventListener>(term: &Term<T>, id: u64, log: &CommandLog)
 }
 
 /// The block whose prompt starts on `start`.
-fn block_from<T: EventListener>(term: &Term<T>, start: Line, log: &CommandLog) -> Option<Block> {
-    let first = marks::mark_at(term, start).filter(|mark| mark.prompt)?;
+fn block_from(screen: &Screen, start: Line, log: &CommandLog) -> Option<Block> {
+    let first = marks::mark_at(screen, start).filter(|mark| mark.prompt)?;
     let id = first.id;
-    let bottom = term.bottommost_line();
+    let bottom = screen.bottommost_line();
     let mut end = start;
     let mut last_command_line = start;
     let mut command = String::new();
     let mut wrapped = false;
     let mut line = start;
     while line <= bottom {
-        let mark = if line == start { Some(first) } else { marks::mark_at(term, line) };
+        let mark = if line == start { Some(first) } else { marks::mark_at(screen, line) };
         match mark {
             Some(RowMark { id: other, .. }) if other != id => break,
             Some(mark) => {
@@ -208,33 +205,16 @@ fn block_from<T: EventListener>(term: &Term<T>, start: Line, log: &CommandLog) -
                     if !command.is_empty() && !wrapped {
                         command.push('\n');
                     }
-                    command_text(term, line, id, &mut command);
+                    command.push_str(screen.part_text(line, id, Part::Command).trim_end());
                 }
             }
             None => {}
         }
-        wrapped = term.grid()[line][term.last_column()].flags.contains(Flags::WRAPLINE);
+        wrapped = screen.wraps(line);
         line += 1;
     }
     let output = (last_command_line < end).then_some(last_command_line + 1);
     Some(Block { id, start, output, end, command: command.trim_end().to_string(), state: log.state(id) })
-}
-
-/// Append the command-marked text of `line` to `out`.
-fn command_text<T: EventListener>(term: &Term<T>, line: Line, id: u64, out: &mut String) {
-    let row = &term.grid()[line];
-    let mut text = String::new();
-    for col in 0..term.columns() {
-        let cell = &row[Column(col)];
-        if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
-            continue;
-        }
-        if marks::cell_mark(cell) == Some((id, marks::Part::Command)) {
-            text.push(if cell.c == '\0' { ' ' } else { cell.c });
-            text.extend(cell.zerowidth().unwrap_or_default());
-        }
-    }
-    out.push_str(text.trim_end());
 }
 
 /// What a command that has just finished with a failing exit code left, for telling about it
@@ -254,23 +234,23 @@ const LAST_LINE_WINDOW: i32 = 40;
 /// The command that most recently finished with exit code `code`, if its block is on the grid.
 /// The shell has printed its next prompt by the time anyone asks, so the finished block is the
 /// last one or the one before it.
-pub(super) fn ended<T: EventListener>(term: &Term<T>, log: &CommandLog, code: i32) -> Option<Ended> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn ended(screen: &Screen, log: &CommandLog, code: i32) -> Option<Ended> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return None;
     }
-    let mut at = term.bottommost_line();
+    let mut at = screen.bottommost_line();
     let newest = loop {
-        if at < term.topmost_line() {
+        if at < screen.topmost_line() {
             return None;
         }
-        if let Some(mark) = marks::mark_at(term, at) {
+        if let Some(mark) = marks::mark_at(screen, at) {
             break mark.id;
         }
         at -= 1;
     };
     let block = [newest, newest.saturating_sub(1)]
         .into_iter()
-        .filter_map(|id| block(term, id, log))
+        .filter_map(|id| block(screen, id, log))
         .find(|block| matches!(block.state, BlockState::Finished { code: Some(c), .. } if c == code))?;
     let took = match block.state {
         BlockState::Finished { took, .. } => took,
@@ -278,7 +258,7 @@ pub(super) fn ended<T: EventListener>(term: &Term<T>, log: &CommandLog, code: i3
     };
     let last_line = block.output_lines().and_then(|(first, last)| {
         let first = first.max(Line(last.0 - LAST_LINE_WINDOW));
-        let text = lines_text(term, first, last);
+        let text = lines_text(screen, first, last);
         let line =
             text.lines().rev().map(|line| clean(line, BODY_MAX_CHARS)).find(|line| !line.is_empty())?;
         Some(line)
@@ -288,10 +268,10 @@ pub(super) fn ended<T: EventListener>(term: &Term<T>, log: &CommandLog, code: i3
 
 /// The text of lines `first..=last`, trailing blanks trimmed, for copying a block's output (an
 /// image's placeholders aren't text).
-pub(super) fn lines_text<T: EventListener>(term: &Term<T>, first: Line, last: Line) -> String {
-    let start = Point::new(first.max(term.topmost_line()), Column(0));
-    let end = Point::new(last.min(term.bottommost_line()), term.last_column());
-    let text = term.bounds_to_string(start, end);
+pub(super) fn lines_text(screen: &Screen, first: Line, last: Line) -> String {
+    let start = Point::new(first.max(screen.topmost_line()), Column(0));
+    let end = Point::new(last.min(screen.bottommost_line()), screen.last_column());
+    let text = screen.text_between(start, end);
     super::images::strip_placeholders(&text).trim_end().to_string()
 }
 
@@ -319,30 +299,21 @@ pub fn readout_text(state: BlockState) -> Option<String> {
 pub(super) mod tests {
     use std::time::{Duration, Instant};
 
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::grid::Scroll;
-    use alacritty_terminal::index::Line;
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use wormhole_vt::types::{Line, Scroll};
 
     use super::{
         BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, readout_text, took_text,
     };
-    use crate::terminal::GridSize;
-    use crate::terminal::pty_filter::{Mark, Osc, PromptKind, tapped};
+    use crate::terminal::osc::{Mark, PromptKind};
+    use crate::terminal::testing::TestTerm;
 
-    /// A terminal `rows` tall that has shown `bytes` through the tap, and the log the marks left.
-    pub(in crate::terminal) fn shown(rows: u16, bytes: &[u8]) -> (Term<VoidListener>, CommandLog) {
-        let size = GridSize { cols: 20, rows, cell_width: 8.0, cell_height: 16.0 };
-        let mut term = Term::new(Config { scrolling_history: 100, ..Config::default() }, &size, VoidListener);
-        let (out, events) = tapped(bytes);
-        Processor::<StdSyncHandler>::new().advance(&mut term, &out);
+    /// A terminal `rows` tall that has shown `bytes`, and the log the marks left.
+    pub(in crate::terminal) fn shown(rows: u16, bytes: &[u8]) -> (TestTerm, CommandLog) {
+        let mut term = TestTerm::new(20, rows, 100);
         let mut log = CommandLog::default();
         let now = Instant::now();
-        for event in events {
-            if let Osc::Mark(mark, prompt) = event {
-                log.mark(mark, prompt, now);
-            }
+        for (mark, prompt) in term.feed_with_marks(bytes) {
+            log.mark(mark, prompt, now);
         }
         (term, log)
     }
@@ -357,7 +328,7 @@ pub(super) mod tests {
     #[test]
     fn blocks_are_read_back_from_the_grid_with_their_states() {
         let (term, log) = shown(10, SESSION);
-        let found = blocks(&term, &log);
+        let found = blocks(term.screen(), &log);
         let summary: Vec<(u64, i32, Option<i32>, i32, &str)> = found
             .iter()
             .map(|b| (b.id, b.start.0, b.output.map(|l| l.0), b.end.0, b.command.as_str()))
@@ -367,14 +338,14 @@ pub(super) mod tests {
         assert!(found[1].state.failed());
         assert_eq!(found[2].state, BlockState::Prompt);
         assert_eq!(found[1].output_lines(), Some((Line(4), Line(4))), "the blank line after is nobody's");
-        assert_eq!(lines_text(&term, Line(1), Line(2)), "a.rs\nb.rs");
+        assert_eq!(lines_text(term.screen(), Line(1), Line(2)), "a.rs\nb.rs");
         // By a line in it, and by id.
-        assert_eq!(block_at(&term, Line(2), &log).map(|b| b.id), Some(1));
-        assert_eq!(block_at(&term, Line(5), &log), None, "the blank row under a finished block");
-        assert_eq!(block_at(&term, Line(6), &log).map(|b| b.id), Some(3));
-        assert_eq!(block_at(&term, Line(9), &log), None, "below the last block");
-        assert_eq!(block(&term, 2, &log).map(|b| (b.start.0, b.end.0)), Some((3, 4)));
-        assert_eq!(block(&term, 7, &log), None);
+        assert_eq!(block_at(term.screen(), Line(2), &log).map(|b| b.id), Some(1));
+        assert_eq!(block_at(term.screen(), Line(5), &log), None, "the blank row under a finished block");
+        assert_eq!(block_at(term.screen(), Line(6), &log).map(|b| b.id), Some(3));
+        assert_eq!(block_at(term.screen(), Line(9), &log), None, "below the last block");
+        assert_eq!(block(term.screen(), 2, &log).map(|b| (b.start.0, b.end.0)), Some((3, 4)));
+        assert_eq!(block(term.screen(), 7, &log), None);
     }
 
     #[test]
@@ -382,7 +353,7 @@ pub(super) mod tests {
         // `make` exited 2 and printed "error" (and a blank line); the prompt after it is the newest
         // block, so the failed one is the one before.
         let (term, log) = shown(10, SESSION);
-        let found = ended(&term, &log, 2).expect("the failed block is on the grid");
+        let found = ended(term.screen(), &log, 2).expect("the failed block is on the grid");
         assert_eq!(
             found,
             Ended { command: "make".into(), took: found.took, last_line: Some("error".into()) }
@@ -390,8 +361,8 @@ pub(super) mod tests {
         assert!(found.took.is_some());
         // Another code is another command; `ls` (exit 0) is two blocks back, further than a command
         // that just finished can be.
-        assert_eq!(ended(&term, &log, 3), None);
-        assert_eq!(ended(&term, &log, 0), None);
+        assert_eq!(ended(term.screen(), &log, 3), None);
+        assert_eq!(ended(term.screen(), &log, 0), None);
     }
 
     #[test]
@@ -404,23 +375,23 @@ pub(super) mod tests {
         session.extend_from_slice("boom \u{202e}here\r\n   \r\n".as_bytes());
         session.extend_from_slice(b"\x1b]133;D;101\x07\x1b]133;A\x07$ \x1b]133;B\x07");
         let (term, log) = shown(10, &session);
-        let found = ended(&term, &log, 101).expect("on the grid");
+        let found = ended(term.screen(), &log, 101).expect("on the grid");
         assert_eq!(found.last_line.as_deref(), Some("boom here"));
         // A command that printed nothing has no last line.
         let (term, log) = shown(
             10,
             b"\x1b]133;A\x07$ \x1b]133;B\x07false\r\n\x1b]133;C\x07\x1b]133;D;1\x07\x1b]133;A\x07$ \x1b]133;B\x07",
         );
-        let found = ended(&term, &log, 1).expect("on the grid");
+        let found = ended(term.screen(), &log, 1).expect("on the grid");
         assert_eq!((found.command.as_str(), found.last_line), ("false", None));
     }
 
     #[test]
     fn a_full_screen_program_or_a_forgotten_block_has_nothing_to_read() {
         let (term, log) = shown(10, b"\x1b[?1049h\x1b]133;A\x07$ ");
-        assert_eq!(ended(&term, &log, 1), None, "the alternate screen has no blocks");
+        assert_eq!(ended(term.screen(), &log, 1), None, "the alternate screen has no blocks");
         let (term, log) = shown(10, b"plain text, no marks at all");
-        assert_eq!(ended(&term, &log, 1), None);
+        assert_eq!(ended(term.screen(), &log, 1), None);
     }
 
     #[test]
@@ -428,7 +399,7 @@ pub(super) mod tests {
         let input = b"\x1b]133;A\x07$ \x1b]133;B\x07for x in a b\r\n\x1b]133;A;k=s\x07> \x1b]133;B\x07echo $x\r\n\x1b]133;A;k=s\x07> \x1b]133;B\x07done\r\n\x1b]133;C\x07a\r\nb\r\n\x1b]133;D;0\x07\
             \x1b]133;A\x07$ \x1b]133;B\x07echo 0123456789abcdefghij\r\n\x1b]133;C\x070123456789abcdefghij\r\n\x1b]133;D;0\x07";
         let (term, log) = shown(12, input);
-        let found = blocks(&term, &log);
+        let found = blocks(term.screen(), &log);
         assert_eq!(found.len(), 2);
         assert_eq!(found[0].command, "for x in a b\necho $x\ndone");
         assert_eq!((found[0].start.0, found[0].output.map(|l| l.0), found[0].end.0), (0, Some(3), 4));
@@ -441,14 +412,14 @@ pub(super) mod tests {
     fn blocks_follow_their_text_into_the_history_and_none_show_on_the_alternate_screen() {
         let (mut term, log) = shown(4, SESSION);
         // Seven lines on four rows: three are in the history.
-        let found = blocks(&term, &log);
+        let found = blocks(term.screen(), &log);
         assert_eq!(found.iter().map(|b| b.start.0).collect::<Vec<_>>(), [-3, 0, 3]);
-        assert_eq!(block_at(&term, Line(-2), &log).map(|b| b.id), Some(1));
+        assert_eq!(block_at(term.screen(), Line(-2), &log).map(|b| b.id), Some(1));
         term.scroll_display(Scroll::Delta(2));
-        assert_eq!(blocks(&term, &log).len(), 3, "scrolling changes nothing");
-        Processor::<StdSyncHandler>::new().advance(&mut term, b"\x1b[?1049hvim");
-        assert!(blocks(&term, &log).is_empty());
-        assert_eq!(block_at(&term, Line(0), &log), None);
+        assert_eq!(blocks(term.screen(), &log).len(), 3, "scrolling changes nothing");
+        term.feed(b"\x1b[?1049hvim");
+        assert!(blocks(term.screen(), &log).is_empty());
+        assert_eq!(block_at(term.screen(), Line(0), &log), None);
     }
 
     #[test]

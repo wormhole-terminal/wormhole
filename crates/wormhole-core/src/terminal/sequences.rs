@@ -1,11 +1,12 @@
-//! The escape sequences Wormhole reads itself, before alacritty's parser sees the bytes (the PTY
-//! filters: `pty_filter::osc` for the OSCs, `pty_filter::images` for the pictures, `osc_tap` for
-//! the full reset). What alacritty handles on its own (titles, colours, modes, queries, the kitty
-//! keyboard protocol) is listed by hand in `docs/escape-sequences.md`.
+//! The escape sequences that mean something to Wormhole beyond drawing: the engine hands them to
+//! the host (`engine::host`), which acts on them. What the engine does on its own (titles,
+//! colours, modes, queries, the kitty keyboard protocol, the pictures' placement) is listed by
+//! hand in `docs/escape-sequences.md`.
 //!
 //! This table is the list's source: the doc's "Read by Wormhole" table is [`table`], and a test
-//! fails when the parser acts on an OSC number the table doesn't name, or the table names one the
-//! parser has dropped, so the list can't drift from the code.
+//! fails when the engine acts on an OSC number the table (or the test's list of the engine's own)
+//! doesn't name, or the table names one the engine has dropped, so the list can't drift from the
+//! code.
 
 /// One sequence, as a reader of the list needs it.
 #[derive(Clone, Copy, Debug)]
@@ -32,8 +33,8 @@ pub const SEQUENCES: &[Sequence] = &[
         sequence: "OSC 8",
         name: "Hyperlink",
         source: "Egmont Koblinger's hyperlink spec",
-        does: "Parsed by alacritty; Wormhole watches for a link's end to keep a command block's \
-               prompt mark.",
+        does: "Links in the text. ⌘-click opens web and mail links and shows a `file:` link on this Mac \
+               in the Finder; any other scheme is left alone.",
     },
     Sequence {
         sequence: "OSC 9",
@@ -102,8 +103,8 @@ pub const SEQUENCES: &[Sequence] = &[
         sequence: "ESC c",
         name: "Full reset (RIS)",
         source: "ECMA-48",
-        does: "Reset by alacritty; Wormhole also forgets every program status record (a soft \
-               reset, `CSI ! p`, doesn't).",
+        does: "Resets the screen; Wormhole also forgets every program status record (a soft reset, \
+               `CSI ! p`, doesn't).",
     },
 ];
 
@@ -123,16 +124,33 @@ mod tests {
 
     use super::{SEQUENCES, table};
 
-    /// The OSC numbers the parser matches on: each `[b"<number>"` that opens an arm of `parse`.
-    fn parsed_osc_numbers() -> BTreeSet<String> {
-        let source = include_str!("pty_filter/osc.rs");
-        let parse = source.split("pub(super) fn parse(").nth(1).expect("osc::parse");
-        let body = &parse[..parse.find("\n}\n").expect("the end of parse")];
-        body.lines()
-            .filter_map(|line| line.trim_start().strip_prefix("[b\""))
-            .filter_map(|rest| rest.split('"').next())
-            .map(str::to_string)
-            .collect()
+    /// The OSC numbers the engine acts on: the patterns that open an arm of `run_osc`
+    /// (`0 | 2 =>`, `10..=12 =>`, `99 => {`).
+    fn engine_osc_numbers() -> BTreeSet<String> {
+        let source = include_str!("../../../wormhole-vt/src/term/oscs.rs");
+        let run = source.split("fn run_osc(").nth(1).expect("run_osc");
+        let body = &run[..run.find("\n    }\n").expect("the end of run_osc")];
+        let mut numbers = BTreeSet::new();
+        for line in
+            body.lines().filter(|line| line.starts_with("            ") && !line.starts_with("             "))
+        {
+            let Some((pattern, _)) = line.trim().split_once(" =>") else { continue };
+            for alternative in pattern.split(" | ") {
+                match alternative.split_once("..=") {
+                    Some((from, to)) => {
+                        let (from, to): (u32, u32) =
+                            (from.parse().expect("a number"), to.parse().expect("a number"));
+                        numbers.extend((from..=to).map(|n| n.to_string()));
+                    }
+                    None => {
+                        if let Ok(n) = alternative.parse::<u32>() {
+                            numbers.insert(n.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        numbers
     }
 
     /// The OSC numbers the list names (`OSC 9;4` is OSC 9's).
@@ -144,15 +162,29 @@ mod tests {
             .collect()
     }
 
+    /// What the engine does by itself and the host never hears of: titles, palette, special and
+    /// dynamic colors, the clipboard and their resets (the doc lists them by hand).
+    const THE_ENGINES_OWN: [&str; 28] = [
+        "0", "1", "2", "4", "5", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "52", "104",
+        "105", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119",
+    ];
+
     #[test]
-    fn every_osc_the_parser_acts_on_is_listed_and_nothing_else() {
-        let parsed = parsed_osc_numbers();
-        assert!(parsed.contains("7501"), "the scan found the parser's arms: {parsed:?}");
-        let mut listed = listed_osc_numbers();
-        // Read by the image filter, not by `osc::parse`.
-        assert!(listed.remove("1337"));
-        assert!(include_str!("pty_filter/images.rs").contains("1337"));
-        assert_eq!(parsed, listed, "the OSCs Wormhole reads (left) and the list in sequences.rs (right)");
+    fn every_osc_the_engine_acts_on_is_listed_and_nothing_else() {
+        let acted_on = engine_osc_numbers();
+        assert!(acted_on.contains("7501"), "the scan found the engine's arms: {acted_on:?}");
+        let listed = listed_osc_numbers();
+        let own: BTreeSet<String> = THE_ENGINES_OWN.iter().map(|n| n.to_string()).collect();
+        assert!(
+            listed.is_disjoint(&own),
+            "listed twice: {:?}",
+            listed.intersection(&own).collect::<Vec<_>>()
+        );
+        let named: BTreeSet<String> = listed.union(&own).cloned().collect();
+        assert_eq!(
+            acted_on, named,
+            "the OSCs the engine reads (left), the list and the engine's own (right)"
+        );
     }
 
     #[test]

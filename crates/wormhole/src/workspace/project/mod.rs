@@ -322,8 +322,11 @@ pub(super) fn spawn_options(
         tab_id: tab_id.to_string(),
         restore,
         scrollback_lines: 0,
+        allow_screen_checksum: false,
+        allow_window_ops: false,
         env,
         shell: Some(shell),
         welcome: false,
+        colors: None,
     }
 }

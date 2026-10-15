@@ -7,8 +7,7 @@
 //! 1 - (1 - 0.26)^5 ≈ 1 - (1 - 0.11)^13 ≈ 0.78.
 
 use gpui_kit::Hsla;
-use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-use wormhole_core::alacritty_terminal::term::color::Colors;
+use wormhole_core::terminal::types::{Cell, Colors, Flags};
 
 use crate::palette::Palette;
 
@@ -66,9 +65,7 @@ pub(super) fn blurred_row(
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::alacritty_terminal::term::cell::Cell;
-    use wormhole_core::alacritty_terminal::term::color::Colors;
-    use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor};
+    use wormhole_core::terminal::types::{Cell, Color, Colors, NamedColor};
     use wormhole_core::theme;
 
     use super::{BLUR_TAPS, blurred_row};

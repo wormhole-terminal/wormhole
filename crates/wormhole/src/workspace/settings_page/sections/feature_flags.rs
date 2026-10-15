@@ -16,15 +16,18 @@ impl SettingsWindow {
         for flag in FeatureFlag::ALL {
             let on = settings(cx).feature_enabled(flag);
             let key = flag.key();
-            // A flag is on by default in a dev build, so "changed" means off. Turning it back on
-            // takes the key out again rather than writing a redundant `true`, so the dot clears.
-            let state = if on { style::SettingState::Default } else { style::SettingState::Changed };
+            // A flag is on by default in a dev build, so "changed" means off. Going back to the
+            // default takes the key out again rather than writing a redundant entry, so the dot
+            // clears.
+            let default = true;
+            let state =
+                if on == default { style::SettingState::Default } else { style::SettingState::Changed };
             let control = style::toggle(key, on, move |on, _, cx| {
                 update_settings(cx, |s| {
-                    if on {
+                    if on == default {
                         s.feature_flags.remove(key);
                     } else {
-                        s.feature_flags.insert(key.to_string(), false);
+                        s.feature_flags.insert(key.to_string(), on);
                     }
                 });
             })

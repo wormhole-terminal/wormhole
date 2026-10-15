@@ -8,21 +8,19 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
-alacritty_terminal.workspace = true
+# The value types the screen is read and driven in (the engine's boundary).
+wormhole-vt.workspace = true
 anyhow.workspace = true
 dirs.workspace = true
 libc.workspace = true
 plist.workspace = true
-# Finds `clear`'s sequence in every PTY read (SIMD substring search; already
-# in the dependency graph through other crates).
-memchr = "2.8"
-# Find in scrollback: Unicode word boundaries, which alacritty's lazy DFA can't do (already
-# in the dependency graph through other crates).
+# Find in scrollback: Unicode word boundaries, which a lazy DFA can't do (already in the dependency
+# graph through other crates).
 regex = "1.13"
-# alacritty_terminal's PTY traits name polling's types; same major version.
+# The PTY reader thread waits on the master, the child's exit and its inbox with it (kqueue on
+# macOS).
 polling = "3.8"
-# kitty's notifications (OSC 99) may carry their text base64-encoded (alacritty already
-# depends on it for OSC 52).
+# kitty's notifications (OSC 99) may carry their text base64-encoded, and OSC 52 replies are.
 base64 = "0.22"
 # Inline images (kitty's graphics protocol, iTerm2's `1337;File`): PNG, JPEG and GIF decoded
 # under memory limits (GPUI already depends on it with these features and more).
@@ -49,6 +47,11 @@ semver = { version = "1.0", features = ["serde"] }
 tar = { version = "0.4.45", default-features = false }
 tempfile = "3"
 ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
+
+[features]
+# `terminal::testing`: terminals without a PTY, for the app's render tests (its dev-dependencies
+# turn this on, so the shipped build never has it).
+test-support = []
 
 [lints]
 workspace = true

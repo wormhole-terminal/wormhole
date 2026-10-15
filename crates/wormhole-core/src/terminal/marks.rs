@@ -1,41 +1,21 @@
 //! Where command blocks are, read back from the grid.
 //!
-//! `pty_filter::osc_tap` wraps each part of a block a shell with integration announces (OSC 133:
-//! the prompt `A` … `B`, the command line `B` … `C`, the output `C` … `D`) in a hyperlink with one
-//! of the [`uri`]s and an id per prompt, which alacritty stores on the cells. The cells carry it
-//! wherever the text goes (scrolling, the history filling up and dropping lines, `clear`, a
-//! resize's reflow) and lose it when the row is overwritten, so what this module finds is right
-//! wherever the text still is, with no bookkeeping that could fall out of step. A prompt of
-//! several lines (a secondary or right prompt) shares one id; its first line is where the block
-//! starts. Blank rows carry no cells, so a row without a mark belongs to the block above it
-//! (`blocks` decides that; here a row says only what it carries itself).
+//! The engine numbers the blocks a shell with integration announces (OSC 133: the prompt `A` …
+//! `B`, the command line `B` … `C`, the output `C` … `D`) and keeps the block and the part on the
+//! rows' cells. The cells carry it wherever the text goes (scrolling, the history filling up and
+//! dropping lines, `clear`, a resize's reflow) and lose it when the row is overwritten, so what
+//! this module finds is right wherever the text still is, with no bookkeeping that could fall
+//! out of step. A prompt of several lines (a secondary or right prompt) shares one id; its first
+//! line is where the block starts. Blank rows carry no cells, so a row without a mark belongs to
+//! the block above it (`blocks` decides that; here a row says only what it carries itself).
 //!
-//! A scan visits every cell of the lines it passes (most have no `extra`, a cheap check, and the
-//! marked ones share one link, a pointer compare), so a scan of the whole grid is for a key press,
-//! not for every frame; the snapshot marks only the rows it copies.
+//! Reading a row's mark is the engine's (`Screen::row_mark`; it visits the row's cells, so a scan
+//! of the whole grid is for a key press, not for every frame; the snapshot marks only the rows it
+//! copies). This module says what a mark is and what the rows' marks mean together.
 
-use alacritty_terminal::event::EventListener;
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::Line;
-use alacritty_terminal::term::cell::{Cell, Hyperlink};
-use alacritty_terminal::term::{Term, TermMode};
+use wormhole_vt::types::{Line, TermMode};
 
-/// The URIs of the tap's marks. Not links anyone can open: a renderer that draws hyperlinks
-/// must skip them ([`is_mark`]).
-pub(super) const PROMPT_URI: &str = "wormhole:prompt";
-pub(super) const COMMAND_URI: &str = "wormhole:command";
-pub(super) const OUTPUT_URI: &str = "wormhole:output";
-const ID_PREFIX: &str = "wormhole-prompt-";
-
-/// The hyperlink id of the `seq`-th prompt of a terminal (its block's id).
-pub(super) fn prompt_id(seq: u64) -> String {
-    format!("{ID_PREFIX}{seq}")
-}
-
-/// Whether a hyperlink's URI is one of the tap's marks rather than a program's link.
-pub fn is_mark(uri: &str) -> bool {
-    uri.starts_with("wormhole:")
-}
+use super::screen::Screen;
 
 /// The three parts of a command block, as the shell's marks divide it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,14 +26,6 @@ pub enum Part {
     Command,
     /// What the command printed.
     Output,
-}
-
-pub(super) fn uri(part: Part) -> &'static str {
-    match part {
-        Part::Prompt => PROMPT_URI,
-        Part::Command => COMMAND_URI,
-        Part::Output => OUTPUT_URI,
-    }
 }
 
 /// Which way to look for a prompt from a line.
@@ -84,102 +56,49 @@ impl RowMark {
     }
 }
 
-/// The block mark on one cell, if its hyperlink is one.
-pub(super) fn cell_mark(cell: &Cell) -> Option<(u64, Part)> {
-    link_mark(&cell.hyperlink()?)
-}
-
-fn link_mark(link: &Hyperlink) -> Option<(u64, Part)> {
-    let part = match link.uri() {
-        PROMPT_URI => Part::Prompt,
-        COMMAND_URI => Part::Command,
-        OUTPUT_URI => Part::Output,
-        _ => return None,
-    };
-    let id = link.id().strip_prefix(ID_PREFIX)?.parse().ok()?;
-    Some((id, part))
-}
-
-/// What the cells of one row carry (see [`RowMark`]).
-pub fn row_mark<'a>(cells: impl IntoIterator<Item = &'a Cell>) -> Option<RowMark> {
-    let mut found: Option<RowMark> = None;
-    // Cells printed under one mark share one link: a pointer compare tells them apart.
-    let mut last: Option<(Hyperlink, Option<(u64, Part)>)> = None;
-    for cell in cells {
-        if cell.extra.is_none() {
-            continue;
-        }
-        let Some(link) = cell.hyperlink() else { continue };
-        let mark = match &last {
-            Some((seen, mark)) if *seen == link => *mark,
-            _ => {
-                let mark = link_mark(&link);
-                last = Some((link, mark));
-                mark
-            }
-        };
-        let Some((id, part)) = mark else { continue };
-        let row = match &mut found {
-            Some(row) if row.id == id => row,
-            Some(row) if row.id > id => continue,
-            _ => found.insert(RowMark { id, prompt: false, command: false, output: false }),
-        };
-        match part {
-            Part::Prompt => row.prompt = true,
-            Part::Command => row.command = true,
-            Part::Output => row.output = true,
-        }
-    }
-    found
-}
-
 /// The mark on grid `line`, if its cells carry one.
-pub(super) fn mark_at<T: EventListener>(term: &Term<T>, line: Line) -> Option<RowMark> {
-    if line < term.topmost_line() || line > term.bottommost_line() {
+pub(super) fn mark_at(screen: &Screen, line: Line) -> Option<RowMark> {
+    if line < screen.topmost_line() || line > screen.bottommost_line() {
         return None;
     }
-    row_mark(&term.grid()[line])
+    screen.row_mark(line)
 }
 
 /// Whether `line` is the first line of a prompt: it shows a prompt whose block the line above
 /// has nothing of (a secondary prompt's line above has the block's first line or its wrapped
 /// command).
-fn starts_prompt<T: EventListener>(term: &Term<T>, line: Line) -> bool {
-    match mark_at(term, line) {
-        Some(mark) if mark.prompt => mark_at(term, line - 1).is_none_or(|above| above.id != mark.id),
+fn starts_prompt(screen: &Screen, line: Line) -> bool {
+    match mark_at(screen, line) {
+        Some(mark) if mark.prompt => mark_at(screen, line - 1).is_none_or(|above| above.id != mark.id),
         _ => false,
     }
 }
 
 /// Every line a prompt starts on, oldest first; none while a full-screen program has the screen
 /// (the alternate screen has no history and no prompts).
-pub(super) fn prompt_lines<T: EventListener>(term: &Term<T>) -> Vec<Line> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn prompt_lines(screen: &Screen) -> Vec<Line> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return Vec::new();
     }
-    (term.topmost_line().0..=term.bottommost_line().0)
+    (screen.topmost_line().0..=screen.bottommost_line().0)
         .map(Line)
-        .filter(|&line| starts_prompt(term, line))
+        .filter(|&line| starts_prompt(screen, line))
         .collect()
 }
 
 /// The nearest line a prompt starts on, strictly above or below `from`.
-pub(super) fn prompt_line<T: EventListener>(
-    term: &Term<T>,
-    from: Line,
-    direction: Direction,
-) -> Option<Line> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn prompt_line(screen: &Screen, from: Line, direction: Direction) -> Option<Line> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return None;
     }
-    let (top, bottom) = (term.topmost_line(), term.bottommost_line());
+    let (top, bottom) = (screen.topmost_line(), screen.bottommost_line());
     match direction {
         Direction::Up => {
             let mut line = Line(from.0 - 1).min(bottom);
             while line >= top {
-                if let Some(mark) = mark_at(term, line).filter(|mark| mark.prompt) {
+                if let Some(mark) = mark_at(screen, line).filter(|mark| mark.prompt) {
                     // Up to the block's first line.
-                    while mark_at(term, line - 1).is_some_and(|above| above.id == mark.id) {
+                    while mark_at(screen, line - 1).is_some_and(|above| above.id == mark.id) {
                         line -= 1;
                     }
                     return Some(line);
@@ -189,52 +108,7 @@ pub(super) fn prompt_line<T: EventListener>(
             None
         }
         Direction::Down => {
-            ((from.0 + 1).max(top.0)..=bottom.0).map(Line).find(|&line| starts_prompt(term, line))
+            ((from.0 + 1).max(top.0)..=bottom.0).map(Line).find(|&line| starts_prompt(screen, line))
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use alacritty_terminal::term::cell::{Cell, Hyperlink};
-
-    use super::{Part, RowMark, is_mark, prompt_id, row_mark, uri};
-
-    fn marked(text: &str, id: u64, part: Part) -> Vec<Cell> {
-        let link = Hyperlink::new(Some(prompt_id(id)), uri(part).to_string());
-        text.chars()
-            .map(|c| {
-                let mut cell = Cell { c, ..Cell::default() };
-                cell.set_hyperlink(Some(link.clone()));
-                cell
-            })
-            .collect()
-    }
-
-    #[test]
-    fn a_row_says_which_block_and_which_parts_it_carries() {
-        let mut row = marked("$ ", 3, Part::Prompt);
-        row.extend(marked("ls", 3, Part::Command));
-        row.push(Cell::default());
-        assert_eq!(row_mark(&row), Some(RowMark { id: 3, prompt: true, command: true, output: false }));
-        assert_eq!(row_mark(&marked("out", 3, Part::Output)).map(|m| m.output), Some(true));
-        assert_eq!(row_mark(&vec![Cell::default(); 4]), None, "a blank row carries nothing");
-        // A program's own link isn't a mark.
-        let link = Hyperlink::new(Some("x".to_string()), "https://example.com".to_string());
-        let mut cell = Cell::default();
-        cell.set_hyperlink(Some(link));
-        assert_eq!(row_mark(&[cell]), None);
-        assert!(is_mark("wormhole:output") && !is_mark("https://example.com"));
-    }
-
-    #[test]
-    fn where_two_blocks_meet_the_row_is_the_later_ones() {
-        // `printf foo` ended without a newline; the next prompt starts on its row.
-        let mut row = marked("foo", 1, Part::Output);
-        row.extend(marked("$ ", 2, Part::Prompt));
-        assert_eq!(row_mark(&row), Some(RowMark { id: 2, prompt: true, command: false, output: false }));
-        let mut reversed = marked("$ ", 2, Part::Prompt);
-        reversed.extend(marked("foo", 1, Part::Output));
-        assert_eq!(row_mark(&reversed).map(|m| m.id), Some(2), "whatever the order of the cells");
     }
 }

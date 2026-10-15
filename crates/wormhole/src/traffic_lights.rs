@@ -55,7 +55,7 @@ pub fn opacity(window: &Window) -> Option<(f32, bool)> {
 
 #[cfg(target_os = "macos")]
 #[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
-fn ns_window(window: &Window) -> Option<objc2::rc::Retained<objc2_app_kit::NSWindow>> {
+pub(crate) fn ns_window(window: &Window) -> Option<objc2::rc::Retained<objc2_app_kit::NSWindow>> {
     use objc2::MainThreadMarker;
     use objc2_app_kit::NSView;
     use raw_window_handle::{HasWindowHandle, RawWindowHandle};

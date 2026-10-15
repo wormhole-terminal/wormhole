@@ -12,7 +12,7 @@ publish = false
 
 [workspace.dependencies]
 wormhole-core = { path = "crates/wormhole-core" }
-alacritty_terminal = "0.26.0"
+wormhole-vt = { path = "crates/wormhole-vt" }
 anyhow = "1"
 dirs = "7.0.0"
 libc = "0.2"

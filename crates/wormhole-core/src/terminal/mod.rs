@@ -1,8 +1,24 @@
-//! The terminal core: alacritty_terminal's grid + parser, driven by its own
-//! PTY reader thread. Everything above this module talks to `Pty` only, so
-//! the core can later be swapped for libghostty-vt.
+//! The terminal core: a shell in a PTY and the screen it draws. Everything above this module talks
+//! to [`Pty`] and to [`types`] (`wormhole_vt::types`: cells, colors, positions, modes); nothing
+//! above it names the engine's internals.
 //!
-//! - `process`: the shell and its environment, per-process queries;
+//! The engine is Wormhole's own (`wormhole_vt`). The PTY layer is core's own too: it opens the
+//! pseudo-terminal, starts the program and runs the thread that reads it, which parses into the
+//! screen it is given. The engine-specific files are:
+//!
+//! - `engine/`: the host side of the engine on the PTY thread: its parser and events (a title, a
+//!   bell, a folder, a prompt mark, a notification, a picture) as what the UI hears, and the
+//!   pictures' pixels;
+//! - `screen`: the engine's terminal as the rest of core reads and drives it, in `wormhole_vt::types`;
+//! - `osc`: what the sequences the engine hands over raw mean to Wormhole (the shell's marks,
+//!   notifications, progress), cleaned and capped;
+//! - `testing`: terminals for tests, in this crate's and the app's (feature `test-support`).
+//!
+//! The rest:
+//!
+//! - `pty`: the pseudo-terminal, the program on it and the reader thread (`open`, `spawn`,
+//!   `reader`, `hangup`), and the fair lock the thread and the UI share the screen under;
+//! - `process`: which program a terminal runs and with which environment;
 //! - `ports`: the TCP ports the programs under the shell listen on (libproc);
 //! - `events`: the bridge from the PTY thread to the UI;
 //! - `restore`: replaying a previous session's text;
@@ -10,8 +26,6 @@
 //! - `minimap`: the history drawn small, and where a click on it scrolls to;
 //! - `text`: the screen and scrollback as plain text;
 //! - `find`: find in scrollback, on a copy of the grid's text;
-//! - `pty_filter`: what runs on the PTY's output before alacritty parses it (`clear` erasing the
-//!   scrollback too; the shell-integration and notification OSCs alacritty drops);
 //! - `program_status`: what programs report about themselves (OSC 7501), and the records kept;
 //! - `marks`: where a command block's parts are, read back from the grid;
 //! - `blocks`: each prompt with its command and output, and how the command went;
@@ -20,6 +34,7 @@
 //! - `glyphs`: geometry of the characters the UI paints as shapes.
 
 mod blocks;
+mod engine;
 mod events;
 pub mod find;
 pub mod glyphs;
@@ -28,43 +43,47 @@ pub mod input;
 mod links;
 mod marks;
 pub mod minimap;
+mod osc;
 mod ports;
 mod process;
 pub mod program_status;
-mod pty_filter;
+mod pty;
 mod restore;
+mod screen;
 pub mod sequences;
 mod snapshot;
+#[cfg(any(test, feature = "test-support"))]
+pub mod testing;
 mod text;
+
+/// The value types the screen is drawn and driven with: cells, colors, positions, modes.
+pub use wormhole_vt::types;
+
+/// What a program may ask of the window and what the engine needs to know of it to answer the
+/// reports (XTWINOPS); see `allow_window_ops`.
+pub use wormhole_vt::term::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
-use std::thread::JoinHandle;
 use std::time::Duration;
 
-use alacritty_terminal::event::WindowSize;
-use alacritty_terminal::event_loop::{self, EventLoop, EventLoopSender, Msg};
-use alacritty_terminal::grid::{Dimensions, Scroll};
-use alacritty_terminal::index::{Column, Line, Point, Side};
-use alacritty_terminal::selection::{Selection, SelectionType};
-use alacritty_terminal::sync::FairMutex;
-use alacritty_terminal::term::color::Colors;
-use alacritty_terminal::term::{Config, Term, TermMode};
-use alacritty_terminal::tty;
+use wormhole_vt::types::{Colors, Column, Line, Point, Scroll, SelectionType, Side, TermMode};
 
 pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
 use events::EventProxy;
 use events::Shared;
-pub use events::{ColorFormatter, PtyEvent, PtyEvents, Reply, TextFormatter};
+pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
 pub use links::{Link, Openable};
-pub use marks::{Direction, Part, RowMark, is_mark, row_mark};
-pub use ports::listening_ports;
-pub use process::shell_name;
-pub(crate) use pty_filter::percent_decode;
-pub use pty_filter::{
+pub use marks::{Direction, Part, RowMark};
+pub(crate) use osc::percent_decode;
+pub use osc::{
     BODY_MAX_CHARS, Mark, Notification, Progress, ProgressState, PromptKind, TITLE_MAX_CHARS, clean,
 };
+pub use ports::listening_ports;
+pub use process::shell_name;
+use pty::FairLock;
+use screen::Screen;
 pub use snapshot::{BlockSpan, ScreenSnapshot, SnapshotCursor, SnapshotRow};
 pub use text::prompt_in;
 
@@ -87,18 +106,14 @@ impl GridSize {
     }
 }
 
-impl Dimensions for GridSize {
-    fn total_lines(&self) -> usize {
-        self.rows as usize
-    }
-
-    fn screen_lines(&self) -> usize {
-        self.rows as usize
-    }
-
-    fn columns(&self) -> usize {
-        self.cols as usize
-    }
+/// A grid's size in cells and in pixels: what a program that asks for the text area's size is told
+/// and what an image is fitted to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct WindowSize {
+    pub num_lines: u16,
+    pub num_cols: u16,
+    pub cell_width: u16,
+    pub cell_height: u16,
 }
 
 /// How to start a tab's shell.
@@ -110,6 +125,12 @@ pub struct SpawnOptions {
     /// Previous session text, replayed dimmed before the shell starts.
     pub restore: Option<String>,
     pub scrollback_lines: usize,
+    /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
+    /// (`allow_screen_checksum`); the engine ignores it otherwise.
+    pub allow_screen_checksum: bool,
+    /// Let the program act on the window (XTWINOPS: move, resize, minimise, …; DECCOLM changing the
+    /// width) and read its title back (`allow_window_ops`); the engine ignores both otherwise.
+    pub allow_window_ops: bool,
     /// Extra environment, e.g. from a trusted project's `config.json`.
     pub env: std::collections::BTreeMap<String, String>,
     /// The program to run instead of the login shell: the tab's profile, a trusted project's
@@ -119,31 +140,28 @@ pub struct SpawnOptions {
     /// terminal, which becomes the program when it ends. The app also puts the welcome's token in
     /// `env` (`welcome::TOKEN_VAR`).
     pub welcome: bool,
+    /// The theme's colors, which the engine answers a program's color queries (OSC 4, 10, 11, 12)
+    /// with from its first byte; without them it answers with xterm's until
+    /// [`Pty::set_default_colors`] is called, which a terminal that was never drawn has not yet.
+    pub colors: Option<Box<[types::Rgb; types::COLOR_COUNT]>>,
 }
 
-/// A shell in a PTY with alacritty's grid and parser on their own thread. The
-/// grid stays behind this API (snapshots, text, selection, input), so the UI
-/// never holds the lock the parser needs for longer than a copy.
+/// A shell in a PTY with a grid and a parser on the PTY's own thread. The grid stays behind this
+/// API (snapshots, text, selection, input), so the UI never holds the lock the parser needs for
+/// longer than a copy.
 pub struct Pty {
-    term: Arc<FairMutex<Term<EventProxy>>>,
+    term: Arc<FairLock<Screen>>,
     shared: Arc<Shared>,
-    sender: EventLoopSender,
-    /// alacritty's reader thread; it owns the PTY and ends the shell (see `process::close`).
-    event_loop: Option<EventLoopThread>,
+    /// The PTY's reader thread and input; it owns the PTY and ends the shell (see `pty::hangup`).
+    io: pty::Control,
     size: GridSize,
     pid: u32,
-    /// A second handle on the PTY's master, which outlives alacritty's, for closing the tab (see
-    /// `process::close`).
-    master: Option<std::fs::File>,
     /// How long the shell gets to exit after the hangup once the tab is closed (a field so a test
     /// can shorten it).
     hangup_grace: Duration,
     /// The folder the shell last reported (OSC 7), and where polling put it then (see `cwd`).
     reported_cwd: Mutex<Option<ReportedCwd>>,
 }
-
-type EventLoopThread =
-    JoinHandle<(EventLoop<pty_filter::FilteredPty<tty::Pty>, EventProxy>, event_loop::State)>;
 
 /// An OSC 7 report, anchored to what polling the shell's process said when it was taken.
 struct ReportedCwd {
@@ -171,47 +189,21 @@ impl Pty {
     fn spawn_shell(
         size: GridSize,
         options: &SpawnOptions,
-        shell: tty::Shell,
+        shell: pty::Shell,
     ) -> anyhow::Result<(Self, PtyEvents)> {
         let (proxy, events) = EventProxy::new();
         let shared = proxy.shared().clone();
         shared.set_size(size.window_size());
-
-        let config =
-            Config { scrolling_history: options.scrollback_lines, kitty_keyboard: true, ..Config::default() };
-        let term = Arc::new(FairMutex::new(Term::new(config, &size, proxy.clone())));
-
-        // Replay the previous session's text (dimmed) before the shell starts.
-        if let Some(text) = options.restore.as_deref() {
-            restore::replay(&mut term.lock(), text);
-        }
-
-        // macOS's `openpty` resolves the new device's name through a buffer shared by all threads,
-        // so two terminals opened at once can get each other's device (`ENXIO`, seen when tests
-        // spawn in parallel). One at a time; a spawn takes microseconds in here.
-        static OPENING: Mutex<()> = Mutex::new(());
-        let pty = {
-            let _one_at_a_time = OPENING.lock().unwrap_or_else(PoisonError::into_inner);
-            tty::new(&process::tty_options(options, shell), size.window_size(), 0)?
-        };
-        let pid = pty.child().id();
-        let master = process::drain_handle(pty.file());
-        let pty = pty_filter::FilteredPty::new(pty, proxy.clone());
-        let event_loop = EventLoop::new(term.clone(), proxy, pty, true, false)?;
-        let sender = event_loop.channel();
-        shared.set_writer(sender.clone());
-        let event_loop = Some(event_loop.spawn());
-
+        let launch = process::launch_options(options, shell);
+        let engine::Spawned { screen, io, pid } = engine::spawn(size, options, &launch, proxy, &shared)?;
         Ok((
             Self {
-                term,
+                term: screen,
                 shared,
-                sender,
-                event_loop,
+                io,
                 size,
                 pid,
-                master,
-                hangup_grace: process::HANGUP_GRACE,
+                hangup_grace: pty::HANGUP_GRACE,
                 reported_cwd: Mutex::new(None),
             },
             events,
@@ -220,7 +212,7 @@ impl Pty {
 
     pub fn write(&self, bytes: impl Into<Cow<'static, [u8]>>) {
         if self.is_alive() {
-            let _ = self.sender.send(Msg::Input(bytes.into()));
+            self.io.input(bytes.into());
         }
     }
 
@@ -248,15 +240,33 @@ impl Pty {
         self.size = size;
         self.shared.set_size(size.window_size());
         self.term.lock().resize(size);
-        let _ = self.sender.send(Msg::Resize(size.window_size()));
+        self.io.resize(size.window_size());
     }
 
     pub fn size(&self) -> GridSize {
         self.size
     }
 
+    /// Tell the engine where the window is: a program asks for it, its size and the screen's
+    /// (XTWINOPS 11, 13, 14, 15, 19). The latest is kept.
+    pub fn set_window(&self, geometry: WindowGeometry) {
+        self.term.lock().set_window(geometry);
+    }
+
+    /// Whether programs in this terminal may act on the window (`allow_window_ops`).
+    pub fn window_ops_allowed(&self) -> bool {
+        self.term.lock().window_ops_allowed()
+    }
+
+    /// Take the engine back to the size this terminal has. A program that asked for another size
+    /// (XTWINOPS 8, DECSLPP, DECCOLM) was given it at once; when the window could not follow, or
+    /// finished following, this makes the two agree.
+    pub fn sync_size(&self) {
+        self.term.lock().resize(self.size);
+    }
+
     pub fn mode(&self) -> TermMode {
-        *self.term.lock().mode()
+        self.term.lock().mode()
     }
 
     /// Bring `out` up to date with the screen and `above` rows of history over it.
@@ -282,9 +292,9 @@ impl Pty {
     pub fn send_key(&self, encode: impl FnOnce(TermMode) -> Option<Vec<u8>>) -> KeySent {
         let (bytes, view_changed) = {
             let mut term = self.term.lock();
-            let Some(bytes) = encode(*term.mode()) else { return KeySent::Nothing };
-            let had_selection = term.selection.take().is_some();
-            let scrolled = term.grid().display_offset() != 0;
+            let Some(bytes) = encode(term.mode()) else { return KeySent::Nothing };
+            let had_selection = term.take_selection();
+            let scrolled = term.display_offset() != 0;
             if scrolled {
                 term.scroll_display(Scroll::Bottom);
             }
@@ -294,16 +304,40 @@ impl Pty {
         KeySent::Sent { view_changed }
     }
 
+    /// The pointer for a program that asked for the DEC locator (`TermMode::LOCATOR`): a button
+    /// went down or up (`Some`) or the pointer moved (`None`). What the program asked to be told
+    /// goes to its input.
+    pub fn locator(
+        &self,
+        button: Option<(input::mouse::MouseButton, bool)>,
+        at: input::mouse::LocatorPointer,
+    ) {
+        use input::mouse::MouseButton;
+        use wormhole_vt::term::LocatorButton;
+        let button = match button {
+            Some((MouseButton::Left, pressed)) => Some((LocatorButton::Left, pressed)),
+            Some((MouseButton::Middle, pressed)) => Some((LocatorButton::Middle, pressed)),
+            Some((MouseButton::Right, pressed)) => Some((LocatorButton::Right, pressed)),
+            Some(_) => return,
+            None => None,
+        };
+        let at = wormhole_vt::term::Pointer { col: at.col, row: at.row, x: at.x, y: at.y };
+        let replies = self.term.lock().locator_event(button, at);
+        if !replies.is_empty() && self.is_alive() {
+            self.shared.reply(replies);
+        }
+    }
+
     /// The cursor's row on the screen as shown, unless the view is scrolled away from it.
     pub fn cursor_row(&self) -> Option<usize> {
         let term = self.term.lock();
-        let row = term.grid().cursor.point.line.0 + term.grid().display_offset() as i32;
+        let row = term.grid_cursor().line.0 + term.display_offset() as i32;
         usize::try_from(row).ok().filter(|&row| row < term.screen_lines())
     }
 
     /// Colors programs set at runtime (OSC 4/10/11/12), by palette index.
     pub fn colors(&self) -> Colors {
-        *self.term.lock().colors()
+        self.term.lock().colors()
     }
 
     /// Write typed or pasted input; the view returns to the live screen.
@@ -311,7 +345,7 @@ impl Pty {
         {
             let mut term = self.term.lock();
             // Scrolling marks the whole screen changed; only do it when it moves.
-            if term.grid().display_offset() != 0 {
+            if term.display_offset() != 0 {
                 term.scroll_display(Scroll::Bottom);
             }
         }
@@ -325,15 +359,15 @@ impl Pty {
 
     /// How many lines the view is scrolled up into the history.
     pub fn display_offset(&self) -> usize {
-        self.term.lock().grid().display_offset()
+        self.term.lock().display_offset()
     }
 
     /// Scroll the view so `line` (a grid line: 0 is the live screen's top) is in it: a line out
     /// of view comes to the middle of the screen; one in view leaves the view where it is.
     pub fn reveal(&self, line: Line) {
         let mut term = self.term.lock();
-        let offset = term.grid().display_offset();
-        let wanted = find::reveal_offset(line, term.screen_lines(), offset, term.grid().history_size());
+        let offset = term.display_offset();
+        let wanted = find::reveal_offset(line, term.screen_lines(), offset, term.history_size());
         if let Some(wanted) = wanted {
             term.scroll_display(Scroll::Delta(wanted as i32 - offset as i32));
         }
@@ -343,8 +377,8 @@ impl Pty {
     /// screen brings the view back to it).
     pub fn scroll_line_to_top(&self, line: Line) {
         let mut term = self.term.lock();
-        let offset = term.grid().display_offset() as i32;
-        let wanted = (-line.0).clamp(0, term.grid().history_size() as i32);
+        let offset = term.display_offset() as i32;
+        let wanted = (-line.0).clamp(0, term.history_size() as i32);
         if wanted != offset {
             term.scroll_display(Scroll::Delta(wanted - offset));
         }
@@ -352,27 +386,22 @@ impl Pty {
 
     /// Erase the history (the screen stays).
     pub fn clear_history(&self) {
-        self.term.lock().grid_mut().clear_history();
+        self.term.lock().clear_history();
     }
 
     /// Start a mouse selection at a grid point.
     pub fn start_selection(&self, kind: SelectionType, point: Point, side: Side) {
-        self.term.lock().selection = Some(Selection::new(kind, point, side));
+        self.term.lock().start_selection(kind, point, side);
     }
 
     /// Extend the selection being dragged.
     pub fn update_selection(&self, point: Point, side: Side) {
-        if let Some(selection) = self.term.lock().selection.as_mut() {
-            selection.update(point, side);
-        }
+        self.term.lock().update_selection(point, side);
     }
 
     /// A click without a drag selects nothing.
     pub fn finish_selection(&self) {
-        let mut term = self.term.lock();
-        if term.selection.as_ref().is_some_and(Selection::is_empty) {
-            term.selection = None;
-        }
+        self.term.lock().drop_empty_selection();
     }
 
     /// Select the history and the screen.
@@ -380,9 +409,8 @@ impl Pty {
         let mut term = self.term.lock();
         let start = Point::new(term.topmost_line(), Column(0));
         let end = Point::new(term.bottommost_line(), term.last_column());
-        let mut selection = Selection::new(SelectionType::Simple, start, Side::Left);
-        selection.update(end, Side::Right);
-        term.selection = Some(selection);
+        term.start_selection(SelectionType::Simple, start, Side::Left);
+        term.update_selection(end, Side::Right);
     }
 
     /// Select whole lines `first..=last` (a block's output).
@@ -393,9 +421,9 @@ impl Pty {
         if first > last {
             return;
         }
-        let mut selection = Selection::new(SelectionType::Lines, Point::new(first, Column(0)), Side::Left);
-        selection.update(Point::new(last, term.last_column()), Side::Right);
-        term.selection = Some(selection);
+        term.start_selection(SelectionType::Lines, Point::new(first, Column(0)), Side::Left);
+        let end = Point::new(last, term.last_column());
+        term.update_selection(end, Side::Right);
     }
 
     /// The text of lines `first..=last`, trailing blanks trimmed (a block's output to copy).
@@ -426,7 +454,7 @@ impl Pty {
 
     /// The selected text, if anything is selected (an image's placeholders aren't text).
     pub fn selection_text(&self) -> Option<String> {
-        let text = self.term.lock().selection_to_string()?;
+        let text = self.term.lock().selection_text()?;
         let text = images::strip_placeholders(&text).into_owned();
         (!text.trim().is_empty()).then_some(text)
     }
@@ -537,6 +565,24 @@ impl Pty {
         self.shared.images()
     }
 
+    /// Give the engine the theme's colors, for the programs that ask what they are (OSC 4, 10,
+    /// 11, 12): it answers those itself.
+    pub fn set_default_colors(&self, palette: &[types::Rgb; types::COLOR_COUNT]) {
+        self.term.lock().set_default_colors(palette);
+    }
+
+    /// The virtual placement (kitty's `U=1`) the placeholder cells with this picture id and
+    /// placement id belong to. Pictures placed in the grid are drawn from
+    /// [`ScreenSnapshot::placements`]; these are the ones drawn from placeholder cells.
+    pub fn virtual_placement(&self, image_id: u32, placement_id: u32) -> Option<images::Tiles> {
+        let placement = self.term.lock().virtual_placement(image_id, placement_id)?;
+        Some(images::Tiles {
+            key: engine::image_key(placement.image),
+            cols: placement.cols,
+            rows: placement.rows,
+        })
+    }
+
     /// The coding agent running in the foreground, if any.
     pub fn foreground_agent(&self) -> Option<crate::agents::AgentId> {
         crate::agents::foreground_agent(self.pid()?)
@@ -573,7 +619,7 @@ pub enum KeySent {
 /// background thread (it locks the terminal only while copying text).
 #[derive(Clone)]
 pub struct ScrollbackSource {
-    term: Arc<FairMutex<Term<EventProxy>>>,
+    term: Arc<FairLock<Screen>>,
     shared: Arc<Shared>,
 }
 
@@ -597,13 +643,15 @@ impl ScrollbackSource {
 }
 
 #[cfg(test)]
+mod measure;
+#[cfg(test)]
 mod tests;
 
 impl Drop for Pty {
     fn drop(&mut self) {
-        let _ = self.sender.send(Msg::Shutdown);
-        if let Some(event_loop) = self.event_loop.take() {
-            process::close(event_loop, self.pid(), self.master.take(), self.hangup_grace);
+        // A shell that has exited is gone, and so is its thread (its pid may be someone else's).
+        if self.pid().is_some() {
+            self.io.close(self.hangup_grace);
         }
     }
 }

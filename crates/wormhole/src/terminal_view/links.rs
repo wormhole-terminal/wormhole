@@ -6,7 +6,7 @@
 use std::ops::Range;
 
 use gpui_kit::{Context, Pixels, Point};
-use wormhole_core::alacritty_terminal::index::Line;
+use wormhole_core::terminal::types::Line;
 use wormhole_core::terminal::{Link, Openable};
 
 use super::{Layout, TerminalView};

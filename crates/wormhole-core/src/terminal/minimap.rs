@@ -6,13 +6,9 @@
 //! they don't all fit, the minimap shows a window of them that moves with the view, as VS Code's
 //! does: the top of the history while the view is there, the live screen while it's live.
 
-use alacritty_terminal::event::EventListener;
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line};
-use alacritty_terminal::term::Term;
-use alacritty_terminal::term::cell::{Cell, Flags};
-use alacritty_terminal::term::color::Colors;
-use alacritty_terminal::vte::ansi::{Color, NamedColor};
+use wormhole_vt::types::{Cell, Color, Colors, Flags, Line, NamedColor};
+
+use super::screen::Screen;
 
 /// Width of the minimap, in points.
 pub const WIDTH: f32 = 64.0;
@@ -113,14 +109,13 @@ pub struct MinimapSnapshot {
 impl MinimapSnapshot {
     /// Bring the copy up to date with `term` for a minimap `fits` lines tall. `revision` changes
     /// whenever the program printed. Returns whether anything was read again.
-    pub fn update<T: EventListener>(&mut self, term: &Term<T>, fits: usize, revision: u64) -> bool {
-        let grid = term.grid();
-        let (history, screen, cols) = (grid.history_size(), term.screen_lines(), term.columns());
+    pub(super) fn update(&mut self, screen: &Screen, fits: usize, revision: u64) -> bool {
+        let (history, lines, cols) = (screen.history_size(), screen.screen_lines(), screen.columns());
         let geometry = MinimapGeometry {
-            total: history + screen,
-            screen,
+            total: history + lines,
+            screen: lines,
             fits,
-            view_top: history - grid.display_offset().min(history),
+            view_top: history - screen.display_offset().min(history),
         };
         self.geometry = geometry;
         if self.read_for == Some((revision, geometry, cols)) {
@@ -128,13 +123,14 @@ impl MinimapSnapshot {
         }
         self.read_for = Some((revision, geometry, cols));
         self.cols = cols;
-        self.colors = *term.colors();
+        self.colors = screen.colors();
         let first = geometry.first();
         let count = fits.min(geometry.total - first);
         self.lines.resize_with(count, Vec::new);
+        let mut cells = Vec::new();
         for (k, runs) in self.lines.iter_mut().enumerate() {
-            let row = &grid[Line((first + k) as i32 - history as i32)];
-            line_runs((0..cols).map(|col| &row[Column(col)]), runs);
+            screen.copy_row(Line((first + k) as i32 - history as i32), &mut cells, None);
+            line_runs(cells.iter(), runs);
         }
         true
     }
@@ -170,27 +166,23 @@ fn line_runs<'a>(cells: impl Iterator<Item = &'a Cell>, out: &mut Vec<MinimapRun
             last.end = col + 1;
             continue;
         }
-        out.push(MinimapRun { start: col, end: col + 1, text, cell: cell.clone() });
+        out.push(MinimapRun { start: col, end: col + 1, text, cell: *cell });
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::grid::Scroll;
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use wormhole_vt::types::Scroll;
 
     use super::{LINE_PITCH, MinimapGeometry, MinimapSnapshot};
-    use crate::terminal::GridSize;
+    use crate::terminal::testing::TestTerm;
 
-    fn term(rows: usize) -> Term<VoidListener> {
-        let size = GridSize { cols: 20, rows: rows as u16, cell_width: 8.0, cell_height: 18.0 };
-        Term::new(Config { scrolling_history: 1000, ..Config::default() }, &size, VoidListener)
+    fn term(rows: usize) -> TestTerm {
+        TestTerm::new(20, rows as u16, 1000)
     }
 
-    fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(term, bytes);
+    fn feed(term: &mut TestTerm, bytes: &[u8]) {
+        term.feed(bytes);
     }
 
     fn spans(snapshot: &MinimapSnapshot, line: usize) -> Vec<(usize, usize, bool)> {
@@ -203,7 +195,7 @@ mod tests {
         // "ls -la", then a red word, then three blanks on a blue background.
         feed(&mut term, b"ls -la \x1b[31mred\x1b[0m \x1b[44m   \x1b[0m");
         let mut snapshot = MinimapSnapshot::default();
-        assert!(snapshot.update(&term, 10, 1));
+        assert!(snapshot.update(term.screen(), 10, 1));
         assert_eq!(spans(&snapshot, 0), [(0, 2, true), (3, 6, true), (7, 10, true), (11, 14, false)]);
         assert!(snapshot.lines[1].is_empty() && snapshot.lines[2].is_empty());
     }
@@ -213,12 +205,12 @@ mod tests {
         let mut term = term(3);
         feed(&mut term, b"hello");
         let mut snapshot = MinimapSnapshot::default();
-        assert!(snapshot.update(&term, 10, 1));
-        assert!(!snapshot.update(&term, 10, 1));
+        assert!(snapshot.update(term.screen(), 10, 1));
+        assert!(!snapshot.update(term.screen(), 10, 1));
         feed(&mut term, b" world");
-        assert!(snapshot.update(&term, 10, 2), "the program printed");
+        assert!(snapshot.update(term.screen(), 10, 2), "the program printed");
         assert_eq!(spans(&snapshot, 0), [(0, 5, true), (6, 11, true)]);
-        assert!(snapshot.update(&term, 12, 2), "the minimap grew");
+        assert!(snapshot.update(term.screen(), 12, 2), "the minimap grew");
     }
 
     #[test]
@@ -229,14 +221,14 @@ mod tests {
         }
         let mut snapshot = MinimapSnapshot::default();
         // 41 lines (37 of history), room for 10: live, the minimap shows the last 10.
-        snapshot.update(&term, 10, 1);
+        snapshot.update(term.screen(), 10, 1);
         let geometry = snapshot.geometry;
         assert_eq!((geometry.total, geometry.view_top, geometry.first()), (41, 37, 31));
         assert_eq!(snapshot.lines.len(), 10);
         assert_eq!(spans(&snapshot, 0), [(0, 4, true), (5, 7, true)], "line 31");
         // Scrolled to the top: the first 10.
         term.scroll_display(Scroll::Top);
-        snapshot.update(&term, 10, 1);
+        snapshot.update(term.screen(), 10, 1);
         assert_eq!((snapshot.geometry.view_top, snapshot.geometry.first()), (0, 0));
         assert_eq!(spans(&snapshot, 0), [(0, 4, true), (5, 6, true)], "line 0");
     }

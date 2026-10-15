@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use gpui_kit::{Bounds, Context, Hsla, Pixels, Point, point, px, size};
-use wormhole_core::alacritty_terminal::vte::ansi::CursorShape;
+use wormhole_core::terminal::types::CursorShape;
 
 use crate::palette::Palette;
 use crate::terminal_view::{Status, TerminalView};
@@ -92,7 +92,7 @@ pub(super) fn text_color(palette: &Palette, cell_background: Hsla) -> Hsla {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{point, px};
-    use wormhole_core::alacritty_terminal::vte::ansi::CursorShape;
+    use wormhole_core::terminal::types::CursorShape;
     use wormhole_core::theme;
 
     use super::{cursor_rect, drawn, redraws_text, text_color};

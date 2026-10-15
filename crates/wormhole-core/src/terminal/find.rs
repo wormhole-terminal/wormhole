@@ -7,11 +7,10 @@
 //! history above it negative), which stay right until the next output scrolls the grid: the
 //! view searches again when the terminal printed.
 
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::term::Term;
-use alacritty_terminal::term::cell::{Cell, Flags};
 use regex::{Regex, RegexBuilder};
+use wormhole_vt::types::{Cell, Column, Flags, Line, Point, RowExtras};
+
+use super::screen::Screen;
 
 /// The most matches one search keeps; the count then reads "10,000+".
 pub const MAX_MATCHES: usize = 10_000;
@@ -123,16 +122,22 @@ impl FindMatch {
 
     /// Whether the cells under the match still spell what it matched, the rows given by `row`
     /// (what a line holds now, in the match's coordinates); `None` when a row isn't at hand.
-    pub fn holds<'a>(&self, row: impl Fn(Line) -> Option<&'a [Cell]>, cols: usize) -> Option<bool> {
+    pub fn holds<'a>(
+        &self,
+        row: impl Fn(Line) -> Option<(&'a [Cell], &'a RowExtras)>,
+        cols: usize,
+    ) -> Option<bool> {
         let mut text = String::with_capacity(self.text.len());
         for line in self.start.line.0..=self.end.line.0 {
             let (first, last) = self.columns_on(Line(line), cols)?;
-            for cell in row(Line(line))?.get(first..=last)? {
+            let (cells, extras) = row(Line(line))?;
+            for (col, cell) in cells.get(first..=last)?.iter().enumerate().map(|(k, cell)| (first + k, cell))
+            {
                 if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
                     continue;
                 }
                 text.push(if cell.c == '\0' { ' ' } else { cell.c });
-                text.extend(cell.zerowidth().unwrap_or_default());
+                text.extend(extras.zerowidth(col));
             }
         }
         Some(text == self.text)
@@ -205,17 +210,17 @@ pub struct GridText {
 }
 
 impl GridText {
-    /// Copy `term`'s characters (all of them: the history and the screen).
-    pub fn copy<T>(term: &Term<T>) -> Self {
-        let cols = term.columns();
-        let (top, bottom) = (term.topmost_line().0, term.bottommost_line().0);
+    /// Copy the screen's characters (all of them: the history and the screen).
+    pub(super) fn copy(screen: &Screen) -> Self {
+        let cols = screen.columns();
+        let (top, bottom) = (screen.topmost_line().0, screen.bottommost_line().0);
         let mut lines = Vec::new();
         let mut current = TextLine { first: top, text: String::new(), chars: Vec::new() };
+        let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
         for line in top..=bottom {
-            let row = &term.grid()[Line(line)];
+            screen.copy_row(Line(line), &mut cells, Some(&mut extras));
             let base = (line - current.first) as usize * cols;
-            for col in 0..cols {
-                let cell = &row[Column(col)];
+            for (col, cell) in cells.iter().enumerate() {
                 if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
                     continue;
                 }
@@ -225,9 +230,9 @@ impl GridText {
                     wide: cell.flags.contains(Flags::WIDE_CHAR),
                 });
                 current.text.push(if cell.c == '\0' { ' ' } else { cell.c });
-                current.text.extend(cell.zerowidth().unwrap_or_default());
+                current.text.extend(extras.zerowidth(col));
             }
-            let wrapped = cols > 0 && row[Column(cols - 1)].flags.contains(Flags::WRAPLINE);
+            let wrapped = cells.last().is_some_and(|last| last.flags.contains(Flags::WRAPLINE));
             if !wrapped || line == bottom {
                 let next = TextLine { first: line + 1, text: String::new(), chars: Vec::new() };
                 let mut done = std::mem::replace(&mut current, next);
@@ -235,7 +240,7 @@ impl GridText {
                 lines.push(done);
             }
         }
-        Self { cols, history: term.grid().history_size(), lines }
+        Self { cols, history: screen.history_size(), lines }
     }
 
     /// The history's length when this was copied.
@@ -290,21 +295,17 @@ fn trim_end(line: &mut TextLine) {
 
 #[cfg(test)]
 mod tests {
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::index::{Column, Line, Point};
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use wormhole_vt::types::{Cell, Column, Line, Point, RowExtras};
 
     use super::{FindMatch, FindOptions, FindQuery, GridText, InvalidPattern, MAX_MATCHES};
-    use crate::terminal::GridSize;
+    use crate::terminal::testing::TestTerm;
 
-    fn term(cols: u16, rows: u16) -> Term<VoidListener> {
-        let size = GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 };
-        Term::new(Config { scrolling_history: 1000, ..Config::default() }, &size, VoidListener)
+    fn term(cols: u16, rows: u16) -> TestTerm {
+        TestTerm::new(cols, rows, 1000)
     }
 
-    fn feed(term: &mut Term<VoidListener>, text: &str) {
-        Processor::<StdSyncHandler>::new().advance(term, text.as_bytes());
+    fn feed(term: &mut TestTerm, text: &str) {
+        term.feed(text.as_bytes());
     }
 
     fn query(text: &str, options: FindOptions) -> FindQuery {
@@ -312,10 +313,10 @@ mod tests {
     }
 
     /// (line, first column, line, last column) of every match.
-    fn found(term: &Term<VoidListener>, query: &FindQuery) -> Vec<(i32, usize, i32, usize)> {
+    fn found(term: &TestTerm, query: &FindQuery) -> Vec<(i32, usize, i32, usize)> {
         let regex = query.compile().expect("valid").expect("not empty");
         let at = |p: Point| (p.line.0, p.column.0);
-        GridText::copy(term)
+        GridText::copy(term.screen())
             .find(&regex)
             .matches
             .iter()
@@ -408,7 +409,7 @@ mod tests {
         let mut term = term(100, 2);
         feed(&mut term, &"x".repeat(100));
         let regex = query("x", FindOptions::default()).compile().expect("valid").expect("not empty");
-        let text = GridText::copy(&term);
+        let text = GridText::copy(term.screen());
         let results = text.find(&regex);
         assert_eq!(results.matches.len(), 100);
         assert!(!results.capped);
@@ -416,34 +417,29 @@ mod tests {
         for _ in 0..60 {
             feed(&mut term, &format!("{}\r\n", "x".repeat(200)));
         }
-        let results = GridText::copy(&term).find(&regex);
+        let results = GridText::copy(term.screen()).find(&regex);
         assert_eq!(results.matches.len(), MAX_MATCHES);
         assert!(results.capped);
     }
 
     #[test]
     fn a_match_knows_whether_its_cells_still_hold_it() {
-        use alacritty_terminal::grid::Dimensions;
-        use alacritty_terminal::term::cell::Cell;
-
         let mut term = term(10, 3);
         feed(&mut term, "abcdefghsplit 日");
         let regex = query("split", FindOptions::default()).compile().expect("valid").expect("not empty");
-        let found = GridText::copy(&term).find(&regex);
+        let found = GridText::copy(term.screen()).find(&regex);
         let m = &found.matches[0];
-        let rows = |term: &Term<VoidListener>| -> Vec<Vec<Cell>> {
-            (0..term.screen_lines() as i32)
-                .map(|line| (0..10).map(|col| term.grid()[Line(line)][Column(col)].clone()).collect())
-                .collect()
+        let rows = |term: &TestTerm| -> Vec<(Vec<Cell>, RowExtras)> {
+            (0..term.screen_lines() as i32).map(|line| term.row(line)).collect()
         };
         let now = rows(&term);
-        let row = |line: Line| now.get(line.0 as usize).map(Vec::as_slice);
+        let row = |line: Line| now.get(line.0 as usize).map(|(cells, extras)| (cells.as_slice(), extras));
         assert_eq!(m.holds(row, 10), Some(true), "across the wrap");
         assert_eq!(m.holds(|_| None, 10), None, "rows out of reach");
         // The program redraws the line: the match is gone.
         feed(&mut term, "\x1b[1;1Habcdefghspl!t");
         let now = rows(&term);
-        let row = |line: Line| now.get(line.0 as usize).map(Vec::as_slice);
+        let row = |line: Line| now.get(line.0 as usize).map(|(cells, extras)| (cells.as_slice(), extras));
         assert_eq!(m.holds(row, 10), Some(false));
     }
 
@@ -466,7 +462,7 @@ mod tests {
         let mut term = term(20, 4);
         feed(&mut term, "hit\r\nhit hit\r\n\r\nhit");
         let regex = query("hit", FindOptions::default()).compile().expect("valid").expect("not empty");
-        let results = GridText::copy(&term).find(&regex);
+        let results = GridText::copy(term.screen()).find(&regex);
         assert_eq!(results.matches.len(), 4);
         assert_eq!(results.nearest(Line(3)), Some(3), "the bottom one when it is in view");
         assert_eq!(results.nearest(Line(2)), Some(2), "else the last one above the view's bottom");

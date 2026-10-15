@@ -3,8 +3,8 @@
 //! tests and the benchmark.
 
 use gpui_kit::{Bounds, Hsla, Path, Pixels, Point};
-use wormhole_core::alacritty_terminal::term::cell::Cell;
 use wormhole_core::terminal::ScreenSnapshot;
+use wormhole_core::terminal::types::Cell;
 
 use super::blur::blurred_row;
 use super::cache::{RowCache, SyncStats};
@@ -30,6 +30,10 @@ pub(super) struct PaintedRow<L> {
     pub underlines: Vec<Underline>,
     /// `[first, end)` columns struck through.
     pub struck: Vec<(usize, usize, Hsla)>,
+    /// `[first, end)` columns with a line along the top of the cell.
+    pub overlined: Vec<(usize, usize, Hsla)>,
+    /// Text on the row blinks.
+    blinks: bool,
     /// Inline images' tiles on the row (drawn from the store each frame).
     pub images: Vec<ImageRun>,
     shapes: Vec<(usize, char, Hsla)>,
@@ -89,13 +93,15 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
     ) -> FrameStats {
         let mut stats = FrameStats::default();
         let colors = self.snapshot.colors;
-        stats.rows = self.rows.sync(key.clone(), &self.snapshot, found, |cells, marks| {
-            let built = build_row(cells, palette, &colors, marks);
+        stats.rows = self.rows.sync(key.clone(), &self.snapshot, found, |cells, extras, marks| {
+            let built = build_row(cells, extras, palette, &colors, marks);
             PaintedRow {
                 lines: built.segments.into_iter().map(|segment| (segment.col, shape(segment))).collect(),
                 backgrounds: built.backgrounds,
                 underlines: built.underlines,
                 struck: built.strikes,
+                overlined: built.overlines,
+                blinks: built.blinks,
                 images: built.images,
                 shapes: built.shapes,
                 quads: Vec::new(),
@@ -151,6 +157,11 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
         self.rows.rows()
     }
 
+    /// Whether any row in view has blinking text: only then does the blink clock run.
+    pub fn any_blinks(&self) -> bool {
+        self.rows.rows().any(|(_, painted)| painted.blinks)
+    }
+
     /// Every inline image run in view, with its row.
     pub fn image_runs(&self) -> impl Iterator<Item = (usize, &ImageRun)> {
         self.rows.rows().flat_map(|(row, painted)| painted.images.iter().map(move |run| (row, run)))
@@ -165,10 +176,7 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{point, px};
-    use wormhole_core::alacritty_terminal::event::VoidListener;
-    use wormhole_core::alacritty_terminal::term::{Config, Term};
-    use wormhole_core::alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-    use wormhole_core::terminal::GridSize;
+    use wormhole_core::terminal::testing::TestTerm;
     use wormhole_core::theme;
 
     use super::{FrameCache, FrameStats, Geometry};
@@ -182,22 +190,17 @@ mod tests {
         font_size: 14.0,
     };
 
-    fn term() -> Term<VoidListener> {
-        let size = GridSize { cols: 20, rows: 4, cell_width: 8.0, cell_height: 18.0 };
-        Term::new(Config { scrolling_history: 100, ..Config::default() }, &size, VoidListener)
+    fn term() -> TestTerm {
+        TestTerm::new(20, 4, 100)
     }
 
-    fn feed(term: &mut Term<VoidListener>, bytes: &[u8]) {
-        Processor::<StdSyncHandler>::new().advance(term, bytes);
+    fn feed(term: &mut TestTerm, bytes: &[u8]) {
+        term.feed(bytes);
     }
 
-    fn prepare(
-        cache: &mut FrameCache<u8, String>,
-        term: &mut Term<VoidListener>,
-        geometry: Geometry,
-    ) -> FrameStats {
+    fn prepare(cache: &mut FrameCache<u8, String>, term: &mut TestTerm, geometry: Geometry) -> FrameStats {
         let palette = Palette::from_theme(&theme::builtin()[0]);
-        cache.snapshot.update(term, 2);
+        term.snapshot(&mut cache.snapshot, 2);
         cache.prepare(0, geometry, &palette, &[], |segment| segment.text, |text, _| text)
     }
 

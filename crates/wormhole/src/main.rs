@@ -20,6 +20,7 @@ mod terminal_view;
 mod theme_bridge;
 mod traffic_lights;
 mod vibrancy;
+mod window_ops;
 mod workspace;
 
 use gpui_kit::*;

@@ -1,7 +1,7 @@
 //! Wormhole's UI-independent core.
 //!
 //! Everything here builds and tests without GPUI: the terminal engine
-//! (PTY + alacritty grid + key/mouse encoding), git access, settings and
+//! (PTY + screen + key/mouse encoding), git access, settings and
 //! themes, file icon themes, persistence, coding-agent detection and status hooks, and
 //! the self-updater.
 
@@ -51,7 +51,3 @@ pub mod tokens;
 pub mod update;
 pub mod usage;
 pub mod welcome;
-
-/// The terminal state engine, re-exported so the app uses exactly this
-/// version (and so a future swap to libghostty stays a core-only change).
-pub use alacritty_terminal;

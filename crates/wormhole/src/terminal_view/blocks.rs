@@ -7,9 +7,8 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::alacritty_terminal::grid::Scroll;
-use wormhole_core::alacritty_terminal::index::Line;
 use wormhole_core::spoken;
+use wormhole_core::terminal::types::{Line, Scroll};
 use wormhole_core::terminal::{Block, BlockState, Direction, took_text};
 
 use super::{Layout, PADDING_X, TerminalView};
@@ -226,8 +225,7 @@ impl TerminalView {
 /// devctl's view of the blocks and the inline images.
 #[cfg(feature = "devctl")]
 impl TerminalView {
-    /// `images`: one line per image in the store: its id, size, bytes and placements; the store's
-    /// total first.
+    /// `images`: one line per image in the store: its id, size and bytes; the store's total first.
     pub fn devctl_images(&self) -> String {
         let Some(pty) = &self.pty else { return String::new() };
         let mut store = pty.images();
@@ -238,19 +236,7 @@ impl TerminalView {
             let (width, height) = store.dimensions(id).unwrap_or_default();
             let decoded =
                 store.get(id).map_or("decoding".to_string(), |image| format!("{} bytes", image.bytes()));
-            let placements: Vec<String> = store
-                .placements_of(id)
-                .map(|(p, spec)| {
-                    let shown = if store.is_shown(id, p) { "" } else { " hidden" };
-                    format!(
-                        "p{p}: {}x{} cells{}{shown}",
-                        spec.cols,
-                        spec.rows,
-                        if spec.fit { " fit" } else { "" }
-                    )
-                })
-                .collect();
-            out.push_str(&format!("{id}: {width}x{height} {decoded} | {}\n", placements.join(", ")));
+            out.push_str(&format!("{id}: {width}x{height} {decoded}\n"));
         }
         out
     }
@@ -338,8 +324,13 @@ mod tests {
 
     #[test]
     fn a_hover_counts_across_the_pane_within_the_grids_rows() {
-        let layout =
-            Layout { origin: point(px(10.0), px(42.0)), cell: size(px(8.0), px(18.0)), cols: 80, rows: 24 };
+        let layout = Layout {
+            origin: point(px(10.0), px(42.0)),
+            cell: size(px(8.0), px(18.0)),
+            cols: 80,
+            rows: 24,
+            frame: (0.0, 0.0),
+        };
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0))), Some(0));
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0 + 18.0 * 3.0 + 1.0))), Some(3));
         assert_eq!(block_row(&layout, point(px(7.0), px(100.0))), Some(3), "the gutter counts");

@@ -6,10 +6,7 @@
 use std::cell::Cell;
 
 use gpui_kit::{FontId, GlyphId, point, px};
-use wormhole_core::alacritty_terminal::event::VoidListener;
-use wormhole_core::alacritty_terminal::term::{Config, Term};
-use wormhole_core::alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-use wormhole_core::terminal::GridSize;
+use wormhole_core::terminal::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
 use super::rows::Segment;
@@ -41,7 +38,7 @@ impl Rng {
 
 /// The renderer's caches with a shaper that counts what it is asked to shape.
 struct Renderer {
-    term: Term<VoidListener>,
+    term: TestTerm,
     frame: FrameCache<u8, Vec<Glyph>, String>,
     words: WordCache<u8>,
     palette: Palette,
@@ -49,11 +46,10 @@ struct Renderer {
 
 impl Renderer {
     fn new() -> Self {
-        let size = GridSize { cols: COLS as u16, rows: ROWS as u16, cell_width: 8.0, cell_height: 18.0 };
         let mut words = WordCache::default();
         words.sync(0);
         Self {
-            term: Term::new(Config { scrolling_history: 100, ..Config::default() }, &size, VoidListener),
+            term: TestTerm::new(COLS as u16, ROWS as u16, 100),
             frame: FrameCache::default(),
             words,
             palette: Palette::from_theme(&wormhole_core::theme::builtin()[0]),
@@ -62,8 +58,8 @@ impl Renderer {
 
     /// Feed `bytes` and build the frame; returns how many words (or parts of words) were shaped.
     fn frame(&mut self, bytes: &[u8]) -> usize {
-        Processor::<StdSyncHandler>::new().advance(&mut self.term, bytes);
-        self.frame.snapshot.update(&mut self.term, 0);
+        self.term.feed(bytes);
+        self.term.snapshot(&mut self.frame.snapshot, 0);
         let shaped = Cell::new(0);
         let words = &mut self.words;
         self.frame.prepare(
@@ -177,9 +173,49 @@ fn an_unchanged_screen_rebuilds_nothing() {
     renderer.frame(&katakana_rain(&mut rng));
     for _ in 0..5 {
         let stats = {
-            renderer.frame.snapshot.update(&mut renderer.term, 0);
+            renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
             renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| Vec::new(), |text, _| text)
         };
         assert_eq!((stats.rows.built, stats.rows_placed), (0, 0), "{stats:?}");
     }
+}
+
+/// What the blink clock may do each half second is only a repaint: the rows keep the glyphs they
+/// were built with, so a phase change builds, shapes and places nothing.
+#[test]
+fn blinking_text_and_overlines_reach_the_painter_and_a_phase_change_rebuilds_nothing() {
+    let mut renderer = Renderer::new();
+    let shaped = renderer.frame(b"plain [5mblink[25m [6mrapid[0m [53mline[55m");
+    assert!(shaped > 0);
+    assert!(renderer.frame.any_blinks(), "SGR 5 and 6 reach the rows");
+    let glyphs: Vec<(bool, usize)> = renderer
+        .frame
+        .rows()
+        .flat_map(|(_, row)| row.lines.iter().map(|(col, glyphs)| (glyphs.iter().all(|g| g.blink), *col)))
+        .collect();
+    assert_eq!(glyphs, [(false, 0), (true, 6), (true, 12), (false, 18)], "plain, blink, rapid, overlined");
+    let overlined: Vec<(usize, usize)> = renderer
+        .frame
+        .rows()
+        .flat_map(|(_, row)| row.overlined.iter().map(|(first, end, _)| (*first, *end)))
+        .collect();
+    assert_eq!(overlined, [(18, 22)], "SGR 53 until 55");
+    // The clock turning (any number of times) is the same frame to the caches.
+    for _ in 0..4 {
+        renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
+        let stats = renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| Vec::new(), |t, _| t);
+        assert_eq!((stats.rows.built, stats.rows.moved, stats.rows_placed), (0, 0, 0), "{stats:?}");
+    }
+}
+
+#[test]
+fn a_screen_without_blinking_text_asks_for_no_clock() {
+    let mut renderer = Renderer::new();
+    renderer.frame(b"\x1b[1;4;9;53mbold\x1b[0m text");
+    assert!(!renderer.frame.any_blinks(), "overline, bold and the rest don't blink");
+    // Blinking blanks and hidden text draw nothing, so they don't need it either.
+    renderer.frame(b"\r\n\x1b[5m    \x1b[8mhidden\x1b[0m");
+    assert!(!renderer.frame.any_blinks());
+    renderer.frame(b"\r\n\x1b[5mblink");
+    assert!(renderer.frame.any_blinks());
 }

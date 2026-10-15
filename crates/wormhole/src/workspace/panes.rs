@@ -74,6 +74,14 @@ impl Workspace {
             // The workspace draws the find bar.
             TerminalEvent::FindChanged => cx.notify(),
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),
+            // A program (with `allow_window_ops`) asks the window for something: it is read as
+            // being about the pane that asked.
+            TerminalEvent::WindowOp(op) => {
+                let terminal = self.sessions[ix].terminal().clone();
+                let pane = terminal.read(cx).pane_size();
+                let done = crate::window_ops::apply(op, pane, window, cx);
+                terminal.update(cx, |terminal, cx| terminal.window_op_done(done, cx));
+            }
             // The bar is only on screen in the shown terminals.
             TerminalEvent::Close => {
                 if self.on_screen(ix) {

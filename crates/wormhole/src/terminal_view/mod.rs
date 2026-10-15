@@ -7,10 +7,9 @@ use std::time::{Duration, Instant};
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::alacritty_terminal::grid::Scroll;
-use wormhole_core::alacritty_terminal::index::{Column, Line, Point as GridPoint, Side};
-use wormhole_core::alacritty_terminal::selection::SelectionType;
-use wormhole_core::alacritty_terminal::term::TermMode;
+use wormhole_core::terminal::types::{
+    Column, Line, Point as GridPoint, Scroll, SelectionType, Side, TermMode,
+};
 
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge::token;
@@ -20,7 +19,9 @@ use wormhole_core::notify::Source;
 use wormhole_core::terminal::input::app_selection::AppSelection;
 use wormhole_core::terminal::input::{file_drop, keys, mouse};
 use wormhole_core::terminal::program_status::Summary as Reported;
-use wormhole_core::terminal::{GridSize, Mark, Notification, Pty, PtyEvent, SpawnOptions};
+use wormhole_core::terminal::{
+    GridSize, Mark, Notification, Pty, PtyEvent, SpawnOptions, WindowGeometry, WindowOp,
+};
 
 mod blocks;
 mod failed;
@@ -67,6 +68,8 @@ struct Layout {
     cell: Size<Pixels>,
     cols: usize,
     rows: usize,
+    /// What the window has around the grid (the content less the grid's area), for window operations.
+    frame: (f32, f32),
 }
 
 pub struct TerminalView {
@@ -77,6 +80,23 @@ pub struct TerminalView {
     /// scheduler reports as a non-deterministic test when a window closes.
     _tasks: Vec<Task<()>>,
     pty: Option<Pty>,
+    /// The theme palette the terminal's engine was last given (the own engine answers a program's
+    /// color queries itself, so it needs to know them).
+    palette_given: Option<Rc<crate::palette::Palette>>,
+    /// Where the window was when the engine was last told, for the reports a program asks for
+    /// (XTWINOPS); told again when it changes.
+    window_given: Option<WindowGeometry>,
+    /// A program has asked for the window to go to the Dock, or to come back (and when): until
+    /// AppKit says so too, which is after its animation, the reports say what was asked, not the
+    /// frames drawn meanwhile.
+    minimise_asked: Option<(bool, Instant)>,
+    /// The size a program's last resize asked the window for, until the layout shows it (or a
+    /// second has passed): the next operation, which a program sends at once, is about that size.
+    /// With the layout's size when it was made, to tell when the layout has moved.
+    size_asked: Option<(crate::window_ops::SizeGoal, (usize, usize), Instant)>,
+    /// After a window operation: brings the engine back to the pane's size once the window has
+    /// had its say.
+    window_sync: Option<Task<()>>,
     /// The title the program set (OSC 0/2), as the tab shows it (core `names::title_name`).
     pub title: Option<String>,
     /// Renames from the title, held to one per [`status::TITLE_EVERY`].
@@ -165,6 +185,10 @@ pub struct TerminalView {
     wants_blink: bool,
     /// The blink is in its off phase.
     cursor_off: bool,
+    /// Blinking text is on screen in a window in front (see `render::blink`).
+    wants_text_blink: bool,
+    /// The clock that repaints it twice a second; `None` when nothing blinks.
+    text_blink: Option<Task<()>>,
     /// Typed input since the last blink tick: the cursor stays on for a whole phase.
     blink_held: bool,
     /// Runs while `wants_blink`, then ends; `None` once it has.
@@ -193,6 +217,10 @@ impl TerminalView {
         let initial = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 18.0 };
         let shell = wormhole_core::terminal::shell_name(&options).into();
         options.scrollback_lines = settings(cx).scrollback_lines;
+        options.allow_screen_checksum = settings(cx).allow_screen_checksum;
+        options.allow_window_ops = settings(cx).allow_window_ops;
+        let palette = cx.global::<SettingsStore>().palette.clone();
+        options.colors = Some(palette.engine_colors());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
         let (pty, events) = match Pty::spawn(initial, &options) {
@@ -261,6 +289,11 @@ impl TerminalView {
             last_resize: now,
             last_focus_report: now,
             last_output: now,
+            palette_given: Some(palette),
+            window_given: None,
+            minimise_asked: None,
+            size_asked: None,
+            window_sync: None,
             layout: Rc::default(),
             render_state: Rc::default(),
             mode: TermMode::empty(),
@@ -291,6 +324,8 @@ impl TerminalView {
             bell_glow_off: None,
             wants_blink: false,
             cursor_off: false,
+            wants_text_blink: false,
+            text_blink: None,
             blink_held: false,
             cursor_blink: None,
             hovered_link: None,
@@ -471,6 +506,109 @@ impl TerminalView {
             return Some(text);
         }
         self.pty.as_ref()?.grab_prompt()
+    }
+
+    /// Tell the engine the theme's colors when they changed since it was last told: it answers a
+    /// program's color queries (OSC 4, 10, 11, 12) itself. A new terminal gets them with its
+    /// spawn options (a terminal nobody has drawn yet is asked too); this keeps up with theme
+    /// changes, and with a palette that was not the one at spawn.
+    fn share_palette(&mut self, palette: &Rc<crate::palette::Palette>) {
+        if self.palette_given.as_ref().is_some_and(|given| Rc::ptr_eq(given, palette)) {
+            return;
+        }
+        self.palette_given = Some(palette.clone());
+        let Some(pty) = self.pty.as_ref() else { return };
+        pty.set_default_colors(&palette.engine_colors());
+    }
+
+    /// The pane's size, which window operations are sums on: what the last resize asked for while
+    /// the layout has not caught up with it.
+    pub fn pane_size(&self) -> crate::window_ops::PaneSize {
+        let layout = self.layout.get();
+        let mut pane = crate::window_ops::PaneSize {
+            cell: (f32::from(layout.cell.width), f32::from(layout.cell.height)),
+            cols: layout.cols,
+            rows: layout.rows,
+            frame: layout.frame,
+        };
+        if let Some((cols, rows)) = self.size_pending() {
+            (pane.cols, pane.rows) = (cols, rows);
+        }
+        pane
+    }
+
+    /// The size the window was last asked to give the pane, while the layout has not shown it yet.
+    fn size_pending(&self) -> Option<(usize, usize)> {
+        let layout = self.layout.get();
+        match self.size_asked {
+            Some((crate::window_ops::SizeGoal::Set { cols, rows }, before, at))
+                if before == (layout.cols, layout.rows) && at.elapsed() < Duration::from_secs(1) =>
+            {
+                Some((cols, rows))
+            }
+            _ => None,
+        }
+    }
+
+    /// Tell the engine where the window is when that changed since it was last told.
+    fn share_window(&mut self, geometry: Option<WindowGeometry>) {
+        /// How long AppKit gets to follow a minimise or a restore before it is believed over the
+        /// request (a window that cannot be minimised stays as it is).
+        const SETTLE: Duration = Duration::from_secs(3);
+        let Some(mut geometry) = geometry else { return };
+        // The engine has worked out the window's size from the resize (it grows by what the text
+        // area does); the window and its frames still show the size before, which would undo that.
+        if self.size_pending().is_some() {
+            return;
+        }
+        if let Some((want, at)) = self.minimise_asked {
+            if geometry.iconified == want || at.elapsed() > SETTLE {
+                self.minimise_asked = None;
+            } else {
+                geometry.iconified = want;
+            }
+        }
+        if self.window_given == Some(geometry) {
+            return;
+        }
+        self.window_given = Some(geometry);
+        if let Some(pty) = &self.pty {
+            pty.set_window(geometry);
+        }
+    }
+
+    /// The workspace has carried out a program's window operation (`minimised` when it says the
+    /// window is, or is no longer, in the Dock). The window takes a moment to follow a resize, and
+    /// may not at all: after it has had that, the engine is brought back to the pane's size.
+    pub fn window_op_done(&mut self, done: crate::window_ops::Applied, cx: &mut Context<Self>) {
+        let minimised = done.minimised;
+        match done.size {
+            crate::window_ops::SizeGoal::Unchanged => {}
+            goal => {
+                let layout = self.layout.get();
+                self.size_asked = Some((goal, (layout.cols, layout.rows), Instant::now()));
+            }
+        }
+        if let Some(minimised) = minimised {
+            self.minimise_asked = Some((minimised, Instant::now()));
+        }
+        if let (Some(minimised), Some(given)) = (minimised, self.window_given) {
+            // No frame is drawn while the window is minimised, so nothing else would say so.
+            let told = WindowGeometry { iconified: minimised, ..given };
+            self.window_given = Some(told);
+            if let Some(pty) = &self.pty {
+                pty.set_window(told);
+            }
+        }
+        self.window_sync = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(Duration::from_millis(400)).await;
+            this.update(cx, |this, _| {
+                if let Some(pty) = &this.pty {
+                    pty.sync_size();
+                }
+            })
+            .ok();
+        }));
     }
 
     /// Recompute the grid size for the available space and resize the PTY.

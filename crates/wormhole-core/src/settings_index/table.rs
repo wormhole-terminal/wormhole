@@ -401,6 +401,29 @@ const TERMINAL: &[Group] = &[
             ),
         ],
     ),
+    group(
+        "Privacy",
+        &[
+            entry(
+                "screen-checksum",
+                "Let programs read the screen back",
+                "Answers a program's request for the checksum of part of the screen (DECRQCRA), which \
+                 also lets a program, over ssh too, read the screen cell by cell. Applies to new \
+                 terminals",
+                "decrqcra checksum screen read capture esctest security ssh",
+                &["allow_screen_checksum"],
+            ),
+            entry(
+                "window-ops",
+                "Let programs control the window",
+                "Lets a program move, resize, minimise, raise or full-screen the window and read its \
+                 title back (xterm's window operations). A title is text a program chose, so over ssh \
+                 this lets it type into other programs. Applies to new terminals",
+                "xtwinops window operations resize move iconify fullscreen maximize title report security ssh",
+                &["allow_window_ops"],
+            ),
+        ],
+    ),
 ];
 
 const SESSIONS: &[Group] = &[

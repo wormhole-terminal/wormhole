@@ -35,6 +35,8 @@ pub(super) struct Glyph {
     pub id: GlyphId,
     pub emoji: bool,
     pub color: Hsla,
+    /// Blinking text: painted faded in the blink clock's off phase.
+    pub blink: bool,
 }
 
 /// What a word's shape depends on: its text, and which runs are bold or italic.
@@ -207,12 +209,16 @@ fn place(
 ) {
     let dx = cell_width * cell as f32;
     let mut runs = Runs::new(segment);
-    out.extend(shaped.iter().map(|glyph| Glyph {
-        position: Point { x: glyph.position.x + dx, y: glyph.position.y },
-        font_id: glyph.font_id,
-        id: glyph.id,
-        emoji: glyph.emoji,
-        color: runs.at(byte + glyph.index).map(|style| style.fg).unwrap_or_default(),
+    out.extend(shaped.iter().map(|glyph| {
+        let style = runs.at(byte + glyph.index);
+        Glyph {
+            position: Point { x: glyph.position.x + dx, y: glyph.position.y },
+            font_id: glyph.font_id,
+            id: glyph.id,
+            emoji: glyph.emoji,
+            color: style.map(|style| style.fg).unwrap_or_default(),
+            blink: style.is_some_and(|style| style.blink),
+        }
     }));
 }
 
@@ -247,9 +253,7 @@ impl<'a> Runs<'a> {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{FontId, GlyphId, point, px};
-    use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-    use wormhole_core::alacritty_terminal::term::color::Colors;
-    use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor};
+    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
     use wormhole_core::theme;
 
     use super::{Shaped, WordCache};
@@ -266,13 +270,13 @@ mod tests {
                     cell.fg = Color::Named(NamedColor::Red);
                 }
                 if bold.contains(&col) {
-                    cell.flags = wormhole_core::alacritty_terminal::term::cell::Flags::BOLD;
+                    cell.flags = Flags::BOLD;
                 }
                 cell
             })
             .collect();
         let palette = Palette::from_theme(&theme::builtin()[0]);
-        build_row(&cells, &palette, &Colors::default(), &Marks::default()).segments
+        build_row(&cells, &RowExtras::default(), &palette, &Colors::default(), &Marks::default()).segments
     }
 
     /// One glyph per character, one cell apart.
@@ -335,11 +339,12 @@ mod tests {
     fn shaped_row(
         cache: &mut WordCache<u8>,
         cells: &[Cell],
+        extras: &RowExtras,
     ) -> (Vec<String>, Vec<(f32, u32, gpui_kit::Hsla)>) {
         let palette = Palette::from_theme(&theme::builtin()[0]);
         let mut asked = Vec::new();
         let mut glyphs = Vec::new();
-        for segment in build_row(cells, &palette, &Colors::default(), &Marks::default()).segments {
+        for segment in build_row(cells, extras, &palette, &Colors::default(), &Marks::default()).segments {
             let col = segment.col as f32 * 8.0;
             let found = cache.glyphs(&segment, px(8.0), |segment| {
                 asked.push(segment.text.clone());
@@ -367,7 +372,7 @@ mod tests {
     fn characters_that_stand_alone_are_shaped_once_each_whatever_word_they_are_in() {
         let mut cache = WordCache::default();
         cache.sync(0u8);
-        let (asked, glyphs) = shaped_row(&mut cache, &row("aﾊﾞxyｱｲ"));
+        let (asked, glyphs) = shaped_row(&mut cache, &row("aﾊﾞxyｱｲ"), &RowExtras::default());
         // ﾞ (a voiced mark) isn't a letter that stands alone: it is shaped with what follows it.
         assert_eq!(asked, ["a", "ﾊ", "ﾞxy", "ｱ", "ｲ"]);
         let at: Vec<(f32, u32)> = glyphs.iter().map(|g| (g.0, g.1)).collect();
@@ -375,7 +380,7 @@ mod tests {
         assert_eq!(at, ids.iter().enumerate().map(|(k, id)| (8.0 * k as f32, *id)).collect::<Vec<_>>());
 
         // The same characters in new words: nothing new to shape.
-        let (asked, _) = shaped_row(&mut cache, &row("ｲｱﾊ ｱa"));
+        let (asked, _) = shaped_row(&mut cache, &row("ｲｱﾊ ｱa"), &RowExtras::default());
         assert!(asked.is_empty(), "{asked:?}");
     }
 
@@ -383,7 +388,7 @@ mod tests {
     fn wide_characters_stand_alone_two_cells_apart() {
         let mut cache = WordCache::default();
         cache.sync(0u8);
-        let (asked, glyphs) = shaped_row(&mut cache, &row("日本日"));
+        let (asked, glyphs) = shaped_row(&mut cache, &row("日本日"), &RowExtras::default());
         assert_eq!(asked, ["日", "本"]);
         let at: Vec<f32> = glyphs.iter().map(|g| g.0).collect();
         assert_eq!(at, [0.0, 16.0, 32.0]);
@@ -393,9 +398,10 @@ mod tests {
     fn a_character_with_a_combining_mark_is_shaped_with_its_word() {
         let mut cache = WordCache::default();
         cache.sync(0u8);
-        let mut cells = row("ｱｲ");
-        cells[1].push_zerowidth('\u{0301}');
-        let (asked, _) = shaped_row(&mut cache, &cells);
+        let cells = row("ｱｲ");
+        let mut extras = RowExtras::default();
+        extras.push_zerowidth(1, '\u{0301}');
+        let (asked, _) = shaped_row(&mut cache, &cells, &extras);
         assert_eq!(asked, ["ｱｲ\u{0301}"]);
     }
 
@@ -406,7 +412,7 @@ mod tests {
         let mut cells = row("ｱｱxｱ");
         cells[1].fg = Color::Named(NamedColor::Red);
         cells[3].flags = Flags::BOLD;
-        let (asked, glyphs) = shaped_row(&mut cache, &cells);
+        let (asked, glyphs) = shaped_row(&mut cache, &cells, &RowExtras::default());
         assert_eq!(asked, ["ｱ", "x", "ｱ"], "a bold ｱ is another font");
         let palette = Palette::from_theme(&theme::builtin()[0]);
         let colors: Vec<_> = glyphs.iter().map(|g| g.2).collect();

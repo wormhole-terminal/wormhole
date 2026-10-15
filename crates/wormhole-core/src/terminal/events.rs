@@ -1,6 +1,6 @@
 //! Terminal events on their way from the PTY thread to the UI.
 //!
-//! alacritty sends a `Wakeup` per read burst: tens to hundreds a second while a
+//! The engine sends a wakeup per read burst: tens to hundreds a second while a
 //! program streams output. Each one would be a cross-thread wake of the UI. Here
 //! they collapse into one [`PtyEvent::Output`] in flight at a time (the next is
 //! sent only after the UI took the previous one), and a revision counter tells
@@ -20,18 +20,14 @@ use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, AtomicUsize,
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Instant;
 
-use alacritty_terminal::event::{Event, EventListener, WindowSize};
-use alacritty_terminal::event_loop::{EventLoopSender, Msg};
-use alacritty_terminal::vte::ansi::Rgb;
-
+use super::WindowSize;
 use super::blocks::CommandLog;
-use super::images::{self, DECODES_MAX, Format, ImageStore, Limits};
+use super::images::{DECODES_MAX, ImageStore};
+use super::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
 use super::process;
 use super::program_status::{self, ProgramStatus};
-use super::pty_filter::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
+use wormhole_vt::term::WindowOp;
 
-/// Turns the color a program asked for into the escape sequence it expects.
-pub type ColorFormatter = Arc<dyn Fn(Rgb) -> String + Sync + Send + 'static>;
 /// Turns clipboard text into the escape sequence a program expects.
 pub type TextFormatter = Arc<dyn Fn(&str) -> String + Sync + Send + 'static>;
 
@@ -47,8 +43,6 @@ pub enum PtyEvent {
     ClipboardStore(String),
     /// OSC 52 read; answer with the clipboard text run through the formatter.
     ClipboardLoad(TextFormatter, Reply),
-    /// OSC 4/10/11/12 query for a palette entry; answer with its color.
-    ColorRequest(usize, ColorFormatter, Reply),
     /// OSC 7: the shell said where it is (a local folder that exists); `Pty::cwd` has it.
     Cwd,
     /// OSC 133: the shell's prompt, command and output marks.
@@ -60,6 +54,11 @@ pub enum PtyEvent {
     /// Read it with `Pty::program_status`. Like `Output`, one is in flight at a time, so a
     /// program reporting as fast as it can writes costs the UI one look per turn.
     ProgramStatus,
+    /// A program asked the window to do something and `allow_window_ops` is on: move, resize,
+    /// minimise, raise, full screen (XTWINOPS), or switch to 80 or 132 columns (DECCOLM). The
+    /// sizes in cells have taken effect in the engine already; the UI makes the window match and
+    /// then calls [`Pty::sync_size`](super::Pty::sync_size).
+    WindowOp(WindowOp),
     /// The shell exited (sent once), with its exit code when the system reported one.
     Exited(Option<i32>),
 }
@@ -73,11 +72,11 @@ impl std::fmt::Debug for PtyEvent {
             PtyEvent::Bell => f.write_str("Bell"),
             PtyEvent::ClipboardStore(_) => f.write_str("ClipboardStore"),
             PtyEvent::ClipboardLoad(..) => f.write_str("ClipboardLoad"),
-            PtyEvent::ColorRequest(index, ..) => write!(f, "ColorRequest({index})"),
             PtyEvent::Cwd => f.write_str("Cwd"),
             PtyEvent::Mark(mark) => write!(f, "Mark({mark:?})"),
             PtyEvent::Notify(notification) => write!(f, "Notify({notification:?})"),
             PtyEvent::ProgramStatus => f.write_str("ProgramStatus"),
+            PtyEvent::WindowOp(op) => write!(f, "WindowOp({op:?})"),
             PtyEvent::Exited(code) => write!(f, "Exited({code:?})"),
         }
     }
@@ -155,6 +154,9 @@ impl Replies {
     }
 }
 
+/// Sends bytes to the program, from any thread.
+pub(super) type Writer = Box<dyn Fn(Vec<u8>) + Send + Sync>;
+
 /// State shared by the PTY thread (writer) and the UI (reader).
 #[derive(Default)]
 pub(super) struct Shared {
@@ -165,8 +167,8 @@ pub(super) struct Shared {
     exited: AtomicBool,
     /// The grid size in cells and pixels, packed, for size queries.
     size: AtomicU64,
-    /// The event loop's input channel, for query replies; set once it exists.
-    writer: OnceLock<EventLoopSender>,
+    /// Where query replies go (the PTY's input); set once the PTY exists.
+    writer: OnceLock<Writer>,
     /// Replies waiting behind one the UI hasn't given yet.
     replies: Mutex<Replies>,
     /// OSC 7: the folder the shell last reported, until `Pty::cwd` takes it.
@@ -240,9 +242,18 @@ impl Shared {
         self.images.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// The grid's size, for placing an image.
-    pub(super) fn grid_size(&self) -> WindowSize {
-        self.size()
+    /// A decode is about to start on a thread of its own; `false` when [`DECODES_MAX`] are being
+    /// decoded already, in which case it must not start. Pair a `true` with [`Self::end_decode`].
+    pub(super) fn begin_decode(&self) -> bool {
+        if self.decoding.fetch_add(1, Ordering::AcqRel) >= DECODES_MAX {
+            self.decoding.fetch_sub(1, Ordering::AcqRel);
+            return false;
+        }
+        true
+    }
+
+    pub(super) fn end_decode(&self) {
+        self.decoding.fetch_sub(1, Ordering::AcqRel);
     }
 
     /// Answer a program (the same way a query reply goes: on the PTY thread, in order).
@@ -288,7 +299,7 @@ impl Shared {
         Some(Progress { state, percent: (packed & 0xff) as u8 })
     }
 
-    pub(super) fn set_writer(&self, writer: EventLoopSender) {
+    pub(super) fn set_writer(&self, writer: Writer) {
         let _ = self.writer.set(writer);
     }
 
@@ -300,7 +311,7 @@ impl Shared {
         self.size.store(packed, Ordering::Release);
     }
 
-    fn size(&self) -> WindowSize {
+    pub(super) fn size(&self) -> WindowSize {
         let packed = self.size.load(Ordering::Acquire);
         WindowSize {
             num_lines: packed as u16,
@@ -315,7 +326,7 @@ impl Shared {
         self.replies.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    fn reply(&self, bytes: Vec<u8>) {
+    pub(super) fn reply(&self, bytes: Vec<u8>) {
         let mut replies = self.replies();
         if let Some(bytes) = replies.push(bytes) {
             self.send_reply(bytes);
@@ -323,7 +334,7 @@ impl Shared {
     }
 
     /// Hold a place among the replies for one the UI gives.
-    fn hold_reply(self: &Arc<Self>) -> Reply {
+    pub(super) fn hold_reply(self: &Arc<Self>) -> Reply {
         let ticket = self.replies().hold();
         Reply(Arc::new(ReplySlot { ticket, shared: self.clone() }))
     }
@@ -339,13 +350,13 @@ impl Shared {
         if let Some(writer) = self.writer.get()
             && !bytes.is_empty()
         {
-            let _ = writer.send(Msg::Input(bytes.into()));
+            writer(bytes);
         }
     }
 }
 
-/// Receives alacritty's events on the PTY thread (while the terminal is locked,
-/// so it must never lock it again).
+/// Receives the engine's events on the PTY thread (while the terminal is locked, so it must never
+/// lock it again); `engine` turns the engine's own events into calls on this.
 #[derive(Clone)]
 pub(crate) struct EventProxy {
     tx: smol::channel::Sender<PtyEvent>,
@@ -363,12 +374,21 @@ impl EventProxy {
         &self.shared
     }
 
-    fn send(&self, event: PtyEvent) {
+    pub(super) fn send(&self, event: PtyEvent) {
         let _ = self.tx.try_send(event);
     }
 
+    /// The program printed (the engine sends one per read burst): bump the revision and, unless
+    /// the UI hasn't taken the last one yet, say so.
+    pub(super) fn wakeup(&self) {
+        self.shared.revision.fetch_add(1, Ordering::AcqRel);
+        if !self.shared.output_pending.swap(true, Ordering::AcqRel) {
+            self.send(PtyEvent::Output);
+        }
+    }
+
     /// The shell is gone: say so once.
-    fn exited(&self, code: Option<i32>) {
+    pub(super) fn exited(&self, code: Option<i32>) {
         if !self.shared.exited.swap(true, Ordering::AcqRel) {
             // The process the programs' work ran in is over (the UI shows the exit itself).
             self.shared.program_status().on_process_exit();
@@ -383,49 +403,8 @@ impl EventProxy {
         }
     }
 
-    /// Decode an image on a thread of its own and keep it as `id` (reserved in the store already);
-    /// the view redraws when it is in. At most [`DECODES_MAX`] at once per terminal: beyond that
-    /// the image is dropped and logged, and so is one that fails to decode or fit.
-    pub(super) fn decode_image(&self, id: u32, format: Format, data: Vec<u8>, compressed: bool) {
-        let shared = &self.shared;
-        if shared.decoding.fetch_add(1, Ordering::AcqRel) >= DECODES_MAX {
-            shared.decoding.fetch_sub(1, Ordering::AcqRel);
-            tracing::warn!(id, "inline image dropped: {DECODES_MAX} are being decoded already");
-            shared.images().remove(id);
-            return;
-        }
-        let proxy = self.clone();
-        let spawned = std::thread::Builder::new().name("image-decode".into()).spawn(move || {
-            let started = Instant::now();
-            let result = images::decode(format, &data, compressed, &Limits::default());
-            proxy.shared.decoding.fetch_sub(1, Ordering::AcqRel);
-            match result {
-                Ok(image) => {
-                    let (width, height) = (image.width, image.height);
-                    let kept = proxy.shared.images().insert_decoded(id, Arc::new(image));
-                    if kept {
-                        tracing::debug!(id, width, height, took = ?started.elapsed(), "inline image decoded");
-                        // Bumps the revision and sends `Output`, as printed text does.
-                        proxy.send_event(Event::Wakeup);
-                    } else {
-                        tracing::info!(id, "inline image dropped: deleted meanwhile, or no room for it");
-                    }
-                }
-                Err(err) => {
-                    tracing::warn!(id, ?err, "inline image dropped: it didn't decode");
-                    proxy.shared.images().remove(id);
-                }
-            }
-        });
-        if let Err(err) = spawned {
-            tracing::warn!(id, "inline image dropped: no thread to decode it on: {err}");
-            shared.decoding.fetch_sub(1, Ordering::AcqRel);
-            shared.images().remove(id);
-        }
-    }
-
-    /// What the OSC tap found in the output, on the PTY thread like alacritty's own events (and
-    /// like them never touching the terminal's lock).
+    /// What the host made of the engine's events (a folder, a mark, a notification, a status), on
+    /// the PTY thread and never touching the terminal's lock.
     pub(super) fn osc(&self, osc: Osc) {
         match osc {
             // A folder on another machine (ssh) or one that isn't here is no folder to show;
@@ -450,9 +429,10 @@ impl EventProxy {
             // after the first OSC 7501 report, until the next full reset: a mapped 9;4 would
             // replace a real report's kind and msg.
             Osc::Progress(progress) => self.shared.set_progress(progress),
-            // Answered here, on the PTY thread and before alacritty parses what follows, so the
-            // reply goes out ahead of the reply to the primary device attributes a program sends
-            // right after the query: it takes that one arriving first as "not supported".
+            // Answered here, on the PTY thread while the read's events are acted on, so the reply
+            // goes out ahead of the engine's own replies from the same read: the reply to the
+            // primary device attributes a program sends right after the query must not come first,
+            // or it takes the query as "not supported".
             Osc::ProgramStatusQuery => self.shared.write_reply(program_status::QUERY_REPLY.to_vec()),
             Osc::ProgramStatus(report) => {
                 if self.shared.program_status().apply(report) {
@@ -464,38 +444,6 @@ impl EventProxy {
                     self.program_status_changed();
                 }
             }
-            // The tap acts on it itself (re-arming a prompt mark).
-            Osc::HyperlinkEnd => {}
-        }
-    }
-}
-
-impl EventListener for EventProxy {
-    fn send_event(&self, event: Event) {
-        match event {
-            Event::Wakeup => {
-                self.shared.revision.fetch_add(1, Ordering::AcqRel);
-                if !self.shared.output_pending.swap(true, Ordering::AcqRel) {
-                    self.send(PtyEvent::Output);
-                }
-            }
-            Event::PtyWrite(text) => self.shared.reply(text.into_bytes()),
-            Event::TextAreaSizeRequest(format) => self.shared.reply(format(self.shared.size()).into_bytes()),
-            Event::Title(title) => self.send(PtyEvent::Title(title)),
-            Event::ResetTitle => self.send(PtyEvent::ResetTitle),
-            Event::Bell => self.send(PtyEvent::Bell),
-            Event::ClipboardStore(_, text) => self.send(PtyEvent::ClipboardStore(text)),
-            Event::ClipboardLoad(_, format) => {
-                self.send(PtyEvent::ClipboardLoad(format, self.shared.hold_reply()));
-            }
-            Event::ColorRequest(index, format) => {
-                self.send(PtyEvent::ColorRequest(index, format, self.shared.hold_reply()));
-            }
-            // The child's status comes first when the system reports it, then the terminal's
-            // own exit; whichever arrives first is the one reported.
-            Event::ChildExit(status) => self.exited(status.code()),
-            Event::Exit => self.exited(None),
-            Event::MouseCursorDirty | Event::CursorBlinkingChange => {}
         }
     }
 }

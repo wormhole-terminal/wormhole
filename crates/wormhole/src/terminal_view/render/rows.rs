@@ -8,20 +8,22 @@
 //! `text` shapes once and reuses wherever it shows up again.
 
 use gpui_kit::Hsla;
-use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-use wormhole_core::alacritty_terminal::term::color::Colors;
 use wormhole_core::terminal::images::{Placeholder, placeholder_at};
+use wormhole_core::terminal::types::{Cell, Colors, Flags, RowExtras};
 
 use crate::palette::Palette;
 
 /// The text attributes runs are split on. Underlines aren't among them: the
-/// terminal paints those itself (see [`Underline`]), and strikethroughs in rows too.
+/// terminal paints those itself (see [`Underline`]), and strikethroughs in rows too. `blink` only
+/// splits runs: shaping ignores it (words are cached by text and fonts), the painter fades the
+/// glyphs of a blinking run in the clock's off phase.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Style {
     pub fg: Hsla,
     pub bold: bool,
     pub italic: bool,
     pub strike: bool,
+    pub blink: bool,
 }
 
 impl Style {
@@ -33,6 +35,7 @@ impl Style {
             bold: flags.contains(Flags::BOLD),
             italic: flags.contains(Flags::ITALIC),
             strike: flags.contains(Flags::STRIKEOUT),
+            blink: flags.contains(Flags::BLINK),
         }
     }
 }
@@ -49,7 +52,7 @@ pub(crate) enum UnderlineKind {
 
 impl UnderlineKind {
     fn of(flags: Flags) -> Option<Self> {
-        // alacritty sets exactly one of these; the order only matters for a corrupt cell.
+        // Exactly one of these is set; the order only matters for a corrupt cell.
         [
             (Flags::UNDERCURL, Self::Curly),
             (Flags::DOUBLE_UNDERLINE, Self::Double),
@@ -121,6 +124,10 @@ pub(super) struct BuiltRow {
     pub underlines: Vec<Underline>,
     /// `[first, end)` columns struck through, in a color, merged.
     pub strikes: Vec<(usize, usize, Hsla)>,
+    /// `[first, end)` columns with a line along the top of the cell (SGR 53), in a color, merged.
+    pub overlines: Vec<(usize, usize, Hsla)>,
+    /// Some visible text on the row blinks (SGR 5 and 6): the screen needs the blink clock.
+    pub blinks: bool,
     /// Box-drawing and block-element cells, painted as shapes (see `glyphs`).
     pub shapes: Vec<(usize, char, Hsla)>,
     /// The tiles of inline images on the row, consecutive ones as one run (see `images`).
@@ -143,8 +150,8 @@ impl ImageRun {
     /// Whether the placeholder at `col` continues this run.
     fn continues(&self, col: usize, p: &Placeholder) -> bool {
         self.col + self.cells == col
-            && self.image == p.image
-            && self.placement == p.placement
+            && self.image == p.image_id
+            && self.placement == p.placement_id
             && self.tile_row == p.row
             && u32::from(self.tile_col) + self.cells as u32 == u32::from(p.col)
     }
@@ -171,13 +178,21 @@ pub(super) fn is_shape(c: char) -> bool {
     ('\u{2500}'..='\u{259F}').contains(&c)
 }
 
-/// Build one row with what `marks` colors on it.
-pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, marks: &Marks) -> BuiltRow {
+/// Build one row with what `marks` colors on it. `extras` is what the cells carry beside them
+/// (almost always nothing, which costs a check per cell).
+pub(super) fn build_row(
+    cells: &[Cell],
+    extras: &RowExtras,
+    palette: &Palette,
+    overrides: &Colors,
+    marks: &Marks,
+) -> BuiltRow {
     let mut row = BuiltRow::default();
     for (col, cell) in cells.iter().enumerate() {
         if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
             continue;
         }
+        let extra = extras.cell(col);
         let in_selection = marks.selected.is_some_and(|(first, last)| (first..=last).contains(&col));
         let (mut fg, mut bg) = palette.cell_colors(cell, in_selection, overrides);
         // The current match stands out over everything; the others tint, except in the selection.
@@ -197,14 +212,14 @@ pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, m
         }
 
         // An image's placeholder draws its tile, not a character (its background still paints).
-        if let Some(placeholder) = placeholder_at(cell) {
+        if let Some(placeholder) = placeholder_at(cell, extra) {
             match row.images.last_mut() {
                 Some(run) if run.continues(col, &placeholder) => run.cells += 1,
                 _ => row.images.push(ImageRun {
                     col,
                     cells: 1,
-                    image: placeholder.image,
-                    placement: placeholder.placement,
+                    image: placeholder.image_id,
+                    placement: placeholder.placement_id,
                     tile_row: placeholder.row,
                     tile_col: placeholder.col,
                 }),
@@ -219,15 +234,27 @@ pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, m
         } else {
             cell.c
         };
-        // A hidden cell (SGR 8) hides its underline too.
-        if let Some(kind) = UnderlineKind::of(cell.flags).filter(|_| !cell.flags.contains(Flags::HIDDEN)) {
-            let color = cell
-                .underline_color()
+        // A hidden cell (SGR 8) hides its underline and overline too. Both take the underline's
+        // color when the program set one (SGR 58), else the text's.
+        let visible = !cell.flags.contains(Flags::HIDDEN);
+        let line_color = || {
+            extra
+                .underline_color
                 .filter(|_| !in_selection || palette.selection_fg.is_none())
-                .map_or(fg, |color| palette.resolve(color, overrides));
+                .map_or(fg, |color| palette.resolve(color, overrides))
+        };
+        if let Some(kind) = UnderlineKind::of(cell.flags).filter(|_| visible) {
+            let color = line_color();
             match row.underlines.last_mut() {
                 Some(last) if last.end == col && last.kind == kind && last.color == color => last.end = end,
                 _ => row.underlines.push(Underline { first: col, end, kind, color }),
+            }
+        }
+        if visible && cell.flags.contains(Flags::OVERLINE) {
+            let color = line_color();
+            match row.overlines.last_mut() {
+                Some((_, last_end, last)) if *last_end == col && *last == color => *last_end = end,
+                _ => row.overlines.push((col, end, color)),
             }
         }
         let mut style = Style::of(cell, fg);
@@ -238,10 +265,10 @@ pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, m
                 _ => row.strikes.push((col, end, fg)),
             }
         }
-        let zerowidth = cell.zerowidth();
+        let zerowidth = extra.zerowidth;
         // A blank draws nothing: it ends the word before it, and the next
         // character starts one at its own column.
-        if shown == ' ' && zerowidth.is_none() {
+        if shown == ' ' && zerowidth.is_empty() {
             continue;
         }
 
@@ -252,11 +279,10 @@ pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, m
         let Some(segment) = row.segments.last_mut() else { continue };
         let start = segment.text.len();
         segment.text.push(shown);
-        if let Some(zerowidth) = zerowidth {
-            segment.text.extend(zerowidth);
-        }
+        segment.text.extend(zerowidth);
         segment.end = end;
         let len = segment.text.len() - start;
+        row.blinks |= style.blink && visible;
         match segment.runs.last_mut() {
             Some((run_len, run_style)) if *run_style == style => *run_len += len,
             _ => segment.runs.push((len, style)),
@@ -268,9 +294,7 @@ pub(super) fn build_row(cells: &[Cell], palette: &Palette, overrides: &Colors, m
 #[cfg(test)]
 mod tests {
     use gpui_kit::Hsla;
-    use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-    use wormhole_core::alacritty_terminal::term::color::Colors;
-    use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor};
+    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
     use wormhole_core::theme;
 
     use super::{BuiltRow, ImageRun, Marks, UnderlineKind, build_row};
@@ -301,7 +325,11 @@ mod tests {
     }
 
     fn build(cells: &[Cell]) -> BuiltRow {
-        build_row(cells, &palette(), &Colors::default(), &Marks::default())
+        build_with(cells, &RowExtras::default())
+    }
+
+    fn build_with(cells: &[Cell], extras: &RowExtras) -> BuiltRow {
+        build_row(cells, extras, &palette(), &Colors::default(), &Marks::default())
     }
 
     fn texts(row: &BuiltRow) -> Vec<(usize, bool, &str)> {
@@ -349,9 +377,10 @@ mod tests {
         }
         row[6].flags = Flags::UNDERCURL;
         row[7].flags = Flags::UNDERCURL;
-        row[7].set_underline_color(Some(Color::Named(NamedColor::Red)));
+        let mut extras = RowExtras::default();
+        extras.set_underline_color(7, Some(Color::Named(NamedColor::Red)));
         let palette = palette();
-        let built = build(&row);
+        let built = build_with(&row, &extras);
         assert_eq!(texts(&built), [(0, false, "ab"), (6, false, "cd")]);
         let mut trailing = cells("ab    ");
         for cell in &mut trailing[2..] {
@@ -370,6 +399,47 @@ mod tests {
                 (7, 8, UnderlineKind::Curly, palette.ansi[1]),
             ]
         );
+    }
+
+    #[test]
+    fn overlines_take_the_underline_color_else_the_text_color() {
+        let mut row = cells("ab cd e");
+        for cell in &mut row[..2] {
+            cell.flags = Flags::OVERLINE;
+        }
+        for cell in &mut row[3..] {
+            cell.flags = Flags::OVERLINE | Flags::HIDDEN;
+        }
+        row[3].flags = Flags::OVERLINE;
+        row[4].flags = Flags::OVERLINE;
+        let mut extras = RowExtras::default();
+        extras.set_underline_color(4, Some(Color::Named(NamedColor::Red)));
+        let palette = palette();
+        let built = build_with(&row, &extras);
+        assert_eq!(
+            built.overlines,
+            [(0, 2, palette.foreground), (3, 4, palette.foreground), (4, 5, palette.ansi[1])],
+            "merged where the color continues; the hidden cells draw none"
+        );
+        assert!(built.underlines.is_empty(), "an overline is not an underline");
+        let mut blank = cells("   ");
+        blank[1].flags = Flags::OVERLINE;
+        let built = build(&blank);
+        assert_eq!((built.overlines.len(), built.segments.len()), (1, 0), "no text needed");
+    }
+
+    #[test]
+    fn blinking_cells_are_marked_on_their_run_and_the_row() {
+        let mut row = cells("ab cd");
+        row[0].flags = Flags::BLINK;
+        let built = build(&row);
+        assert!(built.blinks);
+        let styles: Vec<bool> = built.segments[0].runs.iter().map(|(_, style)| style.blink).collect();
+        assert_eq!(styles, [true, false]);
+        assert!(!build(&cells("ab cd")).blinks);
+        let mut blank = cells("   ");
+        blank[1].flags = Flags::BLINK;
+        assert!(!build(&blank).blinks, "a blinking blank draws nothing, so nothing blinks");
     }
 
     #[test]
@@ -413,7 +483,7 @@ mod tests {
         }
         let palette = palette();
         let marks = Marks { selected: Some((4, 5)), ..Marks::default() };
-        let built = build_row(&row, &palette, &Colors::default(), &marks);
+        let built = build_row(&row, &RowExtras::default(), &palette, &Colors::default(), &marks);
         assert_eq!(built.backgrounds, [(1, 3, palette.ansi[1]), (4, 6, palette.selection)]);
         let fg: Vec<Hsla> = built.segments[0].runs.iter().map(|(_, style)| style.fg).collect();
         let selected = palette.selection_fg.unwrap_or(palette.foreground);
@@ -424,7 +494,8 @@ mod tests {
     fn matches_tint_and_the_current_one_stands_out() {
         let palette = palette();
         let marks = Marks { selected: None, found: vec![(0, 1, false), (4, 5, true)] };
-        let built = build_row(&cells("ab  cd"), &palette, &Colors::default(), &marks);
+        let extras = RowExtras::default();
+        let built = build_row(&cells("ab  cd"), &extras, &palette, &Colors::default(), &marks);
         assert_eq!(
             built.backgrounds,
             [(0, 2, palette.find_match), (4, 6, palette.find_current)],
@@ -438,31 +509,31 @@ mod tests {
         );
         // A selected match shows the selection; the current match shows over it.
         let marks = Marks { selected: Some((0, 5)), found: vec![(0, 1, false), (4, 5, true)] };
-        let built = build_row(&cells("ab  cd"), &palette, &Colors::default(), &marks);
+        let built = build_row(&cells("ab  cd"), &extras, &palette, &Colors::default(), &marks);
         assert_eq!(built.backgrounds, [(0, 4, palette.selection), (4, 6, palette.find_current)]);
     }
 
     #[test]
     fn image_placeholders_become_runs_of_tiles_and_no_text() {
-        use wormhole_core::alacritty_terminal::term::cell::Flags;
-        use wormhole_core::alacritty_terminal::vte::ansi::Rgb;
         use wormhole_core::terminal::images::PLACEHOLDER;
+        use wormhole_core::terminal::types::Rgb;
         // Row 1 of a placement of image 0x000005, tiles 0..3 at columns 1..4, then an unrelated
         // tile (another image) and text.
         let mut row = cells("a      b");
         let marks = ['\u{030D}', '\u{0305}', '\u{030D}', '\u{030E}', '\u{0310}'];
+        let mut extras = RowExtras::default();
         for (k, col) in (1..=4).enumerate() {
             row[col].c = PLACEHOLDER;
-            row[col].fg = Color::Spec(Rgb { r: 0, g: 0, b: 5 });
-            row[col].push_zerowidth(marks[0]);
-            row[col].push_zerowidth(marks[k + 1]);
+            row[col].fg = Color::Rgb(Rgb { r: 0, g: 0, b: 5 });
+            extras.push_zerowidth(col, marks[0]);
+            extras.push_zerowidth(col, marks[k + 1]);
         }
         row[5].c = PLACEHOLDER;
-        row[5].fg = Color::Spec(Rgb { r: 0, g: 0, b: 6 });
-        row[5].push_zerowidth(marks[1]);
-        row[5].push_zerowidth(marks[1]);
+        row[5].fg = Color::Rgb(Rgb { r: 0, g: 0, b: 6 });
+        extras.push_zerowidth(5, marks[1]);
+        extras.push_zerowidth(5, marks[1]);
         row[5].flags = Flags::empty();
-        let built = build(&row);
+        let built = build_with(&row, &extras);
         assert_eq!(texts(&built), [(0, false, "a"), (7, false, "b")]);
         assert_eq!(
             built.images,
@@ -475,9 +546,21 @@ mod tests {
 
     #[test]
     fn zero_width_marks_stay_with_their_character() {
-        let mut row = cells("e x");
-        row[0].push_zerowidth('\u{301}');
-        let built = build(&row);
+        let row = cells("e x");
+        let mut extras = RowExtras::default();
+        extras.push_zerowidth(0, '\u{301}');
+        let built = build_with(&row, &extras);
         assert_eq!(texts(&built), [(0, false, "e\u{301}"), (2, false, "x")]);
+    }
+
+    #[test]
+    fn a_blank_that_only_has_a_link_or_an_underline_color_is_still_a_blank() {
+        // Everything a shell with integration prints carries a mark, spaces included; none of it
+        // makes a blank into something to shape.
+        let row = cells("a b");
+        let mut extras = RowExtras::default();
+        extras.set_underline_color(1, Some(Color::Indexed(2)));
+        let built = build_with(&row, &extras);
+        assert_eq!(texts(&built), [(0, false, "a"), (2, false, "b")]);
     }
 }

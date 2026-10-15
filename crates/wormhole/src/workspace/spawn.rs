@@ -1,8 +1,8 @@
 //! Starting helper processes (`osascript`, `open`) that nobody waits for.
 //!
 //! Dropping a [`std::process::Child`] neither waits for it nor kills it, and nothing else in the
-//! process reaps strangers (alacritty's SIGCHLD handling only waits for its own shells), so every
-//! fire-and-forget `spawn()` leaves a zombie behind until we exit. Zombies count against the
+//! process reaps strangers (the terminal's SIGCHLD handling only waits for its own shells), so
+//! every fire-and-forget `spawn()` leaves a zombie behind until we exit. Zombies count against the
 //! per-user process limit, and an app that stays open for days notifies many times a day.
 
 use std::io;

@@ -55,6 +55,8 @@ pub enum TerminalEvent {
     Close,
     /// The find bar opened or closed (the workspace draws it).
     FindChanged,
+    /// A program asked the window to move, resize, minimise or the like (`allow_window_ops`).
+    WindowOp(WindowOp),
 }
 
 impl TerminalView {
@@ -463,12 +465,8 @@ impl TerminalView {
                 let text = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
                 reply.send(format(&text).into_bytes());
             }
-            PtyEvent::ColorRequest(index, format, reply) => {
-                let Some(pty) = &self.pty else { return };
-                // What the program set (OSC 4/10/11/12) wins over the theme, as it does on screen.
-                let color = cx.global::<SettingsStore>().palette.query(index, &pty.colors());
-                reply.send(format(color).into_bytes());
-            }
+            // The workspace owns the window.
+            PtyEvent::WindowOp(op) => cx.emit(TerminalEvent::WindowOp(op)),
             // The screen stays: the last output (often why it exited) can still
             // be read, selected and saved.
             PtyEvent::Exited(code) => {

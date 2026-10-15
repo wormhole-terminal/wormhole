@@ -1,7 +1,5 @@
 use gpui_kit::{Hsla, rgb};
-use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-use wormhole_core::alacritty_terminal::term::color::Colors;
-use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor, Rgb};
+use wormhole_core::terminal::types::{COLOR_COUNT, Cell, Color, Colors, Flags, NamedColor, Rgb};
 
 /// Terminal colors, resolved from the active theme. Comparable, so a settings
 /// change that leaves them alone can keep the same palette (and the terminal
@@ -65,7 +63,7 @@ impl Palette {
     /// Resolve a cell color, honoring runtime overrides set via OSC 4/10/11.
     pub fn resolve(&self, color: Color, overrides: &Colors) -> Hsla {
         match color {
-            Color::Spec(rgb) => to_hsla(rgb),
+            Color::Rgb(rgb) => to_hsla(rgb),
             Color::Named(named) => overrides[named].map(to_hsla).unwrap_or_else(|| self.named(named)),
             Color::Indexed(index) => {
                 overrides[index as usize].map(to_hsla).unwrap_or_else(|| self.indexed(index))
@@ -102,7 +100,7 @@ impl Palette {
     /// What a program gets back when it asks for palette entry `index` (OSC 4,
     /// or 256/257/258 for OSC 10/11/12): the color it set, else the theme's.
     pub fn query(&self, index: usize, overrides: &Colors) -> Rgb {
-        if let Some(rgb) = (index < 269).then(|| overrides[index]).flatten() {
+        if let Some(rgb) = (index < COLOR_COUNT).then(|| overrides[index]).flatten() {
             return rgb;
         }
         to_rgb(match index {
@@ -113,16 +111,24 @@ impl Palette {
         })
     }
 
+    /// The theme's answer for every entry a program can ask about, for the engine to answer with
+    /// (it keeps what a program set itself).
+    pub fn engine_colors(&self) -> Box<[Rgb; COLOR_COUNT]> {
+        let none = Colors::default();
+        let mut colors = Box::new([Rgb { r: 0, g: 0, b: 0 }; COLOR_COUNT]);
+        for (slot, color) in colors.iter_mut().enumerate() {
+            *color = self.query(slot, &none);
+        }
+        colors
+    }
+
     fn named(&self, named: NamedColor) -> Hsla {
-        let index = named as usize;
         match named {
-            NamedColor::Foreground | NamedColor::BrightForeground => self.foreground,
+            NamedColor::Foreground => self.foreground,
             NamedColor::Background => self.background,
             NamedColor::Cursor => self.cursor,
-            NamedColor::DimForeground => dim(self.foreground),
-            _ if index < 16 => self.ansi[index],
-            // DimBlack..=DimWhite follow directly after Cursor.
-            _ => dim(self.ansi[(index - NamedColor::DimBlack as usize) % 8]),
+            // The ANSI colors are the first sixteen slots, in the theme's order.
+            ansi => self.ansi[ansi as usize],
         }
     }
 
@@ -165,9 +171,7 @@ pub fn to_rgb(color: Hsla) -> Rgb {
 #[cfg(test)]
 mod tests {
     use gpui_kit::Hsla;
-    use wormhole_core::alacritty_terminal::term::cell::{Cell, Flags};
-    use wormhole_core::alacritty_terminal::term::color::Colors;
-    use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor, Rgb};
+    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, Rgb};
     use wormhole_core::theme;
     use wormhole_core::tokens::Color as TokenColor;
 
@@ -203,7 +207,7 @@ mod tests {
         let palette = Palette::from_theme(&theme::builtin()[0]);
         let red = Cell { c: 'x', fg: Color::Named(NamedColor::Red), ..Cell::default() };
         assert_eq!(palette.cell_colors(&red, false, &overrides), (palette.ansi[1], palette.background));
-        let inverse = Cell { flags: Flags::INVERSE, ..red.clone() };
+        let inverse = Cell { flags: Flags::INVERSE, ..red };
         assert_eq!(palette.cell_colors(&inverse, false, &overrides), (palette.background, palette.ansi[1]));
         let hidden = Cell { flags: Flags::HIDDEN, ..red };
         let (fg, bg) = palette.cell_colors(&hidden, true, &overrides);
@@ -222,6 +226,16 @@ mod tests {
         // OSC 11 set the background: that's the answer now.
         overrides[NamedColor::Background] = Some(Rgb { r: 1, g: 2, b: 3 });
         assert_eq!(palette.query(257, &overrides), Rgb { r: 1, g: 2, b: 3 });
+    }
+
+    #[test]
+    fn the_engine_gets_the_themes_answer_for_every_entry() {
+        let themes = theme::builtin();
+        let palette = Palette::from_theme(&themes[0]);
+        let colors = palette.engine_colors();
+        let none = Colors::default();
+        assert!(colors.iter().enumerate().all(|(slot, color)| *color == palette.query(slot, &none)));
+        assert_eq!(colors[257], to_rgb(palette.background));
     }
 
     #[test]

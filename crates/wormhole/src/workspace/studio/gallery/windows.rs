@@ -155,7 +155,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
                     .flex()
                     .flex_col()
                     .rule_right(ui)
-                    .child(package("g-lic-a", "alacritty_terminal", false))
+                    .child(package("g-lic-a", "ahash", false))
                     .child(package("g-lic-b", "anyhow", true))
                     .child(package("g-lic-c", "gpui-kit", false))
                     .child(package("g-lic-d", "rusqlite", false))

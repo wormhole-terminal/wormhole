@@ -1,19 +1,18 @@
 //! The terminal's contents as plain text: the screen (devctl, prompt grabbing)
 //! and the scrollback saved for restoring a session later.
 
-use alacritty_terminal::grid::Dimensions;
-use alacritty_terminal::index::{Column, Line};
-use alacritty_terminal::term::cell::Flags;
-use alacritty_terminal::term::{Term, TermMode};
+use wormhole_vt::types::{Cell, Flags, Line, RowExtras, TermMode};
+
+use super::screen::Screen;
 
 /// The marker `restore` draws under replayed text.
 pub(super) const RESTORED_MARKER: &str = "──── restored ────";
 
-/// One grid line as text, trailing blanks trimmed.
-fn line_text<T>(term: &Term<T>, line: i32) -> String {
-    let row = &term.grid()[Line(line)];
-    let text: String = (0..term.columns())
-        .map(|col| &row[Column(col)])
+/// One grid line as text, trailing blanks trimmed. `cells` is scratch for the copy.
+fn line_text(screen: &Screen, line: i32, cells: &mut Vec<Cell>) -> String {
+    screen.copy_row(Line(line), cells, None);
+    let text: String = cells
+        .iter()
         .filter(|cell| !cell.flags.contains(Flags::WIDE_CHAR_SPACER))
         .map(|cell| cell.c)
         .collect();
@@ -21,10 +20,11 @@ fn line_text<T>(term: &Term<T>, line: i32) -> String {
 }
 
 /// The visible screen, one line per row.
-pub fn screen_text<T>(term: &Term<T>) -> String {
+pub(super) fn screen_text(screen: &Screen) -> String {
     let mut out = String::new();
-    for line in 0..term.screen_lines() as i32 {
-        out.push_str(&line_text(term, line));
+    let mut cells = Vec::new();
+    for line in 0..screen.screen_lines() as i32 {
+        out.push_str(&line_text(screen, line, &mut cells));
         out.push('\n');
     }
     out
@@ -32,19 +32,18 @@ pub fn screen_text<T>(term: &Term<T>) -> String {
 
 /// The last `max_lines` rows of history + screen, for restoring later, or
 /// `None` while a full-screen program (vim, less, htop) runs: its alternate
-/// screen has no history, and alacritty keeps the real one out of reach until
+/// screen has no history, and the engine keeps the real one out of reach until
 /// it exits, so the copy saved before is the one to keep.
 ///
 /// Soft-wrapped rows come back as one line (a restore re-wraps it to the new
 /// width) and combining marks stay with their characters.
-pub fn scrollback_text<T>(term: &Term<T>, max_lines: usize) -> Option<String> {
-    if term.mode().contains(TermMode::ALT_SCREEN) {
+pub(super) fn scrollback_text(screen: &Screen, max_lines: usize) -> Option<String> {
+    if screen.mode().contains(TermMode::ALT_SCREEN) {
         return None;
     }
-    let top = term.topmost_line().0;
-    let bottom = term.bottommost_line().0;
+    let top = screen.topmost_line().0;
+    let bottom = screen.bottommost_line().0;
     let start = (bottom - max_lines as i32 + 1).max(top);
-    let cols = term.columns();
     let mut lines: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut finish = |current: &mut String| {
@@ -55,10 +54,10 @@ pub fn scrollback_text<T>(term: &Term<T>, max_lines: usize) -> Option<String> {
         }
         current.clear();
     };
+    let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
     for line in start..=bottom {
-        let row = &term.grid()[Line(line)];
-        for col in 0..cols {
-            let cell = &row[Column(col)];
+        screen.copy_row(Line(line), &mut cells, Some(&mut extras));
+        for (col, cell) in cells.iter().enumerate() {
             if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
                 continue;
             }
@@ -69,9 +68,9 @@ pub fn scrollback_text<T>(term: &Term<T>, max_lines: usize) -> Option<String> {
                 continue;
             }
             current.push(cell.c);
-            current.extend(cell.zerowidth().unwrap_or_default());
+            current.extend(extras.zerowidth(col));
         }
-        let wrapped = cols > 0 && row[Column(cols - 1)].flags.contains(Flags::WRAPLINE);
+        let wrapped = cells.last().is_some_and(|last| last.flags.contains(Flags::WRAPLINE));
         if !wrapped {
             finish(&mut current);
         }
@@ -86,8 +85,10 @@ pub fn scrollback_text<T>(term: &Term<T>, max_lines: usize) -> Option<String> {
 }
 
 /// What's typed in an AI CLI's input box on the visible screen.
-pub fn grab_prompt<T>(term: &Term<T>) -> Option<String> {
-    let rows: Vec<String> = (0..term.screen_lines() as i32).map(|line| line_text(term, line)).collect();
+pub(super) fn grab_prompt(screen: &Screen) -> Option<String> {
+    let mut cells = Vec::new();
+    let rows: Vec<String> =
+        (0..screen.screen_lines() as i32).map(|line| line_text(screen, line, &mut cells)).collect();
     prompt_in(&rows)
 }
 
@@ -133,18 +134,12 @@ pub fn prompt_in(rows: &[String]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use alacritty_terminal::event::VoidListener;
-    use alacritty_terminal::term::{Config, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-
     use super::{grab_prompt, prompt_in, screen_text, scrollback_text};
-    use crate::terminal::GridSize;
+    use crate::terminal::testing::TestTerm;
 
-    pub(crate) fn term(cols: u16, rows: u16, bytes: &[u8]) -> Term<VoidListener> {
-        let size = GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 };
-        let mut term =
-            Term::new(Config { scrolling_history: 1000, ..Config::default() }, &size, VoidListener);
-        Processor::<StdSyncHandler>::new().advance(&mut term, bytes);
+    fn term(cols: u16, rows: u16, bytes: &[u8]) -> TestTerm {
+        let mut term = TestTerm::new(cols, rows, 1000);
+        term.feed(bytes);
         term
     }
 
@@ -155,7 +150,7 @@ mod tests {
     #[test]
     fn screen_text_has_one_trimmed_line_per_row() {
         let term = term(10, 3, b"ab  \r\n\xe6\x97\xa5x");
-        assert_eq!(screen_text(&term), "ab\n日x\n\n");
+        assert_eq!(screen_text(term.screen()), "ab\n日x\n\n");
     }
 
     #[test]
@@ -167,12 +162,12 @@ mod tests {
         bytes.extend_from_slice("──── restored ────\r\nafter\r\n\r\n".as_bytes());
         let term = term(20, 4, &bytes);
         assert_eq!(
-            scrollback_text(&term, 1000).as_deref(),
+            scrollback_text(term.screen(), 1000).as_deref(),
             Some("line 0\nline 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nafter")
         );
         // The window counts the blank rows under "after" (and the dropped marker).
-        assert_eq!(scrollback_text(&term, 4).as_deref(), Some("after"));
-        assert_eq!(scrollback_text(&term, 5).as_deref(), Some("line 7\nafter"));
+        assert_eq!(scrollback_text(term.screen(), 4).as_deref(), Some("after"));
+        assert_eq!(scrollback_text(term.screen(), 5).as_deref(), Some("line 7\nafter"));
     }
 
     #[test]
@@ -184,22 +179,22 @@ mod tests {
         }
         bytes.extend_from_slice(b"\x1b[?1049hVIM SCREEN");
         let term = term(20, 5, &bytes);
-        assert_eq!(scrollback_text(&term, 1000), None);
+        assert_eq!(scrollback_text(term.screen(), 1000), None);
     }
 
     #[test]
     fn wrapped_lines_restore_as_one() {
         let wrapped = term(10, 4, b"0123456789abcdef\r\nnext");
-        assert_eq!(scrollback_text(&wrapped, 1000).as_deref(), Some("0123456789abcdef\nnext"));
+        assert_eq!(scrollback_text(wrapped.screen(), 1000).as_deref(), Some("0123456789abcdef\nnext"));
         // A space at the wrap point is part of the line.
         let spaced = term(5, 4, b"abcd efgh\r\n");
-        assert_eq!(scrollback_text(&spaced, 1000).as_deref(), Some("abcd efgh"));
+        assert_eq!(scrollback_text(spaced.screen(), 1000).as_deref(), Some("abcd efgh"));
     }
 
     #[test]
     fn combining_marks_survive_the_round_trip() {
         let term = term(10, 3, "cafe\u{301} ok".as_bytes());
-        assert_eq!(scrollback_text(&term, 1000).as_deref(), Some("cafe\u{301} ok"));
+        assert_eq!(scrollback_text(term.screen(), 1000).as_deref(), Some("cafe\u{301} ok"));
     }
 
     #[test]
@@ -226,6 +221,6 @@ mod tests {
     #[test]
     fn grab_prompt_reads_the_screen() {
         let term = term(20, 4, "> hello\r\n───\r\n".as_bytes());
-        assert_eq!(grab_prompt(&term).as_deref(), Some("hello"));
+        assert_eq!(grab_prompt(term.screen()).as_deref(), Some("hello"));
     }
 }

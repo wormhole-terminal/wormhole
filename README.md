@@ -2,7 +2,7 @@
 
 A native macOS terminal built for working with AI coding agents like
 Claude Code, Codex, Gemini CLI and many more. Written in Rust on [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) (Zed's UI framework)
-and GPUI Kit, with alacritty's terminal core.
+and GPUI Kit, with its own terminal engine.
 
 **[Download Wormhole](https://getwormhole.app)** (macOS 14 or later, Apple Silicon and Intel). It updates itself.
 

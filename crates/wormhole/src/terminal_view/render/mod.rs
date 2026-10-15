@@ -1,13 +1,14 @@
 //! Painting the terminal grid (and the blurred lines under the title bar).
 //!
 //! A frame takes one short lock to bring a `ScreenSnapshot` up to date (only
-//! rows alacritty reports changed are copied), then builds only rows whose
+//! rows the engine reports changed are copied), then builds only rows whose
 //! content or selection changed (`RowCache`; scrolled rows are found again by
 //! content), shaping only words it hasn't seen before (`WordCache`), and paints
 //! glyph by glyph from that cache (`FrameCache`). The view is
 //! embedded with `.cached(..)`, so window frames the terminal didn't cause
 //! (sidebar, tick, hover) reuse its last paint instead of running any of this.
 
+mod blink;
 mod blur;
 mod cache;
 mod cursor;
@@ -37,10 +38,12 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
 use gpui_kit::component::input as text_input;
-use wormhole_core::alacritty_terminal::term::color::{COUNT as COLOR_COUNT, Colors};
-use wormhole_core::alacritty_terminal::vte::ansi::{Color, NamedColor};
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use wormhole_core::keymap;
 use wormhole_core::terminal::ScreenSnapshot;
+use wormhole_core::terminal::images::Tiles;
+use wormhole_core::terminal::types::{COLOR_COUNT, Color, Colors, NamedColor};
 
 /// What every cached row was shaped with; any change rebuilds them all.
 #[derive(Clone, PartialEq)]
@@ -115,8 +118,13 @@ struct Frame {
     /// How far below a row's top its baseline sits, and its strikethrough.
     baseline_y: Pixels,
     strike_y: Pixels,
-    /// The inline images' tiles in view.
+    /// Blinking text is in the clock's off half (never while nothing blinks, the window is behind
+    /// or Reduce Motion is on).
+    blink_faded: bool,
+    /// The inline images' tiles in view, and the pictures placed under the text.
     images: Vec<images::ImagePaint>,
+    /// The pictures placed over the text.
+    overlay: Vec<images::ImagePaint>,
 }
 
 /// Find's match ticks: along the pane's right edge, in its padding, beside the grid.
@@ -211,7 +219,8 @@ fn cursor_frame(
     base_font: &Font,
 ) -> Option<CursorPaint> {
     let at = snapshot.cursor?;
-    let cell = snapshot.rows().get(at.row)?.cells().get(at.col)?;
+    let row = snapshot.rows().get(at.row)?;
+    let cell = row.cells().get(at.col)?;
     let Geometry { origin, cell_width, line_height, font_size, .. } = geometry;
     let corner = point(origin.x + cell_width * at.col as f32, origin.y + line_height * at.row as f32);
     let width = cell_width * if at.wide { 2.0 } else { 1.0 };
@@ -222,7 +231,7 @@ fn cursor_frame(
         let (_, background) = palette.cell_colors(cell, selected, &snapshot.colors);
         let style = Style::of(cell, cursor::text_color(palette, background));
         let mut text = String::from(cell.c);
-        text.extend(cell.zerowidth().unwrap_or_default());
+        text.extend(row.extras().zerowidth(at.col));
         let run = text_run(text.len(), &style, base_font);
         (corner, text_system.shape_line(text.into(), px(font_size), &[run], None))
     });
@@ -265,7 +274,8 @@ impl Render for TerminalView {
         let focused = self.focus_handle.is_focused(window);
         let exited = self.status == Status::Exited;
         let draws_cursor = cursor::drawn(self.status) && !self.cursor_off;
-        let blink_allowed = !cx.reduce_motion();
+        let reduce_motion = cx.reduce_motion();
+        let blink_allowed = !reduce_motion;
         let bell_glow = self.bell_glow().then_some(store.ui.agent_attention);
         let ui = store.ui;
         let drop_tint = token(&store.tokens, "state.highlight");
@@ -280,6 +290,8 @@ impl Render for TerminalView {
         let link_rows = self.hovered_link_rows(self.render_state.borrow().display_offset());
         let link_color = palette.foreground;
         let hovered_block = self.hovered_block();
+        let background_override =
+            self.render_state.borrow().snapshot().colors[NamedColor::Background].map(crate::palette::to_hsla);
         let has_blocks = self.pty.as_ref().is_some_and(Pty::has_blocks);
 
         let grid = canvas(
@@ -292,15 +304,31 @@ impl Render for TerminalView {
                 let line_height = px((font_size_setting * line_height_setting).round());
                 let cols = (f32::from(bounds.size.width) / f32::from(cell_width)).floor().max(2.0) as usize;
                 let rows = (f32::from(bounds.size.height) / f32::from(line_height)).floor().max(1.0) as usize;
+                let viewport = window.viewport_size();
+                let frame = (
+                    (f32::from(viewport.width) - f32::from(bounds.size.width)).max(0.0),
+                    (f32::from(viewport.height) - f32::from(bounds.size.height)).max(0.0),
+                );
                 layout_cell.set(Layout {
                     origin: bounds.origin,
                     cell: size(cell_width, line_height),
                     cols,
                     rows,
+                    frame,
                 });
                 if let Some(dock) = dock {
                     report_dock(cx, bounds.origin, size(cell_width, line_height), dock);
                 }
+                let geometry = crate::window_ops::geometry(
+                    window,
+                    cx,
+                    crate::window_ops::PaneSize {
+                        cell: (f32::from(cell_width), f32::from(line_height)),
+                        cols,
+                        rows,
+                        frame,
+                    },
+                );
                 // Rows just above the viewport, shown blurred under the title bar.
                 let overscan = ((top_inset + PADDING_Y) / f32::from(line_height)).ceil() as usize;
 
@@ -315,6 +343,8 @@ impl Render for TerminalView {
                         cell_width: f32::from(cell_width),
                         cell_height: f32::from(line_height),
                     });
+                    this.share_palette(&palette);
+                    this.share_window(geometry);
                     let Some(pty) = &this.pty else { return (false, false) };
                     pty.snapshot(&mut cache.snapshot, overscan);
                     found = this.found_rows(&cache.snapshot);
@@ -366,6 +396,9 @@ impl Render for TerminalView {
                     },
                     |text, runs| shape_blurred(text, runs, &text_system, &base_font, font_size, cell_width),
                 );
+                let blinking = blink::wanted(cache.any_blinks(), window.is_window_active(), reduce_motion);
+                entity.update(cx, |this, cx| this.text_blink_wanted(blinking, cx));
+                let blink_faded = blinking && blink::faded_now();
                 let cursor = draws_cursor
                     .then(|| {
                         cursor_frame(&cache.snapshot, &palette, focused, geometry, &text_system, &base_font)
@@ -384,11 +417,45 @@ impl Render for TerminalView {
                     let baseline = (line_height - line.ascent - line.descent) / 2.0 + line.ascent;
                     (baseline, (line.ascent * 0.5 + baseline) * 0.5)
                 };
-                // The pictures under the placeholder cells, from the store (a short lock).
-                let images = entity.read(cx).pty.as_ref().map_or_else(Vec::new, |pty| {
-                    images::image_paints(cache.image_runs(), &mut pty.images(), image_cache, geometry)
+                // The pictures: under the placeholder cells and placed in the grid. The terminal's
+                // lock for what the engine knows of the placeholders, then the store's for the
+                // pixels; never both at once.
+                let (images, overlay) = entity.read(cx).pty.as_ref().map_or_else(Default::default, |pty| {
+                    let mut tiles: HashMap<(u32, u32), Tiles> = HashMap::new();
+                    for (_, run) in cache.image_runs() {
+                        let pair = (run.image, run.placement);
+                        if let Entry::Vacant(slot) = tiles.entry(pair)
+                            && let Some(found) = pty.virtual_placement(pair.0, pair.1)
+                        {
+                            slot.insert(found);
+                        }
+                    }
+                    let store = &mut pty.images();
+                    let mut paints =
+                        images::image_paints(cache.image_runs(), &tiles, store, image_cache, geometry);
+                    let snapshot = &cache.snapshot;
+                    let (under, over) = images::placement_paints(
+                        snapshot.placements(),
+                        snapshot.display_offset,
+                        store,
+                        image_cache,
+                        bounds,
+                        geometry,
+                    );
+                    paints.extend(under);
+                    (paints, over)
                 });
-                Some(Frame { geometry, cursor, ticks, underline_y, baseline_y, strike_y, images })
+                Some(Frame {
+                    geometry,
+                    cursor,
+                    ticks,
+                    underline_y,
+                    baseline_y,
+                    strike_y,
+                    blink_faded,
+                    images,
+                    overlay,
+                })
             },
             move |bounds, frame, window, cx| {
                 let Some(frame) = frame else { return };
@@ -475,18 +542,30 @@ impl Render for TerminalView {
                                 let _ = if glyph.emoji {
                                     window.paint_emoji(origin, glyph.font_id, glyph.id, font_size)
                                 } else {
-                                    window.paint_glyph(
-                                        origin,
-                                        glyph.font_id,
-                                        glyph.id,
-                                        font_size,
-                                        glyph.color,
-                                    )
+                                    let color = if frame.blink_faded && glyph.blink {
+                                        blink::faded(glyph.color)
+                                    } else {
+                                        glyph.color
+                                    };
+                                    window.paint_glyph(origin, glyph.font_id, glyph.id, font_size, color)
                                 };
                             }
                         }
                     }
                 });
+                for paint in &frame.overlay {
+                    let painted = window.paint_image(
+                        paint.bounds,
+                        paint.image_bounds,
+                        Corners::default(),
+                        paint.image.clone(),
+                        0,
+                        false,
+                    );
+                    if let Err(err) = painted {
+                        tracing::debug!("a placed image didn't paint: {err}");
+                    }
+                }
                 let mut underlines = Vec::new();
                 window.paint_layer(grid, |window| {
                     for (row, painted) in cache.rows() {
@@ -499,6 +578,12 @@ impl Render for TerminalView {
                                 width,
                                 &style,
                             );
+                        }
+                        for (first, end, color) in &painted.overlined {
+                            // The same weight as an underline, along the top of the cell.
+                            let width = cell_width * (end - first) as f32;
+                            let size = size(width, px(underline::THICKNESS));
+                            window.paint_quad(fill(Bounds::new(at(*first, row), size), *color));
                         }
                         for span in &painted.underlines {
                             underlines.clear();
@@ -585,6 +670,9 @@ impl Render for TerminalView {
                 }
             }))
             .size_full()
+            // A program that set the background (OSC 11) has it behind the padding too, as the
+            // grid's cells have it; the theme's own is the window's and shows through.
+            .when_some(background_override, |this, color| this.bg(color))
             .min_w(px(MIN_WIDTH))
             .pl(px(PADDING_X))
             .pr(px(Self::right_inset(cx)))
