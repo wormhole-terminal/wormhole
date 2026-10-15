@@ -77,42 +77,6 @@
             "solid" : "extended-gray:1.00000,1.00000"
           },
           "glass" : true,
-          "hidden" : true,
-          "image-name" : "lens.svg",
-          "name" : "lens",
-          "opacity" : 1,
-          "position" : {
-            "scale" : 0.95,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-gray:1.00000,1.00000"
-          },
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "lens.svg",
-          "name" : "lens",
-          "opacity" : 0,
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "extended-gray:1.00000,1.00000"
-          },
-          "glass" : true,
           "hidden" : false,
           "image-name" : "lens.svg",
           "name" : "lens",
@@ -164,20 +128,6 @@
     {
       "blur-material" : null,
       "layers" : [
-        {
-          "fill" : "automatic",
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "arms-center.svg",
-          "name" : "Layer",
-          "position" : {
-            "scale" : 2.1,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
         {
           "blend-mode" : "normal",
           "fill" : {
