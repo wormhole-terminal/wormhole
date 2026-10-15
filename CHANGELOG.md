@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- A small icon opens a file of the git panel in the editor chosen for Open in…: on the right of a
+  Changes row while the pointer is over it, over a diff line (the file opens at that line, where
+  the editor can: VS Code and its forks, Zed, Sublime Text and the JetBrains IDEs), in the diff's
+  header, and on the files of a commit in History while they are still in the working tree. With
+  Finder chosen it shows the file there.
 - Column dividers: the lines between the sidebar, the terminal and the right panel are their own
   `divider` colour and `metrics.divider_width` in a theme (both follow the border unless set; a width
   of 0 draws none), and Settings → Appearance → Column dividers hides them in every theme. The edges

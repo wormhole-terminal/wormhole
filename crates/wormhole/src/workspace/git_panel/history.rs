@@ -1,7 +1,7 @@
 //! The History tab: commit log per branch; expand a commit to see its files
 //! and open their diffs.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -10,6 +10,7 @@ use gpui_kit::*;
 
 use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
+use super::open_file::OpenTarget;
 use super::picker::{Picker, PickerChip};
 use super::problem::GitTab;
 use crate::settings::UiColors;
@@ -59,6 +60,10 @@ pub struct HistoryState {
     /// Commit expanded to show its files.
     pub expanded: Option<String>,
     files: HashMap<String, CommitFiles>,
+    /// Of a commit's files, those that are in the working tree now: the ones the icon that
+    /// opens a file in the editor shows on. Read when the files arrive, so a frame never touches
+    /// the disk.
+    present: HashMap<String, Rc<HashSet<String>>>,
     pub root: Option<PathBuf>,
     list: Rows<HistoryRow>,
 }
@@ -212,6 +217,7 @@ impl HistoryState {
                             || key == sha
                             || matches!(files, CommitFiles::Loading)
                     });
+                    self.present.retain(|key, _| self.files.contains_key(key));
                 }
             }
             // Only for a commit that is still waiting for it, and still open.
@@ -223,6 +229,13 @@ impl HistoryState {
                 }
             }
             Err(_) => {}
+        }
+    }
+
+    /// Which of the files of `sha` are in the working tree now.
+    fn files_present(&mut self, sha: &str, present: HashSet<String>) {
+        if self.files.contains_key(sha) {
+            self.present.insert(sha.to_string(), Rc::new(present));
         }
     }
 
@@ -365,14 +378,22 @@ impl Workspace {
     /// Read the files of `commit` off the UI thread, for session `id`.
     fn fetch_commit_files(&mut self, id: i64, root: PathBuf, commit: Commit, cx: &mut Context<Self>) {
         let sha = commit.sha.clone();
-        let task = cx
-            .background_executor()
-            .spawn(async move { git::commit_files(&root, &commit).map_err(|e| format!("{e:#}")) });
+        let task = cx.background_executor().spawn(async move {
+            let files = git::commit_files(&root, &commit).map_err(|e| format!("{e:#}"))?;
+            let present = present_files(&root, &files);
+            Ok::<_, String>((files, present))
+        });
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
                 if let Some(session) = this.sessions.iter_mut().find(|s| s.id == id) {
-                    session.history.files_loaded(&sha, result);
+                    match result {
+                        Ok((files, present)) => {
+                            session.history.files_loaded(&sha, Ok(files));
+                            session.history.files_present(&sha, present);
+                        }
+                        Err(err) => session.history.files_loaded(&sha, Err(err)),
+                    }
                     cx.notify();
                 }
             });
@@ -487,6 +508,8 @@ impl Workspace {
                 .as_ref()
                 .and_then(|sha| history.commits.iter().find(|c| &c.sha == sha).cloned()),
             files: history.expanded.as_ref().and_then(|sha| history.loaded(sha).cloned()),
+            present: history.expanded.as_ref().and_then(|sha| history.present.get(sha).cloned()),
+            open: history.root.as_deref().map(|root| OpenTarget::new(root, cx)),
             files_error: history.expanded.as_ref().and_then(|sha| match history.files.get(sha) {
                 Some(CommitFiles::Failed(err)) => Some(err.clone()),
                 _ => None,
@@ -521,6 +544,19 @@ impl Workspace {
     }
 }
 
+/// How many of a commit's files are looked for in the working tree; a commit that touches more
+/// shows no icon on the rest.
+const PRESENT_CHECKED: usize = 2000;
+
+/// The paths of `files` that are regular files inside the repository at `root` now (a file the
+/// commit deleted, or one removed since, is not).
+fn present_files(root: &Path, files: &[FileChange]) -> HashSet<String> {
+    (files.iter().take(PRESENT_CHECKED))
+        .filter(|file| wormhole_core::fsutil::resolve_within(root, &file.path).is_ok())
+        .map(|file| file.path.clone())
+        .collect()
+}
+
 /// Where a commit's files and the lines about them start: one level in (x 40).
 const FILES_X: f32 = style::CARD_INSET + style::INDENT;
 
@@ -531,6 +567,9 @@ struct HistoryView {
     expanded_commit: Option<Commit>,
     /// Files of the expanded commit, once loaded.
     files: Option<Rc<Vec<FileChange>>>,
+    /// Which of them are in the working tree now, and the icon that opens one in the editor.
+    present: Option<Rc<HashSet<String>>>,
+    open: Option<OpenTarget>,
     /// Why they could not be listed.
     files_error: Option<SharedString>,
     error: Option<SharedString>,
@@ -611,14 +650,19 @@ impl HistoryView {
                     selected: self.open_path.as_deref() == Some(file.path.as_str()),
                     width: self.width,
                 };
-                change_row(&file, place, ui, window, cx)
-                    .on_click(move |_, _, cx| {
-                        this.update(cx, |this, cx| {
-                            this.open_commit_file(commit.clone(), clicked.clone(), cx)
-                        })
+                let row = change_row(&file, place, ui, window, cx);
+                // The file as it is now: none for one that is gone from the working tree.
+                let row = match (&self.open, &self.present) {
+                    (Some(open), Some(present)) if present.contains(&file.path) => {
+                        open.file(&file.path).on_row(row, ui, &format!("history-{}", file.path))
+                    }
+                    _ => row,
+                };
+                row.on_click(move |_, _, cx| {
+                    this.update(cx, |this, cx| this.open_commit_file(commit.clone(), clicked.clone(), cx))
                         .ok();
-                    })
-                    .into_any_element()
+                })
+                .into_any_element()
             }
             HistoryRow::Spacer => div().h(px(16.0)).into_any_element(),
         }

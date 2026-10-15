@@ -269,3 +269,23 @@ fn a_folder_that_is_no_repository_does_not_redraw_on_every_poll() {
     let t = history.begin_refresh(k.clone()).expect("started").ticket();
     assert!(history.finish_refresh(t, Some(&k), Ok(None)));
 }
+
+#[test]
+fn which_files_are_in_the_working_tree_is_kept_with_their_commit_and_dropped_with_it() {
+    let mut history = loaded();
+    // Files nobody asked for are not kept.
+    history.files_present("aaa", ["x.rs".to_string()].into());
+    assert!(history.present.is_empty());
+    history.toggle("aaa");
+    history.files_loaded("aaa", Ok(vec![file("x.rs"), file("gone.rs")]));
+    history.files_present("aaa", ["x.rs".to_string()].into());
+    assert_eq!(history.present.get("aaa").map(|p| p.contains("x.rs")), Some(true));
+    assert_eq!(history.present.get("aaa").map(|p| p.contains("gone.rs")), Some(false));
+    // Pruned with the files, so it never outlives them.
+    for n in 0..=FILES_KEPT {
+        history.files_loaded(&format!("other-{n}"), Ok(vec![file("x")]));
+    }
+    history.toggle("aaa");
+    history.files_loaded("zzz", Ok(vec![file("y")]));
+    assert!(history.present.keys().all(|sha| history.files.contains_key(sha)));
+}

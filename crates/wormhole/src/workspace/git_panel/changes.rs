@@ -12,6 +12,7 @@ use gpui_kit::*;
 use super::diff::Observed;
 use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
+use super::open_file::OpenTarget;
 use super::picker::{Picker, PickerChip};
 use super::problem::{self, GitTab};
 use crate::settings::UiColors;
@@ -476,6 +477,7 @@ impl Workspace {
         let files = list.built.as_ref().map(|b| b.files.clone()).unwrap_or_default();
         let view = Rc::new(ChangesView {
             files,
+            open: OpenTarget::new(&status.root, cx),
             open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
             width: self.columns().panel,
             // The compare picker and refresh button sit in the first card's head, where the
@@ -525,6 +527,8 @@ struct ChangesView {
     files: Rc<Vec<FileChange>>,
     /// The file whose diff is open: its row is the selected one.
     open_path: Option<String>,
+    /// The icon that opens a file in the editor.
+    open: OpenTarget,
     /// The panel's width, which file names are fitted to.
     width: f32,
     compare: PickerChip,
@@ -572,11 +576,17 @@ impl ChangesView {
                     selected: self.open_path.as_deref() == Some(file.path.as_str()),
                     width: self.width,
                 };
-                change_row(file, place, ui, window, cx)
-                    .on_click(move |_, _, cx| {
-                        this.update(cx, |this, cx| this.open_change(clicked.clone(), cx)).ok();
-                    })
-                    .into_any_element()
+                let row = change_row(file, place, ui, window, cx);
+                // A deleted file has nothing to open.
+                let row = if file.kind == git::ChangeKind::Deleted {
+                    row
+                } else {
+                    self.open.file(&file.path).on_row(row, ui, &format!("change-{}", file.path))
+                };
+                row.on_click(move |_, _, cx| {
+                    this.update(cx, |this, cx| this.open_change(clicked.clone(), cx)).ok();
+                })
+                .into_any_element()
             }
             ChangeRow::Spacer => div().h(px(16.0)).into_any_element(),
         }

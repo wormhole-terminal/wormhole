@@ -31,6 +31,7 @@ pub mod licenses;
 pub mod limits;
 pub mod notify;
 pub mod onboarding;
+pub mod open_file;
 pub mod open_in;
 pub mod panel;
 pub mod panes;
