@@ -137,10 +137,16 @@ impl Decoder {
         }
     }
 
-    /// How many bytes a read should ask for now: at least the rest of the frame in progress.
+    /// How many bytes a read should ask for now: a chunk, or the rest of the frame in progress.
+    /// The buffer for a big frame at most doubles per read, so a header that announces a megabyte
+    /// reserves nothing until the bytes really arrive.
     fn read_size(&self) -> usize {
+        let have = self.tail - self.head;
         match self.state {
-            State::Body(h) => READ_CHUNK.max((h.len as usize).saturating_sub(self.tail - self.head)),
+            State::Body(h) => {
+                let rest = (h.len as usize).saturating_sub(have);
+                READ_CHUNK.max(rest.min(2 * have + READ_CHUNK))
+            }
             _ => READ_CHUNK,
         }
     }

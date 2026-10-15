@@ -25,6 +25,19 @@ fn a_length_past_the_maximum_is_fatal_before_anything_is_buffered() {
 }
 
 #[test]
+fn a_big_announcement_reserves_nothing_until_the_bytes_arrive() {
+    let header = Header { len: MAX_PAYLOAD as u32, ty: ty::SPAWN, flags: 0, channel: 1 }.to_bytes();
+    let mut dec = Decoder::new();
+    let mut src = Chunked { data: &header, step: || 8 };
+    dec.fill(&mut src).expect("reads");
+    assert!(dec.next_frame().expect("a valid header").is_none());
+    // The next read asks for a chunk, not for the megabyte the header promised.
+    let mut src = Chunked { data: &[0u8; 100], step: || 100 };
+    dec.fill(&mut src).expect("reads");
+    assert!(dec.capacity() < 4 * MAX_DATA, "reserved {} bytes for a peer that sent 108", dec.capacity());
+}
+
+#[test]
 fn each_type_has_its_own_maximum() {
     // A control message may not claim a data frame's size, nor a data frame a megabyte.
     let too_big = |ty, len: usize| {
