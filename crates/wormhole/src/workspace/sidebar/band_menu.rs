@@ -54,6 +54,7 @@ impl Workspace {
             let popup = cx.entity();
             let paint = this.update(cx, |ws, cx| {
                 ws.sidebar.menu_row = None;
+                ws.sidebar.menu_group = None;
                 ws.sidebar.menu_band = Some(folder.clone());
                 let opened = folder.clone();
                 ws.sidebar.menu_dismissed = Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {

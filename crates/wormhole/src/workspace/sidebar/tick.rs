@@ -17,7 +17,8 @@ impl Workspace {
             self.sidebar.worktrees.borrow_mut().clear();
         }
         // Only what is on screen: the bands' tooltips, the times on the rows.
-        let shown = self.panes.sidebar_open;
+        // The tab bar draws the rows' times too.
+        let shown = self.panes.sidebar_open || self.sidebar.tabs.layout.is_some();
         if shown && self.sidebar.view.grouping == Grouping::Folder && settings(cx).sidebar_branch {
             self.look_up_detached_heads(cx);
         }

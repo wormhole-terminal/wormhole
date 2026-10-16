@@ -2,12 +2,24 @@
 //! the ⌘ hints, and what each row shows.
 
 use wormhole_core::config::StatusPosition;
-use wormhole_core::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
+use wormhole_core::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
 
 use super::*;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
+    Setting::segmented(
+        "terminals-in",
+        &[Segment::text("Sidebar"), Segment::text("Tabs")],
+        |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
+        |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
+    ),
+    Setting::segmented(
+        "tab-layout",
+        &[Segment::text("Two rows"), Segment::text("Stacks"), Segment::text("Bottom")],
+        |s| TabLayout::ALL.iter().position(|&layout| layout == s.tab_layout).unwrap_or(0),
+        |s, ix| s.tab_layout = TabLayout::ALL.get(ix).copied().unwrap_or_default(),
+    ),
     Setting::custom("sidebar-group", draw_grouping),
     Setting::segmented(
         "sidebar-order",
@@ -45,8 +57,13 @@ fn draw_grouping(this: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     // What the funnel of the window in front shows; the setting for a window that has none.
     let current = this.front.grouping.unwrap_or(settings(cx).sidebar_group);
     style::segmented_form(ui)
-        .children([(0usize, "Folder", Grouping::Folder), (1, "None", Grouping::None)].map(
-            |(ix, label, grouping)| {
+        .children(
+            [
+                (0usize, "Folder", Grouping::Folder),
+                (1, "Groups", Grouping::Custom),
+                (2, "None", Grouping::None),
+            ]
+            .map(|(ix, label, grouping)| {
                 style::form_segment(("sidebar-group", ix), ui, None, label, current == grouping).on_click(
                     cx.listener(move |this, _, _, cx| {
                         set_grouping(grouping, cx);
@@ -54,8 +71,8 @@ fn draw_grouping(this: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                         cx.notify();
                     }),
                 )
-            },
-        ))
+            }),
+        )
         .into_any_element()
 }
 

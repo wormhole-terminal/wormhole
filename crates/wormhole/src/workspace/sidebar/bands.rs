@@ -130,6 +130,7 @@ impl Workspace {
             cmd_held: frame.hints,
             unknown: band.folder.is_none(),
             tint: colored.map(|(_, tint)| tint),
+            card: true,
         };
         let id: ElementId = if sticky {
             "sticky-band".into()
@@ -186,7 +187,7 @@ impl Workspace {
             .aria_size_of_set(of)
             .when(keyed, |d| d.aria_active_descendant())
             .when(ring || menu_open, |d| {
-                d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(0.0)))
+                d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
             .when_some(tooltip, |d, (first, second)| {
                 d.tooltip(move |window, cx| two_line_tooltip(first.clone(), second.clone(), ui, window, cx))
@@ -428,16 +429,30 @@ impl Workspace {
             }
         }
         let (band, position, of) = stuck?;
-        // The next band pushes this one up by as much as the stuck band is tall.
-        let height = band_height(&listing.bands[band], frame);
+        // The next band pushes this one up by as much as the stuck band (and its card's top) is tall.
+        let height = band_height(&listing.bands[band], frame) + style::CARD_PAD;
         let push = next.map_or(px(0.0), |next| (next - px(height)).min(px(0.0)));
+        let header = if listing.bands[band].group.is_some() {
+            self.render_group_band(listing, band, (position, of), frame, true, window, cx)
+        } else {
+            self.render_band(listing, band, (position, of), git, frame, true, false, window, cx)
+        };
+        // The card's top, opaque, so the rows scrolling under it don't show through.
         Some(
             div()
                 .absolute()
                 .top(push)
                 .left_0()
                 .right_0()
-                .child(self.render_band(listing, band, (position, of), git, frame, true, false, window, cx))
+                .child(
+                    div()
+                        .mx(px(style::CARD_MARGIN))
+                        .px(px(style::CARD_PAD))
+                        .pt(px(style::CARD_PAD))
+                        .rounded_t(px(style::CARD_RADIUS))
+                        .bg(frame.ui.band_solid)
+                        .child(header),
+                )
                 .into_any_element(),
         )
     }

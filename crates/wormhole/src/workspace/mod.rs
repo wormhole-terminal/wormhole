@@ -561,7 +561,10 @@ impl Workspace {
     // ---------------------------------------------------------------- persistence
 
     fn window_record(&self, cx: &App) -> WindowRecord {
-        let layout = Layout::new(self.panes, self.right_tab, self.sidebar.view.clone());
+        // The groups keep only the terminals that are still here.
+        let mut view = self.sidebar.view.clone();
+        view.groups.retain_terminals(|id| self.sessions.iter().any(|session| session.id == id));
+        let layout = Layout::new(self.panes, self.right_tab, view);
         WindowRecord {
             id: self.window_id,
             active: self.active,
@@ -711,7 +714,13 @@ impl Workspace {
     ) -> usize {
         let mut record = SessionRecord::new(Self::alloc_id(cx), None, cwd);
         record.shell = shell;
+        // Shown in the person's groups, a new terminal joins the group of the one selected.
+        let group = self.active_group();
+        let id = record.id;
         let ix = self.add_session(Some(record), window, cx);
+        if let Some(group) = group {
+            self.sidebar.view.groups.join(group, id);
+        }
         self.activate(ix, window, cx);
         self.dirty = true;
         ix
@@ -858,6 +867,7 @@ impl Workspace {
         self.leave_layout(ix);
         let after = session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
+        self.sidebar.view.groups.leave(closed.id);
         notifications::dismiss(closed.pane.id, cx);
         welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);

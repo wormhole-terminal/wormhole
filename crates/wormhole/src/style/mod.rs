@@ -75,6 +75,8 @@ mod section;
 mod setting;
 mod splits;
 mod status;
+mod tabs;
+mod tile;
 mod tint;
 
 pub use bands::*;
@@ -95,4 +97,6 @@ pub use section::*;
 pub use setting::*;
 pub use splits::*;
 pub use status::*;
+pub use tabs::*;
+pub use tile::*;
 pub(crate) use tint::tint_layers;

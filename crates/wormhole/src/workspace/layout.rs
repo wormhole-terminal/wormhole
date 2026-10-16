@@ -5,6 +5,10 @@ use super::*;
 
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
+        // Under tabs there is no sidebar to show or hide.
+        if self.sidebar.tabs.layout.is_some() {
+            return;
+        }
         let before = self.columns().sidebar;
         self.panes.toggle_sidebar();
         self.start_slide(Edge::Sidebar, before, self.columns().sidebar, cx);
@@ -21,7 +25,14 @@ impl Workspace {
     /// Whether the right panel is on screen: wanted and roomy. Auto-hiding leaves it wanted,
     /// so widening the window brings the panel back unless the user had closed it.
     pub(super) fn notes_visible(&self) -> bool {
-        self.panes.panel_visible(self.window_width)
+        self.shown_panes().panel_visible(self.window_width)
+    }
+
+    /// The columns as they are drawn: under tabs there is no sidebar, whatever it would be.
+    fn shown_panes(&self) -> Panes {
+        let mut panes = self.panes;
+        panes.sidebar_open &= self.sidebar.tabs.layout.is_none();
+        panes
     }
 
     /// Makes the panel appear. With no room for it the sidebar steps aside (the
@@ -43,7 +54,7 @@ impl Workspace {
 
     /// The three columns' widths as of the last frame.
     pub(super) fn columns(&self) -> Columns {
-        self.panes.columns(self.window_width)
+        self.shown_panes().columns(self.window_width)
     }
 
     /// Measures the workspace's column. With the debug Inspector open, GPUI lays the root out in
@@ -103,6 +114,7 @@ impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
+        self.sync_tab_layout(cx);
         // A drag that ended outside every drop target never heard its drop.
         if self.terminal_drag.is_some() && !cx.has_active_drag() {
             self.terminal_drag = None;
@@ -139,6 +151,13 @@ impl Render for Workspace {
         let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
+        let layout = self.sidebar.tabs.layout;
+        let tab_bar = layout.map(|layout| (layout.on_top(), self.render_tab_bar(layout, window, cx)));
+        let (top_tabs, bottom_tabs) = match tab_bar {
+            Some((true, bar)) => (Some(bar), None),
+            Some((false, bar)) => (None, Some(bar)),
+            None => (None, None),
+        };
 
         let root = div()
             .relative()
@@ -161,6 +180,8 @@ impl Render for Workspace {
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_divider_end))
             .when(self.resizing.is_some(), |d| d.cursor(CursorStyle::ResizeLeftRight))
             .when_some(self.pane_drag.as_ref().map(panes::PaneDrag::cursor), |d, cursor| d.cursor(cursor))
+            // The tabs across the top, over everything else.
+            .children(top_tabs)
             // The panes, above the status bar when it is shown and to the window's bottom when not.
             .child(
                 div()
@@ -168,7 +189,7 @@ impl Render for Workspace {
                     .flex()
                     .flex_1()
                     .min_h_0()
-                    .when(self.panes.sidebar_open && self.in_flow(Edge::Sidebar), |d| {
+                    .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
                         d.child(self.render_sidebar(columns.sidebar, window, cx))
                     })
                     .child(
@@ -218,8 +239,10 @@ impl Render for Workspace {
                         d.child(edge_rule(Edge::Panel, x, ui)).child(self.resize_handle(Edge::Panel, x, cx))
                     }),
             )
+            // The tabs along the bottom, over the status bar.
+            .children(bottom_tabs)
             .children(status_bar)
-            .child(sidebar_toggle)
+            .when(layout.is_none(), |d| d.child(sidebar_toggle))
             .child(panel_toggle)
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))

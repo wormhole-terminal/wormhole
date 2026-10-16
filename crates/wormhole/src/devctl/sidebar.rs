@@ -11,7 +11,8 @@ pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let grouping = match arg.trim() {
         "none" => Grouping::None,
         "folder" => Grouping::Folder,
-        other => return Err(anyhow!("expected none|folder, got {other:?}")),
+        "custom" | "groups" => Grouping::Custom,
+        other => return Err(anyhow!("expected none|folder|custom, got {other:?}")),
     };
     ctx.workspace.set_grouping(grouping, ctx.cx);
     Ok(String::new())

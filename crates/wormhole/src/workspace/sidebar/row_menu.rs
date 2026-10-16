@@ -1,5 +1,6 @@
 //! A row's context menu: Show beside… (which terminal to show next to this one,
-//! making a split), Remove from split, Close, Pin to top / Unpin, Reveal in Finder, Copy path.
+//! making a split), Add to group ▸ (the person's groups, New group…), Remove from group, Remove
+//! from split, Close, Pin to top / Unpin, Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. (Move to folder, New folder
 //! and Open in new window are in the backlog.) ⌃↩ opens it for the row the keys are on, and a
 //! band's own menu (`band_menu`) for the band they are on.
@@ -30,6 +31,7 @@ impl Workspace {
         match self.areas.sidebar_at.clone() {
             Some(SidebarStop::Row(id)) => self.row_key_menu(id, window, cx),
             Some(SidebarStop::Band(Some(folder))) => self.band_key_menu(folder, window, cx),
+            Some(SidebarStop::Group(group)) => self.group_key_menu(group, window, cx),
             Some(SidebarStop::Band(None)) | None => {}
         }
     }
@@ -63,6 +65,7 @@ impl Workspace {
             this.update(cx, |ws, cx| {
                 ws.sidebar.menu_row = Some(id);
                 ws.sidebar.menu_band = None;
+                ws.sidebar.menu_group = None;
                 ws.sidebar.menu_dismissed = Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {
                     if ws.sidebar.menu_row == Some(id) {
                         ws.sidebar.menu_row = None;
@@ -99,7 +102,36 @@ impl Workspace {
                     })
                 })
             };
-            menu.when(in_split, |menu| {
+            // The person's groups it can go in, as they are when the menu opens.
+            let groups = this.read_with(cx, |ws, _| ws.group_choices(id)).unwrap_or_default();
+            let grouped = groups.iter().any(|(_, _, current)| *current);
+            let into = this.clone();
+            let menu = menu.submenu("Add to group", window, cx, move |submenu, _, _| {
+                let submenu = groups.iter().fold(submenu, |submenu, (group, name, current)| {
+                    let (this, group) = (into.clone(), *group);
+                    submenu.item(PopupMenuItem::new(name.clone()).checked(*current).on_click(
+                        move |_, _, cx| {
+                            this.update(cx, |ws, cx| {
+                                ws.move_to_group(id, Some(group), cx);
+                                ws.set_grouping(Grouping::Custom, cx);
+                            })
+                            .ok();
+                        },
+                    ))
+                });
+                let this = into.clone();
+                let submenu = if groups.is_empty() { submenu } else { submenu.separator() };
+                submenu.item(PopupMenuItem::new("New group…").on_click(move |_, window, cx| {
+                    this.update(cx, |ws, cx| ws.group_terminal(id, window, cx)).ok();
+                }))
+            });
+            let out = this.clone();
+            menu.when(grouped, |menu| {
+                menu.item(PopupMenuItem::new("Remove from group").on_click(move |_, _, cx| {
+                    out.update(cx, |ws, cx| ws.move_to_group(id, None, cx)).ok();
+                }))
+            })
+            .when(in_split, |menu| {
                 menu.item(PopupMenuItem::new("Remove from split").on_click(on(|ws, ix, _, cx| {
                     ws.leave_split(ix, cx);
                 })))

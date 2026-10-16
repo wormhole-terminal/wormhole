@@ -11,8 +11,8 @@ use super::controls::keycap;
 use super::labels::{count_badge, line_counts};
 use super::motion::{EASE_OUT, MOTION_FAST};
 use super::scale::{
-    FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TITLE_GLYPH,
-    TextRole,
+    CARD_GAP, CARD_MARGIN, CARD_PAD, CARD_RADIUS, CARD_ROW_RADIUS, FILE_NAME_MAX, INDENT, ITEM_LEAD_W,
+    MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TILE, TITLE_GLYPH, TextRole,
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;
@@ -93,6 +93,11 @@ pub struct SessionRow {
     pub trail: Option<AnyElement>,
     /// Line 2's right side, faint: how long a command has run, "new output".
     pub detail_trail: Option<SharedString>,
+    /// A `style::status_tile` beside both lines, in place of `glyph`: the name and the second line
+    /// start after it. Only a row with a second line has one.
+    pub tile: Option<AnyElement>,
+    /// In a card (or lined up with one): 8 in instead of 16, the selection and hover rounded.
+    pub card: bool,
 }
 
 impl SessionRow {
@@ -110,6 +115,8 @@ impl SessionRow {
             mark: None,
             trail: None,
             detail_trail: None,
+            tile: None,
+            card: false,
         }
     }
 }
@@ -129,7 +136,10 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         mark,
         trail,
         detail_trail,
+        tile,
+        card,
     } = row;
+    let tile = tile.filter(|_| detail.is_some());
     let (name_color, weight) = match (selected, emphasis) {
         (true, _) => (ui.selected_text, FontWeight::SEMIBOLD),
         (false, true) => (ui.text, FontWeight::SEMIBOLD),
@@ -153,25 +163,21 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
             .text_color(tone_color)
             .child("needs you")
     });
-    div()
-        .id(id)
+    let has_tile = tile.is_some();
+    let two_lines = detail.is_some();
+    let lines = div()
         .flex()
         .flex_col()
         .justify_center()
-        .w_full()
-        .min_h(px(if detail.is_some() { ROW_TWO_LINE_H } else { ROW_H }))
-        .px_4()
-        .py_1()
-        .cursor_pointer()
-        .when(selected, |d| d.bg(ui.selected_row))
-        .hover(move |d| if selected { d } else { d.bg(ui.hover) })
+        .flex_1()
+        .min_w_0()
         .child(
             div()
                 .flex()
                 .items_center()
                 .gap_2()
                 .h(rems(NAME_LINE))
-                .child(lead(glyph))
+                .when(!has_tile, |d| d.child(lead(glyph)))
                 .child(
                     div()
                         .min_w_0()
@@ -203,7 +209,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                 .items_center()
                 .gap_2()
                 .h(rems(META_LINE))
-                .pl(px(ITEM_LEAD_W + SECOND_LINE_GAP))
+                .when(!has_tile, |d| d.pl(px(ITEM_LEAD_W + SECOND_LINE_GAP)))
                 .min_w_0()
                 .text_caption()
                 .text_color(tone_color)
@@ -219,7 +225,73 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                 .children(detail_trail.map(|trail| {
                     div().flex_none().tabular_nums().text_color(ui.faint).whitespace_nowrap().child(trail)
                 }))
+        }));
+    div()
+        .id(id)
+        .flex()
+        .items_center()
+        .gap(px(TILE_GAP))
+        .w_full()
+        .min_h(px(if has_tile {
+            TILE_ROW_H
+        } else if two_lines {
+            ROW_TWO_LINE_H
+        } else {
+            ROW_H
         }))
+        .map(|d| if card { d.px_2().rounded(px(CARD_ROW_RADIUS)) } else { d.px_4() })
+        .py_1()
+        .cursor_pointer()
+        .when(selected, |d| d.bg(ui.selected_row))
+        .hover(move |d| if selected { d } else { d.bg(ui.hover) })
+        .children(tile)
+        .child(lines)
+}
+
+/// The gap between a status tile and the lines beside it.
+pub const TILE_GAP: f32 = 10.0;
+/// A row with a status tile: the tile and room above and below it.
+pub const TILE_ROW_H: f32 = TILE + 16.0;
+
+/// One stretch of a card in the sidebar: a folder's or a group's band and its terminals are drawn
+/// as one rounded card ([`CARD_MARGIN`] in from the sidebar's sides, [`CARD_RADIUS`] round, its
+/// rows [`CARD_PAD`] in), each line of the list a stretch of it holding `content`. `top` is the
+/// band's (the card's rounded top), `bottom` the last line's (its rounded bottom, and [`CARD_GAP`]
+/// under it); `gap_above` puts that gap over a card that follows a loose terminal. A loose terminal
+/// is a stretch of no card at all (`filled` false), lined up with the cards' rows. The gaps are
+/// part of the stretch, so a drop there lands on its line.
+#[track_caller]
+pub fn card_segment(
+    ui: UiColors,
+    top: bool,
+    bottom: bool,
+    filled: bool,
+    gap_above: bool,
+    content: impl IntoElement,
+) -> Div {
+    let outer = div().flex().flex_col().px(px(CARD_MARGIN));
+    let mut segment = div().flex().flex_col().px(px(CARD_PAD));
+    if !filled {
+        return outer.child(segment.child(content));
+    }
+    segment = segment.bg(ui.band).border_color(ui.border);
+    let edge = Some(ui.border_width.into());
+    {
+        let b = &mut segment.style().border_widths;
+        b.left = edge;
+        b.right = edge;
+        if top {
+            b.top = edge;
+        }
+        if bottom {
+            b.bottom = edge;
+        }
+    }
+    let segment = segment
+        .when(top, |d| d.rounded_t(px(CARD_RADIUS)).pt(px(CARD_PAD)))
+        .when(bottom, |d| d.rounded_b(px(CARD_RADIUS)).pb(px(CARD_PAD)))
+        .child(content);
+    outer.when(top && gap_above, |d| d.pt(px(CARD_GAP))).when(bottom, |d| d.pb(px(CARD_GAP))).child(segment)
 }
 
 /// The gap between the lead column and the name (`_2`), which a second line skips too.

@@ -14,7 +14,8 @@ use super::controls::disclosure;
 use super::labels::count_badge;
 use super::rows::lead;
 use super::scale::{
-    BAND_H, FOLDER_BAND_H, FOLDER_NAME_MAX, ITEM_LEAD_W, META_LINE, NAME_LINE, SIDEBAR_INSET, TextRole,
+    BAND_H, CARD_ROW_RADIUS, FOLDER_BAND_H, FOLDER_NAME_MAX, ITEM_LEAD_W, META_LINE, NAME_LINE,
+    SIDEBAR_INSET, TextRole,
 };
 use super::section::{ClickHandler, Section};
 use super::tint::tint_layers;
@@ -83,8 +84,12 @@ pub struct FolderLook {
     pub cmd_held: bool,
     /// "No folder" (terminals whose folder isn't known yet): its title is muted.
     pub unknown: bool,
-    /// The folder has a colour (right-click the band): the band is tinted from the left.
+    /// The folder has a colour (right-click the band): the band is tinted from the left, or in a
+    /// card its name sits on a pill of that colour.
     pub tint: Option<BandTint>,
+    /// It heads a card (`style::card_segment`): no fill or hairlines of its own (the card has
+    /// them), its content 8 in from the card's padding, and a rounded hover.
+    pub card: bool,
 }
 
 /// The second line of a sidebar folder band, under its name and at its x 40: the folder's path,
@@ -150,11 +155,15 @@ fn band_with(
         joined,
     } = parts;
     let group = SharedString::from(format!("band-{id}"));
+    let card = look.card;
+    let inset = if card { CARD_INSET } else { SIDEBAR_INSET };
     let (fill, hairline) = match (drop_target, sticky) {
         (true, _) => (ui.highlight, ui.primary),
         (false, true) => (ui.band_solid, ui.border),
         (false, false) => (ui.band, ui.border),
     };
+    // In a card, the colour is a pill under the name rather than a tint across the band.
+    let pill = look.tint.filter(|_| card);
     let foldable = section != Section::Empty;
     // A folder shows its count only while folded, and gives its place to the + under the pointer.
     let count = count.filter(|_| kind == BandKind::Section || section.is_collapsed());
@@ -177,7 +186,7 @@ fn band_with(
                 d.absolute()
                     .top_0()
                     .bottom_0()
-                    .right(px(SIDEBAR_INSET))
+                    .right(px(inset))
                     .flex()
                     .items_center()
                     .invisible()
@@ -211,10 +220,20 @@ fn band_with(
                 .flex()
                 .items_center()
                 .gap_2()
-                .pl_4()
+                .pl(px(inset))
                 .when(foldable, |d| d.child(lead(disclosure(ui, section.is_collapsed()))))
                 .child(
                     div()
+                        .when_some(pill, |d, tint| {
+                            d.flex()
+                                .items_center()
+                                .gap_1()
+                                .px_2()
+                                .py(px(PILL_PAD_Y))
+                                .rounded(ui.radius_chip)
+                                .bg(tint.color.opacity(PILL_FILL))
+                                .child(div().flex_none().size(px(PILL_DOT)).rounded_full().bg(tint.color))
+                        })
                         // With a second line the first has only marks after the name, so the name
                         // takes what they leave; without one the branch chip needs its share.
                         .when(!two_lines, |d| {
@@ -237,9 +256,9 @@ fn band_with(
                 .justify_end()
                 .gap_1()
                 .pl_2()
-                .pr_4()
+                .pr(px(inset))
                 // Room for the + where there is no count to stand in for.
-                .when(swap, |d| d.relative().min_w(px(SWAP_SLOT)))
+                .when(swap, |d| d.relative().min_w(px(SWAP_SLOT - SIDEBAR_INSET + inset)))
                 .children(waiting.filter(|_| section.is_collapsed()))
                 .children(count)
                 .children(add),
@@ -260,20 +279,28 @@ fn band_with(
         .h(px(if two_lines { FOLDER_BAND_H } else { BAND_H }))
         .when(two_lines, |d| d.py_1())
         .flex_none()
-        .bg(fill)
-        .when(!drop_target, |d| d.hover(|s| s.bg(ui.band_hover)))
-        // Under the content and the hairlines, which are painted later.
-        .children(look.tint.into_iter().flat_map(|tint| tint_layers(tint.color, tint.peak)))
-        .when(!joined, |d| d.child(hairline_at(Edge::Top, ui, hairline)))
-        .child(hairline_at(Edge::Bottom, ui, hairline))
+        .when(!card, |d| {
+            d.bg(fill)
+                .when(!drop_target, |d| d.hover(|s| s.bg(ui.band_hover)))
+                // Under the content and the hairlines, which are painted later.
+                .children(look.tint.into_iter().flat_map(|tint| tint_layers(tint.color, tint.peak)))
+                .when(!joined, |d| d.child(hairline_at(Edge::Top, ui, hairline)))
+                .child(hairline_at(Edge::Bottom, ui, hairline))
+        })
+        .when(card, |d| {
+            d.rounded(px(CARD_ROW_RADIUS))
+                .when(sticky, |d| d.bg(ui.band_solid))
+                .when(drop_target, |d| d.bg(ui.highlight))
+                .when(!drop_target, |d| d.hover(|s| s.bg(ui.hover)))
+        })
         .when_some(on_toggle.filter(|_| foldable), |d, on_toggle| d.cursor_pointer().on_click(on_toggle))
         .child(first)
-        .children(meta.map(|meta| meta_line(ui, meta)))
+        .children(meta.map(|meta| meta_line(ui, meta, inset)))
 }
 
 /// A folder band's second line: its path, "±N", branch and pull request, from the title's x.
 #[track_caller]
-fn meta_line(ui: UiColors, meta: FolderMeta) -> Div {
+fn meta_line(ui: UiColors, meta: FolderMeta, inset: f32) -> Div {
     let FolderMeta { path, path_w, changes, branch, pull_request } = meta;
     div()
         .flex()
@@ -281,8 +308,8 @@ fn meta_line(ui: UiColors, meta: FolderMeta) -> Div {
         .gap_2()
         .w_full()
         .h(rems(META_LINE))
-        .pl(px(SIDEBAR_INSET + ITEM_LEAD_W + 8.0))
-        .pr_4()
+        .pl(px(inset + ITEM_LEAD_W + 8.0))
+        .pr(px(inset))
         .min_w_0()
         .text_caption()
         .text_color(ui.muted)
@@ -299,6 +326,12 @@ fn meta_line(ui: UiColors, meta: FolderMeta) -> Div {
 /// A folder band's right side when the + takes the count's place: the + (its face less the room
 /// it is pulled right by) and the padding round it.
 const SWAP_SLOT: f32 = 8.0 + 20.0 + SIDEBAR_INSET;
+/// A band's content in a card starts this far in from the card's padding.
+pub const CARD_INSET: f32 = 8.0;
+/// The colour pill under a band's name in a card: its fill's strength, its dot, its padding.
+const PILL_FILL: f32 = 0.2;
+const PILL_DOT: f32 = 7.0;
+const PILL_PAD_Y: f32 = 1.0;
 
 #[derive(Clone, Copy)]
 enum Edge {

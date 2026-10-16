@@ -269,9 +269,14 @@ fn popover_content(
         .flex_col()
         .gap_3()
         .child(Input::new(search).small().prefix(style::icon(IconName::Search).text_color(ui.muted)))
-        .child(group(ui, "Group by").child(
-            segments(ui).child(grouping("Folder", Grouping::Folder)).child(grouping("None", Grouping::None)),
-        ))
+        .child(
+            group(ui, "Group by").child(
+                segments(ui)
+                    .child(grouping("Folder", Grouping::Folder))
+                    .child(grouping("Groups", Grouping::Custom))
+                    .child(grouping("None", Grouping::None)),
+            ),
+        )
         .child(group(ui, "Show").child(segments(ui).children(Show::ALL.map(show))).child(hide_idle))
         .child(separator(ui))
         .child(

@@ -21,6 +21,7 @@ mod shape;
 mod sidebar;
 mod syntax;
 mod terminal;
+mod tiles;
 mod typography;
 mod windows;
 
@@ -125,6 +126,13 @@ const SPECIMENS: &[Specimen] = &[
         area: Some(Area::Sidebar),
         column: Column::Left,
         render: sidebar::render,
+    },
+    Specimen {
+        title: "Tiles and tabs",
+        description: "status tiles, a card, the tab bars' tabs, chips, piles and segments",
+        area: Some(Area::Sidebar),
+        column: Column::Left,
+        render: tiles::render,
     },
     Specimen {
         title: "Right panel",

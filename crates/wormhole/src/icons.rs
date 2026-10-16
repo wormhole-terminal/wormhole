@@ -73,6 +73,9 @@ gpui_kit::assets::icon_assets!(
         CircleDashed,
         // A diff line under the pointer can be commented on.
         MessageSquarePlus,
+        // The terminal list's New group, and the tab bars' group switcher.
+        FolderPlus,
+        Layers,
     ]
 );
 

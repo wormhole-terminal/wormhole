@@ -27,15 +27,17 @@ mod demo;
 mod drag;
 mod facts;
 mod filter_popover;
+mod groups;
 mod hints;
 mod keys;
 mod motion;
 mod row_menu;
 mod rows;
+mod tab_bar;
 mod tick;
 
 use facts::{RowInfo, row_times};
-use motion::{ItemKey, ListMotion, band_key};
+use motion::{ItemKey, ListMotion};
 pub(super) use row_menu::reveal_in_finder;
 
 /// Whether the funnel and what it filters exist (the `SidebarFilter` flag). Off, the list is
@@ -61,6 +63,10 @@ pub(super) struct SidebarState {
     menu_row: Option<i64>,
     /// The folder whose band's context menu is open: the band wears the ring.
     menu_band: Option<PathBuf>,
+    /// The group whose band's context menu is open.
+    menu_group: Option<u32>,
+    /// The group whose name is being edited in place.
+    renaming: Option<groups::Renaming>,
     menu_dismissed: Option<Subscription>,
     pub(super) scroll: ScrollHandle,
     /// Bring this terminal's row into view on the next frame.
@@ -87,6 +93,8 @@ pub(super) struct SidebarState {
     times_drawn: RefCell<Vec<Option<String>>>,
     /// The terminal welcome's example band while its sidebar step is up (`demo`). Never saved.
     pub(super) demo: Option<demo::Demo>,
+    /// The tab bar, while the terminals are in tabs.
+    pub(super) tabs: tab_bar::TabBarState,
 }
 
 impl SidebarState {
@@ -116,6 +124,8 @@ impl SidebarState {
             _keys: keys,
             menu_row: None,
             menu_band: None,
+            menu_group: None,
+            renaming: None,
             menu_dismissed: None,
             scroll: ScrollHandle::new(),
             scroll_to: None,
@@ -129,6 +139,7 @@ impl SidebarState {
             worktrees: RefCell::default(),
             times_drawn: RefCell::default(),
             demo: None,
+            tabs: tab_bar::TabBarState::default(),
         }
     }
 }
@@ -138,12 +149,16 @@ impl Workspace {
     fn listing(&self, infos: &[RowInfo], cx: &App) -> Listing {
         let folders: Vec<Option<PathBuf>> = match self.sidebar.view.grouping {
             Grouping::Folder => infos.iter().map(|info| info.folder.clone()).collect(),
-            Grouping::None => Vec::new(),
+            Grouping::None | Grouping::Custom => Vec::new(),
         };
         // The person's pinned folders, one list for every window (a flat list has no bands).
         let pinned_folders: Vec<PathBuf> = match self.sidebar.view.grouping {
             Grouping::Folder => settings(cx).pinned_folders.iter().map(PathBuf::from).collect(),
-            Grouping::None => Vec::new(),
+            Grouping::None | Grouping::Custom => Vec::new(),
+        };
+        let group_of: Vec<Option<u32>> = match self.sidebar.view.grouping {
+            Grouping::Custom => infos.iter().map(|info| self.sidebar.view.groups.group_of(info.id)).collect(),
+            Grouping::None | Grouping::Folder => Vec::new(),
         };
         let rows: Vec<Searchable> = infos.iter().map(RowInfo::searchable).collect();
         let pinned: Vec<bool> = infos.iter().map(|info| info.pinned).collect();
@@ -170,6 +185,7 @@ impl Workspace {
             order,
             numbers,
             band_order: &band_order,
+            group_of: &group_of,
         });
         self.freeze_numbers(&mut listing, infos, order, cx);
         listing
@@ -250,7 +266,7 @@ impl Workspace {
             .entries
             .iter()
             .map(|entry| match *entry {
-                Entry::Band { band, .. } => band_key(listing.bands[band].folder.as_deref()),
+                Entry::Band { band, .. } => ItemKey::Band(listing.bands[band].key()),
                 Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
             })
             .collect();
@@ -261,10 +277,11 @@ impl Workspace {
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
         for (at, entry) in listing.entries.iter().enumerate() {
             let line = match *entry {
+                Entry::Band { band, position, of } if listing.bands[band].group.is_some() => {
+                    self.render_group_band(&listing, band, (position, of), &frame, false, window, cx)
+                }
                 Entry::Band { band, position, of } => {
-                    // Two bands in a row (the first folded) share one hairline.
-                    let joined = at > 0 && matches!(listing.entries[at - 1], Entry::Band { .. });
-                    self.render_band(&listing, band, (position, of), &git, &frame, false, joined, window, cx)
+                    self.render_band(&listing, band, (position, of), &git, &frame, false, false, window, cx)
                 }
                 Entry::Row { session, band, position, of, number, marks } => {
                     let place = rows::Place {
@@ -277,6 +294,29 @@ impl Workspace {
                     };
                     self.render_row(&infos[session], &place, &listing, &frame, window, cx)
                 }
+            };
+            // Each line is a stretch of its band's card; a loose terminal is lined up with the cards.
+            let (in_card, top) = match *entry {
+                Entry::Band { .. } => (true, true),
+                Entry::Row { band, .. } => (band.is_some(), false),
+            };
+            let card_of = |entry: &Entry| match *entry {
+                Entry::Band { band, .. } | Entry::Row { band: Some(band), .. } => Some(band),
+                Entry::Row { band: None, .. } => None,
+            };
+            let own = card_of(entry);
+            let bottom = in_card
+                && !matches!(listing.entries.get(at + 1), Some(next @ Entry::Row { .. }) if card_of(next) == own);
+            // A card after a loose terminal stands off from it; after another card, that card's gap.
+            let gap_above =
+                at > 0 && matches!(listing.entries.get(at - 1), Some(Entry::Row { band: None, .. }));
+            let segment = style::card_segment(ui, top, bottom, in_card, gap_above, line);
+            let line = match *entry {
+                Entry::Row { session, .. } => {
+                    let id = infos[session].id;
+                    self.with_row_drop(segment.id(("row-line", id as u64)), id, cx).into_any_element()
+                }
+                Entry::Band { .. } => segment.into_any_element(),
             };
             let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);
             items.push(self.with_list_motion(keys[at].clone(), line, is_held));

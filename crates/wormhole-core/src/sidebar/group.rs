@@ -15,23 +15,28 @@ pub enum Grouping {
     None,
     /// One band per folder: the repository a session is in, else its working directory.
     Folder,
+    /// The person's own groups (`groups::Groups`), named and coloured, holding terminals from any
+    /// folder; the terminals in none sit loose above them.
+    Custom,
 }
 
 impl Grouping {
-    pub const ALL: [Grouping; 2] = [Grouping::None, Grouping::Folder];
+    pub const ALL: [Grouping; 3] = [Grouping::None, Grouping::Folder, Grouping::Custom];
 
     pub fn label(self) -> &'static str {
         match self {
             Grouping::None => "No grouping",
             Grouping::Folder => "By folder",
+            Grouping::Custom => "Your groups",
         }
     }
 
     /// Session indices in the order the sidebar lists them (before pins, folding and the
-    /// filter: see `Listing`).
+    /// filter: see `Listing`). Which group a terminal is in only the window knows, so `Custom` is
+    /// the order of a window with no groups yet: every terminal loose, as given.
     pub fn order(self, folders: &[Option<PathBuf>], pinned_folders: &[PathBuf]) -> Vec<usize> {
         match self {
-            Grouping::None => (0..folders.len()).collect(),
+            Grouping::None | Grouping::Custom => (0..folders.len()).collect(),
             Grouping::Folder => {
                 bucket(folders, pinned_folders, &[]).into_iter().flat_map(|bucket| bucket.sessions).collect()
             }

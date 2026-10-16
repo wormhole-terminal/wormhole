@@ -376,8 +376,14 @@ View
   ---
   Group Terminals By ▸
     ✓ Folder
+    Your Groups
     None
   Compact Rows
+  Show Terminals in Sidebar
+  Tab Layout ▸
+    Two Rows
+    Stacks
+    Bottom
   ---
   Bigger  ⌘+
   Smaller  ⌘-

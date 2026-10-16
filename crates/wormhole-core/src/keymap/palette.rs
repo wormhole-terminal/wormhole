@@ -106,10 +106,11 @@ pub fn section(id: ActionId) -> Section {
     use ActionId::*;
     match id {
         ToggleSidebar | ToggleRightPanel | ToggleStatusBar | ToggleMinimap | ShowNotes | ShowChanges
-        | ShowHistory | ShowProject | ShowUsage | GroupByFolder | GroupByNone | CompactRows
-        | FocusTerminalOrPanel | FocusNextArea | FocusPreviousArea | Bigger | Smaller | ActualSize
-        | FullScreen | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows
-        | LayoutGrid | LayoutSingle => Section::View,
+        | ShowHistory | ShowProject | ShowUsage | GroupByFolder | GroupByCustom | GroupByNone
+        | CompactRows | ToggleTerminalTabs | TabsTwoRows | TabsStacks | TabsBottom | FocusTerminalOrPanel
+        | FocusNextArea | FocusPreviousArea | Bigger | Smaller | ActualSize | FullScreen
+        | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
+        | LayoutSingle => Section::View,
         About | CheckForUpdates | Settings | ThemeStudio | Hide | HideOthers | ShowAll | Quit | ShowLogs
         | Inspector | Help | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex
         | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage

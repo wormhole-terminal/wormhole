@@ -87,6 +87,7 @@ impl World {
             order,
             numbers,
             band_order: &self.bands,
+            group_of: &[],
         });
         if numbers == SidebarNumbers::Terminal {
             let window: Vec<(i64, bool)> =
@@ -272,6 +273,7 @@ fn with_no_remembered_order_bands_follow_their_first_terminal() {
         order: SidebarOrder::Stable,
         numbers: SidebarNumbers::Terminal,
         band_order: &[],
+        group_of: &[],
     });
     assert_eq!(band_labels(&listing), ["b", "a", "No folder"]);
 }

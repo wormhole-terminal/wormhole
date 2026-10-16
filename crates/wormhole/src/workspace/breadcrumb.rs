@@ -94,7 +94,8 @@ impl Workspace {
                 })
             })
             .unwrap_or_default();
-        let has_indicator = indicator_glyph(facts.told, facts.status).is_some();
+        // Under tabs across the top the tab says the terminal's tile and name, so the row hasn't them.
+        let named = !self.tabs_on_top();
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
@@ -118,16 +119,18 @@ impl Workspace {
             ports_narrower,
             group,
             folded,
-            name: measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W),
-            name_min: CRUMB_TEXT_MIN,
+            name: if named {
+                measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W)
+            } else {
+                0.0
+            },
+            name_min: if named { CRUMB_TEXT_MIN } else { 0.0 },
             // The padding, the folder's icon and its separator, the branch's separator, and the
-            // terminal's tool icon, status slot and the gap before its name.
+            // terminal's status tile and the gap before its name.
             fixed: 2.0 * CRUMB_PAD
                 + facts.folder.as_ref().map_or(0.0, |_| style::GLYPH + before)
                 + facts.branch.as_ref().map_or(0.0, |_| before)
-                + style::GLYPH
-                + if has_indicator { TOOL_GAP + style::ITEM_LEAD_W } else { 0.0 }
-                + CRUMB_GAP,
+                + if named { style::TILE_MINI + CRUMB_GAP } else { 0.0 },
         };
         let fit = fit_row(self.title_row_width(window), &wants);
         TitlePlan {
@@ -230,22 +233,26 @@ impl Workspace {
                 }))
         });
 
-        // The terminal: the tool's own icon (always in the text color: its status is the
-        // indicator beside it), the live status, the name and how it is doing.
-        let tool = match agent {
-            Some(agent) => {
-                let agent = agents::agent(*agent);
-                style::agent_logo(agent.icon(), agent.monogram, style::GLYPH, ui.text)
-            }
-            None => svg()
-                .path(crate::icons::glyph::TERMINAL)
-                .flex_none()
-                .size(px(style::GLYPH))
-                .text_color(ui.text)
-                .into_any_element(),
+        // The terminal: a small status tile (the tool's own icon, its live status round it), then
+        // the name and how it is doing. Under tabs across the top the tab says the tile and the
+        // name already, so the row keeps only the words.
+        let named = !self.tabs_on_top();
+        let face = match agent.map(agents::agent) {
+            Some(agent) => match agent.icon() {
+                Some(path) => style::TileFace::Logo(path),
+                None => style::TileFace::Monogram(agent.monogram.into()),
+            },
+            None => style::TileFace::Terminal,
         };
-        let indicator = indicator_glyph(*told, *status)
-            .map(|glyph| style::status_glyph(("terminal-status", *id as u64), ui, glyph, cx));
+        let glyph = indicator_glyph(*told, *status).unwrap_or(style::StatusGlyph::Idle);
+        let tile = named.then(|| {
+            style::status_tile(
+                ("terminal-tile", *id as u64),
+                ui,
+                style::StatusTile { face, glyph, selected: false, mini: true },
+                cx,
+            )
+        });
         let attention = *status == Status::Attention;
         let failed = *status == Status::Failed;
         let process = div()
@@ -255,17 +262,19 @@ impl Workspace {
             .gap_2()
             .min_w_0()
             .overflow_hidden()
-            .child(div().flex().flex_none().items_center().gap_1().child(tool).children(indicator))
-            .child(
-                div()
-                    .min_w_0()
-                    .max_w(px(fit.name))
-                    .truncate()
-                    .text_label()
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(ui.text)
-                    .child(label.clone()),
-            )
+            .children(tile)
+            .when(named, |d| {
+                d.child(
+                    div()
+                        .min_w_0()
+                        .max_w(px(fit.name))
+                        .truncate()
+                        .text_label()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(ui.text)
+                        .child(label.clone()),
+                )
+            })
             .children(words.clone().filter(|_| fit.words).map(|words| {
                 div()
                     .flex_none()
@@ -310,8 +319,6 @@ impl Workspace {
 pub(super) const CRUMB_GAP: f32 = 8.0;
 const CRUMB_PAD: f32 = 8.0;
 const CRUMB_TEXT_MIN: f32 = 24.0;
-/// The gap between the terminal's tool icon and its status (`gap_1`).
-const TOOL_GAP: f32 = 4.0;
 /// A branch chip's glyph, gap and padding round its text, and its width when it is the glyph alone.
 const CHIP_CHROME: f32 = 28.0;
 const CHIP_ICON_W: f32 = 20.0;

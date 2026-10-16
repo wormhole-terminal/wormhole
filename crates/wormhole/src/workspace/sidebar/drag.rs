@@ -44,16 +44,25 @@ impl Workspace {
         info: &RowInfo,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
-        let id = info.id;
         let this = cx.weak_entity();
         let dragged =
-            DraggedTerminal::new(id, DragOrigin::Row, info.name.clone(), super::rows::glyph_for(info));
+            DraggedTerminal::new(info.id, DragOrigin::Row, info.name.clone(), super::rows::glyph_for(info));
         row.on_drag(dragged, move |dragged, grabbed, _, cx| {
             this.update(cx, |ws, _| ws.terminal_drag = Some(TerminalDrag::new(dragged.id, dragged.origin)))
                 .ok();
             cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
         })
-        .on_drag_move::<DraggedTerminal>(cx.listener(
+    }
+
+    /// Terminal `id`'s line of the list as a drop target: its row and the stretch of its card round
+    /// it, so the card's padding under its last row takes a drop too.
+    pub(super) fn with_row_drop(
+        &self,
+        line: Stateful<Div>,
+        id: i64,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        line.on_drag_move::<DraggedTerminal>(cx.listener(
             move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
                 // Every row hears every move: only the one under the pointer counts.
                 if !event.bounds.contains(&event.event.position) {
@@ -159,7 +168,9 @@ impl Workspace {
     fn drop_group(&self, listing: &Listing, dragged: usize, onto: usize) -> Option<Vec<usize>> {
         let members: Vec<usize> = match self.sidebar.view.grouping {
             Grouping::Folder => listing.bands.get(listing.band_of(dragged)?)?.members.clone(),
-            Grouping::None => listing.order().to_vec(),
+            // A terminal dropped beside one in another group moves into that group (`row_drop`), so
+            // the whole list is the order it lands in.
+            Grouping::None | Grouping::Custom => listing.order().to_vec(),
         };
         (members.contains(&dragged) && members.contains(&onto)).then_some(members)
     }
@@ -247,6 +258,10 @@ impl Workspace {
         else {
             return Ok(None);
         };
+        // Shown in the person's groups, a terminal put beside one of another group moves into it.
+        let into_group = (self.sidebar.view.grouping == Grouping::Custom)
+            .then(|| self.sidebar.view.groups.group_of(onto))
+            .filter(|&group| group != self.sidebar.view.groups.group_of(dragged));
         match drop {
             RowDrop::Reorder { to } => self.reorder_group(&members, &pinned, from, to),
             RowDrop::Leave { to } => {
@@ -257,6 +272,9 @@ impl Workspace {
                 let target = self.sessions[target].id;
                 self.join_split(members[from], target, Zone::Right, window, cx)?;
             }
+        }
+        if let Some(group) = into_group {
+            self.move_to_group(dragged, group, cx);
         }
         self.mark_dirty(cx);
         Ok(Some(drop))

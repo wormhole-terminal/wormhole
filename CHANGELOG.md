@@ -6,6 +6,23 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- The terminal list is redrawn as rounded cards, one per folder or group, set in from the sidebar's
+  edges, with a rounded selection. Each two-line row leads with a status tile: the agent's logo or the
+  terminal symbol, with a light circling its edge while it works (grey while a command runs), a
+  breathing amber edge when it needs you, and a badge for done, failed, new output or the bell. Under
+  Reduce Motion the light and the edge hold still.
+- Your own groups: Group by → Your groups lists terminals in groups you name and colour yourself, not
+  tied to a folder, with the terminals in no group first. A row's menu adds it to a group or takes it
+  out, dragging a terminal onto a group moves it there, and a group's menu renames it, recolours it,
+  opens a new terminal in it or ungroups it. New terminals open in the selected terminal's group.
+- Terminals can show as tabs instead of the sidebar (Settings → Show terminals in, or View → Show
+  Terminals as Tabs), in one of three layouts: two rows across the top (the groups or folders as chips,
+  the selected one's tabs under them), stacks (the selected set's tabs, the others piled up beside
+  them and fanning out under the pointer) or a bar along the bottom. The title row then shows the
+  terminal's status as a small tile.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

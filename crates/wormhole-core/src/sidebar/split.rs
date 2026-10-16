@@ -222,6 +222,7 @@ mod tests {
             order: SidebarOrder::Classic,
             numbers: SidebarNumbers::List,
             band_order: &[],
+            group_of: &[],
         };
         Listing::build(&input)
     }
@@ -462,6 +463,7 @@ mod tests {
             order: SidebarOrder::Classic,
             numbers: SidebarNumbers::List,
             band_order: &[],
+            group_of: &[],
         };
         assert_eq!(Listing::build(&input).entries, with.entries);
         assert_eq!(Listing::build(&input).order(), with.order());

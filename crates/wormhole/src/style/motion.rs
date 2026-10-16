@@ -26,6 +26,8 @@ pub const MOTION_PANEL: Duration = Duration::from_millis(250);
 
 /// One turn of the working spinner (linear, at most [`ANIMATION_FPS`] frames a second).
 pub const SPIN_PERIOD: Duration = Duration::from_millis(800);
+/// One turn of the light round a working terminal's status tile.
+pub const TILE_ORBIT: Duration = Duration::from_millis(1600);
 /// One breath of the needs-you halo; the dot itself never fades.
 pub const STATUS_PULSE: Duration = Duration::from_millis(1400);
 /// The halo's opacity breathes between these.

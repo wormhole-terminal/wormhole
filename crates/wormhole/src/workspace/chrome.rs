@@ -30,7 +30,7 @@ const AFTER_COLLAPSE: f32 = 8.0;
 /// The panel toggle's distance from the window's right edge: its glyph ends at the 16 pt inset.
 const PANEL_TOGGLE_RIGHT: f32 = style::PANEL_INSET - (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;
 /// What the toggle takes from the title row it floats over, and a gap before it.
-const PANEL_TOGGLE_SLOT: f32 = PANEL_TOGGLE_RIGHT + style::HIT_MIN + 4.0;
+pub(super) const PANEL_TOGGLE_SLOT: f32 = PANEL_TOGGLE_RIGHT + style::HIT_MIN + 4.0;
 /// The terminal's title row's padding beside an open column (`pl_1` / `pr_1`).
 const BESIDE_COLUMN: f32 = 4.0;
 /// A title row's own padding at an edge without the lights or the toggle: the room round a
@@ -182,6 +182,14 @@ impl Workspace {
                     .child(style::panel_title(ui, "Terminals"))
                     .child(div().flex_1())
                     .children(self.filter_button(idle, self.title_ring(TitleButton::Filter, window, cx), cx))
+                    // Shown in the person's groups: a new, empty group to drop terminals on.
+                    .when(self.sidebar.view.grouping == Grouping::Custom, |d| {
+                        d.child(
+                            style::icon_button("new-group", ui, IconName::FolderPlus, "New group")
+                                .in_title_row()
+                                .on_click(cx.listener(|this, _, window, cx| this.new_group(window, cx))),
+                        )
+                    })
                     // A right-click on the + offers the other shells.
                     .child(
                         self.with_shell_menu(
@@ -206,12 +214,16 @@ impl Workspace {
     /// breadcrumb starts a small gap from its hairline; at the window's edge they make room for the lights or
     /// the panel toggle. A column sliding in is over the terminal, not beside it, until it is in.
     pub(super) fn title_row_pads(&self, window: &Window) -> (f32, f32) {
-        let sidebar = self.panes.sidebar_open && self.in_flow(Edge::Sidebar);
+        let sidebar = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let panel = self.notes_visible() && self.in_flow(Edge::Panel);
-        (
-            if sidebar { BESIDE_COLUMN } else { collapse_slot(lights_end(window)) },
-            if panel { BESIDE_COLUMN } else { PANEL_TOGGLE_SLOT },
-        )
+        let lights = match self.sidebar.tabs.layout {
+            // The tab bar across the top has the lights; the row is under it.
+            Some(layout) if layout.on_top() => TITLE_ROW_PAD,
+            // No sidebar, so no button for it after the lights.
+            Some(_) => lights_end(window) + AFTER_COLLAPSE,
+            None => collapse_slot(lights_end(window)),
+        };
+        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_COLUMN } else { PANEL_TOGGLE_SLOT })
     }
 
     /// How wide the terminal's title row is inside its padding: what the breadcrumb has to fit in (worked out from the columns, so it is right in the frame that
@@ -225,7 +237,7 @@ impl Workspace {
     pub(super) fn title_column(&self) -> f32 {
         let columns = self.columns();
         let mut column = self.window_width;
-        if self.panes.sidebar_open && self.in_flow(Edge::Sidebar) {
+        if self.sidebar_shown() && self.in_flow(Edge::Sidebar) {
             column -= columns.sidebar;
         }
         if self.notes_visible() && self.in_flow(Edge::Panel) {

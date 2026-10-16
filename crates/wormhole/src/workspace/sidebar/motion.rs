@@ -8,7 +8,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
-use wormhole_core::sidebar::folder_key;
 use wormhole_core::sidebar::motion::{Drawn, plan_moves};
 
 use super::*;
@@ -63,10 +62,6 @@ impl ListMotion {
     pub(super) fn animation() -> Animation {
         Animation::new(MOTION_MOVE).with_easing(EASE_OUT.easing())
     }
-}
-
-pub(super) fn band_key(folder: Option<&Path>) -> ItemKey {
-    ItemKey::Band(folder_key(folder))
 }
 
 impl Workspace {

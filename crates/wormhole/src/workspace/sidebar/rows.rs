@@ -16,7 +16,7 @@ use wormhole_core::sidebar::text::{agent_detail, ago, clock, place_detail, took}
 use super::super::focus::SidebarStop;
 use super::super::terminal_drag::DragOrigin;
 use super::*;
-use crate::style::{RowTone, SessionRow, StatusGlyph};
+use crate::style::{RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
@@ -46,7 +46,7 @@ pub(super) struct Frame {
     show_notes: bool,
     /// The ⌘N keycaps are showing.
     pub(super) hints: bool,
-    code_font: SharedString,
+    pub(super) code_font: SharedString,
     pub(super) width: f32,
     text_style: TextStyle,
     rem: Pixels,
@@ -96,6 +96,31 @@ pub(super) struct Place {
     pub(super) grouped: bool,
     /// What it shows of its split.
     pub(super) marks: SplitMarks,
+}
+
+/// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
+/// its state round it; the bell is a badge on a terminal that has nothing louder to say.
+pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, mini: bool, cx: &App) -> AnyElement {
+    let face = match info.agent.filter(|_| frame.show_agent).map(agents::agent) {
+        Some(agent) => match agent.icon() {
+            Some(path) => TileFace::Logo(path),
+            None => TileFace::Monogram(agent.monogram.into()),
+        },
+        None => TileFace::Terminal,
+    };
+    let state = match glyph_for(info) {
+        _ if !frame.show_dot => StatusGlyph::Idle,
+        StatusGlyph::Shell | StatusGlyph::Idle | StatusGlyph::Terminal { unread: false } if info.bell => {
+            StatusGlyph::Bell
+        }
+        state => state,
+    };
+    let id = ElementId::Name(SharedString::from(format!(
+        "tile-{}-{}",
+        info.id,
+        if mini { "mini" } else { "full" }
+    )));
+    style::status_tile(id, frame.ui, StatusTile { face, glyph: state, selected, mini }, cx)
 }
 
 /// The glyph a terminal's state is drawn with.
@@ -212,14 +237,20 @@ impl Workspace {
             style::agent_logo(agent.icon(), agent.monogram, style::ITEM_LEAD_W, color)
         });
         let agent_idle = info.agent.is_some() && info.state == RowState::Idle;
+        // A row with two lines leads with its status tile: what the terminal is inside, what it is
+        // doing round it. It says the bell too, so nothing is left for the right.
+        let tiled = !frame.compact;
+        let tile = tiled.then(|| tile_for(info, frame, selected, false, cx));
         let (lead, at_right): (AnyElement, Option<AnyElement>) = match (frame.show_dot, frame.dot_right, logo)
         {
+            _ if tiled => (div().into_any_element(), None),
             (true, false, Some(logo)) if agent_idle => (logo, None),
             (true, false, _) => (glyph(), None),
             (true, true, logo) => (logo.unwrap_or_else(|| div().into_any_element()), Some(glyph())),
             (false, _, logo) => (logo.unwrap_or_else(|| div().into_any_element()), None),
         };
-        let bell = info.bell.then(|| style::status_glyph(("bell", id as u64), ui, StatusGlyph::Bell, cx));
+        let bell = (info.bell && !tiled)
+            .then(|| style::status_glyph(("bell", id as u64), ui, StatusGlyph::Bell, cx));
         // Row details: the notes and tasks still open, the row's own changed files.
         let quiet = if selected { ui.selected_muted } else { ui.muted };
         let notes = (frame.show_notes && info.open_items > 0).then(|| {
@@ -313,19 +344,14 @@ impl Workspace {
         } + f32::from(details) * DETAIL_W
             + if place.marks.chain { TRAIL_W } else { 0.0 }
             + if place.marks.on_screen { ON_SCREEN_W } else { 0.0 };
-        let name_room = frame.width
-            - 2.0 * style::SIDEBAR_INSET
-            - style::ITEM_LEAD_W
-            - 8.0
-            - right
-            - marks as f32 * MARK_W;
+        // What the row's sides and its lead take: the card's margin and padding, the row's own
+        // padding, and the tile or the lead glyph with its gap.
+        let side = style::CARD_MARGIN + style::CARD_PAD + 8.0;
+        let lead_w = if tiled { style::TILE + style::TILE_GAP } else { style::ITEM_LEAD_W + 8.0 };
+        let name_room = frame.width - 2.0 * side - lead_w - right - marks as f32 * MARK_W;
         let name_weight = if selected || info.unread { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM };
         let cut_name = frame.measure(&info.name, BODY_REM, name_weight, window) > name_room;
-        let detail_room = frame.width
-            - 2.0 * style::SIDEBAR_INSET
-            - style::ITEM_LEAD_W
-            - 8.0
-            - detail_trail.as_ref().map_or(0.0, |_| CLOCK_W);
+        let detail_room = frame.width - 2.0 * side - lead_w - detail_trail.as_ref().map_or(0.0, |_| CLOCK_W);
         let cut_detail = !mono
             && detail
                 .as_deref()
@@ -377,6 +403,8 @@ impl Workspace {
                 mark: mark.map(IntoElement::into_any_element),
                 trail,
                 detail_trail: detail_trail.map(SharedString::from),
+                tile,
+                card: true,
             },
         );
         let flash = self.sidebar.flash.filter(|(flashed, _)| *flashed == id).map(|(_, generation)| {
@@ -412,7 +440,7 @@ impl Workspace {
             .children(flash)
             .children(place.marks.bracket.map(|part| style::split_bracket(ui, part)))
             .when(self.sidebar.menu_row == Some(id) || ring, |d| {
-                d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(0.0)))
+                d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
             .children(self.drop_line(info, listing, cx.has_active_drag(), ui))
             .when(!frame.hints, |d| d.child(self.close_button(info, selected, &group, ui, cx)))
@@ -422,7 +450,7 @@ impl Workspace {
     }
 
     /// The × that closes a terminal: on the row under the pointer, the selected one too.
-    fn close_button(
+    pub(super) fn close_button(
         &self,
         info: &RowInfo,
         selected: bool,
@@ -476,7 +504,7 @@ fn tone_of(state: RowState) -> RowTone {
 const MONO_CHAR_W: f32 = 7.2;
 const CLOCK_W: f32 = 48.0;
 /// How many characters of a path fit on a row's second line before it is cut from the front.
-const PLACE_CHARS: usize = 38;
+pub(super) const PLACE_CHARS: usize = 38;
 
 #[cfg(test)]
 mod tests {

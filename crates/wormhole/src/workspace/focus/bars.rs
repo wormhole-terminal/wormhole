@@ -30,7 +30,10 @@ impl Workspace {
     /// The title row's buttons on screen: all four with the sidebar open, its show button alone
     /// without it. The funnel is a stop only while its feature flag is on.
     pub(in crate::workspace) fn title_buttons(&self, cx: &App) -> Vec<TitleButton> {
-        if self.panes.sidebar_open {
+        if self.sidebar.tabs.layout.is_some() {
+            // Under tabs the window has no sidebar, nor a button for it.
+            Vec::new()
+        } else if self.panes.sidebar_open {
             let mut buttons = vec![TitleButton::Sidebar, TitleButton::Settings];
             if super::sidebar::sidebar_filter_on(cx) {
                 buttons.push(TitleButton::Filter);

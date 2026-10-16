@@ -35,6 +35,22 @@ pub const BAND_H: f32 = 32.0;
 /// two-line row, a name line and a meta line between the same four above and below. "No folder"
 /// and the compact density keep [`BAND_H`].
 pub const FOLDER_BAND_H: f32 = ROW_TWO_LINE_H;
+/// The status tile (`style::status_tile`) beside a two-line row's two lines, and the small one in a
+/// tab and the title row.
+pub const TILE: f32 = 32.0;
+pub const TILE_MINI: f32 = 20.0;
+/// The sidebar's cards (a folder's or a group's band with its terminals): this far in from the
+/// sidebar's sides, this round, their rows this far in from the card's sides, and this far apart.
+pub const CARD_MARGIN: f32 = 10.0;
+pub const CARD_RADIUS: f32 = 12.0;
+pub const CARD_PAD: f32 = 4.0;
+pub const CARD_GAP: f32 = 8.0;
+/// The rounded selection and hover inside a card.
+pub const CARD_ROW_RADIUS: f32 = 8.0;
+/// The tab bars (tabs instead of the sidebar): a tab's width where tabs keep one, and the least a
+/// shared one gives way to.
+pub const TAB_W: f32 = 168.0;
+pub const TAB_MIN_W: f32 = 96.0;
 /// The title rows across the top: the sidebar's, the terminal's breadcrumb, the panel's tabs.
 pub const TITLE_ROW_H: f32 = 40.0;
 /// Height of a badge (one caption line). Its least width is the same, so a lone

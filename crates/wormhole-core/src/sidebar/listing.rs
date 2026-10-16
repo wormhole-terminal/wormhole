@@ -1,4 +1,5 @@
-//! The terminal list as the sidebar draws it: folder bands (or one flat list), pins on top,
+//! The terminal list as the sidebar draws it: folder bands, the person's own groups (or one flat
+//! list), pins on top,
 //! the pinned folders' bands first and kept without a terminal in them, folded bands without
 //! their rows, the filter applied, and the ⌘1–9 numbers on the first nine terminals you can see.
 
@@ -10,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::filter::{Filter, Searchable};
 use super::group::{Grouping, group_by_folder_in};
+use super::groups::{Groups, group_key};
 use super::order::{SidebarNumbers, SidebarOrder, with_pins};
 use super::split::{self, SplitMarks, Splits};
 
@@ -17,14 +19,16 @@ use super::split::{self, SplitMarks, Splits};
 pub const NUMBERED: usize = 9;
 
 /// The sidebar's state that belongs to one window and is saved with it: how it groups, what
-/// it filters, which bands are folded.
+/// it filters, which bands are folded, and the groups the person made in it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct WindowSidebar {
     pub grouping: Grouping,
     pub filter: Filter,
-    /// Folded bands, by [`folder_key`].
+    /// Folded bands, by [`folder_key`] (a folder's) or `group_key` (a group's).
     pub folded: BTreeSet<String>,
+    /// The window's own groups (grouping `Custom`), kept while it is grouped another way.
+    pub groups: Groups,
 }
 
 impl WindowSidebar {
@@ -46,7 +50,19 @@ impl WindowSidebar {
 
     /// Fold an open band or open a folded one.
     pub fn toggle_fold(&mut self, folder: Option<&Path>) {
-        let key = folder_key(folder);
+        self.toggle_key(folder_key(folder));
+    }
+
+    pub fn is_group_folded(&self, group: u32) -> bool {
+        self.folded.contains(&group_key(group))
+    }
+
+    /// Fold an open group or open a folded one.
+    pub fn toggle_group_fold(&mut self, group: u32) {
+        self.toggle_key(group_key(group));
+    }
+
+    fn toggle_key(&mut self, key: String) {
         if !self.folded.remove(&key) {
             self.folded.insert(key);
         }
@@ -81,15 +97,21 @@ pub struct ListInput<'a> {
     /// The order the bands that aren't pinned folders keep (`order::settle_bands`), used under
     /// [`SidebarOrder::Stable`]; empty means the order of each band's first terminal.
     pub band_order: &'a [PathBuf],
+    /// Each session's group (`WindowSidebar::groups`), by index like `rows`; only read when the
+    /// list shows the person's groups. A session past its end, or in a group that is gone, is
+    /// loose.
+    pub group_of: &'a [Option<u32>],
 }
 
-/// One folder band.
+/// One band: a folder's, or one of the person's groups.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Band {
-    /// `None` is "No folder" (always last).
+    /// `None` is "No folder" (always last), or a group.
     pub folder: Option<PathBuf>,
+    /// The group it heads (`Groups` id); `None` for a folder's band.
+    pub group: Option<u32>,
     pub label: String,
-    /// The folder is a pinned one: it stays in the list with no terminal in it.
+    /// The folder is a pinned one, or it is a group: it stays in the list with no terminal in it.
     pub pinned: bool,
     /// Every terminal in it, pinned first: what a drag reorders. Empty for a pinned folder
     /// nobody is in.
@@ -97,6 +119,17 @@ pub struct Band {
     /// How many of them the filter keeps: what a folded band counts.
     pub matches: usize,
     pub folded: bool,
+}
+
+impl Band {
+    /// What the band is remembered by while folded, and known by across frames: its group's key,
+    /// else its folder's.
+    pub fn key(&self) -> String {
+        match self.group {
+            Some(group) => group_key(group),
+            None => folder_key(self.folder.as_deref()),
+        }
+    }
 }
 
 /// One line of the list.
@@ -122,7 +155,7 @@ pub enum Entry {
 /// The list top to bottom.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Listing {
-    /// Empty when not grouped by folder.
+    /// Empty for a flat list.
     pub bands: Vec<Band>,
     pub entries: Vec<Entry>,
     /// Terminals the filter leaves out ("8 terminals hidden").
@@ -151,6 +184,7 @@ impl Listing {
             order: order_mode,
             numbers: numbers_mode,
             band_order,
+            group_of,
         } = *input;
         // Classic orders the bands by their first terminal, as they stand now.
         let band_order = if order_mode == SidebarOrder::Stable { band_order } else { &[] };
@@ -187,6 +221,7 @@ impl Listing {
                     let matches = shown.len();
                     listing.bands.push(Band {
                         folder: group.folder,
+                        group: None,
                         label: group.label,
                         pinned: group.pinned,
                         members,
@@ -204,13 +239,49 @@ impl Listing {
                         listing.push_rows(&shown, Some(band));
                     }
                 }
-                let bands: Vec<usize> = listing.band_entries().collect();
-                let of = bands.len();
-                for (n, at) in bands.into_iter().enumerate() {
-                    if let Entry::Band { position, of: total, .. } = &mut listing.entries[at] {
-                        (*position, *total) = (n + 1, of);
+                listing.place_bands();
+            }
+            Grouping::Custom => {
+                let groups = &sidebar.groups;
+                // A group that is gone (or a stale id) leaves its terminals loose.
+                let group_at =
+                    |ix: usize| group_of.get(ix).copied().flatten().filter(|&id| groups.get(id).is_some());
+                let loose: Vec<usize> = (0..rows.len()).filter(|&ix| group_at(ix).is_none()).collect();
+                let loose = split::gather_splits(&with_pins(&loose, is_pinned), &ids);
+                order_band.extend(std::iter::repeat_n(None, loose.len()));
+                listing.order.extend(&loose);
+                let shown: Vec<usize> = loose.iter().copied().filter(|&ix| admitted[ix]).collect();
+                listing.push_rows(&shown, None);
+                for group in groups.iter() {
+                    // In the window's order, not the order they joined, so a drag reorders them.
+                    let members: Vec<usize> =
+                        (0..rows.len()).filter(|&ix| group_at(ix) == Some(group.id)).collect();
+                    let members = split::gather_splits(&with_pins(&members, is_pinned), &ids);
+                    order_band.extend(std::iter::repeat_n(Some(listing.bands.len()), members.len()));
+                    let shown: Vec<usize> = members.iter().copied().filter(|&ix| admitted[ix]).collect();
+                    listing.order.extend(&members);
+                    let folded = sidebar.is_group_folded(group.id);
+                    let matches = shown.len();
+                    listing.bands.push(Band {
+                        folder: None,
+                        group: Some(group.id),
+                        label: group.name.clone(),
+                        pinned: true,
+                        members,
+                        matches,
+                        folded,
+                    });
+                    // Like a pinned folder, a group stays with nothing in it, unless a filter is on.
+                    if shown.is_empty() && filter.is_active() {
+                        continue;
+                    }
+                    let band = listing.bands.len() - 1;
+                    listing.entries.push(Entry::Band { band, position: 0, of: 0 });
+                    if !folded {
+                        listing.push_rows(&shown, Some(band));
                     }
                 }
+                listing.place_bands();
             }
         }
         listing.numbered = match numbers_mode {
@@ -256,6 +327,17 @@ impl Listing {
             let number = None;
             let marks = SplitMarks::default();
             self.entries.push(Entry::Row { session, band, position: n + 1, of, number, marks });
+        }
+    }
+
+    /// Number the bands on screen 1…n, for VoiceOver ("2 of 3").
+    fn place_bands(&mut self) {
+        let bands: Vec<usize> = self.band_entries().collect();
+        let of = bands.len();
+        for (n, at) in bands.into_iter().enumerate() {
+            if let Entry::Band { position, of: total, .. } = &mut self.entries[at] {
+                (*position, *total) = (n + 1, of);
+            }
         }
     }
 
@@ -365,6 +447,7 @@ mod tests {
             order: SidebarOrder::Classic,
             numbers: SidebarNumbers::List,
             band_order: &[],
+            group_of: &[],
         })
     }
 
@@ -517,6 +600,7 @@ mod tests {
             order: SidebarOrder::Classic,
             numbers: SidebarNumbers::List,
             band_order: &[],
+            group_of: &[],
         });
         assert_eq!(shape(&listing), ["[~/a/app]", "[~/b/app]", "0:1", "1:2"]);
         assert!(listing.bands[0].pinned && !listing.bands[1].pinned);
@@ -623,6 +707,82 @@ mod tests {
         let listing = build(Grouping::Folder, &folders, &rows, &[false; 3], &sidebar);
         assert_eq!(listing.step(2, 1), Some(0), "the folded terminal is skipped");
         assert_eq!(listing.step(1, 1), Some(0), "from a folded one, along the whole list");
+    }
+
+    fn build_grouped(
+        rows: &[Searchable],
+        pinned: &[bool],
+        group_of: &[Option<u32>],
+        sidebar: &WindowSidebar,
+    ) -> Listing {
+        Listing::build(&ListInput {
+            grouping: Grouping::Custom,
+            folders: &[],
+            pinned_folders: &[],
+            rows,
+            pinned,
+            sidebar,
+            home: None,
+            splits: Splits::default(),
+            order: SidebarOrder::Classic,
+            numbers: SidebarNumbers::List,
+            band_order: &[],
+            group_of,
+        })
+    }
+
+    #[test]
+    fn your_groups_list_loose_terminals_first_then_each_group_even_empty() {
+        let rows = rows(&[RowState::Idle; 5]);
+        let mut sidebar = WindowSidebar::default();
+        let a = sidebar.groups.create(&[]);
+        let b = sidebar.groups.create(&[]);
+        let empty = sidebar.groups.create(&[]);
+        sidebar.groups.rename(a, "Release");
+        let group_of = [Some(b), None, Some(a), Some(b), None];
+        let listing = build_grouped(&rows, &[false; 5], &group_of, &sidebar);
+        assert_eq!(
+            shape(&listing),
+            ["1:1", "4:2", "[Release]", "2:3", "[Group 2]", "0:4", "3:5", "[Group 3]"]
+        );
+        assert_eq!(
+            listing.bands.iter().map(|band| band.group).collect::<Vec<_>>(),
+            [Some(a), Some(b), Some(empty)]
+        );
+        assert!(listing.bands.iter().all(|band| band.folder.is_none() && band.pinned));
+        assert_eq!(listing.order(), [1, 4, 2, 0, 3]);
+        assert_eq!(listing.band_of(0), Some(1));
+        assert_eq!(listing.band_of(1), None, "loose");
+        assert_eq!(listing.entries[2], Entry::Band { band: 0, position: 1, of: 3 });
+        assert_eq!(listing.bands[0].key(), format!("group:{a}"));
+    }
+
+    #[test]
+    fn a_folded_group_hides_its_rows_and_a_filter_hides_empty_groups() {
+        let rows = rows(&[RowState::Idle, RowState::Working, RowState::Idle]);
+        let mut sidebar = WindowSidebar::default();
+        let a = sidebar.groups.create(&[]);
+        let b = sidebar.groups.create(&[]);
+        // A stale group id leaves its terminal loose.
+        let group_of = [Some(a), Some(b), Some(99)];
+        sidebar.toggle_group_fold(a);
+        assert!(sidebar.is_group_folded(a));
+        let listing = build_grouped(&rows, &[false; 3], &group_of, &sidebar);
+        assert_eq!(shape(&listing), ["2:1", "[Group 1]", "[Group 2]", "1:2"]);
+        assert!(listing.bands[0].folded);
+
+        sidebar.filter = Filter { show: Show::Working, ..Filter::default() };
+        let listing = build_grouped(&rows, &[false; 3], &group_of, &sidebar);
+        assert_eq!(shape(&listing), ["[Group 2]", "1:1"]);
+    }
+
+    #[test]
+    fn pinned_terminals_lead_their_group() {
+        let rows = rows(&[RowState::Idle; 3]);
+        let mut sidebar = WindowSidebar::default();
+        let a = sidebar.groups.create(&[]);
+        let listing = build_grouped(&rows, &[false, false, true], &[Some(a), Some(a), Some(a)], &sidebar);
+        assert_eq!(shape(&listing), ["[Group 1]", "2:1", "0:2", "1:3"]);
     }
 
     #[test]

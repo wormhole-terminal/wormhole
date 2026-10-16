@@ -32,7 +32,10 @@ impl Workspace {
             match *entry {
                 Entry::Band { band, .. } => {
                     let band = &listing.bands[band];
-                    list.stops.push(SidebarStop::Band(band.folder.clone()));
+                    list.stops.push(match band.group {
+                        Some(group) => SidebarStop::Group(group),
+                        None => SidebarStop::Band(band.folder.clone()),
+                    });
                     list.items.push(Item { level: 0, fold: Some(!band.folded) });
                     list.names.push(band.label.clone());
                     list.sessions.push(None);
@@ -113,8 +116,10 @@ impl Workspace {
     }
 
     fn sidebar_fold(&mut self, list: &Walk, ix: usize, cx: &mut Context<Self>) {
-        if let Some(SidebarStop::Band(folder)) = list.stops.get(ix) {
-            self.toggle_band(folder.clone(), cx);
+        match list.stops.get(ix) {
+            Some(SidebarStop::Band(folder)) => self.toggle_band(folder.clone(), cx),
+            Some(&SidebarStop::Group(group)) => self.toggle_group_band(group, cx),
+            _ => {}
         }
     }
 

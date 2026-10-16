@@ -76,6 +76,15 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     if settings.compact_sidebar {
         state.checked.push(ActionId::CompactRows);
     }
+    if settings.terminals_in == wormhole_core::sidebar::TerminalsIn::Sidebar {
+        state.off.push(ActionId::ToggleTerminalTabs);
+    } else {
+        state.checked.push(match settings.tab_layout {
+            wormhole_core::sidebar::TabLayout::TwoRows => ActionId::TabsTwoRows,
+            wormhole_core::sidebar::TabLayout::Stacks => ActionId::TabsStacks,
+            wormhole_core::sidebar::TabLayout::Bottom => ActionId::TabsBottom,
+        });
+    }
     if !full_screen {
         state.off.push(ActionId::FullScreen);
     }
@@ -94,7 +103,7 @@ impl Workspace {
     fn menu_state(&self, cx: &App) -> MenuState {
         use ActionId::*;
         let mut state = MenuState::default();
-        if !self.panes.sidebar_open {
+        if !self.sidebar_shown() {
             state.off.push(ToggleSidebar);
         }
         if !self.notes_visible() {
@@ -109,6 +118,7 @@ impl Workspace {
         });
         state.checked.push(match self.sidebar.view.grouping {
             Grouping::Folder => GroupByFolder,
+            Grouping::Custom => GroupByCustom,
             Grouping::None => GroupByNone,
         });
         if self.active_session().pinned {

@@ -10,7 +10,7 @@ use crate::features::{self, FeatureFlag};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
-use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
+use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
 use crate::tokens::Color;
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
@@ -285,6 +285,11 @@ pub struct Settings {
     /// What ⌘1–9 count along: the terminal (a number stays with it) or the list (the first nine
     /// rows you can see, up to 0.4).
     pub sidebar_numbers: SidebarNumbers,
+    /// Where every window lists its terminals: the sidebar, or a tab bar instead of it.
+    pub terminals_in: TerminalsIn,
+    /// The tab bar's layout, while the terminals are in tabs: two rows across the top, one row
+    /// with the other sets piled up, or a bar along the bottom.
+    pub tab_layout: TabLayout,
     /// Folders whose band stays at the top of the terminal list, grouped by folder, even with no
     /// terminal in it (absolute paths, in the order they were pinned). One list for every window;
     /// the band's menu pins and unpins, there is no row for it in Settings.
@@ -428,6 +433,8 @@ impl Default for Settings {
             sidebar_group: Grouping::Folder,
             sidebar_order: SidebarOrder::default(),
             sidebar_numbers: SidebarNumbers::default(),
+            terminals_in: TerminalsIn::default(),
+            tab_layout: TabLayout::default(),
             pinned_folders: Vec::new(),
             folder_colors: BTreeMap::new(),
             sidebar_cmd_hints: true,
@@ -539,7 +546,10 @@ pub const APP_SETTINGS: &[&str] = &[
     // project is in front.
     "sidebar_order",
     "sidebar_numbers",
-    // The window's chrome, one look for every window; and the programs the person opens folders in.
+    // The window's chrome, one look for every window (where the terminals are listed too); and the
+    // programs the person opens folders in.
+    "terminals_in",
+    "tab_layout",
     "title_border",
     "open_in",
     // What the title row shows is the person's own choice. The pull request also runs `gh`, which
@@ -779,7 +789,7 @@ mod tests {
     use crate::folder_color::FolderColor;
     use crate::fonts;
     use crate::jsonc;
-    use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder};
+    use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
     use crate::tokens::Color;
     use std::path::Path;
 
@@ -853,6 +863,7 @@ mod tests {
             (SidebarOrder::Stable, SidebarNumbers::Terminal)
         );
         assert!(unset.sidebar_cmd_hints);
+        assert_eq!((unset.terminals_in, unset.tab_layout), (TerminalsIn::Sidebar, TabLayout::TwoRows));
         assert!(!unset.sidebar_notes, "the rows are drawn without the notes and tasks count");
         assert!(unset.sidebar_branch && unset.sidebar_changes);
         assert_eq!(unset.theme_mode, ThemeMode::System);
