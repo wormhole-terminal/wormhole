@@ -114,7 +114,7 @@ impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // The workspace's own column: the window less what lies beside it (`column_probe`).
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
-        self.sync_tab_layout(cx);
+        self.sync_tab_layout(window, cx);
         // A drag that ended outside every drop target never heard its drop.
         if self.terminal_drag.is_some() && !cx.has_active_drag() {
             self.terminal_drag = None;

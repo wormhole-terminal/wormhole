@@ -12,7 +12,7 @@ use wormhole_core::sidebar::hints::keycap;
 use wormhole_core::sidebar::tabs::{TabSet, current_set, tab_sets};
 use wormhole_core::sidebar::text::place_detail;
 
-use super::super::chrome::{PANEL_TOGGLE_SLOT, TitleDrag as _, lights_end};
+use super::super::chrome::{PANEL_TOGGLE_SLOT, TitleDrag as _, lights_end, traffic_light_position};
 use super::super::folder_color;
 use super::rows::{Frame, PLACE_CHARS, SecondLine, second_line, tile_for};
 use super::*;
@@ -37,6 +37,8 @@ pub(in crate::workspace) struct TabBarState {
     left: Option<String>,
     /// The terminal last selected in each set, by its key: where opening the set goes back to.
     last: HashMap<String, i64>,
+    /// The height of the row the traffic lights were last centred on.
+    lights_row: Option<f32>,
 }
 
 /// One set as the bar draws it.
@@ -58,11 +60,25 @@ impl Workspace {
     }
 
     /// Read where the terminals are listed from the settings (once a frame, before anything is laid
-    /// out).
-    pub(in crate::workspace) fn sync_tab_layout(&mut self, cx: &App) {
+    /// out), and centre the traffic lights on the row they sit in.
+    pub(in crate::workspace) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
         let s = settings(cx);
         self.sidebar.tabs.layout =
             (s.terminals_in == wormhole_core::sidebar::TerminalsIn::Tabs).then_some(s.tab_layout);
+        let row = self.top_row_h();
+        if self.sidebar.tabs.lights_row != Some(row) {
+            self.sidebar.tabs.lights_row = Some(row);
+            window.set_traffic_light_position(traffic_light_position(row));
+        }
+    }
+
+    /// How tall the window's top row is, the one the traffic lights and the panel toggle are
+    /// centred on: the stacks layout's tab bar, else a title row.
+    pub(in crate::workspace) fn top_row_h(&self) -> f32 {
+        match self.sidebar.tabs.layout {
+            Some(TabLayout::Stacks) => STACKS_H,
+            _ => style::TITLE_ROW_H,
+        }
     }
 
     /// The tab bar of `layout`.

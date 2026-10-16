@@ -66,9 +66,10 @@ pub(crate) trait TitleDrag: InteractiveElement + Sized {
 impl<E: InteractiveElement> TitleDrag for E {}
 
 /// Where macOS draws the traffic lights (the close button's frame): from the 16 pt inset,
-/// centred in the title row. Every window of the app puts them there.
-pub(crate) fn traffic_light_position() -> Point<Pixels> {
-    point(px(LIGHTS_X), px((style::TITLE_ROW_H - LIGHT_FRAME) / 2.0))
+/// centred in a top row `row` tall. Every window of the app puts them in a title row; a workspace
+/// with a taller tab bar moves them down to its middle.
+pub(crate) fn traffic_light_position(row: f32) -> Point<Pixels> {
+    point(px(LIGHTS_X), px((row - LIGHT_FRAME) / 2.0))
 }
 
 /// Where the traffic lights end in this window, from the left edge: for whatever has to clear
@@ -134,7 +135,7 @@ impl Workspace {
             .absolute()
             .top_0()
             .right(px(PANEL_TOGGLE_RIGHT))
-            .h(px(style::TITLE_ROW_H))
+            .h(px(self.top_row_h()))
             .flex()
             .items_center()
             .child(
@@ -223,7 +224,9 @@ impl Workspace {
             Some(_) => lights_end(window) + AFTER_COLLAPSE,
             None => collapse_slot(lights_end(window)),
         };
-        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_COLUMN } else { PANEL_TOGGLE_SLOT })
+        // Under tabs across the top the panel toggle floats over the tab bar, not over this row.
+        let toggle = if self.tabs_on_top() { TITLE_ROW_PAD } else { PANEL_TOGGLE_SLOT };
+        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_COLUMN } else { toggle })
     }
 
     /// How wide the terminal's title row is inside its padding: what the breadcrumb has to fit in (worked out from the columns, so it is right in the frame that

@@ -18,10 +18,13 @@ use super::rows::Frame;
 use super::*;
 use crate::style::{BandKind, BandParts, FolderLook, FolderMeta, Section};
 
+/// How far a band's content sits in from the sidebar's sides: its card's margin and padding, and
+/// its own inset in the card.
+const BAND_SIDE: f32 = style::CARD_MARGIN + style::CARD_PAD + style::CARD_INSET;
 /// What a band's right side takes (count or +, and its padding), and the room the chevron
 /// and its gap take before the name, for knowing when the name or the branch is cut off.
-const BAND_RIGHT_W: f32 = 48.0;
-const BAND_LEAD_W: f32 = style::SIDEBAR_INSET + style::ITEM_LEAD_W + 8.0;
+const BAND_RIGHT_W: f32 = 32.0 + BAND_SIDE;
+const BAND_LEAD_W: f32 = BAND_SIDE + style::ITEM_LEAD_W + 8.0;
 /// The gap between the name and the chip, and the chip's glyph and padding around its text.
 const CHIP_GAP: f32 = 8.0;
 const CHIP_CHROME: f32 = 28.0;
@@ -254,7 +257,7 @@ impl Workspace {
             .unwrap_or_default();
         let chip_natural = shown.map(|git| chip_text(git).max(style::BRANCH_CHIP_MIN));
         let line = band_line_widths(
-            frame.width - BAND_LEAD_W - style::SIDEBAR_INSET - pr_w,
+            frame.width - BAND_LEAD_W - BAND_SIDE - pr_w,
             path_natural,
             changes_w,
             chip_natural.map(|w| w.min(style::BRANCH_CHIP_MAX)),

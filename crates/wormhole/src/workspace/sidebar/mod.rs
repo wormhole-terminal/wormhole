@@ -395,6 +395,22 @@ impl Workspace {
         settings(cx).is_folder_pinned(folder)
     }
 
+    /// A new group named `name` holding the terminals at `rows` (as `state` numbers them, from 0),
+    /// shown as groups; its id.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_new_group(&mut self, name: &str, rows: &[usize], cx: &mut Context<Self>) -> u32 {
+        let group = self.sidebar.view.groups.create(&[]);
+        self.sidebar.view.groups.rename(group, name);
+        for &ix in rows {
+            if let Some(id) = self.sessions.get(ix).map(|session| session.id) {
+                self.move_to_group(id, Some(group), cx);
+            }
+        }
+        self.set_grouping(Grouping::Custom, cx);
+        self.mark_dirty(cx);
+        group
+    }
+
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_rename(&mut self, ix: usize, name: &str, cx: &mut Context<Self>) {
         if let Some(session) = self.sessions.get_mut(ix) {

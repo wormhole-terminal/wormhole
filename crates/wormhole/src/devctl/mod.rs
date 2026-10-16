@@ -64,6 +64,8 @@
 //!   sidebar-show <all|needs_you|working|finished|idle> | sidebar-search [text]   the sidebar's Show
 //!                   filter and search (saved with the window; an empty search clears it)
 //!   filter-popover  open or close the funnel's popover
+//!   group-new <name> <row>…   a new group (Group by → Your groups) of the terminals in those rows
+//!                   (as `state` numbers them), the list shown as groups; prints its id
 //!   sidebar-fold <band>   fold or open the band with this name ("No folder" for terminals without one)
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
 //!   pin-folder <path>   pin the folder (`~/` is the home folder) so its band stays at the top of
@@ -364,6 +366,7 @@ fn command(name: &str) -> Option<Command> {
         "task" => sessions::task,
         "quit" => sessions::quit,
         "sidebar-group" => sidebar::group,
+        "group-new" => sidebar::new_group,
         "sidebar-show" => sidebar::show,
         "sidebar-search" => sidebar::search,
         "filter-popover" => sidebar::filter_popover,

@@ -476,7 +476,7 @@ pub(crate) fn open_workspace_window(
         titlebar: Some(TitlebarOptions {
             title: Some("Wormhole".into()),
             appears_transparent: true,
-            traffic_light_position: Some(chrome::traffic_light_position()),
+            traffic_light_position: Some(chrome::traffic_light_position(style::TITLE_ROW_H)),
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),

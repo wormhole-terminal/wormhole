@@ -59,7 +59,7 @@ pub(crate) fn window_options(
         titlebar: Some(TitlebarOptions {
             title: Some(title.into()),
             appears_transparent: true,
-            traffic_light_position: Some(super::chrome::traffic_light_position()),
+            traffic_light_position: Some(super::chrome::traffic_light_position(style::TITLE_ROW_H)),
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(min),

@@ -56,6 +56,16 @@ pub(super) fn pin(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `group-new <name> <row>…`: a new group of the terminals in those rows (as `state` numbers them),
+/// shown as groups. Prints its id.
+pub(super) fn new_group(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let mut words = arg.split_whitespace();
+    let name = words.next().ok_or_else(|| anyhow!("expected a name and rows"))?;
+    let rows: Vec<usize> = words.map(nth).collect();
+    let group = ctx.workspace.devctl_new_group(name, &rows, ctx.cx);
+    Ok(format!("group {group}"))
+}
+
 /// Pin the folder `arg` names (`~/` is the home folder), or unpin it: the one list of every window,
 /// saved in `config.json`. Prints which it did.
 pub(super) fn pin_folder(ctx: &mut Ctx, arg: &str) -> Result<String> {

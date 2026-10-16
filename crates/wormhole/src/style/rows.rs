@@ -270,16 +270,20 @@ pub fn card_segment(
     content: impl IntoElement,
 ) -> Div {
     let outer = div().flex().flex_col().px(px(CARD_MARGIN));
-    let mut segment = div().flex().flex_col().px(px(CARD_PAD));
-    if !filled {
-        return outer.child(segment.child(content));
-    }
-    segment = segment.bg(ui.band).border_color(ui.border);
+    // A loose terminal keeps the cards' side edges, unpainted, so its row lines up with theirs.
+    let mut segment = div().flex().flex_col().px(px(CARD_PAD)).border_color(ui.border.opacity(0.0));
     let edge = Some(ui.border_width.into());
     {
         let b = &mut segment.style().border_widths;
         b.left = edge;
         b.right = edge;
+    }
+    if !filled {
+        return outer.child(segment.child(content));
+    }
+    segment = segment.bg(ui.band).border_color(ui.border);
+    {
+        let b = &mut segment.style().border_widths;
         if top {
             b.top = edge;
         }

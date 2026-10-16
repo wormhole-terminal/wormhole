@@ -221,11 +221,11 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
     let color = color.unwrap_or(ui.faint);
     // A card behind, `depth` back, at `spread` (0 stacked, 1 fanned out).
     let card = move |depth: f32, spread: f32| {
-        let step = PILE_STEP + spread * PILE_FAN;
+        let (x, y) = (PILE_STEP_X + spread * PILE_FAN_X, PILE_STEP_Y + spread * PILE_FAN_Y);
         div()
             .absolute()
-            .top(px(-step * depth))
-            .left(px(step * depth))
+            .top(px(-y * depth))
+            .left(px(x * depth))
             .size_full()
             .rounded(px(PILE_RADIUS))
             .bg(ui.band_solid)
@@ -264,8 +264,10 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
         .id(id.clone())
         .relative()
         .flex_none()
-        .mt(px(2.0 * (PILE_STEP + PILE_FAN)))
-        .mr(px(2.0 * (PILE_STEP + PILE_FAN)))
+        // Room for the cards behind fanned out: above, and as much below so the front card is
+        // centred like the tabs beside it.
+        .my(px(2.0 * (PILE_STEP_Y + PILE_FAN_Y)))
+        .mr(px(2.0 * (PILE_STEP_X + PILE_FAN_X)))
         .cursor_pointer()
         .child(behind(2.0))
         .child(behind(1.0))
@@ -312,9 +314,12 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
 }
 
 const PILE_RADIUS: f32 = 10.0;
-/// How far each card behind sits from the one in front, and how much further it goes fanned out.
-const PILE_STEP: f32 = 4.0;
-const PILE_FAN: f32 = 4.0;
+/// How far each card behind sits from the one in front, and how much further it goes fanned out:
+/// mostly sideways, since upwards the two behind have only the tab bar's 8 pt over the tabs.
+const PILE_STEP_X: f32 = 4.0;
+const PILE_FAN_X: f32 = 6.0;
+const PILE_STEP_Y: f32 = 2.0;
+const PILE_FAN_Y: f32 = 2.0;
 const PILE_TINT: f32 = 0.14;
 const PILE_HOVER: f32 = 0.08;
 const PILE_OUTLINE: f32 = 0.35;
@@ -342,7 +347,18 @@ pub fn tab_segment(
         .overflow_hidden()
         .bg(ui.band)
         .outlined(ui, color.opacity(PILE_OUTLINE))
-        .child(div().absolute().top_0().bottom_0().left_0().w(px(SEGMENT_EDGE)).bg(color))
+        // A stripe inset from the edge: `overflow_hidden` clips square, so a bar along the edge
+        // itself would cut off the segment's rounded corners.
+        .child(
+            div()
+                .absolute()
+                .top(px(SEGMENT_EDGE_INSET))
+                .bottom(px(SEGMENT_EDGE_INSET))
+                .left(px(SEGMENT_EDGE_LEFT))
+                .w(px(SEGMENT_EDGE))
+                .rounded_full()
+                .bg(color),
+        )
         .child(
             div()
                 .flex_none()
@@ -358,3 +374,6 @@ pub fn tab_segment(
 
 const SEGMENT_H: f32 = 50.0;
 const SEGMENT_EDGE: f32 = 3.0;
+/// The stripe's distance from the segment's top and bottom, past its corners, and from its left.
+const SEGMENT_EDGE_INSET: f32 = PILE_RADIUS;
+const SEGMENT_EDGE_LEFT: f32 = 4.0;
