@@ -48,7 +48,6 @@ pub(crate) struct AppState {
     /// Every profile, and the one Wormhole is in.
     pub profiles: ProfileList,
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
-    #[allow(dead_code, reason = "the Settings page that shows it comes with the profile UI")]
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
     pub(super) parked: profiles::Parked,

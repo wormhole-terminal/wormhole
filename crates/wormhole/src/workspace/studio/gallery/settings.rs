@@ -25,8 +25,54 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         )
         .child(controls(env))
         .child(env.mark("banner", banners(ui)))
+        .child(profile_marks(env))
         .into_any_element()
 }
+
+/// A profile's avatar at the sizes the app draws it, and the edge a window in another profile wears.
+fn profile_marks(env: &Env) -> Div {
+    let ui = env.ui;
+    let colors = wormhole_core::folder_color::FolderColor::ALL
+        .map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
+    div()
+        .flex()
+        .flex_col()
+        .gap_3()
+        .child(
+            div().flex().items_center().gap_2().children(
+                colors.iter().zip("DWPCSRAB".chars()).map(|((_, color), letter)| {
+                    style::profile_avatar(ui, *color, letter, style::TITLE_GLYPH)
+                }),
+            ),
+        )
+        .child(
+            div().flex().items_center().gap_2().children(
+                colors.iter().zip("DWPCSRAB".chars()).take(3).map(|((_, color), letter)| {
+                    style::profile_avatar(ui, *color, letter, PROFILE_AVATAR_LARGE)
+                }),
+            ),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .child(style::choice_row("g-choice-copy", ui, "A copy of Default", true))
+                .child(style::choice_row("g-choice-defaults", ui, "Wormhole's defaults", false)),
+        )
+        .child(
+            div()
+                .w(px(COLUMN_W))
+                .rounded(ui.radius)
+                .overflow_hidden()
+                .outlined(ui, ui.border)
+                .child(style::profile_edge(colors[4].1))
+                .child(div().h(px(PROFILE_EDGE_SAMPLE_H)).bg(ui.background)),
+        )
+}
+
+/// The larger avatar (the settings window's top) and the height of the window sample under the edge.
+const PROFILE_AVATAR_LARGE: f32 = 24.0;
+const PROFILE_EDGE_SAMPLE_H: f32 = 24.0;
 
 /// The setting row in each of its states.
 fn setting_rows(ui: UiColors, cx: &App) -> Div {

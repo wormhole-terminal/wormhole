@@ -18,6 +18,12 @@ const fn group(title: &'static str, entries: &'static [Entry]) -> Group {
 
 pub(super) fn section(id: SectionId) -> &'static SectionInfo {
     match id {
+        SectionId::Profile => &SectionInfo {
+            title: "Profile",
+            intro: "Every page here is this profile's. A new profile starts as a copy of one you have, \
+                    without its terminals or agent logins.",
+            nav: NavGroup::Profile,
+        },
         SectionId::Appearance => &SectionInfo {
             title: "Appearance",
             intro: "What every window looks like. Changes apply as you make them.",
@@ -86,6 +92,7 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
 
 pub(super) fn groups(id: SectionId) -> &'static [Group] {
     match id {
+        SectionId::Profile => PROFILE,
         SectionId::Appearance => APPEARANCE,
         SectionId::Fonts => FONTS,
         SectionId::Terminal => TERMINAL,
@@ -100,6 +107,59 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
         SectionId::Advanced => ADVANCED,
     }
 }
+
+const PROFILE: &[Group] = &[
+    group(
+        "",
+        &[
+            entry(
+                "profile-name",
+                "Name and colour",
+                "",
+                "profile rename avatar letter swatch colour color edge",
+                &[],
+            ),
+            entry(
+                "profile-start",
+                "Start new terminals in",
+                "",
+                "folder directory cwd home path open also claim",
+                &[],
+            ),
+            entry(
+                "profile-env",
+                "Environment",
+                "Variables this profile's terminals start with",
+                "env variable aws path registry export",
+                &[],
+            ),
+            entry(
+                "profile-git",
+                "Git identity",
+                "Set in its terminals only; Wormhole never writes to a repository.",
+                "author committer name email commit user",
+                &[],
+            ),
+            entry(
+                "profile-logins",
+                "Agent logins",
+                "A separate login for each agent.",
+                "claude codex account config dir home sign in",
+                &[],
+            ),
+        ],
+    ),
+    group(
+        "Danger zone",
+        &[entry(
+            "profile-delete",
+            "Delete profile",
+            "Its terminals, notes, tasks and settings are removed and its windows close.",
+            "remove danger",
+            &[],
+        )],
+    ),
+];
 
 const APPEARANCE: &[Group] = &[
     group("", &[entry("appearance-preview", "Live preview", "", "preview wallpaper window", &[])]),

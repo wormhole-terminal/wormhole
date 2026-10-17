@@ -17,6 +17,9 @@ mod git;
 mod menu_bar;
 mod notifications;
 mod preview;
+mod profile;
+mod profile_form;
+mod profile_sheet;
 mod projects;
 mod sessions;
 mod stage;
@@ -26,12 +29,16 @@ mod updates;
 
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
+pub(super) use profile_form::ProfileForm;
+pub(super) use profile_sheet::NewProfileSheet;
+pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
 pub(super) use theme_picker::ThemePicker;
 
 /// The controls of a section's rows (their names and words are in core's settings index).
 pub(super) fn controls(section: Section) -> &'static [Setting] {
     match section {
+        Section::Profile => profile::SETTINGS,
         Section::Appearance => appearance::SETTINGS,
         Section::Fonts => fonts::SETTINGS,
         Section::Terminal => terminal::SETTINGS,
@@ -78,6 +85,15 @@ impl SettingsWindow {
                         this.load_agents(cx);
                         cx.notify();
                     }))
+                    .into_any_element(),
+            ),
+            Section::Profile => Some(
+                Button::new("profile-new")
+                    .outline()
+                    .small()
+                    .icon(IconName::Plus)
+                    .label("New profile…")
+                    .on_click(cx.listener(|this, _, window, cx| this.open_new_profile(window, cx)))
                     .into_any_element(),
             ),
             _ => None,

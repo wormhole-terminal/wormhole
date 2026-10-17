@@ -102,6 +102,12 @@ pub(crate) struct SettingsWindow {
     confirm_reset: bool,
     /// Coding agents → the agents that aren't on PATH are listed.
     others_open: bool,
+    /// Profile → the fields of the profile Wormhole is in (made again when it changes).
+    profile_form: Option<sections::ProfileForm>,
+    /// Profile → "Delete profile…" was pressed: the row asks before it deletes.
+    confirm_delete_profile: bool,
+    /// The "New profile" sheet over the window.
+    new_profile: Option<sections::NewProfileSheet>,
     /// Something that went wrong on a page (an import, writing an agent's hooks), shown at the
     /// top of that page until the page changes.
     notice: Option<(Section, SharedString)>,
@@ -318,6 +324,9 @@ impl SettingsWindow {
             sidebar_preview: None,
             confirm_reset: false,
             others_open: false,
+            profile_form: None,
+            confirm_delete_profile: false,
+            new_profile: None,
             notice: None,
             content_scroll: ScrollHandle::new(),
             revealed: None,
@@ -357,6 +366,7 @@ impl SettingsWindow {
         self.show_results = false;
         self.open_select = None;
         self.confirm_reset = false;
+        self.confirm_delete_profile = false;
         self.revealed = None;
         cx.notify();
     }
@@ -396,10 +406,12 @@ impl SettingsWindow {
     /// Esc: whatever is open first (a menu, the reset question), then the search, then the
     /// window.
     fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.font_picker.open.take().is_some()
+        if self.new_profile.take().is_some()
+            || self.font_picker.open.take().is_some()
             || self.open_select.take().is_some()
             || self.end_recording(cx)
             || std::mem::take(&mut self.confirm_reset)
+            || std::mem::take(&mut self.confirm_delete_profile)
         {
             cx.notify();
         } else if !self.search.read(cx).value().is_empty() {
@@ -483,6 +495,7 @@ impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_primary_picker(window, cx);
         self.sync_sliders(window, cx);
+        self.sync_profile_form(window, cx);
         self.rem = window.rem_size();
         let ui = ui(cx);
         // A preview section can disappear under the person (its flag was switched off in another
@@ -554,6 +567,7 @@ impl Render for SettingsWindow {
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
             .child(self.render_nav(&query, surfaces.panel, cx))
             .child(content)
+            .children(self.render_new_profile(cx))
     }
 }
 
@@ -607,6 +621,23 @@ impl SettingsWindow {
                 .into_any_element(),
             ),
             _ => {}
+        }
+        if self.section == Section::Profile {
+            if let Some(message) = app(cx).profiles_error.clone() {
+                problems.push(
+                    style::banner(
+                        ui,
+                        style::BannerKind::Warning,
+                        false,
+                        format!("The list of profiles couldn't be read, so it was set aside and rebuilt: {message}"),
+                    )
+                    .into_any_element(),
+                );
+            }
+            if let Some(message) = self.profile_form.as_ref().and_then(|form| form.problem()) {
+                problems
+                    .push(style::banner(ui, style::BannerKind::Danger, false, message).into_any_element());
+            }
         }
         if let Some((section, notice)) = &self.notice
             && *section == self.section

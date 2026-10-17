@@ -56,6 +56,12 @@ impl Workspace {
         });
     }
 
+    /// devctl `profile-sheet`: the "New profile" sheet over the settings window, as the File menu
+    /// opens it (the window opens on the next tick: `settings-shot` in a later batch).
+    pub(crate) fn devctl_profile_sheet(&self, cx: &mut App) {
+        sections::open_new_profile_sheet(cx);
+    }
+
     /// devctl `settings-scroll <px>`: scroll the page down (negative: up).
     pub(crate) fn devctl_settings_scroll(&self, by: f32, cx: &mut App) {
         with_page(cx, move |page, _, _| {

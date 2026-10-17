@@ -354,7 +354,8 @@ fn valid_env(key: &str, value: &str) -> bool {
 }
 
 /// The name's first letter or digit, upper-cased; `P` for a name that has none.
-pub(super) fn first_letter(name: &str) -> char {
+/// The avatar letter a name gets when none is chosen: its first letter or digit, upper case.
+pub fn first_letter(name: &str) -> char {
     name.chars().find(|c| c.is_alphanumeric()).and_then(|c| c.to_uppercase().next()).unwrap_or('P')
 }
 

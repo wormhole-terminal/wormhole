@@ -1,0 +1,77 @@
+//! A profile as the app draws it: its avatar (the colour with one letter) and the edge a window
+//! wears when it is in a profile other than the one Wormhole is in. The colours are the
+//! theme's, from core's `FolderColor::color`.
+
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+
+use super::scale::{CONTROL_H, Edges, TextRole};
+use crate::settings::UiColors;
+
+/// The avatar of a profile in the chips and rows: a `size` circle of the profile's colour with
+/// its letter in the window's own colour, which the colour is kept readable against.
+#[track_caller]
+pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div {
+    let avatar = div()
+        .flex_none()
+        .size(px(size))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded_full()
+        .bg(color)
+        .text_color(ui.background)
+        .font_weight(FontWeight::BOLD)
+        .child(letter.to_uppercase().to_string());
+    if size >= AVATAR_BODY_FROM { avatar.text_body() } else { avatar.text_caption() }
+}
+
+/// From this size the avatar's letter is body text, below it caption text.
+const AVATAR_BODY_FROM: f32 = 24.0;
+
+/// How tall the edge is across the top of a window in another profile than the shown one.
+pub const PROFILE_EDGE_H: f32 = 3.0;
+
+/// The edge across the top of a window that is not in the profile Wormhole is in, in that
+/// profile's colour: with the name in the status bar, the only mark of the odd window.
+#[track_caller]
+pub fn profile_edge(color: Hsla) -> Div {
+    div().flex_none().w_full().h(px(PROFILE_EDGE_H)).bg(color)
+}
+
+/// One option of a short list of exclusive choices (the "New profile" sheet's START FROM): a
+/// round mark, filled when chosen, then the label. Add `.on_click(…)`.
+#[track_caller]
+pub fn choice_row(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    label: impl Into<SharedString>,
+    chosen: bool,
+) -> Stateful<Div> {
+    let mark = div()
+        .flex_none()
+        .size(px(CHOICE_MARK))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded_full()
+        .outlined(ui, if chosen { ui.primary } else { ui.border_strong })
+        .when(chosen, |d| d.child(div().size(px(CHOICE_DOT)).rounded_full().bg(ui.primary)));
+    div()
+        .id(id)
+        .role(Role::RadioButton)
+        .aria_selected(chosen)
+        .flex()
+        .items_center()
+        .gap_2()
+        .h(px(CONTROL_H))
+        .cursor_pointer()
+        .text_body()
+        .text_color(ui.text)
+        .child(mark)
+        .child(label.into())
+}
+
+/// The round mark of a [`choice_row`] and the dot in it when chosen.
+const CHOICE_MARK: f32 = 16.0;
+const CHOICE_DOT: f32 = 8.0;

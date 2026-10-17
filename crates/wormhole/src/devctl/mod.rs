@@ -147,6 +147,7 @@
 //!   settings-reveal <id>   open the settings window at that row, scrolled to it and marked (what
 //!                   the palette does for a setting)
 //!   settings-preview <regular|compact|dense|off>   Terminals & sidebar's preview of a density, as on hover
+//!   profile-sheet   the New profile sheet over the settings window (shot it with settings-shot next batch)
 //!   settings-scroll <px>   scroll the settings page (negative = up)
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
@@ -428,6 +429,7 @@ fn command(name: &str) -> Option<Command> {
         "settings-search" => settings::search,
         "settings-resize" => settings::resize,
         "settings-scroll" => settings::scroll,
+        "profile-sheet" => settings::profile_sheet,
         "settings-record" => settings::record,
         "settings-reveal" => settings::reveal,
         "settings-preview" => settings::preview,

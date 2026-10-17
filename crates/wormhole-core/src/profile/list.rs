@@ -295,7 +295,7 @@ impl ProfileList {
     }
 
     /// The first colour no profile wears; once all eight are worn, the least worn.
-    fn next_color(&self) -> FolderColor {
+    pub fn next_color(&self) -> FolderColor {
         let worn = |c: FolderColor| self.profiles.iter().filter(|p| p.color == c).count();
         FolderColor::ALL.into_iter().min_by_key(|c| worn(*c)).unwrap_or(FolderColor::Blue)
     }

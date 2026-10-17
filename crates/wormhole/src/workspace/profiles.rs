@@ -15,7 +15,7 @@ use wormhole_core::layout::REMEMBERED_PANES_KEY;
 use wormhole_core::layout::RememberedPanes;
 use wormhole_core::onboarding::DISMISSED_TIPS_KEY;
 use wormhole_core::onboarding::DismissedTips;
-use wormhole_core::profile::{DataRoot, ProfileId, ProfileList, ProfilePaths};
+use wormhole_core::profile::{DataRoot, NewProfile, ProfileId, ProfileList, ProfilePaths};
 use wormhole_core::store::Store;
 
 use super::app::{AppState, OpenWindow};
@@ -80,6 +80,38 @@ impl AppState {
             hub.id_allocated(id);
         }
         id
+    }
+
+    /// Make a profile (its folder and settings from `new.from`) and add it to the list. Wormhole
+    /// stays in the profile it is in: the caller switches when that is wanted.
+    pub(crate) fn create_profile(new: NewProfile, cx: &mut App) -> Result<ProfileId, String> {
+        let state = app_mut(cx);
+        let root = state.root.clone();
+        state.profiles.create(&root, new).map_err(|err| err.to_string())
+    }
+
+    /// Delete a profile, its files and its windows. When Wormhole is in it, it goes to Default
+    /// first. Deferred callers only (windows are updated).
+    pub(crate) fn delete_profile(id: &ProfileId, cx: &mut App) -> Result<(), String> {
+        if id.is_default() {
+            return Err("The Default profile can't be deleted".into());
+        }
+        if app(cx).profiles.get(id).is_none() {
+            return Err(format!("no profile {id}"));
+        }
+        if app(cx).active_profile() == id {
+            Self::switch_profile(&ProfileId::default_profile(), cx)?;
+        }
+        for window in app(cx).windows_of(id).cloned().collect::<Vec<_>>() {
+            let _ = window.handle.update(cx, |_, win, _| win.remove_window());
+        }
+        let state = app_mut(cx);
+        // Its database closes before its folder goes.
+        state.parked.remove(id);
+        let root = state.root.clone();
+        state.profiles.delete(&root, id).map(|_| ()).map_err(|err| err.to_string())?;
+        cx.refresh_windows();
+        Ok(())
     }
 
     /// The windows of `profile`, shown or not.

@@ -66,6 +66,12 @@ pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `profile-sheet`: the "New profile" sheet over the settings window.
+pub(super) fn profile_sheet(ctx: &mut Ctx, _: &str) -> Result<String> {
+    ctx.workspace.devctl_profile_sheet(ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let by: f32 = arg.trim().parse().map_err(|_| anyhow!("expected <px>"))?;
     ctx.workspace.devctl_settings_scroll(by, ctx.cx);

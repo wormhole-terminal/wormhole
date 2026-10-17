@@ -16,6 +16,7 @@ pub(super) const NAV_W: f32 = 220.0;
 /// The icon of a section in the nav and in search results.
 pub(super) fn section_icon(section: Section) -> IconName {
     match section {
+        Section::Profile => IconName::CircleUser,
         Section::Appearance => IconName::Palette,
         Section::Fonts => IconName::ALargeSmall,
         Section::Terminal => IconName::SquareTerminal,
@@ -62,6 +63,7 @@ impl SettingsWindow {
                     .px_4()
                     .child(style::panel_title(ui, "Settings")),
             )
+            .child(self.render_profile_line(ui, cx))
             .child(
                 div().px_4().pb_2().child(
                     Input::new(&self.search)
@@ -86,7 +88,9 @@ impl SettingsWindow {
             let nav_group = section.info().nav;
             if group != Some(nav_group) {
                 group = Some(nav_group);
-                nav = nav.child(group_label(ui, nav_group));
+                if !nav_group.title().is_empty() {
+                    nav = nav.child(group_label(ui, nav_group));
+                }
             }
             let mark = match hits.get(&section) {
                 _ if !searching && section == Section::Agents && attention => NavMark::Attention,
@@ -110,6 +114,30 @@ impl SettingsWindow {
             );
         }
         nav.into_any_element()
+    }
+}
+
+impl SettingsWindow {
+    /// Whose settings these are: the avatar and name of the profile Wormhole is in, under the title.
+    fn render_profile_line(&self, ui: UiColors, cx: &App) -> Div {
+        let state = app(cx);
+        let profile = state.profiles.active();
+        let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
+        div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .px_4()
+            .pb_2()
+            .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
+            .child(
+                div()
+                    .min_w_0()
+                    .truncate()
+                    .text_body()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .child(profile.name.clone()),
+            )
     }
 }
 

@@ -19,6 +19,8 @@ pub use search::{Hit, Query, search, search_visible};
 /// A page of the settings window, in nav order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SectionId {
+    /// The profile Wormhole is in: its name, folders, environment, git identity and agent logins.
+    Profile,
     Appearance,
     Fonts,
     Terminal,
@@ -37,6 +39,8 @@ pub enum SectionId {
 /// The headings the nav groups its sections under.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavGroup {
+    /// The profile page, first and without a heading of its own.
+    Profile,
     Look,
     Work,
     Agents,
@@ -48,6 +52,7 @@ pub enum NavGroup {
 impl NavGroup {
     pub fn title(self) -> &'static str {
         match self {
+            NavGroup::Profile => "",
             NavGroup::Look => "Look",
             NavGroup::Work => "Work",
             NavGroup::Agents => "Agents",
@@ -91,7 +96,8 @@ pub struct Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 12] = [
+    pub const ALL: [SectionId; 13] = [
+        SectionId::Profile,
         SectionId::Appearance,
         SectionId::Fonts,
         SectionId::Terminal,
