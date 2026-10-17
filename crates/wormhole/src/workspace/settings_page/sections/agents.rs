@@ -365,6 +365,15 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
         .into_any_element()
 }
 
+/// `dir` as `~/…` when it is under the home folder, as the default location is shown.
+fn with_tilde(dir: &Path) -> String {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    match home.as_deref().and_then(|home| dir.strip_prefix(home).ok()) {
+        Some(rest) => format!("~/{}", rest.display()),
+        None => dir.display().to_string(),
+    }
+}
+
 /// A profile's login of an agent: its folder, the hooks' state there and the button for it, as the
 /// agent's own row has for the default location.
 fn login_row(
@@ -378,7 +387,7 @@ fn login_row(
     let (code_font, _) = crate::fonts::code_font(cx);
     let state = login.state.as_ref().ok().copied();
     let dir = login.dir.clone();
-    let shown = dir.to_string_lossy().into_owned();
+    let shown = with_tilde(&dir);
     let (label, remove) = match state {
         Some(State::Installed) => ("Remove hooks", true),
         Some(State::Partial) => ("Repair hooks", false),
