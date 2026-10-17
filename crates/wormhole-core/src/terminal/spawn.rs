@@ -166,14 +166,14 @@ mod tests {
 mod profile_tests {
     use super::{SpawnOptions, spawn_program};
     use crate::agents::AgentId;
-    use crate::folder_color::FolderColor;
     use crate::profile::{AgentLogin, PROFILE_VAR, Profile, ProfileId};
+    use crate::sidebar::GroupColor;
     use crate::terminal::GridSize;
 
     const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 
     fn work() -> Profile {
-        let mut profile = Profile::new(ProfileId::parse("work").expect("an id"), "Work", FolderColor::Teal);
+        let mut profile = Profile::new(ProfileId::parse("work").expect("an id"), "Work", GroupColor::Cyan);
         profile.env.insert("AWS_PROFILE".into(), "acme-prod".into());
         profile.env.insert("PROJECT_FLAG".into(), "from-profile".into());
         profile.git.name = "Benny".into();

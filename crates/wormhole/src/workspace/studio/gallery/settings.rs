@@ -32,7 +32,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
 /// A profile's avatar at the sizes the app draws it, and the edge a window in another profile wears.
 fn profile_marks(env: &Env) -> Div {
     let ui = env.ui;
-    let colors = wormhole_core::folder_color::FolderColor::ALL
+    let colors = wormhole_core::sidebar::GroupColor::ALL
         .map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
     div()
         .flex()
@@ -40,14 +40,14 @@ fn profile_marks(env: &Env) -> Div {
         .gap_3()
         .child(
             div().flex().items_center().gap_2().children(
-                colors.iter().zip("DWPCSRAB".chars()).map(|((_, color), letter)| {
+                colors.iter().zip("DWPCSRABX".chars()).map(|((_, color), letter)| {
                     style::profile_avatar(ui, *color, letter, style::TITLE_GLYPH)
                 }),
             ),
         )
         .child(
             div().flex().items_center().gap_2().children(
-                colors.iter().zip("DWPCSRAB".chars()).take(3).map(|((_, color), letter)| {
+                colors.iter().zip("DWPCSRABX".chars()).take(3).map(|((_, color), letter)| {
                     style::profile_avatar(ui, *color, letter, PROFILE_AVATAR_LARGE)
                 }),
             ),

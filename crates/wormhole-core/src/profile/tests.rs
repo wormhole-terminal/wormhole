@@ -6,7 +6,7 @@ use super::{
 };
 use crate::agents::AgentId;
 use crate::config::Config;
-use crate::folder_color::FolderColor;
+use crate::sidebar::GroupColor;
 use crate::store::Store;
 
 fn root() -> (tempfile::TempDir, DataRoot) {
@@ -274,7 +274,7 @@ fn one_bad_entry_does_not_take_the_others_and_values_are_cleaned() {
     assert!(list.active_id().is_default(), "an unknown active profile is Default");
     let work = list.get(&id("work")).expect("kept");
     assert_eq!(work.name, "work");
-    assert_eq!(work.color, FolderColor::Blue);
+    assert_eq!(work.color, GroupColor::Blue);
     assert_eq!(work.avatar, 'W');
     assert_eq!(work.env.keys().collect::<Vec<_>>(), ["OK"]);
     assert_eq!(work.folders, ["~/work"]);
@@ -314,7 +314,7 @@ fn edits_that_are_not_allowed_leave_the_profile_alone() {
 
 #[test]
 fn a_terminal_gets_the_environment_identity_and_logins_of_its_profile() {
-    let mut profile = Profile::new(id("work"), "Work", FolderColor::Teal);
+    let mut profile = Profile::new(id("work"), "Work", GroupColor::Cyan);
     profile.env.insert("AWS_PROFILE".into(), "acme-prod".into());
     profile.env.insert("GIT_COMMITTER_EMAIL".into(), "ci@acme.dev".into());
     profile.git.name = "Benny".into();
@@ -352,4 +352,14 @@ fn a_folder_opens_in_the_profile_that_claims_it_deepest() {
     assert_eq!(of("/srv/clients/x").as_deref(), Some("Work"));
     assert_eq!(of("/Users/me/workshop"), None, "a folder, not a name prefix");
     assert_eq!(of("/Users/me/other"), None);
+}
+
+#[test]
+fn a_profile_saved_with_the_folder_colours_still_loads() {
+    let profile: Profile =
+        serde_json::from_str(r#"{ "id": "work", "name": "Work", "color": "teal" }"#).expect("loads");
+    assert_eq!(profile.color, GroupColor::Cyan, "teal was the old name of cyan");
+    let grey: Profile =
+        serde_json::from_str(r#"{ "id": "g", "name": "G", "color": "grey" }"#).expect("loads");
+    assert_eq!(grey.color, GroupColor::Grey);
 }

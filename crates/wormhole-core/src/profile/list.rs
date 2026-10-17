@@ -8,8 +8,8 @@ use serde_json::Value;
 use super::copy::copy_settings;
 use super::model::{Profile, ProfileError, ProfileId, first_letter};
 use super::paths::DataRoot;
-use crate::folder_color::FolderColor;
 use crate::fsutil::{self, LinkPolicy};
+use crate::sidebar::GroupColor;
 
 /// Largest `profiles.json` read; a few dozen profiles are a few KiB.
 const MAX_FILE: u64 = 512 * 1024;
@@ -32,7 +32,7 @@ pub enum StartFrom {
 pub struct NewProfile {
     pub name: String,
     /// The next colour no profile wears when `None`.
-    pub color: Option<FolderColor>,
+    pub color: Option<GroupColor>,
     /// The name's first letter when `None`.
     pub avatar: Option<char>,
     pub from: StartFrom,
@@ -295,9 +295,9 @@ impl ProfileList {
     }
 
     /// The first colour no profile wears; once all eight are worn, the least worn.
-    pub fn next_color(&self) -> FolderColor {
-        let worn = |c: FolderColor| self.profiles.iter().filter(|p| p.color == c).count();
-        FolderColor::ALL.into_iter().min_by_key(|c| worn(*c)).unwrap_or(FolderColor::Blue)
+    pub fn next_color(&self) -> GroupColor {
+        let worn = |c: GroupColor| self.profiles.iter().filter(|p| p.color == c).count();
+        GroupColor::IN_TURN.into_iter().min_by_key(|c| worn(*c)).unwrap_or(GroupColor::Blue)
     }
 
     /// An id from the name that no profile and no folder uses (a folder a failed delete left

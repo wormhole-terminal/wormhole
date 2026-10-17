@@ -4,8 +4,8 @@
 //! fields are made in `profile_form`.
 
 use gpui_kit::component::Disableable as _;
-use wormhole_core::folder_color::FolderColor;
 use wormhole_core::profile::Profile;
+use wormhole_core::sidebar::GroupColor;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use super::*;
@@ -34,17 +34,17 @@ fn field(input: &Entity<InputState>, width: f32) -> Div {
 }
 
 /// The profile Wormhole is in, copied out so no borrow of the app is held while a row is built.
-fn shown(window: &SettingsWindow, cx: &App) -> Option<(Profile, FolderPalette)> {
+fn shown(window: &SettingsWindow, cx: &App) -> Option<(Profile, ColorPalette)> {
     let form = window.profile_form.as_ref()?;
     let profile = app(cx).profiles.get(&form.id)?.clone();
     let tokens = &cx.global::<SettingsStore>().tokens;
-    let palette = FolderColor::ALL.map(|color| (color, crate::theme_bridge::hsla(color.color(tokens))));
+    let palette = GroupColor::ALL.map(|color| (color, crate::theme_bridge::hsla(color.color(tokens))));
     Some((profile, palette))
 }
 
-type FolderPalette = [(FolderColor, Hsla); 8];
+type ColorPalette = [(GroupColor, Hsla); 9];
 
-fn color_of(palette: &FolderPalette, color: FolderColor) -> Hsla {
+fn color_of(palette: &ColorPalette, color: GroupColor) -> Hsla {
     palette.iter().find(|(c, _)| *c == color).map_or(palette[0].1, |(_, hsla)| *hsla)
 }
 

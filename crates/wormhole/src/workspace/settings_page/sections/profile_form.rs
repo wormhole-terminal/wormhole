@@ -6,8 +6,8 @@
 use std::collections::BTreeMap;
 
 use wormhole_core::agents::AgentId;
-use wormhole_core::folder_color::FolderColor;
 use wormhole_core::profile::{AgentLogin, GitIdentity, Profile, ProfileId, first_letter};
+use wormhole_core::sidebar::GroupColor;
 
 use super::*;
 
@@ -236,7 +236,7 @@ impl SettingsWindow {
 
     pub(in crate::workspace::settings_page) fn set_profile_color(
         &mut self,
-        color: FolderColor,
+        color: GroupColor,
         cx: &mut Context<Self>,
     ) {
         self.edit_profile(|p| p.color = color, cx);

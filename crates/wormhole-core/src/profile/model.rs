@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::agents::AgentId;
-use crate::folder_color::FolderColor;
+use crate::sidebar::GroupColor;
 
 /// The Default profile's id. It always exists and keeps the data folder's own files.
 pub const DEFAULT_ID: &str = "default";
@@ -153,7 +153,7 @@ pub struct Profile {
     pub id: ProfileId,
     pub name: String,
     #[serde(with = "color_key", default = "default_color")]
-    pub color: FolderColor,
+    pub color: GroupColor,
     /// The one letter in the chip and the avatar; the name's first letter when the file has none.
     #[serde(with = "letter", default)]
     pub avatar: char,
@@ -171,12 +171,12 @@ pub struct Profile {
     pub agent_logins: Vec<AgentLogin>,
 }
 
-fn default_color() -> FolderColor {
-    FolderColor::Blue
+fn default_color() -> GroupColor {
+    GroupColor::Blue
 }
 
 impl Profile {
-    pub fn new(id: ProfileId, name: &str, color: FolderColor) -> Self {
+    pub fn new(id: ProfileId, name: &str, color: GroupColor) -> Self {
         let name = name.trim().to_string();
         let avatar = first_letter(&name);
         Self {
@@ -194,7 +194,7 @@ impl Profile {
 
     /// The Default profile as a first launch has it.
     pub fn default_profile() -> Self {
-        Self::new(ProfileId::default_profile(), "Default", FolderColor::Blue)
+        Self::new(ProfileId::default_profile(), "Default", GroupColor::Blue)
     }
 
     /// Everything a person typed, checked: the first thing wrong is the error.
@@ -363,13 +363,13 @@ pub fn first_letter(name: &str) -> char {
 mod color_key {
     use super::*;
 
-    pub fn serialize<S: Serializer>(color: &FolderColor, serializer: S) -> Result<S::Ok, S::Error> {
+    pub fn serialize<S: Serializer>(color: &GroupColor, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(color.key())
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<FolderColor, D::Error> {
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<GroupColor, D::Error> {
         let key = String::deserialize(deserializer)?;
-        Ok(FolderColor::from_key(&key).unwrap_or_else(default_color))
+        Ok(GroupColor::from_key(&key).unwrap_or_else(default_color))
     }
 }
 
