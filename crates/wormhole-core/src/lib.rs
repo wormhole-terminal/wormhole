@@ -31,6 +31,7 @@ pub mod onboarding;
 pub mod open_in;
 pub mod panel;
 pub mod panes;
+pub mod profile;
 pub mod project;
 pub mod reorder;
 pub mod review;

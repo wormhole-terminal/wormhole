@@ -37,6 +37,21 @@ pub struct SpawnOptions {
 }
 
 impl SpawnOptions {
+    /// Start this terminal as `profile`'s: its environment, git identity and agent logins
+    /// (`Profile::terminal_env`), `WORMHOLE_PROFILE`, and its start folder when no folder was asked
+    /// for. Call it after the project's environment is in: what the project already set (a trusted
+    /// project knows its own needs) is kept, and only what is missing is filled in from the profile.
+    /// The terminal's id, socket and binary are set at launch and can't be redirected by either.
+    pub fn apply_profile(&mut self, profile: &crate::profile::Profile) {
+        for (key, value) in profile.terminal_env() {
+            self.env.entry(key).or_insert(value);
+        }
+        self.env.insert(crate::profile::PROFILE_VAR.into(), profile.id.to_string());
+        if self.cwd.is_none() {
+            self.cwd = profile.start_folder();
+        }
+    }
+
     /// The part of the options the engine is started with.
     fn start_options(&self) -> StartOptions<'_> {
         StartOptions {
@@ -143,6 +158,65 @@ mod tests {
         assert!(
             screen.contains("WORMHOLE_LOG=debug"),
             "a setting that isn't the instance's stays:\n{screen}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::{SpawnOptions, spawn_program};
+    use crate::agents::AgentId;
+    use crate::folder_color::FolderColor;
+    use crate::profile::{AgentLogin, PROFILE_VAR, Profile, ProfileId};
+    use crate::terminal::GridSize;
+
+    const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
+
+    fn work() -> Profile {
+        let mut profile = Profile::new(ProfileId::parse("work").expect("an id"), "Work", FolderColor::Teal);
+        profile.env.insert("AWS_PROFILE".into(), "acme-prod".into());
+        profile.env.insert("PROJECT_FLAG".into(), "from-profile".into());
+        profile.git.name = "Benny".into();
+        profile.git.email = "benny@acme.dev".into();
+        profile.agent_logins = vec![AgentLogin { agent: AgentId::Claude, dir: "/logins/claude-work".into() }];
+        profile.start_dir = "/tmp".into();
+        profile
+    }
+
+    #[test]
+    fn a_profile_fills_in_what_the_project_did_not_set() {
+        let mut options = SpawnOptions { tab_id: "t1".into(), ..SpawnOptions::default() };
+        options.env.insert("PROJECT_FLAG".into(), "from-project".into());
+        options.apply_profile(&work());
+        assert_eq!(options.env.get("PROJECT_FLAG").map(String::as_str), Some("from-project"));
+        assert_eq!(options.env.get("AWS_PROFILE").map(String::as_str), Some("acme-prod"));
+        assert_eq!(options.env.get(PROFILE_VAR).map(String::as_str), Some("work"));
+        assert_eq!(options.cwd.as_deref(), Some(std::path::Path::new("/tmp")));
+        let asked = SpawnOptions { cwd: Some("/var".into()), ..SpawnOptions::default() };
+        let mut options = asked;
+        options.apply_profile(&work());
+        assert_eq!(options.cwd.as_deref(), Some(std::path::Path::new("/var")), "an asked-for folder wins");
+    }
+
+    /// The shell really sees them, next to the tab's own variables, which a profile can't redirect.
+    #[test]
+    fn a_shell_started_in_a_profile_sees_its_environment() {
+        let mut options = SpawnOptions { tab_id: "real-tab".into(), ..SpawnOptions::default() };
+        let mut profile = work();
+        profile.env.insert("WORMHOLE_TAB_ID".into(), "spoofed".into());
+        // Refused by `check`, but a hand-built profile must not get through either.
+        options.apply_profile(&profile);
+        let script = r#"printf '[%s] [%s] [%s] [%s] [%s] [%s]\n' "$AWS_PROFILE" "$GIT_AUTHOR_EMAIL" "$CLAUDE_CONFIG_DIR" "$WORMHOLE_PROFILE" "$WORMHOLE_TAB_ID" "$PWD"; sleep 5"#;
+        let (pty, _events) = spawn_program(SIZE, &options, "/bin/sh", &["-c", script]).expect("spawn");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !pty.screen_text().contains("[real-tab]") {
+            assert!(std::time::Instant::now() < deadline, "timed out:\n{}", pty.screen_text());
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let screen = pty.screen_text();
+        assert!(
+            screen.contains("[acme-prod] [benny@acme.dev] [/logins/claude-work] [work] [real-tab]"),
+            "{screen}"
         );
     }
 }

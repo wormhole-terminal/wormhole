@@ -28,6 +28,20 @@ pub struct UpdateSchedule {
 }
 
 impl UpdateSchedule {
+    /// The schedule every profile shares (`DataRoot::update_schedule_file`): a copy of it from
+    /// `legacy`, the JSON a version before profiles kept in the database, when the file isn't there
+    /// yet. A file that doesn't read starts a fresh schedule, which only checks again sooner.
+    pub fn load_shared(path: &std::path::Path, legacy: impl FnOnce() -> Option<String>) -> Self {
+        let text =
+            crate::fsutil::read_to_string_capped(path, 64 * 1024, crate::fsutil::LinkPolicy::Follow).ok();
+        text.or_else(legacy).and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+    }
+
+    pub fn save_shared(&self, path: &std::path::Path) -> std::io::Result<()> {
+        let json = serde_json::to_string(self).map_err(std::io::Error::other)?;
+        crate::fsutil::write_atomic(path, json.as_bytes(), crate::fsutil::LinkPolicy::Follow)
+    }
+
     /// Whether to check right after launch.
     pub fn due_at_launch(&self, now: SystemTime) -> bool {
         self.elapsed(now).is_none_or(|e| e >= LAUNCH_MIN_GAP)
@@ -159,5 +173,25 @@ mod tests {
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(serde_json::from_str::<UpdateSchedule>(&json).unwrap(), s);
         assert_eq!(serde_json::from_str::<UpdateSchedule>("{}").unwrap(), UpdateSchedule::default());
+    }
+}
+
+#[cfg(test)]
+mod shared_tests {
+    use super::UpdateSchedule;
+
+    #[test]
+    fn the_shared_schedule_round_trips_and_adopts_the_old_database_copy_once() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = dir.path().join("update-schedule.json");
+        let legacy = || Some(r#"{"last_check":42,"skipped_version":"1.2.3"}"#.to_string());
+        let adopted = UpdateSchedule::load_shared(&path, legacy);
+        assert_eq!(adopted.last_check, Some(42));
+        adopted.save_shared(&path).expect("saves");
+        // Once the file exists, the old copy is not asked for again.
+        let again = UpdateSchedule::load_shared(&path, || panic!("the file is the truth now"));
+        assert_eq!(again, adopted);
+        std::fs::write(&path, "garbage").expect("writes");
+        assert_eq!(UpdateSchedule::load_shared(&path, || None), UpdateSchedule::default());
     }
 }

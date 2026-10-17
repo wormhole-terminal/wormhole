@@ -91,7 +91,12 @@ pub fn fingerprint_in(dir: &Path) -> Vec<(PathBuf, u64, Option<SystemTime>)> {
 /// A theme file: JSON token theme, or a Ghostty / iTerm2 / Alacritty palette.
 /// Resolved the way `config` resolves a theme given by path.
 pub fn load_path(path: &Path) -> Result<ThemeTokens, String> {
-    crate::config::load_theme_path(&Config::themes_dir(), path)
+    load_path_in(&Config::themes_dir(), path)
+}
+
+/// [`load_path`] with the themes of a profile available to `extends`.
+pub fn load_path_in(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
+    crate::config::load_theme_path(dir, path)
 }
 
 #[cfg(test)]

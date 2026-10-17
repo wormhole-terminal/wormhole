@@ -113,6 +113,12 @@ impl Store {
         Self::open_at(&data_dir())
     }
 
+    /// A profile's database (Default's is the data folder's own, so this is [`open`](Self::open)
+    /// for it).
+    pub fn open_for(paths: &crate::profile::ProfilePaths) -> Result<Self> {
+        Self::open_at(paths.dir())
+    }
+
     /// Open (or create) the database in `dir`. A file that is not a database, or that fails
     /// `PRAGMA quick_check`, is moved aside as `wormhole.db.corrupt-<unix time>` (with its WAL)
     /// and a fresh one is started, so a damaged file costs the saved sessions once instead of

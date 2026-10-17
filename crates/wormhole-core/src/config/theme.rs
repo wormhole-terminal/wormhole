@@ -132,12 +132,22 @@ fn free_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
 /// Resolve a theme file (e.g. the Theme Studio's draft), with user themes
 /// available for `extends`.
 pub fn resolve_theme_file(file: &ThemeFile) -> Result<ThemeTokens, String> {
-    UserThemes::read(&Config::themes_dir()).resolve_file(file)
+    resolve_theme_file_in(&Config::themes_dir(), file)
+}
+
+/// [`resolve_theme_file`] with the themes of a profile (`ProfilePaths::themes_dir`).
+pub fn resolve_theme_file_in(themes: &Path, file: &ThemeFile) -> Result<ThemeTokens, String> {
+    UserThemes::read(themes).resolve_file(file)
 }
 
 /// Resolve a theme given as JSON text (e.g. a project's `.wormhole/theme.json`).
 pub fn tokens_from_json(text: &str) -> Result<ThemeTokens, String> {
-    resolve_theme_file(&tokens::parse_theme_file(text)?)
+    tokens_from_json_in(&Config::themes_dir(), text)
+}
+
+/// [`tokens_from_json`] with the themes of a profile.
+pub fn tokens_from_json_in(themes: &Path, text: &str) -> Result<ThemeTokens, String> {
+    resolve_theme_file_in(themes, &tokens::parse_theme_file(text)?)
 }
 
 /// A theme file on disk: JSON token theme, or a Ghostty / iTerm2 / Alacritty

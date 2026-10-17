@@ -23,10 +23,10 @@ pub use self::settings::{
 };
 pub(crate) use self::theme::load_theme_path;
 use self::theme::{ThemeStamp, default_tokens, resolve_theme};
-pub use self::theme::{resolve_theme_file, tokens_from_json};
+pub use self::theme::{resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in};
 use crate::fsutil::{self, LinkPolicy};
 use crate::jsonc;
-use crate::store::data_dir;
+use crate::profile::{DataRoot, ProfilePaths};
 use crate::text::did_you_mean;
 use crate::tokens::{Appearance, ThemeTokens};
 
@@ -64,17 +64,23 @@ pub struct Config {
 }
 
 impl Config {
+    /// The Default profile's `config.json`: the data folder's own, where it has always been.
     pub fn path() -> PathBuf {
-        data_dir().join("config.json")
+        DataRoot::current().default_profile().config_file()
     }
 
     pub fn themes_dir() -> PathBuf {
-        data_dir().join("themes")
+        DataRoot::current().default_profile().themes_dir()
     }
 
-    /// Load `config.json`, creating it with defaults if it doesn't exist.
+    /// Load the Default profile's `config.json`, creating it with defaults if it doesn't exist.
     pub fn load() -> Self {
-        Self::load_from(Self::path(), Self::themes_dir())
+        Self::load_for(&DataRoot::current().default_profile())
+    }
+
+    /// Load a profile's `config.json` and themes, creating the file with defaults if it doesn't exist.
+    pub fn load_for(paths: &ProfilePaths) -> Self {
+        Self::load_from(paths.config_file(), paths.themes_dir())
     }
 
     fn load_from(path: PathBuf, themes: PathBuf) -> Self {
