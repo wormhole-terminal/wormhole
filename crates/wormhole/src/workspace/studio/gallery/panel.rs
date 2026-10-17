@@ -356,10 +356,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     let strip = style::panel_strip(ui)
         .h(px(STRIP_H))
         .child(style::strip_tab("g-strip-changes", ui, IconName::GitCompare, "Changes", false, true))
-        .child(env.mark(
-            "strip.tab",
-            style::strip_tab("g-strip-history", ui, IconName::GitCommitHorizontal, "History", true, false),
-        ))
+        .child(style::strip_tab("g-strip-history", ui, IconName::GitCommitHorizontal, "History", true, false))
         .child(style::strip_tab("g-strip-notes", ui, IconName::FileText, "Notes", false, false))
         .child(div().flex_1())
         .child(style::strip_tab("g-strip-inbox", ui, IconName::Inbox, "Stash prompt", false, false));
