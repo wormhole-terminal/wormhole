@@ -124,8 +124,8 @@ const STRIP_DOT: f32 = 5.0;
 const STRIP_DOT_INSET: f32 = 1.0;
 
 /// The right panel's tabs in a strip down the window's right edge: [`PANEL_STRIP`] wide, on the
-/// panel's surface, a hairline on its left. Put the tabs in with `.child(…)`, then a
-/// `div().flex_1()` and the foot's button.
+/// panel's surface, a hairline on its left. Put the tabs in with `.child(…)`; nothing
+/// sits at its foot.
 #[track_caller]
 pub fn panel_strip(ui: UiColors) -> Div {
     div()

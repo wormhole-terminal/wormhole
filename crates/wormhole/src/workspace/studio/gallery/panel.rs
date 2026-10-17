@@ -357,9 +357,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
         .h(px(STRIP_H))
         .child(style::strip_tab("g-strip-changes", ui, IconName::GitCompare, "Changes", false, true))
         .child(style::strip_tab("g-strip-history", ui, IconName::GitCommitHorizontal, "History", true, false))
-        .child(style::strip_tab("g-strip-notes", ui, IconName::FileText, "Notes", false, false))
-        .child(div().flex_1())
-        .child(style::strip_tab("g-strip-inbox", ui, IconName::Inbox, "Stash prompt", false, false));
+        .child(style::strip_tab("g-strip-notes", ui, IconName::FileText, "Notes", false, false));
     // A note where a list would be, in a card of its own.
     let note_card = style::panel_card(ui, style::empty_note(ui, "No changes. Working tree is clean."));
 

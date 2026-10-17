@@ -2,8 +2,8 @@
 //! is closed or has no room. A click on a tab opens the panel on it, a click on the open tab
 //! closes the panel; the keyboard's ⌘-keys and the menu do the same through `show_tab` and
 //! `toggle_notes`. The tab list is one keyboard stop whose ← → switch tabs at once and VoiceOver
-//! reads it as a tab list with the counts in words. At its foot a button stashes the typed
-//! prompt into a note (the board's "Inbox").
+//! reads it as a tab list with the counts in words. The strip has no button at its foot: stashing
+//! the typed prompt is the palette's, the menu's and the key's.
 use wormhole_core::focus::Area;
 use wormhole_core::spoken::{self, PanelTab};
 
@@ -80,22 +80,11 @@ impl Workspace {
                     RightTab::Project,
                 ))
             });
-        let stash = style::strip_tab(
-            "stash-prompt",
-            ui,
-            IconName::Inbox,
-            keymap::with_key("Stash prompt into a new note", ActionId::StashPrompt),
-            false,
-            false,
-        )
-        .on_click(cx.listener(|this, _, window, cx| this.stash_prompt(window, cx)));
         style::panel_strip(ui)
             .id("panel-strip")
             // Not the window's drag area: a press between the buttons does nothing.
             .occlude()
             .child(self.area_container(Area::PanelTabs, list, cx))
-            .child(div().flex_1())
-            .child(stash)
             .into_any_element()
     }
 
