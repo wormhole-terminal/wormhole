@@ -158,6 +158,35 @@ mod tests {
         }
     }
 
+    /// Text lies on the wash at its strongest (the card's left edge): over the card's own fill, on
+    /// the sidebar. The board's text colours are fixed, so the second lines may sink to 3.5 and 4:1
+    /// under the strongest wash; the primary text and the amber edge keep their full ratios.
+    #[test]
+    fn text_on_a_groups_wash_reads_in_every_theme() {
+        for tokens in builtins() {
+            let get = |name: &str| tokens.get(name).expect(name);
+            let column = get("sidebar.background").over(get("surface.window").over(Color::BLACK));
+            let card = get("card").over(column);
+            for color in GroupColor::ALL {
+                let wash = color.color(tokens).with_alpha(super::WASH_PEAK).over(card);
+                for (name, min) in [
+                    ("text.primary", 4.5),
+                    ("text.muted", 3.5),
+                    ("agent.attention.text", 4.0),
+                    ("agent.attention", 3.0),
+                ] {
+                    let ratio = Color::contrast_ratio(get(name).over(wash), wash);
+                    assert!(
+                        ratio >= min - 0.05,
+                        "{}: {name} on a {} wash is {ratio:.2}",
+                        tokens.name,
+                        color.key()
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn every_hue_has_colour_in_every_theme() {
         for tokens in builtins() {

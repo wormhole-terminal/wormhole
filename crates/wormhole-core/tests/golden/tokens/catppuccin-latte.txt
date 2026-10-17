@@ -1,8 +1,8 @@
 # Catppuccin Latte (Light)
-agent.attention #bc7400
-agent.attention.ring #bc740047
+agent.attention #a46400
+agent.attention.ring #a4640047
 agent.attention.text #855000
-agent.attention.tint #bc74001f
+agent.attention.tint #a464001f
 agent.bell #ff9e64
 agent.claude #d97757
 agent.done #369720
@@ -28,8 +28,8 @@ border.strong #474a6347
 button.background #e5e7ec
 button.hover #dddfe5
 button.text #474a63
-card #474a6309
-card.edge #474a631a
+card #474a6308
+card.edge #474a631f
 checkbox.background #fafbfc
 checkbox.border #7c7e8b
 checkbox.checked #1e66f5
@@ -166,7 +166,10 @@ translucent 80% no blur text.faint #5d5f6c
 translucent 80% no blur git.branch #69185c
 translucent 80% no blur sidebar.row.selected.text #0037a2
 translucent 80% no blur sidebar.row.selected.muted #3e4050
+increase_contrast agent.attention #a06200
+increase_contrast agent.attention.ring #a0620047
 increase_contrast agent.attention.text #794900
+increase_contrast agent.attention.tint #a062001f
 increase_contrast agent.done.text #166100
 increase_contrast agent.exited #656773
 increase_contrast band #30334b14

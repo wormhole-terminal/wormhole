@@ -12,9 +12,17 @@ use super::scale::{CONTROL_H, Edges, TextRole};
 use crate::settings::UiColors;
 
 /// The avatar of a profile in the chips and rows: a `size` circle of the profile's colour with
-/// its letter in the window's own colour, which the colour is kept readable against.
+/// its letter in the window's own colour, or black or white where that would not read (the
+/// window's white on a light theme's yellow or green).
 #[track_caller]
 pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div {
+    let fill = crate::theme_bridge::color(color);
+    let ink = crate::theme_bridge::color(ui.background);
+    let ink = if wormhole_core::tokens::Color::contrast_ratio(ink, fill) >= LETTER_CONTRAST {
+        ui.background
+    } else {
+        crate::theme_bridge::hsla(fill.text_on())
+    };
     let avatar = div()
         .flex_none()
         .size(px(size))
@@ -23,7 +31,7 @@ pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div
         .justify_center()
         .rounded_full()
         .bg(color)
-        .text_color(ui.background)
+        .text_color(ink)
         .font_weight(FontWeight::BOLD)
         .child(letter.to_uppercase().to_string());
     if size >= AVATAR_BODY_FROM { avatar.text_body() } else { avatar.text_caption() }
@@ -74,6 +82,9 @@ pub fn profile_chip(
 pub const CHIP_H: f32 = 24.0;
 const CHIP_AVATAR: f32 = 16.0;
 const CHIP_NAME_MAX: f32 = 120.0;
+
+/// The least the letter is kept from the colour: the 4.5:1 WCAG asks of text.
+const LETTER_CONTRAST: f32 = 4.5;
 
 /// From this size the avatar's letter is body text, below it caption text.
 const AVATAR_BODY_FROM: f32 = 24.0;

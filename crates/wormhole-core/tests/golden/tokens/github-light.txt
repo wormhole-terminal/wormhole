@@ -1,8 +1,8 @@
 # GitHub Light (Light)
-agent.attention #ba8300
-agent.attention.ring #ba830047
+agent.attention #9c6e00
+agent.attention.ring #9c6e0047
 agent.attention.text #845c00
-agent.attention.tint #ba83001f
+agent.attention.tint #9c6e001f
 agent.bell #ff9e64
 agent.claude #d97757
 agent.done #116329
@@ -28,8 +28,8 @@ border.strong #1f232847
 button.background #f2f2f2
 button.hover #e6e7e7
 button.text #1f2328
-card #1f232809
-card.edge #1f23281a
+card #1f232808
+card.edge #1f23281f
 checkbox.background #ffffff
 checkbox.border #858689
 checkbox.checked #0969da

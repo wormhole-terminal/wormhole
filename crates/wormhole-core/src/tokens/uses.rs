@@ -175,6 +175,20 @@ pub const TOKEN_USES: &[TokenUse] = &[
         ],
     ),
     u(
+        "panel.card",
+        "panel card",
+        Panel,
+        &[
+            "surface.panel",
+            "card",
+            "card.edge",
+            "text.primary",
+            "text.muted",
+            "metrics.border_width",
+            "metrics.radius_lg",
+        ],
+    ),
+    u(
         "panel.band",
         "section band",
         Panel,

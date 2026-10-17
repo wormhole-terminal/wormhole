@@ -47,9 +47,9 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "sidebar.row.selected.text" => "readable(primary, sidebar.row.selected, 4.5)",
         "sidebar.row.selected.muted" => "readable(text.muted, sidebar.row.selected, 4.5)",
         // The sidebar's cards: a faint fill and an edge that holds the card where the fill vanishes
-        // (on white, say).
-        "card" => "text.primary / 3.5%",
-        "card.edge" => "text.primary / 10%",
+        // (on white, say): a light theme's fill is 3% and its edge 12%, as the board's GitHub Light.
+        "card" => p("text.primary / 3.5%", "text.primary / 3%"),
+        "card.edge" => p("text.primary / 10%", "text.primary / 12%"),
         // Group heads and section bands, one step above a hovered row and below a pressed one.
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
@@ -130,7 +130,12 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         }
         "agent.working" => "primary",
         "agent.done" => "status.success",
-        "agent.attention" => "status.warning",
+        // Also on a card and on a group's wash at its strongest (worst case: a grey as bright as the
+        // text), where a light theme's thin amber would fall short of 3:1.
+        "agent.attention" => {
+            "readable(status.warning, over(card, sidebar.background), \
+             over(text.primary / 16%, sidebar.background), 3)"
+        }
         "agent.exited" => "text.faint",
         // The bell's orange (the boards' RF-12): not the amber of "needs you", so the two badges
         // don't read alike.

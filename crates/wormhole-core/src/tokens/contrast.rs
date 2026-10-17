@@ -85,6 +85,15 @@ pub const CONTRAST_PAIRS: &[ContrastPair] = &[
     // A project's commands: on the trust callout's tint in the panel, and in their own window.
     on("trust.command", "banner.warning.background", "surface.panel", 4.5),
     pair("trust.command", "surface.window", 4.5),
+    // The sidebar's and the panel's cards: their fill is faint, but text and marks on them keep
+    // what they have on the column (the amber edge of a card that needs you included).
+    on("text.primary", "card", "sidebar.background", 4.5),
+    on("text.muted", "card", "sidebar.background", 4.5),
+    on("text.faint", "card", "sidebar.background", 3.0),
+    on("agent.attention", "card", "sidebar.background", 3.0),
+    on("agent.attention.text", "card", "sidebar.background", 4.5),
+    on("agent.done.text", "card", "sidebar.background", 4.5),
+    on("agent.working", "card", "sidebar.background", 3.0),
     pair("agent.working", "sidebar.background", 3.0),
     pair("agent.done", "sidebar.background", 3.0),
     pair("agent.attention", "sidebar.background", 3.0),

@@ -75,6 +75,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
   The old compact switch becomes Compact; View → Compact Rows is gone.
 
+- On macOS 26 and later the right panel's cards sit on Liquid Glass like the sidebar's, the panel, its
+  strip and the status bar stand on the window's own material, and the terminal's rounded surface runs
+  to the strip and the status bar. With Reduce Transparency or Increase Contrast, or before macOS 26,
+  everything paints its own surface as before.
+
+- Light themes: cards keep a 12 % edge where their 3 % fill vanishes on white, the amber of a card that
+  needs you holds 3:1 on it, and a profile's letter turns black on a light colour (yellow, green).
+
 ### Removed
 
 - The sidebar no longer groups terminals by folder, and its header is only "Terminals" and the +: the
