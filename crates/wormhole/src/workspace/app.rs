@@ -36,6 +36,8 @@ pub(crate) struct OpenWindow {
     pub workspace: WeakEntity<Workspace>,
     /// The profile whose window this is.
     pub profile: ProfileId,
+    /// Out of sight because its profile is not the shown one; its terminals run on.
+    pub hidden: bool,
 }
 
 pub(crate) struct AppState {
@@ -43,7 +45,8 @@ pub(crate) struct AppState {
     pub root: DataRoot,
     /// Every profile, and the one Wormhole is in.
     pub profiles: ProfileList,
-    /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say.
+    /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
+    #[allow(dead_code, reason = "the Settings page that shows it comes with the profile UI")]
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
     pub(super) parked: profiles::Parked,
@@ -92,7 +95,7 @@ pub(crate) struct AppState {
     pub(super) next_id: i64,
     pub(super) next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
-    applied_theme: Option<u64>,
+    pub(super) applied_theme: Option<u64>,
     ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
@@ -248,8 +251,8 @@ impl AppState {
         }
         upgrade_legacy_hooks(cx);
         cx.background_spawn(async { super::default_terminal::upgrade_legacy_default() }).detach();
-        let store =
-            Store::open_for(&paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
+        let profiles::ProfileData { store, tips, mut hub, usage, worktrees, last_panes, .. } =
+            profiles::ProfileData::open(&paths);
         let saved = store
             .as_ref()
             .and_then(|s| {
@@ -257,27 +260,8 @@ impl AppState {
             })
             .unwrap_or_default();
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
-        let tips = DismissedTips::parse(
-            store.as_ref().and_then(|s| s.meta(DISMISSED_TIPS_KEY).ok().flatten()).as_deref(),
-        );
-        let usage = store
-            .as_ref()
-            .and_then(|s| s.meta(wormhole_core::usage::STORE_KEY).ok().flatten())
-            .map(|json| wormhole_core::usage::from_json(&json))
-            .unwrap_or_default();
-        // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
-        let mut worktrees = store
-            .as_ref()
-            .and_then(|s| s.meta(worktree::STORE_KEY).ok().flatten())
-            .map(|json| Worktrees::from_json(&json))
-            .unwrap_or_default();
-        worktrees.prune();
-        let last_panes = RememberedPanes::parse(
-            store.as_ref().and_then(|s| s.meta(REMEMBERED_PANES_KEY).ok().flatten()).as_deref(),
-        );
         let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
         let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
-        let mut hub = project::ProjectHub::load_from(paths.dir());
         hub.ids_start_at(next_id);
         let (display_changed, display_options) = smol::channel::unbounded::<()>();
         let display_observer = vibrancy::observe_display_options(move || {
@@ -386,10 +370,12 @@ impl AppState {
     /// was in front last.
     pub(crate) fn front_window(cx: &App) -> Option<OpenWindow> {
         let state = app(cx);
+        // A window of a profile that is not shown is never the one the person works in.
+        let mut shown = state.windows.iter().filter(|w| !w.hidden);
         cx.active_window()
-            .and_then(|active| state.windows.iter().find(|w| w.handle.window_id() == active.window_id()))
-            .or_else(|| state.windows.iter().find(|w| w.id == state.front))
-            .or_else(|| state.windows.first())
+            .and_then(|active| shown.clone().find(|w| w.handle.window_id() == active.window_id()))
+            .or_else(|| shown.clone().find(|w| w.id == state.front))
+            .or_else(|| shown.next())
             .cloned()
     }
 
@@ -516,6 +502,7 @@ pub(crate) fn open_workspace_window_in(
                 handle,
                 workspace: workspace.downgrade(),
                 profile: profile.clone(),
+                hidden: false,
             });
             state.front = id;
             crate::background::activate(cx);
@@ -537,7 +524,8 @@ pub(super) fn new_window_from_front(cx: &mut App) {
 fn window_closed(cx: &mut App, id: WindowId) {
     let state = app_mut(cx);
     state.windows.retain(|w| w.handle.window_id() != id);
-    // Sessions end with their window, so with none left there is nothing to show.
+    // Sessions end with their window, so with none left there is nothing to show. (The close
+    // button asked before the last visible window went, while another profile still had windows.)
     if state.windows.is_empty() && !state.quitting {
         cx.quit();
     }
@@ -633,7 +621,7 @@ fn tick(cx: &mut App) {
 
 /// Push the resolved theme to GPUI Kit (its theme is global, the settings and
 /// Studio windows use it too), and the theme's appearance to every window's material.
-fn apply_theme(cx: &mut App) {
+pub(super) fn apply_theme(cx: &mut App) {
     let store = cx.global::<SettingsStore>();
     let revision = store.revision;
     if app(cx).applied_theme == Some(revision) {

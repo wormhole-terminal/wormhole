@@ -119,6 +119,9 @@
 //!   path-card <open|close>   open or close the hover card under the title row's path at once, as
 //!                   resting the pointer on the path does after a moment (`hover <x> <y>` does too)
 //!   toggle-sidebar | toggle-panel   hide or show the sidebar / the right panel
+//!   profile <id> | profile-new <name> | profiles   switch Wormhole to a profile (its windows show, the
+//!                   shown profile's hide with their terminals running), make a profile (it is not
+//!                   switched to) and print its id, or list the profiles (`*` marks the shown one)
 //!   new-window | close-window   open another window / close this one (`state` lists them)
 //!   onboarding <welcome|folder|look|agents|primer|close>   open the intro window at that step over this
 //!                   window with nothing played around it, whether or not it ran before (`close` closes
@@ -365,6 +368,9 @@ fn command(name: &str) -> Option<Command> {
         "note" => sessions::note,
         "task" => sessions::task,
         "quit" => sessions::quit,
+        "profile" => sessions::profile,
+        "profile-new" => sessions::profile_new,
+        "profiles" => sessions::profiles,
         "sidebar-group" => sidebar::group,
         "group-new" => sidebar::new_group,
         "sidebar-show" => sidebar::show,

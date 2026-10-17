@@ -103,7 +103,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     let mut snapshot =
         Snapshot { actions: palette_actions::actions(&menu), shells, hidden_sections, ..Snapshot::default() };
     let mut folders: Vec<FolderItem> = Vec::new();
-    for (ix, window) in app(cx).windows.iter().enumerate() {
+    for (ix, window) in app(cx).windows.iter().enumerate().filter(|(_, w)| !w.hidden) {
         let own = window.id == window_id;
         let read = window.workspace.read_with(cx, |ws, cx| {
             let facts = ws.tab_facts(key == Some(window.handle.window_id()), cx);

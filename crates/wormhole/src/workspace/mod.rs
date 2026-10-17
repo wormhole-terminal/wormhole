@@ -16,7 +16,7 @@ pub(crate) use about::devctl_command as devctl_about;
 #[cfg(feature = "devctl")]
 pub(crate) use actions::NewWindow;
 pub(crate) use actions::{CheckForUpdates, init as init_actions};
-use app::app_mut;
+pub(crate) use app::app_mut;
 pub(crate) use app::{AppState, app};
 #[cfg(feature = "devctl")]
 pub(crate) use app_menu::dump as menu_dump;
@@ -638,12 +638,13 @@ impl Workspace {
     #[cfg(feature = "devctl")]
     pub(crate) fn debug_state(&self, cx: &App) -> String {
         let mut out = format!(
-            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} grouping={:?} show={:?} hide_idle={} search={:?} folded={:?} listed={:?} numbered={:?}\n",
+            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} grouping={:?} show={:?} hide_idle={} search={:?} folded={:?} listed={:?} numbered={:?}\n",
             self.window_number(cx),
             app(cx).windows.len(),
             self.window_id,
             self.close_dot,
             self.closing_session_prompt,
+            self.profile,
             self.panes.sidebar_width,
             self.panes.panel_width,
             self.window_width,
@@ -797,11 +798,6 @@ impl Workspace {
 
     fn alloc_id(&self, cx: &mut App) -> i64 {
         app_mut(cx).alloc_id_in(&self.profile)
-    }
-
-    /// The profile this window is in.
-    pub(crate) fn profile(&self) -> &ProfileId {
-        &self.profile
     }
 
     /// Where a new terminal starts: where the current one is.

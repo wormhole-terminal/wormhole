@@ -294,9 +294,18 @@ pub(super) fn close_window_detail(
 }
 
 /// What the question before quitting says: the terminals come back, what runs in them doesn't.
-pub(super) fn quit_detail(running: &[(Status, bool)], programs: &[String]) -> String {
+pub(super) fn quit_detail(
+    running: &[(Status, bool)],
+    programs: &[String],
+    other_profiles: &[(String, usize)],
+) -> String {
+    let mut elsewhere = String::new();
+    for (profile, count) in other_profiles {
+        let (many, verb) = if *count == 1 { ("terminal", "is") } else { ("terminals", "are") };
+        elsewhere.push_str(&format!(" {count} {many} in {profile} {verb} running an agent or a command."));
+    }
     format!(
-        "Your terminals come back next time, but what runs in them ends.{}",
+        "Your terminals come back next time, but what runs in them ends.{}{elsewhere}",
         still_running(running, programs)
     )
 }
@@ -507,9 +516,19 @@ mod tests {
     #[test]
     fn quitting_says_the_terminals_come_back_but_their_programs_end() {
         assert_eq!(
-            quit_detail(&[(Status::Idle, true)], &names(&["claude", "caffeinate"])),
+            quit_detail(&[(Status::Idle, true)], &names(&["claude", "caffeinate"]), &[]),
             "Your terminals come back next time, but what runs in them ends. Still running: claude, \
              caffeinate."
+        );
+    }
+
+    #[test]
+    fn quitting_names_the_other_profiles_that_still_run_something() {
+        assert_eq!(
+            quit_detail(&[(Status::Busy, false)], &[], &[("Work".into(), 1), ("Client".into(), 3)]),
+            "Your terminals come back next time, but what runs in them ends. An agent is still working. \
+             1 terminal in Work is running an agent or a command. \
+             3 terminals in Client are running an agent or a command."
         );
     }
 

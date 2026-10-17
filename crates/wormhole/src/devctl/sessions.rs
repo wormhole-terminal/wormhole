@@ -263,6 +263,54 @@ pub(super) fn front(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `profile <id>`: switch Wormhole to that profile, after this batch (the windows are updating now).
+pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let id = wormhole_core::profile::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    ctx.cx.defer(move |cx| {
+        if let Err(err) = crate::workspace::AppState::switch_profile(&id, cx) {
+            tracing::warn!("devctl profile: {err}");
+        }
+    });
+    Ok(String::new())
+}
+
+/// `profile-new <name> [git-email]`: make a profile with Wormhole's defaults (with a git identity
+/// of that name and email, when an email is given) and print its id.
+pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    use wormhole_core::profile::{NewProfile, StartFrom};
+    let state = crate::workspace::app_mut(ctx.cx);
+    let root = state.root.clone();
+    let (name, email) = match arg.trim().rsplit_once(' ') {
+        Some((name, email)) if email.contains('@') => (name.trim(), Some(email)),
+        _ => (arg.trim(), None),
+    };
+    let new = NewProfile { name: name.to_string(), color: None, avatar: None, from: StartFrom::Defaults };
+    let id = state.profiles.create(&root, new).map_err(|err| anyhow!("{err}"))?;
+    if let Some(email) = email {
+        let (identity_name, email) = (name.to_string(), email.to_string());
+        state
+            .profiles
+            .edit(&id, |p| p.git = wormhole_core::profile::GitIdentity { name: identity_name, email })
+            .and_then(|()| state.profiles.save(&root))
+            .map_err(|err| anyhow!("{err}"))?;
+    }
+    Ok(id.to_string())
+}
+
+/// `profiles`: one a line, `*` on the shown one.
+pub(super) fn profiles(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let state = crate::workspace::app(ctx.cx);
+    Ok(state
+        .profiles
+        .profiles()
+        .iter()
+        .map(|p| {
+            let mark = if &p.id == state.profiles.active_id() { '*' } else { ' ' };
+            format!("{mark} {} {:?} {:?}\n", p.id, p.name, p.color)
+        })
+        .collect())
+}
+
 pub(super) fn quit(ctx: &mut Ctx, _: &str) -> Result<String> {
     ctx.workspace.quit(ctx.cx);
     Ok(String::new())

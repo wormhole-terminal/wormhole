@@ -19,6 +19,7 @@
 //! with the theme's own. Both sets are kept ([`SettingsStore::ui_for`]).
 
 mod overlay;
+mod profile;
 mod ui_colors;
 
 use std::path::{Path, PathBuf};

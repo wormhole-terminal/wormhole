@@ -295,6 +295,29 @@ fn deminiaturize(window: &Window) {
 #[cfg(not(target_os = "macos"))]
 fn deminiaturize(_: &Window) {}
 
+/// Take `window` off the screen without closing it: its view, terminals and agents go on
+/// running (a profile that is not shown, `AppState::switch_profile`). GPUI has no call for it.
+#[cfg(target_os = "macos")]
+pub fn hide(window: &Window) {
+    if let Some(ns_window) = crate::traffic_lights::ns_window(window) {
+        ns_window.orderOut(None);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn hide(_: &Window) {}
+
+/// Put a window [`hide`] took away back on the screen, in front but not necessarily keyed.
+#[cfg(target_os = "macos")]
+pub fn show(window: &Window) {
+    if let Some(ns_window) = crate::traffic_lights::ns_window(window) {
+        ns_window.orderFront(None);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn show(_: &Window) {}
+
 #[cfg(target_os = "macos")]
 fn order_back(window: &Window) {
     if let Some(ns_window) = crate::traffic_lights::ns_window(window) {

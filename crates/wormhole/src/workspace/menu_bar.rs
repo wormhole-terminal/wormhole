@@ -51,10 +51,7 @@ impl MenuState {
     /// Menu clicks and hotkey presses arrive on the returned receiver.
     pub fn new(store: Option<&Store>) -> (Self, smol::channel::Receiver<MenuCommand>) {
         let (tx, rx) = smol::channel::unbounded();
-        let recent = store
-            .and_then(|s| s.meta("recent_projects").ok().flatten())
-            .and_then(|json| serde_json::from_str(&json).ok())
-            .unwrap_or_default();
+        let recent = Self::load_recent(store);
         let state = Self {
             tx,
             bar: None,
@@ -68,6 +65,22 @@ impl MenuState {
             dock_actions: false,
         };
         (state, rx)
+    }
+
+    /// A profile switch: its recent projects take the place of the shown one's (the previous ones
+    /// come back out in `recent`), and the hotkey is registered again as the new profile sets it.
+    /// The status item stays: whether it shows, and its icon, follow the settings every tick.
+    pub fn switch_profile(&mut self, recent: &mut Vec<PathBuf>) {
+        std::mem::swap(&mut self.recent, recent);
+        self.applied_hotkey = None;
+    }
+
+    /// The recent projects a store keeps, most recently used first.
+    pub fn load_recent(store: Option<&Store>) -> Vec<PathBuf> {
+        store
+            .and_then(|s| s.meta("recent_projects").ok().flatten())
+            .and_then(|json| serde_json::from_str(&json).ok())
+            .unwrap_or_default()
     }
 
     /// Project roots, most recently used first.
@@ -188,7 +201,7 @@ fn rgba(color: Hsla) -> crate::menubar::Rgba {
 pub(super) fn project_actions(cx: &App) -> Vec<ActionItem> {
     let state = app(cx);
     let mut roots = Vec::new();
-    for window in &state.windows {
+    for window in state.windows.iter().filter(|w| !w.hidden) {
         if let Ok(window_roots) = window.workspace.read_with(cx, |ws, cx| ws.project_roots(cx)) {
             roots.extend(window_roots);
         }

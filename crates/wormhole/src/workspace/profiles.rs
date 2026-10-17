@@ -9,10 +9,13 @@
 
 use std::collections::HashMap;
 
+use wormhole_core::git::worktree;
 use wormhole_core::git::worktree::Worktrees;
+use wormhole_core::layout::REMEMBERED_PANES_KEY;
 use wormhole_core::layout::RememberedPanes;
+use wormhole_core::onboarding::DISMISSED_TIPS_KEY;
 use wormhole_core::onboarding::DismissedTips;
-use wormhole_core::profile::{DataRoot, ProfileId, ProfileList};
+use wormhole_core::profile::{DataRoot, ProfileId, ProfileList, ProfilePaths};
 use wormhole_core::store::Store;
 
 use super::app::{AppState, OpenWindow};
@@ -29,7 +32,7 @@ impl AppState {
         if profile == self.active_profile() {
             self.store.as_ref()
         } else {
-            self.parked.get(profile).and_then(|slot| slot.store.as_ref())
+            self.parked.get(profile).and_then(|slot| slot.data.store.as_ref())
         }
     }
 
@@ -37,7 +40,7 @@ impl AppState {
         if profile == self.profiles.active_id() {
             self.store.as_mut()
         } else {
-            self.parked.get_mut(profile).and_then(|slot| slot.store.as_mut())
+            self.parked.get_mut(profile).and_then(|slot| slot.data.store.as_mut())
         }
     }
 
@@ -46,7 +49,7 @@ impl AppState {
         if profile == self.profiles.active_id() {
             Some(&mut self.hub)
         } else {
-            self.parked.get_mut(profile).map(|slot| &mut slot.hub)
+            self.parked.get_mut(profile).map(|slot| &mut slot.data.hub)
         }
     }
 
@@ -85,9 +88,9 @@ impl AppState {
     }
 }
 
-/// What a profile keeps while another is shown: everything `AppState` holds per profile, and
-/// its settings (the `SettingsStore` global is the shown profile's).
-pub(super) struct ProfileSlot {
+/// What the app keeps per profile besides the settings: its database, closed tips, project
+/// folders, recent projects, plan usage, worktrees and remembered side columns.
+pub(super) struct ProfileData {
     pub store: Option<Store>,
     pub tips: DismissedTips,
     pub hub: project::ProjectHub,
@@ -95,10 +98,152 @@ pub(super) struct ProfileSlot {
     pub usage: Vec<wormhole_core::usage::Usage>,
     pub worktrees: Worktrees,
     pub last_panes: RememberedPanes,
+}
+
+impl ProfileData {
+    /// Open the profile's database and read what it keeps.
+    pub fn open(paths: &ProfilePaths) -> Self {
+        let store =
+            Store::open_for(paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
+        let meta = |key: &str| store.as_ref().and_then(|s| s.meta(key).ok().flatten());
+        let tips = DismissedTips::parse(meta(DISMISSED_TIPS_KEY).as_deref());
+        let usage = meta(wormhole_core::usage::STORE_KEY)
+            .map(|json| wormhole_core::usage::from_json(&json))
+            .unwrap_or_default();
+        // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
+        let mut worktrees =
+            meta(worktree::STORE_KEY).map(|json| Worktrees::from_json(&json)).unwrap_or_default();
+        worktrees.prune();
+        let last_panes = RememberedPanes::parse(meta(REMEMBERED_PANES_KEY).as_deref());
+        let recent = menu_bar::MenuState::load_recent(store.as_ref());
+        Self {
+            store,
+            tips,
+            hub: project::ProjectHub::load_from(paths.dir()),
+            recent,
+            usage,
+            worktrees,
+            last_panes,
+        }
+    }
+}
+
+/// What a profile keeps while another is shown: [`ProfileData`] and its settings (the
+/// `SettingsStore` global is the shown profile's).
+pub(super) struct ProfileSlot {
+    pub data: ProfileData,
     pub settings: SettingsStore,
 }
 
+impl ProfileSlot {
+    fn open(paths: &ProfilePaths) -> Self {
+        Self { data: ProfileData::open(paths), settings: SettingsStore::load_for(paths) }
+    }
+}
+
 pub(super) type Parked = HashMap<ProfileId, ProfileSlot>;
+
+impl AppState {
+    /// Wormhole is in profile `target` from now on: every window of the profile that was shown goes
+    /// out of sight with its terminals running, and the target's come back as they were (or are
+    /// restored from its database the first time, or opened fresh when it had none). The two
+    /// profiles trade places in the app's state, so everything that reads "the" settings, store or
+    /// project folders reads the target's from here on. Deferred callers only: windows are updated.
+    pub(crate) fn switch_profile(target: &ProfileId, cx: &mut App) -> Result<(), String> {
+        let from = app(cx).active_profile().clone();
+        if &from == target {
+            return Ok(());
+        }
+        if app(cx).profiles.get(target).is_none() {
+            return Err(format!("no profile {target}"));
+        }
+        // What a relaunch restores: the profile being left as it is now.
+        for window in app(cx).windows_of(&from).cloned().collect::<Vec<_>>() {
+            Self::with_workspace(&window, cx, |ws, win, cx| ws.persist(win, cx));
+        }
+
+        let paths = app(cx).root.profile(target);
+        // Before the target's settings resolve their fonts and icon themes.
+        crate::active_profile::set(paths.clone());
+        crate::fonts::poll_custom(cx);
+        let slot = match app_mut(cx).parked.remove(target) {
+            Some(slot) => slot,
+            None => ProfileSlot::open(&paths),
+        };
+        let ProfileSlot { data, settings } = slot;
+        let leaving_settings = SettingsStore::swap_in(cx, settings);
+        let first_free = app(cx).next_id;
+        let state = app_mut(cx);
+        let ProfileData { store, tips, mut hub, mut recent, usage, worktrees, last_panes } = data;
+        hub.ids_start_at(first_free);
+        let leaving = ProfileData {
+            store: std::mem::replace(&mut state.store, store),
+            tips: std::mem::replace(&mut state.tips, tips),
+            hub: std::mem::replace(&mut state.hub, hub),
+            usage: std::mem::replace(&mut state.usage, usage),
+            worktrees: std::mem::replace(&mut state.worktrees, worktrees),
+            last_panes: std::mem::replace(&mut state.last_panes, last_panes),
+            recent: Vec::new(),
+        };
+        state.menu.switch_profile(&mut recent);
+        let leaving = ProfileData { recent, ..leaving };
+        state.parked.insert(from.clone(), ProfileSlot { data: leaving, settings: leaving_settings });
+        if let Err(err) = state.profiles.set_active(target) {
+            return Err(err.to_string());
+        }
+        if let Err(err) = state.profiles.save(&state.root) {
+            tracing::warn!("remembering the active profile: {err}");
+        }
+        state.applied_theme = None;
+
+        Self::show_profile_windows(&from, target, cx);
+        super::app::sync_system_look(cx);
+        super::app::apply_theme(cx);
+        super::app_menu::sync(cx);
+        cx.refresh_windows();
+        Ok(())
+    }
+
+    /// Hide `from`'s windows and bring `target`'s forward, opening them first when it has none.
+    fn show_profile_windows(from: &ProfileId, target: &ProfileId, cx: &mut App) {
+        for window in app(cx).windows_of(from).cloned().collect::<Vec<_>>() {
+            let _ = window.handle.update(cx, |_, win, _| crate::window_ops::hide(win));
+        }
+        for window in &mut app_mut(cx).windows {
+            if &window.profile == from {
+                window.hidden = true;
+            } else if &window.profile == target {
+                window.hidden = false;
+            }
+        }
+        let shown = app(cx).windows_of(target).cloned().collect::<Vec<_>>();
+        if shown.is_empty() {
+            // The first time in this profile since launch: its windows come back from its database.
+            let saved = app(cx)
+                .store
+                .as_ref()
+                .and_then(|s| {
+                    s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
+                })
+                .unwrap_or_default();
+            if saved.is_empty() {
+                super::app::open_workspace_window_in(target, None, None, cx);
+            }
+            for record in saved {
+                super::app::open_workspace_window_in(target, Some(record), None, cx);
+            }
+            return;
+        }
+        for window in &shown {
+            let _ = window.handle.update(cx, |_, win, _| crate::window_ops::show(win));
+        }
+        let front = shown.iter().find(|w| w.id == app(cx).front).or(shown.first()).cloned();
+        if let Some(front) = front {
+            crate::background::activate(cx);
+            let _ = front.handle.update(cx, |_, win, cx| crate::background::activate_window(win, cx));
+        }
+    }
+}
 
 /// The first ids free in every profile's database: one counter serves them all, so a terminal
 /// or window id never repeats across profiles. `live` is the shown profile's open database.

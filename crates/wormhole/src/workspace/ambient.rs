@@ -135,9 +135,19 @@ impl Workspace {
 /// Every tab of every window, oldest window first. A window that is being updated right now
 /// can't be read: call this outside any window's update (from the app's tick, or deferred).
 pub(crate) fn all_tabs(cx: &App) -> Vec<TabFacts> {
+    tabs_of(true, cx)
+}
+
+/// The tabs of the windows on screen: a profile that is not shown has its terminals running, but
+/// the menu bar, the Dock and the quick panel are about the shown profile.
+fn shown_tabs(cx: &App) -> Vec<TabFacts> {
+    tabs_of(false, cx)
+}
+
+fn tabs_of(with_hidden: bool, cx: &App) -> Vec<TabFacts> {
     let key = cx.active_window().map(|w| w.window_id());
     let mut tabs = Vec::new();
-    for window in &app(cx).windows {
+    for window in app(cx).windows.iter().filter(|w| with_hidden || !w.hidden) {
         let is_key = key == Some(window.handle.window_id());
         if let Ok(facts) = window.workspace.read_with(cx, |ws, cx| ws.tab_facts(is_key, cx)) {
             tabs.extend(facts);
@@ -148,7 +158,7 @@ pub(crate) fn all_tabs(cx: &App) -> Vec<TabFacts> {
 
 /// Every sidebar terminal of every window, for the status item, the Dock and the quick panel.
 pub(crate) fn terminals(cx: &App) -> Vec<notify::Terminal> {
-    let tabs = all_tabs(cx);
+    let tabs = shown_tabs(cx);
     let finished = super::notifications::finished_commands(cx);
     tabs.iter().map(|t| terminal(t, finished.and_then(|f| f.get(&t.tab)))).collect()
 }

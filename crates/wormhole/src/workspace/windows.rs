@@ -200,7 +200,7 @@ impl Workspace {
     }
 
     fn is_last_window(&self, cx: &App) -> bool {
-        app(cx).windows.iter().all(|w| w.id == self.window_id)
+        app(cx).windows.iter().all(|w| w.id == self.window_id || w.hidden)
     }
 
     /// The window is going away for good: forget its sessions, and stop saving them.
@@ -291,10 +291,23 @@ pub(crate) fn request_quit(cx: &mut App) {
     }
     let windows = state.windows.clone();
     let (mut running, mut programs) = (Vec::new(), Vec::new());
-    for workspace in windows.iter().filter_map(|w| w.workspace.upgrade()) {
+    // Terminals of a profile that is not shown run on out of sight: the question names them.
+    let mut elsewhere: Vec<(String, usize)> = Vec::new();
+    for window in &windows {
+        let Some(workspace) = window.workspace.upgrade() else { continue };
         for session in workspace.read(cx).sessions.iter().filter(|s| s.needs_close_confirmation(cx)) {
             running.push((session.status(cx), session.command_running(cx)));
             programs.extend(session.running_programs(false, cx));
+            if window.hidden {
+                let name = app(cx)
+                    .profiles
+                    .get(&window.profile)
+                    .map_or(window.profile.to_string(), |p| p.name.clone());
+                match elsewhere.iter_mut().find(|(n, _)| *n == name) {
+                    Some((_, count)) => *count += 1,
+                    None => elsewhere.push((name, 1)),
+                }
+            }
         }
     }
     let front = AppState::front_window(cx);
@@ -304,7 +317,7 @@ pub(crate) fn request_quit(cx: &mut App) {
     };
     let question = dialog::CloseQuestion {
         title: "Quit Wormhole?".into(),
-        detail: session::quit_detail(&running, &programs).into(),
+        detail: session::quit_detail(&running, &programs, &elsewhere).into(),
         confirm: "Quit",
     };
     let asked = AppState::with_workspace(&front, cx, |_, window, cx| {

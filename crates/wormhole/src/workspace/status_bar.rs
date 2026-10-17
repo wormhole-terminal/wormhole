@@ -151,7 +151,7 @@ impl Workspace {
         self.status_others = app(cx)
             .windows
             .iter()
-            .filter(|window| window.id != self.window_id)
+            .filter(|window| window.id != self.window_id && !window.hidden)
             .filter_map(|window| {
                 window.workspace.read_with(cx, |ws, cx| (window.id, ws.status_terminals(cx))).ok()
             })
@@ -167,7 +167,7 @@ impl Workspace {
         // last read them.
         let mut counted = Vec::new();
         let mut seen_self = false;
-        for window in &app(cx).windows {
+        for window in app(cx).windows.iter().filter(|w| !w.hidden) {
             if window.id == self.window_id {
                 counted.extend(self.status_terminals(cx));
                 seen_self = true;
