@@ -298,6 +298,9 @@ pub struct TerminalInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub changed: Option<usize>,
     pub pinned: bool,
+    /// The profile it is in, named only while there is more than one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
     /// On screen in its window.
     pub selected: bool,
     pub tabs: Vec<TabInfo>,

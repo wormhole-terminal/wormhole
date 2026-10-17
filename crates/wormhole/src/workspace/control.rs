@@ -282,6 +282,12 @@ impl Workspace {
             branch: repo.and_then(|g| g.branch.clone()),
             changed: repo.map(|g| g.files.len()),
             pinned: session.pinned,
+            profile: {
+                let profiles = &app(cx).profiles;
+                (profiles.profiles().len() > 1)
+                    .then(|| profiles.get(&self.profile).map(|p| p.name.clone()))
+                    .flatten()
+            },
             selected: ix == self.active,
             // The protocol still lists tabs: a terminal has the one, itself, with its one pane.
             tabs: vec![TabInfo {

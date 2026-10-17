@@ -8,6 +8,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Profiles: a whole Wormhole of its own for Work, Private or anything else, each with its terminals,
+  theme, fonts, keys, notifications, trusted projects, start folder, environment, git identity and a
+  separate Claude and Codex login. Settings → Profile (the first page) edits the one Wormhole is in and
+  makes new ones; Shell → Profile and the command palette switch ("Switch to Work"), open a window in
+  another profile or move this window to one. Switching hides the other profile's windows with their
+  terminals and agents still running. A window in another profile than the shown one wears a colour
+  edge across its top and its profile's name in the status bar. `Wormhole list` shows each terminal's
+  profile. A folder you list under a profile opens in that profile.
 - The status tile looks like an app icon: black for a terminal, Claude on its orange, Gemini on its
   blue, with a faint sheen and edge. The amber edge of a terminal that needs you breathes more slowly,
   and the tile comes in 32, 20, 18, 16 and 14 points for rows, tabs, the title row and the status bar.

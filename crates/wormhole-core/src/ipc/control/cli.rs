@@ -271,6 +271,9 @@ fn terminal_line(terminal: &TerminalInfo, home: Option<&Path>) -> String {
     if terminal.pinned {
         parts.push("pinned".into());
     }
+    if let Some(profile) = &terminal.profile {
+        parts.push(format!("profile {profile}"));
+    }
     if terminal.selected {
         parts.push("selected".into());
     }
@@ -598,6 +601,7 @@ mod tests {
             branch: Some("main".into()),
             changed: Some(2),
             pinned: true,
+            profile: None,
             selected: true,
             tabs: vec![
                 TabInfo {
