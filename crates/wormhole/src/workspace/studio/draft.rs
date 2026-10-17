@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use wormhole_core::config::{Config, resolve_theme_file};
+use wormhole_core::config::Config;
 use wormhole_core::tokens::{
     Appearance, Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, default_rule,
     syntax_keys, used_in,
@@ -27,11 +27,21 @@ pub(super) struct Themes {
 
 impl Themes {
     /// The user's themes folder.
-    pub(super) const USER: Themes = Themes {
-        resolve: resolve_theme_file,
-        saved_path: Config::saved_theme_path,
-        save: Config::save_theme,
-    };
+    pub(super) const USER: Themes =
+        Themes { resolve: resolve_in_profile, saved_path: saved_in_profile, save: save_in_profile };
+}
+
+// The Studio edits the themes of the profile Wormhole is in (RF-21): its own folder, not Default's.
+fn resolve_in_profile(file: &ThemeFile) -> Result<ThemeTokens, String> {
+    wormhole_core::config::resolve_theme_file_in(&crate::active_profile::paths().themes_dir(), file)
+}
+
+fn saved_in_profile(name: &str) -> Option<PathBuf> {
+    Config::saved_theme_path_in(&crate::active_profile::paths().themes_dir(), name)
+}
+
+fn save_in_profile(file: &ThemeFile) -> Result<PathBuf, String> {
+    Config::save_theme_to(&crate::active_profile::paths().themes_dir(), file)
 }
 
 /// Turns a draft into tokens. The Studio resolves with the user's themes available for

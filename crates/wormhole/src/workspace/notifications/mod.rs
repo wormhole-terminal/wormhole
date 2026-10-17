@@ -239,7 +239,6 @@ pub(crate) fn sweep(cx: &mut App) {
     if events.is_empty() {
         return;
     }
-    let settings = settings(cx).clone();
     let mut heard = Vec::new();
     for event in events {
         match event {
@@ -247,6 +246,12 @@ pub(crate) fn sweep(cx: &mut App) {
                 if let Some(facts) = tabs.iter().find(|facts| facts.tab == tab) {
                     heard.push((tab, facts.name.as_str(), kind, spoken_words(kind, facts)));
                     let happened = Happened { kind, facts, took, command: command.as_deref() };
+                    // By the settings of the profile the terminal is in, shown or not.
+                    let owner = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some());
+                    let settings = match owner {
+                        Some(owner) => app(cx).settings_of(&owner.profile, cx),
+                        None => settings(cx).clone(),
+                    };
                     announce(happened, app_active, &settings, cx);
                 }
             }

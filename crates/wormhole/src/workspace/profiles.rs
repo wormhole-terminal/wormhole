@@ -165,6 +165,15 @@ impl AppState {
         Ok(())
     }
 
+    /// The settings of `profile`: the live ones when it is shown, else its parked ones. A hidden
+    /// profile's agents tell you by their own profile's notification settings.
+    pub(crate) fn settings_of(&self, profile: &ProfileId, cx: &App) -> wormhole_core::config::Settings {
+        match self.parked.get(profile) {
+            Some(slot) if profile != self.active_profile() => slot.settings.settings.clone(),
+            _ => settings(cx).clone(),
+        }
+    }
+
     /// The windows of `profile`, shown or not.
     pub(crate) fn windows_of<'a>(&'a self, profile: &'a ProfileId) -> impl Iterator<Item = &'a OpenWindow> {
         self.windows.iter().filter(move |w| &w.profile == profile)

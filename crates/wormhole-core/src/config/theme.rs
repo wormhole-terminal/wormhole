@@ -42,7 +42,17 @@ impl Config {
     /// The file a theme saved as `name` replaces, if the themes dir already has
     /// a JSON theme by that name (so the caller can ask first).
     pub fn saved_theme_path(name: &str) -> Option<PathBuf> {
-        named_in(&UserThemes::read(&Self::themes_dir()), name)
+        Self::saved_theme_path_in(&Self::themes_dir(), name)
+    }
+
+    /// [`save_theme`](Self::save_theme) into a profile's themes folder.
+    pub fn save_theme_to(themes: &Path, file: &ThemeFile) -> Result<PathBuf, String> {
+        save_theme_in(themes, file)
+    }
+
+    /// [`saved_theme_path`](Self::saved_theme_path) in a profile's themes folder.
+    pub fn saved_theme_path_in(themes: &Path, name: &str) -> Option<PathBuf> {
+        named_in(&UserThemes::read(themes), name)
     }
 }
 
