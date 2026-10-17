@@ -288,8 +288,16 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .child(div().px_4().py_2().child(env.mark("folder.color", choices)))
         .child(div().px_4().pb_2().child(locked_choices))
         .child(div().px_4().pb_2().child(menu_dots))
-        .child(caption(ui, "A branch chip: the git branch and its changes, where the sidebar's rows show one"))
-        .child(div().px_4().pb_2().child(env.mark("branch.chip", style::branch_chip(ui, Some("ui-unify"), Some(3)))));
+        .child(caption(
+            ui,
+            "A branch chip: the git branch and its changes, where the sidebar's rows show one",
+        ))
+        .child(
+            div()
+                .px_4()
+                .pb_2()
+                .child(env.mark("branch.chip", style::branch_chip(ui, Some("ui-unify"), Some(3)))),
+        );
 
     // Terminals without an agent say what runs; an idle agent shows its logo.
     let code_font = crate::fonts::code_font(app).0;
