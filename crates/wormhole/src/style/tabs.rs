@@ -6,6 +6,7 @@
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 use super::controls::keycap;
@@ -30,13 +31,16 @@ pub struct TerminalTab {
     /// Drawn [`TAB_W`] wide whatever its name (the stacks and the bottom bar), instead of
     /// sharing the row down to [`TAB_MIN_W`].
     pub fixed: bool,
+    /// The compact list's tab: one line (the name) and a mini tile, [`TAB_COMPACT_H`] tall.
+    pub compact: bool,
 }
 
 /// One terminal's tab: its status tile, then its name over its second line; the selected one in
 /// the sidebar's selection, the others with a hover fill. Add `.on_click(…)`.
 #[track_caller]
 pub fn terminal_tab(id: impl Into<ElementId>, ui: UiColors, tab: TerminalTab) -> Stateful<Div> {
-    let TerminalTab { tile, name, detail, tone, detail_font, selected, hint, fixed } = tab;
+    let TerminalTab { tile, name, detail, tone, detail_font, selected, hint, fixed, compact } = tab;
+    let detail = detail.filter(|_| !compact);
     let tone_color = match tone {
         RowTone::Plain if selected => ui.selected_muted,
         RowTone::Plain => ui.muted,
@@ -49,8 +53,8 @@ pub fn terminal_tab(id: impl Into<ElementId>, ui: UiColors, tab: TerminalTab) ->
         .relative()
         .flex()
         .items_center()
-        .gap(px(TILE_GAP))
-        .min_h(px(TAB_MIN_H))
+        .gap(px(if compact { COMPACT_GAP } else { TILE_GAP }))
+        .min_h(px(if compact { TAB_COMPACT_H } else { TAB_MIN_H }))
         .pl(px(TAB_PAD_LEAD))
         .pr(px(TAB_PAD_END))
         .rounded(px(CARD_ROW_RADIUS))
@@ -106,6 +110,9 @@ pub fn terminal_tab(id: impl Into<ElementId>, ui: UiColors, tab: TerminalTab) ->
 /// A tab's least height (its tile and room round it), the most a shared one grows to, and its
 /// padding: less before the tile than after the text.
 const TAB_MIN_H: f32 = 44.0;
+/// A compact tab's height (a mini tile and one line), and the gap after its tile.
+pub const TAB_COMPACT_H: f32 = 32.0;
+const COMPACT_GAP: f32 = 8.0;
 const TAB_MAX_W: f32 = 220.0;
 const TAB_PAD_LEAD: f32 = 6.0;
 const TAB_PAD_END: f32 = 10.0;
@@ -208,7 +215,15 @@ pub struct TabPile {
     /// The status tile of the terminal that most wants attention in it.
     pub lead: AnyElement,
     pub fan: PileFan,
+    /// On Liquid Glass: the glass under each card (`0` the front one, then the ones behind), and
+    /// no opaque fills, which would hide it.
+    pub glass: Option<PileGlass>,
+    /// The compact list's pile: [`TAB_COMPACT_H`] tall, its name and summary on one line.
+    pub compact: bool,
 }
+
+/// The glass under a pile's card at a depth: an element filling the card.
+pub type PileGlass = Rc<dyn Fn(u8) -> AnyElement>;
 
 /// A set that isn't the selected one, in the stacks layout: its tabs piled up, the front card
 /// showing the tile of the terminal that most wants attention, its name and a summary. Under the
@@ -216,28 +231,31 @@ pub struct TabPile {
 /// `.on_click(…)` (it opens the set).
 #[track_caller]
 pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Stateful<Div> {
-    let TabPile { color, name, summary, summary_color, lead, fan } = pile;
+    let TabPile { color, name, summary, summary_color, lead, fan, glass, compact } = pile;
     let id: ElementId = id.into();
     let color = color.unwrap_or(ui.faint);
-    // A card behind, `depth` back, at `spread` (0 stacked, 1 fanned out).
-    let card = move |depth: f32, spread: f32| {
-        let (x, y) = (PILE_STEP_X + spread * PILE_FAN_X, PILE_STEP_Y + spread * PILE_FAN_Y);
-        div()
-            .absolute()
-            .top(px(-y * depth))
-            .left(px(x * depth))
-            .size_full()
-            .rounded(px(PILE_RADIUS))
-            .bg(ui.band_solid)
-            .child(
-                div()
-                    .size_full()
-                    .rounded(px(PILE_RADIUS))
-                    .bg(color.opacity((PILE_TINT + spread * PILE_HOVER) * (1.0 - depth * 0.25)))
-                    .outlined(ui, color.opacity(PILE_OUTLINE)),
-            )
+    let on_glass = glass.is_some();
+    // A card behind, `depth` back, at `spread` (0 stacked, 1 fanned out). On glass it is the glass
+    // alone: a fill or an outline would show through the see-through card in front of it.
+    let card = {
+        let glass = glass.clone();
+        move |depth: f32, spread: f32| {
+            let (x, y) = (PILE_STEP_X + spread * PILE_FAN_X, PILE_STEP_Y + spread * PILE_FAN_Y);
+            let card = div().absolute().top(px(-y * depth)).left(px(x * depth)).size_full();
+            match &glass {
+                Some(glass) => card.child(glass(depth as u8)),
+                None => card.rounded(px(PILE_RADIUS)).bg(ui.band_solid).child(
+                    div()
+                        .size_full()
+                        .rounded(px(PILE_RADIUS))
+                        .bg(color.opacity((PILE_TINT + spread * PILE_HOVER) * (1.0 - depth * 0.25)))
+                        .outlined(ui, color.opacity(PILE_OUTLINE)),
+                ),
+            }
+        }
     };
     let behind = |depth: f32| -> AnyElement {
+        let card = card.clone();
         match fan {
             PileFan::Rest => card(depth, 0.0).into_any_element(),
             PileFan::Opening | PileFan::Closing => {
@@ -276,12 +294,13 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
                 .relative()
                 .flex()
                 .items_center()
-                .gap(px(TILE_GAP))
-                .min_h(px(TAB_MIN_H))
+                .gap(px(if compact { COMPACT_GAP } else { TILE_GAP }))
+                .min_h(px(if compact { TAB_COMPACT_H } else { TAB_MIN_H }))
                 .pl(px(TAB_PAD_LEAD))
                 .pr_3()
                 .rounded(px(PILE_RADIUS))
-                .bg(ui.band_solid)
+                .when(!on_glass, |d| d.bg(ui.band_solid))
+                .children(glass.as_ref().map(|glass| glass(0)))
                 .child(
                     div()
                         .absolute()
@@ -297,7 +316,7 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
                     div()
                         .relative()
                         .flex()
-                        .flex_col()
+                        .map(|d| if compact { d.items_center().gap_2() } else { d.flex_col() })
                         .child(
                             div()
                                 .text_body()
@@ -313,7 +332,8 @@ pub fn tab_pile(id: impl Into<ElementId>, ui: UiColors, pile: TabPile) -> Statef
         )
 }
 
-const PILE_RADIUS: f32 = 10.0;
+/// A pile's cards' and a bottom-bar segment's corners.
+pub const PILE_RADIUS: f32 = 10.0;
 /// How far each card behind sits from the one in front, and how much further it goes fanned out:
 /// mostly sideways, since upwards the two behind have only the tab bar's 8 pt over the tabs.
 const PILE_STEP_X: f32 = 4.0;
@@ -332,6 +352,7 @@ pub fn tab_segment(
     ui: UiColors,
     color: Option<Hsla>,
     name: impl Into<SharedString>,
+    compact: bool,
 ) -> Stateful<Div> {
     let color = color.unwrap_or(ui.faint);
     div()
@@ -341,7 +362,7 @@ pub fn tab_segment(
         .items_center()
         .gap_1()
         .min_w_0()
-        .h(px(SEGMENT_H))
+        .h(px(if compact { SEGMENT_COMPACT_H } else { SEGMENT_H }))
         .pr_1()
         .rounded(px(PILE_RADIUS))
         .overflow_hidden()
@@ -373,6 +394,8 @@ pub fn tab_segment(
 }
 
 const SEGMENT_H: f32 = 50.0;
+/// A compact segment: a compact tab and the room round it.
+const SEGMENT_COMPACT_H: f32 = TAB_COMPACT_H + 8.0;
 const SEGMENT_EDGE: f32 = 3.0;
 /// The stripe's distance from the segment's top and bottom, past its corners, and from its left.
 const SEGMENT_EDGE_INSET: f32 = PILE_RADIUS;

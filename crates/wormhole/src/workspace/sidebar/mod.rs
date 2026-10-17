@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
 use super::session::home_dir;
 use super::*;
 
@@ -35,6 +36,9 @@ mod row_menu;
 mod rows;
 mod tab_bar;
 mod tick;
+
+/// The room a loose terminal's glass leaves above and below it.
+const LOOSE_GAP: f32 = 2.0;
 
 use facts::{RowInfo, row_times};
 use motion::{ItemKey, ListMotion};
@@ -251,6 +255,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui(cx);
+        let glass = self.glass_on(cx);
         let infos = self.row_infos(cx);
         let listing = self.listing(&infos, cx);
         *self.sidebar.times_drawn.borrow_mut() = row_times(&infos, cx);
@@ -311,6 +316,28 @@ impl Workspace {
             let gap_above =
                 at > 0 && matches!(listing.entries.get(at - 1), Some(Entry::Row { band: None, .. }));
             let segment = style::card_segment(ui, top, bottom, in_card, gap_above, line);
+            // Each card, and each loose terminal, is a glass of its own.
+            let segment = if glass {
+                let (key, inset) = match (own, *entry) {
+                    (Some(band), _) => (
+                        glass_key(GlassKind::Card, 1 + band as u64),
+                        Insets(
+                            style::CARD_MARGIN,
+                            if top && gap_above { style::CARD_GAP } else { 0.0 },
+                            style::CARD_MARGIN,
+                            if bottom { style::CARD_GAP } else { 0.0 },
+                        ),
+                    ),
+                    (None, Entry::Row { session, .. }) => (
+                        glass_key(GlassKind::Loose, infos[session].id as u64),
+                        Insets(style::CARD_MARGIN, LOOSE_GAP, style::CARD_MARGIN, LOOSE_GAP),
+                    ),
+                    (None, Entry::Band { .. }) => (0, Insets(0.0, 0.0, 0.0, 0.0)),
+                };
+                segment.child(self.glass_probe(key, inset, style::CARD_RADIUS, Some(LIST_CLIP)))
+            } else {
+                segment
+            };
             let line = match *entry {
                 Entry::Row { session, .. } => {
                     let id = infos[session].id;
@@ -339,7 +366,7 @@ impl Workspace {
             .overflow_hidden()
             .h_full()
             .flex_none()
-            .bg(ui.panel)
+            .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
             .child(self.render_sidebar_header(listing.idle, window, cx))
             .children(self.filter_chip(cx))
             .child(
@@ -349,6 +376,7 @@ impl Workspace {
                     .min_h_0()
                     // The stuck band is pushed up out of the list by the next one, not over the header.
                     .overflow_hidden()
+                    .when(glass, |d| d.child(self.glass_clip_probe(LIST_CLIP)))
                     .child({
                         let list = div()
                             .id("session-list")

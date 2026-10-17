@@ -94,6 +94,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                     selected,
                     hint: None,
                     fixed,
+                    compact: false,
                 },
             )
             .into_any_element()
@@ -140,9 +141,11 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             summary_color: ui.attention_text,
             lead: tile("g-pile-lead", claude(), StatusGlyph::NeedsYou, false, false),
             fan: PileFan::Rest,
+            glass: None,
+            compact: false,
         },
     );
-    let segment = style::tab_segment("g-segment", ui, Some(teal), "Work")
+    let segment = style::tab_segment("g-segment", ui, Some(teal), "Work", false)
         .child(tile("g-segment-tile", claude(), StatusGlyph::Working, false, true))
         .child(div().pr_3().text_caption().text_color(ui.muted).child("3"));
     let bars = div().flex().items_center().gap_4().px_4().py_3().child(pile).child(segment);

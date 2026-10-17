@@ -17,12 +17,17 @@
 use gpui_kit::Window;
 use wormhole_core::tokens::Appearance;
 
-/// The blur behind one window. Hidden until enabled; cheap to toggle.
+/// The blur behind one window. Hidden until enabled; cheap to toggle. Under it lies a plain fill
+/// (`set_backing`) for a window that has Liquid Glass but no blur: the glass is drawn below GPUI's
+/// view, so what GPUI leaves see-through round it has to be painted by AppKit too.
 #[derive(Default)]
 pub struct Blur {
     #[cfg(target_os = "macos")]
     effect: Option<objc2::rc::Retained<objc2_app_kit::NSVisualEffectView>>,
+    #[cfg(target_os = "macos")]
+    backing: Option<objc2::rc::Retained<objc2_app_kit::NSBox>>,
     enabled: Option<bool>,
+    backing_color: Option<Option<[u32; 4]>>,
 }
 
 impl Blur {
@@ -31,8 +36,8 @@ impl Blur {
     pub fn install(window: &Window, enabled: bool) -> Self {
         use objc2::MainThreadMarker;
         use objc2_app_kit::{
-            NSAutoresizingMaskOptions, NSView, NSVisualEffectBlendingMode, NSVisualEffectMaterial,
-            NSVisualEffectState, NSVisualEffectView, NSWindowOrderingMode,
+            NSAutoresizingMaskOptions, NSBox, NSBoxType, NSTitlePosition, NSView, NSVisualEffectBlendingMode,
+            NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindowOrderingMode,
         };
         use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
@@ -61,12 +66,58 @@ impl Blur {
         effect.setHidden(!enabled);
         material::adopt(&effect);
         parent.addSubview_positioned_relativeTo(&effect, NSWindowOrderingMode::Below, Some(view));
-        Self { effect: Some(effect), enabled: Some(enabled) }
+
+        let backing = NSBox::initWithFrame(mtm.alloc(), parent.bounds());
+        backing.setBoxType(NSBoxType::Custom);
+        backing.setTitlePosition(NSTitlePosition::NoTitle);
+        backing.setBorderWidth(0.0);
+        backing.setContentViewMargins(objc2_foundation::NSSize::new(0.0, 0.0));
+        backing.setAutoresizingMask(
+            NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+        backing.setHidden(true);
+        parent.addSubview_positioned_relativeTo(&backing, NSWindowOrderingMode::Below, Some(&effect));
+        Self {
+            effect: Some(effect),
+            backing: Some(backing),
+            enabled: Some(enabled),
+            backing_color: Some(None),
+        }
     }
 
     #[cfg(not(target_os = "macos"))]
     pub fn install(_window: &Window, enabled: bool) -> Self {
-        Self { enabled: Some(enabled) }
+        Self { enabled: Some(enabled), backing_color: Some(None) }
+    }
+
+    /// Fill the window with `color` under the glass (`None`: no fill, the blur or nothing shows);
+    /// a no-op when nothing changes.
+    pub fn set_backing(&mut self, color: Option<gpui_kit::Hsla>) {
+        let key = color.map(|c| {
+            let c = c.to_rgb();
+            [c.r, c.g, c.b, c.a].map(|v| (v * 1000.0).round() as u32)
+        });
+        if self.backing_color == Some(key) {
+            return;
+        }
+        self.backing_color = Some(key);
+        #[cfg(target_os = "macos")]
+        if let Some(backing) = &self.backing {
+            match color {
+                Some(color) => {
+                    let c = color.to_rgb();
+                    let fill = objc2_app_kit::NSColor::colorWithSRGBRed_green_blue_alpha(
+                        f64::from(c.r),
+                        f64::from(c.g),
+                        f64::from(c.b),
+                        f64::from(c.a),
+                    );
+                    backing.setFillColor(&fill);
+                    backing.setHidden(false);
+                }
+                None => backing.setHidden(true),
+            }
+        }
     }
 
     /// Show or hide the blur; a no-op when nothing changes, so views may call
@@ -83,6 +134,117 @@ impl Blur {
     }
 }
 
+/// Liquid Glass (macOS 26): `NSGlassEffectView`s behind GPUI's view, one for each sidebar card,
+/// each loose terminal, and each tab, chip and pile of the tab bars, floating over the window's
+/// blur. GPUI paints those regions see-through and keeps only tints on top. Without the class
+/// (before macOS 26) [`Glass::available`] is false and the windows keep today's blur.
+///
+/// A frame says where the regions are (`propose`, from the layout's own bounds, so the glass moves
+/// with a sliding column, a scrolling list or a pile fanning out) and one last probe applies them
+/// (`commit`); a region nobody proposed is hidden. Pieces proposed under one key (the stretches of
+/// a card) join up. A region may name a clip (`clip_to`, a scrolling list's own room) it is cut
+/// to. Glass views stack by key: a higher key lies over a lower one.
+#[derive(Default)]
+pub struct Glass {
+    #[cfg(target_os = "macos")]
+    native: std::cell::RefCell<Option<native::Views>>,
+    pending: std::cell::RefCell<std::collections::BTreeMap<u64, (GlassRect, Option<u32>)>>,
+    clips: std::cell::RefCell<std::collections::HashMap<u32, GlassRect>>,
+    shown: std::cell::RefCell<Vec<GlassRect>>,
+}
+
+/// Where a glass sits, in the window's points from its top left, and how round it is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GlassRect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub radius: f32,
+}
+
+impl GlassRect {
+    fn right(&self) -> f32 {
+        self.x + self.w
+    }
+
+    fn bottom(&self) -> f32 {
+        self.y + self.h
+    }
+
+    fn join(self, other: Self) -> Self {
+        let (x, y) = (self.x.min(other.x), self.y.min(other.y));
+        Self {
+            x,
+            y,
+            w: self.right().max(other.right()) - x,
+            h: self.bottom().max(other.bottom()) - y,
+            radius: self.radius,
+        }
+    }
+
+    fn clipped(self, to: Self) -> Option<Self> {
+        let (x, y) = (self.x.max(to.x), self.y.max(to.y));
+        let (w, h) = (self.right().min(to.right()) - x, self.bottom().min(to.bottom()) - y);
+        (w > 0.0 && h > 0.0).then_some(Self { x, y, w, h, radius: self.radius })
+    }
+}
+
+impl Glass {
+    #[cfg(target_os = "macos")]
+    pub fn install(window: &Window) -> Self {
+        Self { native: std::cell::RefCell::new(native::Views::find(window)), ..Self::default() }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn install(_window: &Window) -> Self {
+        Self::default()
+    }
+
+    /// Whether this Mac has Liquid Glass.
+    pub fn available(&self) -> bool {
+        #[cfg(target_os = "macos")]
+        return self.native.borrow().is_some();
+        #[cfg(not(target_os = "macos"))]
+        false
+    }
+
+    /// Clip `id` is `rect` this frame: the regions that name it are cut to it.
+    pub fn clip_to(&self, id: u32, rect: GlassRect) {
+        self.clips.borrow_mut().insert(id, rect);
+    }
+
+    pub fn propose(&self, key: u64, rect: GlassRect, clip: Option<u32>) {
+        let mut pending = self.pending.borrow_mut();
+        let rect = match pending.get(&key) {
+            Some(&(have, _)) => have.join(rect),
+            None => rect,
+        };
+        pending.insert(key, (rect, clip));
+    }
+
+    /// Move the glasses to what this frame proposed, and hide the rest.
+    pub fn commit(&self) {
+        let clips = std::mem::take(&mut *self.clips.borrow_mut());
+        let next: Vec<GlassRect> = std::mem::take(&mut *self.pending.borrow_mut())
+            .into_values()
+            .filter_map(|(rect, clip)| match clip.and_then(|id| clips.get(&id)) {
+                Some(&clip) => rect.clipped(clip),
+                None => Some(rect),
+            })
+            .collect();
+        if next == *self.shown.borrow() {
+            return;
+        }
+        tracing::debug!(glasses = next.len(), "liquid glass placed");
+        #[cfg(target_os = "macos")]
+        if let Some(views) = self.native.borrow_mut().as_mut() {
+            views.place(&next);
+        }
+        *self.shown.borrow_mut() = next;
+    }
+}
+
 /// Every window's material follows `appearance` (the theme's) from now on, the windows open
 /// now and the ones that open later.
 pub fn set_material_appearance(appearance: Appearance) {
@@ -93,27 +255,94 @@ pub fn set_material_appearance(appearance: Appearance) {
 }
 
 #[cfg(target_os = "macos")]
+mod native {
+    use objc2::rc::Retained;
+    use objc2::runtime::AnyClass;
+    use objc2::{MainThreadMarker, Message as _};
+    use objc2_app_kit::{NSGlassEffectView, NSView, NSWindowOrderingMode};
+    use objc2_foundation::{NSPoint, NSRect, NSSize};
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    use super::{GlassRect, Window, material};
+
+    /// GPUI's view, its parent, and the glass views made so far (a pool: the nth region uses the
+    /// nth view, and the rest are hidden).
+    pub(super) struct Views {
+        mtm: MainThreadMarker,
+        parent: Retained<NSView>,
+        anchor: Retained<NSView>,
+        glass: Vec<Retained<NSGlassEffectView>>,
+    }
+
+    impl Views {
+        #[allow(unsafe_code)] // AppKit interop; GPUI hands out its live NSView on the main thread.
+        pub(super) fn find(window: &Window) -> Option<Self> {
+            // `NSGlassEffectView` only exists from macOS 26; naming the class on an older
+            // system would abort, so ask the runtime first.
+            AnyClass::get(c"NSGlassEffectView")?;
+            let mtm = MainThreadMarker::new()?;
+            let RawWindowHandle::AppKit(handle) = HasWindowHandle::window_handle(window).ok()?.as_raw()
+            else {
+                return None;
+            };
+            // SAFETY: see above.
+            let anchor: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
+            let parent = unsafe { anchor.superview() }?;
+            Some(Self { mtm, parent, anchor: anchor.retain(), glass: Vec::new() })
+        }
+
+        pub(super) fn place(&mut self, rects: &[GlassRect]) {
+            let base = self.anchor.frame();
+            let flipped = self.parent.isFlipped();
+            while self.glass.len() < rects.len() {
+                let view = NSGlassEffectView::initWithFrame(self.mtm.alloc(), NSRect::ZERO);
+                material::adopt(&view);
+                // Just under GPUI's view, over the window's blur.
+                self.parent.addSubview_positioned_relativeTo(
+                    &view,
+                    NSWindowOrderingMode::Below,
+                    Some(&self.anchor),
+                );
+                self.glass.push(view);
+            }
+            for (ix, view) in self.glass.iter().enumerate() {
+                let Some(rect) = rects.get(ix) else {
+                    view.setHidden(true);
+                    continue;
+                };
+                let (x, w, h) = (f64::from(rect.x), f64::from(rect.w), f64::from(rect.h));
+                let y = f64::from(rect.y);
+                let y = if flipped { base.origin.y + y } else { base.origin.y + base.size.height - y - h };
+                view.setCornerRadius(f64::from(rect.radius));
+                view.setFrame(NSRect::new(NSPoint::new(base.origin.x + x, y), NSSize::new(w, h)));
+                view.setHidden(false);
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
 mod material {
     use std::cell::{Cell, RefCell};
 
     use objc2::rc::Weak;
     use objc2_app_kit::{
-        NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-        NSVisualEffectView,
+        NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSView,
     };
     use wormhole_core::tokens::Appearance;
 
     thread_local! {
         /// Every window's effect view (AppKit lives on the main thread), forgotten as windows close.
-        static EFFECTS: RefCell<Vec<Weak<NSVisualEffectView>>> = const { RefCell::new(Vec::new()) };
+        static EFFECTS: RefCell<Vec<Weak<NSView>>> = const { RefCell::new(Vec::new()) };
         static APPEARANCE: Cell<Option<Appearance>> = const { Cell::new(None) };
     }
 
-    pub(super) fn adopt(effect: &objc2::rc::Retained<NSVisualEffectView>) {
+    /// A blur or glass view that follows the theme's appearance from now on.
+    pub(super) fn adopt(effect: &NSView) {
         if let Some(appearance) = APPEARANCE.get() {
             apply(effect, appearance);
         }
-        EFFECTS.with_borrow_mut(|effects| effects.push(Weak::from_retained(effect)));
+        EFFECTS.with_borrow_mut(|effects| effects.push(Weak::new(effect)));
     }
 
     pub(super) fn set(appearance: Appearance) {
@@ -130,7 +359,7 @@ mod material {
     }
 
     #[allow(unsafe_code)]
-    fn apply(effect: &NSVisualEffectView, appearance: Appearance) {
+    fn apply(effect: &NSView, appearance: Appearance) {
         // SAFETY: AppKit's appearance names are immutable statics, set before main runs.
         let name = unsafe {
             match appearance {

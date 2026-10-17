@@ -191,7 +191,7 @@ impl Workspace {
                                 .on_click(cx.listener(|this, _, window, cx| this.new_group(window, cx))),
                         )
                     })
-                    // A right-click on the + offers the other shells.
+                    // The chevron after the + offers the other shells, and so does a right-click on it.
                     .child(
                         self.with_shell_menu(
                             "new-session-shells",
@@ -206,7 +206,8 @@ impl Workspace {
                             .on_click(cx.listener(|this, _, window, cx| this.new_session(window, cx))),
                             cx,
                         ),
-                    ),
+                    )
+                    .children(self.shell_chevron("new-session-chevron", Anchor::TopRight, cx)),
             )
             .into_any_element()
     }

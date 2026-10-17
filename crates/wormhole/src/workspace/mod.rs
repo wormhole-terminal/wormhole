@@ -58,6 +58,7 @@ mod folder_color;
 #[cfg(test)]
 mod folder_color_tests;
 mod git_panel;
+mod glass;
 mod items;
 #[cfg(test)]
 mod key_tests;
@@ -268,6 +269,8 @@ pub struct Workspace {
     /// The note whose text has the keyboard right now (drawn as the active item).
     editing_note: Option<EntityId>,
     blur: vibrancy::Blur,
+    /// Liquid Glass behind the sidebar or the tab bar (macOS 26).
+    glass: std::rc::Rc<vibrancy::Glass>,
     /// Where the window was last seen, as saved.
     bounds: Option<String>,
     bounds_watch: window_bounds::BoundsWatch,
@@ -392,6 +395,7 @@ impl Workspace {
             focused_note: None,
             editing_note: None,
             blur: vibrancy::Blur::install(window, aux_window::wants_blur(settings(cx), true)),
+            glass: std::rc::Rc::new(vibrancy::Glass::install(window)),
             bounds: record.bounds,
             bounds_watch: Default::default(),
             title: SharedString::default(),
@@ -434,7 +438,10 @@ impl Workspace {
 
     /// Apply settings that live outside GPUI's render tree.
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        self.blur.set_enabled(aux_window::wants_blur(settings(cx), true));
+        let blur = aux_window::wants_blur(settings(cx), true);
+        self.blur.set_enabled(blur);
+        // Glass without the blur stands on the panel's colour, as the sidebar would have painted.
+        self.blur.set_backing((self.glass_on(cx) && !blur).then(|| ui(cx).panel));
     }
 
     fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {

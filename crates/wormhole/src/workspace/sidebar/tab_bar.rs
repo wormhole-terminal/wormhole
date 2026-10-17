@@ -5,6 +5,7 @@
 //! its terminal's row in short: the status tile, the name and the second line, the row's menu and
 //! its close ×.
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::sidebar::TabLayout;
@@ -14,15 +15,18 @@ use wormhole_core::sidebar::text::place_detail;
 
 use super::super::chrome::{PANEL_TOGGLE_SLOT, TitleDrag as _, lights_end, traffic_light_position};
 use super::super::folder_color;
+use super::super::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
 use super::rows::{Frame, PLACE_CHARS, SecondLine, second_line, tile_for};
 use super::*;
 use crate::settings::SettingsStore;
-use crate::style::{GroupChip, PileFan, StatusGlyph, StatusTile, TabPile, TerminalTab, TileFace};
+use crate::style::{GroupChip, PileFan, PileGlass, StatusGlyph, StatusTile, TabPile, TerminalTab, TileFace};
 
 /// The room between the traffic lights and the first thing after them on a tab bar.
 const AFTER_LIGHTS: f32 = 12.0;
-/// The stacks layout's one row: a tab and the room round it.
+/// The stacks layout's one row: a tab and the room round it (8 above and below, where a pile's
+/// cards fan out), with full tabs and with compact ones.
 const STACKS_H: f32 = 60.0;
+const STACKS_COMPACT_H: f32 = style::TAB_COMPACT_H + 16.0;
 /// The two-row layout's tab row: its card's padding, and the room under it.
 const TAB_ROW_PAD: f32 = 6.0;
 const TAB_ROW_BOTTOM: f32 = 8.0;
@@ -39,6 +43,8 @@ pub(in crate::workspace) struct TabBarState {
     last: HashMap<String, i64>,
     /// The height of the row the traffic lights were last centred on.
     lights_row: Option<f32>,
+    /// The list is compact (one line a terminal): so are the tabs.
+    compact: bool,
 }
 
 /// One set as the bar draws it.
@@ -65,6 +71,7 @@ impl Workspace {
         let s = settings(cx);
         self.sidebar.tabs.layout =
             (s.terminals_in == wormhole_core::sidebar::TerminalsIn::Tabs).then_some(s.tab_layout);
+        self.sidebar.tabs.compact = s.compact_sidebar;
         let row = self.top_row_h();
         if self.sidebar.tabs.lights_row != Some(row) {
             self.sidebar.tabs.lights_row = Some(row);
@@ -76,6 +83,7 @@ impl Workspace {
     /// centred on: the stacks layout's tab bar, else a title row.
     pub(in crate::workspace) fn top_row_h(&self) -> f32 {
         match self.sidebar.tabs.layout {
+            Some(TabLayout::Stacks) if self.sidebar.tabs.compact => STACKS_COMPACT_H,
             Some(TabLayout::Stacks) => STACKS_H,
             _ => style::TITLE_ROW_H,
         }
@@ -105,8 +113,15 @@ impl Workspace {
             })
             .collect();
         let frame = Frame::new(self, self.window_width, window, cx);
-        let bar =
-            Bar { sets: &sets, looks: &looks, current, infos: &infos, numbers: &numbers, frame: &frame };
+        let bar = Bar {
+            glass: self.glass_on(cx),
+            sets: &sets,
+            looks: &looks,
+            current,
+            infos: &infos,
+            numbers: &numbers,
+            frame: &frame,
+        };
         match layout {
             TabLayout::TwoRows => self.two_rows(&bar, window, cx),
             TabLayout::Stacks => self.stacks(&bar, window, cx),
@@ -154,8 +169,10 @@ impl Workspace {
         }
     }
 
-    /// One terminal's tab: its tile, name and second line, its menu and its close ×.
-    fn tab(&self, bar: &Bar, ix: usize, fixed: bool, cx: &mut Context<Self>) -> AnyElement {
+    /// One terminal's tab: its tile, name and second line, its menu and its close ×. On glass a
+    /// tab across the top is a glass of its own (`glassy`); in a bottom-bar segment, which is one
+    /// already, it isn't.
+    fn tab(&self, bar: &Bar, ix: usize, fixed: bool, glassy: bool, cx: &mut Context<Self>) -> AnyElement {
         let Some(info) = bar.infos.get(ix) else { return div().into_any_element() };
         let frame = bar.frame;
         let ui = frame.ui;
@@ -169,7 +186,7 @@ impl Workspace {
             ("tab", info.id as u64),
             ui,
             TerminalTab {
-                tile: tile_for(info, frame, selected, false, cx),
+                tile: tile_for(info, frame, selected, frame.compact, cx),
                 name: info.name.clone(),
                 detail: text.map(SharedString::from),
                 tone,
@@ -177,8 +194,18 @@ impl Workspace {
                 selected,
                 hint,
                 fixed,
+                compact: frame.compact,
             },
         )
+        .when(bar.glass && selected, |d| d.bg(ui.selected_row.opacity(GLASS_SELECTED)))
+        .when(bar.glass && glassy, |d| {
+            d.child(self.glass_probe(
+                glass_key(GlassKind::Tab, info.id as u64),
+                Insets::NONE,
+                style::CARD_ROW_RADIUS,
+                Some(TAB_ROW_CLIP),
+            ))
+        })
         .group(group.clone())
         .role(Role::Tab)
         .aria_label(info.name.clone())
@@ -189,14 +216,28 @@ impl Workspace {
     }
 
     /// The + after a set's tabs: a new terminal in it (in its group, or where the selected one is).
+    /// A right-click offers the other shells (profiles), as the sidebar's + does; one opens in the
+    /// selected terminal's set too.
     fn new_tab_button(&self, look: &SetLook, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let group = look.group;
-        style::icon_button("tab-new", ui, IconName::Plus, "New terminal")
-            .on_click(cx.listener(move |this, _, window, cx| match group {
-                Some(group) => this.new_session_in_group(group, window, cx),
-                None => this.new_session(window, cx),
-            }))
+        let button = style::icon_button(
+            "tab-new",
+            ui,
+            IconName::Plus,
+            keymap::with_key("New terminal", ActionId::NewTerminal),
+        )
+        .on_click(cx.listener(move |this, _, window, cx| match group {
+            Some(group) => this.new_session_in_group(group, window, cx),
+            None => this.new_session(window, cx),
+        }));
+        let plus = self.with_shell_menu("tab-new-shells", button, cx);
+        div()
+            .flex()
+            .flex_none()
+            .items_center()
+            .child(plus)
+            .children(self.shell_chevron("tab-new-chevron", Anchor::TopLeft, cx))
             .into_any_element()
     }
 
@@ -247,6 +288,14 @@ impl Workspace {
                         alert,
                     },
                 )
+                .when(bar.glass, |d| {
+                    d.child(self.glass_probe(
+                        glass_key(GlassKind::Chip, at as u64),
+                        Insets::NONE,
+                        f32::from(ui.radius),
+                        None,
+                    ))
+                })
                 .on_click(
                     cx.listener(move |this, _, window, cx| this.open_set(&set, &key, group, window, cx)),
                 )
@@ -256,14 +305,15 @@ impl Workspace {
         let current = &bar.sets[bar.current];
         let look = &bar.looks[bar.current];
         let tint = look.color.unwrap_or(ui.border);
-        let tabs: Vec<AnyElement> = current.members.iter().map(|&ix| self.tab(bar, ix, false, cx)).collect();
+        let tabs: Vec<AnyElement> =
+            current.members.iter().map(|&ix| self.tab(bar, ix, false, true, cx)).collect();
         div()
             .id("tab-bar")
             .flex()
             .flex_col()
             .flex_none()
-            .bg(ui.panel)
-            .rule_bottom(ui)
+            .bg(bar.surface(ui))
+            .when(!bar.glass, |d| d.rule_bottom(ui))
             .child(
                 div()
                     .id("tab-sets")
@@ -290,8 +340,9 @@ impl Workspace {
                         .p(px(TAB_ROW_PAD))
                         .rounded(px(style::CARD_RADIUS))
                         .overflow_hidden()
-                        .bg(ui.band)
-                        .outlined(ui, tint.opacity(TINT_OUTLINE))
+                        // On glass the tabs float on their own glass, with no card round them.
+                        .when(!bar.glass, |d| d.bg(ui.band).outlined(ui, tint.opacity(TINT_OUTLINE)))
+                        .when(bar.glass, |d| d.child(self.glass_clip_probe(TAB_ROW_CLIP)))
                         .children(tabs)
                         .child(self.new_tab_button(look, cx)),
                 ),
@@ -304,14 +355,15 @@ impl Workspace {
         let ui = bar.frame.ui;
         let current = &bar.sets[bar.current];
         let look = &bar.looks[bar.current];
-        let tabs: Vec<AnyElement> = current.members.iter().map(|&ix| self.tab(bar, ix, true, cx)).collect();
+        let tabs: Vec<AnyElement> =
+            current.members.iter().map(|&ix| self.tab(bar, ix, true, true, cx)).collect();
         let piles: Vec<AnyElement> = bar
             .sets
             .iter()
             .zip(bar.looks)
             .enumerate()
             .filter(|(at, _)| *at != bar.current)
-            .map(|(_, (set, look))| self.pile(bar, set, look, cx))
+            .map(|(at, (set, look))| self.pile(bar, at, set, look, cx))
             .collect();
         div()
             .id("tab-bar")
@@ -319,13 +371,20 @@ impl Workspace {
             .flex_none()
             .items_center()
             .gap_2()
-            .h(px(STACKS_H))
+            .h(px(self.top_row_h()))
             .pl(px(lights_end(window) + AFTER_LIGHTS))
             .pr(px(PANEL_TOGGLE_SLOT))
-            .bg(ui.panel)
-            .rule_bottom(ui)
+            .bg(bar.surface(ui))
+            .when(!bar.glass, |d| d.rule_bottom(ui))
             .title_drag()
-            .child(style::set_label(ui, look.color, current.label.clone()))
+            .child(style::set_label(ui, look.color, current.label.clone()).when(bar.glass, |d| {
+                d.relative().child(self.glass_probe(
+                    glass_key(GlassKind::Label, 0),
+                    Insets::NONE,
+                    f32::from(ui.radius_chip),
+                    None,
+                ))
+            }))
             .child(
                 div()
                     .id("tab-row")
@@ -336,6 +395,7 @@ impl Workspace {
                     .items_center()
                     .gap_1()
                     .overflow_hidden()
+                    .when(bar.glass, |d| d.child(self.glass_clip_probe(TAB_ROW_CLIP)))
                     .children(tabs)
                     .child(self.new_tab_button(look, cx)),
             )
@@ -347,11 +407,11 @@ impl Workspace {
 
     /// A set that isn't the selected one, piled up: the tile of its loudest terminal, its name and
     /// how it is doing. The cards behind fan out under the pointer; a click opens it.
-    fn pile(&self, bar: &Bar, set: &TabSet, look: &SetLook, cx: &mut Context<Self>) -> AnyElement {
+    fn pile(&self, bar: &Bar, at: usize, set: &TabSet, look: &SetLook, cx: &mut Context<Self>) -> AnyElement {
         let ui = bar.frame.ui;
         let lead = Self::loudest(bar, set);
         let tile = match lead.and_then(|ix| bar.infos.get(ix)) {
-            Some(info) => tile_for(info, bar.frame, false, false, cx),
+            Some(info) => tile_for(info, bar.frame, false, bar.frame.compact, cx),
             None => style::status_tile(
                 ElementId::Name(SharedString::from(format!("pile-empty-{}", look.key))),
                 ui,
@@ -359,7 +419,7 @@ impl Workspace {
                     face: TileFace::Terminal,
                     glyph: StatusGlyph::Idle,
                     selected: false,
-                    mini: false,
+                    mini: bar.frame.compact,
                 },
                 cx,
             ),
@@ -373,6 +433,15 @@ impl Workspace {
         } else {
             PileFan::Rest
         };
+        // On glass each card is a glass of its own, the front one over the ones behind.
+        let glass = bar.glass.then(|| {
+            let glass = self.glass.clone();
+            let pile: PileGlass = Rc::new(move |depth: u8| {
+                let key = glass_key(GlassKind::Pile, at as u64 * 4 + u64::from(2 - depth.min(2)));
+                Workspace::glass_probe_on(&glass, key, Insets::NONE, style::PILE_RADIUS, None)
+            });
+            pile
+        });
         let (set, key, group, hover_key) = (set.clone(), look.key.clone(), look.group, look.key.clone());
         style::tab_pile(
             ElementId::Name(SharedString::from(format!("tab-pile-{}", look.key))),
@@ -384,6 +453,8 @@ impl Workspace {
                 summary_color,
                 lead: tile,
                 fan,
+                glass,
+                compact: bar.frame.compact,
             },
         )
         .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
@@ -410,10 +481,19 @@ impl Workspace {
             .enumerate()
             .map(|(at, (set, look))| {
                 let id = ElementId::Name(SharedString::from(format!("tab-segment-{}", look.key)));
-                let segment = style::tab_segment(id, ui, look.color, set.label.clone());
+                // On glass a segment is a glass of its own, with no fill.
+                let segment = style::tab_segment(id, ui, look.color, set.label.clone(), bar.frame.compact)
+                    .when(bar.glass, |d| {
+                        d.bg(gpui_kit::transparent_black()).child(self.glass_probe(
+                            glass_key(GlassKind::Segment, at as u64),
+                            Insets::NONE,
+                            style::PILE_RADIUS,
+                            None,
+                        ))
+                    });
                 if at == bar.current {
                     let tabs: Vec<AnyElement> =
-                        set.members.iter().map(|&ix| self.tab(bar, ix, true, cx)).collect();
+                        set.members.iter().map(|&ix| self.tab(bar, ix, true, false, cx)).collect();
                     segment
                         .flex_shrink_1()
                         .child(
@@ -464,8 +544,8 @@ impl Workspace {
             .gap_2()
             .px(px(style::CARD_MARGIN))
             .py(px(TAB_ROW_PAD))
-            .bg(ui.panel)
-            .rule_top(ui)
+            .bg(bar.surface(ui))
+            .when(!bar.glass, |d| d.rule_top(ui))
             .children(segments)
             .children(self.new_group_button(cx))
             .child(div().flex_1())
@@ -522,6 +602,8 @@ impl Workspace {
 
 /// What every part of one frame's tab bar is drawn from.
 struct Bar<'a> {
+    /// The bar sits on Liquid Glass: it paints no surface of its own.
+    glass: bool,
     sets: &'a [TabSet],
     looks: &'a [SetLook],
     current: usize,
@@ -531,8 +613,17 @@ struct Bar<'a> {
     frame: &'a Frame,
 }
 
+impl Bar<'_> {
+    /// What the bar paints under its tabs: nothing over glass.
+    fn surface(&self, ui: UiColors) -> Hsla {
+        if self.glass { gpui_kit::transparent_black() } else { ui.panel }
+    }
+}
+
 /// How strong a set's colour is round its tab row.
 const TINT_OUTLINE: f32 = 0.45;
+/// How much of the selected tab's fill lies over its glass.
+const GLASS_SELECTED: f32 = 0.7;
 
 /// The hairline between the selected set's tabs and the piles.
 #[track_caller]

@@ -64,8 +64,11 @@ impl Workspace {
     /// than it measures is followed by one more (`beside`).
     fn column_probe(&self, cx: &mut Context<Self>) -> AnyElement {
         let this = cx.entity().downgrade();
+        let glass = self.glass.clone();
         canvas(
             move |bounds, window, cx| {
+                // The last probe of the frame: every region that wants glass has said so by now.
+                glass.commit();
                 let beside = f32::from(window.viewport_size().width - bounds.size.width);
                 let changed = this.update(cx, |this, _| {
                     let changed = (this.beside - beside).abs() > 0.5;
@@ -140,8 +143,11 @@ impl Render for Workspace {
         let split = self.active_split().is_some();
         // The diff sits in its own card below the bar, so nothing scrolls under it then; a split's
         // panes start below the bar, with headers of their own.
-        let scrolled = self.diff_view.is_none() && !split && terminal.read(cx).has_content_above();
-        let inset = crate::terminal_view::TOP_INSET;
+        // On glass the title row sits on the window above the terminal's rounded surface, so nothing
+        // lies under it; otherwise it floats over the terminal's top.
+        let lifted = self.glass_on(cx);
+        let scrolled = !lifted && self.diff_view.is_none() && !split && terminal.read(cx).has_content_above();
+        let inset = if lifted { 0.0 } else { crate::terminal_view::TOP_INSET };
         // A pane of a split has its header over it instead of the title bar.
         let pane_inset = if split { 0.0 } else { inset };
         for ix in self.on_screen_sessions() {
@@ -151,6 +157,8 @@ impl Render for Workspace {
         let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
+        let sidebar_glass = lifted;
+        let sidebar_shown = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let layout = self.sidebar.tabs.layout;
         let tab_bar = layout.map(|layout| (layout.on_top(), self.render_tab_bar(layout, window, cx)));
         let (top_tabs, bottom_tabs) = match tab_bar {
@@ -192,35 +200,61 @@ impl Render for Workspace {
                     .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
                         d.child(self.render_sidebar(columns.sidebar, window, cx))
                     })
-                    .child(
-                        self.carry_with_slide(
+                    .child({
+                        let surface = div()
+                            .relative()
+                            .flex_1()
+                            // Never squeezed below the terminal's minimum: the panels yield
+                            // first (core `Panes::columns`).
+                            .min_w(px(crate::terminal_view::MIN_WIDTH))
+                            .bg(ui.background)
+                            .children(
+                                self.render_diff(if lifted { None } else { Some(style::TITLE_ROW_H) }, cx),
+                            )
+                            // Cached: window frames the terminal didn't cause reuse its last
+                            // paint. A split's panes are drawn with their headers below the
+                            // title rows.
+                            .when(self.diff_view.is_none() && !split, |d| {
+                                d.child(terminal.cached(StyleRefinement::default().size_full()))
+                            })
+                            .when(self.diff_view.is_none() && split, |d| {
+                                d.child(self.render_panes(inset, cx))
+                            })
+                            .when(self.diff_view.is_none(), |d| d.child(self.pane_probe(inset, cx)))
+                            // While a terminal is dragged, over the panes (the terminal swallows the mouse).
+                            .when(self.diff_view.is_none(), |d| {
+                                d.children(self.render_drop_overlay(inset, cx))
+                            })
+                            .children(self.render_find_bar(inset, cx));
+                        let column = if lifted {
+                            // On glass the terminal is a rounded surface floating in the window, the
+                            // title row over it on the window's own material. Beside the sidebar its
+                            // cards' margin is the gap; without it (tabs, or hidden) the surface
+                            // stands in from the window's edge.
+                            let gap = px(super::glass::SURFACE_INSET);
                             div()
                                 .relative()
                                 .flex_1()
-                                // Never squeezed below the terminal's minimum: the panels yield
-                                // first (core `Panes::columns`).
                                 .min_w(px(crate::terminal_view::MIN_WIDTH))
                                 .h_full()
-                                .bg(ui.background)
-                                .children(self.render_diff(cx))
-                                // Cached: window frames the terminal didn't cause reuse its last
-                                // paint. A split's panes are drawn with their headers below the
-                                // title rows.
-                                .when(self.diff_view.is_none() && !split, |d| {
-                                    d.child(terminal.cached(StyleRefinement::default().size_full()))
-                                })
-                                .when(self.diff_view.is_none() && split, |d| {
-                                    d.child(self.render_panes(inset, cx))
-                                })
-                                .when(self.diff_view.is_none(), |d| d.child(self.pane_probe(inset, cx)))
-                                // While a terminal is dragged, over the panes (the terminal swallows the mouse).
-                                .when(self.diff_view.is_none(), |d| {
-                                    d.children(self.render_drop_overlay(inset, cx))
-                                })
+                                .flex()
+                                .flex_col()
+                                .child(
+                                    surface
+                                        .min_h_0()
+                                        .mt(px(style::TITLE_ROW_H))
+                                        .mb(gap)
+                                        .mr(gap)
+                                        .when(!sidebar_shown, |d| d.ml(gap))
+                                        .rounded(ui.radius_lg)
+                                        .overflow_hidden(),
+                                )
                                 .child(titlebar)
-                                .children(self.render_find_bar(inset, cx)),
-                        ),
-                    )
+                        } else {
+                            surface.h_full().child(titlebar)
+                        };
+                        self.carry_with_slide(column)
+                    })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
                         d.child(self.render_notes_panel(columns.panel, window, cx))
                     })
@@ -228,11 +262,9 @@ impl Render for Workspace {
                     .children(self.render_slide(window, cx))
                     // The hairlines lie over the columns' edges and their handles over them.
                     .when(columns.sidebar > 0.0 && self.in_flow(Edge::Sidebar), |d| {
-                        d.child(edge_rule(Edge::Sidebar, columns.sidebar, ui)).child(self.resize_handle(
-                            Edge::Sidebar,
-                            columns.sidebar,
-                            cx,
-                        ))
+                        // Glass floats inset, so no hairline runs along the column's edge.
+                        d.when(!sidebar_glass, |d| d.child(edge_rule(Edge::Sidebar, columns.sidebar, ui)))
+                            .child(self.resize_handle(Edge::Sidebar, columns.sidebar, cx))
                     })
                     .when(columns.panel > 0.0 && self.in_flow(Edge::Panel), |d| {
                         let x = self.window_width - columns.panel;

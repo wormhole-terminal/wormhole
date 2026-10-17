@@ -64,7 +64,9 @@ objc2-quartz-core = { version = "0.3.2", default-features = false, features = [
     "std", "CALayer", "CAMetalLayer", "CATransform3D", "objc2-core-foundation", "objc2-metal",
 ] }
 objc2-app-kit = { version = "0.3", features = [
-    "NSView", "NSResponder", "NSVisualEffectView", "NSGraphics",
+    "NSView", "NSResponder", "NSVisualEffectView", "NSGlassEffectView", "NSGraphics",
+    # A plain fill under the glass while the window isn't blurred.
+    "NSBox",
     # Where the traffic lights are (the title rows' chrome sits after them).
     "NSWindow",
     # Menu bar item.
