@@ -92,14 +92,21 @@ impl FolderColor {
     /// theme's own six colours (ANSI red to cyan), so a pastel theme gets pastels and a light one
     /// darker colours, then moved far enough from the window and the sidebar to be seen on both.
     pub fn color(self, tokens: &ThemeTokens) -> Color {
-        let (lightness, chroma) = palette_character(tokens);
-        let color = Color::from_oklch(lightness, chroma, self.hue());
-        [tokens.get("surface.window"), tokens.get("surface.panel")]
-            .into_iter()
-            .flatten()
-            .fold(color, |color, surface| color.readable_on(surface.with_alpha(1.0), MARK_CONTRAST))
-            .with_alpha(1.0)
+        swatch(tokens, self.hue(), false)
     }
+}
+
+/// A colour of `hue` (or a grey) in `tokens`' theme: the lightness and chroma of the theme's own
+/// palette, then moved far enough from the window and the sidebar to be seen on both. Shared with
+/// the groups' colours (`sidebar::GroupColor`), which are drawn the same way.
+pub(crate) fn swatch(tokens: &ThemeTokens, hue: f32, grey: bool) -> Color {
+    let (lightness, chroma) = palette_character(tokens);
+    let color = Color::from_oklch(lightness, if grey { 0.0 } else { chroma }, hue);
+    [tokens.get("surface.window"), tokens.get("surface.panel")]
+        .into_iter()
+        .flatten()
+        .fold(color, |color, surface| color.readable_on(surface.with_alpha(1.0), MARK_CONTRAST))
+        .with_alpha(1.0)
 }
 
 /// The average OKLCH lightness and chroma of the palette's colours (ANSI 1 to 6, red to cyan).

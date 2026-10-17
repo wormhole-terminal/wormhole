@@ -23,10 +23,7 @@ pub(super) struct RowInfo {
     /// How long the terminal has been in its status.
     pub(super) since: Duration,
     pub(super) cwd: Option<PathBuf>,
-    /// Its band: the repository it is in, else its folder (only looked up when grouped).
-    pub(super) folder: Option<PathBuf>,
-    /// The repository its folder is a worktree of, in the flat list (grouped, the band carries
-    /// the mark).
+    /// The repository its folder is a worktree of.
     pub(super) worktree: Option<PathBuf>,
     pub(super) branch: Option<String>,
     /// The command in front of a plain terminal, and how long it has run: only for one that ends
@@ -43,8 +40,7 @@ pub(super) struct RowInfo {
     pub(super) pinned: bool,
     /// Notes with something in them and tasks not done.
     pub(super) open_items: usize,
-    /// The changed files the row itself counts: in the flat list the folder's, under a band only
-    /// one that means something else (a terminal comparing with another branch).
+    /// The changed files the row counts.
     pub(super) changes: Option<usize>,
 }
 
@@ -62,19 +58,9 @@ impl RowInfo {
     pub(super) fn told(&self) -> bool {
         self.source.told()
     }
-
-    pub(super) fn searchable(&self) -> Searchable<'_> {
-        Searchable {
-            name: &self.name,
-            state: self.state,
-            place: self.cwd.as_deref(),
-            branch: self.branch.as_deref(),
-            command: self.command.as_deref(),
-        }
-    }
 }
 
-/// What the Show filter makes of a terminal's status. A terminal whose status is told (`told`: an
+/// What a terminal's status makes of its row. A terminal whose status is told (`told`: an
 /// agent's, or a program's own report) shows it; one without is working while a command runs,
 /// needs you while its bell counts, and has failed when its last command did and nobody has seen.
 fn row_state(told: bool, status: Status, command: bool) -> RowState {
@@ -94,7 +80,6 @@ fn row_state(told: bool, status: Status, command: bool) -> RowState {
 impl Workspace {
     /// Every terminal's row facts, in the window's (manual) order.
     pub(super) fn row_infos(&self, cx: &App) -> Vec<RowInfo> {
-        let grouped = self.sidebar.view.grouping == Grouping::Folder;
         let now = SystemTime::now();
         self.sessions
             .iter()
@@ -120,8 +105,7 @@ impl Workspace {
                     message: terminal.agent_message.clone(),
                     since: terminal.status_since().elapsed(),
                     cwd: terminal.cwd.clone(),
-                    worktree: root.as_deref().filter(|_| !grouped).and_then(|root| self.worktree_of(root)),
-                    folder: if grouped { root } else { None },
+                    worktree: root.as_deref().and_then(|root| self.worktree_of(root)),
                     branch: git.and_then(|status| status.branch.clone()),
                     running: foreground
                         .filter(|f| !told && ends_by_itself(&f.command))
@@ -144,25 +128,9 @@ impl Workspace {
                     open_items: session.open_items(cx),
                     changes: git.and_then(|status| {
                         let n = status.files.len();
-                        (n > 0 && (!grouped || status.compare.is_some())).then_some(n)
+                        (n > 0).then_some(n)
                     }),
                 }
-            })
-            .collect()
-    }
-
-    /// Each session's branch and changes, in `sessions` order; `None` when it isn't in a
-    /// repository or its status is from a folder it has since left.
-    pub(super) fn session_git(&self, cx: &App) -> Vec<Option<SessionGit<'_>>> {
-        self.sessions
-            .iter()
-            .map(|session| {
-                let status = session.git.status.as_ref()?;
-                (session.git.cwd == session.terminal().read(cx).cwd).then(|| SessionGit {
-                    branch: status.branch.as_deref(),
-                    changes: status.files.len(),
-                    compared: status.compare.is_some(),
-                })
             })
             .collect()
     }

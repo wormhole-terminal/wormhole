@@ -70,13 +70,7 @@ pub(super) fn draw_stage(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
     let status_bar = store.settings.status_bar;
     let base = hsla(tokens.terminal.background.with_alpha(1.0));
     let (mono, _) = crate::fonts::font(FontSlot::Terminal, cx);
-    let mini = Mini {
-        ui,
-        filter: crate::workspace::sidebar::sidebar_filter_on(cx),
-        mono,
-        green: hsla(tokens.terminal.ansi[2]),
-        yellow: hsla(tokens.terminal.ansi[3]),
-    };
+    let mini = Mini { ui, mono, green: hsla(tokens.terminal.ansi[2]), yellow: hsla(tokens.terminal.ansi[3]) };
     let wallpaper = linear_gradient(
         WASH_ANGLE,
         linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.branch }, 0.0),
@@ -124,8 +118,6 @@ pub(super) fn draw_stage(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
 /// an agent's transcript uses.
 struct Mini {
     ui: UiColors,
-    /// The sidebar's funnel exists (its feature flag is on).
-    filter: bool,
     mono: SharedString,
     green: Hsla,
     yellow: Hsla,
@@ -289,13 +281,12 @@ impl Mini {
             .bg(ui.panel)
             .border_r(px(MINI_RULE))
             .border_color(ui.border)
-            // The traffic lights' row: the collapse button and the gear.
-            .child(
-                self.title_row()
-                    .child(div().flex_1())
-                    .child(self.icon(IconName::PanelLeft, MINI_ICON, ui.muted))
-                    .child(self.icon(IconName::Settings, MINI_ICON, ui.muted)),
-            )
+            // The traffic lights' row: the collapse button.
+            .child(self.title_row().child(div().flex_1()).child(self.icon(
+                IconName::PanelLeft,
+                MINI_ICON,
+                ui.muted,
+            )))
             .child(
                 self.title_row()
                     .child(
@@ -303,7 +294,6 @@ impl Mini {
                             .font_weight(FontWeight::BOLD),
                     )
                     .child(div().flex_1())
-                    .when(self.filter, |d| d.child(self.icon(IconName::Funnel, MINI_ICON, ui.muted)))
                     .child(self.icon(IconName::Plus, MINI_ICON, ui.muted)),
             )
             .child(self.band(

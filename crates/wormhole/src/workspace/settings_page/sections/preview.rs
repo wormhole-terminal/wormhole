@@ -3,10 +3,9 @@
 //! stage is `stage`.
 
 use wormhole_core::config::StatusPosition;
-use wormhole_core::sidebar::Grouping;
 
 use super::*;
-use style::{BandKind, BandParts, FolderLook, FolderMeta, RowTone, SessionRow, StatusGlyph};
+use style::{RowTone, SessionRow, StatusGlyph};
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 350.0;
@@ -61,12 +60,10 @@ pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<Set
 #[derive(Clone, Copy)]
 struct Look {
     compact: bool,
-    grouped: bool,
     dot: bool,
     dot_right: bool,
     logo: bool,
     branch: bool,
-    changes: bool,
     notes: bool,
 }
 
@@ -74,12 +71,10 @@ impl Look {
     fn of(s: &Settings) -> Self {
         Self {
             compact: s.compact_sidebar,
-            grouped: s.sidebar_group == Grouping::Folder,
             dot: s.sidebar_status_dot,
             dot_right: s.sidebar_status_position == StatusPosition::Right,
             logo: s.sidebar_agent_icon,
             branch: s.sidebar_branch,
-            changes: s.sidebar_changes,
             notes: s.sidebar_notes,
         }
     }
@@ -103,18 +98,14 @@ struct Sample {
 /// A folder of the sample list.
 struct Folder {
     name: &'static str,
-    path: &'static str,
     branch: &'static str,
-    changes: usize,
     rows: &'static [Sample],
 }
 
 const SAMPLES: &[Folder] = &[
     Folder {
         name: "terminal",
-        path: "~/Projects/terminal",
         branch: "ui-unify",
-        changes: 3,
         rows: &[
             Sample {
                 name: "sidebar polish",
@@ -144,9 +135,7 @@ const SAMPLES: &[Folder] = &[
     },
     Folder {
         name: "api-server",
-        path: "~/Projects/api-server",
         branch: "feature/auth",
-        changes: 1,
         rows: &[
             Sample {
                 name: "auth tokens",
@@ -170,8 +159,7 @@ const SAMPLES: &[Folder] = &[
 
 /// The sample list in `look`, with the sidebar's own bands and rows.
 fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
-    // The sidebar's own header: its title, the funnel (while its flag is on) and the + (drawn, not
-    // working).
+    // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
         .flex()
         .items_center()
@@ -180,9 +168,6 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .px_4()
         .child(style::panel_title(ui, "Terminals"))
         .child(div().flex_1())
-        .when(crate::workspace::sidebar::sidebar_filter_on(cx), |d| {
-            d.child(style::icon(IconName::Funnel).text_color(ui.muted))
-        })
         .child(style::icon(IconName::Plus).text_color(ui.muted));
     let claude = wormhole_core::agents::AGENTS.first();
     let mut column = div()
@@ -194,40 +179,6 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .bg(ui.panel)
         .child(header);
     for (fx, folder) in SAMPLES.iter().enumerate() {
-        if look.grouped {
-            // The comfortable density gives a band a second line: its path, ±N and branch. The
-            // compact one keeps it to one, the chip and ±N after the name.
-            let chip = (look.branch && look.compact).then(|| {
-                style::branch_chip(ui, Some(folder.branch), look.changes.then_some(folder.changes))
-                    .into_any_element()
-            });
-            let meta = (!look.compact).then(|| FolderMeta {
-                path: folder.path.into(),
-                path_w: None,
-                changes: look.changes.then_some(folder.changes),
-                branch: look.branch.then(|| style::branch_tag(ui, Some(folder.branch)).into_any_element()),
-                pull_request: None,
-            });
-            column = column.child(style::folder_band(
-                SharedString::from(format!("preview-{id}-band-{fx}")),
-                ui,
-                BandParts {
-                    kind: BandKind::Folder,
-                    section: style::Section::of(folder.rows.len(), false),
-                    title: folder.name.into(),
-                    detail: chip,
-                    count: None,
-                    waiting: None,
-                    add: None,
-                    on_toggle: None,
-                    drop_target: false,
-                    sticky: false,
-                    joined: false,
-                },
-                FolderLook::default(),
-                meta,
-            ));
-        }
         for (rx, sample) in folder.rows.iter().enumerate() {
             let glyph_id = SharedString::from(format!("preview-{id}-glyph-{fx}-{rx}"));
             let idle = sample.glyph == StatusGlyph::Idle;
@@ -249,13 +200,12 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
             if !look.compact {
                 // A quiet row says where it is: its branch under a folder's band, else its path.
                 row.detail = Some(match sample.detail {
-                    "" if look.grouped => folder.branch.into(),
                     "" => format!("~/Projects/{}", folder.name).into(),
                     detail => detail.into(),
                 });
-            }
-            if !look.grouped && look.branch && !look.compact {
-                row.detail = Some(format!("{} · {}", folder.name, folder.branch).into());
+                if look.branch && sample.detail.is_empty() {
+                    row.detail = Some(format!("{} · {}", folder.name, folder.branch).into());
+                }
             }
             row.trail = match (look.dot && look.dot_right, look.notes && sample.notes > 0) {
                 (true, _) => Some(glyph()),
@@ -278,34 +228,6 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                 row,
             ));
         }
-    }
-    // A folded folder, with how many terminals it holds.
-    if look.grouped {
-        column = column.child(style::folder_band(
-            SharedString::from(format!("preview-{id}-band-folded")),
-            ui,
-            BandParts {
-                kind: BandKind::Folder,
-                section: style::Section::of(3, true),
-                title: "dotfiles".into(),
-                detail: None,
-                count: Some("3".into()),
-                waiting: None,
-                add: None,
-                on_toggle: None,
-                drop_target: false,
-                sticky: false,
-                joined: false,
-            },
-            FolderLook::default(),
-            (!look.compact).then(|| FolderMeta {
-                path: "~/dotfiles".into(),
-                path_w: None,
-                changes: None,
-                branch: None,
-                pull_request: None,
-            }),
-        ));
     }
     column.into_any_element()
 }

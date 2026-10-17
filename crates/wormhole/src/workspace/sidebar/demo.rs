@@ -113,7 +113,6 @@ impl Workspace {
                 joined: false,
             },
             FolderLook::default(),
-            None,
         )
         .role(Role::TreeItem)
         .aria_label(example::band_label())

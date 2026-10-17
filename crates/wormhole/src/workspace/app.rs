@@ -457,7 +457,7 @@ pub(crate) fn open_workspace_window_in(
     // left them, not `Panes::default()` (which the saved-layout path and the tests start from).
     let record = record.unwrap_or_else(|| WindowRecord {
         id,
-        layout: Layout::remembered(&app(cx).last_panes, settings(cx).sidebar_group),
+        layout: Layout::remembered(&app(cx).last_panes),
         ..Default::default()
     });
     let displays: Vec<Bounds<Pixels>> = cx.displays().iter().map(|d| d.bounds()).collect();

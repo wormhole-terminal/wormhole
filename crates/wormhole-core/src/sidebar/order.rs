@@ -1,31 +1,10 @@
-//! The order of the terminal list: the user's (manual) order, pins on top of it, moving a
-//! terminal by drag and drop, and what ⌘1–9 count along.
+//! The order of the terminal list: pins on top of the person's order, where a drag puts a
+//! terminal among its group's, and what ⌘1–9 count along.
 //!
-//! The manual order is the order the window keeps its sessions in (and saves them in). A
-//! group is a folder band, or the whole list under "No grouping"; pinned terminals stay at
-//! the top of their group and keep their manual order among themselves. A drag moves a
-//! terminal inside its group, and inside its pinned or unpinned block of it.
-
-use std::path::PathBuf;
+//! Pinned terminals stay at the top of their group (or of the list, in no group) and keep their
+//! order among themselves; a drag moves a terminal inside its pinned or unpinned block.
 
 use serde::{Deserialize, Serialize};
-
-/// How the terminal list keeps its order (Settings → Terminals & sidebar).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SidebarOrder {
-    /// Pinned terminals first, then first created to last; under "By folder" the bands keep the
-    /// order they appeared in. Nothing moves when a terminal is created, changes folder or status.
-    #[default]
-    Stable,
-    /// Up to 0.4: a split pulls its new terminal next to it, and the bands are ordered by their
-    /// first terminal as things are now, so a terminal that changes folder can move other bands.
-    Classic,
-}
-
-impl SidebarOrder {
-    pub const ALL: [SidebarOrder; 2] = [SidebarOrder::Stable, SidebarOrder::Classic];
-}
 
 /// What ⌘1–9 count along (Settings → Terminals & sidebar).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -43,12 +22,12 @@ impl SidebarNumbers {
     pub const ALL: [SidebarNumbers; 2] = [SidebarNumbers::Terminal, SidebarNumbers::List];
 }
 
-/// The ⌘ numbers when they stay with the terminal: dealt top to bottom as the list stands, then
-/// frozen. A terminal made later takes the next free number and keeps it (even in a band in the
-/// middle); a folder change, a status change, the Show filter, a fold or a split's gathering never
-/// renumber anyone, and a hidden terminal keeps its number. They are dealt again, top to bottom,
-/// only when the person changes the order (a pin, an unpin, a drag), a terminal is closed (so
-/// there is no gap), or a setting that orders the list changes.
+/// The ⌘ numbers when they stay with the terminal: dealt top to bottom over the terminals you can
+/// see, then frozen. A terminal made later takes the next free number and keeps it (even in a
+/// group in the middle); a status change or a split's gathering never renumbers anyone. They are
+/// dealt again, top to bottom, only when the person changes the order (a pin, an unpin, a drag, a
+/// terminal moved into a group), folds or opens a group (a folded group's terminals have no
+/// number), a terminal is closed (so there is no gap), or a setting that orders the list changes.
 #[derive(Clone, Debug)]
 pub struct FrozenNumbers<K> {
     /// Who holds ⌘1, ⌘2 … in that order.
@@ -56,8 +35,8 @@ pub struct FrozenNumbers<K> {
     /// The window's terminals and their pins when last settled, to tell a new terminal from a
     /// changed order.
     seen: Option<Vec<(K, bool)>>,
-    /// What the settings that order the list said then.
-    tag: u8,
+    /// What the settings and the arrangement that order the list said then.
+    tag: u64,
 }
 
 impl<K> Default for FrozenNumbers<K> {
@@ -68,9 +47,10 @@ impl<K> Default for FrozenNumbers<K> {
 
 impl<K: Clone + PartialEq> FrozenNumbers<K> {
     /// The holders of ⌘1… now. `window` is every terminal in the window's order with whether it is
-    /// pinned, `tag` stands for the settings that order the list (grouping, order, numbers) and
-    /// `dealt` is every terminal top to bottom as the list stands (used when the numbers are dealt).
-    pub fn settle(&mut self, window: &[(K, bool)], tag: u8, dealt: &[K], count: usize) -> Vec<K> {
+    /// pinned, `tag` stands for whatever orders the list (the number setting, how the person arranged
+    /// it, which groups are folded) and `dealt` is the terminals you can see top to bottom as the
+    /// list stands (used when the numbers are dealt).
+    pub fn settle(&mut self, window: &[(K, bool)], tag: u64, dealt: &[K], count: usize) -> Vec<K> {
         let unchanged_prefix = |seen: &Vec<(K, bool)>| {
             seen.len() <= window.len() && seen.iter().zip(window).all(|(before, now)| before == now)
         };
@@ -96,25 +76,6 @@ impl<K: Clone + PartialEq> FrozenNumbers<K> {
         self.seen = None;
         self.held.clear();
     }
-}
-
-/// The order folder bands keep, given the order they had (`previous`) and the folder each
-/// terminal is in now: a band stays where it was while it has a terminal, a new one goes last
-/// (the first-seen order among new ones), one with no terminal left is forgotten. Terminals
-/// with no known folder have no band of their own here (they are last, always).
-pub fn settle_bands(previous: &[PathBuf], folders: &[Option<PathBuf>]) -> Vec<PathBuf> {
-    let mut settled: Vec<PathBuf> = Vec::new();
-    for folder in previous {
-        if folders.iter().flatten().any(|present| present == folder) && !settled.contains(folder) {
-            settled.push(folder.clone());
-        }
-    }
-    for folder in folders.iter().flatten() {
-        if !settled.contains(folder) {
-            settled.push(folder.clone());
-        }
-    }
-    settled
 }
 
 /// The session ⌘`n` (1-based) selects among `numbered`, the sessions that carry a number, top to
@@ -185,11 +146,7 @@ pub fn follow(order: &[usize], ix: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        FrozenNumbers, drop_position, follow, move_in_block, regroup, settle_bands, shortcut_target,
-        with_pins,
-    };
-    use std::path::PathBuf;
+    use super::{FrozenNumbers, drop_position, follow, move_in_block, regroup, shortcut_target, with_pins};
 
     #[test]
     fn command_digits_count_down_the_list_and_past_the_end_mean_the_last() {
@@ -289,24 +246,5 @@ mod tests {
         assert_eq!(numbers.settle(&window(8), 0, &order(8), 9).len(), 8);
         assert_eq!(numbers.settle(&window(10), 0, &order(10), 9), order(9), "the ninth, not the tenth");
         assert_eq!(numbers.settle(&window(11), 0, &order(11), 9).len(), 9);
-    }
-
-    #[test]
-    fn bands_keep_their_order_while_terminals_come_and_go() {
-        let dirs = |paths: &[Option<&str>]| -> Vec<Option<PathBuf>> {
-            paths.iter().map(|p| p.map(PathBuf::from)).collect()
-        };
-        let paths = |paths: &[&str]| -> Vec<PathBuf> { paths.iter().map(PathBuf::from).collect() };
-        let first = settle_bands(&[], &dirs(&[Some("/w/b"), Some("/w/a"), Some("/w/b")]));
-        assert_eq!(first, paths(&["/w/b", "/w/a"]), "the first time: as first seen");
-        // The first terminal of /w/b goes to /w/c: /w/b keeps its place above /w/a, /w/c is last.
-        let moved = settle_bands(&first, &dirs(&[Some("/w/c"), Some("/w/a"), Some("/w/b")]));
-        assert_eq!(moved, paths(&["/w/b", "/w/a", "/w/c"]));
-        // A band nobody is in is forgotten, and comes back last.
-        let gone = settle_bands(&moved, &dirs(&[Some("/w/c"), Some("/w/a")]));
-        assert_eq!(gone, paths(&["/w/a", "/w/c"]));
-        let back = settle_bands(&gone, &dirs(&[Some("/w/b"), Some("/w/c"), Some("/w/a")]));
-        assert_eq!(back, paths(&["/w/a", "/w/c", "/w/b"]));
-        assert!(settle_bands(&first, &dirs(&[None])).is_empty());
     }
 }

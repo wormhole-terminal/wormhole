@@ -10,7 +10,7 @@ use crate::features::{self, FeatureFlag};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
-use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
+use crate::sidebar::{SidebarNumbers, TerminalsIn};
 use crate::tokens::Color;
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
@@ -277,28 +277,15 @@ pub struct Settings {
     pub sidebar_changes: bool,
     /// Note icon with the number of open notes and tasks.
     pub sidebar_notes: bool,
-    /// How a new window's sidebar groups its terminals (each window keeps its own after that).
-    pub sidebar_group: Grouping,
-    /// How the terminal list keeps its order: stable (pinned first, then first made to last,
-    /// nothing moves on its own) or classic (up to 0.4).
-    pub sidebar_order: SidebarOrder,
     /// What ⌘1–9 count along: the terminal (a number stays with it) or the list (the first nine
     /// rows you can see, up to 0.4).
     pub sidebar_numbers: SidebarNumbers,
     /// Where every window lists its terminals: the sidebar, or a tab bar instead of it.
     pub terminals_in: TerminalsIn,
-    /// The tab bar's layout, while the terminals are in tabs: two rows across the top, one row
-    /// with the other sets piled up, or a bar along the bottom.
-    pub tab_layout: TabLayout,
-    /// Folders whose band stays at the top of the terminal list, grouped by folder, even with no
-    /// terminal in it (absolute paths, in the order they were pinned). One list for every window;
-    /// the band's menu pins and unpins, there is no row for it in Settings.
-    pub pinned_folders: Vec<String>,
-    /// The colour of a folder's band and of its terminals' title row: the folder's path (absolute)
-    /// and the colour (a name: `red`, `teal` … see [`FolderColor`]; or a hex colour the picker made,
-    /// `#rrggbb`). One list for every window; the
-    /// band's menu and the Project tab set it, there is no row for it in Settings. A name this
-    /// build doesn't know stays in the file and colours nothing.
+    /// The colour of a folder's terminals' title row: the folder's path (absolute) and the colour
+    /// (a name: `red`, `teal` … see [`FolderColor`]; or a hex colour the picker made, `#rrggbb`).
+    /// One list for every window; the Project tab sets it, there is no row for it in Settings. A
+    /// name this build doesn't know stays in the file and colours nothing.
     pub folder_colors: BTreeMap<String, String>,
     /// Holding ⌘ shows the ⌘1–9 keycaps on the sidebar's terminals.
     pub sidebar_cmd_hints: bool,
@@ -430,12 +417,8 @@ impl Default for Settings {
             sidebar_branch: true,
             sidebar_changes: true,
             sidebar_notes: false,
-            sidebar_group: Grouping::Folder,
-            sidebar_order: SidebarOrder::default(),
             sidebar_numbers: SidebarNumbers::default(),
             terminals_in: TerminalsIn::default(),
-            tab_layout: TabLayout::default(),
-            pinned_folders: Vec::new(),
             folder_colors: BTreeMap::new(),
             sidebar_cmd_hints: true,
             theme_mode: ThemeMode::default(),
@@ -517,7 +500,6 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "sidebar_branch",
     "sidebar_changes",
     "sidebar_notes",
-    "sidebar_group",
     "sidebar_cmd_hints",
     "bell_sound",
     "bell_visual",
@@ -542,14 +524,11 @@ pub const APP_SETTINGS: &[&str] = &[
     "studio_translucent",
     "status_bar",
     "minimap",
-    // The person's own habits: where a terminal sits in the list and what ⌘1–9 reach, whatever
-    // project is in front.
-    "sidebar_order",
+    // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",
     // The window's chrome, one look for every window (where the terminals are listed too); and the
     // programs the person opens folders in.
     "terminals_in",
-    "tab_layout",
     "title_border",
     "open_in",
     // What the title row shows is the person's own choice. The pull request also runs `gh`, which
@@ -590,11 +569,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "allow_window_ops",
     // Where worktrees go is the person's own folder layout; a repository must not pick it.
     "worktree_base",
-    // The folders the person pinned in the terminal list, one list for every window: a project
-    // must not add its own to everyone's sidebar.
-    "pinned_folders",
     // Which colour each folder wears is the person's too: a repository can tint its own title row
-    // (`project_color`), not recolour the folders in everyone's sidebar.
+    // (`project_color`), not recolour the folders in everyone's windows.
     "folder_colors",
     // Which in-progress features are on is the person's own, dev-build choice, never a project's.
     "feature_flags",
@@ -679,26 +655,6 @@ impl Settings {
             || self.notify_bell;
     }
 
-    /// Whether `folder` is one of the pinned folders.
-    pub fn is_folder_pinned(&self, folder: &Path) -> bool {
-        self.pinned_folders.iter().any(|pinned| Path::new(pinned) == folder)
-    }
-
-    /// Pin `folder` (last, after the ones pinned before) or, if it is pinned, let it go. Returns
-    /// whether it is pinned now.
-    pub fn toggle_pinned_folder(&mut self, folder: &Path) -> bool {
-        match self.pinned_folders.iter().position(|pinned| Path::new(pinned) == folder) {
-            Some(at) => {
-                self.pinned_folders.remove(at);
-                false
-            }
-            None => {
-                self.pinned_folders.push(folder.to_string_lossy().into_owned());
-                true
-            }
-        }
-    }
-
     /// The colour `folder` wears, if it has one this build knows: a name, or a hex colour the
     /// person picked.
     pub fn folder_color_choice(&self, folder: &Path) -> Option<ProjectColorChoice> {
@@ -749,18 +705,7 @@ impl Settings {
             }
             keep
         });
-        // A pin that isn't an absolute path can never match a terminal's folder, and "New terminal
-        // here" would start one in the wrong place; a folder pinned twice is still one band.
-        let mut pinned: Vec<PathBuf> = Vec::new();
-        self.pinned_folders.retain(|folder| {
-            let path = Path::new(folder);
-            let keep = path.is_absolute() && !pinned.iter().any(|known| known == path);
-            if keep {
-                pinned.push(path.to_path_buf());
-            }
-            keep
-        });
-        // A colour for a path that isn't absolute can never match a folder's band; the same folder
+        // A colour for a path that isn't absolute can never match a folder; the same folder
         // spelt with a trailing slash is one entry.
         let colors = std::mem::take(&mut self.folder_colors);
         for (folder, color) in colors {
@@ -773,7 +718,7 @@ impl Settings {
 }
 
 /// How a folder is named in `folder_colors`: its path without a trailing slash or `.` parts, so
-/// the band's folder and one typed by hand find the same entry.
+/// the terminal's folder and one typed by hand find the same entry.
 fn folder_color_key(folder: &Path) -> String {
     folder.components().collect::<PathBuf>().to_string_lossy().into_owned()
 }
@@ -789,7 +734,7 @@ mod tests {
     use crate::folder_color::FolderColor;
     use crate::fonts;
     use crate::jsonc;
-    use crate::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
+    use crate::sidebar::{SidebarNumbers, TerminalsIn};
     use crate::tokens::Color;
     use std::path::Path;
 
@@ -825,7 +770,6 @@ mod tests {
             // One switch for every window, so View → Show Status Bar says the same everywhere.
             "status_bar",
             "minimap",
-            "sidebar_order",
             "sidebar_numbers",
             "dock_badge",
             "hotkey_action",
@@ -857,13 +801,9 @@ mod tests {
         assert!(!unset.status_bar, "the status bar is hidden until asked for");
         assert!(!unset.minimap, "so is the minimap");
         assert!(unset.bell_sound && unset.bell_visual);
-        assert_eq!(unset.sidebar_group, Grouping::Folder);
-        assert_eq!(
-            (unset.sidebar_order, unset.sidebar_numbers),
-            (SidebarOrder::Stable, SidebarNumbers::Terminal)
-        );
+        assert_eq!(unset.sidebar_numbers, SidebarNumbers::Terminal);
         assert!(unset.sidebar_cmd_hints);
-        assert_eq!((unset.terminals_in, unset.tab_layout), (TerminalsIn::Sidebar, TabLayout::TwoRows));
+        assert_eq!(unset.terminals_in, TerminalsIn::Sidebar);
         assert!(!unset.sidebar_notes, "the rows are drawn without the notes and tasks count");
         assert!(unset.sidebar_branch && unset.sidebar_changes);
         assert_eq!(unset.theme_mode, ThemeMode::System);
@@ -944,33 +884,21 @@ mod tests {
         assert!(applied == ["control_write"] && merged.control_write);
     }
 
-    /// The pinned folders are one list for every window, and the person's own: a repository can't
-    /// put a folder in everyone's sidebar. Only absolute paths can match a terminal's folder.
+    /// A config.json from before the final sidebar still reads: its grouping, order, tab layout and
+    /// pinned folders mean nothing now, and the rest applies as before.
     #[test]
-    fn pinned_folders_are_the_apps_own_and_keep_only_absolute_paths_once() {
-        assert!(APP_SETTINGS.contains(&"pinned_folders") && !PROJECT_SETTINGS.contains(&"pinned_folders"));
-        assert!(Settings::default().pinned_folders.is_empty(), "no folder is pinned until asked");
-        let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
-        assert!(unset.pinned_folders.is_empty());
-        let read: Settings = jsonc::parse(
-            r#"{ "pinned_folders": ["/w/b", "~/notes", "", "/w/a", "/w/b/", "relative/dir", "/w/b"] }"#,
-        )
-        .expect("valid jsonc");
-        assert_eq!(read.pinned_folders.len(), 7, "reading keeps what the file says");
-        assert_eq!(read.sanitized().pinned_folders, ["/w/b", "/w/a"], "in the order they were pinned");
-    }
-
-    #[test]
-    fn a_folder_is_pinned_last_and_unpinned_from_where_it_was() {
-        let mut settings = Settings::default();
-        assert!(settings.toggle_pinned_folder(Path::new("/w/a")));
-        assert!(settings.toggle_pinned_folder(Path::new("/w/b")));
-        assert!(settings.toggle_pinned_folder(Path::new("/w/c")));
-        assert_eq!(settings.pinned_folders, ["/w/a", "/w/b", "/w/c"]);
-        assert!(settings.is_folder_pinned(Path::new("/w/b")));
-        assert!(!settings.toggle_pinned_folder(Path::new("/w/b/")), "a trailing slash is the same folder");
-        assert_eq!(settings.pinned_folders, ["/w/a", "/w/c"]);
-        assert!(!settings.is_folder_pinned(Path::new("/w/b")));
+    fn a_config_with_the_old_sidebar_keys_still_reads() {
+        let text = r#"{
+            "sidebar_group": "folder", "sidebar_order": "classic", "tab_layout": "stacks",
+            "pinned_folders": ["/w/a"], "sidebar_numbers": "list", "font_size": 15.0
+        }"#;
+        let settings: Settings = jsonc::parse(text).expect("old keys are ignored");
+        assert_eq!(settings.font_size, 15.0);
+        assert_eq!(settings.sidebar_numbers, SidebarNumbers::List);
+        let json = serde_json::to_value(&settings).expect("serializes");
+        for gone in ["sidebar_group", "sidebar_order", "tab_layout", "pinned_folders"] {
+            assert!(json.get(gone).is_none(), "{gone} is no setting any more");
+        }
     }
 
     /// A folder's colour is the person's own, for every window: a repository can't recolour the
@@ -1044,8 +972,7 @@ mod tests {
     fn the_final_design_keys_round_trip_by_their_documented_names() {
         let text = r#"{
             "status_bar": true, "bell_sound": false, "bell_visual": false,
-            "sidebar_group": "none", "sidebar_cmd_hints": false,
-            "sidebar_order": "classic", "sidebar_numbers": "list",
+            "sidebar_cmd_hints": false, "sidebar_numbers": "list",
             "theme_mode": "light", "theme_light": "GitHub Light",
             "notify_command_after": 30, "notify_in_front": "banner", "notify_sound": "all",
             "dock_badge": "needs_you_done", "menu_bar_icon": "status_count",
@@ -1053,11 +980,7 @@ mod tests {
         }"#;
         let settings: Settings = jsonc::parse(text).expect("valid jsonc");
         assert!(settings.status_bar && !settings.bell_sound && !settings.bell_visual);
-        assert_eq!(settings.sidebar_group, Grouping::None);
-        assert_eq!(
-            (settings.sidebar_order, settings.sidebar_numbers),
-            (SidebarOrder::Classic, SidebarNumbers::List)
-        );
+        assert_eq!(settings.sidebar_numbers, SidebarNumbers::List);
         assert_eq!(settings.theme_mode, ThemeMode::Light);
         assert_eq!(settings.notify_in_front, InFront::Banner);
         assert_eq!(settings.notify_sound, NotifySound::All);
@@ -1065,8 +988,6 @@ mod tests {
         assert_eq!(settings.hotkey_action, HotkeyAction::ToggleApp);
         let json = serde_json::to_value(&settings).expect("serializes");
         for (key, value) in [
-            ("sidebar_group", "none"),
-            ("sidebar_order", "classic"),
             ("sidebar_numbers", "list"),
             ("theme_mode", "light"),
             ("notify_in_front", "banner"),

@@ -1,52 +1,17 @@
-//! The terminal list: grouping, the filter and its popover, pins, holding ⌘, its scroll.
+//! The terminal list: groups, pins, holding ⌘, its scroll.
 
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
-use wormhole_core::sidebar::{Grouping, Show};
 
 use super::sessions::expand_home;
 use super::{Ctx, coordinates, nth};
 
-pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let grouping = match arg.trim() {
-        "none" => Grouping::None,
-        "folder" => Grouping::Folder,
-        "custom" | "groups" => Grouping::Custom,
-        other => return Err(anyhow!("expected none|folder|custom, got {other:?}")),
-    };
-    ctx.workspace.set_grouping(grouping, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn show(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let show = match arg.trim() {
-        "all" | "" => Show::All,
-        "needs_you" => Show::NeedsYou,
-        "working" => Show::Working,
-        "finished" => Show::Finished,
-        "idle" => Show::Idle,
-        other => return Err(anyhow!("expected all|needs_you|working|finished|idle, got {other:?}")),
-    };
-    ctx.workspace.set_show(show, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.set_search(arg.trim(), ctx.window, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn filter_popover(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.devctl_toggle_filter_popover(ctx.cx);
-    Ok(String::new())
-}
-
-/// Fold the band called `label`, or open it.
+/// Fold the group called `label`, or open it.
 pub(super) fn fold(ctx: &mut Ctx, arg: &str) -> Result<String> {
     if ctx.workspace.devctl_fold(arg.trim(), ctx.cx) {
         Ok(String::new())
     } else {
-        Err(anyhow!("no band {:?}", arg.trim()))
+        Err(anyhow!("no group {:?}", arg.trim()))
     }
 }
 
@@ -56,25 +21,14 @@ pub(super) fn pin(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
-/// `group-new <name> <row>…`: a new group of the terminals in those rows (as `state` numbers them),
-/// shown as groups. Prints its id.
+/// `group-new <name> <row>…`: a new group of the terminals in those rows (as `state` numbers them).
+/// Prints its id.
 pub(super) fn new_group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let name = words.next().ok_or_else(|| anyhow!("expected a name and rows"))?;
     let rows: Vec<usize> = words.map(nth).collect();
     let group = ctx.workspace.devctl_new_group(name, &rows, ctx.cx);
     Ok(format!("group {group}"))
-}
-
-/// Pin the folder `arg` names (`~/` is the home folder), or unpin it: the one list of every window,
-/// saved in `config.json`. Prints which it did.
-pub(super) fn pin_folder(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let folder = std::path::PathBuf::from(expand_home(arg.trim()));
-    if !folder.is_absolute() {
-        return Err(anyhow!("expected an absolute path, got {:?}", arg.trim()));
-    }
-    let pinned = ctx.workspace.devctl_pin_folder(&folder, ctx.cx);
-    Ok(format!("{} {}", if pinned { "pinned" } else { "unpinned" }, folder.display()))
 }
 
 /// `folder-color [path] <name|#rrggbb|none>`: colour the folder (the active terminal's without a path;

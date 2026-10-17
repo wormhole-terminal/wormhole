@@ -56,10 +56,15 @@ fn paint(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> FolderP
     cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.folder_paint(folder, cx))).expect("open")
 }
 
-/// The words of the band's tint for VoiceOver, if the band is tinted.
+/// The words of the folder's tint for VoiceOver, if the folder is tinted.
 fn band_name(cx: &mut TestAppContext, window: &OpenWindow, folder: &Path) -> Option<&'static str> {
-    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.band_tint(folder, cx).map(|(name, _)| name)))
-        .expect("open")
+    cx.update(|cx| {
+        window.workspace.read_with(cx, |ws, cx| {
+            let tokens = &cx.global::<SettingsStore>().tokens;
+            ws.folder_paint(folder, cx).tint(tokens).map(|(_, name)| name)
+        })
+    })
+    .expect("open")
 }
 
 /// Pick `color` for `folder` as its band's menu does (the colour goes where the paint says).

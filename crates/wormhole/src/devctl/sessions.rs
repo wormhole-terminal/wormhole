@@ -10,7 +10,7 @@ use super::{Ctx, nth};
 pub(super) fn new(ctx: &mut Ctx, arg: &str) -> Result<String> {
     match arg.trim() {
         "" => ctx.workspace.new_session(ctx.window, ctx.cx),
-        dir => ctx.workspace.new_session_in(Some(expand_home(dir).into()), ctx.window, ctx.cx),
+        dir => ctx.workspace.devctl_new_session_in(expand_home(dir), ctx.window, ctx.cx),
     }
     Ok(String::new())
 }
@@ -142,7 +142,7 @@ pub(super) fn split_leave(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// of the second row's (`row`: it joins its split), its top quarter (`before`) or its bottom
 /// quarter (`after`), as a drag in the sidebar would. Prints what it did.
 pub(super) fn row_drop(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::sidebar::{Part, RowDrop};
+    use wormhole_core::sidebar::{Drop, Landing, Part};
     let mut parts = arg.split_whitespace();
     let (Some(from), Some(onto), Some(part), None) = (parts.next(), parts.next(), parts.next(), parts.next())
     else {
@@ -162,9 +162,19 @@ pub(super) fn row_drop(ctx: &mut Ctx, arg: &str) -> Result<String> {
         .map_err(|error| anyhow!("refused: {error:?}"))?;
     Ok(match done {
         None => "nothing to do\n".to_string(),
-        Some(RowDrop::Reorder { to }) => format!("reorder to {}\n", to + 1),
-        Some(RowDrop::Join { target, .. }) => format!("join row {}\n", target + 1),
-        Some(RowDrop::Leave { to }) => format!("leave to {}\n", to + 1),
+        Some(Drop::Join { target }) => format!("join row {}\n", target + 1),
+        Some(Drop::Move { landing: Landing::Group { group, before }, leave_split, .. }) => {
+            format!(
+                "move into group {group} before {before:?}{}\n",
+                if leave_split { " leaving its split" } else { "" }
+            )
+        }
+        Some(Drop::Move { landing: Landing::Top { before }, leave_split, .. }) => {
+            format!(
+                "move to the top level before {before:?}{}\n",
+                if leave_split { " leaving its split" } else { "" }
+            )
+        }
     })
 }
 

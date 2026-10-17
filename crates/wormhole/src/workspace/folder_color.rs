@@ -12,8 +12,6 @@ use wormhole_core::folder_color::FolderColor;
 use wormhole_core::project::{Feature, ProjectColor, ProjectColorChoice};
 use wormhole_core::tokens::{Color, ThemeTokens};
 
-use gpui_kit::component::color_picker::ColorPicker;
-
 use super::project::{project_folders_on, set_project_color};
 use super::settings_page::update_settings;
 use super::title_row::Tint;
@@ -111,25 +109,6 @@ impl FolderPaint {
         }
     }
 
-    /// How devctl's `rows` says it: ` color=teal` (a hex colour as `color=#2bb3a3`), ` project` when
-    /// the project's `config.json` holds it, ` locked`, ` hidden` while its Settings switch is off.
-    #[cfg(feature = "devctl")]
-    pub(in crate::workspace) fn devctl_words(&self) -> String {
-        match self {
-            Self::Own(color) => color.map_or(String::new(), |color| format!(" color={}", color.to_value())),
-            Self::Project(project) => {
-                let color = match project.chosen {
-                    Some(ProjectColorChoice::Named(name)) => format!(" color={}", name.key()),
-                    Some(ProjectColorChoice::Hex(color)) => format!(" color={}", color.color().to_hex()),
-                    None => String::new(),
-                };
-                let locked = if project.locked { " locked" } else { "" };
-                let hidden = if project.shown { "" } else { " hidden" };
-                format!("{color} project{locked}{hidden}")
-            }
-        }
-    }
-
     /// The tint it draws in the theme `tokens`, and the words VoiceOver says for it ("coloured teal").
     pub(in crate::workspace) fn tint(&self, tokens: &ThemeTokens) -> Option<(ProjectColor, &'static str)> {
         match self {
@@ -206,43 +185,6 @@ impl Workspace {
         }
     }
 
-    /// A band's "Custom colour…": the picker opens under that band, on the colour the folder wears
-    /// (the theme's primary while it has none).
-    pub(super) fn start_custom_color(
-        &mut self,
-        folder: PathBuf,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let tokens = &cx.global::<SettingsStore>().tokens;
-        let start = self
-            .folder_paint(&folder, cx)
-            .shown(tokens)
-            .map(|color| color.color())
-            .or_else(|| tokens.get("primary"));
-        if let Some(start) = start {
-            self.folder_picker
-                .update(cx, |picker, cx| picker.set_value(theme_bridge::hsla(start), window, cx));
-        }
-        self.picking_folder = Some(folder);
-        self.folder_picker.update(cx, |picker, cx| picker.set_open(true, cx));
-        cx.notify();
-    }
-
-    /// The picker as it hangs off the band of `folder` while it is the one being coloured: its
-    /// trigger is invisible, the band's menu item was what opened it.
-    pub(super) fn band_picker(&self, folder: &Path) -> Option<AnyElement> {
-        (self.picking_folder.as_deref() == Some(folder)).then(|| {
-            div()
-                .absolute()
-                .left(px(style::PANEL_INSET))
-                .bottom_0()
-                .opacity(0.0)
-                .child(ColorPicker::new(&self.folder_picker).anchor(Anchor::TopLeft))
-                .into_any_element()
-        })
-    }
-
     /// A colour picked in the Project tab's picker, for the active terminal's folder: kept as the
     /// hex colour it is, where the folder's colour lives.
     pub(super) fn pick_folder_color(&mut self, color: Hsla, cx: &mut Context<Self>) {
@@ -252,13 +194,6 @@ impl Workspace {
         };
         let paint = self.folder_paint(&folder, cx);
         set_folder_choice(&paint, &folder, Some(ProjectColorChoice::Hex(picked)), cx);
-    }
-
-    /// The tint of `folder`'s band, if it has a colour: the words for it too, for VoiceOver.
-    pub(super) fn band_tint(&self, folder: &Path, cx: &App) -> Option<(&'static str, BandTint)> {
-        let tokens = &cx.global::<SettingsStore>().tokens;
-        let (color, name) = self.folder_paint(folder, cx).tint(tokens)?;
-        Some((name, band_tint_of(color, tokens)))
     }
 }
 

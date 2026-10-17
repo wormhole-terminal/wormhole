@@ -32,10 +32,7 @@ impl Workspace {
             match *entry {
                 Entry::Band { band, .. } => {
                     let band = &listing.bands[band];
-                    list.stops.push(match band.group {
-                        Some(group) => SidebarStop::Group(group),
-                        None => SidebarStop::Band(band.folder.clone()),
-                    });
+                    list.stops.push(SidebarStop::Group(band.group));
                     list.items.push(Item { level: 0, fold: Some(!band.folded) });
                     list.names.push(band.label.clone());
                     list.sessions.push(None);
@@ -60,8 +57,9 @@ impl Workspace {
             return;
         }
         let selected = self.sessions.get(self.active).map(|s| SidebarStop::Row(s.id));
-        let band = self.sidebar.active_band.as_ref().map(|(_, folder)| SidebarStop::Band(folder.clone()));
-        self.areas.sidebar_at = [selected, band]
+        // Folded away, the selected terminal is its group's head.
+        let group = self.active_group().map(SidebarStop::Group);
+        self.areas.sidebar_at = [selected, group]
             .into_iter()
             .flatten()
             .find(|stop| list.stops.contains(stop))
@@ -116,10 +114,8 @@ impl Workspace {
     }
 
     fn sidebar_fold(&mut self, list: &Walk, ix: usize, cx: &mut Context<Self>) {
-        match list.stops.get(ix) {
-            Some(SidebarStop::Band(folder)) => self.toggle_band(folder.clone(), cx),
-            Some(&SidebarStop::Group(group)) => self.toggle_group_band(group, cx),
-            _ => {}
+        if let Some(&SidebarStop::Group(group)) = list.stops.get(ix) {
+            self.toggle_group_band(group, cx);
         }
     }
 

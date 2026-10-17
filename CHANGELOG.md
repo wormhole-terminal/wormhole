@@ -11,20 +11,20 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The status tile looks like an app icon: black for a terminal, Claude on its orange, Gemini on its
   blue, with a faint sheen and edge. The amber edge of a terminal that needs you breathes more slowly,
   and the tile comes in 32, 20, 18, 16 and 14 points for rows, tabs, the title row and the status bar.
-- The terminal list is redrawn as rounded cards, one per folder or group, set in from the sidebar's
-  edges, with a rounded selection. Each two-line row leads with a status tile: the agent's logo or the
-  terminal symbol, with a light circling its edge while it works (grey while a command runs), a
-  breathing amber edge when it needs you, and a badge for done, failed, new output or the bell. Under
-  Reduce Motion the light and the edge hold still.
-- Your own groups: Group by → Your groups lists terminals in groups you name and colour yourself, not
-  tied to a folder, with the terminals in no group first. A row's menu adds it to a group or takes it
-  out, dragging a terminal onto a group moves it there, and a group's menu renames it, recolours it,
-  opens a new terminal in it or ungroups it. New terminals open in the selected terminal's group.
+- The terminal list is redrawn as rounded cards, set in from the sidebar's edges, with a rounded
+  selection: a card for each group and a card of its own for each terminal in no group. Each
+  two-line row leads with a status tile: the agent's logo or the terminal symbol, with a light
+  circling its edge while it works (grey while a command runs), a breathing amber edge when it needs
+  you, and a badge for done, failed, new output or the bell. Under Reduce Motion the light and the
+  edge hold still.
+- Your own groups, as in a browser's tab groups: groups you name and colour yourself, in your order
+  among the terminals in no group. Drag a terminal into or out of a group, or a group by its head, to
+  rearrange; a row's menu adds it to a group or takes it out, and a group's menu renames it, recolours
+  it, opens a new terminal in it or ungroups it. A group goes with its last terminal. New terminals
+  open in the selected terminal's group.
 - Terminals can show as tabs instead of the sidebar (Settings → Show terminals in, or View → Show
-  Terminals as Tabs), in one of three layouts: two rows across the top (the groups or folders as chips,
-  the selected one's tabs under them), stacks (the selected set's tabs, the others piled up beside
-  them and fanning out under the pointer) or a bar along the bottom. The title row then shows the
-  terminal's status as a small tile.
+  Terminals as Tabs): one row across the top with the selected terminal's group (a menu switches to
+  another) and its tabs. The title row then shows the terminal's status as a small tile.
 - The right panel is drawn in cards like the sidebar's: Changes has a card per section, History's
   commits are one card, Notes has its Next steps and Notes cards, and Usage and Project follow. The
   panel has no title row any more; its first card starts under the top of the window.
@@ -41,6 +41,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - New windows open with a 320 point sidebar and a 300 point panel (plus its 28 point strip); saved
   widths are kept.
+
+### Removed
+
+- The sidebar no longer groups terminals by folder, and its header is only "Terminals" and the +: the
+  filter funnel (Show, search, Hide idle), Group by, the new-group button, the Settings gear and the
+  shell chevron are gone (a right-click on the + still offers the other shells). The Order setting
+  (Stable or Classic) is gone with the folder bands it ordered; terminals keep the order you give them.
+  The tab bar's two-row, stacks and bottom-bar layouts are gone too. Old settings that named any of
+  these still load and do nothing.
 
 ## [1.1.0] - 2026-10-15
 

@@ -1,11 +1,9 @@
-//! The words and widths of a row and a band: what a terminal's second
-//! line says, how its times read, and which part of a band gives way first when it is narrow.
+//! The words of a row: what a terminal's second line says and how its times read.
 
 use std::path::Path;
 use std::time::Duration;
 
-use super::filter::RowState;
-use super::group::{display_path, place_in_folder};
+use super::state::RowState;
 
 /// What the second line of a row whose status something tells (an agent, or a program that
 /// reports its own) says, or `None` for a one-line row: "Needs you · Approve cargo test?",
@@ -82,146 +80,25 @@ pub fn path_tail(path: &str, max: usize) -> String {
     format!("…/{tail}")
 }
 
-/// What a comfortable row's second line says when the terminal has nothing to report (an idle
-/// agent, a bare shell), so no row is a single line: where it is. Under a band that is how far
-/// below the band's folder it has gone (`crates/core`), and at the folder itself the branch,
-/// since the header already names the folder; in the flat list the path, `~/…` and cut from the
-/// front to `max` characters. `None` only when the terminal's folder is unknown.
-pub fn place_detail(
-    cwd: Option<&Path>,
-    band: Option<&Path>,
-    branch: Option<&str>,
-    home: Option<&Path>,
-    max: usize,
-) -> Option<String> {
-    let cwd = cwd?;
-    let Some(folder) = band else {
-        return Some(path_tail(&display_path(cwd, home), max));
-    };
-    match place_in_folder(cwd, folder) {
-        Some(deeper) => Some(path_tail(&deeper, max)),
-        None => Some(branch.map_or_else(|| path_tail(&display_path(cwd, home), max), str::to_string)),
+/// What a row's second line says when the terminal has nothing to report (an idle agent, a bare
+/// shell), so no row is a single line: where it is, `~/…` and cut from the front to `max`
+/// characters. `None` only when the terminal's folder is unknown.
+pub fn place_detail(cwd: Option<&Path>, home: Option<&Path>, max: usize) -> Option<String> {
+    Some(path_tail(&display_path(cwd?, home), max))
+}
+
+/// `~/Projects/app` for paths under the home directory, the full path otherwise.
+pub fn display_path(path: &Path, home: Option<&Path>) -> String {
+    match home.and_then(|home| path.strip_prefix(home).ok()) {
+        Some(rest) if rest.as_os_str().is_empty() => "~".into(),
+        Some(rest) => format!("~/{}", rest.display()),
+        None => path.display().to_string(),
     }
-}
-
-/// How wide a band's folder name and branch chip are drawn.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BandWidths {
-    pub folder: f32,
-    pub chip: Option<f32>,
-}
-
-/// The order of giving way on a band whose title area (after the chevron, before the
-/// count or ±N, which never shrink) is `avail` wide: the folder name keeps at most
-/// `folder_max` of it (a share, 0.6); the branch chip shrinks first, from its natural width
-/// down to `chip_min` (its glyph and three letters); then the folder name. `gap` is the space
-/// between the two. Natural widths are what the text needs.
-pub fn band_widths(
-    avail: f32,
-    folder: f32,
-    chip: Option<f32>,
-    gap: f32,
-    folder_max: f32,
-    chip_min: f32,
-) -> BandWidths {
-    let folder = folder.min(avail * folder_max).max(0.0);
-    let Some(chip) = chip else {
-        return BandWidths { folder: folder.min(avail.max(0.0)), chip: None };
-    };
-    let room = (avail - folder - gap).max(0.0);
-    let chip_min = chip_min.min(chip);
-    let chip = chip.min(room).max(chip_min);
-    let folder = folder.min((avail - gap - chip).max(0.0));
-    BandWidths { folder, chip: Some(chip) }
-}
-
-/// How wide the parts of a folder band's second line are drawn.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BandLine {
-    /// The folder's path; 0 when it is left out.
-    pub path: f32,
-    pub chip: Option<f32>,
-}
-
-/// The order of giving way on a folder band's second line, which has `avail` for the path,
-/// the "±N" (`changes` wide, 0 without one: it never gives way) and the branch chip, `gap` apart:
-/// the path shortens first (cut with an ellipsis), then the chip down to `chip_min`. A path
-/// that would be left narrower than `path_least` is left out instead of showing as a sliver,
-/// and the room it and its gap took goes to the chip. Natural widths are what the text needs.
-pub fn band_line_widths(
-    avail: f32,
-    path: f32,
-    changes: f32,
-    chip: Option<f32>,
-    gap: f32,
-    path_least: f32,
-    chip_min: f32,
-) -> BandLine {
-    let fit = |with_path: bool| {
-        let path = if with_path { path.max(0.0) } else { 0.0 };
-        let drawn = usize::from(path > 0.0) + usize::from(changes > 0.0) + usize::from(chip.is_some());
-        let room = avail - changes - drawn.saturating_sub(1) as f32 * gap;
-        give_way(room, &[Part::down_to(path, 0.0), Part::down_to(chip.unwrap_or(0.0), chip_min)])
-    };
-    let widths = fit(true);
-    let (path, chip_w) = if path > 0.0 && widths[0] < path_least.min(path) {
-        (0.0, fit(false)[1])
-    } else {
-        (widths[0], widths[1])
-    };
-    BandLine { path, chip: chip.map(|_| chip_w) }
-}
-
-/// One part of a line that gives way when the line is too narrow: the width it wants, the least
-/// it may be drawn at, and whether it is drawn whole or not at all (words cut to "wo…" say
-/// nothing).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Part {
-    pub natural: f32,
-    pub least: f32,
-    pub whole: bool,
-}
-
-impl Part {
-    /// A part that may shrink to `least`.
-    pub fn down_to(natural: f32, least: f32) -> Self {
-        Self { natural, least: least.min(natural), whole: false }
-    }
-
-    /// A part that shows whole or not at all.
-    pub fn whole(natural: f32) -> Self {
-        Self { natural, least: 0.0, whole: true }
-    }
-}
-
-/// The widths of `parts` on a line with `avail` for them, the parts giving way in the order
-/// given: the first down to its least before the second gives anything, and so on. Whatever
-/// still doesn't fit after every part is at its least is the caller's to clip.
-pub fn give_way(avail: f32, parts: &[Part]) -> Vec<f32> {
-    let mut over = parts.iter().map(|p| p.natural).sum::<f32>() - avail;
-    parts
-        .iter()
-        .map(|part| {
-            if over <= 0.0 {
-                return part.natural;
-            }
-            if part.whole {
-                over -= part.natural;
-                return 0.0;
-            }
-            let cut = (part.natural - part.least).max(0.0).min(over);
-            over -= cut;
-            part.natural - cut
-        })
-        .collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        BandLine, BandWidths, Part, agent_detail, ago, band_line_widths, band_widths, clock, give_way,
-        path_tail, place_detail, took,
-    };
+    use super::{agent_detail, ago, clock, display_path, path_tail, place_detail, took};
     use crate::sidebar::RowState;
     use std::path::Path;
     use std::time::Duration;
@@ -290,70 +167,21 @@ mod tests {
     #[test]
     fn a_quiet_row_says_where_it_is() {
         let home = Some(Path::new("/Users/me"));
-        let (cwd, folder) = (Path::new("/Users/me/Projects/app"), Path::new("/Users/me/Projects/app"));
-        let say = |cwd, band, branch| place_detail(cwd, band, branch, home, 38);
-        // The flat list: the path, from home.
-        assert_eq!(say(Some(cwd), None, Some("main")).as_deref(), Some("~/Projects/app"));
-        assert_eq!(say(Some(Path::new("/opt/x")), None, None).as_deref(), Some("/opt/x"));
-        // Under a band: how far below its folder; at the folder, the branch, else the path.
-        let deeper = Path::new("/Users/me/Projects/app/crates/core");
-        assert_eq!(say(Some(deeper), Some(folder), Some("main")).as_deref(), Some("crates/core"));
-        assert_eq!(say(Some(cwd), Some(folder), Some("feature/x")).as_deref(), Some("feature/x"));
-        assert_eq!(say(Some(cwd), Some(folder), None).as_deref(), Some("~/Projects/app"));
+        let cwd = Path::new("/Users/me/Projects/app");
+        assert_eq!(place_detail(Some(cwd), home, 38).as_deref(), Some("~/Projects/app"));
+        assert_eq!(place_detail(Some(Path::new("/opt/x")), home, 38).as_deref(), Some("/opt/x"));
         // A long path is cut from the front.
         let long = Path::new("/Users/me/Projects/clients/acme/very/deep/app");
-        assert_eq!(place_detail(Some(long), None, None, home, 20).as_deref(), Some("…/acme/very/deep/app"));
+        assert_eq!(place_detail(Some(long), home, 20).as_deref(), Some("…/acme/very/deep/app"));
         // Without a folder there is nothing to say.
-        assert_eq!(say(None, None, Some("main")), None);
+        assert_eq!(place_detail(None, home, 38), None);
     }
 
     #[test]
-    fn the_branch_chip_gives_way_first_then_the_folder_name() {
-        let widths = |avail, folder, chip| band_widths(avail, folder, chip, 8.0, 0.6, 56.0);
-        // Room for everything.
-        assert_eq!(widths(300.0, 80.0, Some(70.0)), BandWidths { folder: 80.0, chip: Some(70.0) });
-        // The folder name never takes more than 60 %.
-        let capped = widths(200.0, 400.0, None);
-        assert!((capped.folder - 120.0).abs() < 0.01 && capped.chip.is_none(), "{capped:?}");
-        // Narrower: the chip shrinks, the folder keeps its width...
-        assert_eq!(widths(200.0, 100.0, Some(112.0)), BandWidths { folder: 100.0, chip: Some(92.0) });
-        // ...down to 56, and only then does the folder name give way.
-        assert_eq!(widths(150.0, 90.0, Some(112.0)), BandWidths { folder: 86.0, chip: Some(56.0) });
-        // A short branch keeps its own width as its least.
-        assert_eq!(widths(100.0, 60.0, Some(40.0)), BandWidths { folder: 52.0, chip: Some(40.0) });
-        // Nothing left: nothing negative.
-        assert_eq!(widths(10.0, 60.0, Some(70.0)), BandWidths { folder: 0.0, chip: Some(56.0) });
-    }
-
-    #[test]
-    fn a_bands_second_line_shortens_the_path_first_then_the_chip() {
-        let line = |avail, path, changes, chip| band_line_widths(avail, path, changes, chip, 8.0, 24.0, 56.0);
-        // Room for everything: 100 + 8 + 20 + 8 + 80.
-        assert_eq!(line(300.0, 100.0, 20.0, Some(80.0)), BandLine { path: 100.0, chip: Some(80.0) });
-        // The path gives way alone, the "±N" and the chip keep theirs.
-        assert_eq!(line(200.0, 100.0, 20.0, Some(80.0)), BandLine { path: 84.0, chip: Some(80.0) });
-        // Without git there is only the path, which takes what there is.
-        assert_eq!(line(60.0, 100.0, 0.0, None), BandLine { path: 60.0, chip: None });
-        // A path left under the least is left out; its gap goes to the chip, down to its least.
-        assert_eq!(line(120.0, 100.0, 20.0, Some(80.0)), BandLine { path: 0.0, chip: Some(80.0) });
-        assert_eq!(line(70.0, 100.0, 20.0, Some(112.0)), BandLine { path: 0.0, chip: Some(56.0) });
-        assert_eq!(line(10.0, 100.0, 20.0, Some(112.0)), BandLine { path: 0.0, chip: Some(56.0) });
-        // A short chip keeps its own width as its least, and the "±N" alone is never cut.
-        assert_eq!(line(40.0, 100.0, 20.0, Some(30.0)), BandLine { path: 0.0, chip: Some(30.0) });
-        assert_eq!(line(10.0, 100.0, 20.0, None), BandLine { path: 0.0, chip: None });
-    }
-
-    #[test]
-    fn parts_give_way_one_after_the_other() {
-        let parts = [Part::down_to(50.0, 10.0), Part::whole(30.0), Part::down_to(40.0, 0.0)];
-        assert_eq!(give_way(200.0, &parts), [50.0, 30.0, 40.0], "room for all");
-        assert_eq!(give_way(100.0, &parts), [30.0, 30.0, 40.0], "the first gives way alone");
-        // The first at its least, the whole part goes entirely, and what that frees stays free.
-        assert_eq!(give_way(70.0, &parts), [10.0, 0.0, 40.0]);
-        assert_eq!(give_way(30.0, &parts), [10.0, 0.0, 20.0]);
-        // Too narrow even at the least: the rest is clipped, nothing is negative.
-        assert_eq!(give_way(0.0, &parts), [10.0, 0.0, 0.0]);
-        // A least above the natural width means the part never shrinks.
-        assert_eq!(Part::down_to(20.0, 56.0).least, 20.0);
+    fn home_is_abbreviated() {
+        let home = Path::new("/Users/me");
+        assert_eq!(display_path(Path::new("/Users/me/Projects/x"), Some(home)), "~/Projects/x");
+        assert_eq!(display_path(Path::new("/opt/x"), Some(home)), "/opt/x");
+        assert_eq!(display_path(Path::new("/Users/me"), Some(home)), "~");
     }
 }

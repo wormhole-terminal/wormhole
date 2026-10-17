@@ -1,8 +1,7 @@
-//! Terminals & sidebar: the live preview, the funnel's options (grouping, density) and
-//! the ⌘ hints, and what each row shows.
+//! Terminals & sidebar: the live preview, the density, the ⌘ hints, and what each row shows.
 
 use wormhole_core::config::StatusPosition;
-use wormhole_core::sidebar::{Grouping, SidebarNumbers, SidebarOrder, TabLayout, TerminalsIn};
+use wormhole_core::sidebar::{SidebarNumbers, TerminalsIn};
 
 use super::*;
 
@@ -13,19 +12,6 @@ pub(super) const SETTINGS: &[Setting] = &[
         &[Segment::text("Sidebar"), Segment::text("Tabs")],
         |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
         |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
-    ),
-    Setting::segmented(
-        "tab-layout",
-        &[Segment::text("Two rows"), Segment::text("Stacks"), Segment::text("Bottom")],
-        |s| TabLayout::ALL.iter().position(|&layout| layout == s.tab_layout).unwrap_or(0),
-        |s, ix| s.tab_layout = TabLayout::ALL.get(ix).copied().unwrap_or_default(),
-    ),
-    Setting::custom("sidebar-group", draw_grouping),
-    Setting::segmented(
-        "sidebar-order",
-        &[Segment::text("Stable"), Segment::text("Classic")],
-        |s| usize::from(s.sidebar_order == SidebarOrder::Classic),
-        |s, ix| s.sidebar_order = if ix == 0 { SidebarOrder::Stable } else { SidebarOrder::Classic },
     ),
     Setting::segmented(
         "sidebar-numbers",
@@ -49,40 +35,6 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("sidebar-agent", sidebar_agent_icon),
     toggle!("sidebar-notes", sidebar_notes),
 ];
-
-/// Group by, the same as the funnel's: it sets the grouping of every open window, and
-/// of the windows still to come.
-fn draw_grouping(this: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
-    // What the funnel of the window in front shows; the setting for a window that has none.
-    let current = this.front.grouping.unwrap_or(settings(cx).sidebar_group);
-    style::segmented_form(ui)
-        .children(
-            [
-                (0usize, "Folder", Grouping::Folder),
-                (1, "Groups", Grouping::Custom),
-                (2, "None", Grouping::None),
-            ]
-            .map(|(ix, label, grouping)| {
-                style::form_segment(("sidebar-group", ix), ui, None, label, current == grouping).on_click(
-                    cx.listener(move |this, _, _, cx| {
-                        set_grouping(grouping, cx);
-                        this.front.grouping = Some(grouping);
-                        cx.notify();
-                    }),
-                )
-            }),
-        )
-        .into_any_element()
-}
-
-/// The grouping for new windows, and for every open one now.
-fn set_grouping(grouping: Grouping, cx: &mut App) {
-    update_settings(cx, |s| s.sidebar_group = grouping);
-    for window in app(cx).windows.clone() {
-        AppState::with_workspace(&window, cx, |ws, _, cx| ws.set_grouping(grouping, cx));
-    }
-}
 
 /// Density: hovering an option shows the list in it beside the current one.
 fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {

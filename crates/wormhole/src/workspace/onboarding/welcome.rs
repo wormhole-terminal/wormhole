@@ -2,7 +2,7 @@
 //! it, and the way in. It is what the window carries through the wormhole, so each part has its own
 //! moment to come in (`wormhole_core::intro::page`).
 
-use style::{BandKind, BandParts, FolderLook, FolderMeta, RowTone, Section, SessionRow, StatusGlyph};
+use style::{BandKind, BandParts, FolderLook, RowTone, Section, SessionRow, StatusGlyph};
 use wormhole_core::intro::page::Entrance;
 
 use super::page::Entering;
@@ -177,13 +177,6 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             joined: true,
         },
         FolderLook::default(),
-        Some(FolderMeta {
-            path: "~/Projects/api-server".into(),
-            path_w: None,
-            changes: Some(3),
-            branch: Some(style::branch_tag(ui, Some("feature/auth")).into_any_element()),
-            pull_request: None,
-        }),
     );
     style::palette_surface(ui, true)
         .relative()

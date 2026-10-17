@@ -70,7 +70,7 @@ fn badge(ui: UiColors) -> Div {
 /// `git.branch` on its own tint, 20 tall, truncating at [`BRANCH_CHIP_MAX`] so the folder
 /// name never gives way first. `None` is a detached HEAD, which isn't on any branch: it
 /// reads "detached" in the warning colors. `changes` adds the folder's "±N" after the
-/// chip, in muted digits. A band with a second line has [`branch_tag`] there instead.
+/// chip, in muted digits.
 #[track_caller]
 pub fn branch_chip(ui: UiColors, branch: Option<&str>, changes: Option<usize>) -> Div {
     div().flex().items_center().gap_2().min_w_0().child(branch_chip_box(ui, branch, CHIP_H)).children(
@@ -78,14 +78,6 @@ pub fn branch_chip(ui: UiColors, branch: Option<&str>, changes: Option<usize>) -
             div().flex_none().text_caption().tabular_nums().text_color(ui.muted).child(format!("±{n}"))
         }),
     )
-}
-
-/// The branch on a folder band's second line (`style::folder_band`'s `FolderMeta`): the chip
-/// of [`branch_chip`] at the height of a caption line ([`BADGE_H`]), without the "±N", which
-/// stands before it on that line.
-#[track_caller]
-pub fn branch_tag(ui: UiColors, branch: Option<&str>) -> Div {
-    branch_chip_box(ui, branch, BADGE_H)
 }
 
 /// The chip both branch marks share: ⎇ and the branch (or "detached") `height` tall.

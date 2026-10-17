@@ -91,8 +91,7 @@ pub(super) struct Place {
     pub(super) position: usize,
     pub(super) of: usize,
     pub(super) number: Option<usize>,
-    /// The folder of its band, when grouped.
-    pub(super) band: Option<PathBuf>,
+    /// It is in a group.
     pub(super) grouped: bool,
     /// What it shows of its split.
     pub(super) marks: SplitMarks,
@@ -214,7 +213,6 @@ impl Workspace {
         &self,
         info: &RowInfo,
         place: &Place,
-        listing: &Listing,
         frame: &Frame,
         window: &Window,
         cx: &mut Context<Self>,
@@ -294,8 +292,8 @@ impl Workspace {
         // has to report comes first; a quiet one says where it is, and where even that is
         // unknown it says what it is, so no row is a single line.
         let branch = info.branch.as_deref().filter(|_| frame.show_branch);
-        let whereabouts =
-            || place_detail(info.cwd.as_deref(), place.band.as_deref(), branch, home_dir(), PLACE_CHARS);
+        let _ = branch;
+        let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
         let SecondLine { text: detail, tone, mono, trail: detail_trail } =
             second_line(info, frame.compact, whereabouts);
 
@@ -356,11 +354,8 @@ impl Workspace {
             || mono
                 && detail.as_deref().is_some_and(|d| d.chars().count() as f32 * MONO_CHAR_W > detail_room);
         let tooltip = (cut_name || cut_detail).then(|| {
-            let where_ = place
-                .band
-                .as_deref()
-                .or(info.cwd.as_deref())
-                .map(|folder| wormhole_core::sidebar::display_path(folder, home_dir()));
+            let where_ =
+                info.cwd.as_deref().map(|folder| wormhole_core::sidebar::display_path(folder, home_dir()));
             let second = [where_, detail.clone()].into_iter().flatten().collect::<Vec<_>>().join(" · ");
             (info.name.clone(), SharedString::from(second))
         });
@@ -439,7 +434,6 @@ impl Workspace {
             .when(self.sidebar.menu_row == Some(id) || ring, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
-            .children(self.drop_line(info, listing, cx.has_active_drag(), ui))
             .when(!frame.hints, |d| d.child(self.close_button(info, selected, &group, ui, cx)))
             .map(|d| self.with_drag(d, info, cx));
         // Last: the menu wraps the row.
@@ -528,7 +522,6 @@ mod tests {
             message: None,
             since: Duration::from_secs(180),
             cwd: Some(PathBuf::from("/w")),
-            folder: None,
             worktree: None,
             branch: None,
             command: None,

@@ -1,32 +1,31 @@
-//! Drag and drop in the list: a terminal moves within its folder (the whole list under
-//! "No grouping"), inside its pinned or unpinned block, or joins another terminal in a split, or
-//! leaves its split. The row lifts to 40 %, a ghost follows the pointer and a 2 px primary line
-//! shows where it lands (full width outside any bracket, inset inside one, where it only reorders;
-//! the middle of a row, which joins it in a split, is tinted instead). A pane's header dragged over
-//! the list lands the same way, and dropped below the rows or on a band it takes the terminal out of
-//! its split. Core works out what a drop does (`order` where a row lands, `resolve_row_drop`
-//! whether it is a reorder, a join or a leave); the middle of a row in another folder's band still
-//! joins it (the two stay in their own bands, joined by the chain mark), but dropping between
-//! rows there or on another window does nothing (custom folders are in the backlog), except that a
-//! header still leaves its split. A drag inside a bracket reorders the sidebar only, never the
-//! layout.
+//! Drag and drop in the list: a terminal moves among the terminals in no group and the groups, into
+//! a group or out of it, or joins another terminal in a split, or leaves its split; a group moves
+//! among the others by its head. The row lifts to 40 %, a ghost follows the pointer and a 2 px
+//! primary line shows where it lands (full width outside any bracket, inset inside one, where it
+//! only reorders; the middle of a row, which joins it in a split, is tinted instead). A pane's
+//! header dragged over the list lands the same way, and dropped below the rows it takes the
+//! terminal out of its split. Core works out what a drop does (`sidebar::place`): where on the
+//! arrangement it lands, or which split it joins; this reads the pointer and draws the line.
+//! A drag inside a bracket reorders the sidebar only, never the layout.
 use wormhole_core::panes::{DropError, Zone};
-use wormhole_core::sidebar::order::{follow, move_in_block, regroup};
-use wormhole_core::sidebar::{Part, RowDrop, resolve_row_drop};
+use wormhole_core::sidebar::{Card, Drop, DropInput, Item, Landing, Part, Target, group_drop, terminal_drop};
 
-use super::super::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag};
+use super::super::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over, TerminalDrag};
+use super::motion::ItemKey;
 use super::*;
 
-/// What a drop would do, and the group it is worked out in: the group's terminals as listed (a
-/// folder band, or the whole flat list), whether each is pinned, and the dragged one's place in it.
-struct Pending {
-    drop: RowDrop,
-    members: Vec<usize>,
-    pinned: Vec<bool>,
-    from: usize,
+/// Where a dragged thing would land, as a line on the list.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) enum DropMark {
+    /// The line above this one; `inside` a split's bracket, which only reorders its rows.
+    Above { key: ItemKey, inside: bool },
+    /// The line below it.
+    Below { key: ItemKey, inside: bool },
+    /// The row of this terminal would take the dragged one into its split.
+    Join(i64),
 }
 
-/// The part of a row the pointer is over: the top quarter, the bottom quarter, or the middle half.
+/// The part of a line the pointer is over: the top quarter, the bottom quarter, or the middle half.
 fn part_at(fraction: f32) -> Part {
     if fraction < 0.25 {
         Part::Top
@@ -54,103 +53,194 @@ impl Workspace {
         })
     }
 
+    /// A group's head makes the group draggable.
+    pub(super) fn with_group_drag(
+        &self,
+        head: Stateful<Div>,
+        group: u32,
+        name: SharedString,
+        color: Option<Hsla>,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        let this = cx.weak_entity();
+        let dragged = DraggedGroup { group, name, color, grabbed: Point::default() };
+        head.on_drag(dragged, move |dragged, grabbed, _, cx| {
+            this.update(cx, |ws, _| ws.group_drag = Some(dragged.group)).ok();
+            cx.new(|_| DraggedGroup { grabbed, ..dragged.clone() })
+        })
+    }
+
     /// Terminal `id`'s line of the list as a drop target: its row and the stretch of its card round
-    /// it, so the card's padding under its last row takes a drop too.
+    /// it, so the card's padding under its last row takes a drop too. `card` is the card it is a
+    /// stretch of, and `last` whether it is the card's last line, whose bottom gap is "after the card".
     pub(super) fn with_row_drop(
         &self,
         line: Stateful<Div>,
         id: i64,
+        group: Option<u32>,
+        last: bool,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
+        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
+            let height = f32::from(bounds.size.height).max(1.0);
+            let y = f32::from(position.y - bounds.origin.y);
+            match group {
+                // The gap under a group's card puts the dragged terminal after the group.
+                Some(group) if last && y > height - style::CARD_GAP => Over::After(group),
+                _ => Over::Row { id, part: part_at(y / height) },
+            }
+        };
         line.on_drag_move::<DraggedTerminal>(cx.listener(
             move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
                 // Every row hears every move: only the one under the pointer counts.
-                if !event.bounds.contains(&event.event.position) {
-                    return;
-                }
-                let height = f32::from(event.bounds.size.height).max(1.0);
-                let part = part_at(f32::from(event.event.position.y - event.bounds.origin.y) / height);
-                if let Some(drag) = &mut this.terminal_drag
-                    && (drag.onto != Some(id) || drag.part != part)
-                {
-                    drag.onto = Some(id);
-                    drag.part = part;
-                    cx.notify();
+                if event.bounds.contains(&event.event.position) {
+                    this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
                 }
             },
         ))
+        .on_drag_move::<DraggedGroup>(cx.listener(move |this, event: &DragMoveEvent<DraggedGroup>, _, cx| {
+            if event.bounds.contains(&event.event.position) {
+                this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+            }
+        }))
         .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, window, cx| {
-            let part = this.terminal_drag.as_ref().map_or(Part::Middle, |drag| drag.part);
-            this.finish_row_drop(dragged, id, part, window, cx);
+            this.finish_terminal_drop(dragged, window, cx);
+        }))
+        .on_drop(cx.listener(move |this, dragged: &DraggedGroup, _, cx| {
+            this.finish_group_drop(dragged, cx);
         }))
     }
 
-    /// A terminal was dropped on the `part` of the row of terminal `onto`.
-    fn finish_row_drop(
+    /// A group's head as a drop target; `last` when it is the whole card (folded, or empty).
+    pub(super) fn with_head_drop(
+        &self,
+        line: Stateful<Div>,
+        group: u32,
+        last: bool,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
+            let height = f32::from(bounds.size.height).max(1.0);
+            let y = f32::from(position.y - bounds.origin.y);
+            if last && y > height - style::CARD_GAP {
+                Over::After(group)
+            } else {
+                Over::Head { group, part: part_at(y / height) }
+            }
+        };
+        line.on_drag_move::<DraggedTerminal>(cx.listener(
+            move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
+                if event.bounds.contains(&event.event.position) {
+                    this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+                }
+            },
+        ))
+        .on_drag_move::<DraggedGroup>(cx.listener(move |this, event: &DragMoveEvent<DraggedGroup>, _, cx| {
+            if event.bounds.contains(&event.event.position) {
+                this.set_over(Some(over_at(event.bounds, event.event.position)), cx);
+            }
+        }))
+        .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, window, cx| {
+            // The list underneath would take it out of its split instead.
+            cx.stop_propagation();
+            this.finish_terminal_drop(dragged, window, cx);
+        }))
+        .on_drop(cx.listener(move |this, dragged: &DraggedGroup, _, cx| {
+            cx.stop_propagation();
+            this.finish_group_drop(dragged, cx);
+        }))
+    }
+
+    fn set_over(&mut self, over: Option<Over>, cx: &mut Context<Self>) {
+        if self.sidebar.over != over {
+            self.sidebar.over = over;
+            cx.notify();
+        }
+    }
+
+    /// A terminal was dropped on what the pointer was over last.
+    fn finish_terminal_drop(
         &mut self,
         dragged: &DraggedTerminal,
-        onto: i64,
-        part: Part,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let over = self.sidebar.over.take();
         self.terminal_drag = None;
-        match self.row_drop(dragged.id, onto, part, window, cx) {
-            // A header dropped where no row could take it (another folder's band) still leaves
-            // its split, unless it was dropped on a terminal of that same split.
-            Ok(None) if dragged.origin == DragOrigin::PaneHeader => {
-                self.leave_unless_beside(dragged.id, onto, cx)
+        let result = over.map(|over| self.drop_terminal(dragged.id, over, window, cx));
+        match result {
+            Some(Err(error)) => tracing::debug!(?error, "a drop on a row was refused"),
+            Some(Ok(Some(_))) => {}
+            // A header dropped where no row could take it still leaves its split, unless it was
+            // dropped on a terminal of that same split.
+            Some(Ok(None)) | None if dragged.origin == DragOrigin::PaneHeader => {
+                if let Some(Over::Row { id, .. }) = over {
+                    self.leave_unless_beside(dragged.id, id, cx)
+                } else if let Some(ix) = self.find_session(dragged.id) {
+                    self.leave_split(ix, cx);
+                    self.mark_dirty(cx);
+                }
             }
-            Ok(_) => {}
-            Err(error) => tracing::debug!(?error, "a drop on a row was refused"),
+            Some(Ok(None)) | None => {}
         }
         cx.notify();
     }
 
-    /// The list itself as a drop target: what no row took, the bands, takes the dragged terminal
-    /// out of its split where it is. Its handler of the drag's move runs before the rows' (parents
-    /// first), so it clears the row the pointer was over and the one under it now sets it again:
-    /// over a band or beside the rows no row is marked.
+    fn finish_group_drop(&mut self, dragged: &DraggedGroup, cx: &mut Context<Self>) {
+        let over = self.sidebar.over.take();
+        self.group_drag = None;
+        if let Some(over) = over {
+            self.drop_group(dragged.group, over, cx);
+        }
+        cx.notify();
+    }
+
+    /// The list itself as a drop target: what no row took, the space under the last line, takes
+    /// the dragged terminal out of any group and its split, to the end. Its handler of the drag's
+    /// move runs before the rows' (parents first), so it clears what the pointer was over and the
+    /// line under it now sets it again.
     pub(super) fn with_list_drop(&self, list: Stateful<Div>, cx: &mut Context<Self>) -> Stateful<Div> {
-        list.on_drag_move::<DraggedTerminal>(cx.listener(
-            |this, _: &DragMoveEvent<DraggedTerminal>, _, cx| {
-                if let Some(drag) = &mut this.terminal_drag {
-                    drag.onto = None;
-                    cx.notify();
-                }
-            },
-        ))
-        .on_drop(cx.listener(|this, dragged: &DraggedTerminal, _, cx| {
-            this.terminal_drag = None;
-            if let Some(ix) = this.find_session(dragged.id) {
-                this.leave_split(ix, cx);
-                this.mark_dirty(cx);
-            }
-            cx.notify();
+        list.on_drag_move::<DraggedTerminal>(
+            cx.listener(|this, _: &DragMoveEvent<DraggedTerminal>, _, cx| this.set_over(None, cx)),
+        )
+        .on_drag_move::<DraggedGroup>(
+            cx.listener(|this, _: &DragMoveEvent<DraggedGroup>, _, cx| this.set_over(None, cx)),
+        )
+        .on_drop(cx.listener(|this, dragged: &DraggedTerminal, window, cx| {
+            this.finish_terminal_drop(dragged, window, cx);
+        }))
+        .on_drop(cx.listener(|this, dragged: &DraggedGroup, _, cx| {
+            this.finish_group_drop(dragged, cx);
         }))
     }
 
-    /// The space under the last row, which counts as the bottom of that row: a terminal dropped
-    /// there goes to the end of its band, out of its split if it was in one. `last` is that row's
-    /// terminal; none without rows.
-    pub(super) fn list_tail(&self, last: Option<i64>, cx: &mut Context<Self>) -> AnyElement {
-        let tail = div().id("session-tail").flex_1().min_h(px(style::SIDEBAR_TAIL_MIN_H)).w_full();
-        let Some(last) = last else { return tail.into_any_element() };
-        tail.on_drag_move::<DraggedTerminal>(cx.listener(
-            move |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
-                if event.bounds.contains(&event.event.position)
-                    && let Some(drag) = &mut this.terminal_drag
-                {
-                    drag.onto = Some(last);
-                    drag.part = Part::Bottom;
-                    cx.notify();
+    /// The space under the last line, which counts as after every card: a terminal dropped there
+    /// goes last, out of any group and its split.
+    pub(super) fn list_tail(&self, cx: &mut Context<Self>) -> AnyElement {
+        div()
+            .id("session-tail")
+            .flex_1()
+            .min_h(px(style::SIDEBAR_TAIL_MIN_H))
+            .w_full()
+            .on_drag_move::<DraggedTerminal>(cx.listener(
+                |this, event: &DragMoveEvent<DraggedTerminal>, _, cx| {
+                    if event.bounds.contains(&event.event.position) {
+                        this.set_over(Some(Over::Tail), cx);
+                    }
+                },
+            ))
+            .on_drag_move::<DraggedGroup>(cx.listener(|this, event: &DragMoveEvent<DraggedGroup>, _, cx| {
+                if event.bounds.contains(&event.event.position) {
+                    this.set_over(Some(Over::Tail), cx);
                 }
-            },
-        ))
-        .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, window, cx| {
-            this.finish_row_drop(dragged, last, Part::Bottom, window, cx);
-        }))
-        .into_any_element()
+            }))
+            .on_drop(cx.listener(|this, dragged: &DraggedTerminal, window, cx| {
+                this.finish_terminal_drop(dragged, window, cx);
+            }))
+            .on_drop(cx.listener(|this, dragged: &DraggedGroup, _, cx| {
+                this.finish_group_drop(dragged, cx);
+            }))
+            .into_any_element()
     }
 
     /// A header was dropped on the row of terminal `onto`, which took nothing: its terminal leaves
@@ -163,88 +253,154 @@ impl Workspace {
         }
     }
 
-    /// The group of terminals a drop of `dragged` on `onto` is worked out in: the folder band they
-    /// share, or the whole flat list. `None` when they are in different bands, which does nothing.
-    fn drop_group(&self, listing: &Listing, dragged: usize, onto: usize) -> Option<Vec<usize>> {
-        let members: Vec<usize> = match self.sidebar.view.grouping {
-            Grouping::Folder => listing.bands.get(listing.band_of(dragged)?)?.members.clone(),
-            // A terminal dropped beside one in another group moves into that group (`row_drop`), so
-            // the whole list is the order it lands in.
-            Grouping::None | Grouping::Custom => listing.order().to_vec(),
-        };
-        (members.contains(&dragged) && members.contains(&onto)).then_some(members)
+    /// `over` as the core target it means: terminals and groups by their places in the listing.
+    fn target_of(&self, listing: &Listing, over: Over) -> Option<Target> {
+        Some(match over {
+            Over::Row { id, part } => Target::Row { onto: self.find_session(id)?, part },
+            Over::Head { group, part } => {
+                Target::Head { band: listing.bands.iter().position(|band| band.group == group)?, part }
+            }
+            Over::After(group) => {
+                Target::After(Card::Group(listing.bands.iter().position(|band| band.group == group)?))
+            }
+            Over::Tail => Target::Tail,
+        })
     }
 
-    /// What dropping terminal `dragged` on the `part` of terminal `onto` would do.
-    fn pending_drop(&self, listing: &Listing, dragged: i64, onto: i64, part: Part) -> Option<Pending> {
-        let (dragged, onto) = (self.find_session(dragged)?, self.find_session(onto)?);
-        let Some(members) = self.drop_group(listing, dragged, onto) else {
-            // A row of another folder's band: there is no order to put the terminal in, but the
-            // middle of the row still makes a split with it, each staying in its own band.
-            let beside = self.sessions[dragged].split.is_some()
-                && self.sessions[dragged].split == self.sessions[onto].split;
-            return (part == Part::Middle && dragged != onto && !beside).then(|| Pending {
-                drop: RowDrop::Join { target: onto, to: 0 },
-                members: vec![dragged],
-                pinned: vec![false],
-                from: 0,
-            });
-        };
-        let drop = resolve_row_drop(&members, &self.split_ids(), dragged, onto, part)?;
-        let pinned: Vec<bool> = members.iter().map(|&ix| self.split_pinned(ix)).collect();
-        let from = members.iter().position(|&ix| ix == dragged)?;
-        Some(Pending { drop, members, pinned, from })
+    /// What dropping terminal `dragged` on `over` would do.
+    fn terminal_drop_plan(&self, listing: &Listing, dragged: i64, over: Over) -> Option<Drop> {
+        let ids = self.session_ids();
+        let pinned: Vec<bool> = (0..self.sessions.len()).map(|ix| self.split_pinned(ix)).collect();
+        let split_of = self.split_ids();
+        let input = DropInput { listing, ids: &ids, split_of: &split_of, pinned: &pinned };
+        terminal_drop(&input, self.find_session(dragged)?, self.target_of(listing, over)?)
     }
 
-    /// Where `to` (an index the dragged row is put back at once it is taken out) lies when the
-    /// dragged terminal stays among its own pinned or unpinned block.
-    fn clamp_to_block(pinned: &[bool], from: usize, to: usize) -> usize {
-        let Some(&block) = pinned.get(from) else { return to };
-        let first = pinned.iter().position(|&p| p == block).unwrap_or(0);
-        let last = pinned.iter().rposition(|&p| p == block).unwrap_or(0);
-        to.clamp(first, last)
+    /// What dropping group `group` on `over` would do.
+    fn group_drop_plan(&self, listing: &Listing, group: u32, over: Over) -> Option<Landing> {
+        let ids = self.session_ids();
+        let pinned: Vec<bool> = (0..self.sessions.len()).map(|ix| self.split_pinned(ix)).collect();
+        let split_of = self.split_ids();
+        let input = DropInput { listing, ids: &ids, split_of: &split_of, pinned: &pinned };
+        let band = listing.bands.iter().position(|band| band.group == group)?;
+        group_drop(&input, band, self.target_of(listing, over)?)
     }
 
-    /// The pending drop under the pointer, while a terminal is being dragged.
-    fn pending_under_pointer(&self, listing: &Listing) -> Option<Pending> {
-        let drag = self.terminal_drag.as_ref()?;
-        self.pending_drop(listing, drag.id, drag.onto?, drag.part)
+    /// The line a drag in flight would drop on, if it lands somewhere.
+    pub(super) fn drop_mark(&self, listing: &Listing, infos: &[RowInfo]) -> Option<DropMark> {
+        let over = self.sidebar.over?;
+        if let Some(dragged) = self.terminal_drag.as_ref().map(|drag| drag.id) {
+            return match self.terminal_drop_plan(listing, dragged, over)? {
+                Drop::Join { target } => Some(DropMark::Join(infos.get(target)?.id)),
+                Drop::Move { landing, leave_split, .. } => {
+                    let own = self.find_session(dragged)?;
+                    let in_split = self.sessions[own].split.is_some() && !leave_split;
+                    self.landing_mark(listing, infos, landing, in_split)
+                }
+            };
+        }
+        let group = self.group_drag?;
+        let landing = self.group_drop_plan(listing, group, over)?;
+        self.landing_mark(listing, infos, landing, false)
     }
 
-    /// The mark of where the dragged terminal would land, on the row it lands next to: the line
-    /// between two rows, or a tint over the row it would join.
-    pub(super) fn drop_line(
+    /// The line `landing` is drawn as: above the item it stands before, or below the last line of
+    /// where it goes last.
+    fn landing_mark(
         &self,
-        info: &RowInfo,
         listing: &Listing,
-        dragging: bool,
+        infos: &[RowInfo],
+        landing: Landing,
+        inside: bool,
+    ) -> Option<DropMark> {
+        let row_key = |id: i64| ItemKey::Row(id);
+        let last_key = |entry: &Entry| match *entry {
+            Entry::Band { band, .. } => ItemKey::Band(listing.bands[band].key()),
+            Entry::Row { session, .. } => ItemKey::Row(infos[session].id),
+        };
+        match landing {
+            Landing::Top { before: Some(Item::Terminal(id)) } => {
+                Some(DropMark::Above { key: row_key(id), inside })
+            }
+            Landing::Top { before: Some(Item::Group(group)) } => {
+                Some(DropMark::Above { key: ItemKey::Band(wormhole_core::sidebar::group_key(group)), inside })
+            }
+            Landing::Top { before: None } => {
+                Some(DropMark::Below { key: last_key(listing.entries.last()?), inside })
+            }
+            Landing::Group { before: Some(id), .. } => Some(DropMark::Above { key: row_key(id), inside }),
+            Landing::Group { group, before: None } => {
+                let band = listing.bands.iter().position(|band| band.group == group)?;
+                let last = listing.entries.iter().rev().find(|entry| match **entry {
+                    Entry::Band { band: b, .. } | Entry::Row { band: Some(b), .. } => b == band,
+                    Entry::Row { band: None, .. } => false,
+                })?;
+                Some(DropMark::Below { key: last_key(last), inside })
+            }
+        }
+    }
+
+    /// The mark of the line `key`, as a drop line or a tint over it.
+    pub(super) fn mark_element(
+        &self,
+        mark: Option<&DropMark>,
+        key: &ItemKey,
         ui: UiColors,
     ) -> Option<AnyElement> {
-        if !dragging {
-            return None;
-        }
-        let Pending { drop, members, pinned, from } = self.pending_under_pointer(listing)?;
-        let to = match drop {
-            RowDrop::Join { target, .. } => {
-                return (target == info.ix).then(|| style::row_drop_target(ui).into_any_element());
+        match mark? {
+            DropMark::Above { key: at, inside } if at == key => {
+                Some(style::drop_line(ui, *inside, false).into_any_element())
             }
-            RowDrop::Reorder { to } | RowDrop::Leave { to } => Self::clamp_to_block(&pinned, from, to),
-        };
-        // A reorder of a terminal that is in a split stays inside its bracket: the line is inset.
-        let inside = matches!(drop, RowDrop::Reorder { .. })
-            && self.sessions.get(members[from]).is_some_and(|session| session.split.is_some());
-        // The line is where the row goes back in once it is taken out.
-        let rest: Vec<usize> = members.iter().copied().filter(|&ix| ix != members[from]).collect();
-        let (at, below) = match rest.get(to) {
-            Some(&next) => (next, false),
-            None => (*rest.last()?, true),
-        };
-        (at == info.ix).then(|| style::drop_line(ui, inside, below).into_any_element())
+            DropMark::Below { key: at, inside } if at == key => {
+                Some(style::drop_line(ui, *inside, true).into_any_element())
+            }
+            DropMark::Join(id) if *key == ItemKey::Row(*id) => {
+                Some(style::row_drop_target(ui).into_any_element())
+            }
+            _ => None,
+        }
     }
 
-    /// Drop terminal `dragged` on the `part` of terminal `onto`: it moves within its group, joins
-    /// `onto`'s split or leaves its own (core `resolve_row_drop`). `Ok(None)` when nothing would
-    /// change; an error when a join was refused (for want of room, mostly) and nothing changed.
+    /// Drop terminal `dragged` on `over`: it moves (with the rest of its split, unless it leaves),
+    /// joins `onto`'s split or leaves its own. `Ok(None)` when nothing would change; an error when
+    /// a join was refused (for want of room, mostly) and nothing changed.
+    fn drop_terminal(
+        &mut self,
+        dragged: i64,
+        over: Over,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Result<Option<Drop>, DropError> {
+        let listing = self.session_listing(cx);
+        let Some(drop) = self.terminal_drop_plan(&listing, dragged, over) else { return Ok(None) };
+        match drop {
+            Drop::Move { landing, leave_split, with_mates } => {
+                if leave_split && let Some(ix) = self.find_session(dragged) {
+                    self.leave_layout(ix);
+                }
+                self.land_terminal(dragged, landing, with_mates, cx);
+                self.sidebar.flash = Some((dragged, self.sidebar.flash.map_or(0, |(_, n)| n + 1)));
+            }
+            Drop::Join { target } => {
+                let Some(joiner) = self.find_session(dragged) else { return Ok(None) };
+                let target = self.sessions[target].id;
+                self.join_split(joiner, target, Zone::Right, window, cx)?;
+            }
+        }
+        self.mark_dirty(cx);
+        Ok(Some(drop))
+    }
+
+    /// Drop group `group` on `over`.
+    fn drop_group(&mut self, group: u32, over: Over, cx: &mut Context<Self>) {
+        let listing = self.session_listing(cx);
+        if let Some(landing) = self.group_drop_plan(&listing, group, over) {
+            self.land_group(group, landing, cx);
+        }
+    }
+
+    /// A drop of `dragged` on the `part` of terminal `onto`'s row (devctl, the tests).
+    #[cfg(any(test, feature = "devctl"))]
     pub(crate) fn row_drop(
         &mut self,
         dragged: i64,
@@ -252,52 +408,7 @@ impl Workspace {
         part: Part,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Result<Option<RowDrop>, DropError> {
-        let listing = self.session_listing(cx);
-        let Some(Pending { drop, members, pinned, from }) = self.pending_drop(&listing, dragged, onto, part)
-        else {
-            return Ok(None);
-        };
-        // Shown in the person's groups, a terminal put beside one of another group moves into it.
-        let into_group = (self.sidebar.view.grouping == Grouping::Custom)
-            .then(|| self.sidebar.view.groups.group_of(onto))
-            .filter(|&group| group != self.sidebar.view.groups.group_of(dragged));
-        match drop {
-            RowDrop::Reorder { to } => self.reorder_group(&members, &pinned, from, to),
-            RowDrop::Leave { to } => {
-                self.leave_layout(members[from]);
-                self.reorder_group(&members, &pinned, from, to);
-            }
-            RowDrop::Join { target, .. } => {
-                let target = self.sessions[target].id;
-                self.join_split(members[from], target, Zone::Right, window, cx)?;
-            }
-        }
-        if let Some(group) = into_group {
-            self.move_to_group(dragged, group, cx);
-        }
-        self.mark_dirty(cx);
-        Ok(Some(drop))
-    }
-
-    /// Put the terminal at place `from` of the group `members` back at place `to` of what is left
-    /// once it is taken out, inside its own pinned or unpinned block: only that block's places are
-    /// rewritten, so the other keeps its own (unpinning a terminal puts it back where it was).
-    fn reorder_group(&mut self, members: &[usize], pinned: &[bool], from: usize, to: usize) {
-        let to = Self::clamp_to_block(pinned, from, to);
-        let block = move_in_block(members, pinned, from, to);
-        self.reorder_sessions(&regroup(self.sessions.len(), &block));
-    }
-
-    /// Put the sessions in a new manual order (`order[k]`: the session that goes to place `k`),
-    /// the selection staying on its terminal.
-    pub(in crate::workspace) fn reorder_sessions(&mut self, order: &[usize]) {
-        let active = follow(order, self.active);
-        let mut old: Vec<Option<Session>> =
-            std::mem::take(&mut self.sessions).into_iter().map(Some).collect();
-        self.sessions = order.iter().filter_map(|&ix| old.get_mut(ix).and_then(Option::take)).collect();
-        // A bad order must not lose a terminal.
-        self.sessions.extend(old.into_iter().flatten());
-        self.active = active.min(self.sessions.len().saturating_sub(1));
+    ) -> Result<Option<Drop>, DropError> {
+        self.drop_terminal(dragged, Over::Row { id: onto, part }, window, cx)
     }
 }

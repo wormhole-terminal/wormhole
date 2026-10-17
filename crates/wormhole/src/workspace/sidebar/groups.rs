@@ -1,22 +1,20 @@
-//! The person's own groups in the list (grouping "Groups"): a group's band (its name on a pill of
-//! its colour, the count while folded, the + for a new terminal in it), its menu (New terminal in
-//! group, Rename…, Colour ▸, Ungroup), renaming it in place, and putting terminals in and out of
-//! groups (a row's menu, a drop on a group's band or beside one of its rows). Core keeps the groups
-//! (`sidebar::Groups`, saved with the window); this draws them and changes them.
+//! The person's own groups in the list: a group's head (its name on a pill of its colour, the count
+//! while folded, the + for a new terminal in it), its menu (New terminal in group, Rename…,
+//! Colour ▸, Ungroup), renaming it in place, and putting terminals in and out of groups (a row's
+//! menu, a drop on a group's head or beside one of its rows). Core keeps the groups and their
+//! order (`sidebar::WindowSidebar`, saved with the window); this draws them and changes them.
 use std::rc::Rc;
 
 use gpui_kit::component::input::Input;
 use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _, PopupMenu, PopupMenuItem};
-use wormhole_core::folder_color::FolderColor;
-use wormhole_core::sidebar::spoken;
+use wormhole_core::sidebar::{GroupColor, Item, Landing, spoken};
 
 use super::super::focus::{MenuBuilder, SidebarStop};
-use super::super::folder_color;
-use super::super::terminal_drag::DraggedTerminal;
 use super::rows::Frame;
 use super::*;
 use crate::settings::SettingsStore;
-use crate::style::{BandKind, BandParts, FolderLook, Section};
+use crate::style::{BandKind, BandParts, BandTint, FolderLook, Section};
+use crate::theme_bridge;
 
 /// A group being renamed in place: which, and its name field.
 pub(super) struct Renaming {
@@ -25,23 +23,34 @@ pub(super) struct Renaming {
     _events: Subscription,
 }
 
+/// The colours a group can wear, as the theme in force draws them.
+pub(in crate::workspace) fn group_colors(cx: &App) -> Vec<(GroupColor, Hsla)> {
+    let tokens = &cx.global::<SettingsStore>().tokens;
+    GroupColor::ALL.into_iter().map(|color| (color, theme_bridge::hsla(color.color(tokens)))).collect()
+}
+
 impl Workspace {
     /// Fold an open group, or open a folded one.
-    pub(super) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
         self.sidebar.view.toggle_group_fold(group);
         self.mark_dirty(cx);
     }
 
-    /// The group the selected terminal is in, while the list shows the groups: where a new
-    /// terminal goes.
+    /// The group the selected terminal is in: where a new terminal goes.
     pub(in crate::workspace) fn active_group(&self) -> Option<u32> {
-        if self.sidebar.view.grouping != Grouping::Custom {
-            return None;
-        }
         self.sessions.get(self.active).and_then(|session| self.sidebar.view.groups.group_of(session.id))
     }
 
-    /// A new terminal in group `group` (its band's +), where the selected terminal is.
+    /// Terminal `id` and the rest of its split: they move, join and leave groups together.
+    fn with_split_mates(&self, id: i64) -> Vec<i64> {
+        let Some(ix) = self.find_session(id) else { return Vec::new() };
+        match self.sessions[ix].split {
+            Some(split) => self.members(split).into_iter().map(|member| self.sessions[member].id).collect(),
+            None => vec![id],
+        }
+    }
+
+    /// A new terminal in group `group` (its head's +), where the selected terminal is.
     pub(in crate::workspace) fn new_session_in_group(
         &mut self,
         group: u32,
@@ -49,73 +58,98 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let cwd = self.default_cwd(cx);
-        let ix = self.open_session(None, cwd, window, cx);
-        if let Some(id) = self.sessions.get(ix).map(|session| session.id) {
-            self.sidebar.view.groups.join(group, id);
-        }
+        let ix = self.open_session_in(Some(Some(group)), None, cwd, window, cx);
+        let _ = ix;
         self.mark_dirty(cx);
     }
 
-    /// Put terminal `id` (with the rest of its split) in group `group`, or in none.
-    pub(in crate::workspace) fn move_to_group(
-        &mut self,
-        id: i64,
-        group: Option<u32>,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(ix) = self.find_session(id) else { return };
-        let members = match self.sessions[ix].split {
-            Some(split) => self.members(split),
-            None => vec![ix],
-        };
-        for member in members {
-            let member = self.sessions[member].id;
-            match group {
-                Some(group) => {
-                    self.sidebar.view.groups.join(group, member);
+    /// Put terminal `id` (with the rest of its split) in group `group`, last in it.
+    pub(in crate::workspace) fn move_to_group(&mut self, id: i64, group: u32, cx: &mut Context<Self>) {
+        let ids = self.session_ids();
+        for member in self.with_split_mates(id) {
+            self.sidebar.view.place_in_group(&ids, member, group, None);
+        }
+        self.list_rearranged(cx);
+    }
+
+    /// Take terminal `id` (with the rest of its split) out of its group: it stands right after it.
+    pub(in crate::workspace) fn remove_from_group(&mut self, id: i64, cx: &mut Context<Self>) {
+        let ids = self.session_ids();
+        let Some(group) = self.sidebar.view.groups.group_of(id) else { return };
+        let top = self.sidebar.view.arranged(&ids);
+        let after =
+            top.iter().position(|&item| item == Item::Group(group)).and_then(|at| top.get(at + 1)).copied();
+        for member in self.with_split_mates(id) {
+            self.sidebar.view.place_at_top(&ids, Item::Terminal(member), after);
+        }
+        self.list_rearranged(cx);
+    }
+
+    /// A new group holding `terminals` (and the rest of their splits). Its id.
+    pub(in crate::workspace) fn group_terminals(&mut self, terminals: &[i64], cx: &mut Context<Self>) -> u32 {
+        let ids = self.session_ids();
+        let mut members: Vec<i64> = Vec::new();
+        for &id in terminals {
+            for member in self.with_split_mates(id) {
+                if !members.contains(&member) {
+                    members.push(member);
                 }
-                None => self.sidebar.view.groups.leave(member),
             }
         }
-        self.mark_dirty(cx);
+        let group = self.sidebar.view.new_group(&ids, &members);
+        self.list_rearranged(cx);
+        group
     }
 
-    /// A new group holding terminal `id` (and its split), shown as groups, renamed at once.
+    /// A new group holding terminal `id` (and its split), renamed at once.
     pub(in crate::workspace) fn group_terminal(
         &mut self,
         id: i64,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let group = self.sidebar.view.groups.create(&[]);
-        self.move_to_group(id, Some(group), cx);
-        self.set_grouping(Grouping::Custom, cx);
+        let group = self.group_terminals(&[id], cx);
         self.start_group_rename(group, window, cx);
     }
 
-    /// A new, empty group at the end of the list, renamed at once.
-    pub(in crate::workspace) fn new_group(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let group = self.sidebar.view.groups.create(&[]);
-        self.set_grouping(Grouping::Custom, cx);
-        self.mark_dirty(cx);
-        self.start_group_rename(group, window, cx);
-    }
-
-    /// Remove group `group`; its terminals stay, loose.
+    /// Take group `group` apart; its terminals stand where it stood.
     pub(in crate::workspace) fn ungroup(&mut self, group: u32, cx: &mut Context<Self>) {
-        self.sidebar.view.groups.remove(group);
-        self.sidebar.view.folded.remove(&wormhole_core::sidebar::group_key(group));
-        self.mark_dirty(cx);
+        let ids = self.session_ids();
+        self.sidebar.view.ungroup(&ids, group);
+        self.list_rearranged(cx);
     }
 
     pub(in crate::workspace) fn set_group_color(
         &mut self,
         group: u32,
-        color: Option<FolderColor>,
+        color: Option<GroupColor>,
         cx: &mut Context<Self>,
     ) {
-        self.sidebar.view.groups.set_color(group, color.map_or("", FolderColor::key));
+        self.sidebar.view.groups.set_color(group, color);
         self.mark_dirty(cx);
+    }
+
+    /// Put what a drop landed where it landed: a terminal (with its split, unless it leaves it) or a
+    /// group.
+    pub(in crate::workspace) fn land_terminal(
+        &mut self,
+        id: i64,
+        landing: Landing,
+        with_mates: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let ids = self.session_ids();
+        let members = if with_mates { self.with_split_mates(id) } else { vec![id] };
+        for member in members {
+            self.sidebar.view.land(&ids, member, landing);
+        }
+        self.list_rearranged(cx);
+    }
+
+    pub(in crate::workspace) fn land_group(&mut self, group: u32, landing: Landing, cx: &mut Context<Self>) {
+        let ids = self.session_ids();
+        self.sidebar.view.land_group(&ids, group, landing);
+        self.list_rearranged(cx);
     }
 
     /// The group's name becomes a field, its text selected: ↩ or a click elsewhere keeps what was
@@ -159,26 +193,23 @@ impl Workspace {
         window.focus(&self.active_terminal().focus_handle(cx), cx);
     }
 
-    /// The band of one of the person's groups: its name on a pill of its colour (or a field while
-    /// it is renamed), the count while folded, the + for a new terminal in it. A terminal dragged
-    /// onto it joins it.
-    #[allow(clippy::too_many_arguments)]
+    /// A group's head: its name on a pill of its colour (or a field while it is renamed), the count
+    /// while folded, the + for a new terminal in it. A terminal dragged onto it joins it.
     pub(super) fn render_group_band(
         &self,
         listing: &Listing,
         band_ix: usize,
         (position, of): (usize, usize),
         frame: &Frame,
-        sticky: bool,
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = frame.ui;
         let band = &listing.bands[band_ix];
-        let Some(group) = band.group else { return div().into_any_element() };
-        let color = self.sidebar.view.groups.get(group).and_then(|g| FolderColor::from_key(&g.color));
+        let group = band.group;
+        let color = self.sidebar.view.groups.get(group).and_then(|g| g.color());
         let tokens = &cx.global::<SettingsStore>().tokens;
-        let tint = color.map(|color| folder_color::band_tint_in(color, tokens));
+        let tint = color.map(|color| BandTint { color: theme_bridge::hsla(color.color(tokens)), peak: 0.2 });
         let folded = band.folded;
         let waiting = band
             .members
@@ -190,10 +221,11 @@ impl Workspace {
         let this = cx.weak_entity();
         let (on_toggle, on_add) = (this.clone(), this.clone());
         let renaming = self.sidebar.renaming.as_ref().filter(|r| r.group == group).map(|r| r.input.clone());
+        let renaming_now = renaming.is_some();
         let parts = BandParts {
             kind: BandKind::Folder,
             section: if folded { Section::Collapsed } else { Section::Open },
-            title: band.label.clone().into(),
+            title: if renaming_now { SharedString::default() } else { band.label.clone().into() },
             detail: renaming.map(|input| {
                 // The field takes the name's place; ⎋ gives the old name back.
                 div()
@@ -209,7 +241,7 @@ impl Workspace {
                     .child(Input::new(&input).xsmall())
                     .into_any_element()
             }),
-            count: Some(style::count_label(band.matches).into()),
+            count: Some(style::count_label(band.members.len()).into()),
             waiting: (folded && waiting > 0).then(|| {
                 let id = ElementId::Name(SharedString::from(format!("band-waiting-{}", band.key())));
                 style::status_glyph(id, ui, style::StatusGlyph::NeedsYou, cx)
@@ -224,28 +256,17 @@ impl Workspace {
                 on_toggle.update(cx, |this, cx| this.toggle_group_band(group, cx)).ok();
             })),
             drop_target: false,
-            sticky,
+            sticky: false,
             joined: false,
         };
-        let renaming_now = self.sidebar.renaming.as_ref().is_some_and(|r| r.group == group);
-        let parts = if renaming_now { BandParts { title: SharedString::default(), ..parts } } else { parts };
-        let look = FolderLook {
-            cmd_held: frame.hints,
-            unknown: false,
-            tint: tint.filter(|_| !renaming_now),
-            card: true,
-        };
-        let id: ElementId = if sticky {
-            "sticky-band".into()
-        } else {
-            ElementId::Name(SharedString::from(format!("band-{}", band.key())))
-        };
+        let look = FolderLook { cmd_held: frame.hints, tint: tint.filter(|_| !renaming_now), card: true };
+        let id: ElementId = ElementId::Name(SharedString::from(format!("band-{}", band.key())));
         let mut label = spoken::band_label(
             &band.label,
-            false,
-            color.map(FolderColor::label),
-            None,
+            band.pinned,
+            color.map(GroupColor::label),
             band.members.len(),
+            waiting,
             !folded,
             position,
             of,
@@ -254,10 +275,8 @@ impl Workspace {
             label = format!("{label}, {}", wormhole_core::spoken::terminals_need_you(waiting));
         }
         let (keyed, ring) = self.sidebar_keyed(&SidebarStop::Group(group), window);
-        let keyed = keyed && !sticky;
         let menu_open = self.sidebar.menu_group == Some(group);
-        let highlight = ui.highlight;
-        let element = style::folder_band(id, ui, parts, look, None)
+        let element = style::folder_band(id, ui, parts, look)
             .relative()
             .role(Role::TreeItem)
             .aria_label(label)
@@ -269,32 +288,31 @@ impl Workspace {
             .when(ring || menu_open, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
-            // A terminal dropped on the band joins the group, at its end.
-            .drag_over::<DraggedTerminal>(move |style, _, _, _| style.bg(highlight))
-            .on_drop(cx.listener(move |this, dragged: &DraggedTerminal, _, cx| {
-                // The list underneath would take it out of its split instead.
-                cx.stop_propagation();
-                this.terminal_drag = None;
-                this.move_to_group(dragged.id, Some(group), cx);
-            }))
             .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                 // A double click on the name renames the group.
                 if event.click_count() == 2 {
                     this.start_group_rename(group, window, cx);
                 }
             }));
+        let element = self.with_group_drag(
+            element,
+            group,
+            band.label.clone().into(),
+            color.map(|color| theme_bridge::hsla(color.color(tokens))),
+            cx,
+        );
         let build = self.group_menu(group, cx);
         let menu: ContextMenu<Stateful<Div>> =
             element.context_menu(move |menu, window, cx| build(menu, window, cx));
         menu.into_any_element()
     }
 
-    /// ⌃↩ with the keys on group `group`'s band: its menu, under it.
+    /// ⌃↩ with the keys on group `group`'s head: its menu, under it.
     pub(super) fn group_key_menu(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
         let listing = self.session_listing(cx);
         // The list's children are its entries, in order.
         let at = listing.entries.iter().position(
-            |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == Some(group)),
+            |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
         );
         let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
         let build = self.group_menu(group, cx);
@@ -309,7 +327,6 @@ impl Workspace {
             let current = this
                 .update(cx, |ws, cx| {
                     ws.sidebar.menu_row = None;
-                    ws.sidebar.menu_band = None;
                     ws.sidebar.menu_group = Some(group);
                     ws.sidebar.menu_dismissed =
                         Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {
@@ -319,17 +336,17 @@ impl Workspace {
                             }
                         }));
                     cx.notify();
-                    ws.sidebar.view.groups.get(group).and_then(|g| FolderColor::from_key(&g.color))
+                    ws.sidebar.view.groups.get(group).and_then(|g| g.color())
                 })
                 .ok()
                 .flatten();
-            let choices = folder_color::choices(cx);
+            let choices = group_colors(cx);
             let ui = ui(cx);
             let (add, rename, colors, ungroup) = (this.clone(), this.clone(), this.clone(), this.clone());
             menu.item(PopupMenuItem::new("New terminal in group").on_click(move |_, window, cx| {
                 add.update(cx, |ws, cx| ws.new_session_in_group(group, window, cx)).ok();
             }))
-            .item(PopupMenuItem::new("Rename group…").on_click(move |_, window, cx| {
+            .item(PopupMenuItem::new("Rename…").on_click(move |_, window, cx| {
                 rename.update(cx, |ws, cx| ws.start_group_rename(group, window, cx)).ok();
             }))
             .submenu("Colour", window, cx, move |mut submenu, _, _| {
@@ -350,12 +367,7 @@ impl Workspace {
                         }),
                     );
                 }
-                let this = colors.clone();
-                submenu.separator().item(PopupMenuItem::new("None").checked(current.is_none()).on_click(
-                    move |_, _, cx| {
-                        this.update(cx, |ws, cx| ws.set_group_color(group, None, cx)).ok();
-                    },
-                ))
+                submenu
             })
             .separator()
             .item(PopupMenuItem::new("Ungroup").on_click(move |_, _, cx| {

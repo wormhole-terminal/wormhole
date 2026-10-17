@@ -1,4 +1,4 @@
-//! Liquid Glass behind the sidebar's cards and the tab bars' tabs (`vibrancy::Glass`): which
+//! Liquid Glass behind the sidebar's cards and the tab bar's tabs (`vibrancy::Glass`): which
 //! regions want it, the keys that tell them apart (and stack them), and the probes that tell it
 //! where they are.
 
@@ -16,12 +16,12 @@ impl Insets {
     pub(in crate::workspace) const NONE: Self = Self(0.0, 0.0, 0.0, 0.0);
 }
 
-/// The clips: the sidebar's list, and a tab bar's row of tabs (both cut what scrolls past them).
+/// The clips: the sidebar's list, and the tab bar's row of tabs (both cut what scrolls past them).
 pub(in crate::workspace) const LIST_CLIP: u32 = 0;
 pub(in crate::workspace) const TAB_ROW_CLIP: u32 = 1;
 
 /// What a glass is for, in the key's top bits; the low ones tell the pieces of one kind apart. A
-/// higher key lies over a lower one, so a pile's front card (`Pile`, depth 0 last) is on top.
+/// higher key lies over a lower one.
 #[derive(Clone, Copy)]
 pub(in crate::workspace) enum GlassKind {
     /// A sidebar card, by its band (1 up, so 0 stays free).
@@ -30,14 +30,6 @@ pub(in crate::workspace) enum GlassKind {
     Loose = 1,
     /// A terminal's tab, by its id.
     Tab = 2,
-    /// A set's chip (two rows), by its place.
-    Chip = 3,
-    /// The selected set's name (stacks).
-    Label = 4,
-    /// A card of a set's pile (stacks): by the set's place, then the card, front last.
-    Pile = 5,
-    /// A set's segment of the bottom bar, by its place.
-    Segment = 6,
 }
 
 pub(in crate::workspace) fn glass_key(kind: GlassKind, n: u64) -> u64 {

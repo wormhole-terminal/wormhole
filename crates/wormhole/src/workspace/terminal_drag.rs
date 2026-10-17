@@ -62,20 +62,55 @@ pub(super) struct PaneHover {
     pub(super) zone: Zone,
 }
 
+/// What the pointer is over in the sidebar while something is dragged there.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Over {
+    /// A terminal's row, and the part of it.
+    Row { id: i64, part: Part },
+    /// A group's head, and the part of it.
+    Head { group: u32, part: Part },
+    /// The gap under a group's card (a terminal in no group has none: the bottom of its row).
+    After(u32),
+    /// The space under the last line.
+    Tail,
+}
+
 /// What a drag in flight is over.
 pub(super) struct TerminalDrag {
     pub(super) id: i64,
     pub(super) origin: DragOrigin,
-    /// The row the pointer is over, and the part of it.
-    pub(super) onto: Option<i64>,
-    pub(super) part: Part,
     /// The pane edge the pointer is over.
     pub(super) pane: Option<PaneHover>,
 }
 
 impl TerminalDrag {
     pub(super) fn new(id: i64, origin: DragOrigin) -> Self {
-        Self { id, origin, onto: None, part: Part::Middle, pane: None }
+        Self { id, origin, pane: None }
+    }
+}
+
+/// The payload and the picture of a dragged group: its colour and name, beside the pointer.
+#[derive(Clone)]
+pub(super) struct DraggedGroup {
+    pub(super) group: u32,
+    pub(super) name: SharedString,
+    pub(super) color: Option<Hsla>,
+    /// Where in the head it was picked up (see [`DraggedTerminal::grabbed`]).
+    pub(super) grabbed: Point<Pixels>,
+}
+
+impl Render for DraggedGroup {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let ui = ui(cx);
+        let dot = style::color_dot(ui, self.color.unwrap_or(ui.faint), style::COLOR_DOT_MENU);
+        let left = f32::from(self.grabbed.x) + style::GHOST_POINTER_GAP;
+        let top = (f32::from(self.grabbed.y) - style::GHOST_POINTER_RISE).max(0.0);
+        div().pl(px(left)).pt(px(top)).child(style::drag_ghost(
+            ui,
+            cx.theme().popover,
+            Some(dot.into_any_element()),
+            self.name.clone(),
+        ))
     }
 }
 

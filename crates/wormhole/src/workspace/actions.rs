@@ -15,8 +15,8 @@ use gpui_kit::component::WindowExt as _;
 use gpui_kit::component::input;
 use wormhole_core::keymap::{self, ActionId, Scope, Stage};
 use wormhole_core::keyspec::KeySpec;
+use wormhole_core::sidebar::TerminalsIn;
 use wormhole_core::sidebar::order::shortcut_target;
-use wormhole_core::sidebar::{TabLayout, TerminalsIn};
 
 use super::app::{self, AppState, app};
 use super::settings_page::update_settings;
@@ -61,13 +61,7 @@ actions!(
         ShowHistory,
         ShowProject,
         ShowUsage,
-        GroupByFolder,
-        GroupByCustom,
-        GroupByNone,
         ToggleTerminalTabs,
-        TabsTwoRows,
-        TabsStacks,
-        TabsBottom,
         FocusTerminalOrPanel,
         FocusNextArea,
         FocusPreviousArea,
@@ -187,14 +181,8 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::ShowHistory => Box::new(ShowHistory),
         A::ShowProject => Box::new(ShowProject),
         A::ShowUsage => Box::new(ShowUsage),
-        A::GroupByFolder => Box::new(GroupByFolder),
-        A::GroupByCustom => Box::new(GroupByCustom),
-        A::GroupByNone => Box::new(GroupByNone),
         A::CompactRows => Box::new(ToggleCompactRows),
         A::ToggleTerminalTabs => Box::new(ToggleTerminalTabs),
-        A::TabsTwoRows => Box::new(TabsTwoRows),
-        A::TabsStacks => Box::new(TabsStacks),
-        A::TabsBottom => Box::new(TabsBottom),
         A::FocusTerminalOrPanel => Box::new(FocusTerminalOrPanel),
         A::FocusNextArea => Box::new(FocusNextArea),
         A::FocusPreviousArea => Box::new(FocusPreviousArea),
@@ -333,7 +321,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &ShowKeyboardShortcuts, cx| cx.defer(shortcut_sheet::toggle));
     cx.on_action(|_: &ToggleStatusBar, cx| update_settings(cx, |s| s.status_bar = !s.status_bar));
     cx.on_action(|_: &ToggleMinimap, cx| update_settings(cx, |s| s.minimap = !s.minimap));
-    // Terminals in tabs or in the sidebar, and the tab bar's layout: every window at once.
+    // Terminals in tabs or in the sidebar: every window at once.
     cx.on_action(|_: &ToggleTerminalTabs, cx| {
         update_settings(cx, |s| {
             s.terminals_in = match s.terminals_in {
@@ -342,9 +330,6 @@ pub(crate) fn init(cx: &mut App) {
             }
         })
     });
-    cx.on_action(|_: &TabsTwoRows, cx| set_tab_layout(TabLayout::TwoRows, cx));
-    cx.on_action(|_: &TabsStacks, cx| set_tab_layout(TabLayout::Stacks, cx));
-    cx.on_action(|_: &TabsBottom, cx| set_tab_layout(TabLayout::Bottom, cx));
     cx.on_action(|_: &ToggleCompactRows, cx| {
         // From what the sidebar shows: a project may override the saved value.
         let compact = settings(cx).compact_sidebar;
@@ -392,14 +377,6 @@ pub(crate) fn init(cx: &mut App) {
 
 /// Wormhole → Theme Studio (⌥⌘,): the Studio to the front, opened if need be. With the Studio
 /// already in front it closes it, as its key always did.
-/// The tab bar's layout, from the View menu or the palette: picking one shows the terminals in tabs.
-fn set_tab_layout(layout: TabLayout, cx: &mut App) {
-    update_settings(cx, |s| {
-        s.tab_layout = layout;
-        s.terminals_in = TerminalsIn::Tabs;
-    });
-}
-
 fn theme_studio(cx: &mut App) {
     let in_front = app(cx)
         .studio_window
@@ -589,9 +566,6 @@ impl Workspace {
                     cx.listener(|this, _: &ShowProject, _, cx| this.show_tab(RightTab::Project, cx)),
                 )
             })
-            .on_action(cx.listener(|this, _: &GroupByFolder, _, cx| this.set_grouping(Grouping::Folder, cx)))
-            .on_action(cx.listener(|this, _: &GroupByCustom, _, cx| this.set_grouping(Grouping::Custom, cx)))
-            .on_action(cx.listener(|this, _: &GroupByNone, _, cx| this.set_grouping(Grouping::None, cx)))
             .on_action(
                 cx.listener(|this, _: &FocusTerminalOrPanel, window, cx| this.toggle_focus(window, cx)),
             )

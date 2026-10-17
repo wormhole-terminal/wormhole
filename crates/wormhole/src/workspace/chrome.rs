@@ -1,9 +1,9 @@
 //! The window's chrome: the 40 pt title rows across the top. The
 //! sidebar's collapse button sits at one spot of the window whether the sidebar is open or
-//! hidden (so do the traffic lights macOS draws at the left); the sidebar's title row ends in
-//! the Settings gear above the "Terminals" header and the terminal's carries the selected
-//! terminal's breadcrumb and the split buttons. The right panel has no title row: its tabs are
-//! the strip down the window's edge (`panel_strip`).
+//! hidden (so do the traffic lights macOS draws at the left); the sidebar's title row leaves room
+//! for the lights above the "Terminals" header and the terminal's carries the selected terminal's
+//! breadcrumb and the split buttons. The right panel has no title row: its tabs are the strip down
+//! the window's edge (`panel_strip`).
 use wormhole_core::layout::Edge;
 
 use super::focus::TitleButton;
@@ -117,50 +117,23 @@ impl Workspace {
             .into_any_element()
     }
 
-    /// The top of the sidebar: its title row (room for the lights and the collapse button, the
-    /// Settings gear at the right end) and the "Terminals" header with the funnel and +. `idle`
-    /// is how many terminals are idle, for the filter popover.
-    pub(super) fn render_sidebar_header(
-        &self,
-        idle: usize,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
+    /// The top of the sidebar: its title row (room for the lights and the collapse button) and the
+    /// "Terminals" header with the + that starts one.
+    pub(super) fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let row = || div().h(px(style::TITLE_ROW_H)).flex_none().flex().items_center().gap_1();
         div()
             .flex()
             .flex_col()
             .flex_none()
-            .child(
-                row().id("sidebar-title-row").pr(px(TITLE_ROW_PAD)).title_drag().child(div().flex_1()).child(
-                    style::icon_button(
-                        "open-settings",
-                        ui,
-                        IconName::Settings,
-                        keymap::with_key("Settings", ActionId::Settings),
-                    )
-                    .in_title_row()
-                    .focus_ring(self.title_ring(TitleButton::Settings, window, cx))
-                    .on_click(cx.listener(|this, _, window, cx| this.toggle_settings(window, cx))),
-                ),
-            )
+            .child(row().id("sidebar-title-row").pr(px(TITLE_ROW_PAD)).title_drag().child(div().flex_1()))
             .child(
                 row()
                     .pl(px(style::SIDEBAR_INSET))
                     .pr(px(TITLE_ROW_PAD))
                     .child(style::panel_title(ui, "Terminals"))
                     .child(div().flex_1())
-                    .children(self.filter_button(idle, self.title_ring(TitleButton::Filter, window, cx), cx))
-                    // Shown in the person's groups: a new, empty group to drop terminals on.
-                    .when(self.sidebar.view.grouping == Grouping::Custom, |d| {
-                        d.child(
-                            style::icon_button("new-group", ui, IconName::FolderPlus, "New group")
-                                .in_title_row()
-                                .on_click(cx.listener(|this, _, window, cx| this.new_group(window, cx))),
-                        )
-                    })
-                    // The chevron after the + offers the other shells, and so does a right-click on it.
+                    // A right-click on the + offers the other shells.
                     .child(
                         self.with_shell_menu(
                             "new-session-shells",
@@ -175,8 +148,7 @@ impl Workspace {
                             .on_click(cx.listener(|this, _, window, cx| this.new_session(window, cx))),
                             cx,
                         ),
-                    )
-                    .children(self.shell_chevron("new-session-chevron", Anchor::TopRight, cx)),
+                    ),
             )
             .into_any_element()
     }
@@ -185,12 +157,11 @@ impl Workspace {
     /// breadcrumb starts a small gap from its hairline; at the window's edge it makes room for the lights. A column sliding in is over the terminal, not beside it, until it is in.
     pub(super) fn title_row_pads(&self, window: &Window) -> (f32, f32) {
         let sidebar = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
-        let lights = match self.sidebar.tabs.layout {
+        let lights = if self.tabs_on_top() {
             // The tab bar across the top has the lights; the row is under it.
-            Some(layout) if layout.on_top() => TITLE_ROW_PAD,
-            // No sidebar, so no button for it after the lights.
-            Some(_) => lights_end(window) + AFTER_COLLAPSE,
-            None => collapse_slot(lights_end(window)),
+            TITLE_ROW_PAD
+        } else {
+            collapse_slot(lights_end(window))
         };
         // The panel's strip is always at the right edge, so the row ends beside a column.
         (if sidebar { BESIDE_COLUMN } else { lights }, BESIDE_COLUMN)

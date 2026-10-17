@@ -109,7 +109,12 @@ impl Workspace {
         self.sessions[ix].id
     }
 
-    /// devctl `rows`: the sidebar's list as drawn, one a line: bands and terminals with what the
+    /// devctl `new <dir>`: a new terminal in `dir`.
+    pub(crate) fn devctl_new_session_in(&mut self, dir: String, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_session(None, Some(dir), window, cx);
+    }
+
+    /// devctl `rows`: the sidebar's list as drawn, one a line: groups and terminals with what the
     /// rows show of their splits.
     pub(crate) fn devctl_rows(&self, cx: &App) -> String {
         use wormhole_core::sidebar::{Bracket, Entry};
@@ -121,13 +126,18 @@ impl Workspace {
                     let band = &listing.bands[band];
                     let folded = if band.folded { " folded" } else { "" };
                     let pinned = if band.pinned { " pinned" } else { "" };
-                    let colored = band
-                        .folder
-                        .as_deref()
-                        .map_or(String::new(), |folder| self.folder_paint(folder, cx).devctl_words());
+                    let colored = self
+                        .sidebar
+                        .view
+                        .groups
+                        .get(band.group)
+                        .and_then(|group| group.color())
+                        .map_or(String::new(), |color| format!(" colour={}", color.key()));
                     out.push_str(&format!(
-                        "band {:?} {position}/{of}{folded}{pinned}{colored}\n",
-                        band.label
+                        "group {:?} id={} {position}/{of}{folded}{pinned}{colored} terminals={}\n",
+                        band.label,
+                        band.group,
+                        band.members.len()
                     ));
                 }
                 Entry::Row { session, position, of, number, marks, .. } => {

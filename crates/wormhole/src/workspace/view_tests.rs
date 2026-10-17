@@ -17,7 +17,7 @@ use gpui_kit::{
 use wormhole_core::agents::AgentId;
 use wormhole_core::config::InFront;
 use wormhole_core::git::{ChangeKind, DiffSpec, FileChange};
-use wormhole_core::sidebar::{Entry, Grouping, Show, SidebarNumbers, SidebarOrder, WindowSidebar};
+use wormhole_core::sidebar::{Entry, SidebarNumbers, WindowSidebar};
 use wormhole_core::store::{SessionRecord, WindowRecord};
 
 use super::app::{AppState, OpenWindow, app, open_workspace_window};
@@ -110,10 +110,9 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(SettingsStore::load());
         cx.set_global(AppState::for_test(100));
-        // These tests were written for the order and numbers up to 0.4; the stable ones have their
-        // own (`stable_list_tests`), which switch back with `use_stable`.
+        // These tests were written for the numbers that follow the list; the ones that stay with the
+        // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
         super::settings_page::update_settings(cx, |settings| {
-            settings.sidebar_order = SidebarOrder::Classic;
             settings.sidebar_numbers = SidebarNumbers::List;
         });
         super::actions::init(cx);
@@ -124,11 +123,10 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
     cx.update(|cx| app(cx).windows.first().cloned()).expect("the window opened")
 }
 
-/// The stable order and the numbers that stay with a terminal (the defaults).
+/// The numbers that stay with a terminal (the default).
 pub(super) fn use_stable(cx: &mut TestAppContext) {
     cx.update(|cx| {
         super::settings_page::update_settings(cx, |settings| {
-            settings.sidebar_order = SidebarOrder::Stable;
             settings.sidebar_numbers = SidebarNumbers::Terminal;
         });
     });
@@ -562,47 +560,36 @@ fn listed(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<String> {
 }
 
 #[gpui_kit::test]
-fn the_sidebar_lists_bands_pins_folds_and_filters(cx: &mut TestAppContext) {
-    if isolate("the_sidebar_lists_bands_pins_folds_and_filters") {
+fn the_sidebar_lists_groups_pins_and_folds(cx: &mut TestAppContext) {
+    if isolate("the_sidebar_lists_groups_pins_and_folds") {
         return;
     }
     let window = start(cx, 3);
     draw(cx, &window);
-    // A window that was never saved groups as the settings say (by folder): the three terminals
-    // start in one folder, so one band, numbered top to bottom.
-    assert_eq!(listed(cx, &window), ["[band]", "1:1", "2:2", "3:3"]);
-
-    drive(cx, &window, |ws, _, cx| ws.set_grouping(Grouping::None, cx));
-    draw(cx, &window);
+    // A window that was never saved has no groups: the terminals are a card each, numbered top to
+    // bottom.
     assert_eq!(listed(cx, &window), ["1:1", "2:2", "3:3"]);
 
     // A pinned terminal goes first, and ⌘1 follows it.
     drive(cx, &window, |ws, _, cx| ws.toggle_pin(2, cx));
     draw(cx, &window);
     assert_eq!(listed(cx, &window), ["3:1", "1:2", "2:3"]);
+    drive(cx, &window, |ws, _, cx| ws.toggle_pin(2, cx));
 
-    // A folded band keeps its terminals out of the list and out of the numbering.
-    drive(cx, &window, |ws, _, cx| {
-        ws.set_grouping(Grouping::Folder, cx);
-        let folder = ws.session_listing(cx).bands[0].folder.clone();
-        ws.toggle_band(folder, cx);
-    });
+    // Two terminals grouped stand where the first stood, under a head of their own.
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2, 3], cx));
     draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]"]);
-    drive(cx, &window, |ws, _, cx| {
-        let folder = ws.session_listing(cx).bands[0].folder.clone();
-        ws.toggle_band(folder, cx);
-    });
+    assert_eq!(listed(cx, &window), ["1:1", "[band]", "2:2", "3:3"]);
 
-    // Show "Needs you": only the terminal whose agent asks, under its band, with a chip.
-    hook(cx, &window, 2, "Notification", Some("Allow Bash?"));
-    drive(cx, &window, |ws, _, cx| ws.set_show(Show::NeedsYou, cx));
+    // A folded group keeps its terminals out of the list and out of the numbering.
+    drive(cx, &window, |ws, _, cx| ws.toggle_group_band(group, cx));
     draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "2:1"]);
-    let saved = read(cx, &window, |ws| {
-        assert_eq!(ws.sidebar.view.filter.chip().as_deref(), Some("Filtered: needs you"));
-        ws.sidebar.view.clone()
-    });
+    assert_eq!(listed(cx, &window), ["1:1", "[band]"]);
+    drive(cx, &window, |ws, _, cx| ws.toggle_group_band(group, cx));
+    draw(cx, &window);
+    assert_eq!(listed(cx, &window), ["1:1", "[band]", "2:2", "3:3"]);
+
+    let saved = read(cx, &window, |ws| ws.sidebar.view.clone());
     // What is saved with the window brings all of it back.
     let record = cx
         .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.window_record(cx)))
@@ -612,7 +599,7 @@ fn the_sidebar_lists_bands_pins_folds_and_filters(cx: &mut TestAppContext) {
     let restored: WindowSidebar =
         serde_json::from_value(layout["sidebar"].clone()).expect("the sidebar's state");
     assert_eq!(restored, saved);
-    assert_eq!(record.sessions.iter().map(|s| s.pinned).collect::<Vec<_>>(), [false, false, true]);
+    assert_eq!(record.sessions.iter().map(|s| s.pinned).collect::<Vec<_>>(), [false, false, false]);
 }
 
 /// Press a key combination in the window, as the keyboard would (`cmd-1`).
@@ -628,99 +615,22 @@ fn command_digits_and_stepping_follow_what_the_sidebar_shows(cx: &mut TestAppCon
     if isolate("command_digits_and_stepping_follow_what_the_sidebar_shows") {
         return;
     }
-    let window = start(cx, 3);
+    let window = start(cx, 4);
     let active = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions[ws.active].id);
-    // Only the terminal that asks is shown: its keycap is ⌘1, and ⌘1 goes there.
-    hook(cx, &window, 2, "Notification", Some("Allow Bash?"));
-    drive(cx, &window, |ws, _, cx| ws.set_show(Show::NeedsYou, cx));
+    // The first two are a group, folded: its terminals are skipped, so ⌘1 is the third.
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[1, 2], cx));
+    drive(cx, &window, |ws, _, cx| ws.toggle_group_band(group, cx));
     draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "2:1"]);
+    assert_eq!(listed(cx, &window), ["[band]", "3:1", "4:2"]);
     press(cx, &window, "cmd-1");
-    assert_eq!(active(cx), 2, "⌘1 is the terminal its keycap is on");
+    assert_eq!(active(cx), 3, "⌘1 is the terminal its keycap is on");
 
-    // Two terminals at work and only those shown: stepping goes between them, past the hidden one.
-    hook(cx, &window, 1, "UserPromptSubmit", None);
-    hook(cx, &window, 3, "UserPromptSubmit", None);
-    drive(cx, &window, |ws, window, cx| {
-        ws.set_show(Show::Working, cx);
-        ws.activate(0, window, cx);
-    });
-    draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "1:1", "3:2"]);
+    // Stepping goes between what is shown, past the folded ones, and wraps.
     press(cx, &window, "ctrl-cmd-down");
-    assert_eq!(active(cx), 3, "the hidden terminal is skipped");
+    assert_eq!(active(cx), 4);
     draw(cx, &window);
     press(cx, &window, "ctrl-cmd-down");
-    assert_eq!(active(cx), 1, "and it wraps");
-}
-
-/// With the sidebar-filter flag off there is no funnel to see or clear a saved filter with, so
-/// the list ignores it; turning the flag back on brings the filter back, as it was saved.
-#[gpui_kit::test]
-fn with_the_sidebar_filter_flag_off_a_saved_filter_does_not_hide_terminals(cx: &mut TestAppContext) {
-    if isolate("with_the_sidebar_filter_flag_off_a_saved_filter_does_not_hide_terminals") {
-        return;
-    }
-    let window = start(cx, 3);
-    hook(cx, &window, 2, "Notification", Some("Allow Bash?"));
-    drive(cx, &window, |ws, _, cx| ws.set_show(Show::NeedsYou, cx));
-    draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "2:1"], "the filter applies while the flag is on");
-
-    let flag = |cx: &mut TestAppContext, on: bool| {
-        cx.update(|cx| {
-            super::settings_page::update_settings(cx, |settings| {
-                if on {
-                    settings.feature_flags.remove("sidebar_filter");
-                } else {
-                    settings.feature_flags.insert("sidebar_filter".into(), false);
-                }
-            });
-        });
-    };
-    flag(cx, false);
-    draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "1:1", "2:2", "3:3"], "every terminal, all numbered");
-    let (kept, stops) = cx
-        .update(|cx| {
-            window.workspace.read_with(cx, |ws, cx| (ws.sidebar.view.filter.show, ws.title_buttons(cx)))
-        })
-        .expect("the window is open");
-    assert_eq!(kept, Show::NeedsYou, "the saved view is untouched");
-    assert!(!stops.contains(&super::focus::TitleButton::Filter), "the funnel is no keyboard stop");
-
-    flag(cx, true);
-    draw(cx, &window);
-    assert_eq!(listed(cx, &window), ["[band]", "2:1"], "and it comes back with the flag");
-}
-
-#[gpui_kit::test]
-fn a_terminal_that_leaves_its_folder_moves_band_stays_selected_and_flashes(cx: &mut TestAppContext) {
-    if isolate("a_terminal_that_leaves_its_folder_moves_band_stays_selected_and_flashes") {
-        return;
-    }
-    let window = start(cx, 2);
-    draw(cx, &window);
-    drive(cx, &window, |ws, _, cx| ws.sidebar_tick(true, cx));
-    assert_eq!(listed(cx, &window), ["[band]", "1:1", "2:2"]);
-    // `cd` somewhere else in the selected terminal (the shell's folder, as the tick reads it).
-    let elsewhere = std::env::temp_dir().join(format!("wormhole-band-move-{}", std::process::id()));
-    std::fs::create_dir_all(&elsewhere).expect("creates the folder");
-    let asked_into_view = drive(cx, &window, |ws, _, cx| {
-        let terminal = ws.sessions[0].terminal().clone();
-        terminal.update(cx, |t, _| t.cwd = Some(elsewhere.clone()));
-        ws.sidebar_tick(true, cx);
-        ws.sidebar.scroll_to
-    });
-    assert_eq!(asked_into_view, Some(1), "its row comes into view");
-    draw(cx, &window);
-    read(cx, &window, |ws| {
-        assert_eq!(ws.active, 0, "still selected");
-        assert_eq!(ws.sidebar.flash.map(|(id, _)| id), Some(1), "its row flashes");
-        assert_eq!(ws.sidebar.scroll_to, None, "brought into view once");
-    });
-    assert_eq!(listed(cx, &window), ["[band]", "1:1", "[band]", "2:2"], "a band of its own, first as it was");
-    std::fs::remove_dir_all(&elsewhere).ok();
+    assert_eq!(active(cx), 3, "the folded terminals are skipped, and it wraps");
 }
 
 #[gpui_kit::test]

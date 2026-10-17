@@ -85,9 +85,9 @@ impl Workspace {
         let Some(dragged) = self.terminal_drag.as_ref().map(|drag| drag.id) else { return };
         let point = self.in_pane_area(event.event.position);
         let hover = point.and_then(|point| self.pane_hover_at(dragged, point));
-        let Some(drag) = self.terminal_drag.as_mut() else { return };
         // The sidebar's rows hear every move too: over the panes none of them is the target.
-        let cleared = point.is_some() && drag.onto.take().is_some();
+        let cleared = point.is_some() && self.sidebar.over.take().is_some();
+        let Some(drag) = self.terminal_drag.as_mut() else { return };
         if drag.pane != hover || cleared {
             drag.pane = hover;
             cx.notify();
@@ -140,16 +140,11 @@ impl Workspace {
     /// swapped; the rest of the list stays where it is.
     fn follow_layout(&mut self, id: SplitId) {
         let Some(panes) = self.split_with(id).map(|split| split.layout.panes()) else { return };
-        let slots = self.members(id);
-        if slots.len() != panes.len() {
+        if self.members(id).len() != panes.len() {
             return;
         }
-        let mut order: Vec<usize> = (0..self.sessions.len()).collect();
-        for (&slot, &pane) in slots.iter().zip(&panes) {
-            let Some(ix) = self.find_session(pane) else { return };
-            order[slot] = ix;
-        }
-        self.reorder_sessions(&order);
+        let ids = self.session_ids();
+        self.sidebar.view.reorder_terminals(&ids, &panes);
     }
 
     /// The overlay over the panes while a terminal is dragged (and nothing otherwise): `inset`

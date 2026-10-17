@@ -2,7 +2,7 @@
 //! `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::{Focusable as _, TestAppContext, VisualTestContext};
 use wormhole_core::panes::{Axis, DropError, Preset, TabPanes, Zone};
-use wormhole_core::sidebar::{Bracket, Part, RowDrop};
+use wormhole_core::sidebar::{Bracket, Drop, Landing, Part};
 use wormhole_core::store::{SessionRecord, SplitRecord, WindowRecord};
 
 use super::app::OpenWindow;
@@ -23,8 +23,14 @@ fn panes(cx: &mut TestAppContext, window: &OpenWindow) -> (Vec<i64>, i64, Option
 }
 
 /// The ids of the terminals as the window keeps them, in order.
+/// The terminals' ids top to bottom as the sidebar lists them.
 fn ids(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<i64> {
-    read(cx, window, |ws| ws.sessions.iter().map(|session| session.id).collect())
+    cx.update(|cx| {
+        window
+            .workspace
+            .read_with(cx, |ws, cx| ws.session_order(cx).into_iter().map(|ix| ws.sessions[ix].id).collect())
+    })
+    .expect("the window is open")
 }
 
 /// The id of the selected terminal.
@@ -293,7 +299,7 @@ fn a_terminal_joins_a_split_on_a_side_of_a_pane_or_is_refused(cx: &mut TestAppCo
     assert_eq!(ids(cx, &window), [1, 3, 2], "its members are next to each other");
     // It can't join its own split again, nor a terminal that isn't there.
     drive(cx, &window, |ws, window, cx| {
-        assert_eq!(ws.join_split(1, 1, Zone::Right, window, cx), Err(DropError::Unknown));
+        assert_eq!(ws.join_split(2, 1, Zone::Right, window, cx), Err(DropError::Unknown));
         assert_eq!(ws.join_split(0, 9, Zone::Right, window, cx), Err(DropError::Unknown));
     });
     // Terminal 2 joins the split below terminal 1.
@@ -319,15 +325,18 @@ fn a_drop_on_a_row_joins_reorders_or_leaves(cx: &mut TestAppContext) {
     let window = start(cx, 4);
     // The middle of a row joins the two in a split.
     let done = drive(cx, &window, |ws, window, cx| ws.row_drop(4, 1, Part::Middle, window, cx));
-    assert!(matches!(done, Ok(Some(RowDrop::Join { target: 0, .. }))), "{done:?}");
+    assert!(matches!(done, Ok(Some(Drop::Join { target: 0 }))), "{done:?}");
     assert_eq!(panes(cx, &window), (vec![1, 4], 4, None));
     assert_eq!(ids(cx, &window), [1, 4, 2, 3], "the member sits right after its split");
     // The bottom of a row of another split lands outside it; the top of one leaves.
     let done = drive(cx, &window, |ws, window, cx| ws.row_drop(2, 3, Part::Bottom, window, cx));
-    assert!(matches!(done, Ok(Some(RowDrop::Reorder { .. }))), "{done:?}");
+    assert!(matches!(done, Ok(Some(Drop::Move { leave_split: false, .. }))), "{done:?}");
     assert_eq!(ids(cx, &window), [1, 4, 3, 2]);
     let done = drive(cx, &window, |ws, window, cx| ws.row_drop(4, 2, Part::Top, window, cx));
-    assert!(matches!(done, Ok(Some(RowDrop::Leave { .. }))), "{done:?}");
+    assert!(
+        matches!(done, Ok(Some(Drop::Move { leave_split: true, landing: Landing::Top { .. }, .. }))),
+        "{done:?}"
+    );
     read(cx, &window, |ws| assert!(ws.splits.is_empty(), "the split of two is gone with one leaving"));
     // Dropping a row on itself changes nothing.
     let done = drive(cx, &window, |ws, window, cx| ws.row_drop(3, 3, Part::Middle, window, cx));

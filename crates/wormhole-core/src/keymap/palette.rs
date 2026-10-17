@@ -106,8 +106,7 @@ pub fn section(id: ActionId) -> Section {
     use ActionId::*;
     match id {
         ToggleSidebar | ToggleRightPanel | ToggleStatusBar | ToggleMinimap | ShowNotes | ShowChanges
-        | ShowHistory | ShowProject | ShowUsage | GroupByFolder | GroupByCustom | GroupByNone
-        | CompactRows | ToggleTerminalTabs | TabsTwoRows | TabsStacks | TabsBottom | FocusTerminalOrPanel
+        | ShowHistory | ShowProject | ShowUsage | CompactRows | ToggleTerminalTabs | FocusTerminalOrPanel
         | FocusNextArea | FocusPreviousArea | Bigger | Smaller | ActualSize | FullScreen
         | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
         | LayoutSingle => Section::View,
@@ -175,7 +174,7 @@ mod tests {
             "Show history",
             "Show notes",
             "Show project",
-            "Group terminals by folder",
+            "Compact rows",
             "Focus terminal / panel",
             "Keyboard shortcuts",
             "Show logs in Finder",

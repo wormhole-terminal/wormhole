@@ -4,7 +4,7 @@
 use super::*;
 use crate::theme_bridge;
 use crate::workspace::folder_color;
-use style::{BandKind, BandParts, FolderLook, FolderMeta, RowTone, Section, SessionRow, StatusGlyph};
+use style::{BandKind, BandParts, FolderLook, RowTone, Section, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::layout::status_bar::CONTEXT_METER_W;
@@ -36,18 +36,6 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         )
         .into_any_element()
     };
-    // A folder band's second line: its path, the ±N of its changes and its branch (`None`: no
-    // repository; `Some(None)`: a detached HEAD). `path_w` cuts the path as a narrow sidebar does.
-    let meta = |path: &'static str,
-                changes: Option<usize>,
-                branch: Option<Option<&'static str>>,
-                path_w: Option<f32>| FolderMeta {
-        path: path.into(),
-        path_w,
-        changes,
-        branch: branch.map(|b| env.mark("branch.chip", style::branch_tag(ui, b)).into_any_element()),
-        pull_request: None,
-    };
     let folder_parts = |title: &'static str, section, count: Option<&str>, interactive: bool| BandParts {
         kind: BandKind::Folder,
         section,
@@ -61,29 +49,14 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         sticky: false,
         joined: false,
     };
-    let folder = |id: &'static str, title: &'static str, section, count: Option<&str>, meta: FolderMeta| {
-        style::folder_band(
-            id,
-            ui,
-            folder_parts(title, section, count, true),
-            FolderLook::default(),
-            Some(meta),
-        )
+    let folder = |id: &'static str, title: &'static str, section, count: Option<&str>| {
+        style::folder_band(id, ui, folder_parts(title, section, count, true), FolderLook::default())
     };
 
     // The anatomy: an open folder with three terminals, then two folded folders that share
     // a hairline.
     let anatomy = column(ui)
-        .child(env.mark(
-            "sidebar.band",
-            folder(
-                "g-band-terminal",
-                "terminal",
-                Section::Open,
-                Some("3"),
-                meta("~/Projects/terminal", Some(3), Some(Some("ui-unify")), None),
-            ),
-        ))
+        .child(env.mark("sidebar.band", folder("g-band-terminal", "terminal", Section::Open, Some("3"))))
         .child(env.mark(
             "sidebar.row",
             row(
@@ -115,13 +88,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             // How the pointer shows on a row (`state.hover`).
             .bg(ui.hover),
         )
-        .child(folder(
-            "g-band-dotfiles",
-            "dotfiles",
-            Section::Collapsed,
-            Some("3"),
-            meta("~/dotfiles", None, None, None),
-        ))
+        .child(folder("g-band-dotfiles", "dotfiles", Section::Collapsed, Some("3")))
         .child(style::folder_band(
             "g-band-website",
             ui,
@@ -132,7 +99,6 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 ..folder_parts("website", Section::Collapsed, Some("2"), true)
             },
             FolderLook::default(),
-            Some(meta("~/Projects/website", None, Some(Some("main")), None)),
         ));
 
     // Every row state, two lines and one.
@@ -213,17 +179,11 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 ..folder_parts("api-server", Section::Collapsed, Some("2"), false)
             },
             FolderLook::default(),
-            Some(meta(
-                "~/Projects/clients/acme/services/api-server",
-                Some(1),
-                Some(Some("feature/very-long-branch-name")),
-                Some(96.0),
-            )),
         )
     };
     // ⌘ held: the count drops to 40 %. "No folder": a muted title, one line, with no path or git.
-    let held = |id: &'static str, title: &'static str, look: FolderLook, meta: Option<FolderMeta>| {
-        style::folder_band(id, ui, folder_parts(title, Section::Collapsed, Some("3"), false), look, meta)
+    let held = |id: &'static str, title: &'static str, look: FolderLook| {
+        style::folder_band(id, ui, folder_parts(title, Section::Collapsed, Some("3"), false), look)
     };
     // A pinned folder's band stays with no terminal in it: its pin after the name, no count.
     let pinned = style::folder_band(
@@ -244,7 +204,6 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             ..folder_parts("notes", Section::Open, None, true)
         },
         FolderLook::default(),
-        Some(meta("~/Projects/notes", None, None, None)),
     );
     // The compact density keeps a band to one line: the chip and ±N follow the name.
     let compact = style::band(
@@ -257,13 +216,12 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     );
     // A folder with a colour: the band is tinted from the left as the title row is, and the choices
     // (Project tab) and the dots (the band's menu) are the same eight, drawn from this theme.
-    let tinted = |id: &'static str, color: FolderColor, path: &'static str| {
+    let tinted = |id: &'static str, color: FolderColor, _path: &'static str| {
         style::folder_band(
             id,
             ui,
             folder_parts(color.key(), Section::Open, Some("2"), true),
             FolderLook { tint: Some(folder_color::band_tint_in(color, env.tokens)), ..FolderLook::default() },
-            Some(meta(path, Some(2), Some(Some("main")), None)),
         )
     };
     let colors = FolderColor::ALL.map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
@@ -306,21 +264,14 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         ))
         .child(band_state("g-band-drop", true, false))
         .child(band_state("g-band-sticky", false, true))
-        .child(held(
-            "g-band-held",
-            "dotfiles",
-            FolderLook { cmd_held: true, ..FolderLook::default() },
-            Some(meta("~/dotfiles", None, None, None)),
-        ))
+        .child(held("g-band-held", "dotfiles", FolderLook { cmd_held: true, ..FolderLook::default() }))
         .child(pinned)
-        .child(compact)
-        .child(held("g-band-unknown", "No folder", FolderLook { unknown: true, ..FolderLook::default() }, None))
+        .child(env.mark("branch.chip", compact))
         .child(style::folder_band(
             "g-band-detached",
             ui,
             folder_parts("bisect", Section::Open, None, true),
             FolderLook::default(),
-            Some(meta("~/Projects/bisect", None, Some(None), None)),
         ));
 
     // Terminals without an agent say what runs; an idle agent shows its logo.

@@ -9,11 +9,10 @@ use gpui_kit::{
 };
 use wormhole_core::panes::Zone;
 use wormhole_core::sidebar::Entry;
-use wormhole_core::store::{SessionRecord, WindowRecord};
 
 use super::app::OpenWindow;
-use super::terminal_drag::PaneHover;
-use super::view_tests::{draw, drive, isolate_in, read, start, start_with};
+use super::terminal_drag::{Over, PaneHover};
+use super::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -102,8 +101,22 @@ fn panes(cx: &mut TestAppContext, window: &OpenWindow) -> (Vec<i64>, i64) {
     })
 }
 
+/// The terminals' ids top to bottom as the sidebar lists them.
 fn ids(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<i64> {
-    read(cx, window, |ws| ws.sessions.iter().map(|session| session.id).collect())
+    cx.update(|cx| {
+        window
+            .workspace
+            .read_with(cx, |ws, cx| ws.session_order(cx).into_iter().map(|ix| ws.sessions[ix].id).collect())
+    })
+    .expect("the window is open")
+}
+
+/// The terminal whose row the pointer is over while something is dragged.
+fn onto(cx: &mut TestAppContext, window: &OpenWindow) -> Option<i64> {
+    read(cx, window, |ws| match ws.sidebar.over {
+        Some(Over::Row { id, .. }) => Some(id),
+        _ => None,
+    })
 }
 
 fn in_a_split(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<bool> {
@@ -177,40 +190,31 @@ fn a_row_dragged_onto_a_row_makes_a_split_and_between_rows_only_reorders(cx: &mu
     let row = row_bounds(cx, &window, 2).center();
     let middle = row_bounds(cx, &window, 1).center();
     drag(cx, &window, row, &[row + point(px(30.0), px(0.0)), middle]);
-    assert_eq!(read(cx, &window, |ws| ws.terminal_drag.as_ref().and_then(|drag| drag.onto)), Some(1));
+    assert_eq!(onto(cx, &window), Some(1));
     release(cx, &window, middle);
     assert_eq!(panes(cx, &window), (vec![1, 2], 2), "2 is shown beside 1");
-    assert_eq!(in_a_split(cx, &window), [false, true, true]);
+    assert_eq!(in_a_split(cx, &window), [true, true, false]);
 }
 
 #[gpui_kit::test]
-fn the_middle_of_a_row_in_another_folder_still_makes_a_split_each_in_its_own_band(cx: &mut TestAppContext) {
-    if isolate("the_middle_of_a_row_in_another_folder_still_makes_a_split_each_in_its_own_band") {
+fn the_middle_of_a_row_in_another_group_still_makes_a_split_each_in_its_own_group(cx: &mut TestAppContext) {
+    if isolate("the_middle_of_a_row_in_another_group_still_makes_a_split_each_in_its_own_group") {
         return;
     }
-    // Two terminals in two folders, so the list has two bands.
-    let here = std::env::current_dir().expect("the scratch dir");
-    let folder = |dir: std::path::PathBuf| Some(dir.to_string_lossy().into_owned());
-    let record = WindowRecord {
-        id: 1,
-        sessions: vec![
-            SessionRecord::new(1, None, folder(here.clone())),
-            SessionRecord::new(2, None, folder(here.join("home"))),
-        ],
-        ..Default::default()
-    };
-    let window = start_with(cx, record);
-    cx.simulate_window_resize(window.handle, size(px(1800.0), px(900.0)));
+    // Two terminals in two groups of their own.
+    let window = open(cx, 2, 1800.0, 900.0);
+    drive(cx, &window, |ws, _, cx| {
+        ws.group_terminals(&[1], cx);
+        ws.group_terminals(&[2], cx);
+    });
     draw(cx, &window);
-    draw(cx, &window);
-    assert_eq!(read(cx, &window, |ws| ws.sidebar.view.grouping), wormhole_core::sidebar::Grouping::Folder);
-    let bands = cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.session_listing(cx).bands.len()));
-    assert_eq!(bands.expect("open"), 2, "one band each");
+    let groups = cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.session_listing(cx).bands.len()));
+    assert_eq!(groups.expect("open"), 2, "one group each");
 
     let row = row_bounds(cx, &window, 2).center();
     let middle = row_bounds(cx, &window, 1).center();
     drag(cx, &window, row, &[row + point(px(30.0), px(0.0)), middle]);
-    assert_eq!(read(cx, &window, |ws| ws.terminal_drag.as_ref().and_then(|drag| drag.onto)), Some(1));
+    assert_eq!(onto(cx, &window), Some(1));
     release(cx, &window, middle);
     assert_eq!(panes(cx, &window), (vec![1, 2], 2), "shown side by side");
     let chained = cx
@@ -227,7 +231,7 @@ fn the_middle_of_a_row_in_another_folder_still_makes_a_split_each_in_its_own_ban
             })
         })
         .expect("open");
-    assert_eq!(chained, [true, true], "each in its own folder, joined by the chain mark");
+    assert_eq!(chained, [true, true], "each in its own group, joined by the chain mark");
 }
 
 #[gpui_kit::test]
@@ -242,7 +246,7 @@ fn a_header_dragged_into_the_sidebar_leaves_the_split(cx: &mut TestAppContext) {
     let target = row_bounds(cx, &window, 3);
     let bottom = point(target.center().x, target.bottom() - px(3.0));
     drag(cx, &window, header, &[header + point(px(-40.0), px(10.0)), bottom]);
-    assert_eq!(read(cx, &window, |ws| ws.terminal_drag.as_ref().and_then(|drag| drag.onto)), Some(3));
+    assert_eq!(onto(cx, &window), Some(3));
     release(cx, &window, bottom);
     assert_eq!(ids(cx, &window), [1, 3, 2], "it went where the line was");
     assert_eq!(in_a_split(cx, &window), [false; 3], "a split of one is none");
@@ -345,7 +349,13 @@ fn a_row_dragged_out_of_its_bracket_leaves_the_split(cx: &mut TestAppContext) {
 
     // Inside a bracket a row only changes places in the list: the layout stays. Terminals 1 and 3
     // are next to each other now; 3 goes above 1.
-    two_in_a_split(cx, &window);
+    drive(cx, &window, |ws, window, cx| {
+        let three = ws.find_session(3).expect("a row");
+        ws.join_split(three, 1, Zone::Right, window, cx).expect("room for two");
+        ws.activate(0, window, cx);
+    });
+    draw(cx, &window);
+    draw(cx, &window);
     let layout = read(cx, &window, |ws| ws.active_split().map(|split| split.layout.clone()));
     assert_eq!(ids(cx, &window), [1, 3, 2]);
     let row = row_bounds(cx, &window, 3).center();
@@ -354,7 +364,7 @@ fn a_row_dragged_out_of_its_bracket_leaves_the_split(cx: &mut TestAppContext) {
     drag(cx, &window, row, &[row + point(px(30.0), px(0.0)), above]);
     release(cx, &window, above);
     assert_eq!(ids(cx, &window), [3, 1, 2], "the rows swapped");
-    assert_eq!(in_a_split(cx, &window), [true, true, false]);
+    assert_eq!(in_a_split(cx, &window), [true, false, true]);
     assert_eq!(read(cx, &window, |ws| ws.active_split().map(|split| split.layout.clone())), layout);
 }
 

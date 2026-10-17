@@ -5,8 +5,8 @@
 //!
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
-//! first one gates the entire project-folder feature and its sidebar module, another the sidebar's
-//! funnel, a third the first-run welcome that runs in the terminal itself.
+//! first one gates the entire project-folder feature and its sidebar module, another the first-run
+//! welcome that runs in the terminal itself.
 
 use std::collections::BTreeMap;
 
@@ -20,10 +20,6 @@ pub enum FeatureFlag {
     /// layout overlays, shared notes, the sidebar's Project tab and its "Create project folder",
     /// and project-owned folder colours.
     ProjectFolders,
-    /// The sidebar's funnel: the Terminals header's button and its popover (search, Show, Hide
-    /// idle, Group by, Density, Row details) and the "Filtered" chip. With it off the list is
-    /// never filtered, whatever a window saved.
-    SidebarFilter,
     /// The first-run welcome as a program in the first terminal (`Wormhole welcome`), with the
     /// window's sidebar and chrome showing, instead of the intro window that stands in for the
     /// terminal. Off, the first launch and Help → Welcome to Wormhole open the intro window.
@@ -31,13 +27,12 @@ pub enum FeatureFlag {
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 3] = [Self::ProjectFolders, Self::SidebarFilter, Self::TerminalWelcome];
+    pub const ALL: [FeatureFlag; 2] = [Self::ProjectFolders, Self::TerminalWelcome];
 
     /// The key this flag has under `feature_flags` in `config.json`.
     pub fn key(self) -> &'static str {
         match self {
             Self::ProjectFolders => "project_folders",
-            Self::SidebarFilter => "sidebar_filter",
             Self::TerminalWelcome => "terminal_welcome",
         }
     }
@@ -50,7 +45,6 @@ impl FeatureFlag {
     pub fn title(self) -> &'static str {
         match self {
             Self::ProjectFolders => "Project folders",
-            Self::SidebarFilter => "Sidebar filter",
             Self::TerminalWelcome => "Terminal welcome",
         }
     }
@@ -61,10 +55,6 @@ impl FeatureFlag {
             Self::ProjectFolders => {
                 "The .wormhole project folder: trust, per-project settings and theme, actions, \
                  shared notes, the sidebar's Project tab and project folder colours."
-            }
-            Self::SidebarFilter => {
-                "The funnel in the Terminals header and its popover (search, Show, Hide idle, Group by, \
-                 Density, Row details), and the \"Filtered\" chip."
             }
             Self::TerminalWelcome => {
                 "The first-run welcome as a program in the first terminal, with the sidebar showing, \
@@ -78,7 +68,6 @@ impl FeatureFlag {
     pub fn released(self) -> bool {
         match self {
             Self::ProjectFolders => false,
-            Self::SidebarFilter => false,
             // Until the user has seen it and approved: the intro window stays the first run.
             Self::TerminalWelcome => false,
         }
@@ -127,16 +116,6 @@ mod tests {
     }
 
     #[test]
-    fn the_sidebar_filter_ships_off_and_a_dev_build_can_switch_it() {
-        assert!(!FeatureFlag::SidebarFilter.released());
-        let off = BTreeMap::from([("sidebar_filter".to_string(), false)]);
-        assert!(!enabled_in(FeatureFlag::SidebarFilter, &off, true));
-        assert!(enabled_in(FeatureFlag::SidebarFilter, &BTreeMap::new(), true));
-        // Switching one flag leaves the other alone.
-        assert!(enabled_in(FeatureFlag::ProjectFolders, &off, true));
-    }
-
-    #[test]
     fn the_terminal_welcome_is_on_in_a_dev_build_and_off_in_a_release() {
         assert!(!FeatureFlag::TerminalWelcome.released());
         assert!(enabled_in(FeatureFlag::TerminalWelcome, &BTreeMap::new(), true));
@@ -158,10 +137,15 @@ mod tests {
     fn a_retired_flags_key_in_config_json_changes_nothing() {
         // The own engine was a flag until it became the only engine; a config.json from then may
         // still carry its key.
-        let old = BTreeMap::from([("own_engine".to_string(), false), ("project_folders".to_string(), false)]);
+        let old = BTreeMap::from([
+            ("own_engine".to_string(), false),
+            ("sidebar_filter".to_string(), false),
+            ("project_folders".to_string(), false),
+        ]);
         assert_eq!(FeatureFlag::from_key("own_engine"), None);
+        assert_eq!(FeatureFlag::from_key("sidebar_filter"), None, "the sidebar's funnel is gone");
         assert!(!enabled_in(FeatureFlag::ProjectFolders, &old, true));
-        assert!(enabled_in(FeatureFlag::SidebarFilter, &old, true));
+        assert!(enabled_in(FeatureFlag::TerminalWelcome, &old, true));
     }
 
     #[test]

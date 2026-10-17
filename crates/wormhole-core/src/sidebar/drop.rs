@@ -43,6 +43,20 @@ pub fn resolve_row_drop(
     target: usize,
     part: Part,
 ) -> Option<RowDrop> {
+    resolve_drop(order, ids, dragged, target, part, false)
+}
+
+/// [`resolve_row_drop`], `across` saying the drop moves the row to another group even where it
+/// keeps its place in the list (the first row under a group's head dropped on its top): then a
+/// move that leaves every row where it is still counts.
+pub fn resolve_drop(
+    order: &[usize],
+    ids: &[Option<SplitId>],
+    dragged: usize,
+    target: usize,
+    part: Part,
+    across: bool,
+) -> Option<RowDrop> {
     let from = order.iter().position(|&ix| ix == dragged)?;
     if dragged == target || !order.contains(&target) {
         return None;
@@ -65,7 +79,7 @@ pub fn resolve_row_drop(
     // A member dropped outside its own bracket leaves the split even where it keeps its place in
     // the list: the last one on the row under the bracket, the first on the row above it.
     let leaves = own.is_some() && !together;
-    if to == from && !leaves {
+    if to == from && !leaves && !across {
         return None;
     }
     Some(if leaves { RowDrop::Leave { to } } else { RowDrop::Reorder { to } })

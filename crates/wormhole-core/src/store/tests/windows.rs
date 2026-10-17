@@ -211,20 +211,16 @@ fn a_pin_is_saved_and_unpinning_is_saved_too() {
 }
 
 #[test]
-fn each_window_keeps_its_own_sidebar_filter_and_search() {
-    use crate::sidebar::{Filter, Grouping, Show, WindowSidebar};
+fn each_window_keeps_its_own_groups_and_order() {
+    use crate::sidebar::WindowSidebar;
     let dir = temp_dir("sidebar-state");
     let mut store = Store::open_at(&dir).expect("opens");
-    let mut first = WindowSidebar {
-        grouping: Grouping::Folder,
-        filter: Filter { show: Show::NeedsYou, hide_idle: false, search: "deploy".into() },
-        ..Default::default()
-    };
-    first.toggle_fold(Some(std::path::Path::new("/w/dotfiles")));
-    let second = WindowSidebar {
-        filter: Filter { show: Show::All, hide_idle: true, search: String::new() },
-        ..Default::default()
-    };
+    let mut first = WindowSidebar::default();
+    let docs = first.new_group(&[1, 2], &[2]);
+    first.groups.rename(docs, "Docs");
+    first.groups.set_pinned(docs, true);
+    first.toggle_group_fold(docs);
+    let second = WindowSidebar::default();
     // The app saves the sidebar's state inside the window's layout JSON.
     let layout = |state: &WindowSidebar| serde_json::to_string(state).ok();
     store

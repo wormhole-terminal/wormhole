@@ -13,7 +13,7 @@ use crate::settings::SettingsStore;
 use crate::workspace::AppState;
 
 pub(super) fn open(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.toggle_settings(ctx.window, ctx.cx);
+    ctx.workspace.devctl_settings_section("", ctx.cx);
     Ok(String::new())
 }
 

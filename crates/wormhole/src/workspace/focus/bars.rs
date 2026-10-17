@@ -11,9 +11,6 @@ use super::*;
 pub(in crate::workspace) enum TitleButton {
     /// Hide (or show) the sidebar.
     Sidebar,
-    Settings,
-    /// Group and filter: the funnel's popover.
-    Filter,
     NewTerminal,
 }
 
@@ -27,19 +24,14 @@ fn along(keystroke: &Keystroke) -> Option<isize> {
 }
 
 impl Workspace {
-    /// The title row's buttons on screen: all four with the sidebar open, its show button alone
-    /// without it. The funnel is a stop only while its feature flag is on.
-    pub(in crate::workspace) fn title_buttons(&self, cx: &App) -> Vec<TitleButton> {
-        if self.sidebar.tabs.layout.is_some() {
+    /// The title row's buttons on screen: both with the sidebar open, its show button alone
+    /// without it.
+    pub(in crate::workspace) fn title_buttons(&self, _cx: &App) -> Vec<TitleButton> {
+        if self.sidebar.tabs.on {
             // Under tabs the window has no sidebar, nor a button for it.
             Vec::new()
         } else if self.panes.sidebar_open {
-            let mut buttons = vec![TitleButton::Sidebar, TitleButton::Settings];
-            if super::sidebar::sidebar_filter_on(cx) {
-                buttons.push(TitleButton::Filter);
-            }
-            buttons.push(TitleButton::NewTerminal);
-            buttons
+            vec![TitleButton::Sidebar, TitleButton::NewTerminal]
         } else {
             vec![TitleButton::Sidebar]
         }
@@ -66,8 +58,6 @@ impl Workspace {
         }
         match buttons.get(self.areas.title) {
             Some(TitleButton::Sidebar) => self.toggle_sidebar(cx),
-            Some(TitleButton::Settings) => self.toggle_settings(window, cx),
-            Some(TitleButton::Filter) => self.sidebar.filter_open = !self.sidebar.filter_open,
             Some(TitleButton::NewTerminal) => self.new_session(window, cx),
             None => {}
         }

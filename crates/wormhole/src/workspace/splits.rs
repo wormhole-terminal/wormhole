@@ -11,7 +11,7 @@
 use wormhole_core::panes::{
     Axis, DropError, Leave, PANE_MIN_H, PANE_MIN_W, PaneId, Preset, Room, TabPanes, Zone,
 };
-use wormhole_core::sidebar::{SidebarOrder, SplitId};
+use wormhole_core::sidebar::SplitId;
 use wormhole_core::store::{SessionRecord, SplitRecord};
 
 use super::*;
@@ -229,30 +229,6 @@ impl Workspace {
         left
     }
 
-    /// Put session `ix` next to the other members of its split in the window's order, after the
-    /// last of them: a split's members are adjacent, so they save and come back together.
-    ///
-    /// Only under the classic order. The stable one leaves every terminal where it was made and
-    /// lets the list gather a split's rows (`Listing`), so a terminal that leaves its split is
-    /// back in its own place and the others' places and ⌘ numbers never move for a split.
-    fn keep_adjacent(&mut self, ix: usize, cx: &App) {
-        if settings(cx).sidebar_order != SidebarOrder::Classic {
-            return;
-        }
-        let Some(split) = self.sessions[ix].split else { return };
-        let Some(last) = self.members(split).into_iter().filter(|&member| member != ix).max() else { return };
-        if ix == last + 1 {
-            return;
-        }
-        let selected = self.sessions.get(self.active).map(|session| session.id);
-        let session = self.sessions.remove(ix);
-        let to = if ix < last { last } else { last + 1 };
-        self.sessions.insert(to, session);
-        if let Some(at) = selected.and_then(|id| self.find_session(id)) {
-            self.active = at;
-        }
-    }
-
     /// Session `ix` joins the split of the terminal with id `target`, on `zone`'s side of its
     /// pane, making the split when the target stands alone; it leaves its own split if it was in
     /// one. It takes the keyboard, and the row is selected. Refused, with nothing changed, when
@@ -347,7 +323,6 @@ impl Workspace {
         self.sessions[anchor].split = Some(id);
         self.sessions[joiner].split = Some(id);
         self.sessions[joiner].pinned = pinned;
-        self.keep_adjacent(joiner, cx);
         self.dirty = true;
     }
 
@@ -392,7 +367,6 @@ impl Workspace {
             for ix in joined {
                 self.sessions[ix].split = Some(split_id);
                 self.sessions[ix].pinned = pinned;
-                self.keep_adjacent(ix, cx);
             }
             let focused = self.split_with(split_id).map_or(anchor_id, |split| split.layout.focused());
             self.dirty = true;

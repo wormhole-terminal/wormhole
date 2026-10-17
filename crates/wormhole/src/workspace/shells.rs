@@ -1,23 +1,19 @@
-//! Opening a terminal with a shell other than the default: the menu of the chevron beside the +
-//! of the Terminals title and of the tab bars (and under a right-click on the + itself), as
-//! Terminal.app's "New Tab with Profile". The shells on offer, their
+//! Opening a terminal with a shell other than the default: the menu under a right-click on the +
+//! of the Terminals title and of the tab bar, as Terminal.app's "New Tab with Profile". The shells on offer, their
 //! keys and what each runs are core's `shells`; the Shell menu's "New Terminal With ▸" and the
 //! palette's "New terminal: fish" entries go through the same method.
 
 use std::rc::Rc;
 
-use gpui_kit::component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenu, PopupMenuItem};
+use gpui_kit::component::menu::{ContextMenuExt as _, PopupMenu, PopupMenuItem};
 use wormhole_core::shells::{self, ShellChoice};
 
 use super::focus::MenuBuilder;
 use super::*;
 use crate::settings::Settings;
 
-/// The menu's heading, and the chevron's tooltip.
+/// The menu's heading.
 const MENU_TITLE: &str = "New terminal with";
-const MENU_TITLE_TOOLTIP: &str = "New terminal with…";
-/// The chevron's face, as narrow as the Open in… one.
-const CHEVRON_W: f32 = 16.0;
 
 /// The key `default_shell` names, as the choices spell it: what a plain + opens.
 pub(super) fn default_key(settings: &Settings) -> &str {
@@ -40,39 +36,6 @@ impl Workspace {
             .child(button)
             .context_menu(move |menu, window, cx| build(menu, window, cx))
             .into_any_element()
-    }
-
-    /// The chevron beside a + that opens the shells' menu on a click, so the other shells are
-    /// in sight, not only under a right-click; none while there is only one shell. `anchor` is the
-    /// menu's corner that meets the chevron.
-    pub(super) fn shell_chevron(
-        &self,
-        id: &'static str,
-        anchor: Anchor,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
-        if shells::choices(settings(cx)).len() < 2 {
-            return None;
-        }
-        let menu = self.shell_menu(cx);
-        Some(
-            div()
-                .id(id)
-                .occlude()
-                .flex_none()
-                .child(
-                    style::icon_button(
-                        SharedString::from(format!("{id}-button")),
-                        ui(cx),
-                        IconName::ChevronDown,
-                        MENU_TITLE_TOOLTIP,
-                    )
-                    .narrow(CHEVRON_W)
-                    .menu_trigger()
-                    .dropdown_menu_with_anchor(anchor, move |m, w, c| menu(m, w, c)),
-                )
-                .into_any_element(),
-        )
     }
 
     /// What builds the shells' menu.

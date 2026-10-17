@@ -54,7 +54,7 @@ impl Workspace {
         }
         // The project that governs each folder a band names holds that folder's colour; it may be
         // above the terminal's own (a terminal in a nested project) or none.
-        let mut folders: Vec<PathBuf> = self
+        let folders: Vec<PathBuf> = self
             .sessions
             .iter()
             .filter_map(|session| {
@@ -62,7 +62,6 @@ impl Workspace {
                 Some(session.repo_root.of(&cwd))
             })
             .collect();
-        folders.extend(settings(cx).pinned_folders.iter().map(PathBuf::from));
         let mut folder_projects = HashMap::new();
         for folder in folders {
             if !folder_projects.contains_key(&folder)

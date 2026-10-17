@@ -6,7 +6,7 @@ use super::*;
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
         // Under tabs there is no sidebar to show or hide.
-        if self.sidebar.tabs.layout.is_some() {
+        if self.sidebar.tabs.on {
             return;
         }
         let before = self.columns().sidebar;
@@ -31,7 +31,7 @@ impl Workspace {
     /// The columns as they are drawn: under tabs there is no sidebar, whatever it would be.
     fn shown_panes(&self) -> Panes {
         let mut panes = self.panes;
-        panes.sidebar_open &= self.sidebar.tabs.layout.is_none();
+        panes.sidebar_open &= !self.sidebar.tabs.on;
         panes
     }
 
@@ -119,8 +119,10 @@ impl Render for Workspace {
         self.window_width = f32::from(window.viewport_size().width) - self.beside;
         self.sync_tab_layout(window, cx);
         // A drag that ended outside every drop target never heard its drop.
-        if self.terminal_drag.is_some() && !cx.has_active_drag() {
+        if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
+            self.group_drag = None;
+            self.sidebar.over = None;
         }
         if self.picking_folder.is_some() && !self.folder_picker.read(cx).is_open() {
             self.picking_folder = None;
@@ -159,13 +161,8 @@ impl Render for Workspace {
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
         let sidebar_shown = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
-        let layout = self.sidebar.tabs.layout;
-        let tab_bar = layout.map(|layout| (layout.on_top(), self.render_tab_bar(layout, window, cx)));
-        let (top_tabs, bottom_tabs) = match tab_bar {
-            Some((true, bar)) => (Some(bar), None),
-            Some((false, bar)) => (None, Some(bar)),
-            None => (None, None),
-        };
+        let tabs = self.sidebar.tabs.on;
+        let top_tabs = tabs.then(|| self.render_tab_bar(window, cx));
 
         let root = div()
             .relative()
@@ -273,10 +270,8 @@ impl Render for Workspace {
                         d.child(edge_rule(Edge::Panel, x, ui)).child(self.resize_handle(Edge::Panel, x, cx))
                     }),
             )
-            // The tabs along the bottom, over the status bar.
-            .children(bottom_tabs)
             .children(status_bar)
-            .when(layout.is_none(), |d| d.child(sidebar_toggle))
+            .when(!tabs, |d| d.child(sidebar_toggle))
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))
             .children(self.render_overlay())

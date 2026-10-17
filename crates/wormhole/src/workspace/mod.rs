@@ -34,7 +34,7 @@ use wormhole_core::agents::integrations;
 use wormhole_core::ipc;
 use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::profile::ProfileId;
-use wormhole_core::sidebar::{Grouping, WindowSidebar};
+use wormhole_core::sidebar::WindowSidebar;
 
 mod about;
 mod actions;
@@ -252,6 +252,8 @@ pub struct Workspace {
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
     terminal_drag: Option<terminal_drag::TerminalDrag>,
+    /// The group being dragged by its head, while it is.
+    group_drag: Option<u32>,
     /// The divider the pointer has rested on (its line shows), and the timer that sets it.
     divider_hot: Option<wormhole_core::panes::DividerId>,
     divider_hover: Option<Task<()>>,
@@ -347,12 +349,7 @@ impl Workspace {
         });
 
         let saved: Option<Layout> = record.layout.as_deref().and_then(|json| serde_json::from_str(json).ok());
-        // A window that was never saved groups as the settings say; a saved one as it was left.
-        let fresh = saved.is_none();
         let mut layout = saved.unwrap_or_default();
-        if fresh {
-            layout.sidebar.grouping = settings(cx).sidebar_group;
-        }
         let sidebar = sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
 
         let picker_search = cx.new(|cx| InputState::new(window, cx).placeholder("Search branches"));
@@ -394,6 +391,7 @@ impl Workspace {
             resizing: None,
             pane_drag: None,
             terminal_drag: None,
+            group_drag: None,
             divider_hot: None,
             divider_hover: None,
             pane_area: Bounds::default(),
@@ -638,7 +636,7 @@ impl Workspace {
     #[cfg(feature = "devctl")]
     pub(crate) fn debug_state(&self, cx: &App) -> String {
         let mut out = format!(
-            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} grouping={:?} show={:?} hide_idle={} search={:?} folded={:?} listed={:?} numbered={:?}\n",
+            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} groups={} folded={:?} listed={:?} numbered={:?}\n",
             self.window_number(cx),
             app(cx).windows.len(),
             self.window_id,
@@ -653,10 +651,7 @@ impl Workspace {
             self.notes_visible(),
             self.resizing.is_some(),
             self.status_bar_drawn.is_some(),
-            self.sidebar.view.grouping,
-            self.sidebar.view.filter.show,
-            self.sidebar.view.filter.hide_idle,
-            self.sidebar.view.filter.search,
+            self.sidebar.view.groups.iter().count(),
             self.sidebar.view.folded,
             self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
@@ -739,14 +734,28 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> usize {
+        self.open_session_in(None, shell, cwd, window, cx)
+    }
+
+    /// [`Self::open_session`] in a group of its own choosing: `Some(Some(group))` joins that group,
+    /// `Some(None)` stands in no group, `None` beside the selected terminal, in its group if it
+    /// has one (⌘T), whereas ⇧⌘T opens one in no group.
+    pub(in crate::workspace) fn open_session_in(
+        &mut self,
+        group: Option<Option<u32>>,
+        shell: Option<String>,
+        cwd: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> usize {
         let mut record = SessionRecord::new(self.alloc_id(cx), None, cwd);
         record.shell = shell;
-        // Shown in the person's groups, a new terminal joins the group of the one selected.
-        let group = self.active_group();
+        let group = group.unwrap_or_else(|| self.active_group());
         let id = record.id;
         let ix = self.add_session(Some(record), window, cx);
         if let Some(group) = group {
-            self.sidebar.view.groups.join(group, id);
+            let ids = self.session_ids();
+            self.sidebar.view.place_in_group(&ids, id, group, None);
         }
         self.activate(ix, window, cx);
         self.dirty = true;

@@ -104,13 +104,12 @@ sleep 1; cat "$S/ctl/out.txt"
   `studio`, `studio-shot`, `studio-select <token>`, `studio-set <value>` (typed into the token editor's
   field, Return pressed: an expression that doesn't work keeps its error), `studio-filter <all|changed|low>`,
   `studio-area <area>`, `studio-menu [save|copy|json|project]`, `set key=value` (JSON value), `quit`.
-- The sidebar: `new ~/dir` (a terminal in another folder, for bands), `rename <n> <name>`,
-  `sidebar-group <folder|none>`, `sidebar-show <filter>`, `sidebar-search <text>`, `sidebar-fold <band>`,
-  `filter-popover`, `pin <n>`, `pin-folder <path>` (a folder's band stays at the top with no
-  terminal in it; again unpins), `folder-color [path] <name|none>` (a folder's colour: its band and its
-  terminals' title row are tinted; written to the project's `config.json` as `project_color` when the
-  folder's project has one, else to Wormhole's settings), `hold-cmd` / `release-cmd` (the ⌘1–9 keycaps show 250 ms after
-  `hold-cmd`: `shot` in a later batch), `right-click <x> <y>` (a row's or a band's menu),
+- The sidebar: `new ~/dir` (a terminal in another folder), `rename <n> <name>`,
+  `group-new <name> <row>…` (a group of those terminals), `sidebar-fold <group>`, `pin <n>`,
+  `folder-color [path] <name|none>` (a folder's colour: its terminals' title row is tinted; written to
+  the project's `config.json` as `project_color` when the folder's project has one, else to Wormhole's
+  settings), `hold-cmd` / `release-cmd` (the ⌘1–9 keycaps show 250 ms after
+  `hold-cmd`: `shot` in a later batch), `right-click <x> <y>` (a row's or a group's menu),
   `sidebar-scroll <px>`.
 - The right panel: `panel-tab notes|changes|history|project`, `project-init` (the Project tab's Create project
   folder button, for the active terminal's folder), `task-seed <open> <done>` and

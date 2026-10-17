@@ -430,42 +430,19 @@ const SESSIONS: &[Group] = &[
     group("", &[entry("sidebar-preview", "Live preview", "", "preview sidebar", &[])]),
     group(
         "Terminals in",
-        &[
-            entry(
-                "terminals-in",
-                "Show terminals in",
-                "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs",
-                "tabs tab bar sidebar list layout",
-                &["terminals_in"],
-            ),
-            entry(
-                "tab-layout",
-                "Tab layout",
-                "Two rows: the groups above their tabs; Stacks: one row, the other groups piled up; Bottom: a bar along the bottom",
-                "tabs layout two rows stacks piles bottom bar",
-                &["tab_layout"],
-            ),
-        ],
+        &[entry(
+            "terminals-in",
+            "Show terminals in",
+            "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs",
+            "tabs tab bar sidebar list layout",
+            &["terminals_in"],
+        )],
     ),
     Group {
         title: "Terminals list",
         blurb: "",
-        aside: "Same values as the funnel in the Terminals header",
+        aside: "",
         entries: &[
-            entry(
-                "sidebar-group",
-                "Group by",
-                "Folder puts terminals under a band per working folder; None is one list in your order",
-                "grouping folder band none flat",
-                &["sidebar_group"],
-            ),
-            entry(
-                "sidebar-order",
-                "Order",
-                "Stable: pinned first, then oldest to newest, nothing moves on its own; Classic: the order of earlier versions",
-                "order sort stable classic pinned created position move",
-                &["sidebar_order"],
-            ),
             entry(
                 "sidebar-numbers",
                 "⌘1–⌘9 numbers",

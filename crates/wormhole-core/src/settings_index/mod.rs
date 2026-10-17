@@ -179,7 +179,7 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 /// the Notifications section's switches set (on while any kind is on); `pinned_folders` is a
 /// list the terminal list's bands change (Pin folder), with nothing to set in a form; the same
 /// goes for `folder_colors`, which the band's menu and the Project tab set.
-pub const UNLISTED: &[&str] = &["notifications", "pinned_folders", "folder_colors"];
+pub const UNLISTED: &[&str] = &["notifications", "folder_colors"];
 
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {

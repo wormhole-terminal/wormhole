@@ -59,32 +59,23 @@
 //!                   `-` is the login shell); `state` shows each terminal's key and what it runs
 //!   shells          the shells on offer, one a line: key, name, what it runs, `default` on the default
 //!   rename <n> <name>   name the n-th terminal as a project's layout would (as `state` numbers them)
-//!   sidebar-group <folder|none>   how the sidebar groups the terminal list (`state` shows the listed
-//!                   order and the ⌘-numbered terminals)
-//!   sidebar-show <all|needs_you|working|finished|idle> | sidebar-search [text]   the sidebar's Show
-//!                   filter and search (saved with the window; an empty search clears it)
-//!   filter-popover  open or close the funnel's popover
-//!   group-new <name> <row>…   a new group (Group by → Your groups) of the terminals in those rows
-//!                   (as `state` numbers them), the list shown as groups; prints its id
-//!   sidebar-fold <band>   fold or open the band with this name ("No folder" for terminals without one)
+//!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
+//!                   prints its id
+//!   sidebar-fold <group>   fold or open the group with this name
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
-//!   pin-folder <path>   pin the folder (`~/` is the home folder) so its band stays at the top of
-//!                   the list with no terminal in it, or unpin it: the list of every window, in
-//!                   `config.json`; prints which it did (`rows` marks a pinned band)
 //!   folder-color [path] <name|#hex|none> colour the folder (the active terminal's without a path; `~/`
 //!                   is the home folder) red, orange, yellow, green, teal, blue, purple or pink, or
-//!                   take its colour away, as the band's Colour menu does: its band is tinted and so
-//!                   is its terminals' title row; the list of every window, in `config.json`, or the
+//!                   take its colour away, as the Project tab does: its terminals' title row is
+//!                   tinted; the list of every window, in `config.json`, or the
 //!                   project's `project_color` in its `.wormhole/config.json` when the folder's
 //!                   project has one (refused while `project_color_locked`); prints what it did
-//!                   (`rows` marks a coloured band, with `project` and `locked` where the project
-//!                   holds it, `title` shows the tint)
+//!                   (with `project` and `locked` where the project holds it, `title` shows the tint)
 //!   hold-cmd | release-cmd   press ⌘ alone and keep it held (the ⌘1–9 keycaps show after 250 ms;
 //!                   `shot` in a later batch), or let go
-//!   right-click <x> <y>   a right-click there (a sidebar row's or band's context menu)
+//!   right-click <x> <y>   a right-click there (a sidebar row's or group's context menu)
 //!   sidebar-scroll <px>   scroll the terminal list (negative = up)
-//!   rows            the sidebar's list as it is drawn, one a line: each band, and each terminal's row
-//!                   with its number as `state` has it, id, name, place in its band, ⌘ number and its
+//!   rows            the sidebar's list as it is drawn, one a line: each group, and each terminal's row
+//!                   with its number as `state` has it, id, name, place in its group, ⌘ number and its
 //!                   split's marks: `bracket=start|mid|end`, `chain`, `on_screen` (shown beside the
 //!                   selected one), `selected`
 //!   split-join <row> <pane> <left|right|top|bottom>   the terminal in that row joins the split of
@@ -371,14 +362,9 @@ fn command(name: &str) -> Option<Command> {
         "profile" => sessions::profile,
         "profile-new" => sessions::profile_new,
         "profiles" => sessions::profiles,
-        "sidebar-group" => sidebar::group,
         "group-new" => sidebar::new_group,
-        "sidebar-show" => sidebar::show,
-        "sidebar-search" => sidebar::search,
-        "filter-popover" => sidebar::filter_popover,
         "sidebar-fold" => sidebar::fold,
         "pin" => sidebar::pin,
-        "pin-folder" => sidebar::pin_folder,
         "folder-color" => sidebar::folder_color,
         "hold-cmd" => |ctx, _| sidebar::hold_cmd(ctx, true),
         "release-cmd" => |ctx, _| sidebar::hold_cmd(ctx, false),

@@ -1,12 +1,11 @@
-//! What VoiceOver says for a band or a terminal row: one label that carries the state
+//! What VoiceOver says for a group's head or a terminal row: one label that carries the state
 //! word, the detail, the selection, the place in its set and the shortcut, so the glyphs and
 //! keycaps themselves are never read.
 
 use std::time::Duration;
 
-use super::filter::RowState;
-use super::git::GroupGit;
 use super::split::SplitMarks;
+use super::state::RowState;
 use super::text::count;
 
 /// What a terminal row is about, for its label.
@@ -100,37 +99,51 @@ pub fn row_label_in_split(name: &str, speech: RowSpeech, place: Place, split: Op
     parts.join(", ")
 }
 
-/// "terminal, branch ui-unify, 3 changes, 3 terminals, expanded, 1 of 4"; a pinned folder says
-/// so right after its name ("terminal, pinned, 0 terminals, expanded, 1 of 4"), and a coloured one
-/// its colour ("terminal, coloured teal, 3 terminals, expanded, 1 of 4"): the band's tint is all
-/// the eyes get of it, so VoiceOver has to be told.
+/// A group's head: "Release 1.2, coloured blue, pinned, 3 terminals, expanded, 1 of 4". The colour is said
+/// because the card's wash is all the eyes get of it; a folded group says how many of its
+/// terminals need you or failed, since only the dot on its head tells the eyes.
 #[allow(clippy::too_many_arguments)]
 pub fn band_label(
     label: &str,
     pinned: bool,
     color: Option<&str>,
-    git: Option<GroupGit>,
     terminals: usize,
+    alerts: usize,
     expanded: bool,
     position: usize,
     of: usize,
 ) -> String {
     let mut parts = vec![label.to_string()];
+    parts.extend(color.map(|color| format!("coloured {}", color.to_lowercase())));
     if pinned {
         parts.push("pinned".to_string());
     }
-    parts.extend(color.map(|color| format!("coloured {}", color.to_lowercase())));
-    if let Some(git) = git {
-        parts.push(match git.branch {
-            Some(branch) => format!("branch {branch}"),
-            None => "detached HEAD".to_string(),
-        });
-        parts.extend(git.changes.filter(|&n| n > 0).map(|n| count(n, "change", "changes")));
+    parts.push(if terminals == 0 {
+        "no terminals".to_string()
+    } else {
+        count(terminals, "terminal", "terminals")
+    });
+    if !expanded && alerts > 0 {
+        parts.push(format!("{alerts} need attention"));
     }
-    parts.push(count(terminals, "terminal", "terminals"));
     parts.push(if expanded { "expanded" } else { "collapsed" }.to_string());
     parts.push(format!("{position} of {of}"));
     parts.join(", ")
+}
+
+/// The group's chevron: it folds the group or opens it again.
+pub fn fold_label(name: &str, expanded: bool) -> String {
+    format!("{} group {name}", if expanded { "Fold" } else { "Unfold" })
+}
+
+/// The group's label, which opens its popover (name, colour, actions).
+pub fn edit_label(name: &str) -> String {
+    format!("Edit group {name}")
+}
+
+/// The + on a group's head or its empty line.
+pub fn new_in_group_label(name: &str) -> String {
+    format!("New terminal in {name}")
 }
 
 /// A row's state as a word: "needs you", "working", "finished", "failed".
@@ -162,8 +175,11 @@ pub fn spoken_clock(elapsed: Duration) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Place, RowSpeech, SplitSpeech, band_label, row_label, row_label_in_split, spoken_clock};
-    use crate::sidebar::{Bracket, GroupGit, RowState, SplitMarks};
+    use super::{
+        Place, RowSpeech, SplitSpeech, band_label, edit_label, fold_label, new_in_group_label, row_label,
+        row_label_in_split, spoken_clock,
+    };
+    use crate::sidebar::{Bracket, RowState, SplitMarks};
     use std::time::Duration;
 
     fn place(selected: bool, position: usize, number: Option<usize>) -> Place {
@@ -263,47 +279,44 @@ mod tests {
     }
 
     #[test]
-    fn bands_read_their_branch_changes_and_count() {
-        let git = GroupGit { branch: Some("ui-unify"), changes: Some(3) };
+    fn a_group_reads_its_colour_pin_count_and_place() {
         assert_eq!(
-            band_label("terminal", false, None, Some(git), 3, true, 1, 4),
-            "terminal, branch ui-unify, 3 changes, 3 terminals, expanded, 1 of 4"
+            band_label("Release 1.2", false, Some("Blue"), 3, 0, true, 1, 4),
+            "Release 1.2, coloured blue, 3 terminals, expanded, 1 of 4"
         );
         assert_eq!(
-            band_label("dotfiles", false, None, None, 1, false, 3, 4),
-            "dotfiles, 1 terminal, collapsed, 3 of 4"
-        );
-        let detached = GroupGit { branch: None, changes: Some(0) };
-        assert_eq!(
-            band_label("bisect", false, None, Some(detached), 2, true, 1, 1),
-            "bisect, detached HEAD, 2 terminals, expanded, 1 of 1"
+            band_label("Review", true, Some("Pink"), 1, 0, false, 2, 4),
+            "Review, coloured pink, pinned, 1 terminal, collapsed, 2 of 4"
         );
     }
 
     #[test]
-    fn a_coloured_folder_says_its_colour_after_its_name() {
+    fn a_pinned_group_says_so_with_no_terminal_in_it() {
         assert_eq!(
-            band_label("app", false, Some("Teal"), None, 3, true, 2, 4),
-            "app, coloured teal, 3 terminals, expanded, 2 of 4"
-        );
-        let git = GroupGit { branch: Some("main"), changes: Some(0) };
-        assert_eq!(
-            band_label("app", true, Some("Pink"), Some(git), 0, false, 1, 4),
-            "app, pinned, coloured pink, branch main, 0 terminals, collapsed, 1 of 4"
+            band_label("Docs", true, None, 0, 0, true, 3, 4),
+            "Docs, pinned, no terminals, expanded, 3 of 4"
         );
     }
 
     #[test]
-    fn a_pinned_folder_says_so_even_with_no_terminal_in_it() {
+    fn a_folded_group_says_what_its_dot_says() {
         assert_eq!(
-            band_label("notes", true, None, None, 0, true, 1, 2),
-            "notes, pinned, 0 terminals, expanded, 1 of 2"
+            band_label("Experiments", false, None, 3, 1, false, 2, 3),
+            "Experiments, 3 terminals, 1 need attention, collapsed, 2 of 3"
         );
-        let git = GroupGit { branch: Some("main"), changes: Some(0) };
         assert_eq!(
-            band_label("terminal", true, None, Some(git), 2, false, 1, 2),
-            "terminal, pinned, branch main, 2 terminals, collapsed, 1 of 2"
+            band_label("Experiments", false, None, 3, 1, true, 2, 3),
+            "Experiments, 3 terminals, expanded, 2 of 3",
+            "open, its rows say it"
         );
+    }
+
+    #[test]
+    fn the_groups_buttons_say_what_they_do() {
+        assert_eq!(fold_label("Docs", true), "Fold group Docs");
+        assert_eq!(fold_label("Docs", false), "Unfold group Docs");
+        assert_eq!(edit_label("Docs"), "Edit group Docs");
+        assert_eq!(new_in_group_label("Docs"), "New terminal in Docs");
     }
 
     #[test]

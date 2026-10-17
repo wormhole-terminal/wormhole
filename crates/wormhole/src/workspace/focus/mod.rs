@@ -41,11 +41,10 @@ pub(crate) fn init(cx: &mut App) {
     ]);
 }
 
-/// A sidebar item the keys can be on: a band (by its folder), one of the person's groups (by its
-/// id) or a terminal (by its id).
+/// A sidebar item the keys can be on: one of the person's groups (by its id) or a terminal (by its
+/// id).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum SidebarStop {
-    Band(Option<PathBuf>),
     Group(u32),
     Row(i64),
 }
@@ -399,7 +398,6 @@ impl Workspace {
         let at = match area {
             Area::TitleRow => self.title_buttons(cx).get(self.areas.title).map(|b| format!("{b:?}")),
             Area::Sidebar => self.areas.sidebar_at.as_ref().map(|at| match at {
-                SidebarStop::Band(folder) => format!("band {:?}", folder.as_deref().unwrap_or(Path::new(""))),
                 SidebarStop::Group(id) => format!("group {id}"),
                 SidebarStop::Row(id) => format!("terminal id={id}"),
             }),

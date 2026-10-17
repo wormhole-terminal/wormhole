@@ -69,47 +69,16 @@ pub struct PrLook {
     pub checks: Option<(IconName, Hsla)>,
 }
 
-impl PrLook {
-    /// What the checks add to a chip's or a mark's width.
-    pub fn checks_w(&self) -> f32 {
-        if self.checks.is_some() { EXTRA_GAP + EXTRA_ICON } else { 0.0 }
-    }
-
-    /// The width of its [`pull_request_mark`], the label `text_w` wide.
-    pub fn mark_w(&self, text_w: f32) -> f32 {
-        EXTRA_ICON + EXTRA_GAP + text_w + self.checks_w()
-    }
-}
-
 #[track_caller]
 fn small_icon(icon: IconName, color: Hsla) -> Div {
     div().flex_none().text_color(color).child(Icon::new(icon).xsmall())
 }
 
 /// The title row's pull request: an [`extra_chip`] with the checks' icon after the number. Its
-/// width is the chip's plus [`PrLook::checks_w`].
+/// width is the chip's plus the checks' icon and its gap.
 #[track_caller]
 pub fn pull_request_chip(ui: UiColors, look: PrLook) -> Div {
     extra_chip(ui, true, Some((look.icon, look.color)), look.label)
-        .children(look.checks.map(|(icon, color)| small_icon(icon, color)))
-}
-
-/// A pull request on a folder band, after its branch: the chip's parts without the chip, in muted
-/// caption type, [`PrLook::mark_w`] wide.
-#[track_caller]
-pub fn pull_request_mark(ui: UiColors, look: PrLook) -> Div {
-    div()
-        .flex_none()
-        .flex()
-        .items_center()
-        .gap_1()
-        .text_caption()
-        .font_weight(FontWeight::MEDIUM)
-        .tabular_nums()
-        .whitespace_nowrap()
-        .text_color(ui.muted)
-        .child(small_icon(look.icon, look.color))
-        .child(look.label)
         .children(look.checks.map(|(icon, color)| small_icon(icon, color)))
 }
 

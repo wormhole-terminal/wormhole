@@ -78,12 +78,6 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     }
     if settings.terminals_in == wormhole_core::sidebar::TerminalsIn::Sidebar {
         state.off.push(ActionId::ToggleTerminalTabs);
-    } else {
-        state.checked.push(match settings.tab_layout {
-            wormhole_core::sidebar::TabLayout::TwoRows => ActionId::TabsTwoRows,
-            wormhole_core::sidebar::TabLayout::Stacks => ActionId::TabsStacks,
-            wormhole_core::sidebar::TabLayout::Bottom => ActionId::TabsBottom,
-        });
     }
     if !full_screen {
         state.off.push(ActionId::FullScreen);
@@ -115,11 +109,6 @@ impl Workspace {
             RightTab::History => ShowHistory,
             RightTab::Project => ShowProject,
             RightTab::Usage => ShowUsage,
-        });
-        state.checked.push(match self.sidebar.view.grouping {
-            Grouping::Folder => GroupByFolder,
-            Grouping::Custom => GroupByCustom,
-            Grouping::None => GroupByNone,
         });
         if self.active_session().pinned {
             state.checked.push(PinTerminal);

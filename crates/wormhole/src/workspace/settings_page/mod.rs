@@ -51,13 +51,12 @@ fn ui(cx: &App) -> UiColors {
     crate::settings::window_ui(cx, settings(cx).settings_translucent)
 }
 
-/// What the pages show of the window in front: its funnel's grouping (Terminals & sidebar) and
-/// its terminal's project (the "set by this project" marks). Read when Settings opens and once a
+/// What the pages show of the window in front: its terminal's project (the "set by this project"
+/// marks). Read when Settings opens and once a
 /// second after, never in a frame: GPUI makes an entity read while a window draws that window's,
 /// so the workspace would run its tick in Settings, and lose it when Settings closed.
 #[derive(Clone, Debug, Default, PartialEq)]
 struct FrontWindow {
-    grouping: Option<wormhole_core::sidebar::Grouping>,
     project: Option<PathBuf>,
 }
 
@@ -67,10 +66,7 @@ impl FrontWindow {
             .and_then(|window| {
                 window
                     .workspace
-                    .read_with(cx, |ws, _| Self {
-                        grouping: Some(ws.sidebar.view.grouping),
-                        project: ws.active_session().project.clone(),
-                    })
+                    .read_with(cx, |ws, _| Self { project: ws.active_session().project.clone() })
                     .ok()
             })
             .unwrap_or_default()
@@ -130,14 +126,6 @@ pub(crate) struct SettingsWindow {
     _subscriptions: Vec<Subscription>,
     /// Keeps the project picker's list current.
     _refresh: Task<()>,
-}
-
-impl Workspace {
-    /// ⌘, and the sidebar button: bring up the settings window (it stays open
-    /// until closed; ⌘, again just focuses it).
-    pub(crate) fn toggle_settings(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        open_settings(None, cx);
-    }
 }
 
 /// Bring up the settings window (showing `section`), or focus it if it is open.

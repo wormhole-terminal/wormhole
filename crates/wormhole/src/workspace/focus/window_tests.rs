@@ -3,7 +3,6 @@
 //! sidebar and the panel, Esc back to the terminal.
 use gpui_kit::TestAppContext;
 use wormhole_core::focus::Area;
-use wormhole_core::sidebar::Grouping;
 
 use super::super::RightTab;
 use super::super::app::OpenWindow;
@@ -45,7 +44,6 @@ fn the_sidebar_is_walked_with_the_arrows_and_opened_with_return_or_space(cx: &mu
         return;
     }
     let window = start(cx, 3);
-    drive(cx, &window, |ws, _, cx| ws.set_grouping(Grouping::None, cx));
     let ids: Vec<i64> = read(cx, &window, |ws| ws.sessions.iter().map(|s| s.id).collect());
     let at = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.areas.sidebar_at.clone());
     let active = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions[ws.active].id);
@@ -154,31 +152,33 @@ fn on_a_section_band_only_space_folds_it(cx: &mut TestAppContext) {
     assert_eq!(area(cx, &window), Some(Area::PanelContent), "the list keeps the keyboard");
 }
 
-/// On a folder band in the sidebar too, ↩ does nothing and Space folds or opens it;
+/// On a group's head in the sidebar too, ↩ does nothing and Space folds or opens it;
 /// the list keeps the keyboard either way.
 #[gpui_kit::test]
-fn on_a_sidebar_band_only_space_folds_it(cx: &mut TestAppContext) {
-    if isolate_in(module_path!(), "on_a_sidebar_band_only_space_folds_it") {
+fn on_a_sidebar_group_only_space_folds_it(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "on_a_sidebar_group_only_space_folds_it") {
         return;
     }
     let window = start(cx, 2);
-    drive(cx, &window, |ws, _, cx| ws.set_grouping(Grouping::Folder, cx));
+    drive(cx, &window, |ws, _, cx| {
+        ws.group_terminals(&[1, 2], cx);
+    });
     let folded = |cx: &mut TestAppContext| {
         read(cx, &window, |ws| match &ws.areas.sidebar_at {
-            Some(SidebarStop::Band(folder)) => ws.sidebar.view.is_folded(folder.as_deref()),
-            at => panic!("the keys are on {at:?}, not a band"),
+            Some(SidebarStop::Group(group)) => ws.sidebar.view.is_group_folded(*group),
+            at => panic!("the keys are on {at:?}, not a group"),
         })
     };
 
     f6_to(cx, &window, Area::Sidebar);
-    // ⌥↑: the first row, the one band both terminals are under.
+    // ⌥↑: the first line, the head both terminals are under.
     key(cx, &window, "alt-up");
-    assert!(!folded(cx), "the band starts open");
+    assert!(!folded(cx), "the group starts open");
     key(cx, &window, "enter");
-    assert!(!folded(cx), "↩ on a band does nothing");
+    assert!(!folded(cx), "↩ on a head does nothing");
     assert_eq!(area(cx, &window), Some(Area::Sidebar));
     key(cx, &window, "space");
-    assert!(folded(cx), "Space folded the band");
+    assert!(folded(cx), "Space folded the group");
     key(cx, &window, "space");
     assert!(!folded(cx), "and opened it again");
     assert_eq!(area(cx, &window), Some(Area::Sidebar), "the list keeps the keyboard");
@@ -193,7 +193,6 @@ fn ctrl_return_opens_the_rows_menu_from_the_keyboard(cx: &mut TestAppContext) {
         return;
     }
     let window = start(cx, 2);
-    drive(cx, &window, |ws, _, cx| ws.set_grouping(Grouping::None, cx));
     let menu_open = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.areas.menu.is_some());
 
     f6_to(cx, &window, Area::Sidebar);

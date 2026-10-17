@@ -5,10 +5,10 @@ use wormhole_core::layout::RememberedPanes;
 
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a
-    /// new window starts (the configured grouping, no filter, nothing folded).
-    fn for_new_window(json: Option<&str>, grouping: Grouping) -> Option<String> {
+    /// new window starts (no groups, nothing folded).
+    fn for_new_window(json: Option<&str>) -> Option<String> {
         let mut layout: Layout = json.and_then(|json| serde_json::from_str(json).ok()).unwrap_or_default();
-        layout.sidebar = WindowSidebar { grouping, ..WindowSidebar::default() };
+        layout.sidebar = WindowSidebar::default();
         serde_json::to_string(&layout).ok()
     }
 }
@@ -16,8 +16,8 @@ impl Layout {
 impl Layout {
     /// The layout of a window opened with none saved: the columns as they were last left, the
     /// sidebar the way a new window starts.
-    pub(super) fn remembered(last: &RememberedPanes, grouping: Grouping) -> Option<String> {
-        let sidebar = WindowSidebar { grouping, ..WindowSidebar::default() };
+    pub(super) fn remembered(last: &RememberedPanes) -> Option<String> {
+        let sidebar = WindowSidebar::default();
         serde_json::to_string(&Layout::new(last.panes(), Layout::default().right_tab, sidebar)).ok()
     }
 }
@@ -32,8 +32,7 @@ impl Workspace {
     /// Another window, laid out like this one, with a session starting in `cwd` (the command
     /// palette's ⌘↩).
     pub(super) fn new_window_in(&mut self, cwd: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
-        let layout =
-            Layout::for_new_window(self.window_record(cx).layout.as_deref(), settings(cx).sidebar_group);
+        let layout = Layout::for_new_window(self.window_record(cx).layout.as_deref());
         let source = window.bounds();
         let profile = self.profile.clone();
         // Deferred: the new window renders right away, and nothing may read

@@ -1,9 +1,12 @@
-//! The groups a person makes in the terminal list (grouping "Your groups"): a name, a colour and the
-//! terminals in it, the way a browser groups its tabs. Unlike a folder band a group isn't worked
-//! out from where its terminals are: it holds whichever terminals were put in it, from any folder,
-//! and a terminal in no group stays loose in the list. A window keeps its own groups, saved with it.
+//! The groups a person makes in the terminal list: a name, a colour and the terminals in it, the
+//! way a browser groups its tabs. A group isn't worked out from where its terminals are: it holds
+//! whichever terminals were put in it, from any folder, and a terminal in no group stands in the
+//! list on its own. A group goes with its last terminal unless it is pinned. A window keeps its
+//! own groups, saved with it.
 
 use serde::{Deserialize, Serialize};
+
+use super::group_color::GroupColor;
 
 /// One group of terminals.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -13,14 +16,20 @@ pub struct TermGroup {
     /// group and a drag remember it by.
     pub id: u32,
     pub name: String,
-    /// A folder colour's name (`blue`, `teal` … see `config::FolderColor`), or empty for none.
+    /// A [`GroupColor`]'s name (`blue`, `cyan` …), or empty for none; a name this build doesn't
+    /// know is kept and draws nothing.
     pub color: String,
     /// The terminals in it by their id, in the order they joined.
     pub members: Vec<i64>,
+    /// It stays, as one line, when its last terminal closes.
+    pub pinned: bool,
 }
 
-/// The colours new groups take in turn, so two groups made one after the other don't look alike.
-pub const GROUP_COLORS: [&str; 8] = ["blue", "green", "orange", "purple", "pink", "teal", "yellow", "red"];
+impl TermGroup {
+    pub fn color(&self) -> Option<GroupColor> {
+        GroupColor::from_key(&self.color)
+    }
+}
 
 /// A window's groups, in the order they are listed.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +49,7 @@ impl Groups {
         self.0.iter().find(|group| group.id == id)
     }
 
-    fn get_mut(&mut self, id: u32) -> Option<&mut TermGroup> {
+    pub(super) fn get_mut(&mut self, id: u32) -> Option<&mut TermGroup> {
         self.0.iter_mut().find(|group| group.id == id)
     }
 
@@ -54,11 +63,18 @@ impl Groups {
     pub fn create(&mut self, members: &[i64]) -> u32 {
         let id = self.0.iter().map(|group| group.id + 1).max().unwrap_or(1);
         let name = (1..).map(|n| format!("Group {n}")).find(|name| self.0.iter().all(|g| &g.name != name));
-        let color = GROUP_COLORS[self.0.len() % GROUP_COLORS.len()].to_string();
+        let color = GroupColor::IN_TURN[self.0.len() % GroupColor::IN_TURN.len()].key().to_string();
         for &terminal in members {
-            self.leave(terminal);
+            self.detach(terminal);
         }
-        self.0.push(TermGroup { id, name: name.unwrap_or_default(), color, members: members.to_vec() });
+        self.drop_empty();
+        self.0.push(TermGroup {
+            id,
+            name: name.unwrap_or_default(),
+            color,
+            members: members.to_vec(),
+            pinned: false,
+        });
         id
     }
 
@@ -68,18 +84,28 @@ impl Groups {
         if self.get(id).is_none() {
             return false;
         }
-        self.leave(terminal);
+        self.detach(terminal);
         if let Some(group) = self.get_mut(id) {
             group.members.push(terminal);
         }
+        self.drop_empty();
         true
     }
 
-    /// Take `terminal` out of its group; the group stays, even empty, until it is removed.
+    /// Take `terminal` out of its group. A group left with no terminal goes, unless it is pinned.
     pub fn leave(&mut self, terminal: i64) {
+        self.detach(terminal);
+        self.drop_empty();
+    }
+
+    fn detach(&mut self, terminal: i64) {
         for group in &mut self.0 {
             group.members.retain(|&member| member != terminal);
         }
+    }
+
+    fn drop_empty(&mut self) {
+        self.0.retain(|group| group.pinned || !group.members.is_empty());
     }
 
     /// Rename group `id`; a blank name keeps the old one.
@@ -90,10 +116,18 @@ impl Groups {
         }
     }
 
-    pub fn set_color(&mut self, id: u32, color: &str) {
+    pub fn set_color(&mut self, id: u32, color: Option<GroupColor>) {
         if let Some(group) = self.get_mut(id) {
-            group.color = color.to_string();
+            group.color = color.map_or("", GroupColor::key).to_string();
         }
+    }
+
+    /// Pin group `id`, or let it go again.
+    pub fn set_pinned(&mut self, id: u32, pinned: bool) {
+        if let Some(group) = self.get_mut(id) {
+            group.pinned = pinned;
+        }
+        self.drop_empty();
     }
 
     /// Remove group `id`; its terminals stay, loose.
@@ -102,23 +136,24 @@ impl Groups {
     }
 
     /// Forget the terminals that are gone (closed while the window was open, or not restored):
-    /// `alive` says which ids still exist. Empty groups stay; the person removes those.
+    /// `alive` says which ids still exist. A group that has none left goes with them, unless it is
+    /// pinned.
     pub fn retain_terminals(&mut self, alive: impl Fn(i64) -> bool) {
         for group in &mut self.0 {
             group.members.retain(|&member| alive(member));
         }
+        self.drop_empty();
     }
 }
 
-/// How a folded group is remembered among the folded bands (`WindowSidebar::folded`). A folder's
-/// key is its absolute path, so the two never meet.
+/// How a folded group is remembered (`WindowSidebar::folded`).
 pub fn group_key(id: u32) -> String {
     format!("group:{id}")
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{GROUP_COLORS, Groups, group_key};
+    use super::{GroupColor, Groups, group_key};
 
     #[test]
     fn a_new_group_takes_its_members_from_the_groups_they_were_in() {
@@ -135,37 +170,65 @@ mod tests {
     #[test]
     fn new_groups_are_numbered_and_coloured_in_turn() {
         let mut groups = Groups::default();
-        let a = groups.create(&[]);
-        let b = groups.create(&[]);
+        let a = groups.create(&[1]);
+        let b = groups.create(&[2]);
         let names: Vec<_> = groups.iter().map(|g| (g.name.as_str(), g.color.as_str())).collect();
-        assert_eq!(names, [("Group 1", GROUP_COLORS[0]), ("Group 2", GROUP_COLORS[1])]);
+        assert_eq!(
+            names,
+            [("Group 1", GroupColor::IN_TURN[0].key()), ("Group 2", GroupColor::IN_TURN[1].key())]
+        );
         groups.remove(a);
         // The free name is taken again, the id never is.
-        let c = groups.create(&[]);
+        let c = groups.create(&[3]);
         assert_eq!(groups.get(c).map(|g| g.name.as_str()), Some("Group 1"));
         assert!(c > b);
     }
 
     #[test]
-    fn joining_moves_a_terminal_and_leaving_keeps_the_group() {
+    fn joining_moves_a_terminal_and_a_group_left_empty_goes() {
         let mut groups = Groups::default();
         let a = groups.create(&[1]);
-        let b = groups.create(&[]);
+        let b = groups.create(&[2]);
         assert!(groups.join(b, 1));
         assert_eq!(groups.group_of(1), Some(b));
+        assert!(groups.get(a).is_none(), "its last terminal left, so it went");
         assert!(!groups.join(99, 1), "no such group");
         groups.leave(1);
         assert_eq!(groups.group_of(1), None);
-        assert!(groups.get(a).is_some() && groups.get(b).is_some());
+        assert!(groups.get(b).is_some(), "one terminal is still in it");
     }
 
     #[test]
-    fn rename_ignores_a_blank_name() {
+    fn a_pinned_group_stays_empty_and_an_unpinned_one_goes_with_its_last_terminal() {
         let mut groups = Groups::default();
-        let a = groups.create(&[]);
+        let a = groups.create(&[1]);
+        let b = groups.create(&[2]);
+        groups.set_pinned(b, true);
+        groups.retain_terminals(|_| false);
+        assert!(groups.get(a).is_none());
+        assert_eq!(groups.get(b).map(|g| (g.members.len(), g.pinned)), Some((0, true)));
+        // Unpinned while empty, it goes at once.
+        groups.set_pinned(b, false);
+        assert!(groups.is_empty());
+        // A terminal can join a pinned empty group.
+        let c = groups.create(&[5]);
+        groups.set_pinned(c, true);
+        groups.leave(5);
+        assert!(groups.join(c, 6));
+        assert_eq!(groups.get(c).map(|g| g.members.clone()), Some(vec![6]));
+    }
+
+    #[test]
+    fn rename_ignores_a_blank_name_and_colours_are_the_nine() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
         groups.rename(a, "  Release  ");
         groups.rename(a, "   ");
         assert_eq!(groups.get(a).map(|g| g.name.as_str()), Some("Release"));
+        groups.set_color(a, Some(GroupColor::Cyan));
+        assert_eq!(groups.get(a).and_then(|g| g.color()), Some(GroupColor::Cyan));
+        groups.set_color(a, None);
+        assert_eq!(groups.get(a).and_then(|g| g.color()), None);
     }
 
     #[test]
@@ -177,12 +240,18 @@ mod tests {
     }
 
     #[test]
-    fn groups_round_trip_as_a_plain_list() {
+    fn groups_round_trip_as_a_plain_list_and_old_ones_load() {
         let mut groups = Groups::default();
         groups.create(&[4]);
         let json = serde_json::to_string(&groups).unwrap_or_default();
         assert!(json.starts_with('['), "{json}");
         assert_eq!(serde_json::from_str::<Groups>(&json).ok(), Some(groups));
         assert_eq!(group_key(3), "group:3");
+        // Saved before groups could be pinned, when "teal" was a colour.
+        let old: Groups = serde_json::from_str(r#"[{"id":2,"name":"Docs","color":"teal","members":[1]}]"#)
+            .unwrap_or_default();
+        let group = old.get(2).expect("loaded");
+        assert!(!group.pinned);
+        assert_eq!(group.color(), Some(GroupColor::Cyan));
     }
 }
