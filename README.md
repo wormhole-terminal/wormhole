@@ -13,13 +13,10 @@ and GPUI Kit, with its own terminal engine.
   finished, or waiting for you. Rows show
   the status dot, the logo of the agent running there, git branch, changed
   files and open notes (each can be switched off in Settings → Terminals & sidebar).
-  The funnel next to “+ New” groups the list by folder (the git repository a
-  terminal is in, else its working directory); ⌘1…9 count terminals in the order listed. A
-  folder's band names its path, its changed files and its branch under its name. Right-click a
-  band to pin the folder: its band then stays at the top of every window's list, even with no
-  terminal in it, and its + starts one there; or to give it a color, which tints its band and
-  its terminals' title row (the same eight colors are in the Project tab, which can also create the
-  folder's `.wormhole/`).
+  Group terminals the way a browser groups its tabs: name and colour a group, fold it, drag
+  terminals in and out, and keep groups and loose terminals in your own order; ⌘1…9 count the
+  terminals you can see, top to bottom. A folder can be given a color in the Project tab, which
+  tints its terminals' title row (and can create the folder's `.wormhole/`).
 - **Splits and windows** – there are no tabs: every terminal is a row of the sidebar. ⌘D and
   ⇧⌘D split the one you are in (the agent beside a dev server, say); each pane is a terminal of
   its own, with its own notes, tasks and status, and the rows of a split are joined in the list.
