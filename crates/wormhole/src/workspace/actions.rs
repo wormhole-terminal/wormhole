@@ -36,6 +36,7 @@ actions!(
         CloseWindow,
         NewSession,
         NewTerminalInWorktree,
+        NewTerminalNoGroup,
         PinTerminal,
         RevealInFinder,
         CopyPath,
@@ -147,6 +148,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::NewWindow => Box::new(NewWindow),
         A::NewTerminal => Box::new(NewSession),
         A::NewTerminalInWorktree => Box::new(NewTerminalInWorktree),
+        A::NewTerminalNoGroup => Box::new(NewTerminalNoGroup),
         A::OpenFolder => Box::new(OpenFolder),
         A::PinTerminal => Box::new(PinTerminal),
         A::RevealInFinder => Box::new(RevealInFinder),
@@ -464,6 +466,10 @@ impl Workspace {
         let has_repo = self.active_session().git.status.is_some();
         let split = self.active_split().is_some();
         root.on_action(cx.listener(|this, _: &NewSession, window, cx| this.new_session(window, cx)))
+            .on_action(cx.listener(|this, _: &NewTerminalNoGroup, window, cx| {
+                let cwd = this.default_cwd(cx);
+                this.open_session_in(Some(None), None, cwd, window, cx);
+            }))
             .when(has_repo, |root| {
                 root.on_action(cx.listener(|this, _: &NewTerminalInWorktree, window, cx| {
                     this.new_terminal_in_worktree(window, cx)

@@ -14,13 +14,12 @@
 //! its terminal closes (`close_session`), and it is not drawn while the welcome's gate is shut or the
 //! terminal's program has exited, whatever else was missed.
 
-use wormhole_core::config::StatusPosition;
 use wormhole_core::sidebar::RowState;
 use wormhole_core::welcome::demo as example;
 
 use super::rows::Frame;
 use super::*;
-use crate::style::{BandKind, BandParts, FolderLook, RowTone, Section, SessionRow, StatusGlyph};
+use crate::style::{RowTone, SessionRow, StatusGlyph};
 
 /// How often the redraw timer looks again while Reduce Motion holds the rows still (it may be turned
 /// off meanwhile).
@@ -86,63 +85,76 @@ impl Workspace {
         Some(example::rows(demo.since.elapsed(), cx.reduce_motion()))
     }
 
-    /// The band and its three rows, to follow the list's own entries; none when it is not up.
+    /// The group and its three rows, to follow the list's own entries; none when it is not up. It is
+    /// drawn as a card, as any group is.
     pub(super) fn render_demo(&self, frame: &Frame, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let Some(demo) = self.demo_in_view(cx) else { return Vec::new() };
         let ui = frame.ui;
+        let metrics = frame.metrics;
         let rows = example::rows(demo.since.elapsed(), cx.reduce_motion());
-        let s = settings(cx);
-        let (show_dot, dot_right) =
-            (s.sidebar_status_dot, s.sidebar_status_position == StatusPosition::Right);
 
-        // Display only: nothing to click, fold or drop on (and `display_only` takes the hover away).
-        let band = style::folder_band(
+        // Display only: nothing to click, fold or drop on (`display_only` keeps the pointer off).
+        let head = style::group_head(
             "welcome-demo-band",
             ui,
-            BandParts {
-                kind: BandKind::Folder,
-                section: Section::Open,
-                title: example::BAND.into(),
-                detail: None,
-                count: None,
-                waiting: None,
-                add: None,
-                on_toggle: None,
-                drop_target: false,
-                sticky: false,
-                joined: false,
+            style::GroupHead {
+                metrics,
+                name: example::BAND.into(),
+                color: None,
+                folded: false,
+                pinned: false,
+                tiles: Vec::new(),
+                count: 0,
+                alert: None,
+                empty: None,
+                on_toggle: Box::new(|_, _, _| {}),
+                spoken_edit: SharedString::default(),
+                spoken_fold: SharedString::default(),
+                wrap_label: Box::new(|trigger| trigger.into_any_element()),
             },
-            FolderLook::default(),
         )
         .role(Role::TreeItem)
         .aria_label(example::band_label())
         .aria_expanded(true)
         .aria_level(1);
 
-        let mut items = vec![display_only(band)];
+        let last = rows.len();
+        let mut items =
+            vec![style::card_segment(ui, metrics, true, false, None, display_only(head)).into_any_element()];
         for (ix, row) in rows.into_iter().enumerate() {
-            let glyph = style::status_glyph(("welcome-demo-status", ix as u64), ui, glyph_of(row.state), cx);
-            // The status sits where the person's setting puts it, as on a real row.
-            let (lead, at_right) = match (show_dot, dot_right) {
-                (true, false) => (glyph, None),
-                (true, true) => (div().into_any_element(), Some(glyph)),
-                (false, _) => (div().into_any_element(), None),
-            };
-            let trail =
-                at_right.map(|glyph| div().flex().items_center().gap_2().child(glyph).into_any_element());
+            let tile = style::status_tile(
+                ("welcome-demo-tile", ix as u64),
+                ui,
+                style::StatusTile {
+                    face: style::TileFace::Terminal,
+                    glyph: glyph_of(row.state),
+                    selected: false,
+                    size: metrics.tile,
+                },
+                cx,
+            );
             let tone = match row.state {
                 RowState::NeedsYou => RowTone::Attention,
                 RowState::Finished => RowTone::Done,
                 _ => RowTone::Plain,
             };
-            let detail = frame.metrics.two_lines.then(|| SharedString::from(row.detail));
-            let parts = SessionRow { detail, tone, trail, ..SessionRow::new(lead, row.name) };
-            items.push(display_only(
+            let detail = metrics.two_lines.then(|| SharedString::from(row.detail));
+            let parts = SessionRow {
+                detail,
+                tone,
+                tile: Some(tile),
+                card: true,
+                metrics,
+                ..SessionRow::new(div().into_any_element(), row.name)
+            };
+            let line = display_only(
                 style::session_row(("welcome-demo-row", ix as u64), ui, parts)
                     .role(Role::TreeItem)
                     .aria_label(row.spoken)
                     .aria_level(2),
-            ));
+            );
+            items
+                .push(style::card_segment(ui, metrics, false, ix + 1 == last, None, line).into_any_element());
         }
         items
     }

@@ -1,27 +1,29 @@
-//! The person's own groups in the list: a group's head (its name on a pill of its colour, the count
-//! while folded, the + for a new terminal in it), its menu (New terminal in group, Rename…,
-//! Colour ▸, Ungroup), renaming it in place, and putting terminals in and out of groups (a row's
-//! menu, a drop on a group's head or beside one of its rows). Core keeps the groups and their
-//! order (`sidebar::WindowSidebar`, saved with the window); this draws them and changes them.
-use std::rc::Rc;
-
+//! The person's own groups in the list, as the window changes them: folding, putting terminals
+//! in and out of groups (a row's menu, a drop on a group's head or beside one of its rows), making
+//! and taking apart groups, their colour and pin, and the popover their label opens (name, nine
+//! colours, the group's actions). Core keeps the groups and their order (`sidebar::WindowSidebar`,
+//! saved with the window); `group_head` draws them and `group_actions` closes and moves them.
 use gpui_kit::component::input::Input;
-use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _, PopupMenu, PopupMenuItem};
-use wormhole_core::sidebar::{GroupColor, Item, Landing, spoken};
+use gpui_kit::component::popover::Popover;
+use wormhole_core::sidebar::{GroupColor, Item, Landing};
 
-use super::super::focus::{MenuBuilder, SidebarStop};
-use super::rows::Frame;
 use super::*;
+use crate::select;
 use crate::settings::SettingsStore;
-use crate::style::{BandKind, BandParts, BandTint, FolderLook, Section};
+use crate::style::PopoverTrigger;
 use crate::theme_bridge;
 
-/// A group being renamed in place: which, and its name field.
-pub(super) struct Renaming {
+/// A group's popover being open: which group, and its name field.
+pub(super) struct GroupEdit {
     pub(super) group: u32,
     pub(super) input: Entity<InputState>,
     _events: Subscription,
 }
+
+/// The popover's width: nine 28 pt colours and its padding.
+const POPOVER_W: f32 = 276.0;
+/// The popover's action rows.
+const ACTION_H: f32 = 28.0;
 
 /// The colours a group can wear, as the theme in force draws them.
 pub(in crate::workspace) fn group_colors(cx: &App) -> Vec<(GroupColor, Hsla)> {
@@ -33,7 +35,7 @@ impl Workspace {
     /// Fold an open group, or open a folded one.
     pub(in crate::workspace) fn toggle_group_band(&mut self, group: u32, cx: &mut Context<Self>) {
         self.sidebar.view.toggle_group_fold(group);
-        self.mark_dirty(cx);
+        self.list_rearranged(cx);
     }
 
     /// The group the selected terminal is in: where a new terminal goes.
@@ -42,7 +44,7 @@ impl Workspace {
     }
 
     /// Terminal `id` and the rest of its split: they move, join and leave groups together.
-    fn with_split_mates(&self, id: i64) -> Vec<i64> {
+    pub(super) fn with_split_mates(&self, id: i64) -> Vec<i64> {
         let Some(ix) = self.find_session(id) else { return Vec::new() };
         match self.sessions[ix].split {
             Some(split) => self.members(split).into_iter().map(|member| self.sessions[member].id).collect(),
@@ -50,7 +52,7 @@ impl Workspace {
         }
     }
 
-    /// A new terminal in group `group` (its head's +), where the selected terminal is.
+    /// A new terminal in group `group` (its + or its menu), where the selected terminal is.
     pub(in crate::workspace) fn new_session_in_group(
         &mut self,
         group: u32,
@@ -58,8 +60,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let cwd = self.default_cwd(cx);
-        let ix = self.open_session_in(Some(Some(group)), None, cwd, window, cx);
-        let _ = ix;
+        self.open_session_in(Some(Some(group)), None, cwd, window, cx);
         self.mark_dirty(cx);
     }
 
@@ -101,7 +102,8 @@ impl Workspace {
         group
     }
 
-    /// A new group holding terminal `id` (and its split), renamed at once.
+    /// "Add terminal to new group": a group holding terminal `id` (and its split), its popover open
+    /// at once to name it.
     pub(in crate::workspace) fn group_terminal(
         &mut self,
         id: i64,
@@ -109,7 +111,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let group = self.group_terminals(&[id], cx);
-        self.start_group_rename(group, window, cx);
+        self.start_group_edit(group, window, cx);
     }
 
     /// Take group `group` apart; its terminals stand where it stood.
@@ -129,7 +131,14 @@ impl Workspace {
         self.mark_dirty(cx);
     }
 
-    /// Put what a drop landed where it landed: a terminal (with its split, unless it leaves it) or a
+    /// Pin group `group` (it stays, as a line, when its last terminal closes) or let it go again.
+    pub(in crate::workspace) fn toggle_group_pin(&mut self, group: u32, cx: &mut Context<Self>) {
+        let pinned = self.sidebar.view.groups.get(group).is_some_and(|group| group.pinned);
+        self.sidebar.view.groups.set_pinned(group, !pinned);
+        self.mark_dirty(cx);
+    }
+
+    /// Put what a drop landed where it landed: a terminal (with its split, if `with_mates`) or a
     /// group.
     pub(in crate::workspace) fn land_terminal(
         &mut self,
@@ -152,9 +161,11 @@ impl Workspace {
         self.list_rearranged(cx);
     }
 
-    /// The group's name becomes a field, its text selected: ↩ or a click elsewhere keeps what was
-    /// typed, ⎋ the old name.
-    pub(in crate::workspace) fn start_group_rename(
+    // ---------------------------------------------------------------- the popover
+
+    /// The group's popover opens on its label, its name selected: what is typed is kept when it
+    /// closes (↩, ⎋ or a click elsewhere).
+    pub(in crate::workspace) fn start_group_edit(
         &mut self,
         group: u32,
         window: &mut Window,
@@ -162,229 +173,156 @@ impl Workspace {
     ) {
         let Some(name) = self.sidebar.view.groups.get(group).map(|g| g.name.clone()) else { return };
         let input = cx.new(|cx| InputState::new(window, cx).default_value(name));
-        let events =
-            cx.subscribe_in(&input, window, move |this, _, event: &InputEvent, window, cx| match event {
-                InputEvent::PressEnter { .. } | InputEvent::Blur => {
-                    this.finish_group_rename(true, window, cx)
-                }
-                _ => {}
-            });
+        let events = cx.subscribe_in(&input, window, |this, _, event: &InputEvent, window, cx| {
+            if let InputEvent::PressEnter { .. } = event {
+                this.finish_group_edit(window, cx);
+            }
+        });
         input.update(cx, |input, cx| {
             input.focus(window, cx);
             input.select_all(window, cx);
         });
-        self.sidebar.renaming = Some(Renaming { group, input, _events: events });
+        self.sidebar.editing = Some(GroupEdit { group, input, _events: events });
         cx.notify();
     }
 
-    /// Keep the typed name (`keep`) or the old one, and give the keyboard back to the terminal.
-    pub(in crate::workspace) fn finish_group_rename(
-        &mut self,
-        keep: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(renaming) = self.sidebar.renaming.take() else { return };
-        if keep {
-            let name = renaming.input.read(cx).value().to_string();
-            self.sidebar.view.groups.rename(renaming.group, &name);
-        }
+    /// Close the popover, keeping the typed name, and give the keyboard back to the terminal.
+    pub(in crate::workspace) fn finish_group_edit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(editing) = self.sidebar.editing.take() else { return };
+        let name = editing.input.read(cx).value().to_string();
+        self.sidebar.view.groups.rename(editing.group, &name);
         self.mark_dirty(cx);
         window.focus(&self.active_terminal().focus_handle(cx), cx);
     }
 
-    /// A group's head: its name on a pill of its colour (or a field while it is renamed), the count
-    /// while folded, the + for a new terminal in it. A terminal dragged onto it joins it.
-    pub(super) fn render_group_band(
-        &self,
-        listing: &Listing,
-        band_ix: usize,
-        (position, of): (usize, usize),
-        frame: &Frame,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let ui = frame.ui;
-        let band = &listing.bands[band_ix];
-        let group = band.group;
-        let color = self.sidebar.view.groups.get(group).and_then(|g| g.color());
-        let tokens = &cx.global::<SettingsStore>().tokens;
-        let tint = color.map(|color| BandTint { color: theme_bridge::hsla(color.color(tokens)), peak: 0.2 });
-        let folded = band.folded;
-        let waiting = band
-            .members
-            .iter()
-            .filter(|&&ix| {
-                self.sessions.get(ix).is_some_and(|s| s.terminal().read(cx).status() == Status::Attention)
-            })
-            .count();
-        let this = cx.weak_entity();
-        let (on_toggle, on_add) = (this.clone(), this.clone());
-        let renaming = self.sidebar.renaming.as_ref().filter(|r| r.group == group).map(|r| r.input.clone());
-        let renaming_now = renaming.is_some();
-        let parts = BandParts {
-            kind: BandKind::Folder,
-            section: if folded { Section::Collapsed } else { Section::Open },
-            title: if renaming_now { SharedString::default() } else { band.label.clone().into() },
-            detail: renaming.map(|input| {
-                // The field takes the name's place; ⎋ gives the old name back.
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
-                        if event.keystroke.key == "escape" {
-                            cx.stop_propagation();
-                            this.finish_group_rename(false, window, cx);
-                        }
-                    }))
-                    .child(Input::new(&input).xsmall())
-                    .into_any_element()
-            }),
-            count: Some(style::count_label(band.members.len()).into()),
-            waiting: (folded && waiting > 0).then(|| {
-                let id = ElementId::Name(SharedString::from(format!("band-waiting-{}", band.key())));
-                style::status_glyph(id, ui, style::StatusGlyph::NeedsYou, cx)
-            }),
-            add: Some((
-                "New terminal in this group",
-                Box::new(move |_, window, cx| {
-                    on_add.update(cx, |this, cx| this.new_session_in_group(group, window, cx)).ok();
-                }),
-            )),
-            on_toggle: Some(Box::new(move |_, _, cx| {
-                on_toggle.update(cx, |this, cx| this.toggle_group_band(group, cx)).ok();
-            })),
-            drop_target: false,
-            sticky: false,
-            joined: false,
-        };
-        let look = FolderLook { cmd_held: frame.hints, tint: tint.filter(|_| !renaming_now), card: true };
-        let id: ElementId = ElementId::Name(SharedString::from(format!("band-{}", band.key())));
-        let mut label = spoken::band_label(
-            &band.label,
-            band.pinned,
-            color.map(GroupColor::label),
-            band.members.len(),
-            waiting,
-            !folded,
-            position,
-            of,
-        );
-        if folded && waiting > 0 {
-            label = format!("{label}, {}", wormhole_core::spoken::terminals_need_you(waiting));
-        }
-        let (keyed, ring) = self.sidebar_keyed(&SidebarStop::Group(group), window);
-        let menu_open = self.sidebar.menu_group == Some(group);
-        let element = style::folder_band(id, ui, parts, look)
-            .relative()
-            .role(Role::TreeItem)
-            .aria_label(label)
-            .aria_expanded(!folded)
-            .aria_level(1)
-            .aria_position_in_set(position)
-            .aria_size_of_set(of)
-            .when(keyed, |d| d.aria_active_descendant())
-            .when(ring || menu_open, |d| {
-                d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
-            })
-            .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
-                // A double click on the name renames the group.
-                if event.click_count() == 2 {
-                    this.start_group_rename(group, window, cx);
-                }
-            }));
-        let element = self.with_group_drag(
-            element,
+    /// What a group's popover is drawn from: copied when the head is drawn, since the popover builds
+    /// its content later, without the workspace at hand.
+    pub(super) fn popover_snapshot(&self, group: u32, ui: UiColors, cx: &App) -> PopoverSnapshot {
+        let edit = self.sidebar.editing.as_ref().filter(|edit| edit.group == group);
+        PopoverSnapshot {
             group,
-            band.label.clone().into(),
-            color.map(|color| theme_bridge::hsla(color.color(tokens))),
-            cx,
-        );
-        let build = self.group_menu(group, cx);
-        let menu: ContextMenu<Stateful<Div>> =
-            element.context_menu(move |menu, window, cx| build(menu, window, cx));
-        menu.into_any_element()
+            ui,
+            open: edit.is_some(),
+            input: edit.map(|edit| edit.input.clone()),
+            current: self.sidebar.view.groups.get(group).and_then(|g| g.color()),
+            pinned: self.sidebar.view.groups.get(group).is_some_and(|g| g.pinned),
+            colors: group_colors(cx),
+            bg: select::menu_bg(ui, cx),
+        }
     }
+}
 
-    /// ⌃↩ with the keys on group `group`'s head: its menu, under it.
-    pub(super) fn group_key_menu(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
-        let listing = self.session_listing(cx);
-        // The list's children are its entries, in order.
-        let at = listing.entries.iter().position(
-            |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
-        );
-        let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        let build = self.group_menu(group, cx);
-        self.open_key_menu(wormhole_core::focus::Area::Sidebar, bounds, build, window, cx);
-    }
+/// See [`Workspace::popover_snapshot`].
+pub(super) struct PopoverSnapshot {
+    group: u32,
+    ui: UiColors,
+    open: bool,
+    input: Option<Entity<InputState>>,
+    current: Option<GroupColor>,
+    pinned: bool,
+    colors: Vec<(GroupColor, Hsla)>,
+    bg: Hsla,
+}
 
-    /// What builds group `group`'s menu: New terminal in group, Rename…, Colour ▸, Ungroup.
-    fn group_menu(&self, group: u32, cx: &mut Context<Self>) -> MenuBuilder {
-        let this = cx.weak_entity();
-        Rc::new(move |menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>| {
-            let popup = cx.entity();
-            let current = this
+/// The label's popover: the name, the nine colours and the group's actions. `trigger` is the label,
+/// which the popover hangs off.
+pub(super) fn group_popover(
+    snap: PopoverSnapshot,
+    trigger: PopoverTrigger,
+    this: WeakEntity<Workspace>,
+) -> AnyElement {
+    let PopoverSnapshot { group, ui, open, input, current, pinned, colors, bg } = snap;
+    let on_open = this.clone();
+    let popover = Popover::new(("group-edit", group as u64))
+        .anchor(Anchor::TopLeft)
+        .offset(px(6.0))
+        .open(open)
+        .on_open_change(move |open, window, cx| {
+            on_open
                 .update(cx, |ws, cx| {
-                    ws.sidebar.menu_row = None;
-                    ws.sidebar.menu_group = Some(group);
-                    ws.sidebar.menu_dismissed =
-                        Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {
-                            if ws.sidebar.menu_group == Some(group) {
-                                ws.sidebar.menu_group = None;
-                                cx.notify();
-                            }
-                        }));
-                    cx.notify();
-                    ws.sidebar.view.groups.get(group).and_then(|g| g.color())
+                    if *open {
+                        ws.start_group_edit(group, window, cx);
+                    } else {
+                        ws.finish_group_edit(window, cx);
+                    }
                 })
-                .ok()
-                .flatten();
-            let choices = group_colors(cx);
-            let ui = ui(cx);
-            let (add, rename, colors, ungroup) = (this.clone(), this.clone(), this.clone(), this.clone());
-            menu.item(PopupMenuItem::new("New terminal in group").on_click(move |_, window, cx| {
-                add.update(cx, |ws, cx| ws.new_session_in_group(group, window, cx)).ok();
-            }))
-            .item(PopupMenuItem::new("Rename…").on_click(move |_, window, cx| {
-                rename.update(cx, |ws, cx| ws.start_group_rename(group, window, cx)).ok();
-            }))
-            .submenu("Colour", window, cx, move |mut submenu, _, _| {
-                for &(color, hsla) in &choices {
-                    let this = colors.clone();
-                    submenu = submenu.item(
-                        PopupMenuItem::element(move |_, _| {
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(style::color_dot(ui, hsla, style::COLOR_DOT_MENU))
-                                .child(color.label())
-                        })
-                        .checked(current == Some(color))
-                        .on_click(move |_, _, cx| {
-                            this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
-                        }),
-                    );
-                }
-                submenu
-            })
-            .separator()
-            .item(PopupMenuItem::new("Ungroup").on_click(move |_, _, cx| {
-                ungroup.update(cx, |ws, cx| ws.ungroup(group, cx)).ok();
-            }))
+                .ok();
         })
-    }
-
-    /// The groups a terminal's menu offers to move it to: every group, with its name and whether
-    /// the terminal is in it.
-    pub(super) fn group_choices(&self, id: i64) -> Vec<(u32, SharedString, bool)> {
-        let current = self.sidebar.view.groups.group_of(id);
-        self.sidebar
-            .view
-            .groups
-            .iter()
-            .map(|group| (group.id, SharedString::from(group.name.clone()), current == Some(group.id)))
-            .collect()
-    }
+        .trigger(trigger);
+    select::menu_surface(popover, ui, px(POPOVER_W), bg)
+        .p_3()
+        .content(move |_, _, _| {
+            let action = |id: &'static str, label: &'static str| {
+                div()
+                    .id((id, group as u64))
+                    .role(Role::Button)
+                    .aria_label(label)
+                    .flex()
+                    .items_center()
+                    .h(px(ACTION_H))
+                    .px_2()
+                    .rounded(ui.radius)
+                    .cursor_pointer()
+                    .text_body()
+                    .text_color(ui.text)
+                    .hover(move |d| d.bg(ui.hover))
+                    .child(label)
+            };
+            let acting = |run: fn(&mut Workspace, u32, &mut Window, &mut Context<Workspace>)| {
+                let this = this.clone();
+                move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                    this.update(cx, |ws, cx| {
+                        // The popover goes first, keeping the name typed so far.
+                        ws.finish_group_edit(window, cx);
+                        run(ws, group, window, cx);
+                    })
+                    .ok();
+                }
+            };
+            div()
+                .flex()
+                .flex_col()
+                .gap_2()
+                .children(input.as_ref().map(|input| Input::new(input).small()))
+                .child(div().flex().items_center().children(colors.iter().map(|&(color, hsla)| {
+                    let this = this.clone();
+                    style::color_choice(
+                        ("group-color", color as usize),
+                        ui,
+                        color.label(),
+                        Some(hsla),
+                        current == Some(color),
+                        true,
+                    )
+                    .on_click(move |_, _, cx| {
+                        this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
+                    })
+                })))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .child(
+                            action("group-new-terminal", "New terminal in group")
+                                .on_click(acting(|ws, g, w, cx| ws.new_session_in_group(g, w, cx))),
+                        )
+                        .child(
+                            action("group-ungroup", "Ungroup")
+                                .on_click(acting(|ws, g, _, cx| ws.ungroup(g, cx))),
+                        )
+                        .child(
+                            action("group-close", "Close group")
+                                .on_click(acting(|ws, g, w, cx| ws.close_group(g, w, cx))),
+                        )
+                        .child(
+                            action("group-pin", if pinned { "Unpin group" } else { "Pin group" })
+                                .on_click(acting(|ws, g, _, cx| ws.toggle_group_pin(g, cx))),
+                        )
+                        .child(
+                            action("group-move", "Move group to new window")
+                                .on_click(acting(|ws, g, w, cx| ws.move_group_to_window(g, w, cx))),
+                        ),
+                )
+        })
+        .into_any_element()
 }

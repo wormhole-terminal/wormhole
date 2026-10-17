@@ -28,6 +28,8 @@ pub enum ActionId {
     // Windows and terminals.
     NewWindow,
     NewTerminal,
+    /// A terminal in no group, where ⌘T opens one beside the selected terminal, in its group.
+    NewTerminalNoGroup,
     /// A terminal in a new git worktree of the current terminal's repository, on a branch the
     /// dialog asks for.
     NewTerminalInWorktree,

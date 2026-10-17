@@ -319,6 +319,7 @@ Wormhole
 Shell
   New Window  ⌘N
   New Terminal  ⌘T
+  New Terminal in No Group  ⇧⌘T
   New Terminal With ▸
     No Shells  (disabled)
   New Terminal in New Worktree…

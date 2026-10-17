@@ -34,6 +34,8 @@ pub const UI_TOKENS: &[TokenInfo] = &[
         "Chrome",
         "Second line and metadata on a selected row; still meets 4.5:1",
     ),
+    t("card", "Chrome", "A card's fill in the sidebar: a group's, or a terminal's own (overlay)"),
+    t("card.edge", "Chrome", "A card's edge, which carries it where its fill is faint (overlay)"),
     t("band", "Chrome", "Folder bands in the sidebar and section bands in the right panel (overlay)"),
     t("band.hover", "Chrome", "A band under the pointer; also the hover of an icon button (overlay)"),
     t("band.solid", "Chrome", "A band over the sidebar, opaque: the fill of a band that sticks to the top"),

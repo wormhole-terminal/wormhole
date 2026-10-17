@@ -62,8 +62,22 @@ pub const TOKEN_USES: &[TokenUse] = &[
         ],
     ),
     u(
+        "sidebar.card",
+        "sidebar card",
+        Sidebar,
+        &[
+            "sidebar.background",
+            "card",
+            "card.edge",
+            "text.primary",
+            "text.muted",
+            "metrics.border_width",
+            "metrics.radius_lg",
+        ],
+    ),
+    u(
         "sidebar.band",
-        "folder band",
+        "group head",
         Sidebar,
         &[
             "sidebar.background",

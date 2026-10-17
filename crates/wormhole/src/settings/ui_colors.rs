@@ -70,6 +70,9 @@ pub struct UiColors {
     pub list_selected_muted: Hsla,
     /// Folder and section bands (`band`), one under the pointer and an icon button's
     /// hover (`band.hover`), and a band stuck to the top of a list (`band.solid`, opaque).
+    /// A sidebar card's fill and edge (`card`, `card.edge`).
+    pub card: Hsla,
+    pub card_edge: Hsla,
     pub band: Hsla,
     pub band_hover: Hsla,
     pub band_solid: Hsla,
@@ -202,6 +205,8 @@ const COLORS: &[Field] = fields! {
     list_selected = "list.selected";
     list_selected_text = "list.selected.text";
     list_selected_muted = "list.selected.muted";
+    card = "card";
+    card_edge = "card.edge";
     band = "band";
     band_hover = "band.hover";
     band_solid = "band.solid";

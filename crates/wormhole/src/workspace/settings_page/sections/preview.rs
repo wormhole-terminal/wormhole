@@ -5,7 +5,9 @@
 use wormhole_core::sidebar::Density;
 
 use super::*;
-use style::{BandKind, BandParts, FolderLook, Metrics, RowTone, Section, SessionRow, StatusGlyph, TileFace};
+use crate::settings::SettingsStore;
+use crate::theme_bridge;
+use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 320.0;
@@ -170,25 +172,31 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .child(header);
     for (cx_ix, card) in SAMPLES.iter().enumerate() {
         let mut lines: Vec<AnyElement> = Vec::new();
+        let wash = card.group.map(|_| {
+            theme_bridge::hsla(
+                wormhole_core::sidebar::GroupColor::Blue.color(&cx.global::<SettingsStore>().tokens),
+            )
+        });
         if let Some(title) = card.group {
             lines.push(
-                style::folder_band(
+                style::group_head(
                     SharedString::from(format!("preview-{id}-head-{cx_ix}")),
                     ui,
-                    BandParts {
-                        kind: BandKind::Folder,
-                        section: Section::Open,
-                        title: title.into(),
-                        detail: None,
-                        count: None,
-                        waiting: None,
-                        add: None,
-                        on_toggle: None,
-                        drop_target: false,
-                        sticky: false,
-                        joined: false,
+                    style::GroupHead {
+                        metrics,
+                        name: title.into(),
+                        color: wash,
+                        folded: false,
+                        pinned: false,
+                        tiles: Vec::new(),
+                        count: card.rows.len(),
+                        alert: None,
+                        empty: None,
+                        on_toggle: Box::new(|_, _, _| {}),
+                        spoken_edit: SharedString::default(),
+                        spoken_fold: SharedString::default(),
+                        wrap_label: Box::new(|trigger| trigger.into_any_element()),
                     },
-                    FolderLook { card: true, ..FolderLook::default() },
                 )
                 .into_any_element(),
             );
@@ -234,7 +242,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         }
         let last = lines.len().saturating_sub(1);
         for (at, line) in lines.into_iter().enumerate() {
-            column = column.child(style::card_segment(ui, metrics, at == 0, at == last, line));
+            column = column.child(style::card_segment(ui, metrics, at == 0, at == last, wash, line));
         }
     }
     column.into_any_element()

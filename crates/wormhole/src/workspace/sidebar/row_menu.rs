@@ -1,6 +1,7 @@
-//! A row's context menu: Show beside… (which terminal to show next to this one,
-//! making a split), Add to group ▸ (the person's groups, New group…), Remove from group, Remove
-//! from split, Close, Pin to top / Unpin, Reveal in Finder, Copy path.
+//! A row's context menu, in a browser's words: Rename…, Add terminal to new group, Add terminal to
+//! group ▸ (the person's groups), Remove from group, Split right, Close terminal; then Show beside…
+//! (which terminal to show next to this one, making a split), Remove from split, Pin to top / Unpin,
+//! Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. ⌃↩ opens it for the row the keys
 //! are on, and a group's own menu (`groups`) for the head they are on.
 use std::rc::Rc;
@@ -84,57 +85,66 @@ impl Workspace {
                 }
             };
             let cwd = cwd.clone();
+            // The person's groups it can go in, as they are when the menu opens.
+            let groups = this.read_with(cx, |ws, _| ws.group_choices(id)).unwrap_or_default();
+            let grouped = groups.iter().any(|(_, _, current)| *current);
+            let (rename, new_group, into, out) = (this.clone(), this.clone(), this.clone(), this.clone());
+            let menu = menu
+                .item(PopupMenuItem::new("Rename…").on_click(move |_, window, cx| {
+                    rename.update(cx, |ws, cx| ws.start_terminal_rename(id, window, cx)).ok();
+                }))
+                .item(PopupMenuItem::new("Add terminal to new group").on_click(move |_, window, cx| {
+                    new_group.update(cx, |ws, cx| ws.group_terminal(id, window, cx)).ok();
+                }));
+            let menu = if groups.is_empty() {
+                menu.item(PopupMenuItem::new("Add terminal to group").disabled(true))
+            } else {
+                menu.submenu("Add terminal to group", window, cx, move |submenu, _, _| {
+                    groups.iter().fold(submenu, |submenu, (group, name, current)| {
+                        let (this, group) = (into.clone(), *group);
+                        submenu.item(PopupMenuItem::new(name.clone()).checked(*current).on_click(
+                            move |_, _, cx| {
+                                this.update(cx, |ws, cx| ws.move_to_group(id, group, cx)).ok();
+                            },
+                        ))
+                    })
+                })
+            };
             // The terminals it could show beside this one, as they are when the menu opens.
             let choices = this.read_with(cx, |ws, cx| ws.beside_choices(id, cx)).unwrap_or_default();
+            let beside_menu = this.clone();
+            let menu = menu
+                .when(grouped, |menu| {
+                    menu.item(PopupMenuItem::new("Remove from group").on_click(move |_, _, cx| {
+                        out.update(cx, |ws, cx| ws.remove_from_group(id, cx)).ok();
+                    }))
+                })
+                .item(PopupMenuItem::new("Split right").on_click(on(|ws, ix, window, cx| {
+                    ws.activate(ix, window, cx);
+                    ws.split_pane(wormhole_core::panes::Axis::Row, window, cx);
+                })))
+                .item(
+                    PopupMenuItem::new("Close terminal")
+                        .on_click(on(|ws, ix, window, cx| ws.request_close_session(ix, window, cx))),
+                )
+                .separator();
             let menu = if choices.is_empty() {
                 menu.item(PopupMenuItem::new("Show beside…").disabled(true))
             } else {
-                let this = this.clone();
                 menu.submenu("Show beside…", window, cx, move |submenu, _, _| {
                     choices.iter().fold(submenu, |submenu, (other, name)| {
-                        let (this, other) = (this.clone(), *other);
+                        let (this, other) = (beside_menu.clone(), *other);
                         submenu.item(PopupMenuItem::new(name.clone()).on_click(move |_, window, cx| {
                             this.update(cx, |ws, cx| ws.show_beside(other, id, window, cx)).ok();
                         }))
                     })
                 })
             };
-            // The person's groups it can go in, as they are when the menu opens.
-            let groups = this.read_with(cx, |ws, _| ws.group_choices(id)).unwrap_or_default();
-            let grouped = groups.iter().any(|(_, _, current)| *current);
-            let into = this.clone();
-            let menu = menu.submenu("Add to group", window, cx, move |submenu, _, _| {
-                let submenu = groups.iter().fold(submenu, |submenu, (group, name, current)| {
-                    let (this, group) = (into.clone(), *group);
-                    submenu.item(PopupMenuItem::new(name.clone()).checked(*current).on_click(
-                        move |_, _, cx| {
-                            this.update(cx, |ws, cx| ws.move_to_group(id, group, cx)).ok();
-                        },
-                    ))
-                });
-                let this = into.clone();
-                let submenu = if groups.is_empty() { submenu } else { submenu.separator() };
-                submenu.item(PopupMenuItem::new("New group…").on_click(move |_, window, cx| {
-                    this.update(cx, |ws, cx| ws.group_terminal(id, window, cx)).ok();
-                }))
-            });
-            let out = this.clone();
-            menu.when(grouped, |menu| {
-                menu.item(PopupMenuItem::new("Remove from group").on_click(move |_, _, cx| {
-                    out.update(cx, |ws, cx| ws.remove_from_group(id, cx)).ok();
-                }))
-            })
-            .when(in_split, |menu| {
+            menu.when(in_split, |menu| {
                 menu.item(PopupMenuItem::new("Remove from split").on_click(on(|ws, ix, _, cx| {
                     ws.leave_split(ix, cx);
                 })))
             })
-            .separator()
-            .item(
-                PopupMenuItem::new("Close")
-                    .on_click(on(|ws, ix, window, cx| ws.request_close_session(ix, window, cx))),
-            )
-            .separator()
             .item(
                 PopupMenuItem::new(if pinned { "Unpin" } else { "Pin to top" })
                     .on_click(on(|ws, ix, _, cx| ws.toggle_pin(ix, cx))),

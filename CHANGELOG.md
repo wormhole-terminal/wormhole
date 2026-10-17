@@ -17,11 +17,17 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   circling its edge while it works (grey while a command runs), a breathing amber edge when it needs
   you, and a badge for done, failed, new output or the bell. Under Reduce Motion the light and the
   edge hold still.
-- Your own groups, as in a browser's tab groups: groups you name and colour yourself, in your order
-  among the terminals in no group. Drag a terminal into or out of a group, or a group by its head, to
-  rearrange; a row's menu adds it to a group or takes it out, and a group's menu renames it, recolours
-  it, opens a new terminal in it or ungroups it. A group goes with its last terminal. New terminals
-  open in the selected terminal's group.
+- Your own groups, as in a browser's tab groups: name and colour them (grey, blue, red, yellow, green,
+  pink, purple, cyan or orange) and keep them in your order among the terminals in no group, each of
+  which is a card of its own. A group's card is washed with its colour from the left; its name stands
+  alone on the head, with the chevron at the right, and folded it keeps its terminals' tiles, their
+  count and a dot while one needs you or failed. Click the label for a popover (name, colours, New
+  terminal in group, Ungroup, Close group, Pin group, Move group to new window), the chevron to fold.
+  A pinned group stays as one line when its last terminal closes; an unpinned one goes with it.
+  Drag terminals into and out of groups and groups by their head; a terminal's menu reads Rename…,
+  Add terminal to new group, Add terminal to group, Remove from group, Split right, Close terminal.
+  Close group asks once if an agent is working in it. ⌘T opens a terminal in the selected one's
+  group, ⇧⌘T in no group; folded groups are skipped by ⌘1–9.
 - Terminals can show as tabs instead of the sidebar (Settings → Show terminals in, or View → Show
   Terminals as Tabs): one row across the top with the selected terminal's group (a menu switches to
   another) and its tabs. The title row then shows the terminal's status as a small tile.

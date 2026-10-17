@@ -91,6 +91,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(NewWindow, "New Window", &[(CMD, "n")]),
         // ⇧⌘N, the key it had before ⌘T became its own, still works.
         row(NewTerminal, "New Terminal", &[(CMD, "t"), (SHIFT_CMD, "n")]),
+        row(NewTerminalNoGroup, "New Terminal in No Group", &[(SHIFT_CMD, "t")]),
         row(NewTerminalInWorktree, "New Terminal in New Worktree…", &[]),
         row(OpenFolder, "Open Folder…", &[(CMD, "o")]),
         row(PinTerminal, "Pin to Top", &[]),

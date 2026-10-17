@@ -1,14 +1,14 @@
-//! The sidebar's parts: folder bands, terminal rows in every state
+//! The sidebar's parts: group cards and their heads, terminal rows in every state
 //! (agents and plain terminals), the status glyphs and the status bar's items.
 
 use super::*;
 use crate::theme_bridge;
-use crate::workspace::folder_color;
-use style::{BandKind, BandParts, FolderLook, RowTone, Section, SessionRow, StatusGlyph};
+use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::layout::status_bar::CONTEXT_METER_W;
 use wormhole_core::sidebar::Bracket;
+use wormhole_core::sidebar::GroupColor;
 
 /// The sidebar's width (and its minimum in the app).
 const COLUMN_W: f32 = 350.0;
@@ -36,69 +36,144 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         )
         .into_any_element()
     };
-    let folder_parts = |title: &'static str, section, count: Option<&str>, interactive: bool| BandParts {
-        kind: BandKind::Folder,
-        section,
-        title: title.into(),
-        detail: None,
-        count: count.map(SharedString::from),
-        waiting: None,
-        add: if interactive { Some(("New terminal here", Box::new(|_, _, _| {}))) } else { None },
-        on_toggle: if interactive { Some(Box::new(|_, _, _| {})) } else { None },
-        drop_target: false,
-        sticky: false,
-        joined: false,
-    };
-    let folder = |id: &'static str, title: &'static str, section, count: Option<&str>| {
-        style::folder_band(id, ui, folder_parts(title, section, count, true), FolderLook::default())
-    };
-
-    // The anatomy: an open folder with three terminals, then two folded folders that share
-    // a hairline.
-    let anatomy = column(ui)
-        .child(env.mark("sidebar.band", folder("g-band-terminal", "terminal", Section::Open, Some("3"))))
-        .child(env.mark(
-            "sidebar.row",
-            row(
-                "g-row-anatomy-1",
-                glyph("g-glyph-a1", StatusGlyph::Working),
-                Some("Editing sidebar.rs…"),
-                RowTone::Plain,
-                true,
-                None,
-            ),
-        ))
-        .child(env.mark(
-            "sidebar.row",
-            row(
-                "g-row-anatomy-2",
-                glyph("g-glyph-a2", StatusGlyph::NeedsYou),
-                Some("Needs you · Approve cargo test?"),
-                RowTone::Attention,
-                false,
-                None,
-            ),
-        ))
-        .child(
-            style::session_row(
-                "g-row-anatomy-3",
-                ui,
-                SessionRow::new(glyph("g-glyph-a3", StatusGlyph::Idle), "zsh"),
-            )
-            // How the pointer shows on a row (`state.hover`).
-            .bg(ui.hover),
-        )
-        .child(folder("g-band-dotfiles", "dotfiles", Section::Collapsed, Some("3")))
-        .child(style::folder_band(
-            "g-band-website",
+    // A group's card as the list draws it: the head (the name alone, its pin, the chevron), its rows
+    // under a wash of the group's colour; a folded group keeps its terminals' tiles, their count and
+    // an alert dot; a pinned group with nothing in it is a line with a +; a terminal in no group is a
+    // card of one row.
+    let metrics = style::Metrics::default();
+    let blue = theme_bridge::hsla(GroupColor::Blue.color(env.tokens));
+    let tile = |id: &'static str, glyph: StatusGlyph, size: f32| {
+        style::status_tile(
+            id,
             ui,
-            // A terminal folded away in it needs you: the amber dot before the count.
-            BandParts {
-                joined: true,
-                waiting: Some(glyph("g-band-waiting", StatusGlyph::NeedsYou)),
-                ..folder_parts("website", Section::Collapsed, Some("2"), true)
+            style::StatusTile { face: style::TileFace::Terminal, glyph, selected: false, size },
+            app,
+        )
+    };
+    let head = |id: &'static str,
+                name: &'static str,
+                color: Option<Hsla>,
+                folded: bool,
+                pinned: bool,
+                tiles: Vec<AnyElement>,
+                alert: Option<Hsla>,
+                empty: bool| {
+        style::group_head(
+            id,
+            ui,
+            style::GroupHead {
+                metrics,
+                name: name.into(),
+                color,
+                folded,
+                pinned,
+                count: tiles.len(),
+                tiles,
+                alert,
+                empty: empty.then(|| {
+                    let add: style::ClickHandler = Box::new(|_, _, _| {});
+                    ("New terminal in group".into(), add)
+                }),
+                on_toggle: Box::new(|_, _, _| {}),
+                spoken_edit: name.into(),
+                spoken_fold: name.into(),
+                wrap_label: Box::new(|trigger| trigger.into_any_element()),
             },
-            FolderLook::default(),
+        )
+    };
+    let tile_row =
+        |id: &'static str, name: &'static str, glyph: StatusGlyph, detail: &'static str, selected| {
+            style::session_row(
+                id,
+                ui,
+                SessionRow {
+                    detail: Some(detail.into()),
+                    selected,
+                    tile: Some(tile(id, glyph, style::TILE)),
+                    card: true,
+                    metrics,
+                    ..SessionRow::new(div().into_any_element(), name)
+                },
+            )
+        };
+    let card = |top: bool, bottom: bool, wash: Option<Hsla>, content: AnyElement| {
+        style::card_segment(ui, metrics, top, bottom, wash, content)
+    };
+    let anatomy = column(ui)
+        .child(caption(ui, "A group's card · folded · pinned and empty · a terminal in no group"))
+        .child(
+            env.mark(
+                "sidebar.card",
+                card(
+                    true,
+                    false,
+                    Some(blue),
+                    env.mark(
+                        "sidebar.band",
+                        head("g-head-open", "Release 1.2", Some(blue), false, false, vec![], None, false),
+                    )
+                    .into_any_element(),
+                ),
+            ),
+        )
+        .child(card(
+            false,
+            false,
+            Some(blue),
+            env.mark(
+                "sidebar.row",
+                tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true),
+            )
+            .into_any_element(),
+        ))
+        .child(card(
+            false,
+            true,
+            Some(blue),
+            tile_row("g-row-anatomy-2", "Fix pile fan-out", StatusGlyph::NeedsYou, "Needs you · 2m", false)
+                .into_any_element(),
+        ))
+        .child(card(
+            true,
+            true,
+            Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
+            head(
+                "g-head-folded",
+                "Review",
+                Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
+                true,
+                true,
+                vec![
+                    tile("g-folded-1", StatusGlyph::Working, style::TILE_MINI),
+                    tile("g-folded-2", StatusGlyph::NeedsYou, style::TILE_MINI),
+                    tile("g-folded-3", StatusGlyph::Idle, style::TILE_MINI),
+                ],
+                Some(ui.agent_attention),
+                false,
+            )
+            .into_any_element(),
+        ))
+        .child(card(
+            true,
+            true,
+            Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
+            head(
+                "g-head-empty",
+                "Docs",
+                Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
+                false,
+                true,
+                vec![],
+                None,
+                true,
+            )
+            .into_any_element(),
+        ))
+        .child(card(
+            true,
+            true,
+            None,
+            tile_row("g-row-loose", "scratch", StatusGlyph::Idle, "~", false).into_any_element(),
         ));
 
     // Every row state, two lines and one.
@@ -165,65 +240,22 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             ))
     };
 
-    // The band's other states: a terminal dragged over it, and stuck to the top of the list. Their
-    // line is too narrow for the whole path.
-    let band_state = |id: &'static str, drop_target: bool, sticky: bool| {
-        style::folder_band(
-            id,
-            ui,
-            BandParts {
-                drop_target,
-                sticky,
-                add: None,
-                on_toggle: None,
-                ..folder_parts("api-server", Section::Collapsed, Some("2"), false)
-            },
-            FolderLook::default(),
-        )
-    };
-    // ⌘ held: the count drops to 40 %. "No folder": a muted title, one line, with no path or git.
-    let held = |id: &'static str, title: &'static str, look: FolderLook| {
-        style::folder_band(id, ui, folder_parts(title, Section::Collapsed, Some("3"), false), look)
-    };
-    // A pinned folder's band stays with no terminal in it: its pin after the name, no count.
-    let pinned = style::folder_band(
-        "g-band-pinned",
-        ui,
-        BandParts {
-            detail: Some(
-                div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .text_color(ui.faint)
-                    .child(Icon::new(IconName::Pin).xsmall())
+    // The nine colours a group wears, each as a washed head; and the eight a folder can wear (the
+    // Project tab's choices, the dots) drawn from this theme.
+    let group_colors: Vec<(GroupColor, Hsla)> =
+        GroupColor::ALL.iter().map(|&color| (color, theme_bridge::hsla(color.color(env.tokens)))).collect();
+    let washed = column(ui)
+        .child(caption(ui, "Grey · Blue · Red · Yellow · Green · Pink · Purple · Cyan · Orange"))
+        .children(group_colors.iter().enumerate().map(|(ix, &(color, hsla))| {
+            let id = Box::leak(format!("g-head-{}", color.key()).into_boxed_str());
+            card(
+                true,
+                true,
+                Some(hsla),
+                head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false)
                     .into_any_element(),
-            ),
-            count: None,
-            waiting: None,
-            ..folder_parts("notes", Section::Open, None, true)
-        },
-        FolderLook::default(),
-    );
-    // The compact density keeps a band to one line: the chip and ±N follow the name.
-    let compact = style::band(
-        "g-band-compact",
-        ui,
-        BandParts {
-            detail: Some(style::branch_chip(ui, Some("ui-unify"), Some(3)).into_any_element()),
-            ..folder_parts("terminal", Section::Open, None, true)
-        },
-    );
-    // A folder with a colour: the band is tinted from the left as the title row is, and the choices
-    // (Project tab) and the dots (the band's menu) are the same eight, drawn from this theme.
-    let tinted = |id: &'static str, color: FolderColor, _path: &'static str| {
-        style::folder_band(
-            id,
-            ui,
-            folder_parts(color.key(), Section::Open, Some("2"), true),
-            FolderLook { tint: Some(folder_color::band_tint_in(color, env.tokens)), ..FolderLook::default() },
-        )
-    };
+            )
+        }));
     let colors = FolderColor::ALL.map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
     let choices = div()
         .flex()
@@ -251,28 +283,13 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     let bands = column(ui)
         .child(caption(
             ui,
-            "A folder's colour: tinted bands · the choices · the choices a project sets · the dots in the menu",
+            "A folder's colour (the Project tab): the choices · the choices a project sets · dots",
         ))
-        .child(env.mark("folder.color", tinted("g-band-teal", FolderColor::Teal, "~/Projects/api")))
-        .child(tinted("g-band-pink", FolderColor::Pink, "~/Projects/site"))
         .child(div().px_4().py_2().child(env.mark("folder.color", choices)))
         .child(div().px_4().pb_2().child(locked_choices))
         .child(div().px_4().pb_2().child(menu_dots))
-        .child(caption(
-            ui,
-            "Drop target · stuck to the top · a cut path · pinned · hover one for its + · compact · no folder",
-        ))
-        .child(band_state("g-band-drop", true, false))
-        .child(band_state("g-band-sticky", false, true))
-        .child(held("g-band-held", "dotfiles", FolderLook { cmd_held: true, ..FolderLook::default() }))
-        .child(pinned)
-        .child(env.mark("branch.chip", compact))
-        .child(style::folder_band(
-            "g-band-detached",
-            ui,
-            folder_parts("bisect", Section::Open, None, true),
-            FolderLook::default(),
-        ));
+        .child(caption(ui, "A branch chip: the git branch and its changes, where the sidebar's rows show one"))
+        .child(div().px_4().pb_2().child(env.mark("branch.chip", style::branch_chip(ui, Some("ui-unify"), Some(3)))));
 
     // Terminals without an agent say what runs; an idle agent shows its logo.
     let code_font = crate::fonts::code_font(app).0;
@@ -481,7 +498,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .flex()
         .flex_col()
         .gap_4()
-        .child(div().flex().flex_wrap().gap_4().child(anatomy).child(bands))
+        .child(div().flex().flex_wrap().gap_4().child(anatomy).child(washed).child(bands))
         .child(div().flex().flex_wrap().gap_4().child(states(true)).child(states(false)))
         .child(div().flex().flex_wrap().gap_4().child(plain_rows).child(split_rows).child(drops))
         .child(env.mark("status.glyph", glyphs))

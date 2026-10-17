@@ -27,6 +27,8 @@ border.strong #969faa3d
 button.background #1d2025
 button.hover #25292e
 button.text #969faa
+card #969faa09
+card.edge #969faa1a
 checkbox.background #0c0e11
 checkbox.border #5f646b
 checkbox.checked #6ca4f8
@@ -172,6 +174,8 @@ increase_contrast border.strong #b3bcc77a
 increase_contrast button.background #202328
 increase_contrast button.hover #2a2d32
 increase_contrast button.text #b3bcc7
+increase_contrast card #b3bcc70f
+increase_contrast card.edge #b3bcc747
 increase_contrast checkbox.border #767b83
 increase_contrast chip.border #b3bcc77a
 increase_contrast diff.filler #b3bcc71f

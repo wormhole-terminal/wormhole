@@ -5,6 +5,12 @@
 use crate::folder_color::swatch;
 use crate::tokens::{Color, ThemeTokens};
 
+/// How a group's colour washes its card: from `WASH_PEAK` of the colour at the card's left edge down
+/// to `WASH_FAR` at `WASH_SPAN` of its width, and `WASH_FAR` from there on.
+pub const WASH_PEAK: f32 = 0.12;
+pub const WASH_FAR: f32 = 0.03;
+pub const WASH_SPAN: f32 = 0.6;
+
 /// A group's colour.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GroupColor {
@@ -148,6 +154,16 @@ mod tests {
                     let ratio = Color::contrast_ratio(shown, on(surface));
                     assert!(ratio >= 2.95, "{}: {} on {surface} is {ratio:.2}", tokens.name, color.key());
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn every_hue_has_colour_in_every_theme() {
+        for tokens in builtins() {
+            for color in GroupColor::ALL.into_iter().filter(|&c| c != GroupColor::Grey) {
+                let (_, chroma, _) = color.color(tokens).to_oklch();
+                assert!(chroma >= 0.05, "{}: {} has chroma {chroma:.3}", tokens.name, color.key());
             }
         }
     }

@@ -123,6 +123,7 @@ const APP: &[Slot] = &[
 const SHELL: &[Slot] = &[
     A(NewWindow),
     A(NewTerminal),
+    A(NewTerminalNoGroup),
     Slot::NewTerminalWith,
     A(NewTerminalInWorktree),
     Sep,

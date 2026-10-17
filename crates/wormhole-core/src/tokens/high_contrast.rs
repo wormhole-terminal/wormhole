@@ -84,6 +84,8 @@ fn high_contrast_rule(name: &str, dark: bool) -> Option<Cow<'static, str>> {
         // Hover (10 %) now sits above the band (8 %); the steps above it move up to stay
         // steps, hover < band.hover < active, as 5 < 8 < 12 do by default.
         "band" => "text.primary / 8%",
+        "card" => "text.primary / 6%",
+        "card.edge" => "text.primary / 28%",
         "state.hover" => "text.primary / 10%",
         "band.hover" => "text.primary / 13%",
         "state.active" => "text.primary / 16%",
@@ -367,6 +369,8 @@ mod tests {
             "band.hover",
             "border",
             "border.strong",
+            "card",
+            "card.edge",
             "list.selected",
             "sidebar.row.selected",
             "state.active",

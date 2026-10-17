@@ -18,6 +18,7 @@ use super::scale::{
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;
+use wormhole_core::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
 
 /// A square row that runs from edge to edge: [`ROW_H`] tall, inset 16 on both sides (the right
 /// panel's rows, which sit in cards, are inset [`CARD_INSET`] and rounded instead),
@@ -80,6 +81,8 @@ pub struct SessionRow {
     /// A `style::status_glyph`, a `style::agent_logo`, or an empty lead slot.
     pub glyph: AnyElement,
     pub name: SharedString,
+    /// The name's place while it is being renamed: its field.
+    pub name_edit: Option<AnyElement>,
     /// The second line; `None` is a one-line row.
     pub detail: Option<SharedString>,
     pub tone: RowTone,
@@ -112,6 +115,7 @@ impl SessionRow {
         Self {
             glyph,
             name: name.into(),
+            name_edit: None,
             detail: None,
             tone: RowTone::Plain,
             selected: false,
@@ -134,6 +138,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
     let SessionRow {
         glyph,
         name,
+        name_edit,
         detail,
         tone,
         selected,
@@ -185,15 +190,18 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                 .gap_2()
                 .h(rems(NAME_LINE))
                 .when(!has_tile, |d| d.child(lead(glyph)))
-                .child(
-                    div()
-                        .min_w_0()
-                        .truncate()
-                        .text_body()
-                        .font_weight(weight)
-                        .text_color(name_color)
-                        .child(name),
-                )
+                .map(|d| match name_edit {
+                    Some(edit) => d.child(div().flex_1().min_w_0().child(edit)),
+                    None => d.child(
+                        div()
+                            .min_w_0()
+                            .truncate()
+                            .text_body()
+                            .font_weight(weight)
+                            .text_color(name_color)
+                            .child(name),
+                    ),
+                })
                 .children(mark.map(|mark| div().flex_none().flex().items_center().child(mark)))
                 .child(div().flex_1())
                 .map(|d| match hint {
@@ -264,12 +272,15 @@ pub const TILE_GAP: f32 = 10.0;
 /// first line (the card's rounded top), `bottom` the last (its rounded bottom, and `card_gap` under
 /// it). The gaps are part of the stretch, so a drop there lands on its line. Without cards the lines
 /// stand in by the same margin with no fill or edge, and the gap under a group is what sets it apart.
+/// A group's colour (`wash`) tints the card from its left edge, 12 % fading to 3 % at 60 % of its
+/// width: each stretch draws the same gradient, so the card reads as one.
 #[track_caller]
 pub fn card_segment(
     ui: UiColors,
     metrics: Metrics,
     top: bool,
     bottom: bool,
+    wash: Option<Hsla>,
     content: impl IntoElement,
 ) -> Div {
     let outer = div().flex().flex_col().px(px(metrics.card_margin));
@@ -277,14 +288,14 @@ pub fn card_segment(
     if !metrics.cards {
         return outer.when(bottom, |d| d.pb(gap)).child(content);
     }
-    let mut segment = div().flex().flex_col().px(px(metrics.card_pad));
+    let mut segment = div().relative().flex().flex_col().px(px(metrics.card_pad));
     let edge = Some(ui.border_width.into());
     {
         let b = &mut segment.style().border_widths;
         b.left = edge;
         b.right = edge;
     }
-    segment = segment.bg(ui.band).border_color(ui.border);
+    segment = segment.bg(ui.card).border_color(ui.card_edge);
     {
         let b = &mut segment.style().border_widths;
         if top {
@@ -299,6 +310,23 @@ pub fn card_segment(
     let segment = segment
         .when(top, |d| d.rounded_t(radius).pt(pad))
         .when(bottom, |d| d.rounded_b(radius).pb(pad))
+        .when_some(wash, |d, color| {
+            d.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .bottom_0()
+                    .left_0()
+                    .right_0()
+                    .when(top, |d| d.rounded_t(radius))
+                    .when(bottom, |d| d.rounded_b(radius))
+                    .bg(linear_gradient(
+                        90.0,
+                        linear_color_stop(color.opacity(WASH_PEAK), 0.0),
+                        linear_color_stop(color.opacity(WASH_FAR), WASH_SPAN),
+                    )),
+            )
+        })
         .child(content);
     outer.when(bottom, |d| d.pb(gap)).child(segment)
 }

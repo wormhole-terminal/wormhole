@@ -25,10 +25,13 @@ use wormhole_core::sidebar::{
 mod demo;
 mod drag;
 mod facts;
+mod group_actions;
+mod group_head;
 mod groups;
 mod hints;
 mod keys;
 mod motion;
+mod rename;
 mod row_menu;
 mod rows;
 mod tab_bar;
@@ -51,8 +54,10 @@ pub(super) struct SidebarState {
     menu_row: Option<i64>,
     /// The group whose head's context menu is open.
     menu_group: Option<u32>,
-    /// The group whose name is being edited in place.
-    renaming: Option<groups::Renaming>,
+    /// The group whose popover is open.
+    editing: Option<groups::GroupEdit>,
+    /// The terminal being renamed in its row.
+    pub(super) renaming: Option<rename::TerminalRename>,
     menu_dismissed: Option<Subscription>,
     pub(super) scroll: ScrollHandle,
     /// Bring this terminal's row into view on the next frame.
@@ -90,6 +95,7 @@ impl SidebarState {
             _keys: keys,
             menu_row: None,
             menu_group: None,
+            editing: None,
             renaming: None,
             menu_dismissed: None,
             scroll: ScrollHandle::new(),
@@ -196,12 +202,24 @@ impl Workspace {
         self.plan_list_motion(keys.clone(), cx);
         let frame = rows::Frame::new(self, width, window, cx);
         let mark = self.drop_mark(&listing, &infos);
+        let group_wash: HashMap<u32, Hsla> = {
+            let tokens = &cx.global::<crate::settings::SettingsStore>().tokens;
+            self.sidebar
+                .view
+                .groups
+                .iter()
+                .filter_map(|group| {
+                    let color = group.color()?;
+                    Some((group.id, crate::theme_bridge::hsla(color.color(tokens))))
+                })
+                .collect()
+        };
         let held = cx.has_active_drag().then(|| self.terminal_drag.as_ref().map(|drag| drag.id)).flatten();
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
         for (at, entry) in listing.entries.iter().enumerate() {
             let line = match *entry {
                 Entry::Band { band, position, of } => {
-                    self.render_group_band(&listing, band, (position, of), &frame, window, cx)
+                    self.render_group_band(&listing, &infos, band, (position, of), &frame, window, cx)
                 }
                 Entry::Row { session, band, position, of, number, marks } => {
                     let place = rows::Place { position, of, number, grouped: band.is_some(), marks };
@@ -215,7 +233,12 @@ impl Workspace {
             };
             // Each line is a stretch of its card: a group's head and rows, or a terminal's own.
             let (top, bottom) = listing.card_edges(at);
-            let segment = style::card_segment(ui, frame.metrics, top, bottom, line);
+            // A group's colour washes its card from the left.
+            let wash = match listing.card(at) {
+                Some(Card::Group(band)) => group_wash.get(&listing.bands[band].group).copied(),
+                _ => None,
+            };
+            let segment = style::card_segment(ui, frame.metrics, top, bottom, wash, line);
             // Each card is a glass of its own.
             let segment = if glass && frame.metrics.cards {
                 let (key, inset) = match listing.card(at) {
@@ -337,6 +360,79 @@ impl Workspace {
         self.sidebar.view.groups.rename(group, name);
         self.mark_dirty(cx);
         group
+    }
+
+    /// devctl `group <name> <edit|pin|ungroup|close|move|color:<colour>|none>`: what the group's
+    /// popover and menu do. `edit` opens its popover.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_group(
+        &mut self,
+        name: &str,
+        action: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Result<(), String> {
+        let group = self
+            .sidebar
+            .view
+            .groups
+            .iter()
+            .find(|group| group.name == name)
+            .map(|group| group.id)
+            .ok_or_else(|| format!("no group {name:?}"))?;
+        match action {
+            "edit" => self.start_group_edit(group, window, cx),
+            "pin" => self.toggle_group_pin(group, cx),
+            "ungroup" => self.ungroup(group, cx),
+            "close" => self.close_group(group, window, cx),
+            "move" => self.move_group_to_window(group, window, cx),
+            color => {
+                let color =
+                    color.strip_prefix("color:").ok_or_else(|| format!("unknown action {action:?}"))?;
+                let found = if color == "none" {
+                    None
+                } else {
+                    Some(
+                        wormhole_core::sidebar::GroupColor::from_key(color)
+                            .ok_or_else(|| format!("no colour {color:?}"))?,
+                    )
+                };
+                self.set_group_color(group, found, cx);
+            }
+        }
+        Ok(())
+    }
+
+    /// devctl `to-group <row> <name|none>`: put the terminal in the group, or take it out.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_to_group(
+        &mut self,
+        ix: usize,
+        name: &str,
+        cx: &mut Context<Self>,
+    ) -> Result<(), String> {
+        let id = self.sessions.get(ix).map(|session| session.id).ok_or("no such row")?;
+        if name == "none" {
+            self.remove_from_group(id, cx);
+            return Ok(());
+        }
+        let group = self
+            .sidebar
+            .view
+            .groups
+            .iter()
+            .find(|group| group.name == name)
+            .map(|group| group.id)
+            .ok_or_else(|| format!("no group {name:?}"))?;
+        self.move_to_group(id, group, cx);
+        Ok(())
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_rename_edit(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(id) = self.sessions.get(ix).map(|session| session.id) {
+            self.start_terminal_rename(id, window, cx);
+        }
     }
 
     #[cfg(feature = "devctl")]

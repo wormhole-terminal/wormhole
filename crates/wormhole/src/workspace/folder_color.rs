@@ -16,16 +16,7 @@ use super::project::{project_folders_on, set_project_color};
 use super::settings_page::update_settings;
 use super::title_row::Tint;
 use super::*;
-use crate::style::BandTint;
 use crate::theme_bridge;
-
-/// The most a folder's band is tinted at its left edge, where the title row goes up to 36 %: the
-/// band is shorter and its text smaller, and it is meant as a mark in a long list, not a banner.
-const BAND_TINT_MAX: f32 = 0.30;
-/// How much of its strength the tint has left where the band's text starts, x 40 of a sidebar
-/// 350 pt wide (the gradient fades out with `TINT_STOPS`; a wider sidebar leaves less): the second
-/// line has to read on that, not on the edge's full strength.
-const BAND_TINT_AT_TEXT: f32 = 0.6;
 
 /// Where a folder's colour lives, and what it is now.
 #[derive(Clone, Debug)]
@@ -248,21 +239,4 @@ pub(super) fn title_tint(color: ProjectColor, cx: &App) -> Tint {
     let bar = store.tokens.get("surface.window").map_or(Color::BLACK, |c| c.with_alpha(1.0));
     let text = store.tokens.get("text.primary").unwrap_or(Color::WHITE);
     Tint { color, peak: color.tint_peak(bar, text), line: theme_bridge::hsla(color.line(bar)) }
-}
-
-/// `color` as a band's tint in a theme: as strong as the band's second line (muted text) lets it
-/// be where that line starts, and never past [`BAND_TINT_MAX`]. The Studio's gallery draws it from the
-/// draft theme too.
-pub(in crate::workspace) fn band_tint_in(color: FolderColor, tokens: &ThemeTokens) -> BandTint {
-    band_tint_of(ProjectColor::from_color(color.color(tokens)), tokens)
-}
-
-/// [`band_tint_in`] for a colour that is already a tint (a project's hex colour, or a name resolved).
-fn band_tint_of(color: ProjectColor, tokens: &ThemeTokens) -> BandTint {
-    let band = tokens.get("band.solid").map_or(Color::BLACK, |c| c.with_alpha(1.0));
-    let muted = tokens.get("text.muted").unwrap_or(Color::WHITE);
-    BandTint {
-        color: theme_bridge::hsla(color.color()),
-        peak: (color.tint_peak(band, muted) / BAND_TINT_AT_TEXT).min(BAND_TINT_MAX),
-    }
 }

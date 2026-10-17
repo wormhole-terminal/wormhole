@@ -62,6 +62,12 @@
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
 //!   sidebar-fold <group>   fold or open the group with this name
+//!   group <name> <edit|pin|ungroup|close|move|color:<name|none>>   what the group's popover and menu
+//!                   do: open the popover, pin or unpin, take apart, close (asks if an agent works in
+//!                   it), move to a window of its own, or colour it (grey, blue, red, yellow, green,
+//!                   pink, purple, cyan or orange)
+//!   to-group <row> <name|none>   put the terminal in that row in the group, or take it out of its group
+//!   rename-edit <row>   the terminal's name becomes a field, as Rename… in its menu makes it
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
 //!   folder-color [path] <name|#hex|none> colour the folder (the active terminal's without a path; `~/`
 //!                   is the home folder) red, orange, yellow, green, teal, blue, purple or pink, or
@@ -140,7 +146,7 @@
 //!   settings-record <id> [keys]   start a shortcut field (hotkey) recording, and press keys into it
 //!   settings-reveal <id>   open the settings window at that row, scrolled to it and marked (what
 //!                   the palette does for a setting)
-//!   settings-preview <compact|comfortable|off>   Terminals & sidebar's preview of a density, as on hover
+//!   settings-preview <regular|compact|dense|off>   Terminals & sidebar's preview of a density, as on hover
 //!   settings-scroll <px>   scroll the settings page (negative = up)
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
@@ -364,6 +370,9 @@ fn command(name: &str) -> Option<Command> {
         "profiles" => sessions::profiles,
         "group-new" => sidebar::new_group,
         "sidebar-fold" => sidebar::fold,
+        "group" => sidebar::group,
+        "to-group" => sidebar::to_group,
+        "rename-edit" => sidebar::rename_edit,
         "pin" => sidebar::pin,
         "folder-color" => sidebar::folder_color,
         "hold-cmd" => |ctx, _| sidebar::hold_cmd(ctx, true),

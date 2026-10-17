@@ -345,6 +345,7 @@ impl Workspace {
             ui,
             SessionRow {
                 glyph: div().into_any_element(),
+                name_edit: self.rename_field(id, cx),
                 name: info.name.clone(),
                 detail: detail.map(SharedString::from),
                 tone,

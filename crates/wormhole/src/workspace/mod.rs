@@ -60,6 +60,8 @@ mod folder_color;
 mod folder_color_tests;
 mod git_panel;
 mod glass;
+#[cfg(test)]
+mod group_tests;
 mod items;
 #[cfg(test)]
 mod key_tests;
@@ -823,6 +825,10 @@ impl Workspace {
     /// opened with, else a trusted project's shell (its env applies too), else the default (core's
     /// `shells::for_terminal`), in the folder and with the scrollback the record has.
     fn make_pane(&mut self, record: &SessionRecord, window: &mut Window, cx: &mut Context<Self>) -> Pane {
+        // A terminal moved here from another window keeps running.
+        if let Some(terminal) = app_mut(cx).adopted.remove(&record.id) {
+            return Pane::new(record.id, record.shell.clone(), terminal, window, cx);
+        }
         let cwd = record.cwd.as_ref().map(PathBuf::from);
         let (mut env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
         // A worktree Wormhole made: its own ports, whatever the project says.

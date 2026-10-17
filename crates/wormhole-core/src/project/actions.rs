@@ -358,7 +358,7 @@ mod tests {
     #[test]
     fn parses_all_kinds() {
         let text = r#"[
-            {"id": "test", "title": "Test", "key": "cmd-shift-t", "type": "run", "command": "cargo test"},
+            {"id": "test", "title": "Test", "key": "cmd-shift-y", "type": "run", "command": "cargo test"},
             {"id": "web", "title": "Web", "type": "run", "command": "npm run dev",
              "target": "new_session", "cwd": "frontend"},
             {"id": "review", "title": "Review", "type": "prompt", "file": "review.md",
@@ -370,7 +370,7 @@ mod tests {
         ]"#;
         let actions = load(text).expect("ok").expect("present");
         assert_eq!(actions.len(), 6);
-        assert_eq!(actions[0].key.as_deref(), Some("cmd-shift-t"));
+        assert_eq!(actions[0].key.as_deref(), Some("cmd-shift-y"));
         assert_eq!(
             actions[1].kind,
             ActionKind::Run {

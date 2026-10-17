@@ -293,6 +293,29 @@ pub(super) fn close_window_detail(
     detail
 }
 
+/// The title of the question before closing a group.
+pub(super) fn close_group_title(name: &str) -> String {
+    format!("Close the group \u{201c}{name}\u{201d}?")
+}
+
+/// What the question before closing a group says: how many terminals end, and what still runs.
+pub(super) fn close_group_detail(
+    terminals: usize,
+    running: &[(Status, bool)],
+    programs: &[String],
+    open_items: usize,
+) -> String {
+    let mut detail = match terminals {
+        1 => "The terminal in this group will end.".to_string(),
+        n => format!("The {n} terminals in this group will end."),
+    };
+    detail.push_str(&still_running(running, programs));
+    if open_items > 0 {
+        detail.push_str(" Their notes and tasks are discarded.");
+    }
+    detail
+}
+
 /// What the question before quitting says: the terminals come back, what runs in them doesn't.
 pub(super) fn quit_detail(
     running: &[(Status, bool)],

@@ -1,0 +1,180 @@
+//! A group's head in the sidebar, as RF-11 draws it: the name in 13 semibold alone on the line (a
+//! dot of the group's colour before it where there is no card to wash), the pin after it, and the
+//! chevron at the right in a 20 box. Folded, the head also keeps its terminals' tiles, their count
+//! and a dot while one needs you or failed; a pinned group with nothing in it is one line with
+//! "No terminals" and a + instead. The label opens the group's popover, the chevron folds it.
+
+use gpui_kit::assets::IconName;
+use gpui_kit::component::{Icon, Selectable, Sizable as _};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+
+use super::buttons::icon_button;
+use super::controls::disclosure;
+use super::labels::count_badge;
+use super::metrics::Metrics;
+use super::scale::{MARK_DOT, TextRole};
+use super::section::ClickHandler;
+use crate::settings::UiColors;
+
+/// The parts of a [`group_head`].
+pub struct GroupHead {
+    pub metrics: Metrics,
+    pub name: SharedString,
+    /// The group's colour: the dot before the name where the group has no card.
+    pub color: Option<Hsla>,
+    pub folded: bool,
+    pub pinned: bool,
+    /// Folded: its terminals' tiles (`style::status_tile` at `metrics.folded_tile`), and what they
+    /// number.
+    pub tiles: Vec<AnyElement>,
+    pub count: usize,
+    /// A terminal in it needs you (amber) or failed (danger): the dot after the tiles.
+    pub alert: Option<Hsla>,
+    /// A pinned group with no terminal: its + (tooltip, what it does).
+    pub empty: Option<(SharedString, ClickHandler)>,
+    /// What the chevron does (fold or open); the head's own click does the same.
+    pub on_toggle: ClickHandler,
+    /// What VoiceOver says of the label (it opens the popover) and of the chevron (it folds).
+    pub spoken_edit: SharedString,
+    pub spoken_fold: SharedString,
+    /// Puts the label where it opens the group's popover: given the label as a popover's trigger, it
+    /// gives back what is drawn in its place.
+    pub wrap_label: Box<dyn FnOnce(PopoverTrigger) -> AnyElement>,
+}
+
+/// An element that can be a `Popover`'s trigger: the popover marks it selected while it is open.
+#[derive(IntoElement)]
+pub struct PopoverTrigger {
+    content: Stateful<Div>,
+    open: bool,
+}
+
+impl PopoverTrigger {
+    pub fn new(content: Stateful<Div>) -> Self {
+        Self { content, open: false }
+    }
+}
+
+impl Selectable for PopoverTrigger {
+    fn selected(mut self, selected: bool) -> Self {
+        self.open = selected;
+        self
+    }
+
+    fn is_selected(&self) -> bool {
+        self.open
+    }
+}
+
+impl RenderOnce for PopoverTrigger {
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        self.content
+    }
+}
+
+/// The chevron's box, and the room round the pin.
+const CHEVRON_BOX: f32 = 20.0;
+const PIN_SIZE: f32 = 12.0;
+/// The colour dot of a group without a card.
+const DOT: f32 = 8.0;
+
+/// See [`GroupHead`]. `id` names the head; add the drag, the drop and the context menu to it.
+#[track_caller]
+pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> Stateful<Div> {
+    let GroupHead {
+        metrics,
+        name,
+        color,
+        folded,
+        pinned,
+        tiles,
+        count,
+        alert,
+        empty,
+        on_toggle,
+        spoken_edit,
+        spoken_fold,
+        wrap_label,
+    } = parts;
+    let id: ElementId = id.into();
+    let is_empty = empty.is_some();
+    let label = div()
+        .id((id.clone(), "label"))
+        .role(Role::Button)
+        .aria_label(spoken_edit)
+        .flex()
+        .items_center()
+        .gap_1()
+        .min_w_0()
+        .h_full()
+        .cursor_pointer()
+        .child(div().min_w_0().truncate().text_label().text_color(ui.text).child(name))
+        .when(pinned, |d| {
+            d.child(
+                div()
+                    .flex_none()
+                    .text_color(ui.faint)
+                    .child(Icon::new(IconName::Pin).with_size(px(PIN_SIZE))),
+            )
+        });
+    let tiles = folded.then(|| {
+        div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(5.0))
+            .children(tiles)
+            .child(count_badge(ui, super::scale::count_label(count)))
+            .children(alert.map(|color| div().flex_none().size(px(MARK_DOT + 1.0)).rounded_full().bg(color)))
+    });
+    let trailing = match empty {
+        Some((tooltip, on_add)) => div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap_2()
+            .child(div().text_caption().text_color(ui.faint).child("No terminals"))
+            .child(icon_button((id.clone(), "add"), ui, IconName::Plus, tooltip).in_row().on_click(
+                move |event, window, cx| {
+                    cx.stop_propagation();
+                    on_add(event, window, cx);
+                },
+            ))
+            .into_any_element(),
+        None => div()
+            .id((id.clone(), "chevron"))
+            .role(Role::Button)
+            .aria_label(spoken_fold)
+            .aria_expanded(!folded)
+            .flex_none()
+            .flex()
+            .items_center()
+            .justify_center()
+            .size(px(CHEVRON_BOX))
+            .rounded(ui.radius_sm)
+            .cursor_pointer()
+            .hover(move |d| d.bg(ui.hover))
+            .child(disclosure(ui, folded))
+            .into_any_element(),
+    };
+    let head = div()
+        .id(id)
+        .relative()
+        .flex()
+        .items_center()
+        .gap_2()
+        .w_full()
+        .h(px(if is_empty { metrics.empty_h } else { metrics.head_h }))
+        .px(px(metrics.row_px))
+        .rounded(px(metrics.row_radius))
+        .cursor_pointer()
+        .when(!metrics.cards, |d| {
+            d.when_some(color, |d, color| d.child(div().flex_none().size(px(DOT)).rounded_full().bg(color)))
+        })
+        .child(wrap_label(PopoverTrigger::new(label)))
+        .child(div().flex_1())
+        .children(tiles)
+        .child(trailing);
+    if is_empty { head } else { head.on_click(move |event, window, cx| on_toggle(event, window, cx)) }
+}

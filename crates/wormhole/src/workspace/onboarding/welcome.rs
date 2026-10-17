@@ -2,7 +2,7 @@
 //! it, and the way in. It is what the window carries through the wormhole, so each part has its own
 //! moment to come in (`wormhole_core::intro::page`).
 
-use style::{BandKind, BandParts, FolderLook, RowTone, Section, SessionRow, StatusGlyph};
+use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::intro::page::Entrance;
 
 use super::page::Entering;
@@ -141,6 +141,7 @@ fn logo(progress: f32, icon: &'static str) -> Div {
 /// what the app looks like. Nothing in it reacts: a plate over it keeps the pointer off its rows.
 #[track_caller]
 fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
+    let metrics = style::Metrics::default();
     let row = |id: &'static str,
                glyph: StatusGlyph,
                name: &'static str,
@@ -154,36 +155,48 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
                 detail: Some(detail.into()),
                 tone,
                 selected,
-                ..SessionRow::new(style::status_glyph(format!("{id}-glyph"), ui, glyph, cx), name)
+                tile: Some(style::status_tile(
+                    format!("{id}-tile"),
+                    ui,
+                    style::StatusTile {
+                        face: style::TileFace::Terminal,
+                        glyph,
+                        selected,
+                        size: metrics.tile,
+                    },
+                    cx,
+                )),
+                card: true,
+                metrics,
+                ..SessionRow::new(div().into_any_element(), name)
             },
         )
     };
-    let band = style::folder_band(
+    let head = style::group_head(
         "welcome-band",
         ui,
-        BandParts {
-            kind: BandKind::Folder,
-            section: Section::Open,
-            title: "api-server".into(),
-            detail: None,
-            count: Some("3".into()),
-            waiting: None,
-            add: None,
-            on_toggle: None,
-            drop_target: false,
-            sticky: false,
-            // The card's own outline is its top edge: the band's hairline would show past its rounded
-            // corners.
-            joined: true,
+        style::GroupHead {
+            metrics,
+            name: "api-server".into(),
+            color: None,
+            folded: false,
+            pinned: false,
+            tiles: Vec::new(),
+            count: 3,
+            alert: None,
+            empty: None,
+            on_toggle: Box::new(|_, _, _| {}),
+            spoken_edit: SharedString::default(),
+            spoken_fold: SharedString::default(),
+            wrap_label: Box::new(|trigger| trigger.into_any_element()),
         },
-        FolderLook::default(),
     );
     style::palette_surface(ui, true)
         .relative()
         .w_full()
         .bg(panel)
-        // Its fill is square, so it takes the card's corners itself.
-        .child(band.rounded_t(ui.radius_lg))
+        .p_1()
+        .child(head)
         .child(row(
             "welcome-working",
             StatusGlyph::Working,

@@ -15,6 +15,29 @@ pub(super) fn fold(ctx: &mut Ctx, arg: &str) -> Result<String> {
     }
 }
 
+/// `group <name> <action>`: what a group's popover and menu do (`edit` opens the popover, `pin`
+/// toggles the pin, `ungroup`, `close`, `move`, `color:<name|none>`).
+pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (name, action) =
+        arg.trim().rsplit_once(char::is_whitespace).ok_or_else(|| anyhow!("expected <name> <action>"))?;
+    ctx.workspace.devctl_group(name.trim(), action.trim(), ctx.window, ctx.cx).map_err(|e| anyhow!(e))?;
+    Ok(String::new())
+}
+
+/// `to-group <row> <name|none>`: put the terminal in that row in the group, or take it out of its group.
+pub(super) fn to_group(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (row, name) =
+        arg.trim().split_once(char::is_whitespace).ok_or_else(|| anyhow!("expected <row> <name>"))?;
+    ctx.workspace.devctl_to_group(nth(row), name.trim(), ctx.cx).map_err(|e| anyhow!(e))?;
+    Ok(String::new())
+}
+
+/// `rename-edit <row>`: the terminal's name becomes a field, as "Rename…" in its menu makes it.
+pub(super) fn rename_edit(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    ctx.workspace.devctl_rename_edit(nth(arg), ctx.window, ctx.cx);
+    Ok(String::new())
+}
+
 /// Pin the `n`th terminal (as `state` numbers them), or unpin it.
 pub(super) fn pin(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.workspace.toggle_pin(nth(arg), ctx.cx);

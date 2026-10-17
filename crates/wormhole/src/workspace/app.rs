@@ -14,6 +14,8 @@
 //! look reaches the settings store, which re-derives what it touches; Reduce Motion is GPUI's
 //! own flag, which its animations follow.
 
+use std::collections::HashMap;
+
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
 use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
@@ -92,6 +94,9 @@ pub(crate) struct AppState {
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
     /// that window is being opened.
     pub first_welcome: Option<super::welcome::Plan>,
+    /// Terminals on their way to another window (a group moved there): the new window takes the
+    /// running terminal of a session it is opened with instead of starting a shell.
+    pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
     pub(super) next_id: i64,
     pub(super) next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
@@ -145,6 +150,7 @@ impl AppState {
             last_panes: RememberedPanes::default(),
             welcomes: Default::default(),
             first_welcome: None,
+            adopted: HashMap::new(),
             next_id,
             next_window_id: 2,
             applied_theme: None,
@@ -293,6 +299,7 @@ impl AppState {
             last_panes,
             welcomes: Default::default(),
             first_welcome: None,
+            adopted: HashMap::new(),
             next_id,
             next_window_id,
             applied_theme: None,

@@ -46,7 +46,11 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         // muted line for one row's fill.
         "sidebar.row.selected.text" => "readable(primary, sidebar.row.selected, 4.5)",
         "sidebar.row.selected.muted" => "readable(text.muted, sidebar.row.selected, 4.5)",
-        // Folder and section bands, one step above a hovered row and below a pressed one.
+        // The sidebar's cards: a faint fill and an edge that holds the card where the fill vanishes
+        // (on white, say).
+        "card" => "text.primary / 3.5%",
+        "card.edge" => "text.primary / 10%",
+        // Group heads and section bands, one step above a hovered row and below a pressed one.
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
         "band.solid" => "over(band, sidebar.background)",
