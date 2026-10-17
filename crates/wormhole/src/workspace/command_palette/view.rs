@@ -9,7 +9,7 @@ use wormhole_core::search::Scope;
 use wormhole_core::settings_index;
 
 use super::super::overlay::scrim;
-use super::rows::{self, Item, Row, Snapshot};
+use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
 use super::*;
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
@@ -209,6 +209,26 @@ fn render_row(ix: usize, row: &Row, env: &RowEnv, cx: &mut App) -> AnyElement {
                 parts.detail = action.command.clone().map(SharedString::from);
                 parts.detail_font = Some(env.code_font.clone());
                 parts.trailing.extend(action.key.clone().map(keycap));
+                parts
+            }
+            Item::Profile(command, id) => {
+                let Some(label) = snapshot.profile(id).and_then(|choice| item.profile_label(choice)) else {
+                    return div().into_any_element();
+                };
+                let glyph = match command {
+                    ProfileCommand::Switch => IconName::CircleUser,
+                    ProfileCommand::OpenWindowIn => IconName::AppWindow,
+                    ProfileCommand::MoveWindowTo => IconName::ArrowRightLeft,
+                };
+                let mut parts = style::PaletteResult::new(icon(glyph), label);
+                parts.detail = Some(
+                    match command {
+                        ProfileCommand::Switch => "every window switches",
+                        ProfileCommand::OpenWindowIn | ProfileCommand::MoveWindowTo => "",
+                    }
+                    .into(),
+                )
+                .filter(|detail: &SharedString| !detail.is_empty());
                 parts
             }
             // A terminal with another shell: named like New terminal, with what it runs.

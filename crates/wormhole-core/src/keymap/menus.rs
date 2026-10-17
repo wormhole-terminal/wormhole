@@ -17,6 +17,12 @@ pub enum Command {
     RunProjectAction(String),
     /// A new terminal running the n-th shell of [`MenuState::shells`].
     NewTerminalWith(usize),
+    /// Wormhole goes to the n-th profile of [`MenuState::profiles`].
+    SwitchProfile(usize),
+    /// A new window in the n-th profile.
+    OpenInProfile(usize),
+    /// The window in front goes to the n-th profile.
+    MoveToProfile(usize),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,6 +69,11 @@ pub struct MenuState {
     pub project_actions: Vec<(String, String)>,
     /// The shells New Terminal With offers, by name (`shells::choices`' order).
     pub shells: Vec<String>,
+    /// The profiles' names, and which one Wormhole is in (an index into the names).
+    pub profiles: Vec<String>,
+    pub current_profile: Option<usize>,
+    /// The profile of the window in front.
+    pub window_profile: Option<usize>,
     /// The selected terminal is in a split: ⌘W closes its pane.
     pub split: bool,
     /// A debug build: the Developer menu is there.
@@ -82,6 +93,9 @@ impl MenuState {
             && self.recent == other.recent
             && self.project_actions == other.project_actions
             && self.shells == other.shells
+            && self.profiles == other.profiles
+            && self.current_profile == other.current_profile
+            && self.window_profile == other.window_profile
             && self.split == other.split
             && self.debug == other.debug
     }
@@ -99,6 +113,8 @@ enum Slot {
     /// The shells to open a terminal with (`MenuState::shells`), as Terminal.app's "New Tab with
     /// Profile".
     NewTerminalWith,
+    /// The Profile submenu: switch, open a window in, move this window to, new, manage.
+    Profiles,
 }
 
 use ActionId::*;
@@ -133,6 +149,8 @@ const SHELL: &[Slot] = &[
     Sep,
     A(OpenFolder),
     Slot::RecentFolders,
+    Sep,
+    Slot::Profiles,
     Sep,
     A(CloseTerminal),
     A(CloseWindow),
@@ -279,6 +297,7 @@ fn fill(slots: &[Slot], state: &MenuState) -> Vec<Item> {
                 });
                 items.push(submenu("New Terminal With", shells.collect(), "No Shells"));
             }
+            Slot::Profiles => items.push(profile_submenu(state)),
             Slot::Terminals => {
                 for (ix, name) in state.terminals.iter().take(9).enumerate() {
                     let id = Terminal(ix as u8 + 1);
@@ -294,6 +313,55 @@ fn fill(slots: &[Slot], state: &MenuState) -> Vec<Item> {
         }
     }
     items
+}
+
+/// Profile ▸ the profiles (the shown one checked), what opens a window in one or moves this window
+/// to one (only with another profile to pick), then New Profile… and Manage Profiles….
+fn profile_submenu(state: &MenuState) -> Item {
+    let pick = |command: fn(usize) -> Command, skip: Option<usize>| -> Vec<Item> {
+        state
+            .profiles
+            .iter()
+            .enumerate()
+            .filter(|(ix, _)| Some(*ix) != skip)
+            .map(|(ix, name)| Item::Action {
+                command: command(ix),
+                title: name.clone(),
+                key: None,
+                checked: false,
+                enabled: true,
+            })
+            .collect()
+    };
+    let mut items: Vec<Item> = state
+        .profiles
+        .iter()
+        .enumerate()
+        .map(|(ix, name)| Item::Action {
+            command: Command::SwitchProfile(ix),
+            title: name.clone(),
+            key: None,
+            checked: state.current_profile == Some(ix),
+            enabled: true,
+        })
+        .collect();
+    if state.profiles.len() > 1 {
+        items.push(Item::Separator);
+        items.push(Item::Submenu {
+            title: "Open Window in".to_string(),
+            items: pick(Command::OpenInProfile, None),
+            enabled: true,
+        });
+        items.push(Item::Submenu {
+            title: "Move Window to".to_string(),
+            items: pick(Command::MoveToProfile, state.window_profile),
+            enabled: state.window_profile.is_some(),
+        });
+    }
+    items.push(Item::Separator);
+    items.extend(action_item(NewProfile, state));
+    items.extend(action_item(ManageProfiles, state));
+    Item::Submenu { title: "Profile".to_string(), items: tidy(items), enabled: true }
 }
 
 /// A submenu of what the window has; with nothing, the greyed `empty` in it.

@@ -46,6 +46,12 @@ impl Detail {
         self >= Detail::Numbers
     }
 
+    /// Whether the profile's name is shown (a window in another profile than the shown one). It is
+    /// the bar's lowest-priority item: it goes first, with the words, when the window narrows.
+    pub fn profile(self) -> bool {
+        self.words()
+    }
+
     /// How wide the context meter's track is, `None` where it goes with the size.
     pub fn context_meter(self) -> Option<f32> {
         match self {
@@ -204,6 +210,11 @@ pub fn elapsed(time: Duration) -> String {
     }
 }
 
+/// The profile item's tooltip: what the name at the bar's left means.
+pub fn profile_tooltip(name: &str) -> String {
+    format!("This window is in {name}, not the profile Wormhole is in")
+}
+
 /// The context item's tooltip: "Context: 62% used".
 pub fn context_tooltip(percent: u32) -> String {
     format!("Context: {percent}% used")
@@ -235,6 +246,8 @@ mod tests {
         assert_eq!(Detail::at(670.0), Detail::Lean);
         assert!(Detail::Words.words() && !Detail::Numbers.words() && !Detail::Lean.words());
         assert!(Detail::Words.size() && Detail::Numbers.size() && !Detail::Lean.size());
+        // The profile's name is the first to go.
+        assert!(Detail::Words.profile() && !Detail::Numbers.profile() && !Detail::Lean.profile());
     }
 
     #[test]

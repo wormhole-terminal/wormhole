@@ -44,6 +44,18 @@ pub enum ActionId {
     PreviousTerminal,
     /// The sidebar's terminal with this number (1–9, as its ⌘ keycap says).
     Terminal(u8),
+    // Profiles. The three that name a profile take it from a pick (a menu item, a palette row), so
+    // they have no key of their own.
+    /// The sheet that makes a profile.
+    NewProfile,
+    /// Settings, on the Profile page.
+    ManageProfiles,
+    /// Wormhole goes to the picked profile: every window switches.
+    SwitchProfile,
+    /// A new window in the picked profile, as the odd window when it isn't the shown one.
+    OpenWindowInProfile,
+    /// The window in front goes to the picked profile.
+    MoveWindowToProfile,
     // Panes.
     SplitRight,
     SplitDown,

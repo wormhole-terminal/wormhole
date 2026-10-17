@@ -109,6 +109,13 @@ pub(super) fn entries() -> Vec<Entry> {
         rows.push(row(Terminal(n as u8 + 1), title, &[(CMD, digit)]).not_in_palette());
     }
     rows.extend([
+        // Profiles: no default keys. The last three act on the profile a menu item or palette row
+        // names, so nothing binds them as they are.
+        row(NewProfile, "New Profile…", &[]),
+        row(ManageProfiles, "Manage Profiles…", &[]),
+        row(SwitchProfile, "Switch Profile", &[]).not_in_palette(),
+        row(OpenWindowInProfile, "Open Window in Profile", &[]).not_in_palette(),
+        row(MoveWindowToProfile, "Move Window to Profile", &[]).not_in_palette(),
         // Panes: iTerm2's keys for the splits and the zoom; ⌥⌘arrows move between panes
         // while a terminal has the keyboard (a list's ⌥⌘↑ / ⌥⌘↓ move its item). The layouts
         // have no keys.

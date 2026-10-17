@@ -50,6 +50,18 @@ pub(super) struct StatusBar {
     size: Option<String>,
     /// What VoiceOver says for each item, whole whatever the width.
     spoken: Spoken,
+    /// The profile of a window that is not in the profile Wormhole is in, while the window is
+    /// wide enough: the bar's lowest-priority item, at its left.
+    profile: Option<ProfileTag>,
+}
+
+/// The name of the profile an odd window is in, with its colour.
+#[derive(Clone, Debug, PartialEq)]
+struct ProfileTag {
+    name: SharedString,
+    color: Hsla,
+    spoken: String,
+    tooltip: String,
 }
 
 /// The longest-waiting terminal's button.
@@ -233,7 +245,13 @@ impl Workspace {
             context: context.as_ref().map(|item| spoken::status_context(item.percent)),
             size: size.as_ref().map(|_| spoken::status_size(&terminal.shell(), cols, rows)),
         };
-        Some(StatusBar { spoken, branch, attention, rest, words: detail.words(), context, size })
+        let profile = self.odd_profile(cx).filter(|_| detail.profile()).map(|(profile, color)| ProfileTag {
+            spoken: spoken::status_profile(&profile.name),
+            tooltip: rules::profile_tooltip(&profile.name),
+            name: profile.name.clone().into(),
+            color,
+        });
+        Some(StatusBar { spoken, branch, attention, rest, words: detail.words(), context, size, profile })
     }
 
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
@@ -392,11 +410,33 @@ impl Workspace {
                 .when(ix > 0 && bar.words, |d| d.child(div().text_caption().text_color(ui.faint).child("·")))
                 .child(button)
         });
+        // The odd window's profile: its colour and name, before everything else.
+        let profile = bar.profile.clone().map(|tag| {
+            let tooltip = SharedString::from(tag.tooltip.clone());
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(
+                    style::status_text(ui)
+                        .id("status-profile")
+                        .role(Role::Label)
+                        .aria_label(tag.spoken.clone())
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .child(style::color_dot(ui, tag.color, style::COLOR_DOT_MENU))
+                        .child(tag.name.clone())
+                        .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx)),
+                )
+                .child(style::status_separator(ui))
+        });
         let bar_element = style::status_bar(ui)
             .id("status-bar")
             // A toolbar, there only while the bar is shown.
             .role(Role::Toolbar)
             .aria_label("Status bar")
+            .children(profile)
             .children(branch)
             .children(
                 bar.branch

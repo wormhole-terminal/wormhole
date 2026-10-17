@@ -286,6 +286,9 @@ fn front_window() -> MenuState {
         recent: vec![],
         project_actions: vec![],
         shells: vec![],
+        profiles: vec!["Default".into(), "Work".into()],
+        current_profile: Some(0),
+        window_profile: Some(0),
         split: false,
         debug: true,
     }
@@ -331,6 +334,19 @@ Shell
   Open Folder…  ⌘O
   Open Recent ▸
     No Recent Folders  (disabled)
+  ---
+  Profile ▸
+    ✓ Default
+    Work
+    ---
+    Open Window in ▸
+      Default
+      Work
+    Move Window to ▸
+      Work
+    ---
+    New Profile…
+    Manage Profiles…
   ---
   Close Terminal  ⌘W
   Close Window  ⇧⌘W

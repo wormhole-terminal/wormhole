@@ -25,6 +25,7 @@ use crate::vibrancy::Blur;
 use crate::workspace::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
 use registry::{ProjectSource, Segment, Setting, toggle};
+pub(crate) use sections::open_new_profile_sheet;
 use style::{SettingParts, SettingState};
 
 /// Where a page's title row starts: under the traffic lights, which the nav runs beneath like

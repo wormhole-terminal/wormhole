@@ -164,6 +164,11 @@ pub fn status_branch(branch: &str, changes: usize) -> String {
     format!("{name}, {}", some_or_none(changes, "change", "changes"))
 }
 
+/// The profile item of a window that is not in the profile Wormhole is in: "Window in profile Work".
+pub fn status_profile(name: &str) -> String {
+    format!("Window in profile {name}")
+}
+
 /// The context meter: "Agent context, 62 percent".
 pub fn status_context(percent: u32) -> String {
     format!("Agent context, {percent} percent")

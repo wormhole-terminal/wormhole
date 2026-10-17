@@ -272,6 +272,7 @@ impl Render for Workspace {
             )
             .children(status_bar)
             .when(!tabs, |d| d.child(sidebar_toggle))
+            .children(self.render_profile_edge(cx))
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))
             .children(self.render_overlay())

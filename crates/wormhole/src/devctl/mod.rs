@@ -119,6 +119,8 @@
 //!   profile <id> | profile-new <name> | profiles   switch Wormhole to a profile (its windows show, the
 //!                   shown profile's hide with their terminals running), make a profile (it is not
 //!                   switched to) and print its id, or list the profiles (`*` marks the shown one)
+//!   profile-open <id> | profile-move <id> | profile-delete <id>   open a window in a profile (the odd window
+//!                   while Wormhole is in another), move the front window to one, or delete one
 //!   new-window | close-window   open another window / close this one (`state` lists them)
 //!   onboarding <welcome|folder|look|agents|primer|close>   open the intro window at that step over this
 //!                   window with nothing played around it, whether or not it ran before (`close` closes
@@ -368,6 +370,9 @@ fn command(name: &str) -> Option<Command> {
         "quit" => sessions::quit,
         "profile" => sessions::profile,
         "profile-new" => sessions::profile_new,
+        "profile-open" => sessions::profile_open,
+        "profile-move" => sessions::profile_move,
+        "profile-delete" => sessions::profile_delete,
         "profiles" => sessions::profiles,
         "group-new" => sidebar::new_group,
         "sidebar-fold" => sidebar::fold,

@@ -284,6 +284,35 @@ pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `profile-open <id>`: a new window in that profile (the odd window when Wormhole is in another).
+pub(super) fn profile_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let id = wormhole_core::profile::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    ctx.cx.defer(move |cx| crate::workspace::AppState::open_window_in_profile(&id, cx));
+    Ok(String::new())
+}
+
+/// `profile-move <id>`: the window in front goes to that profile.
+pub(super) fn profile_move(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let id = wormhole_core::profile::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    ctx.cx.defer(move |cx| {
+        if let Err(err) = crate::workspace::AppState::move_front_window_to_profile(&id, cx) {
+            tracing::warn!("devctl profile-move: {err}");
+        }
+    });
+    Ok(String::new())
+}
+
+/// `profile-delete <id>`: delete a profile, as Settings does after its question.
+pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let id = wormhole_core::profile::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    ctx.cx.defer(move |cx| {
+        if let Err(err) = crate::workspace::AppState::delete_profile(&id, cx) {
+            tracing::warn!("devctl profile-delete: {err}");
+        }
+    });
+    Ok(String::new())
+}
+
 /// `profile-new <name> [git-email]`: make a profile with Wormhole's defaults (with a git identity
 /// of that name and email, when an email is given) and print its id.
 pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {

@@ -114,9 +114,94 @@ impl AppState {
         Ok(())
     }
 
+    /// Open `profile`'s database and settings when this launch hasn't yet, so a window can live in
+    /// it without Wormhole being in it. The shown profile is always open.
+    pub(crate) fn ensure_open(&mut self, profile: &ProfileId) {
+        if profile == self.active_profile() || self.parked.contains_key(profile) {
+            return;
+        }
+        let mut slot = ProfileSlot::open(&self.root.profile(profile));
+        slot.data.hub.ids_start_at(self.next_id);
+        self.parked.insert(profile.clone(), slot);
+    }
+
+    /// A new window in `target` ("Open a window in…"), stepped away from the window in front. When
+    /// Wormhole is not in `target`, it is the odd window. Deferred callers only.
+    pub(crate) fn open_window_in_profile(target: &ProfileId, cx: &mut App) {
+        if app(cx).profiles.get(target).is_none() {
+            return;
+        }
+        app_mut(cx).ensure_open(target);
+        let target = target.clone();
+        // A start folder of its own (the profile's), not the window in front's.
+        if AppState::with_front_workspace(cx, |ws, window, cx| {
+            let cwd = (ws.profile == target).then(|| ws.default_cwd(cx)).flatten();
+            ws.new_window_in_profile(cwd, target.clone(), window, cx);
+        })
+        .is_none()
+        {
+            super::app::open_workspace_window_in(&target, None, None, cx);
+        }
+    }
+
+    /// The window in front goes to `target` ("Move this window to…"): where it stays visible, as
+    /// the odd window when Wormhole is not in `target`. Deferred callers only.
+    pub(crate) fn move_front_window_to_profile(target: &ProfileId, cx: &mut App) -> Result<(), String> {
+        if app(cx).profiles.get(target).is_none() {
+            return Err(format!("no profile {target}"));
+        }
+        let Some(front) = Self::front_window(cx) else { return Ok(()) };
+        if &front.profile == target {
+            return Ok(());
+        }
+        app_mut(cx).ensure_open(target);
+        Self::with_workspace(&front, cx, |ws, _, cx| ws.rehome(target, cx)).unwrap_or(Ok(()))?;
+        if let Some(window) = app_mut(cx).windows.iter_mut().find(|w| w.id == front.id) {
+            window.profile = target.clone();
+            window.hidden = false;
+        }
+        super::app_menu::sync(cx);
+        cx.refresh_windows();
+        Ok(())
+    }
+
     /// The windows of `profile`, shown or not.
     pub(crate) fn windows_of<'a>(&'a self, profile: &'a ProfileId) -> impl Iterator<Item = &'a OpenWindow> {
         self.windows.iter().filter(move |w| &w.profile == profile)
+    }
+}
+
+impl Workspace {
+    /// This window and its terminals go to profile `target`: its record and its terminals'
+    /// scrollback are saved into that profile's database and removed from the old one. The
+    /// terminals themselves are untouched, so they keep the environment they started with.
+    fn rehome(&mut self, target: &ProfileId, cx: &mut Context<Self>) -> Result<(), String> {
+        let from = self.profile.clone();
+        if &from == target {
+            return Ok(());
+        }
+        let record = self.window_record(cx);
+        let scrollback: Vec<(i64, String)> = self
+            .sessions
+            .iter()
+            .map(|session| &session.pane)
+            .map(|pane| (pane.id, pane.terminal.read(cx).scrollback_text(super::SCROLLBACK_LINES)))
+            .collect();
+        let state = app_mut(cx);
+        let Some(store) = state.store_of_mut(target) else {
+            return Err(format!("the database of profile {target} is not open"));
+        };
+        store.save_window(&record).map_err(|err| format!("saving the window in {target}: {err:#}"))?;
+        for (id, text) in &scrollback {
+            if let Err(err) = store.save_scrollback(*id, text) {
+                tracing::warn!("scrollback of {id} did not move to {target}: {err:#}");
+            }
+        }
+        state.forget_window(&from, self.window_id);
+        self.profile = target.clone();
+        self.dirty = false;
+        cx.notify();
+        Ok(())
     }
 }
 

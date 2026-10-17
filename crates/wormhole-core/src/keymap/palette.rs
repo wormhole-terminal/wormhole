@@ -110,10 +110,12 @@ pub fn section(id: ActionId) -> Section {
         | FocusNextArea | FocusPreviousArea | Bigger | Smaller | ActualSize | FullScreen
         | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
         | LayoutSingle => Section::View,
-        About | CheckForUpdates | Settings | ThemeStudio | Hide | HideOthers | ShowAll | Quit | ShowLogs
-        | Inspector | Help | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex
-        | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage
-        | PlayWelcomeCursor | PlayWelcomePortal | PlayWelcomeLogo => Section::App,
+        About | CheckForUpdates | Settings | ThemeStudio | NewProfile | ManageProfiles | Hide
+        | HideOthers | ShowAll | Quit | ShowLogs | Inspector | Help | CommandPalette | ShowIntro
+        | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora
+        | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor | PlayWelcomePortal | PlayWelcomeLogo => {
+            Section::App
+        }
         _ => Section::Terminal,
     }
 }

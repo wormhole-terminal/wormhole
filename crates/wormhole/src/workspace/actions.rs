@@ -110,6 +110,8 @@ actions!(
         PlayWelcomeLogo,
         ToggleCommandPalette,
         ShowKeyboardShortcuts,
+        NewProfile,
+        ManageProfiles,
         /// The greyed line in an empty submenu ("No Recent Folders"): nothing handles it, so
         /// AppKit keeps it disabled whatever is in front.
         Placeholder,
@@ -130,6 +132,22 @@ pub struct OpenRecent(pub PathBuf);
 #[derive(Clone, Debug, PartialEq, Action)]
 #[action(namespace = workspace, no_json)]
 pub struct RunProjectAction(pub SharedString);
+
+/// Shell → Profile → a profile: Wormhole goes to it, every window with it. Also the palette's
+/// "Switch to Work". The text is the profile's id.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = app, no_json)]
+pub struct SwitchProfile(pub SharedString);
+
+/// Shell → Profile → Open Window in → a profile (and the palette's "Open window in Work").
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = app, no_json)]
+pub struct OpenWindowInProfile(pub SharedString);
+
+/// Shell → Profile → Move Window to → a profile (and the palette's "Move this window to Work").
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = app, no_json)]
+pub struct MoveWindowToProfile(pub SharedString);
 
 /// Shell → New Terminal With: a new terminal running the shell with this key.
 #[derive(Clone, Debug, PartialEq, Action)]
@@ -237,6 +255,10 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::GoToFinished => Box::new(GoToFinished),
         A::CommandPalette => Box::new(ToggleCommandPalette),
         A::KeyboardShortcuts => Box::new(ShowKeyboardShortcuts),
+        A::NewProfile => Box::new(NewProfile),
+        A::ManageProfiles => Box::new(ManageProfiles),
+        // These three act on the profile a menu item or palette row names: `SwitchProfile(id)`.
+        A::SwitchProfile | A::OpenWindowInProfile | A::MoveWindowToProfile => return None,
         A::Help | A::Print | A::ExportText => return None,
         A::LineStart | A::LineEnd | A::DeleteLine | A::MoveItemUp | A::MoveItemDown | A::RowMenu => {
             return None;
@@ -305,6 +327,36 @@ pub(crate) fn init(cx: &mut App) {
         cx.defer(|cx| {
             settings_page::open_settings(Some(settings_page::Section::Updates), cx);
             updates::check_for_updates(true, cx);
+        });
+    });
+    cx.on_action(|_: &NewProfile, cx| cx.defer(settings_page::open_new_profile_sheet));
+    cx.on_action(|_: &ManageProfiles, cx| {
+        cx.defer(|cx| settings_page::open_settings(Some(settings_page::Section::Profile), cx))
+    });
+    cx.on_action(|switch: &SwitchProfile, cx| {
+        let id = switch.0.to_string();
+        cx.defer(move |cx| {
+            let Ok(id) = ProfileId::parse(&id) else { return };
+            if let Err(message) = AppState::switch_profile(&id, cx) {
+                tracing::warn!("switching profile: {message}");
+            }
+        });
+    });
+    cx.on_action(|open: &OpenWindowInProfile, cx| {
+        let id = open.0.to_string();
+        cx.defer(move |cx| {
+            if let Ok(id) = ProfileId::parse(&id) {
+                AppState::open_window_in_profile(&id, cx);
+            }
+        });
+    });
+    cx.on_action(|moved: &MoveWindowToProfile, cx| {
+        let id = moved.0.to_string();
+        cx.defer(move |cx| {
+            let Ok(id) = ProfileId::parse(&id) else { return };
+            if let Err(message) = AppState::move_front_window_to_profile(&id, cx) {
+                tracing::warn!("moving the window: {message}");
+            }
         });
     });
     cx.on_action(|_: &About, cx| cx.defer(about::open_about));
@@ -642,6 +694,9 @@ mod tests {
                     | ActionId::RowMenu
                     | ActionId::SaveTheme
                     | ActionId::SaveThemeCopy
+                    | ActionId::SwitchProfile
+                    | ActionId::OpenWindowInProfile
+                    | ActionId::MoveWindowToProfile
             );
             assert_eq!(gpui_action(entry.id).is_some(), !viewed, "{:?}", entry.id);
         }

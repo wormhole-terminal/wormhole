@@ -25,7 +25,7 @@ use super::app::{AppState, OpenWindow, app, open_tab};
 use super::overlay::OverlayView;
 use super::*;
 pub(crate) use rows::Recent;
-use rows::{FolderItem, Item, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
+use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
 pub(crate) struct CommandPalette {
     workspace: WeakEntity<Workspace>,
@@ -100,8 +100,27 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
         .into_iter()
         .filter(|section| !section.is_visible(settings(cx)))
         .collect();
-    let mut snapshot =
-        Snapshot { actions: palette_actions::actions(&menu), shells, hidden_sections, ..Snapshot::default() };
+    let list = &app(cx).profiles;
+    let profiles = list
+        .profiles()
+        .iter()
+        .map(|p| rows::ProfileChoice { id: p.id.to_string(), name: p.name.clone() })
+        .collect();
+    let shown_profile = list.active_id().to_string();
+    let window_profile = app(cx)
+        .windows
+        .iter()
+        .find(|w| w.id == window_id)
+        .map_or_else(|| shown_profile.clone(), |w| w.profile.to_string());
+    let mut snapshot = Snapshot {
+        actions: palette_actions::actions(&menu),
+        shells,
+        profiles,
+        shown_profile,
+        window_profile,
+        hidden_sections,
+        ..Snapshot::default()
+    };
     let mut folders: Vec<FolderItem> = Vec::new();
     for (ix, window) in app(cx).windows.iter().enumerate().filter(|(_, w)| !w.hidden) {
         let own = window.id == window_id;
@@ -460,6 +479,15 @@ impl CommandPalette {
             Item::NewTerminalWith(key) => {
                 let _ = self.workspace.update(cx, |ws, cx| ws.new_session_with(Some(key), window, cx));
             }
+            Item::Profile(command, id) => {
+                let id = SharedString::from(id);
+                let action: Box<dyn Action> = match command {
+                    ProfileCommand::Switch => Box::new(super::actions::SwitchProfile(id)),
+                    ProfileCommand::OpenWindowIn => Box::new(super::actions::OpenWindowInProfile(id)),
+                    ProfileCommand::MoveWindowTo => Box::new(super::actions::MoveWindowToProfile(id)),
+                };
+                window.dispatch_action(action, cx);
+            }
         }
     }
 
@@ -476,7 +504,11 @@ impl CommandPalette {
                 Some(root) => Folder::Path(root.clone()),
                 None => return,
             },
-            Item::Setting(_) | Item::Action(_) | Item::ProjectAction(_) | Item::NewTerminalWith(_) => {
+            Item::Setting(_)
+            | Item::Action(_)
+            | Item::ProjectAction(_)
+            | Item::NewTerminalWith(_)
+            | Item::Profile(..) => {
                 return self.run(item, window, cx);
             }
         };
@@ -543,7 +575,7 @@ fn remember(item: &Item, cx: &mut App) {
         Item::Folder(path) => Recent::Folder(path.clone()),
         Item::Setting(id) => Recent::Setting(id),
         Item::Commit(sha) => Recent::Commit(sha.clone()),
-        Item::Action(_) | Item::ProjectAction(_) | Item::NewTerminalWith(_) => return,
+        Item::Action(_) | Item::ProjectAction(_) | Item::NewTerminalWith(_) | Item::Profile(..) => return,
     };
     let chosen = &mut cx.default_global::<Chosen>().0;
     chosen.retain(|r| *r != recent);

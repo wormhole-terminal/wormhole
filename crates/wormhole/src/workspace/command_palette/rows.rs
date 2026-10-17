@@ -52,6 +52,22 @@ pub(crate) struct ProjectAction {
     pub key: Option<String>,
 }
 
+/// A profile the palette can switch to, open a window in or move the window to.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ProfileChoice {
+    pub id: String,
+    pub name: String,
+}
+
+/// What a profile row of the palette does with its profile.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ProfileCommand {
+    /// Wormhole goes to it: every window switches.
+    Switch,
+    OpenWindowIn,
+    MoveWindowTo,
+}
+
 /// Something chosen in the palette before, which its empty query lists under Recent, in the
 /// order they were used (one mixed list of terminals, folders, settings and commits).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -80,6 +96,10 @@ pub(crate) struct Snapshot {
     /// The shells a new terminal can run besides the default (which the plain New terminal
     /// opens), in core's order.
     pub shells: Vec<ShellChoice>,
+    /// The profiles, with the ids of the one Wormhole is in and of the window's own.
+    pub profiles: Vec<ProfileChoice>,
+    pub shown_profile: String,
+    pub window_profile: String,
     pub project: Option<ProjectItem>,
     pub recent: Vec<Recent>,
     /// For the suggestions' details: where a new terminal opens, how many files changed.
@@ -103,6 +123,8 @@ pub(crate) enum Item {
     ProjectAction(String),
     /// A new terminal running the shell with this key (core `shells`).
     NewTerminalWith(String),
+    /// A profile's id, and what to do with it.
+    Profile(ProfileCommand, String),
 }
 
 impl Item {
@@ -110,6 +132,18 @@ impl Item {
     pub(crate) fn shell_label(&self, choice: &ShellChoice) -> Option<String> {
         match self {
             Item::NewTerminalWith(_) => Some(format!("New terminal: {}", choice.name)),
+            _ => None,
+        }
+    }
+
+    /// What a profile row is called: "Switch to Work", "Open window in Work", "Move this window to Work".
+    pub(crate) fn profile_label(&self, choice: &ProfileChoice) -> Option<String> {
+        match self {
+            Item::Profile(ProfileCommand::Switch, _) => Some(format!("Switch to {}", choice.name)),
+            Item::Profile(ProfileCommand::OpenWindowIn, _) => Some(format!("Open window in {}", choice.name)),
+            Item::Profile(ProfileCommand::MoveWindowTo, _) => {
+                Some(format!("Move this window to {}", choice.name))
+            }
             _ => None,
         }
     }
@@ -194,6 +228,32 @@ impl Snapshot {
     /// terminal with each shell.
     fn shell_items(&self) -> impl Iterator<Item = Item> + '_ {
         self.shells.iter().map(|choice| Item::NewTerminalWith(choice.key.clone()))
+    }
+
+    pub(crate) fn profile(&self, id: &str) -> Option<&ProfileChoice> {
+        self.profiles.iter().find(|choice| choice.id == id)
+    }
+
+    /// The profile rows: with another profile to go to, a row to switch to each profile that
+    /// isn't shown, to open a window in each, and to move this window to each it isn't in.
+    fn profile_items(&self) -> Vec<Item> {
+        if self.profiles.len() < 2 {
+            return Vec::new();
+        }
+        let mut items = Vec::new();
+        for (command, skip) in [
+            (ProfileCommand::Switch, Some(&self.shown_profile)),
+            (ProfileCommand::OpenWindowIn, None),
+            (ProfileCommand::MoveWindowTo, Some(&self.window_profile)),
+        ] {
+            items.extend(
+                self.profiles
+                    .iter()
+                    .filter(|choice| Some(&choice.id) != skip)
+                    .map(|choice| Item::Profile(command, choice.id.clone())),
+            );
+        }
+        items
     }
 
     /// What a shell entry is searched by: its label, and what it runs.
@@ -294,6 +354,11 @@ fn actions_by_section(snapshot: &Snapshot) -> Vec<Row> {
         rows.extend(project.actions.iter().map(|a| result(Item::ProjectAction(a.id.clone()))));
     }
     rows.extend(action_section(snapshot, ActionSection::App));
+    let profiles = snapshot.profile_items();
+    if !profiles.is_empty() {
+        rows.push(label("Profiles", None));
+        rows.extend(profiles.into_iter().map(result));
+    }
     rows
 }
 
@@ -330,6 +395,15 @@ fn found(snapshot: &Snapshot, scope: Scope, query: &str) -> Vec<Row> {
     let shell_words: Vec<(Item, String, &str)> = snapshot
         .shell_items()
         .filter_map(|item| snapshot.shell_words(&item).map(|(label, line)| (item, label, line)))
+        .collect();
+    let profile_words: Vec<(Item, String)> = snapshot
+        .profile_items()
+        .into_iter()
+        .filter_map(|item| {
+            let Item::Profile(_, id) = &item else { return None };
+            let label = item.profile_label(snapshot.profile(id)?)?;
+            Some((item, label))
+        })
         .collect();
     if wanted(Group::Settings) {
         // The settings index scores its own rows (label first, then config key, description…)
@@ -372,6 +446,10 @@ fn found(snapshot: &Snapshot, scope: Scope, query: &str) -> Vec<Row> {
         for (item, label, command_line) in &shell_words {
             list.push(item.clone());
             candidates.push(Candidate::new(label).with(command_line));
+        }
+        for item in &profile_words {
+            list.push(item.0.clone());
+            candidates.push(Candidate::new(&item.1));
         }
         groups.push((Group::Actions, search::rank(query, candidates)));
         items.push((Group::Actions, list));
@@ -560,6 +638,9 @@ mod tests {
                     Item::ProjectAction(id) => format!("project {id}"),
                     Item::NewTerminalWith(key) => {
                         snapshot.shell(key).and_then(|c| item.shell_label(c)).unwrap_or_default()
+                    }
+                    Item::Profile(_, id) => {
+                        snapshot.profile(id).and_then(|c| item.profile_label(c)).unwrap_or_default()
                     }
                 },
             })

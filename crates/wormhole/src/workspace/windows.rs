@@ -32,9 +32,21 @@ impl Workspace {
     /// Another window, laid out like this one, with a session starting in `cwd` (the command
     /// palette's ⌘↩).
     pub(super) fn new_window_in(&mut self, cwd: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
+        let profile = self.profile.clone();
+        self.new_window_in_profile(cwd, profile, window, cx);
+    }
+
+    /// [`new_window_in`](Self::new_window_in) in `profile`, which may not be the one this window
+    /// (or Wormhole) is in: then the new window is the odd one.
+    pub(super) fn new_window_in_profile(
+        &mut self,
+        cwd: Option<String>,
+        profile: ProfileId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let layout = Layout::for_new_window(self.window_record(cx).layout.as_deref());
         let source = window.bounds();
-        let profile = self.profile.clone();
         // Deferred: the new window renders right away, and nothing may read
         // this workspace while it is still being updated.
         cx.defer(move |cx| {

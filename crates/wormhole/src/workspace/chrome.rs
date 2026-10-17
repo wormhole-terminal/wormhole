@@ -86,6 +86,25 @@ fn collapse_slot(lights_end: f32) -> f32 {
 }
 
 impl Workspace {
+    /// The profile this window is in and its colour, when that is not the profile Wormhole is in
+    /// (the odd window), as the theme draws it.
+    pub(super) fn odd_profile(&self, cx: &App) -> Option<(wormhole_core::profile::Profile, Hsla)> {
+        let state = app(cx);
+        if &self.profile == state.active_profile() {
+            return None;
+        }
+        let profile = state.profiles.get(&self.profile)?.clone();
+        let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
+        Some((profile, color))
+    }
+
+    /// The edge across the top of the odd window, in its profile's colour. Over everything else
+    /// and out of the way of the pointer, so the title rows keep their height.
+    pub(super) fn render_profile_edge(&self, cx: &App) -> Option<AnyElement> {
+        let (_, color) = self.odd_profile(cx)?;
+        Some(div().absolute().top_0().left_0().right_0().child(style::profile_edge(color)).into_any_element())
+    }
+
     /// The sidebar's collapse button. It floats over the title rows at a fixed spot in the window,
     /// so it never moves as the sidebar opens and closes.
     pub(super) fn render_window_controls(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {

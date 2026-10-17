@@ -12,7 +12,10 @@ use wormhole_core::keymap::menus::{self, Command, Item, MenuState};
 use wormhole_core::project::Feature;
 use wormhole_core::shells;
 
-use super::actions::{DEBUG, NewTerminalWith, OpenRecent, Placeholder, RunProjectAction, gpui_action};
+use super::actions::{
+    DEBUG, MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder,
+    RunProjectAction, SwitchProfile, gpui_action,
+};
 use super::app::{AppState, app};
 use super::*;
 
@@ -39,7 +42,9 @@ pub(crate) fn sync(cx: &mut App) {
     }
     let recent = app(cx).menu.recent().to_vec();
     let shells: Vec<String> = shells::choices(settings(cx)).into_iter().map(|choice| choice.key).collect();
-    cx.set_menus(gpui_menus(menus::menus(&state), &recent, &shells));
+    let profiles: Vec<SharedString> =
+        app(cx).profiles.profiles().iter().map(|p| p.id.to_string().into()).collect();
+    cx.set_menus(gpui_menus(menus::menus(&state), &recent, &shells, &profiles));
     cx.set_global(Built { state, at: Instant::now() });
 }
 
@@ -81,6 +86,11 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     }
     state.recent = app(cx).menu.recent().iter().map(|root| folder_name(root)).collect();
     state.shells = shells::choices(settings).into_iter().map(|choice| choice.name).collect();
+    let list = &app(cx).profiles;
+    state.profiles = list.profiles().iter().map(|p| p.name.clone()).collect();
+    state.current_profile = list.profiles().iter().position(|p| &p.id == list.active_id());
+    state.window_profile = AppState::front_window(cx)
+        .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
     state.debug = DEBUG;
     state
 }
@@ -134,18 +144,28 @@ impl Workspace {
 /// GPUI's menus for the model. `recent` is the list the Open Recent items were named from, and
 /// `shells` the keys of the shells the New With items were named from, so each item opens what
 /// it showed even if the list changes before the click.
-fn gpui_menus(menus: Vec<menus::Menu>, recent: &[PathBuf], shells: &[String]) -> Vec<Menu> {
+fn gpui_menus(
+    menus: Vec<menus::Menu>,
+    recent: &[PathBuf],
+    shells: &[String],
+    profiles: &[SharedString],
+) -> Vec<Menu> {
     menus
         .into_iter()
         .map(|menu| Menu {
             name: menu.title.into(),
-            items: gpui_items(menu.items, recent, shells),
+            items: gpui_items(menu.items, recent, shells, profiles),
             disabled: false,
         })
         .collect()
 }
 
-fn gpui_items(items: Vec<Item>, recent: &[PathBuf], shells: &[String]) -> Vec<MenuItem> {
+fn gpui_items(
+    items: Vec<Item>,
+    recent: &[PathBuf],
+    shells: &[String],
+    profiles: &[SharedString],
+) -> Vec<MenuItem> {
     items
         .into_iter()
         .filter_map(|item| {
@@ -154,7 +174,7 @@ fn gpui_items(items: Vec<Item>, recent: &[PathBuf], shells: &[String]) -> Vec<Me
                 Item::Services => MenuItem::os_submenu("Services", SystemMenuType::Services),
                 Item::Submenu { title, items, enabled } => MenuItem::Submenu(Menu {
                     name: title.into(),
-                    items: gpui_items(items, recent, shells),
+                    items: gpui_items(items, recent, shells, profiles),
                     disabled: !enabled,
                 }),
                 // Greyed like a disabled action; its action has no handler, so AppKit's own
@@ -173,6 +193,15 @@ fn gpui_items(items: Vec<Item>, recent: &[PathBuf], shells: &[String]) -> Vec<Me
                         Command::RunProjectAction(id) => (Box::new(RunProjectAction(id.into())), None),
                         Command::NewTerminalWith(ix) => {
                             (Box::new(NewTerminalWith(shells.get(ix)?.clone().into())), None)
+                        }
+                        Command::SwitchProfile(ix) => {
+                            (Box::new(SwitchProfile(profiles.get(ix)?.clone())), None)
+                        }
+                        Command::OpenInProfile(ix) => {
+                            (Box::new(OpenWindowInProfile(profiles.get(ix)?.clone())), None)
+                        }
+                        Command::MoveToProfile(ix) => {
+                            (Box::new(MoveWindowToProfile(profiles.get(ix)?.clone())), None)
                         }
                     };
                     MenuItem::Action { name: title.into(), action, os_action, checked, disabled: !enabled }
