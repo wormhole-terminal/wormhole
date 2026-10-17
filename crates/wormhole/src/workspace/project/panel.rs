@@ -64,7 +64,7 @@ impl Workspace {
             .flex()
             .flex_wrap()
             // The first dot lines up with the panel's inset, inside its hit area.
-            .px(px(style::PANEL_INSET - (style::HIT_MIN - style::COLOR_DOT) / 2.0))
+            .px(px(style::CARD_INSET - (style::HIT_MIN - style::COLOR_DOT) / 2.0))
             .child(choice("folder-color-none".into(), "None", None, None))
             .children(custom.map(|color| {
                 let hex = color.color().to_hex();
@@ -99,12 +99,17 @@ impl Workspace {
                         .accessibility_label("Pick a colour"),
                 )
             }));
-        div()
-            .flex()
-            .flex_col()
-            .child(section_band("project-folder-color", "Folder colour", None, ui))
+        style::Cards::new(ui)
+            .head(section_band("project-folder-color", "Folder colour", None, ui))
             .child(row)
-            .child(div().px_4().pb_2().text_caption().text_color(ui.muted).child(paint.note()))
+            .child(
+                div()
+                    .px(px(style::CARD_INSET))
+                    .pb_2()
+                    .text_caption()
+                    .text_color(ui.muted)
+                    .child(paint.note()),
+            )
             .into_any_element()
     }
 
@@ -114,16 +119,14 @@ impl Workspace {
         let target = folder.map(|folder| {
             format!("Creates {}/.wormhole/", display_path(folder, home_dir()).trim_end_matches('/'))
         });
-        div()
-            .flex()
-            .flex_col()
-            .child(section_band("project-folder", "Project folder", None, ui))
+        style::Cards::new(ui)
+            .head(section_band("project-folder", "Project folder", None, ui))
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .gap_3()
-                    .px_4()
+                    .px(px(style::CARD_INSET))
                     .py_2()
                     .text_body()
                     .text_color(ui.muted)
@@ -165,14 +168,13 @@ impl Workspace {
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
 
         // The folder and its trust, the header the sections hang from.
-        let mut body = div().flex().flex_col().child(
+        let mut body = style::Cards::new(ui).child(
             div()
                 .flex()
                 .items_center()
                 .gap_2()
-                .h(px(style::TITLE_ROW_H))
-                .pl(px(style::PANEL_INSET))
-                .pr(px(style::HEADER_PAD_END))
+                .h(px(style::BAND_H))
+                .px(px(style::CARD_INSET))
                 .child(style::lead(style::icon(IconName::Folder).text_color(ui.muted)))
                 .child(
                     div()
@@ -205,7 +207,7 @@ impl Workspace {
         }
 
         // Feature switches (per project, for you only).
-        body = body.child(section_band("project-use", "Use from this project", None, ui));
+        body = body.head(section_band("project-use", "Use from this project", None, ui));
         for feature in Feature::ALL {
             let present = project.snapshot.has(feature);
             if !present && feature != Feature::Notes {
@@ -242,7 +244,7 @@ impl Workspace {
         // Actions: a click runs one.
         let actions = project.actions();
         if app(cx).hub.enabled(project, Feature::Actions) && !actions.is_empty() {
-            body = body.child(section_band("project-actions", "Actions", Some(actions.len()), ui));
+            body = body.head(section_band("project-actions", "Actions", Some(actions.len()), ui));
             for action in actions {
                 let id = action.id.clone();
                 body = body.child(
@@ -275,7 +277,7 @@ impl Workspace {
         // Prompts: paste one, or copy it into a note to edit first.
         let prompts = project.snapshot.prompts();
         if app(cx).hub.enabled(project, Feature::Prompts) && !prompts.is_empty() {
-            body = body.child(section_band("project-prompts", "Prompts", Some(prompts.len()), ui));
+            body = body.head(section_band("project-prompts", "Prompts", Some(prompts.len()), ui));
             for prompt in prompts {
                 let (send_id, note_id) = (prompt.id.clone(), prompt.id.clone());
                 let actions = vec![
@@ -314,30 +316,29 @@ impl Workspace {
             && let Some(layout) = project.snapshot.layout().filter(|l| !l.sessions.is_empty())
         {
             let names: Vec<String> = layout.sessions.iter().map(|c| c.name.clone()).collect();
-            body =
-                body.child(section_band("project-layout", "Terminal layout", Some(names.len()), ui)).child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .h(px(style::TITLE_ROW_H))
-                        .pl(px(style::PANEL_INSET + style::INDENT))
-                        .pr_4()
-                        .child(
-                            div()
-                                .flex_1()
-                                .min_w_0()
-                                .truncate()
-                                .text_caption()
-                                .text_color(ui.muted)
-                                .child(names.join(" · ")),
-                        )
-                        .child(
-                            Button::new("open-layout").primary().xsmall().label("Open terminals").on_click(
-                                cx.listener(|this, _, window, cx| this.open_project_layout(window, cx)),
-                            ),
+            body = body.head(section_band("project-layout", "Terminal layout", Some(names.len()), ui)).child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .h(px(style::TITLE_ROW_H))
+                    .pl(px(style::CARD_INSET + style::INDENT))
+                    .pr(px(style::CARD_INSET))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .truncate()
+                            .text_caption()
+                            .text_color(ui.muted)
+                            .child(names.join(" · ")),
+                    )
+                    .child(
+                        Button::new("open-layout").primary().xsmall().label("Open terminals").on_click(
+                            cx.listener(|this, _, window, cx| this.open_project_layout(window, cx)),
                         ),
-                );
+                    ),
+            );
         }
 
         body.into_any_element()
@@ -368,8 +369,7 @@ impl Workspace {
                 .items_center()
                 .gap_2()
                 .h(px(style::ROW_H))
-                .pl(px(style::PANEL_INSET))
-                .pr_2()
+                .px(px(style::CARD_INSET))
                 .child(style::lead(style::icon(IconName::ShieldCheck).text_color(ui.success_text)))
                 .child(div().flex_1().min_w_0().truncate().text_caption().text_color(ui.muted).child(line))
                 .child(
@@ -446,9 +446,9 @@ impl Workspace {
     }
 }
 
-/// A section of the Project tab: the same band as Notes and Changes, open, with its count.
+/// A section of the Project tab: the same card head as Notes and Changes, open, with its count.
 fn section_band(id: &'static str, title: &'static str, count: Option<usize>, ui: UiColors) -> AnyElement {
-    style::band(
+    style::section_card(
         id,
         ui,
         style::BandParts {
@@ -464,6 +464,7 @@ fn section_band(id: &'static str, title: &'static str, count: Option<usize>, ui:
             sticky: false,
             joined: false,
         },
+        Vec::new(),
     )
     .when_some(count, |d, n| d.aria_label(spoken::section_band(title, n, spoken::Counted::Items)))
     .into_any_element()
@@ -471,7 +472,7 @@ fn section_band(id: &'static str, title: &'static str, count: Option<usize>, ui:
 
 /// A line about something the project couldn't load, in the danger color.
 fn problem_line(ui: UiColors, text: impl Into<SharedString>) -> Div {
-    div().px_4().py_1().text_caption().text_color(ui.danger_text).child(text.into())
+    div().px(px(style::CARD_INSET)).py_1().text_caption().text_color(ui.danger_text).child(text.into())
 }
 
 /// One line of what a project wants to run, as the trust notice and its window draw it: what

@@ -69,7 +69,6 @@ impl Workspace {
         let ui = ui(cx);
         let Some(Wording { headline, hint, detail, copy }) = wording(tab, error) else {
             return style::empty_note(ui, "This terminal's folder isn't inside a git repository.")
-                .px_4()
                 .into_any_element();
         };
         let code_font = crate::fonts::code_font(cx).0;
@@ -78,11 +77,11 @@ impl Workspace {
             .flex()
             .flex_col()
             .gap_2()
-            .child(style::empty_note(ui, headline).px_4())
-            .children(hint.map(|hint| div().px_4().text_caption().text_color(ui.muted).child(hint)))
+            .child(style::empty_note(ui, headline))
+            .children(hint.map(|hint| div().px_3().text_caption().text_color(ui.muted).child(hint)))
             .child(
                 div()
-                    .mx_4()
+                    .mx_3()
                     .p_2()
                     .rounded(ui.radius)
                     // A well a step darker than the panel (lighter in a light theme), like a field.
@@ -97,7 +96,8 @@ impl Workspace {
                 div()
                     .flex()
                     .gap_2()
-                    .px_4()
+                    .px_3()
+                    .pb_2()
                     .child(
                         button("git-retry", "Retry")
                             .on_click(cx.listener(move |this, _, _, cx| this.retry_git(tab, cx))),

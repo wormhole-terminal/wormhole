@@ -171,7 +171,7 @@ fn fit(
     let body = |text: &str| measure(text, BODY_REMS, name_weight);
     let caption = |text: &str| measure(text, CAPTION_REMS, FontWeight::NORMAL);
 
-    let content = width - 2.0 * style::PANEL_INSET - depth as f32 * style::INDENT;
+    let content = width - 2.0 * style::PANEL_ROW_X - depth as f32 * style::INDENT;
     let name = elide::fit(name, content * style::FILE_NAME_MAX, body, elide::middle);
     if folder.is_empty() {
         return Fitted { name: name.into_owned().into(), folder: SharedString::default() };

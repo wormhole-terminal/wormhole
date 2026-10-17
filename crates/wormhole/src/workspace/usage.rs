@@ -21,27 +21,31 @@ impl Workspace {
         let ui = ui(cx);
         let reports = &app(cx).usage;
         if reports.is_empty() {
-            return div()
-                .flex()
-                .flex_col()
-                .gap_3()
-                .px_4()
-                .py_2()
-                .text_body()
-                .text_color(ui.muted)
-                .child("Claude's plan usage limits show here after its next reply in a Wormhole terminal.")
-                .child(
-                    "They need a Pro or Max plan, Claude Code 2.1.80 or later, and the Claude \
-                     integration from Settings → Coding agents.",
-                )
-                .into_any_element();
+            return style::panel_card(
+                ui,
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_3()
+                    .px(px(style::CARD_INSET))
+                    .py_2()
+                    .text_body()
+                    .text_color(ui.muted)
+                    .child(
+                        "Claude's plan usage limits show here after its next reply in a Wormhole terminal.",
+                    )
+                    .child(
+                        "They need a Pro or Max plan, Claude Code 2.1.80 or later, and the Claude \
+                         integration from Settings → Coding agents.",
+                    ),
+            )
+            .into_any_element();
         }
         let now = unix_now();
         div()
             .flex()
             .flex_col()
-            .pb_4()
-            .children(reports.iter().map(|report| agent_block(report, now, ui)))
+            .children(reports.iter().map(|report| style::panel_card(ui, agent_block(report, now, ui))))
             .into_any_element()
     }
 }
@@ -53,9 +57,8 @@ fn agent_block(report: &Usage, now: i64, ui: UiColors) -> AnyElement {
         .flex()
         .items_center()
         .gap_2()
-        .h(px(style::TITLE_ROW_H))
-        .pl(px(style::PANEL_INSET))
-        .pr(px(style::PANEL_INSET))
+        .h(px(style::BAND_H))
+        .px(px(style::CARD_INSET))
         .child(style::lead(style::agent_logo(agent.icon(), agent.monogram, style::GLYPH, ui.muted)))
         .child(
             div()
@@ -78,7 +81,7 @@ fn agent_block(report: &Usage, now: i64, ui: UiColors) -> AnyElement {
         .flex()
         .flex_col()
         .child(header)
-        .child(div().px(px(style::PANEL_INSET)).pb_1().child(style::section_label(ui, "Plan usage limits")))
+        .child(div().px(px(style::CARD_INSET)).pb_1().child(style::section_label(ui, "Plan usage limits")))
         .children(Limit::ALL.into_iter().map(|limit| limit_row(report, limit, now, ui)))
         .into_any_element()
 }
@@ -96,7 +99,7 @@ fn limit_row(report: &Usage, limit: Limit, now: i64, ui: UiColors) -> AnyElement
         .flex()
         .flex_col()
         .gap_2()
-        .px(px(style::PANEL_INSET))
+        .px(px(style::CARD_INSET))
         .py_2()
         .child(
             div()

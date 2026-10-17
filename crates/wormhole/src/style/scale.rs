@@ -84,6 +84,12 @@ pub const ITEM_LEAD_W: f32 = 16.0;
 pub const INDENT: f32 = 24.0;
 /// The room between the right panel's tab bar and what each tab shows.
 pub const PANEL_LIST_TOP: f32 = 4.0;
+/// The right panel has no title row: its first card starts this far under the window's top, so
+/// the first tab in the strip beside it (16 under the top) is level with the card's head.
+pub const PANEL_TOP: f32 = 6.0;
+/// How far in from the panel's edge a row inside a card has its content: the card's margin, its
+/// hairline and padding, and the row's own inset.
+pub const PANEL_ROW_X: f32 = CARD_MARGIN + 1.0 + CARD_PAD + 8.0;
 /// The right padding of a header row that ends in an icon button (a tab's header in the
 /// panel): the button's 16 pt glyph ends on the 16 pt inset, so the row stops 10 in.
 pub const HEADER_PAD_END: f32 = PANEL_INSET - (HIT_MIN - TITLE_GLYPH) / 2.0;

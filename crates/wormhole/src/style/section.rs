@@ -7,10 +7,11 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use super::bands::CARD_INSET;
 use super::buttons::{icon_button, row_actions};
 use super::reorder::{self, Reorder};
 use super::rows::lead;
-use super::scale::{DRAG_LIFT_OPACITY, ITEM_LEAD_W, PANEL_INSET, ROW_H, TextRole};
+use super::scale::{CARD_ROW_RADIUS, DRAG_LIFT_OPACITY, ITEM_LEAD_W, ROW_H, TextRole};
 use crate::settings::UiColors;
 
 /// A click handler that can be stored in a component's optional slot.
@@ -52,10 +53,10 @@ const ITEM_LINE_H: f32 = 24.0;
 const ITEM_GROUP: &str = "section-item";
 /// Where a flush item's body starts so its text lines up with the main line at x 40: the
 /// inset, the lead column and its gap, less the editor's own inset.
-const FLUSH_BODY_INDENT: f32 = PANEL_INSET + ITEM_LEAD_W + 8.0 - EDITOR_INSET;
-/// The drag grip of a flush item, in its left inset while the item is hovered.
+const FLUSH_BODY_INDENT: f32 = CARD_INSET + ITEM_LEAD_W + 8.0 - EDITOR_INSET;
+/// The drag grip of a flush item, in the card's padding left of it while the item is hovered.
 const GRIP_W: f32 = 12.0;
-const GRIP_INSET: f32 = 2.0;
+const GRIP_INSET: f32 = -4.0;
 
 /// What one item of a panel section is made of. Every kind of item (tasks, notes) is
 /// the same row: only what goes in the slots differs.
@@ -75,11 +76,10 @@ pub struct ItemParts {
     pub reorder: Option<Reorder>,
 }
 
-/// One task or note of a right-panel section: a square row
-/// that runs edge to edge, [`ROW_H`] tall, with the lead (a checkbox, a chevron) in the
-/// lead column at x 16 and the main line at x 40. The actions show at the right while the
+/// One task or note of a right-panel card: a row that runs the card's width, [`ROW_H`] tall,
+/// with the lead (a checkbox, a chevron) in the lead column, inset [`CARD_INSET`], and the main line after it. The actions show at the right while the
 /// item is hovered (the main line then truncates before them), and a draggable item shows
-/// its grip in the left inset. It sits under a `style::band`.
+/// its grip in the card's padding. It sits under a `style::section_card`.
 #[track_caller]
 pub fn item_row(id: impl Into<ElementId>, ui: UiColors, parts: ItemParts) -> Div {
     let id = id.into();
@@ -91,7 +91,7 @@ pub fn item_row(id: impl Into<ElementId>, ui: UiColors, parts: ItemParts) -> Div
         .flex()
         .items_center()
         .gap_2()
-        .px_4()
+        .px(px(CARD_INSET))
         .min_h(px(ROW_H))
         .text_body()
         .child(lead(parts.lead))
@@ -124,6 +124,7 @@ pub fn item_row(id: impl Into<ElementId>, ui: UiColors, parts: ItemParts) -> Div
         .flex()
         .flex_col()
         .w_full()
+        .rounded(px(CARD_ROW_RADIUS))
         .hover(|d| d.bg(ui.hover))
         .when(active, |d| d.bg(ui.hover))
         .when(dragged, |d| d.opacity(DRAG_LIFT_OPACITY))
@@ -145,7 +146,9 @@ pub fn item_row(id: impl Into<ElementId>, ui: UiColors, parts: ItemParts) -> Div
             )
         })
         .child(line)
-        .children(parts.body.map(|body| div().pl(px(FLUSH_BODY_INDENT)).pr_4().pb_2().child(body)))
+        .children(
+            parts.body.map(|body| div().pl(px(FLUSH_BODY_INDENT)).pr(px(CARD_INSET)).pb_2().child(body)),
+        )
         .children(drop)
 }
 
