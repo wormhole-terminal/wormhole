@@ -12,11 +12,24 @@ use wormhole_core::project::{Feature, FeatureStanding};
 
 /// The panel's slices are drawn 300 wide (narrower in a narrow gallery column).
 const COLUMN_W: f32 = 300.0;
+/// How tall the strip's specimen is.
+const STRIP_H: f32 = 160.0;
+
+/// A slice of the panel: its rows are the lines of one card on the panel's surface.
+fn card_column(ui: UiColors, lines: Div) -> Div {
+    div()
+        .w_full()
+        .max_w(px(COLUMN_W))
+        .pt(px(style::PANEL_TOP))
+        .bg(ui.panel_right)
+        .outlined(ui, ui.border)
+        .child(style::panel_card(ui, lines.flex().flex_col()))
+}
 
 pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
     let ui = env.ui;
     let section = |id: &'static str, title: &'static str, section, count: Option<&'static str>| {
-        style::band(
+        style::section_card(
             id,
             ui,
             BandParts {
@@ -32,6 +45,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
                 sticky: false,
                 joined: false,
             },
+            Vec::new(),
         )
     };
     let actions = |id: &'static str| {
@@ -97,10 +111,6 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     let notes = div()
         .flex()
         .flex_col()
-        .w_full()
-        .max_w(px(COLUMN_W))
-        .bg(ui.panel_right)
-        .outlined(ui, ui.border)
         .child(env.mark("panel.band", section("g-sec-steps", "Next steps", Section::Open, Some("2"))))
         .child(env.mark("panel.item", task("g-flush-task", "Update README with setup steps", false, Some(0))))
         .child(task("g-flush-done", "Fix the flaky login test", true, Some(1)))
@@ -137,10 +147,6 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     let changes = div()
         .flex()
         .flex_col()
-        .w_full()
-        .max_w(px(COLUMN_W))
-        .bg(ui.panel_right)
-        .outlined(ui, ui.border)
         .child(section("g-sec-changes", "Changes", Section::Open, Some("6")))
         .child(file(
             "g-file-m",
@@ -230,10 +236,6 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     let history = div()
         .flex()
         .flex_col()
-        .w_full()
-        .max_w(px(COLUMN_W))
-        .bg(ui.panel_right)
-        .outlined(ui, ui.border)
         .child(env.mark(
             "commit.row",
             commit("g-commit-open", "feat(ui): unify design system across panels", "adcd556", "30m", true),
@@ -270,10 +272,6 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     let project = div()
         .flex()
         .flex_col()
-        .w_full()
-        .max_w(px(COLUMN_W))
-        .bg(ui.panel_right)
-        .outlined(ui, ui.border)
         // The trust callout: full width, the commands in the code font, one primary button.
         .child(
             env.mark(
@@ -353,11 +351,38 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
         ))
         .child(div().pl_4().child(style::line_counts(ui, Some(17), Some(10))));
 
+    // The panel's tabs in their strip down the window's edge, the open one in the accent and an
+    // amber dot where something is new.
+    let strip = style::panel_strip(ui)
+        .h(px(STRIP_H))
+        .child(style::strip_tab("g-strip-changes", ui, IconName::GitCompare, "Changes", false, true))
+        .child(env.mark(
+            "strip.tab",
+            style::strip_tab("g-strip-history", ui, IconName::GitCommitHorizontal, "History", true, false),
+        ))
+        .child(style::strip_tab("g-strip-notes", ui, IconName::FileText, "Notes", false, false))
+        .child(div().flex_1())
+        .child(style::strip_tab("g-strip-inbox", ui, IconName::Inbox, "Stash prompt", false, false));
+    // A note where a list would be, in a card of its own.
+    let note_card = style::panel_card(ui, style::empty_note(ui, "No changes. Working tree is clean."));
+
     div()
         .flex()
         .flex_col()
         .gap_3()
         .child(tabs)
-        .child(div().flex().flex_wrap().gap_4().child(notes).child(changes).child(history).child(project))
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .gap_4()
+                .items_start()
+                .child(card_column(ui, notes))
+                .child(card_column(ui, changes))
+                .child(card_column(ui, history))
+                .child(card_column(ui, project))
+                .child(div().w_full().max_w(px(COLUMN_W)).bg(ui.panel_right).child(note_card))
+                .child(div().flex().bg(ui.panel_right).outlined(ui, ui.border).child(strip)),
+        )
         .into_any_element()
 }

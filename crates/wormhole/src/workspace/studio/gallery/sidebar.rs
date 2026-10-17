@@ -494,15 +494,27 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 .child(div().ml_1().child("±3")),
         )
         .child(style::status_separator(ui))
+        // The terminal that has waited longest, as a button with its tile; the rest as numbers.
+        .child(
+            style::status_attention("g-status-attention", ui, false)
+                .child(style::status_tile(
+                    "g-status-attention-tile",
+                    ui,
+                    style::StatusTile {
+                        face: style::TileFace::Terminal,
+                        glyph: StatusGlyph::NeedsYou,
+                        selected: false,
+                        mini: true,
+                    },
+                    cx,
+                ))
+                .child("Fix pile fan-out")
+                .child(div().text_color(ui.attention_text).child("needs you · 2m")),
+        )
         .child(
             style::status_item("g-status-working", ui, false, true)
                 .child(glyph("g-status-spin", StatusGlyph::Working))
-                .child("Claude working · 4m"),
-        )
-        .child(
-            style::status_item("g-status-needs", ui, true, false)
-                .child(style::icon(IconName::CircleAlert))
-                .child("1 needs you"),
+                .child("2 working"),
         )
         .child(
             style::status_item("g-status-done", ui, false, false)

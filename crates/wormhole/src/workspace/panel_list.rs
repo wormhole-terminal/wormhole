@@ -29,6 +29,9 @@ pub enum CardPart {
     Outside,
 }
 
+/// What draws a list's rows as cards: the surface's colours and where each row stands.
+type Carded<T> = (UiColors, fn(&T) -> CardPart);
+
 /// How a row sits in its card, given the part of the row after it: `None` for a row outside any
 /// card, else whether it is the card's top (a head) and whether it is also its bottom (nothing
 /// of the card follows).
@@ -108,7 +111,7 @@ impl<T: PartialEq> Rows<T> {
     fn build(
         &self,
         cursor: Option<(usize, Option<UiColors>)>,
-        carded: Option<(UiColors, fn(&T) -> CardPart)>,
+        carded: Option<Carded<T>>,
         render: impl Fn(&T, &mut Window, &mut App) -> AnyElement + 'static,
     ) -> List
     where

@@ -192,6 +192,27 @@ pub fn status_working(summary: &Summary, entries: &[Entry], now: Instant) -> Opt
     }
 }
 
+/// The attention button, which is the terminal that has waited longest: "Fix pile fan-out needs
+/// you, waiting 2 minutes".
+pub fn status_attention(summary: &Summary, entries: &[Entry], now: Instant) -> Option<String> {
+    let entry = &entries[summary.attention()?];
+    let waited = spoken_elapsed(now.saturating_duration_since(entry.since));
+    Some(format!("{} needs you, waiting {waited}", entry.name))
+}
+
+/// One of the numbers after the button: "2 terminals working", "1 terminal finished".
+pub fn status_counted(counted: &crate::layout::status_bar::Counted) -> String {
+    use crate::layout::status_bar::Activity;
+    let n = counted.count;
+    match counted.activity {
+        Activity::Working => format!("{} working", count(n, "terminal", "terminals")),
+        Activity::NeedsYou => terminals_need_you(n),
+        Activity::Done => terminals_finished(n),
+        Activity::Failed => terminals_failed(n),
+        Activity::Quiet => count(n, "terminal", "terminals"),
+    }
+}
+
 /// The needs-you item: "1 terminal needs you", "2 terminals need you".
 pub fn status_needs_you(summary: &Summary) -> Option<String> {
     let n = summary.needs_you.len();
@@ -254,10 +275,10 @@ mod tests {
 
     use super::{
         Counted, PanelTab, command_block, panel_tab, section_band, spoken_elapsed, spoken_took,
-        status_branch, status_context, status_done, status_failed, status_needs_you, status_size,
-        status_working,
+        status_attention, status_branch, status_context, status_counted, status_done, status_failed,
+        status_needs_you, status_size, status_working,
     };
-    use crate::layout::status_bar::{Activity, Detail, Entry, Summary};
+    use crate::layout::status_bar::{Activity, Entry, Summary};
     use crate::terminal::BlockState;
 
     #[test]
@@ -359,9 +380,14 @@ mod tests {
         assert_eq!(status_working(&summary, &entries, now).as_deref(), Some("Claude working, 4 minutes"));
         assert_eq!(status_needs_you(&summary).as_deref(), Some("1 terminal needs you"));
         assert_eq!(status_done(&summary).as_deref(), Some("1 terminal finished"));
-        // A narrow window shows only "4m" and "1"; speech keeps every word.
-        assert_eq!(summary.working(&entries, Detail::Lean, now).as_deref(), Some("4m"));
-        assert_eq!(summary.done(Detail::Lean).as_deref(), Some("1"));
+        // The button names who waits and for how long; the numbers after it keep every word too,
+        // whatever the window shows.
+        assert_eq!(
+            status_attention(&summary, &entries, now).as_deref(),
+            Some("diff perf needs you, waiting less than a minute")
+        );
+        let rest: Vec<String> = summary.rest().iter().map(status_counted).collect();
+        assert_eq!(rest, ["1 terminal working", "1 terminal finished"]);
     }
 
     #[test]

@@ -21,9 +21,8 @@ pub const NOTE_OPEN_MAX_LINES: usize = 12;
 pub const DIFF_SPLIT_MIN: f32 = 560.0;
 
 /// Window widths (logical px) where the status bar, when shown, sheds detail: below the
-/// first its items drop their words (needs you keeps them), below the second the
-/// terminal size goes.
-pub const STATUS_BAR_WORDS_MIN: f32 = 900.0;
+/// first its items drop their words, below the second the terminal size goes.
+pub const STATUS_BAR_WORDS_MIN: f32 = 1100.0;
 pub const STATUS_BAR_SIZE_MIN: f32 = 720.0;
 
 /// Whether a diff body this wide has room for old and new side by side. Narrower, the

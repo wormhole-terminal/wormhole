@@ -20,8 +20,8 @@ pub const CONTEXT_METER_W_NARROW: f32 = 32.0;
 pub enum Detail {
     /// Below [`STATUS_BAR_SIZE_MIN`]: numbers, and no terminal size.
     Lean,
-    /// Below [`STATUS_BAR_WORDS_MIN`]: the items drop their words and keep their numbers
-    /// ("4m · 1 needs you · 1"); only "needs you" keeps its words.
+    /// Below [`STATUS_BAR_WORDS_MIN`]: the items drop their words and keep their numbers: the
+    /// button says how long it has waited ("2m"), the rest are a glyph and a count.
     Numbers,
     Words,
 }
@@ -86,6 +86,35 @@ pub struct Entry<'a> {
     pub name: &'a str,
 }
 
+/// One count after the attention button: how many terminals are doing `activity`, and the first
+/// of them (an index into the entries), which a click goes to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Counted {
+    pub activity: Activity,
+    pub count: usize,
+    pub terminal: usize,
+}
+
+impl Counted {
+    /// "2 working", "1 done", "3 failed", "2 need you": all of them in words.
+    pub fn words(&self) -> String {
+        let n = self.count;
+        match self.activity {
+            Activity::Working => format!("{n} working"),
+            Activity::NeedsYou if n == 1 => "1 needs you".to_string(),
+            Activity::NeedsYou => format!("{n} need you"),
+            Activity::Done => format!("{n} done"),
+            Activity::Failed => format!("{n} failed"),
+            Activity::Quiet => n.to_string(),
+        }
+    }
+}
+
+/// The counts as one muted line: "2 working · 1 done".
+pub fn rest_line(rest: &[Counted]) -> String {
+    rest.iter().map(Counted::words).collect::<Vec<_>>().join(" · ")
+}
+
 /// The terminals each agent item counts, as indices into the entries: working, done and failed in
 /// the order given (each item opens the first), needing you the longest waiting first (that item
 /// opens the one that has waited longest).
@@ -114,32 +143,35 @@ impl Summary {
         summary
     }
 
-    /// The working item: one terminal says who works and for how long ("Claude Code working ·
-    /// 4m", only "4m" when narrow); several say how many ("2 working", "2").
-    pub fn working(&self, entries: &[Entry], detail: Detail, now: Instant) -> Option<String> {
-        match self.working.as_slice() {
-            [] => None,
-            [one] => {
-                let entry = &entries[*one];
-                let time = elapsed(now.saturating_duration_since(entry.since));
-                Some(match (detail.words(), entry.agent) {
-                    (false, _) => time,
-                    (true, Some(agent)) => format!("{agent} working · {time}"),
-                    (true, None) => format!("1 working · {time}"),
-                })
-            }
-            many if detail.words() => Some(format!("{} working", many.len())),
-            many => Some(many.len().to_string()),
-        }
+    /// The terminal the bar's button is for: the one that has waited longest for you (an index
+    /// into the entries). `None` while nothing needs you.
+    pub fn attention(&self) -> Option<usize> {
+        self.needs_you.first().copied()
     }
 
-    /// The needs-you item, the bar's one loud item: it always keeps its words.
-    pub fn needs_you(&self) -> Option<String> {
-        match self.needs_you.len() {
-            0 => None,
-            1 => Some("1 needs you".into()),
-            n => Some(format!("{n} need you")),
-        }
+    /// What the attention button says after the terminal's name: "needs you · 2m", and only
+    /// "2m" once the words have gone.
+    pub fn attention_words(&self, entries: &[Entry], detail: Detail, now: Instant) -> Option<String> {
+        let entry = &entries[self.attention()?];
+        let waited = elapsed(now.saturating_duration_since(entry.since));
+        Some(if detail.words() { format!("needs you · {waited}") } else { waited })
+    }
+
+    /// The rest, as the bar counts them after the button: any others that need you, then what
+    /// works, what is done and what failed, each with how many and the terminal a click goes to.
+    pub fn rest(&self) -> Vec<Counted> {
+        let others = self.needs_you.get(1..).unwrap_or_default();
+        [
+            (Activity::NeedsYou, others),
+            (Activity::Working, &self.working[..]),
+            (Activity::Done, &self.done[..]),
+            (Activity::Failed, &self.failed[..]),
+        ]
+        .into_iter()
+        .filter_map(|(activity, group)| {
+            group.first().map(|&terminal| Counted { activity, count: group.len(), terminal })
+        })
+        .collect()
     }
 
     /// Who needs you, longest waiting first, and what a click does ("diff perf, then prod · go
@@ -158,24 +190,6 @@ impl Summary {
         }
         text.push_str(if rest.is_empty() { " · go there" } else { " · go to the first" });
         Some(text)
-    }
-
-    /// The done item: "1 done", only "1" when narrow.
-    pub fn done(&self, detail: Detail) -> Option<String> {
-        match self.done.len() {
-            0 => None,
-            n if detail.words() => Some(format!("{n} done")),
-            n => Some(n.to_string()),
-        }
-    }
-
-    /// The failed item: "1 failed", only "1" when narrow.
-    pub fn failed(&self, detail: Detail) -> Option<String> {
-        match self.failed.len() {
-            0 => None,
-            n if detail.words() => Some(format!("{n} failed")),
-            n => Some(n.to_string()),
-        }
     }
 }
 
@@ -205,16 +219,17 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::{
-        Activity, CONTEXT_METER_W, CONTEXT_METER_W_NARROW, Detail, Entry, STATUS_BAR_H, Summary,
-        context_tooltip, elapsed, pane_height, size,
+        Activity, CONTEXT_METER_W, CONTEXT_METER_W_NARROW, Counted, Detail, Entry, STATUS_BAR_H, Summary,
+        context_tooltip, elapsed, pane_height, rest_line, size,
     };
 
     #[test]
     fn the_bar_sheds_detail_as_the_window_narrows() {
-        // Below 900 the words drop, below 720 the size goes too.
+        // Below 1100 the words drop, below 720 the size goes too.
         assert_eq!(Detail::at(1440.0), Detail::Words);
-        assert_eq!(Detail::at(900.0), Detail::Words);
-        assert_eq!(Detail::at(899.0), Detail::Numbers);
+        assert_eq!(Detail::at(1100.0), Detail::Words);
+        assert_eq!(Detail::at(1099.0), Detail::Numbers);
+        assert_eq!(Detail::at(900.0), Detail::Numbers);
         assert_eq!(Detail::at(720.0), Detail::Numbers);
         assert_eq!(Detail::at(719.0), Detail::Lean);
         assert_eq!(Detail::at(670.0), Detail::Lean);
@@ -249,36 +264,57 @@ mod tests {
     }
 
     #[test]
-    fn the_agent_items_say_what_the_agent_is_doing() {
+    fn the_longest_waiting_terminal_is_the_button() {
         let now = Instant::now();
         let ago = |secs| now - Duration::from_secs(secs);
         let entries = [
-            entry(Activity::Working, ago(4 * 60 + 10), Some("Claude"), "sidebar polish"),
-            entry(Activity::NeedsYou, ago(30), Some("Claude"), "diff perf"),
+            entry(Activity::NeedsYou, ago(60), None, "prod"),
+            entry(Activity::Working, ago(10), None, "build"),
+            entry(Activity::NeedsYou, ago(2 * 60 + 5), Some("Claude"), "diff perf"),
             entry(Activity::Quiet, ago(5), None, "zsh"),
-            entry(Activity::Done, ago(12 * 60), Some("Codex"), "auth tokens"),
         ];
         let summary = Summary::of(&entries);
-        assert_eq!(summary.working(&entries, Detail::Words, now).as_deref(), Some("Claude working · 4m"));
-        assert_eq!(summary.needs_you().as_deref(), Some("1 needs you"));
-        assert_eq!(summary.done(Detail::Words).as_deref(), Some("1 done"));
-        // Below 900: "4m · 1 needs you · 1".
-        assert_eq!(summary.working(&entries, Detail::Numbers, now).as_deref(), Some("4m"));
-        assert_eq!(summary.done(Detail::Numbers).as_deref(), Some("1"));
-        assert_eq!(summary.needs_you_tooltip(&entries).as_deref(), Some("diff perf · go there"));
+        assert_eq!(summary.attention(), Some(2), "waiting 2m, not the one waiting 1m");
+        assert_eq!(summary.attention_words(&entries, Detail::Words, now).as_deref(), Some("needs you · 2m"));
+        // Under ~1100 the words go first: only how long it has waited stays.
+        assert_eq!(summary.attention_words(&entries, Detail::Numbers, now).as_deref(), Some("2m"));
+        assert_eq!(summary.attention_words(&entries, Detail::Lean, now).as_deref(), Some("2m"));
+        // The other one that needs you is counted with the rest, a click goes to it.
+        assert_eq!(
+            summary.rest(),
+            [
+                Counted { activity: Activity::NeedsYou, count: 1, terminal: 0 },
+                Counted { activity: Activity::Working, count: 1, terminal: 1 },
+            ]
+        );
     }
 
     #[test]
-    fn several_working_say_how_many() {
+    fn the_same_wait_keeps_the_order_of_the_terminals() {
         let now = Instant::now();
-        let entries =
-            [entry(Activity::Working, now, Some("Claude"), "a"), entry(Activity::Working, now, None, "b")];
+        let entries = [entry(Activity::NeedsYou, now, None, "a"), entry(Activity::NeedsYou, now, None, "b")];
+        assert_eq!(Summary::of(&entries).attention(), Some(0));
+    }
+
+    #[test]
+    fn the_rest_is_numbers_in_a_line() {
+        let now = Instant::now();
+        let entries = [
+            entry(Activity::Working, now, Some("Claude"), "sidebar polish"),
+            entry(Activity::Working, now, None, "cargo test"),
+            entry(Activity::NeedsYou, now, Some("Claude"), "diff perf"),
+            entry(Activity::Done, now, Some("Codex"), "auth tokens"),
+            entry(Activity::Failed, now, None, "build"),
+            entry(Activity::Failed, now, Some("brew"), "upgrade"),
+        ];
         let summary = Summary::of(&entries);
-        assert_eq!(summary.working(&entries, Detail::Words, now).as_deref(), Some("2 working"));
-        assert_eq!(summary.working(&entries, Detail::Lean, now).as_deref(), Some("2"));
-        // A command without an agent says it is one.
-        let one = [entry(Activity::Working, now - Duration::from_secs(9), None, "cargo test")];
-        assert_eq!(Summary::of(&one).working(&one, Detail::Words, now).as_deref(), Some("1 working · <1m"));
+        assert_eq!(summary.attention(), Some(2));
+        let rest = summary.rest();
+        // The terminal in the button isn't counted again.
+        assert_eq!(rest_line(&rest), "2 working · 1 done · 2 failed");
+        assert_eq!(rest.iter().map(|c| c.terminal).collect::<Vec<_>>(), [0, 3, 4], "each goes to its first");
+        assert_eq!(Counted { activity: Activity::NeedsYou, count: 1, terminal: 0 }.words(), "1 needs you");
+        assert_eq!(Counted { activity: Activity::NeedsYou, count: 3, terminal: 0 }.words(), "3 need you");
     }
 
     #[test]
@@ -287,15 +323,15 @@ mod tests {
         let entries = [entry(Activity::Quiet, now, None, "zsh")];
         let summary = Summary::of(&entries);
         assert_eq!(summary, Summary::default());
-        assert_eq!(summary.working(&entries, Detail::Words, now), None);
-        assert_eq!(summary.needs_you(), None);
-        assert_eq!(summary.done(Detail::Words), None);
-        assert_eq!(summary.failed(Detail::Words), None);
+        assert_eq!(summary.attention(), None);
+        assert_eq!(summary.attention_words(&entries, Detail::Words, now), None);
+        assert!(summary.rest().is_empty());
+        assert_eq!(rest_line(&summary.rest()), "");
         assert_eq!(summary.needs_you_tooltip(&entries), None);
     }
 
     #[test]
-    fn a_failed_terminal_has_its_own_item() {
+    fn a_failed_terminal_is_counted_not_a_button() {
         let now = Instant::now();
         let entries = [
             entry(Activity::Failed, now, None, "build"),
@@ -304,14 +340,12 @@ mod tests {
         ];
         let summary = Summary::of(&entries);
         assert_eq!((summary.failed.as_slice(), summary.done.as_slice()), (&[0, 2][..], &[1][..]));
-        assert_eq!(summary.failed(Detail::Words).as_deref(), Some("2 failed"));
-        assert_eq!(summary.failed(Detail::Numbers).as_deref(), Some("2"));
-        assert_eq!(summary.done(Detail::Words).as_deref(), Some("1 done"), "not counted as done");
+        assert_eq!(summary.attention(), None);
+        assert_eq!(rest_line(&summary.rest()), "1 done · 2 failed");
     }
 
     #[test]
-    fn the_longest_waiting_comes_first() {
-        // "2 need you", the tooltip names them longest waiting first, a click goes there.
+    fn the_tooltip_names_who_waits_longest_first() {
         let now = Instant::now();
         let ago = |secs| now - Duration::from_secs(secs);
         let entries = [
@@ -321,11 +355,12 @@ mod tests {
         ];
         let summary = Summary::of(&entries);
         assert_eq!(summary.needs_you, [2, 0]);
-        assert_eq!(summary.needs_you().as_deref(), Some("2 need you"));
         assert_eq!(
             summary.needs_you_tooltip(&entries).as_deref(),
             Some("diff perf, then prod · go to the first")
         );
+        let one = [entry(Activity::NeedsYou, now, None, "prod")];
+        assert_eq!(Summary::of(&one).needs_you_tooltip(&one).as_deref(), Some("prod · go there"));
         let many: Vec<Entry> = ["a", "b", "c", "d", "e"]
             .into_iter()
             .enumerate()

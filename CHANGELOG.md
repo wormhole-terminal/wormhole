@@ -25,6 +25,22 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the selected one's tabs under them), stacks (the selected set's tabs, the others piled up beside
   them and fanning out under the pointer) or a bar along the bottom. The title row then shows the
   terminal's status as a small tile.
+- The right panel is drawn in cards like the sidebar's: Changes has a card per section, History's
+  commits are one card, Notes has its Next steps and Notes cards, and Usage and Project follow. The
+  panel has no title row any more; its first card starts under the top of the window.
+- The panel's tabs (Changes, History, Notes, Usage, Project) sit in a narrow strip down the window's
+  right edge that stays when the panel is closed: a click on a tab opens the panel on it, a click on
+  the open tab closes it, and an amber dot on Changes says its files changed since you last looked.
+  The button at the foot stashes the typed prompt into a note. The panel's button in the title row is
+  gone; its key and menu item still work.
+- The status bar puts the terminal that has waited longest for you first, as a button with its tile,
+  its name and how long it has waited (one click goes there), and counts the rest ("2 working · 1
+  done"). Below about 1100 points the words go first.
+
+### Changed
+
+- New windows open with a 320 point sidebar and a 300 point panel (plus its 28 point strip); saved
+  widths are kept.
 
 ## [1.1.0] - 2026-10-15
 

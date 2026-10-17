@@ -1,11 +1,13 @@
 //! The status bar along the bottom of the window. It is optional and hidden by default (`status_bar` in config.json, one switch
 //! for every window); then nothing of it is drawn and the panes reach the window's bottom.
 //!
-//! Shown, it has the branch and its changes (opens Changes), the agents of every window by what
-//! they do (working · needs you · done · failed; each opens the first such terminal, needs you the
-//! one that has waited longest), how full the selected terminal's agent context window is (what its
-//! status line last reported, as the title row's gauge) and the terminal's size. What it says, and how much fits the window's
-//! width, is core's (`wormhole_core::layout::status_bar`).
+//! Shown, it has the branch and its changes (opens Changes), the terminal of any window that has
+//! waited longest for you as a button (its tile, its name, how long: one click goes there), the
+//! other agents by what they do as numbers ("2 working · 1 done"; each opens the first such
+//! terminal), how full the selected terminal's agent context window is (what its status line last
+//! reported, as the title row's gauge) and the terminal's size. What it says, which terminal is
+//! the longest waiting and how much fits the window's width, is core's
+//! (`wormhole_core::layout::status_bar`).
 use std::time::Instant;
 
 use gpui_kit::component::tooltip::Tooltip;
@@ -15,7 +17,7 @@ use wormhole_core::spoken;
 
 use super::app::{app, open_tab};
 use super::*;
-use crate::style::StatusGlyph;
+use crate::style::{StatusGlyph, StatusTile, TileFace};
 
 /// One terminal (a sidebar row) as the bar counts it.
 #[derive(Clone)]
@@ -26,25 +28,51 @@ pub(super) struct Counted {
     /// The agent's short name, or the name of the program that reports its status.
     agent: Option<SharedString>,
     name: SharedString,
+    /// What its tile shows inside: the agent's logo, or the terminal symbol.
+    face: TileFace,
 }
 
 /// What the bar shows, worked out once per frame and compared on the tick, so a change in
-/// another window (or a minute more of work) redraws this one.
+/// another window (or a minute more of waiting) redraws this one.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(super) struct StatusBar {
     /// The selected terminal's branch and how many files changed; `None` outside a repository.
     branch: Option<(SharedString, usize)>,
-    /// Each agent item's words and the terminal a click goes to.
-    working: Option<(String, i64)>,
-    needs_you: Option<(String, String, i64)>,
-    done: Option<(String, i64)>,
-    failed: Option<(String, i64)>,
+    /// The terminal that has waited longest, as the bar's button.
+    attention: Option<Attention>,
+    /// The rest, as numbers, in the order core gives them.
+    rest: Vec<Rest>,
+    /// Whether the window is wide enough for the words ("2 working") rather than glyphs and numbers.
+    words: bool,
     /// The selected terminal's agent context, while the window is wide enough.
     context: Option<ContextItem>,
     /// The terminal's shell and grid, while the window is wide enough.
     size: Option<String>,
     /// What VoiceOver says for each item, whole whatever the width.
     spoken: Spoken,
+}
+
+/// The longest-waiting terminal's button.
+#[derive(Clone, Debug, PartialEq)]
+struct Attention {
+    tab: i64,
+    name: SharedString,
+    face: TileFace,
+    /// "needs you · 2m", or "2m" in a narrow window.
+    words: String,
+    /// Who else needs you, and what a click does.
+    tooltip: String,
+    spoken: String,
+}
+
+/// One count after the button, and the terminal a click on it goes to.
+#[derive(Clone, Debug, PartialEq)]
+struct Rest {
+    activity: Activity,
+    count: usize,
+    words: String,
+    tab: i64,
+    spoken: String,
 }
 
 /// The context meter as the bar draws it.
@@ -61,10 +89,6 @@ struct ContextItem {
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Spoken {
     branch: Option<String>,
-    working: Option<String>,
-    needs_you: Option<String>,
-    done: Option<String>,
-    failed: Option<String>,
     context: Option<String>,
     size: Option<String>,
 }
@@ -73,11 +97,17 @@ struct Spoken {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum StatusItem {
     Branch,
+    /// The longest-waiting terminal's button.
+    Attention(i64),
     Working(i64),
-    NeedsYou,
+    /// Another terminal that needs you.
+    NeedsYou(i64),
     Done(i64),
     Failed(i64),
 }
+
+/// The most the button gives its name before cutting it.
+const ATTENTION_NAME_MAX: f32 = 220.0;
 
 impl Workspace {
     /// This window's terminals.
@@ -101,6 +131,13 @@ impl Workspace {
                         .map(|id| SharedString::from(wormhole_core::agents::agent(id).short_name()))
                         .or_else(|| terminal.program_name().map(SharedString::from)),
                     name: session.name(cx),
+                    face: match terminal.agent.map(wormhole_core::agents::agent) {
+                        Some(agent) => match agent.icon() {
+                            Some(path) => TileFace::Logo(path),
+                            None => TileFace::Monogram(agent.monogram.into()),
+                        },
+                        None => TileFace::Terminal,
+                    },
                 }
             })
             .collect()
@@ -147,7 +184,6 @@ impl Workspace {
             .collect();
         let summary = Summary::of(&entries);
         let detail = Detail::at(self.window_width);
-        let tab = |ixs: &[usize]| ixs.first().map(|&ix| counted[ix].tab);
 
         let session = self.active_session();
         let terminal = session.terminal().read(cx);
@@ -169,29 +205,35 @@ impl Workspace {
                 }
             });
         let now = Instant::now();
+        let attention = summary.attention().map(|ix| {
+            let (entry, counted) = (&entries[ix], &counted[ix]);
+            Attention {
+                tab: counted.tab,
+                name: counted.name.clone(),
+                face: counted.face.clone(),
+                words: summary.attention_words(&entries, detail, now).unwrap_or_default(),
+                tooltip: summary.needs_you_tooltip(&entries).unwrap_or_default(),
+                spoken: spoken::status_attention(&summary, &entries, now)
+                    .unwrap_or_else(|| entry.name.to_string()),
+            }
+        });
+        let rest = summary
+            .rest()
+            .into_iter()
+            .map(|c| Rest {
+                activity: c.activity,
+                count: c.count,
+                words: c.words(),
+                tab: counted[c.terminal].tab,
+                spoken: spoken::status_counted(&c),
+            })
+            .collect();
         let spoken = Spoken {
             branch: branch.as_ref().map(|(name, changes)| spoken::status_branch(name, *changes)),
-            working: spoken::status_working(&summary, &entries, now),
-            needs_you: spoken::status_needs_you(&summary),
-            done: spoken::status_done(&summary),
-            failed: spoken::status_failed(&summary),
             context: context.as_ref().map(|item| spoken::status_context(item.percent)),
             size: size.as_ref().map(|_| spoken::status_size(&terminal.shell(), cols, rows)),
         };
-        Some(StatusBar {
-            spoken,
-            branch,
-            working: summary.working(&entries, detail, now).zip(tab(&summary.working)),
-            needs_you: summary
-                .needs_you()
-                .zip(summary.needs_you_tooltip(&entries))
-                .zip(tab(&summary.needs_you))
-                .map(|((words, tooltip), tab)| (words, tooltip, tab)),
-            done: summary.done(detail).zip(tab(&summary.done)),
-            failed: summary.failed(detail).zip(tab(&summary.failed)),
-            context,
-            size,
-        })
+        Some(StatusBar { spoken, branch, attention, rest, words: detail.words(), context, size })
     }
 
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
@@ -220,16 +262,18 @@ impl Workspace {
     /// The items the keys move along, left to right.
     pub(super) fn status_items(&self) -> Vec<StatusItem> {
         let Some(bar) = &self.status_bar_drawn else { return Vec::new() };
-        [
-            bar.branch.as_ref().map(|_| StatusItem::Branch),
-            bar.working.as_ref().map(|(_, tab)| StatusItem::Working(*tab)),
-            bar.needs_you.as_ref().map(|_| StatusItem::NeedsYou),
-            bar.done.as_ref().map(|(_, tab)| StatusItem::Done(*tab)),
-            bar.failed.as_ref().map(|(_, tab)| StatusItem::Failed(*tab)),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+        bar.branch
+            .as_ref()
+            .map(|_| StatusItem::Branch)
+            .into_iter()
+            .chain(bar.attention.as_ref().map(|a| StatusItem::Attention(a.tab)))
+            .chain(bar.rest.iter().map(|r| match r.activity {
+                Activity::NeedsYou => StatusItem::NeedsYou(r.tab),
+                Activity::Done => StatusItem::Done(r.tab),
+                Activity::Failed => StatusItem::Failed(r.tab),
+                Activity::Working | Activity::Quiet => StatusItem::Working(r.tab),
+            }))
+            .collect()
     }
 
     /// What a click on `item` does, from the keyboard.
@@ -241,10 +285,11 @@ impl Workspace {
     ) {
         match item {
             StatusItem::Branch => self.show_tab(RightTab::Changes, cx),
-            StatusItem::Working(tab) | StatusItem::Done(tab) | StatusItem::Failed(tab) => {
-                self.go_to_tab(tab, window, cx)
-            }
-            StatusItem::NeedsYou => cx.defer(super::ambient::jump_to_waiting),
+            StatusItem::Attention(tab)
+            | StatusItem::Working(tab)
+            | StatusItem::NeedsYou(tab)
+            | StatusItem::Done(tab)
+            | StatusItem::Failed(tab) => self.go_to_tab(tab, window, cx),
         }
     }
 
@@ -278,72 +323,88 @@ impl Workspace {
             .tooltip(|window, cx| Tooltip::new("Branch and changes").build(window, cx))
             .on_click(cx.listener(|this, _, _, cx| this.show_tab(RightTab::Changes, cx)))
         });
-        let agents =
-            bar.working.is_some() || bar.needs_you.is_some() || bar.done.is_some() || bar.failed.is_some();
-        let working = bar.working.clone().map(|(words, tab)| {
-            let item = StatusItem::Working(tab);
-            spoken(
-                style::status_item("status-working", ui, false, ring && keyed(item)),
-                &bar.spoken.working,
-                item,
-            )
-            .child(style::status_glyph(("status-working", tab as u64), ui, StatusGlyph::Working, cx))
-            .child(words)
-            .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
-        });
-        // ⌥⌘J in the bar: the longest waiting first, then the next one on every click.
         let jump = settings(cx).jump_waiting_key.parse::<wormhole_core::keyspec::KeySpec>().ok();
-        let needs_you = bar.needs_you.clone().map(|(words, tooltip, _)| {
+        // The longest waiting first: its tile, its name, how long it has waited. One click goes there.
+        let attention = bar.attention.clone().map(|a| {
+            let tab = a.tab;
+            let item = StatusItem::Attention(tab);
             let tooltip = SharedString::from(match &jump {
-                Some(key) => format!("{tooltip} ({})", key.glyphs()),
-                None => tooltip,
+                Some(key) => format!("{} ({})", a.tooltip, key.glyphs()),
+                None => a.tooltip.clone(),
             });
-            let item = StatusItem::NeedsYou;
             spoken(
-                style::status_item("status-needs-you", ui, true, ring && keyed(item)),
-                &bar.spoken.needs_you,
+                style::status_attention("status-attention", ui, ring && keyed(item)),
+                &Some(a.spoken.clone()),
                 item,
             )
-            .child(style::icon(IconName::CircleAlert))
-            .child(words)
+            .child(style::status_tile(
+                ("status-attention-tile", tab as u64),
+                ui,
+                StatusTile {
+                    face: a.face.clone(),
+                    glyph: StatusGlyph::NeedsYou,
+                    selected: false,
+                    mini: true,
+                },
+                cx,
+            ))
+            .child(div().min_w_0().max_w(px(ATTENTION_NAME_MAX)).truncate().child(a.name.clone()))
+            .child(div().flex_none().text_color(ui.attention_text).child(a.words.clone()))
             .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
-            .on_click(|_, _, cx| cx.defer(super::ambient::jump_to_waiting))
+            .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
         });
-        let done = bar.done.clone().map(|(words, tab)| {
-            let item = StatusItem::Done(tab);
-            spoken(style::status_item("status-done", ui, false, ring && keyed(item)), &bar.spoken.done, item)
-                .child(div().text_color(ui.agent_done).child(style::icon(IconName::CircleCheck)))
-                .child(words)
-                .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
-        });
-        let failed = bar.failed.clone().map(|(words, tab)| {
-            let item = StatusItem::Failed(tab);
-            spoken(
-                style::status_item("status-failed", ui, false, ring && keyed(item)),
-                &bar.spoken.failed,
+        // The rest as numbers: "2 working · 1 done" while there is room for the words, each a
+        // glyph and its count after that.
+        let rest = bar.rest.iter().enumerate().map(|(ix, r)| {
+            let tab = r.tab;
+            let item = match r.activity {
+                Activity::NeedsYou => StatusItem::NeedsYou(tab),
+                Activity::Done => StatusItem::Done(tab),
+                Activity::Failed => StatusItem::Failed(tab),
+                Activity::Working | Activity::Quiet => StatusItem::Working(tab),
+            };
+            let glyph = match r.activity {
+                Activity::NeedsYou => {
+                    div().text_color(ui.attention_text).child(style::icon(IconName::CircleAlert))
+                }
+                Activity::Done => div().text_color(ui.agent_done).child(style::icon(IconName::CircleCheck)),
+                Activity::Failed => div().text_color(ui.danger_text).child(style::icon(IconName::CircleX)),
+                Activity::Working | Activity::Quiet => div().child(style::status_glyph(
+                    ("status-working", tab as u64),
+                    ui,
+                    StatusGlyph::Working,
+                    cx,
+                )),
+            };
+            let button = spoken(
+                style::status_item(("status-rest", ix), ui, false, ring && keyed(item)),
+                &Some(r.spoken.clone()),
                 item,
             )
-            .child(div().text_color(ui.danger_text).child(style::icon(IconName::CircleX)))
-            .child(words)
-            .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)))
+            .when(!bar.words, |d| d.child(glyph))
+            .child(if bar.words { r.words.clone() } else { r.count.to_string() })
+            .on_click(cx.listener(move |this, _, window, cx| this.go_to_tab(tab, window, cx)));
+            // "2 working · 1 done": a dot between the words.
+            div()
+                .flex()
+                .items_center()
+                .when(ix > 0 && bar.words, |d| d.child(div().text_caption().text_color(ui.faint).child("·")))
+                .child(button)
         });
         let bar_element = style::status_bar(ui)
             .id("status-bar")
             // A toolbar, there only while the bar is shown.
             .role(Role::Toolbar)
             .aria_label("Status bar")
-            .children(branch.map(|branch| {
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .child(branch)
-                    .when(agents, |d| d.child(style::status_separator(ui)))
-            }))
-            .children(working)
-            .children(needs_you)
-            .children(done)
-            .children(failed)
+            .children(branch)
+            .children(
+                bar.branch
+                    .as_ref()
+                    .filter(|_| attention.is_some() || !bar.rest.is_empty())
+                    .map(|_| style::status_separator(ui)),
+            )
+            .children(attention)
+            .child(div().flex().items_center().children(rest))
             .child(div().flex_1())
             .children(bar.context.clone().map(|item| {
                 let tooltip = SharedString::from(rules::context_tooltip(item.percent));

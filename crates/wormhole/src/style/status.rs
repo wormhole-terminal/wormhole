@@ -206,6 +206,38 @@ pub fn status_item(id: impl Into<ElementId>, ui: UiColors, loud: bool, ring: boo
         }))
 }
 
+/// The status bar's button for the terminal that has waited longest for you: [`CONTROL_H_SM`]
+/// tall with the chip corners and the attention tint, a status tile (the 16 one) at its left,
+/// then the name and, in the attention text, how long it has waited. One click goes there.
+/// Add the tile and the words with `.child(…)`, and `.on_click(…)`.
+#[track_caller]
+pub fn status_attention(id: impl Into<ElementId>, ui: UiColors, ring: bool) -> Stateful<Div> {
+    div()
+        .id(id)
+        .relative()
+        .flex()
+        .flex_none()
+        .items_center()
+        .gap(px(ATTENTION_GAP))
+        .h(px(CONTROL_H_SM))
+        .pl_1()
+        .pr_2()
+        .rounded(ui.radius_chip)
+        .bg(ui.attention_tint)
+        .text_caption()
+        .text_color(ui.text)
+        .cursor_pointer()
+        .hover(|d| d.bg(ui.attention_ring.opacity(ATTENTION_HOVER)))
+        .when(ring, |d| {
+            d.child(super::controls::focus_ring(ui, super::controls::RingPlacement::Outside, ui.radius_chip))
+        })
+}
+
+/// The gap between the button's tile, the name and the words, and how strong its fill gets
+/// under the pointer.
+const ATTENTION_GAP: f32 = 6.0;
+const ATTENTION_HOVER: f32 = 0.3;
+
 /// How tall the hairline between groups of status bar items is.
 const STATUS_SEPARATOR_H: f32 = 12.0;
 
@@ -253,9 +285,23 @@ pub fn status_context(
 }
 
 /// The optional status bar along the bottom of a window: [`STATUS_BAR_H`]
-/// tall on the sidebar's surface with a hairline on top; its items start and end at the
-/// 16 pt inset (12 here, 4 inside each item).
+/// tall on the sidebar's surface with a hairline on top; its items are 14 apart and start and
+/// end 14 in (the gap and the bar's padding, and 4 inside each item).
 #[track_caller]
 pub fn status_bar(ui: UiColors) -> Div {
-    div().flex_none().flex().items_center().gap_1().h(px(STATUS_BAR_H)).px_3().bg(ui.panel).rule_top(ui)
+    div()
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap(px(STATUS_BAR_GAP))
+        .h(px(STATUS_BAR_H))
+        .px(px(STATUS_BAR_EDGE))
+        .bg(ui.panel)
+        .rule_top(ui)
 }
+
+/// The room between the bar's items: 14 from one's text to the next's, counting the 4 each has
+/// round it.
+const ITEM_PAD: f32 = 4.0;
+const STATUS_BAR_GAP: f32 = 14.0 - 2.0 * ITEM_PAD;
+const STATUS_BAR_EDGE: f32 = 14.0 - ITEM_PAD;
