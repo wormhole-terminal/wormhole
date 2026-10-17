@@ -4,44 +4,20 @@
 use super::*;
 use crate::workspace::folder_color;
 use style::{
-    GroupChip, PileFan, RowTone, SessionRow, StatusGlyph, StatusTile, TabPile, TerminalTab, TileFace,
+    GroupChip, PileFan, RowTone, SessionRow, StatusGlyph, StatusTile, TILE, TILE_DENSE_FOLD, TILE_MINI,
+    TILE_SMALL, TILE_TITLE, TabPile, TerminalTab, TileFace,
 };
-use wormhole_core::agents::{self, AgentId};
+use wormhole_core::agents::AgentId;
 use wormhole_core::folder_color::FolderColor;
 
 pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
     let ui = env.ui;
     let app: &App = cx;
-    let claude = || match agents::agent(AgentId::Claude).icon() {
-        Some(path) => TileFace::Logo(path),
-        None => TileFace::Monogram("C".into()),
-    };
+    let claude = || TileFace::Agent(AgentId::Claude);
     let tile = |id: &'static str, face: TileFace, glyph: StatusGlyph, selected: bool, mini: bool| {
         style::status_tile(id, ui, StatusTile { face, glyph, selected, mini }, app)
     };
-    let tiles = div()
-        .flex()
-        .flex_wrap()
-        .items_center()
-        .gap_3()
-        .px_4()
-        .py_2()
-        .child(tile("g-tile-working", claude(), StatusGlyph::Working, false, false))
-        .child(tile("g-tile-running", TileFace::Terminal, StatusGlyph::Running, false, false))
-        .child(tile("g-tile-needs", claude(), StatusGlyph::NeedsYou, false, false))
-        .child(tile("g-tile-done", claude(), StatusGlyph::Done, false, false))
-        .child(tile("g-tile-failed", TileFace::Terminal, StatusGlyph::Failed, false, false))
-        .child(tile("g-tile-bell", TileFace::Terminal, StatusGlyph::Bell, false, false))
-        .child(tile(
-            "g-tile-unread",
-            TileFace::Terminal,
-            StatusGlyph::Terminal { unread: true },
-            false,
-            false,
-        ))
-        .child(tile("g-tile-idle", TileFace::Monogram("Cx".into()), StatusGlyph::Idle, true, false))
-        .child(tile("g-tile-mini", claude(), StatusGlyph::Working, false, true))
-        .child(tile("g-tile-mini-needs", TileFace::Terminal, StatusGlyph::NeedsYou, false, true));
+    let tiles = tile_states(ui, app);
 
     let row =
         |id: &'static str, glyph: StatusGlyph, name: &'static str, detail: &'static str, tone, selected| {
@@ -154,11 +130,8 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .flex()
         .flex_col()
         .gap_2()
-        .child(caption(
-            ui,
-            "Status tiles · working, running, needs you, done, failed, bell, unread, idle, small",
-        ))
-        .child(tiles)
+        .child(caption(ui, "Status tiles · every state at 32, 20, 18, 16 and 14 pt"))
+        .child(env.mark("status.tile", tiles))
         .child(caption(ui, "A card of terminals"))
         .child(card)
         .child(caption(ui, "Tabs · shared and fixed width"))
@@ -175,4 +148,61 @@ const COLUMN_W: f32 = 350.0;
 
 fn caption(ui: UiColors, text: &'static str) -> Div {
     div().px_4().py_1().text_caption().text_color(ui.muted).child(text)
+}
+
+/// Every state of the tile at every size, the same terminals in each row: a terminal at rest, an
+/// agent at rest, working, a command running, needs you, done, failed, the bell, new output, an
+/// agent with no logo (its monogram), and last the same on a selected row. The light and the
+/// breathing edge move; under Reduce Motion they stand still (set it in Settings to see them so).
+fn tile_states(ui: UiColors, app: &App) -> Div {
+    let agent = |id: AgentId| TileFace::Agent(id);
+    let states: [(&str, TileFace, StatusGlyph); 11] = [
+        ("terminal", TileFace::Terminal, StatusGlyph::Shell),
+        ("agent", agent(AgentId::Claude), StatusGlyph::Idle),
+        ("working", agent(AgentId::Claude), StatusGlyph::Working),
+        ("running", TileFace::Terminal, StatusGlyph::Running),
+        ("needs", agent(AgentId::Claude), StatusGlyph::NeedsYou),
+        ("done", agent(AgentId::Claude), StatusGlyph::Done),
+        ("failed", agent(AgentId::Gemini), StatusGlyph::Failed),
+        ("bell", TileFace::Terminal, StatusGlyph::Bell),
+        ("output", TileFace::Terminal, StatusGlyph::Terminal { unread: true }),
+        ("monogram", agent(AgentId::Codex), StatusGlyph::Done),
+        ("gemini", agent(AgentId::Gemini), StatusGlyph::Working),
+    ];
+    let sizes =
+        [("32", TILE), ("20", TILE_MINI), ("18", TILE_TITLE), ("16", TILE_SMALL), ("14", TILE_DENSE_FOLD)];
+    let line = |label: String, selected: bool, size: f32| {
+        let row = states.iter().fold(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap_3()
+                .px_2()
+                .py_2()
+                .rounded(ui.radius)
+                .when(selected, |d| d.bg(ui.selected_row)),
+            |row, (name, face, glyph)| {
+                let id = SharedString::from(format!("g-tile-{label}-{name}"));
+                let tile = StatusTile { face: face.clone(), glyph: *glyph, selected, mini: false };
+                row.child(if selected {
+                    // The badge is cut out in the selected row's own colour.
+                    style::status_tile_on(ElementId::Name(id), ui, tile, size, ui.selected_row, app)
+                } else {
+                    style::status_tile_at(ElementId::Name(id), ui, tile, size, app)
+                })
+            },
+        );
+        div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .child(div().px_2().text_caption().text_color(ui.muted).child(label))
+            .child(row)
+    };
+    let mut column = div().flex().flex_col().gap_1().px_2().py_1();
+    for (label, size) in sizes {
+        column = column.child(line(format!("{label} pt"), false, size));
+    }
+    column.child(line("32 pt on a selected row".to_string(), true, TILE))
 }

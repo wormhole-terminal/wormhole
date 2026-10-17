@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The status tile looks like an app icon: black for a terminal, Claude on its orange, Gemini on its
+  blue, with a faint sheen and edge. The amber edge of a terminal that needs you breathes more slowly,
+  and the tile comes in 32, 20, 18, 16 and 14 points for rows, tabs, the title row and the status bar.
 - The terminal list is redrawn as rounded cards, one per folder or group, set in from the sidebar's
   edges, with a rounded selection. Each two-line row leads with a status tile: the agent's logo or the
   terminal symbol, with a light circling its edge while it works (grey while a command runs), a

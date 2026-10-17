@@ -28,6 +28,10 @@ pub const MOTION_PANEL: Duration = Duration::from_millis(250);
 pub const SPIN_PERIOD: Duration = Duration::from_millis(800);
 /// One turn of the light round a working terminal's status tile.
 pub const TILE_ORBIT: Duration = Duration::from_millis(1600);
+/// One breath of a needs-you status tile's amber edge: slower than the status dot's halo.
+pub const TILE_BREATHE: Duration = Duration::from_millis(2400);
+/// The tile's amber edge breathes between this share of its strength and the whole of it.
+pub const TILE_BREATHE_LEAST: f32 = 0.45;
 /// One breath of the needs-you halo; the dot itself never fades.
 pub const STATUS_PULSE: Duration = Duration::from_millis(1400);
 /// The halo's opacity breathes between these.

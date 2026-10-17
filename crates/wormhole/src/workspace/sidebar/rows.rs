@@ -101,11 +101,8 @@ pub(super) struct Place {
 /// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
 /// its state round it; the bell is a badge on a terminal that has nothing louder to say.
 pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, mini: bool, cx: &App) -> AnyElement {
-    let face = match info.agent.filter(|_| frame.show_agent).map(agents::agent) {
-        Some(agent) => match agent.icon() {
-            Some(path) => TileFace::Logo(path),
-            None => TileFace::Monogram(agent.monogram.into()),
-        },
+    let face = match info.agent.filter(|_| frame.show_agent) {
+        Some(agent) => TileFace::Agent(agent),
         None => TileFace::Terminal,
     };
     let state = match glyph_for(info) {

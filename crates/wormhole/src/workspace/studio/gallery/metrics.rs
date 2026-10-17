@@ -81,6 +81,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
             "STATUS_PULSE",
             format!("{} · {}–{}", ms(motion::STATUS_PULSE), motion::PULSE_RANGE.0, motion::PULSE_RANGE.1),
         ),
+        ("TILE_ORBIT · TILE_BREATHE", format!("{} · {}", ms(motion::TILE_ORBIT), ms(motion::TILE_BREATHE))),
         ("ANIMATION_FPS", motion::ANIMATION_FPS.to_string()),
         ("TOOLTIP_DELAY · HINT_HOLD", format!("{} · {}", ms(motion::TOOLTIP_DELAY), ms(motion::HINT_HOLD))),
         ("RESIZE_HANDLE_HOVER_DELAY", ms(motion::RESIZE_HANDLE_HOVER_DELAY)),

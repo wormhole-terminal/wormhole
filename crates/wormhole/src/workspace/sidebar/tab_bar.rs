@@ -20,6 +20,7 @@ use super::rows::{Frame, PLACE_CHARS, SecondLine, second_line, tile_for};
 use super::*;
 use crate::settings::SettingsStore;
 use crate::style::{GroupChip, PileFan, PileGlass, StatusGlyph, StatusTile, TabPile, TerminalTab, TileFace};
+use wormhole_core::sidebar::Urgency;
 
 /// The room between the traffic lights and the first thing after them on a tab bar.
 const AFTER_LIGHTS: f32 = 12.0;
@@ -553,24 +554,12 @@ impl Workspace {
             .into_any_element()
     }
 
-    /// The terminal of `set` that most wants attention: needs you, then failed, working, the bell,
-    /// new output, running, finished, idle.
+    /// The terminal of `set` that most wants attention, by core's order of urgency (needs you,
+    /// failed, working, the bell, new output, running, finished, idle).
     fn loudest(bar: &Bar, set: &TabSet) -> Option<usize> {
-        let rank = |glyph: StatusGlyph| match glyph {
-            StatusGlyph::NeedsYou => 0,
-            StatusGlyph::Failed => 1,
-            StatusGlyph::Working => 2,
-            StatusGlyph::Bell => 3,
-            StatusGlyph::Terminal { unread: true } => 4,
-            StatusGlyph::Running | StatusGlyph::Terminal { unread: false } => 5,
-            StatusGlyph::Done => 6,
-            StatusGlyph::Idle => 7,
-            StatusGlyph::Shell => 8,
-        };
-        set.members
-            .iter()
-            .copied()
-            .min_by_key(|&ix| bar.infos.get(ix).map_or(9, |info| rank(super::rows::glyph_for(info))))
+        wormhole_core::sidebar::urgency::loudest(set.members.iter().copied(), |&ix| {
+            bar.infos.get(ix).map_or(Urgency::Idle, |info| super::rows::glyph_for(info).into())
+        })
     }
 
     /// How a set is doing in words, and their colour: "3 · 1 waiting", "3 · 1 failed", "3 · 2

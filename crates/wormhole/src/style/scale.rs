@@ -39,6 +39,12 @@ pub const FOLDER_BAND_H: f32 = ROW_TWO_LINE_H;
 /// tab and the title row.
 pub const TILE: f32 = 32.0;
 pub const TILE_MINI: f32 = 20.0;
+/// The other sizes of the tile: the title row's, and a tab's, a dense row's and the status bar's.
+/// A dense folded head's is [`TILE_DENSE_FOLD`]; a compact row's and a folded head's is
+/// [`TILE_MINI`].
+pub const TILE_TITLE: f32 = 18.0;
+pub const TILE_SMALL: f32 = 16.0;
+pub const TILE_DENSE_FOLD: f32 = 14.0;
 /// The sidebar's cards (a folder's or a group's band with its terminals): this far in from the
 /// sidebar's sides, this round, their rows this far in from the card's sides, and this far apart.
 pub const CARD_MARGIN: f32 = 10.0;

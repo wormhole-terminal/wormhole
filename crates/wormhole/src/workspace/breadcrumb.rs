@@ -7,7 +7,6 @@
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
 use gpui_kit::component::ActiveTheme as _;
-use wormhole_core::agents;
 use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
 use super::path_card::Over;
@@ -130,7 +129,7 @@ impl Workspace {
             fixed: 2.0 * CRUMB_PAD
                 + facts.folder.as_ref().map_or(0.0, |_| style::GLYPH + before)
                 + facts.branch.as_ref().map_or(0.0, |_| before)
-                + if named { style::TILE_MINI + CRUMB_GAP } else { 0.0 },
+                + if named { style::TILE_TITLE + CRUMB_GAP } else { 0.0 },
         };
         let fit = fit_row(self.title_row_width(window), &wants);
         TitlePlan {
@@ -237,19 +236,17 @@ impl Workspace {
         // the name and how it is doing. Under tabs across the top the tab says the tile and the
         // name already, so the row keeps only the words.
         let named = !self.tabs_on_top();
-        let face = match agent.map(agents::agent) {
-            Some(agent) => match agent.icon() {
-                Some(path) => style::TileFace::Logo(path),
-                None => style::TileFace::Monogram(agent.monogram.into()),
-            },
+        let face = match agent {
+            Some(agent) => style::TileFace::Agent(*agent),
             None => style::TileFace::Terminal,
         };
         let glyph = indicator_glyph(*told, *status).unwrap_or(style::StatusGlyph::Idle);
         let tile = named.then(|| {
-            style::status_tile(
+            style::status_tile_at(
                 ("terminal-tile", *id as u64),
                 ui,
                 style::StatusTile { face, glyph, selected: false, mini: true },
+                style::TILE_TITLE,
                 cx,
             )
         });
