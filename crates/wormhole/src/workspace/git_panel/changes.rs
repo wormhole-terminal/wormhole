@@ -53,6 +53,9 @@ pub struct GitState {
     /// (`wormhole_core::panel::section_folded`).
     folds: HashMap<Group, bool>,
     list: ChangesList,
+    /// What the files were (as `signature` says) when the Changes tab was last on screen, so the
+    /// strip's amber dot can say something changed since.
+    seen: Option<u64>,
 }
 
 /// What became of a refresh's answer.
@@ -67,6 +70,34 @@ pub(super) enum Refreshed {
 }
 
 impl GitState {
+    /// A fingerprint of the changed files and their line counts; `None` while there are none.
+    fn signature(&self) -> Option<u64> {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let files = &self.status.as_ref()?.files;
+        if files.is_empty() {
+            return None;
+        }
+        let mut hasher = DefaultHasher::new();
+        for file in files {
+            (&file.path, file.kind.letter(), file.added, file.removed).hash(&mut hasher);
+        }
+        Some(hasher.finish())
+    }
+
+    /// Whether the changed files are not what the person last saw in the Changes tab: the
+    /// amber dot on its tab in the strip.
+    pub(crate) fn has_unseen_changes(&self) -> bool {
+        self.signature().is_some_and(|now| self.seen != Some(now))
+    }
+
+    /// The Changes tab is on screen: what is in it now has been seen. Returns whether the dot
+    /// went out, so the strip can be redrawn.
+    pub(crate) fn mark_seen(&mut self) -> bool {
+        let was = self.has_unseen_changes();
+        self.seen = self.signature();
+        was
+    }
+
     pub fn loading(&self) -> bool {
         self.job.is_pending()
     }

@@ -2,7 +2,7 @@
 //! each test runs in a child process with scratch data).
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::{TestAppContext, TextRun, font, px, rems, size};
-use wormhole_core::layout::{PANEL_MIN, SIDEBAR_DEFAULT, TERMINAL_MIN};
+use wormhole_core::layout::{PANEL_MIN, PANEL_STRIP, SIDEBAR_DEFAULT, TERMINAL_MIN};
 
 use super::app::OpenWindow;
 use super::view_tests::{draw, drive, isolate_in, start};
@@ -13,7 +13,7 @@ fn isolate(name: &str) -> bool {
 
 /// The window at which the panel has its narrowest width, next to the sidebar at its default width
 /// and the least terminal.
-const NARROWEST_PANEL_WINDOW: f32 = SIDEBAR_DEFAULT + TERMINAL_MIN + PANEL_MIN;
+const NARROWEST_PANEL_WINDOW: f32 = SIDEBAR_DEFAULT + TERMINAL_MIN + PANEL_STRIP + PANEL_MIN;
 
 fn resize(cx: &mut TestAppContext, window: &OpenWindow, width: f32) {
     cx.simulate_window_resize(window.handle, size(px(width), px(900.0)));

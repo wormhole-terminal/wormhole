@@ -182,7 +182,9 @@ impl Workspace {
             Area::Sidebar => self.sidebar_shown(),
             // A diff covers the terminal and its title row's tabs.
             Area::Tabs => self.diff_view.is_none(),
-            Area::PanelTabs | Area::PanelContent => self.notes_visible(),
+            // The strip is always there; the panel's list only while it is on screen.
+            Area::PanelTabs => true,
+            Area::PanelContent => self.notes_visible(),
             Area::StatusBar => self.status_bar_drawn.is_some(),
         }
     }

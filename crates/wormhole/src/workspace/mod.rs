@@ -77,6 +77,7 @@ mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
 mod panel_list;
+mod panel_strip;
 mod panes;
 mod path_card;
 mod project;
@@ -519,6 +520,13 @@ impl Workspace {
         }
         if self.is_front(cx) {
             self.remember_project(cx);
+        }
+        // Looking at the Changes tab is what puts out the amber dot on its tab in the strip.
+        if self.notes_visible() && self.right_tab == RightTab::Changes {
+            let active = self.active;
+            if self.sessions[active].git.mark_seen() {
+                cx.notify();
+            }
         }
         self.tick_extras(cx);
         self.refresh_status_bar(cx);

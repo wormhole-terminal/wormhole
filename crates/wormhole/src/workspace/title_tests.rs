@@ -45,7 +45,7 @@ fn a_long_path_loses_its_middle_before_the_buttons_fold(cx: &mut TestAppContext)
     assert_eq!(shown.as_deref(), Some("/Volumes/Work/clients/acme/projects/backend/services/ingest-worker"));
     assert!(!folded);
 
-    let (shown, path, folded, _) = plan(cx, 1100.0);
+    let (shown, path, folded, _) = plan(cx, 1000.0);
     let shown = shown.expect("the path is still drawn");
     assert!(matches!(path, PathShown::Step(ix) if ix > 0), "{shown}");
     assert!(shown.starts_with("/Volumes/…/") && shown.ends_with("/ingest-worker"), "{shown}");

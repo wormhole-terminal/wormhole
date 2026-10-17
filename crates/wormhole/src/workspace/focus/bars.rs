@@ -120,10 +120,14 @@ impl Workspace {
         if let Some(delta) = along(keystroke) {
             let tabs = self.panel_tab_list(cx);
             let at = tabs.iter().position(|&tab| tab == self.right_tab).unwrap_or(0);
-            self.show_tab(tabs[step_wrapping(at, delta, tabs.len())], cx);
+            self.open_panel_tab(tabs[step_wrapping(at, delta, tabs.len())], cx);
             return true;
         }
         if activation(keystroke).is_some() || list_key(keystroke) == Some(Key::Down) {
+            // A closed panel has no list to go into: the tab opens it first.
+            if !self.notes_visible() {
+                self.open_panel_tab(self.right_tab, cx);
+            }
             self.focus_stop(Stop { area: Area::PanelContent, index: 0 }, window, cx);
             return true;
         }

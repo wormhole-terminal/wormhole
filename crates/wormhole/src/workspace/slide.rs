@@ -114,7 +114,8 @@ impl Workspace {
         let clip = div().absolute().top_0().bottom_0().overflow_hidden().child(pinned);
         let clip = match motion.edge {
             Edge::Sidebar => clip.left_0(),
-            Edge::Panel => clip.right_0(),
+            // Beside the strip, which stays where it is.
+            Edge::Panel => clip.right(px(wormhole_core::layout::PANEL_STRIP)),
         };
         Some(
             clip.with_animation(motion.id("slide"), motion.animation(), move |d, t| {

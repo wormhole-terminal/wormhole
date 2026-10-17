@@ -64,7 +64,7 @@ impl Workspace {
         let x = f32::from(event.position.x);
         let extent = match drag.edge {
             Edge::Sidebar => x,
-            Edge::Panel => window_width - x,
+            Edge::Panel => window_width - wormhole_core::layout::PANEL_STRIP - x,
         };
         drag.pointer = event.position;
         // Past the minimum it sticks, then snaps closed; dragging back reopens.

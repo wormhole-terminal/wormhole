@@ -369,7 +369,6 @@ impl Workspace {
             .flex_none()
             .h_full()
             .bg(ui.panel_right)
-            .child(self.render_panel_tab_bar(window, cx))
             .child(
                 div().flex().flex_col().flex_1().min_h_0().pt(px(style::PANEL_TOP)).child(match tab {
                     // Virtualized lists fill the panel and scroll themselves; the list area holds the
