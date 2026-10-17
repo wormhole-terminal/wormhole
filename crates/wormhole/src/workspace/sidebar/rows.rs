@@ -39,7 +39,6 @@ pub(super) struct Frame {
     /// What rows, cards and heads measure at the person's density.
     pub(super) metrics: Metrics,
     show_dot: bool,
-    show_agent: bool,
     pub(super) show_changes: bool,
     show_notes: bool,
     /// The ⌘N keycaps are showing.
@@ -57,7 +56,6 @@ impl Frame {
             ui: ui(cx),
             metrics: Metrics::of(s.density, s.show_groups_as_cards),
             show_dot: s.sidebar_status_dot,
-            show_agent: s.sidebar_agent_icon,
             show_changes: s.sidebar_changes,
             show_notes: s.sidebar_notes,
             hints: ws.hints_showing(cx),
@@ -104,7 +102,7 @@ pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, size: f32,
 /// What a terminal's tile shows: the face and the state, for a tile drawn later (the tab bar's
 /// switcher builds its content without the workspace).
 pub(super) fn tile_parts(info: &RowInfo, frame: &Frame) -> (TileFace, StatusGlyph) {
-    let face = match info.agent.filter(|_| frame.show_agent) {
+    let face = match info.agent {
         Some(agent) => TileFace::Agent(agent),
         None => TileFace::Terminal,
     };

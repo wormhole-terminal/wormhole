@@ -261,9 +261,6 @@ pub struct Settings {
     // Sidebar session rows
     /// Agent status dot.
     pub sidebar_status_dot: bool,
-    /// Logo of the coding agent running in the terminal: with the glyph in the lead column,
-    /// only while that agent is idle (state beats identity).
-    pub sidebar_agent_icon: bool,
     /// Number of changed files.
     pub sidebar_changes: bool,
     /// Note icon with the number of open notes and tasks.
@@ -405,7 +402,6 @@ impl Default for Settings {
             code_font_family: String::new(),
             code_font_size: 13.0,
             sidebar_status_dot: true,
-            sidebar_agent_icon: false,
             sidebar_changes: true,
             sidebar_notes: false,
             sidebar_numbers: SidebarNumbers::default(),
@@ -487,7 +483,6 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "code_font_family",
     "code_font_size",
     "sidebar_status_dot",
-    "sidebar_agent_icon",
     "sidebar_changes",
     "sidebar_notes",
     "sidebar_cmd_hints",
@@ -1115,15 +1110,17 @@ mod tests {
 
     #[test]
     fn the_status_dot_follows_the_setting_and_keys_of_older_files_still_load() {
-        assert!(!Settings::default().sidebar_agent_icon);
-        // Two keys of older files that mean nothing now.
+        // Keys of older files that mean nothing now: the agent's logo is always on its tile.
         let settings: Settings = jsonc::parse(
-            r#"{ "sidebar_status_position": "right", "sidebar_branch": false, "sidebar_changes": false }"#,
+            r#"{ "sidebar_status_position": "right", "sidebar_branch": false, "sidebar_agent_icon": false,
+                "sidebar_changes": false }"#,
         )
         .expect("valid jsonc");
         assert!(!settings.sidebar_changes, "the rest of the file is read");
         let json = serde_json::to_value(&settings).expect("serializes");
-        assert!(json.get("sidebar_status_position").is_none() && json.get("sidebar_branch").is_none());
+        for gone in ["sidebar_status_position", "sidebar_branch", "sidebar_agent_icon"] {
+            assert!(json.get(gone).is_none(), "{gone} is not written back");
+        }
     }
 
     #[test]

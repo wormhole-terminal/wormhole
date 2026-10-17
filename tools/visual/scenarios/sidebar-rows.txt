@@ -20,10 +20,6 @@ hook 1 UserPromptSubmit
 hook 2 Notification Approve cargo test?
 @shot default
 # config.json is read back by its watcher.
-set sidebar_agent_icon=true
-@sleep 1500
-@shot logo-lead
 set sidebar_status_dot=false
-set sidebar_agent_icon=false
 @sleep 1500
 @shot no-dot

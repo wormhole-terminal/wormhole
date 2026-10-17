@@ -551,13 +551,6 @@ const SESSIONS: &[Group] = &[
                 &["sidebar_status_dot"],
             ),
             entry(
-                "sidebar-agent",
-                "Agent logo",
-                "Which coding agent runs in the terminal, as the face of its status tile",
-                "agent icon logo",
-                &["sidebar_agent_icon"],
-            ),
-            entry(
                 "sidebar-notes",
                 "Notes and tasks",
                 "Note icon with the number of notes and open tasks",

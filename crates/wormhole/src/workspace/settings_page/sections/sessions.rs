@@ -23,7 +23,6 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("cmd-hints", sidebar_cmd_hints),
     toggle!("sidebar-changes", sidebar_changes),
     toggle!("sidebar-dot", sidebar_status_dot),
-    toggle!("sidebar-agent", sidebar_agent_icon),
     toggle!("sidebar-notes", sidebar_notes),
 ];
 
