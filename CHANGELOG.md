@@ -59,7 +59,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   commits are one card, Notes has its Next steps and Notes cards, and Usage and Project follow. The
   panel has no title row any more; its first card starts under the top of the window.
 - The panel's tabs (Changes, History, Notes, Usage, Project) sit in a narrow strip down the window's
-  right edge that stays when the panel is closed: a click on a tab opens the panel on it, a click on
+  right edge that comes and goes with the panel (closed, the terminal runs to the window's edge): a click on a tab opens the panel on it, a click on
   the open tab closes it, and an amber dot on Changes says its files changed since you last looked.
   The button at the foot stashes the typed prompt into a note. The panel's button in the title row is
   gone; its key and menu item still work.

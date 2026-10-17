@@ -1,5 +1,5 @@
-//! The right panel's tabs: a 28 pt strip down the window's right edge that stays when the panel
-//! is closed or has no room. A click on a tab opens the panel on it, a click on the open tab
+//! The right panel's tabs: a 28 pt strip down the window's right edge that belongs to the open
+//! panel (closed or without room, both are gone and the terminal runs to the edge). A click on a tab opens the panel on it, a click on the open tab
 //! closes the panel; the keyboard's ⌘-keys and the menu do the same through `show_tab` and
 //! `toggle_notes`. The tab list is one keyboard stop whose ← → switch tabs at once and VoiceOver
 //! reads it as a tab list with the counts in words. The strip has no button at its foot: stashing
@@ -19,7 +19,7 @@ impl Workspace {
         let open_steps = session.tasks.iter().filter(|t| !t.done).count();
         let notes = session.notes.iter().filter(|n| !super::notes::is_blank_note(n.state.read(cx))).count();
         let tabs = self.panel_tab_list(cx);
-        let visible = self.notes_visible();
+        let visible = self.notes_visible() || self.slide_motion().is_some_and(|m| m.edge == Edge::Panel);
         let ring = self.ring(Area::PanelTabs, window);
         let tab = |id: &'static str, icon: IconName, label: &str, key: ActionId, tab: RightTab| {
             // Only the tab on show while the panel is on screen is "open".

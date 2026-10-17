@@ -257,8 +257,11 @@ impl Render for Workspace {
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
                         d.child(self.render_notes_panel(columns.panel, window, cx))
                     })
-                    // The panel's tabs, down the window's edge whether the panel is open or not.
-                    .child(self.render_panel_strip(window, cx))
+                    // The panel's tabs, down the window's edge with the panel (they slide in and out
+                    // with it, `render_slide`).
+                    .when(notes_visible && self.in_flow(Edge::Panel), |d| {
+                        d.child(self.render_panel_strip(window, cx))
+                    })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))
                     // The hairlines lie over the columns' edges and their handles over them.

@@ -244,8 +244,10 @@ impl Workspace {
         } else {
             collapse_slot(lights_end(window))
         };
-        // The panel's strip is always at the right edge, so the row ends beside a column.
-        (if sidebar { BESIDE_COLUMN } else { lights }, BESIDE_COLUMN)
+        // The panel's strip is at the right edge only with the panel on screen; without it the
+        // row ends at the window's edge.
+        let panel = self.notes_visible() && self.in_flow(Edge::Panel);
+        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_COLUMN } else { TITLE_ROW_PAD })
     }
 
     /// How wide the terminal's title row is inside its padding: what the breadcrumb has to fit in (worked out from the columns, so it is right in the frame that
@@ -263,9 +265,8 @@ impl Workspace {
             column -= columns.sidebar;
         }
         if self.notes_visible() && self.in_flow(Edge::Panel) {
-            column -= columns.panel;
+            column -= columns.panel + columns.strip;
         }
-        column -= columns.strip;
         column.max(crate::terminal_view::MIN_WIDTH)
     }
 }

@@ -53,8 +53,11 @@ fn the_column_sizes() {
     assert_eq!((SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX), (320.0, 240.0, 420.0));
     assert_eq!((PANEL_DEFAULT, PANEL_MIN, PANEL_MAX, PANEL_STRIP), (300.0, 240.0, 720.0, 28.0));
     assert_eq!(TERMINAL_MIN, 320.0);
-    // The smallest window is the narrowest sidebar, the terminal and the strip: 588.
+    // The smallest window is the terminal, the strip and the narrowest panel: 588.
     assert_eq!(WINDOW_MIN_WIDTH, 588.0);
+    // With the panel on screen its strip is 28 wide; without, the strip is gone.
+    assert_eq!(Panes::default().columns(1440.0).strip, PANEL_STRIP);
+    assert_eq!(Panes { panel_wanted: false, ..Panes::default() }.columns(1440.0).strip, 0.0);
     assert_eq!(Panes::default(), panes(true, 320.0, true, 300.0));
 }
 
@@ -83,14 +86,15 @@ fn the_columns_at_window_widths() {
     assert_eq!(panes.columns(1440.0), cols(320.0, 792.0, 300.0));
     // 960: the panel yields first, down from 300 to 292, so the terminal keeps 320.
     assert_eq!(panes.columns(960.0), cols(320.0, 320.0, 292.0));
-    // 900: no room for the panel (900 < 908): it hides by itself, still wanted; the strip stays.
-    assert_eq!(panes.columns(900.0), cols(320.0, 552.0, 0.0));
+    // 900: no room for the panel (900 < 908): it hides by itself with its strip, still wanted.
+    let bare = |sidebar, terminal| Columns { sidebar, terminal, panel: 0.0, strip: 0.0 };
+    assert_eq!(panes.columns(900.0), bare(320.0, 580.0));
     assert!(panes.panel_wanted);
     // 670: sidebar and terminal, no room for the panel.
-    assert_eq!(panes.columns(670.0), cols(320.0, 322.0, 0.0));
-    // 670, sidebar hidden and panel closed: the terminal has the window less the strip.
+    assert_eq!(panes.columns(670.0), bare(320.0, 350.0));
+    // 670, sidebar hidden and panel closed: the terminal has the whole window, no strip.
     let hidden = Panes { sidebar_open: false, panel_wanted: false, ..panes };
-    assert_eq!(hidden.columns(670.0), cols(0.0, 642.0, 0.0));
+    assert_eq!(hidden.columns(670.0), bare(0.0, 670.0));
 }
 
 // ---------------------------------------------------------------- toggles
@@ -197,9 +201,9 @@ fn a_drag_moves_the_panels_own_width() {
 fn the_terminal_never_goes_below_its_minimum() {
     // A wide sidebar in the smallest window gives way to its own minimum.
     let wide = panes(true, 420.0, false, PANEL_DEFAULT);
-    let cols = |sidebar, terminal| Columns { sidebar, terminal, panel: 0.0, strip: PANEL_STRIP };
-    assert_eq!(wide.columns(670.0), cols(322.0, 320.0));
-    assert_eq!(wide.columns(768.0), cols(420.0, 320.0));
+    let cols = |sidebar, terminal| Columns { sidebar, terminal, panel: 0.0, strip: 0.0 };
+    assert_eq!(wide.columns(670.0), cols(350.0, 320.0));
+    assert_eq!(wide.columns(740.0), cols(420.0, 320.0));
     // It keeps its chosen width for when the window grows.
     assert_eq!(wide.sidebar_width, 420.0);
     for window in [670.0, 700.0, 930.0, 1000.0, 1100.0, 1440.0] {
@@ -240,11 +244,11 @@ fn the_panel_is_dragged_no_wider_than_the_window_can_spare() {
 fn the_sidebar_is_dragged_no_wider_than_the_terminal_allows() {
     let mut panes = Panes::default();
     assert_eq!(panes.max_width(Edge::Sidebar, 1440.0), SIDEBAR_MAX);
-    assert_eq!(panes.max_width(Edge::Sidebar, 700.0), 352.0);
-    assert_eq!(panes.max_width(Edge::Sidebar, 670.0), 322.0);
-    assert_eq!(panes.max_width(Edge::Sidebar, WINDOW_MIN_WIDTH), SIDEBAR_MIN);
+    assert_eq!(panes.max_width(Edge::Sidebar, 700.0), 380.0);
+    assert_eq!(panes.max_width(Edge::Sidebar, 670.0), 350.0);
+    assert_eq!(panes.max_width(Edge::Sidebar, SIDEBAR_MIN + TERMINAL_MIN), SIDEBAR_MIN);
     let to = panes.drag(Edge::Sidebar, 500.0, 700.0);
-    assert_eq!((to.width, to.readout(Edge::Sidebar)), (352.0, "352 · max".to_string()));
+    assert_eq!((to.width, to.readout(Edge::Sidebar)), (380.0, "380 · max".to_string()));
     // The pointer between 420 and 500 in a wide window: stays at 420.
     assert_eq!(panes.drag(Edge::Sidebar, 470.0, 1440.0).readout(Edge::Sidebar), "420 · max");
 }
