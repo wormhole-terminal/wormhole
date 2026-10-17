@@ -147,18 +147,6 @@ impl<'de> Deserialize<'de> for OptionAsMeta {
     }
 }
 
-/// Where the agent status glyph sits in a sidebar terminal row.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum StatusPosition {
-    /// In the lead column (x 16–32), like every lead column in the app.
-    #[default]
-    Left,
-    /// At the right edge (x 334) on the name line; the lead column keeps its slot, so names
-    /// stay at x 40.
-    Right,
-}
-
 /// When the line under the terminal's title row is drawn: always, only while the terminal
 /// has output scrolled under the bar (the bar then blurs it, and the line says where the bar
 /// ends), or never.
@@ -273,13 +261,9 @@ pub struct Settings {
     // Sidebar session rows
     /// Agent status dot.
     pub sidebar_status_dot: bool,
-    /// Which edge of the session row the status dot sits on.
-    pub sidebar_status_position: StatusPosition,
     /// Logo of the coding agent running in the terminal: with the glyph in the lead column,
     /// only while that agent is idle (state beats identity).
     pub sidebar_agent_icon: bool,
-    /// Git branch of the session's folder.
-    pub sidebar_branch: bool,
     /// Number of changed files.
     pub sidebar_changes: bool,
     /// Note icon with the number of open notes and tasks.
@@ -421,9 +405,7 @@ impl Default for Settings {
             code_font_family: String::new(),
             code_font_size: 13.0,
             sidebar_status_dot: true,
-            sidebar_status_position: StatusPosition::default(),
             sidebar_agent_icon: false,
-            sidebar_branch: true,
             sidebar_changes: true,
             sidebar_notes: false,
             sidebar_numbers: SidebarNumbers::default(),
@@ -505,9 +487,7 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "code_font_family",
     "code_font_size",
     "sidebar_status_dot",
-    "sidebar_status_position",
     "sidebar_agent_icon",
-    "sidebar_branch",
     "sidebar_changes",
     "sidebar_notes",
     "sidebar_cmd_hints",
@@ -743,7 +723,7 @@ mod tests {
 
     use super::{
         APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
-        PROJECT_SETTINGS, Settings, ShellProfile, SizeUnits, StatusPosition, ThemeMode, TitleBorder, keys,
+        PROJECT_SETTINGS, Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder, keys,
     };
     use crate::folder_color::FolderColor;
     use crate::fonts;
@@ -819,7 +799,7 @@ mod tests {
         assert!(unset.sidebar_cmd_hints);
         assert_eq!(unset.terminals_in, TerminalsIn::Sidebar);
         assert!(!unset.sidebar_notes, "the rows are drawn without the notes and tasks count");
-        assert!(unset.sidebar_branch && unset.sidebar_changes);
+        assert!(unset.sidebar_changes);
         assert_eq!(unset.theme_mode, ThemeMode::System);
         assert_eq!(unset.theme_light, "Catppuccin Latte");
         assert!(unset.notify_needs_you && unset.notify_agent_done && unset.notify_command_done);
@@ -1134,15 +1114,16 @@ mod tests {
     }
 
     #[test]
-    fn status_dot_defaults_to_the_lead_column_without_a_logo_and_follows_the_setting() {
-        // The glyph in the lead column, the agent logo off.
-        assert_eq!(Settings::default().sidebar_status_position, StatusPosition::Left);
+    fn the_status_dot_follows_the_setting_and_keys_of_older_files_still_load() {
         assert!(!Settings::default().sidebar_agent_icon);
-        let settings: Settings =
-            jsonc::parse(r#"{ "sidebar_status_position": "right" }"#).expect("valid jsonc");
-        assert_eq!(settings.sidebar_status_position, StatusPosition::Right);
+        // Two keys of older files that mean nothing now.
+        let settings: Settings = jsonc::parse(
+            r#"{ "sidebar_status_position": "right", "sidebar_branch": false, "sidebar_changes": false }"#,
+        )
+        .expect("valid jsonc");
+        assert!(!settings.sidebar_changes, "the rest of the file is read");
         let json = serde_json::to_value(&settings).expect("serializes");
-        assert_eq!(json["sidebar_status_position"], "right");
+        assert!(json.get("sidebar_status_position").is_none() && json.get("sidebar_branch").is_none());
     }
 
     #[test]
@@ -1248,13 +1229,5 @@ mod tests {
         let kept: Vec<(&str, &str)> =
             settings.shells.iter().map(|p| (p.name.as_str(), p.command.as_str())).collect();
         assert_eq!(kept, [("fish", "/opt/homebrew/bin/fish"), ("nu", "nu")]);
-    }
-
-    #[test]
-    fn unknown_status_position_in_an_overlay_is_ignored() {
-        let overrides = serde_json::json!({ "sidebar_status_position": "middle" });
-        let serde_json::Value::Object(map) = overrides else { unreachable!() };
-        let merged = Settings::default().with_overrides(&map);
-        assert_eq!(merged.sidebar_status_position, StatusPosition::Left);
     }
 }

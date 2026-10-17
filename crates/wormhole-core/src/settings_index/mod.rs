@@ -183,10 +183,8 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 
 /// `config.json` keys without a row of their own: `notifications` is the master switch, which
 /// the Notifications section's switches set (on while any kind is on); `folder_colors` is a list the
-/// Project tab sets, with nothing to set in a form; `sidebar_branch` and `sidebar_status_position`
-/// are read from older files and no longer drawn (a row is a tile, and says where it is on its own).
-pub const UNLISTED: &[&str] =
-    &["notifications", "folder_colors", "sidebar_branch", "sidebar_status_position"];
+/// Project tab sets, with nothing to set in a form.
+pub const UNLISTED: &[&str] = &["notifications", "folder_colors"];
 
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {

@@ -19,7 +19,7 @@ use serde_json::{Map, Value};
 pub(crate) use self::settings::keys;
 pub use self::settings::{
     APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
-    Settings, ShellProfile, SizeUnits, StatusPosition, ThemeMode, TitleBorder,
+    Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
 pub(crate) use self::theme::load_theme_path;
 use self::theme::{ThemeStamp, default_tokens, resolve_theme};

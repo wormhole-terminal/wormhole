@@ -19,17 +19,10 @@ activate 1
 hook 1 UserPromptSubmit
 hook 2 Notification Approve cargo test?
 @shot default
-set sidebar_status_position="right"
 # config.json is read back by its watcher.
-@sleep 1500
-@shot right
-set sidebar_status_position="left"
 set sidebar_agent_icon=true
 @sleep 1500
 @shot logo-lead
-set sidebar_status_position="right"
-@sleep 1500
-@shot logo-right
 set sidebar_status_dot=false
 set sidebar_agent_icon=false
 @sleep 1500
