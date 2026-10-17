@@ -83,6 +83,7 @@ mod panel_list;
 mod panel_strip;
 mod panes;
 mod path_card;
+mod profile_chip;
 mod profiles;
 mod project;
 pub(crate) mod quick_panel;

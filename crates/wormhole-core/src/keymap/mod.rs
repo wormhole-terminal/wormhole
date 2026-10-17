@@ -44,6 +44,12 @@ pub enum ActionId {
     PreviousTerminal,
     /// The sidebar's terminal with this number (1–9, as its ⌘ keycap says).
     Terminal(u8),
+    /// The previous and the next group, in the tab bar's switcher (and the sidebar's order): ⌃⌥[ and
+    /// ⌃⌥]. The terminals in no group count as the last group.
+    PreviousGroup,
+    NextGroup,
+    /// The group with this number (1–9, as the tab bar's switcher lists them).
+    Group(u8),
     // Profiles. The three that name a profile take it from a pick (a menu item, a palette row), so
     // they have no key of their own.
     /// The sheet that makes a profile.

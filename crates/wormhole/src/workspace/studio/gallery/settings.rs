@@ -59,6 +59,54 @@ fn profile_marks(env: &Env) -> Div {
                 .child(style::choice_row("g-choice-copy", ui, "A copy of Default", true))
                 .child(style::choice_row("g-choice-defaults", ui, "Wormhole's defaults", false)),
         )
+        .child(div().flex().items_center().gap_3().child(style::profile_chip(
+            "g-profile-chip",
+            ui,
+            colors[1].1,
+            'W',
+            "Work",
+            "Profile Work, switch profile",
+        )))
+        .child(
+            div()
+                .w(px(PROFILE_MENU_W))
+                .p_1()
+                .rounded(ui.radius_lg)
+                .bg(ui.elevated)
+                .outlined(ui, ui.border_strong)
+                .child(style::popover_heading(ui, "Switch Wormhole to"))
+                .child(style::popover_row(
+                    "g-menu-default",
+                    ui,
+                    style::PopoverRow {
+                        lead: Some(
+                            style::profile_avatar(ui, colors[0].1, 'D', style::TITLE_GLYPH)
+                                .into_any_element(),
+                        ),
+                        note: Some("every window switches".into()),
+                        ..style::PopoverRow::new("Default")
+                    },
+                ))
+                .child(style::popover_row(
+                    "g-menu-work",
+                    ui,
+                    style::PopoverRow {
+                        lead: Some(
+                            style::profile_avatar(ui, colors[1].1, 'W', style::TITLE_GLYPH)
+                                .into_any_element(),
+                        ),
+                        note: Some("current".into()),
+                        current: true,
+                        ..style::PopoverRow::new("Work")
+                    },
+                ))
+                .child(style::popover_rule(ui))
+                .child(style::popover_row(
+                    "g-menu-settings",
+                    ui,
+                    style::PopoverRow { key: Some("⌘,".into()), ..style::PopoverRow::new("Settings…") },
+                )),
+        )
         .child(
             div()
                 .w(px(COLUMN_W))
@@ -72,6 +120,8 @@ fn profile_marks(env: &Env) -> Div {
 
 /// The larger avatar (the settings window's top) and the height of the window sample under the edge.
 const PROFILE_AVATAR_LARGE: f32 = 24.0;
+/// The profile chip's menu sample.
+const PROFILE_MENU_W: f32 = 280.0;
 const PROFILE_EDGE_SAMPLE_H: f32 = 24.0;
 
 /// The setting row in each of its states.

@@ -146,6 +146,50 @@ pub fn new_in_group_label(name: &str) -> String {
     format!("New terminal in {name}")
 }
 
+/// The group switcher on the tab bar: "Group Release 1.2, 3 terminals, another group needs you".
+/// The dot is all the eyes get of the last part, so it is said.
+pub fn switcher_label(name: &str, terminals: usize, another_needs_you: bool) -> String {
+    let mut parts = vec![format!("Group {name}"), terminals_in(terminals)];
+    if another_needs_you {
+        parts.push("another group needs you".to_string());
+    }
+    parts.join(", ")
+}
+
+/// A group's card in the switcher: "Review, 2 terminals, 2 need attention, current, 2 of 4".
+pub fn switcher_card_label(
+    name: &str,
+    terminals: usize,
+    alerts: usize,
+    current: bool,
+    position: usize,
+    of: usize,
+) -> String {
+    let mut parts = vec![name.to_string(), terminals_in(terminals)];
+    if alerts > 0 {
+        parts.push(format!("{alerts} need attention"));
+    }
+    if current {
+        parts.push("current".to_string());
+    }
+    parts.push(format!("{position} of {of}"));
+    parts.join(", ")
+}
+
+/// A terminal's tab: "Fix pile fan-out, selected, 2 of 3". The tile's state is the row's words.
+pub fn tab_label(name: &str, state: &str, selected: bool, position: usize, of: usize) -> String {
+    let mut parts = vec![name.to_string(), state.to_string()];
+    if selected {
+        parts.push("selected".to_string());
+    }
+    parts.push(format!("{position} of {of}"));
+    parts.join(", ")
+}
+
+fn terminals_in(n: usize) -> String {
+    if n == 0 { "no terminals".to_string() } else { count(n, "terminal", "terminals") }
+}
+
 /// A row's state as a word: "needs you", "working", "finished", "failed".
 pub fn state_word(state: RowState) -> &'static str {
     match state {
@@ -177,13 +221,26 @@ pub fn spoken_clock(elapsed: Duration) -> String {
 mod tests {
     use super::{
         Place, RowSpeech, SplitSpeech, band_label, edit_label, fold_label, new_in_group_label, row_label,
-        row_label_in_split, spoken_clock,
+        row_label_in_split, spoken_clock, switcher_card_label, switcher_label, tab_label,
     };
     use crate::sidebar::{Bracket, RowState, SplitMarks};
     use std::time::Duration;
 
     fn place(selected: bool, position: usize, number: Option<usize>) -> Place {
         Place { selected, position, of: 3, number }
+    }
+
+    #[test]
+    fn the_switcher_and_its_tabs_read_in_words() {
+        assert_eq!(switcher_label("Release 1.2", 3, false), "Group Release 1.2, 3 terminals");
+        assert_eq!(switcher_label("Docs", 0, true), "Group Docs, no terminals, another group needs you");
+        assert_eq!(
+            switcher_card_label("Review", 2, 2, true, 2, 4),
+            "Review, 2 terminals, 2 need attention, current, 2 of 4"
+        );
+        assert_eq!(switcher_card_label("Docs", 0, 0, false, 4, 4), "Docs, no terminals, 4 of 4");
+        assert_eq!(tab_label("cargo test", "working", true, 2, 3), "cargo test, working, selected, 2 of 3");
+        assert_eq!(tab_label("zsh", "idle", false, 1, 3), "zsh, idle, 1 of 3");
     }
 
     #[test]

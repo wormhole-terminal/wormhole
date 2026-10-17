@@ -22,6 +22,8 @@ const LIGHT_FRAME: f32 = 14.0;
 const COLLAPSE_X: f32 = 84.0;
 /// The gap between the lights and the collapse button's frame (72 to 84).
 const AFTER_LIGHTS: f32 = COLLAPSE_X - (LIGHTS_X + ASSUMED_LIGHTS_SPAN);
+/// The profile chip starts this far after the sidebar's toggle (x 118 with the assumed lights).
+const AFTER_TOGGLE: f32 = 6.0;
 /// A title row's own content starts this far after the collapse button when the sidebar is
 /// hidden and the button sits over it.
 const AFTER_COLLAPSE: f32 = 8.0;
@@ -157,8 +159,14 @@ impl Workspace {
                     .id("sidebar-title-row")
                     .h(px(style::TITLE_ROW_H))
                     .flex_none()
+                    .flex()
+                    .items_center()
+                    // The lights and the toggle float over the row's start; the profile chip is
+                    // the first thing after them.
+                    .pl(px(collapse_x(lights_end(window)) + style::HIT_MIN + AFTER_TOGGLE))
                     .pr(px(TITLE_ROW_PAD))
                     .title_drag()
+                    .children(self.render_profile_chip(cx))
                     .child(div().flex_1()),
             )
             .child(

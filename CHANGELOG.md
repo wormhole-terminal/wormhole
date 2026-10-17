@@ -8,6 +8,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The top rows are 36 points tall. The title row is tinted with the selected terminal's group colour
+  (none for a terminal in no group), and a chip at the sidebar's top names the profile Wormhole is in
+  once there are two: its menu switches profiles (every window with it), opens a window in one,
+  moves this one, makes or manages profiles and opens Settings.
+- Terminals as tabs is one row: the lights, the profile chip, a group switcher (the group's colour,
+  name and count, with an amber dot while another group needs you) and that group's terminals as tabs.
+  The switcher opens a search ("Go to group or terminal…") over the groups as cards, "In no group",
+  New group and "Show all groups in the sidebar". ⌃⌥[ and ⌃⌥] go to the previous and next group and
+  ⌃⌥1–9 to a group by number, in both layouts.
 - Profiles: a whole Wormhole of its own for Work, Private or anything else, each with its terminals,
   theme, fonts, keys, notifications, trusted projects, start folder, environment, git identity and a
   separate Claude and Codex login. Settings → Profile (the first page) edits the one Wormhole is in and

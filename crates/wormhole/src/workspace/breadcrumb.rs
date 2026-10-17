@@ -93,7 +93,7 @@ impl Workspace {
                 })
             })
             .unwrap_or_default();
-        // Under tabs across the top the tab says the terminal's tile and name, so the row hasn't them.
+        // Under tabs across the top the tab says the terminal's name, so the row keeps its tile and words.
         let named = !self.tabs_on_top();
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
@@ -129,7 +129,8 @@ impl Workspace {
             fixed: 2.0 * CRUMB_PAD
                 + facts.folder.as_ref().map_or(0.0, |_| style::GLYPH + before)
                 + facts.branch.as_ref().map_or(0.0, |_| before)
-                + if named { style::TILE_TITLE + CRUMB_GAP } else { 0.0 },
+                + style::TILE_TITLE
+                + CRUMB_GAP,
         };
         let fit = fit_row(self.title_row_width(window), &wants);
         TitlePlan {
@@ -233,23 +234,21 @@ impl Workspace {
         });
 
         // The terminal: a small status tile (the tool's own icon, its live status round it), then
-        // the name and how it is doing. Under tabs across the top the tab says the tile and the
-        // name already, so the row keeps only the words.
+        // the name and how it is doing. Under tabs across the top the tab says the name already, so
+        // the row keeps the tile and the words.
         let named = !self.tabs_on_top();
         let face = match agent {
             Some(agent) => style::TileFace::Agent(*agent),
             None => style::TileFace::Terminal,
         };
         let glyph = indicator_glyph(*told, *status).unwrap_or(style::StatusGlyph::Idle);
-        let tile = named.then(|| {
-            style::status_tile_at(
-                ("terminal-tile", *id as u64),
-                ui,
-                style::StatusTile { face, glyph, selected: false, mini: true },
-                style::TILE_TITLE,
-                cx,
-            )
-        });
+        let tile = style::status_tile_at(
+            ("terminal-tile", *id as u64),
+            ui,
+            style::StatusTile { face, glyph, selected: false, mini: true },
+            style::TILE_TITLE,
+            cx,
+        );
         let attention = *status == Status::Attention;
         let failed = *status == Status::Failed;
         let process = div()
@@ -259,7 +258,7 @@ impl Workspace {
             .gap_2()
             .min_w_0()
             .overflow_hidden()
-            .children(tile)
+            .child(tile)
             .when(named, |d| {
                 d.child(
                     div()

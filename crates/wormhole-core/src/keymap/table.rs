@@ -16,6 +16,7 @@ const ALT_CMD: KeyMods = mods(false, true, false, true);
 const CTRL_CMD: KeyMods = mods(true, false, false, true);
 const SHIFT_ALT_CMD: KeyMods = mods(false, true, true, true);
 const CTRL_ALT_CMD: KeyMods = mods(true, true, false, true);
+const CTRL_ALT: KeyMods = mods(true, true, false, false);
 
 const TERMINAL_TITLES: [&str; 9] = [
     "Terminal 1",
@@ -28,6 +29,8 @@ const TERMINAL_TITLES: [&str; 9] = [
     "Terminal 8",
     "Terminal 9",
 ];
+const GROUP_TITLES: [&str; 9] =
+    ["Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6", "Group 7", "Group 8", "Group 9"];
 const DIGITS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 /// A row: an app action until said otherwise, in the palette, live.
@@ -107,6 +110,12 @@ pub(super) fn entries() -> Vec<Entry> {
     ];
     for (n, (title, digit)) in TERMINAL_TITLES.iter().zip(DIGITS).enumerate() {
         rows.push(row(Terminal(n as u8 + 1), title, &[(CMD, digit)]).not_in_palette());
+    }
+    // Groups, in the tab bar's switcher and in the list: ⌃⌥ with a bracket or a number.
+    rows.push(row(PreviousGroup, "Previous Group", &[(CTRL_ALT, "[")]));
+    rows.push(row(NextGroup, "Next Group", &[(CTRL_ALT, "]")]));
+    for (n, (title, digit)) in GROUP_TITLES.iter().zip(DIGITS).enumerate() {
+        rows.push(row(Group(n as u8 + 1), title, &[(CTRL_ALT, digit)]).not_in_palette());
     }
     rows.extend([
         // Profiles: no default keys. The last three act on the profile a menu item or palette row

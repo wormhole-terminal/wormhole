@@ -57,6 +57,9 @@ const TERMINALS: [ActionId; 9] = [
     Terminal(9),
 ];
 
+const GROUPS: [ActionId; 9] =
+    [Group(1), Group(2), Group(3), Group(4), Group(5), Group(6), Group(7), Group(8), Group(9)];
+
 /// A row as written below: its label, its actions, how their keys are shown.
 type RowSpec = (&'static str, &'static [ActionId], Keys);
 
@@ -81,6 +84,8 @@ const SHEET: &[(&str, &[RowSpec])] = &[
             ),
             ("Previous / next terminal", &[PreviousTerminal, NextTerminal], Each),
             ("Terminals 1–9 (hold ⌘ to see them)", &TERMINALS, Range),
+            ("Previous / next group", &[PreviousGroup, NextGroup], Each),
+            ("Groups 1–9", &GROUPS, Range),
             ("Go to the terminal that needs you", &[GoToWaiting], Each),
             ("Go to the terminal that finished", &[GoToFinished], Each),
         ],

@@ -229,6 +229,8 @@ const WINDOW: &[Slot] = &[
     Sep,
     A(NextTerminal),
     A(PreviousTerminal),
+    A(NextGroup),
+    A(PreviousGroup),
     A(GoToWaiting),
     A(GoToFinished),
     Slot::Submenu("Select Pane", &[A(FocusPaneLeft), A(FocusPaneRight), A(FocusPaneUp), A(FocusPaneDown)]),

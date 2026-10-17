@@ -79,11 +79,6 @@ impl Metrics {
             small_title: dense,
         }
     }
-
-    /// The tile of a tab: the small one at every density, as the tile's sizes say.
-    pub fn tab_tile(&self) -> f32 {
-        TILE_SMALL
-    }
 }
 
 impl Default for Metrics {

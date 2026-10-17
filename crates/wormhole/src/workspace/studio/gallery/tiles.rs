@@ -58,22 +58,47 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             id,
             ui,
             TerminalTab {
-                tile: tile(id, claude(), glyph, selected, true),
+                tile: style::status_tile_at(
+                    id,
+                    ui,
+                    StatusTile { face: claude(), glyph, selected, mini: true },
+                    TILE_SMALL,
+                    app,
+                ),
                 name: name.into(),
                 selected,
                 hint: None,
+                close: selected
+                    .then(|| style::close_x(id, ui, style::SelectedFill::Plain).into_any_element()),
             },
         )
         .into_any_element()
     };
+    let switch = |id: &'static str, alert: bool| {
+        style::group_switcher(
+            id,
+            ui,
+            style::GroupSwitch {
+                color: Some(ui.primary),
+                name: "Release 1.2".into(),
+                count: 3,
+                alert,
+                spoken: "Group Release 1.2, 3 terminals".into(),
+            },
+        )
+    };
     let tabs = div()
         .flex()
         .items_center()
-        .gap_1()
+        .gap_2()
         .px_4()
         .py_2()
+        .child(switch("g-switch", true))
+        .child(style::tab_divider(ui, 16.0))
         .child(tab("g-tab-1", StatusGlyph::Working, "sidebar polish", true))
-        .child(tab("g-tab-2", StatusGlyph::Done, "release", false));
+        .child(tab("g-tab-2", StatusGlyph::Done, "release", false))
+        .child(style::tab_divider(ui, 14.0))
+        .child(tab("g-tab-3", StatusGlyph::Idle, "cargo test", false));
 
     div()
         .flex()
@@ -83,7 +108,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .child(env.mark("status.tile", tiles))
         .child(caption(ui, "A card of terminals"))
         .child(card)
-        .child(caption(ui, "Tabs · the open one and another"))
+        .child(caption(ui, "Tab bar · the group switcher with its amber dot, the open tab and the others"))
         .child(tabs)
         .into_any_element()
 }

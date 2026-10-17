@@ -96,6 +96,14 @@ pub(super) struct Place {
 /// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
 /// its state round it; the bell is a badge on a terminal that has nothing louder to say.
 pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, size: f32, cx: &App) -> AnyElement {
+    let (face, state) = tile_parts(info, frame);
+    let id = ElementId::Name(SharedString::from(format!("tile-{}-{}", info.id, size as u32)));
+    style::status_tile_at(id, frame.ui, StatusTile { face, glyph: state, selected, mini: false }, size, cx)
+}
+
+/// What a terminal's tile shows: the face and the state, for a tile drawn later (the tab bar's
+/// switcher builds its content without the workspace).
+pub(super) fn tile_parts(info: &RowInfo, frame: &Frame) -> (TileFace, StatusGlyph) {
     let face = match info.agent.filter(|_| frame.show_agent) {
         Some(agent) => TileFace::Agent(agent),
         None => TileFace::Terminal,
@@ -107,8 +115,7 @@ pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, size: f32,
         }
         state => state,
     };
-    let id = ElementId::Name(SharedString::from(format!("tile-{}-{}", info.id, size as u32)));
-    style::status_tile_at(id, frame.ui, StatusTile { face, glyph: state, selected, mini: false }, size, cx)
+    (face, state)
 }
 
 /// The glyph a terminal's state is drawn with.

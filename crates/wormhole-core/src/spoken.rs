@@ -169,6 +169,16 @@ pub fn status_profile(name: &str) -> String {
     format!("Window in profile {name}")
 }
 
+/// The profile chip in the sidebar's top row: "Profile Work, switch profile".
+pub fn profile_chip(name: &str) -> String {
+    format!("Profile {name}, switch profile")
+}
+
+/// A profile's row in the chip's menu: "Work, current profile" or "Private, switches every window".
+pub fn profile_choice(name: &str, current: bool) -> String {
+    if current { format!("{name}, current profile") } else { format!("{name}, switches every window") }
+}
+
 /// The context meter: "Agent context, 62 percent".
 pub fn status_context(percent: u32) -> String {
     format!("Agent context, {percent} percent")
@@ -283,6 +293,7 @@ mod tests {
         status_attention, status_branch, status_context, status_counted, status_done, status_failed,
         status_needs_you, status_size, status_working,
     };
+    use super::{profile_chip, profile_choice};
     use crate::layout::status_bar::{Activity, Entry, Summary};
     use crate::terminal::BlockState;
 
@@ -442,6 +453,13 @@ mod tests {
         );
         assert_eq!(super::pane("cargo test", None, 2, 3, false), "cargo test, pane 2 of 3");
         assert_eq!(super::pane("zsh", Some(""), 1, 2, false), "zsh, pane 1 of 2");
+    }
+
+    #[test]
+    fn the_profile_chip_and_its_rows_say_what_they_do() {
+        assert_eq!(profile_chip("Work"), "Profile Work, switch profile");
+        assert_eq!(profile_choice("Work", true), "Work, current profile");
+        assert_eq!(profile_choice("Private", false), "Private, switches every window");
     }
 
     #[test]

@@ -2,9 +2,12 @@
 //! wears when it is in a profile other than the one Wormhole is in. The colours are the
 //! theme's, from core's `FolderColor::color`.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use super::groups::PopoverTrigger;
 use super::scale::{CONTROL_H, Edges, TextRole};
 use crate::settings::UiColors;
 
@@ -25,6 +28,52 @@ pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div
         .child(letter.to_uppercase().to_string());
     if size >= AVATAR_BODY_FROM { avatar.text_body() } else { avatar.text_caption() }
 }
+
+/// The chip in the top row of the sidebar and of the tab bar (RF-21): a borderless pop-up that names
+/// the profile Wormhole is in. 24 tall, a 16 pt avatar, the name in 13, up-down chevrons, and a
+/// fill only under the pointer. It is only drawn while there are two or more profiles. As a
+/// `Popover`'s trigger it opens the profile menu.
+#[track_caller]
+pub fn profile_chip(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    color: Hsla,
+    letter: char,
+    name: impl Into<SharedString>,
+    spoken: impl Into<SharedString>,
+) -> PopoverTrigger {
+    let chip = div()
+        .id(id)
+        .role(Role::Button)
+        .aria_label(spoken)
+        .flex_none()
+        .flex()
+        .items_center()
+        .gap_2()
+        .h(px(CHIP_H))
+        .pl_1()
+        .pr_2()
+        .rounded(ui.radius)
+        .cursor_pointer()
+        .hover(move |d| d.bg(ui.band_hover))
+        .child(profile_avatar(ui, color, letter, CHIP_AVATAR))
+        .child(
+            div()
+                .max_w(px(CHIP_NAME_MAX))
+                .truncate()
+                .text_label()
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(ui.text)
+                .child(name.into()),
+        )
+        .child(Icon::new(IconName::ChevronsUpDown).xsmall().text_color(ui.muted));
+    PopoverTrigger::new(chip)
+}
+
+/// The chip's height, its avatar, and the longest name it shows whole.
+pub const CHIP_H: f32 = 24.0;
+const CHIP_AVATAR: f32 = 16.0;
+const CHIP_NAME_MAX: f32 = 120.0;
 
 /// From this size the avatar's letter is body text, below it caption text.
 const AVATAR_BODY_FROM: f32 = 24.0;

@@ -43,6 +43,8 @@ actions!(
         CloseTerminal,
         NextTerminal,
         PreviousTerminal,
+        NextGroup,
+        PreviousGroup,
         SplitRight,
         SplitDown,
         ZoomPane,
@@ -123,6 +125,11 @@ actions!(
 #[action(namespace = workspace, no_json)]
 pub struct GoToTerminal(pub u8);
 
+/// ⌃⌥1–9: the group with that number, as the tab bar's switcher lists them.
+#[derive(Clone, Debug, PartialEq, Action)]
+#[action(namespace = workspace, no_json)]
+pub struct GoToGroup(pub u8);
+
 /// Shell → Open Recent: a recent folder.
 #[derive(Clone, Debug, PartialEq, Action)]
 #[action(namespace = app, no_json)]
@@ -176,6 +183,9 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::NextTerminal => Box::new(NextTerminal),
         A::PreviousTerminal => Box::new(PreviousTerminal),
         A::Terminal(n) => Box::new(GoToTerminal(n)),
+        A::NextGroup => Box::new(NextGroup),
+        A::PreviousGroup => Box::new(PreviousGroup),
+        A::Group(n) => Box::new(GoToGroup(n)),
         A::SplitRight => Box::new(SplitRight),
         A::SplitDown => Box::new(SplitDown),
         A::ZoomPane => Box::new(ZoomPane),
@@ -589,6 +599,9 @@ impl Workspace {
                 cx.listener(|this, _: &PreviousTerminal, window, cx| this.step_session(-1, window, cx)),
             )
             .on_action(cx.listener(|this, n: &GoToTerminal, window, cx| this.go_to_numbered(n.0, window, cx)))
+            .on_action(cx.listener(|this, _: &NextGroup, window, cx| this.step_group(true, window, cx)))
+            .on_action(cx.listener(|this, _: &PreviousGroup, window, cx| this.step_group(false, window, cx)))
+            .on_action(cx.listener(|this, n: &GoToGroup, window, cx| this.go_to_group(n.0, window, cx)))
             .on_action(cx.listener(|this, _: &PinTerminal, _, cx| this.toggle_pin(this.active, cx)))
             .when(has_folder, |root| {
                 root.on_action(cx.listener(|this, _: &RevealInFinder, _, cx| {

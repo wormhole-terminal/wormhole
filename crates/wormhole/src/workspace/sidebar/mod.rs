@@ -34,6 +34,7 @@ mod motion;
 mod rename;
 mod row_menu;
 mod rows;
+mod switcher;
 mod tab_bar;
 mod tick;
 
@@ -83,6 +84,8 @@ pub(super) struct SidebarState {
     pub(super) demo: Option<demo::Demo>,
     /// The tab bar, while the terminals are in tabs.
     pub(super) tabs: tab_bar::TabBarState,
+    /// The profile chip's menu being open, and the list it shows.
+    pub(super) profile_menu: Option<super::profile_chip::ProfilePage>,
 }
 
 impl SidebarState {
@@ -109,6 +112,7 @@ impl SidebarState {
             times_drawn: RefCell::default(),
             demo: None,
             tabs: tab_bar::TabBarState::default(),
+            profile_menu: None,
         }
     }
 }

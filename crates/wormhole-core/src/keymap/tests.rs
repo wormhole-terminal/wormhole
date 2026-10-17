@@ -191,7 +191,13 @@ fn app_keys_carry_command_except_f6() {
     for entry in entries().iter().filter(|e| e.scope == Scope::App) {
         for key in &entry.keys {
             let f6 = key.key == "f6" && !key.mods.cmd && !key.mods.ctrl && !key.mods.alt;
-            assert!(key.mods.cmd || f6, "{:?}: {} has no ⌘", entry.id, key.glyphs());
+            // The groups' keys (⌃⌥[, ⌃⌥], ⌃⌥1–9) are the boards' choice: the terminal yields them.
+            let group =
+                matches!(entry.id, ActionId::PreviousGroup | ActionId::NextGroup | ActionId::Group(_))
+                    && key.mods.ctrl
+                    && key.mods.alt
+                    && !key.mods.shift;
+            assert!(key.mods.cmd || f6 || group, "{:?}: {} has no ⌘", entry.id, key.glyphs());
         }
     }
 }
@@ -419,6 +425,8 @@ Window
   ---
   Next Terminal  ⌃⌘↓
   Previous Terminal  ⌃⌘↑
+  Next Group  ⌃⌥]
+  Previous Group  ⌃⌥[
   Go to Waiting Terminal  ⌥⌘J
   Go to Finished Terminal  ⌥⇧⌘J
   Select Pane ▸
