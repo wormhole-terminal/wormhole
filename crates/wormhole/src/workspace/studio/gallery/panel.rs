@@ -363,6 +363,27 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     // A note where a list would be, in a card of its own.
     let note_card = style::panel_card(ui, style::empty_note(ui, "No changes. Working tree is clean."));
 
+    // A plain band (the Theme Studio's groups) and a loose line beside the cards, which stands in
+    // line with their rows but draws no card.
+    let flat_band = style::band(
+        "g-flat-band",
+        ui,
+        BandParts {
+            kind: BandKind::Section,
+            section: Section::Open,
+            title: "Plain band".into(),
+            detail: None,
+            count: Some("3".into()),
+            waiting: None,
+            add: None,
+            on_toggle: Some(Box::new(|_, _, _| {})),
+            drop_target: false,
+            sticky: false,
+            joined: false,
+        },
+    );
+    let loose = style::panel_segment(ui, false, false, false, false, style::empty_note(ui, "A loose line"));
+
     div()
         .flex()
         .flex_col()
@@ -379,6 +400,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
                 .child(card_column(ui, history))
                 .child(card_column(ui, project))
                 .child(div().w_full().max_w(px(COLUMN_W)).bg(ui.panel_right).child(note_card))
+                .child(div().w_full().max_w(px(COLUMN_W)).bg(ui.panel_right).child(flat_band).child(loose))
                 .child(div().flex().bg(ui.panel_right).outlined(ui, ui.border).child(strip)),
         )
         .into_any_element()
