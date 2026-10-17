@@ -74,6 +74,19 @@ impl Default for Panes {
     }
 }
 
+/// How the right panel's toggle looks: the panel open, closed, or wanted but hidden for
+/// lack of room (a small primary dot on the toggle).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PanelToggle {
+    Open,
+    /// Closed by the user. `hides_sidebar`: opening it now would hide the sidebar for room.
+    Closed {
+        hides_sidebar: bool,
+    },
+    /// Wanted, waiting for room; opening it hides the sidebar.
+    Waiting,
+}
+
 /// The columns' widths in a window, left to right; a hidden panel is 0 wide. The strip is
 /// [`PANEL_STRIP`] at the right edge whatever the panel does.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -134,6 +147,15 @@ impl Panes {
             self.reveal_panel(window);
         }
         self.panel_visible(window)
+    }
+
+    /// What the panel's toggle shows in a window this wide.
+    pub fn panel_toggle(&self, window: f32) -> PanelToggle {
+        match (self.panel_wanted, self.panel_fits(window)) {
+            (true, true) => PanelToggle::Open,
+            (true, false) => PanelToggle::Waiting,
+            (false, fits) => PanelToggle::Closed { hides_sidebar: !fits },
+        }
     }
 
     pub fn toggle_sidebar(&mut self) {

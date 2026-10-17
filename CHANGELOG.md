@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The right panel's toggle is back at the right end of the terminal's title row (also with terminals as
+  tabs), beside the panel's tab strip: it opens the panel on its last tab and closes it, like ⌥⌘I.
 - In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)
   on a right-click or a click on its name. The panel's tab strip no longer has a button at its foot;
   Stash prompt stays in the palette, the menu and its key.
@@ -67,6 +69,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- The status bar's size item names the program in front (the agent, or the running command), as the
+  title row does, instead of always the shell.
 - New windows open with a 320 point sidebar and a 300 point panel (plus its 28 point strip); saved
   widths are kept.
 

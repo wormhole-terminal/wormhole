@@ -2,9 +2,9 @@
 //! sidebar's collapse button sits at one spot of the window whether the sidebar is open or
 //! hidden (so do the traffic lights macOS draws at the left); the sidebar's title row leaves room
 //! for the lights above the "Terminals" header and the terminal's carries the selected terminal's
-//! breadcrumb and the split buttons. The right panel has no title row: its tabs are the strip down
-//! the window's edge (`panel_strip`).
-use wormhole_core::layout::Edge;
+//! breadcrumb and the split buttons, ending in the right panel's toggle. The right panel has no
+//! title row: its tabs are the strip down the window's edge (`panel_strip`).
+use wormhole_core::layout::{Edge, PanelToggle};
 
 use super::focus::TitleButton;
 use super::*;
@@ -135,6 +135,37 @@ impl Workspace {
                 .in_title_row()
                 .focus_ring(self.title_ring(TitleButton::Sidebar, window, cx))
                 .on_click(cx.listener(|this, _, _, cx| this.toggle_sidebar(cx))),
+            )
+            .into_any_element()
+    }
+
+    /// The right panel's toggle, the last button of the terminal's title row: it opens the panel on
+    /// its last tab and closes it, as the key does.
+    pub(super) fn render_panel_toggle(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        let ui = ui(cx);
+        let look = self.panes.panel_toggle(self.window_width);
+        // One glyph in every state; the tooltip says what a click does.
+        let tooltip = match look {
+            PanelToggle::Open => keymap::with_key("Hide right panel", ActionId::ToggleRightPanel),
+            PanelToggle::Closed { hides_sidebar: false } => {
+                keymap::with_key("Show right panel", ActionId::ToggleRightPanel)
+            }
+            PanelToggle::Closed { hides_sidebar: true } | PanelToggle::Waiting => format!(
+                "{} · hides the sidebar to make room",
+                keymap::with_key("Show right panel", ActionId::ToggleRightPanel)
+            ),
+        };
+        div()
+            .id("panel-toggle")
+            .occlude()
+            .flex_none()
+            .child(
+                style::icon_button("toggle-panel", ui, IconName::PanelRight, tooltip)
+                    .in_title_row()
+                    // Wanted but hidden for lack of room: the dot says it comes back.
+                    .marked(look == PanelToggle::Waiting)
+                    .focus_ring(self.title_ring(TitleButton::Panel, window, cx))
+                    .on_click(cx.listener(|this, _, window, cx| this.toggle_notes(window, cx))),
             )
             .into_any_element()
     }

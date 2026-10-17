@@ -1,6 +1,7 @@
 use super::{
-    Columns, Edge, PANEL_DEFAULT, PANEL_MAX, PANEL_MIN, PANEL_STRIP, Panes, Resize, SIDEBAR_DEFAULT,
-    SIDEBAR_MAX, SIDEBAR_MIN, Stop, TERMINAL_MIN, WINDOW_MIN_WIDTH, resize, right_panel_fits,
+    Columns, Edge, PANEL_DEFAULT, PANEL_MAX, PANEL_MIN, PANEL_STRIP, PanelToggle, Panes, Resize,
+    SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN, Stop, TERMINAL_MIN, WINDOW_MIN_WIDTH, resize,
+    right_panel_fits,
 };
 
 /// What the panel needs beside it: the terminal and the strip.
@@ -268,4 +269,19 @@ fn a_double_click_puts_the_default_width_back() {
     panes.reset(Edge::Panel);
     assert_eq!(panes.panel_width, 300.0);
     assert_eq!(panes, Panes::default());
+}
+
+#[test]
+fn the_panel_toggle_shows_open_closed_or_waiting() {
+    let open = Panes::default();
+    assert_eq!(open.panel_toggle(1440.0), PanelToggle::Open);
+    // 880 < 908: hidden for room while wanted, so the toggle wears the dot.
+    assert_eq!(open.panel_toggle(880.0), PanelToggle::Waiting);
+    let closed = Panes { panel_wanted: false, ..open };
+    assert_eq!(closed.panel_toggle(1440.0), PanelToggle::Closed { hides_sidebar: false });
+    // Opening it in a narrow window would hide the sidebar: the tooltip says so.
+    assert_eq!(closed.panel_toggle(880.0), PanelToggle::Closed { hides_sidebar: true });
+    // With the sidebar hidden there is room in any window.
+    let hidden = Panes { sidebar_open: false, ..open };
+    assert_eq!(hidden.panel_toggle(WINDOW_MIN_WIDTH), PanelToggle::Open);
 }

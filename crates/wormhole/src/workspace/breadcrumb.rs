@@ -10,7 +10,7 @@ use gpui_kit::component::ActiveTheme as _;
 use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
 use super::path_card::Over;
-use super::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use super::title_row::{Facts, MORE_W, PANEL_TOGGLE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 use super::*;
 
 impl Workspace {
@@ -98,8 +98,11 @@ impl Workspace {
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
-            Some(_) => (ROW_GAP + super::title_row::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
-            None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
+            Some(_) => (
+                ROW_GAP + super::title_row::OPEN_IN_W + SPLITS_W + PANEL_TOGGLE_W,
+                ROW_GAP + MORE_W + PANEL_TOGGLE_W,
+            ),
+            None => (ROW_GAP + SPLITS_W + PANEL_TOGGLE_W, ROW_GAP + MORE_W + PANEL_TOGGLE_W),
         };
         // A crumb before the terminal brings a gap, the separator and a gap.
         let before = 2.0 * CRUMB_GAP + style::GLYPH;
