@@ -1,5 +1,5 @@
-//! View tests of a folder's colour and of the Project tab that sets it: whose tint the title row
-//! wears, who has the tab, and making a project folder from it.
+//! View tests of a folder's colour and of the Project tab that sets it: whose colour a
+//! folder's band wears, who has the tab, and making a project folder from it.
 
 use std::path::{Path, PathBuf};
 
@@ -42,13 +42,12 @@ fn go(ws: &mut Workspace, dir: &Path, cx: &mut gpui_kit::Context<Workspace>) {
     ws.refresh_projects(cx);
 }
 
-/// The hex of the colour the title row is tinted with, if it is.
-fn tint(
-    ws: &Workspace,
-    window: &mut gpui_kit::Window,
-    cx: &mut gpui_kit::Context<Workspace>,
-) -> Option<String> {
-    ws.title_plan(window, cx).tint.map(|tint| tint.color.color().to_hex())
+/// The hex of the colour the active terminal's folder wears (its band's; the title row wears its
+/// group's colour instead), if it has one.
+fn tint(ws: &Workspace, _: &mut gpui_kit::Window, cx: &mut gpui_kit::Context<Workspace>) -> Option<String> {
+    let tokens = &cx.global::<SettingsStore>().tokens;
+    let paint = ws.folder_paint(&ws.active_folder(cx)?, cx);
+    paint.tint(tokens).map(|(color, _)| color.color().to_hex())
 }
 
 /// The folder's paint, as the band and the Project tab get it.

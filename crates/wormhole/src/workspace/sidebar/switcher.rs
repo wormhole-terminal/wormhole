@@ -16,6 +16,9 @@ use super::*;
 use crate::select;
 use crate::style::{GroupHead, GroupSwitch, PopoverRow, TileFace, popover_row, popover_rule};
 
+/// What a card or row does once the popover has closed.
+type Then = Box<dyn Fn(&mut Workspace, &mut Window, &mut Context<Workspace>)>;
+
 /// The popover's width.
 const POPOVER_W: f32 = 340.0;
 /// The gap between two cards, and how far the popover is inset.
@@ -279,7 +282,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
     let Snapshot { ui, metrics, input, cards, loose, hits, hint, keys, .. } = snap;
     let (ui, metrics) = (*ui, *metrics);
     // A click that closes the popover first, then does `then`.
-    let go = |then: Box<dyn Fn(&mut Workspace, &mut Window, &mut Context<Workspace>)>| {
+    let go = |then: Then| {
         let this = this.clone();
         move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
             this.update(cx, |ws, cx| {
@@ -386,7 +389,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         } else {
             head
         };
-        let wash = card.color.map(|c| c);
+        let wash = card.color;
         let segment = style::card_segment(ui, metrics, true, true, wash, head);
         // The open group wears a ring in the primary.
         let ring = card.current.then(|| {
