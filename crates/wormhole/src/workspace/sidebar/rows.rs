@@ -16,7 +16,7 @@ use wormhole_core::sidebar::text::{agent_detail, ago, clock, place_detail, took}
 use super::super::focus::SidebarStop;
 use super::super::terminal_drag::DragOrigin;
 use super::*;
-use crate::style::{RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
+use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
@@ -37,11 +37,10 @@ const ON_SCREEN_W: f32 = 76.0;
 /// What every row of one frame shares: the settings and how text is measured.
 pub(super) struct Frame {
     pub(super) ui: UiColors,
-    pub(super) compact: bool,
+    /// What rows, cards and heads measure at the person's density.
+    pub(super) metrics: Metrics,
     show_dot: bool,
-    dot_right: bool,
     show_agent: bool,
-    pub(super) show_branch: bool,
     pub(super) show_changes: bool,
     show_notes: bool,
     /// The ⌘N keycaps are showing.
@@ -57,11 +56,9 @@ impl Frame {
         let s = settings(cx);
         Self {
             ui: ui(cx),
-            compact: s.compact_sidebar,
+            metrics: Metrics::of(s.density, s.show_groups_as_cards),
             show_dot: s.sidebar_status_dot,
-            dot_right: s.sidebar_status_position == wormhole_core::config::StatusPosition::Right,
             show_agent: s.sidebar_agent_icon,
-            show_branch: s.sidebar_branch,
             show_changes: s.sidebar_changes,
             show_notes: s.sidebar_notes,
             hints: ws.hints_showing(cx),
@@ -99,7 +96,7 @@ pub(super) struct Place {
 
 /// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
 /// its state round it; the bell is a badge on a terminal that has nothing louder to say.
-pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, mini: bool, cx: &App) -> AnyElement {
+pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, size: f32, cx: &App) -> AnyElement {
     let face = match info.agent.filter(|_| frame.show_agent) {
         Some(agent) => TileFace::Agent(agent),
         None => TileFace::Terminal,
@@ -111,12 +108,8 @@ pub(super) fn tile_for(info: &RowInfo, frame: &Frame, selected: bool, mini: bool
         }
         state => state,
     };
-    let id = ElementId::Name(SharedString::from(format!(
-        "tile-{}-{}",
-        info.id,
-        if mini { "mini" } else { "full" }
-    )));
-    style::status_tile(id, frame.ui, StatusTile { face, glyph: state, selected, mini }, cx)
+    let id = ElementId::Name(SharedString::from(format!("tile-{}-{}", info.id, size as u32)));
+    style::status_tile_at(id, frame.ui, StatusTile { face, glyph: state, selected, mini: false }, size, cx)
 }
 
 /// The glyph a terminal's state is drawn with.
@@ -147,9 +140,9 @@ pub(super) struct SecondLine {
     pub(super) trail: Option<String>,
 }
 
-/// The second line of every comfortable row: what the terminal has to report comes first; a quiet
+/// The second line of every regular row: what the terminal has to report comes first; a quiet
 /// one says where it is (`whereabouts`), and where even that is unknown it says what it is, so no
-/// row is a single line. A compact row has none.
+/// row is a single line. A compact or dense row has none (`compact`).
 pub(super) fn second_line(
     info: &RowInfo,
     compact: bool,
@@ -222,30 +215,9 @@ impl Workspace {
         let selected = ix == self.active;
         let group = SharedString::from("terminal-row");
 
-        // The lead column and line 1's right side: the status glyph in one of them, the
-        // agent's logo in the lead column when asked for (only while the agent is idle if the
-        // glyph is there too, since state beats identity).
-        let glyph = || style::status_glyph(("status", id as u64), ui, glyph_for(info), cx);
-        let logo = info.agent.filter(|_| frame.show_agent).map(|agent| {
-            let agent = agents::agent(agent);
-            let color = if selected { ui.selected_text } else { ui.muted };
-            style::agent_logo(agent.icon(), agent.monogram, style::ITEM_LEAD_W, color)
-        });
-        let agent_idle = info.agent.is_some() && info.state == RowState::Idle;
-        // A row with two lines leads with its status tile: what the terminal is inside, what it is
-        // doing round it. It says the bell too, so nothing is left for the right.
-        let tiled = !frame.compact;
-        let tile = tiled.then(|| tile_for(info, frame, selected, false, cx));
-        let (lead, at_right): (AnyElement, Option<AnyElement>) = match (frame.show_dot, frame.dot_right, logo)
-        {
-            _ if tiled => (div().into_any_element(), None),
-            (true, false, Some(logo)) if agent_idle => (logo, None),
-            (true, false, _) => (glyph(), None),
-            (true, true, logo) => (logo.unwrap_or_else(|| div().into_any_element()), Some(glyph())),
-            (false, _, logo) => (logo.unwrap_or_else(|| div().into_any_element()), None),
-        };
-        let bell = (info.bell && !tiled)
-            .then(|| style::status_glyph(("bell", id as u64), ui, StatusGlyph::Bell, cx));
+        // Every row leads with its status tile: what the terminal is inside, what it is doing round
+        // it. It says the bell too, so nothing is left for the right.
+        let tile = tile_for(info, frame, selected, frame.metrics.tile, cx);
         // Row details: the notes and tasks still open, the row's own changed files.
         let quiet = if selected { ui.selected_muted } else { ui.muted };
         let notes = (frame.show_notes && info.open_items > 0).then(|| {
@@ -266,36 +238,27 @@ impl Workspace {
         // What a split says of this terminal, at the right of its first line.
         let chain = place.marks.chain.then(|| style::chain_mark(("chain", id as u64), ui));
         let on_screen = place.marks.on_screen.then(|| style::on_screen_mark(ui));
-        let trail = (notes.is_some()
-            || changes.is_some()
-            || bell.is_some()
-            || at_right.is_some()
-            || chain.is_some()
-            || on_screen.is_some())
-        .then(|| {
-            div()
-                .flex()
-                .items_center()
-                .gap_2()
-                // The close × takes this place under the pointer.
-                .group_hover(group.clone(), |s| s.invisible())
-                .children(chain)
-                .children(on_screen)
-                .children(notes)
-                .children(changes)
-                .children(bell)
-                .children(at_right)
-                .into_any_element()
-        });
+        let trail =
+            (notes.is_some() || changes.is_some() || chain.is_some() || on_screen.is_some()).then(|| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    // The close × takes this place under the pointer.
+                    .group_hover(group.clone(), |s| s.invisible())
+                    .children(chain)
+                    .children(on_screen)
+                    .children(notes)
+                    .children(changes)
+                    .into_any_element()
+            });
 
-        // The second line: every comfortable row has one. What the terminal
+        // The second line: every regular row has one. What the terminal
         // has to report comes first; a quiet one says where it is, and where even that is
         // unknown it says what it is, so no row is a single line.
-        let branch = info.branch.as_deref().filter(|_| frame.show_branch);
-        let _ = branch;
         let whereabouts = || place_detail(info.cwd.as_deref(), home_dir(), PLACE_CHARS);
         let SecondLine { text: detail, tone, mono, trail: detail_trail } =
-            second_line(info, frame.compact, whereabouts);
+            second_line(info, !frame.metrics.two_lines, whereabouts);
 
         let hint = place.number.filter(|_| frame.hints).map(|n| SharedString::from(keycap(n)));
         // After the name: the pin, and the worktree mark the band carries too, with the
@@ -332,17 +295,14 @@ impl Workspace {
 
         // Tooltip only when something is cut off: the name, or the second line.
         let details = (frame.show_notes && info.open_items > 0) as u8 + info.changes.is_some() as u8;
-        let right = match (&hint, frame.dot_right || info.bell) {
-            (Some(_), _) => KEYCAP_TRAIL_W,
-            (None, true) => TRAIL_W,
-            (None, false) => 0.0,
-        } + f32::from(details) * DETAIL_W
+        let right = if hint.is_some() { KEYCAP_TRAIL_W } else { 0.0 }
+            + f32::from(details) * DETAIL_W
             + if place.marks.chain { TRAIL_W } else { 0.0 }
             + if place.marks.on_screen { ON_SCREEN_W } else { 0.0 };
         // What the row's sides and its lead take: the card's margin and padding, the row's own
         // padding, and the tile or the lead glyph with its gap.
-        let side = style::CARD_MARGIN + style::CARD_PAD + 8.0;
-        let lead_w = if tiled { style::TILE + style::TILE_GAP } else { style::ITEM_LEAD_W + 8.0 };
+        let side = frame.metrics.card_margin + frame.metrics.card_pad + frame.metrics.row_px;
+        let lead_w = frame.metrics.tile + frame.metrics.tile_gap;
         let name_room = frame.width - 2.0 * side - lead_w - right - marks as f32 * MARK_W;
         let name_weight = if selected || info.unread { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM };
         let cut_name = frame.measure(&info.name, BODY_REM, name_weight, window) > name_room;
@@ -384,7 +344,7 @@ impl Workspace {
             ("session", id as u64),
             ui,
             SessionRow {
-                glyph: lead,
+                glyph: div().into_any_element(),
                 name: info.name.clone(),
                 detail: detail.map(SharedString::from),
                 tone,
@@ -395,8 +355,9 @@ impl Workspace {
                 mark: mark.map(IntoElement::into_any_element),
                 trail,
                 detail_trail: detail_trail.map(SharedString::from),
-                tile,
+                tile: Some(tile),
                 card: true,
+                metrics: frame.metrics,
             },
         );
         let flash = self.sidebar.flash.filter(|(flashed, _)| *flashed == id).map(|(_, generation)| {
@@ -523,7 +484,6 @@ mod tests {
             since: Duration::from_secs(180),
             cwd: Some(PathBuf::from("/w")),
             worktree: None,
-            branch: None,
             command: None,
             running: None,
             bell: false,

@@ -42,6 +42,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - New windows open with a 320 point sidebar and a 300 point panel (plus its 28 point strip); saved
   widths are kept.
 
+- Settings → Terminals & sidebar has three densities, Regular (48 pt rows with a second line), Compact
+  (32 pt, one line) and Dense (26 pt, tighter cards), each with its status tile, for the sidebar and
+  the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
+  The old compact switch becomes Compact; View → Compact Rows is gone.
+
 ### Removed
 
 - The sidebar no longer groups terminals by folder, and its header is only "Terminals" and the +: the

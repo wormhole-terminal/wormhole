@@ -15,6 +15,7 @@ use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use wormhole_core::fonts::FontSlot;
 pub(crate) use wormhole_core::settings_index::SectionId as Section;
 use wormhole_core::settings_index::{self, Query};
+use wormhole_core::sidebar::Density;
 
 use super::aux_window;
 use super::*;
@@ -41,7 +42,7 @@ const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
 /// over another option.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SidebarLook {
-    Compact(bool),
+    Density(Density),
 }
 
 /// The settings window's colours: an opaque window keeps the theme's own text colours, a

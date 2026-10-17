@@ -220,7 +220,7 @@ impl Workspace {
             ("tab", info.id as u64),
             ui,
             TerminalTab {
-                tile: tile_for(info, frame, selected, true, cx),
+                tile: tile_for(info, frame, selected, frame.metrics.tab_tile(), cx),
                 name: info.name.clone(),
                 selected,
                 hint,

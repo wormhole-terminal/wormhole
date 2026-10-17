@@ -444,18 +444,25 @@ const SESSIONS: &[Group] = &[
         aside: "",
         entries: &[
             entry(
+                "density",
+                "Density",
+                "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26",
+                "density compact dense regular comfortable rows size",
+                &["density"],
+            ),
+            entry(
+                "cards",
+                "Show groups as cards",
+                "Off: groups are a head and their rows, with no card around them",
+                "cards groups card background border",
+                &["show_groups_as_cards"],
+            ),
+            entry(
                 "sidebar-numbers",
                 "⌘1–⌘9 numbers",
                 "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",
                 "command shortcuts numbers stay follow list stable classic",
                 &["sidebar_numbers"],
-            ),
-            entry(
-                "compact",
-                "Density",
-                "Compact: one line per terminal",
-                "compact comfortable rows",
-                &["compact_sidebar"],
             ),
             entry(
                 "cmd-hints",
@@ -470,37 +477,23 @@ const SESSIONS: &[Group] = &[
         "Row details",
         &[
             entry(
-                "sidebar-branch",
-                "Branch",
-                "Chip on the folder band; under the name when not grouped by folder",
-                "git branch",
-                &["sidebar_branch"],
-            ),
-            entry(
                 "sidebar-changes",
                 "Changed files",
-                "±N uncommitted changes next to the branch",
+                "±N uncommitted changes in the terminal's row",
                 "git changes count",
                 &["sidebar_changes"],
             ),
             entry(
                 "sidebar-dot",
                 "Status dot",
-                "Working, needs you, finished or idle, as a glyph on every terminal",
+                "Working, needs you, finished or idle, as the state round every terminal's status tile",
                 "status glyph agent",
                 &["sidebar_status_dot"],
             ),
             entry(
-                "status-position",
-                "Status dot position",
-                "Lead column, before the name, or the right edge of the first line",
-                "left right lead column",
-                &["sidebar_status_position"],
-            ),
-            entry(
                 "sidebar-agent",
                 "Agent logo",
-                "Which coding agent runs in the terminal; shown while it's idle",
+                "Which coding agent runs in the terminal, as the face of its status tile",
                 "agent icon logo",
                 &["sidebar_agent_icon"],
             ),

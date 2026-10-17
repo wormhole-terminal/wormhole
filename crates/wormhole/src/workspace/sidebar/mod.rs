@@ -215,26 +215,31 @@ impl Workspace {
             };
             // Each line is a stretch of its card: a group's head and rows, or a terminal's own.
             let (top, bottom) = listing.card_edges(at);
-            let segment = style::card_segment(ui, top, bottom, true, false, line);
+            let segment = style::card_segment(ui, frame.metrics, top, bottom, line);
             // Each card is a glass of its own.
-            let segment = if glass {
+            let segment = if glass && frame.metrics.cards {
                 let (key, inset) = match listing.card(at) {
                     Some(Card::Group(band)) => (
                         glass_key(GlassKind::Card, 1 + band as u64),
                         Insets(
-                            style::CARD_MARGIN,
+                            frame.metrics.card_margin,
                             0.0,
-                            style::CARD_MARGIN,
-                            if bottom { style::CARD_GAP } else { 0.0 },
+                            frame.metrics.card_margin,
+                            if bottom { frame.metrics.card_gap } else { 0.0 },
                         ),
                     ),
                     Some(Card::Loose(session)) => (
                         glass_key(GlassKind::Loose, infos[session].id as u64),
-                        Insets(style::CARD_MARGIN, 0.0, style::CARD_MARGIN, style::CARD_GAP),
+                        Insets(
+                            frame.metrics.card_margin,
+                            0.0,
+                            frame.metrics.card_margin,
+                            frame.metrics.card_gap,
+                        ),
                     ),
                     None => (0, Insets(0.0, 0.0, 0.0, 0.0)),
                 };
-                segment.child(self.glass_probe(key, inset, style::CARD_RADIUS, Some(LIST_CLIP)))
+                segment.child(self.glass_probe(key, inset, frame.metrics.card_radius, Some(LIST_CLIP)))
             } else {
                 segment
             };
@@ -245,13 +250,24 @@ impl Workspace {
                         Card::Group(band) => Some(listing.bands[band].group),
                         Card::Loose(_) => None,
                     });
-                    self.with_row_drop(segment.id(("row-line", id as u64)), id, group, bottom, cx)
-                        .into_any_element()
+                    self.with_row_drop(
+                        segment.id(("row-line", id as u64)),
+                        id,
+                        group,
+                        bottom.then_some(frame.metrics.card_gap),
+                        cx,
+                    )
+                    .into_any_element()
                 }
                 Entry::Band { band, .. } => {
                     let group = listing.bands[band].group;
-                    self.with_head_drop(segment.id(("head-line", group as u64)), group, bottom, cx)
-                        .into_any_element()
+                    self.with_head_drop(
+                        segment.id(("head-line", group as u64)),
+                        group,
+                        bottom.then_some(frame.metrics.card_gap),
+                        cx,
+                    )
+                    .into_any_element()
                 }
             };
             let is_held = matches!(&keys[at], ItemKey::Row(id) if Some(*id) == held);

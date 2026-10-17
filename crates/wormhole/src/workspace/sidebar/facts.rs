@@ -25,7 +25,6 @@ pub(super) struct RowInfo {
     pub(super) cwd: Option<PathBuf>,
     /// The repository its folder is a worktree of.
     pub(super) worktree: Option<PathBuf>,
-    pub(super) branch: Option<String>,
     /// The command in front of a plain terminal, and how long it has run: only for one that ends
     /// by itself (a build, a test run), since the time an editor or a dev server has been open says
     /// nothing.
@@ -106,7 +105,6 @@ impl Workspace {
                     since: terminal.status_since().elapsed(),
                     cwd: terminal.cwd.clone(),
                     worktree: root.as_deref().and_then(|root| self.worktree_of(root)),
-                    branch: git.and_then(|status| status.branch.clone()),
                     running: foreground
                         .filter(|f| !told && ends_by_itself(&f.command))
                         .and_then(|f| now.duration_since(f.started).ok()),
@@ -138,7 +136,7 @@ impl Workspace {
 
 /// What each row's times read now (compact rows, without a second line, show none).
 pub(super) fn row_times(infos: &[RowInfo], cx: &App) -> Vec<Option<String>> {
-    let compact = settings(cx).compact_sidebar;
+    let compact = !settings(cx).density.two_lines();
     infos.iter().map(|info| rows::time_text(info, compact)).collect()
 }
 

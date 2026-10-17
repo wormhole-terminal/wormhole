@@ -135,7 +135,7 @@ impl Workspace {
                 RowState::Finished => RowTone::Done,
                 _ => RowTone::Plain,
             };
-            let detail = (!frame.compact).then(|| SharedString::from(row.detail));
+            let detail = frame.metrics.two_lines.then(|| SharedString::from(row.detail));
             let parts = SessionRow { detail, tone, trail, ..SessionRow::new(lead, row.name) };
             items.push(display_only(
                 style::session_row(("welcome-demo-row", ix as u64), ui, parts)

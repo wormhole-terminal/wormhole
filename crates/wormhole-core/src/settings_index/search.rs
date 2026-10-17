@@ -199,7 +199,7 @@ mod tests {
         let fonts: Vec<&str> =
             hits.iter().filter(|h| h.section == SectionId::Fonts).map(|h| h.entry.id).collect();
         assert_eq!(fonts.first(), Some(&"line-height"));
-        for id in ["line-height", "scrollback", "compact", "diff-wrap"] {
+        for id in ["line-height", "scrollback", "density", "diff-wrap"] {
             assert!(hits.iter().any(|h| h.entry.id == id), "\"line\" finds {id}");
         }
     }

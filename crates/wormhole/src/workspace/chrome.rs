@@ -118,20 +118,40 @@ impl Workspace {
     }
 
     /// The top of the sidebar: its title row (room for the lights and the collapse button) and the
-    /// "Terminals" header with the + that starts one.
+    /// "Terminals" header with the + that starts one. The header is 28 tall and 12 in, with a 16 pt
+    /// title and a 24 pt + (22, 8, 14 and 20 in the dense density).
     pub(super) fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let row = || div().h(px(style::TITLE_ROW_H)).flex_none().flex().items_center().gap_1();
+        let s = settings(cx);
+        let metrics = style::Metrics::of(s.density, s.show_groups_as_cards);
+        let title = if metrics.small_title {
+            div().text_body().font_weight(FontWeight::BOLD).text_color(ui.text).child("Terminals")
+        } else {
+            style::panel_title(ui, "Terminals")
+        };
         div()
             .flex()
             .flex_col()
             .flex_none()
-            .child(row().id("sidebar-title-row").pr(px(TITLE_ROW_PAD)).title_drag().child(div().flex_1()))
             .child(
-                row()
-                    .pl(px(style::SIDEBAR_INSET))
+                div()
+                    .id("sidebar-title-row")
+                    .h(px(style::TITLE_ROW_H))
+                    .flex_none()
                     .pr(px(TITLE_ROW_PAD))
-                    .child(style::panel_title(ui, "Terminals"))
+                    .title_drag()
+                    .child(div().flex_1()),
+            )
+            .child(
+                div()
+                    .h(px(metrics.header_h))
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .pl(px(metrics.header_in))
+                    .pr(px(metrics.header_in))
+                    .child(title)
                     .child(div().flex_1())
                     // A right-click on the + offers the other shells.
                     .child(
@@ -143,7 +163,9 @@ impl Workspace {
                                 IconName::Plus,
                                 keymap::with_key("New terminal", ActionId::NewTerminal),
                             )
-                            .in_title_row()
+                            .map(
+                                |button| if metrics.small_title { button.in_row() } else { button.in_band() },
+                            )
                             .focus_ring(self.title_ring(TitleButton::NewTerminal, window, cx))
                             .on_click(cx.listener(|this, _, window, cx| this.new_session(window, cx))),
                             cx,

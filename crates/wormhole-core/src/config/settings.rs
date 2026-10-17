@@ -10,7 +10,7 @@ use crate::features::{self, FeatureFlag};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
-use crate::sidebar::{SidebarNumbers, TerminalsIn};
+use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use crate::tokens::Color;
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
@@ -221,7 +221,14 @@ pub struct Settings {
     /// Background opacity, 0.3..=1.0.
     pub opacity: f32,
     pub blur: bool,
-    /// One-line session rows in the sidebar.
+    /// How much room each terminal takes in the sidebar and the tab bar.
+    pub density: Density,
+    /// Groups are cards in the sidebar; off, a group is its head and rows, with no card round them.
+    pub show_groups_as_cards: bool,
+    /// What `density` replaced: one-line rows. Read from older files (see [`Settings::sanitized`]),
+    /// never written.
+    #[serde(skip_serializing)]
+    #[doc(hidden)]
     pub compact_sidebar: bool,
     /// Which Option keys send Esc+key (a side set to Meta can't type @ { [ on some layouts).
     pub option_as_meta: OptionAsMeta,
@@ -391,6 +398,8 @@ impl Default for Settings {
             line_height: 1.3,
             opacity: 0.8,
             blur: true,
+            density: Density::default(),
+            show_groups_as_cards: true,
             compact_sidebar: false,
             option_as_meta: OptionAsMeta::Off,
             scrollback_lines: 10_000,
@@ -481,7 +490,8 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "line_height",
     "opacity",
     "blur",
-    "compact_sidebar",
+    "density",
+    "show_groups_as_cards",
     "option_as_meta",
     "scrollback_lines",
     "changes_tree",
@@ -705,6 +715,10 @@ impl Settings {
             }
             keep
         });
+        // Files from before the three densities say it with one switch.
+        if std::mem::take(&mut self.compact_sidebar) && self.density == Density::Regular {
+            self.density = Density::Compact;
+        }
         // A colour for a path that isn't absolute can never match a folder; the same folder
         // spelt with a trailing slash is one entry.
         let colors = std::mem::take(&mut self.folder_colors);
@@ -734,7 +748,7 @@ mod tests {
     use crate::folder_color::FolderColor;
     use crate::fonts;
     use crate::jsonc;
-    use crate::sidebar::{SidebarNumbers, TerminalsIn};
+    use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
     use crate::tokens::Color;
     use std::path::Path;
 
@@ -882,6 +896,22 @@ mod tests {
         // The merge itself is blind to the lists (the app applies only `PROJECT_SETTINGS`), so
         // what matters is the classification above; the overlay reads like any other key here.
         assert!(applied == ["control_write"] && merged.control_write);
+    }
+
+    /// Files from before the three densities have one switch for one-line rows: it becomes Compact,
+    /// is never written again, and a density the file does say wins over it.
+    #[test]
+    fn the_old_compact_switch_becomes_a_density() {
+        let read = |text: &str| jsonc::parse::<Settings>(text).expect("valid jsonc").sanitized();
+        assert_eq!(read(r#"{ "compact_sidebar": true }"#).density, Density::Compact);
+        assert_eq!(read(r#"{ "compact_sidebar": false }"#).density, Density::Regular);
+        assert_eq!(read(r#"{ "compact_sidebar": true, "density": "dense" }"#).density, Density::Dense);
+        assert_eq!(read("{}").density, Density::Regular);
+        assert!(read("{}").show_groups_as_cards, "cards are on until asked");
+        let json = serde_json::to_value(read(r#"{ "compact_sidebar": true }"#)).expect("serializes");
+        assert!(json.get("compact_sidebar").is_none(), "the old key is not written back");
+        assert_eq!(json["density"], "compact");
+        assert!(PROJECT_SETTINGS.contains(&"density") && PROJECT_SETTINGS.contains(&"show_groups_as_cards"));
     }
 
     /// A config.json from before the final sidebar still reads: its grouping, order, tab layout and

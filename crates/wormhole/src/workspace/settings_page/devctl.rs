@@ -41,12 +41,13 @@ impl Workspace {
         reveal_row(id, cx);
     }
 
-    /// devctl `settings-preview <compact|comfortable|off>`: what Terminals & sidebar previews
+    /// devctl `settings-preview <regular|compact|dense|off>`: what Terminals & sidebar previews
     /// beside the current look, as when the pointer is over that density.
     pub(crate) fn devctl_settings_preview(&self, arg: &str, cx: &mut App) {
         let look = match arg.trim() {
-            "compact" => Some(SidebarLook::Compact(true)),
-            "comfortable" => Some(SidebarLook::Compact(false)),
+            "regular" => Some(SidebarLook::Density(Density::Regular)),
+            "compact" => Some(SidebarLook::Density(Density::Compact)),
+            "dense" => Some(SidebarLook::Density(Density::Dense)),
             _ => None,
         };
         with_page(cx, move |page, _, cx| {

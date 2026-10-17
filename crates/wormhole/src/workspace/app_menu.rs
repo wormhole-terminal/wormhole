@@ -73,9 +73,6 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     if !settings.minimap {
         state.off.push(ActionId::ToggleMinimap);
     }
-    if settings.compact_sidebar {
-        state.checked.push(ActionId::CompactRows);
-    }
     if settings.terminals_in == wormhole_core::sidebar::TerminalsIn::Sidebar {
         state.off.push(ActionId::ToggleTerminalTabs);
     }

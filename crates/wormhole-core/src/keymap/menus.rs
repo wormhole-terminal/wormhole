@@ -178,7 +178,6 @@ const VIEW: &[Slot] = &[
     A(ShowUsage),
     A(ShowProject),
     Sep,
-    A(CompactRows),
     A(ToggleTerminalTabs),
     Sep,
     A(Bigger),

@@ -12,6 +12,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     let app: &App = cx;
     let claude = || TileFace::Agent(AgentId::Claude);
     let tile = |id: &'static str, face: TileFace, glyph: StatusGlyph, selected: bool, mini: bool| {
+        let size = if mini { style::TILE_MINI } else { style::TILE };
         style::status_tile(id, ui, StatusTile { face, glyph, selected, mini }, app)
     };
     let tiles = tile_states(ui, app);
@@ -38,18 +39,16 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .flex_col()
         .child(style::card_segment(
             ui,
-            true,
-            false,
+            style::Metrics::default(),
             true,
             false,
             row("g-card-1", StatusGlyph::Working, "sidebar polish", "Editing tabs.rs", RowTone::Plain, true),
         ))
         .child(style::card_segment(
             ui,
+            style::Metrics::default(),
             false,
             true,
-            true,
-            false,
             row("g-card-2", StatusGlyph::NeedsYou, "diff perf", "Waiting for you", RowTone::Attention, false),
         ));
 

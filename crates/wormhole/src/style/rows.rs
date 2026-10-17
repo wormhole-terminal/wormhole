@@ -10,10 +10,11 @@ use gpui_kit::*;
 use super::bands::CARD_INSET;
 use super::controls::keycap;
 use super::labels::{count_badge, line_counts};
+use super::metrics::Metrics;
 use super::motion::{EASE_OUT, MOTION_FAST};
 use super::scale::{
-    CARD_GAP, CARD_MARGIN, CARD_PAD, CARD_RADIUS, CARD_ROW_RADIUS, FILE_NAME_MAX, INDENT, ITEM_LEAD_W,
-    MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TILE, TITLE_GLYPH, TextRole,
+    FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TITLE_GLYPH,
+    TextRole,
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;
@@ -95,11 +96,14 @@ pub struct SessionRow {
     pub trail: Option<AnyElement>,
     /// Line 2's right side, faint: how long a command has run, "new output".
     pub detail_trail: Option<SharedString>,
-    /// A `style::status_tile` beside both lines, in place of `glyph`: the name and the second line
-    /// start after it. Only a row with a second line has one.
+    /// A `style::status_tile` beside the lines, in place of `glyph`: the name and the second line
+    /// start after it.
     pub tile: Option<AnyElement>,
-    /// In a card (or lined up with one): 8 in instead of 16, the selection and hover rounded.
+    /// In a card (or lined up with one): inset by the row's own padding instead of 16, the selection
+    /// and hover rounded.
     pub card: bool,
+    /// What the row measures at the person's density.
+    pub metrics: Metrics,
 }
 
 impl SessionRow {
@@ -119,6 +123,7 @@ impl SessionRow {
             detail_trail: None,
             tile: None,
             card: false,
+            metrics: Metrics::default(),
         }
     }
 }
@@ -140,8 +145,8 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         detail_trail,
         tile,
         card,
+        metrics,
     } = row;
-    let tile = tile.filter(|_| detail.is_some());
     let (name_color, weight) = match (selected, emphasis) {
         (true, _) => (ui.selected_text, FontWeight::SEMIBOLD),
         (false, true) => (ui.text, FontWeight::SEMIBOLD),
@@ -232,17 +237,17 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         .id(id)
         .flex()
         .items_center()
-        .gap(px(TILE_GAP))
+        .gap(px(if has_tile { metrics.tile_gap } else { TILE_GAP }))
         .w_full()
         .min_h(px(if has_tile {
-            TILE_ROW_H
+            metrics.row_h
         } else if two_lines {
             ROW_TWO_LINE_H
         } else {
             ROW_H
         }))
-        .map(|d| if card { d.px_2().rounded(px(CARD_ROW_RADIUS)) } else { d.px_4() })
-        .py_1()
+        .map(|d| if card { d.px(px(metrics.row_px)).rounded(px(metrics.row_radius)) } else { d.px_4() })
+        .when(has_tile && metrics.two_lines, |d| d.py_1())
         .cursor_pointer()
         .when(selected, |d| d.bg(ui.selected_row))
         .hover(move |d| if selected { d } else { d.bg(ui.hover) })
@@ -250,38 +255,34 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         .child(lines)
 }
 
-/// The gap between a status tile and the lines beside it.
+/// The gap between a status tile and the lines beside it (at the regular density).
 pub const TILE_GAP: f32 = 10.0;
-/// A row with a status tile: the tile and room above and below it.
-pub const TILE_ROW_H: f32 = TILE + 16.0;
 
-/// One stretch of a card in the sidebar: a folder's or a group's band and its terminals are drawn
-/// as one rounded card ([`CARD_MARGIN`] in from the sidebar's sides, [`CARD_RADIUS`] round, its
-/// rows [`CARD_PAD`] in), each line of the list a stretch of it holding `content`. `top` is the
-/// band's (the card's rounded top), `bottom` the last line's (its rounded bottom, and [`CARD_GAP`]
-/// under it); `gap_above` puts that gap over a card that follows a loose terminal. A loose terminal
-/// is a stretch of no card at all (`filled` false), lined up with the cards' rows. The gaps are
-/// part of the stretch, so a drop there lands on its line.
+/// One stretch of a card in the sidebar: a group's head and its terminals, or a terminal's own, are
+/// drawn as one rounded card (`metrics.card_margin` in from the sidebar's sides, `card_radius` round,
+/// its rows `card_pad` in), each line of the list a stretch of it holding `content`. `top` is the
+/// first line (the card's rounded top), `bottom` the last (its rounded bottom, and `card_gap` under
+/// it). The gaps are part of the stretch, so a drop there lands on its line. Without cards the lines
+/// stand in by the same margin with no fill or edge, and the gap under a group is what sets it apart.
 #[track_caller]
 pub fn card_segment(
     ui: UiColors,
+    metrics: Metrics,
     top: bool,
     bottom: bool,
-    filled: bool,
-    gap_above: bool,
     content: impl IntoElement,
 ) -> Div {
-    let outer = div().flex().flex_col().px(px(CARD_MARGIN));
-    // A loose terminal keeps the cards' side edges, unpainted, so its row lines up with theirs.
-    let mut segment = div().flex().flex_col().px(px(CARD_PAD)).border_color(ui.border.opacity(0.0));
+    let outer = div().flex().flex_col().px(px(metrics.card_margin));
+    let gap = px(metrics.card_gap);
+    if !metrics.cards {
+        return outer.when(bottom, |d| d.pb(gap)).child(content);
+    }
+    let mut segment = div().flex().flex_col().px(px(metrics.card_pad));
     let edge = Some(ui.border_width.into());
     {
         let b = &mut segment.style().border_widths;
         b.left = edge;
         b.right = edge;
-    }
-    if !filled {
-        return outer.child(segment.child(content));
     }
     segment = segment.bg(ui.band).border_color(ui.border);
     {
@@ -293,11 +294,13 @@ pub fn card_segment(
             b.bottom = edge;
         }
     }
+    let radius = px(metrics.card_radius);
+    let pad = px(metrics.card_pad);
     let segment = segment
-        .when(top, |d| d.rounded_t(px(CARD_RADIUS)).pt(px(CARD_PAD)))
-        .when(bottom, |d| d.rounded_b(px(CARD_RADIUS)).pb(px(CARD_PAD)))
+        .when(top, |d| d.rounded_t(radius).pt(pad))
+        .when(bottom, |d| d.rounded_b(radius).pb(pad))
         .child(content);
-    outer.when(top && gap_above, |d| d.pt(px(CARD_GAP))).when(bottom, |d| d.pb(px(CARD_GAP))).child(segment)
+    outer.when(bottom, |d| d.pb(gap)).child(segment)
 }
 
 /// The gap between the lead column and the name (`_2`), which a second line skips too.

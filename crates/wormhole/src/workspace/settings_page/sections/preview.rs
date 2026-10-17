@@ -1,14 +1,14 @@
-//! Terminals & sidebar's live preview: the Terminals list drawn with the sidebar's own
-//! rows and bands from the current options, beside the option under the pointer. Appearance's
+//! Terminals & sidebar's live preview: the Terminals list drawn with the sidebar's own cards,
+//! heads and rows from the current options, beside the option under the pointer. Appearance's
 //! stage is `stage`.
 
-use wormhole_core::config::StatusPosition;
+use wormhole_core::sidebar::Density;
 
 use super::*;
-use style::{RowTone, SessionRow, StatusGlyph};
+use style::{BandKind, BandParts, FolderLook, Metrics, RowTone, Section, SessionRow, StatusGlyph, TileFace};
 
 /// A preview list is as wide as the sidebar at its least.
-const SIDEBAR_W: f32 = 350.0;
+const SIDEBAR_W: f32 = 320.0;
 
 /// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
 /// with the option under the pointer.
@@ -26,13 +26,13 @@ pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<Set
             .flex()
             .flex_col()
             .gap_2()
-            .child(label(format!("Now · {}", now.density())))
+            .child(label(format!("Now · {}", now.density.label())))
             .child(list("now", now, ui, cx)),
     );
-    if let Some(SidebarLook::Compact(compact)) = window.sidebar_preview
-        && compact != now.compact
+    if let Some(SidebarLook::Density(density)) = window.sidebar_preview
+        && density != now.density
     {
-        let previewed = Look { compact, ..now };
+        let previewed = Look { density, ..now };
         panes = panes.child(
             div()
                 .flex_1()
@@ -41,7 +41,7 @@ pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<Set
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(label(format!("Previewed while hovering {}", previewed.density())))
+                .child(label(format!("Previewed while hovering {}", previewed.density.label())))
                 .child(list("previewed", previewed, ui, cx)),
         );
     }
@@ -56,31 +56,17 @@ pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<Set
         .into_any_element()
 }
 
-/// The row options a list is drawn with.
+/// The options a list is drawn with.
 #[derive(Clone, Copy)]
 struct Look {
-    compact: bool,
-    dot: bool,
-    dot_right: bool,
-    logo: bool,
-    branch: bool,
+    density: Density,
+    cards: bool,
     notes: bool,
 }
 
 impl Look {
     fn of(s: &Settings) -> Self {
-        Self {
-            compact: s.compact_sidebar,
-            dot: s.sidebar_status_dot,
-            dot_right: s.sidebar_status_position == StatusPosition::Right,
-            logo: s.sidebar_agent_icon,
-            branch: s.sidebar_branch,
-            notes: s.sidebar_notes,
-        }
-    }
-
-    fn density(self) -> &'static str {
-        if self.compact { "Compact" } else { "Comfortable" }
+        Self { density: s.density, cards: s.show_groups_as_cards, notes: s.sidebar_notes }
     }
 }
 
@@ -95,70 +81,69 @@ struct Sample {
     notes: usize,
 }
 
-/// A folder of the sample list.
-struct Folder {
-    name: &'static str,
-    branch: &'static str,
+/// A card of the sample list: a group's head and its rows, or a terminal in no group.
+struct Card {
+    group: Option<&'static str>,
     rows: &'static [Sample],
 }
 
-const SAMPLES: &[Folder] = &[
-    Folder {
-        name: "terminal",
-        branch: "ui-unify",
+const SAMPLES: &[Card] = &[
+    Card {
+        group: None,
+        rows: &[Sample {
+            name: "scratch",
+            glyph: StatusGlyph::Idle,
+            detail: "~",
+            tone: RowTone::Plain,
+            selected: false,
+            notes: 0,
+        }],
+    },
+    Card {
+        group: Some("Release 1.2"),
         rows: &[
             Sample {
-                name: "sidebar polish",
+                name: "Sidebar cards",
                 glyph: StatusGlyph::Working,
-                detail: "Editing sidebar.rs…",
+                detail: "Working · 4m",
                 tone: RowTone::Plain,
                 selected: true,
                 notes: 2,
             },
             Sample {
-                name: "diff perf",
+                name: "Fix pile fan-out",
                 glyph: StatusGlyph::NeedsYou,
-                detail: "Needs you · Approve cargo test?",
+                detail: "Needs you · 2m",
                 tone: RowTone::Attention,
                 selected: false,
                 notes: 0,
             },
             Sample {
-                name: "zsh",
-                glyph: StatusGlyph::Idle,
-                detail: "",
+                name: "cargo test",
+                glyph: StatusGlyph::Running,
+                detail: "cargo test --workspace",
                 tone: RowTone::Plain,
                 selected: false,
                 notes: 0,
             },
         ],
     },
-    Folder {
-        name: "api-server",
-        branch: "feature/auth",
-        rows: &[
-            Sample {
-                name: "auth tokens",
-                glyph: StatusGlyph::Done,
-                detail: "Finished · 12m ago",
-                tone: RowTone::Done,
-                selected: false,
-                notes: 1,
-            },
-            Sample {
-                name: "rate limits",
-                glyph: StatusGlyph::Idle,
-                detail: "",
-                tone: RowTone::Plain,
-                selected: false,
-                notes: 0,
-            },
-        ],
+    Card {
+        group: None,
+        rows: &[Sample {
+            name: "zsh",
+            glyph: StatusGlyph::Idle,
+            detail: "~/Projects/terminal/wormhole",
+            tone: RowTone::Plain,
+            selected: false,
+            notes: 0,
+        }],
     },
 ];
 
-/// The sample list in `look`, with the sidebar's own bands and rows.
+/// The sample list in `look`, with the sidebar's own cards, heads and rows.
 fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
+    let metrics = Metrics::of(look.density, look.cards);
     // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
         .flex()
@@ -170,6 +155,10 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .child(div().flex_1())
         .child(style::icon(IconName::Plus).text_color(ui.muted));
     let claude = wormhole_core::agents::AGENTS.first();
+    let face = || match claude.and_then(|agent| agent.icon()) {
+        Some(path) => TileFace::Logo(path),
+        None => TileFace::Terminal,
+    };
     let mut column = div()
         .flex()
         .flex_col()
@@ -177,39 +166,56 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .overflow_hidden()
         .outlined(ui, ui.border)
         .bg(ui.panel)
+        .pb(px(metrics.card_gap))
         .child(header);
-    for (fx, folder) in SAMPLES.iter().enumerate() {
-        for (rx, sample) in folder.rows.iter().enumerate() {
-            let glyph_id = SharedString::from(format!("preview-{id}-glyph-{fx}-{rx}"));
-            let idle = sample.glyph == StatusGlyph::Idle;
-            let glyph = || style::status_glyph(glyph_id.clone(), ui, sample.glyph, cx);
-            // The agent's logo stands in for an idle glyph (state beats identity).
-            let lead = match (look.dot && !look.dot_right, look.logo && idle) {
-                (_, true) => style::agent_logo(
-                    claude.and_then(|agent| agent.icon()),
-                    claude.map_or("CC", |agent| agent.monogram),
-                    style::GLYPH,
-                    ui.muted,
-                ),
-                (true, false) => glyph(),
-                (false, false) => div().into_any_element(),
-            };
-            let mut row = SessionRow::new(lead, sample.name);
+    for (cx_ix, card) in SAMPLES.iter().enumerate() {
+        let mut lines: Vec<AnyElement> = Vec::new();
+        if let Some(title) = card.group {
+            lines.push(
+                style::folder_band(
+                    SharedString::from(format!("preview-{id}-head-{cx_ix}")),
+                    ui,
+                    BandParts {
+                        kind: BandKind::Folder,
+                        section: Section::Open,
+                        title: title.into(),
+                        detail: None,
+                        count: None,
+                        waiting: None,
+                        add: None,
+                        on_toggle: None,
+                        drop_target: false,
+                        sticky: false,
+                        joined: false,
+                    },
+                    FolderLook { card: true, ..FolderLook::default() },
+                )
+                .into_any_element(),
+            );
+        }
+        for (rx, sample) in card.rows.iter().enumerate() {
+            let tile = style::status_tile(
+                SharedString::from(format!("preview-{id}-tile-{cx_ix}-{rx}")),
+                ui,
+                style::StatusTile {
+                    face: face(),
+                    glyph: sample.glyph,
+                    selected: sample.selected,
+                    size: metrics.tile,
+                },
+                cx,
+            );
+            let mut row = SessionRow::new(div().into_any_element(), sample.name);
             row.selected = sample.selected;
             row.tone = sample.tone;
-            if !look.compact {
-                // A quiet row says where it is: its branch under a folder's band, else its path.
-                row.detail = Some(match sample.detail {
-                    "" => format!("~/Projects/{}", folder.name).into(),
-                    detail => detail.into(),
-                });
-                if look.branch && sample.detail.is_empty() {
-                    row.detail = Some(format!("{} · {}", folder.name, folder.branch).into());
-                }
+            row.tile = Some(tile);
+            row.card = true;
+            row.metrics = metrics;
+            if metrics.two_lines {
+                row.detail = Some(sample.detail.into());
             }
-            row.trail = match (look.dot && look.dot_right, look.notes && sample.notes > 0) {
-                (true, _) => Some(glyph()),
-                (false, true) => Some(
+            if look.notes && sample.notes > 0 {
+                row.trail = Some(
                     div()
                         .flex()
                         .items_center()
@@ -219,14 +225,16 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         .child(style::icon(IconName::StickyNote))
                         .child(sample.notes.to_string())
                         .into_any_element(),
-                ),
-                _ => None,
-            };
-            column = column.child(style::session_row(
-                SharedString::from(format!("preview-{id}-row-{fx}-{rx}")),
-                ui,
-                row,
-            ));
+                );
+            }
+            lines.push(
+                style::session_row(SharedString::from(format!("preview-{id}-row-{cx_ix}-{rx}")), ui, row)
+                    .into_any_element(),
+            );
+        }
+        let last = lines.len().saturating_sub(1);
+        for (at, line) in lines.into_iter().enumerate() {
+            column = column.child(style::card_segment(ui, metrics, at == 0, at == last, line));
         }
     }
     column.into_any_element()

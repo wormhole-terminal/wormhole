@@ -7,6 +7,7 @@
 
 mod arrange;
 pub mod command;
+mod density;
 mod drop;
 pub mod group_color;
 pub mod groups;
@@ -26,6 +27,7 @@ pub mod text;
 pub mod urgency;
 
 pub use arrange::Item;
+pub use density::Density;
 pub use drop::{Part, RowDrop, resolve_row_drop};
 pub use group_color::GroupColor;
 pub use groups::{Groups, TermGroup, group_key};

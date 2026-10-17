@@ -88,7 +88,6 @@ actions!(
         ToggleThemeStudio,
         ToggleStatusBar,
         ToggleMinimap,
-        ToggleCompactRows,
         Hide,
         HideOthers,
         ShowAll,
@@ -181,7 +180,6 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::ShowHistory => Box::new(ShowHistory),
         A::ShowProject => Box::new(ShowProject),
         A::ShowUsage => Box::new(ShowUsage),
-        A::CompactRows => Box::new(ToggleCompactRows),
         A::ToggleTerminalTabs => Box::new(ToggleTerminalTabs),
         A::FocusTerminalOrPanel => Box::new(FocusTerminalOrPanel),
         A::FocusNextArea => Box::new(FocusNextArea),
@@ -329,11 +327,6 @@ pub(crate) fn init(cx: &mut App) {
                 TerminalsIn::Tabs => TerminalsIn::Sidebar,
             }
         })
-    });
-    cx.on_action(|_: &ToggleCompactRows, cx| {
-        // From what the sidebar shows: a project may override the saved value.
-        let compact = settings(cx).compact_sidebar;
-        update_settings(cx, |s| s.compact_sidebar = !compact);
     });
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());

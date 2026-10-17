@@ -277,7 +277,7 @@ fn front_window() -> MenuState {
     use ActionId::*;
     MenuState {
         off: vec![ToggleStatusBar, ToggleMinimap, FullScreen, ZoomPane],
-        checked: vec![ShowChanges, CompactRows],
+        checked: vec![ShowChanges],
         disabled: vec![],
         terminals: ["sidebar polish", "diff perf", "zsh", "auth tokens", "rate limits"]
             .map(String::from)
@@ -374,7 +374,6 @@ View
   Usage  ⌃⌘4
   Project  ⌃⌘5
   ---
-  ✓ Compact Rows
   Show Terminals in Sidebar
   ---
   Bigger  ⌘+

@@ -75,7 +75,6 @@ pub enum ActionId {
     ShowHistory,
     ShowProject,
     ShowUsage,
-    CompactRows,
     ToggleTerminalTabs,
     FocusTerminalOrPanel,
     FocusNextArea,

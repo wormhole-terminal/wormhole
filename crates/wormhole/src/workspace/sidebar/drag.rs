@@ -72,13 +72,13 @@ impl Workspace {
 
     /// Terminal `id`'s line of the list as a drop target: its row and the stretch of its card round
     /// it, so the card's padding under its last row takes a drop too. `card` is the card it is a
-    /// stretch of, and `last` whether it is the card's last line, whose bottom gap is "after the card".
+    /// stretch of, and `gap` the gap under it when it is the card's last line: its bottom is "after the card".
     pub(super) fn with_row_drop(
         &self,
         line: Stateful<Div>,
         id: i64,
         group: Option<u32>,
-        last: bool,
+        gap: Option<f32>,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
         let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
@@ -86,7 +86,7 @@ impl Workspace {
             let y = f32::from(position.y - bounds.origin.y);
             match group {
                 // The gap under a group's card puts the dragged terminal after the group.
-                Some(group) if last && y > height - style::CARD_GAP => Over::After(group),
+                Some(group) if gap.is_some_and(|gap| y > height - gap) => Over::After(group),
                 _ => Over::Row { id, part: part_at(y / height) },
             }
         };
@@ -111,18 +111,18 @@ impl Workspace {
         }))
     }
 
-    /// A group's head as a drop target; `last` when it is the whole card (folded, or empty).
+    /// A group's head as a drop target; `gap` is the gap under it when it is the whole card (folded, or empty).
     pub(super) fn with_head_drop(
         &self,
         line: Stateful<Div>,
         group: u32,
-        last: bool,
+        gap: Option<f32>,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
         let over_at = move |bounds: Bounds<Pixels>, position: Point<Pixels>| {
             let height = f32::from(bounds.size.height).max(1.0);
             let y = f32::from(position.y - bounds.origin.y);
-            if last && y > height - style::CARD_GAP {
+            if gap.is_some_and(|gap| y > height - gap) {
                 Over::After(group)
             } else {
                 Over::Head { group, part: part_at(y / height) }
