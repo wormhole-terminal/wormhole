@@ -134,6 +134,16 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         // on its selected row.
         "agent.attention.text" => "readable(agent.attention, sidebar.background, sidebar.row.selected, 4.5)",
         "agent.done.text" => "readable(agent.done, sidebar.background, sidebar.row.selected, 4.5)",
+        // An app icon: each agent's tile in its own colors (the boards' RF-12), in both schemes,
+        // since an icon looks the same on a light sidebar.
+        "agent.claude" => "#d97757",
+        "agent.gemini" => "#3b7bff",
+        "agent.gemini.end" => "#8f6cf5",
+        "tile.background" => "#121318",
+        "tile.mark" => "#c9d1e4",
+        "tile.mark.brand" => "#fff",
+        "tile.sheen" => "#fff / 14%",
+        "tile.edge" => "#fff / 10%",
         // Diff backgrounds are opaque so their text contrast is well defined. The colors
         // also count lines (+N / −N) in the panel's rows, selected ones too.
         "diff.added" => {

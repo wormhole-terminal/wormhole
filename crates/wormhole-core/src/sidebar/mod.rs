@@ -24,6 +24,7 @@ pub mod spoken;
 mod stable_tests;
 pub mod tabs;
 pub mod text;
+pub mod urgency;
 
 pub use drop::{Part, RowDrop, resolve_row_drop};
 pub use filter::{Filter, RowState, Searchable, Show, hidden_label};
@@ -36,3 +37,4 @@ pub use listing::{Band, Entry, ListInput, Listing, NUMBERED, WindowSidebar, fold
 pub use order::{SidebarNumbers, SidebarOrder};
 pub use split::{Bracket, SplitId, SplitMarks, Splits, gather_splits, split_of};
 pub use tabs::{TabLayout, TerminalsIn};
+pub use urgency::Urgency;

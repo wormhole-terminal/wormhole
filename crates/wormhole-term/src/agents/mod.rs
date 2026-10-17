@@ -35,6 +35,15 @@ pub enum AgentId {
     Cline,
 }
 
+/// What colour an agent's status tile is: black unless the agent has colours of its own. The
+/// colours themselves are design tokens (`agent.claude`, `agent.gemini`), never literals.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TileColor {
+    Black,
+    Claude,
+    Gemini,
+}
+
 pub struct Agent {
     pub id: AgentId,
     pub name: &'static str,
@@ -59,6 +68,16 @@ impl Agent {
     /// Asset key of the bundled monochrome logo, if there is one.
     pub fn icon(&self) -> Option<&'static str> {
         self.logo
+    }
+
+    /// The colour of the agent's status tile: Claude on its orange, Gemini on its blue, the rest
+    /// black.
+    pub fn tile_color(&self) -> TileColor {
+        match self.id {
+            AgentId::Claude => TileColor::Claude,
+            AgentId::Gemini => TileColor::Gemini,
+            _ => TileColor::Black,
+        }
     }
 
     /// The name without what kind of program it is ("Claude" for Claude Code, "Codex" for Codex

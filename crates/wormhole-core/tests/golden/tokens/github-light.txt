@@ -3,9 +3,12 @@ agent.attention #ba8300
 agent.attention.ring #ba830047
 agent.attention.text #845c00
 agent.attention.tint #ba83001f
+agent.claude #d97757
 agent.done #116329
 agent.done.text #116329
 agent.exited #858689
+agent.gemini #3b7bff
+agent.gemini.end #8f6cf5
 agent.working #0969da
 band #1f23280d
 band.hover #1f232814
@@ -89,6 +92,11 @@ text.on_primary #ffffff
 text.on_selected #ffffff
 text.on_selected.muted #f9fcff
 text.primary #1f2328
+tile.background #121318
+tile.edge #ffffff1a
+tile.mark #c9d1e4
+tile.mark.brand #ffffff
+tile.sheen #ffffff24
 titlebar.background #f5f5f5
 tooltip.background #1f2328
 tooltip.text #ffffff
