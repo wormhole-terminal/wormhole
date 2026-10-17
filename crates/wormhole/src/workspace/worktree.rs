@@ -436,9 +436,71 @@ impl Workspace {
     }
 }
 
+/// The worktrees Wormhole made that a group's terminals are in, for the question before closing the
+/// group: each once, and whether it may be offered for removal (no changes as last read, and no
+/// terminal outside the group still in it).
+pub(super) struct GroupWorktrees(Vec<(Worktree, bool)>);
+
+impl GroupWorktrees {
+    pub(super) fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// What the question adds: which worktrees, and what Close and Close and Remove do with them.
+    pub(super) fn note(&self) -> String {
+        let names = self
+            .0
+            .iter()
+            .map(|(w, _)| format!("{} at {}", w.branch, shown(&w.folder)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let kept = self.0.iter().filter(|(_, removable)| !removable).count();
+        let removable = self.0.len() - kept;
+        let many = if self.0.len() == 1 { "worktree" } else { "worktrees" };
+        let mut note = format!("Wormhole made the {many} {names}. ");
+        match (removable, kept) {
+            (0, _) => note.push_str("They have changes or other terminals in them, so they stay."),
+            (_, 0) => note.push_str(
+                "Close keeps them; Close and Remove Worktrees deletes their folders (the branches stay).",
+            ),
+            _ => note.push_str(
+                "Close keeps them; Close and Remove Worktrees deletes the folders without changes or other \
+                 terminals (the branches stay).",
+            ),
+        }
+        note
+    }
+
+    /// The worktrees "Close and Remove Worktrees" removes.
+    pub(super) fn removable(&self) -> Vec<Worktree> {
+        self.0.iter().filter(|(_, removable)| *removable).map(|(w, _)| w.clone()).collect()
+    }
+}
+
+impl Workspace {
+    /// The worktrees Wormhole made that the terminals `members` are in.
+    pub(super) fn made_worktrees_of(&self, members: &[i64], cx: &App) -> GroupWorktrees {
+        let mut found: Vec<(Worktree, bool)> = Vec::new();
+        for session in members.iter().filter_map(|&id| self.find_session(id)).map(|ix| &self.sessions[ix]) {
+            let Some(cwd) = session.terminal().read(cx).cwd.clone() else { continue };
+            let Some(made) = app(cx).worktrees.find(&cwd).cloned() else { continue };
+            if found.iter().any(|(w, _)| w.folder == made.folder) {
+                continue;
+            }
+            let dirty = session.git.status.as_ref().is_some_and(|status| !status.files.is_empty());
+            let shared = self.sessions.iter().any(|other| {
+                !members.contains(&other.id)
+                    && other.terminal().read(cx).cwd.as_ref().is_some_and(|c| c.starts_with(&made.folder))
+            });
+            found.push((made, !dirty && !shared));
+        }
+        GroupWorktrees(found)
+    }
+}
+
 /// Remove `worktree` off the UI thread, once its terminal is closed; forgotten when it is gone,
 /// and git's refusal (changes made in the meantime) shown in the front window.
-fn remove_worktree(worktree: Worktree, cx: &mut App) {
+pub(super) fn remove_worktree(worktree: Worktree, cx: &mut App) {
     cx.spawn(async move |cx| {
         let gone = worktree.clone();
         let result = cx.background_spawn(async move { worktree::remove(&gone) }).await;

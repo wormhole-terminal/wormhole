@@ -24,7 +24,10 @@ impl Workspace {
         let sessions: Vec<&Session> =
             members.iter().filter_map(|&id| self.find_session(id)).map(|ix| &self.sessions[ix]).collect();
         let asking: Vec<&&Session> = sessions.iter().filter(|s| s.needs_close_confirmation(cx)).collect();
-        if asking.is_empty() {
+        // Closing one terminal in a worktree Wormhole made asks about the worktree; so does closing
+        // the group it is in.
+        let worktrees = self.made_worktrees_of(&members, cx);
+        if asking.is_empty() && worktrees.is_empty() {
             self.close_terminals(&members, window, cx);
             return;
         }
@@ -35,18 +38,35 @@ impl Workspace {
             asking.iter().map(|s| (s.status(cx), s.command_running(cx))).collect();
         let programs: Vec<String> = asking.iter().flat_map(|s| s.running_programs(false, cx)).collect();
         let open_items: usize = sessions.iter().map(|s| s.open_items(cx)).sum();
+        let mut detail = close_group_detail(sessions.len(), &running, &programs, open_items);
+        if !worktrees.is_empty() {
+            detail.push(' ');
+            detail.push_str(&worktrees.note());
+        }
         let question = dialog::CloseQuestion {
             title: close_group_title(&name).into(),
-            detail: close_group_detail(sessions.len(), &running, &programs, open_items).into(),
+            detail: detail.into(),
             confirm: "Close Group",
         };
         self.closing_session_prompt = true;
         cx.notify();
-        let (confirm, dismiss) = (cx.weak_entity(), cx.weak_entity());
-        dialog::ask_before_closing(
+        let (confirm, remove, dismiss) = (cx.weak_entity(), cx.weak_entity(), cx.weak_entity());
+        let removable = worktrees.removable();
+        let close_members = members.clone();
+        let also: Option<dialog::Also> = (!removable.is_empty()).then(|| {
+            let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
+                let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
+                for worktree in removable.clone() {
+                    super::super::worktree::remove_worktree(worktree, cx);
+                }
+            });
+            ("Close and Remove Worktrees", on_also)
+        });
+        dialog::ask_before_closing_with(
             window,
             cx,
             question,
+            also,
             move |window, cx| {
                 let _ = confirm.update(cx, |this, cx| this.close_terminals(&members, window, cx));
             },
