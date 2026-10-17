@@ -160,6 +160,12 @@ impl AppState {
             window.profile = target.clone();
             window.hidden = false;
         }
+        // The window left the shown profile and may have been its last: it must not be left without
+        // one (nothing to type in, and closing the odd window would then quit).
+        let shown = app(cx).active_profile().clone();
+        if app(cx).windows_of(&shown).next().is_none() {
+            super::app::open_workspace_window_in(&shown, None, None, cx);
+        }
         super::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
