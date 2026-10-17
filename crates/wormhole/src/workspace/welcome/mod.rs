@@ -283,7 +283,7 @@ impl Workspace {
             self.new_session(window, cx);
             return;
         };
-        let id = Self::alloc_id(cx);
+        let id = self.alloc_id(cx);
         let scan = cx.spawn(async move |this, cx| {
             let agents = cx
                 .background_executor()

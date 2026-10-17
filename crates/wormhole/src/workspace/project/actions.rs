@@ -109,7 +109,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> usize {
-        let id = Self::alloc_id(cx);
+        let id = self.alloc_id(cx);
         let record = SessionRecord::new(id, name, cwd.map(|p| p.to_string_lossy().into_owned()));
         let ix = self.add_session(Some(record), window, cx);
         self.activate(ix, window, cx);

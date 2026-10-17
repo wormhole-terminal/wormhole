@@ -119,6 +119,11 @@ impl Store {
         Self::open_at(paths.dir())
     }
 
+    /// Whether the profile has a database yet (a new one has none until it is first opened).
+    pub fn exists_for(paths: &crate::profile::ProfilePaths) -> bool {
+        paths.dir().join(DB_FILE).exists()
+    }
+
     /// Open (or create) the database in `dir`. A file that is not a database, or that fails
     /// `PRAGMA quick_check`, is moved aside as `wormhole.db.corrupt-<unix time>` (with its WAL)
     /// and a fresh one is started, so a damaged file costs the saved sessions once instead of

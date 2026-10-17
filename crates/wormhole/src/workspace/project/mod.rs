@@ -30,7 +30,6 @@ use wormhole_core::project::{
     TrustStatus, TrustStore,
 };
 use wormhole_core::shells::ShellCommand;
-use wormhole_core::store::data_dir;
 use wormhole_core::terminal::SpawnOptions;
 
 use super::app::{AppState, app, app_mut};
@@ -89,7 +88,7 @@ pub(crate) struct LoadedProject {
 impl ProjectHub {
     #[cfg(test)]
     pub fn load() -> Self {
-        Self::load_from(&data_dir())
+        Self::load_from(&wormhole_core::store::data_dir())
     }
 
     pub(crate) fn load_from(dir: &Path) -> Self {

@@ -33,6 +33,7 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::ipc;
 use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::profile::ProfileId;
 use wormhole_core::sidebar::{Grouping, WindowSidebar};
 
 mod about;
@@ -80,6 +81,7 @@ mod panel_list;
 mod panel_strip;
 mod panes;
 mod path_card;
+mod profiles;
 mod project;
 pub(crate) mod quick_panel;
 #[cfg(test)]
@@ -209,6 +211,9 @@ pub struct Workspace {
     folder_projects: std::collections::HashMap<PathBuf, PathBuf>,
     /// Which saved window this is.
     window_id: i64,
+    /// The profile this window belongs to: its sessions are saved in that profile's database and its
+    /// terminals start with that profile's environment.
+    profile: ProfileId,
     /// The selected terminal. When it is in a split, the split is on screen with its pane focused.
     active: usize,
     next_number: usize,
@@ -309,7 +314,12 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    pub fn new(record: WindowRecord, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        record: WindowRecord,
+        profile: ProfileId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let tick = cx.spawn_in(window, async move |this, cx| {
             loop {
                 cx.background_executor().timer(Duration::from_millis(400)).await;
@@ -364,6 +374,7 @@ impl Workspace {
             sessions: Vec::new(),
             splits: Vec::new(),
             window_id: record.id,
+            profile,
             active: 0,
             next_number: 1,
             panes: layout.panes(),
@@ -596,7 +607,7 @@ impl Workspace {
             return;
         }
         let record = self.window_record(cx);
-        app_mut(cx).save_window(&record);
+        app_mut(cx).save_window(&self.profile, &record);
     }
 
     fn save_scrollback(&mut self, cx: &mut App) {
@@ -604,7 +615,7 @@ impl Workspace {
         if self.discarded {
             return;
         }
-        let Some(store) = &app(cx).store else { return };
+        let Some(store) = app(cx).store_of(&self.profile) else { return };
         for pane in self.sessions.iter().map(|session| &session.pane) {
             let text = pane.terminal.read(cx).scrollback_text(SCROLLBACK_LINES);
             if let Err(err) = store.save_scrollback(pane.id, &text) {
@@ -727,7 +738,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> usize {
-        let mut record = SessionRecord::new(Self::alloc_id(cx), None, cwd);
+        let mut record = SessionRecord::new(self.alloc_id(cx), None, cwd);
         record.shell = shell;
         // Shown in the person's groups, a new terminal joins the group of the one selected.
         let group = self.active_group();
@@ -750,7 +761,7 @@ impl Workspace {
         let number = self.next_number;
         self.next_number += 1;
         let record = record.unwrap_or_else(|| {
-            let id = Self::alloc_id(cx);
+            let id = self.alloc_id(cx);
             SessionRecord::new(id, None, self.default_cwd(cx))
         });
         let pane = self.make_pane(&record, window, cx);
@@ -784,8 +795,13 @@ impl Workspace {
         ix
     }
 
-    fn alloc_id(cx: &mut App) -> i64 {
-        app_mut(cx).alloc_id()
+    fn alloc_id(&self, cx: &mut App) -> i64 {
+        app_mut(cx).alloc_id_in(&self.profile)
+    }
+
+    /// The profile this window is in.
+    pub(crate) fn profile(&self) -> &ProfileId {
+        &self.profile
     }
 
     /// Where a new terminal starts: where the current one is.

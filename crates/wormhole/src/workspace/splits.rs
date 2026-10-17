@@ -312,7 +312,7 @@ impl Workspace {
     /// A new terminal for a split to take: where the selected one is, running its shell, not yet
     /// selected or in any split. Its id and its place in `sessions`.
     fn new_member(&mut self, window: &mut Window, cx: &mut Context<Self>) -> (PaneId, usize) {
-        let id = Self::alloc_id(cx);
+        let id = self.alloc_id(cx);
         let mut record = SessionRecord::new(id, None, self.default_cwd(cx));
         record.shell = self.active_session().pane.shell.clone();
         let ix = self.add_session(Some(record), window, cx);
@@ -331,7 +331,7 @@ impl Workspace {
         if let Some(id) = current.filter(|id| self.splits.iter().any(|split| split.id == *id)) {
             return id;
         }
-        let id = Self::alloc_id(cx);
+        let id = self.alloc_id(cx);
         self.splits.push(Split { id, layout: layout.clone() });
         id
     }
@@ -366,7 +366,7 @@ impl Workspace {
             None => TabPanes::single(selected),
         };
         let plan = layout.plan(preset);
-        let new_ids: Vec<PaneId> = (0..plan.new).map(|_| Self::alloc_id(cx)).collect();
+        let new_ids: Vec<PaneId> = (0..plan.new).map(|_| self.alloc_id(cx)).collect();
         let Some(out) = layout.arrange(preset, &new_ids) else { return };
         let cwd = self.default_cwd(cx);
         let shell = self.sessions[anchor].pane.shell.clone();

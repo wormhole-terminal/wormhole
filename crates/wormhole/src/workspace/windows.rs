@@ -1,5 +1,5 @@
 //! One window's life: opening siblings, closing, saving, and being the one in front.
-use super::app::{app, app_mut, open_workspace_window};
+use super::app::{app, app_mut, open_workspace_window_in};
 use super::*;
 use wormhole_core::layout::RememberedPanes;
 
@@ -35,18 +35,19 @@ impl Workspace {
         let layout =
             Layout::for_new_window(self.window_record(cx).layout.as_deref(), settings(cx).sidebar_group);
         let source = window.bounds();
+        let profile = self.profile.clone();
         // Deferred: the new window renders right away, and nothing may read
         // this workspace while it is still being updated.
         cx.defer(move |cx| {
             let state = app_mut(cx);
-            let (id, session_id) = (state.alloc_window_id(), state.alloc_id());
+            let (id, session_id) = (state.alloc_window_id(), state.alloc_id_in(&profile));
             let record = WindowRecord {
                 id,
                 layout,
                 sessions: vec![SessionRecord::new(session_id, None, cwd)],
                 ..Default::default()
             };
-            open_workspace_window(Some(record), Some(source), cx);
+            open_workspace_window_in(&profile, Some(record), Some(source), cx);
         });
     }
 
@@ -208,7 +209,7 @@ impl Workspace {
         for session in &self.sessions {
             notifications::dismiss(session.id, cx);
         }
-        app_mut(cx).forget_window(self.window_id);
+        app_mut(cx).forget_window(&self.profile, self.window_id);
     }
 
     /// Save the window, its sessions and their scrollback (on the way out).

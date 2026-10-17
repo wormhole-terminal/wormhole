@@ -1,7 +1,7 @@
 //! Fonts: one specimen for the three fonts, then the terminal font with its line height
 //! and ligatures, the code and interface fonts, and the user's own fonts.
 
-use wormhole_core::fonts::{FontSlot, custom, display_name};
+use wormhole_core::fonts::{FontSlot, display_name};
 
 use super::*;
 use crate::fonts::LoadedFonts;

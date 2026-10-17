@@ -17,7 +17,7 @@
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
 use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
-use wormhole_core::profile::{DataRoot, ProfileList};
+use wormhole_core::profile::{DataRoot, ProfileId, ProfileList};
 use wormhole_core::store::{Store, WindowRecord};
 use wormhole_core::tokens::Appearance;
 
@@ -34,6 +34,8 @@ pub(crate) struct OpenWindow {
     pub id: i64,
     pub handle: AnyWindowHandle,
     pub workspace: WeakEntity<Workspace>,
+    /// The profile whose window this is.
+    pub profile: ProfileId,
 }
 
 pub(crate) struct AppState {
@@ -43,6 +45,8 @@ pub(crate) struct AppState {
     pub profiles: ProfileList,
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say.
     pub profiles_error: Option<String>,
+    /// The profiles that were shown before and are not now (see `profiles`).
+    pub(super) parked: profiles::Parked,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -85,8 +89,8 @@ pub(crate) struct AppState {
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
     /// that window is being opened.
     pub first_welcome: Option<super::welcome::Plan>,
-    next_id: i64,
-    next_window_id: i64,
+    pub(super) next_id: i64,
+    pub(super) next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
     applied_theme: Option<u64>,
     ticks: u64,
@@ -117,6 +121,7 @@ impl AppState {
             root: DataRoot::current(),
             profiles: ProfileList::default(),
             profiles_error: None,
+            parked: Default::default(),
             store: None,
             tips: DismissedTips::default(),
             hub: project::ProjectHub::load(),
@@ -251,7 +256,7 @@ impl AppState {
                 s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
             })
             .unwrap_or_default();
-        let (next_id, next_window_id) = store.as_ref().and_then(|s| s.next_ids().ok()).unwrap_or((1, 1));
+        let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
         let tips = DismissedTips::parse(
             store.as_ref().and_then(|s| s.meta(DISMISSED_TIPS_KEY).ok().flatten()).as_deref(),
         );
@@ -283,6 +288,7 @@ impl AppState {
             root,
             profiles,
             profiles_error: profiles_error.map(|err| err.to_string()),
+            parked: Default::default(),
             store,
             tips,
             hub,
@@ -376,32 +382,6 @@ impl AppState {
         id
     }
 
-    /// Ids for sessions (terminals) and splits; hooks report a terminal's id, so they never repeat.
-    pub(crate) fn alloc_id(&mut self) -> i64 {
-        let id = self.next_id;
-        self.next_id += 1;
-        // Belt and braces with `ids_start_at`: a fresh id never comes with a notes base.
-        self.hub.id_allocated(id);
-        id
-    }
-
-    pub(crate) fn save_window(&mut self, record: &WindowRecord) {
-        if let Some(store) = &mut self.store
-            && let Err(err) = store.save_window(record)
-        {
-            tracing::error!("saving window {} failed: {err:#}", record.id);
-        }
-    }
-
-    /// A window was closed on purpose: its sessions go with it.
-    pub(crate) fn forget_window(&mut self, id: i64) {
-        if let Some(store) = &mut self.store
-            && let Err(err) = store.delete_window(id)
-        {
-            tracing::error!("forgetting window {id} failed: {err:#}");
-        }
-    }
-
     /// The window the user is working in: the active one, else the one that
     /// was in front last.
     pub(crate) fn front_window(cx: &App) -> Option<OpenWindow> {
@@ -472,6 +452,17 @@ pub(crate) fn open_workspace_window(
     source: Option<Bounds<Pixels>>,
     cx: &mut App,
 ) {
+    let profile = app(cx).active_profile().clone();
+    open_workspace_window_in(&profile, record, source, cx);
+}
+
+/// [`open_workspace_window`] for a window of `profile`.
+pub(crate) fn open_workspace_window_in(
+    profile: &ProfileId,
+    record: Option<WindowRecord>,
+    source: Option<Bounds<Pixels>>,
+    cx: &mut App,
+) {
     let id = match &record {
         Some(record) => record.id,
         None => app_mut(cx).alloc_window_id(),
@@ -508,8 +499,9 @@ pub(crate) fn open_workspace_window(
         app_owns_titlebar_drag: true,
         ..Default::default()
     };
+    let owner = profile.clone();
     match crate::background::open_window(options, cx, move |window, cx| {
-        cx.new(|cx| Workspace::new(record, window, cx))
+        cx.new(|cx| Workspace::new(record, owner, window, cx))
     }) {
         Ok((handle, workspace)) => {
             // The system's appearance is every window's: any of them hears it change. GPUI also
@@ -519,7 +511,12 @@ pub(crate) fn open_workspace_window(
                 window.observe_window_appearance(|_, cx| cx.defer(sync_system_look)).detach();
             });
             let state = app_mut(cx);
-            state.windows.push(OpenWindow { id, handle, workspace: workspace.downgrade() });
+            state.windows.push(OpenWindow {
+                id,
+                handle,
+                workspace: workspace.downgrade(),
+                profile: profile.clone(),
+            });
             state.front = id;
             crate::background::activate(cx);
             let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
