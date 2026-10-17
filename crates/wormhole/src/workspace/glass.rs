@@ -74,12 +74,14 @@ impl Workspace {
         }
     }
 
-    /// Whether the sidebar's cards, the tab bars and the terminal's surface sit on glass: the Mac
-    /// has it and the system doesn't want windows opaque (Reduce Transparency, Increase Contrast),
-    /// whatever the window's own blur and opacity are; without the blur the window gets a plain
-    /// fill under the glass (`Blur::set_backing`). Else everything paints its own surface.
+    /// Whether the sidebar's cards, the tab bars and the terminal's surface sit on glass: the
+    /// Liquid Glass setting is on, the Mac has it and the system doesn't want windows opaque
+    /// (Reduce Transparency, Increase Contrast), whatever the window's own blur and opacity are;
+    /// without the blur the window gets a plain fill under the glass (`Blur::set_backing`). Else
+    /// everything paints its own surface (the window's opacity and blur keep working as before).
     pub(in crate::workspace) fn glass_on(&self, cx: &App) -> bool {
-        self.glass.available() && !cx.global::<crate::settings::SettingsStore>().system().opaque()
+        let store = cx.global::<crate::settings::SettingsStore>();
+        store.settings.glass_on(self.glass.available(), store.system().opaque())
     }
 
     /// A probe filling its parent that asks for glass under that region, inset, as the glass

@@ -210,6 +210,14 @@ const APPEARANCE: &[Group] = &[
                 &["blur"],
             ),
             entry(
+                "liquid-glass",
+                "Liquid Glass",
+                "Glass under the sidebar's and the panel's cards on macOS 26 and later. Off: every \
+                 surface painted.",
+                "glass translucent material apple tahoe cards",
+                &["liquid_glass"],
+            ),
+            entry(
                 "translucent",
                 "Also translucent",
                 "Use the opacity and blur above for these windows too",

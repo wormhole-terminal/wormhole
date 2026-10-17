@@ -79,10 +79,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
   The old compact switch becomes Compact; View → Compact Rows is gone.
 
-- On macOS 26 and later the right panel's cards sit on Liquid Glass like the sidebar's, the panel, its
-  strip and the status bar stand on the window's own material, and the terminal's rounded surface runs
-  to the strip and the status bar. With Reduce Transparency or Increase Contrast, or before macOS 26,
-  everything paints its own surface as before.
+- Liquid Glass, off by default (Settings → Appearance). On macOS 26 and later it puts the sidebar's and
+  the right panel's cards on glass, the panel, its strip and the status bar on the window's own material,
+  and runs the terminal's rounded surface to the strip and the status bar. Off, before macOS 26, or with
+  Reduce Transparency or Increase Contrast, every surface paints itself.
 
 - Light themes: cards keep a 12 % edge where their 3 % fill vanishes on white, the amber of a card that
   needs you holds 3:1 on it, and a profile's letter turns black on a light colour (yellow, green).

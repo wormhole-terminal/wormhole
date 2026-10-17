@@ -190,6 +190,14 @@ impl GlassRect {
     }
 }
 
+/// Whether this Mac has Liquid Glass (macOS 26 and later), for Settings, which has no window glass.
+pub fn glass_available() -> bool {
+    #[cfg(target_os = "macos")]
+    return objc2::runtime::AnyClass::get(c"NSGlassEffectView").is_some();
+    #[cfg(not(target_os = "macos"))]
+    false
+}
+
 impl Glass {
     #[cfg(target_os = "macos")]
     pub fn install(window: &Window) -> Self {

@@ -209,6 +209,9 @@ pub struct Settings {
     /// Background opacity, 0.3..=1.0.
     pub opacity: f32,
     pub blur: bool,
+    /// Liquid Glass under the sidebar's and the panel's cards (macOS 26 and later). Off, every
+    /// surface is painted; see [`Settings::glass_on`].
+    pub liquid_glass: bool,
     /// How much room each terminal takes in the sidebar and the tab bar.
     pub density: Density,
     /// Groups are cards in the sidebar; off, a group is its head and rows, with no card round them.
@@ -379,6 +382,7 @@ impl Default for Settings {
             line_height: 1.3,
             opacity: 0.8,
             blur: true,
+            liquid_glass: false,
             density: Density::default(),
             show_groups_as_cards: true,
             compact_sidebar: false,
@@ -454,6 +458,13 @@ impl Settings {
     pub fn feature_enabled(&self, flag: FeatureFlag) -> bool {
         features::enabled_in(flag, &self.feature_flags, features::dev_build())
     }
+
+    /// Whether the sidebar's and the panel's cards sit on Liquid Glass: asked for, the Mac has it
+    /// (macOS 26 and later), and the system doesn't want windows opaque (Reduce Transparency,
+    /// Increase Contrast). Otherwise every surface paints itself.
+    pub fn glass_on(&self, mac_has_glass: bool, system_opaque: bool) -> bool {
+        self.liquid_glass && mac_has_glass && !system_opaque
+    }
 }
 
 /// Settings a project's `.wormhole/config.json` may change (how its sessions
@@ -516,6 +527,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "terminals_in",
     "title_border",
     "open_in",
+    // The glass is a look of the whole window, and a repository must not switch it on.
+    "liquid_glass",
     // What the title row shows is the person's own choice. The pull request also runs `gh`, which
     // a repository must not be able to switch on for itself.
     "title_branch_status",
@@ -726,6 +739,19 @@ mod tests {
     use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
     use crate::tokens::Color;
     use std::path::Path;
+
+    #[test]
+    fn glass_needs_the_setting_the_mac_and_a_system_that_allows_it() {
+        let off = Settings::default();
+        assert!(!off.liquid_glass, "off by default");
+        let on = Settings { liquid_glass: true, ..Settings::default() };
+        assert!(!off.glass_on(true, false));
+        assert!(on.glass_on(true, false));
+        assert!(!on.glass_on(false, false), "before macOS 26");
+        assert!(!on.glass_on(true, true), "Reduce Transparency or Increase Contrast");
+        let from_file: Settings = jsonc::parse(r#"{ "liquid_glass": true }"#).expect("valid jsonc");
+        assert!(from_file.liquid_glass);
+    }
 
     #[test]
     fn the_master_notification_switch_is_on_while_any_kind_is() {

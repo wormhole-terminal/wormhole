@@ -3,6 +3,7 @@
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
+use gpui_kit::component::Disableable as _;
 use gpui_kit::component::color_picker::ColorPicker;
 use gpui_kit::component::slider::Slider;
 use wormhole_core::config::{ThemeMode, TitleBorder};
@@ -38,6 +39,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("primary-color", draw_swatches).describe(describe_primary),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
+    Setting::custom("liquid-glass", draw_liquid_glass).below(liquid_glass_hint),
     Setting::custom("translucent", draw_translucent),
     Setting::segmented(
         "title-border",
@@ -170,6 +172,26 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
         )
         .into_any_element()
     })
+}
+
+/// The Liquid Glass switch: out of reach before macOS 26, where there is no glass to turn on.
+fn draw_liquid_glass(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let on = settings(cx).liquid_glass;
+    style::toggle("liquid-glass", on, |on, _, cx| update_settings(cx, |s| s.liquid_glass = on))
+        .disabled(!crate::vibrancy::glass_available())
+        .into_any_element()
+}
+
+fn liquid_glass_hint(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let text = if !crate::vibrancy::glass_available() {
+        "Liquid Glass needs macOS 26 or later."
+    } else if cx.global::<SettingsStore>().system().opaque() {
+        "Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays \
+         painted. The glass returns when it's off."
+    } else {
+        return None;
+    };
+    Some(style::banner(ui(cx), style::BannerKind::Info, false, text).into_any_element())
 }
 
 /// The settings and Studio windows in one row of checkboxes.
