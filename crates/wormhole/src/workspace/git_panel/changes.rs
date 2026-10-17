@@ -360,7 +360,11 @@ impl Workspace {
         let Some(status) = &session.git.status else {
             if let Some(error) = &session.git.error {
                 return panel
-                    .child(style::panel_card(ui, self.render_git_problem(GitTab::Changes, error, cx)))
+                    .child(self.panel_card_glass(
+                        style::panel_card(ui, self.render_git_problem(GitTab::Changes, error, cx)),
+                        0,
+                        cx,
+                    ))
                     .into_any_element();
             }
             // Not a repository: nothing to compare or refresh.
@@ -369,7 +373,8 @@ impl Workspace {
             } else {
                 "This terminal's folder isn't inside a git repository."
             };
-            return panel.child(style::panel_card(ui, style::empty_note(ui, text))).into_any_element();
+            let card = self.panel_card_glass(style::panel_card(ui, style::empty_note(ui, text)), 0, cx);
+            return panel.child(card).into_any_element();
         };
 
         let list = &session.git.list;
@@ -390,16 +395,15 @@ impl Workspace {
         if status.files.is_empty() {
             // The head stays, so the compare picker is still in reach.
             let head = view.render_band(Group::All, 0, false, true, ui, cx);
-            return panel
-                .child(style::panel_card(
-                    ui,
-                    div()
-                        .flex()
-                        .flex_col()
-                        .child(head)
-                        .child(style::empty_note(ui, "No changes. Working tree is clean.")),
-                ))
-                .into_any_element();
+            let card = style::panel_card(
+                ui,
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(head)
+                    .child(style::empty_note(ui, "No changes. Working tree is clean.")),
+            );
+            return panel.child(self.panel_card_glass(card, 0, cx)).into_any_element();
         }
 
         let in_list = view;
@@ -407,6 +411,7 @@ impl Workspace {
             .child(list.rows.element_carded(
                 self.panel_ring(window, ui),
                 ui,
+                self.panel_backing(cx),
                 ChangeRow::part,
                 move |row, window, cx| in_list.render_row(row, crate::settings::ui(cx), window, cx),
             ))

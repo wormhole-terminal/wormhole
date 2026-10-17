@@ -21,7 +21,7 @@ impl Workspace {
         let ui = ui(cx);
         let reports = &app(cx).usage;
         if reports.is_empty() {
-            return style::panel_card(
+            return self.panel_card_glass(style::panel_card(
                 ui,
                 div()
                     .flex()
@@ -38,14 +38,16 @@ impl Workspace {
                         "They need a Pro or Max plan, Claude Code 2.1.80 or later, and the Claude \
                          integration from Settings → Coding agents.",
                     ),
-            )
+            ), 0, cx)
             .into_any_element();
         }
         let now = unix_now();
         div()
             .flex()
             .flex_col()
-            .children(reports.iter().map(|report| style::panel_card(ui, agent_block(report, now, ui))))
+            .children(reports.iter().enumerate().map(|(n, report)| {
+                self.panel_card_glass(style::panel_card(ui, agent_block(report, now, ui)), n as u64, cx)
+            }))
             .into_any_element()
     }
 }

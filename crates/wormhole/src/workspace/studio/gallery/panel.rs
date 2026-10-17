@@ -353,7 +353,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
 
     // The panel's tabs in their strip down the window's edge, the open one in the accent and an
     // amber dot where something is new.
-    let strip = style::panel_strip(ui)
+    let strip = style::panel_strip(ui, false)
         .h(px(STRIP_H))
         .child(style::strip_tab("g-strip-changes", ui, IconName::GitCompare, "Changes", false, true))
         .child(style::strip_tab("g-strip-history", ui, IconName::GitCommitHorizontal, "History", true, false))

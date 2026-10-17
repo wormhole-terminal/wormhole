@@ -160,6 +160,7 @@ impl Render for Workspace {
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
+        let has_status_bar = status_bar.is_some();
         let sidebar_shown = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let tabs = self.sidebar.tabs.on;
         let top_tabs = tabs.then(|| self.render_tab_bar(window, cx));
@@ -227,7 +228,9 @@ impl Render for Workspace {
                             // On glass the terminal is a rounded surface floating in the window, the
                             // title row over it on the window's own material. Beside the sidebar its
                             // cards' margin is the gap; without it (tabs, or hidden) the surface
-                            // stands in from the window's edge.
+                            // stands in from the window's edge. To the right it runs to the panel's
+                            // strip and below to the status bar, with no gap, all four corners
+                            // round; without a status bar the window's edge is the gap.
                             let gap = px(super::glass::SURFACE_INSET);
                             div()
                                 .relative()
@@ -240,8 +243,7 @@ impl Render for Workspace {
                                     surface
                                         .min_h_0()
                                         .mt(px(style::TITLE_ROW_H))
-                                        .mb(gap)
-                                        .mr(gap)
+                                        .when(!has_status_bar, |d| d.mb(gap))
                                         .when(!sidebar_shown, |d| d.ml(gap))
                                         .rounded(ui.radius_lg)
                                         .overflow_hidden(),
@@ -267,7 +269,8 @@ impl Render for Workspace {
                     })
                     .when(columns.panel > 0.0 && self.in_flow(Edge::Panel), |d| {
                         let x = self.window_width - columns.strip - columns.panel;
-                        d.child(edge_rule(Edge::Panel, x, ui)).child(self.resize_handle(Edge::Panel, x, cx))
+                        d.when(!sidebar_glass, |d| d.child(edge_rule(Edge::Panel, x, ui)))
+                            .child(self.resize_handle(Edge::Panel, x, cx))
                     }),
             )
             .children(status_bar)

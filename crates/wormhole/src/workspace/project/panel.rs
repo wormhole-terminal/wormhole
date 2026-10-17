@@ -100,6 +100,7 @@ impl Workspace {
                 )
             }));
         style::Cards::new(ui)
+            .backed(self.panel_backing(cx))
             .head(section_band("project-folder-color", "Folder colour", None, ui))
             .child(row)
             .child(
@@ -120,6 +121,7 @@ impl Workspace {
             format!("Creates {}/.wormhole/", display_path(folder, home_dir()).trim_end_matches('/'))
         });
         style::Cards::new(ui)
+            .backed(self.panel_backing(cx))
             .head(section_band("project-folder", "Project folder", None, ui))
             .child(
                 div()
@@ -168,7 +170,7 @@ impl Workspace {
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
 
         // The folder and its trust, the header the sections hang from.
-        let mut body = style::Cards::new(ui).child(
+        let mut body = style::Cards::new(ui).backed(self.panel_backing(cx)).child(
             div()
                 .flex()
                 .items_center()

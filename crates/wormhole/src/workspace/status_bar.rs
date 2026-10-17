@@ -431,7 +431,7 @@ impl Workspace {
                 )
                 .child(style::status_separator(ui))
         });
-        let bar_element = style::status_bar(ui)
+        let bar_element = style::status_bar(ui, self.glass_on(cx))
             .id("status-bar")
             // A toolbar, there only while the bar is shown.
             .role(Role::Toolbar)

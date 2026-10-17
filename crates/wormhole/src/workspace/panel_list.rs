@@ -30,7 +30,7 @@ pub enum CardPart {
 }
 
 /// What draws a list's rows as cards: the surface's colours and where each row stands.
-type Carded<T> = (UiColors, fn(&T) -> CardPart);
+type Carded<T> = (UiColors, fn(&T) -> CardPart, Option<style::CardBacking>);
 
 /// How a row sits in its card, given the part of the row after it: `None` for a row outside any
 /// card, else whether it is the card's top (a head) and whether it is also its bottom (nothing
@@ -99,13 +99,14 @@ impl<T: PartialEq> Rows<T> {
         &self,
         cursor: Option<(usize, Option<UiColors>)>,
         ui: UiColors,
+        backing: Option<style::CardBacking>,
         part: fn(&T) -> CardPart,
         render: impl Fn(&T, &mut Window, &mut App) -> AnyElement + 'static,
     ) -> List
     where
         T: 'static,
     {
-        self.build(cursor, Some((ui, part)), render)
+        self.build(cursor, Some((ui, part, backing)), render)
     }
 
     fn build(
@@ -123,11 +124,20 @@ impl<T: PartialEq> Rows<T> {
             Some(row) => {
                 let keyed = cursor.filter(|(at, _)| *at == ix);
                 let content = render(row, window, cx);
-                let content = match carded {
-                    Some((ui, part)) => match card_edges(part(row), rows.get(ix + 1).map(part)) {
+                let content = match &carded {
+                    Some((ui, part, backing)) => match card_edges(part(row), rows.get(ix + 1).map(part)) {
                         None => content,
                         Some((top, bottom)) => {
-                            style::panel_segment(ui, top, bottom, true, false, content).into_any_element()
+                            let segment = style::panel_segment(*ui, top, bottom, true, false, content);
+                            match backing {
+                                // The glass is the card's, named by its head's line.
+                                Some(back) => {
+                                    let head = (0..=ix).rev().find(|&k| part(&rows[k]) != CardPart::Body);
+                                    back(segment, head.unwrap_or(ix) as u64, bottom)
+                                }
+                                None => segment,
+                            }
+                            .into_any_element()
                         }
                     },
                     None => content,

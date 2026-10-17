@@ -19,6 +19,8 @@ impl Insets {
 /// The clips: the sidebar's list, and the tab bar's row of tabs (both cut what scrolls past them).
 pub(in crate::workspace) const LIST_CLIP: u32 = 0;
 pub(in crate::workspace) const TAB_ROW_CLIP: u32 = 1;
+/// The right panel's body (its lists scroll under the panel's top).
+pub(in crate::workspace) const PANEL_CLIP: u32 = 2;
 
 /// What a glass is for, in the key's top bits; the low ones tell the pieces of one kind apart. A
 /// higher key lies over a lower one.
@@ -30,13 +32,48 @@ pub(in crate::workspace) enum GlassKind {
     Loose = 1,
     /// A terminal's tab, by its id.
     Tab = 2,
+    /// A card of the right panel, by its head's line (lists) or its place (short cards).
+    Panel = 3,
 }
 
 pub(in crate::workspace) fn glass_key(kind: GlassKind, n: u64) -> u64 {
     ((kind as u64) << 40) | (n & ((1 << 40) - 1))
 }
 
+/// A stretch of a right-panel card (`style::panel_segment`'s outer box) with the card's glass
+/// under it: every stretch of one card names the same key `n`, so they join into one glass.
+/// `bottom` is the last stretch, which carries the gap under the card, outside the glass.
+fn panel_stretch(glass: &std::rc::Rc<crate::vibrancy::Glass>, outer: Div, n: u64, bottom: bool) -> Div {
+    let inset =
+        Insets(style::CARD_MARGIN, 0.0, style::CARD_MARGIN, if bottom { style::CARD_GAP } else { 0.0 });
+    outer.relative().child(Workspace::glass_probe_on(
+        glass,
+        glass_key(GlassKind::Panel, n),
+        inset,
+        style::CARD_RADIUS,
+        Some(PANEL_CLIP),
+    ))
+}
+
 impl Workspace {
+    /// What puts the panel's cards on glass (`style::CardBacking`), or nothing when the glass is
+    /// off and each card paints its own surface.
+    pub(in crate::workspace) fn panel_backing(&self, cx: &App) -> Option<style::CardBacking> {
+        let glass = self.glass.clone();
+        self.glass_on(cx).then(|| {
+            std::rc::Rc::new(move |outer: Div, n: u64, bottom: bool| panel_stretch(&glass, outer, n, bottom))
+                as style::CardBacking
+        })
+    }
+
+    /// A whole short card of the panel on glass when it is on; `n` tells it from the tab's others.
+    pub(in crate::workspace) fn panel_card_glass(&self, card: Div, n: u64, cx: &App) -> Div {
+        match self.panel_backing(cx) {
+            Some(back) => back(card, style::SHORT_CARD + n, true),
+            None => card,
+        }
+    }
+
     /// Whether the sidebar's cards, the tab bars and the terminal's surface sit on glass: the Mac
     /// has it and the system doesn't want windows opaque (Reduce Transparency, Increase Contrast),
     /// whatever the window's own blur and opacity are; without the blur the window gets a plain

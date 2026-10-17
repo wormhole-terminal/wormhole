@@ -80,7 +80,7 @@ impl Workspace {
                     RightTab::Project,
                 ))
             });
-        style::panel_strip(ui)
+        style::panel_strip(ui, self.glass_on(cx))
             .id("panel-strip")
             // Not the window's drag area: a press between the buttons does nothing.
             .occlude()

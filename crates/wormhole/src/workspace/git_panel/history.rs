@@ -451,7 +451,11 @@ impl Workspace {
         if history.root.is_none() {
             if let Some(problem) = &history.problem {
                 return panel
-                    .child(style::panel_card(ui, self.render_git_problem(GitTab::History, problem, cx)))
+                    .child(self.panel_card_glass(
+                        style::panel_card(ui, self.render_git_problem(GitTab::History, problem, cx)),
+                        0,
+                        cx,
+                    ))
                     .into_any_element();
             }
             let answered =
@@ -461,7 +465,8 @@ impl Workspace {
             } else {
                 "Reading history…"
             };
-            return panel.child(style::panel_card(ui, style::empty_note(ui, text))).into_any_element();
+            let card = self.panel_card_glass(style::panel_card(ui, style::empty_note(ui, text)), 0, cx);
+            return panel.child(card).into_any_element();
         }
 
         let view = HistoryView {
@@ -493,6 +498,7 @@ impl Workspace {
             .child(history.list.element_carded(
                 self.panel_ring(window, ui),
                 ui,
+                self.panel_backing(cx),
                 HistoryRow::part,
                 move |row, window, cx| view.render_row(row, crate::settings::ui(cx), window, cx),
             ))

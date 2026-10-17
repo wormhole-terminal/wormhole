@@ -14,6 +14,13 @@ use super::scale::{CARD_GAP, CARD_MARGIN, CARD_PAD, CARD_RADIUS, Edges as _};
 use crate::settings::UiColors;
 use wormhole_core::layout::PANEL_STRIP;
 
+/// Puts a glass under a stretch of a card: given its outer box, the card's number and whether it
+/// is the card's last stretch. Set by the workspace while the window has Liquid Glass.
+/// Short cards' numbers start here, above any line index of a list.
+pub const SHORT_CARD: u64 = 1 << 20;
+
+pub type CardBacking = std::rc::Rc<dyn Fn(Div, u64, bool) -> Div>;
+
 /// One whole card round `content`: a note where a list would be, a block of the Usage tab.
 #[track_caller]
 pub fn panel_card(ui: UiColors, content: impl IntoElement) -> Div {
@@ -49,7 +56,7 @@ pub fn panel_segment(
     if !filled {
         return outer.child(segment.child(content));
     }
-    segment = segment.bg(ui.band).border_color(ui.border);
+    segment = segment.bg(ui.card).border_color(ui.card_edge);
     {
         let b = &mut segment.style().border_widths;
         if top {
@@ -72,11 +79,18 @@ pub fn panel_segment(
 pub struct Cards {
     ui: UiColors,
     cards: Vec<Vec<AnyElement>>,
+    backing: Option<CardBacking>,
 }
 
 impl Cards {
     pub fn new(ui: UiColors) -> Self {
-        Self { ui, cards: Vec::new() }
+        Self { ui, cards: Vec::new(), backing: None }
+    }
+
+    /// Put the cards on glass.
+    pub fn backed(mut self, backing: Option<CardBacking>) -> Self {
+        self.backing = backing;
+        self
     }
 
     /// Start a new card with `head` as its first line.
@@ -101,10 +115,14 @@ impl IntoElement for Cards {
     type Element = Div;
 
     fn into_element(self) -> Div {
-        let ui = self.ui;
-        div().flex().flex_col().children(
-            self.cards.into_iter().map(|lines| panel_card(ui, div().flex().flex_col().children(lines))),
-        )
+        let (ui, backing) = (self.ui, self.backing);
+        div().flex().flex_col().children(self.cards.into_iter().enumerate().map(|(n, lines)| {
+            let card = panel_card(ui, div().flex().flex_col().children(lines));
+            match &backing {
+                Some(back) => back(card, SHORT_CARD + n as u64, true),
+                None => card,
+            }
+        }))
     }
 }
 
@@ -127,8 +145,8 @@ const STRIP_DOT_INSET: f32 = 1.0;
 /// panel's surface, a hairline on its left. Put the tabs in with `.child(…)`; nothing
 /// sits at its foot.
 #[track_caller]
-pub fn panel_strip(ui: UiColors) -> Div {
-    div()
+pub fn panel_strip(ui: UiColors, glass: bool) -> Div {
+    let strip = div()
         .flex_none()
         .flex()
         .flex_col()
@@ -137,9 +155,9 @@ pub fn panel_strip(ui: UiColors) -> Div {
         .w(px(PANEL_STRIP))
         .h_full()
         .pt(px(STRIP_TOP))
-        .pb(px(STRIP_FOOT))
-        .bg(ui.panel_right)
-        .rule_left(ui)
+        .pb(px(STRIP_FOOT));
+    // On glass the strip stands on the window's material, with no line between it and the terminal.
+    if glass { strip } else { strip.bg(ui.panel_right).rule_left(ui) }
 }
 
 /// A button of the strip: [`STRIP_BUTTON`] square with the chip corners and a [`STRIP_ICON`]

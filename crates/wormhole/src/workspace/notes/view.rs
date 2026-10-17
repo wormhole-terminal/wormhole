@@ -523,6 +523,7 @@ impl Workspace {
             .child(rows.element_carded(
                 self.panel_ring(window, ui(cx)),
                 ui(cx),
+                self.panel_backing(cx),
                 NotesRow::part,
                 move |row, window, cx| in_list.render_row(row, ui(cx), window, cx),
             ))

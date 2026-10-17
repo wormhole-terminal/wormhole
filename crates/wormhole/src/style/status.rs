@@ -288,16 +288,16 @@ pub fn status_context(
 /// tall on the sidebar's surface with a hairline on top; its items are 14 apart and start and
 /// end 14 in (the gap and the bar's padding, and 4 inside each item).
 #[track_caller]
-pub fn status_bar(ui: UiColors) -> Div {
-    div()
+pub fn status_bar(ui: UiColors, glass: bool) -> Div {
+    let bar = div()
         .flex_none()
         .flex()
         .items_center()
         .gap(px(STATUS_BAR_GAP))
         .h(px(STATUS_BAR_H))
-        .px(px(STATUS_BAR_EDGE))
-        .bg(ui.panel)
-        .rule_top(ui)
+        .px(px(STATUS_BAR_EDGE));
+    // On glass the bar stands on the window's material, the terminal's surface running down to it.
+    if glass { bar } else { bar.bg(ui.panel).rule_top(ui) }
 }
 
 /// The room between the bar's items: 14 from one's text to the next's, counting the 4 each has

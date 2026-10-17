@@ -463,7 +463,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         }),
     );
 
-    let status_bar = style::status_bar(ui)
+    let status_bar = style::status_bar(ui, false)
         .child(
             style::status_item("g-status-branch", ui, false, false)
                 .child(div().text_color(ui.branch).child(style::icon(IconName::GitBranch)))
