@@ -12,7 +12,8 @@ use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
 use super::picker::{Picker, PickerChip};
 use super::problem::GitTab;
-use crate::settings::{UiColors, ui};
+use crate::settings::UiColors;
+use crate::settings::ui_in;
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::panel_list::{CardPart, Rows};
@@ -443,7 +444,7 @@ impl Workspace {
     }
 
     pub(crate) fn render_history_tab(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let history = &session.history;
         let panel = div().flex().flex_col().flex_1().min_h_0();
@@ -483,7 +484,7 @@ impl Workspace {
             }),
             error: history.error.clone(),
             open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
-            code_font: crate::fonts::code_font(cx).0,
+            code_font: crate::fonts::code_font_in(&self.profile, cx).0,
             now: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs() as i64)
@@ -493,6 +494,7 @@ impl Workspace {
             this: cx.weak_entity(),
         };
 
+        let profile = self.profile.clone();
         // A column that fills the panel, so the list gets a bounded height.
         panel
             .child(history.list.element_carded(
@@ -500,7 +502,7 @@ impl Workspace {
                 ui,
                 self.panel_backing(cx),
                 HistoryRow::part,
-                move |row, window, cx| view.render_row(row, crate::settings::ui(cx), window, cx),
+                move |row, window, cx| view.render_row(row, ui_in(&profile, cx), window, cx),
             ))
             .into_any_element()
     }

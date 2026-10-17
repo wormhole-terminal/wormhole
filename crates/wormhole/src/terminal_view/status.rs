@@ -359,7 +359,7 @@ impl TerminalView {
     /// sound per glow, not a rattle. The attention state the sidebar shows is separate.
     fn ring(&mut self, cx: &mut Context<Self>) {
         let (sound, visual) = {
-            let settings = settings(cx);
+            let settings = settings_in(&self.profile, cx);
             (settings.bell_sound, settings.bell_visual)
         };
         if sound && !self.bell_glow {

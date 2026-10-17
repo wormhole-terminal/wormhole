@@ -146,7 +146,7 @@ impl TerminalView {
         // Which Option key is down is only asked for when it matters.
         let option_as_meta = m.alt && {
             let (left, right) = option_sides();
-            settings(cx).option_as_meta.is_meta(left, right)
+            settings_in(&self.profile, cx).option_as_meta.is_meta(left, right)
         };
         let Some(pty) = &self.pty else { return false };
         let input = keys::KeyInput {

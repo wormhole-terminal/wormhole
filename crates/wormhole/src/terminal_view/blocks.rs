@@ -12,7 +12,7 @@ use wormhole_core::terminal::types::{Line, Scroll};
 use wormhole_core::terminal::{Block, BlockState, Direction, took_text};
 
 use super::{Layout, PADDING_X, TerminalView};
-use crate::settings::{SettingsStore, UiColors};
+use crate::settings::{UiColors, store_in};
 use crate::style;
 
 /// The gutter mark: a 2 pt bar inside the pane's left padding, 1 pt from its edge, inset where
@@ -196,8 +196,8 @@ impl TerminalView {
         let state = self.render_state.borrow();
         let span = state.snapshot().block_spans().iter().find(|span| span.id == id)?;
         let BlockState::Finished { code, took } = span.state else { return None };
-        let ui = cx.global::<SettingsStore>().ui;
-        let right = px(Self::right_inset(cx));
+        let ui = store_in(&self.profile, cx).ui;
+        let right = px(Self::right_inset(&self.profile, cx));
         let readout = style::block_readout(ui, code, took.map(took_text))
             .id("block-readout")
             .absolute()

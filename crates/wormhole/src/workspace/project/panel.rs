@@ -17,6 +17,7 @@ use super::super::folder_color;
 use super::super::session::home_dir;
 use super::*;
 use crate::auth;
+use crate::settings::{store_in, ui_in};
 use crate::theme_bridge;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
@@ -46,7 +47,7 @@ impl Workspace {
     /// that locks its colour (or whose file can't be read) shows the row dimmed, and a hex colour
     /// it sets by hand is shown as a swatch of its own, matching none of the names.
     fn render_folder_color(&self, folder: &Path, cx: &Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let paint = self.folder_paint(folder, cx);
         let (current, custom) = (paint.checked(), paint.custom());
         let enabled = paint.closed().is_none();
@@ -116,7 +117,7 @@ impl Workspace {
 
     /// A folder with no `.wormhole/`: what one is, and the button that makes it.
     fn render_no_project(&self, folder: Option<&Path>, cx: &Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let target = folder.map(|folder| {
             format!("Creates {}/.wormhole/", display_path(folder, home_dir()).trim_end_matches('/'))
         });
@@ -165,7 +166,7 @@ impl Workspace {
 
     /// The project at the terminal's folder: its trust, then a band for each part.
     fn render_project(&self, project: &LoadedProject, cx: &Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let root = project.folder.root.clone();
         let name = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
 
@@ -358,7 +359,7 @@ impl Workspace {
         needing: &[Feature],
         cx: &Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let applies = trust_applies(needing);
         if status == TrustStatus::Trusted {
             let line = if commands.is_empty() {
@@ -393,7 +394,7 @@ impl Workspace {
         };
         // Every line wrapped, never cut off: a cut-off line is where a payload would hide. Past
         // a few lines the rest are a window away, with the same approval there.
-        let command_color = crate::theme_bridge::token(&cx.global::<SettingsStore>().tokens, "trust.command");
+        let command_color = crate::theme_bridge::token(&store_in(&self.profile, cx).tokens, "trust.command");
         let shown = if commands.len() > TRUST_LINES_MAX { TRUST_LINES_SHOWN } else { commands.len() };
         let lines = commands.iter().take(shown).map(|line| trust_line(ui, command_color, line));
         let view_all = (shown < commands.len()).then(|| {
@@ -419,8 +420,8 @@ impl Workspace {
                     .rounded(ui.radius)
                     .bg(ui.hover)
                     .text_caption()
-                    .font_family(crate::fonts::code_font(cx).0)
-                    .font_features(crate::fonts::code_font_features(cx))
+                    .font_family(crate::fonts::code_font_in(&self.profile, cx).0)
+                    .font_features(crate::fonts::code_font_features_in(&self.profile, cx))
                     .children(lines)
                     .into_any_element(),
             );

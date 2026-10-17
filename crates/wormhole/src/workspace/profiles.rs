@@ -44,6 +44,17 @@ impl AppState {
         }
     }
 
+    /// The settings of a profile that is not shown, when it has been opened: what its odd windows
+    /// draw with.
+    pub(crate) fn parked_settings(&self, profile: &ProfileId) -> Option<&SettingsStore> {
+        self.parked.get(profile).map(|slot| &slot.settings)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn parked_settings_mut(&mut self, profile: &ProfileId) -> Option<&mut SettingsStore> {
+        self.parked.get_mut(profile).map(|slot| &mut slot.settings)
+    }
+
     /// The project folders (preferences, trust, notes sync) of `profile`.
     pub(super) fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
         if profile == self.profiles.active_id() {
@@ -180,6 +191,16 @@ impl AppState {
         }
     }
 
+    /// Parked profiles keep up with the system and their files, as their odd windows draw by them.
+    /// Returns whether any look changed.
+    pub(crate) fn follow_parked(&mut self, system: crate::settings::SystemLook) -> bool {
+        let mut moved = false;
+        for slot in self.parked.values_mut() {
+            moved |= slot.settings.follow(system);
+        }
+        moved
+    }
+
     /// The windows of `profile`, shown or not.
     pub(crate) fn windows_of<'a>(&'a self, profile: &'a ProfileId) -> impl Iterator<Item = &'a OpenWindow> {
         self.windows.iter().filter(move |w| &w.profile == profile)
@@ -214,6 +235,13 @@ impl Workspace {
         }
         state.forget_window(&from, self.window_id);
         self.profile = target.clone();
+        // What it draws with follows: its terminals and an open diff read their window's profile.
+        for session in &self.sessions {
+            session.pane.terminal.update(cx, |terminal, cx| terminal.set_profile(target.clone(), cx));
+        }
+        if let Some(diff) = self.diff_view.as_mut() {
+            diff.set_profile(target.clone());
+        }
         self.dirty = false;
         cx.notify();
         Ok(())

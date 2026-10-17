@@ -123,7 +123,7 @@ impl Workspace {
         let ids: Vec<i64> = infos.iter().map(|info| info.id).collect();
         let pinned: Vec<bool> = infos.iter().map(|info| info.pinned).collect();
         let split_of = self.split_ids();
-        let numbers = settings(cx).sidebar_numbers;
+        let numbers = settings_in(&self.profile, cx).sidebar_numbers;
         let mut listing = Listing::build(&ListInput {
             ids: &ids,
             pinned: &pinned,
@@ -182,11 +182,11 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let glass = self.glass_on(cx);
         let infos = self.row_infos(cx);
         let listing = self.listing(&infos, cx);
-        *self.sidebar.times_drawn.borrow_mut() = row_times(&infos, cx);
+        *self.sidebar.times_drawn.borrow_mut() = row_times(&infos, &self.profile, cx);
         if let Some(id) = self.sidebar.scroll_to.take()
             && let Some(at) = listing
                 .entries
@@ -207,7 +207,7 @@ impl Workspace {
         let frame = rows::Frame::new(self, width, window, cx);
         let mark = self.drop_mark(&listing, &infos);
         let group_wash: HashMap<u32, Hsla> = {
-            let tokens = &cx.global::<crate::settings::SettingsStore>().tokens;
+            let tokens = &store_in(&self.profile, cx).tokens;
             self.sidebar
                 .view
                 .groups

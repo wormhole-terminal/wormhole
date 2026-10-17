@@ -12,7 +12,8 @@ use gpui_kit::*;
 use super::history::HistoryState;
 use super::job::Ticket;
 use crate::select::{self, Choice, SearchSelect, SelectTrigger};
-use crate::settings::{UiColors, ui};
+use crate::settings::UiColors;
+use crate::settings::ui_in;
 use crate::workspace::Workspace;
 use wormhole_core::git;
 
@@ -96,7 +97,7 @@ impl Workspace {
             Picker::Compare => "HEAD (uncommitted changes)",
             Picker::History => "HEAD (current branch)",
         };
-        let branch = ui(cx).branch;
+        let branch = ui_in(&self.profile, cx).branch;
         std::iter::once(Choice::new(None, head))
             .chain(
                 self.branches

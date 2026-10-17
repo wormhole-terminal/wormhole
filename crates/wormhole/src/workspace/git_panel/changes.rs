@@ -14,7 +14,8 @@ use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
 use super::picker::{Picker, PickerChip};
 use super::problem::{self, GitTab};
-use crate::settings::{UiColors, settings, ui};
+use crate::settings::UiColors;
+use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::focus::Walkable;
@@ -286,7 +287,7 @@ impl Workspace {
     /// Refresh the list's rows from git status and settings. Cheap when nothing
     /// changed, so it runs on every render (including every scroll tick).
     pub(crate) fn sync_changes_list(&mut self, cx: &App) {
-        let s = settings(cx);
+        let s = settings_in(&self.profile, cx);
         let (tree, group_untracked) = (s.changes_tree, s.group_untracked);
         let session = &mut self.sessions[self.active];
         let folded = Folded { set: &self.collapsed_dirs, session: session.id };
@@ -353,7 +354,7 @@ impl Workspace {
     }
 
     pub(crate) fn render_changes_tab(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let panel = div().flex().flex_col().flex_1().min_h_0();
 
@@ -407,13 +408,14 @@ impl Workspace {
         }
 
         let in_list = view;
+        let profile = self.profile.clone();
         panel
             .child(list.rows.element_carded(
                 self.panel_ring(window, ui),
                 ui,
                 self.panel_backing(cx),
                 ChangeRow::part,
-                move |row, window, cx| in_list.render_row(row, crate::settings::ui(cx), window, cx),
+                move |row, window, cx| in_list.render_row(row, ui_in(&profile, cx), window, cx),
             ))
             .into_any_element()
     }

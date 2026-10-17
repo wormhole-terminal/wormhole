@@ -60,7 +60,7 @@ pub(super) struct ExtraFacts {
 impl Workspace {
     /// What the extras show for the active terminal, with every switched-off one left out.
     pub(super) fn extra_facts(&self, cx: &App) -> ExtraFacts {
-        let settings = settings(cx);
+        let settings = settings_in(&self.profile, cx);
         let session = self.active_session();
         let terminal = session.terminal().read(cx);
         // Git's answer only while it is about the folder the terminal is in now.
@@ -122,7 +122,7 @@ impl Workspace {
     /// Ask for the ports under the terminal on screen, off the main thread, when the last look
     /// is a few seconds old.
     fn poll_ports(&mut self, cx: &mut Context<Self>) {
-        let wanted = settings(cx).title_ports;
+        let wanted = settings_in(&self.profile, cx).title_ports;
         let session = &mut self.sessions[self.active];
         let pid = session.pane.terminal.read(cx).shell_pid();
         let Some(pid) = pid.filter(|_| wanted) else {
@@ -171,7 +171,7 @@ impl Workspace {
 
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(super) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
-        if !settings(cx).title_pull_request || !super::project::project_folders_on(cx) {
+        if !settings_in(&self.profile, cx).title_pull_request || !super::project::project_folders_on(cx) {
             return None;
         }
         let session = self.sessions.get(ix)?;

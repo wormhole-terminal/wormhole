@@ -97,7 +97,7 @@ impl Workspace {
             return None;
         }
         let profile = state.profiles.get(&self.profile)?.clone();
-        let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
+        let color = crate::theme_bridge::hsla(profile.color.color(&store_in(&self.profile, cx).tokens));
         Some((profile, color))
     }
 
@@ -111,7 +111,7 @@ impl Workspace {
     /// The sidebar's collapse button. It floats over the title rows at a fixed spot in the window,
     /// so it never moves as the sidebar opens and closes.
     pub(super) fn render_window_controls(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let sidebar_open = self.panes.sidebar_open;
         div()
             .id("sidebar-toggle")
@@ -142,7 +142,7 @@ impl Workspace {
     /// The right panel's toggle, the last button of the terminal's title row: it opens the panel on
     /// its last tab and closes it, as the key does.
     pub(super) fn render_panel_toggle(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let look = self.panes.panel_toggle(self.window_width);
         // One glyph in every state; the tooltip says what a click does.
         let tooltip = match look {
@@ -174,8 +174,8 @@ impl Workspace {
     /// "Terminals" header with the + that starts one. The header is 28 tall and 12 in, with a 16 pt
     /// title and a 24 pt + (22, 8, 14 and 20 in the dense density).
     pub(super) fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
-        let s = settings(cx);
+        let ui = ui_in(&self.profile, cx);
+        let s = settings_in(&self.profile, cx);
         let metrics = style::Metrics::of(s.density, s.show_groups_as_cards);
         let title = if metrics.small_title {
             div().text_body().font_weight(FontWeight::BOLD).text_color(ui.text).child("Terminals")

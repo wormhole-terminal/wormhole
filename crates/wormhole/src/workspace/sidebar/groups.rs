@@ -9,7 +9,6 @@ use wormhole_core::sidebar::{GroupColor, Item, Landing};
 
 use super::*;
 use crate::select;
-use crate::settings::SettingsStore;
 use crate::style::PopoverTrigger;
 use crate::theme_bridge;
 
@@ -26,8 +25,8 @@ const POPOVER_W: f32 = 276.0;
 const ACTION_H: f32 = 28.0;
 
 /// The colours a group can wear, as the theme in force draws them.
-pub(in crate::workspace) fn group_colors(cx: &App) -> Vec<(GroupColor, Hsla)> {
-    let tokens = &cx.global::<SettingsStore>().tokens;
+pub(in crate::workspace) fn group_colors(profile: &ProfileId, cx: &App) -> Vec<(GroupColor, Hsla)> {
+    let tokens = &store_in(profile, cx).tokens;
     GroupColor::ALL.into_iter().map(|color| (color, theme_bridge::hsla(color.color(tokens)))).collect()
 }
 
@@ -208,7 +207,7 @@ impl Workspace {
             input: edit.map(|edit| edit.input.clone()),
             current: self.sidebar.view.groups.get(group).and_then(|g| g.color()),
             pinned: self.sidebar.view.groups.get(group).is_some_and(|g| g.pinned),
-            colors: group_colors(cx),
+            colors: group_colors(&self.profile, cx),
             bg: select::menu_bg(ui, cx),
         }
     }

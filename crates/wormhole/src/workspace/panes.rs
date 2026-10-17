@@ -408,7 +408,7 @@ impl Workspace {
         of: usize,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let id = pane.id;
         let (status, told, folder) = {
             let terminal = pane.terminal.read(cx);
@@ -444,7 +444,7 @@ impl Workspace {
                 .ok();
                 cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
             })
-            .child(terminal_glyph(id, status, told, cx))
+            .child(terminal_glyph(id, status, told, &self.profile, cx))
             // The name keeps its room; the folder gives way first.
             .child(
                 div()
@@ -503,7 +503,7 @@ impl Workspace {
         axis: Axis,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let dragging =
             self.pane_drag.as_ref().is_some_and(|drag| drag.split == split && drag.divider == divider);
         let look = if dragging {

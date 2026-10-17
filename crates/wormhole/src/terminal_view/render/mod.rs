@@ -266,7 +266,7 @@ impl Render for TerminalView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.redraw.rendered();
         let entity = cx.entity();
-        let store = cx.global::<SettingsStore>();
+        let store = store_in(&self.profile, cx);
         let palette = store.palette.clone();
         // A zoom kept while Settings changed the size still stays within what Settings allows.
         let font_size_setting =
@@ -680,7 +680,7 @@ impl Render for TerminalView {
             .when_some(background_override, |this, color| this.bg(color))
             .min_w(px(MIN_WIDTH))
             .pl(px(PADDING_X))
-            .pr(px(Self::right_inset(cx)))
+            .pr(px(Self::right_inset(&self.profile, cx)))
             .pb(px(PADDING_Y))
             .pt(px(self.top_inset + PADDING_Y))
             // A program that takes the mouse gets clicks, not a text selection (⇧ still selects).
@@ -755,14 +755,15 @@ impl TerminalView {
     /// How far the grid stays from the pane's right edge: the padding, and the minimap when it is
     /// shown or the scrollbar's gutter (the legacy style; the overlay one takes no room). The
     /// find bar lines up with it.
-    pub fn right_inset(cx: &App) -> f32 {
-        PADDING_X + if settings(cx).minimap { minimap::MINIMAP_W } else { ScrollerPrefs::gutter(cx) }
+    pub fn right_inset(profile: &ProfileId, cx: &App) -> f32 {
+        PADDING_X
+            + if settings_in(profile, cx).minimap { minimap::MINIMAP_W } else { ScrollerPrefs::gutter(cx) }
     }
 
     /// The bar along the bottom of a pane whose shell has ended: what ended and how, a
     /// new shell in the same tab, or closing the tab.
     fn render_exited(&self, cx: &mut Context<Self>) -> AnyElement {
-        let ui = cx.global::<SettingsStore>().ui;
+        let ui = store_in(&self.profile, cx).ui;
         let what = match self.exit_code {
             Some(code) => format!("{} exited with code {code}", self.shell),
             None => format!("{} exited", self.shell),

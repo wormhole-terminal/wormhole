@@ -19,7 +19,7 @@ use gpui_kit::*;
 use super::highlight::Highlights;
 use super::rows::{BuildKey, Row, RowStats, build_rows, syntax_fingerprint};
 use super::{DiffView, Request};
-use crate::settings::{SettingsStore, settings};
+use crate::settings::{settings_in, store_in};
 use crate::workspace::Workspace;
 use crate::workspace::git_panel::changes::display_order;
 use crate::workspace::git_panel::job::{Ticket, Wanted};
@@ -303,7 +303,7 @@ impl Workspace {
     /// The key rows would be built with now. `None` without a diff on view.
     pub(super) fn build_key(&mut self, cx: &App) -> Option<BuildKey> {
         let split_fits = self.diff_split_fits(cx);
-        let store = cx.global::<SettingsStore>();
+        let store = store_in(&self.profile, cx);
         let view = self.diff_view.as_mut()?;
         Some(BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens)))
     }
@@ -316,7 +316,7 @@ impl Workspace {
         build: BuildKey,
         cx: &mut Context<Self>,
     ) {
-        let theme = cx.global::<SettingsStore>().highlight.clone();
+        let theme = store_in(&self.profile, cx).highlight.clone();
         let ticket = wanted.ticket();
         let task = cx.background_executor().spawn(async move { run(work, build, &theme, &wanted) });
         cx.spawn(async move |this, cx| {
@@ -352,7 +352,7 @@ impl Workspace {
     /// position stays; one that is no longer changed is marked as such.
     pub(crate) fn refresh_open_diff(&mut self, observed: Option<Observed>, cx: &mut Context<Self>) {
         let (tree, group_untracked) = {
-            let s = settings(cx);
+            let s = settings_in(&self.profile, cx);
             (s.changes_tree, s.group_untracked)
         };
         let reload = {

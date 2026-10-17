@@ -51,15 +51,15 @@ pub(super) struct Frame {
 
 impl Frame {
     pub(super) fn new(ws: &Workspace, width: f32, window: &mut Window, cx: &App) -> Self {
-        let s = settings(cx);
+        let s = settings_in(&ws.profile, cx);
         Self {
-            ui: ui(cx),
+            ui: ui_in(&ws.profile, cx),
             metrics: Metrics::of(s.density, s.show_groups_as_cards),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
             show_notes: s.sidebar_notes,
             hints: ws.hints_showing(cx),
-            code_font: crate::fonts::code_font(cx).0,
+            code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,
             text_style: window.text_style(),
             rem: window.rem_size(),
@@ -203,7 +203,7 @@ pub(super) fn time_text(info: &RowInfo, compact: bool) -> Option<String> {
 impl Workspace {
     /// The ⌘1–9 keycaps are showing (⌘ held alone long enough, and the setting on).
     pub(super) fn hints_showing(&self, cx: &App) -> bool {
-        settings(cx).sidebar_cmd_hints && self.sidebar.hold.showing(Instant::now())
+        settings_in(&self.profile, cx).sidebar_cmd_hints && self.sidebar.hold.showing(Instant::now())
     }
 
     pub(super) fn render_row(

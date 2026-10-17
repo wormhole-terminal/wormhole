@@ -270,7 +270,7 @@ impl Workspace {
             metrics: style::Metrics {
                 card_margin: 0.0,
                 card_gap: CARD_GAP,
-                ..style::Metrics::of(settings(cx).density, true)
+                ..style::Metrics::of(settings_in(&self.profile, cx).density, true)
             },
             open: self.sidebar.tabs.switcher.is_some(),
             input,

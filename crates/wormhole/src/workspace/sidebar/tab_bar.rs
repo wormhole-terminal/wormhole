@@ -68,7 +68,8 @@ impl Workspace {
     /// Read where the terminals are listed from the settings (once a frame, before anything is laid
     /// out), and centre the traffic lights on the row they sit in.
     pub(in crate::workspace) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
-        self.sidebar.tabs.on = settings(cx).terminals_in == wormhole_core::sidebar::TerminalsIn::Tabs;
+        self.sidebar.tabs.on =
+            settings_in(&self.profile, cx).terminals_in == wormhole_core::sidebar::TerminalsIn::Tabs;
         let row = style::TITLE_ROW_H;
         if self.sidebar.tabs.lights_row != Some(row) {
             self.sidebar.tabs.lights_row = Some(row);
@@ -164,7 +165,7 @@ impl Workspace {
         let band = set.band.and_then(|band| listing.bands.get(band));
         let key = band.map_or_else(|| "ungrouped".to_string(), |band| band.key());
         let group = band.map(|band| band.group);
-        let tokens = &cx.global::<crate::settings::SettingsStore>().tokens;
+        let tokens = &store_in(&self.profile, cx).tokens;
         let color = group
             .and_then(|group| self.sidebar.view.groups.get(group))
             .and_then(|group| group.color())
@@ -320,7 +321,7 @@ impl Workspace {
     /// A right-click offers the other shells (profiles), as the sidebar's + does; one opens in the
     /// selected terminal's set too.
     fn new_tab_button(&self, group: Option<u32>, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let button = style::icon_button(
             "tab-new",
             ui,

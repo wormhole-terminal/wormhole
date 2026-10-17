@@ -12,7 +12,7 @@ use super::*;
 impl Workspace {
     /// The strip, in the window's last column.
     pub(super) fn render_panel_strip(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let files = session.git.status.as_ref().map(|s| s.files.len());
         let new_changes = session.git.has_unseen_changes();

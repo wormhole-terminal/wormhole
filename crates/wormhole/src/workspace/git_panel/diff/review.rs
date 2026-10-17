@@ -19,7 +19,8 @@ use wormhole_core::review::{LineSide, ReviewComment};
 
 use super::DiffView;
 use super::render::{LineAt, OnLine};
-use crate::settings::{UiColors, ui};
+use crate::settings::UiColors;
+use crate::settings::ui_in;
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::{Workspace, dialog};
 
@@ -89,12 +90,13 @@ impl Workspace {
         let session = self.active_session().id;
         self.commenting = Some(Commenting { session, path, at, input: input.clone(), _enter: enter });
         let weak = cx.weak_entity();
-        let (font_family, _) = crate::fonts::code_font(cx);
+        let (font_family, _) = crate::fonts::code_font_in(&self.profile, cx);
         // As for the worktree dialog: nothing focused when it opens, so nothing is given the keys
         // back when it closes; `on_close` hands them to the terminal.
         window.blur(cx);
+        let profile = self.profile.clone();
         dialog::open_alert(window, cx, move |alert, _, cx| {
-            let ui = ui(cx);
+            let ui = ui_in(&profile, cx);
             let (save, dismiss, remove) = (weak.clone(), weak.clone(), weak.clone());
             alert
                 .title(format!("Comment on {place}"))

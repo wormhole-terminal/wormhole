@@ -23,12 +23,14 @@ use gpui_kit::*;
 
 use super::changes::display_order;
 use super::job::Job;
-use crate::settings::{SettingsStore, settings, ui};
+use crate::settings::SettingsStore;
+use crate::settings::{settings_in, store_in, ui_in};
 use crate::workspace::Workspace;
 use load::{Ask, Stamp};
 use rows::{BuildKey, Row, RowStats};
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side};
 use wormhole_core::limits;
+use wormhole_core::profile::ProfileId;
 
 pub(super) use load::Observed;
 pub(in crate::workspace) use review::Commenting;
@@ -45,6 +47,8 @@ struct Request {
 }
 
 pub struct DiffView {
+    /// The profile of the window showing it: whose settings and colours it draws with.
+    profile: ProfileId,
     request: Request,
     /// Files ‹ › steps through (the Changes list in the order it shows them, or a commit's files).
     siblings: Rc<Vec<FileChange>>,
@@ -91,9 +95,14 @@ pub struct DiffView {
 }
 
 impl DiffView {
+    pub fn set_profile(&mut self, profile: ProfileId) {
+        self.profile = profile;
+    }
+
     fn new(request: Request, siblings: Rc<Vec<FileChange>>, context: Option<SharedString>) -> Self {
         let file = &request.file;
         Self {
+            profile: ProfileId::default_profile(),
             sides: git::sides(&FileDiff::default(), file.kind),
             counts: load::file_counts(file),
             request,
@@ -134,7 +143,7 @@ impl DiffView {
     /// Whether the rows on hand are side by side (they may lag the setting, or the room for
     /// it, `split_fits`, by a frame).
     fn split(&self, split_fits: bool, cx: &App) -> bool {
-        self.built.map_or(split_fits && settings(cx).diff_split, |k| k.split)
+        self.built.map_or(split_fits && settings_in(&self.profile, cx).diff_split, |k| k.split)
     }
 
     /// Stored with Git LFS: each side a pointer, or `.gitattributes` says so.
@@ -179,7 +188,7 @@ impl Workspace {
     pub(crate) fn open_change(&mut self, file: FileChange, cx: &mut Context<Self>) {
         let Some(status) = &self.active_session().git.status else { return };
         let spec = DiffSpec { old: status.base_rev.clone(), new: None };
-        let s = settings(cx);
+        let s = settings_in(&self.profile, cx);
         let siblings = Rc::new(display_order(status, s.changes_tree, s.group_untracked));
         let root = status.root.clone();
         self.open_diff(root, file, spec, siblings, None, cx);
@@ -198,8 +207,9 @@ impl Workspace {
     ) {
         let request = Request { root, file, spec, limits: DiffLimits::default() };
         let mut view = DiffView::new(request, siblings, context);
+        view.profile = self.profile.clone();
         let split_fits = self.diff_split_fits(cx);
-        let store = cx.global::<SettingsStore>();
+        let store = store_in(&self.profile, cx);
         let build = BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens));
         let started = view.begin_load(build);
         self.diff_view = Some(view);
@@ -222,7 +232,7 @@ impl Workspace {
     /// Whether the diff has room for old and new side by side: its body is the terminal's
     /// column less the card's inset and border, and needs two columns of 280.
     pub(super) fn diff_split_fits(&self, cx: &App) -> bool {
-        let border = f32::from(ui(cx).border_width);
+        let border = f32::from(ui_in(&self.profile, cx).border_width);
         limits::diff_split_fits(self.columns().terminal - 2.0 * (render::CARD_INSET + border))
     }
 
@@ -265,7 +275,7 @@ impl Workspace {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn toggle_split(&mut self, cx: &mut Context<Self>) {
-        let split = settings(cx).diff_split;
+        let split = settings_in(&self.profile, cx).diff_split;
         self.set_diff_split(!split, cx);
     }
 
@@ -291,7 +301,7 @@ impl Workspace {
 
     /// Scroll the code sideways by a wheel delta (positive = toward the start).
     pub(crate) fn scroll_diff_by(&mut self, delta: f32, cx: &mut Context<Self>) {
-        let wrap = settings(cx).diff_wrap;
+        let wrap = settings_in(&self.profile, cx).diff_wrap;
         let Some(view) = self.diff_view.as_mut() else { return };
         if delta == 0.0 || wrap {
             return;

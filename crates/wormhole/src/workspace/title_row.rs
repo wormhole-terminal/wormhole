@@ -89,9 +89,9 @@ impl Workspace {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let (drop_tint, fill, system, border) = {
-            let store = cx.global::<SettingsStore>();
+            let store = store_in(&self.profile, cx);
             let system = store.system();
             // Under Reduce Transparency and Increase Contrast the bar is solid, with no
             // see-through to the blurred text.
@@ -195,16 +195,16 @@ impl Workspace {
         let id = self.sessions.get(self.active)?.id;
         let group = self.sidebar.view.groups.group_of(id)?;
         let color = self.sidebar.view.groups.get(group)?.color()?;
-        let tokens = &cx.global::<SettingsStore>().tokens;
+        let tokens = &store_in(&self.profile, cx).tokens;
         let color = ProjectColor::from_color(color.color(tokens));
-        Some(folder_color::title_tint(color, cx))
+        Some(folder_color::title_tint(&self.profile, color, cx))
     }
 
     /// Open in… and the splits at the right end of the title row, flush against each other with no
     /// gaps: the app's icon opens the folder, its chevron lists the others, and the two splits.
     /// Where the row is narrow they are one `⋯` menu.
     fn render_title_actions(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let folder = plan.facts.folder.clone();
         let menu = self.actions_menu(plan, folder.as_deref(), plan.fit.folded, cx);
         if plan.fit.folded {
@@ -273,7 +273,7 @@ impl Workspace {
         with_splits: bool,
         cx: &mut Context<Self>,
     ) -> MenuBuilder {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let this = cx.weak_entity();
         let folder = folder.map(Path::to_path_buf);
         let chosen = plan.app.app.bundle.clone();

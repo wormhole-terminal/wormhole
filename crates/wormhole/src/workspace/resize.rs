@@ -110,7 +110,7 @@ impl Workspace {
 
     /// The grab area on `edge`, at `x` from the window's left edge.
     pub(super) fn resize_handle(&self, edge: Edge, x: f32, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let dragging = self.resizing.as_ref().is_some_and(|drag| drag.edge == edge);
         let line = if dragging {
             Some(ui.resize_active)
@@ -157,7 +157,7 @@ impl Workspace {
                 .absolute()
                 .left(drag.pointer.x + px(READOUT_OFFSET))
                 .top(drag.pointer.y - px(READOUT_OFFSET))
-                .child(style::readout(ui(cx), at.readout(drag.edge)))
+                .child(style::readout(ui_in(&self.profile, cx), at.readout(drag.edge)))
                 .into_any_element(),
         )
     }

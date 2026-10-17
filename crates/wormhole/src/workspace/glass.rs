@@ -80,7 +80,7 @@ impl Workspace {
     /// without the blur the window gets a plain fill under the glass (`Blur::set_backing`). Else
     /// everything paints its own surface (the window's opacity and blur keep working as before).
     pub(in crate::workspace) fn glass_on(&self, cx: &App) -> bool {
-        let store = cx.global::<crate::settings::SettingsStore>();
+        let store = store_in(&self.profile, cx);
         store.settings.glass_on(self.glass.available(), store.system().opaque())
     }
 

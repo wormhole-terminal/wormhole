@@ -21,7 +21,7 @@ impl Workspace {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         // The strip is one keyboard stop; its ring round the breadcrumb.
         let ring = self.ring(wormhole_core::focus::Area::Tabs, window);
         let crumb = div()
@@ -150,7 +150,7 @@ impl Workspace {
     /// The folder shows in Finder and its hover card has more; the branch opens the compare
     /// picker; the name is what runs, with its live status next to the tool's icon.
     fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let Facts { id, folder, status, agent, told, label, words, branch, .. } = &plan.facts;
         let fit = &plan.fit;
         // Under a tint the folder's icon and its parents step up to the main text color, so they
@@ -419,8 +419,14 @@ fn indicator_glyph(told: bool, status: Status) -> Option<style::StatusGlyph> {
 /// A terminal's status slot (16 pt): what it is and how it is doing in one place, so a change of
 /// status never moves the label. Shape tells the states apart, not only colour. A split's
 /// pane headers draw it too.
-pub(super) fn terminal_glyph(id: i64, status: Status, told: bool, cx: &App) -> AnyElement {
-    let ui = ui(cx);
+pub(super) fn terminal_glyph(
+    id: i64,
+    status: Status,
+    told: bool,
+    profile: &ProfileId,
+    cx: &App,
+) -> AnyElement {
+    let ui = ui_in(profile, cx);
     let glyph = match status {
         Status::Busy if told => style::StatusGlyph::Working,
         Status::Busy => style::StatusGlyph::Running,

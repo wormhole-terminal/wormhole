@@ -16,6 +16,7 @@ use gpui_kit::{App, FontFeatures, Global, Pixels, SharedString, px};
 use wormhole_core::fonts::FontSlot;
 use wormhole_core::fonts::bundled;
 use wormhole_core::fonts::custom::{self, FontFile, Scan};
+use wormhole_core::profile::ProfileId;
 
 use crate::settings::SettingsStore;
 
@@ -185,6 +186,17 @@ pub fn font(slot: FontSlot, cx: &App) -> (SharedString, Pixels) {
     (fonts.family(slot).to_string().into(), px(fonts.size(slot)))
 }
 
+/// [`font`] for a window in `profile` (an odd window draws with its own profile's fonts).
+pub fn font_in(profile: &ProfileId, slot: FontSlot, cx: &App) -> (SharedString, Pixels) {
+    let fonts = &crate::settings::store_in(profile, cx).fonts;
+    (fonts.family(slot).to_string().into(), px(fonts.size(slot)))
+}
+
+/// [`code_font`] for a window in `profile`.
+pub fn code_font_in(profile: &ProfileId, cx: &App) -> (SharedString, Pixels) {
+    font_in(profile, FontSlot::Code, cx)
+}
+
 /// Code text: diffs, file lists, hashes, samples.
 pub fn code_font(cx: &App) -> (SharedString, Pixels) {
     font(FontSlot::Code, cx)
@@ -205,6 +217,11 @@ pub fn ligature_features(enabled: bool) -> FontFeatures {
 /// The features code text (`code_font`) is drawn with, following `font_ligatures`.
 pub fn code_font_features(cx: &App) -> FontFeatures {
     ligature_features(cx.global::<SettingsStore>().settings.font_ligatures)
+}
+
+/// [`code_font_features`] for a window in `profile`.
+pub fn code_font_features_in(profile: &ProfileId, cx: &App) -> FontFeatures {
+    ligature_features(crate::settings::settings_in(profile, cx).font_ligatures)
 }
 
 fn classify_all(names: &[String]) -> (HashSet<String>, HashSet<String>) {

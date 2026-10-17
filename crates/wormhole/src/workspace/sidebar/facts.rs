@@ -135,8 +135,8 @@ impl Workspace {
 }
 
 /// What each row's times read now (compact rows, without a second line, show none).
-pub(super) fn row_times(infos: &[RowInfo], cx: &App) -> Vec<Option<String>> {
-    let compact = !settings(cx).density.two_lines();
+pub(super) fn row_times(infos: &[RowInfo], profile: &ProfileId, cx: &App) -> Vec<Option<String>> {
+    let compact = !settings_in(profile, cx).density.two_lines();
     infos.iter().map(|info| rows::time_text(info, compact)).collect()
 }
 

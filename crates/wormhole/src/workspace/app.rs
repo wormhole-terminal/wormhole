@@ -608,7 +608,12 @@ fn handle_menu_command(command: MenuCommand, cx: &mut App) {
 fn tick(cx: &mut App) {
     app_mut(cx).ticks += 1;
     let ticks = app(cx).ticks;
-    if SettingsStore::poll(cx) {
+    let mut moved = SettingsStore::poll(cx);
+    if !app(cx).parked.is_empty() {
+        let system = cx.global::<SettingsStore>().system();
+        moved |= app_mut(cx).follow_parked(system);
+    }
+    if moved {
         cx.refresh_windows();
     }
     apply_theme(cx);

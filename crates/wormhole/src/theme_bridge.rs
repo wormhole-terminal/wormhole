@@ -27,6 +27,12 @@ pub fn color(hsla: Hsla) -> Color {
     Color { r: rgba.r, g: rgba.g, b: rgba.b, a: rgba.a }
 }
 
+/// The window's rem size for these fonts: GPUI Kit sizes text and spacing in rems of the theme's
+/// `font_size` (16 px where our 13 pt interface text sits).
+pub fn rem_size(fonts: &ResolvedFonts) -> gpui_kit::Pixels {
+    px(fonts.ui_size * 16.0 / DEFAULT_UI_FONT_SIZE)
+}
+
 /// What a token that does not exist shows as: magenta, so a typo is easy to spot.
 pub const MISSING_TOKEN: Color = Color { r: 1.0, g: 0.0, b: 1.0, a: 1.0 };
 
@@ -234,7 +240,7 @@ fn apply_now(
         // default, where our 13 pt interface text sits), so the interface size
         // scales the chrome proportionally.
         theme.font_family = fonts.ui_family.clone().into();
-        theme.font_size = px(fonts.ui_size * 16.0 / DEFAULT_UI_FONT_SIZE);
+        theme.font_size = rem_size(fonts);
         theme.mono_font_family = fonts.code_family.clone().into();
         theme.mono_font_size = px(fonts.code_size);
         theme.highlight_theme = highlight.clone();

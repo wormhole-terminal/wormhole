@@ -14,6 +14,7 @@ use super::super::items::with_item_keys;
 use super::super::panel_list::{CardPart, Rows};
 use super::super::text::{note_body, note_title};
 use super::*;
+use crate::settings::ui_in;
 
 /// The Notes band's + names its key, from the keymap (the band takes a `&'static str`).
 static NEW_NOTE_TOOLTIP: std::sync::LazyLock<String> =
@@ -514,6 +515,7 @@ impl Workspace {
         let rows = &session.notes_list.rows;
         let in_list = view;
         // A column that fills the panel, so the list gets a bounded height.
+        let profile = self.profile.clone();
         div()
             .relative()
             .flex()
@@ -521,11 +523,11 @@ impl Workspace {
             .flex_1()
             .min_h_0()
             .child(rows.element_carded(
-                self.panel_ring(window, ui(cx)),
-                ui(cx),
+                self.panel_ring(window, ui_in(&self.profile, cx)),
+                ui_in(&self.profile, cx),
                 self.panel_backing(cx),
                 NotesRow::part,
-                move |row, window, cx| in_list.render_row(row, ui(cx), window, cx),
+                move |row, window, cx| in_list.render_row(row, ui_in(&profile, cx), window, cx),
             ))
             .into_any_element()
     }

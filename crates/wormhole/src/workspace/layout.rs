@@ -95,7 +95,7 @@ impl Workspace {
         let terminal = self.active_terminal();
         let terminal = terminal.read(cx);
         let bar = terminal.find_bar()?;
-        let right = px(crate::terminal_view::TerminalView::right_inset(cx));
+        let right = px(crate::terminal_view::TerminalView::right_inset(&self.profile, cx));
         let (top, right) = match self.active_split() {
             Some(split) => {
                 let (w, h) = (f32::from(self.pane_area.size.width), f32::from(self.pane_area.size.height));
@@ -139,7 +139,7 @@ impl Render for Workspace {
                 RightTab::Usage => {}
             }
         }
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let terminal = session.terminal().clone();
         let split = self.active_split().is_some();
@@ -165,6 +165,13 @@ impl Render for Workspace {
         let tabs = self.sidebar.tabs.on;
         let top_tabs = tabs.then(|| self.render_tab_bar(window, cx));
 
+        // GPUI Kit's root sets the interface font and the rem size from the shown profile's
+        // theme; an odd window overrides both with its own profile's.
+        let own_font = self.odd_profile(cx).map(|_| {
+            let fonts = &store_in(&self.profile, cx).fonts;
+            window.set_rem_size(crate::theme_bridge::rem_size(fonts));
+            SharedString::from(fonts.ui_family.clone())
+        });
         let root = div()
             .relative()
             .size_full()
@@ -172,6 +179,7 @@ impl Render for Workspace {
             .flex_col()
             // Each region paints its own surface (translucent over the native blur).
             .text_color(ui.text)
+            .when_some(own_font, |d, family| d.font_family(family))
             .key_context("Workspace");
         // While the intro window is open the window's actions wait: its keys go to it.
         let root = if self.first_run.is_open() { root } else { self.with_actions(root, cx) };

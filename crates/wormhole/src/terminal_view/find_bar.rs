@@ -62,7 +62,7 @@ impl Render for FindBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(terminal) = self.terminal.upgrade() else { return div().into_any_element() };
         let status = terminal.read(cx).find_status();
-        let ui = cx.global::<SettingsStore>().ui;
+        let ui = crate::settings::store_in(terminal.read(cx).profile(), cx).ui;
         let on_option = {
             let terminal = self.terminal.clone();
             Rc::new(move |option, _: &mut Window, cx: &mut App| {

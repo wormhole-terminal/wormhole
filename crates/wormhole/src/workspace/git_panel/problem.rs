@@ -8,7 +8,8 @@ use gpui_kit::component::button::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use crate::settings::{SettingsStore, UiColors, ui};
+use crate::settings::UiColors;
+use crate::settings::{store_in, ui_in};
 use crate::style::{self, ROW_H, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
@@ -66,12 +67,12 @@ impl Workspace {
         error: &GitError,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let Some(Wording { headline, hint, detail, copy }) = wording(tab, error) else {
             return style::empty_note(ui, "This terminal's folder isn't inside a git repository.")
                 .into_any_element();
         };
-        let code_font = crate::fonts::code_font(cx).0;
+        let code_font = crate::fonts::code_font_in(&self.profile, cx).0;
         // Everything starts at the panel's 16 pt inset, like the rows it stands in for.
         div()
             .flex()
@@ -85,7 +86,7 @@ impl Workspace {
                     .p_2()
                     .rounded(ui.radius)
                     // A well a step darker than the panel (lighter in a light theme), like a field.
-                    .bg(token(&cx.global::<SettingsStore>().tokens, "input.background"))
+                    .bg(token(&store_in(&self.profile, cx).tokens, "input.background"))
                     .text_caption()
                     .text_color(ui.muted)
                     .font_family(code_font)

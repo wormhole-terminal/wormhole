@@ -53,8 +53,8 @@ impl Workspace {
         if !self.profile_chip_shown(cx) {
             return None;
         }
-        let ui = ui(cx);
-        let tokens = &cx.global::<SettingsStore>().tokens;
+        let ui = ui_in(&self.profile, cx);
+        let tokens = &store_in(&self.profile, cx).tokens;
         let state = app(cx);
         let active = state.profiles.active_id().clone();
         let choices: Vec<Choice> = state

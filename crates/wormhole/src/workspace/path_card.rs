@@ -112,7 +112,7 @@ impl Workspace {
             return None;
         }
         let (folder, shown) = (plan.facts.folder.clone()?, plan.facts.shown.clone()?);
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let copied = self.path_card.copied;
         let exited = plan.facts.status == Status::Exited;
         let width = (column - 2.0 * CARD_MARGIN).clamp(0.0, CARD_MAX_W);

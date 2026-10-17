@@ -11,7 +11,8 @@ use gpui_kit::*;
 
 use super::DiffView;
 use super::render::DiffColors;
-use crate::settings::{UiColors, settings};
+use crate::settings::UiColors;
+use crate::settings::settings_in;
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
 use wormhole_core::config::SizeUnits;
@@ -148,7 +149,7 @@ impl Workspace {
             (added, removed) => Some(added.unwrap_or(0) as usize + removed.unwrap_or(0) as usize),
         };
         let patch_bytes = view.diff.as_ref().and_then(|d| d.patch_bytes);
-        let units = settings(cx).size_units;
+        let units = settings_in(&self.profile, cx).size_units;
         let button = |id: &'static str, label: &'static str| {
             Button::new(id).outline().xsmall().h(px(BUTTON_H)).px_2().label(label)
         };

@@ -91,7 +91,7 @@ impl Workspace {
     ) -> Option<AnyElement> {
         let status =
             plan.facts.extras.branch.as_ref().filter(|_| plan.fit.extras.shows(Extra::BranchStatus))?;
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let words = SharedString::from(status.words());
         let tip = words.clone();
         Some(
@@ -108,7 +108,7 @@ impl Workspace {
 
     /// The model and context, the ports and the pull request, the ones the row had room for.
     pub(super) fn render_title_extras(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let (facts, extras) = (&plan.facts.extras, &plan.fit.extras);
         let mut chips: Vec<AnyElement> = Vec::new();
         if let Some(gauge) = facts.gauge.as_ref().filter(|_| extras.shows(Extra::Gauge)) {

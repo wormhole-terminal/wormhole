@@ -20,7 +20,7 @@ impl Workspace {
         // The times on the rows ("Working · 3m", a command's clock) move on their own; redraw
         // when one would read differently, but not for a window nobody is looking at.
         if window_active && shown {
-            let now = row_times(&self.row_infos(cx), cx);
+            let now = row_times(&self.row_infos(cx), &self.profile, cx);
             if *self.sidebar.times_drawn.borrow() != now {
                 *self.sidebar.times_drawn.borrow_mut() = now;
                 cx.notify();

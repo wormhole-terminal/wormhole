@@ -9,6 +9,7 @@ use super::*;
 
 mod view;
 
+use crate::settings::ui_in;
 use view::wrapped_placeholder;
 pub(super) use view::{NotesList, NotesView};
 
@@ -355,7 +356,7 @@ impl Workspace {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let glass = self.glass_on(cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Notes until the next refresh resets it.

@@ -172,7 +172,7 @@ impl Workspace {
 
     /// What the bar shows now, or `None` while it is switched off.
     pub(super) fn status_bar(&self, cx: &App) -> Option<StatusBar> {
-        if !settings(cx).status_bar {
+        if !settings_in(&self.profile, cx).status_bar {
             return None;
         }
         // Every window's terminals, in window order: this one's now, the others' as the tick
@@ -259,7 +259,7 @@ impl Workspace {
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
     /// since it was drawn (a terminal in another window, or the working time).
     pub(super) fn refresh_status_bar(&mut self, cx: &mut Context<Self>) {
-        if settings(cx).status_bar {
+        if settings_in(&self.profile, cx).status_bar {
             self.read_other_windows(cx);
         } else {
             self.status_others.clear();
@@ -319,7 +319,7 @@ impl Workspace {
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         // The item the keys are on, while the bar has the keyboard.
         let cursor = self.status_items().get(self.areas.status).copied();
         let ring = self.ring(Area::StatusBar, window);
@@ -343,7 +343,8 @@ impl Workspace {
             .tooltip(|window, cx| Tooltip::new("Branch and changes").build(window, cx))
             .on_click(cx.listener(|this, _, _, cx| this.show_tab(RightTab::Changes, cx)))
         });
-        let jump = settings(cx).jump_waiting_key.parse::<wormhole_core::keyspec::KeySpec>().ok();
+        let jump =
+            settings_in(&self.profile, cx).jump_waiting_key.parse::<wormhole_core::keyspec::KeySpec>().ok();
         // The longest waiting first: its tile, its name, how long it has waited. One click goes there.
         let attention = bar.attention.clone().map(|a| {
             let tab = a.tab;

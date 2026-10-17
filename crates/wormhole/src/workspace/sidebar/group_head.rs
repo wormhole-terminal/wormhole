@@ -10,7 +10,6 @@ use super::super::focus::{MenuBuilder, SidebarStop};
 use super::groups::{group_colors, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
-use crate::settings::SettingsStore;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
@@ -32,7 +31,7 @@ impl Workspace {
         let band = &listing.bands[band_ix];
         let group = band.group;
         let color = self.sidebar.view.groups.get(group).and_then(|g| g.color());
-        let tokens = &cx.global::<SettingsStore>().tokens;
+        let tokens = &store_in(&self.profile, cx).tokens;
         let hsla = color.map(|color| theme_bridge::hsla(color.color(tokens)));
         let folded = band.folded;
         // One order of urgency for the dot and for the tiles (core's, the same the tab switcher and
@@ -131,6 +130,7 @@ impl Workspace {
     /// What builds group `group`'s menu.
     fn group_menu(&self, group: u32, cx: &mut Context<Self>) -> MenuBuilder {
         let this = cx.weak_entity();
+        let profile = self.profile.clone();
         Rc::new(move |menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>| {
             let popup = cx.entity();
             let (current, pinned) = this
@@ -149,8 +149,8 @@ impl Workspace {
                     (found.and_then(|g| g.color()), found.is_some_and(|g| g.pinned))
                 })
                 .unwrap_or((None, false));
-            let choices = group_colors(cx);
-            let ui = ui(cx);
+            let choices = group_colors(&profile, cx);
+            let ui = ui_in(&profile, cx);
             let (add, rename, colors, ungroup, pin, close, window_move) = (
                 this.clone(),
                 this.clone(),

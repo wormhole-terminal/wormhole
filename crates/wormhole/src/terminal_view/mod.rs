@@ -11,7 +11,9 @@ use wormhole_core::terminal::types::{
     Column, Line, Point as GridPoint, Scroll, SelectionType, Side, TermMode,
 };
 
-use crate::settings::{SettingsStore, settings};
+use wormhole_core::profile::ProfileId;
+
+use crate::settings::{settings_in, store_in};
 use crate::theme_bridge::token;
 use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
@@ -212,16 +214,37 @@ pub struct TerminalView {
     /// Command blocks: the hovered one, and where ⌘↑ / ⌘↓ last landed.
     blocks: blocks::Blocks,
     _focus_watch: Vec<Subscription>,
+    /// The profile of the window this terminal is in: whose look (colours, fonts, settings) it
+    /// draws with, which is not the shown profile's in an odd window.
+    profile: ProfileId,
 }
 
 impl TerminalView {
-    pub fn new(mut options: SpawnOptions, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn profile(&self) -> &ProfileId {
+        &self.profile
+    }
+
+    /// The window this terminal is in was moved to another profile.
+    pub fn set_profile(&mut self, profile: ProfileId, cx: &mut Context<Self>) {
+        if self.profile != profile {
+            self.profile = profile;
+            cx.notify();
+        }
+    }
+
+    pub fn new(
+        mut options: SpawnOptions,
+        profile: ProfileId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let initial = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 18.0 };
         let shell = wormhole_core::terminal::shell_name(&options).into();
-        options.scrollback_lines = settings(cx).scrollback_lines;
-        options.allow_screen_checksum = settings(cx).allow_screen_checksum;
-        options.allow_window_ops = settings(cx).allow_window_ops;
-        let palette = cx.global::<SettingsStore>().palette.clone();
+        let store = store_in(&profile, cx);
+        options.scrollback_lines = store.settings.scrollback_lines;
+        options.allow_screen_checksum = store.settings.allow_screen_checksum;
+        options.allow_window_ops = store.settings.allow_window_ops;
+        let palette = store.palette.clone();
         options.colors = Some(palette.engine_colors());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
@@ -291,6 +314,7 @@ impl TerminalView {
             last_resize: now,
             last_focus_report: now,
             last_output: now,
+            profile,
             palette_given: Some(palette),
             window_given: None,
             minimise_asked: None,

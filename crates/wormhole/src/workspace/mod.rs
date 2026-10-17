@@ -8,7 +8,7 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use crate::settings::{SettingsStore, UiColors, settings, ui};
+use crate::settings::{SettingsStore, UiColors, settings, settings_in, store_in, ui, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::vibrancy;
 #[cfg(feature = "devctl")]
@@ -84,6 +84,8 @@ mod panel_strip;
 mod panes;
 mod path_card;
 mod profile_chip;
+#[cfg(test)]
+mod profile_look_tests;
 mod profiles;
 mod project;
 pub(crate) mod quick_panel;
@@ -325,6 +327,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let blur_wanted = aux_window::wants_blur(settings_in(&profile, cx), true);
         let tick = cx.spawn_in(window, async move |this, cx| {
             loop {
                 cx.background_executor().timer(Duration::from_millis(400)).await;
@@ -407,7 +410,7 @@ impl Workspace {
             status_others: Vec::new(),
             focused_note: None,
             editing_note: None,
-            blur: vibrancy::Blur::install(window, aux_window::wants_blur(settings(cx), true)),
+            blur: vibrancy::Blur::install(window, blur_wanted),
             glass: std::rc::Rc::new(vibrancy::Glass::install(window)),
             bounds: record.bounds,
             bounds_watch: Default::default(),
@@ -451,10 +454,10 @@ impl Workspace {
 
     /// Apply settings that live outside GPUI's render tree.
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = aux_window::wants_blur(settings(cx), true);
+        let blur = aux_window::wants_blur(settings_in(&self.profile, cx), true);
         self.blur.set_enabled(blur);
         // Glass without the blur stands on the panel's colour, as the sidebar would have painted.
-        self.blur.set_backing((self.glass_on(cx) && !blur).then(|| ui(cx).panel));
+        self.blur.set_backing((self.glass_on(cx) && !blur).then(|| ui_in(&self.profile, cx).panel));
     }
 
     fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -839,7 +842,7 @@ impl Workspace {
         let shell = wormhole_core::shells::for_terminal(
             record.shell.as_deref(),
             project_shell.as_deref(),
-            settings(cx),
+            settings_in(&self.profile, cx),
         );
         let mut options = project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
         // After the project's environment is in: what a trusted project set is kept. The profile's
@@ -856,7 +859,7 @@ impl Workspace {
             options.welcome = !cfg!(test);
             options.env.insert(wormhole_core::welcome::TOKEN_VAR.to_string(), token);
         }
-        let terminal = cx.new(|cx| TerminalView::new(options, window, cx));
+        let terminal = cx.new(|cx| TerminalView::new(options, self.profile.clone(), window, cx));
         let zoom = self.font_zoom;
         terminal.update(cx, |terminal, cx| terminal.set_font_zoom(zoom, cx));
         Pane::new(record.id, record.shell.clone(), terminal, window, cx)

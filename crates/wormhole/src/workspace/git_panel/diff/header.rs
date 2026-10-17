@@ -11,7 +11,8 @@ use gpui_kit::*;
 
 use super::DiffView;
 use super::render::DiffColors;
-use crate::settings::{SettingsStore, UiColors, settings, ui};
+use crate::settings::{SettingsStore, UiColors};
+use crate::settings::{settings_in, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
 use wormhole_core::git::{ChangeKind, Side};
@@ -29,7 +30,7 @@ impl Workspace {
     /// Title bar while a diff is open: where the file sits among its siblings.
     pub(crate) fn render_diff_title(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
         let view = self.diff_view.as_ref()?;
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let position = view.siblings.iter().position(|f| f.path == view.file().path);
         let count = view.siblings.len();
         Some(
@@ -74,8 +75,8 @@ impl Workspace {
         split_fits: bool,
         cx: &mut Context<Self>,
     ) -> Div {
-        let (font_family, font_size) = crate::fonts::code_font(cx);
-        let wrap = settings(cx).diff_wrap;
+        let (font_family, font_size) = crate::fonts::code_font_in(&self.profile, cx);
+        let wrap = settings_in(&self.profile, cx).diff_wrap;
         let split = view.split(split_fits, cx);
         let (dir, name) = match view.file().path.rsplit_once('/') {
             Some((dir, name)) => (format!("{dir}/"), name.to_string()),

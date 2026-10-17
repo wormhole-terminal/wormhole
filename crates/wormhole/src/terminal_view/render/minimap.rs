@@ -12,7 +12,7 @@ pub(in crate::terminal_view) const MINIMAP_W: f32 = WIDTH;
 impl TerminalView {
     /// The minimap, below the title bar and as tall as the grid.
     pub(super) fn render_minimap(&self, cx: &mut Context<Self>) -> AnyElement {
-        let store = cx.global::<SettingsStore>();
+        let store = store_in(&self.profile, cx);
         let palette = store.palette.clone();
         let thumb = token(&store.tokens, "scrollbar.thumb");
         let entity = cx.entity();

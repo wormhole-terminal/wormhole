@@ -16,7 +16,8 @@ use gpui_kit::*;
 use super::DiffView;
 use super::notes::{notes, side_note};
 use super::rows::{Cell, RenderedLine, Row};
-use crate::settings::{SettingsStore, UiColors, settings, ui};
+use crate::settings::UiColors;
+use crate::settings::{settings_in, store_in, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
@@ -401,12 +402,12 @@ impl Workspace {
     /// inset like its sides where nothing is over it (`None`: the title row sits above the column).
     pub(crate) fn render_diff(&self, top: Option<f32>, cx: &mut Context<Self>) -> Option<AnyElement> {
         let view = self.diff_view.as_ref()?;
-        let ui = ui(cx);
-        let colors = DiffColors::new(&cx.global::<SettingsStore>().tokens);
+        let ui = ui_in(&self.profile, cx);
+        let colors = DiffColors::new(&store_in(&self.profile, cx).tokens);
         let split_fits = self.diff_split_fits(cx);
         // The room for a split view changed (the window or a panel was resized): build the rows
         // for it now rather than at the next tick.
-        let want_split = split_fits && settings(cx).diff_split;
+        let want_split = split_fits && settings_in(&self.profile, cx).diff_split;
         if view.built.is_some_and(|key| key.split != want_split) && !view.job.is_pending() {
             let this = cx.entity().downgrade();
             cx.defer(move |cx| {
@@ -459,7 +460,7 @@ impl Workspace {
         if view.too_large() {
             return body.child(self.render_too_large(view, ui, cx));
         }
-        let (font_family, font_size) = crate::fonts::code_font(cx);
+        let (font_family, font_size) = crate::fonts::code_font_in(&self.profile, cx);
         let font_size = f32::from(font_size);
         // Rows are no longer rebuilt (with a fresh list) when a setting changes, and the
         // list only measures again when its width does: do it when the font size moved.
@@ -467,7 +468,7 @@ impl Workspace {
             view.wrap_list.remeasure();
         }
         let split = view.split(split_fits, cx);
-        let wrap = settings(cx).diff_wrap;
+        let wrap = settings_in(&self.profile, cx).diff_wrap;
         let empty = view.rows.is_empty();
         let (old_side, new_side) = view.sides;
         // A column with nothing to show is hatched as a whole, with a note saying why.
@@ -536,18 +537,19 @@ impl Workspace {
             });
 
         let rows = view.rows.clone();
+        let profile = self.profile.clone();
         let list: AnyElement = if empty {
             div().into_any_element()
         } else if wrap {
             list(view.wrap_list.clone(), move |ix, _window, cx| {
-                let colors = DiffColors::new(&cx.global::<SettingsStore>().tokens);
+                let colors = DiffColors::new(&store_in(&profile, cx).tokens);
                 render_row(ix, &rows[ix], colors, &style).into_any_element()
             })
             .size_full()
             .into_any_element()
         } else {
             let mut list = uniform_list("diff-rows", rows.len(), move |range, _window, cx| {
-                let colors = DiffColors::new(&cx.global::<SettingsStore>().tokens);
+                let colors = DiffColors::new(&store_in(&profile, cx).tokens);
                 range.map(|ix| render_row(ix, &rows[ix], colors, &style).into_any_element()).collect()
             })
             .track_scroll(&view.scroll)
@@ -557,7 +559,7 @@ impl Workspace {
             list.into_any_element()
         };
 
-        let notes = notes(view, split, empty, settings(cx).size_units);
+        let notes = notes(view, split, empty, settings_in(&self.profile, cx).size_units);
         let mut body = body.child(list);
         if cut {
             for span in code_spans {

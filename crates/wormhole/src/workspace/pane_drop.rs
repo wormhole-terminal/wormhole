@@ -151,7 +151,7 @@ impl Workspace {
     /// tall of title rows are above it, as for the panes.
     pub(super) fn render_drop_overlay(&self, inset: f32, cx: &mut Context<Self>) -> Option<AnyElement> {
         let drag = self.terminal_drag.as_ref().filter(|_| cx.has_active_drag())?;
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let mut zones: Vec<AnyElement> = Vec::new();
         if let Some(PaneHover { target, zone }) = drag.pane
             && let Some((_, pane)) = self.drop_rects().into_iter().find(|(id, _)| *id == target)

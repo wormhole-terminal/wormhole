@@ -42,7 +42,7 @@ impl TerminalView {
     /// a terminal without history leave the pane's right edge to the program and to selecting.
     pub(super) fn render_scrollbar(&self, cx: &mut Context<Self>) -> AnyElement {
         let style = ScrollerPrefs::style(cx);
-        let store = cx.global::<SettingsStore>();
+        let store = store_in(&self.profile, cx);
         let (thumb, held_thumb, track) = (
             token(&store.tokens, "scrollbar.thumb"),
             token(&store.tokens, "text.faint"),

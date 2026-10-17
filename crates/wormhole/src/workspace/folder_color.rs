@@ -142,7 +142,7 @@ impl Workspace {
                 shown: app(cx).hub.prefs.enabled(&project.folder.root, Feature::Settings),
                 unreadable: project.snapshot.config_error().is_some(),
             }),
-            None => FolderPaint::Own(settings(cx).folder_color_choice(folder)),
+            None => FolderPaint::Own(settings_in(&self.profile, cx).folder_color_choice(folder)),
         }
     }
 
@@ -155,7 +155,7 @@ impl Workspace {
             return;
         }
         let Some(folder) = self.active_folder(cx) else { return };
-        let tokens = &cx.global::<SettingsStore>().tokens;
+        let tokens = &store_in(&self.profile, cx).tokens;
         let Some(color) = self.folder_paint(&folder, cx).shown(tokens) else { return };
         let color = theme_bridge::hsla(color.color());
         let hex = |color: Hsla| theme_bridge::color(color).with_alpha(1.0).to_hex();
@@ -222,8 +222,8 @@ pub(in crate::workspace) fn choices(cx: &App) -> Vec<(FolderColor, Hsla)> {
 }
 
 /// `color` as the title row's tint: as strong as the title's text lets it be over the window.
-pub(super) fn title_tint(color: ProjectColor, cx: &App) -> Tint {
-    let store = cx.global::<SettingsStore>();
+pub(super) fn title_tint(profile: &ProfileId, color: ProjectColor, cx: &App) -> Tint {
+    let store = store_in(profile, cx);
     let bar = store.tokens.get("surface.window").map_or(Color::BLACK, |c| c.with_alpha(1.0));
     let text = store.tokens.get("text.primary").unwrap_or(Color::WHITE);
     Tint { color, peak: color.tint_peak(bar, text), line: theme_bridge::hsla(color.line(bar)) }
