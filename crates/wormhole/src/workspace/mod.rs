@@ -830,6 +830,12 @@ impl Workspace {
             settings(cx),
         );
         let mut options = project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
+        // After the project's environment is in: what a trusted project set is kept. The profile's
+        // own environment is the person's (not repository content), so it applies in an untrusted
+        // project as well.
+        if let Some(profile) = app(cx).profiles.get(&self.profile) {
+            options.apply_profile(profile);
+        }
         // A welcome terminal: the shell starts through `Wormhole welcome`, and only this terminal's
         // environment has the token that lets that program talk to the app as the welcome.
         if let Some((_, token)) = self.pending_welcome.take_if(|(id, _)| *id == record.id) {
