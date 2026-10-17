@@ -192,6 +192,8 @@ impl Workspace {
         let name = editing.input.read(cx).value().to_string();
         self.sidebar.view.groups.rename(editing.group, &name);
         self.mark_dirty(cx);
+        // A popover opened from a switcher card hangs off the switcher: they end together.
+        self.finish_switcher(window, cx);
         window.focus(&self.active_terminal().focus_handle(cx), cx);
     }
 
@@ -213,6 +215,7 @@ impl Workspace {
 }
 
 /// See [`Workspace::popover_snapshot`].
+#[derive(Clone)]
 pub(super) struct PopoverSnapshot {
     group: u32,
     ui: UiColors,

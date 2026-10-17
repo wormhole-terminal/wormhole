@@ -10,6 +10,7 @@ use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::tabs::{Hit, IN_NO_GROUP, search};
 
 use super::super::settings_page::update_settings;
+use super::groups::{PopoverSnapshot, group_popover};
 use super::rows::{Frame, glyph_for};
 use super::tab_bar::SetView;
 use super::*;
@@ -51,6 +52,8 @@ struct CardSnap {
     current: bool,
     spoken: SharedString,
     group: Option<u32>,
+    /// The sidebar label's popover, which the card's name and a right-click open.
+    popover: Option<PopoverSnapshot>,
 }
 
 /// A line of the search's results.
@@ -150,6 +153,8 @@ impl Workspace {
     /// Close the popover and give the keyboard back to the terminal.
     pub(super) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.sidebar.tabs.switcher.take().is_some() {
+            // A group popover open on a card goes with it.
+            self.finish_group_edit(window, cx);
             window.focus(&self.active_terminal().focus_handle(cx), cx);
             cx.notify();
         }
@@ -225,6 +230,7 @@ impl Workspace {
                 )
                 .into(),
                 group: look.group,
+                popover: look.group.map(|group| self.popover_snapshot(group, ui, cx)),
             });
         }
         let input = self.sidebar.tabs.switcher.as_ref().map(|s| s.input.clone());
@@ -379,11 +385,25 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             on_toggle: Box::new(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx)))),
             spoken_edit: card.label.clone(),
             spoken_fold: card.spoken.clone(),
-            wrap_label: Box::new(|trigger| trigger.into_any_element()),
+            // The sidebar's popover on the name; one is open at a time (`sidebar.editing`).
+            wrap_label: match card.popover.clone() {
+                Some(snap) => {
+                    let this = this.clone();
+                    Box::new(move |trigger| group_popover(snap, trigger, this))
+                }
+                None => Box::new(|trigger| trigger.into_any_element()),
+            },
         };
         let head = style::group_head(("switch-card", set), ui, parts)
             .role(Role::Button)
-            .aria_label(card.spoken.clone());
+            .aria_label(card.spoken.clone())
+            .when_some(group, |head, group| {
+                let this = this.clone();
+                head.on_mouse_down(MouseButton::Right, move |_, window, cx| {
+                    cx.stop_propagation();
+                    this.update(cx, |ws, cx| ws.start_group_edit(group, window, cx)).ok();
+                })
+            });
         let head = if empty && card.pinned {
             head.on_click(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx))))
         } else {
