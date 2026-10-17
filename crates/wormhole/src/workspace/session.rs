@@ -47,6 +47,11 @@ impl Pane {
     pub(super) fn label(&self, cx: &App) -> SharedString {
         names::process_name(&name_facts(self.terminal.read(cx))).into()
     }
+
+    /// What runs in front, whatever title it set: the agent, the running command or the shell.
+    pub(super) fn program(&self, cx: &App) -> SharedString {
+        names::program_name(&name_facts(self.terminal.read(cx))).into()
+    }
 }
 
 pub(super) struct Session {

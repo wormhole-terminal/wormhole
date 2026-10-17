@@ -388,11 +388,6 @@ impl TerminalView {
         false
     }
 
-    /// The program the tab runs ("zsh").
-    pub fn shell(&self) -> SharedString {
-        self.shell.clone()
-    }
-
     /// [`Self::shell`], borrowed: names are worked out on every frame.
     pub fn shell_name(&self) -> &str {
         &self.shell

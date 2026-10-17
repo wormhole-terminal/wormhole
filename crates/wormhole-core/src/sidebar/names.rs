@@ -20,9 +20,15 @@ pub struct NameFacts<'a> {
 /// The name of what runs: the title its program set, else the agent, else the program in front,
 /// else the shell.
 pub fn process_name(facts: &NameFacts) -> String {
-    if let Some(title) = facts.title.filter(|t| !t.is_empty()) {
-        return title.to_string();
+    match facts.title.filter(|t| !t.is_empty()) {
+        Some(title) => title.to_string(),
+        None => program_name(facts),
     }
+}
+
+/// The program in front, without the title it set: the agent, else the running command, else the
+/// shell. What the status bar's size item names ("claude · 90×40").
+pub fn program_name(facts: &NameFacts) -> String {
     if let Some(agent) = facts.agent.filter(|a| !a.is_empty()) {
         return agent.to_string();
     }
@@ -73,7 +79,7 @@ pub fn command_name(command: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{NameFacts, command_name, process_name, title_name};
+    use super::{NameFacts, command_name, process_name, program_name, title_name};
 
     fn shell() -> NameFacts<'static> {
         NameFacts { shell: "zsh", ..NameFacts::default() }
@@ -89,6 +95,15 @@ mod tests {
         assert_eq!(process_name(&shell()), "zsh");
         // A command that names nothing falls back to the shell.
         assert_eq!(process_name(&NameFacts { command: Some("   "), ..shell() }), "zsh");
+    }
+
+    #[test]
+    fn the_program_in_front_ignores_the_title_it_set() {
+        let agent = NameFacts { title: Some("Fix the login bug"), agent: Some("claude"), ..shell() };
+        assert_eq!(program_name(&agent), "claude");
+        let vim = NameFacts { title: Some("main.rs - VIM"), command: Some("vim main.rs"), ..shell() };
+        assert_eq!(program_name(&vim), "vim");
+        assert_eq!(program_name(&NameFacts { title: Some("~"), ..shell() }), "zsh");
     }
 
     #[test]

@@ -205,7 +205,9 @@ impl Workspace {
             (SharedString::from(name), status.files.len())
         });
         let (cols, rows) = terminal.grid_size();
-        let size = detail.size().then(|| rules::size(&terminal.shell(), cols, rows));
+        // What runs in front (the agent, or the command), as the title row names it, not the shell.
+        let program = session.pane.program(cx);
+        let size = detail.size().then(|| rules::size(&program, cols, rows));
         let gauge = self.agent_gauge(cx);
         let context =
             detail.context_meter().zip(gauge.and_then(|gauge| gauge.percent())).map(|(width, percent)| {
@@ -243,7 +245,7 @@ impl Workspace {
         let spoken = Spoken {
             branch: branch.as_ref().map(|(name, changes)| spoken::status_branch(name, *changes)),
             context: context.as_ref().map(|item| spoken::status_context(item.percent)),
-            size: size.as_ref().map(|_| spoken::status_size(&terminal.shell(), cols, rows)),
+            size: size.as_ref().map(|_| spoken::status_size(&program, cols, rows)),
         };
         let profile = self.odd_profile(cx).filter(|_| detail.profile()).map(|(profile, color)| ProfileTag {
             spoken: spoken::status_profile(&profile.name),
