@@ -337,7 +337,7 @@ impl Workspace {
                 &Some(a.spoken.clone()),
                 item,
             )
-            .child(style::status_tile(
+            .child(style::status_tile_at(
                 ("status-attention-tile", tab as u64),
                 ui,
                 StatusTile {
@@ -346,6 +346,7 @@ impl Workspace {
                     selected: false,
                     mini: true,
                 },
+                style::TILE_SMALL,
                 cx,
             ))
             .child(div().min_w_0().max_w(px(ATTENTION_NAME_MAX)).truncate().child(a.name.clone()))
