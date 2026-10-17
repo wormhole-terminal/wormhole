@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
+use wormhole_core::profile::Profile;
 
 use super::*;
 
@@ -42,6 +43,15 @@ pub(crate) struct AgentRow {
     pub(crate) spec: Option<&'static Spec>,
     /// `None` when there is no spec.
     pub(crate) state: Option<Result<State, String>>,
+    /// The profiles' login folders for this agent: a second location for the hooks each.
+    pub(crate) logins: Vec<LoginRow>,
+}
+
+/// Where a profile's login of an agent keeps its config, and the state of the hooks there.
+pub(crate) struct LoginRow {
+    profile: String,
+    dir: PathBuf,
+    state: Result<State, String>,
 }
 
 impl AgentRow {
@@ -53,7 +63,8 @@ impl AgentRow {
 impl AgentsSnapshot {
     /// Read every agent's state under `home`, installed agents first (the registry's order
     /// otherwise).
-    pub(crate) fn load(home: &Path) -> Self {
+    pub(crate) fn load(home: &Path, profiles: &[Profile]) -> Self {
+        let user_home = std::env::var_os("HOME").map(PathBuf::from);
         let mut rows: Vec<AgentRow> = AGENTS
             .iter()
             .map(|agent| {
@@ -63,6 +74,20 @@ impl AgentsSnapshot {
                     installed: agents::installed(agent),
                     spec,
                     state: spec.map(|spec| spec.state(home)),
+                    logins: spec
+                        .map(|spec| {
+                            profiles
+                                .iter()
+                                .flat_map(|p| {
+                                    p.login_dirs(user_home.as_deref())
+                                        .into_iter()
+                                        .filter(|(id, _)| *id == agent.id)
+                                        .map(|(_, dir)| (p.name.clone(), dir))
+                                })
+                                .map(|(profile, dir)| LoginRow { state: spec.state_in(&dir), profile, dir })
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                 }
             })
             .collect();
@@ -80,7 +105,12 @@ impl AgentsSnapshot {
 
     /// Installed agents whose hooks are only partly there: the nav marks the page for them.
     pub(crate) fn needs_repair(&self) -> usize {
-        self.installed().filter(|row| row.hooks() == Some(State::Partial)).count()
+        self.installed()
+            .filter(|row| {
+                row.hooks() == Some(State::Partial)
+                    || row.logins.iter().any(|login| login.state == Ok(State::Partial))
+            })
+            .count()
     }
 
     pub(crate) fn home(&self) -> &Path {
@@ -92,9 +122,12 @@ impl SettingsWindow {
     /// Read the agents again in the background; what is shown stays until the new list
     /// arrives.
     pub(in crate::workspace::settings_page) fn load_agents(&mut self, cx: &mut Context<Self>) {
+        let profiles = app(cx).profiles.profiles().to_vec();
         self.agents_task = Some(cx.spawn(async move |this, cx| {
-            let snapshot =
-                cx.background_executor().spawn(async { AgentsSnapshot::load(&integrations::home()) }).await;
+            let snapshot = cx
+                .background_executor()
+                .spawn(async move { AgentsSnapshot::load(&integrations::home(), &profiles) })
+                .await;
             this.update(cx, |this, cx| {
                 this.agents = Some(snapshot);
                 this.agents_task = None;
@@ -324,6 +357,82 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                 .child(note)
         }))
         .children(problem.map(|banner| div().pl(px(style::CONTROL_H + 12.0)).child(banner)))
+        .children(row.spec.map(|spec| {
+            div().flex().flex_col().children(
+                row.logins.iter().enumerate().map(|(ix, login)| login_row(ui, agent, spec, ix, login, cx)),
+            )
+        }))
+        .into_any_element()
+}
+
+/// A profile's login of an agent: its folder, the hooks' state there and the button for it, as the
+/// agent's own row has for the default location.
+fn login_row(
+    ui: UiColors,
+    agent: &'static Agent,
+    spec: &'static Spec,
+    ix: usize,
+    login: &LoginRow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    let (code_font, _) = crate::fonts::code_font(cx);
+    let state = login.state.as_ref().ok().copied();
+    let dir = login.dir.clone();
+    let shown = dir.to_string_lossy().into_owned();
+    let (label, remove) = match state {
+        Some(State::Installed) => ("Remove hooks", true),
+        Some(State::Partial) => ("Repair hooks", false),
+        _ => ("Install hooks", false),
+    };
+    let badge = match state {
+        Some(State::Installed) => "Status hooks on",
+        Some(State::Partial) => "Hooks incomplete",
+        _ => "No hooks",
+    };
+    let id = format!("agent-login-{:?}-{ix}", agent.id);
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .pl(px(style::CONTROL_H + 12.0))
+        .py_1()
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap_1()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(format!("{} profile · {badge} in", login.profile))
+                .child(
+                    div()
+                        .px_1()
+                        .rounded(ui.radius_chip)
+                        .bg(ui.hover)
+                        .font_family(code_font)
+                        .truncate()
+                        .child(shown),
+                ),
+        )
+        .child(
+            Button::new(SharedString::from(id))
+                .small()
+                .when(remove, |b| b.outline())
+                .when(!remove, |b| b.primary())
+                .label(label)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let result = if remove { spec.uninstall_in(&dir) } else { spec.install_in(&dir) };
+                    if let Err(err) = &result {
+                        tracing::warn!("{} hooks in {}: {err}", agent.name, dir.display());
+                    }
+                    this.notice =
+                        result.err().map(|e| (Section::Agents, format!("{} hooks: {e}", agent.name).into()));
+                    this.load_agents(cx);
+                    cx.notify();
+                })),
+        )
         .into_any_element()
 }
 
@@ -470,25 +579,25 @@ mod tests {
     #[test]
     fn the_snapshot_lists_every_agent_with_its_hook_state() {
         let home = Home::new("agents-state");
-        let before = AgentsSnapshot::load(&home.0);
+        let before = AgentsSnapshot::load(&home.0, &[]);
         assert_eq!(before.rows.len(), AGENTS.len());
         assert_eq!(state_of(&before, AgentId::Claude), Some(State::NotInstalled));
 
         let spec = integrations::spec(AgentId::Claude).expect("Claude Code has hooks");
         spec.install(&home.0).expect("installs into the scratch home");
-        let after = AgentsSnapshot::load(&home.0);
+        let after = AgentsSnapshot::load(&home.0, &[]);
         assert_eq!(state_of(&after, AgentId::Claude), Some(State::Installed));
         // Another agent's files were not touched.
         assert_eq!(state_of(&after, AgentId::Codex), Some(State::NotInstalled));
 
         spec.uninstall(&home.0).expect("removes them again");
-        assert_eq!(state_of(&AgentsSnapshot::load(&home.0), AgentId::Claude), Some(State::NotInstalled));
+        assert_eq!(state_of(&AgentsSnapshot::load(&home.0, &[]), AgentId::Claude), Some(State::NotInstalled));
     }
 
     #[test]
     fn installed_agents_come_first_and_the_registry_order_holds_otherwise() {
         let home = Home::new("agents-order");
-        let snapshot = AgentsSnapshot::load(&home.0);
+        let snapshot = AgentsSnapshot::load(&home.0, &[]);
         let flags: Vec<bool> = snapshot.rows.iter().map(|row| row.installed).collect();
         let first_missing = flags.iter().position(|installed| !installed).unwrap_or(flags.len());
         assert!(flags[first_missing..].iter().all(|installed| !installed), "{flags:?}");

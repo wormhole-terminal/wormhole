@@ -302,6 +302,16 @@ impl Profile {
         env
     }
 
+    /// The login folders of this profile's agents, `~` resolved against `home` (the ones that
+    /// can't be are left out): where Wormhole's status hooks go for those logins.
+    pub fn login_dirs(&self, home: Option<&Path>) -> Vec<(AgentId, PathBuf)> {
+        self.agent_logins
+            .iter()
+            .filter(|login| login_env_var(login.agent).is_some())
+            .filter_map(|login| Some((login.agent, expand_home(&login.dir, home)?)))
+            .collect()
+    }
+
     /// Where new terminals start, if the profile says.
     pub fn start_folder(&self) -> Option<PathBuf> {
         if self.start_dir.is_empty() {

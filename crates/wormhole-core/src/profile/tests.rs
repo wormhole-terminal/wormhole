@@ -363,3 +363,15 @@ fn a_profile_saved_with_the_folder_colours_still_loads() {
         serde_json::from_str(r#"{ "id": "g", "name": "G", "color": "grey" }"#).expect("loads");
     assert_eq!(grey.color, GroupColor::Grey);
 }
+
+#[test]
+fn the_login_folders_are_resolved_for_the_agents_that_have_one() {
+    let mut profile = Profile::new(id("work"), "Work", GroupColor::Cyan);
+    profile.agent_logins = vec![
+        AgentLogin { agent: AgentId::Claude, dir: "~/.claude-work".into() },
+        AgentLogin { agent: AgentId::Aider, dir: "/opt/aider".into() },
+    ];
+    let home = Path::new("/Users/me");
+    assert_eq!(profile.login_dirs(Some(home)), vec![(AgentId::Claude, "/Users/me/.claude-work".into())]);
+    assert!(profile.login_dirs(None).is_empty(), "no home, no `~`");
+}

@@ -409,3 +409,26 @@ fn uninstalling_takes_the_old_hooks_too() {
     claude().uninstall(home.path()).expect("uninstall");
     assert_eq!(read(&path), json!({}));
 }
+
+#[test]
+fn a_login_folder_gets_the_hooks_in_its_own_files_and_the_home_stays_untouched() {
+    let home = home();
+    let login = home.path().join(".claude-work");
+    assert_eq!(claude().path_in(&login), Some(login.join("settings.json")));
+    let codex = spec(AgentId::Codex).expect("codex spec");
+    assert_eq!(codex.path_in(&login), Some(login.join("hooks.json")));
+    assert_eq!(spec(AgentId::Gemini).expect("gemini spec").path_in(&login), None);
+
+    assert_eq!(claude().state_in(&login), Ok(State::NotInstalled));
+    claude().install_in(&login).expect("install");
+    assert_eq!(claude().state_in(&login), Ok(State::Installed));
+    assert_eq!(read(&login.join("settings.json"))["hooks"]["Stop"].as_array().map(Vec::len), Some(1));
+    assert_eq!(claude().state(home.path()), Ok(State::NotInstalled), "the default location is not touched");
+
+    claude().uninstall_in(&login).expect("uninstall");
+    assert_eq!(claude().state_in(&login), Ok(State::NotInstalled));
+    assert!(
+        claude().install_in(&login).is_ok()
+            && spec(AgentId::Gemini).expect("gemini").install_in(&login).is_err()
+    );
+}

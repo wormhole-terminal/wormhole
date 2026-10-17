@@ -90,6 +90,42 @@ impl Spec {
         home.join(rel)
     }
 
+    /// The file this integration edits inside an agent's login folder (`CLAUDE_CONFIG_DIR`,
+    /// `CODEX_HOME`): the same file name the agent has under its home folder, directly in `dir`.
+    /// `None` for an agent that has no such folder variable or keeps its hooks in other files.
+    pub fn path_in(&self, login_dir: &Path) -> Option<PathBuf> {
+        match (&self.kind, self.agent) {
+            (Kind::Json(rel, _), AgentId::Claude | AgentId::Codex) => {
+                Some(login_dir.join(Path::new(rel).file_name()?))
+            }
+            _ => None,
+        }
+    }
+
+    /// [`state`](Self::state) of the hooks in a login folder.
+    pub fn state_in(&self, login_dir: &Path) -> Result<State, String> {
+        match (&self.kind, self.path_in(login_dir)) {
+            (Kind::Json(_, format), Some(path)) => json_hooks::state(format, &path),
+            _ => Err("this agent has no login folder".into()),
+        }
+    }
+
+    /// [`install`](Self::install) into a login folder (made if it is not there yet).
+    pub fn install_in(&self, login_dir: &Path) -> Result<(), String> {
+        match (&self.kind, self.path_in(login_dir)) {
+            (Kind::Json(_, format), Some(path)) => json_hooks::install(format, self.agent, &path),
+            _ => Err("this agent has no login folder".into()),
+        }
+    }
+
+    /// [`uninstall`](Self::uninstall) from a login folder.
+    pub fn uninstall_in(&self, login_dir: &Path) -> Result<(), String> {
+        match (&self.kind, self.path_in(login_dir)) {
+            (Kind::Json(_, format), Some(path)) => json_hooks::uninstall(format, &path),
+            _ => Err("this agent has no login folder".into()),
+        }
+    }
+
     /// [`path`](Self::path) for the UI (`~/.claude/settings.json`).
     pub fn display_path(&self, home: &Path) -> String {
         files::display(&self.path(home))
