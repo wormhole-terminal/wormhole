@@ -154,7 +154,7 @@ impl AssetSource for Assets {
 
 /// Where users put their own icon themes (a folder per theme, or a Zed extension).
 pub fn user_dir() -> PathBuf {
-    wormhole_core::store::data_dir().join("icon-themes")
+    crate::active_profile::paths().icon_themes_dir()
 }
 
 /// How long the picker's list of icon themes is kept before the folder is read again.

@@ -152,12 +152,17 @@ pub struct SettingsStore {
 impl Global for SettingsStore {}
 
 impl SettingsStore {
+    /// The `config.json` of the profile Wormhole is in.
     pub fn config_path() -> PathBuf {
-        Config::path()
+        crate::active_profile::paths().config_file()
     }
 
     pub fn load() -> Self {
-        Self::new(Config::load())
+        Self::load_for(&crate::active_profile::paths())
+    }
+
+    pub fn load_for(paths: &wormhole_core::profile::ProfilePaths) -> Self {
+        Self::new(Config::load_for(paths))
     }
 
     fn new(config: Config) -> Self {

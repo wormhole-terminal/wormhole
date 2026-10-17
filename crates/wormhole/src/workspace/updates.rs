@@ -41,6 +41,7 @@ pub(crate) enum UpdatePhase {
 pub(crate) struct Updates {
     config: Option<UpdaterConfig>,
     schedule: UpdateSchedule,
+    schedule_file: Option<PathBuf>,
     pub phase: UpdatePhase,
     /// Bytes downloaded / total (0 = unknown), written from the download thread.
     progress: Arc<(AtomicU64, AtomicU64)>,
@@ -51,13 +52,17 @@ pub(crate) struct Updates {
 }
 
 impl Updates {
-    pub fn new(store: Option<&Store>) -> Self {
-        let schedule = store
-            .and_then(|s| s.meta(SCHEDULE_KEY).ok().flatten())
-            .and_then(|json| serde_json::from_str(&json).ok())
-            .unwrap_or_default();
+    /// `schedule_file` is the one every profile shares (`DataRoot::update_schedule_file`); a
+    /// version from before profiles kept the schedule in the database, which seeds the file.
+    pub fn new(schedule_file: Option<PathBuf>, store: Option<&Store>) -> Self {
+        let legacy = || store.and_then(|s| s.meta(SCHEDULE_KEY).ok().flatten());
+        let schedule = match &schedule_file {
+            Some(file) => UpdateSchedule::load_shared(file, legacy),
+            None => legacy().and_then(|json| serde_json::from_str(&json).ok()).unwrap_or_default(),
+        };
         Self {
             config: feed_config(),
+            schedule_file,
             schedule,
             phase: UpdatePhase::Idle,
             progress: Default::default(),
@@ -308,10 +313,9 @@ pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
 }
 
 fn save_update_schedule(cx: &App) {
-    let state = app(cx);
-    let Some(store) = &state.store else { return };
-    let json = serde_json::to_string(&state.updates.schedule).unwrap_or_default();
-    if let Err(err) = store.set_meta(SCHEDULE_KEY, &json) {
+    let updates = &app(cx).updates;
+    let Some(file) = &updates.schedule_file else { return };
+    if let Err(err) = updates.schedule.save_shared(file) {
         tracing::warn!("saving update schedule: {err:#}");
     }
 }

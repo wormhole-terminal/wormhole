@@ -162,7 +162,7 @@ impl Workspace {
             .map(|value| value.to_string());
         if theme_json != hub.applied_theme {
             let tokens = theme_json.as_deref().and_then(|json| {
-                wormhole_core::config::tokens_from_json(json)
+                wormhole_core::config::tokens_from_json_in(&crate::active_profile::paths().themes_dir(), json)
                     .inspect_err(|err| tracing::warn!("project theme: {err}"))
                     .ok()
             });

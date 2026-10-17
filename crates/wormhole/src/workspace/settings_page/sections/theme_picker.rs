@@ -191,10 +191,10 @@ struct PreviewCache {
 impl Global for PreviewCache {}
 
 fn entries(cx: &mut App) -> Rc<Vec<ThemeEntry>> {
-    let fingerprint = theme_catalog::fingerprint();
+    let fingerprint = theme_catalog::fingerprint_in(&crate::active_profile::paths().themes_dir());
     let cache = cx.default_global::<PreviewCache>();
     if cache.fingerprint.as_ref() != Some(&fingerprint) {
-        cache.entries = Rc::new(theme_catalog::catalog());
+        cache.entries = Rc::new(theme_catalog::catalog_in(&crate::active_profile::paths().themes_dir()));
         cache.fingerprint = Some(fingerprint);
     }
     cache.entries.clone()

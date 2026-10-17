@@ -47,7 +47,7 @@ impl LoadedFonts {
 /// Load the bundled and custom fonts. Runs before the first window, so the
 /// terminal never starts in a fallback font.
 pub fn init(cx: &mut App) {
-    let dir = custom::user_dir();
+    let dir = crate::active_profile::paths().fonts_dir();
     let fingerprint = custom::fingerprint(&dir);
     let scan = custom::scan(&dir);
     let custom = register_all(scan);
@@ -72,7 +72,7 @@ pub fn init(cx: &mut App) {
 /// Pick up fonts added to, changed in or removed from the fonts folder.
 /// Returns true if anything changed.
 pub fn poll_custom(cx: &mut App) -> bool {
-    let fingerprint = custom::fingerprint(&custom::user_dir());
+    let fingerprint = custom::fingerprint(&crate::active_profile::paths().fonts_dir());
     let loaded = cx.global_mut::<LoadedFonts>();
     if fingerprint == loaded.fingerprint {
         return false;

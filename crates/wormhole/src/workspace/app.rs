@@ -17,6 +17,7 @@
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
 use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
+use wormhole_core::profile::{DataRoot, ProfileList};
 use wormhole_core::store::{Store, WindowRecord};
 use wormhole_core::tokens::Appearance;
 
@@ -36,6 +37,12 @@ pub(crate) struct OpenWindow {
 }
 
 pub(crate) struct AppState {
+    /// The data folder as a whole: `profiles.json`, the update schedule and the other shared files.
+    pub root: DataRoot,
+    /// Every profile, and the one Wormhole is in.
+    pub profiles: ProfileList,
+    /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say.
+    pub profiles_error: Option<String>,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -107,11 +114,14 @@ impl AppState {
     pub(super) fn for_test(next_id: i64) -> Self {
         let (menu, _) = menu_bar::MenuState::new(None);
         Self {
+            root: DataRoot::current(),
+            profiles: ProfileList::default(),
+            profiles_error: None,
             store: None,
             tips: DismissedTips::default(),
             hub: project::ProjectHub::load(),
             menu,
-            updates: updates::Updates::new(None),
+            updates: updates::Updates::new(None, None),
             settings_window: None,
             studio_window: None,
             about_window: None,
@@ -220,10 +230,21 @@ impl AppState {
 impl AppState {
     /// Load what was saved, start the app-level tasks and open the windows
     /// that were open last time (or one fresh window).
-    pub(crate) fn start(hook_events: smol::channel::Receiver<ipc::Incoming>, cx: &mut App) {
+    pub(crate) fn start(
+        hook_events: smol::channel::Receiver<ipc::Incoming>,
+        root: DataRoot,
+        profiles: ProfileList,
+        profiles_error: Option<wormhole_core::profile::ProfileError>,
+        cx: &mut App,
+    ) {
+        let paths = root.profile(profiles.active_id());
+        if let Some(err) = &profiles_error {
+            tracing::warn!("profiles.json was set aside and rebuilt: {err}");
+        }
         upgrade_legacy_hooks(cx);
         cx.background_spawn(async { super::default_terminal::upgrade_legacy_default() }).detach();
-        let store = Store::open().inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
+        let store =
+            Store::open_for(&paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
         let saved = store
             .as_ref()
             .and_then(|s| {
@@ -250,8 +271,8 @@ impl AppState {
             store.as_ref().and_then(|s| s.meta(REMEMBERED_PANES_KEY).ok().flatten()).as_deref(),
         );
         let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
-        let updates = updates::Updates::new(store.as_ref());
-        let mut hub = project::ProjectHub::load();
+        let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
+        let mut hub = project::ProjectHub::load_from(paths.dir());
         hub.ids_start_at(next_id);
         let (display_changed, display_options) = smol::channel::unbounded::<()>();
         let display_observer = vibrancy::observe_display_options(move || {
@@ -259,6 +280,9 @@ impl AppState {
         });
         super::open_in::OpenIn::install(cx);
         cx.set_global(AppState {
+            root,
+            profiles,
+            profiles_error: profiles_error.map(|err| err.to_string()),
             store,
             tips,
             hub,

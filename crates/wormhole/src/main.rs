@@ -1,4 +1,5 @@
 mod a11y;
+mod active_profile;
 mod auth;
 mod background;
 #[cfg(feature = "devctl")]
@@ -77,6 +78,11 @@ fn main() {
         background::start(cx);
         gpui_kit::init(cx);
         fonts::init(cx);
+        // The profile Wormhole was left in: its files are the ones read from here on. With only
+        // Default (no `profiles.json`) these are the data folder's own, where they have always been.
+        let root = wormhole_core::profile::DataRoot::current();
+        let (profiles, profiles_error) = wormhole_core::profile::ProfileList::load_or_recover(&root);
+        active_profile::set(root.profile(profiles.active_id()));
         cx.set_global(settings::SettingsStore::load());
 
         // ⌘Q asks first while something runs; saving happens as the app goes away, whichever way
@@ -88,7 +94,7 @@ fn main() {
         // The keys from the action table, before the menus (they show the bound keys).
         workspace::init_actions(cx);
 
-        workspace::AppState::start(hook_events, cx);
+        workspace::AppState::start(hook_events, root, profiles, profiles_error, cx);
         workspace::serve_opened(opened, cx);
         background::activate(cx);
     });

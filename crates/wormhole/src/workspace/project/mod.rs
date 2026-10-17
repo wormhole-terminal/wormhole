@@ -87,11 +87,12 @@ pub(crate) struct LoadedProject {
 }
 
 impl ProjectHub {
+    #[cfg(test)]
     pub fn load() -> Self {
         Self::load_from(&data_dir())
     }
 
-    fn load_from(dir: &Path) -> Self {
+    pub(crate) fn load_from(dir: &Path) -> Self {
         // A file that doesn't load is kept aside as `.bad`; say so where trust is shown.
         let mut problems = Vec::new();
         let (prefs, err) = ProjectPrefs::load_or_recover(dir);
