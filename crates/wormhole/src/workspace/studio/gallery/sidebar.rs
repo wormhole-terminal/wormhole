@@ -43,10 +43,11 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     let metrics = style::Metrics::default();
     let blue = theme_bridge::hsla(GroupColor::Blue.color(env.tokens));
     let tile = |id: &'static str, glyph: StatusGlyph, size: f32| {
-        style::status_tile(
+        style::status_tile_at(
             id,
             ui,
-            style::StatusTile { face: style::TileFace::Terminal, glyph, selected: false, size },
+            style::StatusTile { face: style::TileFace::Terminal, glyph, selected: false, mini: false },
+            size,
             app,
         )
     };

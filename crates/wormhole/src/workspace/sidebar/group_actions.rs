@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use wormhole_core::sidebar::{Item, SplitId, WindowSidebar, group_key};
 use wormhole_core::store::{SplitRecord, WindowRecord};
 
-use super::super::app::{app_mut, open_workspace_window};
+use super::super::app::{app_mut, open_workspace_window_in};
 use super::super::dialog;
 use super::super::session::{close_group_detail, close_group_title};
 use super::*;
@@ -130,6 +130,8 @@ impl Workspace {
         self.list_rearranged(cx);
 
         let source = window.bounds();
+        // The new window stays in this window's profile: its database, its environment.
+        let profile = self.profile.clone();
         // Deferred: the new window renders right away, and nothing may read this workspace while
         // it is still being updated.
         cx.defer(move |cx| {
@@ -138,7 +140,7 @@ impl Workspace {
             state.adopted.extend(terminals);
             let record =
                 WindowRecord { id: window_id, active, layout, bounds: None, sessions: records, splits };
-            open_workspace_window(Some(record), Some(source), cx);
+            open_workspace_window_in(&profile, Some(record), Some(source), cx);
         });
     }
 }

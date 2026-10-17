@@ -122,15 +122,16 @@ impl Workspace {
         let mut items =
             vec![style::card_segment(ui, metrics, true, false, None, display_only(head)).into_any_element()];
         for (ix, row) in rows.into_iter().enumerate() {
-            let tile = style::status_tile(
+            let tile = style::status_tile_at(
                 ("welcome-demo-tile", ix as u64),
                 ui,
                 style::StatusTile {
                     face: style::TileFace::Terminal,
                     glyph: glyph_of(row.state),
                     selected: false,
-                    size: metrics.tile,
+                    mini: false,
                 },
+                metrics.tile,
                 cx,
             );
             let tone = match row.state {

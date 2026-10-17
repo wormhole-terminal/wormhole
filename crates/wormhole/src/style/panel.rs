@@ -10,15 +10,60 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::buttons::tooltip_delay;
-use super::rows::card_segment;
-use super::scale::Edges as _;
+use super::scale::{CARD_GAP, CARD_MARGIN, CARD_PAD, CARD_RADIUS, Edges as _};
 use crate::settings::UiColors;
 use wormhole_core::layout::PANEL_STRIP;
 
 /// One whole card round `content`: a note where a list would be, a block of the Usage tab.
 #[track_caller]
 pub fn panel_card(ui: UiColors, content: impl IntoElement) -> Div {
-    card_segment(ui, true, true, true, false, content)
+    panel_segment(ui, true, true, true, false, content)
+}
+
+/// One stretch of a card in the right panel: a section's head and its lines are drawn as one
+/// rounded card ([`CARD_MARGIN`] in from the panel's sides, [`CARD_RADIUS`] round, its rows
+/// [`CARD_PAD`] in), each line of the list a stretch of it holding `content`. `top` is the head's
+/// (the card's rounded top), `bottom` the last line's (its rounded bottom, and [`CARD_GAP`] under
+/// it); `gap_above` puts that gap over a card that follows a loose line. A loose line is a stretch
+/// of no card at all (`filled` false), lined up with the cards' rows. The gaps are part of the
+/// stretch, so a drop there lands on its line. (The sidebar's cards are `card_segment`: they have
+/// a colour wash and densities.)
+#[track_caller]
+pub fn panel_segment(
+    ui: UiColors,
+    top: bool,
+    bottom: bool,
+    filled: bool,
+    gap_above: bool,
+    content: impl IntoElement,
+) -> Div {
+    let outer = div().flex().flex_col().px(px(CARD_MARGIN));
+    // A loose line keeps the cards' side edges, unpainted, so it lines up with their rows.
+    let mut segment = div().flex().flex_col().px(px(CARD_PAD)).border_color(ui.border.opacity(0.0));
+    let edge = Some(ui.border_width.into());
+    {
+        let b = &mut segment.style().border_widths;
+        b.left = edge;
+        b.right = edge;
+    }
+    if !filled {
+        return outer.child(segment.child(content));
+    }
+    segment = segment.bg(ui.band).border_color(ui.border);
+    {
+        let b = &mut segment.style().border_widths;
+        if top {
+            b.top = edge;
+        }
+        if bottom {
+            b.bottom = edge;
+        }
+    }
+    let segment = segment
+        .when(top, |d| d.rounded_t(px(CARD_RADIUS)).pt(px(CARD_PAD)))
+        .when(bottom, |d| d.rounded_b(px(CARD_RADIUS)).pb(px(CARD_PAD)))
+        .child(content);
+    outer.when(top && gap_above, |d| d.pt(px(CARD_GAP))).when(bottom, |d| d.pb(px(CARD_GAP))).child(segment)
 }
 
 /// A column of cards built from lines: [`Cards::head`] starts a card and every

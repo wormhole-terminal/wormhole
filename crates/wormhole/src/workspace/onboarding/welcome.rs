@@ -155,15 +155,11 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
                 detail: Some(detail.into()),
                 tone,
                 selected,
-                tile: Some(style::status_tile(
+                tile: Some(style::status_tile_at(
                     format!("{id}-tile"),
                     ui,
-                    style::StatusTile {
-                        face: style::TileFace::Terminal,
-                        glyph,
-                        selected,
-                        size: metrics.tile,
-                    },
+                    style::StatusTile { face: style::TileFace::Terminal, glyph, selected, mini: false },
+                    metrics.tile,
                     cx,
                 )),
                 card: true,

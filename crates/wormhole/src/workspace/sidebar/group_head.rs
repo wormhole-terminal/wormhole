@@ -4,11 +4,11 @@
 use std::rc::Rc;
 
 use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _, PopupMenu, PopupMenuItem};
-use wormhole_core::sidebar::{GroupColor, spoken};
+use wormhole_core::sidebar::{GroupColor, Urgency, spoken};
 
 use super::super::focus::{MenuBuilder, SidebarStop};
 use super::groups::{group_colors, group_popover};
-use super::rows::{Frame, tile_for};
+use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
 use crate::settings::SettingsStore;
 use crate::style::{ClickHandler, GroupHead};
@@ -35,17 +35,20 @@ impl Workspace {
         let tokens = &cx.global::<SettingsStore>().tokens;
         let hsla = color.map(|color| theme_bridge::hsla(color.color(tokens)));
         let folded = band.folded;
-        let state_of = |ix: usize| infos[ix].state;
-        let alerts = band.members.iter().filter(|&&ix| state_of(ix).is_alert()).count();
-        let alert = if band.members.iter().any(|&ix| state_of(ix) == RowState::NeedsYou) {
-            Some(ui.agent_attention)
-        } else if band.members.iter().any(|&ix| state_of(ix) == RowState::Failed) {
-            Some(ui.danger)
-        } else {
-            None
+        // One order of urgency for the dot and for the tiles (core's, the same the tab switcher and
+        // the status bar pick by).
+        let urgency_of = |ix: usize| Urgency::from(glyph_for(&infos[ix]));
+        let alerts = band.members.iter().filter(|&&ix| urgency_of(ix).is_alert()).count();
+        let alert = match band.members.iter().map(|&ix| urgency_of(ix)).min() {
+            Some(Urgency::NeedsYou) => Some(ui.agent_attention),
+            Some(Urgency::Failed) => Some(ui.danger),
+            _ => None,
         };
         let tiles: Vec<AnyElement> = if folded {
-            band.members
+            // The loudest first; terminals alike keep the list's order.
+            let mut members = band.members.clone();
+            members.sort_by_key(|&ix| urgency_of(ix));
+            members
                 .iter()
                 .map(|&ix| tile_for(&infos[ix], frame, false, frame.metrics.folded_tile, cx))
                 .collect()

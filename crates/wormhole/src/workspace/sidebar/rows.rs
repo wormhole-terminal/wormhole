@@ -7,7 +7,6 @@
 use std::time::Duration;
 
 use gpui_kit::component::tooltip::Tooltip;
-use wormhole_core::agents;
 use wormhole_core::sidebar::SplitMarks;
 use wormhole_core::sidebar::hints::{keycap, keyshortcut};
 use wormhole_core::sidebar::spoken::{self, RowSpeech, SplitSpeech};

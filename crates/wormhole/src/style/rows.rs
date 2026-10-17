@@ -13,8 +13,8 @@ use super::labels::{count_badge, line_counts};
 use super::metrics::Metrics;
 use super::motion::{EASE_OUT, MOTION_FAST};
 use super::scale::{
-    FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TITLE_GLYPH,
-    TextRole,
+    CARD_ROW_RADIUS, FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H,
+    ROW_TWO_LINE_H, TITLE_GLYPH, TextRole,
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;

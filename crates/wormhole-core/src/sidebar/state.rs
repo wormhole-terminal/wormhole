@@ -24,9 +24,4 @@ impl RowState {
     pub fn is_idle(self) -> bool {
         matches!(self, RowState::Idle | RowState::Exited)
     }
-
-    /// Something a folded group's label must say out loud: it needs you or it failed.
-    pub fn is_alert(self) -> bool {
-        matches!(self, RowState::NeedsYou | RowState::Failed)
-    }
 }

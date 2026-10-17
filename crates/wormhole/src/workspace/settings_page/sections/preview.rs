@@ -202,15 +202,16 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
             );
         }
         for (rx, sample) in card.rows.iter().enumerate() {
-            let tile = style::status_tile(
+            let tile = style::status_tile_at(
                 SharedString::from(format!("preview-{id}-tile-{cx_ix}-{rx}")),
                 ui,
                 style::StatusTile {
                     face: face(),
                     glyph: sample.glyph,
                     selected: sample.selected,
-                    size: metrics.tile,
+                    mini: false,
                 },
+                metrics.tile,
                 cx,
             );
             let mut row = SessionRow::new(div().into_any_element(), sample.name);

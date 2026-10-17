@@ -94,7 +94,7 @@ impl<T: PartialEq> Rows<T> {
     /// is `part` [`CardPart::Head`] starts a card and the [`CardPart::Body`] rows after it
     /// continue it; the card ends at the last of them, and a row outside any card (the spacer
     /// at the foot) stands alone. Each row is drawn as its stretch of the card
-    /// (`style::card_segment`, the same as the sidebar's), so the list stays virtual.
+    /// (`style::panel_segment`), so the list stays virtual.
     pub fn element_carded(
         &self,
         cursor: Option<(usize, Option<UiColors>)>,
@@ -127,7 +127,7 @@ impl<T: PartialEq> Rows<T> {
                     Some((ui, part)) => match card_edges(part(row), rows.get(ix + 1).map(part)) {
                         None => content,
                         Some((top, bottom)) => {
-                            style::card_segment(ui, top, bottom, true, false, content).into_any_element()
+                            style::panel_segment(ui, top, bottom, true, false, content).into_any_element()
                         }
                     },
                     None => content,
