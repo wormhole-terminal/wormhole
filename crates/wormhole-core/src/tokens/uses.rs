@@ -138,6 +138,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "agent.gemini.end",
             "agent.working",
             "agent.attention",
+            "agent.bell",
             "agent.done",
             "status.danger",
             "primary",

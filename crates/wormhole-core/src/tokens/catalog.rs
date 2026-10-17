@@ -92,6 +92,7 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("agent.done", "Agents", "Agent finished"),
     t("agent.attention", "Agents", "Agent needs input"),
     t("agent.exited", "Agents", "Agent process exited"),
+    t("agent.bell", "Agents", "The bell's orange: the badge of a terminal that rang"),
     t("agent.attention.ring", "Agents", "The halo round a needs-you dot (overlay)"),
     t("agent.attention.tint", "Agents", "Fill of a tab that waits for input (overlay)"),
     t("agent.attention.text", "Agents", "“Needs you” as text: second lines, the status bar"),

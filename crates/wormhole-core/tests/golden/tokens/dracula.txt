@@ -3,6 +3,7 @@ agent.attention #f1fa8c
 agent.attention.ring #f1fa8c47
 agent.attention.text #f1fa8c
 agent.attention.tint #f1fa8c1f
+agent.bell #ff9e64
 agent.claude #d97757
 agent.done #50fa7b
 agent.done.text #50fa7b

@@ -413,7 +413,7 @@ fn badge(ui: UiColors, state: StatusGlyph, tile: f32, surface: Hsla) -> Option<A
         ),
         StatusGlyph::Done => (ui.agent_done, Some(badge_mark(glyph::CHECK, mark, surface))),
         StatusGlyph::Failed => (ui.danger, Some(badge_mark(glyph::FAILED, mark, surface))),
-        StatusGlyph::Bell => (ui.agent_attention, Some(badge_mark(glyph::BELL, mark, surface))),
+        StatusGlyph::Bell => (ui.agent_bell, Some(badge_mark(glyph::BELL, mark, surface))),
         StatusGlyph::Terminal { unread: true } => (ui.primary, None),
         _ => return None,
     };

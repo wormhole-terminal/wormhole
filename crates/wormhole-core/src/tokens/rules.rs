@@ -132,6 +132,9 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "agent.done" => "status.success",
         "agent.attention" => "status.warning",
         "agent.exited" => "text.faint",
+        // The bell's orange (the boards' RF-12): not the amber of "needs you", so the two badges
+        // don't read alike.
+        "agent.bell" => "#ff9e64",
         "agent.attention.ring" => "agent.attention / 28%",
         "agent.attention.tint" => "agent.attention / 12%",
         // As text in the sidebar (second lines) and the status bar: on the sidebar and

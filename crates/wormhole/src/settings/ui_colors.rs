@@ -131,6 +131,8 @@ pub struct UiColors {
     pub agent_done: Hsla,
     pub agent_attention: Hsla,
     pub agent_exited: Hsla,
+    /// The bell badge on a status tile (`agent.bell`).
+    pub agent_bell: Hsla,
     /// The halo round a needs-you dot and the fill of a waiting tab (`agent.attention.ring`
     /// / `.tint`).
     pub attention_ring: Hsla,
@@ -248,6 +250,7 @@ const COLORS: &[Field] = fields! {
     agent_done = "agent.done";
     agent_attention = "agent.attention";
     agent_exited = "agent.exited";
+    agent_bell = "agent.bell";
     attention_ring = "agent.attention.ring";
     attention_tint = "agent.attention.tint";
     attention_text = "agent.attention.text";
