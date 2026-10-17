@@ -397,7 +397,13 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
                 .child(card_column(ui, changes))
                 .child(card_column(ui, history))
                 .child(card_column(ui, project))
-                .child(div().w_full().max_w(px(COLUMN_W)).bg(ui.panel_right).child(note_card))
+                .child(
+                    div()
+                        .w_full()
+                        .max_w(px(COLUMN_W))
+                        .bg(ui.panel_right)
+                        .child(env.mark("panel.card", note_card)),
+                )
                 .child(div().w_full().max_w(px(COLUMN_W)).bg(ui.panel_right).child(flat_band).child(loose))
                 .child(div().flex().bg(ui.panel_right).outlined(ui, ui.border).child(strip)),
         )
