@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)
+  on a right-click or a click on its name. The panel's tab strip no longer has a button at its foot;
+  Stash prompt stays in the palette, the menu and its key.
 - The top rows are 36 points tall. The title row is tinted with the selected terminal's group colour
   (none for a terminal in no group), and a chip at the sidebar's top names the profile Wormhole is in
   once there are two: its menu switches profiles (every window with it), opens a window in one,
