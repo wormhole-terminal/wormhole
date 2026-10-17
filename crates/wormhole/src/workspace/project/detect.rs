@@ -97,18 +97,6 @@ impl Workspace {
         app(cx).hub.projects.get(root)
     }
 
-    /// The colour the active terminal's own project names for the title row's tint, while its
-    /// Settings switch is on. A colour only paints, so unlike the rest of `config.json` it needs no
-    /// trust. (A folder's colour is [`Workspace::folder_paint`]'s; this is what is left for a
-    /// terminal in a project of its own below the folder its band names.)
-    pub(in crate::workspace) fn project_color(&self, cx: &App) -> Option<proj::ProjectColor> {
-        let project = self.active_project(cx)?;
-        let wanted = project.snapshot.has(Feature::Settings)
-            && app(cx).hub.prefs.enabled(&project.folder.root, Feature::Settings);
-        let chosen = project.snapshot.config()?.color.filter(|_| wanted)?;
-        Some(chosen.resolve(&cx.global::<SettingsStore>().tokens))
-    }
-
     /// Env and shell for a new session started in `cwd`, if its project allows it.
     pub(in crate::workspace) fn project_spawn_options(
         cwd: Option<&Path>,

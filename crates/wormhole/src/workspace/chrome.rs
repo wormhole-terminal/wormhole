@@ -1,4 +1,4 @@
-//! The window's chrome: the 40 pt title rows across the top. The
+//! The window's chrome: the 36 pt title rows across the top. The
 //! sidebar's collapse button sits at one spot of the window whether the sidebar is open or
 //! hidden (so do the traffic lights macOS draws at the left); the sidebar's title row leaves room
 //! for the lights above the "Terminals" header and the terminal's carries the selected terminal's
@@ -9,18 +9,18 @@ use wormhole_core::layout::Edge;
 use super::focus::TitleButton;
 use super::*;
 
-/// The traffic lights start at the 16 pt inset. They are assumed to be three 12 pt ones 8 apart
-/// (x 16 to 68); later macOS versions draw them larger, so the span is measured (`traffic_lights`)
+/// The traffic lights start at the 20 pt inset. They are assumed to be three 12 pt ones 8 apart
+/// (x 20 to 72); later macOS versions draw them larger, so the span is measured (`traffic_lights`)
 /// by whatever has to clear the real lights.
-const LIGHTS_X: f32 = 16.0;
+const LIGHTS_X: f32 = 20.0;
 const ASSUMED_LIGHTS_SPAN: f32 = 52.0;
 /// The height of AppKit's frame round each light, which is what its position places.
 const LIGHT_FRAME: f32 = 14.0;
-/// The sidebar's collapse button starts here (its glyph is centred in it, at x 82–98), at
-/// 8 after the lights. It doesn't follow the sidebar; it moves right only
+/// The sidebar's collapse button starts here (its glyph is centred in it, at x 90–106), at
+/// 12 after the lights. It doesn't follow the sidebar; it moves right only
 /// when macOS draws the lights wider than assumed, so it never covers them.
-const COLLAPSE_X: f32 = 76.0;
-/// The gap between the lights and the collapse button's frame (68 to 76).
+const COLLAPSE_X: f32 = 84.0;
+/// The gap between the lights and the collapse button's frame (72 to 84).
 const AFTER_LIGHTS: f32 = COLLAPSE_X - (LIGHTS_X + ASSUMED_LIGHTS_SPAN);
 /// A title row's own content starts this far after the collapse button when the sidebar is
 /// hidden and the button sits over it.
@@ -62,7 +62,7 @@ pub(crate) trait TitleDrag: InteractiveElement + Sized {
 
 impl<E: InteractiveElement> TitleDrag for E {}
 
-/// Where macOS draws the traffic lights (the close button's frame): from the 16 pt inset,
+/// Where macOS draws the traffic lights (the close button's frame): from the 20 pt inset,
 /// centred in a top row `row` tall. Every window of the app puts them in a title row; a workspace
 /// with a taller tab bar moves them down to its middle.
 pub(crate) fn traffic_light_position(row: f32) -> Point<Pixels> {
@@ -256,10 +256,10 @@ mod tests {
     fn the_collapse_button_sits_after_the_assumed_lights() {
         let lights_end = LIGHTS_X + ASSUMED_LIGHTS_SPAN;
         let glyph = collapse_x(lights_end) + (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;
-        assert_eq!((glyph, glyph + style::TITLE_GLYPH), (82.0, 98.0));
-        assert_eq!(collapse_slot(lights_end), 76.0 + style::HIT_MIN + 8.0);
+        assert_eq!((glyph, glyph + style::TITLE_GLYPH), (90.0, 106.0));
+        assert_eq!(collapse_slot(lights_end), 84.0 + style::HIT_MIN + 8.0);
         // Narrower lights leave it where it is.
-        assert_eq!(collapse_x(lights_end - 6.0), 76.0);
+        assert_eq!(collapse_x(lights_end - 6.0), 84.0);
     }
 
     /// Lights wider than assumed push the button (and the title row after it) right, so it
@@ -267,8 +267,8 @@ mod tests {
     #[test]
     fn the_collapse_button_clears_wider_lights() {
         let lights_end = LIGHTS_X + 70.0;
-        assert_eq!(collapse_x(lights_end), lights_end + 8.0);
-        assert_eq!(collapse_slot(lights_end), lights_end + 8.0 + style::HIT_MIN + 8.0);
+        assert_eq!(collapse_x(lights_end), lights_end + 12.0);
+        assert_eq!(collapse_slot(lights_end), lights_end + 12.0 + style::HIT_MIN + 8.0);
     }
 
     /// While a column slides, the title row's ends start at its padding with the column out

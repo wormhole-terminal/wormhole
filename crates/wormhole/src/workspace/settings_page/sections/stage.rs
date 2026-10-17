@@ -18,7 +18,7 @@ const WINDOW_W: f32 = 1440.0 * SCALE;
 const WINDOW_H: f32 = 900.0 * SCALE;
 const MINI_SIDEBAR_W: f32 = 350.0 * SCALE;
 const MINI_PANEL_W: f32 = 360.0 * SCALE;
-const MINI_TITLE_H: f32 = 40.0 * SCALE;
+const MINI_TITLE_H: f32 = 36.0 * SCALE;
 const MINI_BAND_H: f32 = 32.0 * SCALE;
 const MINI_ROW_H: f32 = 28.0 * SCALE;
 const MINI_ROW_TWO_H: f32 = 44.0 * SCALE;
@@ -198,7 +198,7 @@ impl Mini {
             .child(self.caption(text, ui.text).font_weight(FontWeight::SEMIBOLD))
     }
 
-    /// A title row (the sidebar's, a pane's, the panel's): 40 high in the window.
+    /// A title row (the sidebar's, a pane's, the panel's): 36 high in the window.
     fn title_row(&self) -> Div {
         div()
             .flex_none()

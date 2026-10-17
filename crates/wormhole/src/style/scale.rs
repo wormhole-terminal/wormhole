@@ -58,7 +58,7 @@ pub const CARD_ROW_RADIUS: f32 = 8.0;
 pub const TAB_W: f32 = 168.0;
 pub const TAB_MIN_W: f32 = 96.0;
 /// The title rows across the top: the sidebar's, the terminal's breadcrumb, the panel's tabs.
-pub const TITLE_ROW_H: f32 = 40.0;
+pub const TITLE_ROW_H: f32 = 36.0;
 /// Height of a badge (one caption line). Its least width is the same, so a lone
 /// digit sits in a square.
 pub const BADGE_H: f32 = 16.0;

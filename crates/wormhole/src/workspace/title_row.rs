@@ -185,11 +185,15 @@ impl Workspace {
         .into_any_element()
     }
 
-    /// The tint behind the active terminal's title row, if any: the colour its folder wears (the
-    /// person's own, for every window), else the colour its project names while the project's
-    /// Settings switch is on. It only paints, so it needs no trust.
+    /// The tint behind the active terminal's title row: its group's colour, as the sidebar's card
+    /// wears it. A terminal in no group (or in a group without a colour) has none. It only
+    /// paints, so it needs no trust.
     fn title_tint(&self, cx: &App) -> Option<Tint> {
-        let color = self.folder_tint_color(cx).or_else(|| self.project_color(cx))?;
+        let id = self.sessions.get(self.active)?.id;
+        let group = self.sidebar.view.groups.group_of(id)?;
+        let color = self.sidebar.view.groups.get(group)?.color()?;
+        let tokens = &cx.global::<SettingsStore>().tokens;
+        let color = ProjectColor::from_color(color.color(tokens));
         Some(folder_color::title_tint(color, cx))
     }
 

@@ -126,11 +126,12 @@ pub fn icon_button(
 }
 
 impl IconButton {
-    /// The 16 pt glyph of the title rows: the sidebar toggle, Settings, the panel toggle. It
+    /// The 16 pt glyph of the title rows on a 24 pt face (still clickable across [`HIT_MIN`]): the
+    /// sidebar toggle, Open in…, the splits. It
     /// takes the pointer from the title row under it, so clicking it fast never reads as a
     /// double-click on the title bar (which zooms the window).
     pub fn in_title_row(mut self) -> Self {
-        self.glyph = TITLE_GLYPH;
+        (self.glyph, self.face) = (TITLE_GLYPH, BAND_BUTTON);
         self.occludes = true;
         self
     }

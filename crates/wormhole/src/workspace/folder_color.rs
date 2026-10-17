@@ -78,7 +78,7 @@ impl FolderPaint {
 
     /// The line under the Project tab's row: whose colour it is and where it is kept.
     pub(in crate::workspace) fn note(&self) -> String {
-        let marks = "Marks this folder's band and its terminals' title row.";
+        let marks = "Marks this folder's band.";
         match self {
             Self::Own(_) => format!("{marks} Yours only: it isn't saved in the project."),
             Self::Project(project) if project.locked => {
@@ -143,18 +143,6 @@ impl Workspace {
                 unreadable: project.snapshot.config_error().is_some(),
             }),
             None => FolderPaint::Own(settings(cx).folder_color_choice(folder)),
-        }
-    }
-
-    /// The colour the active terminal's folder wears, for the title row's tint. A terminal in a
-    /// project of its own below its folder (a nested `.wormhole/`) still shows that project's
-    /// colour while the folder has none.
-    pub(super) fn folder_tint_color(&self, cx: &App) -> Option<ProjectColor> {
-        let tokens = &cx.global::<SettingsStore>().tokens;
-        match self.active_folder(cx).map(|folder| self.folder_paint(&folder, cx)) {
-            Some(paint @ FolderPaint::Project(_)) => paint.tint(tokens).map(|(color, _)| color),
-            Some(paint @ FolderPaint::Own(Some(_))) => paint.tint(tokens).map(|(color, _)| color),
-            Some(FolderPaint::Own(None)) | None => self.project_color(cx),
         }
     }
 
