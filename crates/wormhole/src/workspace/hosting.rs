@@ -121,15 +121,12 @@ impl Workspace {
         }
     }
 
-    /// Whether a new terminal may start in a session host. Welcome and test terminals stay in the
-    /// app's process (`WORMHOLE_SHELL`'s stand-in is for checks that must not leave programs
-    /// running), and so does anything started once the app is quitting.
+    /// Whether a new terminal may start in a session host. Welcome terminals and unit tests stay in
+    /// the app's process, and so does anything started once the app is quitting. A devctl
+    /// instance's `WORMHOLE_SHELL` stand-in (`/bin/cat`) is hosted like any shell, so checks see
+    /// hosting; `devctl-instance.sh stop` ends the instance's hosts.
     fn may_host(&self, options: &SpawnOptions, cx: &App) -> bool {
-        !cfg!(test)
-            && super::windows::persistent_terminals_on(cx)
-            && !options.welcome
-            && std::env::var_os("WORMHOLE_SHELL").is_none()
-            && !app(cx).quitting
+        !cfg!(test) && super::windows::persistent_terminals_on(cx) && !options.welcome && !app(cx).quitting
     }
 
     /// A terminal just started a session host: its row, naming the host, goes to the database now,
