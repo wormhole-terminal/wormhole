@@ -12,6 +12,8 @@ publish.workspace = true
 wormhole-vt.workspace = true
 # The terminal layer (a program in a PTY and the screen it draws), which core re-exports as `terminal`.
 wormhole-term.workspace = true
+# The session host's wire protocol, to end a host from the command line (`hosts::end_host`).
+wormhole-wire.workspace = true
 anyhow.workspace = true
 # Agent reports carry RFC 3339 timestamps; compare source times across concurrent terminals.
 chrono = { version = "0.4", default-features = false, features = ["std"] }

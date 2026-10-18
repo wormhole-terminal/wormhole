@@ -40,6 +40,8 @@ pub const COMMAND_NAME: &str = "wh";
 /// The usage text, with the command by the name it is called by (`COMMAND_NAME`), not the binary's.
 pub fn help() -> String {
     let wh = COMMAND_NAME;
+    let sessions = super::sessions::help(wh);
+    let sessions = sessions.trim_end();
     format!(
         "\
 Wormhole: control the running app from the command line
@@ -55,12 +57,14 @@ Wormhole: control the running app from the command line
   {wh} new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]
       A new terminal in the front window (or --window), in a folder, running a command in its shell.
 
+{sessions}
   {wh} welcome [-- <program> [<args>...]]
       The first-run welcome, in this terminal; then it starts <program> (your shell) here.
 
   <target>: --terminal <id> | --tab <id> | --pane <id>, with the ids `list` prints.
   --json prints the reply as one JSON object; the exit code is 0 when it worked, 1 when the app
-  would not or could not, 2 for a mistake in the arguments, 3 when Wormhole isn't running.
+  would not or could not, 2 for a mistake in the arguments, 3 when Wormhole isn't running (list and
+  status then still show the terminals that keep running without it).
 
 Typing into terminals and opening them are off until Settings → Coding agents → \"Let the command
 line type and open terminals\" is on; listing, status and notify always work. Inside a terminal,
@@ -74,7 +78,10 @@ line tool\" installs it.
 
 /// Whether `word` as the first argument is this command line's (`Wormhole list …`).
 pub fn is_verb(word: &str) -> bool {
-    matches!(word, "list" | "status" | "notify" | "send-text" | "new-terminal" | "help" | "--help" | "-h")
+    matches!(
+        word,
+        "list" | "status" | "notify" | "send-text" | "new-terminal" | "sessions" | "help" | "--help" | "-h"
+    )
 }
 
 /// Read the words after the program name (`list --json`, `send-text --tab 3 hello`) into what to
@@ -367,6 +374,10 @@ pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Resu
 
 /// `Wormhole <verb> …`: do the round trip and print the answer. Returns the exit code.
 pub fn run(args: &[String]) -> i32 {
+    // Session hosts are not the app's: this works from their files, with the app closed too.
+    if args.first().map(String::as_str) == Some("sessions") {
+        return super::sessions::run(&args[1..]);
+    }
     let cwd = std::env::current_dir().unwrap_or_default();
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let cli = match parse(args, &cwd, home.as_deref()) {
@@ -400,6 +411,11 @@ pub fn run(args: &[String]) -> i32 {
     let reply = match exchange(&socket, &request, REPLY_WAIT) {
         Ok(reply) => reply,
         Err(Exchange::NotRunning) => {
+            // Terminals that outlive the app can still be listed from their hosts' files.
+            if let Some(text) = super::sessions::offline(&request.action, cli.json) {
+                print(&text);
+                return 3;
+            }
             print_err("Wormhole: Wormhole isn't running\n");
             return 3;
         }
@@ -444,11 +460,11 @@ fn read_stdin_text() -> Result<String, String> {
 }
 
 /// Write to stdout as a command line does; a closed pipe (`| head`) is not an error worth saying.
-fn print(text: &str) {
+pub(super) fn print(text: &str) {
     let _ = io::stdout().lock().write_all(text.as_bytes());
 }
 
-fn print_err(text: &str) {
+pub(super) fn print_err(text: &str) {
     let _ = io::stderr().lock().write_all(text.as_bytes());
 }
 
@@ -558,6 +574,15 @@ mod tests {
         assert!(help.contains(&format!("{} list", super::COMMAND_NAME)) && help.contains("--json"));
         // The usage names the command people type, never the binary's own name for it.
         assert!(!help.contains("Wormhole list") && !help.contains("Wormhole send-text"));
+    }
+
+    #[test]
+    fn the_sessions_verb_is_ours_and_in_the_usage() {
+        assert!(super::is_verb("sessions"));
+        let help = super::help();
+        for line in ["sessions list", "sessions end <id> | --all", "sessions forget <id>"] {
+            assert!(help.contains(line), "{line}");
+        }
     }
 
     #[test]

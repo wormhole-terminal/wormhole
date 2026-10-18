@@ -9206,6 +9206,7 @@ dependencies = [
  "ureq",
  "wormhole-term",
  "wormhole-vt",
+ "wormhole-wire",
 ]
 
 [[package]]

@@ -95,7 +95,7 @@ fn same_user(stream: &UnixStream) -> bool {
     target_os = "openbsd",
     target_os = "netbsd"
 ))]
-fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
+pub(crate) fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
     use std::os::fd::AsRawFd;
     let (mut uid, mut gid): (libc::uid_t, libc::gid_t) = (0, 0);
     // SAFETY: `getpeereid` writes the peer's ids into the two out-parameters, which are valid for
@@ -106,7 +106,7 @@ fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
 }
 
 #[cfg(target_os = "linux")]
-fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
+pub(crate) fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
     use std::os::fd::AsRawFd;
     // SAFETY: `ucred` is plain data, so zeroed is a valid value; `getsockopt` writes at most
     // `len` bytes into it and updates `len`; the descriptor is this stream's.

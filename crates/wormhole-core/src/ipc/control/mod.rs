@@ -13,6 +13,10 @@
 //! ([`send_text_check`]). Everything a caller sends is hostile input: capped in size here, rate
 //! limited in `limits`, and shown only through text cleaned like a program's own notification.
 //!
+//! `sessions` (`Wormhole sessions list | end | forget`) is not part of the protocol: it is for the session
+//! hosts that keep terminals running behind the app, works from their files and sockets, and needs no app
+//! (`sessions`).
+//!
 //! One more kind of request is not a script's: `welcome` is the first-run program (`Wormhole welcome`,
 //! in a terminal the app started for it) talking to the app that runs it. A token the app put in that
 //! terminal's environment stands in for `control_write` (`welcome`'s module notes say why that is
@@ -20,6 +24,7 @@
 
 mod cli;
 mod limits;
+pub mod sessions;
 mod welcome;
 
 use serde::{Deserialize, Serialize};

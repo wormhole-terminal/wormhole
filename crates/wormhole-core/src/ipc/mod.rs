@@ -38,6 +38,7 @@ pub use control::run as run_control_cli;
 pub(crate) use instance::is_locked_instance_dir;
 pub use instance::{Instance, InstanceLock, acquire, start_server};
 pub use message::Message;
+pub(crate) use server::peer_uid;
 
 /// What the socket hands the app.
 #[derive(Debug)]

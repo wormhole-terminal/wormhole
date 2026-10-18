@@ -7,43 +7,27 @@
 
 use std::io;
 use std::os::unix::fs::FileTypeExt as _;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+
+use wormhole_term::hosted::meta::Meta;
 
 use crate::fsutil::{self, LinkPolicy};
 
 use super::is_valid_host_id;
 
 /// A meta file is a dozen short lines; anything bigger is not one.
-const META_CAP: u64 = 16 * 1024;
+const META_CAP: u64 = wormhole_term::hosted::meta::READ_MAX;
 
-/// What a host says about itself in `<id>.meta`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HostMeta {
-    pub id: String,
-    /// The host process.
-    pub pid: u32,
-    /// The terminal's shell, once the host knows it.
-    pub child_pid: Option<u32>,
-    /// Unix seconds.
-    pub started_at: u64,
-    pub host_version: String,
-    pub proto_min: u32,
-    pub proto_max: u32,
-    /// Where the host listens (an absolute path; see [`super::socket_path`]).
-    pub socket: PathBuf,
-    pub data_dir: PathBuf,
-}
+/// What a host says about itself in `<id>.meta`: the one type the host, the app and this crate
+/// share (`wormhole_term::hosted::meta`).
+pub type HostMeta = Meta;
 
 /// Read and check one meta file.
 ///
-/// TODO(integration): the format's reader and writer live in `wormhole_term::hosted::meta`
-/// (shared by the host, core and the app). This is a local parser of the same `key=value` format
-/// (contract `p1-contract.md`) so the two could be written in parallel; at integration the body
-/// becomes a call to that module and the `HostMeta` type its re-export.
-///
 /// The file is hostile input as far as its size and content go (any process of the user can write
-/// to the folder): it is read capped and without following links, unknown keys and lines without
-/// `=` are skipped, and the id inside must be valid and equal the file name's.
+/// to the folder): it is read capped and without following links, then parsed by
+/// [`Meta::parse`] (the format's one reader), and on top of that the id inside must equal the
+/// file name's, the pid must be one `kill` can address and the socket path absolute.
 pub fn read_meta(path: &Path) -> io::Result<HostMeta> {
     let bad = |what: &str| io::Error::new(io::ErrorKind::InvalidData, format!("{}: {what}", path.display()));
     let stem = path
@@ -55,45 +39,19 @@ pub fn read_meta(path: &Path) -> io::Result<HostMeta> {
     // `Within` the folder: a link planted as the file is refused, not followed.
     let root = path.parent().ok_or_else(|| bad("no folder"))?;
     let text = fsutil::read_to_string_capped(path, META_CAP, LinkPolicy::Within(root))?;
-
-    let (mut format, mut id, mut pid, mut child_pid, mut started_at) = (None, None, None, None, None);
-    let (mut host_version, mut proto_min, mut proto_max, mut socket, mut data_dir) =
-        (String::new(), 0, 0, None, None);
-    for line in text.lines() {
-        let Some((key, value)) = line.split_once('=') else { continue };
-        match key {
-            "format" => format = value.parse::<u32>().ok(),
-            "id" => id = Some(value),
-            "pid" => pid = value.parse::<u32>().ok(),
-            "child_pid" => child_pid = value.parse::<u32>().ok().filter(|p| *p > 0),
-            "started_at" => started_at = value.parse::<u64>().ok(),
-            "host_version" => host_version = value.to_string(),
-            "proto_min" => proto_min = value.parse().map_err(|_| bad("proto_min"))?,
-            "proto_max" => proto_max = value.parse().map_err(|_| bad("proto_max"))?,
-            "socket" => socket = Some(PathBuf::from(value)),
-            "data_dir" => data_dir = Some(PathBuf::from(value)),
-            _ => {}
-        }
-    }
-    if format != Some(1) {
-        return Err(bad("unknown format"));
-    }
-    if id != Some(stem) {
+    let mut meta = Meta::parse(&text).map_err(|err| bad(&err.to_string()))?;
+    // 0 is "not known yet" to every reader, as it is on the wire.
+    meta.child_pid = meta.child_pid.filter(|pid| *pid > 0);
+    if meta.id != stem {
         return Err(bad("id does not match the file name"));
     }
-    let pid = pid.filter(|p| *p > 0 && i32::try_from(*p).is_ok()).ok_or_else(|| bad("pid"))?;
-    let socket = socket.filter(|s| s.is_absolute()).ok_or_else(|| bad("socket"))?;
-    Ok(HostMeta {
-        id: stem.to_string(),
-        pid,
-        child_pid,
-        started_at: started_at.ok_or_else(|| bad("started_at"))?,
-        host_version,
-        proto_min,
-        proto_max,
-        socket,
-        data_dir: data_dir.unwrap_or_default(),
-    })
+    if meta.pid == 0 || i32::try_from(meta.pid).is_err() {
+        return Err(bad("pid"));
+    }
+    if !meta.socket.is_absolute() {
+        return Err(bad("socket"));
+    }
+    Ok(meta)
 }
 
 /// Why a host's files are left over.
@@ -236,7 +194,7 @@ mod tests {
         let meta = read_meta(&path).expect("reads");
         assert_eq!(meta.id, "abcdefghij12");
         assert_eq!((meta.pid, meta.child_pid, meta.started_at), (77, Some(4242), 1_700_000_000));
-        assert_eq!((meta.proto_min, meta.proto_max), (1, 2));
+        assert_eq!((meta.proto_min, meta.proto_max), (1_u16, 2_u16));
         assert_eq!(meta.host_version, "0.3.0");
         assert_eq!(meta.socket, Path::new("/s/x.sock"));
         assert_eq!(meta.data_dir, Path::new("/d"));
@@ -254,7 +212,6 @@ mod tests {
             ("pid too big", good.replace("pid=77", "pid=4294967295")),
             ("relative socket", good.replace("socket=/s/x.sock", "socket=x.sock")),
             ("no socket", good.replace("socket=/s/x.sock\n", "")),
-            ("no start", good.replace("started_at=5\n", "")),
             ("binary", String::from_utf8_lossy(&[0xff, 0xfe, b'\n']).into_owned()),
             ("empty", String::new()),
         ];
@@ -269,6 +226,16 @@ mod tests {
         let huge = dir.path().join("abcdefghij12.meta");
         std::fs::write(&huge, format!("{good}{}", "x".repeat(20_000))).expect("write");
         assert!(read_meta(&huge).is_err(), "capped");
+    }
+
+    #[test]
+    fn a_child_pid_of_zero_is_not_known() {
+        let dir = tempfile::tempdir().expect("temp");
+        let path = dir.path().join("abcdefghij12.meta");
+        let text =
+            meta_text("abcdefghij12", 77, Path::new("/s/x.sock"), 5).replace("child_pid=4242", "child_pid=0");
+        std::fs::write(&path, text).expect("write");
+        assert_eq!(read_meta(&path).expect("reads").child_pid, None);
     }
 
     #[test]

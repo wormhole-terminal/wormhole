@@ -6,13 +6,20 @@
 //! itself, written by the host) and `<id>.sock` (its socket). Nothing here talks to a host or
 //! deletes a file: [`scan`] reports what is stale and the caller decides.
 
+mod admin;
 mod scan;
 
 use std::io;
 use std::os::unix::fs::{DirBuilderExt as _, MetadataExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
 
+pub use admin::{
+    EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, find, forget, is_host_process,
+};
 pub use scan::{HostMeta, Scan, StaleHost, StaleReason, read_meta, scan, scan_with};
+/// Where a host listens and where its meta file is: one rule for the host, the app and this crate
+/// (`wormhole_term::hosted::paths`); readers still take the socket from the meta.
+pub use wormhole_term::hosted::paths::{meta_path, socket_path};
 
 /// How many characters a host id has.
 pub const ID_LEN: usize = 12;
@@ -20,9 +27,6 @@ pub const ID_LEN: usize = 12;
 /// The alphabet of an id: lowercase letters and digits, so it is safe in a file name, a socket
 /// path and an environment variable.
 const ALPHABET: &[u8; 36] = b"abcdefghijklmnopqrstuvwxyz0123456789";
-
-/// `sun_path` holds 104 bytes on macOS, the terminating NUL included.
-const SUN_PATH_MAX: usize = 104;
 
 /// A new host id: [`ID_LEN`] characters of `[a-z0-9]` from the system's random source (about 62
 /// bits). Random rather than a counter because a row of the database names a host by it, and a
@@ -51,7 +55,7 @@ fn fill_random(buf: &mut [u8]) -> io::Result<()> {
 /// Whether `id` is a host id: exactly [`ID_LEN`] characters of `[a-z0-9]`. Anything that becomes
 /// part of a path or a command line is checked with this first.
 pub fn is_valid_host_id(id: &str) -> bool {
-    id.len() == ID_LEN && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+    wormhole_term::hosted::meta::valid_id(id)
 }
 
 /// `<data dir>/hosts`: where the hosts' files are. Does not touch the disk; see
@@ -97,31 +101,6 @@ fn current_uid() -> u32 {
     unsafe {
         libc::getuid()
     }
-}
-
-/// `<hosts dir>/<id>.meta`.
-pub fn meta_path(hosts_dir: &Path, id: &str) -> PathBuf {
-    hosts_dir.join(format!("{id}.meta"))
-}
-
-/// Where host `id` listens: `<hosts dir>/<id>.sock`, or, when that path does not fit `sun_path`
-/// (a long data dir), `$TMPDIR/wormhole-host-<uid>-<id>.sock`. The host writes the path it chose
-/// into its meta file, so readers use [`HostMeta::socket`] and this is for whoever starts the host.
-pub fn socket_path(hosts_dir: &Path, id: &str) -> PathBuf {
-    socket_path_in(hosts_dir, &std::env::temp_dir(), current_uid(), id)
-}
-
-/// [`socket_path`] with the temp folder and uid as arguments, for the tests.
-fn socket_path_in(hosts_dir: &Path, temp: &Path, uid: u32, id: &str) -> PathBuf {
-    use std::os::unix::ffi::OsStrExt as _;
-    let home = hosts_dir.join(format!("{id}.sock"));
-    if home.as_os_str().as_bytes().len() < SUN_PATH_MAX {
-        return home;
-    }
-    let name = format!("wormhole-host-{uid}-{id}.sock");
-    let in_temp = temp.join(&name);
-    // Same last resort as the app's own socket (`ipc::socket_path`).
-    if in_temp.as_os_str().as_bytes().len() < SUN_PATH_MAX { in_temp } else { Path::new("/tmp").join(name) }
 }
 
 #[cfg(test)]
@@ -181,36 +160,5 @@ mod tests {
         std::os::unix::fs::symlink(elsewhere.path(), data.path().join("hosts")).expect("link");
         let err = ensure_hosts_dir(data.path()).expect_err("refused");
         assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
-    }
-
-    #[test]
-    fn the_socket_sits_in_the_hosts_dir_unless_the_path_is_too_long() {
-        let id = "abcdefghij12";
-        let short = Path::new("/Users/me/Library/Application Support/Wormhole/hosts");
-        assert_eq!(
-            socket_path_in(short, Path::new("/var/folders/ab/T"), 501, id),
-            short.join("abcdefghij12.sock")
-        );
-        // 103 bytes fit (the NUL makes 104), 104 do not.
-        let name_len = format!("/{id}.sock").len();
-        let fits = PathBuf::from(format!("/{}", "d".repeat(SUN_PATH_MAX - 1 - name_len - 1)));
-        assert_eq!(fits.join(format!("{id}.sock")).as_os_str().len(), SUN_PATH_MAX - 1);
-        assert_eq!(socket_path_in(&fits, Path::new("/t"), 501, id), fits.join("abcdefghij12.sock"));
-        let long = PathBuf::from(format!("/{}", "d".repeat(SUN_PATH_MAX - name_len)));
-        assert_eq!(
-            socket_path_in(&long, Path::new("/var/folders/ab/T"), 501, id),
-            Path::new("/var/folders/ab/T/wormhole-host-501-abcdefghij12.sock")
-        );
-        // A temp folder that is long too falls back to /tmp.
-        let long_temp = PathBuf::from(format!("/{}", "t".repeat(120)));
-        assert_eq!(
-            socket_path_in(&long, &long_temp, 501, id),
-            Path::new("/tmp/wormhole-host-501-abcdefghij12.sock")
-        );
-    }
-
-    #[test]
-    fn meta_paths_sit_beside_the_socket() {
-        assert_eq!(meta_path(Path::new("/h"), "abcdefghij12"), Path::new("/h/abcdefghij12.meta"));
     }
 }
