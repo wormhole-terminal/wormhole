@@ -72,6 +72,22 @@ impl AppState {
         }
     }
 
+    /// A terminal just started a session host: its row, naming the host, is written now in its own
+    /// profile's database (`Store::save_session_host`).
+    pub(crate) fn save_session_host(
+        &mut self,
+        profile: &ProfileId,
+        window_id: i64,
+        record: &SessionRecord,
+        host: &str,
+    ) {
+        if let Some(store) = self.store_of_mut(profile)
+            && let Err(err) = store.save_session_host(window_id, record, host)
+        {
+            tracing::error!("saving the session host of terminal {} failed: {err:#}", record.id);
+        }
+    }
+
     /// A window was closed on purpose: its sessions go with it, from its own profile's database.
     pub(crate) fn forget_window(&mut self, profile: &ProfileId, id: i64) {
         if let Some(store) = self.store_of_mut(profile)

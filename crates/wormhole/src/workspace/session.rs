@@ -177,10 +177,21 @@ impl Session {
             shell: self.pane.shell.clone(),
             scrollback: None,
             split_id: self.split,
-            // The session host arrives with the app integration; until then every terminal is
-            // in-process and the column stays NULL.
-            host_id: None,
+            host_id: self.persisted_host(cx),
         }
+    }
+
+    /// The session host the row names: the terminal's own, unless it was lost or every host is
+    /// being ended on the way out (core `hosts::persisted_host`).
+    fn persisted_host(&self, cx: &App) -> Option<String> {
+        let terminal = self.terminal().read(cx);
+        wormhole_core::hosts::persisted_host(terminal.host_id(), terminal.host_lost(), app(cx).ending_hosts)
+    }
+
+    /// Its program runs in a session host: quitting leaves it running, so the question before
+    /// quitting doesn't count it.
+    pub(super) fn is_hosted(&self, cx: &App) -> bool {
+        self.terminal().read(cx).is_hosted()
     }
 }
 

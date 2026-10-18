@@ -72,6 +72,14 @@
 //!                   version and `live` or `stale` (with why), as `Wormhole sessions list` prints them
 //!   host-kill <id>  end that host as `Wormhole sessions end <id>` does (`Kill` over its socket, SIGTERM
 //!                   when that fails; a stale one is refused); prints what happened
+//!   detach          let go of every hosted terminal of this window, as quitting does: the programs
+//!                   go on running in their hosts, the views keep their last screen; prints how many
+//!                   (`state` ends each terminal's line with `hosted <id>` and what the host is doing
+//!                   (`connecting`, `headless`, `detached`, `lost`), or `local`)
+//!   reattach        attach those terminals to their hosts again, as a launch does (on screen with a
+//!                   repaint, the rest headless); prints their ids
+//!   quit-keep       quit as ⌘Q does: every hosted terminal is let go of and goes on running for the
+//!                   next launch (`quit` is the same quit)
 //!   rename <n> <name>   name the n-th terminal as a project's layout would (as `state` numbers them)
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
@@ -374,6 +382,9 @@ fn command(name: &str) -> Option<Command> {
         "new" => sessions::new,
         "hosts" => hosts::hosts,
         "host-kill" => hosts::host_kill,
+        "detach" => hosts::detach,
+        "reattach" => hosts::reattach,
+        "quit-keep" => hosts::quit_keep,
         "new-shell" => sessions::new_shell,
         "shells" => sessions::shells,
         "activate" => sessions::activate,

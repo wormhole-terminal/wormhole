@@ -72,6 +72,8 @@ impl Workspace {
         let Some(ix) = self.find_session(id) else { return };
         match event {
             TerminalEvent::SummaryChanged => {}
+            // Its row names the host it has now (none, after a fallback or a lost host).
+            TerminalEvent::HostChanged => self.dirty = true,
             // The workspace draws the find bar.
             TerminalEvent::FindChanged => cx.notify(),
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),
@@ -99,12 +101,17 @@ impl Workspace {
         let cwd = old.terminal().read(cx).cwd.as_ref().map(|p| p.to_string_lossy().into_owned());
         let mut record = SessionRecord::new(old.id, None, cwd);
         record.shell = old.pane.shell.clone();
-        let pane = self.make_pane(&record, window, cx);
+        let (pane, new_host) = self.make_pane(&record, window, cx);
         let focus = pane.terminal.focus_handle(cx);
         self.sessions[ix].pane = pane;
         if ix == self.active {
             window.focus(&focus, cx);
         }
+        // A new host, with a new id: the row names it now.
+        if let Some(host) = new_host {
+            self.save_host_row(ix, &host, cx);
+        }
+        self.sync_host_visibility(cx);
         self.dirty = true;
         cx.notify();
     }

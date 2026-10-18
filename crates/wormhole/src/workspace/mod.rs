@@ -62,6 +62,7 @@ mod git_panel;
 mod glass;
 #[cfg(test)]
 mod group_tests;
+mod hosting;
 mod items;
 #[cfg(test)]
 mod key_tests;
@@ -326,6 +327,9 @@ pub struct Workspace {
     /// The sidebar or the right panel sliding in or out.
     slide: Option<slide::Slide>,
     last_scrollback_save: Instant,
+    /// While the window opens: the saved terminals on screen, which attach to their hosts with a
+    /// repaint at once (the rest attach headless).
+    shown_at_launch: Vec<i64>,
     ticks: u64,
     _tick: Task<()>,
 }
@@ -442,13 +446,17 @@ impl Workspace {
             overlay: None,
             slide: None,
             last_scrollback_save: Instant::now(),
+            shown_at_launch: Vec::new(),
             ticks: 0,
             _tick: tick,
         };
         this.right_tab = layout.right_tab;
+        let saved: Vec<(i64, Option<i64>)> = record.sessions.iter().map(|s| (s.id, s.split_id)).collect();
+        this.shown_at_launch = wormhole_core::hosts::shown_at_launch(record.active, &saved);
         for session in record.sessions {
             this.add_session(Some(session), window, cx);
         }
+        this.shown_at_launch.clear();
         this.restore_splits(&record.splits);
         if this.sessions.is_empty() {
             // The very first launch, with the terminal welcome on: the first terminal is the welcome.
@@ -494,6 +502,7 @@ impl Workspace {
         for (session, is_active) in self.sessions.iter().zip(on_screen) {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {
+                // A split joined or left since the selection last changed.
                 terminal.set_on_screen(is_active && looking);
                 let before = terminal.status();
                 let mut changed = terminal.tick(is_active, window_active);
@@ -685,7 +694,7 @@ impl Workspace {
                 " "
             };
             out.push_str(&format!(
-                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?}\n",
+                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?} {}\n",
                 ix + 1,
                 session.id,
                 terminal.status(),
@@ -701,6 +710,7 @@ impl Workspace {
                 terminal.foreground().map(|f| f.command.clone()),
                 session.pane.shell,
                 terminal.shell_name(),
+                terminal.host_label(),
             ));
             for task in &session.tasks {
                 out.push_str(&format!("    [{}] {}\n", if task.done { "x" } else { " " }, task.text));
@@ -793,7 +803,7 @@ impl Workspace {
             let id = self.alloc_id(cx);
             SessionRecord::new(id, None, self.default_cwd(cx))
         });
-        let pane = self.make_pane(&record, window, cx);
+        let (pane, new_host) = self.make_pane(&record, window, cx);
         self.sessions.push(Session {
             id: record.id,
             number,
@@ -821,6 +831,9 @@ impl Workspace {
         for note in record.notes {
             self.add_note(ix, Some(note.body), note.collapsed, window, cx);
         }
+        if let Some(host) = new_host {
+            self.save_host_row(ix, &host, cx);
+        }
         ix
     }
 
@@ -840,11 +853,18 @@ impl Workspace {
 
     /// Start the shell of a session's terminal, with the id the session has: the profile it was
     /// opened with, else a trusted project's shell (its env applies too), else the default (core's
-    /// `shells::for_terminal`), in the folder and with the scrollback the record has.
-    fn make_pane(&mut self, record: &SessionRecord, window: &mut Window, cx: &mut Context<Self>) -> Pane {
+    /// `shells::for_terminal`), in the folder and with the scrollback the record has. In a session
+    /// host when it should run in one (`start_for`): then the new host's id comes back too, for the
+    /// row that names it.
+    fn make_pane(
+        &mut self,
+        record: &SessionRecord,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (Pane, Option<String>) {
         // A terminal moved here from another window keeps running.
         if let Some(terminal) = app_mut(cx).adopted.remove(&record.id) {
-            return Pane::new(record.id, record.shell.clone(), terminal, window, cx);
+            return (Pane::new(record.id, record.shell.clone(), terminal, window, cx), None);
         }
         let cwd = record.cwd.as_ref().map(PathBuf::from);
         let (mut env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
@@ -872,10 +892,15 @@ impl Workspace {
             options.welcome = !cfg!(test);
             options.env.insert(wormhole_core::welcome::TOKEN_VAR.to_string(), token);
         }
-        let terminal = cx.new(|cx| TerminalView::new(options, self.profile.clone(), window, cx));
+        let start = self.start_for(record, &options, cx);
+        let new_host = match &start {
+            crate::terminal_view::Start::Host { id, .. } => Some(id.clone()),
+            _ => None,
+        };
+        let terminal = cx.new(|cx| TerminalView::new(options, start, self.profile.clone(), window, cx));
         let zoom = self.font_zoom;
         terminal.update(cx, |terminal, cx| terminal.set_font_zoom(zoom, cx));
-        Pane::new(record.id, record.shell.clone(), terminal, window, cx)
+        (Pane::new(record.id, record.shell.clone(), terminal, window, cx), new_host)
     }
 
     /// Select terminal `ix` and give it the keyboard. Selecting a row of a split shows the split
@@ -909,6 +934,9 @@ impl Workspace {
             self.dirty = true;
         }
         self.acknowledge_selected(cx);
+        // At once, not on the next tick: a terminal switched to shows its last screen and is fed
+        // from here on.
+        self.sync_host_visibility(cx);
     }
 
     /// Close terminal `ix`: its shell ends. In a split its pane goes and the others take its room;

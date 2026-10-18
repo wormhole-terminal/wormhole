@@ -123,15 +123,16 @@ fn running_terminals(cx: &App) -> Vec<Running> {
     let mut running = Vec::new();
     for workspace in workspaces(cx) {
         let sessions = &workspace.read(cx).sessions;
-        running
-            .extend(sessions.iter().filter(|s| s.needs_close_confirmation(cx)).map(|s| Running::of(s, cx)));
+        // A hosted terminal goes on running through the relaunch.
+        let cut_off = |s: &&Session| s.needs_close_confirmation(cx) && !s.is_hosted(cx);
+        running.extend(sessions.iter().filter(cut_off).map(|s| Running::of(s, cx)));
     }
     running
 }
 
 fn all_idle(cx: &App) -> bool {
     workspaces(cx).iter().all(|workspace| {
-        workspace.read(cx).sessions.iter().all(|session| {
+        workspace.read(cx).sessions.iter().filter(|session| !session.is_hosted(cx)).all(|session| {
             let terminal = session.terminal().read(cx);
             is_idle(terminal.status(), terminal.program_in_foreground(), terminal.agent.is_some())
         })

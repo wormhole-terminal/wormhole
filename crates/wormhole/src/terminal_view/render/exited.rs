@@ -12,14 +12,11 @@ use crate::style::{Edges, TextRole};
 use crate::terminal_view::{TerminalEvent, TerminalView};
 
 impl TerminalView {
-    /// The bar along the bottom of a pane whose shell has ended: what ended and how, a
-    /// new shell in the same tab, or closing the tab.
+    /// The bar along the bottom of a pane whose shell has ended: what ended and how (or that its
+    /// session host went away with it), a new shell in the same tab, or closing the tab.
     pub(super) fn render_exited(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = store_in(&self.profile, cx).ui;
-        let what = match self.exit_code {
-            Some(code) => format!("{} exited with code {code}", self.shell),
-            None => format!("{} exited", self.shell),
-        };
+        let what = self.exited_words();
         div()
             .id("exited-bar")
             .absolute()

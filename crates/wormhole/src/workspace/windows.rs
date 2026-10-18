@@ -320,6 +320,9 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
         cx.quit();
         return;
     }
+    // Before the first save: from here on no save records a host for any terminal, the ones on the
+    // way out included, and nothing starts a new one (`quitting`).
+    app_mut(cx).ending_hosts = true;
     super::app::save_all(cx);
     let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::store::data_dir());
     let ending = cx
@@ -352,7 +355,9 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
     let mut elsewhere: Vec<(String, usize)> = Vec::new();
     for window in &windows {
         let Some(workspace) = window.workspace.upgrade() else { continue };
-        for session in workspace.read(cx).sessions.iter().filter(|s| s.needs_close_confirmation(cx)) {
+        // A hosted terminal goes on running after a plain quit: only Quit and End All cuts it off.
+        let cut_off = |s: &&Session| s.needs_close_confirmation(cx) && (end_hosts || !s.is_hosted(cx));
+        for session in workspace.read(cx).sessions.iter().filter(cut_off) {
             running.push((session.status(cx), session.command_running(cx)));
             programs.extend(session.running_programs(false, cx));
             if window.hidden {

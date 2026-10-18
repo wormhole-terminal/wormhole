@@ -76,6 +76,12 @@ pub(crate) struct AppState {
     pub front: i64,
     /// Set once the app is going away, so closing windows then never deletes sessions.
     pub quitting: bool,
+    /// Quit and End All Terminals is ending every session host: the saves on the way out record no
+    /// host for any terminal (`hosts::persisted_host`), so they come back as text.
+    pub ending_hosts: bool,
+    /// The session hosts found at launch, until the terminals that name them have attached and the
+    /// orphans have been adopted (`hosting`).
+    pub launch_hosts: wormhole_core::hosts::LaunchHosts,
     /// The window showing the question before quitting, while it is up.
     pub quit_prompt: Option<i64>,
     /// The coding agents' plan usage limits, one report per agent (the Usage tab).
@@ -142,6 +148,8 @@ impl AppState {
             windows: Vec::new(),
             front: 0,
             quitting: false,
+            ending_hosts: false,
+            launch_hosts: Default::default(),
             quit_prompt: None,
             usage: Vec::new(),
             pr: Default::default(),
@@ -265,6 +273,7 @@ impl AppState {
             })
             .unwrap_or_default();
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
+        let launch_hosts = super::hosting::scan_at_launch(&root, &profiles, store.as_ref());
         let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
         let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
         hub.ids_start_at(next_id);
@@ -291,6 +300,8 @@ impl AppState {
             windows: Vec::new(),
             front: 0,
             quitting: false,
+            ending_hosts: false,
+            launch_hosts,
             quit_prompt: None,
             usage,
             pr: Default::default(),
@@ -318,8 +329,11 @@ impl AppState {
         })
         .detach();
 
-        // Every way of quitting (⌘Q, the menu bar, the Dock) ends up here.
+        // Every way of quitting (⌘Q, the menu bar, the Dock, logging out, the updater's relaunch)
+        // ends up here, before GPUI drops the windows and their terminals: the hosts are let go of
+        // first, so those drops leave their programs running.
         cx.on_app_quit(|cx| {
+            super::hosting::detach_all(cx);
             save_all(cx);
             ipc::remove_socket();
             async {}
@@ -364,6 +378,7 @@ impl AppState {
         for window in saved {
             open_workspace_window(Some(window), None, cx);
         }
+        super::hosting::adopt_orphans(cx);
         app_menu::sync(cx);
     }
 

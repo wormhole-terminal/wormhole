@@ -261,6 +261,7 @@ impl Render for TerminalView {
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
             .children(self.render_pane_bar(exited, cx))
+            .children(self.render_host_notice(cx))
     }
 }
 

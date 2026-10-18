@@ -57,6 +57,9 @@ pub enum TerminalEvent {
     FindChanged,
     /// A program asked the window to move, resize, minimise or the like (`allow_window_ops`).
     WindowOp(WindowOp),
+    /// The session host it runs in changed: it fell back to the app's process, or the host went
+    /// away. Its row is saved again, with the host it has now.
+    HostChanged,
 }
 
 impl TerminalView {
@@ -458,6 +461,7 @@ impl TerminalView {
             // be read, selected and saved.
             PtyEvent::Exited(code) => {
                 self.exit_code = code;
+                self.exit_was_host_lost(cx);
                 self.set_status(Status::Exited);
             }
         }

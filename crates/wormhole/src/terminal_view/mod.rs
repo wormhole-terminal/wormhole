@@ -29,6 +29,7 @@ mod blocks;
 mod failed;
 mod find;
 mod find_bar;
+mod hosted;
 mod input;
 mod line_size;
 mod links;
@@ -38,6 +39,7 @@ mod reported;
 mod status;
 
 pub use failed::Failure;
+pub use hosted::Start;
 pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]
 pub(crate) use render::PAINTS;
@@ -217,6 +219,8 @@ pub struct TerminalView {
     /// The profile of the window this terminal is in: whose look (colours, fonts, settings) it
     /// draws with, which is not the shown profile's in an odd window.
     profile: ProfileId,
+    /// The session host its program runs in, if it does (see `hosted`).
+    host: hosted::HostState,
 }
 
 impl TerminalView {
@@ -232,8 +236,11 @@ impl TerminalView {
         }
     }
 
+    /// A terminal for `options`, started as `start` says: at once in the app's own process, or in a
+    /// session host off the UI thread (the pane is blank until it is ready).
     pub fn new(
         mut options: SpawnOptions,
+        start: Start,
         profile: ProfileId,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -250,32 +257,16 @@ impl TerminalView {
         options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
-        let (pty, events) = match wormhole_core::terminal::spawn(initial, &options) {
-            Ok((pty, events)) => (Some(pty), Some(events)),
-            Err(err) => {
+        let local = matches!(start, Start::Local).then(|| wormhole_core::terminal::spawn(initial, &options));
+        let (pty, events) = match local {
+            Some(Ok((pty, events))) => (Some(pty), Some(events)),
+            Some(Err(err)) => {
                 tracing::error!("failed to spawn shell: {err:#}");
                 (None, None)
             }
+            None => (None, None),
         };
-
-        let mut tasks = Vec::new();
-        if let Some(events) = events {
-            tasks.push(cx.spawn(async move |this, cx| {
-                while let Some(event) = events.recv().await {
-                    // Everything that's already queued goes into the same update.
-                    let alive = this.update(cx, |this, cx| {
-                        this.handle_event(event, cx);
-                        while let Some(event) = events.try_recv() {
-                            this.handle_event(event, cx);
-                        }
-                        this.after_events(cx);
-                    });
-                    if alive.is_err() {
-                        break;
-                    }
-                }
-            }));
-        }
+        let host = hosted::HostState::of(&start);
 
         input::TerminalKeys::register(cx.entity().downgrade(), cx);
 
@@ -298,7 +289,7 @@ impl TerminalView {
             source: Source::Plain,
             failed: None,
         };
-        Self {
+        let mut this = Self {
             focus_handle,
             pty,
             title: None,
@@ -365,8 +356,33 @@ impl TerminalView {
             find: find::Find::default(),
             blocks: blocks::Blocks::default(),
             _focus_watch: focus_watch,
-            _tasks: tasks,
+            _tasks: Vec::new(),
+            host,
+        };
+        if let Some(events) = events {
+            this.listen(events, cx);
         }
+        this.begin(start, options, initial, cx);
+        this
+    }
+
+    /// Hand the PTY's events to the terminal as they come.
+    fn listen(&mut self, events: wormhole_core::terminal::PtyEvents, cx: &mut Context<Self>) {
+        self._tasks.push(cx.spawn(async move |this, cx| {
+            while let Some(event) = events.recv().await {
+                // Everything that's already queued goes into the same update.
+                let alive = this.update(cx, |this, cx| {
+                    this.handle_event(event, cx);
+                    while let Some(event) = events.try_recv() {
+                        this.handle_event(event, cx);
+                    }
+                    this.after_events(cx);
+                });
+                if alive.is_err() {
+                    break;
+                }
+            }
+        }));
     }
 
     /// Tell the program when the terminal gained or lost focus, if it asked, and draw the cursor
