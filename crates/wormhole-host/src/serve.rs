@@ -72,7 +72,7 @@ pub fn serve<S: Spawner>(
 ) -> io::Result<()> {
     let poller = wakes.poller.clone();
     watch(&poller, &listener.listener, LISTENER, false)?;
-    let mut conns: Vec<(ConnId, UnixStream)> = Vec::new();
+    let mut conns: Vec<(ConnId, UnixStream, bool)> = Vec::new();
     let mut events = Events::new();
     let mut buf = vec![0u8; 64 * 1024];
     let mut touch_at = Instant::now() + TOUCH_EVERY;
@@ -89,7 +89,7 @@ pub fn serve<S: Spawner>(
         let wrote_all = write_all(session, &mut conns, &poller);
         if session.is_done() {
             flush_at_end(session, &mut conns);
-            for (_, stream) in &conns {
+            for (_, stream, _) in &conns {
                 let _ = poller.delete(stream);
             }
             let _ = poller.delete(&listener.listener);
@@ -162,12 +162,12 @@ fn watch(poller: &Poller, source: &impl std::os::fd::AsFd, key: usize, writable:
 
 fn forget(
     poller: &Poller,
-    conns: &mut Vec<(ConnId, UnixStream)>,
+    conns: &mut Vec<(ConnId, UnixStream, bool)>,
     session: &mut Session<impl Spawner>,
     id: ConnId,
 ) {
-    if let Some(at) = conns.iter().position(|(c, _)| *c == id) {
-        let (_, stream) = conns.remove(at);
+    if let Some(at) = conns.iter().position(|(c, ..)| *c == id) {
+        let (_, stream, _) = conns.remove(at);
         let _ = poller.delete(&stream);
     }
     session.closed(id);
@@ -177,7 +177,7 @@ fn accept_all<S: Spawner>(
     session: &mut Session<S>,
     listener: &Listener,
     poller: &Poller,
-    conns: &mut Vec<(ConnId, UnixStream)>,
+    conns: &mut Vec<(ConnId, UnixStream, bool)>,
     now: Instant,
 ) {
     loop {
@@ -205,7 +205,8 @@ fn accept_all<S: Spawner>(
                     session.closed(id);
                     continue;
                 }
-                conns.push((id, stream));
+                // The third field: whether the poller watches it for writability too.
+                conns.push((id, stream, false));
             }
             Err(refusal) => {
                 let mut stream = stream;
@@ -217,13 +218,13 @@ fn accept_all<S: Spawner>(
 
 fn read_from<S: Spawner>(
     session: &mut Session<S>,
-    conns: &mut Vec<(ConnId, UnixStream)>,
+    conns: &mut Vec<(ConnId, UnixStream, bool)>,
     id: ConnId,
     buf: &mut [u8],
     poller: &Poller,
     now: Instant,
 ) {
-    let Some(at) = conns.iter().position(|(c, _)| *c == id) else { return };
+    let Some(at) = conns.iter().position(|(c, ..)| *c == id) else { return };
     let mut total = 0;
     while total < READ_PER_TURN {
         match conns[at].1.read(buf) {
@@ -243,13 +244,13 @@ fn read_from<S: Spawner>(
 /// watch for writability where something is left. Whether every queue was written out.
 fn write_all<S: Spawner>(
     session: &mut Session<S>,
-    conns: &mut Vec<(ConnId, UnixStream)>,
+    conns: &mut Vec<(ConnId, UnixStream, bool)>,
     poller: &Poller,
 ) -> bool {
     let mut all = true;
-    let ids: Vec<ConnId> = conns.iter().map(|(id, _)| *id).collect();
+    let ids: Vec<ConnId> = conns.iter().map(|(id, ..)| *id).collect();
     for id in ids {
-        let Some(at) = conns.iter().position(|(c, _)| *c == id) else { continue };
+        let Some(at) = conns.iter().position(|(c, ..)| *c == id) else { continue };
         let out = session.output(id);
         if !out.is_empty() {
             match conns[at].1.write(out) {
@@ -267,16 +268,22 @@ fn write_all<S: Spawner>(
         }
         let left = !session.output(id).is_empty();
         all &= !left;
-        let interest = if left { Event::all(id.0 as usize) } else { Event::readable(id.0 as usize) };
-        let _ = poller.modify_with_mode(&conns[at].1, interest, PollMode::Level);
+        // Only when it changes: a `kevent` per connection per turn would double the syscalls of a
+        // flood, whose turns are otherwise one `write` each.
+        let (_, stream, watching_writes) = &mut conns[at];
+        if *watching_writes != left {
+            *watching_writes = left;
+            let interest = if left { Event::all(id.0 as usize) } else { Event::readable(id.0 as usize) };
+            let _ = poller.modify_with_mode(&*stream, interest, PollMode::Level);
+        }
     }
     all
 }
 
 /// The host is ending: give the connections a moment to take their last frames.
-fn flush_at_end<S: Spawner>(session: &mut Session<S>, conns: &mut [(ConnId, UnixStream)]) {
+fn flush_at_end<S: Spawner>(session: &mut Session<S>, conns: &mut [(ConnId, UnixStream, bool)]) {
     let until = Instant::now() + FLUSH_AT_END;
-    for (id, stream) in conns.iter_mut() {
+    for (id, stream, _) in conns.iter_mut() {
         let _ = stream.set_nonblocking(false);
         let _ = stream.set_write_timeout(Some(
             until.saturating_duration_since(Instant::now()).max(Duration::from_millis(1)),

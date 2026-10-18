@@ -118,7 +118,12 @@ impl<S: Spawner> Session<S> {
             }
         }
         send_counters(conn, program.counters(), now, next, counters_every);
-        let Some(attach) = &conn.attach else { return false };
+        let Some(attach) = &mut conn.attach else { return false };
+        // Stalled means no progress, not behind: a client that keeps acknowledging under a flood
+        // has a full window after every turn and must not be cut loose for it.
+        if budget < MAX_DATA {
+            attach.stalled_since = None;
+        }
         let unsent =
             attach.mode != StreamMode::None && attach.cursor.as_ref().is_some_and(|c| c.unsent() > 0);
         let blocked = unsent && (attach.credit() == 0 || conn.pending() >= OUT_HIGH);

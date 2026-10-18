@@ -162,8 +162,10 @@ impl HostedTerminal {
         self.pid
     }
 
+    /// The grid's size now. Read from the screen, not from the last [`resize`](Self::resize): a
+    /// program that may act on the window (DECCOLM, XTWINOPS) resizes the engine itself.
     pub fn size(&self) -> wire::Size {
-        self.size
+        size_of(&self.screen.lock(), self.size)
     }
 
     pub fn stream(&self) -> &Arc<Stream> {
@@ -241,7 +243,7 @@ impl HostedTerminal {
             cursor,
             offset,
             epoch: self.core.epoch.load(Ordering::Acquire),
-            size: self.size,
+            size: size_of(&screen, self.size),
             block: made.seeds.block,
             link_seq: made.seeds.link_seq,
             image_handle: made.seeds.image_handle,
@@ -325,6 +327,12 @@ impl HostedTerminal {
 /// A size the engine can take: at least one cell, at most [`MAX_CELLS`] each way.
 pub fn clamp_size(size: wire::Size) -> wire::Size {
     wire::Size { cols: size.cols.clamp(1, MAX_CELLS), rows: size.rows.clamp(1, MAX_CELLS), ..size }
+}
+
+/// The screen's grid in cells, with the cell size of `last` (the engine keeps no pixels).
+fn size_of(screen: &Screen, last: wire::Size) -> wire::Size {
+    let cells = |n: usize| n.clamp(1, usize::from(MAX_CELLS)) as u16;
+    wire::Size { cols: cells(screen.columns()), rows: cells(screen.screen_lines()), ..last }
 }
 
 /// The wire's size (cells in 1/16 pixel) as the terminal's.
