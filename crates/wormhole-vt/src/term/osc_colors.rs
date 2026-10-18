@@ -20,6 +20,7 @@ use crate::types::{NamedColor, Rgb};
 use super::Terminal;
 use super::color::{ColorSpec, parse_color};
 use super::event::Terminator;
+use super::oscs::terminator;
 
 /// How many special colors there are: bold, underline, blink, reverse, italic.
 pub(super) const SPECIAL_COLORS: usize = 5;
@@ -51,13 +52,6 @@ enum Slot {
     Named(NamedColor),
     /// A dynamic color from OSC 13 to 19, 0 to 6.
     Extra(usize),
-}
-
-fn terminator(end: Terminator) -> &'static str {
-    match end {
-        Terminator::Bel => "\x07",
-        Terminator::St => "\x1b\\",
-    }
 }
 
 /// The number in `text`, if it is one.

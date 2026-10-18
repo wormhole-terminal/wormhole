@@ -33,7 +33,9 @@
 //! | `reports` | DSR, DA1/2/3, XTVERSION, XTGETTCAP |
 //! | `presentation`, `state` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | `window`, `title` | XTWINOPS: the window's reports and operations; the title, the icon name and their stack |
-//! | `osc`, `oscs`, `color` | operating system commands |
+//! | `osc`, `oscs` | operating system commands: collecting the string; the dispatch and the text helpers |
+//! | `osc_cwd`, `osc_link`, `osc_clipboard`, `osc_notify`, `osc_marks` | OSC 7 (the folder), 8 (hyperlinks), 52 (clipboard), 9, 9;4, 99 and 777 (notifications, progress), 133 (shell marks) |
+//! | `osc_colors`, `color` | OSC 4, 5, 10 to 19 and their resets; the parser of color specs |
 //! | `dcs` | device control strings (DECRQSS, XTGETTCAP, sixel) and APC |
 //! | `graphics` | kitty's graphics protocol, Sixel and iTerm2's inline images, placed in the grid |
 //! | `reset` | RIS, DECSTR, DECALN |
@@ -95,7 +97,12 @@ mod locator;
 mod modes;
 mod modes_apply;
 mod osc;
+mod osc_clipboard;
 mod osc_colors;
+mod osc_cwd;
+mod osc_link;
+mod osc_marks;
+mod osc_notify;
 mod oscs;
 mod presentation;
 mod print;
