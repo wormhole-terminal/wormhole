@@ -10,13 +10,13 @@ use gpui_kit::*;
 
 use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
-use super::picker::Picker;
+use super::picker::{Picker, PickerChip};
 use super::problem::GitTab;
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
-use crate::workspace::panel_list::Rows;
+use crate::workspace::panel_list::{CardPart, Rows};
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
 use wormhole_core::limits::count_grouped;
 use wormhole_core::panel::age;
@@ -66,6 +66,8 @@ pub struct HistoryState {
 /// One line of the History list: a commit, or what sits under the expanded one.
 #[derive(Clone, PartialEq)]
 enum HistoryRow {
+    /// The card's head: "History", how many commits, and the branch picker.
+    Head,
     Error,
     Commit(usize),
     /// "Loading files…" / "No file changes." under the expanded commit.
@@ -76,6 +78,17 @@ enum HistoryRow {
     File(usize),
     /// Bottom padding, so the last row can scroll clear of the panel edge.
     Spacer,
+}
+
+impl HistoryRow {
+    /// The commits are one card; the spacer under it is outside.
+    fn part(&self) -> CardPart {
+        match self {
+            Self::Head => CardPart::Head,
+            Self::Spacer => CardPart::Outside,
+            _ => CardPart::Body,
+        }
+    }
 }
 
 impl HistoryState {
@@ -220,7 +233,8 @@ impl HistoryState {
     }
 
     fn rows(&self) -> Vec<HistoryRow> {
-        let mut rows = Vec::with_capacity(self.commits.len() + 2);
+        let mut rows = Vec::with_capacity(self.commits.len() + 3);
+        rows.push(HistoryRow::Head);
         if self.error.is_some() {
             rows.push(HistoryRow::Error);
         }
@@ -433,11 +447,13 @@ impl Workspace {
         let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let history = &session.history;
-        let panel = div().flex().flex_col().flex_1().min_h_0().pt(px(style::PANEL_LIST_TOP));
+        let panel = div().flex().flex_col().flex_1().min_h_0();
 
         if history.root.is_none() {
             if let Some(problem) = &history.problem {
-                return panel.child(self.render_git_problem(GitTab::History, problem, cx)).into_any_element();
+                return panel
+                    .child(style::panel_card(ui, self.render_git_problem(GitTab::History, problem, cx)))
+                    .into_any_element();
             }
             let answered =
                 session.terminal().read(cx).cwd.as_deref().is_some_and(|cwd| history.answered_for(cwd));
@@ -446,26 +462,8 @@ impl Workspace {
             } else {
                 "Reading history…"
             };
-            return panel.child(style::empty_note(ui, text).px_4()).into_any_element();
+            return panel.child(style::panel_card(ui, style::empty_note(ui, text))).into_any_element();
         }
-
-        // How many commits, and the branch picker at the right.
-        let header = div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .gap_2()
-            .h(px(style::TITLE_ROW_H))
-            .pl(px(style::PANEL_INSET))
-            .pr(px(style::HEADER_PAD_END))
-            .child(div().flex_1().min_w_0().text_caption().text_color(ui.muted).truncate().child(
-                match history.commits.len() {
-                    0 => "No commits yet".to_string(),
-                    n if n >= LOG_LIMIT => format!("Latest {n} commits"),
-                    n => format!("{} commits", count_grouped(n)),
-                },
-            ))
-            .child(self.render_picker_chip(Picker::History, "", history.rev.as_deref(), cx));
 
         let view = HistoryView {
             commits: history.commits.clone(),
@@ -487,22 +485,30 @@ impl Workspace {
                 .map(|d| d.as_secs() as i64)
                 .unwrap_or(0),
             width: self.columns().panel,
+            picker: self.picker_chip(Picker::History, "", history.rev.as_deref(), cx),
             this: cx.weak_entity(),
         };
 
         let profile = self.profile.clone();
         // A column that fills the panel, so the list gets a bounded height.
         panel
-            .child(header)
-            .child(history.list.element(self.panel_ring(window, ui), move |row, window, cx| {
-                view.render_row(row, ui_in(&profile, cx), window, cx)
-            }))
+            .child(history.list.with_edges(
+                history.list.element_carded(
+                    self.panel_ring(window, ui),
+                    ui,
+                    HistoryRow::part,
+                    move |row, window, cx| view.render_row(row, ui_in(&profile, cx), window, cx),
+                ),
+                ui,
+                "history-scrollbar",
+                cx,
+            ))
             .into_any_element()
     }
 }
 
 /// Where a commit's files and the lines about them start: one level in (x 40).
-const FILES_X: f32 = style::PANEL_INSET + style::INDENT;
+const FILES_X: f32 = style::CARD_INSET + style::INDENT;
 
 /// What the History list's rows draw from, captured for the render callback.
 struct HistoryView {
@@ -519,15 +525,38 @@ struct HistoryView {
     now: i64,
     /// The panel's width, which file names are fitted to.
     width: f32,
+    picker: PickerChip,
     this: WeakEntity<Workspace>,
 }
 
 impl HistoryView {
     fn render_row(&self, row: &HistoryRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
         match row {
+            HistoryRow::Head => style::section_card(
+                "history-band",
+                ui,
+                style::BandParts {
+                    kind: style::BandKind::Section,
+                    section: style::Section::Empty,
+                    title: "History".into(),
+                    detail: None,
+                    count: match self.commits.len() {
+                        0 => None,
+                        n => Some(count_grouped(n).into()),
+                    },
+                    waiting: None,
+                    add: None,
+                    on_toggle: None,
+                    drop_target: false,
+                    sticky: false,
+                    joined: false,
+                },
+                vec![self.picker.render(ui, cx)],
+            )
+            .into_any_element(),
             // The branch is gone (or git can't read its log): git's words where the list would be.
             HistoryRow::Error => div()
-                .px_4()
+                .px(px(style::CARD_INSET))
                 .py_2()
                 .text_caption()
                 .text_color(ui.danger_text)
@@ -590,7 +619,7 @@ fn files_line(color: Hsla) -> Div {
         .items_center()
         .min_h(px(style::ROW_H))
         .pl(px(FILES_X))
-        .pr_4()
+        .pr(px(style::CARD_INSET))
         .text_caption()
         .text_color(color)
 }

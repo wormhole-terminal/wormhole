@@ -234,6 +234,9 @@ pub struct Workspace {
     /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
     sidebar: sidebar::SidebarState,
     right_tab: RightTab,
+    /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
+    /// again whenever another tab is shown.
+    panel_scroll: ScrollHandle,
     /// Open branch picker (Changes "compare with" / History branch).
     picker: Option<picker::Picker>,
     branches: Vec<String>,
@@ -384,6 +387,7 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             right_tab: RightTab::default(),
+            panel_scroll: ScrollHandle::new(),
             picker: None,
             branches: Vec::new(),
             picker_search,

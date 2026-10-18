@@ -248,12 +248,12 @@ impl Workspace {
 // ---------------------------------------------------------------- rows
 
 impl NotesView {
-    /// The Next steps band; `pinned` is its copy drawn over the top of the list.
-    pub(super) fn render_tasks_band(&self, ui: UiColors, pinned: bool) -> AnyElement {
+    /// The Next steps card's head.
+    pub(super) fn render_tasks_band(&self, ui: UiColors) -> AnyElement {
         let (toggle, add) = (self.this.clone(), self.this.clone());
         let open = self.tasks.iter().filter(|t| !t.done).count();
-        style::band(
-            if pinned { "tasks-band-pinned" } else { "tasks-band" },
+        style::section_card(
+            "tasks-band",
             ui,
             style::BandParts {
                 kind: style::BandKind::Section,
@@ -279,10 +279,10 @@ impl NotesView {
                         .ok();
                 })),
                 drop_target: false,
-                sticky: pinned,
-                // First in the list, or pinned over its top: right under the tab bar's rule.
-                joined: true,
+                sticky: false,
+                joined: false,
             },
+            Vec::new(),
         )
         .aria_label(spoken::section_band("Next steps", open, spoken::Counted::Open))
         .into_any_element()

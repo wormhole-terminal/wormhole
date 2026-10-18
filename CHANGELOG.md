@@ -46,6 +46,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Terminals as tabs is one row under the title row: the profile chip, a group switcher (the group's
   colour, name and count, with an amber dot while another group needs you) and that group's terminals as
   tabs. As in macOS Terminal there is no tab bar while there is only one terminal; the switcher shows
+- The right panel's sections are cards like the sidebar's again, under its own tab bar: Changes, History
+  and Notes are each a stack of cards led by their heads, with the compare picker and refresh in the
+  Changes card's head. Its lists scroll like the sidebar's, with the same scrollbar and the hairline under
+  the tab bar only while rows are scrolled beneath it.
   once there is another group to switch to, the tabs once the group has more than one terminal.
   The switcher opens a search ("Go to group or terminal…") over the groups as cards, "In no group",
   New group and "Show all groups in the sidebar". ⌃⌥[ and ⌃⌥] go to the previous and next group and

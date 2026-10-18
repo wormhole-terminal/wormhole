@@ -2,7 +2,7 @@
 //! another branch), as a list or a folder tree.
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
@@ -12,7 +12,7 @@ use gpui_kit::*;
 use super::diff::Observed;
 use super::file_line::{Placement, change_row};
 use super::job::{Job, Ticket, Wanted};
-use super::picker::Picker;
+use super::picker::{Picker, PickerChip};
 use super::problem::{self, GitTab};
 use crate::settings::UiColors;
 use crate::settings::{settings_in, ui_in};
@@ -325,61 +325,22 @@ impl Workspace {
     pub(crate) fn render_changes_tab(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
-        let panel = div().flex().flex_col().flex_1().min_h_0().pt(px(style::PANEL_LIST_TOP));
+        let panel = div().flex().flex_col().flex_1().min_h_0();
 
         let Some(status) = &session.git.status else {
             if let Some(error) = &session.git.error {
-                return panel.child(self.render_git_problem(GitTab::Changes, error, cx)).into_any_element();
+                return panel
+                    .child(style::panel_card(ui, self.render_git_problem(GitTab::Changes, error, cx)))
+                    .into_any_element();
             }
-            // Not a repository: no header, nothing to compare or refresh.
+            // Not a repository: nothing to compare or refresh.
             let text = if session.git.loading() || session.git.cwd.is_none() {
                 "Reading git status…"
             } else {
                 "This terminal's folder isn't inside a git repository."
             };
-            return panel.child(style::empty_note(ui, text).px_4()).into_any_element();
+            return panel.child(style::panel_card(ui, style::empty_note(ui, text))).into_any_element();
         };
-
-        // The branch chip · the repository, the compare picker and refresh, ending on x 344.
-        let header = div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .gap_2()
-            .h(px(style::TITLE_ROW_H))
-            .pl(px(style::PANEL_INSET))
-            .pr(px(style::HEADER_PAD_END))
-            .child(style::branch_chip(ui, status.branch.as_deref(), None))
-            .child(div().flex_none().text_caption().text_color(ui.faint).child("·"))
-            .child(
-                div()
-                    .min_w_0()
-                    .truncate()
-                    .text_caption()
-                    .text_color(ui.muted)
-                    .child(short_root(&status.root)),
-            )
-            .child(div().flex_1())
-            .child(self.render_picker_chip(Picker::Compare, "vs", status.compare.as_deref(), cx))
-            .child(
-                style::icon_button("git-refresh", ui, IconName::RefreshCw, "Refresh")
-                    .in_title_row()
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        let ix = this.active;
-                        this.refresh_git(ix, cx);
-                    })),
-            );
-
-        let panel = panel
-            .child(header)
-            .children(status.compare_missing.as_deref().map(|branch| problem::compare_missing(ui, branch)))
-            .children(session.git.error.as_ref().map(|error| problem::refresh_failed(ui, error)));
-        if status.files.is_empty() {
-            // The header stays, so the compare picker is still in reach.
-            return panel
-                .child(style::empty_note(ui, "No changes. Working tree is clean.").px_4())
-                .into_any_element();
-        }
 
         let list = &session.git.list;
         let files = list.built.as_ref().map(|b| b.files.clone()).unwrap_or_default();
@@ -387,28 +348,44 @@ impl Workspace {
             files,
             open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
             width: self.columns().panel,
+            // The compare picker and refresh button sit in the first card's head, where the
+            // panel's header row used to be.
+            compare: self.picker_chip(Picker::Compare, "vs", status.compare.as_deref(), cx),
             this: cx.weak_entity(),
         });
-        let pinned =
-            list.rows.pinned(px(style::BAND_H), ChangeRow::is_band).map(|(row, push)| (row.clone(), push));
-        let in_list = view.clone();
+
+        let panel = panel
+            .children(status.compare_missing.as_deref().map(|branch| problem::compare_missing(ui, branch)))
+            .children(session.git.error.as_ref().map(|error| problem::refresh_failed(ui, error)));
+        if status.files.is_empty() {
+            // The head stays, so the compare picker is still in reach.
+            let head = view.render_band(Group::All, 0, false, true, ui, cx);
+            return panel
+                .child(style::panel_card(
+                    ui,
+                    div()
+                        .flex()
+                        .flex_col()
+                        .child(head)
+                        .child(style::empty_note(ui, "No changes. Working tree is clean.")),
+                ))
+                .into_any_element();
+        }
+
+        let in_list = view;
         let profile = self.profile.clone();
         panel
-            .child(
-                // A band whose section scrolls under the top stays pinned there.
-                div()
-                    .relative()
-                    .flex()
-                    .flex_col()
-                    .flex_1()
-                    .min_h_0()
-                    .child(list.rows.element(self.panel_ring(window, ui), move |row, window, cx| {
-                        in_list.render_row(row, false, ui_in(&profile, cx), window, cx)
-                    }))
-                    .children(pinned.map(|(row, push)| {
-                        div().absolute().top(push).left_0().right_0().child(view.render_band(&row, true, ui))
-                    })),
-            )
+            .child(list.rows.with_edges(
+                list.rows.element_carded(
+                    self.panel_ring(window, ui),
+                    ui,
+                    ChangeRow::part,
+                    move |row, window, cx| in_list.render_row(row, ui_in(&profile, cx), window, cx),
+                ),
+                ui,
+                "changes-scrollbar",
+                cx,
+            ))
             .into_any_element()
     }
 }
@@ -420,24 +397,25 @@ struct ChangesView {
     open_path: Option<String>,
     /// The panel's width, which file names are fitted to.
     width: f32,
+    compare: PickerChip,
     this: WeakEntity<Workspace>,
 }
 
 impl ChangesView {
-    /// One visible row of the Changes list; `pinned` is a band's copy over the top of the list.
-    fn render_row(
-        &self,
-        row: &ChangeRow,
-        pinned: bool,
-        ui: UiColors,
-        window: &mut Window,
-        cx: &App,
-    ) -> AnyElement {
+    /// One visible row of the Changes list.
+    fn render_row(&self, row: &ChangeRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
         match row {
-            ChangeRow::Band { .. } => self.render_band(row, pinned, ui),
-            ChangeRow::FoldNote(text) => {
-                div().px_4().py_2().text_caption().text_color(ui.muted).child(text.clone()).into_any_element()
+            // The first section's head carries the picker and refresh.
+            ChangeRow::Band { group, count, folded, first } => {
+                self.render_band(*group, *count, *folded, *first, ui, cx)
             }
+            ChangeRow::FoldNote(text) => div()
+                .px(px(style::CARD_INSET))
+                .py_2()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(text.clone())
+                .into_any_element(),
             ChangeRow::Dir { group, path, label, depth, collapsed } => {
                 let (this, group, key) = (self.this.clone(), *group, path.clone());
                 let icon = crate::icons::folder(file_name(label), !collapsed, cx)
@@ -474,41 +452,60 @@ impl ChangesView {
         }
     }
 
-    /// A section's band: its title and file count, a click folds it. No +: nothing is added here.
-    fn render_band(&self, row: &ChangeRow, pinned: bool, ui: UiColors) -> AnyElement {
-        let ChangeRow::Band { group, count, folded, joined } = *row else { return div().into_any_element() };
+    /// A section's card head: its title and file count, a click folds it. No +: nothing is added
+    /// here. With `controls`, the compare picker and the refresh button come before the count.
+    fn render_band(
+        &self,
+        group: Group,
+        count: usize,
+        folded: bool,
+        controls: bool,
+        ui: UiColors,
+        cx: &App,
+    ) -> AnyElement {
         let this = self.this.clone();
-        let id = SharedString::from(format!(
-            "changes-band-{}{}",
-            group.tag(),
-            if pinned { "-pinned" } else { "" }
-        ));
-        style::band(
-            id,
+        let refresh = self.this.clone();
+        let trailing = if controls {
+            vec![
+                self.compare.render(ui, cx),
+                style::icon_button("git-refresh", ui, IconName::RefreshCw, "Refresh")
+                    .in_band()
+                    .on_click(move |_, _, cx| {
+                        refresh
+                            .update(cx, |this, cx| {
+                                let ix = this.active;
+                                this.refresh_git(ix, cx);
+                            })
+                            .ok();
+                    })
+                    .into_any_element(),
+            ]
+        } else {
+            Vec::new()
+        };
+        style::section_card(
+            SharedString::from(format!("changes-band-{}", group.tag())),
             ui,
             style::BandParts {
                 kind: style::BandKind::Section,
                 section: style::Section::of(count, folded),
                 title: group.title().into(),
                 detail: None,
-                count: Some(count_grouped(count).into()),
+                count: (count > 0).then(|| count_grouped(count).into()),
                 waiting: None,
                 add: None,
                 on_toggle: Some(Box::new(move |_, _, cx| {
                     this.update(cx, |this, cx| this.toggle_section(group, count, cx)).ok();
                 })),
                 drop_target: false,
-                sticky: pinned,
-                joined: joined && !pinned,
+                sticky: false,
+                joined: false,
             },
+            trailing,
         )
         .aria_label(spoken::section_band(group.title(), count, spoken::Counted::Files))
         .into_any_element()
     }
-}
-
-fn short_root(root: &Path) -> String {
-    root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| root.display().to_string())
 }
 
 #[cfg(test)]

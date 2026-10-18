@@ -169,11 +169,12 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             )
             .into_any_element(),
         ))
-        .child(card(
-            true,
-            true,
-            None,
-            tile_row("g-row-loose", "scratch", StatusGlyph::Idle, "~", false).into_any_element(),
+        // A terminal in no group: the row is its card.
+        .child(style::card_segment_solo(
+            ui,
+            metrics,
+            false,
+            tile_row("g-row-loose", "scratch", StatusGlyph::Idle, "~", false),
         ));
 
     // Every row state, two lines and one.

@@ -9,8 +9,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use gpui_kit::component::scroll::{Scrollbar, ScrollbarMode};
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
+use gpui_kit::component::scroll::Scrollbar;
 
 use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
 use super::session::home_dir;
@@ -382,26 +381,11 @@ impl Workspace {
             .into_any_element()
     }
 
-    /// What lies over the list's edges: a hairline under the title row while rows are scrolled up
-    /// beneath it, as a Mac window draws one, and the scrollbar in the system's style, as the
-    /// terminal's: while the list scrolls (overlay), or always (legacy). No fade at the bottom: over the sidebar's translucent surface a gradient darkens what it covers
-    /// instead of fading it, and the row cut off at the edge already says there is more.
+    /// What lies over the list's edges (`panel_list::scroll_edges`, as the panel's lists).
     fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
-        // A wheel turn moves the offset at once and the layout clamps it only on the next frame, and
-        // the clamp leaves -0, which `Pixels` orders below 0: a list too short to scroll would draw
-        // as scrolled. Half a point of real scroll counts.
-        let (offset, max) = (self.sidebar.scroll.offset(), self.sidebar.scroll.max_offset());
-        let scrolled = offset.y.max(-max.y) < px(-0.5);
-        let mode = match crate::scroller::ScrollerPrefs::style(cx) {
-            ScrollerStyle::Overlay => ScrollbarMode::Scrolling,
-            ScrollerStyle::Legacy => ScrollbarMode::Always,
-        };
-        div()
-            .absolute()
-            .inset_0()
-            .when(scrolled, |d| d.child(div().absolute().top_0().left_0().right_0().rule_top(ui)))
-            .child(Scrollbar::vertical(&self.sidebar.scroll).id("sidebar-scrollbar").mode(mode))
-            .into_any_element()
+        let scroll = &self.sidebar.scroll;
+        let scrollbar = Scrollbar::vertical(scroll).id("sidebar-scrollbar");
+        super::panel_list::scroll_edges(ui, super::panel_list::is_scrolled(scroll), scrollbar, cx)
     }
 
     /// Fold the group called `label`, or open it; `false` if there is none.

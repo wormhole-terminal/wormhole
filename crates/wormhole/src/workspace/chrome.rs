@@ -281,7 +281,9 @@ impl Workspace {
                     ),
                 )
             });
-        div().flex_none().flex().flex_col().rule_bottom(ui).child(row).into_any_element()
+        // No rule under it: the tab's list draws one while rows are scrolled up beneath it, as the
+        // sidebar's does.
+        div().flex_none().flex().flex_col().child(row).into_any_element()
     }
 
     /// The panel's tabs: a tab list VoiceOver reads with its counts in words, one

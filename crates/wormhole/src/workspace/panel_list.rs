@@ -1,22 +1,107 @@
-//! Virtualized rows for the right panel's lists (Notes, Changes, History), and the band
-//! pinned over the top of one while its section scrolls under it.
+//! Virtualized rows for the right panel's lists (Notes, Changes, History), each row a stretch
+//! of a card.
 //!
 //! A plain `overflow_y_scroll` div is not an option for those: scrolling
 //! notifies the whole workspace view, so every wheel tick would rebuild every
 //! row. GPUI's `list` asks for the rows in view only, so a tick costs the same
-//! for 20 rows as for 20 000. The same notify is what redraws the pinned band.
+//! for 20 rows as for 20 000.
 
 use std::ops::Range;
 use std::rc::Rc;
 
+use gpui_kit::component::scroll::{Scrollbar, ScrollbarMode};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::terminal::scrollbar::ScrollerStyle;
 
 use crate::settings::UiColors;
-use crate::style;
+use crate::style::{self, Edges as _};
 
 /// Laid out above and below the viewport so fast scrolling doesn't pop in.
 const OVERDRAW: f32 = 300.0;
+
+/// What lies over a scrolling list's edges, the sidebar's and the panel's alike: a hairline under
+/// the row above it while rows are `scrolled` up beneath it, as a Mac window draws one, and the
+/// `scrollbar` in the system's style, as the terminal's: while the list scrolls (overlay), or
+/// always (legacy). No fade at the bottom: over a translucent surface a gradient darkens what it
+/// covers instead of fading it, and the row cut off at the edge already says there is more. Lay it
+/// over the list, beside it rather than in it: a child of the scrolled content moves with it.
+pub(super) fn scroll_edges(ui: UiColors, scrolled: bool, scrollbar: Scrollbar, cx: &App) -> AnyElement {
+    let mode = match crate::scroller::ScrollerPrefs::style(cx) {
+        ScrollerStyle::Overlay => ScrollbarMode::Scrolling,
+        ScrollerStyle::Legacy => ScrollbarMode::Always,
+    };
+    div()
+        .absolute()
+        .inset_0()
+        .when(scrolled, |d| d.child(div().absolute().top_0().left_0().right_0().rule_top(ui)))
+        .child(scrollbar.mode(mode))
+        .into_any_element()
+}
+
+/// Whether a scrolled div's offset is a real scroll. A wheel turn moves the offset at once and the
+/// layout clamps it only on the next frame, and the clamp leaves -0, which `Pixels` orders below 0:
+/// a list too short to scroll would draw as scrolled. Half a point counts.
+pub(super) fn is_scrolled(scroll: &ScrollHandle) -> bool {
+    let (offset, max) = (scroll.offset(), scroll.max_offset());
+    offset.y.max(-max.y) < px(-0.5)
+}
+
+/// A div that scrolls `content` (a short tab, all there at once: Project, Usage), with the room
+/// above its first card and the [`scroll_edges`] over it.
+pub(super) fn scroll_column(
+    id: &'static str,
+    scroll: &ScrollHandle,
+    ui: UiColors,
+    content: AnyElement,
+    cx: &App,
+) -> AnyElement {
+    div()
+        .relative()
+        .flex()
+        .flex_col()
+        .flex_1()
+        .min_h_0()
+        .child(
+            div()
+                .id(id)
+                .flex()
+                .flex_col()
+                .size_full()
+                .pt(px(style::PANEL_LIST_TOP))
+                .overflow_y_scroll()
+                .track_scroll(scroll)
+                .child(content),
+        )
+        .child(scroll_edges(ui, is_scrolled(scroll), Scrollbar::vertical(scroll).id((id, 1u64)), cx))
+        .into_any_element()
+}
+
+/// A carded list's colours and how it tells each row's place in its card.
+type Carded<T> = (UiColors, fn(&T) -> CardPart);
+
+/// Where a row of a carded list stands (`Rows::element_carded`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CardPart {
+    /// The first line of a card: its head.
+    Head,
+    /// A line under a head, in the same card.
+    Body,
+    /// Not in a card.
+    Outside,
+}
+
+/// How a row sits in its card, given the part of the row after it: `None` for a row outside any
+/// card, else whether it is the card's top (a head) and whether it is also its bottom (nothing
+/// of the card follows).
+fn card_edges(part: CardPart, next: Option<CardPart>) -> Option<(bool, bool)> {
+    match part {
+        CardPart::Outside => None,
+        CardPart::Head | CardPart::Body => {
+            Some((part == CardPart::Head, next.is_none_or(|next| next != CardPart::Body)))
+        }
+    }
+}
 
 /// The rows of one list plus the state that scrolls them.
 ///
@@ -43,6 +128,26 @@ impl<T: PartialEq> Rows<T> {
         &self.rows
     }
 
+    /// Whether rows are scrolled up under the list's top.
+    pub fn scrolled(&self) -> bool {
+        let top = self.state.logical_scroll_top();
+        top.item_ix > 0 || top.offset_in_item > px(0.5)
+    }
+
+    /// `list` (this one's [`Self::element`] or [`Self::element_carded`]) with the
+    /// [`scroll_edges`] over it, filling the space its parent column gives it.
+    pub fn with_edges(&self, list: List, ui: UiColors, id: &'static str, cx: &App) -> AnyElement {
+        div()
+            .relative()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .child(list)
+            .child(scroll_edges(ui, self.scrolled(), Scrollbar::vertical(&self.state).id(id), cx))
+            .into_any_element()
+    }
+
     /// Scroll just enough to show row `ix` (the one the keys moved to).
     pub fn reveal(&self, ix: usize) {
         self.state.scroll_to_reveal_item(ix);
@@ -61,17 +166,60 @@ impl<T: PartialEq> Rows<T> {
     where
         T: 'static,
     {
+        self.build(cursor, None, render)
+    }
+
+    /// Like [`Self::element`] for the right panel: the rows are the lines of cards. A row that
+    /// is `part` [`CardPart::Head`] starts a card and the [`CardPart::Body`] rows after it
+    /// continue it; the card ends at the last of them, and a row outside any card (the spacer
+    /// at the foot) stands alone. Each row is drawn as its stretch of the card
+    /// (`style::card_segment`, the same as the sidebar's), so the list stays virtual.
+    pub fn element_carded(
+        &self,
+        cursor: Option<(usize, Option<UiColors>)>,
+        ui: UiColors,
+        part: fn(&T) -> CardPart,
+        render: impl Fn(&T, &mut Window, &mut App) -> AnyElement + 'static,
+    ) -> List
+    where
+        T: 'static,
+    {
+        self.build(cursor, Some((ui, part)), render)
+    }
+
+    fn build(
+        &self,
+        cursor: Option<(usize, Option<UiColors>)>,
+        carded: Option<Carded<T>>,
+        render: impl Fn(&T, &mut Window, &mut App) -> AnyElement + 'static,
+    ) -> List
+    where
+        T: 'static,
+    {
         let rows = self.rows.clone();
         list(self.state.clone(), move |ix, window, cx| match rows.get(ix) {
             // Items are laid out at their content width unless told otherwise.
             Some(row) => {
                 let keyed = cursor.filter(|(at, _)| *at == ix);
+                let content = render(row, window, cx);
+                let content = match carded {
+                    Some((ui, part)) => match card_edges(part(row), rows.get(ix + 1).map(part)) {
+                        None => content,
+                        Some((top, bottom)) => {
+                            style::card_segment(ui, style::panel_metrics(), top, bottom, None, content)
+                                .into_any_element()
+                        }
+                    },
+                    None => content,
+                };
                 div()
                     .id(("list-row", ix))
                     .w_full()
                     .relative()
+                    // The room above the first card, scrolling away with it as the sidebar's does.
+                    .when(ix == 0, |d| d.pt(px(style::PANEL_LIST_TOP)))
                     .when(keyed.is_some(), |d| d.role(Role::ListItem).aria_active_descendant())
-                    .child(render(row, window, cx))
+                    .child(content)
                     .children(
                         keyed
                             .and_then(|(_, ring)| ring)
@@ -83,27 +231,6 @@ impl<T: PartialEq> Rows<T> {
         })
         .flex_1()
         .min_h_0()
-    }
-
-    /// The band to pin over the top of the list ("section bands stick"): the last
-    /// row `is_band` says is a band at or above the first row in view, once that band has
-    /// started to scroll away; `None` while it is still wholly in view. The second value is
-    /// how far up to draw it, so the next band pushes it out (`band_h` is a band's height).
-    /// Call while rendering the list's parent, never from a row: the list's state is borrowed
-    /// while it draws its rows.
-    pub fn pinned(&self, band_h: Pixels, is_band: impl Fn(&T) -> bool) -> Option<(&T, Pixels)> {
-        let top = self.state.logical_scroll_top();
-        let first = top.item_ix.min(self.rows.len().checked_sub(1)?);
-        let band = (0..=first).rev().find(|&ix| is_band(&self.rows[ix]))?;
-        if band == top.item_ix && top.offset_in_item <= px(0.) {
-            return None;
-        }
-        let viewport = self.state.viewport_bounds();
-        let push = (first + 1..self.rows.len())
-            .find(|&ix| is_band(&self.rows[ix]))
-            .and_then(|next| self.state.bounds_for_item(next))
-            .map_or(px(0.), |next| (next.top() - viewport.top() - band_h).min(px(0.)));
-        Some((&self.rows[band], push))
     }
 
     /// Swap in new rows. Only what differs is invalidated, so the scroll
@@ -159,7 +286,20 @@ fn splices<T: PartialEq>(old: &[T], new: &[T]) -> Vec<(Range<usize>, Range<usize
 #[cfg(test)]
 mod tests {
     // Not `super::*`: that would pull in GPUI's `test` macro and shadow `#[test]`.
-    use super::splices;
+    use super::{CardPart, card_edges, splices};
+
+    #[test]
+    fn a_card_is_a_head_and_the_body_rows_after_it() {
+        use CardPart::{Body, Head, Outside};
+        // A head alone is both the top and the bottom of its card.
+        assert_eq!(card_edges(Head, Some(Head)), Some((true, true)));
+        assert_eq!(card_edges(Head, Some(Body)), Some((true, false)));
+        assert_eq!(card_edges(Body, Some(Body)), Some((false, false)));
+        assert_eq!(card_edges(Body, Some(Head)), Some((false, true)));
+        assert_eq!(card_edges(Body, Some(Outside)), Some((false, true)));
+        assert_eq!(card_edges(Body, None), Some((false, true)));
+        assert_eq!(card_edges(Outside, Some(Head)), None);
+    }
 
     #[test]
     fn identical_rows_need_no_splice() {

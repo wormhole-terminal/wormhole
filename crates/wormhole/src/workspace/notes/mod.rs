@@ -371,7 +371,7 @@ impl Workspace {
             .h_full()
             .bg(ui.panel_right)
             .child(self.render_panel_tab_bar(window, cx))
-            .child(match tab {
+            .child(div().flex().flex_col().flex_1().min_h_0().child(match tab {
                 // Virtualized lists fill the panel and scroll themselves; the list area holds the
                 // keyboard for them.
                 RightTab::Changes => {
@@ -386,31 +386,22 @@ impl Workspace {
                     let list = self.render_notes_tab(window, cx);
                     self.panel_content(list, cx)
                 }
-                RightTab::Project => div()
-                    .id("project-scroll")
-                    .flex()
-                    .flex_col()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .pt(px(style::PANEL_LIST_TOP))
-                    .pb_4()
-                    .child(self.render_project_tab(cx))
-                    .into_any_element(),
-                RightTab::Usage => div()
-                    .id("usage-scroll")
-                    .flex()
-                    .flex_col()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .pt(px(style::PANEL_LIST_TOP))
-                    .child(self.render_usage_tab(cx))
-                    .into_any_element(),
-            })
+                // Short tabs, all there at once: a plain scrolling column.
+                RightTab::Project => {
+                    let content = self.render_project_tab(cx).into_any_element();
+                    panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
+                }
+                RightTab::Usage => {
+                    let content = self.render_usage_tab(cx).into_any_element();
+                    panel_list::scroll_column("usage-scroll", &self.panel_scroll, ui, content, cx)
+                }
+            }))
     }
 
     pub(crate) fn show_tab(&mut self, tab: RightTab, cx: &mut Context<Self>) {
+        if tab != self.right_tab {
+            self.panel_scroll.set_offset(Point::default());
+        }
         self.right_tab = tab;
         self.reveal_notes();
         self.remember_panes(cx);

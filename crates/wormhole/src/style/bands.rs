@@ -59,7 +59,21 @@ pub struct BandParts {
 /// See [`BandParts`]. `id` names the band and its + (a folder's path, a section's name).
 #[track_caller]
 pub fn band(id: impl Into<ElementId>, ui: UiColors, parts: BandParts) -> Stateful<Div> {
-    band_with(id.into(), ui, parts, FolderLook::default())
+    band_with(id.into(), ui, parts, FolderLook::default(), Vec::new())
+}
+
+/// The head of a card in the right panel: a section's [`band`] drawn as the card's first line
+/// ([`BAND_H`] tall, the chevron and title 8 in, rounded under the pointer). `trailing` sits
+/// before the count and the + (the Changes card's compare picker and refresh button).
+#[track_caller]
+pub fn section_card(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    parts: BandParts,
+    trailing: Vec<AnyElement>,
+) -> Stateful<Div> {
+    let look = FolderLook { card: true, ..FolderLook::default() };
+    band_with(id.into(), ui, BandParts { kind: BandKind::Section, ..parts }, look, trailing)
 }
 
 /// The tint of a coloured folder's band: the folder's colour, and how strong it is at the band's
@@ -91,7 +105,13 @@ pub struct FolderLook {
 const HELD_COUNT_OPACITY: f32 = 0.4;
 
 #[track_caller]
-fn band_with(id: ElementId, ui: UiColors, parts: BandParts, look: FolderLook) -> Stateful<Div> {
+fn band_with(
+    id: ElementId,
+    ui: UiColors,
+    parts: BandParts,
+    look: FolderLook,
+    trailing: Vec<AnyElement>,
+) -> Stateful<Div> {
     let dim_count = look.cmd_held;
     let BandParts {
         kind,
@@ -206,6 +226,7 @@ fn band_with(id: ElementId, ui: UiColors, parts: BandParts, look: FolderLook) ->
                 .pr(px(inset))
                 // Room for the + where there is no count to stand in for.
                 .when(swap, |d| d.relative().min_w(px(SWAP_SLOT - SIDEBAR_INSET + inset)))
+                .children(trailing)
                 .children(waiting.filter(|_| section.is_collapsed()))
                 .children(count)
                 .children(add),
