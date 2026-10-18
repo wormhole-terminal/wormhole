@@ -396,7 +396,7 @@ mod tests {
     #[test]
     fn builtins_are_complete_and_readable() {
         let all = builtin_tokens();
-        assert_eq!(all.len(), 14);
+        assert_eq!(all.len(), 19);
         for t in &all {
             let n = &t.name;
             assert_eq!(t.ui_tokens().count(), UI_TOKENS.len(), "{n}");

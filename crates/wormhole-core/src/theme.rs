@@ -250,6 +250,12 @@ const BUILTIN: &[(&str, &str)] = &[
     ("GitHub Dark", include_str!("themes/GitHub Dark")),
     ("GitHub Light", include_str!("themes/GitHub Light Default")),
     ("Monokai Pro", include_str!("themes/Monokai Pro")),
+    // Wormhole's own: three that pop, and two built on deep blacks.
+    ("Nebula", include_str!("themes/Nebula")),
+    ("Solar Flare", include_str!("themes/Solar Flare")),
+    ("Borealis", include_str!("themes/Borealis")),
+    ("Event Horizon", include_str!("themes/Event Horizon")),
+    ("Void", include_str!("themes/Void")),
 ];
 
 /// All bundled themes; the first entry (Tokyo Night) is the default. A copy
