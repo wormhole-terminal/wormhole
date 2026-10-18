@@ -67,7 +67,8 @@ impl Workspace {
             agent: terminal.agent,
             told: terminal.source().told(),
             label: session.pane.label(cx),
-            words: crumb_words(terminal),
+            // Shown, the status bar has the state at its end; the title row doesn't repeat it.
+            words: crumb_words(terminal).filter(|_| !settings_in(&self.profile, cx).status_bar),
             branch,
             extras: self.extra_facts(cx),
         }
@@ -346,6 +347,10 @@ impl Workspace {
     /// else to redraw the window (an agent thinking quietly); redraw when it would read
     /// differently.
     pub(super) fn crumb_tick(&self, cx: &mut Context<Self>) {
+        // The status bar's tick redraws its own copy.
+        if settings_in(&self.profile, cx).status_bar {
+            return;
+        }
         let now = crumb_words(self.active_session().terminal().read(cx));
         // Taken as drawn: if nothing draws it (a diff is over the title row), it asks once.
         if self.crumb_drawn.replace(now.clone()) != now {
@@ -356,7 +361,7 @@ impl Workspace {
 
 /// What the breadcrumb says after a terminal's name: how it is doing, working time in whole
 /// minutes ("working · <1m", "working · 4m"), or nothing while it is idle.
-fn crumb_words(terminal: &TerminalView) -> Option<String> {
+pub(super) fn crumb_words(terminal: &TerminalView) -> Option<String> {
     let took = || wormhole_core::layout::status_bar::elapsed(terminal.status_since().elapsed());
     match terminal.status() {
         Status::Busy => Some(format!("working · {}", took())),

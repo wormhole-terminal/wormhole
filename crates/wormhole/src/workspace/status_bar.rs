@@ -3,7 +3,8 @@
 //!
 //! Shown, it has the terminal of any window that has waited longest for you as a button (its
 //! tile, its name, how long: one click goes there), the other agents by what they do as numbers
-//! ("2 working · 1 done"; each opens the first such terminal) and the terminal's size. The branch,
+//! ("2 working · 1 done"; each opens the first such terminal), how the terminal on screen is doing
+//! ("working · 4m", which the title row leaves to the bar then) and its size. The branch,
 //! its changes and the agent's context are the title row's, so the bar doesn't repeat them. What it
 //! says, which terminal is
 //! the longest waiting and how much fits the window's width, is core's
@@ -42,6 +43,9 @@ pub(super) struct StatusBar {
     rest: Vec<Rest>,
     /// Whether the window is wide enough for the words ("2 working") rather than glyphs and numbers.
     words: bool,
+    /// How the terminal on screen is doing ("working · 4m"), which the title row says while the bar
+    /// is hidden; nothing while it is idle.
+    state: Option<String>,
     /// The terminal's shell and grid, while the window is wide enough.
     size: Option<String>,
     /// What VoiceOver says for each item, whole whatever the width.
@@ -186,6 +190,7 @@ impl Workspace {
         // What runs in front (the agent, or the command), as the title row names it, not the shell.
         let program = session.pane.program(cx);
         let size = detail.size().then(|| rules::size(&program, cols, rows));
+        let state = super::breadcrumb::crumb_words(terminal);
         let now = Instant::now();
         let attention = summary.attention().map(|ix| {
             let (entry, counted) = (&entries[ix], &counted[ix]);
@@ -217,7 +222,7 @@ impl Workspace {
             name: profile.name.clone().into(),
             color,
         });
-        Some(StatusBar { spoken, attention, rest, words: detail.words(), size, profile })
+        Some(StatusBar { spoken, attention, rest, words: detail.words(), state, size, profile })
     }
 
     /// On the tick: read the other windows, and redraw when what the bar would show has changed
@@ -392,6 +397,14 @@ impl Workspace {
             .children(attention)
             .child(div().flex().items_center().children(rest))
             .child(div().flex_1())
+            .children(bar.state.clone().map(|state| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(style::status_separator(ui))
+                    .child(style::status_text(ui).id("status-state").role(Role::Label).child(state))
+            }))
             .children(bar.size.clone().map(|size| {
                 div().flex().items_center().gap_1().child(style::status_separator(ui)).child(
                     style::status_text(ui)

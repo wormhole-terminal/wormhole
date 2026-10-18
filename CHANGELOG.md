@@ -91,7 +91,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - The status bar's size item names the program in front (the agent, or the running command), as the
   title row does, instead of always the shell. It no longer shows the branch, its changes or the agent's
-  context: the title row has them.
+  context: the title row has them. While the bar is shown it also says how the terminal on screen is
+  doing ("working · 4m", "needs you", "done · 2m"), before its size, and the title row leaves that out.
 - A split's pane headers name each terminal as its sidebar row does (a rename shows there too), lead
   with its status tile and show the end of its folder, cut from the front.
 - A group whose terminals are in one repository shows its changed files (±N) once, on its first row,
