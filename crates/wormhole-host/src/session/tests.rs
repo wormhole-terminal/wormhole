@@ -546,6 +546,10 @@ fn a_headless_attach_gets_events_and_counters_but_no_bytes() {
     let got = rig.recv(id);
     assert!(outs(&got).is_empty());
     assert!(got.contains(&Got::Event(3, "Title(\"build\")".into())), "{got:?}");
+    // The attach sent the first counters: the next wait out the 16 ms.
+    rig.advance(Duration::from_millis(16));
+    let got = rig.recv(id);
+    assert!(outs(&got).is_empty());
     assert!(got.iter().any(|g| matches!(g, Got::Counters(c) if c.revision == 3)), "{got:?}");
     rig.stream.append(b"d");
     assert!(!rig.recv(id).iter().any(|g| matches!(g, Got::Counters(_))), "at most every 16 ms");

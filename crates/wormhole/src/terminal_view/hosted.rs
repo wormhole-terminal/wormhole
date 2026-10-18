@@ -178,7 +178,7 @@ impl TerminalView {
                     if !FALLBACK_TOLD.swap(true, Ordering::Relaxed) {
                         self.host.notice = Some(
                             "This terminal runs inside Wormhole and ends when it quits: \
-                             its session host couldn't start."
+                             the helper that keeps terminals running couldn't start."
                                 .into(),
                         );
                     }

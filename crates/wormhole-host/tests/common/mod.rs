@@ -405,7 +405,8 @@ impl Client {
         let until = Instant::now() + PATIENCE;
         loop {
             assert!(Instant::now() < until, "the host kept the connection open");
-            self.reader.get_ref().set_read_timeout(Some(Duration::from_millis(100))).expect("a timeout");
+            // macOS refuses the option (EINVAL) once the peer has closed: what this waits for.
+            let _ = self.reader.get_ref().set_read_timeout(Some(Duration::from_millis(100)));
             match self.reader.read_frame() {
                 Ok(None) | Err(RecvError::UnexpectedEof) => return,
                 Ok(Some(frame)) => {

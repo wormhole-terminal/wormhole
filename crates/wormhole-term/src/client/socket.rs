@@ -46,7 +46,10 @@ pub(super) fn hello(
             proto_max: range.max,
             proto_minor: version::PROTO_MINOR,
             role: Role::Controller,
-            force: false,
+            // The app is a terminal's one controller: a controller still there is a connection of
+            // its own the host has not seen close yet (a detach or a crash just before), or an app
+            // that is stopped. Waiting for it would refuse the attach.
+            force: true,
             features: Features::NONE,
             client_version: client_version(),
             client_name: "Wormhole",
