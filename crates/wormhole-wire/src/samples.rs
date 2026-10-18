@@ -69,6 +69,8 @@ pub fn events() -> Vec<(&'static str, Event<'static>)> {
         ("event_clipboard_load", at(EventKind::ClipboardLoad { ticket: 17, selection: b'c' })),
         ("event_window_op", at(EventKind::WindowOp { op: 8, a: 24, b: 80 })),
         ("event_exited", at(EventKind::Exited(ExitInfo { code: 0, signal: 9, at_ms: 1_760_000_001_000 }))),
+        ("event_full_reset", at(EventKind::FullReset)),
+        ("event_repaint_seeds", at(EventKind::RepaintSeeds { block: 12, link_seq: 3, image_handle: 5 })),
     ]
 }
 

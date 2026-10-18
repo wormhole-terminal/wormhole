@@ -77,6 +77,17 @@ pub enum EventKind<'a> {
         b: u32,
     },
     Exited(ExitInfo),
+    /// RIS (`ESC c`): the program reset the terminal. The replica's own events are dropped, so
+    /// this is how the client learns to drop what programs reported about themselves.
+    FullReset,
+    /// The counters VT has no sequence for, sent just before a `Repaint` (same offset): the client
+    /// seeds its replica with them before parsing the repaint, so its block numbers, generated
+    /// link ids and picture handles are the host's.
+    RepaintSeeds {
+        block: u32,
+        link_seq: u64,
+        image_handle: u64,
+    },
     /// An event kind from a newer minor: skip it.
     Unknown(u8),
 }
@@ -101,6 +112,8 @@ mod k {
     pub const CLIPBOARD_LOAD: u8 = 10;
     pub const WINDOW_OP: u8 = 11;
     pub const EXITED: u8 = 12;
+    pub const FULL_RESET: u8 = 13;
+    pub const REPAINT_SEEDS: u8 = 14;
 }
 
 impl<'a> Event<'a> {
@@ -160,6 +173,13 @@ impl<'a> Event<'a> {
                 w.u8(k::EXITED);
                 x.write(w);
             }
+            EventKind::FullReset => w.u8(k::FULL_RESET),
+            EventKind::RepaintSeeds { block, link_seq, image_handle } => {
+                w.u8(k::REPAINT_SEEDS);
+                w.u32(block);
+                w.u64(link_seq);
+                w.u64(image_handle);
+            }
             // Re-encoding a kind we cannot read would invent a body for it.
             EventKind::Unknown(_) => return Err(EncodeError::BadValue("Event kind")),
         }
@@ -189,6 +209,10 @@ impl<'a> Event<'a> {
             k::CLIPBOARD_LOAD => EventKind::ClipboardLoad { ticket: r.u32()?, selection: r.u8()? },
             k::WINDOW_OP => EventKind::WindowOp { op: r.u8()?, a: r.u32()?, b: r.u32()? },
             k::EXITED => EventKind::Exited(ExitInfo::read(&mut r)?),
+            k::FULL_RESET => EventKind::FullReset,
+            k::REPAINT_SEEDS => {
+                EventKind::RepaintSeeds { block: r.u32()?, link_seq: r.u64()?, image_handle: r.u64()? }
+            }
             other => EventKind::Unknown(other),
         };
         // Whatever follows is the TLV tail of a newer minor; there are no tags to read yet.

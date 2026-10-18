@@ -131,7 +131,7 @@ fn exit(rng: &mut Rng) -> ExitInfo {
 }
 
 fn event<'a>(rng: &mut Rng, p: &'a Pool) -> Event<'a> {
-    let kind = match rng.below(12) {
+    let kind = match rng.below(14) {
         0 => EventKind::Title(p.string(rng)),
         1 => EventKind::ResetTitle,
         2 => EventKind::Bell,
@@ -148,6 +148,8 @@ fn event<'a>(rng: &mut Rng, p: &'a Pool) -> Event<'a> {
         8 => EventKind::ClipboardStore { selection: rng.u8(), data: p.bytes(rng) },
         9 => EventKind::ClipboardLoad { ticket: rng.u32(), selection: rng.u8() },
         10 => EventKind::WindowOp { op: rng.u8(), a: rng.u32(), b: rng.u32() },
+        11 => EventKind::FullReset,
+        12 => EventKind::RepaintSeeds { block: rng.u32(), link_seq: rng.next(), image_handle: rng.next() },
         _ => EventKind::Exited(exit(rng)),
     };
     Event { offset: rng.next(), kind }
