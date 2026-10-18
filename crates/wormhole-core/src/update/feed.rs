@@ -7,7 +7,7 @@ use semver::Version;
 use serde::Deserialize;
 
 use super::security::Security;
-use super::{UpdateError, UpdaterConfig, check_url, http, parse_lenient_version};
+use super::{UpdateError, UpdaterConfig, check_url, feed_url, http, parse_lenient_version};
 
 /// The feed is a few KB; anything bigger is not our feed.
 const MAX_FEED_BYTES: u64 = 1024 * 1024;
@@ -70,12 +70,53 @@ struct Feed {
     security: Option<serde_json::Value>,
 }
 
-/// Fetches the feed and decides. Network errors are `Network` (retry later); anything the server
-/// sent that we won't accept is `Feed`.
+/// Fetches the channel's feeds and decides. Network errors are `Network` (retry later); anything
+/// the server sent that we won't accept is `Feed`.
+///
+/// With more than one feed (Unstable reads Stable's too) the newest offer wins, and an error counts
+/// only when no feed answered: a broken Unstable feed must not keep a stable release from anyone,
+/// nor make the schedule retry every minute as it does after a network error.
 pub fn check(config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
-    check_url(&config.feed_url)?;
-    tracing::debug!(url = %config.feed_url, "checking for updates");
-    let response = http::get(&config.feed_url, http::FEED_TIMEOUT)?;
+    let mut best: Option<Result<UpdateStatus, UpdateError>> = None;
+    for &channel in config.channel.feeds() {
+        let result = check_feed(&feed_url(&config.base_url, channel), config);
+        if let Err(err) = &result {
+            tracing::warn!(?channel, "update feed failed: {err}");
+        }
+        best = Some(match best {
+            Some(prev) => better(prev, result),
+            None => result,
+        });
+    }
+    let status = best.unwrap_or(Ok(UpdateStatus::UpToDate))?;
+    tracing::info!(?status, current = %config.current_version, "update check finished");
+    Ok(status)
+}
+
+/// The more useful of two feeds' answers: an update (the newer one), then a version this Mac
+/// can't run, then "up to date", then an error. Ties keep the first, the channel's own feed.
+fn better(
+    a: Result<UpdateStatus, UpdateError>,
+    b: Result<UpdateStatus, UpdateError>,
+) -> Result<UpdateStatus, UpdateError> {
+    fn rank(r: &Result<UpdateStatus, UpdateError>) -> u8 {
+        match r {
+            Ok(UpdateStatus::Available(_)) => 3,
+            Ok(UpdateStatus::Unsupported { .. }) => 2,
+            Ok(UpdateStatus::UpToDate) => 1,
+            Err(_) => 0,
+        }
+    }
+    if let (Ok(UpdateStatus::Available(x)), Ok(UpdateStatus::Available(y))) = (&a, &b) {
+        return if y.version.cmp_precedence(&x.version).is_gt() { b } else { a };
+    }
+    if rank(&b) > rank(&a) { b } else { a }
+}
+
+fn check_feed(url: &str, config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
+    check_url(url)?;
+    tracing::debug!(%url, "checking for updates");
+    let response = http::get(url, http::FEED_TIMEOUT)?;
     let mut body = Vec::new();
     response
         .into_body()
@@ -86,9 +127,7 @@ pub fn check(config: &UpdaterConfig) -> Result<UpdateStatus, UpdateError> {
     if body.len() as u64 > MAX_FEED_BYTES {
         return Err(UpdateError::Feed("feed is too large".into()));
     }
-    let status = evaluate(&body, config)?;
-    tracing::info!(?status, current = %config.current_version, "update check finished");
-    Ok(status)
+    evaluate(&body, config)
 }
 
 /// The pure part of [`check`]: parse the feed and compare against the config.
@@ -97,7 +136,7 @@ pub(crate) fn evaluate(json: &[u8], config: &UpdaterConfig) -> Result<UpdateStat
     let version = Version::parse(feed.version.trim())
         .map_err(|e| UpdateError::Feed(format!("invalid version {:?}: {e}", feed.version)))?;
 
-    if !is_newer(&version, &config.current_version) {
+    if !is_newer(&version, &config.current_version, config.channel.takes_prereleases()) {
         return Ok(UpdateStatus::UpToDate);
     }
 
@@ -131,10 +170,10 @@ pub(crate) fn evaluate(json: &[u8], config: &UpdaterConfig) -> Result<UpdateStat
 }
 
 /// Strictly newer by semver precedence (build metadata ignored, so `1.0.0+a` vs `1.0.0+b` is not
-/// an update). A prerelease is only offered to someone already on a prerelease: if CI ever
-/// publishes a beta to the stable feed, stable users stay put.
-pub(crate) fn is_newer(candidate: &Version, current: &Version) -> bool {
-    if !candidate.pre.is_empty() && current.pre.is_empty() {
+/// an update). A prerelease is only offered on a channel that takes them, or to someone already
+/// on one: if CI ever publishes a main build to the stable feed, stable users stay put.
+pub(crate) fn is_newer(candidate: &Version, current: &Version, prereleases: bool) -> bool {
+    if !candidate.pre.is_empty() && current.pre.is_empty() && !prereleases {
         return false;
     }
     candidate.cmp_precedence(current).is_gt()
@@ -161,9 +200,9 @@ fn validate_asset(asset: &Asset, config: &UpdaterConfig) -> Result<(), UpdateErr
 mod tests {
     use semver::Version;
 
-    use super::{UpdateStatus, evaluate, is_newer};
-    use crate::update::UpdateError;
-    use crate::update::test_support::{TestKey, test_config};
+    use super::{UpdateStatus, better, evaluate, is_newer};
+    use crate::update::test_support::{TestKey, sample_release, test_config};
+    use crate::update::{UpdateChannel, UpdateError};
 
     fn feed(version: &str, platform: &str, min_os: &str, sig: &str) -> String {
         serde_json::json!({
@@ -304,6 +343,7 @@ mod tests {
     #[test]
     fn version_ordering() {
         let v = |s: &str| Version::parse(s).unwrap();
+        let is_newer = |a: &Version, b: &Version| is_newer(a, b, false);
         assert!(is_newer(&v("0.2.0"), &v("0.1.9")));
         assert!(is_newer(&v("1.0.0"), &v("0.99.99")));
         assert!(!is_newer(&v("0.1.0"), &v("0.2.0")), "downgrade");
@@ -316,5 +356,49 @@ mod tests {
         // ...but stable users are never moved onto a prerelease.
         assert!(!is_newer(&v("0.3.0-beta.1"), &v("0.2.0")));
         assert!(!is_newer(&v("0.2.0-rc.1"), &v("0.2.0")));
+    }
+
+    #[test]
+    fn unstable_takes_the_builds_of_main_between_releases() {
+        let v = |s: &str| Version::parse(s).unwrap();
+        // CI numbers a main build after 1.2.0 as 1.2.1-dev.<commits since the tag>.
+        assert!(is_newer(&v("1.2.1-dev.3"), &v("1.2.0"), true));
+        assert!(!is_newer(&v("1.2.1-dev.3"), &v("1.2.0"), false), "not on Stable");
+        assert!(is_newer(&v("1.2.1-dev.10"), &v("1.2.1-dev.9"), true), "numeric, not text, order");
+        // The next release overtakes them, whatever it is called...
+        assert!(is_newer(&v("1.2.1"), &v("1.2.1-dev.40"), false));
+        assert!(is_newer(&v("1.3.0"), &v("1.2.1-dev.40"), false));
+        // ...and a build after a prerelease release sorts between it and the next.
+        assert!(is_newer(&v("1.3.0-beta.1.dev.2"), &v("1.3.0-beta.1"), true));
+        assert!(is_newer(&v("1.3.0-beta.2"), &v("1.3.0-beta.1.dev.2"), true));
+    }
+
+    #[test]
+    fn unstable_offers_a_main_build_that_stable_refuses() {
+        let main_build = feed("1.2.1-dev.3", "darwin-aarch64", "13.0", &sig());
+        let stable = test_config("1.2.0", "unused");
+        assert_eq!(evaluate(main_build.as_bytes(), &stable).unwrap(), UpdateStatus::UpToDate);
+        let mut unstable = test_config("1.2.0", "unused");
+        unstable.channel = UpdateChannel::Unstable;
+        let status = evaluate(main_build.as_bytes(), &unstable).unwrap();
+        assert!(
+            matches!(status, UpdateStatus::Available(r) if r.version == Version::parse("1.2.1-dev.3").unwrap())
+        );
+    }
+
+    #[test]
+    fn the_newer_feed_wins_and_an_error_only_when_nothing_answered() {
+        let available = |v: &str| Ok(UpdateStatus::Available(sample_release(v)));
+        let version = |r: Result<UpdateStatus, UpdateError>| match r {
+            Ok(UpdateStatus::Available(r)) => r.version.to_string(),
+            other => format!("{other:?}"),
+        };
+        assert_eq!(version(better(available("1.2.1-dev.3"), available("1.3.0"))), "1.3.0");
+        assert_eq!(version(better(available("1.3.1-dev.1"), available("1.3.0"))), "1.3.1-dev.1");
+        let offline = || Err(UpdateError::Network("offline".into()));
+        assert_eq!(version(better(offline(), available("1.3.0"))), "1.3.0");
+        assert!(matches!(better(offline(), Ok(UpdateStatus::UpToDate)), Ok(UpdateStatus::UpToDate)));
+        assert!(matches!(better(Ok(UpdateStatus::UpToDate), offline()), Ok(UpdateStatus::UpToDate)));
+        assert!(matches!(better(offline(), offline()), Err(UpdateError::Network(_))));
     }
 }

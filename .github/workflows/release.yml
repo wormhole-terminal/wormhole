@@ -9,6 +9,9 @@
 #   release a security update in latest.json (see RELEASE_SEVERITY in scripts/package.sh).
 # - Run manually (workflow_dispatch) -> build + package only; tick "publish" to also create the
 #   GitHub Release.
+# - CI passed for a push to main (workflow_run) -> a build for the Unstable update channel, numbered
+#   after the last release (X.Y.Z-dev.N, scripts/lib.sh dev_version) and published to the rolling
+#   prerelease `unstable`; <base>/unstable/latest.json redirects to its latest.json.
 name: Release
 
 on:
@@ -24,50 +27,76 @@ on:
         description: "Run the whole test suite on the runner first (off: the local gate already ran it)"
         type: boolean
         default: false
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write # gh release create
-
-concurrency:
-  group: release
-  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # A cheap Linux job that decides whether the macOS one is needed at all.
+  # A cheap Linux job that decides whether the macOS one is needed at all, and for which channel.
   gate:
-    name: Already published?
+    name: Anything to build?
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      published: ${{ steps.check.outputs.published }}
+      skip: ${{ steps.check.outputs.skip }}
+      channel: ${{ steps.check.outputs.channel }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: ${{ github.event_name == 'workflow_run' && 0 || 1 }} # dev_version counts commits
       - id: check
         env:
           GH_TOKEN: ${{ github.token }}
+          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          CI_EVENT: ${{ github.event.workflow_run.event }}
+          CI_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
         run: |
           . scripts/lib.sh
-          published=false
-          if [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
-            published=true
+          skip=false channel=stable
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            channel=unstable
+            # Only a push to main in this repository that passed CI: never a pull request's run,
+            # whose code isn't main's, and never a commit that failed the tests.
+            if [ "$CI_CONCLUSION" != success ] || [ "$CI_EVENT" != push ] || [ "$CI_REPO" != "$GITHUB_REPOSITORY" ]; then
+              skip=true
+              echo "::notice::CI ended '$CI_CONCLUSION' for a $CI_EVENT from $CI_REPO: no unstable build"
+            elif [ -z "$(dev_version)" ]; then
+              skip=true
+              echo "::notice::This is the commit of v$APP_VERSION: the release covers it"
+            fi
+          elif [ "$GITHUB_EVENT_NAME" = push ] && gh release view "v$APP_VERSION" >/dev/null 2>&1; then
+            skip=true
             echo "::notice::The release v$APP_VERSION already exists: nothing to build"
           fi
-          echo "published=$published" >> "$GITHUB_OUTPUT"
+          { echo "skip=$skip"; echo "channel=$channel"; } >> "$GITHUB_OUTPUT"
 
   release:
     name: Release (Apple Silicon + Intel)
     needs: gate
-    if: needs.gate.outputs.published != 'true'
+    if: needs.gate.outputs.skip != 'true'
+    # Releases queue one after another. A build of main gives way to a newer one, and the two
+    # channels never wait for each other.
+    concurrency:
+      group: release-${{ needs.gate.outputs.channel }}
+      cancel-in-progress: ${{ needs.gate.outputs.channel == 'unstable' }}
     # The signing secrets live in this environment, which only main and v* tags may use: a workflow
     # changed on any other branch can't reach them.
     environment: release
     runs-on: macos-latest
     timeout-minutes: 120
     env:
-      PUBLISH: ${{ github.event_name == 'push' || inputs.publish == true }}
+      CHANNEL: ${{ needs.gate.outputs.channel }}
+      # The commit being built: a workflow_run's own GITHUB_SHA is main's newest, maybe a later one.
+      BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      PUBLISH: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || inputs.publish == true }}
       # Set repository variable ALLOW_UNSIGNED_RELEASE=true to publish ad-hoc signed,
       # un-notarized builds (e.g. before the Developer ID certificate exists).
       ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE == 'true' }}
@@ -75,11 +104,21 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # the annotated tag object must be fetchable
+          ref: ${{ env.BUILD_SHA }}
+          fetch-depth: 0 # the annotated tag object must be fetchable; dev_version counts commits
 
       - name: Check version
         id: version
         run: |
+          if [ "$CHANNEL" = unstable ]; then
+            # Numbered after the last release; Cargo.toml gets it once Rust is installed (below).
+            version="$(. scripts/lib.sh && dev_version)"
+            [ -n "$version" ] || { echo "::error::no dev version at the release's own commit"; exit 1; }
+            echo "Unstable build: $version"
+            python3 scripts/changelog.py check || exit 1
+            { echo "version=$version"; echo "prerelease=true"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           version="$(. scripts/lib.sh && echo "$APP_VERSION")"
           echo "Cargo version: $version"
           if [ "$GITHUB_REF_TYPE" = tag ]; then
@@ -153,6 +192,14 @@ jobs:
         with:
           key: release
           save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # The binary reads its version from Cargo.toml (CARGO_PKG_VERSION), so the build of main gets
+      # its own there; the change stays on the runner.
+      - name: Version of this build of main
+        if: env.CHANNEL == 'unstable'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: . scripts/lib.sh && set_app_version "$VERSION"
 
       - name: Install tools
         run: |
@@ -252,6 +299,18 @@ jobs:
         run: |
           notes="$RUNNER_TEMP/notes.md"
           body="$RUNNER_TEMP/release-body.md"
+          if [ "$CHANNEL" = unstable ]; then
+            # What main has gained since the release. No security flag: every build until the
+            # release would carry it, and it would stop "Skip this version" for all of them.
+            {
+              echo "An unstable build of [\`${BUILD_SHA::7}\`](https://github.com/$GITHUB_REPOSITORY/commit/$BUILD_SHA): changes since the last release, not yet released."
+              echo
+              scripts/changelog.py notes Unreleased 2>/dev/null || true
+            } > "$notes"
+            cp "$notes" "$body"
+            { echo "RELEASE_NOTES_FILE=$notes"; echo "RELEASE_BODY_FILE=$body"; } >> "$GITHUB_ENV"
+            exit 0
+          fi
           if ! scripts/changelog.py notes "$VERSION" > "$notes"; then
             [ "$PUBLISH" != true ] || { echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1; }
             echo "Wormhole $VERSION" > "$notes"
@@ -283,6 +342,7 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
           REQUIRE_RELEASE_KEY: ${{ env.PUBLISH == 'true' && '1' || '0' }}
+          RELEASE_TAG: ${{ env.CHANNEL == 'unstable' && 'unstable' || '' }}
           REQUIRE_NOTARIZATION: ${{ env.PUBLISH == 'true' && env.ALLOW_UNSIGNED != 'true' && '1' || '0' }}
         run: |
           if [ -z "$MINISIGN_SECRET_KEY" ] && [ "$REQUIRE_RELEASE_KEY" != 1 ]; then
@@ -303,7 +363,7 @@ jobs:
       # archive it names appear together; a prerelease never becomes "latest", so the update feed
       # (releases/latest/download/latest.json) only ever offers stable versions.
       - name: GitHub Release
-        if: env.PUBLISH == 'true'
+        if: env.PUBLISH == 'true' && env.CHANNEL != 'unstable'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -312,6 +372,41 @@ jobs:
           flags=(--title "Wormhole $VERSION" --notes-file "$RELEASE_BODY_FILE" --target "$GITHUB_SHA")
           if [ "$PRERELEASE" = true ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
           gh release create "v$VERSION" target/release/dist/* "${flags[@]}"
+
+      # One rolling prerelease, `unstable`, holds the newest build of main, so the Releases page gets
+      # no entry per commit. The archive goes up before the latest.json that names it; the build
+      # before stays as well, for an app that read the old latest.json a moment ago, and older ones go.
+      - name: Unstable release
+        if: env.PUBLISH == 'true' && env.CHANNEL == 'unstable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          tag=unstable dist=target/release/dist previous=""
+          title="Wormhole Unstable ($VERSION)"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            previous="$(gh release download "$tag" -p latest.json -O - 2>/dev/null | jq -r '.version // empty' || true)"
+            # CI on main finishes in order, but an older build must never replace a newer one.
+            if [ -n "$previous" ] && ! python3 -c 'import sys; sys.path.insert(0, "scripts"); import changelog as c; sys.exit(c.sem_key(sys.argv[1]) <= c.sem_key(sys.argv[2]))' "$VERSION" "$previous"; then
+              echo "::notice::unstable already has $previous, newer than $VERSION: not published"
+              exit 0
+            fi
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" -f sha="$BUILD_SHA" -F force=true >/dev/null
+            gh release edit "$tag" --title "$title" --notes-file "$RELEASE_BODY_FILE" --prerelease --latest=false
+          else
+            gh release create "$tag" --target "$BUILD_SHA" --title "$title" --notes-file "$RELEASE_BODY_FILE" --prerelease --latest=false
+          fi
+          files=()
+          for f in "$dist"/*; do [ "${f##*/}" = latest.json ] || files+=("$f"); done
+          gh release upload "$tag" "${files[@]}" --clobber
+          gh release upload "$tag" "$dist/latest.json" --clobber
+          gh release view "$tag" --json assets -q '.assets[].name' | while read -r name; do
+            case "$name" in
+              latest.json | SHA256SUMS | Wormhole-macos.dmg | *"-$VERSION-"*) continue ;;
+            esac
+            if [ -n "$previous" ] && [[ "$name" == *"-$previous-"* ]]; then continue; fi
+            gh release delete-asset "$tag" "$name" --yes
+          done
 
       - name: Remove signing keychain
         if: always()

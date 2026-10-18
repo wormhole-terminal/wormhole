@@ -104,15 +104,7 @@ trap finish EXIT
 
 touched=1
 cp "$work/CHANGELOG.md" CHANGELOG.md
-awk -v v="$version" '
-  /^\[workspace\.package\]/ { f = 1; print; next }
-  /^\[/ { f = 0 }
-  f && !done && /^version[[:space:]]*=/ { print "version = \"" v "\""; done = 1; next }
-  { print }' Cargo.toml > "$work/Cargo.toml"
-cat "$work/Cargo.toml" > Cargo.toml
-[ "$(app_version)" = "$version" ] || die "could not set the version in Cargo.toml"
-# Only the workspace crates' own entries in Cargo.lock change; nothing is fetched.
-cargo update --workspace --offline --quiet
+set_app_version "$version"
 git commit -q -m "chore(release): $version" -- CHANGELOG.md Cargo.toml Cargo.lock
 committed=1
 

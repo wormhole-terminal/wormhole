@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings → Updates → Channel: Unstable updates to a build of every change as soon as it passes the
+  tests, between releases, and shows Settings → Feature flags so you can try features that are still
+  being built. Stable, the default, gets releases only. Going back to Stable keeps the build you have
+  until the next release overtakes it.
+
 - Five new themes of Wormhole's own: Nebula (deep violet with neon pink, mint and electric blue),
   Solar Flare (warm and hot: coral, acid lime and amber), Borealis (teal-black with aurora greens and
   violet), and two built on deep blacks, Event Horizon (near-black and cool) and Void (true black, for

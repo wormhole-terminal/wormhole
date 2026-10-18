@@ -3,7 +3,7 @@
 //!
 //! The feed URL and Apple team come from the release build's environment
 //! (`WORMHOLE_UPDATE_URL`, `WORMHOLE_TEAM_ID`); development builds have no
-//! URL and never check. The public key is `packaging/updater.pub`, the same
+//! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key is `packaging/updater.pub`, the same
 //! file `scripts/package.sh` checks the signing key against.
 
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
 use wormhole_core::update::{
-    self, DownloadedUpdate, Release, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
+    self, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
 use wormhole_core::store::Store;
@@ -49,6 +49,8 @@ pub(crate) struct Updates {
     /// "Restart When Idle" was chosen: the app restarts once its terminals have been idle for a
     /// while (`update_restart::tick`). Not saved: a request lives as long as the run that made it.
     restart_when_idle: Option<IdleWatch>,
+    /// The channel the shown phase belongs to; switching it checks the new one (see [`init`]).
+    channel: UpdateChannel,
 }
 
 impl Updates {
@@ -68,6 +70,7 @@ impl Updates {
             progress: Default::default(),
             task: None,
             restart_when_idle: None,
+            channel: UpdateChannel::Stable,
         }
     }
 
@@ -108,6 +111,28 @@ fn feed_config() -> Option<UpdaterConfig> {
     Some(config)
 }
 
+/// Follows the `update_channel` setting: once AppState exists, and whenever settings change.
+pub(crate) fn init(cx: &mut App) {
+    let channel = settings(cx).update_channel;
+    app_mut(cx).updates.channel = channel;
+    cx.observe_global::<SettingsStore>(channel_changed).detach();
+}
+
+/// What the old channel offered (or that it had nothing) no longer holds, so the new one is asked
+/// at once, as if the person had pressed Check: they just made a choice about updates.
+fn channel_changed(cx: &mut App) {
+    let channel = settings(cx).update_channel;
+    let updates = &mut app_mut(cx).updates;
+    if updates.channel == channel {
+        return;
+    }
+    updates.channel = channel;
+    if !updates.available() || updates.busy() || matches!(updates.phase, UpdatePhase::Installed(_)) {
+        return;
+    }
+    check_for_updates(true, cx);
+}
+
 /// Called from the app tick: automatic checks at launch and every few hours.
 pub(super) fn schedule_check(ticks: u64, cx: &mut App) {
     // Once a minute is plenty for a schedule measured in hours.
@@ -130,8 +155,9 @@ pub(super) fn schedule_check(ticks: u64, cx: &mut App) {
 
 /// `manual`: the user asked, so show every result (even a skipped version).
 pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
+    let channel = settings(cx).update_channel;
     let updates = &mut app_mut(cx).updates;
-    let Some(config) = updates.config.clone() else {
+    let Some(mut config) = updates.config.clone() else {
         updates.phase = UpdatePhase::Failed("This is a development build; it doesn't update itself.".into());
         notify_settings(cx);
         return;
@@ -139,6 +165,7 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     if updates.busy() {
         return;
     }
+    config.channel = channel;
     updates.phase = UpdatePhase::Checking;
     notify_settings(cx);
     let check = cx.background_executor().spawn(async move { update::check(&config) });

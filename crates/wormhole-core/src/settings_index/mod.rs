@@ -131,22 +131,22 @@ impl SectionId {
     }
 
     /// Whether this section appears in the nav (and its settings in search) for this build. The
-    /// Preview sections are gated: the feature-flag list shows only in a development build, and a
-    /// feature's own section (Project folders) shows only while its flag is on, so it moves from
-    /// hidden to shown the moment the flag is turned on, and vanishes in a release build where the
-    /// feature isn't there. Everything else is always shown.
+    /// Preview sections are gated: the feature-flag list shows only in a development build or on
+    /// the Unstable channel, and a feature's own section (Project folders) shows only while its
+    /// flag is on, so it moves from hidden to shown the moment the flag is turned on, and vanishes
+    /// in a release build where the feature isn't there. Everything else is always shown.
     pub fn is_visible(self, settings: &Settings) -> bool {
-        self.is_visible_in(settings, crate::features::dev_build())
+        self.is_visible_in(settings, settings.flag_mode())
     }
 
-    /// [`Self::is_visible`] for a dev build (`dev`) or a release one, so the tests, which are
-    /// always dev builds, can check what a release shows too.
-    pub fn is_visible_in(self, settings: &Settings, dev: bool) -> bool {
+    /// [`Self::is_visible`] for a given [`FlagMode`](crate::features::FlagMode), so the tests,
+    /// which are always dev builds, can check what a release shows too.
+    pub fn is_visible_in(self, settings: &Settings, mode: crate::features::FlagMode) -> bool {
         match self {
-            SectionId::FeatureFlags => dev,
+            SectionId::FeatureFlags => mode.shows_switches(),
             _ => self
                 .feature_flag()
-                .is_none_or(|flag| crate::features::enabled_in(flag, &settings.feature_flags, dev)),
+                .is_none_or(|flag| crate::features::enabled_in(flag, &settings.feature_flags, mode)),
         }
     }
 
@@ -278,7 +278,8 @@ mod tests {
     }
 
     #[test]
-    fn the_preview_sections_show_only_in_a_dev_build_and_only_while_their_flag_is_on() {
+    fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
+        use crate::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
         let preview = [SectionId::Projects, SectionId::FeatureFlags];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.
@@ -286,24 +287,28 @@ mod tests {
             Settings { feature_flags: [("project_folders".to_string(), true)].into(), ..Settings::default() };
         for settings in [&defaults, &asked_on] {
             for section in preview {
-                assert!(!section.is_visible_in(settings, false), "{section:?} in a release build");
+                assert!(!section.is_visible_in(settings, RELEASE), "{section:?} in a release build");
             }
         }
         // A dev build: the flag list, and the feature's section while its flag is on (the default).
-        assert!(SectionId::FeatureFlags.is_visible_in(&defaults, true));
-        assert!(SectionId::Projects.is_visible_in(&defaults, true));
+        assert!(SectionId::FeatureFlags.is_visible_in(&defaults, DEV));
+        assert!(SectionId::Projects.is_visible_in(&defaults, DEV));
         let off = Settings {
             feature_flags: [("project_folders".to_string(), false)].into(),
             ..Settings::default()
         };
-        assert!(!SectionId::Projects.is_visible_in(&off, true));
-        assert!(SectionId::FeatureFlags.is_visible_in(&off, true), "the switch to turn it back on stays");
+        assert!(!SectionId::Projects.is_visible_in(&off, DEV));
+        assert!(SectionId::FeatureFlags.is_visible_in(&off, DEV), "the switch to turn it back on stays");
         // Every other section ships in both.
         for section in SectionId::ALL.into_iter().filter(|s| !preview.contains(s)) {
             assert!(!section.is_preview());
-            assert!(section.is_visible_in(&off, false) && section.is_visible_in(&off, true), "{section:?}");
+            assert!(section.is_visible_in(&off, RELEASE) && section.is_visible_in(&off, DEV), "{section:?}");
         }
         assert!(preview.iter().all(|s| s.is_preview()));
+        // A release on Unstable: the flag list, and a feature's section once a tester turns it on.
+        assert!(SectionId::FeatureFlags.is_visible_in(&defaults, UNSTABLE));
+        assert!(!SectionId::Projects.is_visible_in(&defaults, UNSTABLE));
+        assert!(SectionId::Projects.is_visible_in(&asked_on, UNSTABLE));
     }
 
     #[test]

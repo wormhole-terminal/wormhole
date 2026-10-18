@@ -63,8 +63,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         },
         SectionId::FeatureFlags => &SectionInfo {
             title: "Feature flags",
-            intro: "Features still being built. They show here only in a development build; a \
-                    release build has them off until they're finished.",
+            intro: "Features still being built. They show here in a development build and on the \
+                    Unstable update channel; otherwise a release has them off until they're finished.",
             nav: NavGroup::Preview,
         },
         SectionId::Notifications => &SectionInfo {
@@ -715,8 +715,8 @@ const FEATURE_FLAGS: &[Group] = &[group(
     &[entry(
         "feature-flags",
         "Feature flags",
-        "Turn features that are still being built on or off in this development build",
-        "feature flag preview experimental development dev in progress beta project folders",
+        "Turn features that are still being built on or off in this build",
+        "feature flag preview experimental development dev in progress beta unstable project folders",
         &["feature_flags"],
     )],
 )];
@@ -879,6 +879,14 @@ const UPDATES: &[Group] = &[group(
             "Checks in the background and installs on the next restart",
             "download auto",
             &["auto_update"],
+        ),
+        entry(
+            "update-channel",
+            "Channel",
+            "Unstable also gets a build of every change once it passes the tests, and shows the \
+             feature flags",
+            "beta nightly unstable stable prerelease dev builds main feature flags",
+            &["update_channel"],
         ),
         entry("update-status", "Check for updates", "", "install restart release notes check skip", &[]),
     ],

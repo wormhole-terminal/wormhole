@@ -1,7 +1,8 @@
 //! App-wide feature flags: features still in progress that are shown and switchable only in a
-//! development build (`cargo run`, `scripts/dev.sh`, the tests). A shipped release can't turn an
-//! unfinished feature on by editing `config.json`: there each flag takes its release default,
-//! and the flag UI isn't built at all.
+//! development build (`cargo run`, `scripts/dev.sh`, the tests) or a release on the Unstable update
+//! channel, where testers try them in a signed build. Any other release can't turn an unfinished
+//! feature on by editing `config.json`: there each flag takes its release default, and the flag UI
+//! isn't built at all.
 //!
 //! This is not the per-project [`crate::project::Feature`] switches (which parts of a trusted
 //! `.wormhole/` a person accepts). A `FeatureFlag` gates whole features of Wormhole itself; the
@@ -11,6 +12,8 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
+
+use crate::update::UpdateChannel;
 
 /// A feature of Wormhole kept behind a flag until it is finished.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -81,36 +84,77 @@ pub fn dev_build() -> bool {
     cfg!(debug_assertions)
 }
 
-/// Whether `flag` is on, from the `feature_flags` map of `config.json` and whether this is a dev
-/// build. A dev build reads the map and a flag with no entry there defaults **on**, so a dev
-/// build behaves as it always has and a person must switch a flag off to see what a release user
-/// gets. A release build ignores the map
-/// and uses the flag's release default.
-pub fn enabled_in(flag: FeatureFlag, flags: &BTreeMap<String, bool>, dev: bool) -> bool {
-    if dev { flags.get(flag.key()).copied().unwrap_or(true) } else { flag.released() }
+/// Who decides whether a flag is on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FlagMode {
+    /// A development build: the `feature_flags` map, and a flag with no entry there is **on**, so
+    /// a dev build behaves as it always has and a person must switch a flag off to see what a
+    /// release user gets.
+    Dev,
+    /// A release on the Unstable channel: the map too, but a flag with no entry is what the
+    /// release does, so switching to Unstable changes nothing until a tester turns a flag on.
+    Unstable,
+    /// Any other release: the flag's release default, whatever the map says.
+    Release,
+}
+
+impl FlagMode {
+    pub fn of(dev_build: bool, channel: UpdateChannel) -> Self {
+        match (dev_build, channel) {
+            (true, _) => Self::Dev,
+            (false, UpdateChannel::Unstable) => Self::Unstable,
+            (false, UpdateChannel::Stable) => Self::Release,
+        }
+    }
+
+    /// Whether the switches are shown (Settings → Feature flags) and the map is read.
+    pub fn shows_switches(self) -> bool {
+        self != Self::Release
+    }
+
+    /// What `flag` is with no entry in the map.
+    pub fn default_for(self, flag: FeatureFlag) -> bool {
+        match self {
+            Self::Dev => true,
+            Self::Unstable | Self::Release => flag.released(),
+        }
+    }
+}
+
+/// Whether `flag` is on, from the `feature_flags` map of `config.json` and `mode` (see
+/// [`FlagMode`]).
+pub fn enabled_in(flag: FeatureFlag, flags: &BTreeMap<String, bool>, mode: FlagMode) -> bool {
+    if mode.shows_switches() {
+        flags.get(flag.key()).copied().unwrap_or(mode.default_for(flag))
+    } else {
+        flag.released()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const DEV: FlagMode = FlagMode::Dev;
+    const RELEASE: FlagMode = FlagMode::Release;
+
     #[test]
     fn a_dev_build_defaults_a_flag_on_and_obeys_the_map() {
         let empty = BTreeMap::new();
-        assert!(enabled_in(FeatureFlag::ProjectFolders, &empty, true), "on by default in a dev build");
+        assert!(enabled_in(FeatureFlag::ProjectFolders, &empty, DEV), "on by default in a dev build");
         let off = BTreeMap::from([("project_folders".to_string(), false)]);
-        assert!(!enabled_in(FeatureFlag::ProjectFolders, &off, true), "the map can switch it off");
+        assert!(!enabled_in(FeatureFlag::ProjectFolders, &off, DEV), "the map can switch it off");
         let on = BTreeMap::from([("project_folders".to_string(), true)]);
-        assert!(enabled_in(FeatureFlag::ProjectFolders, &on, true));
+        assert!(enabled_in(FeatureFlag::ProjectFolders, &on, DEV));
     }
 
     #[test]
     fn a_release_build_ignores_the_map_and_takes_the_release_default() {
         let on = BTreeMap::from([("project_folders".to_string(), true)]);
         // Even with the file saying on, a release build keeps the feature off until it graduates.
-        assert!(!enabled_in(FeatureFlag::ProjectFolders, &on, false));
+        assert!(!enabled_in(FeatureFlag::ProjectFolders, &on, RELEASE));
         assert_eq!(
-            enabled_in(FeatureFlag::ProjectFolders, &on, false),
+            enabled_in(FeatureFlag::ProjectFolders, &on, RELEASE),
             FeatureFlag::ProjectFolders.released()
         );
     }
@@ -118,9 +162,9 @@ mod tests {
     #[test]
     fn the_terminal_welcome_is_on_in_a_dev_build_and_off_in_a_release() {
         assert!(!FeatureFlag::TerminalWelcome.released());
-        assert!(enabled_in(FeatureFlag::TerminalWelcome, &BTreeMap::new(), true));
+        assert!(enabled_in(FeatureFlag::TerminalWelcome, &BTreeMap::new(), DEV));
         let on = BTreeMap::from([("terminal_welcome".to_string(), true)]);
-        assert!(!enabled_in(FeatureFlag::TerminalWelcome, &on, false), "a release ignores the map");
+        assert!(!enabled_in(FeatureFlag::TerminalWelcome, &on, RELEASE), "a release ignores the map");
         assert_eq!(FeatureFlag::from_key("terminal_welcome"), Some(FeatureFlag::TerminalWelcome));
     }
 
@@ -144,8 +188,22 @@ mod tests {
         ]);
         assert_eq!(FeatureFlag::from_key("own_engine"), None);
         assert_eq!(FeatureFlag::from_key("sidebar_filter"), None, "the sidebar's funnel is gone");
-        assert!(!enabled_in(FeatureFlag::ProjectFolders, &old, true));
-        assert!(enabled_in(FeatureFlag::TerminalWelcome, &old, true));
+        assert!(!enabled_in(FeatureFlag::ProjectFolders, &old, DEV));
+        assert!(enabled_in(FeatureFlag::TerminalWelcome, &old, DEV));
+    }
+
+    #[test]
+    fn unstable_reads_the_map_but_starts_from_what_a_release_does() {
+        let unstable = FlagMode::of(false, UpdateChannel::Unstable);
+        assert_eq!(unstable, FlagMode::Unstable);
+        assert!(unstable.shows_switches());
+        let empty = BTreeMap::new();
+        assert!(!enabled_in(FeatureFlag::ProjectFolders, &empty, unstable), "off until turned on");
+        let on = BTreeMap::from([("project_folders".to_string(), true)]);
+        assert!(enabled_in(FeatureFlag::ProjectFolders, &on, unstable), "a tester can turn it on");
+        assert_eq!(FlagMode::of(false, UpdateChannel::Stable), FlagMode::Release);
+        assert!(!FlagMode::Release.shows_switches());
+        assert_eq!(FlagMode::of(true, UpdateChannel::Stable), FlagMode::Dev);
     }
 
     #[test]

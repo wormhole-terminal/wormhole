@@ -83,7 +83,10 @@ Before 1.0:
 - A **patch** version (0.3.0 → 0.3.1) is fixes only.
 - A security fix always ships as a patch on the latest version as soon as it is ready; it doesn't wait
   for the next minor.
-- A prerelease (`0.4.0-beta.1`) is published as a GitHub prerelease and is never offered as an update.
+- A prerelease (`0.4.0-beta.1`) is published as a GitHub prerelease and is never offered as an update
+  on the Stable channel.
+- A build of `main` is numbered after the last release: `0.4.1-dev.12` after `0.4.0` (12 commits since
+  its tag). Only the Unstable channel gets it (see Releases), and the next release sorts above it.
 - `version` in `Cargo.toml` changes only in a release commit (`chore(release): 0.3.1`, made by
   `scripts/release.sh`). Between releases it is the last release's number.
 
@@ -182,7 +185,13 @@ section). A version with a Security entry gets `"security": {"severity": …, "a
 `latest.json`, and the Release page opens with a security notice. The app checks
 `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest release's
 `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is never
-offered as an update.
+offered on the Stable channel.
+
+Every push to `main` that passes CI is built the same way for the Unstable channel (Settings → Updates →
+Channel): numbered `X.Y.(Z+1)-dev.N` (`dev_version` in `scripts/lib.sh`), signed, notarized and put on
+the rolling prerelease `unstable`, which holds only the newest build and the one before. Its notes are
+CHANGELOG.md's `[Unreleased]`. The app on Unstable reads `unstable/latest.json` and `stable/latest.json`
+and takes the newer, and it shows Settings → Feature flags, which a release otherwise hides.
 
 ## License
 

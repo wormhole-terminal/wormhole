@@ -20,6 +20,40 @@ app_version() {
 APP_VERSION="$(app_version)"
 [ -n "$APP_VERSION" ] || die "could not read workspace.package.version from Cargo.toml"
 
+# Sets workspace.package.version in Cargo.toml, and the workspace crates' entries in Cargo.lock
+# (nothing else changes; the index is fetched only when there is no copy, as on a fresh CI runner).
+# Re-source this file (or start a new script) for APP_VERSION to follow.
+set_app_version() {
+  local tmp
+  tmp="$(mktemp)"
+  awk -v v="$1" '
+    /^\[workspace\.package\]/ { f = 1; print; next }
+    /^\[/ { f = 0 }
+    f && !done && /^version[[:space:]]*=/ { print "version = \"" v "\""; done = 1; next }
+    { print }' "$ROOT/Cargo.toml" > "$tmp"
+  cat "$tmp" > "$ROOT/Cargo.toml"
+  rm -f "$tmp"
+  [ "$(app_version)" = "$1" ] || die "could not set the version in Cargo.toml"
+  (cd "$ROOT" && { cargo update --workspace --offline --quiet 2>/dev/null || cargo update --workspace --quiet; })
+}
+
+# The version of a build of main between releases (the Unstable channel): after X.Y.Z it is
+# X.Y.(Z+1)-dev.N, after a prerelease X.Y.Z-beta.1 it is X.Y.Z-beta.1.dev.N, N being the commits
+# since that release's tag. Both sort after the release and before the next one, so the updater
+# moves across them. Prints nothing at the release's own commit, which the release itself covers.
+dev_version() {
+  local n major minor patch
+  n="$(git -C "$ROOT" rev-list --count "v$APP_VERSION..HEAD")" || die "no tag v$APP_VERSION to count from"
+  [ "$n" -gt 0 ] || return 0
+  case "$APP_VERSION" in
+    *-*) echo "$APP_VERSION.dev.$n" ;;
+    *)
+      IFS=. read -r major minor patch <<<"$APP_VERSION"
+      echo "$major.$minor.$((patch + 1))-dev.$n"
+      ;;
+  esac
+}
+
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 APP_PATH_DEFAULT="$TARGET_DIR/release/$APP_NAME.app"
 DIST_DEFAULT="$TARGET_DIR/release/dist"

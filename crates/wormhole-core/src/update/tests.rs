@@ -15,7 +15,7 @@ use super::test_support::{
     BUNDLE_ID, RawEntry, TEST_TRUSTED_COMMENT, TestKey, fake_app_archive, marker_of, raw_archive, serve,
     temp_apps_dir, test_config, write_fake_app,
 };
-use super::{UpdateError, UpdateStatus, UpdaterConfig, check, download, install, preflight};
+use super::{UpdateChannel, UpdateError, UpdateStatus, UpdaterConfig, check, download, install, preflight};
 
 const ARCHIVE_PATH: &str = "/releases/0.2.0/Wormhole-0.2.0-macos.app.tar.gz";
 
@@ -56,7 +56,7 @@ fn publish_with(
     let feed_base =
         serve(HashMap::from([("/stable/latest.json".to_string(), feed.to_string().into_bytes())]));
     let mut config = test_config("0.1.0", &key.public_key_text());
-    config.feed_url = super::feed_url(&feed_base);
+    config.base_url = feed_base;
     Published { config }
 }
 
@@ -107,6 +107,18 @@ fn full_update_flow() {
     let mut config = p.config.clone();
     config.current_version = Version::new(0, 2, 0);
     assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate);
+}
+
+#[test]
+fn unstable_still_gets_stable_releases_when_its_own_feed_is_missing() {
+    let key = TestKey::generate();
+    let archive = fake_app_archive(BUNDLE_ID, "0.2.0");
+    let mut config = publish(&key, &archive, archive.clone(), None).config;
+    config.channel = UpdateChannel::Unstable;
+    // Only stable/latest.json is served: unstable/latest.json is a 404.
+    assert_eq!(available(&config).version, Version::new(0, 2, 0));
+    config.current_version = Version::new(0, 2, 0);
+    assert_eq!(check(&config).unwrap(), UpdateStatus::UpToDate, "an answer, not the 404");
 }
 
 #[test]

@@ -4,13 +4,14 @@
 //! [`check`] → [`download`] → [`install`] → [`relaunch`], with [`UpdateSchedule`] deciding when to
 //! check and which version the user skipped.
 //!
-//! Trust model: the feed (`<base>/stable/latest.json`) is *not* signed, so nothing in it is
+//! Trust model: the feed (`<base>/<channel>/latest.json`) is *not* signed, so nothing in it is
 //! trusted beyond "where to look". The archive's minisign signature, checked against the public
 //! key compiled into the app, is the authority; the feed's sha256 is only an early integrity check.
 //! Because an attacker who controls the feed could pair an old (validly signed) archive with a new
 //! version number, [`install`] also checks the version inside the extracted bundle's Info.plist.
 
 mod archive;
+mod channel;
 mod download;
 mod feed;
 mod http;
@@ -26,6 +27,7 @@ mod tests;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+pub use channel::UpdateChannel;
 pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Release, UpdateStatus, check};
 pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
@@ -35,13 +37,12 @@ pub use security::{MAX_ADVISORIES, Security, Severity};
 /// Releases larger than this are refused before and during download.
 pub const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;
 
-/// The channel path below the configurable base URL; CI publishes to exactly this key.
-pub const FEED_PATH: &str = "stable/latest.json";
-
 #[derive(Debug, Clone)]
 pub struct UpdaterConfig {
-    /// Full feed URL, normally `<base>/stable/latest.json` (see [`UpdaterConfig::new`]).
-    pub feed_url: String,
+    /// Where the feeds are: `<base>/<channel>/latest.json` (see [`feed_url`]).
+    pub base_url: String,
+    /// Which feeds a check reads and whether it may offer a prerelease.
+    pub channel: UpdateChannel,
     /// minisign public key: either the whole `.pub` file text or just its base64 key line.
     pub public_key: String,
     pub current_version: semver::Version,
@@ -75,7 +76,8 @@ impl UpdaterConfig {
         bundle_identifier: impl Into<String>,
     ) -> Self {
         Self {
-            feed_url: feed_url(base_url),
+            base_url: base_url.to_string(),
+            channel: UpdateChannel::Stable,
             public_key: public_key.into(),
             current_version,
             platform: current_platform(),
@@ -90,8 +92,8 @@ impl UpdaterConfig {
     }
 }
 
-pub fn feed_url(base_url: &str) -> String {
-    format!("{}/{FEED_PATH}", base_url.trim_end_matches('/'))
+pub fn feed_url(base_url: &str, channel: UpdateChannel) -> String {
+    format!("{}/{}", base_url.trim_end_matches('/'), channel.feed_path())
 }
 
 /// The feed's platform key for this build, e.g. `darwin-aarch64` or `darwin-x86_64`.
@@ -254,7 +256,7 @@ pub(crate) fn check_url(url: &str) -> Result<(), UpdateError> {
 #[cfg(test)]
 mod unit_tests {
     use super::{
-        DEFAULT_MAX_DOWNLOAD_SIZE, UpdateError, check_url, feed_url, parse_lenient_version,
+        DEFAULT_MAX_DOWNLOAD_SIZE, UpdateChannel, UpdateError, check_url, feed_url, parse_lenient_version,
         version_from_system_plist,
     };
     use semver::Version;
@@ -309,8 +311,13 @@ mod unit_tests {
 
     #[test]
     fn feed_url_joins_base() {
-        assert_eq!(feed_url("https://u.example.com/"), "https://u.example.com/stable/latest.json");
-        assert_eq!(feed_url("https://u.example.com"), "https://u.example.com/stable/latest.json");
+        let stable = UpdateChannel::Stable;
+        assert_eq!(feed_url("https://u.example.com/", stable), "https://u.example.com/stable/latest.json");
+        assert_eq!(feed_url("https://u.example.com", stable), "https://u.example.com/stable/latest.json");
+        assert_eq!(
+            feed_url("https://u.example.com", UpdateChannel::Unstable),
+            "https://u.example.com/unstable/latest.json"
+        );
     }
 
     #[test]

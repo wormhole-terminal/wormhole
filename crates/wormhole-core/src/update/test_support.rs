@@ -11,7 +11,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 use semver::Version;
 
-use super::{Asset, DEFAULT_MAX_DOWNLOAD_SIZE, Release, UpdaterConfig};
+use super::{Asset, DEFAULT_MAX_DOWNLOAD_SIZE, Release, UpdateChannel, UpdaterConfig};
 
 pub const BUNDLE_ID: &str = "dev.wormhole.test";
 
@@ -50,7 +50,8 @@ impl TestKey {
 
 pub fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
     UpdaterConfig {
-        feed_url: "http://127.0.0.1:1/stable/latest.json".into(),
+        base_url: "http://127.0.0.1:1".into(),
+        channel: UpdateChannel::Stable,
         public_key: public_key.into(),
         current_version: Version::parse(current).unwrap(),
         platform: "darwin-aarch64".into(),

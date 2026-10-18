@@ -1,7 +1,8 @@
 //! Feature flags: a switch for each in-progress feature (see core's `features`). This section,
-//! and the whole Preview nav group it sits in, is drawn only in a development build; a release
-//! build neither lists it nor reads the switches. Turning a flag on makes its feature's own
-//! section appear (Project folders) and the feature work in every window at once.
+//! and the whole Preview nav group it sits in, is drawn only in a development build or on the
+//! Unstable update channel; any other release neither lists it nor reads the switches. Turning a
+//! flag on makes its feature's own section appear (Project folders) and the feature work in every
+//! window at once.
 
 use wormhole_core::features::FeatureFlag;
 
@@ -16,10 +17,10 @@ impl SettingsWindow {
         for flag in FeatureFlag::ALL {
             let on = settings(cx).feature_enabled(flag);
             let key = flag.key();
-            // A flag is on by default in a dev build, so "changed" means off. Going back to the
-            // default takes the key out again rather than writing a redundant entry, so the dot
-            // clears.
-            let default = true;
+            // A flag is on by default in a dev build and as released on Unstable, so "changed" is
+            // whatever differs from that. Going back to the default takes the key out again rather
+            // than writing a redundant entry, so the dot clears.
+            let default = settings(cx).flag_mode().default_for(flag);
             let state =
                 if on == default { style::SettingState::Default } else { style::SettingState::Changed };
             let control = style::toggle(key, on, move |on, _, cx| {

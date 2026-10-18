@@ -5,7 +5,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::progress::Progress;
-use wormhole_core::update::{Release, Security, Severity};
+use wormhole_core::update::{Release, Security, Severity, UpdateChannel};
 
 use super::super::super::updates::UpdatePhase;
 use super::*;
@@ -21,6 +21,12 @@ pub(super) const SETTINGS: &[Setting] = &[
             .into_any_element()
     }),
     toggle!("auto-update", auto_update),
+    Setting::segmented(
+        "update-channel",
+        &[Segment::text("Stable"), Segment::text("Unstable")],
+        |s| usize::from(s.update_channel == UpdateChannel::Unstable),
+        |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
+    ),
     Setting::block("update-status", draw_status),
 ];
 

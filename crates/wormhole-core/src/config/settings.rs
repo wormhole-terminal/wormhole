@@ -6,12 +6,13 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::features::{self, FeatureFlag};
+use crate::features::{self, FeatureFlag, FlagMode};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
 use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use crate::tokens::Color;
+use crate::update::UpdateChannel;
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
 /// pick (`theme_light`), or whichever matches the system's appearance.
@@ -246,6 +247,9 @@ pub struct Settings {
     pub hotkey: String,
     /// Check for and download updates automatically.
     pub auto_update: bool,
+    /// Which builds to update to: releases, or also every build of main (see [`UpdateChannel`]).
+    /// Unstable also shows the feature-flag switches (see [`crate::features`]).
+    pub update_channel: UpdateChannel,
 
     // Windows
     /// Settings window: translucent (window opacity + blur) like the main window.
@@ -367,8 +371,9 @@ pub struct Settings {
     pub worktree_base: String,
 
     /// Features still behind a flag (see [`crate::features`]). The key is a [`FeatureFlag`]'s
-    /// `key`, the value whether it is on. Only a development build reads this; a release ignores
-    /// it and uses each flag's release default. A key this build doesn't know stays in the file.
+    /// `key`, the value whether it is on. Only a development build or the Unstable channel reads
+    /// this; otherwise a release uses each flag's release default. A key this build doesn't know
+    /// stays in the file.
     pub feature_flags: BTreeMap<String, bool>,
 }
 
@@ -402,6 +407,7 @@ impl Default for Settings {
             menu_bar: true,
             hotkey: String::new(),
             auto_update: true,
+            update_channel: UpdateChannel::Stable,
             settings_translucent: false,
             studio_translucent: false,
             ui_font_family: String::new(),
@@ -457,10 +463,16 @@ impl Default for Settings {
 
 impl Settings {
     /// Whether the feature behind `flag` is on in this build: a development build reads
-    /// `feature_flags` (a flag with no entry defaults on), a release build uses the flag's
-    /// release default (see [`crate::features`]).
+    /// `feature_flags` (a flag with no entry defaults on), a release on the Unstable channel reads
+    /// it too (no entry: the release default), any other release uses the flag's release default
+    /// (see [`crate::features`]).
     pub fn feature_enabled(&self, flag: FeatureFlag) -> bool {
-        features::enabled_in(flag, &self.feature_flags, features::dev_build())
+        features::enabled_in(flag, &self.feature_flags, self.flag_mode())
+    }
+
+    /// Who decides the feature flags in this build with these settings.
+    pub fn flag_mode(&self) -> FlagMode {
+        FlagMode::of(features::dev_build(), self.update_channel)
     }
 
     /// Whether the sidebar's and the panel's cards sit on Liquid Glass: asked for, the Mac has it
@@ -519,6 +531,9 @@ pub const APP_SETTINGS: &[&str] = &[
     "hotkey",
     "menu_bar",
     "auto_update",
+    // Which builds the app installs, and whether config.json may turn unfinished features on: a
+    // cloned repository must not be able to choose either.
+    "update_channel",
     "notifications",
     "settings_translucent",
     "studio_translucent",
@@ -575,7 +590,8 @@ pub const APP_SETTINGS: &[&str] = &[
     // Which colour each folder wears is the person's too: a repository can tint its own title row
     // (`project_color`), not recolour the folders in everyone's windows.
     "folder_colors",
-    // Which in-progress features are on is the person's own, dev-build choice, never a project's.
+    // Which in-progress features are on is the person's own choice (a dev build, or Unstable), never a
+    // project's.
     "feature_flags",
 ];
 
@@ -784,6 +800,7 @@ mod tests {
             "hotkey",
             "menu_bar",
             "auto_update",
+            "update_channel",
             "notifications",
             "settings_translucent",
             "studio_translucent",

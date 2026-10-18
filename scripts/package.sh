@@ -9,14 +9,16 @@
 #   dist/SHA256SUMS
 #   dist/latest.json                              update feed
 #
-# All of them go onto the GitHub Release vX.Y.Z. The app reads <PUBLIC_BASE_URL>/<channel>/latest.json,
-# which redirects to the latest release's latest.json, and that names the archive on its release.
+# All of them go onto the GitHub Release vX.Y.Z (a build of main: the rolling release `unstable`). The
+# app reads <PUBLIC_BASE_URL>/<channel>/latest.json, which redirects to that release's latest.json,
+# and that names the archive on its release.
 #
 #   scripts/package.sh [path/to/Wormhole.app] [dist-dir]
 #
 # Env:
 #   GITHUB_REPOSITORY    owner/name whose Releases host the files (set in Actions; default
 #                        wormhole-terminal/wormhole)
+#   RELEASE_TAG          the release the files go onto (default v<version>; `unstable` for main builds)
 #   RELEASE_NOTES        Markdown notes for latest.json, or RELEASE_NOTES_FILE=path
 #   RELEASE_SEVERITY     critical|high|medium|low: this version is a security update, so latest.json gets
 #                        "security": {"severity": "<level>", "advisories": ["GHSA-…"]}. Without it
@@ -38,7 +40,7 @@ dist="${2:-$DIST_DEFAULT}"
 need minisign "Install it: brew install minisign"
 need jq
 
-base_url="https://github.com/${GITHUB_REPOSITORY:-wormhole-terminal/wormhole}/releases/download/v$APP_VERSION"
+base_url="https://github.com/${GITHUB_REPOSITORY:-wormhole-terminal/wormhole}/releases/download/${RELEASE_TAG:-v$APP_VERSION}"
 
 bundled_version="$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")"
 [ "$bundled_version" = "${APP_VERSION%%[-+]*}" ] \
