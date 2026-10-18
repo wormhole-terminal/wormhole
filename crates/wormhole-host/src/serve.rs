@@ -19,6 +19,7 @@ use polling::{Event, Events, PollMode, Poller};
 use wormhole_term::hosted::meta::{self, Meta};
 
 use crate::listen::{Listener, TOUCH_EVERY};
+use crate::peer::Policy;
 use crate::program::Spawner;
 use crate::session::{ConnId, Notice, Session};
 use crate::sys::{self, ReadyPipe};
@@ -69,6 +70,7 @@ pub fn serve<S: Spawner>(
     wakes: &Arc<Wakes>,
     ready: &mut ReadyPipe,
     files: &mut Files<'_>,
+    peers: &Policy,
 ) -> io::Result<()> {
     let poller = wakes.poller.clone();
     watch(&poller, &listener.listener, LISTENER, false)?;
@@ -109,7 +111,7 @@ pub fn serve<S: Spawner>(
         let now = Instant::now();
         for event in events.iter() {
             if event.key == LISTENER {
-                accept_all(session, listener, &poller, &mut conns, now);
+                accept_all(session, listener, peers, &poller, &mut conns, now);
             } else if event.readable {
                 let id = ConnId(event.key as u64);
                 read_from(session, &mut conns, id, &mut buf, &poller, now);
@@ -176,6 +178,7 @@ fn forget(
 fn accept_all<S: Spawner>(
     session: &mut Session<S>,
     listener: &Listener,
+    peers: &Policy,
     poller: &Poller,
     conns: &mut Vec<(ConnId, UnixStream, bool)>,
     now: Instant,
@@ -190,10 +193,13 @@ fn accept_all<S: Spawner>(
                 return;
             }
         };
-        // Same user, always; the signature when the host is signed (see `sys`).
+        // Same user, always; then the signature, when the host is signed (see `peer`).
         let uid = sys::peer_uid(&stream);
-        if uid.as_ref().ok() != Some(&sys::euid()) || !sys::signature_allows(&stream) {
+        if uid.as_ref().ok() != Some(&sys::euid()) {
             tracing::warn!(peer_uid = uid.ok(), "refused a connection from another user");
+            continue;
+        }
+        if !peers.allows(&stream) {
             continue;
         }
         if stream.set_nonblocking(true).is_err() {

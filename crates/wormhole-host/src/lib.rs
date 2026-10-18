@@ -31,6 +31,7 @@
 pub mod args;
 mod listen;
 pub mod log;
+mod peer;
 pub mod program;
 mod serve;
 pub mod session;
@@ -49,6 +50,7 @@ use wormhole_term::hosted::{
 use wormhole_wire::{AppVersion, version::Range};
 
 use listen::Listener;
+use peer::Policy;
 use program::PtySpawner;
 use serve::{Files, Wakes};
 use session::{Config, Session};
@@ -140,6 +142,8 @@ fn serve_files(
     started_ms: u64,
 ) -> anyhow::Result<()> {
     meta::write(&args.dir, &files.meta)?;
+    // Once, from the host's own signature; the socket is bound but nobody has been accepted yet.
+    let peers = Policy::detect();
     let poller = Arc::new(Poller::new()?);
     let wakes = Wakes::new(poller);
     let signals = wakes.clone();
@@ -157,7 +161,7 @@ fn serve_files(
     let config = Config::new(args.id.clone(), host_version(), started_ms);
     let spawner = PtySpawner { on_reader_start: sys::set_user_interactive };
     let mut session = Session::new(config, spawner, wake, Instant::now());
-    serve::serve(&mut session, listener, &wakes, ready, files)?;
+    serve::serve(&mut session, listener, &wakes, ready, files, &peers)?;
     if !ready.is_spent() {
         ready.say("err the host ended before a program was started");
     }

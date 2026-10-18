@@ -11,8 +11,17 @@ use std::path::{Path, PathBuf};
 const MAX_LINES: usize = 1000;
 
 /// What `[dependencies]` may name.
-const ALLOWED_DEPENDENCIES: &[&str] =
-    &["wormhole-term", "wormhole-wire", "anyhow", "libc", "tracing", "polling"];
+const ALLOWED_DEPENDENCIES: &[&str] = &[
+    "wormhole-term",
+    "wormhole-wire",
+    "anyhow",
+    "libc",
+    "tracing",
+    "polling",
+    "security-framework",
+    "security-framework-sys",
+    "core-foundation",
+];
 
 /// What the session's code must not name: sockets, files, the poller, the system, the clock.
 const SESSION_FORBIDS: &[&str] = &[
@@ -26,7 +35,7 @@ const SESSION_FORBIDS: &[&str] = &[
 ];
 
 /// The files that may hold `unsafe` (each in a small function with `#[allow(unsafe_code)]`).
-const UNSAFE_IN: &[&str] = &["src/sys.rs", "src/serve.rs"];
+const UNSAFE_IN: &[&str] = &["src/sys.rs", "src/serve.rs", "src/peer.rs"];
 
 fn crate_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -82,7 +91,9 @@ fn the_host_links_only_what_it_needs() {
     let mut extra = Vec::new();
     for line in manifest.lines().map(str::trim) {
         if line.starts_with('[') {
-            in_dependencies = line == "[dependencies]";
+            // The platform tables too (`[target.'cfg(..)'.dependencies]`), not the dev-dependencies.
+            in_dependencies = line == "[dependencies]"
+                || (line.starts_with("[target.") && line.ends_with(".dependencies]"));
             continue;
         }
         if !in_dependencies || line.is_empty() || line.starts_with('#') {

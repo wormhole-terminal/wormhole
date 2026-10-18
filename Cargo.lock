@@ -9214,8 +9214,11 @@ name = "wormhole-host"
 version = "1.1.0"
 dependencies = [
  "anyhow",
+ "core-foundation 0.10.1",
  "libc",
  "polling",
+ "security-framework",
+ "security-framework-sys",
  "tempfile",
  "tracing",
  "wormhole-term",

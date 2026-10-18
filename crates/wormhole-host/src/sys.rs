@@ -152,21 +152,6 @@ pub fn peer_uid(socket: &impl AsRawFd) -> io::Result<u32> {
     }
 }
 
-/// Whether the peer's code signature is one the host serves.
-///
-/// TODO(session host, P1 before shipping; `session-host.md` section 9 and spike 3): a host signed
-/// with a Developer ID must take the peer's audit token (`LOCAL_PEERTOKEN`), find its code
-/// (`SecCodeCopyGuestWithAttributes` with `kSecGuestAttributeAudit`) and check it once per
-/// connection against `anchor apple generic and identifier "app.getwormhole.terminal" (or the
-/// `wh` identifier) and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate
-/// leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "<team id>"`, the team
-/// id read from the host's own signature (`SecCodeCopySelf`), never compiled in, and never a
-/// cdhash or a version. An ad-hoc or unsigned host (dev builds) skips the check: uid and the
-/// `0700` directory only, as decided. Until then every build is treated as ad-hoc.
-pub fn signature_allows(_socket: &impl AsRawFd) -> bool {
-    true
-}
-
 /// Set a file's access and modification times to now (the long-path socket in `$TMPDIR` is kept
 /// from the temporary-file cleaner by this).
 #[allow(unsafe_code)] // libc FFI; a NUL-terminated path and a null times pointer.
