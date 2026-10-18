@@ -200,3 +200,12 @@ fn seeding_sets_the_counters() {
     assert_eq!(done.seeds.link_seq, 8);
     assert_eq!(done.seeds.image_handle, 3);
 }
+
+#[test]
+fn thousands_of_tab_stops_on_a_very_wide_screen() {
+    // A stop in every column of 9,000: a DECRSPS of them is longer than a receiver takes.
+    let input = format!("\x1b[3g{}", "\x1bH\x1b[C".repeat(9_000));
+    let (a, _, gaps) = repaint(input.as_bytes(), 9_000, 3);
+    assert!(gaps.is_empty(), "left out: {gaps:?}");
+    assert_eq!(a.tabs.columns().count(), 9_000);
+}

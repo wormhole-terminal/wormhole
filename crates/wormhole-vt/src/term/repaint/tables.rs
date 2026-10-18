@@ -10,6 +10,7 @@ use super::super::Cursor;
 use super::super::charset::Charsets;
 use super::super::conformance::Level;
 use super::super::modes::{self, Modes};
+use super::super::presentation::RESTORE_MAX;
 use super::{Gaps, Writer};
 
 /// The DEC private modes that are one flag and nothing else, with their numbers. The ones that do
@@ -81,21 +82,27 @@ impl<'a> Writer<'a> {
             return;
         }
         if t.level >= Level::Vt300 {
+            let start = self.out.len();
             self.put(b"\x1bP2$t");
+            let payload = self.out.len();
             for (i, column) in t.tabs.columns().enumerate() {
                 if i > 0 {
                     self.out.push(b'/');
                 }
                 self.num(column + 1);
             }
-            self.put(b"\x1b\\");
-        } else {
-            // TBC 3, then HTS where each stop is.
-            self.put(b"\x1b[3g");
-            for column in t.tabs.columns() {
-                self.csi2(1, column + 1, b'H');
-                self.put(b"\x1bH");
+            // The receiver drops a longer DECRSPS whole: thousands of stops on a very wide screen.
+            if self.out.len() - payload <= RESTORE_MAX {
+                self.put(b"\x1b\\");
+                return;
             }
+            self.out.truncate(start);
+        }
+        // TBC 3, then HTS where each stop is.
+        self.put(b"\x1b[3g");
+        for column in t.tabs.columns() {
+            self.csi2(1, column + 1, b'H');
+            self.put(b"\x1bH");
         }
     }
 
