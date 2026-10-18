@@ -2,6 +2,7 @@
 
 use super::{apc, apc_bare, freed, png, rgb, rig, spots, uploads};
 use crate::grid::MAX_PLACEMENTS;
+use crate::term::Event;
 use crate::term::{IMAGE_BUDGET_BYTES, MAX_IMAGES};
 
 /// A deterministic byte generator.
@@ -165,4 +166,22 @@ fn a_transmission_left_open_does_not_swallow_the_next_command_for_ever() {
     r.feed(&apc("m=0", &rgb(1, 3)));
     assert_eq!(uploads(&mut r).len(), 1);
     assert!(r.replies().contains("Gi=1;OK"));
+}
+
+#[test]
+fn a_full_event_queue_still_tells_the_host_which_pictures_go() {
+    let mut r = rig(40, 6);
+    for id in 1..=100 {
+        r.feed(&apc(&format!("a=t,f=24,s=1,v=1,i={id},q=2"), &rgb(1, 1)));
+    }
+    assert_eq!(uploads(&mut r).len(), 100);
+    // The host is not looking, and a program fills the queue with things it can lose.
+    r.feed(&"\x1b]1337;SetUserVar=a=Yg==\x07".repeat(20_000));
+    r.feed(&apc_bare("a=d,d=A,q=2"));
+    r.feed("\x1bc\x1bc\x1bc");
+    let events = r.events();
+    assert!(events.len() >= 16_384, "the queue was full");
+    let count = |want: fn(&Event) -> bool| events.iter().filter(|event| want(event)).count();
+    assert_eq!(count(|event| matches!(event, Event::ImageFree(_))), 100);
+    assert_eq!(count(|event| matches!(event, Event::FullReset)), 1, "resets in a row are one");
 }

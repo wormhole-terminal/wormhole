@@ -485,11 +485,15 @@ impl Terminal {
     }
 
     /// Queue an event. A host that never drains them does not grow without bound: past the cap
-    /// new ones are dropped, and a run of the same event (a bell, a title, a folder said twice) is
-    /// one.
+    /// new ones are dropped, and a run of the same event (a bell, a title, a folder said twice, a
+    /// reset) is one. A picture's pixels, their release and a reset are never dropped: the host
+    /// would keep pixels nobody can show, or show a picture without them. They stay bounded past
+    /// the cap: `add_image` takes no new picture there, a picture is freed once, and resets in a
+    /// row are one.
     fn push_event(&mut self, event: Event) {
-        if self.events.len() >= EVENTS_MAX
-            || (matches!(event, Event::Bell | Event::Title | Event::Cwd)
+        let kept = matches!(event, Event::ImageData(_) | Event::ImageFree(_) | Event::FullReset);
+        if (self.events.len() >= EVENTS_MAX && !kept)
+            || (matches!(event, Event::Bell | Event::Title | Event::Cwd | Event::FullReset)
                 && self.events.last() == Some(&event))
         {
             return;
