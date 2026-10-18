@@ -25,6 +25,33 @@ impl Store {
         Ok(())
     }
 
+    /// Save one session right now, in a transaction of its own: what the app calls when it has just
+    /// started a session host for a terminal, so the row that names the host (`host_id`) is on disk
+    /// before anything can go wrong, not on the next window save. It is [`Store::save_session`]
+    /// (same row, same guards); it only sets `host_id`, so the rest of the record should be the
+    /// session as it is.
+    pub fn save_session_host(
+        &mut self,
+        window_id: i64,
+        session: &SessionRecord,
+        host_id: &str,
+    ) -> Result<()> {
+        let mut record = session.clone();
+        record.host_id = Some(host_id.to_string());
+        self.save_session(window_id, &record)
+    }
+
+    /// Every terminal that names a session host: `(session id, host id)`, for matching the hosts
+    /// found on disk against the rows (a live host nobody names is an orphan).
+    pub fn host_ids(&self) -> Result<Vec<(i64, String)>> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT session_id, host_id FROM tabs WHERE host_id IS NOT NULL ORDER BY session_id",
+        )?;
+        let rows =
+            stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
+        Ok(rows)
+    }
+
     /// Put the window's sessions in this order (`order[0]` first). Ids that are not the window's
     /// are ignored, and sessions not listed keep their old position numbers, so list every session.
     pub fn order_sessions(&mut self, window_id: i64, order: &[i64]) -> Result<()> {
@@ -111,13 +138,13 @@ fn write_terminal(conn: &Connection, session: &SessionRecord) -> Result<()> {
     exec(conn, "DELETE FROM tabs WHERE session_id = ?1 AND id <> ?1", [session.id])?;
     exec(
         conn,
-        "INSERT INTO tabs (id, session_id, tab_id, position, cwd, shell, layout)
-         VALUES (?1, ?1, ?1, 0, ?2, ?3, NULL)
+        "INSERT INTO tabs (id, session_id, tab_id, position, cwd, shell, layout, host_id)
+         VALUES (?1, ?1, ?1, 0, ?2, ?3, NULL, ?4)
          ON CONFLICT(id) DO UPDATE SET session_id = ?1, tab_id = ?1, position = 0, cwd = ?2, shell = ?3,
-                                       layout = NULL
+                                       layout = NULL, host_id = ?4
          WHERE session_id IS NOT ?1 OR tab_id IS NOT ?1 OR position IS NOT 0 OR cwd IS NOT ?2
-            OR shell IS NOT ?3 OR layout IS NOT NULL",
-        params![session.id, session.cwd, session.shell],
+            OR shell IS NOT ?3 OR layout IS NOT NULL OR host_id IS NOT ?4",
+        params![session.id, session.cwd, session.shell, session.host_id],
     )?;
     Ok(())
 }

@@ -35,7 +35,7 @@ impl Store {
             conn.prepare_cached("SELECT id, layout FROM splits WHERE window_id = ? ORDER BY id")?;
         // The terminal is the row with the session's id (the only one, since schema 7).
         let mut terminal = conn.prepare_cached(
-            "SELECT t.cwd, t.shell, s.text
+            "SELECT t.cwd, t.shell, s.text, t.host_id
              FROM tabs t LEFT JOIN scrollback s ON s.tab_id = t.id
              WHERE t.session_id = ?1 ORDER BY t.id = ?1 DESC, t.position LIMIT 1",
         )?;
@@ -59,13 +59,14 @@ impl Store {
                 .collect::<rusqlite::Result<Vec<_>>>()?;
             for session in &mut window.sessions {
                 let found = terminal
-                    .query_map([session.id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+                    .query_map([session.id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
                     .next()
                     .transpose()?;
-                if let Some((cwd, shell, scrollback)) = found {
+                if let Some((cwd, shell, scrollback, host_id)) = found {
                     session.cwd = cwd;
                     session.shell = shell;
                     session.scrollback = scrollback;
+                    session.host_id = host_id;
                 }
                 // Blank ones saved by an older version are left behind.
                 session.notes = notes

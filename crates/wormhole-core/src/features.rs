@@ -31,10 +31,15 @@ pub enum FeatureFlag {
     /// (New Note, Stash Prompt, Show Notes), the open-items count in the sidebar and in the close
     /// questions, and the project notes sync. What was written stays in the database.
     NotesAndTasks,
+    /// Terminals that outlive the app: each runs under its own small `wormhole-host` process, so
+    /// quitting, crashing or updating Wormhole detaches from them and the next launch attaches
+    /// again to the same screen and the same running programs (`repo-docs/docs/session-host.md`).
+    PersistentTerminals,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 3] = [Self::ProjectFolders, Self::TerminalWelcome, Self::NotesAndTasks];
+    pub const ALL: [FeatureFlag; 4] =
+        [Self::ProjectFolders, Self::TerminalWelcome, Self::NotesAndTasks, Self::PersistentTerminals];
 
     /// The key this flag has under `feature_flags` in `config.json`.
     pub fn key(self) -> &'static str {
@@ -42,6 +47,7 @@ impl FeatureFlag {
             Self::ProjectFolders => "project_folders",
             Self::TerminalWelcome => "terminal_welcome",
             Self::NotesAndTasks => "notes_and_tasks",
+            Self::PersistentTerminals => "persistent_terminals",
         }
     }
 
@@ -55,6 +61,7 @@ impl FeatureFlag {
             Self::ProjectFolders => "Project folders",
             Self::TerminalWelcome => "Terminal welcome",
             Self::NotesAndTasks => "Notes and tasks",
+            Self::PersistentTerminals => "Persistent terminals",
         }
     }
 
@@ -73,6 +80,10 @@ impl FeatureFlag {
                 "Notes and next steps for each terminal: the right panel's Notes tab, their keys and \
                  the open count in the sidebar."
             }
+            Self::PersistentTerminals => {
+                "Terminals keep running when Wormhole quits or updates, and the next launch picks them \
+                 up again with their screen and programs."
+            }
         }
     }
 
@@ -85,6 +96,8 @@ impl FeatureFlag {
             Self::TerminalWelcome => false,
             // Hidden for now; what people wrote stays in the database.
             Self::NotesAndTasks => false,
+            // Off until the host has been through its phases and the user has approved it.
+            Self::PersistentTerminals => false,
         }
     }
 }
@@ -188,6 +201,21 @@ mod tests {
         assert!(enabled_in(FeatureFlag::NotesAndTasks, &BTreeMap::new(), DEV));
         let on = BTreeMap::from([("notes_and_tasks".to_string(), true)]);
         assert!(!enabled_in(FeatureFlag::NotesAndTasks, &on, RELEASE));
+    }
+
+    #[test]
+    fn persistent_terminals_is_on_in_a_dev_build_and_off_in_a_release() {
+        let flag = FeatureFlag::PersistentTerminals;
+        assert!(!flag.released());
+        assert_eq!(flag.key(), "persistent_terminals");
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        let on = BTreeMap::from([("persistent_terminals".to_string(), true)]);
+        assert!(!enabled_in(flag, &on, RELEASE), "a release ignores the map");
+        assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable), "off until a tester turns it on");
+        assert!(enabled_in(flag, &on, FlagMode::Unstable));
+        let off = BTreeMap::from([("persistent_terminals".to_string(), false)]);
+        assert!(!enabled_in(flag, &off, DEV));
+        assert_eq!(FeatureFlag::from_key("persistent_terminals"), Some(flag));
     }
 
     #[test]

@@ -153,3 +153,8 @@ pub(super) const V7_EVERY_TERMINAL_A_SESSION: &str = r#"
     DROP TABLE v7_rows;
     DROP TABLE v7_splits;
 "#;
+
+/// Version 7 to 8: a terminal may run under a session host. `tabs.host_id` holds the host's
+/// 12-character id (random, so a recovered database can't hand one host to the wrong terminal);
+/// NULL, as every existing row gets it, is a terminal in the app's own process.
+pub(super) const V8_TERMINAL_HOST: &str = "ALTER TABLE tabs ADD COLUMN host_id TEXT;";

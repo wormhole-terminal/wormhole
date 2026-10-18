@@ -108,7 +108,7 @@ fn a_version_6_database_is_upgraded_to_exactly_the_fresh_layout() {
     drop(v6_database(&dir));
     let store = Store::open_at(&dir).expect("opens");
     assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
-    assert_eq!(version(&store.conn), 7);
+    assert_eq!(version(&store.conn), 8);
     let fresh_dir = temp_dir("migrate-fresh");
     let fresh = Store::open_at(&fresh_dir).expect("opens");
     assert_eq!(dump(&store.conn), dump(&fresh.conn));
@@ -123,6 +123,7 @@ fn a_version_6_database_is_upgraded_to_exactly_the_fresh_layout() {
     assert_eq!(session.shell.as_deref(), Some("fish"));
     assert_eq!(session.scrollback.as_deref(), Some("output"));
     assert_eq!(session.split_id, None);
+    assert_eq!(session.host_id, None, "a terminal from before hosts runs in the app");
     assert!(windows[0].splits.is_empty());
 
     // A copy of the database as it was is kept first, with everything in it.

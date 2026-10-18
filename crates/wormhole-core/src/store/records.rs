@@ -50,6 +50,9 @@ pub struct SessionRecord {
     /// The split this terminal is a member of (`WindowRecord::splits`), `None` for a terminal alone.
     /// A name no split has is dropped the next time the database is opened.
     pub split_id: Option<i64>,
+    /// The session host that runs this terminal (`hosts::is_valid_host_id`'s 12 characters), `None`
+    /// for a terminal that lives in the app's own process. Stored on the terminal's `tabs` row.
+    pub host_id: Option<String>,
 }
 
 impl SessionRecord {

@@ -152,3 +152,41 @@ fn save_window_meta_writes_the_window_row_only() {
     store.save_window_meta(&window(2, vec![])).expect("saves");
     assert_eq!(store.load().expect("loads").iter().map(|w| w.id).collect::<Vec<_>>(), [1, 2]);
 }
+
+#[test]
+fn a_terminals_host_id_is_saved_loaded_and_cleared() {
+    let dir = temp_dir("host-id");
+    let mut store = Store::open_at(&dir).expect("opens");
+    let mut hosted = session(1, "/a");
+    hosted.host_id = Some("abcdefghij12".into());
+    store.save_window(&window(1, vec![hosted.clone(), session(2, "/b")])).expect("saves");
+    let loaded = store.load().expect("loads");
+    assert_eq!(loaded[0].sessions[0].host_id.as_deref(), Some("abcdefghij12"));
+    assert_eq!(loaded[0].sessions[1].host_id, None);
+    assert_eq!(store.host_ids().expect("ids"), [(1, "abcdefghij12".to_string())]);
+
+    // Saving the same record writes nothing.
+    let before = changes(&store);
+    store.save_window(&window(1, vec![hosted.clone(), session(2, "/b")])).expect("saves");
+    assert_eq!(changes(&store), before);
+
+    // A session that ends its host is saved without one.
+    hosted.host_id = None;
+    store.save_session(1, &hosted).expect("saves");
+    assert_eq!(store.load().expect("loads")[0].sessions[0].host_id, None);
+    assert!(store.host_ids().expect("ids").is_empty());
+}
+
+#[test]
+fn a_new_hosted_session_is_on_disk_as_soon_as_save_session_host_returns() {
+    let dir = temp_dir("host-id-now");
+    let mut store = Store::open_at(&dir).expect("opens");
+    store.save_window(&window(1, vec![session(1, "/a")])).expect("saves");
+    store.save_session_host(1, &session(2, "/b"), "zzzzzzzzzzzz").expect("saves");
+    // A second connection (what the next launch sees) finds the row without any window save.
+    let again = Store::open_at(&dir).expect("opens again");
+    let loaded = again.load().expect("loads");
+    assert_eq!(loaded[0].sessions.len(), 2);
+    assert_eq!(loaded[0].sessions[1].id, 2, "goes last in the window");
+    assert_eq!(loaded[0].sessions[1].host_id.as_deref(), Some("zzzzzzzzzzzz"));
+}

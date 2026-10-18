@@ -177,6 +177,9 @@ impl Session {
             shell: self.pane.shell.clone(),
             scrollback: None,
             split_id: self.split,
+            // The session host arrives with the app integration; until then every terminal is
+            // in-process and the column stays NULL.
+            host_id: None,
         }
     }
 }

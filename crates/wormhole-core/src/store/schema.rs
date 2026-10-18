@@ -19,7 +19,7 @@ const FIRST_MIGRATABLE: i64 = 6;
 
 /// `MIGRATIONS[i]` takes a database from version `FIRST_MIGRATABLE + i` to the next one. All the
 /// steps a database needs run in one transaction, so a failing step leaves it as it was.
-const MIGRATIONS: &[&str] = &[steps::V7_EVERY_TERMINAL_A_SESSION];
+const MIGRATIONS: &[&str] = &[steps::V7_EVERY_TERMINAL_A_SESSION, steps::V8_TERMINAL_HOST];
 
 /// The schema version this build creates and reads.
 const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
@@ -32,7 +32,8 @@ const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
 /// working folder and the shell, has that id too: `session_id` and `tab_id` repeat it, `position`
 /// is 0 and `layout` NULL. Those three and `sessions.active_tab` are what a session had when it had
 /// tabs and panes (schema 6); nothing reads them now, and a later step drops them.
-/// `scrollback.tab_id` names the terminal's row.
+/// `scrollback.tab_id` names the terminal's row. `tabs.host_id` names the session host that runs the
+/// terminal (`hosts`), NULL for a terminal in the app's own process.
 ///
 /// Scrollback has a table of its own: SQLite rewrites whole records, and updating a `tabs` row
 /// to change its cwd would have to read (and maybe rewrite) the scrollback's overflow
@@ -70,7 +71,8 @@ pub(super) const SCHEMA: &str = "
         position INTEGER NOT NULL,
         cwd TEXT,
         shell TEXT,
-        layout TEXT
+        layout TEXT,
+        host_id TEXT
     );
     CREATE TABLE IF NOT EXISTS scrollback (
         tab_id INTEGER PRIMARY KEY REFERENCES tabs(id) ON DELETE CASCADE,

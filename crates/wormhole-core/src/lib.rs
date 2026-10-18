@@ -19,6 +19,7 @@ pub mod fonts;
 pub mod fsutil;
 pub mod git;
 pub mod host_binary;
+pub mod hosts;
 pub mod icon_theme;
 pub mod intro;
 pub mod ipc;

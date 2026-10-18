@@ -67,7 +67,7 @@ fn words(text: &str) -> Vec<&str> {
 
 /// What [`dump`] must give for a fresh database, compared ignoring how the lines are wrapped.
 const EXPECTED: &str = r#"
-user_version 7
+user_version 8
 table meta: CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)
     columns: key TEXT pk 1, value TEXT
 table notes: CREATE TABLE notes (session_id INTEGER NOT NULL, position INTEGER NOT NULL,
@@ -87,9 +87,10 @@ table sessions: CREATE TABLE sessions (id INTEGER PRIMARY KEY, window_id INTEGER
 table splits: CREATE TABLE splits (id INTEGER PRIMARY KEY, window_id INTEGER NOT NULL, layout TEXT)
     columns: id INTEGER pk 1, window_id INTEGER not null, layout TEXT
 table tabs: CREATE TABLE tabs (id INTEGER PRIMARY KEY, session_id INTEGER NOT NULL,
-        tab_id INTEGER NOT NULL, position INTEGER NOT NULL, cwd TEXT, shell TEXT, layout TEXT)
+        tab_id INTEGER NOT NULL, position INTEGER NOT NULL, cwd TEXT, shell TEXT, layout TEXT,
+        host_id TEXT)
     columns: id INTEGER pk 1, session_id INTEGER not null, tab_id INTEGER not null,
-        position INTEGER not null, cwd TEXT, shell TEXT, layout TEXT
+        position INTEGER not null, cwd TEXT, shell TEXT, layout TEXT, host_id TEXT
 table tasks: CREATE TABLE tasks (session_id INTEGER NOT NULL, position INTEGER NOT NULL,
         text TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0)
     columns: session_id INTEGER not null, position INTEGER not null, text TEXT not null,
