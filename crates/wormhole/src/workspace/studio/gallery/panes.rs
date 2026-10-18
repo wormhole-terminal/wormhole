@@ -8,7 +8,7 @@ use super::*;
 pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
     let ui = env.ui;
     let header = |id: &'static str, focused: bool, glyph: style::StatusGlyph, name: &'static str| {
-        style::pane_header(id, ui, focused)
+        style::pane_header(id, ui, focused, false)
             .flex_1()
             .min_w_0()
             .child(style::status_glyph((id, 1u64), ui, glyph, cx))
@@ -63,7 +63,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                         .flex_col()
                         .child(header("g-pane-other", false, style::StatusGlyph::Terminal { unread: false }, "zsh"))
                         .child(body("← another pane: muted, its text at 72 %").opacity(style::PANE_DIM))
-                        .child(style::pane_divider("g-divider-rest", ui, Axis::Row, style::DividerLook::Rest)),
+                        .child(style::pane_divider("g-divider-rest", ui, Axis::Row, style::DividerLook::Rest, false)),
                 ),
         )
         .child(
@@ -77,22 +77,37 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                     "g-divider-hot",
                     ui,
                     Axis::Row,
-                    style::DividerLook::Hot,
+                    style::DividerLook::Hot, false,
                 )))
                 .child(div().relative().h_full().w(px(DIVIDER_SAMPLE_W)).child(style::pane_divider(
                     "g-divider-drag",
                     ui,
                     Axis::Row,
-                    style::DividerLook::Dragging,
+                    style::DividerLook::Dragging, false,
                 )))
                 .child(div().relative().w(px(DIVIDER_SAMPLE_L)).h(px(DIVIDER_SAMPLE_W)).child(
-                    style::pane_divider("g-divider-row", ui, Axis::Column, style::DividerLook::Hot),
+                    style::pane_divider("g-divider-row", ui, Axis::Column, style::DividerLook::Hot, false),
                 ))
                 .child(
                     div()
                         .text_caption()
                         .text_color(ui.muted)
                         .child("← dividers: hovered, dragged, and a horizontal one (drag to resize, double-click to equalize)"),
+                ),
+        )
+        .child(
+            // With gaps between the terminals each pane is a rounded surface, outlined.
+            div()
+                .flex()
+                .items_center()
+                .gap_4()
+                .child(div().relative().w(px(DIVIDER_SAMPLE_L)).h(px(DIVIDER_SAMPLE_H)).child(style::pane_outline(ui, true)))
+                .child(div().relative().w(px(DIVIDER_SAMPLE_L)).h(px(DIVIDER_SAMPLE_H)).child(style::pane_outline(ui, false)))
+                .child(
+                    div()
+                        .text_caption()
+                        .text_color(ui.muted)
+                        .child("← split gaps on: the focused pane's outline, and another's"),
                 ),
         )
         .child(drop_zones(ui))

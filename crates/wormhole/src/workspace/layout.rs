@@ -143,6 +143,7 @@ impl Render for Workspace {
         let session = self.active_session();
         let terminal = session.terminal().clone();
         let split = self.active_split().is_some();
+        let gaps = settings_in(&self.profile, cx).split_gaps && self.diff_view.is_none();
         // The diff sits in its own card below the bar, so nothing scrolls under it then; a split's
         // panes start below the bar, with headers of their own.
         // On glass the title row sits on the window above the terminal's rounded surface, so nothing
@@ -212,7 +213,8 @@ impl Render for Workspace {
                             // Never squeezed below the terminal's minimum: the panels yield
                             // first (core `Panes::columns`).
                             .min_w(px(crate::terminal_view::MIN_WIDTH))
-                            .bg(ui.background)
+                            // A split with gaps: each pane is the surface, the gaps show the window.
+                            .when(!(split && gaps), |d| d.bg(ui.background))
                             .children(
                                 self.render_diff(if lifted { None } else { Some(style::TITLE_ROW_H) }, cx),
                             )
@@ -252,8 +254,9 @@ impl Render for Workspace {
                                         .mt(px(style::TITLE_ROW_H))
                                         .when(!has_status_bar, |d| d.mb(gap))
                                         .when(!sidebar_shown, |d| d.ml(gap))
-                                        .rounded(ui.radius_lg)
-                                        .overflow_hidden(),
+                                        .when(!(split && gaps), |d| {
+                                            d.rounded(ui.radius_lg).overflow_hidden()
+                                        }),
                                 )
                                 .child(titlebar)
                         } else {

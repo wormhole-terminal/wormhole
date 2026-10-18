@@ -387,6 +387,14 @@ const TERMINAL: &[Group] = &[
                 &["minimap"],
             ),
             entry(
+                "split-gaps",
+                "Gaps between split terminals",
+                "Each terminal of a split is its own rounded surface, a small gap apart. Off joins \
+                 them with a hairline",
+                "panes divider spacing rounded margin",
+                &["split_gaps"],
+            ),
+            entry(
                 "meta",
                 "Use Option as Meta",
                 "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some \

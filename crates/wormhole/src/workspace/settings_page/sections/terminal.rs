@@ -17,6 +17,7 @@ const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("scrollback", draw_scrollback),
     toggle!("minimap", minimap),
+    toggle!("split-gaps", split_gaps),
     Setting::segmented(
         "meta",
         &[Segment::text("Off"), Segment::text("Left"), Segment::text("Right"), Segment::text("Both")],

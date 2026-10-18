@@ -327,6 +327,7 @@ impl Workspace {
             let Node::Leaf(id) = node else { unreachable!("a node is a pane or a split") };
             return self.render_pane(split, *id, order, cx);
         };
+        let gaps = settings_in(&self.profile, cx).split_gaps;
         let mut container = div().flex().size_full().min_w_0().min_h_0();
         container = match axis {
             Axis::Row => container.flex_row(),
@@ -336,6 +337,7 @@ impl Workspace {
             path.push(i);
             let inner = self.render_node(split, &child.node, path, order, cx);
             path.pop();
+            let gap = if i > 0 && gaps { px(style::PANE_GAP) } else { px(0.0) };
             let mut cell = div()
                 .relative()
                 .flex_grow(child.ratio)
@@ -346,8 +348,8 @@ impl Workspace {
                 .flex()
                 .child(inner);
             cell = match axis {
-                Axis::Row => cell.h_full(),
-                Axis::Column => cell.w_full(),
+                Axis::Row => cell.h_full().pl(gap),
+                Axis::Column => cell.w_full().pt(gap),
             };
             if i > 0 {
                 let divider = DividerId { path: path.clone(), index: i - 1 };
@@ -372,7 +374,9 @@ impl Workspace {
                 .as_ref()
                 .is_some_and(|drag| drag.id == id && drag.origin == DragOrigin::PaneHeader);
         let position = order.iter().position(|pane| *pane == id).map_or(1, |at| at + 1);
-        let header = self.render_pane_header(split, pane, focused, position, order.len(), cx);
+        let gaps = settings_in(&self.profile, cx).split_gaps;
+        let ui = ui_in(&self.profile, cx);
+        let header = self.render_pane_header(split, pane, focused, position, order.len(), gaps, cx);
         div()
             .id(("pane", id as u64))
             .relative()
@@ -382,6 +386,8 @@ impl Workspace {
             .min_w_0()
             .min_h_0()
             .overflow_hidden()
+            // Each pane its own surface, as the single terminal's.
+            .when(gaps, |d| d.bg(ui.background).rounded(ui.radius_lg))
             .when(lifted, |d| d.opacity(style::DRAG_LIFT_OPACITY))
             .child(header)
             .child(
@@ -393,6 +399,7 @@ impl Workspace {
                     // Cached: window frames the terminal didn't cause reuse its last paint.
                     .child(pane.terminal.clone().cached(StyleRefinement::default().size_full())),
             )
+            .when(gaps, |d| d.child(style::pane_outline(ui, focused)))
             .into_any_element()
     }
 
@@ -406,6 +413,7 @@ impl Workspace {
         focused: bool,
         position: usize,
         of: usize,
+        gaps: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
@@ -428,7 +436,7 @@ impl Workspace {
             DraggedTerminal::new(id, DragOrigin::PaneHeader, dragged_name, pane_glyph(status, told));
         let this = cx.weak_entity();
         let close_tip = keymap::with_key("Close pane", ActionId::CloseTerminal);
-        style::pane_header(("pane-header", id as u64), ui, focused)
+        style::pane_header(("pane-header", id as u64), ui, focused, gaps)
             .role(Role::Group)
             .aria_label(spoken::pane(&name, folder.as_deref(), position, of, focused))
             .on_mouse_down(
@@ -515,7 +523,8 @@ impl Workspace {
         };
         let id: SharedString = format!("pane-divider-{split}-{:?}-{}", divider.path, divider.index).into();
         let (hover, press) = (divider.clone(), divider);
-        style::pane_divider(id, ui, axis, look)
+        let gaps = settings_in(&self.profile, cx).split_gaps;
+        style::pane_divider(id, ui, axis, look, gaps)
             .on_hover(
                 cx.listener(move |this, hovered: &bool, _, cx| {
                     this.hover_divider(hover.clone(), *hovered, cx)

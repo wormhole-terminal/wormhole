@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::panes::{Axis, Zone};
 
 use super::buttons::icon;
-use super::scale::{CONTROL_H_SM, DROP_LINE_W, Edges, RESIZE_HANDLE_W, ROW_H, TextRole};
+use super::scale::{CONTROL_H_SM, DROP_LINE_W, Edges, PANE_GAP, RESIZE_HANDLE_W, ROW_H, TextRole};
 use crate::settings::UiColors;
 
 /// A pane's header is as tall as a one-line row: the status slot, the name and the folder, then
@@ -32,9 +32,10 @@ pub enum DividerLook {
 /// The header over a pane of a split tab: caption text, semibold and full strength on
 /// the focused pane with a [`PANE_FOCUS_LINE`] in the primary under it, medium and muted on the
 /// others; a hairline under every header. Add the status slot, the name, the folder and the
-/// buttons with `.child(…)`.
+/// buttons with `.child(…)`. With `gaps` (each pane its own rounded surface) it has neither the
+/// hairline nor the line: the surface's outline says which pane has the keyboard (`pane_outline`).
 #[track_caller]
-pub fn pane_header(id: impl Into<ElementId>, ui: UiColors, focused: bool) -> Stateful<Div> {
+pub fn pane_header(id: impl Into<ElementId>, ui: UiColors, focused: bool, gaps: bool) -> Stateful<Div> {
     div()
         .id(id)
         .relative()
@@ -45,64 +46,76 @@ pub fn pane_header(id: impl Into<ElementId>, ui: UiColors, focused: bool) -> Sta
         .h(px(PANE_HEADER_H))
         .pl_3()
         .pr_1()
-        .rule_bottom(ui)
+        .when(!gaps, |d| d.rule_bottom(ui))
         .text_caption()
         .font_weight(if focused { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
         .text_color(if focused { ui.text } else { ui.muted })
-        .when(focused, |d| {
+        .when(focused && !gaps, |d| {
             d.child(div().absolute().left_0().right_0().bottom_0().h(px(PANE_FOCUS_LINE)).bg(ui.primary))
         })
+}
+
+/// The outline over a pane that is its own rounded surface (`split_gaps`): the primary on the pane
+/// with the keyboard, the hairline on the others, following the surface's corners. Lay it over the
+/// pane with `.absolute()`.
+#[track_caller]
+pub fn pane_outline(ui: UiColors, focused: bool) -> Div {
+    div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
+        .bottom_0()
+        .rounded(ui.radius_lg)
+        .outlined(ui, if focused { ui.primary } else { ui.border })
 }
 
 /// The divider between two panes: a [`RESIZE_HANDLE_W`] handle straddling their shared edge (it
 /// sits at the start of the second pane, reaching back over the first) with the hairline along
 /// the edge, which takes `resize.handle.hover` under the pointer and `resize.handle.active` while
-/// dragged, with a grabber across it. A `Row` split's divider is vertical and drags sideways, a
+/// dragged, with a grabber across it. With `gaps` the handle is the gap itself ([`PANE_GAP`], at the
+/// start of the second pane's cell) and no hairline is drawn, only the grabber. A `Row` split's divider is vertical and drags sideways, a
 /// `Column` split's horizontal. Add the hover, press and tooltip handlers.
 #[track_caller]
-pub fn pane_divider(id: impl Into<ElementId>, ui: UiColors, axis: Axis, look: DividerLook) -> Stateful<Div> {
+pub fn pane_divider(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    axis: Axis,
+    look: DividerLook,
+    gaps: bool,
+) -> Stateful<Div> {
     let line = match look {
         DividerLook::Rest => ui.border,
         DividerLook::Hot => ui.resize_hover,
         DividerLook::Dragging => ui.resize_active,
     };
-    let half = px(RESIZE_HANDLE_W / 2.0);
+    // In a gap the handle lies in it, from the cell's edge; otherwise it straddles the hairline.
+    let handle_w = if gaps { PANE_GAP } else { RESIZE_HANDLE_W };
+    let half = if gaps { px(0.0) } else { px(RESIZE_HANDLE_W / 2.0) };
     let centred = px((RESIZE_HANDLE_W - f32::from(ui.border_width)) / 2.0);
     let handle = div().id(id).absolute();
-    let rule = div().absolute().bg(line);
+    let rule = div().absolute().bg(if gaps { gpui::transparent_black() } else { line });
     let grab = div().absolute().rounded(ui.radius_chip).bg(line);
     match axis {
         Axis::Row => handle
             .top_0()
             .bottom_0()
             .left(-half)
-            .w(px(RESIZE_HANDLE_W))
+            .w(px(handle_w))
             .cursor(CursorStyle::ResizeLeftRight)
             .child(rule.top_0().bottom_0().left(centred).w(ui.border_width))
             .when(look != DividerLook::Rest, |d| {
-                d.child(
-                    grab.left_0()
-                        .w(px(RESIZE_HANDLE_W))
-                        .h(px(GRAB_L))
-                        .top(relative(0.5))
-                        .mt(px(-GRAB_L / 2.0)),
-                )
+                d.child(grab.left_0().w(px(handle_w)).h(px(GRAB_L)).top(relative(0.5)).mt(px(-GRAB_L / 2.0)))
             }),
         Axis::Column => handle
             .left_0()
             .right_0()
             .top(-half)
-            .h(px(RESIZE_HANDLE_W))
+            .h(px(handle_w))
             .cursor(CursorStyle::ResizeUpDown)
             .child(rule.left_0().right_0().top(centred).h(ui.border_width))
             .when(look != DividerLook::Rest, |d| {
-                d.child(
-                    grab.top_0()
-                        .h(px(RESIZE_HANDLE_W))
-                        .w(px(GRAB_L))
-                        .left(relative(0.5))
-                        .ml(px(-GRAB_L / 2.0)),
-                )
+                d.child(grab.top_0().h(px(handle_w)).w(px(GRAB_L)).left(relative(0.5)).ml(px(-GRAB_L / 2.0)))
             }),
     }
 }

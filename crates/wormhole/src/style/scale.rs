@@ -128,6 +128,9 @@ pub const SIDEBAR_TAIL_MIN_H: f32 = 8.0;
 pub const DROP_LINE_W: f32 = 2.0;
 /// A resize handle straddles its hairline this wide.
 pub const RESIZE_HANDLE_W: f32 = 8.0;
+/// The gap between the terminals of a split when each is its own rounded surface (`split_gaps`); the
+/// divider's handle fills it.
+pub const PANE_GAP: f32 = 8.0;
 
 // ---------------------------------------------------------------- widths
 

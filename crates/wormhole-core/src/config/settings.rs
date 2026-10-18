@@ -292,6 +292,9 @@ pub struct Settings {
     pub status_bar: bool,
     /// The minimap along every terminal's right edge (View → Show Minimap).
     pub minimap: bool,
+    /// A small gap between the terminals of a split, each its own rounded surface; off joins them with
+    /// a hairline.
+    pub split_gaps: bool,
     /// The line under the terminal's title row: always, only while content is under the bar, never.
     pub title_border: TitleBorder,
     /// The app the title row's Open in… button opens a terminal's folder in, by its bundle
@@ -416,6 +419,7 @@ impl Default for Settings {
             theme_light: "Catppuccin Latte".into(),
             status_bar: false,
             minimap: false,
+            split_gaps: true,
             title_border: TitleBorder::default(),
             open_in: String::new(),
             title_branch_status: true,
@@ -520,6 +524,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "studio_translucent",
     "status_bar",
     "minimap",
+    "split_gaps",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",
     // The window's chrome, one look for every window (where the terminals are listed too); and the
