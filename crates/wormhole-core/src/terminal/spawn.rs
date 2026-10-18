@@ -78,6 +78,31 @@ pub fn spawn(size: GridSize, options: &SpawnOptions) -> anyhow::Result<(Pty, Pty
     Pty::start(size, &options.start_options(), launch)
 }
 
+/// [`spawn`] in a new session host (`wormhole-host`): the same program, environment and engine
+/// options, with the program running in `host` instead of the app's own process. The saved text
+/// (`options.restore`) is not replayed: a hosted terminal's history is the host's. Blocks for up
+/// to a few seconds while the host starts: never on the UI thread.
+pub fn spawn_hosted(
+    host: &super::client::HostCommand<'_>,
+    size: GridSize,
+    options: &SpawnOptions,
+) -> anyhow::Result<(Pty, PtyEvents)> {
+    let launch = process::launch_options(options, process::shell(options));
+    Pty::start_hosted(host, size, &options.start_options(), launch)
+}
+
+/// Attach to the running session host `id` listening at `socket`, with the engine options the
+/// terminal was started with (`options`, as [`spawn_hosted`] had them), fed a repaint at once when
+/// `visible` and headless otherwise. Blocks for the handshake: never on the UI thread.
+pub fn attach_hosted(
+    socket: &std::path::Path,
+    id: &str,
+    options: &SpawnOptions,
+    visible: bool,
+) -> anyhow::Result<(Pty, PtyEvents)> {
+    Pty::attach_hosted(socket, id, &options.start_options(), visible)
+}
+
 /// [`spawn`] with an explicit program instead of the user's shell.
 #[cfg(test)]
 pub(crate) fn spawn_program(

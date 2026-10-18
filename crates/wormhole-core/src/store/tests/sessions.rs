@@ -190,3 +190,49 @@ fn a_new_hosted_session_is_on_disk_as_soon_as_save_session_host_returns() {
     assert_eq!(loaded[0].sessions[1].id, 2, "goes last in the window");
     assert_eq!(loaded[0].sessions[1].host_id.as_deref(), Some("zzzzzzzzzzzz"));
 }
+
+/// What launch does with a database whose terminals name hosts of which some still run: the rows
+/// with a live host attach, the rest replay their text, and a live host no row names is an orphan.
+#[test]
+fn restoring_with_live_and_missing_hosts_attaches_replays_and_finds_orphans() {
+    use crate::hosts::{HostMeta, LaunchHosts, Restore};
+    let host = |id: &str, started_at: u64| HostMeta {
+        id: id.into(),
+        pid: 100,
+        child_pid: None,
+        started_at,
+        host_version: "0.3.0".into(),
+        proto_min: 1,
+        proto_max: 1,
+        socket: std::path::PathBuf::from(format!("/h/{id}.sock")),
+        data_dir: std::path::PathBuf::from("/d"),
+    };
+    let dir = temp_dir("mixed-hosts");
+    let mut store = Store::open_at(&dir).expect("opens");
+    let mut live = session(1, "/a");
+    live.host_id = Some("aaaaaaaaaaaa".into());
+    let mut gone = session(2, "/b");
+    gone.host_id = Some("bbbbbbbbbbbb".into());
+    let local = session(3, "/c");
+    store.save_window(&window(1, vec![live, gone, local])).expect("saves");
+    store.save_session_host(1, &session(4, "/d"), "cccccccccccc").expect("a host started just now");
+
+    let ids = store.host_ids().expect("ids");
+    let named = ids.iter().map(|(_, id)| id.as_str());
+    let found = vec![host("aaaaaaaaaaaa", 1), host("cccccccccccc", 2), host("oooooooooooo", 3)];
+    let mut hosts = LaunchHosts::plan(named, found);
+    let loaded = store.load().expect("loads");
+    let plan: Vec<(i64, Restore)> =
+        loaded[0].sessions.iter().map(|s| (s.id, hosts.restore(s.host_id.as_deref()))).collect();
+    assert_eq!(
+        plan,
+        [
+            (1, Restore::Attach("/h/aaaaaaaaaaaa.sock".into())),
+            (2, Restore::Replay),
+            (3, Restore::Replay),
+            (4, Restore::Attach("/h/cccccccccccc.sock".into())),
+        ]
+    );
+    let orphans: Vec<String> = hosts.take_orphans().into_iter().map(|m| m.id).collect();
+    assert_eq!(orphans, ["oooooooooooo"]);
+}

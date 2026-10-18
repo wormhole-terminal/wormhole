@@ -7,6 +7,7 @@
 //! deletes a file: [`scan`] reports what is stale and the caller decides.
 
 mod admin;
+mod launch;
 mod scan;
 
 use std::io;
@@ -16,6 +17,7 @@ use std::path::{Path, PathBuf};
 pub use admin::{
     EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, find, forget, is_host_process,
 };
+pub use launch::{LaunchHosts, Restore, persisted_host, shown_at_launch};
 pub use scan::{HostMeta, Scan, StaleHost, StaleReason, read_meta, scan, scan_with};
 /// Where a host listens and where its meta file is: one rule for the host, the app and this crate
 /// (`wormhole_term::hosted::paths`); readers still take the socket from the meta.

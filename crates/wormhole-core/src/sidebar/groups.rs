@@ -23,7 +23,19 @@ pub struct TermGroup {
     pub members: Vec<i64>,
     /// It stays, as one line, when its last terminal closes.
     pub pinned: bool,
+    /// The window's Recovered group: the terminals of session hosts that no saved row named when
+    /// the app started (`hosts::LaunchHosts`), adopted rather than left running unseen. Otherwise
+    /// a group like any other, which the person may rename, recolour or take apart.
+    #[serde(skip_serializing_if = "is_false")]
+    pub recovered: bool,
 }
+
+fn is_false(value: &bool) -> bool {
+    !value
+}
+
+/// What the Recovered group is called when it is made.
+pub const RECOVERED_NAME: &str = "Recovered";
 
 impl TermGroup {
     pub fn color(&self) -> Option<GroupColor> {
@@ -74,8 +86,34 @@ impl Groups {
             color,
             members: members.to_vec(),
             pinned: false,
+            recovered: false,
         });
         id
+    }
+
+    /// Put `members` (terminals adopted from orphaned session hosts) in the window's Recovered
+    /// group, after the ones it holds, making the group at the end of the list when there is none.
+    /// Its id, `None` when there was nothing to put in it.
+    pub fn recover(&mut self, members: &[i64]) -> Option<u32> {
+        if members.is_empty() {
+            return None;
+        }
+        let id = match self.0.iter().find(|group| group.recovered) {
+            Some(group) => group.id,
+            None => {
+                let id = self.create(&[]);
+                if let Some(group) = self.get_mut(id) {
+                    group.name = RECOVERED_NAME.to_string();
+                    group.color = GroupColor::Grey.key().to_string();
+                    group.recovered = true;
+                }
+                id
+            }
+        };
+        for &terminal in members {
+            self.join(id, terminal);
+        }
+        Some(id)
     }
 
     /// Move `terminal` into group `id` (out of the one it was in). `false` if there is no such
@@ -153,7 +191,7 @@ pub fn group_key(id: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{GroupColor, Groups, group_key};
+    use super::{GroupColor, Groups, RECOVERED_NAME, group_key};
 
     #[test]
     fn a_new_group_takes_its_members_from_the_groups_they_were_in() {
@@ -229,6 +267,37 @@ mod tests {
         assert_eq!(groups.get(a).and_then(|g| g.color()), Some(GroupColor::Cyan));
         groups.set_color(a, None);
         assert_eq!(groups.get(a).and_then(|g| g.color()), None);
+    }
+
+    #[test]
+    fn orphans_gather_in_one_recovered_group_at_the_end() {
+        let mut groups = Groups::default();
+        let mine = groups.create(&[1]);
+        assert_eq!(groups.recover(&[]), None, "nothing to recover makes no group");
+        let recovered = groups.recover(&[7, 8]).expect("made");
+        assert_ne!(recovered, mine);
+        let group = groups.get(recovered).expect("listed");
+        assert_eq!((group.name.as_str(), group.recovered), (RECOVERED_NAME, true));
+        assert_eq!(group.members, [7, 8]);
+        assert_eq!(groups.iter().last().map(|g| g.id), Some(recovered), "after the person's own");
+        // More orphans join the same group; one that was in a group of its own moves there.
+        groups.join(mine, 9);
+        assert_eq!(groups.recover(&[9]), Some(recovered));
+        assert_eq!(groups.get(recovered).map(|g| g.members.clone()), Some(vec![7, 8, 9]));
+        assert_eq!(groups.get(mine).map(|g| g.members.clone()), Some(vec![1]));
+        assert_eq!(groups.iter().filter(|g| g.recovered).count(), 1);
+    }
+
+    #[test]
+    fn the_recovered_mark_round_trips_and_plain_groups_save_as_before() {
+        let mut groups = Groups::default();
+        groups.create(&[1]);
+        let plain = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(!plain.contains("recovered"), "{plain}");
+        groups.recover(&[2]);
+        let json = serde_json::to_string(&groups).unwrap_or_default();
+        let back: Groups = serde_json::from_str(&json).unwrap_or_default();
+        assert_eq!(back.iter().filter(|g| g.recovered).count(), 1, "{json}");
     }
 
     #[test]

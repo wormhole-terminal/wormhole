@@ -11,5 +11,5 @@ mod process;
 mod spawn;
 
 pub use process::shell_name;
-pub use spawn::{SpawnOptions, spawn};
+pub use spawn::{SpawnOptions, attach_hosted, spawn, spawn_hosted};
 pub use wormhole_term::*;
