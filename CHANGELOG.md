@@ -9,10 +9,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Added
 
 - The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
-  above it, and the surface stands 12 pt from the window's edges, the sidebar, the panel and the status
-  bar, so at the window's edge it lines up with the traffic lights. With terminals as tabs the title row is
+  above it, and the terminal's text stands 12 pt from the window's edges, the sidebar, the panel and the
+  status bar (the surface 8 pt, the grid 4 pt inside it, as in 1.1), so at the window's edge it lines
+  up with the traffic lights. With terminals as tabs the title row is
   the same as with the sidebar, and the tabs sit under it, 8 pt above the surface. Glass only changes what
-  they are made of.
+  they are made of. As in 1.1 the terminal's column, title row included, is in the terminal's colour,
+  so the surface reads as the terminal itself rather than a box on the window.
 - The terminals of a split sit 8 pt apart, each its own rounded surface with the primary outline on the one
   that has the keyboard; the gap is the handle that resizes them. Settings → Terminal → Gaps between split
   terminals turns it off for the hairline join.
@@ -26,10 +28,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The window's content lines up on one 12 pt edge: the terminal's text, the title row's first item, the
   status bar's ends and the sidebar and panel headers. The terminal centres its grid in the pane, and the
   edge cells' colours run out to the pane's edges. The title row has no fill of its own: its folder,
-  branch and terminal stand on the window, above the terminal's surface.
+  branch and terminal stand on the terminal's colour, above its surface.
 - Tabs keep their place when you switch between them, show their close button only under the pointer, and the
   group switcher shows just the group's name. Every tab is a box, lined up with the terminal's edge: the
-  open one filled, the others in the terminal's own colour, so each one reads clearly. Too many to fit,
+  open one filled, the others in a fainter fill, so each one reads clearly. Too many to fit,
   and the row scrolls sideways, bringing the selected terminal's tab into view; the + stays at the bar's
   right end. A drag on the tab bar no longer moves the window.
 - In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)

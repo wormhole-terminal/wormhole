@@ -2,7 +2,7 @@
 //! RF-02 draws it: one 38 pt row with the group switcher (the group's name, up-down chevrons, an amber dot while another group needs you) and that group's
 //! terminals as tabs. A tab is 28 tall and 172 wide: a 16 pt status tile, the name in 12.5, and the
 //! × while the pointer is over it (the open one too; it takes its room from the name then). Every
-//! tab is a box: the open one in a 14 % fill, the others in the terminal's colour.
+//! tab is a box on the terminal's colour: the open one in a 14 % fill, the others in a 5 % one.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable as _};
@@ -34,9 +34,9 @@ pub struct TerminalTab {
 /// What a tab leaves its name: its width less its padding, the tile and the gap after it.
 pub const TAB_NAME_W: f32 = TAB_W - 2.0 * 8.0 - super::scale::TILE_SMALL - 8.0;
 
-/// One terminal's tab: its status tile, then its name, in a box; the open one in an [`OPEN_FILL`]
-/// of the text colour with the name in the text colour, the others in the terminal's surface colour
-/// with the name muted and a hover fill. The tab group named by
+/// One terminal's tab: its status tile, then its name, in a box of the text colour; the open one
+/// in an [`OPEN_FILL`] with the name in the text colour, the others in a [`CLOSED_FILL`] with the
+/// name muted and a hover fill. The tab group named by
 /// [`TAB_GROUP`] drives the × on hover. Add `.on_click(…)`.
 #[track_caller]
 pub fn terminal_tab(id: impl Into<ElementId>, ui: UiColors, tab: TerminalTab) -> Stateful<Div> {
@@ -56,9 +56,9 @@ pub fn terminal_tab(id: impl Into<ElementId>, ui: UiColors, tab: TerminalTab) ->
         .flex_none()
         .w(px(TAB_W))
         .cursor_pointer()
-        // Every tab is a box, so each reads on its own: the open one filled, the others in the
-        // terminal's own colour. No edge on either, so switching tabs moves nothing.
-        .bg(if selected { ui.text.opacity(OPEN_FILL) } else { ui.background })
+        // Every tab is a box, so each reads on its own on the terminal's colour: the open one filled
+        // most. No edge on either, so switching tabs moves nothing.
+        .bg(ui.text.opacity(if selected { OPEN_FILL } else { CLOSED_FILL }))
         .hover(move |d| if selected { d } else { d.bg(ui.hover) })
         .child(tile)
         .child(
@@ -131,11 +131,12 @@ pub fn group_switcher(id: impl Into<ElementId>, ui: UiColors, parts: GroupSwitch
     PopoverTrigger::new(button)
 }
 
-/// A tab's height, the switcher's, and the open tab's fill: the text colour at this share, enough to
-/// set it apart from the closed ones.
+/// A tab's height, the switcher's, and the tabs' fills: the text colour at these shares, the open
+/// one's enough to set it apart from the closed ones, theirs enough to hold each one's box.
 pub const TAB_H: f32 = 28.0;
 pub const SWITCHER_H: f32 = 26.0;
 const OPEN_FILL: f32 = 0.14;
+const CLOSED_FILL: f32 = 0.05;
 const SWITCHER_NAME_MAX: f32 = 160.0;
 /// How far the amber dot sits from the switcher's corner.
 const ALERT_INSET: f32 = 0.0;

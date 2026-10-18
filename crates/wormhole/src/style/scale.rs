@@ -70,6 +70,11 @@ pub const BANNER_MIN_H: f32 = 40.0;
 /// the sidebar's header, the title row's first item, the terminal's text, the status bar's ends, the
 /// tab bar and the folder row all start this far in, so the window has shared edges.
 pub const EDGE_INSET: f32 = 12.0;
+/// The terminal's grid inside its surface (as in 1.1; a command block's mark lies in it), and the
+/// surface's inset from the window's edge, the sidebar, the panel and the status bar: the two make
+/// the [`EDGE_INSET`], so the text, not the surface, lines up with the traffic lights.
+pub const TERMINAL_PAD: f32 = 4.0;
+pub const SURFACE_INSET: f32 = EDGE_INSET - TERMINAL_PAD;
 
 /// The left and right inset of every sidebar row, band and toolbar.
 pub const SIDEBAR_INSET: f32 = EDGE_INSET;

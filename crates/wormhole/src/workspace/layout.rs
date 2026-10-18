@@ -203,8 +203,9 @@ impl Render for Workspace {
                             // Never squeezed below the terminal's minimum: the panels yield
                             // first (core `Panes::columns`).
                             .min_w(px(crate::terminal_view::MIN_WIDTH))
-                            // A split with gaps: each pane is the surface, the gaps show the window.
-                            .when(!(split && gaps), |d| d.bg(ui.background))
+                            // No fill of its own: the column has the terminal's colour, and a second
+                            // coat of a translucent one would draw the surface as a darker box. A split
+                            // with gaps: each pane is the surface, the gaps show the window.
                             .children(self.render_diff(cx))
                             // Cached: window frames the terminal didn't cause reuse its last
                             // paint. A split's panes are drawn with their headers below the
@@ -217,11 +218,12 @@ impl Render for Workspace {
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
                             .when(self.diff_view.is_none(), |d| d.children(self.render_drop_overlay(cx)))
                             .children(self.render_find_bar(cx));
-                        // The terminal is a rounded surface below the title row, standing in the window's
-                        // 12 pt edge from the column's sides and bottom: at the window's edge its left side
-                        // lines up with the traffic lights. The margin also keeps a program that paints every
-                        // cell (a full-screen app's rectangle of colour) clear of the window's own corners.
-                        let gap = px(style::EDGE_INSET);
+                        // The terminal is a rounded surface below the title row, its own inset from the
+                        // column's sides and bottom; with the grid's padding inside it the text stands on the
+                        // window's 12 pt edge and lines up with the traffic lights. The margin also keeps a
+                        // program that paints every cell (a full-screen app's rectangle of colour) clear of
+                        // the window's own corners.
+                        let gap = px(style::SURFACE_INSET);
                         let column = div()
                             .relative()
                             .flex_1()
@@ -229,6 +231,10 @@ impl Render for Workspace {
                             .h_full()
                             .flex()
                             .flex_col()
+                            // The terminal's colour from the title row down, as in 1.1, so the surface
+                            // reads as the terminal itself, not a box on the window. A split with gaps
+                            // keeps the window's colour, which the gaps show.
+                            .when(!(split && gaps), |d| d.bg(ui.background))
                             .child(
                                 surface
                                     .min_h_0()

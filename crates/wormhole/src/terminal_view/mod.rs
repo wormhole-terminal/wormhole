@@ -49,11 +49,11 @@ actions!(
     [ClearBuffer, PreviousPrompt, NextPrompt, SelectOutput, CopyOutput, CopyCommand, RerunCommand]
 );
 
-/// The grid's least inset from the pane's sides, and below the title bar and above the bottom: the
-/// window's standard edge. What doesn't make a whole cell is split evenly between the two sides
+/// The grid's least inset from the pane's sides, and below the title bar and above the bottom; with
+/// the surface's own inset it makes the window's standard edge. What doesn't make a whole cell is split evenly between the two sides
 /// (the grid is centred), and the edge cells' backgrounds run out to the pane's edges.
-const PADDING_X: f32 = crate::style::EDGE_INSET;
-const PADDING_Y: f32 = crate::style::EDGE_INSET;
+const PADDING_X: f32 = crate::style::TERMINAL_PAD;
+const PADDING_Y: f32 = crate::style::TERMINAL_PAD;
 /// Narrowest the terminal column may get (padding included); the layout rules in core own it.
 pub const MIN_WIDTH: f32 = wormhole_core::layout::TERMINAL_MIN;
 /// The font sizes a terminal draws at: what Settings allows, the window's ⌘+ / ⌘- included.
