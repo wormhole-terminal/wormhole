@@ -19,9 +19,18 @@ use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFa
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
-/// The close ×: drawn 22 square, its glyph ending at x 334.
+/// The close ×: drawn 22 square, this far under the row's top.
 const CLOSE_X_TOP: f32 = 3.0;
-const CLOSE_X_RIGHT: f32 = 12.0;
+/// How far before its line's end a name too long for it fades out to nothing, in place of an
+/// ellipsis: the name uses the whole width, and the × under the pointer lies over the faded end.
+const NAME_FADE: f32 = 32.0;
+
+/// How far the × stands in from the row's right side: its glyph ends where line 1 ends (the row's
+/// own padding, and a lone card's), on the right edge of what sits there at rest.
+fn close_right(metrics: &style::Metrics, solo: bool) -> f32 {
+    let line_end = metrics.row_px + if solo { metrics.card_pad } else { 0.0 };
+    line_end - (style::CONTROL_H_SM - style::GLYPH) / 2.0
+}
 /// What a glyph or a keycap takes at the right of a line, gap included, for knowing when the
 /// name is cut off.
 const TRAIL_W: f32 = 24.0;
@@ -30,6 +39,10 @@ const KEYCAP_TRAIL_W: f32 = 36.0;
 const DETAIL_W: f32 = 36.0;
 /// The pin after a pinned terminal's name.
 const MARK_W: f32 = 20.0;
+/// The gap between line 1's parts (`gap_2`).
+const LINE_GAP: f32 = 8.0;
+/// How much room a name must have to spare to be drawn whole rather than faded.
+const FIT_SLACK: f32 = 16.0;
 
 /// What every row of one frame shares: the settings and how text is measured.
 pub(super) struct Frame {
@@ -76,6 +89,33 @@ impl Frame {
             window.text_system().shape_line(SharedString::from(text.to_string()), size, &[run], None).width(),
         )
     }
+
+    /// For a line of text too long for `room`: the bytes that fade out over its last [`NAME_FADE`]
+    /// points, and the room it is cut to there. `None` when it fits.
+    pub(super) fn fade(
+        &self,
+        text: &str,
+        size: f32,
+        weight: FontWeight,
+        room: f32,
+        window: &Window,
+    ) -> Option<style::NameFade> {
+        if text.is_empty() || text.contains('\n') || room <= NAME_FADE {
+            return None;
+        }
+        let mut run = self.text_style.to_run(text.len());
+        run.font.weight = weight;
+        let size = rems(size).to_pixels(self.rem);
+        let line = window.text_system().shape_line(SharedString::from(text.to_string()), size, &[run], None);
+        // The room is worked out before layout, a few points off at times: a name that only just fits
+        // fades too, so it never falls back to an ellipsis.
+        if f32::from(line.width()) <= room - FIT_SLACK {
+            return None;
+        }
+        let start = line.closest_index_for_x(px(room - NAME_FADE));
+        let end = line.closest_index_for_x(px(room)).max(start);
+        Some(style::NameFade { bytes: start..end, room })
+    }
 }
 
 /// Where a row sits in the listing.
@@ -89,6 +129,9 @@ pub(super) struct Place {
     pub(super) grouped: bool,
     /// What it shows of its split.
     pub(super) marks: SplitMarks,
+    /// The row above it in its card counts the same changes of the same repository, so this one
+    /// leaves them out.
+    pub(super) changes_above: bool,
 }
 
 /// A terminal's status tile: its agent's logo (when the rows show it) or the terminal symbol, and
@@ -134,8 +177,9 @@ pub(super) fn glyph_for(info: &RowInfo) -> StatusGlyph {
     }
 }
 
-/// A row's second line: its words, their color, whether they are a command or a path (code font),
-/// and what sits at the line's right.
+/// A row's second line: its words, their color, whether they are a command (code font; a path is
+/// in the interface font, as the title row and a pane's header show it) and what sits at the
+/// line's right.
 #[derive(Debug, PartialEq, Eq)]
 pub(super) struct SecondLine {
     pub(super) text: Option<String>,
@@ -161,7 +205,7 @@ pub(super) fn second_line(
         return match agent_detail(info.state, info.message.as_deref(), info.since) {
             Some(text) => line(Some(text), tone_of(info.state), false, None),
             None => match whereabouts() {
-                Some(place) => line(Some(place), RowTone::Plain, true, None),
+                Some(place) => line(Some(place), RowTone::Plain, false, None),
                 None => line(Some("Idle".to_string()), RowTone::Plain, false, None),
             },
         };
@@ -180,7 +224,7 @@ pub(super) fn second_line(
             line(Some(text), RowTone::Failed, true, Some(ago(failure.since)))
         }
         (None, None) => match whereabouts() {
-            Some(place) => line(Some(place), RowTone::Plain, true, None),
+            Some(place) => line(Some(place), RowTone::Plain, false, None),
             None => line(Some("Shell".to_string()), RowTone::Plain, false, None),
         },
     }
@@ -237,7 +281,7 @@ impl Workspace {
         });
         let changes = info
             .changes
-            .filter(|_| frame.show_changes)
+            .filter(|_| frame.show_changes && !place.changes_above)
             .map(|n| div().text_caption().tabular_nums().text_color(quiet).child(format!("±{n}")));
         // What a split says of this terminal, at the right of its first line.
         let chain = place.marks.chain.then(|| style::chain_mark(("chain", id as u64), ui));
@@ -295,7 +339,9 @@ impl Workspace {
         });
 
         // Tooltip only when something is cut off: the name, or the second line.
-        let details = (frame.show_notes && info.open_items > 0) as u8 + info.changes.is_some() as u8;
+        // Only what is drawn: the ±N is left out when the row above counts the same changes.
+        let details = (frame.show_notes && info.open_items > 0) as u8
+            + (frame.show_changes && !place.changes_above && info.changes.is_some()) as u8;
         let right = if hint.is_some() { KEYCAP_TRAIL_W } else { 0.0 }
             + f32::from(details) * DETAIL_W
             + if place.marks.chain { TRAIL_W } else { 0.0 };
@@ -303,7 +349,14 @@ impl Workspace {
         // padding, and the tile or the lead glyph with its gap.
         let side = frame.metrics.card_margin + frame.metrics.card_pad + frame.metrics.row_px;
         let lead_w = frame.metrics.tile + frame.metrics.tile_gap;
-        let name_room = frame.width - 2.0 * side - lead_w - right - marks as f32 * MARK_W;
+        // With nothing at the line's end the gap before its spacer still follows the name (the
+        // details' widths count theirs).
+        let name_room = frame.width
+            - 2.0 * side
+            - lead_w
+            - right
+            - marks as f32 * MARK_W
+            - if right == 0.0 { LINE_GAP } else { 0.0 };
         let name_weight = if selected || info.unread { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM };
         let cut_name = frame.measure(&info.name, BODY_REM, name_weight, window) > name_room;
         let detail_room = frame.width - 2.0 * side - lead_w - detail_trail.as_ref().map_or(0.0, |_| CLOCK_W);
@@ -360,6 +413,21 @@ impl Workspace {
                 card: true,
                 solo: place.solo,
                 metrics: frame.metrics,
+                // The whole line at rest; under the pointer, when nothing else sits at the line's end
+                // to give way to the ×, faded out before it.
+                name_fade: frame.fade(&info.name, BODY_REM, name_weight, name_room, window),
+                name_hover: (right == 0.0)
+                    .then(|| {
+                        frame.fade(
+                            &info.name,
+                            BODY_REM,
+                            name_weight,
+                            name_room - style::CLOSE_GLYPH_ROOM,
+                            window,
+                        )
+                    })
+                    .flatten()
+                    .map(|fade| (fade, group.clone())),
             },
         );
         let flash = self.sidebar.flash.filter(|(flashed, _)| *flashed == id).map(|(_, generation)| {
@@ -397,7 +465,16 @@ impl Workspace {
             .when(self.sidebar.menu_row == Some(id) || ring, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
-            .when(!frame.hints, |d| d.child(self.close_button(info, selected, &group, ui, cx)))
+            .when(!frame.hints, |d| {
+                d.child(self.close_button(
+                    info,
+                    selected,
+                    &group,
+                    close_right(&frame.metrics, place.solo),
+                    ui,
+                    cx,
+                ))
+            })
             .map(|d| self.with_drag(d, info, cx));
         // Last: the menu wraps the row.
         self.with_row_menu(row, info, cx).into_any_element()
@@ -409,6 +486,7 @@ impl Workspace {
         info: &RowInfo,
         selected: bool,
         group: &SharedString,
+        right: f32,
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -420,7 +498,7 @@ impl Workspace {
         div()
             .absolute()
             .top(px(CLOSE_X_TOP))
-            .right(px(CLOSE_X_RIGHT))
+            .right(px(right))
             .size(px(style::CONTROL_H_SM))
             .invisible()
             .group_hover(group.clone(), |s| s.visible())
@@ -494,6 +572,7 @@ mod tests {
             pinned: false,
             open_items: 0,
             changes: None,
+            repo: None,
         }
     }
 

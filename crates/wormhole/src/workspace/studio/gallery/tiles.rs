@@ -70,6 +70,8 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 hint: None,
                 close: selected
                     .then(|| style::close_x(id, ui, style::SelectedFill::Plain).into_any_element()),
+                name_fade: None,
+                name_hover: None,
             },
         )
         .into_any_element()

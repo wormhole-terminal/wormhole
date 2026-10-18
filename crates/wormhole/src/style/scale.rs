@@ -47,12 +47,12 @@ pub const TILE_SMALL: f32 = 16.0;
 pub const TILE_DENSE_FOLD: f32 = 14.0;
 /// The rounded selection and hover inside a card.
 pub const CARD_ROW_RADIUS: f32 = 8.0;
-/// The tab bars (tabs instead of the sidebar): a tab's width where tabs keep one, and the least a
-/// shared one gives way to.
+/// The tab bar (terminals as tabs): every tab's width; too many to fit, and the row scrolls.
 pub const TAB_W: f32 = 172.0;
-pub const TAB_MIN_W: f32 = 96.0;
-/// The title rows across the top: the sidebar's, the terminal's breadcrumb, the panel's tabs.
-pub const TITLE_ROW_H: f32 = 36.0;
+/// The title rows across the top: the sidebar's, the terminal's breadcrumb, the panel's tabs. The
+/// traffic lights (14 pt) are centred in it, which puts them 12 pt from the window's top as they are
+/// from its left: the terminal's surface stands as far from the window's sides and bottom.
+pub const TITLE_ROW_H: f32 = 38.0;
 /// Height of a badge (one caption line). Its least width is the same, so a lone
 /// digit sits in a square.
 pub const BADGE_H: f32 = 16.0;

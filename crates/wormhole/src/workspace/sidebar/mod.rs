@@ -9,6 +9,9 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use gpui_kit::component::scroll::{Scrollbar, ScrollbarMode};
+use wormhole_core::terminal::scrollbar::ScrollerStyle;
+
 use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
 use super::session::home_dir;
 use super::terminal_drag::Over;
@@ -41,6 +44,7 @@ mod tick;
 use facts::{RowInfo, row_times};
 use motion::{ItemKey, ListMotion};
 pub(super) use row_menu::reveal_in_finder;
+pub(super) use tab_bar::TAB_ROW_H;
 
 /// The sidebar's part of a window: what is saved with it (the groups, their order, which are
 /// folded) and what it is doing right now.
@@ -220,12 +224,21 @@ impl Workspace {
         };
         let held = cx.has_active_drag().then(|| self.terminal_drag.as_ref().map(|drag| drag.id)).flatten();
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
+        // The changes the previous row of the card counted: a group's terminals in one repository
+        // say "±3" once, not on every row.
+        let mut counted_above: Option<(Option<usize>, &Option<PathBuf>, usize)> = None;
         for (at, entry) in listing.entries.iter().enumerate() {
             let line = match *entry {
                 Entry::Band { band, position, of } => {
                     self.render_group_band(&listing, &infos, band, (position, of), &frame, window, cx)
                 }
                 Entry::Row { session, band, position, of, number, marks } => {
+                    let info = &infos[session];
+                    // Only inside a group's card: a terminal in no group is a card of its own.
+                    let changes_above = band.is_some()
+                        && info.repo.is_some()
+                        && info.changes.is_some_and(|n| counted_above == Some((band, &info.repo, n)));
+                    counted_above = info.changes.map(|n| (band, &info.repo, n));
                     let place = rows::Place {
                         solo: frame.metrics.cards && matches!(listing.card(at), Some(Card::Loose(_))),
                         position,
@@ -233,8 +246,9 @@ impl Workspace {
                         number,
                         grouped: band.is_some(),
                         marks,
+                        changes_above,
                     };
-                    self.render_row(&infos[session], &place, &frame, window, cx)
+                    self.render_row(info, &place, &frame, window, cx)
                 }
             };
             // Where a dragged thing would land, as a line over this one.
@@ -360,9 +374,33 @@ impl Workspace {
                         let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
                         // It holds the keyboard for the sidebar.
                         self.area_container(wormhole_core::focus::Area::Sidebar, list, cx)
-                    }),
+                    })
+                    // Beside the list, not in it: a child of the scrolled list would move with its rows.
+                    .child(self.list_edges(ui, cx)),
             )
             .children(self.render_no_agents_note(cx))
+            .into_any_element()
+    }
+
+    /// What lies over the list's edges: a hairline under the title row while rows are scrolled up
+    /// beneath it, as a Mac window draws one, and the scrollbar in the system's style, as the
+    /// terminal's: while the list scrolls (overlay), or always (legacy). No fade at the bottom: over the sidebar's translucent surface a gradient darkens what it covers
+    /// instead of fading it, and the row cut off at the edge already says there is more.
+    fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
+        // A wheel turn moves the offset at once and the layout clamps it only on the next frame, and
+        // the clamp leaves -0, which `Pixels` orders below 0: a list too short to scroll would draw
+        // as scrolled. Half a point of real scroll counts.
+        let (offset, max) = (self.sidebar.scroll.offset(), self.sidebar.scroll.max_offset());
+        let scrolled = offset.y.max(-max.y) < px(-0.5);
+        let mode = match crate::scroller::ScrollerPrefs::style(cx) {
+            ScrollerStyle::Overlay => ScrollbarMode::Scrolling,
+            ScrollerStyle::Legacy => ScrollbarMode::Always,
+        };
+        div()
+            .absolute()
+            .inset_0()
+            .when(scrolled, |d| d.child(div().absolute().top_0().left_0().right_0().rule_top(ui)))
+            .child(Scrollbar::vertical(&self.sidebar.scroll).id("sidebar-scrollbar").mode(mode))
             .into_any_element()
     }
 
@@ -468,14 +506,16 @@ impl Workspace {
         }
     }
 
-    /// Scroll the terminal list by `dy` (negative = up), within its bounds.
+    /// Scroll the terminal list by `dy` (negative = up), within its bounds; where it is now and
+    /// how far it goes.
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_sidebar_scroll(&mut self, dy: f32, cx: &mut Context<Self>) {
+    pub(crate) fn devctl_sidebar_scroll(&mut self, dy: f32, cx: &mut Context<Self>) -> String {
         let scroll = &self.sidebar.scroll;
         let (offset, max) = (scroll.offset(), scroll.max_offset());
         let y = (offset.y - px(dy)).clamp(-max.y, px(0.0));
         scroll.set_offset(point(offset.x, y));
         cx.notify();
+        format!("sidebar scroll {} of {}", -f32::from(y), f32::from(max.y))
     }
 }
 

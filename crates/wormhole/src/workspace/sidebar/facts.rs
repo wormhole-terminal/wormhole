@@ -41,6 +41,8 @@ pub(super) struct RowInfo {
     pub(super) open_items: usize,
     /// The changed files the row counts.
     pub(super) changes: Option<usize>,
+    /// The repository the changes are of, so rows of one repository count them once.
+    pub(super) repo: Option<PathBuf>,
 }
 
 /// A plain terminal's last failed command, as its row says it ("cargo build · exit 101").
@@ -105,6 +107,7 @@ impl Workspace {
                     since: terminal.status_since().elapsed(),
                     cwd: terminal.cwd.clone(),
                     worktree: root.as_deref().and_then(|root| self.worktree_of(root)),
+                    repo: root.clone(),
                     running: foreground
                         .filter(|f| !told && ends_by_itself(&f.command))
                         .and_then(|f| now.duration_since(f.started).ok()),

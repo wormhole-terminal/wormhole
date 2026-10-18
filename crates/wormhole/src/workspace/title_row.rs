@@ -23,7 +23,7 @@ use super::folder_color;
 use super::open_in::{self, OpenIn};
 use super::title_extras::ExtraFacts;
 use super::*;
-use crate::theme_bridge::{self, token};
+use crate::theme_bridge::token;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
 pub(super) struct Facts {
@@ -51,9 +51,6 @@ pub(super) struct Tint {
     pub(super) color: ProjectColor,
     /// How strong it is at the left edge: 36 %, less where the text would not read.
     pub(super) peak: f32,
-    /// How strong the rounded bar's even fill is: half of `peak`, so the text keeps its contrast
-    /// across the whole bar.
-    pub(super) bar: f32,
     /// The line that takes its place under Increase Contrast.
     pub(super) line: Hsla,
 }
@@ -73,12 +70,17 @@ pub(super) struct TitlePlan {
 /// The width of Open in… (the app's icon and its chevron), the two splits, and the one `⋯` they
 /// fold into; each with the gap that separates it from the breadcrumb.
 pub(super) const ROW_GAP: f32 = 4.0;
-/// The title row is a rounded bar this far in from the column's sides and the window's top, and the
-/// terminal's surface below it stands in as far (sides, bottom) and this far under the bar: one inset
-/// for the pair. Content in both starts 12 from the surface's edge.
+/// The title row is a bar this far in from the column's sides and the window's top, centred on the
+/// traffic lights, with as much under it before the terminal's surface ([`SURFACE_TOP`]).
 pub(super) const BAR_INSET: f32 = 4.0;
-pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W;
+/// Where the terminal's surface (or, with terminals as tabs, their bar) starts under the window's top:
+/// under the whole title row.
+pub(super) const SURFACE_TOP: f32 = style::TITLE_ROW_H;
+pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W + AFTER_CHEVRON;
 const CHEVRON_W: f32 = 16.0;
+/// After Open in…'s narrow chevron, so its glyph stands as far from the split's as the row's other
+/// glyphs stand from each other (12 pt).
+const AFTER_CHEVRON: f32 = 4.0;
 pub(super) const SPLITS_W: f32 = 2.0 * style::HIT_MIN;
 pub(super) const MORE_W: f32 = style::HIT_MIN;
 /// The app's icon in the Open in… button, and in its menu.
@@ -97,12 +99,9 @@ impl Workspace {
         let plan = (!in_diff).then(|| self.title_plan(window, cx));
         let (left, right) = self.title_row_pads(window);
 
-        // The tint is one even fill over the whole rounded bar; under Increase Contrast it gives way
-        // to a line. A terminal in no group has no tint: the bar is the surface alone.
+        // The bar has no fill of its own: its content stands on the window. Under Increase Contrast
+        // the group's colour is a line under it.
         let tint = plan.as_ref().and_then(|plan| plan.tint.as_ref());
-        let wash = tint
-            .filter(|_| !system.increase_contrast)
-            .map(|tint| theme_bridge::hsla(tint.color.color()).opacity(tint.bar));
         let line = tint.filter(|_| system.increase_contrast).map(|tint| tint.line);
         let strip = plan.as_ref().map(|plan| self.render_title_strip(plan, window, cx));
         let extras = plan.as_ref().and_then(|plan| self.render_title_extras(plan, cx));
@@ -117,10 +116,6 @@ impl Workspace {
             .h(px(style::TITLE_ROW_H - 2.0 * BAR_INSET))
             .rounded(ui.radius_lg)
             .overflow_hidden()
-            // The surface shows through a tint, and is the whole bar without one. The cut-off
-            // `scrolled` fill is gone: the bar is never see-through to the lines under it.
-            .bg(ui.panel)
-            .when_some(wash, |d, wash| d.child(div().absolute().inset_0().bg(wash)))
             .when_some(line, |d, color| d.rule_bottom_in(ui, color, 2.0))
             .child(
                 self.with_title_pads(
@@ -253,12 +248,14 @@ impl Workspace {
                     .into_any_element(),
             ]
         });
+        let gap_after = open_in.is_some();
         div()
             .id("title-actions")
             .flex()
             .flex_none()
             .items_center()
             .children(open_in.into_iter().flatten())
+            .when(gap_after, |d| d.child(div().flex_none().w(px(AFTER_CHEVRON))))
             .child(split("split-right", IconName::Columns2, "Split right", ActionId::SplitRight, Axis::Row))
             .child(split("split-down", IconName::Rows2, "Split down", ActionId::SplitDown, Axis::Column))
             .into_any_element()

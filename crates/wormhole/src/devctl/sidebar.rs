@@ -79,8 +79,7 @@ pub(super) fn folder_color(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_sidebar_scroll(arg.trim().parse().unwrap_or(0.0), ctx.cx);
-    Ok(String::new())
+    Ok(ctx.workspace.devctl_sidebar_scroll(arg.trim().parse().unwrap_or(0.0), ctx.cx))
 }
 
 /// Press ⌘ alone (and keep it held) or let go of it, as the keyboard would.

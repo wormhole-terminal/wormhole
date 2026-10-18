@@ -153,7 +153,9 @@ impl Render for Workspace {
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
         let tabs = self.sidebar.tabs.on;
-        let top_tabs = tabs.then(|| self.render_tab_bar(window, cx));
+        let top_tabs = if tabs { self.render_tab_bar(window, cx) } else { None };
+        // One terminal and no group to switch to: no tab bar, as in macOS Terminal.
+        let tabs_shown = top_tabs.is_some();
 
         // GPUI Kit's root sets the interface font and the rem size from the shown profile's
         // theme; an odd window overrides both with its own profile's.
@@ -184,8 +186,6 @@ impl Render for Workspace {
             .on_mouse_up(MouseButton::Left, cx.listener(Self::on_divider_end))
             .when(self.resizing.is_some(), |d| d.cursor(CursorStyle::ResizeLeftRight))
             .when_some(self.pane_drag.as_ref().map(panes::PaneDrag::cursor), |d, cursor| d.cursor(cursor))
-            // The tabs across the top, over everything else.
-            .children(top_tabs)
             // The panes, above the status bar when it is shown and to the window's bottom when not.
             .child(
                 div()
@@ -217,11 +217,11 @@ impl Render for Workspace {
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
                             .when(self.diff_view.is_none(), |d| d.children(self.render_drop_overlay(cx)))
                             .children(self.render_find_bar(cx));
-                        // The terminal is a rounded surface below the title bar's row, both stood in
-                        // `BAR_INSET` from the column's sides so they read as a pair, with the bar's own
-                        // `BAR_INSET` margin as the gap between them. The same inset lies beside the
-                        // sidebar and the panel's strip, above the status bar and at the window's edge.
-                        let gap = px(super::title_row::BAR_INSET);
+                        // The terminal is a rounded surface below the title row, standing in the window's
+                        // 12 pt edge from the column's sides and bottom: at the window's edge its left side
+                        // lines up with the traffic lights. The margin also keeps a program that paints every
+                        // cell (a full-screen app's rectangle of colour) clear of the window's own corners.
+                        let gap = px(style::EDGE_INSET);
                         let column = div()
                             .relative()
                             .flex_1()
@@ -232,12 +232,15 @@ impl Render for Workspace {
                             .child(
                                 surface
                                     .min_h_0()
-                                    .mt(px(style::TITLE_ROW_H))
+                                    // Terminals as tabs: their bar lies between the title row and the surface.
+                                    .mt(px(super::title_row::SURFACE_TOP
+                                        + if tabs_shown { super::sidebar::TAB_ROW_H } else { 0.0 }))
                                     .mx(gap)
                                     .mb(gap)
                                     .when(!(split && gaps), |d| d.rounded(ui.radius_lg).overflow_hidden()),
                             )
-                            .child(titlebar);
+                            .child(titlebar)
+                            .children(top_tabs);
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {

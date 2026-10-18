@@ -6,7 +6,6 @@ use crate::theme_bridge;
 use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
-use wormhole_core::layout::status_bar::CONTEXT_METER_W;
 use wormhole_core::sidebar::Bracket;
 use wormhole_core::sidebar::GroupColor;
 
@@ -182,7 +181,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         let line = |text: &'static str| two_lines.then_some(text);
         let id = |a: &'static str, b: &'static str| if two_lines { a } else { b };
         column(ui)
-            .child(caption(ui, if two_lines { "Two lines · 44" } else { "One line · 28" }))
+            .child(caption(ui, if two_lines { "Two lines" } else { "One line" }))
             .child(row(
                 id("g-r2-normal", "g-r1-normal"),
                 glyph(id("g-g2-normal", "g-g1-normal"), StatusGlyph::Working),
@@ -450,13 +449,6 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     );
 
     let status_bar = style::status_bar(ui, false)
-        .child(
-            style::status_item("g-status-branch", ui, false, false)
-                .child(div().text_color(ui.branch).child(style::icon(IconName::GitBranch)))
-                .child(div().text_color(ui.branch).child("ui-unify"))
-                .child(div().ml_1().child("±3")),
-        )
-        .child(style::status_separator(ui))
         // The terminal that has waited longest, as a button with its tile; the rest as numbers.
         .child(
             style::status_attention("g-status-attention", ui, false)
@@ -485,9 +477,8 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
                 .child("1 done"),
         )
         .child(div().flex_1())
-        .child(style::status_context(ui, CONTEXT_METER_W, true, 0.62, false, "62%"))
         .child(style::status_separator(ui))
-        .child(style::status_text(ui).child("zsh · 90×40"));
+        .child(style::status_text(ui).child("claude · 90×40"));
 
     div()
         .flex()

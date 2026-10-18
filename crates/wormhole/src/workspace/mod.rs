@@ -455,8 +455,10 @@ impl Workspace {
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
         let blur = aux_window::wants_blur(settings_in(&self.profile, cx), true);
         self.blur.set_enabled(blur);
-        // Glass without the blur stands on the panel's colour, as the sidebar would have painted.
-        self.blur.set_backing((self.glass_on(cx) && !blur).then(|| ui_in(&self.profile, cx).panel));
+        // Without the blur the window stands on the panel's colour: the gaps round the terminal's
+        // surface and between a split's panes show the window, glass or not, and would otherwise
+        // show the desktop through it.
+        self.blur.set_backing((!blur).then(|| ui_in(&self.profile, cx).panel));
     }
 
     fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {

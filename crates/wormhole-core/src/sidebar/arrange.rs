@@ -96,7 +96,7 @@ impl WindowSidebar {
     /// when they are in none, so a split always stands in one card. Does nothing without mates.
     pub fn seat_beside(&mut self, ids: &[i64], joiner: i64, mates: &[i64]) {
         let list = self.arranged(ids);
-        let Some(&anchor) = mates.iter().filter(|&&m| m != joiner).last() else { return };
+        let Some(&anchor) = mates.iter().rfind(|&&m| m != joiner) else { return };
         if let Some(group) = self.groups.group_of(anchor) {
             self.settle(ids);
             self.groups.join(group, joiner);

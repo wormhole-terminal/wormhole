@@ -8,9 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
-- The terminal is always a rounded surface, with or without Liquid Glass: the title bar has its own row above
-  it, both stand in 4 pt from the window, the sidebar, the panel and the status bar with 4 pt between them,
-  and their content starts on the same 12 pt edge. Glass only changes what they are made of.
+- The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
+  above it, and the surface stands 12 pt from the window's edges, the sidebar, the panel and the status
+  bar, so at the window's edge it lines up with the traffic lights. With terminals as tabs the title row is
+  the same as with the sidebar, and the tabs sit under it, 8 pt above the surface. Glass only changes what
+  they are made of.
 - The terminals of a split sit 8 pt apart, each its own rounded surface with the primary outline on the one
   that has the keyboard; the gap is the handle that resizes them. Settings → Terminal → Gaps between split
   terminals turns it off for the hairline join.
@@ -23,21 +25,26 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   rows and the "on screen" label are gone; VoiceOver still says which are on screen.
 - The window's content lines up on one 12 pt edge: the terminal's text, the title row's first item, the
   status bar's ends and the sidebar and panel headers. The terminal centres its grid in the pane, and the
-  edge cells' colours run out to the pane's edges. The title row is a rounded bar, evenly tinted with the
-  group's colour.
+  edge cells' colours run out to the pane's edges. The title row has no fill of its own: its folder,
+  branch and terminal stand on the window, above the terminal's surface.
 - Tabs keep their place when you switch between them, show their close button only under the pointer, and the
-  group switcher shows just the group's name.
-- The right panel's toggle is back at the right end of the terminal's title row (also with terminals as
-  tabs), beside the panel's tab strip: it opens the panel on its last tab and closes it, like ⌥⌘I.
+  group switcher shows just the group's name. Every tab is a box, lined up with the terminal's edge: the
+  open one filled, the others in the terminal's own colour, so each one reads clearly. Too many to fit,
+  and the row scrolls sideways, bringing the selected terminal's tab into view; the + stays at the bar's
+  right end. A drag on the tab bar no longer moves the window.
 - In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)
-  on a right-click or a click on its name. The panel's tab strip no longer has a button at its foot;
-  Stash prompt stays in the palette, the menu and its key.
-- The top rows are 36 points tall. The title row is tinted with the selected terminal's group colour
-  (none for a terminal in no group), and a chip at the sidebar's top names the profile Wormhole is in
+  on a right-click or a click on its name.
+- The top rows are 38 points tall, which puts the traffic lights 12 pt from the window's top as from its
+  left, as far as the terminal stands from the sides and the bottom; a chip at the sidebar's top names the profile Wormhole is in
   once there are two: its menu switches profiles (every window with it), opens a window in one,
   moves this one, makes or manages profiles and opens Settings.
-- Terminals as tabs is one row: the lights, the profile chip, a group switcher (the group's colour,
-  name and count, with an amber dot while another group needs you) and that group's terminals as tabs.
+- The sidebar has no "Terminals" heading any more: its + sits at the right end of the top row and goes
+  with the sidebar when you hide it. A long list has a scrollbar like the terminal's (it follows "Show
+  scroll bars" in System Settings) and a hairline under the top row while rows are scrolled beneath it.
+- Terminals as tabs is one row under the title row: the profile chip, a group switcher (the group's
+  colour, name and count, with an amber dot while another group needs you) and that group's terminals as
+  tabs. As in macOS Terminal there is no tab bar while there is only one terminal; the switcher shows
+  once there is another group to switch to, the tabs once the group has more than one terminal.
   The switcher opens a search ("Go to group or terminal…") over the groups as cards, "In no group",
   New group and "Show all groups in the sidebar". ⌃⌥[ and ⌃⌥] go to the previous and next group and
   ⌃⌥1–9 to a group by number, in both layouts.
@@ -74,14 +81,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Terminals can show as tabs instead of the sidebar (Settings → Show terminals in, or View → Show
   Terminals as Tabs): one row across the top with the selected terminal's group (a menu switches to
   another) and its tabs. The title row then shows the terminal's status as a small tile.
-- The right panel is drawn in cards like the sidebar's: Changes has a card per section, History's
-  commits are one card, Notes has its Next steps and Notes cards, and Usage and Project follow. The
-  panel has no title row any more; its first card starts under the top of the window.
-- The panel's tabs (Changes, History, Notes, Usage, Project) sit in a narrow strip down the window's
-  right edge that stays when the panel is closed: a click on a tab opens the panel on it, a click on
-  the open tab closes it, and an amber dot on Changes says its files changed since you last looked.
-  The button at the foot stashes the typed prompt into a note. The panel's button in the title row is
-  gone; its key and menu item still work.
 - The status bar puts the terminal that has waited longest for you first, as a button with its tile,
   its name and how long it has waited (one click goes there), and counts the rest ("2 working · 1
   done"). Below about 1100 points the words go first.
@@ -89,20 +88,22 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 ### Changed
 
 - The status bar's size item names the program in front (the agent, or the running command), as the
-  title row does, instead of always the shell.
-- New windows open with a 320 point sidebar and a 300 point panel (plus its 28 point strip); saved
-  widths are kept.
-
+  title row does, instead of always the shell. It no longer shows the branch, its changes or the agent's
+  context: the title row has them.
+- A split's pane headers name each terminal as its sidebar row does (a rename shows there too), lead
+  with its status tile and show the end of its folder, cut from the front.
+- A group whose terminals are in one repository shows its changed files (±N) once, on its first row,
+  instead of on every row; a terminal in another repository or worktree keeps its own count. A quiet
+  row's folder is in the interface font, as in the title row; commands stay in the code font.
+- New windows open with a 320 point sidebar and a 300 point panel; saved widths are kept.
 - Settings → Terminals & sidebar has three densities, Regular (48 pt rows with a second line), Compact
   (32 pt, one line) and Dense (26 pt, tighter cards), each with its status tile, for the sidebar and
   the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
   The old compact switch becomes Compact; View → Compact Rows is gone.
-
-- Liquid Glass, off by default (Settings → Appearance). On macOS 26 and later it puts the sidebar's and
-  the right panel's cards on glass, the panel, its strip and the status bar on the window's own material,
-  and runs the terminal's rounded surface to the strip and the status bar. Off, before macOS 26, or with
-  Reduce Transparency or Increase Contrast, every surface paints itself.
-
+- Liquid Glass, off by default (Settings → Appearance). On macOS 26 and later it puts the sidebar's cards
+  and the tab bar's tabs on glass and the status bar on the window's own material. The right panel
+  keeps its own surface, its tab bar at the top and its sections as bands, as before. Off, before
+  macOS 26, or with Reduce Transparency or Increase Contrast, every surface paints itself.
 - Light themes: cards keep a 12 % edge where their 3 % fill vanishes on white, the amber of a card that
   needs you holds 3:1 on it, and a profile's letter turns black on a light colour (yellow, green).
 

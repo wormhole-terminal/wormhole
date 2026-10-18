@@ -1,5 +1,5 @@
 //! The terminals as tabs, instead of the sidebar (Settings → Show terminals in → Tabs), as RF-02 draws
-//! it: one 36 pt row with the traffic lights, the profile chip (while there are two profiles or
+//! it: one 38 pt row with the traffic lights, the profile chip (while there are two profiles or
 //! more), the group switcher (`switcher`), that group's terminals as tabs and the +. The sets of tabs
 //! are the list's groups and the terminals in no group (core `sidebar::tabs`); ⌃⌥[ ⌃⌥] and ⌃⌥1–9
 //! move between them in either layout.
@@ -11,19 +11,26 @@ use wormhole_core::sidebar::hints::keycap;
 use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::tabs::{TabSet, current_set, others_need_you, set_numbered, step_set, tab_sets};
 
-use super::super::chrome::{PANEL_TOGGLE_SLOT, TitleDrag as _, lights_end, traffic_light_position};
+use super::super::chrome::traffic_light_position;
 use super::super::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
 use crate::style::TerminalTab;
 
-/// The room between the traffic lights and the first thing after them on the tab bar.
-const AFTER_LIGHTS: f32 = 12.0;
+/// The gap between the tabs and the terminal's surface under them.
+const TAB_GAP: f32 = 8.0;
+/// The tab bar's height under the title row: a tab's, and the gap above the terminal's surface.
+pub(in crate::workspace) const TAB_ROW_H: f32 = style::TAB_H + TAB_GAP;
 /// How much of the selected tab's fill lies over its glass.
 const GLASS_SELECTED: f32 = 0.7;
-/// The hairlines between the bar's parts and between tabs.
+/// The hairlines between the bar's parts.
 const PART_RULE_H: f32 = 16.0;
-const TAB_RULE_H: f32 = 14.0;
+/// A tab's name size (`text_label`), for measuring where a long one fades out.
+const TAB_NAME_REM: f32 = 0.8125;
+/// What the ⌘N keycap takes from the end of a tab's name while ⌘ is held, its gap included.
+const HINT_W: f32 = 28.0;
+/// How far the × stands in from the tab's right side: its glyph ends on the tab's 8 pt padding.
+const CLOSE_RIGHT: f32 = 8.0 - (style::CONTROL_H_SM - style::GLYPH) / 2.0;
 
 /// What the tab bar remembers between frames.
 #[derive(Default)]
@@ -36,6 +43,10 @@ pub(in crate::workspace) struct TabBarState {
     lights_row: Option<f32>,
     /// The group switcher being open: its search field.
     pub(super) switcher: Option<super::switcher::Switcher>,
+    /// The row of tabs, which scrolls sideways once they are at their narrowest, and the terminal it
+    /// last brought into view.
+    scroll: ScrollHandle,
+    scrolled_to: Option<i64>,
 }
 
 /// One set as the bar draws it.
@@ -91,16 +102,23 @@ impl Workspace {
         SetView { sets, looks, current }
     }
 
-    /// The tab bar.
+    /// The tab bar, as macOS Terminal's: none while there is only one terminal and no group to
+    /// switch to. The group switcher shows once there is more than one set (a group beside another,
+    /// or beside terminals in no group), the tabs once the current set has more than one terminal.
     pub(in crate::workspace) fn render_tab_bar(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> AnyElement {
+    ) -> Option<AnyElement> {
         let infos = self.row_infos(cx);
         let listing = self.listing(&infos, cx);
         let view = self.set_view(&listing, cx);
         let current = view.current.unwrap_or(0);
+        let switch = view.sets.len() > 1;
+        let tabbed = view.sets.get(current).is_some_and(|set| set.members.len() > 1);
+        if !switch && !tabbed {
+            return None;
+        }
         let numbers: HashMap<usize, usize> = listing
             .entries
             .iter()
@@ -112,39 +130,44 @@ impl Workspace {
         let frame = Frame::new(self, self.window_width, window, cx);
         let glass = self.glass_on(cx);
         let ui = frame.ui;
-        let selected_tab =
-            view.sets.get(current).and_then(|set| set.members.iter().position(|&m| m == self.active));
         let mut tabs: Vec<AnyElement> = Vec::new();
-        if let Some(set) = view.sets.get(current) {
+        // A newly selected terminal's tab is brought into view (once, so the row can be scrolled away).
+        let active_id = self.sessions.get(self.active).map(|session| session.id);
+        if self.sidebar.tabs.scrolled_to != active_id
+            && let Some(at) =
+                view.sets.get(current).and_then(|set| set.members.iter().position(|&m| m == self.active))
+        {
+            // The glass's clip probe, when there is one, is the row's first child.
+            self.sidebar.tabs.scroll.scroll_to_item(at + usize::from(glass));
+            self.sidebar.tabs.scrolled_to = active_id;
+        }
+        if let Some(set) = view.sets.get(current).filter(|_| tabbed) {
+            // Each tab is a box of its own, so nothing is drawn between them.
             for (at, &ix) in set.members.iter().enumerate() {
-                // A hairline between two tabs that are neither the open one: the open tab's fill is its edge.
-                if at > 0 {
-                    let hidden = selected_tab == Some(at) || selected_tab == Some(at - 1);
-                    let rule = style::tab_divider(ui, TAB_RULE_H);
-                    tabs.push(rule.when(hidden, |d| d.bg(gpui_kit::transparent_black())).into_any_element());
-                }
-                tabs.push(self.tab(&frame, &infos, &numbers, (at, set.members.len()), ix, glass, cx));
+                tabs.push(self.tab(&frame, &infos, &numbers, (at, set.members.len()), ix, glass, window, cx));
             }
         }
         let alert = others_need_you(&view.sets, current, |ix| Urgency::from(glyph_for(&infos[ix])));
-        let switcher = self.render_switcher(&view, &infos, &frame, alert, cx);
+        let switcher = switch.then(|| self.render_switcher(&view, &infos, &frame, alert, cx));
         let chip = self.render_profile_chip(cx);
         let group = view.looks.get(current).and_then(|look| look.group);
-        div()
+        // Under the terminal's title row, which is the same as with the sidebar (the lights, the
+        // breadcrumb, the buttons), across the terminal's column and with no fill, as the row has none.
+        let bar = div()
             .id("tab-bar")
+            .absolute()
+            .top(px(super::super::title_row::SURFACE_TOP))
+            .left_0()
+            .right_0()
             .flex()
-            .flex_none()
             .items_center()
             .gap_2()
-            .h(px(style::TITLE_ROW_H))
-            .pl(px(lights_end(window) + AFTER_LIGHTS))
-            .pr(px(PANEL_TOGGLE_SLOT))
-            .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
-            .when(!glass, |d| d.rule_bottom(ui))
-            .title_drag()
+            .h(px(style::TAB_H))
+            // The terminal's surface stands on the window's 12 pt edge: the tabs line up with it.
+            .px(px(style::EDGE_INSET))
+            // Not part of the title bar: a drag here doesn't move the window, nor a double-click zoom it.
             .when_some(chip, |d, chip| d.child(chip).child(style::tab_divider(ui, PART_RULE_H)))
-            .child(switcher)
-            .child(style::tab_divider(ui, PART_RULE_H))
+            .when_some(switcher, |d, switcher| d.child(switcher).child(style::tab_divider(ui, PART_RULE_H)))
             .child(
                 div()
                     .id("tab-row")
@@ -154,12 +177,16 @@ impl Workspace {
                     .flex()
                     .items_center()
                     .gap_1()
-                    .overflow_hidden()
+                    // Tabs give way down to their least width, then the row scrolls sideways.
+                    .overflow_x_scroll()
+                    .track_scroll(&self.sidebar.tabs.scroll)
                     .when(glass, |d| d.child(self.glass_clip_probe(TAB_ROW_CLIP)))
-                    .children(tabs)
-                    .child(self.new_tab_button(group, cx)),
+                    .children(tabs),
             )
-            .into_any_element()
+            // The + stays at the bar's right end, however many tabs there are.
+            .child(self.new_tab_button(group, cx))
+            .into_any_element();
+        Some(bar)
     }
 
     /// A set's key (its group's), and its colour.
@@ -247,6 +274,7 @@ impl Workspace {
         (position, of): (usize, usize),
         ix: usize,
         glass: bool,
+        window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some(info) = infos.get(ix) else { return div().into_any_element() };
@@ -257,6 +285,7 @@ impl Workspace {
         let close = (!frame.hints).then(|| self.tab_close(info, &group, ui, cx));
         let spoken =
             spoken::tab_label(&info.name, spoken::state_word(info.state), selected, position + 1, of);
+        let name_room = style::TAB_NAME_W - if frame.hints { HINT_W } else { 0.0 };
         let tab = style::terminal_tab(
             ("tab", info.id as u64),
             ui,
@@ -266,6 +295,16 @@ impl Workspace {
                 selected,
                 hint,
                 close,
+                // The keycap, while ⌘ is held, takes its room from the name's end; under the pointer
+                // the × does.
+                name_fade: frame.fade(&info.name, TAB_NAME_REM, FontWeight::MEDIUM, name_room, window),
+                name_hover: frame.fade(
+                    &info.name,
+                    TAB_NAME_REM,
+                    FontWeight::MEDIUM,
+                    name_room - style::CLOSE_GLYPH_ROOM,
+                    window,
+                ),
             },
         )
         .when(glass && selected, |d| d.bg(ui.selected_row.opacity(GLASS_SELECTED)))
@@ -285,9 +324,7 @@ impl Workspace {
         self.with_row_menu(tab, info, cx).into_any_element()
     }
 
-    /// The × of a tab, while the pointer is over it (the open one too): no width and no gap before
-    /// it otherwise, so the name has the room, and it takes its slot from the name when shown. The
-    /// tab itself keeps its width either way.
+    /// The × at a tab's right end, shown while the pointer is over the tab (the open one too).
     fn tab_close(
         &self,
         info: &RowInfo,
@@ -298,11 +335,15 @@ impl Workspace {
         let ix = info.ix;
         // No tooltip while a close question is up: the pointer still rests on the ×.
         let asking = self.closing_session_prompt || self.closing_prompt;
+        // Laid over the tab's right end, its glyph where the tab's padding starts, over the faded end
+        // of a long name; it shows under the pointer (a style that only paints, as the sidebar row's ×).
         div()
-            .flex_none()
-            .overflow_hidden()
-            .w(px(0.0))
-            .group_hover(group.clone(), |s| s.w(px(style::CONTROL_H_SM)).ml_2())
+            .absolute()
+            .top(px((style::TAB_H - style::CONTROL_H_SM) / 2.0))
+            .right(px(CLOSE_RIGHT))
+            .size(px(style::CONTROL_H_SM))
+            .invisible()
+            .group_hover(group.clone(), |s| s.visible())
             .child(style::hit_area(
                 ("close-hit", info.id as u64),
                 style::CONTROL_H_SM,

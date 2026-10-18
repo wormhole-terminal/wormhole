@@ -14,7 +14,7 @@ use wormhole_core::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId,
 use wormhole_core::sidebar::SplitId;
 use wormhole_core::spoken;
 
-use super::breadcrumb::terminal_glyph;
+use super::breadcrumb::terminal_tile;
 use super::focus::MenuBuilder;
 use super::session::home_dir;
 use super::splits::Split;
@@ -44,6 +44,9 @@ impl PaneDrag {
 
 /// What the divider's tooltip says.
 const DIVIDER_HINT: &str = "Drag to resize · double-click to equalize";
+/// How many characters of the folder a pane's header keeps, cut from the front (as many as a
+/// sidebar row's second line keeps).
+const PANE_PATH_MAX: usize = 38;
 
 impl Workspace {
     /// The keyboard came into the terminal with id `id` (a click, ⌥⌘arrow, F6, a split): its row
@@ -366,7 +369,7 @@ impl Workspace {
         let position = order.iter().position(|pane| *pane == id).map_or(1, |at| at + 1);
         let gaps = settings_in(&self.profile, cx).split_gaps;
         let ui = ui_in(&self.profile, cx);
-        let header = self.render_pane_header(split, pane, focused, position, order.len(), gaps, cx);
+        let header = self.render_pane_header(split, pane, focused, position, order.len(), cx);
         div()
             .id(("pane", id as u64))
             .relative()
@@ -403,27 +406,29 @@ impl Workspace {
         focused: bool,
         position: usize,
         of: usize,
-        gaps: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
+        let gaps = settings_in(&self.profile, cx).split_gaps;
         let id = pane.id;
-        let (status, told, folder) = {
+        let (status, told, agent, folder) = {
             let terminal = pane.terminal.read(cx);
-            let folder =
-                terminal.cwd.as_deref().map(|cwd| wormhole_core::sidebar::display_path(cwd, home_dir()));
-            (terminal.status(), terminal.source().told(), folder)
+            // Cut from the front, as the sidebar's rows do: the end tells two folders apart.
+            let folder = wormhole_core::sidebar::text::place_detail(
+                terminal.cwd.as_deref(),
+                home_dir(),
+                PANE_PATH_MAX,
+            );
+            (terminal.status(), terminal.source().told(), terminal.agent, folder)
         };
-        let name = pane.label(cx);
+        // The terminal's own name, as its sidebar row says it (a rename shows here too).
+        let name = self.find_session(id).map_or_else(|| pane.label(cx), |ix| self.sessions[ix].name(cx));
         let zoomed = split.layout.zoomed() == Some(id);
         let build = self.pane_menu(id, cx);
         let menu = build.clone();
         let zoom_tip = keymap::with_key(if zoomed { "Unzoom pane" } else { "Zoom pane" }, ActionId::ZoomPane);
-        // The picture says the terminal's name as its row does.
-        let dragged_name =
-            self.find_session(id).map_or_else(|| name.clone(), |ix| self.sessions[ix].name(cx));
         let dragged =
-            DraggedTerminal::new(id, DragOrigin::PaneHeader, dragged_name, pane_glyph(status, told));
+            DraggedTerminal::new(id, DragOrigin::PaneHeader, name.clone(), pane_glyph(status, told));
         let this = cx.weak_entity();
         let close_tip = keymap::with_key("Close pane", ActionId::CloseTerminal);
         style::pane_header(("pane-header", id as u64), ui, focused, gaps)
@@ -442,7 +447,7 @@ impl Workspace {
                 .ok();
                 cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
             })
-            .child(terminal_glyph(id, status, told, &self.profile, cx))
+            .child(terminal_tile(("pane-tile", id as u64), agent, told, status, ui, cx))
             // The name keeps its room; the folder gives way first.
             .child(
                 div()

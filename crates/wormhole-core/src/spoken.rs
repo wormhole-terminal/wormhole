@@ -150,13 +150,6 @@ pub fn pane(name: &str, folder: Option<&str>, position: usize, of: usize, focuse
     parts.join(", ")
 }
 
-/// The branch item: "Branch ui-unify, 3 changes". The bar names a detached HEAD "HEAD" (no
-/// branch may have that name), which is said the way the sidebar's band says it.
-pub fn status_branch(branch: &str, changes: usize) -> String {
-    let name = if branch == "HEAD" { "Detached HEAD".to_string() } else { format!("Branch {branch}") };
-    format!("{name}, {}", some_or_none(changes, "change", "changes"))
-}
-
 /// The profile item of a window that is not in the profile Wormhole is in: "Window in profile Work".
 pub fn status_profile(name: &str) -> String {
     format!("Window in profile {name}")
@@ -170,11 +163,6 @@ pub fn profile_chip(name: &str) -> String {
 /// A profile's row in the chip's menu: "Work, current profile" or "Private, switches every window".
 pub fn profile_choice(name: &str, current: bool) -> String {
     if current { format!("{name}, current profile") } else { format!("{name}, switches every window") }
-}
-
-/// The context meter: "Agent context, 62 percent".
-pub fn status_context(percent: u32) -> String {
-    format!("Agent context, {percent} percent")
 }
 
 /// The size item: "zsh, 93 columns by 40 rows".
@@ -283,8 +271,8 @@ mod tests {
 
     use super::{
         Counted, PanelTab, command_block, panel_tab, section_band, spoken_elapsed, spoken_took,
-        status_attention, status_branch, status_context, status_counted, status_done, status_failed,
-        status_needs_you, status_size, status_working,
+        status_attention, status_counted, status_done, status_failed, status_needs_you, status_size,
+        status_working,
     };
     use super::{profile_chip, profile_choice};
     use crate::layout::status_bar::{Activity, Entry, Summary};
@@ -447,14 +435,9 @@ mod tests {
     }
 
     #[test]
-    fn the_branch_and_size_items_read_in_words() {
-        assert_eq!(status_branch("ui-unify", 3), "Branch ui-unify, 3 changes");
-        assert_eq!(status_branch("ui-unify", 1), "Branch ui-unify, 1 change");
-        assert_eq!(status_branch("ui-unify", 0), "Branch ui-unify, no changes");
-        assert_eq!(status_branch("HEAD", 2), "Detached HEAD, 2 changes");
+    fn the_size_item_reads_in_words() {
         assert_eq!(status_size("zsh", 93, 40), "zsh, 93 columns by 40 rows");
         assert_eq!(status_size("fish", 1, 1), "fish, 1 column by 1 row");
-        assert_eq!(status_context(62), "Agent context, 62 percent");
     }
 
     #[test]

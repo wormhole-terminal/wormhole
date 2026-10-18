@@ -93,8 +93,6 @@ impl Workspace {
                 })
             })
             .unwrap_or_default();
-        // Under tabs across the top the tab says the terminal's name, so the row keeps its tile and words.
-        let named = !self.tabs_on_top();
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
@@ -118,12 +116,8 @@ impl Workspace {
             ports_narrower,
             group,
             folded,
-            name: if named {
-                measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W)
-            } else {
-                0.0
-            },
-            name_min: if named { CRUMB_TEXT_MIN } else { 0.0 },
+            name: measure.label(&facts.label, FontWeight::MEDIUM).min(style::TITLE_TAB_MAX_W),
+            name_min: CRUMB_TEXT_MIN,
             // The padding, the folder's icon and its separator, the branch's separator, and the
             // terminal's status tile and the gap before its name.
             fixed: 2.0 * CRUMB_PAD
@@ -234,21 +228,8 @@ impl Workspace {
         });
 
         // The terminal: a small status tile (the tool's own icon, its live status round it), then
-        // the name and how it is doing. Under tabs across the top the tab says the name already, so
-        // the row keeps the tile and the words.
-        let named = !self.tabs_on_top();
-        let face = match agent {
-            Some(agent) => style::TileFace::Agent(*agent),
-            None => style::TileFace::Terminal,
-        };
-        let glyph = indicator_glyph(*told, *status).unwrap_or(style::StatusGlyph::Idle);
-        let tile = style::status_tile_at(
-            ("terminal-tile", *id as u64),
-            ui,
-            style::StatusTile { face, glyph, selected: false, mini: true },
-            style::TILE_TITLE,
-            cx,
-        );
+        // the name and how it is doing.
+        let tile = terminal_tile(("terminal-tile", *id as u64), *agent, *told, *status, ui, cx);
         let attention = *status == Status::Attention;
         let failed = *status == Status::Failed;
         let process = div()
@@ -259,18 +240,16 @@ impl Workspace {
             .min_w_0()
             .overflow_hidden()
             .child(tile)
-            .when(named, |d| {
-                d.child(
-                    div()
-                        .min_w_0()
-                        .max_w(px(fit.name))
-                        .truncate()
-                        .text_label()
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(ui.text)
-                        .child(label.clone()),
-                )
-            })
+            .child(
+                div()
+                    .min_w_0()
+                    .max_w(px(fit.name))
+                    .truncate()
+                    .text_label()
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(ui.text)
+                    .child(label.clone()),
+            )
             .children(words.clone().filter(|_| fit.words).map(|words| {
                 div()
                     .flex_none()
@@ -413,36 +392,28 @@ fn indicator_glyph(told: bool, status: Status) -> Option<style::StatusGlyph> {
     }
 }
 
-/// A terminal's status slot (16 pt): what it is and how it is doing in one place, so a change of
-/// status never moves the label. Shape tells the states apart, not only colour. A split's
-/// pane headers draw it too.
-pub(super) fn terminal_glyph(
-    id: i64,
-    status: Status,
+/// A terminal's status tile in a 28 pt row (the title row, a split's pane headers): the tool's own
+/// icon with the live status its sidebar row shows, so one terminal looks the same everywhere.
+pub(super) fn terminal_tile(
+    id: impl Into<ElementId>,
+    agent: Option<AgentId>,
     told: bool,
-    profile: &ProfileId,
+    status: Status,
+    ui: UiColors,
     cx: &App,
 ) -> AnyElement {
-    let ui = ui_in(profile, cx);
-    let glyph = match status {
-        Status::Busy if told => style::StatusGlyph::Working,
-        Status::Busy => style::StatusGlyph::Running,
-        Status::Done => style::StatusGlyph::Done,
-        Status::Failed => style::StatusGlyph::Failed,
-        Status::Attention => {
-            return div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .justify_center()
-                .size(px(style::ITEM_LEAD_W))
-                .text_color(ui.agent_attention)
-                .child(style::icon(IconName::CircleAlert))
-                .into_any_element();
-        }
-        Status::Idle | Status::Exited => style::StatusGlyph::Terminal { unread: false },
+    let face = match agent {
+        Some(agent) => style::TileFace::Agent(agent),
+        None => style::TileFace::Terminal,
     };
-    style::status_glyph(("terminal-status", id as u64), ui, glyph, cx)
+    let glyph = indicator_glyph(told, status).unwrap_or(style::StatusGlyph::Idle);
+    style::status_tile_at(
+        id,
+        ui,
+        style::StatusTile { face, glyph, selected: false, mini: true },
+        style::TILE_TITLE,
+        cx,
+    )
 }
 
 #[cfg(test)]

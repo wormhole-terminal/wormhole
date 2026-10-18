@@ -108,6 +108,69 @@ pub struct SessionRow {
     pub solo: bool,
     /// What the row measures at the person's density.
     pub metrics: Metrics,
+    /// A name too long for its line: cut to the line's room and faded out over its end instead of
+    /// an ellipsis, so it uses the whole width (the caller measures it).
+    pub name_fade: Option<NameFade>,
+    /// The name under the pointer of the row's group, where a × then shows at the line's end: cut
+    /// shorter, so it has faded out before the ×. Only paints, so nothing moves.
+    pub name_hover: Option<(NameFade, SharedString)>,
+}
+
+/// The room a long name leaves at its line's end for the × that shows there under the pointer:
+/// the ×'s glyph and a gap.
+pub const CLOSE_GLYPH_ROOM: f32 = super::scale::GLYPH + 4.0;
+
+/// A name as a row or a tab draws it: whole when it fits; cut at `rest` and faded out there when it
+/// doesn't; and under the pointer of `hover`'s group cut at its room instead (shorter, clear of the
+/// × that shows then), drawn in the same place. Set the text's size, weight and colour on it.
+pub(super) fn name_text(
+    name: SharedString,
+    rest: Option<&NameFade>,
+    hover: Option<&(NameFade, SharedString)>,
+) -> Div {
+    let cut = |fade: &NameFade| {
+        div().max_w(px(fade.room)).overflow_hidden().whitespace_nowrap().child(faded_name(name.clone(), fade))
+    };
+    let at_rest = match rest {
+        Some(fade) => cut(fade),
+        None => div().truncate().child(name.clone()),
+    };
+    let base = div().relative().min_w_0();
+    match hover {
+        None => base.child(at_rest),
+        Some((fade, group)) => base.child(at_rest.group_hover(group.clone(), |s| s.invisible())).child(
+            cut(fade).absolute().top_0().left_0().invisible().group_hover(group.clone(), |s| s.visible()),
+        ),
+    }
+}
+
+/// How a name too long for its line ends: the bytes that fade from its colour to nothing, and the
+/// width it is cut to, where the fade has reached nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub struct NameFade {
+    pub bytes: std::ops::Range<usize>,
+    pub room: f32,
+}
+
+/// `name`, its `fade` bytes going from its colour to nothing a character at a time and what follows
+/// them invisible.
+fn faded_name(name: SharedString, fade: &NameFade) -> StyledText {
+    // `fade_out` lowers the text colour's alpha; a translucent `color` would only be blended over it.
+    let faded = |amount: f32| HighlightStyle { fade_out: Some(amount), ..Default::default() };
+    let chars: Vec<(usize, char)> = name[fade.bytes.clone()].char_indices().collect();
+    let steps = chars.len() as f32 + 1.0;
+    let mut highlights: Vec<(std::ops::Range<usize>, HighlightStyle)> = chars
+        .iter()
+        .enumerate()
+        .map(|(n, &(at, c))| {
+            let start = fade.bytes.start + at;
+            (start..start + c.len_utf8(), faded((n as f32 + 1.0) / steps))
+        })
+        .collect();
+    if fade.bytes.end < name.len() {
+        highlights.push((fade.bytes.end..name.len(), faded(1.0)));
+    }
+    StyledText::new(name).with_highlights(highlights)
 }
 
 impl SessionRow {
@@ -130,6 +193,8 @@ impl SessionRow {
             card: false,
             solo: false,
             metrics: Metrics::default(),
+            name_fade: None,
+            name_hover: None,
         }
     }
 }
@@ -154,6 +219,8 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         card,
         solo,
         metrics,
+        name_fade,
+        name_hover,
     } = row;
     let (name_color, weight) = match (selected, emphasis) {
         (true, _) => (ui.selected_text, FontWeight::SEMIBOLD),
@@ -196,13 +263,11 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
                 .map(|d| match name_edit {
                     Some(edit) => d.child(div().flex_1().min_w_0().child(edit)),
                     None => d.child(
-                        div()
-                            .min_w_0()
-                            .truncate()
+                        // Cut at its room, the end faded out rather than an ellipsis.
+                        name_text(name.clone(), name_fade.as_ref(), name_hover.as_ref())
                             .text_body()
                             .font_weight(weight)
-                            .text_color(name_color)
-                            .child(name),
+                            .text_color(name_color),
                     ),
                 })
                 .children(mark.map(|mark| div().flex_none().flex().items_center().child(mark)))

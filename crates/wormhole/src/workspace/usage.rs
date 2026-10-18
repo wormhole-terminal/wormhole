@@ -18,7 +18,7 @@ pub(super) const REDRAW_TICKS: u64 = 25;
 
 impl Workspace {
     pub(super) fn render_usage_tab(&self, cx: &Context<Self>) -> AnyElement {
-        let ui = ui(cx);
+        let ui = ui_in(&self.profile, cx);
         let reports = &app(cx).usage;
         if reports.is_empty() {
             return div()

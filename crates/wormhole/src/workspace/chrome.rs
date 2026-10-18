@@ -1,4 +1,4 @@
-//! The window's chrome: the 36 pt title rows across the top. The
+//! The window's chrome: the 38 pt title rows across the top. The
 //! sidebar's collapse button sits at one spot of the window whether the sidebar is open or
 //! hidden (so does the right panel's toggle in the top right corner, and the traffic lights
 //! macOS draws at the left); the sidebar's title row leaves room for the lights above the
@@ -32,11 +32,15 @@ const AFTER_TOGGLE: f32 = 6.0;
 const AFTER_COLLAPSE: f32 = 8.0;
 /// The panel toggle's distance from the window's right edge: its glyph ends at the 12 pt edge.
 const PANEL_TOGGLE_RIGHT: f32 = style::PANEL_INSET - (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;
-/// What the toggle takes from the title row or the tab bar it floats over, and a gap before it.
-pub(super) const PANEL_TOGGLE_SLOT: f32 = PANEL_TOGGLE_RIGHT + style::HIT_MIN + 4.0;
-/// The terminal's title row's padding beside an open column from the column's edge; the bar is inset 4 of it, so 4 more
-/// from the bar's edge, with the breadcrumb's own 8 on the terminal's 12.
-const BESIDE_COLUMN: f32 = 8.0;
+/// What the toggle takes from the title row or the tab bar it floats over: it sits flush against the
+/// row's last button, as the row's buttons sit against each other (12 pt between their glyphs).
+pub(super) const PANEL_TOGGLE_SLOT: f32 = PANEL_TOGGLE_RIGHT + style::HIT_MIN;
+/// The terminal's title row's padding beside the open sidebar, from the column's edge: with the
+/// breadcrumb's own 8 the folder's icon starts on the terminal surface's 12 pt edge.
+const BESIDE_COLUMN: f32 = 4.0;
+/// Its padding beside the open panel: the room round the last button's glyph, so the glyph ends on
+/// the surface's 12 pt edge.
+const BESIDE_PANEL: f32 = PANEL_TOGGLE_RIGHT;
 /// A title row's own padding at an edge without the lights or the toggle: the room round a
 /// button's glyph, so the glyph and text line up with the 12 pt edge below.
 const TITLE_ROW_PAD: f32 = PANEL_TOGGLE_RIGHT;
@@ -171,66 +175,38 @@ impl Workspace {
         [sidebar.into_any_element(), panel.into_any_element()]
     }
 
-    /// The top of the sidebar: its title row (room for the lights and the collapse button) and the
-    /// "Terminals" header with the + that starts one. The header is 28 tall and 12 in, with a 16 pt
-    /// title and a 24 pt + (22, 8, 14 and 20 in the dense density).
+    /// The top of the sidebar: one row, the traffic lights and the collapse button floating over its
+    /// start, the profile chip after them (while there are two profiles), and the + that starts a
+    /// terminal at its end (a right-click offers the other shells). It goes with the sidebar.
     pub(super) fn render_sidebar_header(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let s = settings_in(&self.profile, cx);
-        let metrics = style::Metrics::of(s.density, s.show_groups_as_cards);
-        let title = if metrics.small_title {
-            div().text_body().font_weight(FontWeight::BOLD).text_color(ui.text).child("Terminals")
-        } else {
-            style::panel_title(ui, "Terminals")
-        };
         div()
-            .flex()
-            .flex_col()
+            .id("sidebar-title-row")
+            .h(px(style::TITLE_ROW_H))
             .flex_none()
+            .flex()
+            .items_center()
+            // The lights and the toggle float over the row's start; the profile chip is
+            // the first thing after them.
+            .pl(px(collapse_x(lights_end(window)) + style::HIT_MIN + AFTER_TOGGLE))
+            .pr(px(TITLE_ROW_PAD))
+            .title_drag()
+            .children(self.render_profile_chip(cx))
+            .child(div().flex_1())
             .child(
-                div()
-                    .id("sidebar-title-row")
-                    .h(px(style::TITLE_ROW_H))
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    // The lights and the toggle float over the row's start; the profile chip is
-                    // the first thing after them.
-                    .pl(px(collapse_x(lights_end(window)) + style::HIT_MIN + AFTER_TOGGLE))
-                    .pr(px(TITLE_ROW_PAD))
-                    .title_drag()
-                    .children(self.render_profile_chip(cx))
-                    .child(div().flex_1()),
-            )
-            .child(
-                div()
-                    .h(px(metrics.header_h))
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .pl(px(metrics.header_in))
-                    .pr(px(metrics.header_in))
-                    .child(title)
-                    .child(div().flex_1())
-                    // A right-click on the + offers the other shells.
-                    .child(
-                        self.with_shell_menu(
-                            "new-session-shells",
-                            style::icon_button(
-                                "new-session",
-                                ui,
-                                IconName::Plus,
-                                keymap::with_key("New terminal", ActionId::NewTerminal),
-                            )
-                            .map(
-                                |button| if metrics.small_title { button.in_row() } else { button.in_band() },
-                            )
-                            .focus_ring(self.title_ring(TitleButton::NewTerminal, window, cx))
-                            .on_click(cx.listener(|this, _, window, cx| this.new_session(window, cx))),
-                            cx,
-                        ),
-                    ),
+                self.with_shell_menu(
+                    "new-session-shells",
+                    style::icon_button(
+                        "new-session",
+                        ui,
+                        IconName::Plus,
+                        keymap::with_key("New terminal", ActionId::NewTerminal),
+                    )
+                    .in_title_row()
+                    .focus_ring(self.title_ring(TitleButton::NewTerminal, window, cx))
+                    .on_click(cx.listener(|this, _, window, cx| this.new_session(window, cx))),
+                    cx,
+                ),
             )
             .into_any_element()
     }
@@ -241,16 +217,14 @@ impl Workspace {
     pub(super) fn title_row_pads(&self, window: &Window) -> (f32, f32) {
         let sidebar = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let panel = self.notes_visible() && self.in_flow(Edge::Panel);
+        // The row is the same with terminals as tabs (their bar is under it): after the lights, and
+        // the collapse button when the sidebar is only hidden.
         let lights = if self.tabs_on_top() {
-            // The tab bar across the top has the lights; the row is under it, its content (after
-            // the breadcrumb's own 8) on the standard edge.
-            BESIDE_COLUMN
+            lights_end(window) + AFTER_COLLAPSE
         } else {
             collapse_slot(lights_end(window))
         };
-        // Under tabs across the top the panel toggle floats over the tab bar, not over this row.
-        let toggle = if self.tabs_on_top() { TITLE_ROW_PAD } else { PANEL_TOGGLE_SLOT };
-        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_COLUMN } else { toggle })
+        (if sidebar { BESIDE_COLUMN } else { lights }, if panel { BESIDE_PANEL } else { PANEL_TOGGLE_SLOT })
     }
 
     /// How wide the terminal's title row is inside its padding: what the breadcrumb has to fit in (worked out from the columns, so it is right in the frame that
@@ -278,7 +252,7 @@ impl Workspace {
     pub(super) fn render_panel_tab_bar(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         // The rule under the row is the terminal title row's, at the same height (outside the
-        // 36 pt row, as there), so the two read as one line across the window.
+        // 38 pt row, as there), so the two read as one line across the window.
         let row = div()
             .h(px(style::TITLE_ROW_H))
             .flex_none()
@@ -400,15 +374,15 @@ impl Workspace {
 pub(super) fn sliding_title_pads(edge: Edge, (left, right): (f32, f32), offset: f32) -> (f32, f32) {
     match edge {
         Edge::Sidebar => ((left - offset).max(BESIDE_COLUMN), right + offset),
-        Edge::Panel => (left, right.max(offset + BESIDE_COLUMN)),
+        Edge::Panel => (left, right.max(offset + BESIDE_PANEL)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        ASSUMED_LIGHTS_SPAN, BESIDE_COLUMN, LIGHTS_X, PANEL_TOGGLE_SLOT, collapse_slot, collapse_x,
-        sliding_title_pads,
+        ASSUMED_LIGHTS_SPAN, BESIDE_COLUMN, BESIDE_PANEL, LIGHTS_X, PANEL_TOGGLE_SLOT, collapse_slot,
+        collapse_x, sliding_title_pads,
     };
     use crate::style;
     use wormhole_core::layout::Edge;
@@ -448,6 +422,6 @@ mod tests {
         assert_eq!(sliding_title_pads(Edge::Sidebar, rest, 20.0).0 + 20.0, rest.0);
         let panel = 320.0;
         assert_eq!(sliding_title_pads(Edge::Panel, rest, 0.0), rest);
-        assert_eq!(sliding_title_pads(Edge::Panel, rest, panel), (rest.0, panel + BESIDE_COLUMN));
+        assert_eq!(sliding_title_pads(Edge::Panel, rest, panel), (rest.0, panel + BESIDE_PANEL));
     }
 }
