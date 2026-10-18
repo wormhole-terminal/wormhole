@@ -88,19 +88,51 @@ pub struct Reply(Arc<ReplySlot>);
 
 struct ReplySlot {
     ticket: u64,
-    shared: Arc<Shared>,
+    to: ReplyTo,
 }
+
+/// Where a [`Reply`] goes.
+enum ReplyTo {
+    /// Into the replies of this terminal's own PTY thread.
+    Local(Arc<Shared>),
+    /// To a session host, which holds the place among the replies itself (`client`); whether it
+    /// was answered.
+    Hosted(HostedReply, AtomicBool),
+}
+
+/// Sends a hosted terminal's answer for a ticket to its host; called with nothing when the answer
+/// was dropped unsent, so the program is not kept waiting for the host's timeout.
+pub(crate) type HostedReply = Arc<dyn Fn(u64, Vec<u8>) + Send + Sync>;
 
 impl Reply {
     pub fn send(&self, bytes: Vec<u8>) {
-        self.0.shared.fill_reply(self.0.ticket, bytes);
+        match &self.0.to {
+            ReplyTo::Local(shared) => shared.fill_reply(self.0.ticket, bytes),
+            ReplyTo::Hosted(send, answered) => {
+                if !answered.swap(true, Ordering::AcqRel) {
+                    send(self.0.ticket, bytes);
+                }
+            }
+        }
+    }
+
+    /// The answer to a session host's ticket.
+    pub(crate) fn hosted(ticket: u64, send: HostedReply) -> Self {
+        Self(Arc::new(ReplySlot { ticket, to: ReplyTo::Hosted(send, AtomicBool::new(false)) }))
     }
 }
 
 impl Drop for ReplySlot {
     fn drop(&mut self) {
         // A no-op once answered: the slot is gone.
-        self.shared.fill_reply(self.ticket, Vec::new());
+        match &self.to {
+            ReplyTo::Local(shared) => shared.fill_reply(self.ticket, Vec::new()),
+            ReplyTo::Hosted(send, answered) => {
+                if !answered.swap(true, Ordering::AcqRel) {
+                    send(self.ticket, Vec::new());
+                }
+            }
+        }
     }
 }
 
@@ -315,7 +347,7 @@ impl Shared {
     /// Hold a place among the replies for one the UI gives.
     pub(super) fn hold_reply(self: &Arc<Self>) -> Reply {
         let ticket = self.replies().hold();
-        Reply(Arc::new(ReplySlot { ticket, shared: self.clone() }))
+        Reply(Arc::new(ReplySlot { ticket, to: ReplyTo::Local(self.clone()) }))
     }
 
     fn fill_reply(&self, ticket: u64, bytes: Vec<u8>) {

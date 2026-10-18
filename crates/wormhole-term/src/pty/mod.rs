@@ -45,7 +45,7 @@ use reader::Reader;
 
 pub(crate) use hangup::HANGUP_GRACE;
 pub(crate) use lock::FairLock;
-pub(crate) use parse::Feed;
+pub(crate) use parse::{Feed, Flow, Sink};
 pub use spawn::{Launch, Shell};
 
 /// A running terminal's input, size and end, for the app's side. The thread outlives it when the

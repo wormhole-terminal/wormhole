@@ -31,11 +31,18 @@ pub(crate) fn key(handle: ImageHandle) -> u32 {
 pub(super) struct Uploads {
     proxy: EventProxy,
     screen: Arc<FairLock<Screen>>,
+    /// The engine's replies after a decode go to the program; a replica's go nowhere (the host
+    /// answered the program from its own decode).
+    replies: bool,
 }
 
 impl Uploads {
     pub(super) fn new(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
-        Self { proxy, screen }
+        Self { proxy, screen, replies: true }
+    }
+
+    pub(super) fn replica(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
+        Self { replies: false, ..Self::new(proxy, screen) }
     }
 
     /// A picture arrived (the screen is locked, being read). Answer the engine now or when the
@@ -67,10 +74,10 @@ impl Uploads {
             shared.images().remove(id);
             return screen.term.image_decoded(handle, Err(ImageError::TooBig));
         }
-        let (proxy, locked) = (self.proxy.clone(), self.screen.clone());
+        let (proxy, locked, replies) = (self.proxy.clone(), self.screen.clone(), self.replies);
         let spawned = std::thread::Builder::new()
             .name("image-decode".into())
-            .spawn(move || settle_decode(&proxy, &locked, handle, || decoded(&upload)));
+            .spawn(move || settle(&proxy, &locked, handle, replies, || decoded(&upload)));
         if let Err(err) = spawned {
             tracing::warn!(id, "inline image dropped: no thread to decode it on: {err}");
             shared.end_decode();
@@ -109,6 +116,8 @@ struct Answer<'a> {
     screen: &'a FairLock<Screen>,
     handle: ImageHandle,
     outcome: Option<Result<(), ImageError>>,
+    /// Send the engine's replies to the program (not a replica's).
+    replies: bool,
 }
 
 impl Drop for Answer<'_> {
@@ -123,7 +132,9 @@ impl Drop for Answer<'_> {
         let mut screen = self.screen.lock();
         screen.term.image_decoded(self.handle, outcome);
         if !screen.term.replies().is_empty() {
-            shared.reply(screen.term.replies().to_vec());
+            if self.replies {
+                shared.reply(screen.term.replies().to_vec());
+            }
             screen.term.clear_replies();
         }
         drop(screen);
@@ -132,18 +143,31 @@ impl Drop for Answer<'_> {
     }
 }
 
-/// The decode thread's work: run `decode`, keep the pixels and answer the engine. A decoder that
-/// panics on hostile data is a refusal like any other bad data.
+/// [`settle`] as a local terminal's decode thread does it.
+#[cfg(test)]
 pub(super) fn settle_decode(
     proxy: &EventProxy,
     screen: &FairLock<Screen>,
     handle: ImageHandle,
     decode: impl FnOnce() -> Result<Image, ImageError>,
 ) {
+    settle(proxy, screen, handle, true, decode);
+}
+
+/// The decode thread's work: run `decode`, keep the pixels and answer the engine (and, when
+/// `replies`, the program with what the engine then says). A decoder that panics on hostile data
+/// is a refusal like any other bad data.
+fn settle(
+    proxy: &EventProxy,
+    screen: &FairLock<Screen>,
+    handle: ImageHandle,
+    replies: bool,
+    decode: impl FnOnce() -> Result<Image, ImageError>,
+) {
     let shared = proxy.shared();
     let id = key(handle);
     // Dropped in reverse: the place is free again before the engine hears.
-    let mut answer = Answer { proxy, screen, handle, outcome: None };
+    let mut answer = Answer { proxy, screen, handle, outcome: None, replies };
     let _slot = DecodeSlot(shared);
     let started = std::time::Instant::now();
     let decoded = std::panic::catch_unwind(std::panic::AssertUnwindSafe(decode)).unwrap_or_else(|_| {

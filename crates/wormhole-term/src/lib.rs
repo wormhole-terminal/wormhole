@@ -26,6 +26,8 @@
 //! - `events`: the bridge from the PTY thread to the UI;
 //! - `hosted`: a terminal run by a session host (`wormhole-host`): the stream its clients read,
 //!   the attach repaint, its meta file and socket path;
+//! - `client`: the app's side of a hosted terminal: starting a host, and the connection that
+//!   keeps a [`Pty`]'s screen a replica of the host's;
 //! - `restore`: replaying a previous session's text;
 //! - `snapshot`: what the UI draws, copied under a short lock;
 //! - `minimap`: the history drawn small, and where a click on it scrolls to;
@@ -41,6 +43,7 @@
 
 pub mod agents;
 mod blocks;
+pub mod client;
 mod command_to_prompt;
 mod engine;
 mod events;
@@ -166,8 +169,8 @@ pub struct StartOptions<'a> {
 pub struct Pty {
     term: Arc<FairLock<Screen>>,
     shared: Arc<Shared>,
-    /// The PTY's reader thread and input; it owns the PTY and ends the shell (see `pty::hangup`).
-    io: pty::Control,
+    /// Where the program runs: here, or in a session host.
+    io: Backend,
     size: GridSize,
     pid: u32,
     /// How long the shell gets to exit after the hangup once the tab is closed (a field so a test
@@ -175,6 +178,15 @@ pub struct Pty {
     hangup_grace: Duration,
     /// The folder the shell last reported (OSC 7), and where polling put it then (see `cwd`).
     reported_cwd: Mutex<Option<ReportedCwd>>,
+}
+
+/// Where a terminal's program runs.
+enum Backend {
+    /// The PTY's reader thread and input; it owns the PTY and ends the shell (see `pty::hangup`).
+    Local(pty::Control),
+    /// A session host owns the PTY; this is the connection to it, whose thread keeps the screen
+    /// a replica of the host's (`client`).
+    Hosted(client::Hosted),
 }
 
 /// An OSC 7 report, anchored to what polling the shell's process said when it was taken.
@@ -197,7 +209,7 @@ impl Pty {
             Self {
                 term: screen,
                 shared,
-                io,
+                io: Backend::Local(io),
                 size,
                 pid,
                 hangup_grace: pty::HANGUP_GRACE,
@@ -227,7 +239,10 @@ impl Pty {
 
     pub fn write(&self, bytes: impl Into<Cow<'static, [u8]>>) {
         if self.is_alive() {
-            self.io.input(bytes.into());
+            match &self.io {
+                Backend::Local(io) => io.input(bytes.into()),
+                Backend::Hosted(host) => host.input(bytes.into()),
+            }
         }
     }
 
@@ -253,12 +268,20 @@ impl Pty {
             return;
         }
         self.size = size;
-        let replies = self.term.lock().resize(size);
-        self.io.resize(size.window_size());
-        // After the PTY has its new size: a program told in band that the window changed reads
-        // the size from the report and finds it the same everywhere.
-        if !replies.is_empty() && self.is_alive() {
-            self.shared.reply(replies);
+        match &self.io {
+            Backend::Local(io) => {
+                self.shared.set_size(size.window_size());
+                let replies = self.term.lock().resize(size);
+                io.resize(size.window_size());
+                // After the PTY has its new size: a program told in band that the window changed
+                // reads the size from the report and finds it the same everywhere.
+                if !replies.is_empty() && self.is_alive() {
+                    self.shared.reply(replies);
+                }
+            }
+            // The screen follows when the host says it applied the size, in the stream between
+            // exactly the bytes it was applied between.
+            Backend::Hosted(host) => host.resize(size),
         }
     }
 
@@ -281,9 +304,15 @@ impl Pty {
     /// (XTWINOPS 8, DECSLPP, DECCOLM) was given it at once; when the window could not follow, or
     /// finished following, this makes the two agree.
     pub fn sync_size(&self) {
-        let replies = self.term.lock().resize(self.size);
-        if !replies.is_empty() && self.is_alive() {
-            self.shared.reply(replies);
+        match &self.io {
+            Backend::Local(_) => {
+                let replies = self.term.lock().resize(self.size);
+                if !replies.is_empty() && self.is_alive() {
+                    self.shared.reply(replies);
+                }
+            }
+            // The host's engine took the program's size: ask it for this one again.
+            Backend::Hosted(host) => host.resize(self.size),
         }
     }
 
@@ -596,6 +625,10 @@ impl Pty {
     /// 11, 12): it answers those itself.
     pub fn set_default_colors(&self, palette: &[types::Rgb; types::COLOR_COUNT]) {
         self.term.lock().set_default_colors(palette);
+        // The host's engine is the one that answers.
+        if let Backend::Hosted(host) = &self.io {
+            host.set_colors(palette);
+        }
     }
 
     /// Tell the engine whether the theme is light or dark, for the programs that ask
@@ -685,9 +718,16 @@ mod tests;
 
 impl Drop for Pty {
     fn drop(&mut self) {
-        // A shell that has exited is gone, and so is its thread (its pid may be someone else's).
-        if self.pid().is_some() {
-            self.io.close(self.hangup_grace);
+        match &self.io {
+            // A shell that has exited is gone, and so is its thread (its pid may be someone else's).
+            Backend::Local(io) => {
+                if self.pid().is_some() {
+                    io.close(self.hangup_grace);
+                }
+            }
+            // The host keeps an exited program's screen for a week: closing the terminal ends it
+            // too. Not after `detach`, which leaves it running for the next attach.
+            Backend::Hosted(host) => host.close(self.hangup_grace),
         }
     }
 }

@@ -35,7 +35,7 @@ pub(crate) trait Feed<S>: Send + 'static {
 
 /// Whether the reader goes on after it attended to the rest of the app between two slices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Flow {
+pub(crate) enum Flow {
     /// Parse the next slice.
     Continue,
     /// The terminal was closed: drop the rest.
@@ -43,7 +43,7 @@ pub(super) enum Flow {
 }
 
 /// The screen, the parser that fills it, and the UI's wakeup.
-pub(super) struct Sink<S, F> {
+pub(crate) struct Sink<S, F> {
     screen: Arc<FairLock<S>>,
     feed: F,
     proxy: EventProxy,
@@ -51,14 +51,14 @@ pub(super) struct Sink<S, F> {
 
 impl<S, F: Feed<S>> Sink<S, F> {
     /// A sink that parses with `feed` into `screen` and tells `proxy` when it did.
-    pub(super) fn new(screen: Arc<FairLock<S>>, feed: F, proxy: EventProxy) -> Self {
+    pub(crate) fn new(screen: Arc<FairLock<S>>, feed: F, proxy: EventProxy) -> Self {
         Self { screen, feed, proxy }
     }
 
     /// Hand `bytes` to the parser in slices, the screen's lock taken for one slice at a time.
     /// `between` is called after each slice (the reader attends to input there) and says whether
     /// to go on.
-    pub(super) fn parse(&mut self, mut bytes: &[u8], mut between: impl FnMut() -> Flow) {
+    pub(crate) fn parse(&mut self, mut bytes: &[u8], mut between: impl FnMut() -> Flow) {
         while !bytes.is_empty() {
             let (slice, rest) = bytes.split_at(bytes.len().min(SLICE));
             bytes = rest;
@@ -80,12 +80,12 @@ impl<S, F: Feed<S>> Sink<S, F> {
     }
 
     /// When a synchronized update has to be given up on (see [`Feed::deadline`]).
-    pub(super) fn deadline(&self) -> Option<Instant> {
+    pub(crate) fn deadline(&self) -> Option<Instant> {
         self.feed.deadline()
     }
 
     /// Give up on a synchronized update that has been going on for too long, if it has.
-    pub(super) fn expire_sync(&mut self) {
+    pub(crate) fn expire_sync(&mut self) {
         if self.feed.deadline().is_some_and(|at| at <= Instant::now()) {
             {
                 let mut screen = self.screen.lock();
@@ -93,5 +93,15 @@ impl<S, F: Feed<S>> Sink<S, F> {
             }
             self.proxy.wakeup();
         }
+    }
+
+    /// Change the screen and the parser together, under the screen's lock, and tell the UI (a
+    /// hosted terminal's replica is reset for a repaint and resized when the host says so).
+    pub(crate) fn update(&mut self, change: impl FnOnce(&mut S, &mut F)) {
+        {
+            let mut screen = self.screen.lock();
+            change(&mut screen, &mut self.feed);
+        }
+        self.proxy.wakeup();
     }
 }

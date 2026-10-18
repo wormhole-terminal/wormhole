@@ -45,6 +45,20 @@ impl OwnFeed {
         let uploads = Uploads::new(proxy.clone(), screen);
         Self { host: Host::new(proxy, uploads), deadline: None }
     }
+
+    /// The feed of a hosted terminal's replica (`client`): the host answers the program and
+    /// reports what it did, so the replica's replies and events are dropped, all but its pictures,
+    /// which the UI draws from its own decode.
+    pub(crate) fn replica(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
+        let uploads = Uploads::replica(proxy.clone(), screen);
+        Self { parser: Parser::new(), host: Host::replica(proxy, uploads), deadline: None }
+    }
+
+    /// Start over with a fresh parser, for a fresh screen (a replica about to parse a repaint).
+    pub(crate) fn reset(&mut self) {
+        self.parser = Parser::new();
+        self.deadline = None;
+    }
 }
 
 impl OwnFeed {

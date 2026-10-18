@@ -32,11 +32,18 @@ pub(super) struct Host {
     events: Vec<Event>,
     /// How many bytes of the engine's replies this read has sent already (see `settle`).
     sent: usize,
+    /// A hosted terminal's replica: the host answered and reported, this only keeps the pictures.
+    replica: bool,
 }
 
 impl Host {
     pub(super) fn new(proxy: EventProxy, uploads: Uploads) -> Self {
-        Self { proxy, prompts: 0, kitty: KittyChunks::default(), uploads, events: Vec::new(), sent: 0 }
+        let kitty = KittyChunks::default();
+        Self { proxy, prompts: 0, kitty, uploads, events: Vec::new(), sent: 0, replica: false }
+    }
+
+    pub(super) fn replica(proxy: EventProxy, uploads: Uploads) -> Self {
+        Self { replica: true, ..Self::new(proxy, uploads) }
     }
 
     /// Act on everything the engine queued while it read: events in the order the program's
@@ -44,6 +51,9 @@ impl Host {
     /// the replies after it waiting, so the replies that came before the request go out first:
     /// the program reads its answers in the order it asked.
     pub(super) fn settle(&mut self, screen: &mut Screen) {
+        if self.replica {
+            return self.settle_replica(screen);
+        }
         self.events.extend(screen.term.events());
         let mut events = std::mem::take(&mut self.events);
         for event in events.drain(..) {
@@ -62,6 +72,28 @@ impl Host {
         self.send_replies(screen, usize::MAX);
         screen.term.clear_replies();
         self.sent = 0;
+    }
+
+    /// [`settle`](Self::settle) for a replica: its replies and its reports are the host's to give,
+    /// so only the pictures are kept (the UI draws its own decode), and a column change the window
+    /// may not follow is undone as the host undoes it, to the size the host last applied.
+    fn settle_replica(&mut self, screen: &mut Screen) {
+        self.events.extend(screen.term.drain_events());
+        let mut events = std::mem::take(&mut self.events);
+        for event in events.drain(..) {
+            match event {
+                Event::ImageData(upload) => self.uploads.begin(screen, upload),
+                Event::ImageFree(image) => self.uploads.free(image),
+                Event::ColumnsRequested(_) if !screen.window_ops_allowed() => {
+                    let size = self.proxy.shared().size();
+                    screen.term.resize(usize::from(size.num_cols), usize::from(size.num_lines));
+                }
+                _ => {}
+            }
+        }
+        self.events = events;
+        screen.term.clear_cwd_reports();
+        screen.term.clear_replies();
     }
 
     /// Send the engine's replies up to byte `until` that have not gone out yet.
