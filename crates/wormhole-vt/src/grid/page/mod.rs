@@ -54,6 +54,9 @@ pub(super) struct Page {
     pub(super) styles: StyleTable,
     pub(super) graphemes: Graphemes,
     pub(super) links: Links,
+    /// The bytes of the marks and links, measured once the page holds only history (see
+    /// [`Page::extra_bytes`]); `None` until then, or when it may have changed since.
+    extra: Option<usize>,
 }
 
 impl Page {
@@ -70,6 +73,7 @@ impl Page {
             styles: StyleTable::default(),
             graphemes: Graphemes::default(),
             links: Links::default(),
+            extra: None,
         }
     }
 
@@ -86,6 +90,7 @@ impl Page {
             styles: StyleTable::unallocated(),
             graphemes: Graphemes::default(),
             links: Links::default(),
+            extra: None,
         }
     }
 
@@ -99,6 +104,7 @@ impl Page {
         self.styles.clear();
         self.graphemes.clear();
         self.links.clear();
+        self.extra = None;
     }
 
     #[inline]
@@ -129,6 +135,23 @@ impl Page {
             + self.styles.bytes()
             + self.graphemes.bytes()
             + self.links.bytes()
+    }
+
+    /// The bytes of the marks and the links, which a program can make much larger than the cells
+    /// they are on (32 marks a cell, a link of 8 KiB a cell). Measured once and kept: a page of
+    /// history does not change until a resize, which calls [`Page::forget_extra_bytes`].
+    pub(super) fn extra_bytes(&mut self) -> usize {
+        if let Some(bytes) = self.extra {
+            return bytes;
+        }
+        let bytes = self.graphemes.bytes() + self.links.bytes();
+        self.extra = Some(bytes);
+        bytes
+    }
+
+    /// The page may change again (its rows are back on screen, or it lost some).
+    pub(super) fn forget_extra_bytes(&mut self) {
+        self.extra = None;
     }
 
     /// Append a blank row; its index.
@@ -294,9 +317,10 @@ impl Page {
         let style = self.styles.acquire(&pen.style, n as u32);
         self.release_range(a, b);
         let mut flags = pen.cell_flags();
-        if let Some(link) = &pen.link {
+        if let Some(link) = &pen.link
+            && self.attach_link(a, n, link)
+        {
             flags |= CellFlags::HYPERLINK;
-            self.attach_link(a, n, link);
         }
         let template = Cell::compose(0, style, flags);
         for (cell, &byte) in self.cells[a..b].iter_mut().zip(bytes) {
@@ -314,9 +338,15 @@ impl Page {
         }
     }
 
-    fn attach_link(&mut self, a: usize, n: usize, link: &Hyperlink) {
+    /// Put the `n` cells from `a` under `link`; false when the page has no room for another link's
+    /// text (`side_tables::LINK_TEXT_MAX`) and they stay without one.
+    pub(super) fn attach_link(&mut self, a: usize, n: usize, link: &Hyperlink) -> bool {
+        if !self.links.has_room_for(link) {
+            return false;
+        }
         let id = self.links.acquire(link, n as u32);
         self.links.attach(a as u32, n as u32, id);
+        true
     }
 
     /// Write `c` of `width` 1 or 2 at `col` of `row`, with the marks that follow it in its cluster.
@@ -338,9 +368,10 @@ impl Page {
         let style = self.styles.acquire(&pen.style, n as u32);
         self.release_range(a, b);
         let mut flags = pen.cell_flags();
-        if let Some(link) = &pen.link {
+        if let Some(link) = &pen.link
+            && self.attach_link(a, n, link)
+        {
             flags |= CellFlags::HYPERLINK;
-            self.attach_link(a, n, link);
         }
         let mut head = flags;
         if !marks.is_empty() {
@@ -452,9 +483,10 @@ impl Page {
             flags |= CellFlags::GRAPHEME;
             self.graphemes.set_from(at as u32, marks);
         }
-        if let Some(link) = link {
+        if let Some(link) = link
+            && self.attach_link(at, 1, link)
+        {
             flags |= CellFlags::HYPERLINK;
-            self.attach_link(at, 1, link);
         }
         self.cells[at] = Cell::compose(c.map_or(0, |c| c as u32), id, flags);
     }

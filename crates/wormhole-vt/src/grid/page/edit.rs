@@ -257,7 +257,12 @@ impl Page {
         // The links, run by run: the copied cells are under the same links as the source's.
         let (sa, sb) = ((sbase + start) as u32, (sbase + end) as u32);
         for (lo, hi, id) in src.links.within(sa, sb) {
-            self.attach_link(da + (lo - sa) as usize, (hi - lo) as usize, src.links.link(id));
+            let (at, n) = (da + (lo - sa) as usize, (hi - lo) as usize);
+            if !self.attach_link(at, n, src.links.link(id)) {
+                for cell in &mut self.cells[at..at + n] {
+                    *cell = cell.without_flags(CellFlags::HYPERLINK);
+                }
+            }
         }
         self.mend_copied_edges(da, db);
     }
@@ -297,6 +302,7 @@ impl Page {
         }
         self.rows.drain(..n);
         self.base += n as u64;
+        self.forget_extra_bytes();
     }
 
     /// Drop the last `n` rows the same way. Their slots stay dead, but the newest slots can be

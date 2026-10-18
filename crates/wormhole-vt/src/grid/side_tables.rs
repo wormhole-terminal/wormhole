@@ -183,9 +183,22 @@ pub(super) struct Links {
     scratch: Vec<LinkRun>,
     /// The entry the last interning found: a run of printing under one link asks for it each time.
     last: u32,
+    /// The bytes of the ids and addresses the entries hold: a program decides how long they are.
+    text: usize,
 }
 
+/// The bytes of link ids and addresses a page holds at most. A dense page of real links (`ls
+/// --hyperlink` of a large folder) holds a few hundred KiB; past this a new link is not kept, and
+/// its text is shown without it.
+pub(super) const LINK_TEXT_MAX: usize = 1024 * 1024;
+
 impl Links {
+    /// Whether the page can take cells under `link`: it has it already, or room for its text.
+    #[inline]
+    pub(super) fn has_room_for(&self, link: &Hyperlink) -> bool {
+        self.text + link_text(link) <= LINK_TEXT_MAX || self.by_link.contains_key(link)
+    }
+
     /// The id of `link`, counting `n` more cells under it.
     pub(super) fn acquire(&mut self, link: &Hyperlink, n: u32) -> u32 {
         if let Some(entry) = self.entries.get_mut(self.last as usize).filter(|e| e.refs != 0) {
@@ -200,6 +213,7 @@ impl Links {
             self.last = id;
             return id;
         }
+        self.text += link_text(link);
         let id = match self.free.pop() {
             Some(id) => {
                 self.entries[id as usize] = LinkEntry { link: link.clone(), refs: n };
@@ -224,6 +238,7 @@ impl Links {
         debug_assert!(entry.refs >= n);
         entry.refs = entry.refs.saturating_sub(n);
         if entry.refs == 0 {
+            self.text -= link_text(&entry.link);
             self.by_link.remove(&entry.link);
             self.free.push(id);
             if self.last == id {
@@ -378,13 +393,19 @@ impl Links {
         self.by_link.clear();
         self.runs.clear();
         self.last = 0;
+        self.text = 0;
     }
 
     pub(super) fn bytes(&self) -> usize {
         self.entries.capacity() * size_of::<LinkEntry>()
             + self.by_link.capacity() * (size_of::<Hyperlink>() + size_of::<u32>() + 1)
             + (self.runs.capacity() + self.scratch.capacity()) * size_of::<LinkRun>()
+            + self.text
     }
+}
+
+fn link_text(link: &Hyperlink) -> usize {
+    link.id.len() + link.uri.len()
 }
 
 fn same_link(a: &Hyperlink, b: &Hyperlink) -> bool {
@@ -393,7 +414,7 @@ fn same_link(a: &Hyperlink, b: &Hyperlink) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Graphemes, Links, MAX_MARKS};
+    use super::{Graphemes, LINK_TEXT_MAX, Links, MAX_MARKS};
     use crate::types::Hyperlink;
 
     fn link(id: &str, uri: &str) -> Hyperlink {
@@ -491,5 +512,24 @@ mod tests {
         assert_eq!(runs(&links), [(1, 6, a), (7, 10, b), (20, 22, a), (23, 25, b)]);
         assert_eq!(links.used().collect::<Vec<_>>(), [(a, 7), (b, 5)]);
         assert!(links.verify().is_ok());
+    }
+
+    #[test]
+    fn a_page_holds_link_text_up_to_its_cap_and_counts_it_back() {
+        let mut links = Links::default();
+        let long = |n: usize| link(&n.to_string(), &"x".repeat(64 * 1024));
+        let mut ids = Vec::new();
+        let mut n = 0;
+        while links.has_room_for(&long(n)) {
+            ids.push(links.acquire(&long(n), 1));
+            n += 1;
+        }
+        assert!(links.text <= LINK_TEXT_MAX && links.text > LINK_TEXT_MAX - 64 * 1024 - 8);
+        // A link the page has already is always room; one given back makes room again.
+        assert!(links.has_room_for(&long(0)));
+        links.release(ids[1], 1);
+        assert!(links.has_room_for(&long(n)));
+        links.clear();
+        assert_eq!(links.text, 0);
     }
 }

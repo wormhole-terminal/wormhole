@@ -218,6 +218,8 @@ impl Grid {
         };
         self.all_dirty = true;
         self.drop_placements_off_screen();
+        // Rows went from the history to the screen and back: measure the pages again.
+        self.pages.iter_mut().for_each(Page::forget_extra_bytes);
         self.enforce_limit();
         Point::new(Line((cursor_at.0 - s) as i32), Column(cursor_at.1.min(self.cols - 1)))
     }

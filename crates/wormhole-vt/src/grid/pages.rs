@@ -22,9 +22,11 @@ impl Grid {
         self.limit
     }
 
-    /// Cap the history at `bytes` (cells and row records; side tables are small and not counted)
-    /// and drop what is over. The cap is a ceiling: the oldest pages go whole, so between one and
-    /// two pages (128 KiB each at most) less than the cap are kept.
+    /// Cap the history at `bytes` of cells and row records, and drop what is over. The cap is a
+    /// ceiling: the oldest pages go whole, so between one and two pages (128 KiB each at most) less
+    /// than the cap are kept. The history's combining marks and links may take as many bytes again
+    /// (they are tiny in text people read, and a program sends as many as it likes); its styles
+    /// are not counted, as a page has at most one per cell.
     pub fn set_scrollback_limit(&mut self, bytes: usize) {
         self.limit = bytes;
         self.enforce_limit();
@@ -137,16 +139,24 @@ impl Grid {
 
     /// Drop history over the cap: the oldest pages, whole, that hold no live row. The page being
     /// filled turns into history row by row, so room for all of it is kept free: the history never
-    /// outgrows the cap between two pages, and ends up a page or two short of it.
+    /// outgrows the cap between two pages, and ends up a page or two short of it. The marks and
+    /// links of the pages that are all history have a cap of the same size.
     pub(super) fn enforce_limit(&mut self) {
         let room = self.pages.back().map_or(0, Page::capacity);
         let max_rows = (self.limit / self.row_cost()).saturating_sub(room);
-        while self.pages.len() > 1 && self.history_len() > max_rows {
-            let top = self.top_serial();
-            let Some(first) = self.pages.front() else { break };
+        let top = self.top_serial();
+        let mut extra: usize = self
+            .pages
+            .iter_mut()
+            .take_while(|page| page.base + page.rows.len() as u64 <= top)
+            .map(Page::extra_bytes)
+            .sum();
+        while self.pages.len() > 1 && (self.history_len() > max_rows || extra > self.limit) {
+            let Some(first) = self.pages.front_mut() else { break };
             if first.base + first.rows.len() as u64 > top {
                 break;
             }
+            extra -= first.extra_bytes();
             self.drop_first_page();
         }
         if self.limit == 0 && self.history_len() > 0 {

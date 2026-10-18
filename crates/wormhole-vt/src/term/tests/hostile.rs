@@ -266,3 +266,29 @@ fn repeated_long_cursor_backs_with_reverse_wrap_stay_cheap() {
     rig.feed(&"\x1b[65535D".repeat(10_000));
     assert!(start.elapsed() < std::time::Duration::from_secs(1), "took {:?}", start.elapsed());
 }
+
+#[test]
+fn marks_and_links_do_not_grow_the_history_past_its_cap() {
+    // A history of 2,000 lines, then many more of what costs most beside the cells: every cell
+    // with eight combining marks, or under a link of its own.
+    let marked = format!("{}\r\n", format!("a{}", "\u{301}".repeat(8)).repeat(80));
+    let linked = |line: usize| -> String {
+        let mut out = String::new();
+        for col in 0..80 {
+            out += &format!("\x1b]8;;https://example.com/{line}/{col}/{}\x1b\\b", "x".repeat(256));
+        }
+        out + "\x1b]8;;\x1b\\\r\n"
+    };
+    for (lines, kind) in [(4_000, "marks"), (600, "links")] {
+        let mut rig = Rig { term: Terminal::new(80, 24, 2_000), parser: Parser::new() };
+        for line in 0..lines {
+            rig.feed(&if kind == "marks" { marked.clone() } else { linked(line) });
+        }
+        let grid = rig.term.grid();
+        let (held, limit) = (grid.memory_bytes(), grid.scrollback_limit());
+        // The cells' cap, as much again for the marks and links, and the screen's pages.
+        assert!(held < 2 * limit + 2 * 1024 * 1024, "{kind}: {held} bytes held for a limit of {limit}");
+        assert!(grid.history_len() > 0, "{kind}: some history stays");
+        assert_eq!(grid.check_invariants(), Ok(()), "{kind}");
+    }
+}

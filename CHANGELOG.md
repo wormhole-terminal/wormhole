@@ -155,6 +155,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   no time to shape shows without its ligatures for a frame or two.
 - A program can no longer freeze a terminal for seconds by moving the cursor far to the left over and
   over with reverse wraparound on.
+- A terminal's scrollback stays near its memory limit when the output is full of combining marks or
+  links: accents stacked on every letter, or a link on every character, could make the history hold
+  many times its limit, hundreds of megabytes. Past 1 MiB of link addresses in one stretch of history,
+  new links show as plain text.
 
 ### Security
 
