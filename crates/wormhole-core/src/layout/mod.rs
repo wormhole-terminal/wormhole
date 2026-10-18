@@ -2,12 +2,9 @@
 //! sidebar, the terminal and the right panel are, when the panel has room, what the panel and
 //! sidebar toggles do when it hasn't, and how a drag on a panel's edge resolves.
 //!
-//! The window is three columns and a strip: the sidebar (open or hidden), the terminal (never
-//! narrower than [`TERMINAL_MIN`]), the right panel, and the panel's tab strip down the window's
-//! right edge, which belongs to the open panel: closed or without room, both are gone and the
-//! terminal runs to the window's edge. The panel is the first to
-//! give way: it shrinks from its chosen width to [`PANEL_MIN`], then hides until the window is
-//! wide enough again.
+//! The window is three columns: the sidebar (open or hidden), the terminal (never narrower than
+//! [`TERMINAL_MIN`]) and the right panel. The panel is the first to give way: it shrinks from its
+//! chosen width to [`PANEL_MIN`], then hides until the window is wide enough again.
 
 mod remembered;
 mod resize;
@@ -17,27 +14,23 @@ pub mod title_row;
 pub use remembered::{RememberedPanes, STORE_KEY as REMEMBERED_PANES_KEY};
 pub use resize::{Edge, Resize, Stop, resize};
 
-/// The sidebar's width when it is open: from its minimum up to its maximum, 320 unless dragged.
-pub const SIDEBAR_DEFAULT: f32 = 320.0;
+/// The sidebar's width when it is open: from its minimum up to its maximum, 350 unless dragged.
+pub const SIDEBAR_DEFAULT: f32 = 350.0;
 pub const SIDEBAR_MIN: f32 = 240.0;
 pub const SIDEBAR_MAX: f32 = 420.0;
 /// The right panel's width: its default, and the range a drag moves it in.
-pub const PANEL_DEFAULT: f32 = 300.0;
+pub const PANEL_DEFAULT: f32 = 360.0;
 pub const PANEL_MIN: f32 = 240.0;
 pub const PANEL_MAX: f32 = 720.0;
-/// The strip of the panel's tabs on the window's right edge: there while the panel is on screen
-/// (it comes and goes with the panel), and not part of the panel's width.
-pub const PANEL_STRIP: f32 = 28.0;
 /// Narrowest the terminal column may get (padding included, about 41 columns at the default
 /// font). Below this the side panels give way instead, so the grid never collapses to a sliver
 /// and the PTY is never resized to a few columns.
 pub const TERMINAL_MIN: f32 = 320.0;
 /// Dragging a panel's edge this far past its minimum width hides the panel.
 pub const COLLAPSE_SLACK: f32 = 70.0;
-/// The smallest window: a usable terminal with the open panel and its strip beside it (the sidebar
-/// hidden), so the panel's toggle always has an effect. With the sidebar open as well, the panel
-/// waits for room.
-pub const WINDOW_MIN_WIDTH: f32 = TERMINAL_MIN + PANEL_STRIP + PANEL_MIN;
+/// The smallest window: the sidebar and a usable terminal side by side. The right panel, when
+/// open, needs [`PANEL_MIN`] more than this, or the sidebar hidden.
+pub const WINDOW_MIN_WIDTH: f32 = SIDEBAR_MIN + TERMINAL_MIN;
 pub const WINDOW_MIN_HEIGHT: f32 = 400.0;
 
 /// Whether the right panel has room next to the sidebar and the middle column.
@@ -89,14 +82,12 @@ pub enum PanelToggle {
     Waiting,
 }
 
-/// The columns' widths in a window, left to right; a hidden panel is 0 wide, and
-/// so is the strip: it is [`PANEL_STRIP`] at the right edge only with the panel on screen.
+/// The three columns' widths in a window, left to right; a hidden panel is 0 wide.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Columns {
     pub sidebar: f32,
     pub terminal: f32,
     pub panel: f32,
-    pub strip: f32,
 }
 
 impl Panes {
@@ -120,7 +111,7 @@ impl Panes {
     /// Whether the window is wide enough for the right panel next to the sidebar and the
     /// terminal.
     pub fn panel_fits(&self, window: f32) -> bool {
-        right_panel_fits(window, self.sidebar(window), TERMINAL_MIN + PANEL_STRIP, PANEL_MIN)
+        right_panel_fits(window, self.sidebar(window), TERMINAL_MIN, PANEL_MIN)
     }
 
     /// Whether the right panel is on screen: wanted, and with room. Hiding it for room leaves
@@ -167,25 +158,22 @@ impl Panes {
     /// down to [`PANEL_MIN`]) so the terminal keeps [`TERMINAL_MIN`]; the terminal takes the rest.
     pub fn columns(&self, window: f32) -> Columns {
         let sidebar = self.sidebar(window).unwrap_or(0.0);
-        let (panel, strip) = if self.panel_visible(window) {
-            (self.panel_width.min(window - sidebar - PANEL_STRIP - TERMINAL_MIN).max(PANEL_MIN), PANEL_STRIP)
+        let panel = if self.panel_visible(window) {
+            self.panel_width.min(window - sidebar - TERMINAL_MIN).max(PANEL_MIN)
         } else {
-            (0.0, 0.0)
+            0.0
         };
-        let terminal = (window - sidebar - panel - strip).max(TERMINAL_MIN);
-        Columns { sidebar, terminal, panel, strip }
+        Columns { sidebar, terminal: (window - sidebar - panel).max(TERMINAL_MIN), panel }
     }
 
     /// The widest `edge`'s panel may be dragged in a window this wide: its own maximum, or less
     /// when the window can't spare it (a 1100 window with the sidebar open stops the panel
-    /// at 1100 − 320 − 28 − 320 = 432). Never below the panel's minimum.
+    /// at 1100 − 350 − 320 = 430). Never below the panel's minimum.
     pub fn max_width(&self, edge: Edge, window: f32) -> f32 {
         let (min, max) = edge.limits();
         let room = match edge {
-            Edge::Sidebar => {
-                window - if self.panel_visible(window) { PANEL_STRIP } else { 0.0 } - TERMINAL_MIN
-            }
-            Edge::Panel => window - self.sidebar(window).unwrap_or(0.0) - PANEL_STRIP - TERMINAL_MIN,
+            Edge::Sidebar => window - TERMINAL_MIN,
+            Edge::Panel => window - self.sidebar(window).unwrap_or(0.0) - TERMINAL_MIN,
         };
         max.min(room).max(min)
     }

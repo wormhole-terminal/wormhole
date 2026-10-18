@@ -148,7 +148,7 @@ impl Render for Workspace {
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
         let titlebar = self.render_terminal_title_row(window, cx);
-        let sidebar_toggle = self.render_window_controls(window, cx);
+        let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
@@ -243,11 +243,6 @@ impl Render for Workspace {
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
                         d.child(self.render_notes_panel(columns.panel, window, cx))
                     })
-                    // The panel's tabs, down the window's edge with the panel (they slide in and out
-                    // with it, `render_slide`).
-                    .when(notes_visible && self.in_flow(Edge::Panel), |d| {
-                        d.child(self.render_panel_strip(window, cx))
-                    })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))
                     // The hairlines lie over the columns' edges and their handles over them.
@@ -257,13 +252,14 @@ impl Render for Workspace {
                             .child(self.resize_handle(Edge::Sidebar, columns.sidebar, cx))
                     })
                     .when(columns.panel > 0.0 && self.in_flow(Edge::Panel), |d| {
-                        let x = self.window_width - columns.strip - columns.panel;
+                        let x = self.window_width - columns.panel;
                         d.when(!sidebar_glass, |d| d.child(edge_rule(Edge::Panel, x, ui)))
                             .child(self.resize_handle(Edge::Panel, x, cx))
                     }),
             )
             .children(status_bar)
             .when(!tabs, |d| d.child(sidebar_toggle))
+            .child(panel_toggle)
             .children(self.render_profile_edge(cx))
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))

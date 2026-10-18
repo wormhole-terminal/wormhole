@@ -12,8 +12,6 @@ pub(in crate::workspace) enum TitleButton {
     /// Hide (or show) the sidebar.
     Sidebar,
     NewTerminal,
-    /// Show (or hide) the right panel: the last button of the terminal's title row.
-    Panel,
 }
 
 /// ← (-1) or → (1), with nothing held.
@@ -26,19 +24,17 @@ fn along(keystroke: &Keystroke) -> Option<isize> {
 }
 
 impl Workspace {
-    /// The title row's buttons on screen: the sidebar's two with it open, its show button alone
-    /// without it, and the panel's toggle at the end whatever the layout.
+    /// The title row's buttons on screen: both with the sidebar open, its show button alone
+    /// without it.
     pub(in crate::workspace) fn title_buttons(&self, _cx: &App) -> Vec<TitleButton> {
-        let mut buttons = if self.sidebar.tabs.on {
+        if self.sidebar.tabs.on {
             // Under tabs the window has no sidebar, nor a button for it.
             Vec::new()
         } else if self.panes.sidebar_open {
             vec![TitleButton::Sidebar, TitleButton::NewTerminal]
         } else {
             vec![TitleButton::Sidebar]
-        };
-        buttons.push(TitleButton::Panel);
-        buttons
+        }
     }
 
     /// Whether `button` wears the focus ring.
@@ -63,7 +59,6 @@ impl Workspace {
         match buttons.get(self.areas.title) {
             Some(TitleButton::Sidebar) => self.toggle_sidebar(cx),
             Some(TitleButton::NewTerminal) => self.new_session(window, cx),
-            Some(TitleButton::Panel) => self.toggle_notes(window, cx),
             None => {}
         }
         true
@@ -115,14 +110,10 @@ impl Workspace {
         if let Some(delta) = along(keystroke) {
             let tabs = self.panel_tab_list(cx);
             let at = tabs.iter().position(|&tab| tab == self.right_tab).unwrap_or(0);
-            self.open_panel_tab(tabs[step_wrapping(at, delta, tabs.len())], cx);
+            self.show_tab(tabs[step_wrapping(at, delta, tabs.len())], cx);
             return true;
         }
         if activation(keystroke).is_some() || list_key(keystroke) == Some(Key::Down) {
-            // A closed panel has no list to go into: the tab opens it first.
-            if !self.notes_visible() {
-                self.open_panel_tab(self.right_tab, cx);
-            }
             self.focus_stop(Stop { area: Area::PanelContent, index: 0 }, window, cx);
             return true;
         }

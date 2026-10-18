@@ -181,7 +181,6 @@ impl Workspace {
             Area::Sidebar => self.sidebar_shown(),
             // A diff covers the terminal and its title row's tabs.
             Area::Tabs => self.diff_view.is_none(),
-            // The strip comes and goes with the panel.
             Area::PanelTabs | Area::PanelContent => self.notes_visible(),
             Area::StatusBar => self.status_bar_drawn.is_some(),
         }

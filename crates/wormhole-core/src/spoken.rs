@@ -70,10 +70,9 @@ pub enum PanelTab {
         notes: usize,
     },
     /// The files changed in the terminal's repository; `None` while that isn't known, or outside
-    /// a repository. `new`: they changed since the Changes tab was last looked at (the amber dot).
+    /// a repository.
     Changes {
         files: Option<usize>,
-        new: bool,
     },
     History,
     Project,
@@ -96,16 +95,10 @@ pub fn panel_tab(tab: PanelTab) -> String {
             }
             parts.join(", ")
         }
-        PanelTab::Changes { files, new } => {
-            let mut text = match files {
-                None => "Changes".to_string(),
-                Some(0) => "Changes, no changes".to_string(),
-                Some(n) => format!("Changes, {}", count(n, "changed file", "changed files")),
-            };
-            if new {
-                text.push_str(", new");
-            }
-            text
+        PanelTab::Changes { files: None } => "Changes".to_string(),
+        PanelTab::Changes { files: Some(0) } => "Changes, no changes".to_string(),
+        PanelTab::Changes { files: Some(n) } => {
+            format!("Changes, {}", count(n, "changed file", "changed files"))
         }
         PanelTab::History => "History".to_string(),
         PanelTab::Project => "Project".to_string(),
@@ -329,19 +322,10 @@ mod tests {
 
     #[test]
     fn panel_tabs_read_as_voiceover_says() {
-        assert_eq!(panel_tab(PanelTab::Changes { files: Some(3), new: false }), "Changes, 3 changed files");
-        assert_eq!(panel_tab(PanelTab::Changes { files: Some(1), new: false }), "Changes, 1 changed file");
-        assert_eq!(
-            panel_tab(PanelTab::Changes { files: Some(2), new: true }),
-            "Changes, 2 changed files, new",
-            "the amber dot is said too"
-        );
-        assert_eq!(panel_tab(PanelTab::Changes { files: Some(0), new: false }), "Changes, no changes");
-        assert_eq!(
-            panel_tab(PanelTab::Changes { files: None, new: false }),
-            "Changes",
-            "not known, or no repository"
-        );
+        assert_eq!(panel_tab(PanelTab::Changes { files: Some(3) }), "Changes, 3 changed files");
+        assert_eq!(panel_tab(PanelTab::Changes { files: Some(1) }), "Changes, 1 changed file");
+        assert_eq!(panel_tab(PanelTab::Changes { files: Some(0) }), "Changes, no changes");
+        assert_eq!(panel_tab(PanelTab::Changes { files: None }), "Changes", "not known, or no repository");
         assert_eq!(panel_tab(PanelTab::History), "History");
         assert_eq!(panel_tab(PanelTab::Project), "Project");
         assert_eq!(panel_tab(PanelTab::Usage), "Usage");

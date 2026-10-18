@@ -81,8 +81,6 @@ pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W;
 const CHEVRON_W: f32 = 16.0;
 pub(super) const SPLITS_W: f32 = 2.0 * style::HIT_MIN;
 pub(super) const MORE_W: f32 = style::HIT_MIN;
-/// The right panel's toggle after them, with the gap before it: always drawn, never folded.
-pub(super) const PANEL_TOGGLE_W: f32 = ROW_GAP + style::HIT_MIN;
 /// The app's icon in the Open in… button, and in its menu.
 const APP_ICON: f32 = style::TITLE_GLYPH;
 
@@ -144,8 +142,7 @@ impl Workspace {
                                 .when(extras.is_some(), |d| d.child(div().flex_1().min_w_0()))
                                 .children(extras),
                         )
-                        .children(actions)
-                        .child(self.render_panel_toggle(window, cx)),
+                        .children(actions),
                     (left, right),
                 ),
             );

@@ -74,9 +74,7 @@ impl Workspace {
             })
             .ok();
         });
-        // The panel's strip slides with it, so its width counts.
-        let strip = if edge == Edge::Panel { wormhole_core::layout::PANEL_STRIP } else { 0.0 };
-        self.slide = Some(Slide { edge, opening, width: before.max(after) + strip, serial, _end: end });
+        self.slide = Some(Slide { edge, opening, width: before.max(after), serial, _end: end });
     }
 
     /// Whether `edge`'s column takes its place in the layout: not while it slides in over the
@@ -103,16 +101,7 @@ impl Workspace {
         let width = motion.width;
         let column = match motion.edge {
             Edge::Sidebar => self.render_sidebar(width, window, cx),
-            Edge::Panel => {
-                // The panel with its strip, as at rest.
-                let strip = wormhole_core::layout::PANEL_STRIP;
-                div()
-                    .flex()
-                    .size_full()
-                    .child(self.render_notes_panel(width - strip, window, cx))
-                    .child(self.render_panel_strip(window, cx))
-                    .into_any_element()
-            }
+            Edge::Panel => self.render_notes_panel(width, window, cx).into_any_element(),
         };
         // The column keeps its width inside the clip, pinned to the window's edge, so its rows
         // don't reflow as it moves. It paints its own translucent surface, as at rest: the terminal

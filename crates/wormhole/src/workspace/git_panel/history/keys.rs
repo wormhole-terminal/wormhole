@@ -18,11 +18,9 @@ impl Workspace {
                         item(0, Some(sha.is_some() && history.expanded.as_deref() == sha))
                     }
                     HistoryRow::File(_) => item(1, None),
-                    HistoryRow::Head
-                    | HistoryRow::Error
-                    | HistoryRow::Note(_)
-                    | HistoryRow::FilesError
-                    | HistoryRow::Spacer => return None,
+                    HistoryRow::Error | HistoryRow::Note(_) | HistoryRow::FilesError | HistoryRow::Spacer => {
+                        return None;
+                    }
                 };
                 Some(Walkable { row, item, band: false })
             })

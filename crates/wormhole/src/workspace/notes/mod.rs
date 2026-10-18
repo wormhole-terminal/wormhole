@@ -357,7 +357,6 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let ui = ui_in(&self.profile, cx);
-        let glass = self.glass_on(cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Notes until the next refresh resets it.
         let tab =
@@ -370,52 +369,45 @@ impl Workspace {
             .w(px(width))
             .flex_none()
             .h_full()
-            // On glass the panel is the window's material, its cards the glass.
-            .when(!glass, |d| d.bg(ui.panel_right))
-            .child(
-                div()
-                    .relative()
+            .bg(ui.panel_right)
+            .child(self.render_panel_tab_bar(window, cx))
+            .child(match tab {
+                // Virtualized lists fill the panel and scroll themselves; the list area holds the
+                // keyboard for them.
+                RightTab::Changes => {
+                    let list = self.render_changes_tab(window, cx);
+                    self.panel_content(list, cx)
+                }
+                RightTab::History => {
+                    let list = self.render_history_tab(window, cx);
+                    self.panel_content(list, cx)
+                }
+                RightTab::Notes => {
+                    let list = self.render_notes_tab(window, cx);
+                    self.panel_content(list, cx)
+                }
+                RightTab::Project => div()
+                    .id("project-scroll")
                     .flex()
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .pt(px(style::PANEL_TOP))
-                    .when(glass, |d| d.child(self.glass_clip_probe(super::glass::PANEL_CLIP)))
-                    .child(match tab {
-                        // Virtualized lists fill the panel and scroll themselves; the list area holds the
-                        // keyboard for them.
-                        RightTab::Changes => {
-                            let list = self.render_changes_tab(window, cx);
-                            self.panel_content(list, cx)
-                        }
-                        RightTab::History => {
-                            let list = self.render_history_tab(window, cx);
-                            self.panel_content(list, cx)
-                        }
-                        RightTab::Notes => {
-                            let list = self.render_notes_tab(window, cx);
-                            self.panel_content(list, cx)
-                        }
-                        RightTab::Project => div()
-                            .id("project-scroll")
-                            .flex()
-                            .flex_col()
-                            .flex_1()
-                            .min_h_0()
-                            .overflow_y_scroll()
-                            .child(self.render_project_tab(cx))
-                            .into_any_element(),
-                        RightTab::Usage => div()
-                            .id("usage-scroll")
-                            .flex()
-                            .flex_col()
-                            .flex_1()
-                            .min_h_0()
-                            .overflow_y_scroll()
-                            .child(self.render_usage_tab(cx))
-                            .into_any_element(),
-                    }),
-            )
+                    .overflow_y_scroll()
+                    .pt(px(style::PANEL_LIST_TOP))
+                    .pb_4()
+                    .child(self.render_project_tab(cx))
+                    .into_any_element(),
+                RightTab::Usage => div()
+                    .id("usage-scroll")
+                    .flex()
+                    .flex_col()
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .pt(px(style::PANEL_LIST_TOP))
+                    .child(self.render_usage_tab(cx))
+                    .into_any_element(),
+            })
     }
 
     pub(crate) fn show_tab(&mut self, tab: RightTab, cx: &mut Context<Self>) {

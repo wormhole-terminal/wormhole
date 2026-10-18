@@ -7,7 +7,6 @@ use wormhole_core::git::{ChangeKind, FileChange, RepoStatus};
 use wormhole_core::panel as rules;
 
 use crate::style;
-use crate::workspace::panel_list::CardPart;
 
 /// The block of the list a folder row sits in. Not an index: with only
 /// untracked files "Untracked" is the first block, and its folders keep their
@@ -62,12 +61,12 @@ impl Folded<'_> {
 /// the file snapshot the rows were built from.
 #[derive(Clone, PartialEq)]
 pub(super) enum ChangeRow {
-    /// A section's card head. `first`: the list's top card, whose head carries the controls.
+    /// A section's band. `joined`: the band above has nothing under it, so they share a hairline.
     Band {
         group: Group,
         count: usize,
         folded: bool,
-        first: bool,
+        joined: bool,
     },
     /// Under a section folded for its size: where its files are and why it is folded.
     FoldNote(String),
@@ -89,13 +88,8 @@ pub(super) enum ChangeRow {
 }
 
 impl ChangeRow {
-    /// Each section is a card; the spacer under the last is outside them.
-    pub(super) fn part(&self) -> CardPart {
-        match self {
-            Self::Band { .. } => CardPart::Head,
-            Self::Spacer => CardPart::Outside,
-            _ => CardPart::Body,
-        }
+    pub(super) fn is_band(&self) -> bool {
+        matches!(self, Self::Band { .. })
     }
 }
 
@@ -129,8 +123,8 @@ pub(super) fn build_rows(
     let mut rows = Vec::with_capacity(files.len() + 8);
     for (group, ids) in groups {
         let section_folded = rules::section_folded(ids.len(), folds.get(&group).copied());
-        let first = rows.is_empty();
-        rows.push(ChangeRow::Band { group, count: ids.len(), folded: section_folded, first });
+        let joined = matches!(rows.last(), Some(ChangeRow::Band { .. }));
+        rows.push(ChangeRow::Band { group, count: ids.len(), folded: section_folded, joined });
         if section_folded {
             if ids.len() > style::FOLD_ABOVE {
                 let paths = ids.iter().map(|&ix| files[ix].path.as_str());

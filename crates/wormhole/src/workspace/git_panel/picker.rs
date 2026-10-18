@@ -4,7 +4,6 @@
 use std::path::{Path, PathBuf};
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::input::InputState;
 use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -12,7 +11,6 @@ use gpui_kit::*;
 use super::history::HistoryState;
 use super::job::Ticket;
 use crate::select::{self, Choice, SearchSelect, SelectTrigger};
-use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::workspace::Workspace;
 use wormhole_core::git;
@@ -116,84 +114,52 @@ impl Workspace {
         }
     }
 
-    /// The picker in a panel card's head, as the data its chip draws from: the rows of a list
-    /// are drawn from a callback that can't borrow the workspace, so the chip is described here
-    /// and built there (`PickerChip::render`). `prefix` reads muted before the picked branch.
-    pub(crate) fn picker_chip(
+    /// The picker in a panel header and, while it is open, the floating, searchable
+    /// list of branches under it. It reads `prefix` ("vs", muted) then the picked branch after
+    /// its mark in `git.branch`, or HEAD.
+    pub(crate) fn render_picker_chip(
         &self,
         picker: Picker,
         prefix: &'static str,
         branch: Option<&str>,
         cx: &mut Context<Self>,
-    ) -> PickerChip {
-        let session = self.active_session();
-        let open = self.picker == Some(picker);
-        PickerChip {
-            picker,
-            prefix,
-            branch: branch.map(str::to_string),
-            current: match picker {
-                Picker::Compare => session.compare.clone(),
-                Picker::History => session.history.rev.clone(),
-            },
-            open,
-            // The menu is built only while it is open; the head re-renders far more often than that.
-            options: if open { self.picker_options(picker, cx) } else { Vec::new() },
-            loading: self.branches.is_empty(),
-            search: self.picker_search.clone(),
-            this: cx.weak_entity(),
-        }
-    }
-}
-
-/// A branch picker's chip and, while it is open, the floating, searchable list of branches
-/// under it. It reads `prefix` ("vs", muted) then the picked branch after its mark in
-/// `git.branch`, or HEAD.
-pub(crate) struct PickerChip {
-    picker: Picker,
-    prefix: &'static str,
-    branch: Option<String>,
-    current: Option<String>,
-    open: bool,
-    options: Vec<Choice<Option<String>>>,
-    loading: bool,
-    search: Entity<InputState>,
-    this: WeakEntity<Workspace>,
-}
-
-impl PickerChip {
-    pub(crate) fn render(&self, ui: UiColors, cx: &App) -> AnyElement {
-        let (picker, prefix) = (self.picker, self.prefix);
+    ) -> AnyElement {
+        let ui = ui_in(&self.profile, cx);
         let label = div()
             .flex()
             .items_center()
             .gap_1()
             .min_w_0()
             .when(!prefix.is_empty(), |d| d.child(div().flex_none().text_color(ui.muted).child(prefix)))
-            .when(self.branch.is_some(), |d| {
+            .when(branch.is_some(), |d| {
                 d.child(Icon::new(IconName::GitBranch).xsmall().text_color(ui.branch).flex_none())
             })
             .child(
-                div()
-                    .min_w_0()
-                    .truncate()
-                    .child(SharedString::from(self.branch.clone().unwrap_or_else(|| "HEAD".to_string()))),
+                div().min_w_0().truncate().child(SharedString::from(branch.unwrap_or("HEAD").to_string())),
             );
+        let session = self.active_session();
+        let current = match picker {
+            Picker::Compare => session.compare.clone(),
+            Picker::History => session.history.rev.clone(),
+        };
         let id = match picker {
             Picker::Compare => "compare-chip",
             Picker::History => "history-chip",
         };
-        let (this, on_change) = (self.this.clone(), self.this.clone());
-        let open = self.open;
+        let this = cx.weak_entity();
+        let on_change = this.clone();
+        let open = self.picker == Some(picker);
+
         let select = SearchSelect::new(
             id,
             ui,
             SelectTrigger::new(SharedString::from(format!("{id}-trigger")), ui, label).compact(),
-            &self.search,
+            &self.picker_search,
             cx,
         )
-        .options(self.options.clone())
-        .current(self.current.clone())
+        // The menu is built only while it is open; the header re-renders far more often than that.
+        .options(if open { self.picker_options(picker, cx) } else { Vec::new() })
+        .current(current)
         .open(open)
         .anchor(Anchor::TopRight)
         .menu_width(px(320.0))
@@ -210,7 +176,7 @@ impl PickerChip {
         .on_pick(move |value, _, cx| {
             this.update(cx, |this, cx| this.pick_branch(picker, value.clone(), cx)).ok();
         });
-        let select = if self.loading {
+        let select = if self.branches.is_empty() {
             select.hint("Loading branches…")
         } else if picker == Picker::Compare {
             select.hint("Changes since this branch split off from it")

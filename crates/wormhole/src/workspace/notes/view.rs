@@ -11,7 +11,7 @@ use wormhole_core::spoken;
 
 use super::super::focus::{Activate, Walkable};
 use super::super::items::with_item_keys;
-use super::super::panel_list::{CardPart, Rows};
+use super::super::panel_list::Rows;
 use super::super::text::{note_body, note_title};
 use super::*;
 use crate::settings::ui_in;
@@ -49,13 +49,8 @@ pub(in crate::workspace) enum NotesRow {
 }
 
 impl NotesRow {
-    /// Next steps and Notes are a card each; the spacer under the last is outside them.
-    fn part(&self) -> CardPart {
-        match self {
-            Self::TasksBand | Self::NotesBand => CardPart::Head,
-            Self::Spacer => CardPart::Outside,
-            _ => CardPart::Body,
-        }
+    fn is_band(&self) -> bool {
+        matches!(self, Self::TasksBand | Self::NotesBand)
     }
 }
 
@@ -90,28 +85,33 @@ pub(in crate::workspace) struct NotesView {
 }
 
 impl NotesView {
+    /// One row; `pinned` is the copy of a band drawn over the top of the list.
     pub(super) fn render_row(
         &self,
         row: &NotesRow,
+        pinned: bool,
         ui: UiColors,
         window: &mut Window,
         cx: &App,
     ) -> AnyElement {
         match row {
-            NotesRow::TasksBand => self.render_tasks_band(ui),
+            NotesRow::TasksBand => self.render_tasks_band(ui, pinned),
             NotesRow::Task { ix, .. } => self.render_task(Some(*ix), ui, cx),
             NotesRow::TaskDraft => self.render_task(None, ui, cx),
             NotesRow::DoneFold { count, open } => self.render_done_fold(*count, *open, ui),
-            NotesRow::NotesBand => self.render_notes_band(ui),
+            NotesRow::NotesBand => self.render_notes_band(ui, pinned),
             NotesRow::Note { ix, collapsed, .. } => self.render_note(*ix, *collapsed, ui, window, cx),
             NotesRow::Spacer => div().h(px(16.0)).into_any_element(),
         }
     }
 
-    fn render_notes_band(&self, ui: UiColors) -> AnyElement {
+    fn render_notes_band(&self, ui: UiColors, pinned: bool) -> AnyElement {
         let (toggle, add) = (self.this.clone(), self.this.clone());
-        style::section_card(
-            "notes-band",
+        // Right under the Next steps band (folded, or with nothing in it), the two share a hairline;
+        // pinned over the top of the list, it shares the tab bar's rule.
+        let joined = pinned || self.tasks_section() != style::Section::Open;
+        style::band(
+            if pinned { "notes-band-pinned" } else { "notes-band" },
             ui,
             style::BandParts {
                 kind: style::BandKind::Section,
@@ -130,10 +130,9 @@ impl NotesView {
                     toggle.update(cx, |this, cx| this.toggle_notes_section(cx)).ok();
                 })),
                 drop_target: false,
-                sticky: false,
-                joined: false,
+                sticky: pinned,
+                joined,
             },
-            Vec::new(),
         )
         .aria_label(spoken::section_band("Notes", self.filled_notes, spoken::Counted::Notes))
         .into_any_element()
@@ -268,7 +267,7 @@ impl NotesView {
 /// An open note's text as the panel wraps it (14 pt, between x 40 and the right inset): one
 /// string per line on screen.
 fn wrapped_note(text: &str, panel_w: f32, window: &mut Window, cx: &App) -> Vec<SharedString> {
-    let width = px(panel_w - NOTE_TEXT_X - style::PANEL_ROW_X);
+    let width = px(panel_w - NOTE_TEXT_X - style::PANEL_INSET);
     let font_size = rems(NOTE_TEXT_REMS).to_pixels(window.rem_size());
     let run = TextRun { len: text.len(), font: font(cx.theme().font_family.clone()), ..Default::default() };
     let shaped = window.text_system().shape_text(
@@ -309,9 +308,9 @@ pub(super) fn wrapped_placeholder(panel_w: f32, window: &mut Window, cx: &App) -
     lines.iter().map(|line| line.trim_end()).collect::<Vec<_>>().join("\n").into()
 }
 
-/// Where a note's text starts (from the panel's edge), and its size and line height (GPUI Kit's `small` textarea: 14 pt
+/// Where a note's text starts, and its size and line height (GPUI Kit's `small` textarea: 14 pt
 /// on 20).
-const NOTE_TEXT_X: f32 = style::PANEL_ROW_X + style::ITEM_LEAD_W + 8.0;
+const NOTE_TEXT_X: f32 = 40.0;
 const NOTE_TEXT_REMS: f32 = 0.875;
 const NOTE_LINE_REMS: f32 = 1.25;
 /// How far the editor keeps its text from its right edge (GPUI Kit's `RIGHT_MARGIN`): where it
@@ -513,22 +512,28 @@ impl Workspace {
             this: cx.weak_entity(),
         });
         let rows = &session.notes_list.rows;
-        let in_list = view;
-        // A column that fills the panel, so the list gets a bounded height.
+        let pinned = rows.pinned(px(style::BAND_H), NotesRow::is_band).map(|(row, push)| (row.clone(), push));
+        let in_list = view.clone();
+        let ui = ui_in(&self.profile, cx);
         let profile = self.profile.clone();
+        // A column that fills the panel, so the list gets a bounded height; a band whose
+        // section scrolls under the top stays pinned there.
         div()
             .relative()
             .flex()
             .flex_col()
             .flex_1()
             .min_h_0()
-            .child(rows.element_carded(
-                self.panel_ring(window, ui_in(&self.profile, cx)),
-                ui_in(&self.profile, cx),
-                self.panel_backing(cx),
-                NotesRow::part,
-                move |row, window, cx| in_list.render_row(row, ui_in(&profile, cx), window, cx),
-            ))
+            .child(rows.element(self.panel_ring(window, ui), move |row, window, cx| {
+                in_list.render_row(row, false, ui_in(&profile, cx), window, cx)
+            }))
+            .children(pinned.map(|(row, push)| {
+                let band = match row {
+                    NotesRow::TasksBand => view.render_tasks_band(ui, true),
+                    _ => view.render_notes_band(ui, true),
+                };
+                div().absolute().top(push).left_0().right_0().child(band)
+            }))
             .into_any_element()
     }
 }

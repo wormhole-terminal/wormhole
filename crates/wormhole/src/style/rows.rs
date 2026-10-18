@@ -7,21 +7,19 @@ use gpui_kit::component::{Icon, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::bands::CARD_INSET;
 use super::controls::keycap;
 use super::labels::{count_badge, line_counts};
 use super::metrics::Metrics;
 use super::motion::{EASE_OUT, MOTION_FAST};
 use super::scale::{
-    CARD_ROW_RADIUS, FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H,
-    ROW_TWO_LINE_H, TITLE_GLYPH, TextRole,
+    FILE_NAME_MAX, INDENT, ITEM_LEAD_W, MARK_DOT, META_LINE, NAME_LINE, ROW_H, ROW_TWO_LINE_H, TITLE_GLYPH,
+    TextRole,
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;
 use wormhole_core::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
 
-/// A square row that runs from edge to edge: [`ROW_H`] tall, inset 16 on both sides (the right
-/// panel's rows, which sit in cards, are inset [`CARD_INSET`] and rounded instead),
+/// A square row that runs from edge to edge: [`ROW_H`] tall, inset 16 on both sides,
 /// body text with a gap of `_2` between its parts. The hover fill is `state.hover`; a
 /// selected row (an open file, an expanded commit) takes the primary's tint
 /// (`state.selected`) with its text in `selected_text`, and keeps it under the pointer.
@@ -489,9 +487,7 @@ pub fn file_row(id: impl Into<ElementId>, ui: UiColors, row: FileRow) -> Statefu
         ChangeKind::Renamed => ui.selected_text,
     };
     flush_row(id, ui, selected)
-        .pl(px(CARD_INSET + depth as f32 * INDENT))
-        .pr(px(CARD_INSET))
-        .rounded(px(CARD_ROW_RADIUS))
+        .pl(px(super::scale::PANEL_INSET + depth as f32 * INDENT))
         .child(lead(icon))
         .children(renamed_from.map(|from| {
             div()
@@ -570,9 +566,7 @@ pub fn folder_row(
     collapsed: bool,
 ) -> Stateful<Div> {
     flush_row(id, ui, false)
-        .pl(px(CARD_INSET + depth as f32 * INDENT))
-        .pr(px(CARD_INSET))
-        .rounded(px(CARD_ROW_RADIUS))
+        .pl(px(super::scale::PANEL_INSET + depth as f32 * INDENT))
         .text_color(ui.muted)
         .child(lead(super::controls::disclosure(ui, collapsed)))
         // The icon takes a lead column of its own, so the name lands one level in (x 64).
@@ -611,9 +605,8 @@ pub fn two_line_row(id: impl Into<ElementId>, ui: UiColors, row: TwoLineRow) -> 
         .justify_center()
         .w_full()
         .h(px(ROW_TWO_LINE_H))
-        .px(px(CARD_INSET))
+        .px_4()
         .py_1()
-        .rounded(px(CARD_ROW_RADIUS))
         .hover(|d| d.bg(ui.hover))
         .child(
             div()
@@ -669,9 +662,8 @@ pub fn commit_row(id: impl Into<ElementId>, ui: UiColors, row: CommitRow) -> Sta
         .justify_center()
         .w_full()
         .h(px(ROW_TWO_LINE_H))
-        .px(px(CARD_INSET))
+        .px_4()
         .py_1()
-        .rounded(px(CARD_ROW_RADIUS))
         .cursor_pointer()
         .when(expanded, |d| d.bg(ui.selected))
         .hover(move |d| if expanded { d } else { d.bg(ui.hover) })
