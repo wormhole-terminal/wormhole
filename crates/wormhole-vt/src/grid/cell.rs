@@ -253,6 +253,12 @@ impl Cell {
         self.0 == 0
     }
 
+    /// Blank but for a tab mark, which is invisible: nothing a line holds or a reflow keeps.
+    #[inline]
+    pub const fn is_blank_but_tab(self) -> bool {
+        self.0 & !((CellFlags::TAB.bits() as u64) << FLAGS_SHIFT) == 0
+    }
+
     /// The flags, typed.
     #[inline]
     pub(super) const fn flag_set(self) -> CellFlags {

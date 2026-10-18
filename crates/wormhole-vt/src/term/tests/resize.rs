@@ -143,3 +143,14 @@ fn a_restored_cursor_only_has_a_wrap_due_on_the_last_column() {
     assert_eq!(rig.row(0), "AB");
     assert_eq!(rig.term.check_invariants(), Ok(()));
 }
+
+#[test]
+fn a_tab_after_the_text_is_not_text_when_the_lines_rewrap() {
+    // The tab leaves an invisible mark on the cell it started from; narrower, the line still
+    // fits one row and the next line stays right under it.
+    let mut rig = Rig::new(10, 3);
+    rig.feed("ab\t\r\nc");
+    rig.term.resize(2, 3);
+    assert_eq!((rig.row(0), rig.row(1)), ("ab".to_string(), "c".to_string()));
+    assert_eq!(rig.cursor(), (1, 1));
+}

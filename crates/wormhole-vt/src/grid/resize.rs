@@ -340,7 +340,10 @@ impl Rewrap {
         let width = self.next.cols;
         if self.line.cells.is_empty() && !wrapped {
             // A line of one row: the common case, copied whole when it fits.
-            let len = cells.iter().rposition(|c| !(c.is_blank() || c.is_spacer_head())).map_or(0, |p| p + 1);
+            let len = cells
+                .iter()
+                .rposition(|c| !(c.is_blank_but_tab() || c.is_spacer_head()))
+                .map_or(0, |p| p + 1);
             if self.tracks[here.clone()].iter().all(|t| t.col < width) && len <= width {
                 self.copy_row(page, row, len, here, serial);
                 return;
@@ -352,7 +355,7 @@ impl Rewrap {
         let end = if wrapped {
             cells.len() - usize::from(cells.last().is_some_and(|c| c.is_spacer_head()))
         } else {
-            cells.iter().rposition(|c| !(c.is_blank() || c.is_spacer_head())).map_or(0, |p| p + 1)
+            cells.iter().rposition(|c| !(c.is_blank_but_tab() || c.is_spacer_head())).map_or(0, |p| p + 1)
         };
         for (x, cell) in cells[..end].iter().enumerate() {
             let style = line.style_index(page, cell.style_id());

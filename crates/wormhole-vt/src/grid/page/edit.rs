@@ -328,8 +328,8 @@ impl Page {
         self.cells.truncate(top * self.cols);
     }
 
-    /// Whether row `row` holds nothing but blank cells and no style (fresh memory).
+    /// Whether row `row` holds nothing but blank cells and no style (fresh memory, or tab marks).
     pub(in crate::grid) fn row_is_blank(&self, row: usize) -> bool {
-        self.cells(row).iter().all(|cell| cell.is_blank())
+        self.cells(row).iter().all(|cell| cell.is_blank_but_tab())
     }
 }

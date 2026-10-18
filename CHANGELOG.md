@@ -167,6 +167,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   should, instead of putting back its margins and modes and stopping at the mistake.
 - A protected wide character (Chinese, Japanese, an emoji) right at the edge of a selective erase is no
   longer erased with the rest.
+- A line that ends in a tab no longer takes an extra, empty row when the window gets narrower.
 
 ### Security
 
