@@ -201,6 +201,13 @@ impl Default for Saved {
     }
 }
 
+/// The cursor's look as DECSCUSR and mode 12 asked for it; `None` leaves each to the host.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct CursorStyle {
+    shape: Option<CursorShape>,
+    blink: Option<bool>,
+}
+
 /// A grapheme cluster being built in mode 2027: where the last printed character stands, how wide
 /// the cluster is so far, and the state of the UAX #29 automaton.
 #[derive(Clone, Copy, Debug)]
@@ -253,31 +260,14 @@ pub struct Terminal {
     /// DECSC's slot, per screen (index 0: primary, 1: alternate).
     saved: [Saved; 2],
     keys: [KeyboardFlags; 2],
-    /// What DECSCUSR and mode 12 asked for; `None` leaves it to the host.
-    cursor_shape: Option<CursorShape>,
-    cursor_blink: Option<bool>,
-    title: Option<String>,
-    /// The icon name (OSC 1), kept for the title stack and the reports.
-    icon_name: Option<String>,
-    /// The title modes a program switched on.
-    title_modes: title::TitleModes,
+    cursor_style: CursorStyle,
+    titles: title::Titles,
     /// Whether programs may change the window and read its title.
     window_ops: WindowOps,
     /// Where the host's window is; unknown until it says.
     window: Option<WindowGeometry>,
-    /// The shell's folder as the last OSC 7 said it; empty before any.
-    cwd: String,
-    /// Every OSC 7 since the host last looked (the first `cwd_reported` are in use).
-    cwd_reports: Vec<String>,
-    cwd_reported: usize,
-    title_stack: Vec<title::SavedTitles>,
-    /// What programs set (OSC 4, 10, 11, 12) over the host's palette.
-    colors: Colors,
-    /// The special colors (OSC 4 from 256, OSC 5) and the dynamic colors OSC 13 to 19 set.
-    special_colors: [Option<Rgb>; osc_colors::SPECIAL_COLORS],
-    extra_colors: [Option<Rgb>; osc_colors::EXTRA_DYNAMIC],
-    /// The host's palette, which color queries answer with when a program has not changed an entry.
-    defaults: Box<[Rgb; COLOR_COUNT]>,
+    folder: osc_cwd::Folder,
+    palette: osc_colors::Palette,
     /// A cell in pixels, for XTWINOPS 14, 16 and XTSMGRAPHICS.
     cell_px: (u16, u16),
     /// The last graphic character printed, for REP.
@@ -352,21 +342,12 @@ impl Terminal {
             preferred: Preferred::default(),
             saved: [Saved::default(), Saved::default()],
             keys: [KeyboardFlags::default(), KeyboardFlags::default()],
-            cursor_shape: None,
-            cursor_blink: None,
-            title: None,
-            icon_name: None,
-            title_modes: title::TitleModes::empty(),
+            cursor_style: CursorStyle::default(),
+            titles: title::Titles::default(),
             window_ops: WindowOps::Deny,
             window: None,
-            cwd: String::new(),
-            cwd_reports: Vec::new(),
-            cwd_reported: 0,
-            title_stack: Vec::new(),
-            colors: Colors::default(),
-            special_colors: [None; osc_colors::SPECIAL_COLORS],
-            extra_colors: [None; osc_colors::EXTRA_DYNAMIC],
-            defaults: Box::new(color::xterm_defaults()),
+            folder: osc_cwd::Folder::default(),
+            palette: osc_colors::Palette::new(),
             cell_px: (8, 16),
             last_char: None,
             cluster: Cluster {
@@ -429,13 +410,13 @@ impl Terminal {
 
     /// The window title the program set, `None` if it never did or reset it.
     pub fn title(&self) -> Option<&str> {
-        self.title.as_deref()
+        self.titles.window.as_deref()
     }
 
     /// The shell's folder as it said (OSC 7: `file://host/path`, percent-encoded), `None` before it
     /// said anything.
     pub fn cwd(&self) -> Option<&str> {
-        (!self.cwd.is_empty()).then_some(self.cwd.as_str())
+        (!self.folder.now.is_empty()).then_some(self.folder.now.as_str())
     }
 
     /// The history the terminal was asked to keep (at least this many lines; see
@@ -464,7 +445,7 @@ impl Terminal {
 
     /// The palette entries programs changed (OSC 4, 10, 11, 12) and have not reset.
     pub fn colors(&self) -> Colors {
-        self.colors
+        self.palette.set
     }
 
     /// The host's colors, which OSC 4, 10, 11 and 12 queries are answered with unless the program
@@ -472,7 +453,7 @@ impl Terminal {
     /// black. Entry `i` is `NamedColor`'s slot (0..=255 the palette, then foreground, background
     /// and cursor).
     pub fn set_default_colors(&mut self, palette: &[Rgb; COLOR_COUNT]) {
-        self.defaults.copy_from_slice(palette);
+        self.palette.defaults.copy_from_slice(palette);
     }
 
     /// The size of a cell in pixels, which XTWINOPS 14 and 16 and the sixel geometry report say.

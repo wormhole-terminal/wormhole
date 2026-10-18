@@ -67,8 +67,8 @@ impl Terminal {
         TerminalCursor {
             point: Point::new(Line(y as i32), Column(x)),
             visible: self.modes.contains(Modes::SHOW_CURSOR),
-            shape: self.cursor_shape,
-            blinking: self.cursor_blink,
+            shape: self.cursor_style.shape,
+            blinking: self.cursor_style.blink,
             wide,
         }
     }

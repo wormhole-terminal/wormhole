@@ -124,7 +124,7 @@ impl<'a> Writer<'a> {
         // OSC 4 takes pairs; sixteen at a time keeps every string short.
         let mut open = 0;
         for i in 0..256 {
-            let Some(rgb) = t.colors.get(i) else { continue };
+            let Some(rgb) = t.palette.set.get(i) else { continue };
             if open == 0 {
                 self.put(b"\x1b]4");
             }
@@ -141,7 +141,7 @@ impl<'a> Writer<'a> {
         if open > 0 {
             self.put(b"\x1b\\");
         }
-        for (i, color) in t.special_colors.iter().enumerate() {
+        for (i, color) in t.palette.special.iter().enumerate() {
             if let Some(rgb) = color {
                 self.put(b"\x1b]5;");
                 self.num(i);
@@ -153,7 +153,7 @@ impl<'a> Writer<'a> {
         for (command, named) in
             [(10, NamedColor::Foreground), (11, NamedColor::Background), (12, NamedColor::Cursor)]
         {
-            if let Some(rgb) = t.colors[named] {
+            if let Some(rgb) = t.palette.set[named] {
                 self.put(b"\x1b]");
                 self.num(command);
                 self.out.push(b';');
@@ -161,7 +161,7 @@ impl<'a> Writer<'a> {
                 self.put(b"\x1b\\");
             }
         }
-        for (i, color) in t.extra_colors.iter().enumerate() {
+        for (i, color) in t.palette.extra.iter().enumerate() {
             if let Some(rgb) = color {
                 self.put(b"\x1b]");
                 self.num(13 + i);
@@ -198,7 +198,7 @@ impl<'a> Writer<'a> {
 
     fn titles(&mut self) {
         let t = self.term;
-        for slot in &t.title_stack {
+        for slot in &t.titles.stack {
             if let Some(window) = &slot.window {
                 self.osc_text("2", window.as_deref());
             }
@@ -214,13 +214,13 @@ impl<'a> Writer<'a> {
             self.num(which);
             self.put(b"t");
         }
-        self.osc_text("2", t.title.as_deref());
-        self.osc_text("1", t.icon_name.as_deref());
-        if !t.cwd.is_empty() {
-            self.osc_text("7", Some(&t.cwd));
+        self.osc_text("2", t.titles.window.as_deref());
+        self.osc_text("1", t.titles.icon.as_deref());
+        if !t.folder.now.is_empty() {
+            self.osc_text("7", Some(&t.folder.now));
         }
         // The modes come after the strings: from here on titles are hexadecimal.
-        for (flag, param) in t.title_modes.parts() {
+        for (flag, param) in t.titles.modes.parts() {
             if flag {
                 self.put(b"\x1b[>");
                 self.num(param);
@@ -312,8 +312,8 @@ impl<'a> Writer<'a> {
             self.put(b"\x1bV\x1bW");
         }
         // The cursor's look: DECSCUSR sets the shape and its blink, mode 12 the blink after it.
-        if let Some(shape) = t.cursor_shape {
-            let blink = t.cursor_blink.unwrap_or(false);
+        if let Some(shape) = t.cursor_style.shape {
+            let blink = t.cursor_style.blink.unwrap_or(false);
             let base = match shape {
                 CursorShape::Block => 1,
                 CursorShape::Underline => 3,
@@ -325,9 +325,9 @@ impl<'a> Writer<'a> {
             self.num(base + usize::from(!blink));
             self.put(b" q");
         }
-        if let Some(blink) = t.cursor_blink {
+        if let Some(blink) = t.cursor_style.blink {
             self.private_mode(12, blink);
-        } else if t.cursor_shape.is_none() && self.touched.contains(&12) {
+        } else if t.cursor_style.shape.is_none() && self.touched.contains(&12) {
             // The XTSAVE replay set the blink: DECSCUSR 0 hands it back to the host.
             self.put(b"\x1b[0 q");
         }

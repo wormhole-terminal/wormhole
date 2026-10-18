@@ -39,6 +39,18 @@ bitflags! {
     }
 }
 
+/// The window title and the icon name a program set (OSC 2 and 1; an empty one is none), how it
+/// wants them read and reported (XTSMTITLE), and the stack XTWINOPS 22 and 23 push and pop.
+#[derive(Debug, Default)]
+pub(super) struct Titles {
+    pub(super) window: Option<String>,
+    /// The icon name, kept for the title stack and the reports.
+    pub(super) icon: Option<String>,
+    /// The title modes a program switched on.
+    pub(super) modes: TitleModes,
+    pub(super) stack: Vec<SavedTitles>,
+}
+
 /// One slot of the title stack: the parts a save asked for.
 #[derive(Clone, Debug)]
 pub(super) struct SavedTitles {
@@ -87,42 +99,42 @@ fn decoded(modes: TitleModes, text: &[u8]) -> Option<Cow<'_, [u8]>> {
 impl Terminal {
     /// OSC 0 (both), 1 (the icon name) and 2 (the title), with the text as it came.
     pub(super) fn set_titles(&mut self, window: bool, icon: bool, text: &[u8]) {
-        let Some(text) = decoded(self.title_modes, text) else { return };
+        let Some(text) = decoded(self.titles.modes, text) else { return };
         if window {
             if text.is_empty() {
-                self.title = None;
+                self.titles.window = None;
             } else {
-                fill(self.title.get_or_insert_with(String::new), &text, TITLE_MAX);
+                fill(self.titles.window.get_or_insert_with(String::new), &text, TITLE_MAX);
             }
             self.push_event(Event::Title);
         }
         if icon {
             if text.is_empty() {
-                self.icon_name = None;
+                self.titles.icon = None;
             } else {
-                fill(self.icon_name.get_or_insert_with(String::new), &text, TITLE_MAX);
+                fill(self.titles.icon.get_or_insert_with(String::new), &text, TITLE_MAX);
             }
             // OSC 0 is announced as the title; the icon name has an event of its own for OSC 1.
             if !window {
-                self.push_event(Event::IconName(self.icon_name.clone().unwrap_or_default()));
+                self.push_event(Event::IconName(self.titles.icon.clone().unwrap_or_default()));
             }
         }
     }
 
     /// The icon name the program set, `None` if it never did or reset it.
     pub fn icon_name(&self) -> Option<&str> {
-        self.icon_name.as_deref()
+        self.titles.icon.as_deref()
     }
 
     /// XTWINOPS 22: save the icon name, the title or both in one slot.
     pub(super) fn push_title(&mut self, which: u16) {
         let Some(parts) = Parts::of(which) else { return };
-        if self.title_stack.len() >= TITLE_STACK {
-            self.title_stack.remove(0);
+        if self.titles.stack.len() >= TITLE_STACK {
+            self.titles.stack.remove(0);
         }
-        self.title_stack.push(SavedTitles {
-            window: parts.window.then(|| self.title.clone()),
-            icon: parts.icon.then(|| self.icon_name.clone()),
+        self.titles.stack.push(SavedTitles {
+            window: parts.window.then(|| self.titles.window.clone()),
+            icon: parts.icon.then(|| self.titles.icon.clone()),
         });
     }
 
@@ -130,30 +142,30 @@ impl Terminal {
     /// holds it; the slots used are gone.
     pub(super) fn pop_title(&mut self, which: u16) {
         let Some(parts) = Parts::of(which) else { return };
-        let newest = |has: &dyn Fn(&SavedTitles) -> bool| self.title_stack.iter().rposition(has);
+        let newest = |has: &dyn Fn(&SavedTitles) -> bool| self.titles.stack.iter().rposition(has);
         let window_slot = parts.window.then(|| newest(&|slot| slot.window.is_some())).flatten();
         let icon_slot = parts.icon.then(|| newest(&|slot| slot.icon.is_some())).flatten();
         if let Some(at) = window_slot
-            && let Some(title) = self.title_stack[at].window.clone()
+            && let Some(title) = self.titles.stack[at].window.clone()
         {
-            self.title = title;
+            self.titles.window = title;
             self.push_event(Event::Title);
         }
         if let Some(at) = icon_slot
-            && let Some(icon) = self.title_stack[at].icon.clone()
-            && icon != self.icon_name
+            && let Some(icon) = self.titles.stack[at].icon.clone()
+            && icon != self.titles.icon
         {
-            self.icon_name = icon;
-            self.push_event(Event::IconName(self.icon_name.clone().unwrap_or_default()));
+            self.titles.icon = icon;
+            self.push_event(Event::IconName(self.titles.icon.clone().unwrap_or_default()));
         }
         match (window_slot, icon_slot) {
-            (Some(a), Some(b)) if a == b => drop(self.title_stack.remove(a)),
+            (Some(a), Some(b)) if a == b => drop(self.titles.stack.remove(a)),
             (Some(a), Some(b)) => {
                 // The later slot first, so the earlier one's place does not move.
-                drop(self.title_stack.remove(a.max(b)));
-                drop(self.title_stack.remove(a.min(b)));
+                drop(self.titles.stack.remove(a.max(b)));
+                drop(self.titles.stack.remove(a.min(b)));
             }
-            (Some(at), None) | (None, Some(at)) => drop(self.title_stack.remove(at)),
+            (Some(at), None) | (None, Some(at)) => drop(self.titles.stack.remove(at)),
             (None, None) => {}
         }
     }
@@ -166,7 +178,7 @@ impl Terminal {
                 1 => TitleModes::QUERY_HEX,
                 // UTF-8 is what every string is; asking for it is asking for the plain form.
                 2 | 3 => {
-                    self.title_modes.remove(if param == 2 {
+                    self.titles.modes.remove(if param == 2 {
                         TitleModes::SET_HEX
                     } else {
                         TitleModes::QUERY_HEX
@@ -175,17 +187,18 @@ impl Terminal {
                 }
                 _ => continue,
             };
-            self.title_modes.set(flag, on);
+            self.titles.modes.set(flag, on);
         }
     }
 
     /// XTWINOPS 20 (the icon name) and 21 (the title): `OSC L text ST` and `OSC l text ST`.
     pub(super) fn report_title(&mut self, icon: bool) {
-        let text = if icon { self.icon_name.clone() } else { self.title.clone() }.unwrap_or_default();
+        let text =
+            if icon { self.titles.icon.clone() } else { self.titles.window.clone() }.unwrap_or_default();
         // Control characters, C1 included, are text a terminal must not hand a program back.
         let text: String = text.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
         let letter = if icon { 'L' } else { 'l' };
-        if self.title_modes.contains(TitleModes::QUERY_HEX) {
+        if self.titles.modes.contains(TitleModes::QUERY_HEX) {
             self.reply(format_args!("\x1b]{letter}{}\x1b\\", super::dcs::Hex(text.as_bytes())));
         } else {
             self.reply(format_args!("\x1b]{letter}{text}\x1b\\"));

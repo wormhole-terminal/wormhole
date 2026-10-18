@@ -50,8 +50,8 @@ impl Terminal {
     /// The DECSCUSR parameter that gives the cursor the style it has.
     fn cursor_style_code(&self) -> u8 {
         use crate::types::CursorShape::{Beam, Block, Underline};
-        let steady = self.cursor_blink == Some(false);
-        match self.cursor_shape {
+        let steady = self.cursor_style.blink == Some(false);
+        match self.cursor_style.shape {
             Some(Block) => 2 - u8::from(!steady),
             Some(Underline) => 4 - u8::from(!steady),
             Some(Beam) => 6 - u8::from(!steady),

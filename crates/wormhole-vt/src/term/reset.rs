@@ -48,10 +48,10 @@ impl Terminal {
             keys.reset();
         }
         self.sync_keyboard_flags();
-        self.cursor_shape = None;
-        self.cursor_blink = None;
-        self.title_stack.clear();
-        self.title_modes = Default::default();
+        self.cursor_style.shape = None;
+        self.cursor_style.blink = None;
+        self.titles.stack.clear();
+        self.titles.modes = Default::default();
         self.reset_colors();
         self.last_char = None;
         self.cluster.open = false;
@@ -80,8 +80,8 @@ impl Terminal {
             self.recorded &= !bit;
         }
         self.saved = [Saved::default(), Saved::default()];
-        self.cursor_shape = None;
-        self.cursor_blink = None;
+        self.cursor_style.shape = None;
+        self.cursor_style.blink = None;
         self.cluster.open = false;
     }
 
@@ -110,7 +110,7 @@ impl Terminal {
             6 => (Some(CursorShape::Beam), Some(false)),
             _ => return,
         };
-        self.cursor_shape = shape;
-        self.cursor_blink = blink;
+        self.cursor_style.shape = shape;
+        self.cursor_style.blink = blink;
     }
 }

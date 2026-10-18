@@ -15,7 +15,7 @@
 //! color in force. The special colors and the dynamic colors past the cursor's are kept and
 //! answered but not drawn: xterm needs a resource to draw with them, and nothing here asks for it.
 
-use crate::types::{NamedColor, Rgb};
+use crate::types::{COLOR_COUNT, Colors, NamedColor, Rgb};
 
 use super::Terminal;
 use super::color::{ColorSpec, parse_color};
@@ -28,6 +28,30 @@ pub(super) const SPECIAL_COLORS: usize = 5;
 pub(super) const EXTRA_DYNAMIC: usize = 7;
 /// The palette number of the first special color in OSC 4.
 const SPECIAL_BASE: usize = 256;
+
+/// The colors programs set over the host's palette, and that palette.
+pub(super) struct Palette {
+    /// What programs set with OSC 4, 10, 11 and 12: what the host draws with.
+    pub(super) set: Colors,
+    /// The special colors (OSC 4 from 256, OSC 5) and the dynamic colors OSC 13 to 19 set.
+    pub(super) special: [Option<Rgb>; SPECIAL_COLORS],
+    pub(super) extra: [Option<Rgb>; EXTRA_DYNAMIC],
+    /// The host's palette, which color queries answer with when a program has not changed an
+    /// entry.
+    pub(super) defaults: Box<[Rgb; COLOR_COUNT]>,
+}
+
+impl Palette {
+    /// Nothing set, over xterm's palette until the host gives its own.
+    pub(super) fn new() -> Palette {
+        Palette {
+            set: Colors::default(),
+            special: [None; SPECIAL_COLORS],
+            extra: [None; EXTRA_DYNAMIC],
+            defaults: Box::new(super::color::xterm_defaults()),
+        }
+    }
+}
 
 /// The color a query for an extra dynamic color (OSC 13 to 19) answers when none was set:
 /// the pointer and Tek colors follow the text colors, the highlight is the text on its background.
@@ -63,22 +87,24 @@ impl Terminal {
     /// The color in force for `slot`: the program's, else the host's.
     fn color_of(&self, slot: Slot) -> Rgb {
         match slot {
-            Slot::Palette(i) => self.colors[i].unwrap_or(self.defaults[i]),
-            Slot::Named(named) => self.colors[named].unwrap_or(self.defaults[named as usize]),
+            Slot::Palette(i) => self.palette.set[i].unwrap_or(self.palette.defaults[i]),
+            Slot::Named(named) => self.palette.set[named].unwrap_or(self.palette.defaults[named as usize]),
             // Nothing in the host's palette stands for these: the foreground does.
             Slot::Special(i) => {
-                self.special_colors[i].unwrap_or(self.defaults[NamedColor::Foreground as usize])
+                self.palette.special[i].unwrap_or(self.palette.defaults[NamedColor::Foreground as usize])
             }
-            Slot::Extra(i) => self.extra_colors[i].unwrap_or(self.defaults[EXTRA_DEFAULTS[i] as usize]),
+            Slot::Extra(i) => {
+                self.palette.extra[i].unwrap_or(self.palette.defaults[EXTRA_DEFAULTS[i] as usize])
+            }
         }
     }
 
     fn set_color(&mut self, slot: Slot, color: Option<Rgb>) {
         match slot {
-            Slot::Palette(i) => self.colors[i] = color,
-            Slot::Named(named) => self.colors[named] = color,
-            Slot::Special(i) => self.special_colors[i] = color,
-            Slot::Extra(i) => self.extra_colors[i] = color,
+            Slot::Palette(i) => self.palette.set[i] = color,
+            Slot::Named(named) => self.palette.set[named] = color,
+            Slot::Special(i) => self.palette.special[i] = color,
+            Slot::Extra(i) => self.palette.extra[i] = color,
         }
     }
 
@@ -124,16 +150,16 @@ impl Terminal {
     pub(super) fn osc_reset_palette(&mut self, rest: &[u8]) {
         if rest.is_empty() {
             for slot in 0..SPECIAL_BASE {
-                self.colors[slot] = None;
+                self.palette.set[slot] = None;
             }
-            self.special_colors = [None; SPECIAL_COLORS];
+            self.palette.special = [None; SPECIAL_COLORS];
             return;
         }
         for index in rest.split(|&b| b == b';') {
             match number(index) {
-                Some(n @ 0..=255) => self.colors[n] = None,
+                Some(n @ 0..=255) => self.palette.set[n] = None,
                 Some(n) if (SPECIAL_BASE..SPECIAL_BASE + SPECIAL_COLORS).contains(&n) => {
-                    self.special_colors[n - SPECIAL_BASE] = None;
+                    self.palette.special[n - SPECIAL_BASE] = None;
                 }
                 _ => {}
             }
@@ -143,12 +169,12 @@ impl Terminal {
     /// OSC 105: the special colors listed (0 to 4), or all, go back to the host's.
     pub(super) fn osc_reset_special(&mut self, rest: &[u8]) {
         if rest.is_empty() {
-            self.special_colors = [None; SPECIAL_COLORS];
+            self.palette.special = [None; SPECIAL_COLORS];
             return;
         }
         for index in rest.split(|&b| b == b';') {
             if let Some(n @ 0..=4) = number(index) {
-                self.special_colors[n] = None;
+                self.palette.special[n] = None;
             }
         }
     }
@@ -162,9 +188,9 @@ impl Terminal {
 
     /// RIS: everything a program set.
     pub(super) fn reset_colors(&mut self) {
-        self.colors = Default::default();
-        self.special_colors = [None; SPECIAL_COLORS];
-        self.extra_colors = [None; EXTRA_DYNAMIC];
+        self.palette.set = Default::default();
+        self.palette.special = [None; SPECIAL_COLORS];
+        self.palette.extra = [None; EXTRA_DYNAMIC];
     }
 }
 

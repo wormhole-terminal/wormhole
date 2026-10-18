@@ -40,7 +40,7 @@ impl Terminal {
                 self.modes.set(Modes::ORIGIN, on);
                 self.home();
             }
-            12 => self.cursor_blink = Some(on),
+            12 => self.cursor_style.blink = Some(on),
             47 | 1047 | 1049 => self.set_alt_screen_mode(n, switch),
             1048 => {
                 if on {
@@ -113,7 +113,7 @@ impl Terminal {
     pub(super) fn private_status(&self, n: u16) -> Status {
         match n {
             47 | 1047 | 1049 => Status::of(self.on_alt_screen()),
-            12 => Status::of(self.cursor_blink == Some(true)),
+            12 => Status::of(self.cursor_style.blink == Some(true)),
             _ => {
                 if let Some(status) = fixed_status(n) {
                     status

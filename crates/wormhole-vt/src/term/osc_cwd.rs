@@ -7,18 +7,27 @@ use super::event::Event;
 use super::oscs::fill;
 use super::{CWD_MAX, CWD_REPORTS_MAX, Terminal};
 
+/// The shell's folder as the last OSC 7 said it (empty before any), and every report since the
+/// host last looked: the first `reported` of `reports`, whose strings are reused.
+#[derive(Debug, Default)]
+pub(super) struct Folder {
+    pub(super) now: String,
+    pub(super) reports: Vec<String>,
+    pub(super) reported: usize,
+}
+
 impl Terminal {
     /// OSC 7.
     pub(super) fn set_cwd(&mut self, text: &[u8]) {
-        fill(&mut self.cwd, text, CWD_MAX);
+        fill(&mut self.folder.now, text, CWD_MAX);
         // The report is kept in a buffer that is reused, so a prompt that says it every time
         // allocates nothing once the host has taken the first.
-        if self.cwd_reported < self.cwd_reports.len() {
-            self.cwd_reports[self.cwd_reported].clone_from(&self.cwd);
+        if self.folder.reported < self.folder.reports.len() {
+            self.folder.reports[self.folder.reported].clone_from(&self.folder.now);
         } else {
-            self.cwd_reports.push(self.cwd.clone());
+            self.folder.reports.push(self.folder.now.clone());
         }
-        self.cwd_reported = (self.cwd_reported + 1).min(CWD_REPORTS_MAX);
+        self.folder.reported = (self.folder.reported + 1).min(CWD_REPORTS_MAX);
         self.push_event(Event::Cwd);
     }
 
@@ -26,11 +35,11 @@ impl Terminal {
     /// first, as written (`file://host/path`, percent-encoded; ConEmu's a bare path). At most the
     /// last [`CWD_REPORTS_MAX`] are kept.
     pub fn cwd_reports(&self) -> &[String] {
-        &self.cwd_reports[..self.cwd_reported]
+        &self.folder.reports[..self.folder.reported]
     }
 
     /// Forget the reports, after reading them; their buffers are kept.
     pub fn clear_cwd_reports(&mut self) {
-        self.cwd_reported = 0;
+        self.folder.reported = 0;
     }
 }

@@ -251,15 +251,18 @@ impl Terminal {
         d.field("a/saved[1]", format!("{:?}", self.saved[1]));
         d.field("a/keys[0]", format!("{:?}", self.keys[0]));
         d.field("a/keys[1]", format!("{:?}", self.keys[1]));
-        d.field("a/cursor_shape", format!("{:?} blink {:?}", self.cursor_shape, self.cursor_blink));
-        d.field("a/title", format!("{:?}", self.title));
-        d.field("a/icon_name", format!("{:?}", self.icon_name));
-        d.field("a/title_modes", format!("{:?}", self.title_modes));
-        d.field("a/title_stack", format!("{:?}", self.title_stack));
-        d.field("a/cwd", format!("{:?}", self.cwd));
-        d.field("a/colors", format!("{:?}", self.colors));
-        d.field("a/special_colors", format!("{:?}", self.special_colors));
-        d.field("a/extra_colors", format!("{:?}", self.extra_colors));
+        d.field(
+            "a/cursor_shape",
+            format!("{:?} blink {:?}", self.cursor_style.shape, self.cursor_style.blink),
+        );
+        d.field("a/title", format!("{:?}", self.titles.window));
+        d.field("a/icon_name", format!("{:?}", self.titles.icon));
+        d.field("a/title_modes", format!("{:?}", self.titles.modes));
+        d.field("a/title_stack", format!("{:?}", self.titles.stack));
+        d.field("a/cwd", format!("{:?}", self.folder.now));
+        d.field("a/colors", format!("{:?}", self.palette.set));
+        d.field("a/special_colors", format!("{:?}", self.palette.special));
+        d.field("a/extra_colors", format!("{:?}", self.palette.extra));
         d.field("a/last_char", format!("{:?}", self.last_char));
         // A closed cluster's other fields are dead values: the next character overwrites them.
         d.field("a/cluster", if self.cluster.open { format!("{:?}", self.cluster) } else { "closed".into() });

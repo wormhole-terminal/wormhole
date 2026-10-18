@@ -54,21 +54,12 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("preferred", Written("misc: DECAUPSS")),
     ("saved", Written("saved_cursors: DECSC on each screen")),
     ("keys", Written("keyboard: CSI = u and CSI > u per screen")),
-    ("cursor_shape", Written("misc: DECSCUSR")),
-    ("cursor_blink", Written("misc: DECSCUSR and mode 12")),
-    ("title", Written("titles: OSC 2")),
-    ("icon_name", Written("titles: OSC 1")),
-    ("title_modes", Written("titles: CSI > Ps t")),
+    ("cursor_style", Written("misc: DECSCUSR and mode 12")),
+    ("titles", Written("titles: OSC 2, OSC 1, CSI > Ps t and the stack")),
     ("window_ops", Host("what the host allows; set on the receiver by its host")),
     ("window", Host("where the host's window is")),
-    ("cwd", Written("titles: OSC 7")),
-    ("cwd_reports", Queue("OSC 7 reports since the host looked")),
-    ("cwd_reported", Queue("how many of cwd_reports are in use")),
-    ("title_stack", Written("titles: set and XTWINOPS 22 for each slot")),
-    ("colors", Written("palette: OSC 4, 10, 11, 12")),
-    ("special_colors", Written("palette: OSC 5")),
-    ("extra_colors", Written("palette: OSC 13 to 19")),
-    ("defaults", Host("the host's palette, set on the receiver by SetColors")),
+    ("folder", Written("titles: OSC 7")),
+    ("palette", Written("palette: OSC 4, 5, 10 to 19")),
     ("cell_px", Host("the host's cell size")),
     ("last_char", Written("touch_and_counters, or the open cluster printed again")),
     ("cluster", Written("final_state: the cluster is printed again (Gaps::CLUSTER when it cannot be)")),
@@ -196,6 +187,29 @@ const KEPT: &[(&str, Coverage)] = &[
     ("attribute_extent", Written("DECSACE")),
 ];
 
+const CURSOR_STYLE: &[(&str, Coverage)] =
+    &[("shape", Written("misc: DECSCUSR")), ("blink", Written("misc: DECSCUSR and mode 12"))];
+
+const TITLES: &[(&str, Coverage)] = &[
+    ("window", Written("titles: OSC 2")),
+    ("icon", Written("titles: OSC 1")),
+    ("modes", Written("titles: CSI > Ps t")),
+    ("stack", Written("titles: set and XTWINOPS 22 for each slot")),
+];
+
+const FOLDER: &[(&str, Coverage)] = &[
+    ("now", Written("titles: OSC 7")),
+    ("reports", Queue("OSC 7 reports since the host looked")),
+    ("reported", Queue("how many of the reports are in use")),
+];
+
+const PALETTE: &[(&str, Coverage)] = &[
+    ("set", Written("palette: OSC 4, 10, 11, 12")),
+    ("special", Written("palette: OSC 5")),
+    ("extra", Written("palette: OSC 13 to 19")),
+    ("defaults", Host("the host's palette, set on the receiver by SetColors")),
+];
+
 const SAVED_TITLES: &[(&str, Coverage)] =
     &[("window", Written("OSC 2 then XTWINOPS 22")), ("icon", Written("OSC 1 then XTWINOPS 22"))];
 
@@ -216,6 +230,10 @@ pub const FIELDS: &[StructFields] = &[
     StructFields { name: "Margins", file: "term/mod.rs", fields: MARGINS },
     StructFields { name: "Saved", file: "term/mod.rs", fields: SAVED },
     StructFields { name: "Cluster", file: "term/mod.rs", fields: CLUSTER },
+    StructFields { name: "CursorStyle", file: "term/mod.rs", fields: CURSOR_STYLE },
+    StructFields { name: "Titles", file: "term/title.rs", fields: TITLES },
+    StructFields { name: "Folder", file: "term/osc_cwd.rs", fields: FOLDER },
+    StructFields { name: "Palette", file: "term/osc_colors.rs", fields: PALETTE },
     StructFields { name: "Grid", file: "grid/mod.rs", fields: GRID },
     StructFields { name: "Pen", file: "grid/row.rs", fields: PEN },
     StructFields { name: "Row", file: "grid/row.rs", fields: ROW },
