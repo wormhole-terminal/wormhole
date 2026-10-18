@@ -233,8 +233,14 @@ impl Workspace {
         let tile = terminal_tile(("terminal-tile", *id as u64), *agent, *told, *status, ui, cx);
         let attention = *status == Status::Attention;
         let failed = *status == Status::Failed;
+        // Room round the tile: the box clips a long name sideways, and GPUI's clip is never one axis
+        // only, so a box hugging the tile would cut its shadow off at the left and the bottom. The
+        // room on the left is taken back by the margin, so nothing moves.
         let process = div()
             .id("crumb-process")
+            .py(px(SHADOW_ROOM))
+            .pl(px(SHADOW_ROOM))
+            .ml(px(-SHADOW_ROOM))
             .flex()
             .items_center()
             .gap_2()
@@ -293,6 +299,8 @@ impl Workspace {
 /// The breadcrumb's spacing (`gap_2`, `px_2`), and the least of a cut text worth showing (about
 /// three letters and the ellipsis).
 pub(super) const CRUMB_GAP: f32 = 8.0;
+/// The room the crumb's clip leaves round the terminal's tile, for its shadow.
+const SHADOW_ROOM: f32 = 4.0;
 const CRUMB_PAD: f32 = 8.0;
 const CRUMB_TEXT_MIN: f32 = 24.0;
 /// A branch chip's glyph, gap and padding round its text, and its width when it is the glyph alone.
