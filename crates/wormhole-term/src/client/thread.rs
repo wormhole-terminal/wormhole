@@ -410,15 +410,22 @@ impl State {
         }
     }
 
+    /// Whether a quiet connection is pinged: one on screen, or with input waiting for the host,
+    /// is where a stuck host would show. Hidden ones stay quiet, so twenty terminals in the sidebar
+    /// do not wake the app and their hosts ten times a second.
+    fn pings(&self) -> bool {
+        !self.detaching && (self.visible || self.in_flight > 0)
+    }
+
     /// When the loop must wake at the latest.
     fn deadline(&self) -> Option<Instant> {
-        let ping = (!self.detaching).then_some(self.active + PING_IDLE);
+        let ping = self.pings().then_some(self.active + PING_IDLE);
         [ping, self.replica.deadline(), self.closing].into_iter().flatten().min()
     }
 
     fn tick(&mut self, now: Instant) {
         self.replica.expire_sync();
-        if !self.detaching && now >= self.active + PING_IDLE {
+        if self.pings() && now >= self.active + PING_IDLE {
             let n = self.ping;
             self.ping += 1;
             self.active = now;
