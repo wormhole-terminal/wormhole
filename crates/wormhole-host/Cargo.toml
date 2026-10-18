@@ -1,0 +1,34 @@
+[package]
+name = "wormhole-host"
+description = "Wormhole's session host: one small process per terminal that owns its PTY and screen, so the terminal outlives the app."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+[[bin]]
+name = "wormhole-host"
+path = "src/main.rs"
+
+# Kept small on purpose (session-host.md, section 5: "PTYs + engine + socket, nothing else"):
+# `tests/structure.rs` refuses the app's heavy dependencies here.
+[dependencies]
+wormhole-term.workspace = true
+wormhole-wire.workspace = true
+anyhow.workspace = true
+libc.workspace = true
+tracing.workspace = true
+# The connections and the listener in one wait (kqueue on macOS); `wormhole-term` uses it already.
+polling = "3.8"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+# Replicas in the tests: what a client parses the stream into.
+wormhole-vt.workspace = true
+tempfile = "3"
