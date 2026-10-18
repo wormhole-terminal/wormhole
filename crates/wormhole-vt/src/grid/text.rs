@@ -106,6 +106,13 @@ fn push_slice(page: &Page, row: usize, from: usize, to: usize, (trim, tabs): (Tr
     }
 }
 
+/// The whole of `row` as text, one character per cell (no tabs): its trailing blanks cut when
+/// `trim` is set.
+pub(super) fn push_row_text(page: &Page, row: usize, trim: bool, out: &mut String) {
+    let trim = if trim { Trim::Blanks } else { Trim::Keep };
+    push_slice(page, row, 0, page.cols().saturating_sub(1), (trim, Tabs::Spaces), out);
+}
+
 impl Grid {
     /// The text of the cells from `start` to `end`, as copying them with the mouse gives it.
     /// The points may come in either order; lines outside the grid are clamped to its edges and

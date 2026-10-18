@@ -10,7 +10,6 @@ use crate::types::{Cell as DrawCell, Color, Flags, Line, NamedColor, RowExtras};
 
 use super::cell::{Cell, CellFlags};
 use super::page::Page;
-use super::row::{DIRTY, WRAPPED};
 use super::style::Style;
 use super::{Grid, RowMark};
 
@@ -55,11 +54,10 @@ impl Grid {
                 continue;
             };
             let page = &mut self.pages[page_ix];
-            view.wrapped = page.rows[row].flags & WRAPPED != 0;
-            view.changed = full || page.rows[row].flags & DIRTY != 0;
+            view.wrapped = page.rows[row].wrapped();
+            view.changed = page.take_dirty(row) || full;
             if view.changed {
                 view.mark = copy_page_row(page, row, &mut view.cells, Some(&mut view.extras));
-                page.rows[row].flags &= !DIRTY;
             }
         }
         self.all_dirty = false;
@@ -74,9 +72,7 @@ impl Grid {
             let line = Line(y as i32 - self.offset as i32);
             *flag = false;
             if let Some((page, row)) = self.locate_line(line) {
-                let record = &mut self.pages[page].rows[row];
-                *flag = record.flags & DIRTY != 0;
-                record.flags &= !DIRTY;
+                *flag = self.pages[page].take_dirty(row);
             }
         }
         all
@@ -147,7 +143,7 @@ fn copy_page_row(
             flags: attrs | cell.layout_flags(),
         };
     }
-    if let Some(last) = out.last_mut().filter(|_| page.rows[row].flags & WRAPPED != 0) {
+    if let Some(last) = out.last_mut().filter(|_| page.rows[row].wrapped()) {
         last.flags |= Flags::WRAPLINE;
     }
     if let Some(extras) = extras {

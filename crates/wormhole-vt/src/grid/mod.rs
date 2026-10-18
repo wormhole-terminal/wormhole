@@ -19,7 +19,9 @@
 //! - **Pictures** (`images`) are placements kept by the serial number of their top row, in a table
 //!   of the grid's: they scroll into the history with their text, are cut by a reflow and are
 //!   deleted by the erases that cover them. The cells under one are ordinary cells.
-//! - A **resize** that changes the width rewraps soft-wrapped lines (`resize.rs`).
+//! - A **resize** that changes the width rewraps soft-wrapped lines (`resize.rs`; the rebuild itself is
+//!   `rewrap.rs`). The history's cap and clearing are in `history.rs`, the page list in `pages.rs`, the
+//!   scrolled-back view in `view.rs`.
 //! - The snapshot copy (`copy.rs`) turns rows into [`crate::types::Cell`]s and [`crate::types::RowExtras`].
 //! - Text out of the grid (`text.rs`: a range to copy, the lines to restore; `words.rs`: the word,
 //!   bracket and line around a cell; `links.rs`: how far a hyperlink reaches; `search.rs`: a
@@ -50,6 +52,7 @@ mod cell;
 mod check;
 mod copy;
 mod edit;
+mod history;
 mod images;
 mod links;
 mod page;
@@ -58,6 +61,7 @@ mod pins;
 mod read;
 mod rect;
 mod resize;
+mod rewrap;
 mod row;
 mod rowview;
 mod scroll;
@@ -68,6 +72,7 @@ mod style_table;
 #[cfg(test)]
 mod tests;
 mod text;
+mod view;
 mod words;
 
 use std::collections::VecDeque;
@@ -147,7 +152,17 @@ impl Grid {
 
     fn build(cols: usize, rows: usize, limit: usize, page_rows: usize) -> Grid {
         let (cols, rows) = (cols.clamp(MIN_COLS, MAX_COLS), rows.clamp(1, MAX_ROWS));
-        let mut grid = Grid {
+        let mut grid = Grid::blank(cols, rows, limit, page_rows);
+        for _ in 0..rows {
+            grid.push_row();
+        }
+        grid
+    }
+
+    /// A grid of the given size (already clamped) with no rows made yet: the caller pushes the
+    /// screen's rows, or sets `end` and `next_uid` to carry on from another grid.
+    fn blank(cols: usize, rows: usize, limit: usize, page_rows: usize) -> Grid {
+        Grid {
             cols,
             rows,
             pages: VecDeque::new(),
@@ -163,11 +178,7 @@ impl Grid {
             segments: Vec::new(),
             copied: Vec::new(),
             copied_marks: Vec::new(),
-        };
-        for _ in 0..rows {
-            grid.push_row();
         }
-        grid
     }
 
     // ---- geometry ----

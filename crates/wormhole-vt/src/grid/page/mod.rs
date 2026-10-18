@@ -7,7 +7,8 @@
 //! until the page goes). A page is dropped whole when all its rows fall out of the scrollback, which
 //! frees its styles and side tables with it; nothing is counted down cell by cell.
 //!
-//! Every cell mutation in the grid is one of the methods here. They keep three things true:
+//! Every cell mutation in the grid, and every change to a row's record (wrapped, block, changed),
+//! is one of the methods here. They keep three things true:
 //!
 //! - **Counts.** The style table counts the cells that use each style, the link table the cells
 //!   under each link; a cell is released before it is overwritten.
@@ -23,6 +24,8 @@
 //! Image placements are not a side table of the page: a picture spans rows, and so pages, and
 //! scrolls with the text, so the grid keeps them by row serial (`images`). The cells under a
 //! picture are ordinary cells, and the `IMAGE` flag is unused.
+
+use std::ops::Range;
 
 use crate::types::Hyperlink;
 
@@ -202,6 +205,22 @@ impl Page {
         self.rows[row].flags |= DIRTY;
     }
 
+    /// Mark rows `rows` as changed.
+    pub(super) fn touch_rows(&mut self, rows: Range<usize>) {
+        for record in &mut self.rows[rows] {
+            record.flags |= DIRTY;
+        }
+    }
+
+    /// Whether the snapshot has yet to copy `row`; clears the mark.
+    #[inline]
+    pub(super) fn take_dirty(&mut self, row: usize) -> bool {
+        let flags = &mut self.rows[row].flags;
+        let dirty = *flags & DIRTY != 0;
+        *flags &= !DIRTY;
+        dirty
+    }
+
     pub(super) fn set_wrapped(&mut self, row: usize, wrapped: bool) {
         let flags = &mut self.rows[row].flags;
         if wrapped {
@@ -210,6 +229,29 @@ impl Page {
             *flags &= !WRAPPED;
             *flags |= DIRTY;
         }
+    }
+
+    /// The command block (OSC 133) of `row`, 0 for none.
+    #[inline]
+    pub(super) fn block(&self, row: usize) -> u32 {
+        self.rows[row].block
+    }
+
+    /// Put `row` on command block `block`.
+    pub(super) fn set_block(&mut self, row: usize, block: u32) {
+        self.rows[row].block = block;
+    }
+
+    /// Whether `row` is soft-wrapped and its block: what a row copied over another takes along.
+    pub(super) fn meta(&self, row: usize) -> (bool, u32) {
+        let record = &self.rows[row];
+        (record.wrapped(), record.block)
+    }
+
+    /// Give `row` the wrap flag and block of a row that was copied over it, and mark it changed.
+    pub(super) fn set_meta(&mut self, row: usize, (wrapped, block): (bool, u32)) {
+        self.set_wrapped(row, wrapped);
+        self.rows[row].block = block;
     }
 
     // ---- releasing and filling ----

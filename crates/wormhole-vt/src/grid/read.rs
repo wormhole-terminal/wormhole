@@ -7,6 +7,7 @@ use crate::types::{Line, Point};
 
 use super::cell::Cell;
 use super::style::Style;
+use super::text;
 use super::{Grid, RowMark};
 
 impl Grid {
@@ -77,27 +78,8 @@ impl Grid {
     }
 
     pub(crate) fn push_row_text(&self, line: Line, trim: bool, out: &mut String) {
-        let Some((page_ix, row)) = self.locate_line(line) else { return };
-        let page = &self.pages[page_ix];
-        let cells = page.cells(row);
-        let end = if trim {
-            // A blank that carries a mark (a combining character with nothing to combine with) is text.
-            cells
-                .iter()
-                .rposition(|c| c.has_grapheme() || c.character().is_some_and(|c| c != ' '))
-                .map_or(0, |p| p + 1)
-        } else {
-            cells.len()
-        };
-        for (x, cell) in cells[..end].iter().enumerate() {
-            if cell.is_spacer_tail() || cell.is_spacer_head() {
-                continue;
-            }
-            out.push(cell.character().unwrap_or(' '));
-            if cell.has_grapheme() {
-                out.extend(page.graphemes.get(page.offset(row, x)));
-            }
-        }
+        let Some((page, row)) = self.locate_line(line) else { return };
+        text::push_row_text(&self.pages[page], row, trim, out);
     }
 
     /// The block mark of the row at `line`, read from its cells.

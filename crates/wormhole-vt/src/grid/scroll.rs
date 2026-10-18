@@ -14,7 +14,7 @@ use std::ops::Range;
 use crate::types::Color;
 
 use super::page::Page;
-use super::row::{DIRTY, Region, WRAPPED};
+use super::row::Region;
 use super::{Grid, Spare};
 
 impl Grid {
@@ -79,11 +79,9 @@ impl Grid {
         let (mut page, mut row) = self.locate_y(y0);
         let mut left = y1 - y0 + 1;
         while left > 0 {
-            let records = &mut self.pages[page].rows;
-            let take = left.min(records.len() - row);
-            for record in &mut records[row..row + take] {
-                record.flags |= DIRTY;
-            }
+            let in_page = &mut self.pages[page];
+            let take = left.min(in_page.rows.len() - row);
+            in_page.touch_rows(row..row + take);
             left -= take;
             page += 1;
             row = 0;
@@ -260,15 +258,11 @@ impl Grid {
             self.pages[dp].copy_from_page(&source, sr, dr, cols);
             self.pages[sp] = source;
         }
-        let (flags, block) = {
-            let record = self.pages[sp].rows[sr];
-            (record.flags & WRAPPED, record.block)
-        };
-        let target = &mut self.pages[dp].rows[dr];
-        target.flags |= DIRTY;
-        if meta {
-            target.flags = (target.flags & !WRAPPED) | flags;
-            target.block = block;
+        let meta = meta.then(|| self.pages[sp].meta(sr));
+        let target = &mut self.pages[dp];
+        match meta {
+            Some(meta) => target.set_meta(dr, meta),
+            None => target.touch(dr),
         }
     }
 

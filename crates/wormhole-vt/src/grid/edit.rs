@@ -163,7 +163,7 @@ impl Grid {
     pub fn set_row_block(&mut self, y: usize, block: u32) {
         if y < self.rows {
             let (page, row) = self.page_row_mut(y);
-            page.rows[row].block = block;
+            page.set_block(row, block);
         }
     }
 
