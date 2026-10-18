@@ -91,6 +91,35 @@ impl WindowSidebar {
         true
     }
 
+    /// Seat `joiner`, who just joined a split, with the split's other members `mates` (in the order
+    /// the list shows them): into their group, right after the last of them, or out of any group
+    /// when they are in none, so a split always stands in one card. Does nothing without mates.
+    pub fn seat_beside(&mut self, ids: &[i64], joiner: i64, mates: &[i64]) {
+        let list = self.arranged(ids);
+        let Some(&anchor) = mates.iter().filter(|&&m| m != joiner).last() else { return };
+        if let Some(group) = self.groups.group_of(anchor) {
+            self.settle(ids);
+            self.groups.join(group, joiner);
+            if let Some(group) = self.groups.get_mut(group) {
+                group.members.retain(|&member| member != joiner);
+                // After the last mate in the group's own order.
+                let at = group
+                    .members
+                    .iter()
+                    .rposition(|m| mates.contains(m))
+                    .map_or(group.members.len(), |p| p + 1);
+                group.members.insert(at, joiner);
+            }
+            self.items = self.arranged(ids);
+        } else if self.groups.group_of(joiner).is_some() {
+            // Loose members are gathered at the first one's place by the list; leave right after the last.
+            let after = list.iter().position(|&i| i == Item::Terminal(anchor));
+            let before =
+                after.and_then(|p| list.get(p + 1).copied()).filter(|&i| i != Item::Terminal(joiner));
+            self.place_at_top(ids, Item::Terminal(joiner), before);
+        }
+    }
+
     /// Put terminal `id` where a drop landed it.
     pub fn land(&mut self, ids: &[i64], id: i64, landing: Landing) {
         match landing {
@@ -193,6 +222,27 @@ mod tests {
     use crate::sidebar::WindowSidebar;
 
     const IDS: [i64; 5] = [1, 2, 3, 4, 5];
+
+    #[test]
+    fn a_terminal_joining_a_split_goes_into_the_splits_group_after_its_last_member() {
+        let mut sidebar = view();
+        let g = sidebar.groups.create(&[1, 2, 3]);
+        sidebar.seat_beside(&IDS, 5, &[1, 2]);
+        assert_eq!(sidebar.groups.get(g).map(|g| g.members.clone()), Some(vec![1, 2, 5, 3]));
+        sidebar.seat_beside(&IDS, 4, &[1]);
+        assert_eq!(sidebar.groups.get(g).map(|g| g.members.clone()), Some(vec![1, 4, 2, 5, 3]));
+    }
+
+    #[test]
+    fn a_terminal_joining_a_loose_split_leaves_its_group() {
+        let mut sidebar = view();
+        let g = sidebar.groups.create(&[4, 5]);
+        sidebar.seat_beside(&IDS, 4, &[1, 2]);
+        assert_eq!(sidebar.groups.group_of(4), None);
+        assert_eq!(sidebar.groups.group_of(5), Some(g));
+        sidebar.seat_beside(&IDS, 5, &[]);
+        assert_eq!(sidebar.groups.group_of(5), Some(g), "no mates, no move");
+    }
 
     fn view() -> WindowSidebar {
         WindowSidebar::default()

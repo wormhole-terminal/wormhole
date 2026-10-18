@@ -323,6 +323,11 @@ impl Workspace {
         self.sessions[anchor].split = Some(id);
         self.sessions[joiner].split = Some(id);
         self.sessions[joiner].pinned = pinned;
+        // The joiner stands in the split's card: its group, right after the other members.
+        let ids: Vec<i64> = self.sessions.iter().map(|s| s.id).collect();
+        let joiner_id = self.sessions[joiner].id;
+        let mates: Vec<i64> = self.members(id).into_iter().map(|m| self.sessions[m].id).collect();
+        self.sidebar.view.seat_beside(&ids, joiner_id, &mates);
         self.dirty = true;
     }
 
