@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::arrange::Item;
 use super::groups::{Groups, group_key};
 use super::order::{SidebarNumbers, with_pins};
-use super::split::{self, SplitMarks, Splits};
+use super::split::{self, Bracket, SplitMarks, Splits};
 
 /// How many terminals get a ⌘ number.
 pub const NUMBERED: usize = 9;
@@ -104,12 +104,14 @@ pub struct Listing {
     numbered: Vec<usize>,
 }
 
-/// The card a line of the list belongs to: a group's (its head and its rows), or a terminal in no
-/// group, which is a card of one row.
+/// The card a line of the list belongs to: a group's (its head and its rows), the rows of one split
+/// in no group (a small group without a head), or a terminal in no group, a card of one row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Card {
     Group(usize),
     Loose(usize),
+    /// The terminals of one split that sit together in no group, named by the first of them.
+    Split(usize),
 }
 
 /// A place at the top level: a terminal in no group, or a group.
@@ -281,7 +283,21 @@ impl Listing {
     pub fn card(&self, at: usize) -> Option<Card> {
         match *self.entries.get(at)? {
             Entry::Band { band, .. } | Entry::Row { band: Some(band), .. } => Some(Card::Group(band)),
-            Entry::Row { session, band: None, .. } => Some(Card::Loose(session)),
+            Entry::Row { session, band: None, marks, .. } => {
+                if marks.bracket.is_none() {
+                    return Some(Card::Loose(session));
+                }
+                // Walk up to the first row of the split (the one whose mark starts it).
+                let first = (0..=at).rev().find_map(|n| match self.entries[n] {
+                    Entry::Row { session, band: None, marks, .. }
+                        if marks.bracket == Some(Bracket::Start) =>
+                    {
+                        Some(session)
+                    }
+                    _ => None,
+                });
+                Some(first.map_or(Card::Loose(session), Card::Split))
+            }
         }
     }
 
@@ -433,5 +449,50 @@ mod tests {
         assert_eq!(listing.step(3, -1), Some(0));
         // From a folded one the whole list is walked.
         assert_eq!(listing.step(1, 1), Some(2));
+    }
+
+    #[test]
+    fn the_terminals_of_a_split_in_no_group_share_one_card() {
+        let ids = [1, 2, 3, 4, 5];
+        let sidebar = WindowSidebar::default();
+        let pinned = [false; 5];
+        let split_of = [None, Some(7), Some(7), Some(7), None];
+        let listing = Listing::build(&ListInput {
+            ids: &ids,
+            pinned: &pinned,
+            sidebar: &sidebar,
+            splits: Splits { split_of: &split_of, selected: Some(2) },
+            numbers: SidebarNumbers::List,
+        });
+        let cards: Vec<Option<Card>> = (0..5).map(|at| listing.card(at)).collect();
+        assert_eq!(
+            cards,
+            [
+                Some(Card::Loose(0)),
+                Some(Card::Split(1)),
+                Some(Card::Split(1)),
+                Some(Card::Split(1)),
+                Some(Card::Loose(4))
+            ]
+        );
+        let edges: Vec<(bool, bool)> = (0..5).map(|at| listing.card_edges(at)).collect();
+        assert_eq!(edges, [(true, true), (true, false), (false, false), (false, true), (true, true)]);
+    }
+
+    #[test]
+    fn a_split_inside_a_group_stays_in_the_groups_card() {
+        let ids = [1, 2, 3];
+        let mut sidebar = WindowSidebar::default();
+        named(&mut sidebar, &ids, "Docs", &[1, 2, 3]);
+        let pinned = [false; 3];
+        let split_of = [Some(7), Some(7), None];
+        let listing = Listing::build(&ListInput {
+            ids: &ids,
+            pinned: &pinned,
+            sidebar: &sidebar,
+            splits: Splits { split_of: &split_of, selected: Some(0) },
+            numbers: SidebarNumbers::List,
+        });
+        assert!((0..4).all(|at| listing.card(at) == Some(Card::Group(0))));
     }
 }

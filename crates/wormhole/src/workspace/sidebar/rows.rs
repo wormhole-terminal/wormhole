@@ -2,8 +2,8 @@
 //! at x 40, the second line (what the agent does, the command in front, where it is), what
 //! sits at x 334 (⌘N keycap, status glyph on the right, bell, close ×), and the states laid
 //! over it (its context menu's focus ring, a drag, the flash after a move). A terminal in a
-//! split also shows it: the bracket along the gutter, the chain mark and "on screen" at the
-//! right of its first line.
+//! split also shows it: the chain mark at the right of its first line when its mates are elsewhere
+//! (rows of one split in no group share a card; VoiceOver is told they are on screen).
 use std::time::Duration;
 
 use gpui_kit::component::tooltip::Tooltip;
@@ -30,8 +30,6 @@ const KEYCAP_TRAIL_W: f32 = 36.0;
 const DETAIL_W: f32 = 36.0;
 /// The pin after a pinned terminal's name.
 const MARK_W: f32 = 20.0;
-/// "● on screen" at the right of a split sibling's first line, gap included.
-const ON_SCREEN_W: f32 = 76.0;
 
 /// What every row of one frame shares: the settings and how text is measured.
 pub(super) struct Frame {
@@ -241,21 +239,18 @@ impl Workspace {
             .map(|n| div().text_caption().tabular_nums().text_color(quiet).child(format!("±{n}")));
         // What a split says of this terminal, at the right of its first line.
         let chain = place.marks.chain.then(|| style::chain_mark(("chain", id as u64), ui));
-        let on_screen = place.marks.on_screen.then(|| style::on_screen_mark(ui));
-        let trail =
-            (notes.is_some() || changes.is_some() || chain.is_some() || on_screen.is_some()).then(|| {
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    // The close × takes this place under the pointer.
-                    .group_hover(group.clone(), |s| s.invisible())
-                    .children(chain)
-                    .children(on_screen)
-                    .children(notes)
-                    .children(changes)
-                    .into_any_element()
-            });
+        let trail = (notes.is_some() || changes.is_some() || chain.is_some()).then(|| {
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                // The close × takes this place under the pointer.
+                .group_hover(group.clone(), |s| s.invisible())
+                .children(chain)
+                .children(notes)
+                .children(changes)
+                .into_any_element()
+        });
 
         // The second line: every regular row has one. What the terminal
         // has to report comes first; a quiet one says where it is, and where even that is
@@ -301,8 +296,7 @@ impl Workspace {
         let details = (frame.show_notes && info.open_items > 0) as u8 + info.changes.is_some() as u8;
         let right = if hint.is_some() { KEYCAP_TRAIL_W } else { 0.0 }
             + f32::from(details) * DETAIL_W
-            + if place.marks.chain { TRAIL_W } else { 0.0 }
-            + if place.marks.on_screen { ON_SCREEN_W } else { 0.0 };
+            + if place.marks.chain { TRAIL_W } else { 0.0 };
         // What the row's sides and its lead take: the card's margin and padding, the row's own
         // padding, and the tile or the lead glyph with its gap.
         let side = frame.metrics.card_margin + frame.metrics.card_pad + frame.metrics.row_px;
@@ -396,7 +390,6 @@ impl Workspace {
                 d.tooltip(move |window, cx| two_line_tooltip(name.clone(), second.clone(), ui, window, cx))
             })
             .children(flash)
-            .children(place.marks.bracket.map(|part| style::split_bracket(ui, part)))
             .when(self.sidebar.menu_row == Some(id) || ring, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })

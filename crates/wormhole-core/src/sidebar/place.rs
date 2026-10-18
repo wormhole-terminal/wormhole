@@ -76,12 +76,25 @@ impl DropInput<'_> {
             .collect()
     }
 
-    /// What follows the card at the top level.
-    fn after(&self, card: Card) -> Option<Item> {
-        let own = match card {
+    /// The card's last item at the top level (a split's card ends with its last member).
+    fn last_of(&self, card: Card) -> Option<Item> {
+        Some(match card {
             Card::Group(band) => Item::Group(self.listing.bands.get(band)?.group),
             Card::Loose(session) => Item::Terminal(*self.ids.get(session)?),
-        };
+            Card::Split(_) => {
+                let at =
+                    (0..self.listing.entries.len()).rev().find(|&at| self.listing.card(at) == Some(card))?;
+                match self.listing.entries[at] {
+                    super::Entry::Row { session, .. } => Item::Terminal(*self.ids.get(session)?),
+                    super::Entry::Band { .. } => return None,
+                }
+            }
+        })
+    }
+
+    /// What follows the card at the top level.
+    fn after(&self, card: Card) -> Option<Item> {
+        let own = self.last_of(card)?;
         let top = self.top();
         let at = top.iter().position(|&item| item == own)?;
         top.get(at + 1).copied()
@@ -239,12 +252,10 @@ pub fn group_drop(input: &DropInput, band: usize, target: Target) -> Option<Land
             before_item(at, part == Part::Bottom)
         }
         Target::After(card) => {
-            let card_item = match card {
-                Card::Group(other) if other == band => return None,
-                Card::Group(other) => Item::Group(listing.bands.get(other)?.group),
-                Card::Loose(session) => Item::Terminal(*input.ids.get(session)?),
-            };
-            before_item(item_at(card_item)?, true)
+            if card == Card::Group(band) {
+                return None;
+            }
+            before_item(item_at(input.last_of(card)?)?, true)
         }
         Target::Tail => None,
     };

@@ -255,6 +255,15 @@ impl Workspace {
                             if bottom { frame.metrics.card_gap } else { 0.0 },
                         ),
                     ),
+                    Some(Card::Split(first)) => (
+                        glass_key(GlassKind::Loose, infos[first].id as u64),
+                        Insets(
+                            frame.metrics.card_margin,
+                            0.0,
+                            frame.metrics.card_margin,
+                            if bottom { frame.metrics.card_gap } else { 0.0 },
+                        ),
+                    ),
                     Some(Card::Loose(session)) => (
                         glass_key(GlassKind::Loose, infos[session].id as u64),
                         Insets(
@@ -275,7 +284,7 @@ impl Workspace {
                     let id = infos[session].id;
                     let group = listing.card(at).and_then(|card| match card {
                         Card::Group(band) => Some(listing.bands[band].group),
-                        Card::Loose(_) => None,
+                        Card::Loose(_) | Card::Split(_) => None,
                     });
                     self.with_row_drop(
                         segment.id(("row-line", id as u64)),

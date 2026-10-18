@@ -7,7 +7,6 @@ use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::layout::status_bar::CONTEXT_METER_W;
-use wormhole_core::sidebar::Bracket;
 use wormhole_core::sidebar::GroupColor;
 
 /// The sidebar's width (and its minimum in the app).
@@ -368,52 +367,31 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             ),
         ));
 
-    // A split's rows joined by a bracket, the selected terminal's siblings marked "on
-    // screen", and the chain mark where the members aren't together.
-    let split_row = |id: &'static str,
-                     g: StatusGlyph,
-                     name: &'static str,
-                     selected: bool,
-                     bracket: Option<Bracket>,
-                     trail: Option<AnyElement>| {
-        style::session_row(
-            id,
-            ui,
-            SessionRow {
-                detail: Some("Idle".into()),
-                selected,
-                trail,
-                ..SessionRow::new(glyph(Box::leak(format!("{id}-glyph").into_boxed_str()), g), name)
-            },
-        )
-        .relative()
-        .children(bracket.map(|part| style::split_bracket(ui, part)))
-    };
+    // A split's rows share one card (no mark of their own); the chain mark shows where the
+    // members aren't together.
+    let split_row =
+        |id: &'static str, g: StatusGlyph, name: &'static str, selected: bool, trail: Option<AnyElement>| {
+            style::session_row(
+                id,
+                ui,
+                SessionRow {
+                    detail: Some("Idle".into()),
+                    selected,
+                    trail,
+                    ..SessionRow::new(glyph(Box::leak(format!("{id}-glyph").into_boxed_str()), g), name)
+                },
+            )
+        };
     let split_rows = column(ui)
-        .child(caption(ui, "A split · on screen beside the selected one · the chain mark"))
-        .child(split_row("g-split-a", StatusGlyph::Working, "claude", true, Some(Bracket::Start), None))
-        .child(split_row(
-            "g-split-b",
-            StatusGlyph::Idle,
-            "api-server",
-            false,
-            Some(Bracket::Mid),
-            Some(style::on_screen_mark(ui).into_any_element()),
-        ))
-        .child(split_row(
-            "g-split-c",
-            StatusGlyph::Idle,
-            "zsh",
-            false,
-            Some(Bracket::End),
-            Some(style::on_screen_mark(ui).into_any_element()),
-        ))
+        .child(caption(ui, "A split: its rows in one card · the chain mark"))
+        .child(split_row("g-split-a", StatusGlyph::Working, "claude", true, None))
+        .child(split_row("g-split-b", StatusGlyph::Idle, "api-server", false, None))
+        .child(split_row("g-split-c", StatusGlyph::Idle, "zsh", false, None))
         .child(split_row(
             "g-split-d",
             StatusGlyph::Idle,
             "docs",
             false,
-            None,
             Some(style::chain_mark(("g-split-chain", 1u64), ui).into_any_element()),
         ));
 

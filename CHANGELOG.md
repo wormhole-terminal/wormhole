@@ -8,6 +8,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The terminals of a split that are in no group now share one card in the sidebar. The bracket along their
+  rows and the "on screen" label are gone; VoiceOver still says which are on screen.
 - The right panel's toggle is back at the right end of the terminal's title row (also with terminals as
   tabs), beside the panel's tab strip: it opens the panel on its last tab and closes it, like ⌥⌘I.
 - In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)
