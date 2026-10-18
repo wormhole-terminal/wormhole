@@ -10,7 +10,7 @@ agent.done.text #3cf0a0
 agent.exited #726e87
 agent.gemini #3b7bff
 agent.gemini.end #8f6cf5
-agent.working #7c8cff
+agent.working #ff5ee1
 band #e8e3ff0d
 band.hover #e8e3ff14
 band.solid #1a1629
@@ -23,7 +23,7 @@ banner.success.border #3cf0a059
 banner.warning.background #ffd23f1a
 banner.warning.border #ffd23f59
 border #e8e3ff1f
-border.focus #7c8cff
+border.focus #ff5ee1
 border.strong #e8e3ff3d
 button.background #27233a
 button.hover #343047
@@ -32,14 +32,14 @@ card #e8e3ff09
 card.edge #e8e3ff1a
 checkbox.background #0e0b1c
 checkbox.border #726e87
-checkbox.checked #7c8cff
+checkbox.checked #ff5ee1
 chip.border #e8e3ff3d
-chip.selected #7c8cff
-chip.tint #7c8cff29
+chip.selected #ff5ee1
+chip.tint #ff5ee129
 diff.added #3cf0a0
 diff.added.background #182e35
 diff.filler #e8e3ff1f
-diff.hunk.background #1d1b3a
+diff.hunk.background #2a1637
 diff.hunk.text #9d98b2
 diff.line_number #75718a
 diff.removed #ff4f7b
@@ -51,28 +51,28 @@ git.branch #d16bec
 git.branch.background #d16bec24
 input.background #0e0b1c
 input.border #e8e3ff3d
-input.border.focus #7c8cff
+input.border.focus #ff5ee1
 input.placeholder #726e87
-list.selected #2e2c50
+list.selected #40264c
 list.selected.muted #9d98b2
-list.selected.text #7e8fff
-primary #7c8cff
-primary.hover #9babff
-resize.handle.active #7c8cff
-resize.handle.hover #7c8cff80
+list.selected.text #ff5ee1
+primary #ff5ee1
+primary.hover #ff9ae8
+resize.handle.active #ff5ee1
+resize.handle.hover #ff5ee180
 scrollbar.thumb #e8e3ff40
-selection.ui #7c8cff4d
+selection.ui #ff5ee14d
 shadow #00000080
 sidebar.background #0f0b1e
 sidebar.row.hover #e8e3ff0d
-sidebar.row.selected #1e1d3d
+sidebar.row.selected #301739
 sidebar.row.selected.muted #9d98b2
-sidebar.row.selected.text #7c8cff
+sidebar.row.selected.text #ff5ee1
 state.active #e8e3ff1f
-state.highlight #7c8cff33
+state.highlight #ff5ee133
 state.hover #e8e3ff0d
-state.selected #7c8cff24
-state.selected.inset #7c8cff3d
+state.selected #ff5ee124
+state.selected.inset #ff5ee13d
 status.danger #ff4f7b
 status.danger.text #ff4f7b
 status.info #2fd8f0
@@ -89,11 +89,11 @@ tab.active.background #211d33
 tab.inactive.text #9d98b2
 text.disabled #555169
 text.faint #726e87
-text.link #7c8cff
+text.link #ff5ee1
 text.muted #9d98b2
 text.on_primary #000000
 text.on_selected #000000
-text.on_selected.muted #1f234a
+text.on_selected.muted #511947
 text.primary #e8e3ff
 tile.background #121318
 tile.edge #ffffff1a
@@ -158,14 +158,14 @@ translucent 80% blur text.primary #e8e3ff
 translucent 80% blur text.muted #9d98b2
 translucent 80% blur text.faint #7e7992
 translucent 80% blur git.branch #e585ff
-translucent 80% blur sidebar.row.selected.text #8a9aff
+translucent 80% blur sidebar.row.selected.text #ff64e1
 translucent 80% blur sidebar.row.selected.muted #a39eb8
 translucent 80% no blur text.primary #e8e3ff
 translucent 80% no blur text.muted #b6b1cc
 translucent 80% no blur text.faint #948fa9
 translucent 80% no blur git.branch #edabff
-translucent 80% no blur sidebar.row.selected.text #a7b5ff
-translucent 80% no blur sidebar.row.selected.muted #bbb6d1
+translucent 80% no blur sidebar.row.selected.text #ff94e7
+translucent 80% no blur sidebar.row.selected.muted #bab6d0
 increase_contrast agent.exited #7c7891
 increase_contrast band #e8e3ff14
 increase_contrast band.hover #e8e3ff21
@@ -178,22 +178,22 @@ increase_contrast checkbox.border #7c7891
 increase_contrast chip.border #e8e3ff7a
 increase_contrast diff.hunk.text #9e99b3
 increase_contrast diff.line_number #7c7891
-increase_contrast diff.removed #ff5b81
+increase_contrast diff.removed #ff5e82
 increase_contrast git.branch #d46eef
 increase_contrast git.branch.background #d46eef24
 increase_contrast input.border #e8e3ff7a
 increase_contrast input.placeholder #7c7891
-increase_contrast list.selected #373864
-increase_contrast list.selected.muted #a8a3bd
-increase_contrast list.selected.text #8fa0ff
+increase_contrast list.selected #562d5d
+increase_contrast list.selected.muted #a9a4be
+increase_contrast list.selected.text #ff71e3
 increase_contrast sidebar.row.hover #e8e3ff1a
-increase_contrast sidebar.row.selected #292a54
+increase_contrast sidebar.row.selected #481f4c
 increase_contrast sidebar.row.selected.muted #9e99b3
 increase_contrast state.active #e8e3ff29
 increase_contrast state.hover #e8e3ff1a
-increase_contrast state.selected #7c8cff3d
-increase_contrast state.selected.inset #7c8cff47
-increase_contrast status.danger.text #ff5b81
+increase_contrast state.selected #ff5ee13d
+increase_contrast state.selected.inset #ff5ee147
+increase_contrast status.danger.text #ff5e82
 increase_contrast tab.inactive.text #9e99b3
 increase_contrast text.disabled #5c5870
 increase_contrast text.faint #7c7891

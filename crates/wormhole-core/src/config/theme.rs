@@ -8,7 +8,7 @@ use std::time::SystemTime;
 use super::{Config, Settings, ThemeMode};
 use crate::fsutil::{self, LinkPolicy};
 use crate::theme;
-use crate::theme_registry::{self, ThemeSource, UserThemes};
+use crate::theme_registry::{self, ThemeSource, UserTheme, UserThemes};
 use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
 impl Config {
@@ -72,11 +72,29 @@ impl Settings {
 /// The JSON theme in `themes` whose name is `name` (any case). A file that
 /// doesn't parse as a theme is not one: saving never replaces it.
 fn named_in(themes: &UserThemes, name: &str) -> Option<PathBuf> {
-    themes
-        .themes
-        .iter()
-        .find(|t| t.file().is_some() && t.name.eq_ignore_ascii_case(name))
-        .map(|t| t.path.clone())
+    named_json(themes, name).map(|t| t.path.clone())
+}
+
+fn named_json<'a>(themes: &'a UserThemes, name: &str) -> Option<&'a UserTheme> {
+    themes.themes.iter().find(|t| t.file().is_some() && t.name.eq_ignore_ascii_case(name))
+}
+
+/// Save `file` over the version `theme` of a file that ships several: into that version's
+/// entry, leaving the file's shared layers and its other versions as they are. A draft that
+/// extends the version itself is folded into the version's own layers.
+fn save_into_variant(theme: &UserTheme, short: &str, file: &ThemeFile) -> Result<PathBuf, String> {
+    let mut source = theme.source().cloned().ok_or("not a theme file")?;
+    let entry = source
+        .variants
+        .iter_mut()
+        .find(|v| v.name == short)
+        .ok_or_else(|| format!("{}: no variant {short:?}", theme.path.display()))?;
+    let extends_itself = file.extends.as_deref().is_some_and(|e| e.eq_ignore_ascii_case(&theme.name));
+    let layers = if extends_itself { file.layered_over(&entry.to_file()) } else { file.clone() };
+    entry.set_layers(&layers);
+    fsutil::write_atomic(&theme.path, source.to_json_pretty().as_bytes(), LinkPolicy::Follow)
+        .map_err(|e| e.to_string())?;
+    Ok(theme.path.clone())
 }
 
 /// Save `file` into `dir`, and return where it went.
@@ -92,6 +110,11 @@ fn named_in(themes: &UserThemes, name: &str) -> Option<PathBuf> {
 fn save_theme_in(dir: &Path, file: &ThemeFile) -> Result<PathBuf, String> {
     let themes = UserThemes::read(dir);
     let name = file.name.clone().unwrap_or_else(|| "custom".into());
+    if let Some(theme) = named_json(&themes, &name)
+        && let Some((_, short)) = &theme.family
+    {
+        return save_into_variant(theme, short, file);
+    }
     let extends_itself = file.extends.as_deref().is_some_and(|e| e.eq_ignore_ascii_case(&name));
     let file = match extends_itself.then(|| themes.theme_file(&name)).flatten() {
         Some(parent) => file.layered_over(&parent),
@@ -326,6 +349,59 @@ mod tests {
         // Names that leave nothing for a file name don't become hidden files.
         let odd = save_theme_in(dir.path(), &theme("!!!", "#555555")).expect("saves");
         assert_eq!(odd, dir.path().join("theme.json"));
+    }
+
+    const FAMILY: &str = r##"{
+      "name": "Dusk",
+      "extends": "Nord",
+      "ui": { "primary": "#c08a1e" },
+      "variants": [
+        { "name": "Dark", "metrics": { "radius": 3 } },
+        { "name": "Light", "appearance": "light", "terminal": { "background": "#f6f2ea", "foreground": "#2b2a35" } }
+      ]
+    }"##;
+
+    #[test]
+    fn saving_over_a_version_changes_only_its_entry() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write(dir.path(), "dusk.json", FAMILY);
+        // The Studio's draft of "Dusk Light", named after it and saved.
+        let mut draft = tokens::parse_theme_file(
+            r##"{"name": "Dusk Light Custom", "extends": "Dusk Light", "ui": {"border": "#00ff00"}}"##,
+        )
+        .expect("draft");
+        let previewed = resolve_in(dir.path(), &draft);
+        draft.name = Some("Dusk Light".into());
+        let path = save_theme_in(dir.path(), &draft).expect("saves");
+        assert_eq!((path, files(dir.path())), (dir.path().join("dusk.json"), vec!["dusk.json".to_string()]));
+        let file = saved(&dir.path().join("dusk.json"));
+        assert_eq!((file.name.as_deref(), file.extends.as_deref()), (Some("Dusk"), Some("Nord")));
+        assert_eq!(file.ui.keys().collect::<Vec<_>>(), ["primary"], "the shared layers stay");
+        let [dark, light] = &file.variants[..] else { panic!("two variants: {:?}", file.variants) };
+        assert_eq!((dark.name.as_str(), dark.metrics.radius), ("Dark", Some(3.0)));
+        assert!(dark.ui.is_empty(), "the other version is untouched");
+        assert_eq!(light.name, "Light");
+        assert_eq!(light.ui.get("border").map(String::as_str), Some("#00ff00"));
+        assert_eq!(light.terminal.background.as_deref(), Some("#f6f2ea"), "its own layers stay");
+        let (mut shown, error) = resolve_theme(dir.path(), "Dusk Light");
+        assert!(error.is_none(), "{error:?}");
+        shown.name = previewed.name.clone();
+        assert_eq!(shown, previewed);
+    }
+
+    #[test]
+    fn a_family_name_shows_its_first_version() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write(dir.path(), "dusk.json", FAMILY);
+        for name in ["Dusk", "dusk", "Dusk Dark"] {
+            let (tokens, error) = resolve_theme(dir.path(), name);
+            assert_eq!((tokens.name.as_str(), error), ("Dusk Dark", None), "{name}");
+        }
+        assert_eq!(resolve_theme(dir.path(), "dusk light").0.appearance, tokens::Appearance::Light);
+        // Wormhole's own families too.
+        assert_eq!(resolve_theme(dir.path(), "Soltari").0.name, "Soltari Light");
+        assert_eq!(resolve_theme(dir.path(), "Crimson").0.name, "Crimson Dark");
+        assert_eq!(resolve_theme(dir.path(), "Crimson Light").0.appearance, tokens::Appearance::Light);
     }
 
     #[test]

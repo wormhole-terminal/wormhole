@@ -344,6 +344,57 @@ pub struct ThemeFile {
     pub syntax: BTreeMap<String, SyntaxOverride>,
     #[serde(default, skip_serializing_if = "MetricsFile::is_empty")]
     pub metrics: MetricsFile,
+    /// The versions of the theme this file ships (light, dark, a minimal one, …), each a
+    /// theme of its own made of its layers over the ones above; see [`super::variants`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<ThemeVariant>,
+}
+
+/// One entry of a theme file's `variants`: a version of the theme, named "<the file's name>
+/// <its name>", with what it changes. Its `extends` names another variant of the file (by
+/// its own name) or, failing that, any theme.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ThemeVariant {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extends: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<Appearance>,
+    #[serde(default, skip_serializing_if = "TerminalFile::is_empty")]
+    pub terminal: TerminalFile,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub ui: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub syntax: BTreeMap<String, SyntaxOverride>,
+    #[serde(default, skip_serializing_if = "MetricsFile::is_empty")]
+    pub metrics: MetricsFile,
+}
+
+impl ThemeVariant {
+    /// The variant's own layers as a theme file of their own.
+    pub fn to_file(&self) -> ThemeFile {
+        ThemeFile {
+            name: Some(self.name.clone()),
+            extends: self.extends.clone(),
+            appearance: self.appearance,
+            terminal: self.terminal.clone(),
+            ui: self.ui.clone(),
+            syntax: self.syntax.clone(),
+            metrics: self.metrics.clone(),
+            ..Default::default()
+        }
+    }
+
+    /// The layers of `file` (a single theme) as this variant's, keeping its name.
+    pub fn set_layers(&mut self, file: &ThemeFile) {
+        self.extends.clone_from(&file.extends);
+        self.appearance = file.appearance;
+        self.terminal = file.terminal.clone();
+        self.ui = file.ui.clone();
+        self.syntax = file.syntax.clone();
+        self.metrics = file.metrics.clone();
+    }
 }
 
 impl ThemeFile {
@@ -372,6 +423,8 @@ impl ThemeFile {
             ui,
             syntax,
             metrics,
+            // The result is one theme: the versions a family file ships are themes of their own.
+            variants: Vec::new(),
         }
     }
 

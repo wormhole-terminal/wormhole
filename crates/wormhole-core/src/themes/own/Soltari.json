@@ -1,0 +1,68 @@
+{
+  "name": "Soltari",
+  "ui": {
+    "primary": "terminal.ansi.3"
+  },
+  "variants": [
+    {
+      "name": "Light",
+      "appearance": "light",
+      "terminal": {
+        "background": "#f6f2ea",
+        "foreground": "#2b2a35",
+        "cursor": "#c08a1e",
+        "cursor_text": "#f6f2ea",
+        "selection_background": "#e6d9bc",
+        "selection_foreground": "#2b2a35",
+        "ansi": {
+          "0": "#2b2a35",
+          "1": "#b8243c",
+          "2": "#2a7030",
+          "3": "#835c00",
+          "4": "#2459c2",
+          "5": "#8e3bb3",
+          "6": "#0d6f79",
+          "7": "#625e70",
+          "8": "#8a8596",
+          "9": "#a81e33",
+          "10": "#22622a",
+          "11": "#7a5600",
+          "12": "#1d4ca8",
+          "13": "#7a2f9c",
+          "14": "#0a5f68",
+          "15": "#a39fae"
+        }
+      }
+    },
+    {
+      "name": "Dark",
+      "appearance": "dark",
+      "terminal": {
+        "background": "#15131c",
+        "foreground": "#ece6d8",
+        "cursor": "#f2c14e",
+        "cursor_text": "#15131c",
+        "selection_background": "#3a3324",
+        "selection_foreground": "#fbf7ee",
+        "ansi": {
+          "0": "#262331",
+          "1": "#ff6b7f",
+          "2": "#7fd88f",
+          "3": "#f2c14e",
+          "4": "#7fa8ff",
+          "5": "#d39bff",
+          "6": "#5fd4d0",
+          "7": "#cfc8b8",
+          "8": "#6e6880",
+          "9": "#ff8c9c",
+          "10": "#a2e8ae",
+          "11": "#ffd67a",
+          "12": "#a3c0ff",
+          "13": "#e3baff",
+          "14": "#8ae6e2",
+          "15": "#fbf7ee"
+        }
+      }
+    }
+  ]
+}

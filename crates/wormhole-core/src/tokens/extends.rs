@@ -7,9 +7,11 @@ use super::catalog::UI_TOKENS;
 use super::expr::{Expr, parse_expr};
 use super::file::{MetricsFile, SyntaxOverride, ThemeFile};
 use super::model::{Metrics, TerminalColors, auto_appearance};
+use super::own::{own, own_named};
 use super::resolve::{FlagOverrides, NO_RULES, Resolver, build};
 use super::rules::replaced_by;
 use super::theme_tokens::ThemeTokens;
+use super::variants::variants;
 use crate::text::did_you_mean;
 use crate::theme;
 
@@ -35,6 +37,10 @@ fn builtin_named(name: &str) -> Option<&'static theme::Theme> {
 /// ancestor down, then terminal colors are resolved, then every UI/syntax
 /// token is derived from the final palette with the merged overrides.
 pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> Result<ThemeTokens, String> {
+    // A file that ships several versions is shown as its first.
+    if let Some(first) = variants(file, file.name.as_deref().unwrap_or("Theme"))?.into_iter().next() {
+        return resolve(&first.file, lookup);
+    }
     let mut chain = vec![file.clone()];
     let mut seen: Vec<String> = file.name.iter().cloned().collect();
     let mut parent = file.extends.clone();
@@ -46,7 +52,9 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
             return Err(format!("{}: `extends` chain is deeper than {MAX_EXTENDS_DEPTH}", file.label()));
         }
         let shadowed = seen.contains(&name);
-        match if shadowed { None } else { lookup(&name) } {
+        // The user's themes first, then Wormhole's own (theme files too), then the palettes.
+        let own_file = || own_named(&name).map(|o| o.file.clone());
+        match if shadowed { None } else { lookup(&name) }.or_else(own_file) {
             Some(f) => {
                 seen.push(name);
                 parent = f.extends.clone();
@@ -59,7 +67,8 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
                     return Err(format!("`extends` cycle: {}", path.join(" -> ")));
                 }
                 None => {
-                    let hint = did_you_mean(&name, theme::builtins().iter().map(|t| t.name.as_str()));
+                    let names = theme::builtins().iter().map(|t| t.name.as_str());
+                    let hint = did_you_mean(&name, names.chain(own().iter().map(|o| o.name.as_str())));
                     let from = chain.last().map_or_else(String::new, |f| f.label());
                     return Err(format!("{from}: extends unknown theme {name:?}{hint}"));
                 }

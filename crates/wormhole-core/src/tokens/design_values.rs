@@ -74,7 +74,7 @@ fn only_a_light_palette_with_a_dark_yellow_gets_the_amber_warning() {
             t.name
         ))
         .unwrap();
-        let amber = t.name == "GitHub Light";
+        let amber = ["GitHub Light", "Crimson Light"].contains(&t.name.as_str());
         assert_eq!(t.get("status.warning") != from_yellow.get("status.warning"), amber, "{}", t.name);
     }
     // Solarized Dark's yellow is darker than its muted text too, but on a dark

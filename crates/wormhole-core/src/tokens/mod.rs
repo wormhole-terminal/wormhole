@@ -63,6 +63,7 @@ mod file;
 mod fixes;
 mod high_contrast;
 mod model;
+mod own;
 mod resolve;
 mod rules;
 mod save;
@@ -71,6 +72,7 @@ mod test_support;
 mod theme_tokens;
 mod translucent;
 mod uses;
+mod variants;
 
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -84,7 +86,7 @@ pub use self::contrast::{CONTRAST_PAIRS, ContrastPair};
 use self::extends::MAX_SYNTAX_KEYS;
 pub use self::extends::resolve;
 pub use self::file::{
-    MAX_THEME_BYTES, MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, parse_theme_file,
+    MAX_THEME_BYTES, MetricsFile, SyntaxOverride, TerminalFile, ThemeFile, ThemeVariant, parse_theme_file,
 };
 pub use self::fixes::{ContrastCheck, ContrastFix, ContrastIssue, contrast_issues};
 pub use self::high_contrast::HIGH_CONTRAST_RING;
@@ -95,6 +97,7 @@ pub use self::rules::default_rule;
 pub use self::theme_tokens::ThemeTokens;
 pub use self::translucent::{BLUR_OFF_MIN_OPACITY, OPAQUE, Translucency, TranslucentColors};
 pub use self::uses::{Area, TOKEN_USES, TokenUse, followers, refers_to, used_in, uses_of};
+pub use self::variants::{MAX_VARIANTS, Variant, variant_name, variants};
 pub use crate::color::Color;
 use crate::theme;
 
@@ -121,11 +124,31 @@ pub fn builtin_tokens() -> Vec<ThemeTokens> {
     builtins().to_vec()
 }
 
-/// Tokens for every bundled theme, in [`theme::builtin`] order, derived once.
+/// Tokens for every bundled theme, derived once: the imported palettes in [`theme::builtin`]
+/// order, then Wormhole's own themes, each version of one on its own.
 pub fn builtins() -> &'static [ThemeTokens] {
-    static TOKENS: LazyLock<Vec<ThemeTokens>> =
-        LazyLock::new(|| theme::builtins().iter().map(derive).collect());
+    static TOKENS: LazyLock<Vec<ThemeTokens>> = LazyLock::new(|| {
+        let palettes = theme::builtins().iter().map(derive);
+        // Part of the app, like the palettes: a theme that doesn't resolve is a bug the tests catch.
+        let own = own::own()
+            .iter()
+            .map(|o| resolve(&o.file, &|_| None).unwrap_or_else(|e| panic!("own theme {}: {e}", o.name)));
+        palettes.chain(own).collect()
+    });
     &TOKENS
+}
+
+/// For a bundled theme that is one version of several (`"Soltari Light"`), the family's name
+/// and the version's own (`("Soltari", "Light")`).
+pub fn builtin_family(name: &str) -> Option<(&'static str, &'static str)> {
+    let own = own::own().iter().find(|o| o.name == name)?;
+    own.family.as_ref().map(|(family, short)| (family.as_str(), short.as_str()))
+}
+
+/// The bundled theme a family's name means (`"Soltari"`: its first version), if it is not a
+/// theme's own name.
+pub fn builtin_family_default(name: &str) -> Option<&'static str> {
+    own::own_named(name).filter(|o| o.family.is_some()).map(|o| o.name.as_str())
 }
 
 /// How many themes were derived or resolved on this thread: what tests count

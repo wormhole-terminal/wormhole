@@ -1,0 +1,32 @@
+{
+  "name": "Borealis",
+  "terminal": {
+    "background": "#07141a",
+    "foreground": "#d8f3ee",
+    "cursor": "#39ff9e",
+    "cursor_text": "#07141a",
+    "selection_background": "#14404a",
+    "selection_foreground": "#ffffff",
+    "ansi": {
+      "0": "#12262e",
+      "1": "#ff5c7a",
+      "2": "#39ff9e",
+      "3": "#f5e663",
+      "4": "#45aaff",
+      "5": "#b77bff",
+      "6": "#2af0e0",
+      "7": "#bfe0da",
+      "8": "#4a7480",
+      "9": "#ff8399",
+      "10": "#7dffbd",
+      "11": "#fff08f",
+      "12": "#7fc4ff",
+      "13": "#cfa3ff",
+      "14": "#7af7ec",
+      "15": "#f2fffc"
+    }
+  },
+  "ui": {
+    "primary": "terminal.cursor"
+  }
+}

@@ -19,6 +19,9 @@ pub struct ThemeEntry {
     pub value: String,
     pub tokens: ThemeTokens,
     pub builtin: bool,
+    /// For one version of a theme that ships several: the family's name and the version's own
+    /// (`("Soltari", "Light")`). The picker shows a family as one card.
+    pub family: Option<(String, String)>,
     /// Which theme this is (labels can repeat).
     pub id: ThemeId,
     /// The themes this catalog was built from, to tell what a name selects.
@@ -30,7 +33,7 @@ impl ThemeEntry {
     /// selects this entry: the one entry a name resolves to, so a user theme
     /// that shadows a built-in's name is the only one shown as active.
     pub fn is_selected_by(&self, setting: &str) -> bool {
-        let by_path = !self.builtin && self.value == setting;
+        let by_path = !self.builtin && self.family.is_none() && self.value == setting;
         by_path || self.themes.select(setting).as_ref() == Some(&self.id)
     }
 }
@@ -52,6 +55,7 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
             value: tokens.name.clone(),
             tokens: tokens.clone(),
             builtin: true,
+            family: tokens::builtin_family(&tokens.name).map(|(f, v)| (f.to_string(), v.to_string())),
             id: ThemeId::Builtin(&tokens.name),
             themes: Arc::clone(&themes),
         })
@@ -62,9 +66,14 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
         .filter_map(|theme| match themes.resolve(theme) {
             Ok(tokens) => Some(ThemeEntry {
                 label: theme.name.clone(),
-                value: theme.path.to_string_lossy().into_owned(),
+                // A version is one of several themes in its file: its name says which.
+                value: match theme.family {
+                    Some(_) => theme.name.clone(),
+                    None => theme.path.to_string_lossy().into_owned(),
+                },
                 tokens,
                 builtin: false,
+                family: theme.family.clone(),
                 id: theme.id(),
                 themes: Arc::clone(&themes),
             }),
@@ -74,7 +83,11 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
             }
         })
         .collect();
-    user.sort_by_key(|e| e.label.to_lowercase());
+    // By name, a family's versions together and in the file's order.
+    user.sort_by_cached_key(|e| match &e.family {
+        Some((family, _)) => (family.to_lowercase(), true),
+        None => (e.label.to_lowercase(), false),
+    });
     entries.extend(user);
     entries
 }
@@ -181,6 +194,39 @@ mod tests {
         let entries = catalog_in(dir.path());
         let kid = entries.iter().find(|e| e.label == "Kid").expect("kid resolves");
         assert_eq!(kid.tokens.get("primary").map(|c| c.to_hex()).as_deref(), Some("#123456"));
+    }
+
+    #[test]
+    fn versions_are_entries_of_their_family_and_selected_by_name() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write(dir.path(), "zeta.json", r#"{ "name": "Zeta", "extends": "Nord" }"#);
+        write(
+            dir.path(),
+            "dusk.json",
+            r##"{ "name": "Dusk", "variants": [{ "name": "Light", "appearance": "light",
+                "terminal": { "background": "#fafafa", "foreground": "#202020" } }, { "name": "Dark" }] }"##,
+        );
+        let entries = catalog_in(dir.path());
+        let user: Vec<(&str, Option<&str>)> = entries
+            .iter()
+            .filter(|e| !e.builtin)
+            .map(|e| (e.label.as_str(), e.family.as_ref().map(|(_, v)| v.as_str())))
+            .collect();
+        assert_eq!(user, [("Dusk Light", Some("Light")), ("Dusk Dark", Some("Dark")), ("Zeta", None)]);
+        let light = entries.iter().find(|e| e.label == "Dusk Light").expect("listed");
+        assert_eq!((light.value.as_str(), light.tokens.appearance), ("Dusk Light", Appearance::Light));
+        let active: Vec<&str> =
+            entries.iter().filter(|e| e.is_selected_by("Dusk Dark")).map(|e| e.label.as_str()).collect();
+        assert_eq!(active, ["Dusk Dark"]);
+        // Wormhole's own families say so too.
+        let soltari: Vec<(&str, &str)> = entries
+            .iter()
+            .filter(|e| e.builtin)
+            .filter_map(|e| e.family.as_ref())
+            .filter(|(f, _)| f == "Soltari")
+            .map(|(f, v)| (f.as_str(), v.as_str()))
+            .collect();
+        assert_eq!(soltari, [("Soltari", "Light"), ("Soltari", "Dark")]);
     }
 
     #[test]

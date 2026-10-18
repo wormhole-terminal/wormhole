@@ -16,9 +16,16 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Nine new themes of Wormhole's own: Nebula (deep violet with neon pink, mint and electric blue),
   Solar Flare (warm and hot: coral, acid lime and amber), Borealis (teal-black with aurora greens and
   violet), two built on deep blacks, Event Horizon (near-black and cool) and Void (true black, for
-  OLED-deep blacks), Crimson (red-black with a crimson cursor), Cyberpunk (indigo night with hot pink,
-  cyan and signal yellow), Matrix (phosphor green on black) and Soltari, a light one (ivory with deep
-  jewel tones and a gold cursor). Every colour keeps at least 5:1 on its background.
+  OLED-deep blacks), Crimson (red-black, or rose-white in its light version), Cyberpunk (indigo night
+  with hot pink, cyan and signal yellow), Matrix (phosphor green on black) and Soltari (ivory with deep
+  jewel tones, or a twilight dark version). Each has its own primary colour where it has a signature
+  one (Crimson's crimson, Matrix's green, Soltari's gold), and every colour keeps at least 5:1 on its
+  background.
+- A theme file can ship several versions of a theme at once: shared colours at the top, then a
+  `variants` list where each version (Light, Dark, Light Minimal, …) sets only what differs, and may
+  build on another version of the file. Each is a theme of its own, "Soltari Light", and the family's
+  name alone means its first version. Saving a version from the Theme Studio writes it back into its
+  family's file.
 - The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
   above it, and the terminal's text stands 12 pt from the window's edges, the sidebar, the panel and the
   status bar (the surface 8 pt, the grid 4 pt inside it, as in 1.1), so at the window's edge it lines

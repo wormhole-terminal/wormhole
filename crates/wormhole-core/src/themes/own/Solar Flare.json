@@ -1,0 +1,32 @@
+{
+  "name": "Solar Flare",
+  "terminal": {
+    "background": "#170d14",
+    "foreground": "#ffe9e0",
+    "cursor": "#ffb02e",
+    "cursor_text": "#170d14",
+    "selection_background": "#4a2236",
+    "selection_foreground": "#ffffff",
+    "ansi": {
+      "0": "#2c1823",
+      "1": "#ff3d5a",
+      "2": "#b6f03a",
+      "3": "#ffb02e",
+      "4": "#4fa8ff",
+      "5": "#ff4fc3",
+      "6": "#2ee6c8",
+      "7": "#f0d6cc",
+      "8": "#7a5566",
+      "9": "#ff6f85",
+      "10": "#cdff6a",
+      "11": "#ffc966",
+      "12": "#86c3ff",
+      "13": "#ff85d6",
+      "14": "#6ff2dc",
+      "15": "#fff6f0"
+    }
+  },
+  "ui": {
+    "primary": "terminal.cursor"
+  }
+}

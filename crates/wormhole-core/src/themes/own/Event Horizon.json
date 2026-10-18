@@ -1,0 +1,29 @@
+{
+  "name": "Event Horizon",
+  "terminal": {
+    "background": "#0a0a0c",
+    "foreground": "#e6e6ec",
+    "cursor": "#9cc0ff",
+    "cursor_text": "#0a0a0c",
+    "selection_background": "#2a2a3a",
+    "selection_foreground": "#ffffff",
+    "ansi": {
+      "0": "#1c1c22",
+      "1": "#f2576b",
+      "2": "#5fe0a0",
+      "3": "#f5c76a",
+      "4": "#7aa8ff",
+      "5": "#c597ff",
+      "6": "#5fd7e8",
+      "7": "#c8c8d2",
+      "8": "#5e5e72",
+      "9": "#ff7a88",
+      "10": "#85f0b8",
+      "11": "#ffd98a",
+      "12": "#9cc0ff",
+      "13": "#d8b4ff",
+      "14": "#8ae6f2",
+      "15": "#ffffff"
+    }
+  }
+}

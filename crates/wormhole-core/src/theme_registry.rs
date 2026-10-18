@@ -27,6 +27,8 @@ use crate::tokens::{self, ThemeFile, ThemeTokens};
 pub enum ThemeId {
     Builtin(&'static str),
     File(PathBuf),
+    /// One version of a file that ships several: the file and the version's own name.
+    Variant(PathBuf, String),
 }
 
 /// Finds the theme files `extends` names (user themes; resolution falls back
@@ -38,41 +40,69 @@ pub trait ThemeSource {
 /// Cheap change detector for a themes dir: file names, sizes and mtimes.
 pub type Fingerprint = Vec<(PathBuf, u64, Option<SystemTime>)>;
 
-/// One file in the themes dir.
+/// One theme in the themes dir: a file, or one version of a file that ships several.
 #[derive(Clone, Debug)]
 pub struct UserTheme {
     pub path: PathBuf,
-    /// What the picker shows and bare names match: the JSON `name`, else the file stem.
+    /// What the picker shows and bare names match: the JSON `name`, else the file stem; for a
+    /// version, "<that> <the version's name>".
     pub name: String,
+    /// For a version: the family's name and the version's own.
+    pub family: Option<(String, String)>,
     content: Arc<Content>,
+    /// Which of the file's versions this is.
+    index: usize,
 }
 
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant, reason = "one per file, behind an `Arc`")]
 enum Content {
-    /// A JSON token theme (or why it didn't parse).
-    Json(Result<ThemeFile, String>),
+    /// A JSON token theme and the versions it ships (or why it didn't parse).
+    Json(Result<Json, String>),
     /// A Ghostty / iTerm2 / Alacritty palette.
     Palette(Result<theme::Theme, String>),
 }
 
+#[derive(Debug)]
+struct Json {
+    file: ThemeFile,
+    /// Each version folded into a theme of its own; empty for a file that is one theme.
+    variants: Vec<tokens::Variant>,
+}
+
 impl UserTheme {
     pub fn id(&self) -> ThemeId {
-        ThemeId::File(self.path.clone())
+        match &self.family {
+            Some((_, short)) => ThemeId::Variant(self.path.clone(), short.clone()),
+            None => ThemeId::File(self.path.clone()),
+        }
     }
 
-    /// The parsed JSON theme, if this is one that parses.
+    /// The JSON theme, if this is one that parses: the file, or this version folded into one.
     pub fn file(&self) -> Option<&ThemeFile> {
         match &*self.content {
-            Content::Json(Ok(file)) => Some(file),
+            Content::Json(Ok(json)) => Some(json.variants.get(self.index).map_or(&json.file, |v| &v.file)),
             _ => None,
         }
     }
 
-    /// Whether a bare name means this theme: its name in any case, or its
-    /// file stem exactly.
+    /// The file as written, for a version the file that ships it.
+    pub fn source(&self) -> Option<&ThemeFile> {
+        match &*self.content {
+            Content::Json(Ok(json)) => Some(&json.file),
+            _ => None,
+        }
+    }
+
+    /// Whether a bare name means this theme: its name in any case, or its file stem exactly. A
+    /// file's first version also answers to the family's name and the file stem.
     fn answers_to(&self, name: &str) -> bool {
-        self.name.eq_ignore_ascii_case(name) || self.path.file_stem().is_some_and(|s| s == name)
+        let stem = || self.path.file_stem().is_some_and(|s| s == name);
+        self.name.eq_ignore_ascii_case(name)
+            || match &self.family {
+                None => stem(),
+                Some((family, _)) => self.index == 0 && (family.eq_ignore_ascii_case(name) || stem()),
+            }
     }
 }
 
@@ -99,11 +129,29 @@ impl UserThemes {
                 }
                 _ => Arc::new(read_content(&path)),
             };
-            themes.push(UserTheme {
-                name: display_name(&path, &content),
-                path: path.clone(),
-                content: Arc::clone(&content),
-            });
+            let name = display_name(&path, &content);
+            let versions = match &*content {
+                Content::Json(Ok(json)) => json.variants.as_slice(),
+                _ => &[],
+            };
+            if versions.is_empty() {
+                themes.push(UserTheme {
+                    name: name.clone(),
+                    path: path.clone(),
+                    family: None,
+                    content: Arc::clone(&content),
+                    index: 0,
+                });
+            }
+            for (index, v) in versions.iter().enumerate() {
+                themes.push(UserTheme {
+                    name: v.name.clone(),
+                    path: path.clone(),
+                    family: Some((name.clone(), v.short.clone())),
+                    content: Arc::clone(&content),
+                    index,
+                });
+            }
             fresh.insert(path, Cached { len, modified, content });
         }
         // Only what the dir holds now stays cached.
@@ -137,7 +185,8 @@ impl UserThemes {
     /// its file, not after the theme it extends.
     pub fn resolve(&self, theme: &UserTheme) -> Result<ThemeTokens, String> {
         match &*theme.content {
-            Content::Json(Ok(file)) => {
+            Content::Json(Ok(_)) => {
+                let file = theme.file().ok_or("no theme")?;
                 let mut tokens = self.resolve_file(file)?;
                 if file.name.as_deref().is_none_or(str::is_empty) {
                     tokens.name = theme.name.clone();
@@ -156,10 +205,14 @@ impl ThemeSource for UserThemes {
     }
 }
 
-/// The built-in theme called `name`: exactly, else in any case.
+/// The built-in theme called `name`: exactly, else in any case, else the first version of the
+/// built-in family called `name`.
 pub fn builtin_named(name: &str) -> Option<&'static ThemeTokens> {
     let all = tokens::builtins();
-    all.iter().find(|t| t.name == name).or_else(|| all.iter().find(|t| t.name.eq_ignore_ascii_case(name)))
+    let exact = |name: &str| {
+        all.iter().find(|t| t.name == name).or_else(|| all.iter().find(|t| t.name.eq_ignore_ascii_case(name)))
+    };
+    exact(name).or_else(|| tokens::builtin_family_default(name).and_then(exact))
 }
 
 /// The files in `dir` that can be themes (not hidden), with their sizes and
@@ -196,7 +249,11 @@ fn read_content(path: &Path) -> Content {
     let text = fsutil::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
         .map_err(|e| e.to_string());
     if path.extension().is_some_and(|e| e == "json") {
-        Content::Json(text.and_then(|text| tokens::parse_theme_file(&text)))
+        let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        Content::Json(text.and_then(|text| tokens::parse_theme_file(&text)).and_then(|file| {
+            let variants = tokens::variants(&file, &stem)?;
+            Ok(Json { file, variants })
+        }))
     } else {
         Content::Palette(text.and_then(|text| theme::parse_file(path, &text)))
     }
@@ -205,7 +262,7 @@ fn read_content(path: &Path) -> Content {
 fn display_name(path: &Path, content: &Content) -> String {
     let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     match content {
-        Content::Json(Ok(file)) => file.name.clone().filter(|n| !n.is_empty()).unwrap_or(stem),
+        Content::Json(Ok(json)) => json.file.name.clone().filter(|n| !n.is_empty()).unwrap_or(stem),
         _ => stem,
     }
 }
@@ -282,6 +339,40 @@ mod tests {
         // A bare name still finds the broken file, so selecting it says what is wrong.
         let broken = user.named("broken").expect("listed");
         assert!(user.resolve(broken).expect_err("broken").contains("line 1"));
+    }
+
+    #[test]
+    fn a_file_that_ships_several_versions_is_one_theme_each() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        write(
+            dir.path(),
+            "dusk.json",
+            r##"{ "name": "Dusk", "extends": "Nord", "variants": [
+                { "name": "Dark" },
+                { "name": "Light", "terminal": { "background": "#fafafa" } } ] }"##,
+        );
+        write(dir.path(), "bad.json", r#"{ "name": "Bad", "variants": [{ "name": "A" }, { "name": "a" }] }"#);
+        let user = UserThemes::read(dir.path());
+        let names: Vec<&str> = user.themes.iter().map(|t| t.name.as_str()).collect();
+        // A file that doesn't parse is listed by its stem, to say what is wrong with it.
+        assert_eq!(names, ["bad", "Dusk Dark", "Dusk Light"]);
+        let path = dir.path().join("dusk.json");
+        assert_eq!(user.select("Dusk Light"), Some(ThemeId::Variant(path.clone(), "Light".into())));
+        // The family's name and the file's stem mean its first version.
+        assert_eq!(user.select("Dusk"), Some(ThemeId::Variant(path.clone(), "Dark".into())));
+        assert_eq!(user.select("dusk"), Some(ThemeId::Variant(path, "Dark".into())));
+        let light = user.named("Dusk Light").expect("listed");
+        assert_eq!(light.family, Some(("Dusk".into(), "Light".into())));
+        let tokens = user.resolve(light).expect("resolves");
+        assert_eq!(
+            (tokens.name.as_str(), tokens.terminal.background.to_hex()),
+            ("Dusk Light", "#fafafa".into())
+        );
+        // Another theme may extend a version by its name.
+        assert!(user.theme_file("Dusk Light").is_some_and(|f| f.variants.is_empty()));
+        // Variants that can't be told apart are reported, like any broken file.
+        let bad = user.named("bad").expect("listed");
+        assert!(user.resolve(bad).expect_err("broken").contains("two variants"));
     }
 
     #[test]

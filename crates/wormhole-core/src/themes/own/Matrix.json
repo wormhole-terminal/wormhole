@@ -1,0 +1,32 @@
+{
+  "name": "Matrix",
+  "terminal": {
+    "background": "#020803",
+    "foreground": "#4dff7c",
+    "cursor": "#00ff41",
+    "cursor_text": "#020803",
+    "selection_background": "#0f3d1c",
+    "selection_foreground": "#e6ffe9",
+    "ansi": {
+      "0": "#0c1f10",
+      "1": "#ff6b5e",
+      "2": "#00ff41",
+      "3": "#d4ff5c",
+      "4": "#3ddcb8",
+      "5": "#b5f2a0",
+      "6": "#5effc8",
+      "7": "#a8dcb0",
+      "8": "#2f7a40",
+      "9": "#ff8f82",
+      "10": "#7dff9e",
+      "11": "#e8ff8c",
+      "12": "#7af0d4",
+      "13": "#d0ffc0",
+      "14": "#9dffe0",
+      "15": "#e6ffe9"
+    }
+  },
+  "ui": {
+    "primary": "terminal.ansi.2"
+  }
+}

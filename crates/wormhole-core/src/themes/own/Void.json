@@ -1,0 +1,29 @@
+{
+  "name": "Void",
+  "terminal": {
+    "background": "#000000",
+    "foreground": "#d9d6cf",
+    "cursor": "#f5f3ee",
+    "cursor_text": "#000000",
+    "selection_background": "#262626",
+    "selection_foreground": "#ffffff",
+    "ansi": {
+      "0": "#161616",
+      "1": "#e5484d",
+      "2": "#46c46e",
+      "3": "#e8b53c",
+      "4": "#5b9dff",
+      "5": "#b38cff",
+      "6": "#3fc7c7",
+      "7": "#bdbab3",
+      "8": "#5a5a5a",
+      "9": "#ff6b6f",
+      "10": "#6fdc8f",
+      "11": "#ffd166",
+      "12": "#82b4ff",
+      "13": "#cfb0ff",
+      "14": "#6fe0e0",
+      "15": "#f5f3ee"
+    }
+  }
+}

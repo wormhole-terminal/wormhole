@@ -1,0 +1,68 @@
+{
+  "name": "Crimson",
+  "ui": {
+    "primary": "readable(#dc143c, surface.window, surface.panel, 3)"
+  },
+  "variants": [
+    {
+      "name": "Dark",
+      "appearance": "dark",
+      "terminal": {
+        "background": "#140709",
+        "foreground": "#f2e4e6",
+        "cursor": "#ff3b55",
+        "cursor_text": "#140709",
+        "selection_background": "#4a1a24",
+        "selection_foreground": "#ffffff",
+        "ansi": {
+          "0": "#2a1216",
+          "1": "#ff4d5e",
+          "2": "#7fd99a",
+          "3": "#f5b35c",
+          "4": "#8aa2ff",
+          "5": "#ff6fae",
+          "6": "#6fd6d0",
+          "7": "#d9c6c9",
+          "8": "#8a525c",
+          "9": "#ff7584",
+          "10": "#a3ecb7",
+          "11": "#ffd08a",
+          "12": "#b0c0ff",
+          "13": "#ff9cc8",
+          "14": "#9be8e3",
+          "15": "#ffffff"
+        }
+      }
+    },
+    {
+      "name": "Light",
+      "appearance": "light",
+      "terminal": {
+        "background": "#fbf4f4",
+        "foreground": "#2a1418",
+        "cursor": "#c8102e",
+        "cursor_text": "#fbf4f4",
+        "selection_background": "#f1cfd5",
+        "selection_foreground": "#2a1418",
+        "ansi": {
+          "0": "#2a1418",
+          "1": "#b3122e",
+          "2": "#2a7030",
+          "3": "#835c00",
+          "4": "#2a55b8",
+          "5": "#9a2f7a",
+          "6": "#0d6f79",
+          "7": "#6a5458",
+          "8": "#8f7a7e",
+          "9": "#9e0f28",
+          "10": "#22622a",
+          "11": "#7a5600",
+          "12": "#1d4ca8",
+          "13": "#85286a",
+          "14": "#0a5f68",
+          "15": "#a8969a"
+        }
+      }
+    }
+  ]
+}

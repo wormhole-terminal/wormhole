@@ -234,7 +234,8 @@ pub fn parse_file(path: &Path, text: &str) -> Result<Theme, String> {
     }
 }
 
-/// Bundled themes (display name, Ghostty-format source). First is the default.
+/// Bundled palettes (display name, Ghostty-format source), the imported themes. First is the
+/// default. Wormhole's own themes are theme files (`tokens::own`), listed after these.
 const BUILTIN: &[(&str, &str)] = &[
     ("Tokyo Night", include_str!("themes/TokyoNight")),
     ("Catppuccin Mocha", include_str!("themes/Catppuccin Mocha")),
@@ -250,17 +251,6 @@ const BUILTIN: &[(&str, &str)] = &[
     ("GitHub Dark", include_str!("themes/GitHub Dark")),
     ("GitHub Light", include_str!("themes/GitHub Light Default")),
     ("Monokai Pro", include_str!("themes/Monokai Pro")),
-    // Wormhole's own: three that pop, two built on deep blacks, three that each keep to one mood,
-    // and a light one.
-    ("Nebula", include_str!("themes/Nebula")),
-    ("Solar Flare", include_str!("themes/Solar Flare")),
-    ("Borealis", include_str!("themes/Borealis")),
-    ("Event Horizon", include_str!("themes/Event Horizon")),
-    ("Void", include_str!("themes/Void")),
-    ("Crimson", include_str!("themes/Crimson")),
-    ("Cyberpunk", include_str!("themes/Cyberpunk")),
-    ("Matrix", include_str!("themes/Matrix")),
-    ("Soltari", include_str!("themes/Soltari")),
 ];
 
 /// All bundled themes; the first entry (Tokyo Night) is the default. A copy
@@ -498,6 +488,6 @@ white = "0xffffff"
         assert!(is_light(&by("Catppuccin Latte")));
         assert!(is_light(&by("GitHub Light")));
         let lights: Vec<_> = builtin().into_iter().filter(is_light).map(|t| t.name).collect();
-        assert_eq!(lights, ["Catppuccin Latte", "GitHub Light", "Soltari"]);
+        assert_eq!(lights, ["Catppuccin Latte", "GitHub Light"]);
     }
 }

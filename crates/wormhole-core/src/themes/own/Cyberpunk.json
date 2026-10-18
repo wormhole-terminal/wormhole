@@ -1,0 +1,32 @@
+{
+  "name": "Cyberpunk",
+  "terminal": {
+    "background": "#0c0a1a",
+    "foreground": "#e0f7ff",
+    "cursor": "#fcee0a",
+    "cursor_text": "#0c0a1a",
+    "selection_background": "#3b1f5c",
+    "selection_foreground": "#ffffff",
+    "ansi": {
+      "0": "#1e1a33",
+      "1": "#ff2a6d",
+      "2": "#05ffa1",
+      "3": "#fcee0a",
+      "4": "#5a8bff",
+      "5": "#e040fb",
+      "6": "#00f0ff",
+      "7": "#cfd3ff",
+      "8": "#5d5788",
+      "9": "#ff5c8a",
+      "10": "#6bffc4",
+      "11": "#fff65c",
+      "12": "#8aaeff",
+      "13": "#f07cff",
+      "14": "#7af8ff",
+      "15": "#ffffff"
+    }
+  },
+  "ui": {
+    "primary": "#ff3cac"
+  }
+}
