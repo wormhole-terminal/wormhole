@@ -23,6 +23,7 @@
 //! Lock order: the screen's, then the stream's. A [`Wake`] takes neither.
 
 mod event;
+mod memory;
 pub mod meta;
 pub mod paths;
 mod stream;
@@ -250,6 +251,14 @@ impl HostedTerminal {
             gaps: made.gaps,
             history_lines: made.history_lines,
         })
+    }
+
+    /// The title, the folder and the OSC 7501 reports the program has left standing, as the events
+    /// that tell a client that attaches now (it was not there when they were heard). A repaint
+    /// carries none of them. Deliver them in this order; each is idempotent, so one that is also
+    /// in the stream a cursor reads is harmless.
+    pub fn remembered(&self) -> Vec<HostEvent> {
+        self.core.remembered()
     }
 
     /// What the scrollbar and the sidebar read.

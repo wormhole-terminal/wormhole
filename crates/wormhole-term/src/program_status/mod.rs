@@ -60,7 +60,7 @@ impl State {
 
     /// Done and error outlive the program and its prompt; the terminal decides when the user has
     /// seen them. The rest is only true while the program runs.
-    fn outlives_program(self) -> bool {
+    pub(crate) fn outlives_program(self) -> bool {
         matches!(self, State::Done | State::Error)
     }
 }

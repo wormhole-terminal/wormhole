@@ -9,6 +9,7 @@ use wormhole_vt::types::TermMode;
 use wormhole_wire as wire;
 
 use super::event::{HostEvent, window_op_to_wire};
+use super::memory::Memory;
 use super::stream::{Stream, Wake};
 use crate::engine::OwnFeed;
 use crate::events::{Heard, Reply, Tap, TextFormatter};
@@ -57,6 +58,9 @@ pub(super) struct Core {
     /// The reader thread is over (the program exited and was reported, or was hung up).
     pub finished: AtomicBool,
     pub exit: Mutex<Option<wire::ExitInfo>>,
+    /// What a client that attaches later is told (title, folder, reports). Updated under the
+    /// screen's lock, as the events are heard; a leaf lock.
+    memory: Mutex<Memory>,
     /// A controller is attached to answer the clipboard.
     controller: AtomicBool,
     clipboard: Mutex<Clipboard>,
@@ -78,6 +82,7 @@ impl Core {
             input_written: AtomicU64::new(0),
             finished: AtomicBool::new(false),
             exit: Mutex::new(None),
+            memory: Mutex::new(Memory::default()),
             controller: AtomicBool::new(false),
             clipboard: Mutex::new(Clipboard::default()),
             wake,
@@ -86,6 +91,15 @@ impl Core {
 
     pub fn wake(&self) {
         (self.wake)();
+    }
+
+    fn memory(&self) -> MutexGuard<'_, Memory> {
+        self.memory.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// The events that tell a late client the title, folder and reports (see [`Memory`]).
+    pub fn remembered(&self) -> Vec<HostEvent> {
+        self.memory().events()
     }
 
     fn clipboard(&self) -> MutexGuard<'_, Clipboard> {
@@ -183,6 +197,8 @@ impl Core {
             at_ms: now_ms(),
         };
         *self.exit.lock().unwrap_or_else(PoisonError::into_inner) = Some(info);
+        // As a local terminal's `Shared` ends what a program reported with its process.
+        self.memory().program_over();
         self.stream.push_event(self.stream.total(), HostEvent::Exited(info));
         self.wake();
     }
@@ -216,18 +232,33 @@ impl Tap for Core {
     fn heard(&self, what: Heard<'_>) {
         let at = self.slice_end.load(Ordering::Acquire);
         let event = match what {
-            Heard::Title(title) => HostEvent::Title(title.to_owned()),
-            Heard::ResetTitle => HostEvent::ResetTitle,
+            Heard::Title(title) => {
+                self.memory().set_title(title);
+                HostEvent::Title(title.to_owned())
+            }
+            Heard::ResetTitle => {
+                self.memory().clear_title();
+                HostEvent::ResetTitle
+            }
             Heard::Bell => HostEvent::Bell,
             // A path too long for the wire's strings is no folder worth showing.
             Heard::Cwd(path) => match path.to_str().filter(|p| p.len() <= 4096) {
-                Some(path) => HostEvent::Cwd(path.to_owned()),
+                Some(path) => {
+                    self.memory().set_cwd(path);
+                    HostEvent::Cwd(path.to_owned())
+                }
                 None => return,
             },
-            Heard::Mark(mark, prompt) => match mark_event(mark, prompt) {
-                Some(event) => event,
-                None => return,
-            },
+            Heard::Mark(mark, prompt) => {
+                // A new prompt: whatever program was reporting is over.
+                if mark == Mark::PromptStart(PromptKind::Initial) {
+                    self.memory().program_over();
+                }
+                match mark_event(mark, prompt) {
+                    Some(event) => event,
+                    None => return,
+                }
+            }
             Heard::Notify(notification) => HostEvent::Notify {
                 source: 0,
                 title: notification.title.clone(),
@@ -246,7 +277,10 @@ impl Tap for Core {
                 },
             },
             Heard::ProgramStatus(body) => match std::str::from_utf8(body) {
-                Ok(body) => HostEvent::ProgramStatus(body.to_owned()),
+                Ok(body) => {
+                    self.memory().report(body);
+                    HostEvent::ProgramStatus(body.to_owned())
+                }
                 Err(_) => return,
             },
             Heard::ClipboardStore(text) => {
@@ -257,7 +291,10 @@ impl Tap for Core {
                 let (op, a, b) = window_op_to_wire(op);
                 HostEvent::WindowOp { op, a, b }
             }
-            Heard::FullReset => HostEvent::FullReset,
+            Heard::FullReset => {
+                self.memory().full_reset();
+                HostEvent::FullReset
+            }
             Heard::Exited { code, signal } => return self.exited(code, signal),
         };
         self.stream.push_event(at, event);

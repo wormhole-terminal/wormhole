@@ -184,3 +184,18 @@ fn a_headless_terminal_hears_the_title_and_the_exit() {
     assert!(matches!(got, PtyEvent::Exited(Some(3))));
     assert!(!headless.host_lost());
 }
+
+#[test]
+fn a_headless_attach_after_a_relaunch_is_told_the_title_it_missed() {
+    let place = Place::new();
+    let script = "printf '\\033]2;hello\\007'; read x";
+    let (pty, events) = start(&place, "/bin/sh", &["-c", script]);
+    // Heard by the host once the first client has it.
+    let got = next_event(&events, "title", |e| matches!(e, PtyEvent::Title(_)));
+    assert!(matches!(got, PtyEvent::Title(title) if title == "hello"));
+    assert!(pty.detach());
+    drop(pty);
+    let (_headless, events) = place.attach(false);
+    let got = next_event(&events, "title", |e| matches!(e, PtyEvent::Title(_)));
+    assert!(matches!(got, PtyEvent::Title(title) if title == "hello"));
+}

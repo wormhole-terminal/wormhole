@@ -306,6 +306,15 @@ impl<S: Spawner> Session<S> {
             program.set_controller(true);
         }
         let conn = &mut self.conns[at];
+        // The other modes have no repaint to carry them: at once, at the offset the stream is read
+        // from. The cursor exists already, so an event that happens now is heard again live
+        // (replayed ones are idempotent), never missed.
+        if attach.stream != StreamMode::Sync {
+            let offset = attachment.sent;
+            for event in program.remembered() {
+                conn.send(&Message::Event(event.to_wire(offset)));
+            }
+        }
         if exited && attach.stream != StreamMode::Sync {
             let exit = program.exit();
             if let Some(exit) = exit {

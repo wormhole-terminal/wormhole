@@ -192,6 +192,26 @@ fn a_sync_attach_takes_the_size_then_the_seeds_then_the_repaint_then_the_stream(
 }
 
 #[test]
+fn what_the_host_replays_after_a_repaint_reaches_the_app_as_live_events_do() {
+    let (pty, events, mut script) = connected(StreamMode::Sync);
+    let (bytes, seeds) = repaint_of(40, 10, b"restored");
+    send_repaint(&mut script, 100, wire_size(40, 10), &bytes, seeds);
+    // After the repaint's last part, as the host sends them: the replica is the new one by then.
+    script.event(100, EventKind::Title("hello"));
+    script.event(100, EventKind::Cwd("/"));
+    script.event(100, EventKind::ProgramStatus("state=blocked:kind=question:app=claude-code:msg=Which one?"));
+    let got = next_event(&events, "title", |e| matches!(e, PtyEvent::Title(_)));
+    assert!(matches!(got, PtyEvent::Title(title) if title == "hello"));
+    next_event(&events, "folder", |e| matches!(e, PtyEvent::Cwd));
+    next_event(&events, "status", |e| matches!(e, PtyEvent::ProgramStatus));
+    assert_eq!(pty.cwd().as_deref(), Some(std::path::Path::new("/")));
+    let summary = pty.program_status().summary().expect("the report stands");
+    assert_eq!(summary.state, crate::program_status::State::Blocked);
+    assert_eq!(summary.kind, Some(crate::program_status::Kind::Question));
+    wait_for("the repaint", || pty.screen_text().contains("restored"));
+}
+
+#[test]
 fn too_slow_attaches_again_and_the_repaint_replaces_the_screen() {
     let (pty, _events, mut script) = connected(StreamMode::Raw);
     script.send(&Message::Out(wire::Out { offset: 0, bytes: b"old text\r\n" }));

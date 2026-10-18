@@ -5,7 +5,7 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_term::hosted::{Cursor, HostedTerminal, NotReady, Repainted, Wake};
+use wormhole_term::hosted::{Cursor, HostEvent, HostedTerminal, NotReady, Repainted, Wake};
 use wormhole_wire as wire;
 
 /// A running (or ended) terminal, as the session drives it.
@@ -21,6 +21,8 @@ pub trait Program {
     fn follow(&self, bytes: bool, gap: Duration, wake: Wake) -> Cursor;
     /// The attach repaint into `out` and a cursor from where it stands.
     fn repaint(&self, max_history: usize, out: &mut Vec<u8>, wake: Wake) -> Result<Repainted, NotReady>;
+    /// The title, folder and OSC 7501 reports a client that attaches now did not hear, as events.
+    fn remembered(&self) -> Vec<HostEvent>;
     fn counters(&self) -> wire::Counters;
     fn progress(&self) -> u64;
     fn exit(&self) -> Option<wire::ExitInfo>;
@@ -81,6 +83,9 @@ impl Program for HostedTerminal {
     }
     fn repaint(&self, max_history: usize, out: &mut Vec<u8>, wake: Wake) -> Result<Repainted, NotReady> {
         HostedTerminal::repaint(self, max_history, out, wake)
+    }
+    fn remembered(&self) -> Vec<HostEvent> {
+        HostedTerminal::remembered(self)
     }
     fn counters(&self) -> wire::Counters {
         HostedTerminal::counters(self)

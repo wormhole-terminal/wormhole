@@ -64,6 +64,12 @@ impl<S: Spawner> Session<S> {
                 let blocked = conn.pending() >= OUT_HIGH;
                 return check_stall(conn, blocked, now, next, stall_limit) || !blocked;
             }
+            // Before the exit: a program that ended has its reports ended with it.
+            let offset = attach.sent;
+            for event in std::mem::take(&mut attach.replay) {
+                conn.send(&Message::Event(event.to_wire(offset)));
+            }
+            let Some(attach) = &mut conn.attach else { return false };
             if std::mem::take(&mut attach.exited_after_repaint)
                 && let Some(exit) = program.exit()
             {
@@ -160,6 +166,9 @@ impl<S: Spawner> Session<S> {
         attach.acked = made.offset;
         attach.cursor = Some(made.cursor);
         attach.repaint = Some(PendingRepaint { bytes, pos: 0, epoch: made.epoch, offset: made.offset });
+        // Made with the repaint, told after its last part: the client has replaced its replica by
+        // then, and these are not in the repaint.
+        attach.replay = program.remembered();
         // The replica takes the size first, then the counters VT cannot set, then the repaint.
         conn.send(&Message::ResizeApplied(wire::ResizeApplied {
             offset: made.offset,

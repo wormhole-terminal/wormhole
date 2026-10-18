@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use wormhole_term::hosted::Cursor;
+use wormhole_term::hosted::{Cursor, HostEvent};
 use wormhole_wire::{self as wire, CHANNEL_LOCAL, Decoder, Message, Role, StreamMode};
 
 /// Stream bytes are not taken out of the ring while this much is waiting to be written: the rest
@@ -59,6 +59,8 @@ pub(super) struct Attachment {
     pub waiting: Option<Waiting>,
     /// Since when the stream had bytes for it that could not go out.
     pub stalled_since: Option<Instant>,
+    /// What the repaint cannot say (the title, folder, reports), told once the repaint is out.
+    pub replay: Vec<HostEvent>,
     /// Tell it the program exited once the repaint is out (it attached after the exit).
     pub exited_after_repaint: bool,
     pub counters: Option<wire::Counters>,
@@ -76,6 +78,7 @@ impl Attachment {
             repaint: None,
             waiting: None,
             stalled_since: None,
+            replay: Vec::new(),
             exited_after_repaint: false,
             counters: None,
             counters_at: None,

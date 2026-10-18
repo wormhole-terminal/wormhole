@@ -30,6 +30,8 @@ struct State {
     controller: bool,
     progress: u64,
     clipboard: Vec<(u32, Vec<u8>)>,
+    /// What the terminal says it remembers (title, folder, reports).
+    remembered: Vec<HostEvent>,
 }
 
 struct Fake {
@@ -81,6 +83,9 @@ impl Program for Fake {
             gaps: Gaps::empty(),
             history_lines: 0,
         })
+    }
+    fn remembered(&self) -> Vec<HostEvent> {
+        self.state.borrow().remembered.clone()
     }
     fn counters(&self) -> wire::Counters {
         wire::Counters {
@@ -424,6 +429,97 @@ fn a_sync_attach_is_the_size_the_seeds_the_repaint_in_parts_then_the_bytes() {
     assert!(matches!(parts[1], Got::Repaint { offset: 14, first: false, last: true, .. }));
     rig.stream.append(b"new");
     assert_eq!(rig.recv(id).first(), Some(&Got::Out(14, b"new".to_vec())));
+}
+
+/// The title, the folder and one report, as a terminal that heard them remembers them.
+fn remember_some(rig: &Rig) {
+    rig.state.borrow_mut().remembered = vec![
+        HostEvent::Title("build".into()),
+        HostEvent::Cwd("/work".into()),
+        HostEvent::ProgramStatus("state=working".into()),
+    ];
+}
+
+/// The remembered events among `got`, in the order they came, with the index each came at.
+fn remembered_in(got: &[Got]) -> Vec<(usize, Got)> {
+    got.iter()
+        .cloned()
+        .enumerate()
+        .filter(|(_, g)| {
+            matches!(g, Got::Event(_, e) if e.starts_with("Title(") || e.starts_with("Cwd(") || e.starts_with("ProgramStatus("))
+        })
+        .collect()
+}
+
+fn the_three(offset: u64) -> Vec<Got> {
+    vec![
+        Got::Event(offset, "Title(\"build\")".into()),
+        Got::Event(offset, "Cwd(\"/work\")".into()),
+        Got::Event(offset, "ProgramStatus(\"state=working\")".into()),
+    ]
+}
+
+#[test]
+fn every_attach_is_told_the_title_the_folder_and_the_report_in_order() {
+    let mut rig = Rig::new();
+    let id = rig.spawned();
+    rig.stream.append(b"earlier output");
+    remember_some(&rig);
+
+    // Raw, from the stream's first byte: at once, before the bytes.
+    let got = rig.attach(id, StreamMode::Raw, 0);
+    let told = remembered_in(&got);
+    assert_eq!(told.iter().map(|(_, g)| g.clone()).collect::<Vec<_>>(), the_three(0), "{got:?}");
+    assert!(
+        got.iter().position(|g| matches!(g, Got::Out(..))) > Some(told[2].0),
+        "before the bytes: {got:?}"
+    );
+
+    // Headless, from now: at once, at the stream's offset.
+    let other = rig.connect();
+    rig.hello(other, Role::Observer, false);
+    let got = rig.attach(other, StreamMode::None, 0);
+    assert_eq!(got.iter().filter(|g| matches!(g, Got::Event(..))).cloned().collect::<Vec<_>>(), the_three(0));
+
+    // Raw from now.
+    let third = rig.connect();
+    rig.hello(third, Role::Observer, false);
+    let got = rig.attach(third, StreamMode::Raw, 0);
+    assert_eq!(
+        got.iter().filter(|g| matches!(g, Got::Event(..))).cloned().collect::<Vec<_>>(),
+        the_three(14)
+    );
+
+    // Sync: after the seeds and the repaint's last part, at the repaint's offset.
+    let got = rig.attach(id, StreamMode::Sync, 0);
+    let told = remembered_in(&got);
+    assert_eq!(told.iter().map(|(_, g)| g.clone()).collect::<Vec<_>>(), the_three(14), "{got:?}");
+    let seeds = got.iter().position(|g| matches!(g, Got::Event(_, e) if e.contains("RepaintSeeds")));
+    let last = got.iter().position(|g| matches!(g, Got::Repaint { last: true, .. }));
+    assert!(seeds < last && last < Some(told[0].0), "seeds, the repaint, then the three: {got:?}");
+    assert_eq!(told.windows(2).filter(|w| w[1].0 != w[0].0 + 1).count(), 0, "together: {got:?}");
+}
+
+#[test]
+fn an_attach_with_nothing_remembered_sends_no_such_events() {
+    let mut rig = Rig::new();
+    let id = rig.spawned();
+    let got = rig.attach(id, StreamMode::None, 0);
+    assert!(remembered_in(&got).is_empty(), "{got:?}");
+}
+
+#[test]
+fn a_sync_attach_waiting_for_the_parser_tells_them_once_the_repaint_is_out() {
+    let mut rig = Rig::new();
+    let id = rig.spawned();
+    remember_some(&rig);
+    rig.state.borrow_mut().ready = false;
+    let got = rig.attach(id, StreamMode::Sync, 0);
+    assert!(remembered_in(&got).is_empty(), "{got:?}");
+    rig.state.borrow_mut().ready = true;
+    rig.advance(Duration::from_millis(5));
+    let got = rig.recv(id);
+    assert_eq!(remembered_in(&got).len(), 3, "{got:?}");
 }
 
 #[test]
