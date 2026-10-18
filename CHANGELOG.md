@@ -13,10 +13,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   being built. Stable, the default, gets releases only. Going back to Stable keeps the build you have
   until the next release overtakes it.
 
-- Five new themes of Wormhole's own: Nebula (deep violet with neon pink, mint and electric blue),
+- Nine new themes of Wormhole's own: Nebula (deep violet with neon pink, mint and electric blue),
   Solar Flare (warm and hot: coral, acid lime and amber), Borealis (teal-black with aurora greens and
-  violet), and two built on deep blacks, Event Horizon (near-black and cool) and Void (true black, for
-  OLED-deep blacks). Every colour keeps at least 5:1 on its background.
+  violet), two built on deep blacks, Event Horizon (near-black and cool) and Void (true black, for
+  OLED-deep blacks), Crimson (red-black with a crimson cursor), Cyberpunk (indigo night with hot pink,
+  cyan and signal yellow), Matrix (phosphor green on black) and Soltari, a light one (ivory with deep
+  jewel tones and a gold cursor). Every colour keeps at least 5:1 on its background.
 - The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
   above it, and the terminal's text stands 12 pt from the window's edges, the sidebar, the panel and the
   status bar (the surface 8 pt, the grid 4 pt inside it, as in 1.1), so at the window's edge it lines

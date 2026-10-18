@@ -1,8 +1,9 @@
 # Bundled Theme Credits
 
-Nebula, Solar Flare, Borealis, Event Horizon and Void are Wormhole's own, made for it and covered
-by its license. The other color scheme files in `src/themes/` were taken unmodified from the
-`ghostty/` directory of the iTerm2-Color-Schemes project:
+Nebula, Solar Flare, Borealis, Event Horizon, Void, Crimson, Cyberpunk, Matrix and Soltari are
+Wormhole's own, made for it and covered by its license. The other color scheme files in
+`src/themes/` were taken unmodified from the `ghostty/` directory of the iTerm2-Color-Schemes
+project:
 
 https://github.com/mbadolato/iTerm2-Color-Schemes
 

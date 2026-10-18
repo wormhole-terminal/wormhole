@@ -1,0 +1,207 @@
+# Soltari (Light)
+agent.attention #835c00
+agent.attention.ring #835c0047
+agent.attention.text #7a5500
+agent.attention.tint #835c001f
+agent.bell #ff9e64
+agent.claude #d97757
+agent.done #2a7030
+agent.done.text #226929
+agent.exited #807e7e
+agent.gemini #3b7bff
+agent.gemini.end #8f6cf5
+agent.working #2459c2
+band #2b2a350d
+band.hover #2b2a3514
+band.solid #e3dfd8
+banner.danger.background #b8243c1a
+banner.danger.border #b8243c59
+banner.info.background #0d6f791a
+banner.info.border #0d6f7959
+banner.success.background #2a70301a
+banner.success.border #2a703059
+banner.warning.background #835c001a
+banner.warning.border #835c0059
+border #2b2a3524
+border.focus #2459c2
+border.strong #2b2a3547
+button.background #eae6df
+button.hover #e0dcd6
+button.text #2b2a35
+card #2b2a3508
+card.edge #2b2a351f
+checkbox.background #fcfbf9
+checkbox.border #807e7e
+checkbox.checked #2459c2
+chip.border #2b2a3547
+chip.selected #2459c2
+chip.tint #2459c229
+diff.added #226929
+diff.added.background #dee2d4
+diff.filler #2b2a3529
+diff.hunk.background #e1e3e6
+diff.hunk.text #646266
+diff.line_number #7f7d7d
+diff.removed #b21d38
+diff.removed.background #efd9d5
+find.match #cea35a66
+find.match.current #cea35a
+find.match.current.text #000000
+git.branch #783a94
+git.branch.background #783a9424
+input.background #fcfbf9
+input.border #2b2a3547
+input.border.focus #2459c2
+input.placeholder #807e7e
+list.selected #dde3ef
+list.selected.muted #646266
+list.selected.text #2459c2
+primary #2459c2
+primary.hover #0b40a7
+resize.handle.active #2459c2
+resize.handle.hover #2459c280
+scrollbar.thumb #2b2a354d
+selection.ui #2459c240
+shadow #00000029
+sidebar.background #ece8e1
+sidebar.row.hover #2b2a350d
+sidebar.row.selected #d0d4dc
+sidebar.row.selected.muted #5d5b5f
+sidebar.row.selected.text #2156be
+state.active #2b2a351a
+state.highlight #2459c224
+state.hover #2b2a350d
+state.selected #2459c224
+state.selected.inset #2459c23d
+status.danger #b8243c
+status.danger.text #b21d38
+status.info #0d6f79
+status.success #2a7030
+status.success.text #226929
+status.warning #835c00
+status.warning.text #7a5500
+surface.elevated #fbfaf7
+surface.overlay #00000040
+surface.panel #ece8e1
+surface.window #f6f2ea
+switch.knob #ffffff
+tab.active.background #fbfaf7
+tab.inactive.text #646266
+text.disabled #a4a19f
+text.faint #807e7e
+text.link #2459c2
+text.muted #646266
+text.on_primary #ffffff
+text.on_selected #ffffff
+text.on_selected.muted #d7e5ff
+text.primary #2b2a35
+tile.background #121318
+tile.edge #ffffff1a
+tile.mark #c9d1e4
+tile.mark.brand #ffffff
+tile.sheen #ffffff24
+titlebar.background #ece8e1
+tooltip.background #2b2a35
+tooltip.text #f6f2ea
+trust.command #026b75
+syntax.attribute #825b00 italic
+syntax.boolean #9e401e
+syntax.comment #7f7d7f italic
+syntax.comment.doc #7f7d7f italic
+syntax.constant #9e401e
+syntax.constant.builtin #9e401e
+syntax.constructor #825b00
+syntax.embedded #2b2a35
+syntax.emphasis #2b2a35 italic
+syntax.emphasis.strong #2b2a35 bold
+syntax.enum #825b00
+syntax.function #2459c2
+syntax.function.builtin #076c76
+syntax.function.macro #076c76
+syntax.function.method #2459c2
+syntax.keyword #8e3bb3
+syntax.keyword.control #8e3bb3
+syntax.keyword.operator #8e3bb3
+syntax.label #8e3bb3
+syntax.link_text #2459c2
+syntax.link_uri #076c76 italic
+syntax.namespace #825b00
+syntax.number #9e401e
+syntax.operator #19535e
+syntax.preproc #8e3bb3
+syntax.property #076c76
+syntax.punctuation #5e5c62
+syntax.punctuation.bracket #5e5c62
+syntax.punctuation.delimiter #5e5c62
+syntax.punctuation.special #19535e
+syntax.string #2a7030
+syntax.string.escape #076c76
+syntax.string.regex #076c76
+syntax.string.special #076c76
+syntax.tag #b8243c
+syntax.text.literal #2a7030
+syntax.title #2459c2 bold
+syntax.type #825b00
+syntax.type.builtin #825b00
+syntax.variable #2b2a35
+syntax.variable.builtin #b8243c
+syntax.variable.parameter #2b2a35
+syntax.variable.special #b8243c
+syntax.variant #9e401e
+metrics.radius_sm 4
+metrics.radius_chip 4
+metrics.radius 6
+metrics.radius_lg 10
+metrics.border_width 1
+metrics.focus_ring_width 2
+translucent 80% blur text.primary #2b2a35
+translucent 80% blur text.muted #555357
+translucent 80% blur text.faint #706e6e
+translucent 80% blur git.branch #6a2b85
+translucent 80% blur sidebar.row.selected.text #1246ae
+translucent 80% blur sidebar.row.selected.muted #4f4d51
+translucent 80% no blur text.primary #2b2a35
+translucent 80% no blur text.muted #474549
+translucent 80% no blur text.faint #615f5f
+translucent 80% no blur git.branch #5c1b76
+translucent 80% no blur sidebar.row.selected.text #02379e
+translucent 80% no blur sidebar.row.selected.muted #424044
+increase_contrast agent.attention.text #6e4c00
+increase_contrast agent.done.text #165f1f
+increase_contrast agent.exited #6b6869
+increase_contrast band #2b2a3514
+increase_contrast band.hover #2b2a3521
+increase_contrast band.solid #ddd9d3
+increase_contrast border #2b2a3566
+increase_contrast border.strong #2b2a3594
+increase_contrast card #2b2a350f
+increase_contrast card.edge #2b2a3547
+increase_contrast checkbox.border #6b6869
+increase_contrast chip.border #2b2a3594
+increase_contrast diff.added #165f1f
+increase_contrast diff.hunk.text #4d4b50
+increase_contrast diff.line_number #6b6869
+increase_contrast diff.removed #a6072e
+increase_contrast git.branch #743690
+increase_contrast git.branch.background #74369024
+increase_contrast input.border #2b2a3594
+increase_contrast input.placeholder #6b6869
+increase_contrast list.selected #c8d3ea
+increase_contrast list.selected.muted #4d4b50
+increase_contrast list.selected.text #2055bd
+increase_contrast sidebar.row.hover #2b2a351a
+increase_contrast sidebar.row.selected #bcc6d9
+increase_contrast sidebar.row.selected.muted #4d4b50
+increase_contrast sidebar.row.selected.text #174bb3
+increase_contrast state.active #2b2a3529
+increase_contrast state.hover #2b2a351a
+increase_contrast state.selected #2459c23d
+increase_contrast state.selected.inset #2459c247
+increase_contrast status.danger.text #a6072e
+increase_contrast status.success.text #165f1f
+increase_contrast status.warning.text #6e4c00
+increase_contrast tab.inactive.text #4d4b50
+increase_contrast text.disabled #94918f
+increase_contrast text.faint #6b6869
+increase_contrast text.muted #4d4b50
+increase_contrast metrics.focus_ring_width 3
