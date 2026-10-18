@@ -26,13 +26,15 @@
 //! # Shape
 //!
 //! `rows` writes the screens (history by scrolling it in, the screen by cursor addressing),
-//! `pen` the renditions, links, protection and block marks the cells carry, `tables` everything
-//! else, and `fields` lists every field of the engine's state and how each is covered, which
+//! `pen` the renditions, links, protection and block marks the cells carry, `tables` the tab
+//! stops, colors, titles and the rest of what programs set, `cursors` the counters, the saved
+//! cursors, the modes and the cursor last, and `fields` lists every field of the engine's state and how each is covered, which
 //! `tests/structure.rs` checks against the source so that a new field cannot be forgotten.
 //!
 //! The writer takes `&Terminal`: it changes nothing, damage included, and allocates nothing but
 //! the growth of the caller's buffer, which the caller keeps between calls.
 
+mod cursors;
 mod fields;
 mod pen;
 mod rows;
