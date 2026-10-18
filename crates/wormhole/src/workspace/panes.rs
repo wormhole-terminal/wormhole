@@ -273,9 +273,9 @@ impl Workspace {
 
     // ---------------------------------------------------------------- drawing
 
-    /// Measures the area the panes share (below the title rows, the whole terminal column): what
+    /// Measures the area the panes share (the terminal's surface): what
     /// a divider's drag, ⌥⌘arrows and the room for a split are worked out in.
-    pub(super) fn pane_probe(&self, inset: f32, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn pane_probe(&self, cx: &mut Context<Self>) -> AnyElement {
         let this = cx.entity().downgrade();
         canvas(
             move |bounds, _, cx| {
@@ -284,32 +284,22 @@ impl Workspace {
             |_, _, _, _| {},
         )
         .absolute()
-        .top(px(inset))
-        .bottom_0()
+        .top_0()
         .left_0()
-        .right_0()
+        .size_full()
         .into_any_element()
     }
 
     /// The selected terminal's split: each pane with its header, the dividers over their
-    /// shared edges, below the title rows (`inset` tall). A zoomed pane alone fills the area.
-    pub(super) fn render_panes(&self, inset: f32, cx: &mut Context<Self>) -> AnyElement {
+    /// shared edges, the whole surface. A zoomed pane alone fills the area.
+    pub(super) fn render_panes(&self, cx: &mut Context<Self>) -> AnyElement {
         let Some(split) = self.active_split() else { return div().into_any_element() };
         let order = split.layout.panes();
         let body = match split.layout.zoomed() {
             Some(id) => self.render_pane(split, id, &order, cx),
             None => self.render_node(split, split.layout.tree().root(), &mut Vec::new(), &order, cx),
         };
-        div()
-            .id("panes")
-            .absolute()
-            .top(px(inset))
-            .bottom_0()
-            .left_0()
-            .right_0()
-            .flex()
-            .child(body)
-            .into_any_element()
+        div().id("panes").absolute().top_0().left_0().size_full().flex().child(body).into_any_element()
     }
 
     /// A node of the tree: a pane, or its children along the split's axis, each taking its share

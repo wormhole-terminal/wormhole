@@ -400,7 +400,7 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
 impl Workspace {
     /// The diff view, its card `top` below the column's top (under the floating title row), or
     /// inset like its sides where nothing is over it (`None`: the title row sits above the column).
-    pub(crate) fn render_diff(&self, top: Option<f32>, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(crate) fn render_diff(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let view = self.diff_view.as_ref()?;
         let ui = ui_in(&self.profile, cx);
         let colors = DiffColors::new(&store_in(&self.profile, cx).tokens);
@@ -434,7 +434,7 @@ impl Workspace {
                 .size_full()
                 .flex()
                 .flex_col()
-                .pt(px(top.unwrap_or(CARD_INSET)))
+                .pt(px(CARD_INSET))
                 .px(px(CARD_INSET))
                 .pb(px(CARD_INSET))
                 .child(card)

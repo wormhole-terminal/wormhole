@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- The terminal is always a rounded surface, with or without Liquid Glass: the title bar has its own row above
+  it, both stand in 4 pt from the window, the sidebar, the panel and the status bar with 4 pt between them,
+  and their content starts on the same 12 pt edge. Glass only changes what they are made of.
 - The terminals of a split sit 8 pt apart, each its own rounded surface with the primary outline on the one
   that has the keyboard; the gap is the handle that resizes them. Settings → Terminal → Gaps between split
   terminals turns it off for the hairline join.

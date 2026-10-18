@@ -58,11 +58,6 @@ const PADDING_Y: f32 = crate::style::EDGE_INSET;
 pub const MIN_WIDTH: f32 = wormhole_core::layout::TERMINAL_MIN;
 /// The font sizes a terminal draws at: what Settings allows, the window's ⌘+ / ⌘- included.
 pub use wormhole_core::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
-/// Height of the workspace's floating title bar; the grid starts below it and
-/// earlier lines are drawn blurred underneath it. With several tabs the bar grows by their row
-/// (`set_top_inset`).
-pub const TOP_INSET: f32 = crate::style::TITLE_ROW_H;
-
 /// Geometry of the last painted frame, shared with mouse handlers.
 #[derive(Clone, Copy, Default)]
 struct Layout {
@@ -199,9 +194,6 @@ pub struct TerminalView {
     hovered_link: Option<wormhole_core::terminal::Link>,
     /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0).
     font_zoom: f32,
-    /// How much of the pane's top the workspace's title bar covers: [`TOP_INSET`], or more
-    /// while the tabs' row is under it.
-    top_inset: f32,
     /// Where the pointer holds the minimap's slider, over its top, while it's dragged.
     minimap_grab: Option<f32>,
     /// The scrollbar: its idle time, the pointer on it and the thumb held.
@@ -355,7 +347,6 @@ impl TerminalView {
             cursor_blink: None,
             hovered_link: None,
             font_zoom: 0.0,
-            top_inset: TOP_INSET,
             minimap_grab: None,
             scrollbar: Default::default(),
             dock: None,
@@ -420,20 +411,6 @@ impl TerminalView {
     pub fn grid_size(&self) -> (usize, usize) {
         let layout = self.layout.get();
         (layout.cols, layout.rows)
-    }
-
-    /// How much of the pane's top the title bar covers (the find bar sits below it).
-    pub fn top_inset(&self) -> f32 {
-        self.top_inset
-    }
-
-    /// The title bar over the pane is `inset` tall now; the grid starts below it.
-    pub fn set_top_inset(&mut self, inset: f32, cx: &mut Context<Self>) {
-        if (self.top_inset - inset).abs() > 0.5 {
-            self.top_inset = inset;
-            // The view is cached: lay the grid out again.
-            cx.notify();
-        }
     }
 
     pub fn write(&mut self, bytes: Vec<u8>) {

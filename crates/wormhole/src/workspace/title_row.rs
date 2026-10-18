@@ -2,8 +2,7 @@
 //! the selected terminal is and what it does (`breadcrumb`), Open in… and the two splits flush at
 //! the right end, the project's tint behind them and the line under the row.
 //!
-//! It floats over the top of the terminal, so earlier output scrolls under it, blurred by the
-//! terminal. The row's height is [`style::TITLE_ROW_H`]; the line, when it is drawn, is the one
+//! It has its own row above the terminal's surface and never overlaps it. The row's height is [`style::TITLE_ROW_H`]; the line, when it is drawn, is the one
 //! border width under it. An empty stretch of it is the window's title bar: dragging moves the
 //! window and a double-click does what the system setting says (zoom, or minimize).
 
@@ -74,9 +73,9 @@ pub(super) struct TitlePlan {
 /// The width of Open in… (the app's icon and its chevron), the two splits, and the one `⋯` they
 /// fold into; each with the gap that separates it from the breadcrumb.
 pub(super) const ROW_GAP: f32 = 4.0;
-/// The title row is a rounded bar this far in from the column's sides and the window's top, and
-/// from the terminal below it. Its content keeps the standard 12 from the column's edge (the
-/// terminal's text starts there too), so 8 from the bar's own edge.
+/// The title row is a rounded bar this far in from the column's sides and the window's top, and the
+/// terminal's surface below it stands in as far (sides, bottom) and this far under the bar: one inset
+/// for the pair. Content in both starts 12 from the surface's edge.
 pub(super) const BAR_INSET: f32 = 4.0;
 pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W;
 const CHEVRON_W: f32 = 16.0;
@@ -89,7 +88,7 @@ const APP_ICON: f32 = style::TITLE_GLYPH;
 
 impl Workspace {
     /// The terminal's title row: the selected terminal's breadcrumb (or the diff's title) and the
-    /// buttons at the right end, floating over the top of the terminal.
+    /// buttons at the right end, in its own row above the terminal's surface.
     pub(super) fn render_terminal_title_row(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let (drop_tint, system) = {

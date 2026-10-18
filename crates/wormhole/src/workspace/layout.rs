@@ -91,7 +91,7 @@ impl Workspace {
 
     /// The focused terminal's find bar, floating at the terminal's top right, under the
     /// title bar (in a split under its pane's header) and lined up with the grid's right edge.
-    fn render_find_bar(&self, inset: f32, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_find_bar(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let terminal = self.active_terminal();
         let terminal = terminal.read(cx);
         let bar = terminal.find_bar()?;
@@ -101,11 +101,11 @@ impl Workspace {
                 let (w, h) = (f32::from(self.pane_area.size.width), f32::from(self.pane_area.size.height));
                 let rect = split.layout.shown(w, h).into_iter().find(|(id, _)| *id == split.layout.focused());
                 match rect {
-                    Some((_, rect)) => (inset + rect.y + style::PANE_HEADER_H, px(w - rect.right()) + right),
-                    None => (inset, right),
+                    Some((_, rect)) => (rect.y + style::PANE_HEADER_H, px(w - rect.right()) + right),
+                    None => (0.0, right),
                 }
             }
-            None => (terminal.top_inset(), right),
+            None => (0.0, right),
         };
         Some(div().absolute().top(px(top)).mt_2().right(right).child(bar).into_any_element())
     }
@@ -144,24 +144,14 @@ impl Render for Workspace {
         let terminal = session.terminal().clone();
         let split = self.active_split().is_some();
         let gaps = settings_in(&self.profile, cx).split_gaps && self.diff_view.is_none();
-        // The diff sits in its own card below the bar, so nothing scrolls under it then; a split's
-        // panes start below the bar, with headers of their own.
-        // On glass the title row sits on the window above the terminal's rounded surface, so nothing
-        // lies under it; otherwise it floats over the terminal's top.
+        // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
+        // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
-        let inset = if lifted { 0.0 } else { crate::terminal_view::TOP_INSET };
-        // A pane of a split has its header over it instead of the title bar.
-        let pane_inset = if split { 0.0 } else { inset };
-        for ix in self.on_screen_sessions() {
-            self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_top_inset(pane_inset, cx));
-        }
         let titlebar = self.render_terminal_title_row(window, cx);
         let sidebar_toggle = self.render_window_controls(window, cx);
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
-        let has_status_bar = status_bar.is_some();
-        let sidebar_shown = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let tabs = self.sidebar.tabs.on;
         let top_tabs = tabs.then(|| self.render_tab_bar(window, cx));
 
@@ -215,53 +205,39 @@ impl Render for Workspace {
                             .min_w(px(crate::terminal_view::MIN_WIDTH))
                             // A split with gaps: each pane is the surface, the gaps show the window.
                             .when(!(split && gaps), |d| d.bg(ui.background))
-                            .children(
-                                self.render_diff(if lifted { None } else { Some(style::TITLE_ROW_H) }, cx),
-                            )
+                            .children(self.render_diff(cx))
                             // Cached: window frames the terminal didn't cause reuse its last
                             // paint. A split's panes are drawn with their headers below the
                             // title rows.
                             .when(self.diff_view.is_none() && !split, |d| {
                                 d.child(terminal.cached(StyleRefinement::default().size_full()))
                             })
-                            .when(self.diff_view.is_none() && split, |d| {
-                                d.child(self.render_panes(inset, cx))
-                            })
-                            .when(self.diff_view.is_none(), |d| d.child(self.pane_probe(inset, cx)))
+                            .when(self.diff_view.is_none() && split, |d| d.child(self.render_panes(cx)))
+                            .when(self.diff_view.is_none(), |d| d.child(self.pane_probe(cx)))
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
-                            .when(self.diff_view.is_none(), |d| {
-                                d.children(self.render_drop_overlay(inset, cx))
-                            })
-                            .children(self.render_find_bar(inset, cx));
-                        let column = if lifted {
-                            // On glass the terminal is a rounded surface floating in the window, the
-                            // title row over it on the window's own material. Beside the sidebar its
-                            // cards' margin is the gap; without it (tabs, or hidden) the surface
-                            // stands in from the window's edge. To the right it runs to the panel's
-                            // strip and below to the status bar, with no gap, all four corners
-                            // round; without a status bar the window's edge is the gap.
-                            let gap = px(super::glass::SURFACE_INSET);
-                            div()
-                                .relative()
-                                .flex_1()
-                                .min_w(px(crate::terminal_view::MIN_WIDTH))
-                                .h_full()
-                                .flex()
-                                .flex_col()
-                                .child(
-                                    surface
-                                        .min_h_0()
-                                        .mt(px(style::TITLE_ROW_H))
-                                        .when(!has_status_bar, |d| d.mb(gap))
-                                        .when(!sidebar_shown, |d| d.ml(gap))
-                                        .when(!(split && gaps), |d| {
-                                            d.rounded(ui.radius_lg).overflow_hidden()
-                                        }),
-                                )
-                                .child(titlebar)
-                        } else {
-                            surface.h_full().child(titlebar)
-                        };
+                            .when(self.diff_view.is_none(), |d| d.children(self.render_drop_overlay(cx)))
+                            .children(self.render_find_bar(cx));
+                        // The terminal is a rounded surface below the title bar's row, both stood in
+                        // `BAR_INSET` from the column's sides so they read as a pair, with the bar's own
+                        // `BAR_INSET` margin as the gap between them. The same inset lies beside the
+                        // sidebar and the panel's strip, above the status bar and at the window's edge.
+                        let gap = px(super::title_row::BAR_INSET);
+                        let column = div()
+                            .relative()
+                            .flex_1()
+                            .min_w(px(crate::terminal_view::MIN_WIDTH))
+                            .h_full()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                surface
+                                    .min_h_0()
+                                    .mt(px(style::TITLE_ROW_H))
+                                    .mx(gap)
+                                    .mb(gap)
+                                    .when(!(split && gaps), |d| d.rounded(ui.radius_lg).overflow_hidden()),
+                            )
+                            .child(titlebar);
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {

@@ -291,7 +291,6 @@ impl Render for TerminalView {
         let find_tick = palette.find_current;
         let selecting = self.selecting;
         let prepaint_state = self.render_state.clone();
-        let top_inset = self.top_inset;
         let dock = self.dock;
         let minimap = store.settings.minimap;
         let paint_state = self.render_state.clone();
@@ -356,8 +355,8 @@ impl Render for TerminalView {
                         frame,
                     },
                 );
-                // Rows just above the viewport, shown blurred under the title bar.
-                let overscan = ((top_inset + PADDING_Y) / f32::from(line_height)).ceil() as usize;
+                // Rows just above the viewport, kept for the soft edge at the top.
+                let overscan = (PADDING_Y / f32::from(line_height)).ceil() as usize;
 
                 let mut state = prepaint_state.borrow_mut();
                 let RenderState { frame: cache, images: image_cache, words, .. } = &mut *state;
@@ -713,7 +712,7 @@ impl Render for TerminalView {
             .pl(px(PADDING_X))
             .pr(px(Self::right_inset(&self.profile, cx)))
             .pb(px(PADDING_Y))
-            .pt(px(self.top_inset + PADDING_Y))
+            .pt(px(PADDING_Y))
             // A program that takes the mouse gets clicks, not a text selection (⇧ still selects).
             .cursor(if self.hovered_link.is_some() {
                 CursorStyle::PointingHand

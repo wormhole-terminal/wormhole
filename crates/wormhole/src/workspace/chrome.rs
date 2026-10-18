@@ -28,8 +28,9 @@ const AFTER_TOGGLE: f32 = 6.0;
 /// A title row's own content starts this far after the collapse button when the sidebar is
 /// hidden and the button sits over it.
 const AFTER_COLLAPSE: f32 = 8.0;
-/// The terminal's title row's padding beside an open column (`pl_1` / `pr_1`).
-const BESIDE_COLUMN: f32 = 4.0;
+/// The terminal's title row's padding beside an open column from the column's edge; the bar is inset 4 of it, so 4 more
+/// from the bar's edge, with the breadcrumb's own 8 on the terminal's 12.
+const BESIDE_COLUMN: f32 = 8.0;
 /// A title row's own padding at an edge without the lights: the room round a button's glyph, so
 /// the glyph and text line up with the 16 pt inset below.
 const TITLE_ROW_PAD: f32 = style::PANEL_INSET - (style::HIT_MIN - style::TITLE_GLYPH) / 2.0;

@@ -5,9 +5,6 @@
 use super::*;
 use crate::vibrancy::GlassRect;
 
-/// How far the terminal's surface stands in from the window's edges and the columns beside it.
-pub(super) const SURFACE_INSET: f32 = 8.0;
-
 /// How far a probe's glass is inset from its parent: left, top, right, bottom.
 #[derive(Clone, Copy)]
 pub(in crate::workspace) struct Insets(pub f32, pub f32, pub f32, pub f32);

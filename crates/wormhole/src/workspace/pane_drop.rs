@@ -147,9 +147,9 @@ impl Workspace {
         self.sidebar.view.reorder_terminals(&ids, &panes);
     }
 
-    /// The overlay over the panes while a terminal is dragged (and nothing otherwise): `inset`
-    /// tall of title rows are above it, as for the panes.
-    pub(super) fn render_drop_overlay(&self, inset: f32, cx: &mut Context<Self>) -> Option<AnyElement> {
+    /// The overlay over the panes while a terminal is dragged (and nothing otherwise): the
+    /// surface's size, as for the panes.
+    pub(super) fn render_drop_overlay(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let drag = self.terminal_drag.as_ref().filter(|_| cx.has_active_drag())?;
         let ui = ui_in(&self.profile, cx);
         let mut zones: Vec<AnyElement> = Vec::new();
@@ -182,10 +182,9 @@ impl Workspace {
             div()
                 .id("pane-drop")
                 .absolute()
-                .top(px(inset))
-                .bottom_0()
+                .top_0()
                 .left_0()
-                .right_0()
+                .size_full()
                 // The terminals under it hear nothing while a terminal is on its way.
                 .occlude()
                 .on_drag_move::<DraggedTerminal>(cx.listener(Self::on_pane_drag_move))

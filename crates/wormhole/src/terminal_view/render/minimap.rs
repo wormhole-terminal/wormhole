@@ -66,7 +66,7 @@ impl TerminalView {
         div()
             .id("minimap")
             .absolute()
-            .top(px(self.top_inset + PADDING_Y))
+            .top(px(PADDING_Y))
             .bottom(px(PADDING_Y))
             .right_0()
             .w(px(MINIMAP_W))
