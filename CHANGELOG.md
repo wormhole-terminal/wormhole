@@ -153,6 +153,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A screen that keeps printing new words, such as `ttystorm donut` with a font that has ligatures,
   no longer slows the window down: a frame took 30 ms there and takes about 3 now. A word the frame had
   no time to shape shows without its ligatures for a frame or two.
+- A program can no longer freeze a terminal for seconds by moving the cursor far to the left over and
+  over with reverse wraparound on.
 
 ### Security
 

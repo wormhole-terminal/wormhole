@@ -108,9 +108,24 @@ impl Terminal {
     /// a [`backspace`](Self::backspace), so the cursor may go up a line.
     pub(super) fn cursor_back(&mut self, n: usize) {
         if self.reverse_wraps() {
-            // More steps than the screen has cells only go round again.
-            for _ in 0..n.min(self.cols * self.rows + 1) {
+            // More steps than the screen has cells only go round again. The steps along a row are
+            // taken at once and a step that changes nothing ends the walk, so a program repeating
+            // `CSI 65535 D` costs a few steps per row, not one per cell.
+            let mut steps = n.min(self.cols * self.rows + 1);
+            while steps > 0 {
+                let floor = self.left_limit();
+                if !self.cursor.pending && self.cursor.x > floor {
+                    let run = steps.min(self.cursor.x - floor);
+                    self.place(self.cursor.x - run, self.cursor.y);
+                    steps -= run;
+                    continue;
+                }
+                let before = self.cursor;
                 self.backspace_step();
+                if self.cursor == before {
+                    break;
+                }
+                steps -= 1;
             }
             return;
         }

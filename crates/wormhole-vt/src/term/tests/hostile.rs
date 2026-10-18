@@ -224,3 +224,45 @@ fn host_calls_with_wild_points_between_random_bytes_keep_the_terminal_consistent
         }
     }
 }
+
+#[test]
+fn a_long_cursor_back_with_reverse_wrap_is_as_many_backspaces() {
+    // CUB with reverse wraparound walks as BS does; it only takes the steps along a row at once.
+    let mut rng = Bytes(0x5EED);
+    let pick = |rng: &mut Bytes, below: usize| rng.next() as usize % below;
+    for _ in 0..400 {
+        let (cols, rows) = (2 + pick(&mut rng, 7), 1 + pick(&mut rng, 6));
+        let mut setup = String::new();
+        for _ in 0..pick(&mut rng, 4) {
+            let (y, x) = (1 + pick(&mut rng, rows), 1 + pick(&mut rng, cols));
+            setup += &format!("\x1b[{y};{x}H{}", "w".repeat(pick(&mut rng, 2 * cols)));
+        }
+        if pick(&mut rng, 2) == 0 {
+            let top = 1 + pick(&mut rng, rows);
+            setup += &format!("\x1b[{top};{}r", top + pick(&mut rng, rows + 1 - top));
+        }
+        if pick(&mut rng, 2) == 0 {
+            let left = 1 + pick(&mut rng, cols);
+            setup += &format!("\x1b[?69h\x1b[{left};{}s", left + pick(&mut rng, cols + 1 - left));
+        }
+        setup += ["\x1b[?45h", "\x1b[?1045h", "\x1b[?45h\x1b[?1045h"][pick(&mut rng, 3)];
+        setup += &format!("\x1b[{};{}H", 1 + pick(&mut rng, rows), 1 + pick(&mut rng, cols));
+        if pick(&mut rng, 3) == 0 {
+            setup += &"z".repeat(cols);
+        }
+        let n = 1 + pick(&mut rng, cols * rows + 1);
+        let (mut cub, mut bs) = (Rig::new(cols, rows), Rig::new(cols, rows));
+        cub.feed(&setup).feed(&format!("\x1b[{n}D\x1b[1$w"));
+        bs.feed(&setup).feed(&"\x08".repeat(n)).feed("\x1b[1$w");
+        assert_eq!(cub.replies(), bs.replies(), "{setup:?} then {n} left");
+    }
+}
+
+#[test]
+fn repeated_long_cursor_backs_with_reverse_wrap_stay_cheap() {
+    let mut rig = Rig::new(500, 200);
+    rig.feed("\x1b[?45h\x1b[?1045h\x1b[200;500H");
+    let start = std::time::Instant::now();
+    rig.feed(&"\x1b[65535D".repeat(10_000));
+    assert!(start.elapsed() < std::time::Duration::from_secs(1), "took {:?}", start.elapsed());
+}
