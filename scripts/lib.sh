@@ -151,9 +151,12 @@ stop_hosts() {
         case "$sock" in /*.sock) rm -f -- "$sock" ;; esac
       fi
       n=$((n + 1))
-    else
-      # A leftover of a host that is gone; the app would clear it at its next start anyway.
+    elif ! [[ "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then
+      # A leftover of a host that is gone. A live process under another name (a host started through
+      # WORMHOLE_HOST_BIN) keeps its meta: without it nothing could find that host any more.
       rm -f -- "$meta"
+    else
+      warn "$meta names pid $pid, which runs but is not a wormhole-host; left alone"
     fi
   done
   [ "$n" -eq 0 ] || log "ended $n session host(s) in $dir"
