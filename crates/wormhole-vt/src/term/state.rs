@@ -19,7 +19,7 @@
 
 use super::Terminal;
 use super::modes::{Status, Switch};
-use super::presentation::numbers;
+use super::presentation::{CursorInformation, numbers};
 
 /// The ANSI modes a state report carries.
 const ANSI_MODES: [u16; 2] = [4, 20];
@@ -55,7 +55,8 @@ impl Terminal {
         }
     }
 
-    /// DECRSTS (`DCS Ps $ p D…D ST`). A report that does not parse changes nothing.
+    /// DECRSTS (`DCS Ps $ p D…D ST`). A report that does not parse changes nothing: every part is
+    /// read and checked before any is put back.
     pub(super) fn restore_state(&mut self, ps: u16, data: &[u8]) {
         if ps != 1 {
             return;
@@ -68,9 +69,14 @@ impl Terminal {
             return;
         };
         let [top, bottom, left, right] = margins[..] else { return };
-        if top == 0 || top >= bottom || bottom > self.rows || left == 0 || left > right || right > self.cols {
+        // As DECSTBM and DECSLRM: a region is at least two lines and two columns.
+        if top == 0 || top >= bottom || bottom > self.rows || left == 0 || left >= right || right > self.cols
+        {
             return;
         }
+        let (Some(tabs), Some(cursor)) = (self.read_tab_stops(tabs), CursorInformation::read(cursor)) else {
+            return;
+        };
         let switch = |on: bool| if on { Switch::Set } else { Switch::Reset };
         for n in ANSI_MODES {
             self.set_ansi_mode(n, switch(ansi.contains(&usize::from(n))));
@@ -84,7 +90,7 @@ impl Terminal {
         let columns = private.contains(&69);
         self.margins.left = if columns { left - 1 } else { 0 };
         self.margins.right = if columns { right - 1 } else { self.cols - 1 };
-        self.restore_tab_stops(tabs);
-        self.restore_cursor_information(cursor);
+        self.set_tab_stops(&tabs);
+        self.set_cursor_information(cursor);
     }
 }

@@ -190,3 +190,18 @@ fn replies_past_the_cap_are_dropped_whole() {
     rig.feed("\x1b[5n");
     assert_eq!(rig.replies(), "\x1b[0n");
 }
+
+#[test]
+fn a_state_report_with_one_bad_part_changes_nothing() {
+    let mut rig = Rig::new(20, 4);
+    rig.feed("\x1b[1$u");
+    let before = rig.replies();
+    // Good margins and modes, but a tab stop off the screen; then a column region one wide.
+    rig.feed("\x1bP1$p2;3;1;C;@;@;0;2;@;BBBB!99!2;4;1;10!4!69\x1b\\\x1b[1$u");
+    assert_eq!(rig.replies(), before);
+    rig.feed("\x1bP1$p2;3;1;C;@;@;0;2;@;BBBB!5!2;4;3;3!4!69\x1b\\\x1b[1$u");
+    assert_eq!(rig.replies(), before);
+    // The same report, whole, is put back.
+    rig.feed("\x1bP1$p2;3;1;C;@;@;0;2;@;BBBB!5!2;4;1;10!4!69\x1b\\\x1b[1$u");
+    assert_eq!(rig.replies(), "\x1bP1$s2;3;1;C;@;@;0;2;@;BBBB!5!2;4;1;10!4!69\x1b\\");
+}

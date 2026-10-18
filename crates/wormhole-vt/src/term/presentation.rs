@@ -103,39 +103,36 @@ impl Terminal {
     }
 
     /// A tab stop report read back: the stops it lists, and no other.
-    pub(super) fn restore_tab_stops(&mut self, data: &[u8]) {
-        let Some(columns) = numbers(data, b'/') else { return };
-        if columns.iter().any(|&c| c == 0 || c > self.cols) {
-            return;
+    fn restore_tab_stops(&mut self, data: &[u8]) {
+        if let Some(columns) = self.read_tab_stops(data) {
+            self.set_tab_stops(&columns);
         }
+    }
+
+    /// The columns a tab stop report lists, when it parses and every one is on the screen.
+    pub(super) fn read_tab_stops(&self, data: &[u8]) -> Option<Vec<usize>> {
+        let columns = numbers(data, b'/')?;
+        columns.iter().all(|&c| c != 0 && c <= self.cols).then_some(columns)
+    }
+
+    /// Tab stops at these columns (counted from 1) and no other.
+    pub(super) fn set_tab_stops(&mut self, columns: &[usize]) {
         self.tabs.clear_all();
-        for column in columns {
+        for &column in columns {
             self.tabs.set(column - 1);
         }
     }
 
     /// A cursor information report read back. Anything wrong with it and nothing changes.
-    pub(super) fn restore_cursor_information(&mut self, data: &[u8]) {
-        let fields: Vec<&[u8]> = data.split(|&b| b == b';').collect();
-        let [row, col, _page, rendition, protection, flags, gl, gr, sizes, designators] = fields[..] else {
-            return;
-        };
-        let one =
-            |field: &[u8]| field.first().copied().filter(|b| (0x40..=0x7f).contains(b)).map(|b| b & 0x3f);
-        let slot = |field: &[u8]| match field {
-            [d @ b'0'..=b'3'] => Some(d - b'0'),
-            _ => None,
-        };
-        let number = |field: &[u8]| std::str::from_utf8(field).ok()?.parse::<usize>().ok();
-        let (Some(row), Some(col)) = (number(row), number(col)) else { return };
-        let (Some(rendition), Some(protection), Some(flags), Some(sizes)) =
-            (one(rendition), one(protection), one(flags), one(sizes))
-        else {
-            return;
-        };
-        let (Some(gl), Some(gr)) = (slot(gl), slot(gr)) else { return };
-        let Some(sets) = read_designators(designators, sizes) else { return };
+    fn restore_cursor_information(&mut self, data: &[u8]) {
+        if let Some(info) = CursorInformation::read(data) {
+            self.set_cursor_information(info);
+        }
+    }
 
+    /// Put back what a cursor information report says.
+    pub(super) fn set_cursor_information(&mut self, info: CursorInformation) {
+        let CursorInformation { row, col, rendition, protection, flags, gl, gr, sets } = info;
         self.modes.set(Modes::ORIGIN, flags & 1 != 0);
         self.place(col.clamp(1, self.cols) - 1, row.clamp(1, self.rows) - 1);
         // A wrap is only ever due on the last column.
@@ -180,6 +177,46 @@ impl Terminal {
 }
 
 /// The four designators of a DECCIR (`B0%5%5`), with the sizes `Scss` gave, one bit per slot.
+/// The fields of a cursor information report (DECCIR), read and checked.
+pub(super) struct CursorInformation {
+    row: usize,
+    col: usize,
+    rendition: u8,
+    protection: u8,
+    flags: u8,
+    gl: u8,
+    gr: u8,
+    sets: [Charset; 4],
+}
+
+impl CursorInformation {
+    /// The report's fields; `None` when any is missing or malformed.
+    pub(super) fn read(data: &[u8]) -> Option<CursorInformation> {
+        let fields: Vec<&[u8]> = data.split(|&b| b == b';').collect();
+        let [row, col, _page, rendition, protection, flags, gl, gr, sizes, designators] = fields[..] else {
+            return None;
+        };
+        let one =
+            |field: &[u8]| field.first().copied().filter(|b| (0x40..=0x7f).contains(b)).map(|b| b & 0x3f);
+        let slot = |field: &[u8]| match field {
+            [d @ b'0'..=b'3'] => Some(d - b'0'),
+            _ => None,
+        };
+        let number = |field: &[u8]| std::str::from_utf8(field).ok()?.parse::<usize>().ok();
+        let sizes = one(sizes)?;
+        Some(CursorInformation {
+            row: number(row)?,
+            col: number(col)?,
+            rendition: one(rendition)?,
+            protection: one(protection)?,
+            flags: one(flags)?,
+            gl: slot(gl)?,
+            gr: slot(gr)?,
+            sets: read_designators(designators, sizes)?,
+        })
+    }
+}
+
 fn read_designators(mut text: &[u8], sizes: u8) -> Option<[Charset; 4]> {
     let mut sets = [Charset::Ascii; 4];
     for (i, slot) in sets.iter_mut().enumerate() {
