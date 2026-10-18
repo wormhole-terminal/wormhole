@@ -114,15 +114,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A group whose terminals are in one repository shows its changed files (±N) once, on its first row,
   instead of on every row; a terminal in another repository or worktree keeps its own count. A quiet
   row's folder is in the interface font, as in the title row; commands stay in the code font.
-- New windows open with a 320 point sidebar and a 300 point panel; saved widths are kept.
 - Settings → Terminals & sidebar has three densities, Regular (48 pt rows with a second line), Compact
   (32 pt, one line) and Dense (26 pt, tighter cards), each with its status tile, for the sidebar and
   the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
   The old compact switch becomes Compact; View → Compact Rows is gone.
 - Liquid Glass, off by default (Settings → Appearance). On macOS 26 and later it puts the sidebar's cards
   and the tab bar's tabs on glass and the status bar on the window's own material. The right panel
-  keeps its own surface, its tab bar at the top and its sections as bands, as before. Off, before
-  macOS 26, or with Reduce Transparency or Increase Contrast, every surface paints itself.
+  keeps its own surface and its tab bar at the top. Off, before macOS 26, or with Reduce Transparency or Increase Contrast, every surface paints itself.
 - Light themes: cards keep a 12 % edge where their 3 % fill vanishes on white, the amber of a card that
   needs you holds 3:1 on it, and a profile's letter turns black on a light colour (yellow, green).
 
