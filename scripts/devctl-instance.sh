@@ -19,12 +19,15 @@
 # is a first launch, whose first terminal runs the welcome (`Wormhole welcome`, while its feature flag
 # is on, as in any development build) and no animation plays in a test instance: look at it, or send
 # `onboarding close` first, which skips it (and closes the intro window when that is what opened).
-# `stop` quits only the process this started, by the PID in <scratch dir>/pid.
+# `stop` quits only the process this started, by the PID in <scratch dir>/pid, and then ends the session
+# hosts in <scratch dir>/data/hosts (they outlive their app): TERM, KILL after 3 s, each found by its
+# .meta file and checked to be a wormhole-host. A wormhole-host built next to --bin is copied to bin/
+# too: the app looks for it beside its own executable.
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-usage() { sed -n '2,23p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,26p' "$0"; exit "${1:-0}"; }
 
 # The process <scratch>/pid names, if it is still the binary this script started there.
 own_pid() {
@@ -46,6 +49,7 @@ if [ "${1:-}" = stop ]; then
   else
     log "no instance of this script runs from $scratch"
   fi
+  stop_hosts "$scratch/data"
   exit 0
 fi
 
@@ -80,6 +84,12 @@ fi
 mkdir -p "$scratch/bin"
 rm -f "$scratch/bin/$APP_BINARY"
 cp -c "$bin" "$scratch/bin/$APP_BINARY" 2>/dev/null || cp "$bin" "$scratch/bin/$APP_BINARY"
+# The session host, when it was built beside the app: the app finds it next to its own executable.
+rm -f "$scratch/bin/$HOST_BINARY"
+if [ -x "$(dirname "$bin")/$HOST_BINARY" ]; then
+  cp -c "$(dirname "$bin")/$HOST_BINARY" "$scratch/bin/$HOST_BINARY" 2>/dev/null \
+    || cp "$(dirname "$bin")/$HOST_BINARY" "$scratch/bin/$HOST_BINARY"
+fi
 mkdir -p "$scratch/home"
 start_isolated "$scratch/bin/$APP_BINARY" "$scratch" "${start:-$(cd "$scratch/home" && pwd -P)}" "$shell" \
   ${extra[@]+"${extra[@]}"}

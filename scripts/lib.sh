@@ -126,3 +126,36 @@ stop_isolated() {
   sleep 0.2
   ! kill -0 "$pid" 2>/dev/null
 }
+
+# stop_hosts <data dir>: end the session hosts (wormhole-host) of that data dir, which outlive their
+# app by design. Each <data dir>/hosts/<id>.meta names its host: `pid=` and `socket=`. A pid counts only
+# while `ps` still shows a process called wormhole-host (a recycled pid is somebody else's). TERM first,
+# which makes the host hang up its shell and remove its socket and meta; KILL after 3 s, when its two
+# files are removed here by the exact names the meta gave. The glob only lists files; nothing is
+# removed with it.
+stop_hosts() {
+  local dir="$1/hosts" meta pid sock comm n=0
+  [ -d "$dir" ] || return 0
+  for meta in "$dir"/*.meta; do
+    [ -f "$meta" ] || continue
+    pid="$(sed -n 's/^pid=//p' "$meta" | head -n 1)"
+    sock="$(sed -n 's/^socket=//p' "$meta" | head -n 1)"
+    if [[ "$pid" =~ ^[0-9]+$ ]] && comm="$(ps -p "$pid" -o comm= 2>/dev/null)" && [[ "$comm" == *wormhole-host ]]; then
+      kill -TERM "$pid" 2>/dev/null || true
+      for _ in $(seq 15); do kill -0 "$pid" 2>/dev/null || break; sleep 0.2; done
+      if kill -0 "$pid" 2>/dev/null; then
+        warn "host $pid ignored TERM; sending KILL"
+        kill -KILL "$pid" 2>/dev/null || true
+        sleep 0.2
+        rm -f -- "$meta"
+        case "$sock" in /*.sock) rm -f -- "$sock" ;; esac
+      fi
+      n=$((n + 1))
+    else
+      # A leftover of a host that is gone; the app would clear it at its next start anyway.
+      rm -f -- "$meta"
+    fi
+  done
+  [ "$n" -eq 0 ] || log "ended $n session host(s) in $dir"
+  return 0
+}

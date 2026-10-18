@@ -46,7 +46,9 @@ bundled_version="$(plutil -extract CFBundleShortVersionString raw "$app/Contents
 [ "$bundled_version" = "${APP_VERSION%%[-+]*}" ] \
   || die "app bundle is version $bundled_version but Cargo.toml says $APP_VERSION (re-run bundle.sh)"
 
-codesign --verify --strict "$app" || die "code signature of $app is invalid"
+# --deep so the nested session host is checked too, as the updater does with the downloaded app.
+[ -x "$app/Contents/MacOS/$HOST_BINARY" ] || die "$app has no Contents/MacOS/$HOST_BINARY (re-run bundle.sh)"
+codesign --verify --deep --strict "$app" || die "code signature of $app is invalid"
 if is_developer_id_signed "$app"; then
   xcrun stapler validate -q "$app" >/dev/null 2>&1 \
     || warn "$app is Developer ID signed but has no stapled notarization ticket (run scripts/notarize.sh first)"
@@ -60,6 +62,10 @@ for a in $(lipo -archs "$app/Contents/MacOS/$APP_BINARY"); do
   case "$a" in arm64) platforms+=(darwin-aarch64) ;; x86_64) platforms+=(darwin-x86_64) ;; esac
 done
 [ ${#platforms[@]} -gt 0 ] || die "could not determine architectures of $app"
+# The host serves the same platforms as the app: a lone arm64 host in a universal app breaks Intel Macs.
+[ "$(lipo -archs "$app/Contents/MacOS/$HOST_BINARY" | tr ' ' '\n' | sort | tr '\n' ' ')" = \
+  "$(lipo -archs "$app/Contents/MacOS/$APP_BINARY" | tr ' ' '\n' | sort | tr '\n' ' ')" ] \
+  || die "$HOST_BINARY and $APP_BINARY in $app are built for different architectures"
 
 rm -rf "$dist"
 mkdir -p "$dist"
@@ -76,7 +82,7 @@ COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -czf "$archive" \
 # Round-trip check: the extracted copy must still carry a valid signature.
 mkdir "$work/extract"
 tar -xzf "$archive" -C "$work/extract"
-codesign --verify --strict "$work/extract/$(basename "$app")" \
+codesign --verify --deep --strict "$work/extract/$(basename "$app")" \
   || die "extracted app from the archive fails codesign --verify"
 
 # --- minisign -----------------------------------------------------------------

@@ -30,6 +30,7 @@ use std::path::{Path, PathBuf};
 pub use channel::UpdateChannel;
 pub use download::{DownloadedUpdate, download};
 pub use feed::{Asset, Release, UpdateStatus, check};
+pub(crate) use install::bundle_from_exe;
 pub use install::{current_app_bundle, install, is_translocated, preflight, relaunch};
 pub use schedule::UpdateSchedule;
 pub use security::{MAX_ADVISORIES, Security, Severity};

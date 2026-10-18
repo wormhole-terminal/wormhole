@@ -9,6 +9,9 @@
 # Signing: APPLE_SIGNING_IDENTITY (e.g. "Developer ID Application: Name (TEAMID)")
 # selects a real identity from the keychain; unset = ad-hoc signature ("-"), which
 # runs locally but cannot be notarized. Hardened runtime + entitlements either way.
+# The bundle holds two Mach-Os: the app and the session host (Contents/MacOS/wormhole-host, built in
+# the same profile and for the same architectures). The host is signed first, with the same identity,
+# hardened runtime, timestamp and base entitlements, then the bundle.
 # Optional: BUILD_NUMBER overrides CFBundleVersion (default: X.Y.Z of the version).
 #
 # Time Sensitive notifications: with a real APPLE_SIGNING_IDENTITY *and*
@@ -26,7 +29,7 @@ while [ $# -gt 0 ]; do
     --universal) archs=(aarch64 x86_64) ;;
     --arch) shift; archs=("${1:?--arch needs aarch64 or x86_64}") ;;
     --no-build) build=0 ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
   shift
@@ -58,15 +61,19 @@ if [ "$build" = 1 ]; then
   done
   # One cargo for every architecture, so they build side by side and share the build scripts and
   # proc macros; two cargos would take turns on the target dir's lock.
-  log "cargo build --release -p wormhole ${target_args[*]}"
-  (cd "$ROOT" && cargo build --release --locked -p wormhole "${target_args[@]}")
+  log "cargo build --release -p wormhole -p wormhole-host ${target_args[*]}"
+  (cd "$ROOT" && cargo build --release --locked -p wormhole -p wormhole-host "${target_args[@]}")
 fi
 
 bins=()
+host_bins=()
 for triple in "${triples[@]}"; do
   bin="$TARGET_DIR/$triple/release/$APP_BINARY"
   [ -x "$bin" ] || die "missing binary $bin (drop --no-build?)"
   bins+=("$bin")
+  host_bin="$TARGET_DIR/$triple/release/$HOST_BINARY"
+  [ -x "$host_bin" ] || die "missing binary $host_bin (drop --no-build?)"
+  host_bins+=("$host_bin")
 done
 
 app="$APP_PATH_DEFAULT"
@@ -80,6 +87,13 @@ else
   cp "${bins[0]}" "$app/Contents/MacOS/$APP_BINARY"
 fi
 chmod 755 "$app/Contents/MacOS/$APP_BINARY"
+# The host in the same shape as the app: universal when the app is.
+if [ ${#host_bins[@]} -gt 1 ]; then
+  lipo -create "${host_bins[@]}" -output "$app/Contents/MacOS/$HOST_BINARY"
+else
+  cp "${host_bins[0]}" "$app/Contents/MacOS/$HOST_BINARY"
+fi
+chmod 755 "$app/Contents/MacOS/$HOST_BINARY"
 # Assets.car holds the icon (CFBundleIconName); the .icns is the CFBundleIconFile fallback.
 cp "$PACKAGING/Assets.car" "$app/Contents/Resources/Assets.car"
 cp "$PACKAGING/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
@@ -127,11 +141,21 @@ else
   identity="-"
   timestamp=(--timestamp=none)
 fi
-# One Mach-O and no nested code, so signing the bundle signs everything (no --deep).
+# Two Mach-Os, so the nested one is signed first and the bundle's seal then covers it (no --deep:
+# it would re-sign everything with the app's entitlements). The host always gets the base
+# entitlements: macOS attributes a terminal program's privacy (TCC) requests to the process that
+# started it, and the host is that process, so it needs the same resource-access set as the app.
+# The restricted Time Sensitive entitlement stays with the app alone: the embedded profile
+# authorizes the main executable, and a nested one claiming it would not launch.
+codesign --force --sign "$identity" --options runtime "${timestamp[@]}" \
+  --identifier "$BUNDLE_ID.host" --entitlements "$PACKAGING/entitlements.plist" \
+  "$app/Contents/MacOS/$HOST_BINARY"
 codesign --force --sign "$identity" --options runtime "${timestamp[@]}" \
   --entitlements "$entitlements" "$app"
-codesign --verify --strict --verbose=2 "$app"
+# --deep here only widens the check to the nested host; it signs nothing.
+codesign --verify --deep --strict --verbose=2 "$app"
 "$ROOT/scripts/check-entitlements.sh" "$app"
 
 log "done: $app"
 lipo -archs "$app/Contents/MacOS/$APP_BINARY" >&2
+lipo -archs "$app/Contents/MacOS/$HOST_BINARY" >&2

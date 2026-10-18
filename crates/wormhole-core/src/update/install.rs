@@ -70,7 +70,7 @@ pub fn current_app_bundle() -> Option<PathBuf> {
     bundle_from_exe(&std::env::current_exe().ok()?)
 }
 
-fn bundle_from_exe(exe: &Path) -> Option<PathBuf> {
+pub(crate) fn bundle_from_exe(exe: &Path) -> Option<PathBuf> {
     let macos = exe.parent()?;
     let contents = macos.parent()?;
     let app = contents.parent()?;

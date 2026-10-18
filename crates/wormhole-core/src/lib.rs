@@ -18,6 +18,7 @@ pub mod folder_color;
 pub mod fonts;
 pub mod fsutil;
 pub mod git;
+pub mod host_binary;
 pub mod icon_theme;
 pub mod intro;
 pub mod ipc;

@@ -9,6 +9,9 @@
 # - profile without entitlement: the build is half configured, "needs you" is delivered at Active;
 # - both: the profile has to authorize the entitlement for the App ID the app is signed with.
 # Neither (ad-hoc and local builds, no APPLE_PROVISIONING_PROFILE): fine, delivered at Active.
+# - the nested session host (Contents/MacOS/wormhole-host) is signed with the hardened runtime by the same
+#   team as the app and carries no Time Sensitive entitlement: the embedded profile authorizes the main
+#   executable only, so a nested one claiming it would not launch.
 # scripts/bundle.sh runs this after signing.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
@@ -23,6 +26,20 @@ signed="$work/signed.plist"
 # An app without any entitlements prints nothing; an unsigned one makes codesign fail.
 codesign -d --entitlements :- "$app" 2>/dev/null > "$signed" \
   || die "cannot read the code signature of $app (is it signed?)"
+
+# The session host: a second executable the bundle's signature seals, so it must be signed on its own.
+host="$app/Contents/MacOS/$HOST_BINARY"
+[ -x "$host" ] || die "$app has no Contents/MacOS/$HOST_BINARY"
+host_signed="$work/host.plist"
+host_info="$(codesign -dvv "$host" 2>&1)" || die "cannot read the code signature of $host (is it signed?)"
+grep -q 'flags=.*runtime' <<<"$host_info" || die "$host is not signed with the hardened runtime"
+codesign -d --entitlements :- "$host" 2>/dev/null > "$host_signed" || true
+[ "$(plist_get "$host_signed" ":$TIME_SENSITIVE_ENTITLEMENT")" != true ] \
+  || die "$host carries $TIME_SENSITIVE_ENTITLEMENT: only the app's executable may (its profile does not cover a nested one)"
+app_team="$(sed -n 's/^TeamIdentifier=//p' <<<"$(codesign -dvv "$app" 2>&1)")"
+host_team="$(sed -n 's/^TeamIdentifier=//p' <<<"$host_info")"
+[ "$app_team" = "$host_team" ] || die "$HOST_BINARY is signed by team '$host_team' but the app by '$app_team'"
+printf 'host         Contents/MacOS/%s: signed (hardened runtime, team %s)\n' "$HOST_BINARY" "${host_team:-none}"
 
 has_entitlement=0
 [ "$(plist_get "$signed" ":$TIME_SENSITIVE_ENTITLEMENT")" = true ] && has_entitlement=1
