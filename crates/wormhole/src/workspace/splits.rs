@@ -146,7 +146,8 @@ impl Workspace {
 
     /// The least height a pane needs: the grid's minimum under its header.
     pub(super) fn pane_min_h(&self) -> f32 {
-        PANE_MIN_H + style::PANE_HEADER_H
+        // The taller header, so a pane fits whichever way the gaps setting goes.
+        PANE_MIN_H + style::pane_header_h(true).max(style::PANE_HEADER_H)
     }
 
     /// What a drop or a join works with: the panes' area and the least a pane may be in it.

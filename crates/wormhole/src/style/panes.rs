@@ -7,12 +7,27 @@ use gpui_kit::*;
 use wormhole_core::panes::{Axis, Zone};
 
 use super::buttons::icon;
-use super::scale::{CONTROL_H_SM, DROP_LINE_W, Edges, PANE_GAP, RESIZE_HANDLE_W, ROW_H, TextRole};
+use super::scale::{
+    CONTROL_H_SM, DROP_LINE_W, Edges, PANE_GAP, RESIZE_HANDLE_W, ROW_H, TERMINAL_PAD, TILE_TITLE, TextRole,
+};
 use crate::settings::UiColors;
 
 /// A pane's header is as tall as a one-line row: the status slot, the name and the folder, then
 /// the zoom, menu and close buttons at its right end.
 pub const PANE_HEADER_H: f32 = ROW_H;
+/// A pane that is its own rounded box (`split_gaps`): its header's tile stands this far from the
+/// box's top and left, and its text this far from the box's sides and bottom (the grid's own
+/// padding included), so the tile sits evenly in the box's corner, its own rounding nested in the
+/// box's.
+pub const PANE_INSET: f32 = 8.0;
+/// What a pane's text gets on top of the grid's padding to stand [`PANE_INSET`] in.
+pub const PANE_TEXT_PAD: f32 = PANE_INSET - TERMINAL_PAD;
+
+/// How tall a pane's header is: a one-line row, or with `gaps` the tile and [`PANE_INSET`] above
+/// and below it.
+pub(crate) fn pane_header_h(gaps: bool) -> f32 {
+    if gaps { TILE_TITLE + 2.0 * PANE_INSET } else { PANE_HEADER_H }
+}
 /// The line under the focused pane's header, in the primary.
 pub const PANE_FOCUS_LINE: f32 = 2.0;
 /// How much of its strength the text of a pane without the keyboard keeps (72 %).
@@ -29,9 +44,8 @@ pub enum DividerLook {
     Dragging,
 }
 
-/// The header over a pane of a split tab: caption text, semibold and full strength on
-/// the focused pane with a [`PANE_FOCUS_LINE`] in the primary under it, medium and muted on the
-/// others; a hairline under every header. Add the status slot, the name, the folder and the
+/// The header over a pane of a split tab: caption text in medium, full strength on the focused
+/// pane with a [`PANE_FOCUS_LINE`] in the primary under it, muted on the others; a hairline under every header. Add the status slot, the name, the folder and the
 /// buttons with `.child(…)`. With `gaps` (each pane its own rounded surface) it has neither the
 /// hairline nor the line: the surface's outline says which pane has the keyboard (`pane_outline`).
 #[track_caller]
@@ -43,21 +57,24 @@ pub fn pane_header(id: impl Into<ElementId>, ui: UiColors, focused: bool, gaps: 
         .flex()
         .items_center()
         .gap_2()
-        .h(px(PANE_HEADER_H))
-        .pl_3()
+        .h(px(pane_header_h(gaps)))
+        .map(|d| if gaps { d.pl(px(PANE_INSET)) } else { d.pl_3() })
         .pr_1()
         .when(!gaps, |d| d.rule_bottom(ui))
         .text_caption()
-        .font_weight(if focused { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
+        // One weight on every header: a bolder name on the focused one would change how much of it
+        // fits, and moving the keyboard to another pane must move nothing. The colour says which.
+        .font_weight(FontWeight::MEDIUM)
         .text_color(if focused { ui.text } else { ui.muted })
         .when(focused && !gaps, |d| {
             d.child(div().absolute().left_0().right_0().bottom_0().h(px(PANE_FOCUS_LINE)).bg(ui.primary))
         })
 }
 
-/// The outline over a pane that is its own rounded surface (`split_gaps`): the primary on the pane
-/// with the keyboard, the hairline on the others, following the surface's corners. Lay it over the
-/// pane with `.absolute()`.
+/// The outline over a pane that is its own rounded surface (`split_gaps`), following the surface's
+/// corners: on the pane with the keyboard a quiet grey (`text.faint`), a step up from the hairline
+/// on the others, since the others are dimmed too and a coloured ring shouted. Lay it over the pane
+/// with `.absolute()`.
 #[track_caller]
 pub fn pane_outline(ui: UiColors, focused: bool) -> Div {
     div()
@@ -67,7 +84,7 @@ pub fn pane_outline(ui: UiColors, focused: bool) -> Div {
         .right_0()
         .bottom_0()
         .rounded(ui.radius_lg)
-        .outlined(ui, if focused { ui.primary } else { ui.border })
+        .outlined(ui, if focused { ui.faint } else { ui.border })
 }
 
 /// The divider between two panes: a [`RESIZE_HANDLE_W`] handle straddling their shared edge (it

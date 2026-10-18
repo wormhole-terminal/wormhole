@@ -388,6 +388,9 @@ impl Workspace {
                     .flex_1()
                     .min_h_0()
                     .min_w_0()
+                    // A pane that is its own box keeps its text off the box's edge, under the
+                    // header's tile.
+                    .when(gaps, |d| d.px(px(style::PANE_TEXT_PAD)).pb(px(style::PANE_TEXT_PAD)))
                     .when(!focused, |d| d.opacity(style::PANE_DIM))
                     // Cached: window frames the terminal didn't cause reuse its last paint.
                     .child(pane.terminal.clone().cached(StyleRefinement::default().size_full())),
@@ -448,51 +451,68 @@ impl Workspace {
                 cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })
             })
             .child(terminal_tile(("pane-tile", id as u64), agent, told, status, ui, cx))
-            // The name keeps its room; the folder gives way first.
+            // The folder gives way first (it only takes the room left over), then the name; the
+            // buttons never do, so a narrow pane can still be zoomed and closed.
             .child(
                 div()
-                    .flex_none()
+                    .min_w_0()
                     .max_w(px(style::TITLE_TAB_MAX_W))
                     .truncate()
                     .debug_selector(move || format!("pane-name-{id}"))
                     .child(name),
             )
-            .children(folder.map(|folder| {
-                div().min_w_0().truncate().font_weight(FontWeight::NORMAL).text_color(ui.faint).child(folder)
-            }))
-            .child(div().flex_1())
+            .child(match folder {
+                Some(folder) => div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .font_weight(FontWeight::NORMAL)
+                    .text_color(ui.faint)
+                    .child(folder),
+                None => div().flex_1(),
+            })
+            // The buttons from the right: in a pane too narrow for all three, Zoom goes first and
+            // the menu next (both also on the right-click), never the close button.
             .child(
-                style::icon_button(
-                    ("pane-zoom", id as u64),
-                    ui,
-                    if zoomed { IconName::Minimize } else { IconName::Maximize },
-                    zoom_tip,
-                )
-                .in_row()
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    this.focus_pane(id, window, cx);
-                    this.toggle_zoom(cx);
-                })),
-            )
-            .child(
-                style::icon_button(("pane-menu", id as u64), ui, IconName::Ellipsis, "Pane menu")
-                    .in_row()
-                    .dropdown_menu(move |popup, window, cx| menu(popup, window, cx)),
-            )
-            .child(style::hit_area(
-                ("pane-close-hit", id as u64),
-                style::CONTROL_H_SM,
-                style::close_x(("pane-close", id as u64), ui, style::SelectedFill::Plain),
-                |hit| {
-                    hit.role(Role::Button)
-                        .aria_label("Close pane")
-                        .tooltip(move |window, cx| Tooltip::new(close_tip.clone()).build(window, cx))
+                div()
+                    .flex()
+                    .flex_row_reverse()
+                    .items_center()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .child(style::hit_area(
+                        ("pane-close-hit", id as u64),
+                        style::CONTROL_H_SM,
+                        style::close_x(("pane-close", id as u64), ui, style::SelectedFill::Plain),
+                        |hit| {
+                            hit.role(Role::Button)
+                                .aria_label("Close pane")
+                                .tooltip(move |window, cx| Tooltip::new(close_tip.clone()).build(window, cx))
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    cx.stop_propagation();
+                                    this.close_pane(id, window, cx);
+                                }))
+                        },
+                    ))
+                    .child(
+                        style::icon_button(("pane-menu", id as u64), ui, IconName::Ellipsis, "Pane menu")
+                            .in_row()
+                            .dropdown_menu(move |popup, window, cx| menu(popup, window, cx)),
+                    )
+                    .child(
+                        style::icon_button(
+                            ("pane-zoom", id as u64),
+                            ui,
+                            if zoomed { IconName::Minimize } else { IconName::Maximize },
+                            zoom_tip,
+                        )
+                        .in_row()
                         .on_click(cx.listener(move |this, _, window, cx| {
-                            cx.stop_propagation();
-                            this.close_pane(id, window, cx);
-                        }))
-                },
-            ))
+                            this.focus_pane(id, window, cx);
+                            this.toggle_zoom(cx);
+                        })),
+                    ),
+            )
             .context_menu(move |popup, window, cx| build(popup, window, cx))
             .into_any_element()
     }

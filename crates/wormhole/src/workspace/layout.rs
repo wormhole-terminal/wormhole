@@ -101,7 +101,10 @@ impl Workspace {
                 let (w, h) = (f32::from(self.pane_area.size.width), f32::from(self.pane_area.size.height));
                 let rect = split.layout.shown(w, h).into_iter().find(|(id, _)| *id == split.layout.focused());
                 match rect {
-                    Some((_, rect)) => (rect.y + style::PANE_HEADER_H, px(w - rect.right()) + right),
+                    Some((_, rect)) => {
+                        let header = style::pane_header_h(settings_in(&self.profile, cx).split_gaps);
+                        (rect.y + header, px(w - rect.right()) + right)
+                    }
                     None => (0.0, right),
                 }
             }

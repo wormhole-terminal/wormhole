@@ -15,9 +15,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the same as with the sidebar, and the tabs sit under it, 8 pt above the surface. Glass only changes what
   they are made of. As in 1.1 the terminal's column, title row included, is in the terminal's colour,
   so the surface reads as the terminal itself rather than a box on the window.
-- The terminals of a split sit 8 pt apart, each its own rounded surface with the primary outline on the one
-  that has the keyboard; the gap is the handle that resizes them. Settings → Terminal → Gaps between split
-  terminals turns it off for the hairline join.
+- The terminals of a split sit 8 pt apart, each its own rounded surface: its header's tile stands
+  8 pt from the surface's top and left, evenly in its corner, and its text 8 pt in, under the tile. A
+  quiet grey outline marks the one that has the keyboard (the others are dimmed), and the gap is the
+  handle that resizes them. In a narrow pane the name gives way before the buttons, and Zoom and the
+  menu before the close button, so a pane can always be closed. Settings → Terminal → Gaps between
+  split terminals turns it off for the hairline join.
 - A terminal split off a grouped one (Split Right/Down, a drag onto a pane) joins its group, right after
   the split's other terminals, and a thin line along the split's rows, left of their tiles, shows they belong
   together (the chain mark stays only where they can't be side by side).
@@ -43,13 +46,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The sidebar has no "Terminals" heading any more: its + sits at the right end of the top row and goes
   with the sidebar when you hide it. A long list has a scrollbar like the terminal's (it follows "Show
   scroll bars" in System Settings) and a hairline under the top row while rows are scrolled beneath it.
-- Terminals as tabs is one row under the title row: the profile chip, a group switcher (the group's
-  colour, name and count, with an amber dot while another group needs you) and that group's terminals as
-  tabs. As in macOS Terminal there is no tab bar while there is only one terminal; the switcher shows
 - The right panel's sections are cards like the sidebar's again, under its own tab bar: Changes, History
   and Notes are each a stack of cards led by their heads, with the compare picker and refresh in the
   Changes card's head. Its lists scroll like the sidebar's, with the same scrollbar and the hairline under
   the tab bar only while rows are scrolled beneath it.
+- Terminals as tabs is one row under the title row: the profile chip, a group switcher (the group's
+  colour, name and count, with an amber dot while another group needs you) and that group's terminals as
+  tabs. As in macOS Terminal there is no tab bar while there is only one terminal; the switcher shows
   once there is another group to switch to, the tabs once the group has more than one terminal.
   The switcher opens a search ("Go to group or terminal…") over the groups as cards, "In no group",
   New group and "Show all groups in the sidebar". ⌃⌥[ and ⌃⌥] go to the previous and next group and
