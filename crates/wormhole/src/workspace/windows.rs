@@ -292,6 +292,51 @@ impl Workspace {
 /// next time; what runs in them doesn't. The Dock's Quit and logging out go to AppKit directly and
 /// don't ask.
 pub(crate) fn request_quit(cx: &mut App) {
+    quit_asking(cx, false);
+}
+
+/// Quit and End All Terminals: the same question and the same quit, and the terminals the session
+/// hosts keep running end first (they would otherwise outlive the app).
+pub(crate) fn request_quit_ending_hosts(cx: &mut App) {
+    quit_asking(cx, true);
+}
+
+/// Whether the persistent-terminals feature is on (its flag, see core `features`): the menu item
+/// that ends the hosts' terminals shows only then.
+pub(crate) fn persistent_terminals_on(cx: &App) -> bool {
+    settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::PersistentTerminals)
+}
+
+/// How long one session host gets to end when the app quits and takes them along.
+const END_HOSTS_WAIT: Duration = Duration::from_secs(2);
+
+/// Quit now. With `end_hosts`, every live session host of this data folder is ended first, on a
+/// background thread (the sockets and the hang-ups are not for the UI thread), and the app quits
+/// when they have answered, each within [`END_HOSTS_WAIT`]. The windows are saved before the
+/// terminals go, so what they showed is what comes back as text next time.
+fn finish_quit(cx: &mut App, end_hosts: bool) {
+    if !end_hosts {
+        cx.quit();
+        return;
+    }
+    super::app::save_all(cx);
+    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::store::data_dir());
+    let ending = cx
+        .background_executor()
+        .spawn(async move { wormhole_core::hosts::end_all_live(&hosts_dir, END_HOSTS_WAIT) });
+    cx.spawn(async move |cx| {
+        for (id, result) in ending.await {
+            match result {
+                Ok(how) => tracing::info!(id, ?how, "ended a session host on quit"),
+                Err(why) => tracing::warn!(id, why, "couldn't end a session host on quit"),
+            }
+        }
+        cx.update(|cx| cx.quit());
+    })
+    .detach();
+}
+
+fn quit_asking(cx: &mut App, end_hosts: bool) {
     let state = app(cx);
     if state.quitting {
         return;
@@ -323,26 +368,26 @@ pub(crate) fn request_quit(cx: &mut App) {
     }
     let front = AppState::front_window(cx);
     let Some(front) = front.filter(|_| !running.is_empty()) else {
-        cx.quit();
+        finish_quit(cx, end_hosts);
         return;
     };
     let question = dialog::CloseQuestion {
-        title: "Quit Wormhole?".into(),
+        title: if end_hosts { "Quit and End All Terminals?" } else { "Quit Wormhole?" }.into(),
         detail: session::quit_detail(&running, &programs, &elsewhere).into(),
-        confirm: "Quit",
+        confirm: if end_hosts { "Quit and End All" } else { "Quit" },
     };
     let asked = AppState::with_workspace(&front, cx, |_, window, cx| {
         dialog::ask_before_closing(
             window,
             cx,
             question,
-            |_, cx| cx.quit(),
+            move |_, cx| finish_quit(cx, end_hosts),
             |cx| app_mut(cx).quit_prompt = None,
         );
     });
     match asked {
         Some(()) => app_mut(cx).quit_prompt = Some(front.id),
         // The window couldn't take the question: quit as before rather than not at all.
-        None => cx.quit(),
+        None => finish_quit(cx, end_hosts),
     }
 }

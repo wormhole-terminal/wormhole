@@ -68,6 +68,10 @@
 //!   new-shell <key> [dir]   a new terminal running the shell `key` names (`shells` lists the keys;
 //!                   `-` is the login shell); `state` shows each terminal's key and what it runs
 //!   shells          the shells on offer, one a line: key, name, what it runs, `default` on the default
+//!   hosts           the session hosts of this data folder, one a line: id, pid, shell pid, start (UTC),
+//!                   version and `live` or `stale` (with why), as `Wormhole sessions list` prints them
+//!   host-kill <id>  end that host as `Wormhole sessions end <id>` does (`Kill` over its socket, SIGTERM
+//!                   when that fails; a stale one is refused); prints what happened
 //!   rename <n> <name>   name the n-th terminal as a project's layout would (as `state` numbers them)
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
@@ -277,6 +281,7 @@ mod ambient;
 mod blocks;
 mod control;
 mod flow;
+mod hosts;
 mod input;
 mod menus;
 mod panels;
@@ -367,6 +372,8 @@ fn command(name: &str) -> Option<Command> {
         #[cfg(any(feature = "inspector", debug_assertions))]
         "bounds" => shots::bounds,
         "new" => sessions::new,
+        "hosts" => hosts::hosts,
+        "host-kill" => hosts::host_kill,
         "new-shell" => sessions::new_shell,
         "shells" => sessions::shells,
         "activate" => sessions::activate,

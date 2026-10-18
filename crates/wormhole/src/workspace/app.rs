@@ -539,7 +539,7 @@ fn window_closed(cx: &mut App, id: WindowId) {
 }
 
 /// Everything that is worth keeping, for every window (scrollback included).
-fn save_all(cx: &mut App) {
+pub(super) fn save_all(cx: &mut App) {
     app_mut(cx).quitting = true;
     let windows = app(cx).windows.clone();
     for window in &windows {

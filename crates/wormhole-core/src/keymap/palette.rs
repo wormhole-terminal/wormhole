@@ -111,10 +111,10 @@ pub fn section(id: ActionId) -> Section {
         | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
         | LayoutSingle => Section::View,
         About | CheckForUpdates | Settings | ThemeStudio | NewProfile | ManageProfiles | Hide
-        | HideOthers | ShowAll | Quit | ShowLogs | Licenses | Inspector | Help | CommandPalette
-        | ShowIntro | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse | PlayIntroFtl
-        | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor | PlayWelcomePortal
-        | PlayWelcomeLogo => Section::App,
+        | HideOthers | ShowAll | Quit | QuitAndEndAll | ShowLogs | Licenses | Inspector | Help
+        | CommandPalette | ShowIntro | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse
+        | PlayIntroFtl | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor
+        | PlayWelcomePortal | PlayWelcomeLogo => Section::App,
         _ => Section::Terminal,
     }
 }
@@ -126,7 +126,12 @@ pub fn section(id: ActionId) -> Section {
 pub fn actions(state: &MenuState) -> Vec<Action> {
     let mut actions: Vec<Action> = entries()
         .iter()
-        .filter(|e| e.stage == Stage::Now && e.palette && (!e.debug_only || state.debug))
+        .filter(|e| {
+            e.stage == Stage::Now
+                && e.palette
+                && (!e.debug_only || state.debug)
+                && (!e.persistent_only || state.persistent)
+        })
         .filter(|e| !state.disabled.contains(&e.id) && !state.hidden.contains(&e.id))
         .map(|e| Action {
             id: e.id,

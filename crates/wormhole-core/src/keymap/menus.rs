@@ -80,6 +80,8 @@ pub struct MenuState {
     pub split: bool,
     /// A debug build: the Developer menu is there.
     pub debug: bool,
+    /// Persistent terminals are on: the items about terminals that outlive the app are there.
+    pub persistent: bool,
 }
 
 impl MenuState {
@@ -101,6 +103,7 @@ impl MenuState {
             && self.window_profile == other.window_profile
             && self.split == other.split
             && self.debug == other.debug
+            && self.persistent == other.persistent
     }
 }
 
@@ -137,6 +140,7 @@ const APP: &[Slot] = &[
     A(ShowAll),
     Sep,
     A(Quit),
+    A(QuitAndEndAll),
 ];
 
 const SHELL: &[Slot] = &[
@@ -379,7 +383,11 @@ fn submenu(title: &str, mut items: Vec<Item>, empty: &'static str) -> Item {
 
 fn action_item(id: ActionId, state: &MenuState) -> Option<Item> {
     let entry = entry(id)?;
-    if entry.stage != Stage::Now || (entry.debug_only && !state.debug) || state.hidden.contains(&id) {
+    if entry.stage != Stage::Now
+        || (entry.debug_only && !state.debug)
+        || (entry.persistent_only && !state.persistent)
+        || state.hidden.contains(&id)
+    {
         return None;
     }
     // In a split ⌘W closes the focused pane (the pane menu says so), so its item does too.

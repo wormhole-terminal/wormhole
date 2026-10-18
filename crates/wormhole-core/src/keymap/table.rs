@@ -45,6 +45,7 @@ fn row(id: ActionId, title: &'static str, keys: &[(KeyMods, &str)]) -> Entry {
         stage: Stage::Now,
         palette: true,
         debug_only: false,
+        persistent_only: false,
     }
 }
 
@@ -83,6 +84,11 @@ impl Entry {
 
     fn debug_only(mut self) -> Self {
         self.debug_only = true;
+        self
+    }
+
+    fn persistent_only(mut self) -> Self {
+        self.persistent_only = true;
         self
     }
 }
@@ -219,6 +225,8 @@ pub(super) fn entries() -> Vec<Entry> {
         row(HideOthers, "Hide Others", &[(ALT_CMD, "h")]),
         row(ShowAll, "Show All", &[]),
         row(Quit, "Quit Wormhole", &[(CMD, "q")]),
+        // No key: ending every terminal is not something to hit by accident.
+        row(QuitAndEndAll, "Quit and End All Terminals", &[]).persistent_only(),
         row(ShowLogs, "Show Logs in Finder", &[]),
         row(Licenses, "Licenses", &[]),
         row(ShowIntro, "Welcome to Wormhole", &[]),

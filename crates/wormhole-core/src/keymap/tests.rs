@@ -298,6 +298,7 @@ fn front_window() -> MenuState {
         window_profile: Some(0),
         split: false,
         debug: true,
+        persistent: false,
     }
 }
 
@@ -453,6 +454,34 @@ Developer
   Inspector  ⌥⇧⌘I
 ";
     assert_eq!(dump(&menus(&front_window())), expected);
+}
+
+/// Quit and End All Terminals is about terminals that outlive the app, so it exists only while
+/// persistent terminals are on: under Quit in the Wormhole menu, in the palette, with no key.
+#[test]
+fn quit_and_end_all_terminals_needs_persistent_terminals() {
+    use super::palette;
+    let at_wormhole_menu = |state: &MenuState| {
+        let all = menus(state);
+        let items = all.iter().find(|m| m.title == "Wormhole").expect("the app menu").items.clone();
+        items
+            .iter()
+            .filter_map(|item| match item {
+                Item::Action { command: Command::Action(id), title, .. } => Some((*id, title.clone())),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    let mut state = front_window();
+    assert!(!at_wormhole_menu(&state).iter().any(|(id, _)| *id == ActionId::QuitAndEndAll));
+    assert!(!palette::actions(&state).iter().any(|a| a.id == ActionId::QuitAndEndAll));
+    state.persistent = true;
+    let items = at_wormhole_menu(&state);
+    let quit = items.iter().position(|(id, _)| *id == ActionId::Quit).expect("Quit");
+    assert_eq!(items[quit + 1], (ActionId::QuitAndEndAll, "Quit and End All Terminals".to_string()));
+    assert!(palette::actions(&state).iter().any(|a| a.id == ActionId::QuitAndEndAll));
+    assert!(keys_of(ActionId::QuitAndEndAll).is_empty(), "no key");
+    assert!(dump(&menus(&state)).contains("  Quit Wormhole  ⌘Q\n  Quit and End All Terminals\n"));
 }
 
 #[test]

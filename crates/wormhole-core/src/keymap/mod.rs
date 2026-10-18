@@ -147,6 +147,8 @@ pub enum ActionId {
     HideOthers,
     ShowAll,
     Quit,
+    /// Quit, and end every terminal the session hosts keep running (only with persistent terminals on).
+    QuitAndEndAll,
     ShowLogs,
     /// The third-party licences (Help → Licenses).
     Licenses,
@@ -234,6 +236,9 @@ pub struct Entry {
     pub palette: bool,
     /// Only in debug builds (or with the inspector feature).
     pub debug_only: bool,
+    /// Only while persistent terminals are on (`FeatureFlag::PersistentTerminals`): the action is
+    /// about terminals that outlive the app.
+    pub persistent_only: bool,
 }
 
 impl Entry {

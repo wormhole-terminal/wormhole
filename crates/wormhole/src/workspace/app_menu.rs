@@ -92,6 +92,7 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     state.window_profile = AppState::front_window(cx)
         .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
     state.debug = DEBUG;
+    state.persistent = super::windows::persistent_terminals_on(cx);
     state
 }
 

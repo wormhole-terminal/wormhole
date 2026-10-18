@@ -28,7 +28,7 @@ use gpui_kit::assets::IconName;
 pub(crate) use project::devctl_trust_shot;
 #[cfg(feature = "devctl")]
 pub(crate) use updates::devctl_installed as devctl_update_installed;
-pub(crate) use windows::request_quit;
+pub(crate) use windows::{request_quit, request_quit_ending_hosts};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::ipc;

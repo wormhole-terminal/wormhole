@@ -246,6 +246,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::HideOthers => Box::new(HideOthers),
         A::ShowAll => Box::new(ShowAll),
         A::Quit => Box::new(crate::Quit),
+        A::QuitAndEndAll => Box::new(crate::QuitAndEndAll),
         A::ShowLogs => Box::new(ShowLogs),
         A::Licenses => Box::new(Licenses),
         A::ShowIntro => Box::new(ShowIntro),

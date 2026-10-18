@@ -29,7 +29,7 @@ mod workspace;
 use gpui_kit::*;
 use wormhole_core::ipc::Command;
 
-actions!(wormhole, [Quit]);
+actions!(wormhole, [Quit, QuitAndEndAll]);
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -91,6 +91,8 @@ fn main() {
         // it quits. Deferred: the question opens in the front window, which may be the one
         // dispatching the key.
         cx.on_action(|_: &Quit, cx| cx.defer(workspace::request_quit));
+        // The same, and the terminals the session hosts keep running end with it.
+        cx.on_action(|_: &QuitAndEndAll, cx| cx.defer(workspace::request_quit_ending_hosts));
         #[cfg(any(feature = "inspector", debug_assertions))]
         inspector::init(cx);
         // The keys from the action table, before the menus (they show the bound keys).
