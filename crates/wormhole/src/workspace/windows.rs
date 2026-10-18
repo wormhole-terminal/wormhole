@@ -307,8 +307,9 @@ pub(crate) fn persistent_terminals_on(cx: &App) -> bool {
     settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::PersistentTerminals)
 }
 
-/// How long one session host gets to end when the app quits and takes them along.
-const END_HOSTS_WAIT: Duration = Duration::from_secs(2);
+/// How long one session host gets to end when the app quits and takes them along: its shell's
+/// hangup grace (3 s) and a margin.
+const END_HOSTS_WAIT: Duration = Duration::from_secs(5);
 
 /// Quit now. With `end_hosts`, every live session host of this data folder is ended first, on a
 /// background thread (the sockets and the hang-ups are not for the UI thread), and the app quits

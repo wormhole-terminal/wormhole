@@ -14,9 +14,9 @@ use super::Reply;
 use super::cli::{print, print_err};
 use crate::hosts::{self, ForgetError, HostMeta, Scan, StaleReason};
 
-/// How long one host gets to take `Kill` and hang up. It answers in milliseconds; this is for a
-/// host that is stuck, after which the signal takes over.
-const END_WAIT: Duration = Duration::from_secs(3);
+/// How long one host gets to take `Kill` and hang up: its shell's hangup grace (3 s) and a margin.
+/// Past it the host is taken to be stuck, and the signal takes over.
+const END_WAIT: Duration = Duration::from_secs(5);
 
 /// What `sessions` was asked to do.
 #[derive(Debug, Clone, PartialEq, Eq)]

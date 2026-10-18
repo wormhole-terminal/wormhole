@@ -100,7 +100,9 @@ impl<S: Spawner> Session<S> {
             }
             Message::Kill => {
                 tracing::info!(conn = id.0, "asked to kill");
-                self.end(Duration::ZERO, now);
+                // The grace a closed terminal gets: `sessions end` and Quit and End All Terminals
+                // must not be harsher than quitting was before hosts. Force quit is SIGKILL by pid.
+                self.end(self.config.terminate_grace, now);
             }
             Message::Close { grace_ms } => {
                 tracing::info!(conn = id.0, grace_ms, "asked to close");
