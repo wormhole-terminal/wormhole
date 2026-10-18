@@ -10,7 +10,7 @@ use crate::parser::Csi;
 use super::Terminal;
 use super::conformance::Level;
 use super::cursor::Landing;
-use super::edit::{Erase, Extent, Shift};
+use super::edit::{Erase, EraseExtent, Shift};
 use super::kitty::SetMode;
 use super::modes::{ModeSet, Switch};
 
@@ -82,13 +82,13 @@ impl Terminal {
                 b't' => self.set_title_modes(csi.values(), true),
                 b'T' => self.set_title_modes(csi.values(), false),
                 b'u' => {
-                    self.keys[usize::from(self.on_alt_screen())].push(csi.param(0, 0) as u8);
+                    self.keys[self.screen_slot()].push(csi.param(0, 0) as u8);
                     self.sync_keyboard_flags();
                 }
                 _ => {}
             },
             (Some(b'<'), []) if csi.final_byte() == b'u' => {
-                self.keys[usize::from(self.on_alt_screen())].pop(count(csi, 0));
+                self.keys[self.screen_slot()].pop(count(csi, 0));
                 self.sync_keyboard_flags();
             }
             (Some(b'='), []) => match csi.final_byte() {
@@ -96,7 +96,7 @@ impl Terminal {
                 b'u' => {
                     let mode = SetMode::from_param(csi.param_nonzero(1, 1));
                     if let Some(mode) = mode {
-                        self.keys[usize::from(self.on_alt_screen())].set(csi.param(0, 0) as u8, mode);
+                        self.keys[self.screen_slot()].set(csi.param(0, 0) as u8, mode);
                         self.sync_keyboard_flags();
                     }
                 }
@@ -121,12 +121,12 @@ impl Terminal {
             b'd' => self.set_row(count(csi, 0) - 1),
             b'e' => self.cursor_down(count(csi, 0), Landing::Stay),
             b'J' => {
-                if let Some(extent) = Extent::from_param(csi.param(0, 0)) {
+                if let Some(extent) = EraseExtent::from_param(csi.param(0, 0)) {
                     self.erase_display(extent, Erase::Everything);
                 }
             }
             b'K' => {
-                if let Some(extent) = Extent::from_param(csi.param(0, 0)) {
+                if let Some(extent) = EraseExtent::from_param(csi.param(0, 0)) {
                     self.erase_line(extent, Erase::Everything);
                 }
             }
@@ -171,12 +171,12 @@ impl Terminal {
             b'h' => self.each_mode(csi, Switch::Set, ModeSet::Private),
             b'l' => self.each_mode(csi, Switch::Reset, ModeSet::Private),
             b'J' => {
-                if let Some(extent) = Extent::from_param(csi.param(0, 0)) {
+                if let Some(extent) = EraseExtent::from_param(csi.param(0, 0)) {
                     self.erase_display(extent, Erase::Unprotected);
                 }
             }
             b'K' => {
-                if let Some(extent) = Extent::from_param(csi.param(0, 0)) {
+                if let Some(extent) = EraseExtent::from_param(csi.param(0, 0)) {
                     self.erase_line(extent, Erase::Unprotected);
                 }
             }

@@ -23,6 +23,12 @@ impl Terminal {
         self.modes.contains(Modes::ALT_SCREEN)
     }
 
+    /// The index of what is kept per screen (DECSC's slot, the keyboard flags, the pictures) for
+    /// the screen showing: 0 for the main screen, 1 for the alternate one.
+    pub(super) fn screen_slot(&self) -> usize {
+        usize::from(self.on_alt_screen())
+    }
+
     /// Show the alternate screen, blank when `blank` says so and it was not showing already
     /// (xterm clears when it switches; asking again for a screen that shows changes nothing).
     pub(super) fn enter_alt_screen(&mut self, blank: Blank) {
@@ -89,7 +95,7 @@ impl Terminal {
 
     /// The kitty flags of the screen that shows, as modes.
     pub(super) fn sync_keyboard_flags(&mut self) {
-        let flags = self.keys[usize::from(self.on_alt_screen())].current();
+        let flags = self.keys[self.screen_slot()].current();
         self.modes.remove(Modes::KEYS);
         self.modes.insert(Modes::from_bits_retain(u64::from(flags) << 12));
     }

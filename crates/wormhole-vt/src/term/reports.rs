@@ -211,7 +211,7 @@ impl Terminal {
 
     /// The kitty keyboard protocol's query: the flags in force.
     pub(super) fn report_keyboard_flags(&mut self) {
-        let flags = self.keys[usize::from(self.on_alt_screen())].current();
+        let flags = self.keys[self.screen_slot()].current();
         self.reply(format_args!("\x1b[?{flags}u"));
     }
 

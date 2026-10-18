@@ -12,11 +12,10 @@
 use crate::grid::Spare;
 
 use super::Terminal;
-use super::modes::Modes;
 
 /// Which part of the screen or the line an erase covers (the parameter of ED and EL).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Extent {
+pub(super) enum EraseExtent {
     /// 0: from the cursor to the end.
     ToEnd,
     /// 1: from the start up to and including the cursor.
@@ -27,13 +26,13 @@ pub(super) enum Extent {
     Scrollback,
 }
 
-impl Extent {
-    pub(super) fn from_param(n: u16) -> Option<Extent> {
+impl EraseExtent {
+    pub(super) fn from_param(n: u16) -> Option<EraseExtent> {
         match n {
-            0 => Some(Extent::ToEnd),
-            1 => Some(Extent::ToCursor),
-            2 => Some(Extent::All),
-            3 => Some(Extent::Scrollback),
+            0 => Some(EraseExtent::ToEnd),
+            1 => Some(EraseExtent::ToCursor),
+            2 => Some(EraseExtent::All),
+            3 => Some(EraseExtent::Scrollback),
             _ => None,
         }
     }
@@ -69,22 +68,22 @@ impl Terminal {
 
 impl Terminal {
     /// ED and DECSED (`CSI Ps J`, `CSI ? Ps J`).
-    pub(super) fn erase_display(&mut self, extent: Extent, kind: Erase) {
+    pub(super) fn erase_display(&mut self, extent: EraseExtent, kind: Erase) {
         self.cursor.pending = false;
         let spare = self.spare(kind);
         let bg = self.erase_color();
         let (x, y) = (self.cursor.x, self.cursor.y);
         match extent {
-            Extent::ToEnd => {
+            EraseExtent::ToEnd => {
                 self.grid.erase(y, x..self.cols, bg, spare);
                 self.grid.erase_rows(y + 1..self.rows, bg, spare);
             }
-            Extent::ToCursor => {
+            EraseExtent::ToCursor => {
                 self.grid.erase_rows(0..y, bg, spare);
                 self.grid.erase(y, 0..x + 1, bg, spare);
             }
-            Extent::All => self.clear_screen(bg, kind),
-            Extent::Scrollback => {
+            EraseExtent::All => self.clear_screen(bg, kind),
+            EraseExtent::Scrollback => {
                 self.grid.clear_scrollback();
                 self.history_just_cleared = true;
             }
@@ -97,9 +96,7 @@ impl Terminal {
     /// ESC[2J`) means the user wants them gone: nothing is saved then.
     fn clear_screen(&mut self, bg: crate::types::Color, kind: Erase) {
         let spare = self.spare(kind);
-        let keep = kind == Erase::Everything
-            && !self.modes.contains(Modes::ALT_SCREEN)
-            && !self.history_just_cleared;
+        let keep = kind == Erase::Everything && !self.on_alt_screen() && !self.history_just_cleared;
         if keep {
             self.grid.scroll_screen_into_history(bg);
         }
@@ -107,16 +104,16 @@ impl Terminal {
     }
 
     /// EL and DECSEL (`CSI Ps K`, `CSI ? Ps K`).
-    pub(super) fn erase_line(&mut self, extent: Extent, kind: Erase) {
+    pub(super) fn erase_line(&mut self, extent: EraseExtent, kind: Erase) {
         self.cursor.pending = false;
         let spare = self.spare(kind);
         let bg = self.erase_color();
         let (x, y) = (self.cursor.x, self.cursor.y);
         match extent {
-            Extent::ToEnd => self.grid.erase(y, x..self.cols, bg, spare),
-            Extent::ToCursor => self.grid.erase(y, 0..x + 1, bg, spare),
-            Extent::All => self.grid.erase(y, 0..self.cols, bg, spare),
-            Extent::Scrollback => {}
+            EraseExtent::ToEnd => self.grid.erase(y, x..self.cols, bg, spare),
+            EraseExtent::ToCursor => self.grid.erase(y, 0..x + 1, bg, spare),
+            EraseExtent::All => self.grid.erase(y, 0..self.cols, bg, spare),
+            EraseExtent::Scrollback => {}
         }
     }
 

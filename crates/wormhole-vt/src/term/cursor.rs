@@ -236,7 +236,7 @@ impl Terminal {
     /// DECSC: the cursor, its rendition, character sets, origin mode and protection, for the
     /// screen that shows.
     pub(super) fn save_cursor(&mut self) {
-        let saved = &mut self.saved[usize::from(self.modes.contains(Modes::ALT_SCREEN))];
+        let saved = &mut self.saved[self.screen_slot()];
         saved.cursor = self.cursor;
         saved.style = self.pen.style;
         saved.protected = self.pen.protected;
@@ -247,7 +247,7 @@ impl Terminal {
 
     /// DECRC: bring back what DECSC saved (home and normal rendition when nothing was saved).
     pub(super) fn restore_cursor(&mut self) {
-        let saved = self.saved[usize::from(self.modes.contains(Modes::ALT_SCREEN))].clone();
+        let saved = self.saved[self.screen_slot()].clone();
         self.cursor = saved.cursor;
         self.cursor.x = self.cursor.x.min(self.cols - 1);
         self.cursor.y = self.cursor.y.min(self.rows - 1);

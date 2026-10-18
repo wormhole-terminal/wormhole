@@ -287,11 +287,6 @@ impl Terminal {
         self.graphics.gate.clear();
     }
 
-    /// Which table the screen showing uses: 0 for the main screen, 1 for the alternate one.
-    pub(super) fn screen_slot(&self) -> usize {
-        usize::from(self.on_alt_screen())
-    }
-
     /// The grid of the screen `slot` names (0 main, 1 alternate): the one showing is `grid`, the
     /// other one is kept in `other`.
     pub(super) fn grid_of(&self, slot: usize) -> &Grid {

@@ -40,18 +40,18 @@ const BRIGHT: [NamedColor; 8] = [
 
 /// Which color a 38, 48 or 58 sets.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Slot {
+enum Layer {
     Foreground,
     Background,
     Underline,
 }
 
-impl Slot {
-    fn from_code(code: u16) -> Option<Slot> {
+impl Layer {
+    fn from_code(code: u16) -> Option<Layer> {
         match code {
-            38 => Some(Slot::Foreground),
-            48 => Some(Slot::Background),
-            58 => Some(Slot::Underline),
+            38 => Some(Layer::Foreground),
+            48 => Some(Layer::Background),
+            58 => Some(Layer::Underline),
             _ => None,
         }
     }
@@ -98,11 +98,11 @@ impl Style {
         self.attrs.insert(style);
     }
 
-    fn set_color(&mut self, slot: Slot, color: Color) {
+    fn set_color(&mut self, slot: Layer, color: Color) {
         match slot {
-            Slot::Foreground => self.fg = color,
-            Slot::Background => self.bg = color,
-            Slot::Underline => self.underline_color = Some(color),
+            Layer::Foreground => self.fg = color,
+            Layer::Background => self.bg = color,
+            Layer::Underline => self.underline_color = Some(color),
         }
     }
 
@@ -153,7 +153,7 @@ impl Terminal {
         while i < values.len() {
             let code = values[i];
             i += 1;
-            if let Some(slot) = Slot::from_code(code) {
+            if let Some(slot) = Layer::from_code(code) {
                 i += semicolon_color(style, slot, &values[i..]);
             } else {
                 style.apply(code);
@@ -164,7 +164,7 @@ impl Terminal {
 
 /// `38;5;n` or `38;2;r;g;b` in `rest` (the values after the 38): apply it and return how many of
 /// them it used. A color that is cut short or malformed uses what is there.
-fn semicolon_color(style: &mut Style, slot: Slot, rest: &[u16]) -> usize {
+fn semicolon_color(style: &mut Style, slot: Layer, rest: &[u16]) -> usize {
     match rest {
         [5, n, ..] => {
             if let Some(color) = indexed(*n) {
@@ -190,7 +190,7 @@ fn sgr_groups(style: &mut Style, csi: &Csi) {
     let mut groups = csi.groups();
     while let Some(group) = groups.next() {
         let code = group[0];
-        if let Some(slot) = Slot::from_code(code) {
+        if let Some(slot) = Layer::from_code(code) {
             if group.len() > 1 {
                 if let Some(color) = colon_color(group) {
                     style.set_color(slot, color);
