@@ -351,13 +351,22 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
     }
     let windows = state.windows.clone();
     let (mut running, mut programs) = (Vec::new(), Vec::new());
+    // Which of them are hosted (they go on after a plain quit), and whether any terminal is.
+    let (mut hosted_running, mut local_running, mut any_hosted) = (0, 0, false);
     // Terminals of a profile that is not shown run on out of sight: the question names them.
     let mut elsewhere: Vec<(String, usize)> = Vec::new();
     for window in &windows {
         let Some(workspace) = window.workspace.upgrade() else { continue };
-        // A hosted terminal goes on running after a plain quit: only Quit and End All cuts it off.
-        let cut_off = |s: &&Session| s.needs_close_confirmation(cx) && (end_hosts || !s.is_hosted(cx));
-        for session in workspace.read(cx).sessions.iter().filter(cut_off) {
+        let busy = |s: &&Session| s.needs_close_confirmation(cx);
+        any_hosted |= workspace.read(cx).sessions.iter().any(|s| s.is_hosted(cx));
+        for session in workspace.read(cx).sessions.iter().filter(busy) {
+            // A hosted terminal goes on running after a plain quit, which the question's box can
+            // turn into ending it too.
+            if session.is_hosted(cx) {
+                hosted_running += 1;
+            } else {
+                local_running += 1;
+            }
             running.push((session.status(cx), session.command_running(cx)));
             programs.extend(session.running_programs(false, cx));
             if window.hidden {
@@ -373,23 +382,38 @@ fn quit_asking(cx: &mut App, end_hosts: bool) {
         }
     }
     let front = AppState::front_window(cx);
-    let Some(front) = front.filter(|_| !running.is_empty()) else {
+    let ask = session::quit_ask(end_hosts, hosted_running, local_running, any_hosted);
+    let (Some(front), Some(ask)) = (front, ask) else {
         finish_quit(cx, end_hosts);
         return;
     };
-    let question = dialog::CloseQuestion {
-        title: if end_hosts { "Quit and End All Terminals?" } else { "Quit Wormhole?" }.into(),
-        detail: session::quit_detail(&running, &programs, &elsewhere).into(),
-        confirm: if end_hosts { "Quit and End All" } else { "Quit" },
+    let confirm = if end_hosts { "Quit and End All" } else { "Quit" };
+    let title = if end_hosts { "Quit and End All Terminals?" } else { "Quit Wormhole?" };
+    let detail = match ask {
+        session::QuitAsk::Plain => session::quit_detail(&running, &programs, &elsewhere),
+        session::QuitAsk::KeepBox { local_running } => {
+            session::quit_detail_keeping(&running, &programs, &elsewhere, hosted_running > 0, local_running)
+        }
     };
+    let question = dialog::CloseQuestion { title: title.into(), detail: detail.into(), confirm };
     let asked = AppState::with_workspace(&front, cx, |_, window, cx| {
-        dialog::ask_before_closing(
-            window,
-            cx,
-            question,
-            move |_, cx| finish_quit(cx, end_hosts),
-            |cx| app_mut(cx).quit_prompt = None,
-        );
+        let on_dismiss = |cx: &mut App| app_mut(cx).quit_prompt = None;
+        match ask {
+            session::QuitAsk::Plain => dialog::ask_before_closing(
+                window,
+                cx,
+                question,
+                move |_, cx| finish_quit(cx, end_hosts),
+                on_dismiss,
+            ),
+            session::QuitAsk::KeepBox { .. } => dialog::ask_keeping_terminals(
+                window,
+                cx,
+                question,
+                move |keep_running, _, cx| finish_quit(cx, session::quit_ends_hosts(keep_running)),
+                on_dismiss,
+            ),
+        }
     });
     match asked {
         Some(()) => app_mut(cx).quit_prompt = Some(front.id),

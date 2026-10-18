@@ -188,8 +188,8 @@ impl Session {
         wormhole_core::hosts::persisted_host(terminal.host_id(), terminal.host_lost(), app(cx).ending_hosts)
     }
 
-    /// Its program runs in a session host: quitting leaves it running, so the question before
-    /// quitting doesn't count it.
+    /// Its program runs in a session host: quitting leaves it running (unless the question before
+    /// quitting is answered with the box unticked).
     pub(super) fn is_hosted(&self, cx: &App) -> bool {
         self.terminal().read(cx).is_hosted()
     }
@@ -344,15 +344,84 @@ pub(super) fn quit_detail(
     programs: &[String],
     other_profiles: &[(String, usize)],
 ) -> String {
+    quit_detail_with(
+        "Your terminals come back next time, but what runs in them ends.",
+        running,
+        programs,
+        other_profiles,
+    )
+}
+
+/// [`quit_detail`] under another opening sentence.
+fn quit_detail_with(
+    head: &str,
+    running: &[(Status, bool)],
+    programs: &[String],
+    other_profiles: &[(String, usize)],
+) -> String {
     let mut elsewhere = String::new();
     for (profile, count) in other_profiles {
         let (many, verb) = if *count == 1 { ("terminal", "is") } else { ("terminals", "are") };
         elsewhere.push_str(&format!(" {count} {many} in {profile} {verb} running an agent or a command."));
     }
-    format!(
-        "Your terminals come back next time, but what runs in them ends.{}{elsewhere}",
-        still_running(running, programs)
-    )
+    format!("{head}{}{elsewhere}", still_running(running, programs))
+}
+
+/// How the question before quitting is asked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum QuitAsk {
+    /// Quit / Cancel only: the sheet GPUI draws.
+    Plain,
+    /// With the box "Keep terminals running in the background". `local_running`: some terminal
+    /// that runs something can't be kept (it runs in the app's own process), so it ends either way.
+    KeepBox { local_running: bool },
+}
+
+/// How ⌘Q asks, given how many terminals that run something are hosted (`hosted_running`) or local
+/// (`local_running`), and whether any terminal at all is hosted (`any_hosted`: the box is about
+/// those, idle ones too). `None`: nothing runs, so quit without asking. Quit and End All Terminals
+/// (`end_hosts`) ends everything, so it has nothing to choose.
+pub(super) fn quit_ask(
+    end_hosts: bool,
+    hosted_running: usize,
+    local_running: usize,
+    any_hosted: bool,
+) -> Option<QuitAsk> {
+    if hosted_running + local_running == 0 {
+        return None;
+    }
+    Some(if end_hosts || !any_hosted {
+        QuitAsk::Plain
+    } else {
+        QuitAsk::KeepBox { local_running: local_running > 0 }
+    })
+}
+
+/// Whether quitting ends the session hosts too: the box "Keep terminals running in the background"
+/// left unticked.
+pub(super) fn quit_ends_hosts(keep_running: bool) -> bool {
+    !keep_running
+}
+
+/// What the question before quitting says when it has the box: what runs in terminals that are
+/// kept goes on, what runs in the others ends. Without a kept terminal that runs something there is
+/// nothing to add to [`quit_detail`], which stays true whichever way the box is.
+pub(super) fn quit_detail_keeping(
+    running: &[(Status, bool)],
+    programs: &[String],
+    other_profiles: &[(String, usize)],
+    hosted_running: bool,
+    local_running: bool,
+) -> String {
+    if !hosted_running {
+        return quit_detail(running, programs, other_profiles);
+    }
+    let except = if local_running { ", except in terminals that can't run in the background" } else { "" };
+    let head = format!(
+        "Your terminals come back next time and what runs in them keeps going{except}. Untick the box to \
+         end them."
+    );
+    quit_detail_with(&head, running, programs, other_profiles)
 }
 
 /// What still runs among sessions that ask before closing (`running`: each one's lead status and
@@ -432,7 +501,8 @@ mod tests {
 
     use super::{
         RepoRoot, close_needs_confirmation, close_session_detail, close_session_title, close_window_detail,
-        quit_detail, running_list, session_after_close, step_wrapping,
+        quit_ask, quit_detail, quit_detail_keeping, quit_ends_hosts, running_list, session_after_close,
+        step_wrapping,
     };
     use crate::terminal_view::Status;
 
@@ -575,6 +645,50 @@ mod tests {
              1 terminal in Work is running an agent or a command. \
              3 terminals in Client are running an agent or a command."
         );
+    }
+
+    #[test]
+    fn quitting_with_the_box_says_what_goes_on_and_what_ends() {
+        let running = [(Status::Idle, true)];
+        let programs = names(&["claude"]);
+        // Nothing kept runs something: the plain wording is true either way.
+        assert_eq!(
+            quit_detail_keeping(&running, &programs, &[], false, true),
+            quit_detail(&running, &programs, &[])
+        );
+        assert_eq!(
+            quit_detail_keeping(&running, &programs, &[], true, false),
+            "Your terminals come back next time and what runs in them keeps going. Untick the box to end \
+             them. Still running: claude."
+        );
+        assert_eq!(
+            quit_detail_keeping(&running, &programs, &[("Work".into(), 1)], true, true),
+            "Your terminals come back next time and what runs in them keeps going, except in terminals \
+             that can't run in the background. Untick the box to end them. Still running: claude. \
+             1 terminal in Work is running an agent or a command."
+        );
+    }
+
+    #[test]
+    fn the_box_shows_when_a_terminal_is_hosted_and_something_runs() {
+        use super::QuitAsk::{KeepBox, Plain};
+        // Nothing runs: no question, hosted or not.
+        assert_eq!(quit_ask(false, 0, 0, true), None);
+        assert_eq!(quit_ask(true, 0, 0, true), None);
+        // No hosted terminal at all: today's question.
+        assert_eq!(quit_ask(false, 0, 2, false), Some(Plain));
+        // A hosted terminal that runs something, or an idle one beside a local one that does.
+        assert_eq!(quit_ask(false, 1, 0, true), Some(KeepBox { local_running: false }));
+        assert_eq!(quit_ask(false, 1, 2, true), Some(KeepBox { local_running: true }));
+        assert_eq!(quit_ask(false, 0, 1, true), Some(KeepBox { local_running: true }));
+        // Quit and End All Terminals has no choice to offer.
+        assert_eq!(quit_ask(true, 1, 1, true), Some(Plain));
+    }
+
+    #[test]
+    fn the_box_ticked_keeps_the_hosts_and_unticked_ends_them() {
+        assert!(!quit_ends_hosts(true));
+        assert!(quit_ends_hosts(false));
     }
 
     #[test]
