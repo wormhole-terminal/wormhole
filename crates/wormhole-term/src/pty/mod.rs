@@ -86,6 +86,19 @@ impl Control {
     }
 }
 
+/// Told, on the reader thread, how many bytes of input the master has taken in all (a hosted
+/// terminal acknowledges its client's input with it). Must not block.
+pub(crate) type InputHook = Box<dyn Fn(u64) + Send>;
+
+/// What a hosted terminal's host side adds to the reader thread; a local terminal has none.
+#[derive(Default)]
+pub(crate) struct Hooks {
+    /// See [`InputHook`].
+    pub on_input: Option<InputHook>,
+    /// Run first on the new thread (the host puts it at the user-interactive QoS class).
+    pub on_thread_start: Option<Box<dyn FnOnce() + Send>>,
+}
+
 /// Start `launch` on a new pseudo-terminal of `size` and a thread that parses its output with
 /// `feed` into `screen`.
 pub(crate) fn start<S: Send + 'static, F: Feed<S>>(
@@ -95,10 +108,22 @@ pub(crate) fn start<S: Send + 'static, F: Feed<S>>(
     feed: F,
     proxy: EventProxy,
 ) -> io::Result<Started> {
-    start_when(launch, size, screen, feed, proxy, |_| {})
+    start_with(launch, size, screen, feed, proxy, Hooks::default())
 }
 
-/// [`start`], calling `before_reading` with the program once it runs and before the thread that
+/// [`start`] with a hosted terminal's [`Hooks`].
+pub(crate) fn start_with<S: Send + 'static, F: Feed<S>>(
+    launch: &Launch,
+    size: WindowSize,
+    screen: Arc<FairLock<S>>,
+    feed: F,
+    proxy: EventProxy,
+    hooks: Hooks,
+) -> io::Result<Started> {
+    start_when(launch, size, screen, feed, proxy, hooks, |_| {})
+}
+
+/// [`start_with`], calling `before_reading` with the program once it runs and before the thread that
 /// reads its output exists: a test's way to have the program finish first, as it does when the
 /// machine is busy.
 fn start_when<S: Send + 'static, F: Feed<S>>(
@@ -107,6 +132,7 @@ fn start_when<S: Send + 'static, F: Feed<S>>(
     screen: Arc<FairLock<S>>,
     feed: F,
     proxy: EventProxy,
+    hooks: Hooks,
     before_reading: impl FnOnce(&mut Child),
 ) -> io::Result<Started> {
     let open::Pair { master, slave } = open::open(size)?;
@@ -116,9 +142,16 @@ fn start_when<S: Send + 'static, F: Feed<S>>(
     let mut child = spawn::spawn(launch, &slave)?;
     let pid = child.id();
     before_reading(&mut child);
-    let reader = Reader::new(master, child, poller, inbox.clone(), screen, feed, proxy).holding(slave);
+    let Hooks { on_input, on_thread_start } = hooks;
+    let reader =
+        Reader::new(master, child, poller, inbox.clone(), screen, feed, proxy, on_input).holding(slave);
     // When this fails the reader is dropped with the master, which hangs the terminal up on the
     // program.
-    std::thread::Builder::new().name("PTY reader".into()).spawn(move || reader.run())?;
+    std::thread::Builder::new().name("PTY reader".into()).spawn(move || {
+        if let Some(start) = on_thread_start {
+            start();
+        }
+        reader.run()
+    })?;
     Ok(Started { control: Control { inbox }, pid })
 }

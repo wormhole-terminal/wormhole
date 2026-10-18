@@ -73,9 +73,10 @@ impl<S, F: Feed<S>> Sink<S, F> {
         }
     }
 
-    /// Tell the UI the program exited (with `code`, if it exited with one) and its output is parsed.
-    pub(super) fn report_exit(&self, code: Option<i32>) {
-        self.proxy.exited(code);
+    /// Tell the UI the program exited (with `code`, if it exited with one, or the `signal` that
+    /// ended it) and its output is parsed.
+    pub(super) fn report_exit(&self, code: Option<i32>, signal: Option<i32>) {
+        self.proxy.exited(code, signal);
     }
 
     /// When a synchronized update has to be given up on (see [`Feed::deadline`]).

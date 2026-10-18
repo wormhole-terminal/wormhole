@@ -10,6 +10,8 @@ publish.workspace = true
 [dependencies]
 # The value types the screen is read and driven in (the engine's boundary).
 wormhole-vt.workspace = true
+# A hosted terminal's host side (`hosted`) speaks the session host's protocol types.
+wormhole-wire.workspace = true
 anyhow.workspace = true
 libc.workspace = true
 # The agent registry's ids are stored and sent by name.

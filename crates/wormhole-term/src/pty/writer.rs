@@ -84,13 +84,17 @@ impl Core {
     /// the poller then reports.
     pub(super) fn write_input(&mut self) {
         let mut file = self.master.file();
+        let before = self.input_total;
         while let Some(chunk) = self.input.front() {
             match file.write(chunk) {
                 Ok(0) => {
                     self.input.clear();
                     break;
                 }
-                Ok(written) => self.input.advance(written),
+                Ok(written) => {
+                    self.input.advance(written);
+                    self.input_total += written as u64;
+                }
                 Err(err) if err.kind() == io::ErrorKind::WouldBlock => break,
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(err) => {
@@ -100,6 +104,11 @@ impl Core {
                     break;
                 }
             }
+        }
+        if self.input_total != before
+            && let Some(hook) = &self.input_hook
+        {
+            hook(self.input_total);
         }
         let interest = if self.input.is_empty() { Interest::Output } else { Interest::OutputAndRoom };
         self.master.poll_for(interest);

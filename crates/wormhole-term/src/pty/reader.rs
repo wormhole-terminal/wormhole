@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 
 use polling::{Events, Poller};
 
+use super::InputHook;
 use super::exit::{self, Watch};
 use super::inbox::{Inbox, Msg};
 use super::lock::FairLock;
@@ -56,6 +57,9 @@ pub(super) struct Core {
     messages: Vec<Msg>,
     /// The terminal was closed: end the program, giving it this long.
     close: Option<Duration>,
+    /// Told how much input the master has taken (a hosted terminal's), and the count.
+    pub(super) input_hook: Option<InputHook>,
+    pub(super) input_total: u64,
 }
 
 /// The reader thread's state.
@@ -107,6 +111,7 @@ enum Next {
 
 impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
     /// The thread for `master` and `child`, parsing into `screen` with `feed`.
+    #[allow(clippy::too_many_arguments)] // the thread's whole starting kit, built in one place
     pub(super) fn new(
         master: Master,
         child: Child,
@@ -115,6 +120,7 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
         screen: Arc<FairLock<S>>,
         feed: F,
         proxy: EventProxy,
+        input_hook: Option<InputHook>,
     ) -> Self {
         let exit = exit::watch(&poller, &child);
         Self {
@@ -131,6 +137,8 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
                 input: Input::default(),
                 messages: Vec::new(),
                 close: None,
+                input_hook,
+                input_total: 0,
             },
         }
     }
@@ -227,7 +235,9 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
         exit::unwatch(&self.core.poller, &self.core.child);
         // Everything it wrote is read now.
         self.core.slave = None;
-        self.sink.report_exit(status.and_then(|status| status.code()));
+        use std::os::unix::process::ExitStatusExt as _;
+        let (code, signal) = status.map_or((None, None), |status| (status.code(), status.signal()));
+        self.sink.report_exit(code, signal);
     }
 }
 

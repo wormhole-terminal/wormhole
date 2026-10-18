@@ -334,19 +334,69 @@ impl Shared {
     }
 }
 
+/// What a hosted terminal's host side (`hosted`) hears of a program's doings, in the words the
+/// UI's events use, plus what they leave out (a folder's path, the number of a prompt, the raw
+/// status report). Called on the PTY thread while the terminal is locked, so it must be quick and
+/// must never lock the terminal.
+pub(crate) trait Tap: Send + Sync {
+    fn heard(&self, what: Heard<'_>);
+}
+
+/// One thing a [`Tap`] hears.
+pub(crate) enum Heard<'a> {
+    Title(&'a str),
+    ResetTitle,
+    Bell,
+    ClipboardStore(&'a str),
+    ClipboardLoad(&'a TextFormatter, &'a Reply),
+    WindowOp(WindowOp),
+    Cwd(&'a std::path::Path),
+    Mark(Mark, u64),
+    Notify(&'a Notification),
+    Progress(Option<Progress>),
+    /// The body of an accepted OSC 7501 report, as the program wrote it.
+    ProgramStatus(&'a [u8]),
+    FullReset,
+    /// The program is gone: its exit code, or the signal that ended it.
+    Exited {
+        code: Option<i32>,
+        signal: Option<i32>,
+    },
+}
+
 /// Receives the engine's events on the PTY thread (while the terminal is locked, so it must never
 /// lock it again); `engine` turns the engine's own events into calls on this.
 #[derive(Clone)]
 pub(crate) struct EventProxy {
     tx: async_channel::Sender<PtyEvent>,
     shared: Arc<Shared>,
+    /// Set on a hosted terminal's host side only.
+    tap: Option<Arc<dyn Tap>>,
 }
 
 impl EventProxy {
     pub(super) fn new() -> (Self, PtyEvents) {
         let (tx, rx) = async_channel::unbounded();
         let shared = Arc::new(Shared::default());
-        (Self { tx, shared: shared.clone() }, PtyEvents { rx, shared })
+        (Self { tx, shared: shared.clone(), tap: None }, PtyEvents { rx, shared })
+    }
+
+    /// A proxy whose events are also told to `tap`.
+    pub(super) fn tapped(tap: Arc<dyn Tap>) -> (Self, PtyEvents) {
+        let (mut proxy, events) = Self::new();
+        proxy.tap = Some(tap);
+        (proxy, events)
+    }
+
+    fn heard(&self, what: Heard<'_>) {
+        if let Some(tap) = &self.tap {
+            tap.heard(what);
+        }
+    }
+
+    /// An accepted OSC 7501 report's body, for a tap (the parsed report goes through `osc`).
+    pub(super) fn heard_status(&self, body: &[u8]) {
+        self.heard(Heard::ProgramStatus(body));
     }
 
     pub(super) fn shared(&self) -> &Arc<Shared> {
@@ -354,6 +404,20 @@ impl EventProxy {
     }
 
     pub(super) fn send(&self, event: PtyEvent) {
+        if self.tap.is_some() {
+            match &event {
+                PtyEvent::Title(title) => self.heard(Heard::Title(title)),
+                PtyEvent::ResetTitle => self.heard(Heard::ResetTitle),
+                PtyEvent::Bell => self.heard(Heard::Bell),
+                PtyEvent::ClipboardStore(text) => self.heard(Heard::ClipboardStore(text)),
+                PtyEvent::ClipboardLoad(format, reply) => self.heard(Heard::ClipboardLoad(format, reply)),
+                PtyEvent::WindowOp(op) => self.heard(Heard::WindowOp(*op)),
+                _ => {}
+            }
+            // A host has no UI to take the events, and an unbounded queue nobody drains would
+            // grow for as long as the program runs: the tap is the only listener.
+            return;
+        }
         let _ = self.tx.try_send(event);
     }
 
@@ -367,8 +431,9 @@ impl EventProxy {
     }
 
     /// The shell is gone: say so once.
-    pub(super) fn exited(&self, code: Option<i32>) {
+    pub(super) fn exited(&self, code: Option<i32>, signal: Option<i32>) {
         if !self.shared.exited.swap(true, Ordering::AcqRel) {
+            self.heard(Heard::Exited { code, signal });
             // The process the programs' work ran in is over (the UI shows the exit itself).
             self.shared.program_status().on_process_exit();
             self.send(PtyEvent::Exited(code));
@@ -390,11 +455,13 @@ impl EventProxy {
             // polling the shell's process stays the fallback for those.
             Osc::Cwd { host, path } => {
                 if procinfo::is_this_host(&host) && path.is_dir() {
+                    self.heard(Heard::Cwd(&path));
                     self.shared.report_cwd(path);
                     self.send(PtyEvent::Cwd);
                 }
             }
             Osc::Mark(mark, prompt) => {
+                self.heard(Heard::Mark(mark, prompt));
                 self.shared.mark(mark, prompt);
                 self.send(PtyEvent::Mark(mark));
                 // A new prompt: whatever program was reporting is over.
@@ -403,11 +470,17 @@ impl EventProxy {
                     self.program_status_changed();
                 }
             }
-            Osc::Notify(notification) => self.send(PtyEvent::Notify(notification)),
+            Osc::Notify(notification) => {
+                self.heard(Heard::Notify(&notification));
+                self.send(PtyEvent::Notify(notification));
+            }
             // Nothing shows this yet. Once something does, it must stop mapping it to a status
             // after the first OSC 7501 report, until the next full reset: a mapped 9;4 would
             // replace a real report's kind and msg.
-            Osc::Progress(progress) => self.shared.set_progress(progress),
+            Osc::Progress(progress) => {
+                self.heard(Heard::Progress(progress));
+                self.shared.set_progress(progress);
+            }
             // Answered here, on the PTY thread while the read's events are acted on, so the reply
             // goes out ahead of the engine's own replies from the same read: the reply to the
             // primary device attributes a program sends right after the query must not come first,
@@ -419,6 +492,7 @@ impl EventProxy {
                 }
             }
             Osc::FullReset => {
+                self.heard(Heard::FullReset);
                 if self.shared.program_status().reset() {
                     self.program_status_changed();
                 }

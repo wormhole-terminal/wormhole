@@ -24,6 +24,8 @@
 //! - `agents`: the coding agents' registry and which one runs in the foreground of a terminal;
 //! - `ports`: the TCP ports the programs under the shell listen on (libproc);
 //! - `events`: the bridge from the PTY thread to the UI;
+//! - `hosted`: a terminal run by a session host (`wormhole-host`): the stream its clients read,
+//!   the attach repaint, its meta file and socket path;
 //! - `restore`: replaying a previous session's text;
 //! - `snapshot`: what the UI draws, copied under a short lock;
 //! - `minimap`: the history drawn small, and where a click on it scrolls to;
@@ -44,6 +46,7 @@ mod engine;
 mod events;
 pub mod find;
 pub mod glyphs;
+pub mod hosted;
 pub mod images;
 pub mod input;
 mod links;

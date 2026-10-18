@@ -9224,6 +9224,7 @@ dependencies = [
  "tempfile",
  "tracing",
  "wormhole-vt",
+ "wormhole-wire",
 ]
 
 [[package]]

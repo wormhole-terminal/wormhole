@@ -112,7 +112,10 @@ impl Host {
                 };
                 match program_status::parse(&payload, end) {
                     Some(Parsed::Query) => proxy.osc(Osc::ProgramStatusQuery),
-                    Some(Parsed::Report(report)) => proxy.osc(Osc::ProgramStatus(report)),
+                    Some(Parsed::Report(report)) => {
+                        proxy.heard_status(&payload);
+                        proxy.osc(Osc::ProgramStatus(report));
+                    }
                     None => {}
                 }
             }

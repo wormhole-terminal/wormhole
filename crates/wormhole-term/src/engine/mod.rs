@@ -47,6 +47,14 @@ impl OwnFeed {
     }
 }
 
+impl OwnFeed {
+    /// Whether the parser and the terminal are between sequences, so a repaint can be made (see
+    /// `hosted`): the parser is this feed's own.
+    pub(super) fn repaint_ready(&self, screen: &Screen) -> bool {
+        screen.term.repaint_ready(&self.parser).is_ok()
+    }
+}
+
 impl Feed<Screen> for OwnFeed {
     fn feed(&mut self, screen: &mut Screen, bytes: &[u8]) {
         screen.term.feed(bytes);

@@ -91,6 +91,11 @@ impl CommandLog {
         }
     }
 
+    /// The number of the oldest prompt the log still holds.
+    pub(super) fn oldest(&self) -> Option<u64> {
+        self.records.front().map(|r| r.prompt)
+    }
+
     /// Where the `prompt`-th prompt's command stands.
     pub(super) fn state(&self, prompt: u64) -> BlockState {
         let at = self.records.partition_point(|r| r.prompt < prompt);

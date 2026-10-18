@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use super::{Collect, Run, SIZE, kill, launch, run, run_launch};
 use crate::events::EventProxy;
-use crate::pty::{FairLock, start, start_when};
+use crate::pty::{FairLock, Hooks, start, start_when};
 
 #[test]
 fn a_program_s_output_is_read_and_its_exit_reported() {
@@ -27,7 +27,8 @@ fn the_output_of_a_program_that_finished_before_the_reader_started_is_not_lost()
     // waits for the output to be read (XNU's `ttywait`), which only the reader does.
     let (proxy, events) = EventProxy::new();
     let screen = Arc::new(FairLock::new(Vec::new()));
-    let started = start_when(&launch("/bin/echo", &["hello"]), SIZE, screen.clone(), Collect, proxy, |_| {
+    let echo = launch("/bin/echo", &["hello"]);
+    let started = start_when(&echo, SIZE, screen.clone(), Collect, proxy, Hooks::default(), |_| {
         std::thread::sleep(Duration::from_millis(200));
     })
     .expect("starts");
