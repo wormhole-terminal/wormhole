@@ -48,7 +48,7 @@ impl Workspace {
             .gap_1()
             .children(theme_primary.map(|primary| {
                 style::swatch("onboarding-primary-theme", ui, hsla(primary), chosen.is_none())
-                    .on_click(|_, _, cx| update_settings(cx, |s| s.primary_color.clear()))
+                    .on_click(|_, _, cx| update_settings(cx, |s| s.choose_primary(String::new())))
             }))
             .children(colors.into_iter().enumerate().map(|(ix, (_, color))| {
                 let hex = color.to_hex();
@@ -56,7 +56,7 @@ impl Workspace {
                 style::swatch(("onboarding-primary", ix), ui, hsla(color), picked).on_click(
                     move |_, _, cx| {
                         let hex = hex.clone();
-                        update_settings(cx, |s| s.primary_color = hex)
+                        update_settings(cx, |s| s.choose_primary(hex))
                     },
                 )
             }));

@@ -114,6 +114,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Settings → Appearance → Use the theme's primary colour: a switch, on by default. Turn it off to pick a
+  primary of your own for every theme; turn it back on and the theme's own returns, with your colour
+  kept for next time. A colour you had already chosen stays in use.
+
 - The status bar's size item names the program in front (the agent, or the running command), as the
   title row does, instead of always the shell. It no longer shows the branch, its changes or the agent's
   context: the title row has them. While the bar is shown it also says how the terminal on screen is

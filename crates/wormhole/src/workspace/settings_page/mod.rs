@@ -241,7 +241,7 @@ impl SettingsWindow {
                 let hex = theme_bridge::color(*color).with_alpha(1.0).to_hex();
                 // Dragging a slider fires for shades that round to the same hex.
                 if settings(cx).primary_color != hex {
-                    update_settings(cx, |s| s.primary_color = hex);
+                    update_settings(cx, |s| s.choose_primary(hex));
                 }
             }),
             cx.subscribe_in(&search, window, |this, input, event: &InputEvent, _, cx| {

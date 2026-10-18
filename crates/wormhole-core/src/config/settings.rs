@@ -199,8 +199,13 @@ pub struct Settings {
     /// A built-in theme name, or a path to a Ghostty / iTerm2 / Alacritty theme file.
     pub theme: String,
     /// Replaces the theme's primary (the primary color: buttons, focus, selection,
-    /// links) with this `#rrggbb`; empty keeps the theme's own.
+    /// links) with this `#rrggbb` while `theme_primary` is off; empty keeps the theme's own.
     pub primary_color: String,
+    /// Use the theme's own primary. Off, `primary_color` replaces it, in every theme; the color
+    /// stays chosen while this is on. A config from before the switch has no value: one that
+    /// chose a color keeps it (see [`Settings::uses_theme_primary`]).
+    #[serde(default)]
+    pub theme_primary: Option<bool>,
     pub font_family: String,
     pub font_size: f32,
     /// Combine sequences like `=>` and `!=` into single glyphs (in fonts that
@@ -382,6 +387,7 @@ impl Default for Settings {
         Self {
             theme: "Tokyo Night".into(),
             primary_color: String::new(),
+            theme_primary: Some(true),
             // Only fresh configs: config.json is written out in full on first
             // launch, so existing ones keep the font they have.
             font_family: fonts::bundled::FAMILY.into(),
@@ -489,6 +495,7 @@ impl Settings {
 /// among them: a project brings its own as `.wormhole/theme.json`.
 pub const PROJECT_SETTINGS: &[&str] = &[
     "primary_color",
+    "theme_primary",
     "font_family",
     "font_size",
     "font_ligatures",
@@ -608,15 +615,36 @@ pub(crate) fn keys() -> Vec<String> {
 }
 
 impl Settings {
-    /// The primary chosen in `primary_color`, if it is set to a valid color.
+    /// The primary chosen in `primary_color`, while the theme's own is switched off and it is
+    /// set to a valid color.
     pub fn primary(&self) -> Option<Color> {
+        if self.uses_theme_primary() {
+            return None;
+        }
         Color::from_hex(&self.primary_color).ok().map(|c| c.with_alpha(1.0))
     }
 
-    /// A problem with `primary_color` to show the user.
+    /// Whether the theme's own primary is in use: `theme_primary`, or, in a config from before
+    /// that switch, whether no color was chosen.
+    pub fn uses_theme_primary(&self) -> bool {
+        self.theme_primary.unwrap_or_else(|| self.primary_color.trim().is_empty())
+    }
+
+    /// Use `hex` as the primary, or, empty, the theme's own (the color last chosen stays, for
+    /// the switch).
+    pub fn choose_primary(&mut self, hex: String) {
+        if hex.is_empty() {
+            self.theme_primary = Some(true);
+        } else {
+            self.primary_color = hex;
+            self.theme_primary = Some(false);
+        }
+    }
+
+    /// A problem with `primary_color` to show the user, while it is in use.
     pub(super) fn primary_error(&self) -> Option<String> {
         let value = self.primary_color.trim();
-        if value.is_empty() {
+        if value.is_empty() || self.uses_theme_primary() {
             return None;
         }
         Color::from_hex(value).err().map(|e| format!("primary_color: {e}"))
@@ -648,6 +676,14 @@ impl Settings {
                     applied.push(key.clone());
                 }
             }
+        }
+        // A project that sets a primary color means it, whatever the user's switch says (its
+        // `theme_primary` still wins).
+        if applied.iter().any(|k| k == "primary_color")
+            && !overrides.contains_key("theme_primary")
+            && let Some(serde_json::Value::String(color)) = overrides.get("primary_color")
+        {
+            merged.insert("theme_primary".into(), serde_json::Value::Bool(color.trim().is_empty()));
         }
         applied.sort();
         match serde_json::from_value::<Settings>(serde_json::Value::Object(merged)) {
@@ -703,6 +739,8 @@ impl Settings {
     }
 
     pub(super) fn sanitized(mut self) -> Self {
+        // Written out from now on, so the switch says what is in use.
+        self.theme_primary = Some(self.uses_theme_primary());
         for slot in FontSlot::ALL {
             slot.step_size(&mut self, 0.0);
         }
@@ -834,7 +872,8 @@ mod tests {
     #[test]
     fn the_final_design_keys_have_their_defaults() {
         let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
-        assert_eq!(unset, Settings::default());
+        // The primary's switch is worked out as the file is read (an older config has none).
+        assert_eq!(unset.clone().sanitized(), Settings::default());
         assert!(!unset.status_bar, "the status bar is hidden until asked for");
         assert!(!unset.minimap, "so is the minimap");
         assert!(unset.bell_sound && unset.bell_visual);
@@ -1107,7 +1146,11 @@ mod tests {
 
     #[test]
     fn primary_color_is_a_valid_hex_or_nothing() {
-        let with = |value: &str| Settings { primary_color: value.into(), ..Settings::default() };
+        let with = |value: &str| Settings {
+            primary_color: value.into(),
+            theme_primary: Some(false),
+            ..Settings::default()
+        };
         assert_eq!(Settings::default().primary(), None);
         assert_eq!(with("#ff6600").primary().map(Color::to_hex).as_deref(), Some("#ff6600"));
         assert_eq!(with(" ff6600 ").primary().map(Color::to_hex).as_deref(), Some("#ff6600"));
@@ -1119,12 +1162,46 @@ mod tests {
     }
 
     #[test]
+    fn the_theme_primary_switch_keeps_the_color_chosen() {
+        let mut s = Settings::default();
+        assert!(s.uses_theme_primary());
+        s.choose_primary("#ff6600".into());
+        assert_eq!(
+            (s.theme_primary, s.primary().map(Color::to_hex).as_deref()),
+            (Some(false), Some("#ff6600"))
+        );
+        // Back to the theme's own: the color stays for when the switch goes off again.
+        s.choose_primary(String::new());
+        assert_eq!((s.primary(), s.primary_color.as_str()), (None, "#ff6600"));
+        assert!(s.primary_error().is_none());
+        s.theme_primary = Some(false);
+        assert_eq!(s.primary().map(Color::to_hex).as_deref(), Some("#ff6600"));
+    }
+
+    #[test]
+    fn a_config_from_before_the_switch_keeps_its_color() {
+        let old: Settings = serde_json::from_str(r##"{ "primary_color": "#00aa88" }"##).expect("parses");
+        assert_eq!(old.theme_primary, None);
+        assert_eq!(old.primary().map(Color::to_hex).as_deref(), Some("#00aa88"));
+        assert_eq!(old.clone().sanitized().theme_primary, Some(false), "and says so from now on");
+        let plain: Settings = serde_json::from_str("{}").expect("parses");
+        assert_eq!((plain.primary(), plain.sanitized().theme_primary), (None, Some(true)));
+    }
+
+    #[test]
     fn projects_can_override_the_primary_color() {
         let serde_json::Value::Object(map) = serde_json::json!({ "primary_color": "#00aa88" }) else {
             unreachable!()
         };
         let merged = Settings::default().with_overrides(&map);
         assert_eq!(merged.primary().map(Color::to_hex).as_deref(), Some("#00aa88"));
+        // Its own switch still wins.
+        let serde_json::Value::Object(map) =
+            serde_json::json!({ "primary_color": "#00aa88", "theme_primary": true })
+        else {
+            unreachable!()
+        };
+        assert_eq!(Settings::default().with_overrides(&map).primary(), None);
     }
 
     #[test]

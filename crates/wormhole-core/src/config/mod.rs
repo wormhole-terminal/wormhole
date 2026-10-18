@@ -577,10 +577,18 @@ mod tests {
     fn a_bad_primary_color_is_reported_but_kept() {
         let dir = tempfile::tempdir().expect("temp dir");
         let mut config = Config::at(dir.path().join("config.json"));
-        config.apply(Settings { primary_color: "orange".into(), ..Settings::default() }.sanitized());
+        let chosen = |color: &str| Settings {
+            primary_color: color.into(),
+            theme_primary: Some(false),
+            ..Settings::default()
+        };
+        config.apply(chosen("orange").sanitized());
         assert!(config.error.as_deref().is_some_and(|e| e.contains("primary_color")));
         assert_eq!(config.settings.primary_color, "orange");
-        config.apply(Settings { primary_color: "#ff6600".into(), ..Settings::default() });
+        config.apply(chosen("#ff6600"));
+        assert_eq!(config.error, None);
+        // While the theme's own is in use, a color kept for later is not in the way.
+        config.apply(Settings { theme_primary: Some(true), ..chosen("orange") });
         assert_eq!(config.error, None);
     }
 

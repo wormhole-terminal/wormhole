@@ -36,7 +36,9 @@ pub(super) const SETTINGS: &[Setting] = &[
         },
     ),
     Setting::block("theme", draw_theme),
-    Setting::custom("primary-color", draw_swatches).describe(describe_primary),
+    Setting::toggle("primary-color", |s| s.uses_theme_primary(), |s, on| s.theme_primary = Some(on))
+        .describe(describe_primary)
+        .below(draw_swatches),
     Setting::custom("opacity", draw_opacity).below(reduced_transparency_note),
     toggle!("blur", blur).below(blur_off_warning),
     Setting::custom("liquid-glass", draw_liquid_glass).below(liquid_glass_hint),
@@ -60,22 +62,28 @@ pub(super) const SETTINGS: &[Setting] = &[
     }),
 ];
 
-/// "Theme default · #7aa2f7. Buttons, …": the primary in use, from the theme or chosen.
+/// "The theme's · #7aa2f7. Off: …": the primary in use, the theme's or the one chosen.
 fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let store = cx.global::<SettingsStore>();
     let base = store.base_tokens().get("primary").map(|c| c.to_hex()).unwrap_or_default();
     let (_, _, entry) = settings_index::entry("primary-color")?;
     Some(match store.settings.primary() {
-        Some(chosen) => format!("{} · {}", chosen.to_hex(), entry.description).into(),
-        None => format!("Theme default · {base}. {}", entry.description).into(),
+        Some(chosen) => format!("Yours · {}, in every theme", chosen.to_hex()).into(),
+        None if !store.settings.uses_theme_primary() => {
+            format!("Pick a colour below · the theme's is {base}").into()
+        }
+        None => format!("The theme's · {base}. {}", entry.description).into(),
     })
 }
 
-/// The theme's own primary, then the theme's ANSI colors, then a color chosen elsewhere, and
-/// the "+" that picks any color.
-fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// While the theme's own primary is switched off: the theme's ANSI colors, a color chosen
+/// elsewhere, and the "+" that picks any color.
+fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);
     let store = cx.global::<SettingsStore>();
+    if store.settings.uses_theme_primary() {
+        return None;
+    }
     let base = store.base_tokens();
     let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
     let chosen = store.settings.primary();
@@ -94,30 +102,22 @@ fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
     {
         colors.push(chosen);
     }
-    let theme_default = theme_primary.map(|primary| {
-        style::swatch("primary-theme", ui, theme_bridge::hsla(primary), chosen.is_none())
-            .tooltip(|window, cx| {
-                gpui_kit::component::tooltip::Tooltip::new("Theme default").build(window, cx)
-            })
-            .on_click(|_, _, cx| update_settings(cx, |s| s.primary_color.clear()))
-    });
-    div()
+    let swatches = div()
         .flex()
         .items_center()
         .gap_1()
-        .children(theme_default)
         .children(colors.into_iter().enumerate().map(|(ix, color)| {
             let hex = color.to_hex();
             let picked = chosen.is_some_and(|c| c.to_hex() == hex);
             style::swatch(("primary-swatch", ix), ui, theme_bridge::hsla(color), picked).on_click(
                 move |_, _, cx| {
                     let hex = hex.clone();
-                    update_settings(cx, |s| s.primary_color = hex)
+                    update_settings(cx, |s| s.choose_primary(hex))
                 },
             )
         }))
-        .child(ColorPicker::new(&window.primary_picker).icon(IconName::Plus).anchor(Anchor::TopRight))
-        .into_any_element()
+        .child(ColorPicker::new(&window.primary_picker).icon(IconName::Plus).anchor(Anchor::TopRight));
+    Some(swatches.into_any_element())
 }
 
 /// The opacity slider at what the settings ask for, switched off while Reduce Transparency or

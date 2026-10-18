@@ -186,10 +186,10 @@ const APPEARANCE: &[Group] = &[
         "Accent",
         &[entry(
             "primary-color",
-            "Primary colour",
-            "Buttons, focus rings, selection and links; stays when you switch themes",
-            "accent highlight color colour swatch",
-            &["primary_color"],
+            "Use the theme's primary colour",
+            "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme",
+            "accent highlight color colour swatch custom own",
+            &["theme_primary", "primary_color"],
         )],
     ),
     group(

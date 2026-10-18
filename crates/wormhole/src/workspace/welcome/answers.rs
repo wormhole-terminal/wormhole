@@ -198,7 +198,7 @@ fn set_look(
             s.theme = name;
         }
         if let Some(hex) = primary {
-            s.primary_color = hex;
+            s.choose_primary(hex);
         }
         if let Some(on) = ligatures {
             s.font_ligatures = on;

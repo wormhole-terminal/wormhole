@@ -593,7 +593,7 @@ mod tests {
     fn choosing_a_primary_derives_the_theme_once_and_remembers_it() {
         let mut store = store();
         reset_tally();
-        update(&mut store, |s| s.primary_color = "#ff8800".into());
+        update(&mut store, |s| s.choose_primary("#ff8800".into()));
         assert_eq!(tally().get("with_primary"), Some(&1));
         assert_eq!(tally().get("theme_parts"), Some(&1));
         assert!(store.tokens.get("primary").is_some_and(|c| c.to_hex() == "#ff8800"));
@@ -609,9 +609,9 @@ mod tests {
         assert_eq!(store.revisions.theme, theme);
 
         // Another primary is another derivation; clearing it goes back to the theme's own.
-        update(&mut store, |s| s.primary_color = "#0088ff".into());
+        update(&mut store, |s| s.choose_primary("#0088ff".into()));
         assert_eq!(tally().get("with_primary"), Some(&2));
-        update(&mut store, |s| s.primary_color.clear());
+        update(&mut store, |s| s.choose_primary(String::new()));
         assert_eq!(tally().get("with_primary"), Some(&2));
         assert!(Arc::ptr_eq(&store.tokens, &store.config_tokens));
     }
