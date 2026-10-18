@@ -94,6 +94,9 @@ pub struct Parser {
     /// The bytes of a UTF-8 character the previous input ended in the middle of.
     pending: [u8; 3],
     pending_len: u8,
+    /// With 8-bit controls: the continuation bytes a character in a string still has to come, so
+    /// that they are not read as C1 controls.
+    string_utf8: u8,
 }
 
 impl Default for Parser {
@@ -111,6 +114,7 @@ impl Parser {
             csi: Csi::new(),
             pending: [0; 3],
             pending_len: 0,
+            string_utf8: 0,
         }
     }
 

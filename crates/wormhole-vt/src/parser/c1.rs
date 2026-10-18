@@ -4,14 +4,29 @@
 //! because a stray byte of 0x80..=0x9F is otherwise malformed UTF-8 and printed as U+FFFD, and a
 //! program that does not know about the mode must not be able to start a sequence with it. A
 //! character of UTF-8 text is read as a whole first, so its continuation bytes are never taken for
-//! controls; the cost is that a string closed by ST (0x9C) cannot contain a UTF-8 character with
-//! that byte in it, as on any 8-bit terminal.
+//! controls; inside a string (a title, a DCS payload) the bytes that continue a character are
+//! counted off as they pass, across feeds, so an em dash (E2 80 94) is text and a lone 0x9C is ST.
 
 use super::{Handler, Parser, State};
 
-/// The index of the first C1 byte of `bytes`, or its length.
-pub(super) fn first_c1(bytes: &[u8]) -> usize {
-    bytes.iter().position(|b| (0x80..=0x9F).contains(b)).unwrap_or(bytes.len())
+/// The index of the first C1 control in the string text `bytes`, or its length. A byte of
+/// 0x80..=0x9F that continues a UTF-8 character is text; `due` is how many continuation bytes the
+/// last lead byte still expects, kept from one call to the next.
+pub(super) fn first_c1_in_text(bytes: &[u8], due: &mut u8) -> usize {
+    for (i, &byte) in bytes.iter().enumerate() {
+        if *due > 0 && (0x80..=0xBF).contains(&byte) {
+            *due -= 1;
+            continue;
+        }
+        *due = match byte {
+            0xC2..=0xDF => 1,
+            0xE0..=0xEF => 2,
+            0xF0..=0xF4 => 3,
+            0x80..=0x9F => return i,
+            _ => 0,
+        };
+    }
+    bytes.len()
 }
 
 impl Parser {

@@ -159,6 +159,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   links: accents stacked on every letter, or a link on every character, could make the history hold
   many times its limit, hundreds of megabytes. Past 1 MiB of link addresses in one stretch of history,
   new links show as plain text.
+- After a program turns on 8-bit controls, a title or other string with a dash, curly quotes or `œ` in
+  it is no longer cut short and the rest shown as stray text.
 
 ### Security
 

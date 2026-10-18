@@ -3,7 +3,7 @@
 //! CAN or SUB (8.3.6, 8.3.148, "the data preceding it is in error"). The payload goes to the
 //! handler in slices of the input: found in bulk by `scan`, never copied.
 
-use super::c1::first_c1;
+use super::c1::first_c1_in_text;
 use super::scan::{first_control, string_run};
 use super::{Handler, Parser, State};
 
@@ -18,9 +18,8 @@ impl Parser {
     pub(super) fn osc<H: Handler>(&mut self, h: &mut H, bytes: &[u8], mut at: usize) -> usize {
         loop {
             let mut text = first_control(&bytes[at..]);
-            let eight_bit = h.eight_bit_controls();
-            if eight_bit {
-                text = first_c1(&bytes[at..at + text]);
+            if h.eight_bit_controls() {
+                text = first_c1_in_text(&bytes[at..at + text], &mut self.string_utf8);
             }
             if text > 0 {
                 h.osc_put(&bytes[at..at + text]);
@@ -29,6 +28,8 @@ impl Parser {
             let Some(&control) = bytes.get(at) else {
                 return at;
             };
+            // A control is never inside a character: whatever comes next starts afresh.
+            self.string_utf8 = 0;
             at += 1;
             match control {
                 0x80..=0x9F => {
@@ -92,7 +93,7 @@ impl Parser {
         loop {
             let mut data = string_run(&bytes[at..]);
             if h.eight_bit_controls() {
-                data = first_c1(&bytes[at..at + data]);
+                data = first_c1_in_text(&bytes[at..at + data], &mut self.string_utf8);
             }
             if data > 0 {
                 match KIND {
@@ -105,6 +106,7 @@ impl Parser {
             let Some(&stop) = bytes.get(at) else {
                 return at;
             };
+            self.string_utf8 = 0;
             at += 1;
             match stop {
                 0x80..=0x9F => {
