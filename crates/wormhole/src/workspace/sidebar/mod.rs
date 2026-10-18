@@ -226,7 +226,14 @@ impl Workspace {
                     self.render_group_band(&listing, &infos, band, (position, of), &frame, window, cx)
                 }
                 Entry::Row { session, band, position, of, number, marks } => {
-                    let place = rows::Place { position, of, number, grouped: band.is_some(), marks };
+                    let place = rows::Place {
+                        solo: frame.metrics.cards && matches!(listing.card(at), Some(Card::Loose(_))),
+                        position,
+                        of,
+                        number,
+                        grouped: band.is_some(),
+                        marks,
+                    };
                     self.render_row(&infos[session], &place, &frame, window, cx)
                 }
             };
@@ -242,7 +249,12 @@ impl Workspace {
                 Some(Card::Group(band)) => group_wash.get(&listing.bands[band].group).copied(),
                 _ => None,
             };
-            let segment = style::card_segment(ui, frame.metrics, top, bottom, wash, line);
+            let segment = match (listing.card(at), entry) {
+                (Some(Card::Loose(_)), Entry::Row { session, .. }) => {
+                    style::card_segment_solo(ui, frame.metrics, *session == self.active, line)
+                }
+                _ => style::card_segment(ui, frame.metrics, top, bottom, wash, line),
+            };
             // Each card is a glass of its own.
             let segment = if glass && frame.metrics.cards {
                 let (key, inset) = match listing.card(at) {

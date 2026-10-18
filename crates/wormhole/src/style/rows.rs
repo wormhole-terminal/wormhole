@@ -105,6 +105,9 @@ pub struct SessionRow {
     /// In a card (or lined up with one): inset by the row's own padding instead of 16, the selection
     /// and hover rounded.
     pub card: bool,
+    /// The only row of its card (`card_segment_solo`): the card itself takes the selection and hover
+    /// colours, so the row draws neither.
+    pub solo: bool,
     /// What the row measures at the person's density.
     pub metrics: Metrics,
 }
@@ -127,6 +130,7 @@ impl SessionRow {
             detail_trail: None,
             tile: None,
             card: false,
+            solo: false,
             metrics: Metrics::default(),
         }
     }
@@ -150,6 +154,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         detail_trail,
         tile,
         card,
+        solo,
         metrics,
     } = row;
     let (name_color, weight) = match (selected, emphasis) {
@@ -254,11 +259,18 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         } else {
             ROW_H
         }))
-        .map(|d| if card { d.px(px(metrics.row_px)).rounded(px(metrics.row_radius)) } else { d.px_4() })
+        .map(|d| {
+            if card {
+                d.px(px(metrics.row_px + if solo { metrics.card_pad } else { 0.0 }))
+                    .rounded(px(metrics.row_radius))
+            } else {
+                d.px_4()
+            }
+        })
         .when(has_tile && metrics.two_lines, |d| d.py_1())
         .cursor_pointer()
-        .when(selected, |d| d.bg(ui.selected_row))
-        .hover(move |d| if selected { d } else { d.bg(ui.hover) })
+        .when(selected && !solo, |d| d.bg(ui.selected_row))
+        .when(!solo, |d| d.hover(move |d| if selected { d } else { d.bg(ui.hover) }))
         .children(tile)
         .child(lines)
 }
@@ -283,19 +295,49 @@ pub fn card_segment(
     wash: Option<Hsla>,
     content: impl IntoElement,
 ) -> Div {
+    card_segment_in(ui, metrics, top, bottom, wash, None, content)
+}
+
+/// A card of one row: the row is the card, with no padding inside, and `selected` (or the pointer)
+/// colours the card's own fill and edge instead of a second rounded shape inside it. Without cards
+/// it is a plain stretch, as [`card_segment`] makes.
+#[track_caller]
+pub fn card_segment_solo(ui: UiColors, metrics: Metrics, selected: bool, content: impl IntoElement) -> Div {
+    card_segment_in(ui, metrics, true, true, None, Some(selected), content)
+}
+
+#[track_caller]
+fn card_segment_in(
+    ui: UiColors,
+    metrics: Metrics,
+    top: bool,
+    bottom: bool,
+    wash: Option<Hsla>,
+    solo: Option<bool>,
+    content: impl IntoElement,
+) -> Div {
     let outer = div().flex().flex_col().px(px(metrics.card_margin));
     let gap = px(metrics.card_gap);
     if !metrics.cards {
         return outer.when(bottom, |d| d.pb(gap)).child(content);
     }
-    let mut segment = div().relative().flex().flex_col().px(px(metrics.card_pad));
+    let card_pad = if solo.is_some() { 0.0 } else { metrics.card_pad };
+    let mut segment = div().relative().flex().flex_col().px(px(card_pad));
     let edge = Some(ui.border_width.into());
     {
         let b = &mut segment.style().border_widths;
         b.left = edge;
         b.right = edge;
     }
-    segment = segment.bg(ui.card).border_color(ui.card_edge);
+    let selected = solo == Some(true);
+    segment = segment.bg(if selected { ui.selected_row } else { ui.card }).border_color(if selected {
+        ui.selected_row
+    } else {
+        ui.card_edge
+    });
+    if solo == Some(false) {
+        segment = segment.hover(move |d| d.bg(ui.hover));
+    }
     {
         let b = &mut segment.style().border_widths;
         if top {
@@ -306,7 +348,7 @@ pub fn card_segment(
         }
     }
     let radius = px(metrics.card_radius);
-    let pad = px(metrics.card_pad);
+    let pad = px(card_pad);
     let segment = segment
         .when(top, |d| d.rounded_t(radius).pt(pad))
         .when(bottom, |d| d.rounded_b(radius).pb(pad))

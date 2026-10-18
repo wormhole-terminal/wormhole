@@ -80,6 +80,8 @@ impl Frame {
 
 /// Where a row sits in the listing.
 pub(super) struct Place {
+    /// The only row of its card: the card takes the selection and hover colours.
+    pub solo: bool,
     pub(super) position: usize,
     pub(super) of: usize,
     pub(super) number: Option<usize>,
@@ -356,6 +358,7 @@ impl Workspace {
                 detail_trail: detail_trail.map(SharedString::from),
                 tile: Some(tile),
                 card: true,
+                solo: place.solo,
                 metrics: frame.metrics,
             },
         );

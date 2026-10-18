@@ -14,6 +14,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - The terminals of a split sit 8 pt apart, each its own rounded surface with the primary outline on the one
   that has the keyboard; the gap is the handle that resizes them. Settings → Terminal → Gaps between split
   terminals turns it off for the hairline join.
+- A terminal in no group is one rounded card: the selection and the pointer colour the card itself, with no
+  second rounded shape inside it.
 - The terminals of a split that are in no group now share one card in the sidebar. The bracket along their
   rows and the "on screen" label are gone; VoiceOver still says which are on screen.
 - The window's content lines up on one 12 pt edge: the terminal's text, the title row's first item, the
