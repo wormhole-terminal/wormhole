@@ -21,7 +21,7 @@ impl Page {
             return;
         }
         let base = self.base_of(row);
-        self.guard_edges(base, start, end);
+        self.guard_edges_sparing(base, start, end, spare);
         let (a, b) = (base + start, base + end);
         if spare != Spare::Nothing {
             self.erase_unspared(a, b, bg, spare);

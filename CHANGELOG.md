@@ -165,6 +165,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   into its input when Wormhole stops answering: a report past the limit is left out whole.
 - A saved terminal state that a program sends back with a mistake in it now changes nothing, as it
   should, instead of putting back its margins and modes and stopping at the mistake.
+- A protected wide character (Chinese, Japanese, an emoji) right at the edge of a selective erase is no
+  longer erased with the rest.
 
 ### Security
 

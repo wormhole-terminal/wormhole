@@ -26,7 +26,7 @@
 
 use crate::types::Hyperlink;
 
-use super::cell::{Cell, CellFlags, StyleRun, run_of};
+use super::cell::{Cell, CellFlags, Spare, StyleRun, run_of};
 use super::row::{DIRTY, Pen, Row, RowMark, WRAPPED};
 use super::side_tables::{Graphemes, Links};
 use super::style::Style;
@@ -296,6 +296,17 @@ impl Page {
     fn guard_edges(&mut self, base: usize, from: usize, to: usize) {
         self.split_wide_at(base, from);
         self.split_wide_at(base, to);
+    }
+
+    /// As [`Self::guard_edges`] for an erase that leaves the cells `spare` names alone: a wide
+    /// character those protect is left whole where the range cuts it (both halves carry the
+    /// protection, so the erase passes over the half inside).
+    pub(super) fn guard_edges_sparing(&mut self, base: usize, from: usize, to: usize, spare: Spare) {
+        for col in [from, to] {
+            if col > 0 && col < self.cols && !self.cells[base + col - 1].is_spared(spare) {
+                self.split_wide_at(base, col);
+            }
+        }
     }
 
     // ---- writing ----

@@ -177,6 +177,14 @@ feed A\e[1"qB\e[0"qCDE\e[1;4H\e[?1K
 screen
 | B  E     |
 
+test DECSEL leaves a protected wide character whole where its range cuts it
+spec VT510 DECSEL: CSI ? Ps K erases unprotected characters only; both halves of a wide character are protected
+known-fail: alacritty – DECSEL (CSI ? Ps K) is ignored: nothing is erased
+size 10 4
+feed A\e[1"q日\e[0"qBC\e[1;2H\e[?1K
+screen
+| 日BC     |
+
 test DECSED 2 erases every unprotected character on the screen
 spec VT510 DECSED: CSI ? 2 J
 known-fail: alacritty – DECSED (CSI ? Ps J) is ignored: nothing is erased
@@ -273,6 +281,14 @@ screen
 feed \e[J
 screen
 |  c       |
+
+test ECH leaves a guarded wide character whole where its range cuts it
+spec ECMA-48 8.3.129 SPA and 8.3.38 ECH: the characters of a guarded area are not erased
+known-fail: alacritty – no guarded areas (SPA, EPA): ED, EL and ECH erase them
+size 10 4
+feed a\eV日\eWb\e[1;1H\e[2X
+screen
+| 日b      |
 
 test DECSCA protection is not a guarded area
 spec VT510 DECSCA: only the selective erasers respect it; ECMA-48 8.3.129 for SPA
