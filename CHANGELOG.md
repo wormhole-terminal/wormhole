@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Usage now shows Codex plan-limit windows and Gemini’s latest model-response token count alongside
+  Claude. Enable or update the integrations in Settings → Coding agents. Missing limits are omitted,
+  and expired snapshots wait for a fresh report instead of claiming an unused allowance.
+
 - Settings → Updates → Channel: Unstable updates to a build of every change as soon as it passes the
   tests, between releases, and shows Settings → Feature flags so you can try features that are still
   being built. Stable, the default, gets releases only. Going back to Stable keeps the build you have

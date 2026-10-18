@@ -1,5 +1,6 @@
 //! Coding agents' plan usage limits (the right panel's Usage tab): how much of a subscription's
-//! 5-hour and weekly windows is used and when each resets, as the agent reports it.
+//! limit windows is used and when each resets, as the agent reports it. Gemini reports the
+//! latest model-response token count instead. Codex and Gemini arrive through `usage::from_hook`.
 //!
 //! Claude Code hands its status line command `rate_limits` (since 2.1.80, Pro and Max plans,
 //! after the first reply of a session); Wormhole's status line entry forwards that JSON here
@@ -12,6 +13,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::agents::AgentId;
+
+mod providers;
+pub use providers::from_hook;
 
 /// One rate-limit window: how much of it is used, and when it starts over.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -28,8 +32,37 @@ pub struct Usage {
     pub agent: AgentId,
     pub five_hour: Option<Window>,
     pub seven_day: Option<Window>,
+    /// Provider-defined windows, where the duration can differ from Claude's.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub limits: Vec<PlanLimit>,
+    /// Gemini reports tokens for the latest model response, not account quota.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_tokens: Option<u64>,
     /// When the report came, Unix seconds.
     pub updated: i64,
+}
+
+/// A limit whose label and reset time come from the provider's actual window.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlanLimit {
+    pub label: String,
+    pub used: f32,
+    pub resets_at: Option<i64>,
+}
+
+impl PlanLimit {
+    /// Expiry does not prove there has been no usage since the last snapshot.
+    pub fn shown(&self, now: i64) -> (f32, String) {
+        if self.resets_at.is_some_and(|reset| reset <= now) {
+            return (0.0, "Awaiting update".into());
+        }
+        let used = self.used.clamp(0.0, 100.0);
+        let mut words = format!("{}%", used.round() as u32);
+        if let Some(reset) = self.resets_at {
+            words.push_str(&format!(" · resets {}", duration(reset.saturating_sub(now))));
+        }
+        (used / 100.0, words)
+    }
 }
 
 /// The windows a panel shows, in order.
@@ -66,9 +99,28 @@ impl Usage {
             agent: AgentId::Claude,
             five_hour: window("five_hour"),
             seven_day: window("seven_day"),
+            limits: Vec::new(),
+            response_tokens: None,
             updated: now,
         };
         (usage.five_hour.is_some() || usage.seven_day.is_some()).then_some(usage)
+    }
+
+    /// Only reported limits get a meter; missing data is not an unused allowance.
+    pub fn plan_limits(&self) -> Vec<PlanLimit> {
+        let mut limits: Vec<_> = Limit::ALL
+            .into_iter()
+            .filter_map(|limit| {
+                let window = self.window(limit)?;
+                Some(PlanLimit {
+                    label: limit.label().into(),
+                    used: window.used,
+                    resets_at: Some(window.resets_at),
+                })
+            })
+            .collect();
+        limits.extend(self.limits.iter().cloned());
+        limits
     }
 
     pub fn window(&self, limit: Limit) -> Option<Window> {
@@ -174,7 +226,8 @@ fn context_used(window: &Value) -> Option<f32> {
 /// The reports kept, one per agent, in the order the agents first reported.
 pub fn record(all: &mut Vec<Usage>, usage: Usage) {
     match all.iter_mut().find(|u| u.agent == usage.agent) {
-        Some(slot) => *slot = usage,
+        Some(slot) if usage.updated >= slot.updated => *slot = usage,
+        Some(_) => {}
         None => all.push(usage),
     }
 }
@@ -190,7 +243,7 @@ pub fn duration(secs: i64) -> String {
             m => format!("{}h {m}m", secs / 3600),
         },
         // To the nearest day: three days less a minute still reads "3d".
-        _ => format!("{}d", (secs + 43_200) / 86_400),
+        _ => format!("{}d", secs.saturating_add(43_200) / 86_400),
     }
 }
 
@@ -275,6 +328,44 @@ mod tests {
         assert_eq!(all[0].updated, NOW + 5);
         assert_eq!(from_json(&to_json(&all)), all, "kept across a restart");
         assert!(from_json("not json").is_empty());
+    }
+
+    #[test]
+    fn old_saved_reports_and_new_providers_coexist() {
+        let legacy = r#"[{"agent":"claude","five_hour":null,"seven_day":null,"updated":12}]"#;
+        let mut all = from_json(legacy);
+        assert_eq!(all.len(), 1);
+        assert!(all[0].limits.is_empty());
+        assert_eq!(all[0].response_tokens, None);
+        let gemini = Usage {
+            agent: AgentId::Gemini,
+            five_hour: None,
+            seven_day: None,
+            limits: Vec::new(),
+            response_tokens: Some(100),
+            updated: NOW,
+        };
+        record(&mut all, gemini.clone());
+        record(&mut all, Usage { response_tokens: Some(9), updated: NOW - 1, ..gemini.clone() });
+        assert_eq!(all[1].response_tokens, Some(100), "late hooks cannot replace a newer report");
+        record(&mut all, Usage { response_tokens: Some(150), updated: NOW + 1, ..gemini });
+        assert_eq!(all[1].response_tokens, Some(150), "streaming snapshots are replaced, not summed");
+        assert_eq!(from_json(&to_json(&all)), all);
+    }
+
+    #[test]
+    fn the_panel_omits_unreported_limits_and_marks_expired_snapshots() {
+        let report = Usage::from_claude_status(
+            &json!({"rate_limits": {
+                "five_hour": {"used_percentage": 70, "resets_at": NOW+1}
+            }}),
+            NOW,
+        )
+        .unwrap();
+        let limits = report.plan_limits();
+        assert_eq!(limits.len(), 1);
+        assert_eq!(limits[0].shown(NOW + 2).1, "Awaiting update");
+        assert!(!duration(i64::MAX).is_empty());
     }
 
     #[test]

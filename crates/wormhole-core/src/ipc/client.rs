@@ -59,8 +59,22 @@ pub fn run_cli(args: &[String]) {
         Some(arg) => serde_json::from_str(&arg).unwrap_or(Value::Null),
         None => read_stdin_payload(),
     };
-    let message = hook_message(tab, invocation.agent, &invocation.event, &payload);
-    send(&socket, &message);
+    // Model-response telemetry does not change whether an agent is busy or waiting.
+    if !(invocation.agent == AgentId::Gemini && invocation.event == "AfterModel") {
+        let message = hook_message(tab, invocation.agent, &invocation.event, &payload);
+        send(&socket, &message);
+    }
+    let codex_home = std::env::var_os("CODEX_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| integrations::home().join(".codex"));
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs() as i64);
+    if let Some(usage) =
+        crate::usage::from_hook(invocation.agent, &invocation.event, &payload, &codex_home, now)
+    {
+        send(&socket, &Message::Usage { usage });
+    }
 }
 
 /// `Wormhole statusline`, which Claude Code's status line entry runs with its status JSON on

@@ -1,10 +1,10 @@
 //! The right panel's Usage tab: each coding agent's plan usage limits, as its status line last
-//! reported them (`wormhole_core::usage`). Claude Code only for now; one block per agent.
+//! reported them (`wormhole_core::usage`), plus Gemini’s latest model-response tokens.
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::progress::Progress;
 use wormhole_core::agents;
-use wormhole_core::usage::{self, Limit, Usage};
+use wormhole_core::usage::{self, PlanLimit, Usage};
 
 use super::app::app;
 use super::*;
@@ -32,11 +32,10 @@ impl Workspace {
                     .text_body()
                     .text_color(ui.muted)
                     .child(
-                        "Claude's plan usage limits show here after its next reply in a Wormhole terminal.",
+                        "Claude and Codex plan limits, and Gemini response tokens, show here as you use them in Wormhole.",
                     )
                     .child(
-                        "They need a Pro or Max plan, Claude Code 2.1.80 or later, and the Claude \
-                         integration from Settings → Coding agents.",
+                        "Enable or update their integrations in Settings → Coding agents. Plan limits need a supported subscription; API-key logins may not report them.",
                     ),
             )
             .into_any_element();
@@ -77,24 +76,47 @@ fn agent_block(report: &Usage, now: i64, ui: UiColors) -> AnyElement {
                 .text_color(ui.muted)
                 .child(usage::updated(report.updated, now)),
         );
+    let limits = report.plan_limits();
     div()
         .flex()
         .flex_col()
         .child(header)
-        .child(div().px(px(style::CARD_INSET)).pb_1().child(style::section_label(ui, "Plan usage limits")))
-        .children(Limit::ALL.into_iter().map(|limit| limit_row(report, limit, now, ui)))
+        .when(!limits.is_empty(), |card| {
+            card.child(
+                div().px(px(style::CARD_INSET)).pb_1().child(style::section_label(ui, "Plan usage limits")),
+            )
+        })
+        .children(limits.iter().enumerate().map(|(index, limit)| limit_row(report, index, limit, now, ui)))
+        .when_some(report.response_tokens, |card, tokens| {
+            card.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .px(px(style::CARD_INSET))
+                    .py_2()
+                    .child(style::section_label(ui, "Latest model response"))
+                    .child(div().text_body().tabular_nums().child(format!("{tokens} tokens")))
+                    .child(
+                        div()
+                            .text_caption()
+                            .text_color(ui.muted)
+                            .child("Latest report across Gemini terminals. Plan limits are not reported."),
+                    ),
+            )
+        })
         .into_any_element()
 }
 
 /// "5-hour limit … 25% · resets 34m" over its bar.
-fn limit_row(report: &Usage, limit: Limit, now: i64, ui: UiColors) -> AnyElement {
-    let (share, words) = report.shown(limit, now);
+fn limit_row(report: &Usage, index: usize, limit: &PlanLimit, now: i64, ui: UiColors) -> AnyElement {
+    let (share, words) = limit.shown(now);
     let color = match share {
         s if s >= 1.0 => ui.danger,
         s if s >= WARN_AT => ui.warning,
         _ => ui.primary,
     };
-    let id = format!("usage-{:?}-{limit:?}", report.agent);
+    let id = format!("usage-{:?}-{index}", report.agent);
     div()
         .flex()
         .flex_col()
@@ -106,7 +128,7 @@ fn limit_row(report: &Usage, limit: Limit, now: i64, ui: UiColors) -> AnyElement
                 .flex()
                 .items_baseline()
                 .gap_2()
-                .child(div().min_w_0().truncate().text_body().child(limit.label()))
+                .child(div().min_w_0().truncate().text_body().child(limit.label.clone()))
                 .child(div().flex_1())
                 .child(
                     div().flex_none().text_caption().tabular_nums().text_color(ui.muted).child(words.clone()),
@@ -116,7 +138,7 @@ fn limit_row(report: &Usage, limit: Limit, now: i64, ui: UiColors) -> AnyElement
             Progress::new(SharedString::from(id))
                 .value(share * 100.0)
                 .color(color)
-                .accessibility_label(format!("{}, {words}", limit.label())),
+                .accessibility_label(format!("{}, {words}", limit.label.clone())),
         )
         .into_any_element()
 }

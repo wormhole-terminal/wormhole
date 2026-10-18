@@ -48,7 +48,7 @@ pub const CODEX: Format = Format {
 
 pub const GEMINI: Format = Format {
     root: Some("hooks"),
-    events: &["BeforeAgent", "AfterTool", "Notification", "AfterAgent", "SessionEnd"],
+    events: &["BeforeAgent", "AfterTool", "Notification", "AfterAgent", "AfterModel", "SessionEnd"],
     // Gemini's timeout is in milliseconds.
     entry: |command| {
         json!({ "hooks": [{

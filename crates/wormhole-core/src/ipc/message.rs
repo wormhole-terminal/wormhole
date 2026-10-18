@@ -81,6 +81,8 @@ mod tests {
                         agent: AgentId::Claude,
                         five_hour: Some(crate::usage::Window { used: 25.5, resets_at: 1_800_002_040 }),
                         seven_day: None,
+                        limits: Vec::new(),
+                        response_tokens: None,
                         updated: 1_800_000_000,
                     },
                 },

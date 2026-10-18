@@ -9182,6 +9182,7 @@ name = "wormhole-core"
 version = "1.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "dirs 7.0.0",
  "flate2",
  "libc",

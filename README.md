@@ -140,3 +140,21 @@ Wormhole is free software, released under the [GNU General Public License v3.0 o
 Bundled third-party assets keep their own licenses: JetBrains Mono (SIL OFL 1.1), the built-in themes
 and icons (see the license files next to them), and the Rust dependencies listed in the app's
 About → Licenses window.
+
+### Coding-agent usage
+
+The right panel’s Usage tab shows Claude Code plan limits and Codex plan-limit windows when their
+integrations report them. Gemini CLI reports the token count of its latest model response; this is
+not a subscription quota or a running total. Enable or update the integrations in Settings → Coding
+agents, then restart the agent. Codex may ask you to review its hooks with `/hooks`.
+
+Claude needs a supported subscription and Claude Code 2.1.80 or later. Codex reads only the last
+1 MiB of the transcript supplied by its existing hooks, within `CODEX_HOME` (normally `~/.codex`).
+This is best-effort: if that version does not include rate-limit records there, or uses an API key,
+no quota is shown. Gemini’s `AfterModel` hook supplies `usageMetadata.totalTokenCount`. No credentials
+are read and no separate account requests are made. Missing limits are omitted; an expired report
+says “Awaiting update” until a fresh report arrives.
+
+Format references: [Codex hooks](https://developers.openai.com/codex/hooks),
+[Codex rate-limit protocol](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/protocol.rs),
+and [Gemini model hooks](https://geminicli.com/docs/hooks/reference/#aftermodel).

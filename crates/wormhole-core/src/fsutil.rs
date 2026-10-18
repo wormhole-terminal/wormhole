@@ -16,7 +16,7 @@
 
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 /// How symlinks are treated.
@@ -192,6 +192,34 @@ fn locate_for_write(path: &Path, policy: LinkPolicy<'_>) -> io::Result<(PathBuf,
 
 /// Read at most `cap` bytes of a regular file; larger files are an error, not a truncation.
 pub fn read_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<Vec<u8>> {
+    let file = open_regular(path, policy)?;
+    let meta = file.metadata()?;
+    if meta.len() > cap {
+        return Err(too_large(path, cap));
+    }
+    // The size can change between the check and the read; `take` keeps the cap honest.
+    // Pre-size from the file but never beyond a sane bound: the cap may be u64::MAX.
+    let mut bytes = Vec::with_capacity(usize::try_from(meta.len().min(1 << 20)).unwrap_or(0));
+    file.take(cap.saturating_add(1)).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > cap {
+        return Err(too_large(path, cap));
+    }
+    Ok(bytes)
+}
+
+/// Read only the last `cap` bytes of an append-only log, without loading its history.
+/// A partial first/last record is left to the caller. The same regular-file and link checks
+/// as `read_capped` apply, so an agent-supplied path cannot block a hook on a FIFO.
+pub fn read_tail_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<Vec<u8>> {
+    let mut file = open_regular(path, policy)?;
+    let len = file.metadata()?.len();
+    file.seek(SeekFrom::Start(len.saturating_sub(cap)))?;
+    let mut bytes = Vec::new();
+    file.take(cap).read_to_end(&mut bytes)?;
+    Ok(bytes)
+}
+
+fn open_regular(path: &Path, policy: LinkPolicy<'_>) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true);
     #[cfg(unix)]
@@ -217,21 +245,10 @@ pub fn read_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Result<
         options.custom_flags(flags);
     }
     let file = options.open(&open_path)?;
-    let meta = file.metadata()?;
-    if !meta.is_file() {
+    if !file.metadata()?.is_file() {
         return Err(refuse(path, Refusal::NotRegularFile));
     }
-    if meta.len() > cap {
-        return Err(too_large(path, cap));
-    }
-    // The size can change between the check and the read; `take` keeps the cap honest.
-    // Pre-size from the file but never beyond a sane bound: the cap may be u64::MAX.
-    let mut bytes = Vec::with_capacity(usize::try_from(meta.len().min(1 << 20)).unwrap_or(0));
-    file.take(cap.saturating_add(1)).read_to_end(&mut bytes)?;
-    if bytes.len() as u64 > cap {
-        return Err(too_large(path, cap));
-    }
-    Ok(bytes)
+    Ok(file)
 }
 
 /// [`read_capped`] as UTF-8 text.
@@ -330,6 +347,19 @@ mod tests {
             .collect();
         names.sort();
         names
+    }
+
+    #[test]
+    fn tail_reads_are_bounded_and_keep_link_checks() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("log.jsonl");
+        fs::write(&path, b"old\nnew\n").unwrap();
+        assert_eq!(super::read_tail_capped(&path, 4, LinkPolicy::Within(root.path())).unwrap(), b"new\n");
+        assert!(super::read_tail_capped(&path, 0, LinkPolicy::Follow).unwrap().is_empty());
+        assert_eq!(super::read_tail_capped(&path, 20, LinkPolicy::Follow).unwrap(), b"old\nnew\n");
+        let other = tempfile::tempdir().unwrap();
+        assert!(super::read_tail_capped(&path, 20, LinkPolicy::Within(other.path())).is_err());
+        assert!(super::read_tail_capped(root.path(), 20, LinkPolicy::Follow).is_err());
     }
 
     #[test]

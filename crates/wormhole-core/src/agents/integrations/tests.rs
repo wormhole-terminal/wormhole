@@ -221,7 +221,17 @@ fn every_installed_event_means_something() {
     for spec in SPECS {
         let Kind::Json(_, format) = &spec.kind else { continue };
         for event in format.events {
-            assert!(signal(spec.agent, event).is_some(), "{:?} {event}", spec.agent);
+            if spec.agent == AgentId::Gemini && *event == "AfterModel" {
+                // This event carries usage only: it must not turn a finished terminal busy.
+                assert_eq!(signal(spec.agent, event), None);
+                let input = serde_json::json!({"llm_response":{"usageMetadata":{"totalTokenCount":42}}});
+                let usage =
+                    crate::usage::from_hook(spec.agent, event, &input, std::path::Path::new("/unused"), 0)
+                        .expect("the installed telemetry hook has a consumer");
+                assert_eq!(usage.response_tokens, Some(42));
+            } else {
+                assert!(signal(spec.agent, event).is_some(), "{:?} {event}", spec.agent);
+            }
         }
     }
     for (agent, events) in [
@@ -431,4 +441,21 @@ fn a_login_folder_gets_the_hooks_in_its_own_files_and_the_home_stays_untouched()
         claude().install_in(&login).is_ok()
             && spec(AgentId::Gemini).expect("gemini").install_in(&login).is_err()
     );
+}
+
+#[test]
+fn gemini_usage_hook_is_added_to_existing_status_hooks() {
+    let home = tempfile::tempdir().unwrap();
+    let spec = super::spec(super::AgentId::Gemini).unwrap();
+    spec.install(home.path()).unwrap();
+    let path = spec.path(home.path());
+    let mut settings: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    settings["hooks"].as_object_mut().unwrap().remove("AfterModel");
+    std::fs::write(&path, serde_json::to_vec(&settings).unwrap()).unwrap();
+    assert_eq!(spec.state(home.path()).unwrap(), super::State::Partial);
+    spec.install(home.path()).unwrap();
+    let settings: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let command = settings["hooks"]["AfterModel"][0]["hooks"][0]["command"].as_str().unwrap();
+    assert!(command.contains("gemini") && command.contains("AfterModel"));
+    assert_eq!(spec.state(home.path()).unwrap(), super::State::Installed);
 }
