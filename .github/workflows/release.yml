@@ -373,6 +373,30 @@ jobs:
           if [ "$PRERELEASE" = true ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
           gh release create "v$VERSION" target/release/dist/* "${flags[@]}"
 
+      # The tap's cask (wormhole-terminal/homebrew-tap, Casks/wormhole-terminal.rb) follows each stable
+      # release. HOMEBREW_TAP_TOKEN is a fine-grained token with Contents: write on that repository only.
+      - name: Homebrew cask
+        if: env.PUBLISH == 'true' && env.CHANNEL != 'unstable' && steps.version.outputs.prerelease != 'true'
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::notice::No HOMEBREW_TAP_TOKEN: update version and sha256 in the tap's Casks/wormhole-terminal.rb by hand"
+            exit 0
+          fi
+          sha="$(shasum -a 256 "target/release/dist/Wormhole-$VERSION-macos.dmg" | cut -d' ' -f1)"
+          tap="$RUNNER_TEMP/homebrew-tap"
+          git clone -q --depth 1 "https://x-access-token:$TAP_TOKEN@github.com/wormhole-terminal/homebrew-tap.git" "$tap"
+          cask="$tap/Casks/wormhole-terminal.rb"
+          sed -i '' -e "s/^  version \".*\"$/  version \"$VERSION\"/" -e "s/^  sha256 \".*\"$/  sha256 \"$sha\"/" "$cask"
+          grep -q "version \"$VERSION\"" "$cask" && grep -q "sha256 \"$sha\"" "$cask" \
+            || { echo "::error::could not set version and sha256 in Casks/wormhole-terminal.rb"; exit 1; }
+          if git -C "$tap" diff --quiet; then echo "The cask is at $VERSION already"; exit 0; fi
+          git -C "$tap" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -am "wormhole-terminal $VERSION"
+          git -C "$tap" push -q origin HEAD:main
+
       # One rolling prerelease, `unstable`, holds the newest build of main, so the Releases page gets
       # no entry per commit. The archive goes up before the latest.json that names it; the build
       # before stays as well, for an app that read the old latest.json a moment ago, and older ones go.

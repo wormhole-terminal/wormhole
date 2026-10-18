@@ -185,7 +185,9 @@ section). A version with a Security entry gets `"security": {"severity": …, "a
 `latest.json`, and the Release page opens with a security notice. The app checks
 `https://downloads.getwormhole.app/stable/latest.json`, which redirects to the latest release's
 `latest.json`; a version with a suffix (`0.4.0-beta.1`) is published as a prerelease and is never
-offered on the Stable channel.
+offered on the Stable channel. A stable release also sets `version` and `sha256` in the Homebrew cask
+(`wormhole-terminal/homebrew-tap`, `Casks/wormhole-terminal.rb`) when the `HOMEBREW_TAP_TOKEN` secret
+is there.
 
 Every push to `main` that passes CI is built the same way for the Unstable channel (Settings → Updates →
 Channel): numbered `X.Y.(Z+1)-dev.N` (`dev_version` in `scripts/lib.sh`), signed, notarized and put on
