@@ -11,12 +11,12 @@ use wormhole_core::spoken;
 use wormhole_core::terminal::types::{Line, Scroll};
 use wormhole_core::terminal::{Block, BlockState, Direction, took_text};
 
-use super::{Layout, PADDING_X, TerminalView};
+use super::{Layout, TerminalView};
 use crate::settings::{UiColors, store_in};
 use crate::style;
 
 /// The gutter mark: a 2 pt bar inside the pane's left padding, 1 pt from its edge, inset where
-/// the block starts or ends in view (the grid's inset here is [`PADDING_X`]).
+/// the block starts or ends in view (the padding is at least the window's edge inset).
 pub(super) const MARK_W: f32 = 2.0;
 pub(super) const MARK_X: f32 = 1.0;
 pub(super) const MARK_INSET: f32 = 2.0;
@@ -295,7 +295,7 @@ fn block_row(layout: &Layout, position: Point<Pixels>) -> Option<usize> {
     let y = f32::from(position.y - layout.origin.y);
     let cell_h = f32::from(layout.cell.height).max(1.0);
     let x = f32::from(position.x - layout.origin.x);
-    (y >= 0.0 && y < cell_h * layout.rows as f32 && x >= -PADDING_X).then(|| (y / cell_h) as usize)
+    (y >= 0.0 && y < cell_h * layout.rows as f32 && x >= -layout.gutter).then(|| (y / cell_h) as usize)
 }
 
 #[cfg(test)]
@@ -329,6 +329,7 @@ mod tests {
             cell: size(px(8.0), px(18.0)),
             cols: 80,
             rows: 24,
+            gutter: 12.0,
             frame: (0.0, 0.0),
         };
         assert_eq!(block_row(&layout, point(px(50.0), px(42.0))), Some(0));

@@ -55,7 +55,7 @@ pub const CARD_GAP: f32 = 8.0;
 pub const CARD_ROW_RADIUS: f32 = 8.0;
 /// The tab bars (tabs instead of the sidebar): a tab's width where tabs keep one, and the least a
 /// shared one gives way to.
-pub const TAB_W: f32 = 168.0;
+pub const TAB_W: f32 = 172.0;
 pub const TAB_MIN_W: f32 = 96.0;
 /// The title rows across the top: the sidebar's, the terminal's breadcrumb, the panel's tabs.
 pub const TITLE_ROW_H: f32 = 36.0;
@@ -72,12 +72,17 @@ pub const BANNER_MIN_H: f32 = 40.0;
 
 // ---------------------------------------------------------------- insets and columns
 
+/// The one standard inset from a column's (or the window's) edge to its content: the traffic lights,
+/// the sidebar's header, the title row's first item, the terminal's text, the status bar's ends, the
+/// tab bar and the folder row all start this far in, so the window has shared edges.
+pub const EDGE_INSET: f32 = 12.0;
+
 /// The left and right inset of every sidebar row, band and toolbar.
-pub const SIDEBAR_INSET: f32 = 16.0;
+pub const SIDEBAR_INSET: f32 = EDGE_INSET;
 /// The same inset in the right panel.
-pub const PANEL_INSET: f32 = 16.0;
-/// The lead column of a row (x 16–32): a status glyph, a chevron, a checkbox, a file
-/// icon. Names start a gap (`_2`) after it, at x 40.
+pub const PANEL_INSET: f32 = EDGE_INSET;
+/// The lead column of a row (x 12–28): a status glyph, a chevron, a checkbox, a file
+/// icon. Names start a gap (`_2`) after it, at x 36.
 pub const ITEM_LEAD_W: f32 = 16.0;
 /// How far each level of a tree (folders in Changes, files in a commit) steps in: one
 /// lead column and its gap.
@@ -91,7 +96,7 @@ pub const PANEL_TOP: f32 = 6.0;
 /// hairline and padding, and the row's own inset.
 pub const PANEL_ROW_X: f32 = CARD_MARGIN + 1.0 + CARD_PAD + 8.0;
 /// The right padding of a header row that ends in an icon button (a tab's header in the
-/// panel): the button's 16 pt glyph ends on the 16 pt inset, so the row stops 10 in.
+/// panel): the button's 16 pt glyph ends on the 12 pt inset, so the row stops 6 in.
 pub const HEADER_PAD_END: f32 = PANEL_INSET - (HIT_MIN - TITLE_GLYPH) / 2.0;
 
 // ---------------------------------------------------------------- glyphs and hit areas

@@ -79,9 +79,7 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             id,
             ui,
             style::GroupSwitch {
-                color: Some(ui.primary),
                 name: "Release 1.2".into(),
-                count: 3,
                 alert,
                 spoken: "Group Release 1.2, 3 terminals".into(),
             },

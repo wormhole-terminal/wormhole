@@ -52,6 +52,9 @@ pub(super) struct Tint {
     pub(super) color: ProjectColor,
     /// How strong it is at the left edge: 36 %, less where the text would not read.
     pub(super) peak: f32,
+    /// How strong the rounded bar's even fill is: half of `peak`, so the text keeps its contrast
+    /// across the whole bar.
+    pub(super) bar: f32,
     /// The line that takes its place under Increase Contrast.
     pub(super) line: Hsla,
 }
@@ -71,6 +74,10 @@ pub(super) struct TitlePlan {
 /// The width of Open in… (the app's icon and its chevron), the two splits, and the one `⋯` they
 /// fold into; each with the gap that separates it from the breadcrumb.
 pub(super) const ROW_GAP: f32 = 4.0;
+/// The title row is a rounded bar this far in from the column's sides and the window's top, and
+/// from the terminal below it. Its content keeps the standard 12 from the column's edge (the
+/// terminal's text starts there too), so 8 from the bar's own edge.
+pub(super) const BAR_INSET: f32 = 4.0;
 pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W;
 const CHEVRON_W: f32 = 16.0;
 pub(super) const SPLITS_W: f32 = 2.0 * style::HIT_MIN;
@@ -83,71 +90,45 @@ const APP_ICON: f32 = style::TITLE_GLYPH;
 impl Workspace {
     /// The terminal's title row: the selected terminal's breadcrumb (or the diff's title) and the
     /// buttons at the right end, floating over the top of the terminal.
-    pub(super) fn render_terminal_title_row(
-        &self,
-        scrolled: bool,
-        window: &Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
+    pub(super) fn render_terminal_title_row(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let (drop_tint, fill, system, border) = {
+        let (drop_tint, system) = {
             let store = store_in(&self.profile, cx);
-            let system = store.system();
-            // Under Reduce Transparency and Increase Contrast the bar is solid, with no
-            // see-through to the blurred text.
-            let fill = Hsla { a: if system.opaque() { 1.0 } else { 0.62 }, ..store.palette.background };
-            (token(&store.tokens, "state.highlight"), fill, system, store.settings.title_border)
+            (token(&store.tokens, "state.highlight"), store.system())
         };
         let in_diff = self.diff_view.is_some();
         let plan = (!in_diff).then(|| self.title_plan(window, cx));
         let (left, right) = self.title_row_pads(window);
 
-        // The tint is a gradient from the left; under Increase Contrast it gives way to a line.
+        // The tint is one even fill over the whole rounded bar; under Increase Contrast it gives way
+        // to a line. A terminal in no group has no tint: the bar is the surface alone.
         let tint = plan.as_ref().and_then(|plan| plan.tint.as_ref());
-        let layers = tint
+        let wash = tint
             .filter(|_| !system.increase_contrast)
-            .map(|tint| style::tint_layers(theme_bridge::hsla(tint.color.color()), tint.peak))
-            .unwrap_or_default();
+            .map(|tint| theme_bridge::hsla(tint.color.color()).opacity(tint.bar));
         let line = tint.filter(|_| system.increase_contrast).map(|tint| tint.line);
         let strip = plan.as_ref().map(|plan| self.render_title_strip(plan, window, cx));
         let extras = plan.as_ref().and_then(|plan| self.render_title_extras(plan, cx));
         let actions = plan.as_ref().map(|plan| self.render_title_actions(plan, cx));
         let card = plan.as_ref().and_then(|plan| self.render_path_card(plan, self.title_column(), cx));
-
-        div()
-            .id("titlebar")
-            // Keep clicks (and the I-beam cursor) from reaching the terminal below;
-            // double-click still zooms the window via the drag area.
-            .occlude()
-            .cursor(CursorStyle::Arrow)
-            .absolute()
-            .top_0()
-            .left_0()
-            .right_0()
-            .flex()
-            .flex_col()
-            // The line under the bar as the settings say; no shadow: the blur is the cue. A project's
-            // colour as a line stays whatever they say, since it is the project's marker.
-            .map(|d| match line {
-                Some(color) => d.rule_bottom_in(ui, color, 2.0),
-                None if border.shows(scrolled) => d.rule_bottom(ui),
-                None => d,
-            })
-            // A tint only when content is scrolled under the bar; otherwise the bar blends into
-            // the terminal, like Finder.
-            .when(scrolled, |d| d.bg(fill))
-            // The diff view replaces the terminal, so there is nothing to drop onto then.
-            .when(!in_diff, |d| {
-                d.drag_over::<ExternalPaths>(move |style, _, _, _| style.bg(drop_tint)).on_drop(cx.listener(
-                    |this, files: &ExternalPaths, window, cx| this.drop_files_on_titlebar(files, window, cx),
-                ))
-            })
-            .children(layers)
+        let bar = div()
+            .relative()
+            .flex_none()
+            .mx(px(BAR_INSET))
+            .mt(px(BAR_INSET))
+            .mb(px(BAR_INSET))
+            .h(px(style::TITLE_ROW_H - 2.0 * BAR_INSET))
+            .rounded(ui.radius_lg)
+            .overflow_hidden()
+            // The surface shows through a tint, and is the whole bar without one. The cut-off
+            // `scrolled` fill is gone: the bar is never see-through to the lines under it.
+            .bg(ui.panel)
+            .when_some(wash, |d, wash| d.child(div().absolute().inset_0().bg(wash)))
+            .when_some(line, |d, color| d.rule_bottom_in(ui, color, 2.0))
             .child(
                 self.with_title_pads(
                     div()
-                        .h(px(style::TITLE_ROW_H))
-                        .flex_none()
+                        .size_full()
                         .flex()
                         .items_center()
                         .gap_1()
@@ -168,7 +149,27 @@ impl Workspace {
                         .child(self.render_panel_toggle(window, cx)),
                     (left, right),
                 ),
-            )
+            );
+
+        div()
+            .id("titlebar")
+            // Keep clicks (and the I-beam cursor) from reaching the terminal below;
+            // double-click still zooms the window via the drag area.
+            .occlude()
+            .cursor(CursorStyle::Arrow)
+            .absolute()
+            .top_0()
+            .left_0()
+            .right_0()
+            .flex()
+            .flex_col()
+            // The diff view replaces the terminal, so there is nothing to drop onto then.
+            .when(!in_diff, |d| {
+                d.drag_over::<ExternalPaths>(move |style, _, _, _| style.bg(drop_tint)).on_drop(cx.listener(
+                    |this, files: &ExternalPaths, window, cx| this.drop_files_on_titlebar(files, window, cx),
+                ))
+            })
+            .child(bar)
             .children(card)
             .into_any_element()
     }
@@ -177,12 +178,15 @@ impl Workspace {
     /// (`chrome::sliding_title_pads`), so the breadcrumb and the buttons move with it instead of
     /// jumping when it lands.
     fn with_title_pads(&self, row: Div, (left, right): (f32, f32)) -> AnyElement {
+        // The pads are measured from the column's edges; the bar is inset from them.
+        let inside = |(left, right): (f32, f32)| ((left - BAR_INSET).max(0.0), (right - BAR_INSET).max(0.0));
         let Some(motion) = self.slide_motion() else {
+            let (left, right) = inside((left, right));
             return row.pl(px(left)).pr(px(right)).into_any_element();
         };
         row.with_animation(motion.id("slide-title"), motion.animation(), move |d, t| {
             let (left, right) =
-                super::chrome::sliding_title_pads(motion.edge, (left, right), motion.offset(t));
+                inside(super::chrome::sliding_title_pads(motion.edge, (left, right), motion.offset(t)));
             d.pl(px(left)).pr(px(right))
         })
         .into_any_element()

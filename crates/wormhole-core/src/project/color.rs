@@ -32,6 +32,9 @@ const LIGHTNESS: (f32, f32) = (0.30, 0.88);
 pub const TINT_STOPS: [(f32, f32); 3] = [(0.0, 1.0), (0.12, 20.0 / 36.0), (0.40, 0.0)];
 /// The strongest the tint is drawn: 36 % of the colour over the bar.
 pub const TINT_PEAK: f32 = 0.36;
+/// How much of [`ProjectColor::tint_peak`] the title row's rounded bar wears across its whole width:
+/// an even fill is read everywhere at once, so it is softer than the gradient's start.
+pub const BAR_TINT_SHARE: f32 = 0.5;
 /// The contrast the bar's main text keeps under the strongest tint, where the bar itself allows it.
 const TEXT_CONTRAST: f32 = 5.5;
 /// Under Increase Contrast the tint gives way to a line, which keeps this much against the bar.
@@ -86,6 +89,13 @@ impl ProjectColor {
             if reads(mid) { ok = mid } else { over = mid }
         }
         ok
+    }
+
+    /// How strong the title row's rounded bar's even fill is over `bar` with `text` on it: half the
+    /// strongest tint that reads, so the text keeps its contrast (5.5:1, never below 4.5:1 where the
+    /// theme's own text allows it) everywhere on the bar.
+    pub fn bar_tint(self, bar: Color, text: Color) -> f32 {
+        self.tint_peak(bar, text) * BAR_TINT_SHARE
     }
 
     /// The colour of the line that stands in for the tint under Increase Contrast: the project's
@@ -153,7 +163,7 @@ fn shown(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ProjectColor, TINT_PEAK, TINT_STOPS};
+    use super::{BAR_TINT_SHARE, ProjectColor, TINT_PEAK, TINT_STOPS};
     use crate::tokens::Color;
 
     fn parse(value: &str) -> Result<ProjectColor, String> {
@@ -323,6 +333,24 @@ mod tests {
         let peak = pale.tint_peak(bar, dull);
         let under = pale.color().with_alpha(peak).over(bar);
         assert!(Color::contrast_ratio(dull, under) >= base * 0.85 - 0.05);
+    }
+
+    #[test]
+    fn the_bars_even_tint_reads_in_dark_and_light_themes() {
+        for (bar, text) in
+            [("#1a1b26", "#c0caf5"), ("#ffffff", "#1f2335"), ("#fdf6e3", "#586e75"), ("#000000", "#ffffff")]
+        {
+            let (bar, text) = (Color::from_hex(bar).expect("bar"), Color::from_hex(text).expect("text"));
+            let base = Color::contrast_ratio(text, bar);
+            for hex in ["#2bb3a3", "#e0e8ff", "#d94f4f", "#f0e68c", "#3b5bdb", "#1f4f4a", "#ff00ff"] {
+                let tint = parse(hex).expect("colour");
+                let level = tint.bar_tint(bar, text);
+                assert!(level <= TINT_PEAK * BAR_TINT_SHARE + 1e-6);
+                let under = tint.color().with_alpha(level).over(bar);
+                let ratio = Color::contrast_ratio(text, under);
+                assert!(ratio >= 4.5_f32.min(base * 0.85) - 0.05, "{hex} on {bar:?}: {ratio}");
+            }
+        }
     }
 
     #[test]

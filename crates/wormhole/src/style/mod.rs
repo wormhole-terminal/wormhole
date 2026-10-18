@@ -11,8 +11,8 @@
 //! keeps them out.
 //!
 //! **Lists** run edge to edge: square rows and bands, inset [`SIDEBAR_INSET`] /
-//! [`PANEL_INSET`] (16), one lead column at x 16–32 ([`ITEM_LEAD_W`]: a status
-//! glyph, a chevron, a checkbox, a file icon) and the text at x 40. Heights are
+//! [`PANEL_INSET`] (12, the window's `EDGE_INSET`), one lead column at x 12–28 ([`ITEM_LEAD_W`]: a status
+//! glyph, a chevron, a checkbox, a file icon) and the text at x 36. Heights are
 //! [`BAND_H`] 32 (a folder band with a second line, [`FOLDER_BAND_H`], is 44 like a
 //! two-line row), [`ROW_TWO_LINE_H`] 44 and [`ROW_H`] 28. "Current" is the
 //! primary's tint, hover a 5 % fill; only choice controls (segmented, the active
@@ -109,4 +109,3 @@ pub use splits::*;
 pub use status::*;
 pub use tabs::*;
 pub use tile::*;
-pub(crate) use tint::tint_layers;

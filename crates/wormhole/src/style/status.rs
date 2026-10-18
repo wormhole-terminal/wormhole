@@ -304,4 +304,4 @@ pub fn status_bar(ui: UiColors, glass: bool) -> Div {
 /// round it.
 const ITEM_PAD: f32 = 4.0;
 const STATUS_BAR_GAP: f32 = 14.0 - 2.0 * ITEM_PAD;
-const STATUS_BAR_EDGE: f32 = 14.0 - ITEM_PAD;
+const STATUS_BAR_EDGE: f32 = super::scale::EDGE_INSET - ITEM_PAD;

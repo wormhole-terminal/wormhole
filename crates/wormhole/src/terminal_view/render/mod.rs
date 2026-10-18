@@ -115,6 +115,10 @@ impl RenderState {
 /// The per-frame part, handed from prepaint to paint.
 struct Frame {
     geometry: Geometry,
+    /// How far the first and last columns' and rows' backgrounds run out past the grid.
+    reach: gpui_kit::Edges<Pixels>,
+    cols: usize,
+    rows: usize,
     cursor: Option<CursorPaint>,
     /// Find's matches along the scrollback, 0 at its top and 1 at the screen's bottom.
     ticks: Vec<f32>,
@@ -309,6 +313,23 @@ impl Render for TerminalView {
                 let line_height = px((font_size_setting * line_height_setting).round());
                 let cols = (f32::from(bounds.size.width) / f32::from(cell_width)).floor().max(2.0) as usize;
                 let rows = (f32::from(bounds.size.height) / f32::from(line_height)).floor().max(1.0) as usize;
+                // Whole cells only: what is left over is split evenly, so the grid is centred in
+                // the padded area (whole points, so the glyphs stay where the pixels are).
+                let spare_x = (f32::from(bounds.size.width) - f32::from(cell_width) * cols as f32).max(0.0);
+                let spare_y = (f32::from(bounds.size.height) - f32::from(line_height) * rows as f32).max(0.0);
+                let area = bounds;
+                let (left, top) = ((spare_x / 2.0).floor(), (spare_y / 2.0).floor());
+                let bounds = Bounds::new(
+                    point(area.origin.x + px(left), area.origin.y + px(top)),
+                    size(cell_width * cols as f32, line_height * rows as f32),
+                );
+                // How far the edge cells' backgrounds run out: to the pane's edges.
+                let reach = gpui_kit::Edges {
+                    left: px(left + PADDING_X),
+                    top: px(top + PADDING_Y),
+                    right: px(spare_x - left + PADDING_X),
+                    bottom: px(spare_y - top + PADDING_Y),
+                };
                 let viewport = window.viewport_size();
                 let frame = (
                     (f32::from(viewport.width) - f32::from(bounds.size.width)).max(0.0),
@@ -319,6 +340,7 @@ impl Render for TerminalView {
                     cell: size(cell_width, line_height),
                     cols,
                     rows,
+                    gutter: left + PADDING_X,
                     frame,
                 });
                 if let Some(dock) = dock {
@@ -341,7 +363,7 @@ impl Render for TerminalView {
                 let RenderState { frame: cache, images: image_cache, words, .. } = &mut *state;
                 let mut found = Vec::new();
                 let mut ticks = Vec::new();
-                let (has_terminal, above_changed) = entity.update(cx, |this, cx| {
+                let has_terminal = entity.update(cx, |this, cx| {
                     this.resize(GridSize {
                         cols: cols as u16,
                         rows: rows as u16,
@@ -350,25 +372,15 @@ impl Render for TerminalView {
                     });
                     this.share_palette(&palette);
                     this.share_window(geometry);
-                    let Some(pty) = &this.pty else { return (false, false) };
+                    let Some(pty) = &this.pty else { return false };
                     pty.snapshot(&mut cache.snapshot, overscan);
                     found = this.found_rows(&cache.snapshot);
                     ticks = this.found_ticks(&cache.snapshot);
                     this.mode = cache.snapshot.mode;
                     let blinking = cache.snapshot.cursor.is_some_and(|cursor| cursor.blinking);
                     this.blink_wanted(blinking && focused && blink_allowed, cx);
-                    let above = cache.snapshot.has_content_above();
-                    let changed = above != this.content_above;
-                    this.content_above = above;
-                    (true, changed)
+                    true
                 });
-                if above_changed {
-                    // The workspace read the old value for this frame's title bar.
-                    let entity = entity.downgrade();
-                    cx.defer(move |cx| {
-                        let _ = entity.update(cx, |_, cx| cx.notify());
-                    });
-                }
                 if !has_terminal {
                     return None;
                 }
@@ -452,6 +464,9 @@ impl Render for TerminalView {
                 });
                 Some(Frame {
                     geometry,
+                    reach,
+                    cols,
+                    rows,
                     cursor,
                     ticks,
                     underline_y,
@@ -469,6 +484,7 @@ impl Render for TerminalView {
                 let state = paint_state.borrow();
                 let cache = &state.frame;
                 let Geometry { origin, cell_width, line_height, .. } = frame.geometry;
+                let (reach, cols, rows_in_view) = (frame.reach, frame.cols, frame.rows);
                 let font_size = px(frame.geometry.font_size);
                 let at = |col: usize, row: usize| {
                     point(origin.x + cell_width * col as f32, origin.y + line_height * row as f32)
@@ -480,7 +496,7 @@ impl Render for TerminalView {
                         let _ = line.paint(tap, line_height, TextAlign::Left, None, window, cx);
                     }
                 }
-                paint_blocks(&cache.snapshot, hovered_block, ui, bounds, line_height, window);
+                paint_blocks(&cache.snapshot, hovered_block, ui, bounds, origin, line_height, window);
                 // Each quad painted outside a layer goes into the scene's bounds tree to find its
                 // z-order, and a screen of colored cells is thousands of them: in a full-screen
                 // truecolor animation that tree took nine tenths of the main thread, and the window
@@ -491,11 +507,26 @@ impl Render for TerminalView {
                 window.paint_layer(grid, |window| {
                     for (row, painted) in cache.rows() {
                         for (start, end, color) in &painted.backgrounds {
-                            let width = cell_width * (end - start) as f32;
-                            window.paint_quad(fill(
-                                Bounds::new(at(*start, row), size(width, line_height)),
-                                *color,
-                            ));
+                            // The edge cells' colour runs on into the padding (Ghostty's
+                            // window-padding-color = extend); the default background is the theme's.
+                            let mut from = at(*start, row);
+                            let mut width = cell_width * (end - start) as f32;
+                            let mut height = line_height;
+                            if *start == 0 {
+                                from.x -= reach.left;
+                                width += reach.left;
+                            }
+                            if *end >= cols {
+                                width += reach.right;
+                            }
+                            if row == 0 {
+                                from.y -= reach.top;
+                                height += reach.top;
+                            }
+                            if row + 1 >= rows_in_view {
+                                height += reach.bottom;
+                            }
+                            window.paint_quad(fill(Bounds::new(from, size(width, height)), *color));
                         }
                     }
                 });
@@ -726,17 +757,18 @@ fn paint_blocks(
     snapshot: &ScreenSnapshot,
     hovered: Option<u64>,
     ui: crate::settings::UiColors,
-    grid: Bounds<Pixels>,
+    pane: Bounds<Pixels>,
+    origin: Point<Pixels>,
     line_height: Pixels,
     window: &mut Window,
 ) {
-    let left = grid.left() - px(PADDING_X);
+    let left = pane.left() - px(PADDING_X);
     let rows = snapshot.rows().len();
     for span in snapshot.block_spans() {
-        let top = grid.top() + line_height * span.rows.start as f32;
+        let top = origin.y + line_height * span.rows.start as f32;
         let height = line_height * span.rows.len() as f32;
         if hovered == Some(span.id) {
-            let tint = Bounds::new(point(left, top), size(grid.right() - left, height));
+            let tint = Bounds::new(point(left, top), size(pane.right() - left, height));
             window.paint_quad(fill(tint, ui.hover));
         }
         let Some(color) = blocks::mark_color(span.state, ui) else { continue };

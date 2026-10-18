@@ -118,8 +118,10 @@ impl Workspace {
         if let Some(set) = view.sets.get(current) {
             for (at, &ix) in set.members.iter().enumerate() {
                 // A hairline between two tabs that are neither the open one: the open tab's fill is its edge.
-                if at > 0 && selected_tab != Some(at) && selected_tab != Some(at - 1) {
-                    tabs.push(style::tab_divider(ui, TAB_RULE_H).into_any_element());
+                if at > 0 {
+                    let hidden = selected_tab == Some(at) || selected_tab == Some(at - 1);
+                    let rule = style::tab_divider(ui, TAB_RULE_H);
+                    tabs.push(rule.when(hidden, |d| d.bg(gpui_kit::transparent_black())).into_any_element());
                 }
                 tabs.push(self.tab(&frame, &infos, &numbers, (at, set.members.len()), ix, glass, cx));
             }
@@ -252,7 +254,7 @@ impl Workspace {
         let selected = ix == self.active;
         let hint = numbers.get(&ix).filter(|_| frame.hints).map(|&n| SharedString::from(keycap(n)));
         let group = SharedString::from(style::TAB_GROUP);
-        let close = (!frame.hints).then(|| self.tab_close(info, selected, &group, ui, cx));
+        let close = (!frame.hints).then(|| self.tab_close(info, &group, ui, cx));
         let spoken =
             spoken::tab_label(&info.name, spoken::state_word(info.state), selected, position + 1, of);
         let tab = style::terminal_tab(
@@ -283,11 +285,12 @@ impl Workspace {
         self.with_row_menu(tab, info, cx).into_any_element()
     }
 
-    /// The × of a tab: always on the open one, on another while the pointer is over it.
+    /// The × of a tab, while the pointer is over it (the open one too): no width and no gap before
+    /// it otherwise, so the name has the room, and it takes its slot from the name when shown. The
+    /// tab itself keeps its width either way.
     fn tab_close(
         &self,
         info: &RowInfo,
-        selected: bool,
         group: &SharedString,
         ui: UiColors,
         cx: &mut Context<Self>,
@@ -297,7 +300,9 @@ impl Workspace {
         let asking = self.closing_session_prompt || self.closing_prompt;
         div()
             .flex_none()
-            .when(!selected, |d| d.invisible().group_hover(group.clone(), |s| s.visible()))
+            .overflow_hidden()
+            .w(px(0.0))
+            .group_hover(group.clone(), |s| s.w(px(style::CONTROL_H_SM)).ml_2())
             .child(style::hit_area(
                 ("close-hit", info.id as u64),
                 style::CONTROL_H_SM,

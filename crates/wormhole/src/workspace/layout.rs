@@ -148,14 +148,13 @@ impl Render for Workspace {
         // On glass the title row sits on the window above the terminal's rounded surface, so nothing
         // lies under it; otherwise it floats over the terminal's top.
         let lifted = self.glass_on(cx);
-        let scrolled = !lifted && self.diff_view.is_none() && !split && terminal.read(cx).has_content_above();
         let inset = if lifted { 0.0 } else { crate::terminal_view::TOP_INSET };
         // A pane of a split has its header over it instead of the title bar.
         let pane_inset = if split { 0.0 } else { inset };
         for ix in self.on_screen_sessions() {
             self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_top_inset(pane_inset, cx));
         }
-        let titlebar = self.render_terminal_title_row(scrolled, window, cx);
+        let titlebar = self.render_terminal_title_row(window, cx);
         let sidebar_toggle = self.render_window_controls(window, cx);
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));

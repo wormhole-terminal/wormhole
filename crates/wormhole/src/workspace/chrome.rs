@@ -239,8 +239,9 @@ impl Workspace {
     pub(super) fn title_row_pads(&self, window: &Window) -> (f32, f32) {
         let sidebar = self.sidebar_shown() && self.in_flow(Edge::Sidebar);
         let lights = if self.tabs_on_top() {
-            // The tab bar across the top has the lights; the row is under it.
-            TITLE_ROW_PAD
+            // The tab bar across the top has the lights; the row is under it, its content (after
+            // the breadcrumb's own 8) on the standard edge.
+            BESIDE_COLUMN
         } else {
             collapse_slot(lights_end(window))
         };

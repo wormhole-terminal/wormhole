@@ -226,5 +226,10 @@ pub(super) fn title_tint(profile: &ProfileId, color: ProjectColor, cx: &App) -> 
     let store = store_in(profile, cx);
     let bar = store.tokens.get("surface.window").map_or(Color::BLACK, |c| c.with_alpha(1.0));
     let text = store.tokens.get("text.primary").unwrap_or(Color::WHITE);
-    Tint { color, peak: color.tint_peak(bar, text), line: theme_bridge::hsla(color.line(bar)) }
+    Tint {
+        color,
+        peak: color.tint_peak(bar, text),
+        bar: color.bar_tint(bar, text),
+        line: theme_bridge::hsla(color.line(bar)),
+    }
 }

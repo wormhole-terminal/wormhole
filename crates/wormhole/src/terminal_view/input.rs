@@ -554,6 +554,7 @@ mod tests {
             cell: size(px(8.0), px(18.0)),
             cols: 80,
             rows: 24,
+            gutter: 12.0,
             frame: (0.0, 0.0),
         }
     }

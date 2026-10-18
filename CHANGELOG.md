@@ -10,6 +10,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - The terminals of a split that are in no group now share one card in the sidebar. The bracket along their
   rows and the "on screen" label are gone; VoiceOver still says which are on screen.
+- The window's content lines up on one 12 pt edge: the terminal's text, the title row's first item, the
+  status bar's ends and the sidebar and panel headers. The terminal centres its grid in the pane, and the
+  edge cells' colours run out to the pane's edges. The title row is a rounded bar, evenly tinted with the
+  group's colour.
+- Tabs keep their place when you switch between them, show their close button only under the pointer, and the
+  group switcher shows just the group's name.
 - The right panel's toggle is back at the right end of the terminal's title row (also with terminals as
   tabs), beside the panel's tab strip: it opens the panel on its last tab and closes it, like ⌥⌘I.
 - In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)

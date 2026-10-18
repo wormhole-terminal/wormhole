@@ -98,14 +98,11 @@ impl Workspace {
             .get(current)
             .map(|set| (set.label.clone(), set.members.len()))
             .unwrap_or_else(|| (IN_NO_GROUP.to_string(), 0));
-        let color = view.looks.get(current).and_then(|look| look.color);
         let trigger = style::group_switcher(
             "group-switcher",
             ui,
             GroupSwitch {
-                color,
                 name: name.clone().into(),
-                count,
                 alert,
                 spoken: spoken::switcher_label(&name, count, alert).into(),
             },

@@ -49,11 +49,11 @@ actions!(
     [ClearBuffer, PreviousPrompt, NextPrompt, SelectOutput, CopyOutput, CopyCommand, RerunCommand]
 );
 
-/// The grid's inset from the pane's sides, and below the title bar and above the bottom: one step
-/// of the 4-pt scale, close to Terminal's, so the text gets the room. What
-/// doesn't make a whole cell is left at the right and the bottom.
-const PADDING_X: f32 = 4.0;
-const PADDING_Y: f32 = 4.0;
+/// The grid's least inset from the pane's sides, and below the title bar and above the bottom: the
+/// window's standard edge. What doesn't make a whole cell is split evenly between the two sides
+/// (the grid is centred), and the edge cells' backgrounds run out to the pane's edges.
+const PADDING_X: f32 = crate::style::EDGE_INSET;
+const PADDING_Y: f32 = crate::style::EDGE_INSET;
 /// Narrowest the terminal column may get (padding included); the layout rules in core own it.
 pub const MIN_WIDTH: f32 = wormhole_core::layout::TERMINAL_MIN;
 /// The font sizes a terminal draws at: what Settings allows, the window's ⌘+ / ⌘- included.
@@ -70,6 +70,8 @@ struct Layout {
     cell: Size<Pixels>,
     cols: usize,
     rows: usize,
+    /// How far the grid's left edge is from the pane's: the padding and half the leftover width.
+    gutter: f32,
     /// What the window has around the grid (the content less the grid's area), for window operations.
     frame: (f32, f32),
 }
@@ -133,8 +135,6 @@ pub struct TerminalView {
     /// Terminal modes as of the last frame, for mouse and scroll handling
     /// (asking the terminal would mean waiting on its lock during output).
     mode: TermMode,
-    /// History above the screen, as of the last frame.
-    content_above: bool,
     selecting: bool,
     /// Button held while the app receives mouse reports.
     mouse_button: Option<mouse::MouseButton>,
@@ -323,7 +323,6 @@ impl TerminalView {
             layout: Rc::default(),
             render_state: Rc::default(),
             mode: TermMode::empty(),
-            content_above: false,
             selecting: false,
             mouse_button: None,
             last_mouse_cell: None,
@@ -421,12 +420,6 @@ impl TerminalView {
     pub fn grid_size(&self) -> (usize, usize) {
         let layout = self.layout.get();
         (layout.cols, layout.rows)
-    }
-
-    /// Whether earlier output sits above the visible screen (i.e. it scrolls),
-    /// as of the last frame; a change is announced with a notify.
-    pub fn has_content_above(&self) -> bool {
-        self.content_above
     }
 
     /// How much of the pane's top the title bar covers (the find bar sits below it).
