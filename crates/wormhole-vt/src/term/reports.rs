@@ -71,6 +71,23 @@ impl Terminal {
         }
         let from = self.replies.len();
         let _ = self.replies.write_fmt(args);
+        self.settle_reply(from);
+    }
+
+    /// [`reply`](Self::reply) for bytes that are already made (a graphics answer), with no text
+    /// in between.
+    pub(super) fn reply_bytes(&mut self, bytes: &[u8]) {
+        if self.graphics.hold_reply_bytes(bytes) {
+            return;
+        }
+        let from = self.replies.len();
+        self.replies.extend_from_slice(bytes);
+        self.settle_reply(from);
+    }
+
+    /// What `reply` does with the bytes it just appended at `from`: the cap, decided at an ESC,
+    /// and the one-byte C1 controls.
+    fn settle_reply(&mut self, from: usize) {
         if self.replies.get(from) == Some(&0x1B) {
             self.reply_dropped = from >= REPLIES_MAX;
         }

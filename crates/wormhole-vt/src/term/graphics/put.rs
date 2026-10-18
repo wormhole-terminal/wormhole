@@ -148,7 +148,7 @@ impl Terminal {
             width: if command.w == 0 { width - command.x } else { command.w.min(width - command.x) },
             height: if command.h == 0 { height - command.y } else { command.h.min(height - command.y) },
         };
-        let cell = (u32::from(self.cell_px.0), u32::from(self.cell_px.1));
+        let cell = self.cell_size();
         let offset = (command.offset_x.min(cell.0 - 1), command.offset_y.min(cell.1 - 1));
         let geometry = geometry::requested(source, command.cols, command.rows, offset, cell);
         if command.unicode_placeholder {

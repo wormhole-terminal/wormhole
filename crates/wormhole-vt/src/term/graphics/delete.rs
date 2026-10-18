@@ -68,7 +68,7 @@ impl Terminal {
         let mut removed: Vec<ImageHandle> = Vec::new();
         let selector = command.selector;
         let z = command.z;
-        let screen = if slot == self.screen_slot() { &mut self.grid } else { &mut self.other };
+        let screen = self.grid_of_mut(slot);
         match selector {
             Selector::Frames => return Ok(()),
             Selector::ById | Selector::ByNumber | Selector::IdRange => {
@@ -117,7 +117,7 @@ impl Terminal {
             let candidates: HashSet<ImageHandle> =
                 removed.into_iter().chain(named.into_iter().flatten()).collect();
             for handle in candidates {
-                let screen = if slot == self.screen_slot() { &self.grid } else { &self.other };
+                let screen = self.grid_of(slot);
                 let table = &self.graphics.tables[slot];
                 let Some(index) = table.find(handle) else { continue };
                 let referenced =

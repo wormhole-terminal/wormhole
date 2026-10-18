@@ -4,6 +4,7 @@
 //! Spec: kitty, "Transmitting images" (chunking with `m`, the formats `f=24|32|100`, `o=z`, ids
 //! and numbers), "Querying support" (`a=q`) and "Terminal Responses".
 
+use crate::grid::Grid;
 use crate::term::{Event, Terminal};
 use crate::types::ImageHandle;
 
@@ -230,7 +231,7 @@ impl Terminal {
             self.free_image(slot, old);
         }
         while self.graphics.tables[slot].is_full(cost) {
-            let grid = if slot == self.screen_slot() { &self.grid } else { &self.other };
+            let grid = self.grid_of(slot);
             let victim = self.graphics.tables[slot]
                 .victim(|image| grid.is_placed(image.handle) || !image.virtuals.is_empty());
             let Some(victim) = victim else { return Err(Error::TooBig) };
@@ -262,7 +263,7 @@ impl Terminal {
     /// is told to let go of the pixels.
     pub(super) fn free_image(&mut self, slot: usize, index: usize) {
         let image = self.graphics.tables[slot].remove(index);
-        let grid = if slot == self.screen_slot() { &mut self.grid } else { &mut self.other };
+        let grid = self.grid_of_mut(slot);
         grid.delete_image_placements(image.handle);
         self.push_event(Event::ImageFree(image.handle));
     }
@@ -273,7 +274,7 @@ impl Terminal {
         for image in self.graphics.tables[slot].drain() {
             self.push_event(Event::ImageFree(image.handle));
         }
-        let grid = if slot == self.screen_slot() { &mut self.grid } else { &mut self.other };
+        let grid = self.grid_of_mut(slot);
         grid.clear_placements();
     }
 
@@ -291,11 +292,25 @@ impl Terminal {
         usize::from(self.on_alt_screen())
     }
 
+    /// The grid of the screen `slot` names (0 main, 1 alternate): the one showing is `grid`, the
+    /// other one is kept in `other`.
+    pub(super) fn grid_of(&self, slot: usize) -> &Grid {
+        if slot == self.screen_slot() { &self.grid } else { &self.other }
+    }
+
+    pub(super) fn grid_of_mut(&mut self, slot: usize) -> &mut Grid {
+        if slot == self.screen_slot() { &mut self.grid } else { &mut self.other }
+    }
+
+    /// A cell's size in pixels, as the host gave it.
+    pub(super) fn cell_size(&self) -> (u32, u32) {
+        (u32::from(self.cell_px.0), u32::from(self.cell_px.1))
+    }
+
     /// Send out an answer (or none).
     pub(in crate::term) fn answer(&mut self, bytes: Option<Vec<u8>>) {
         if let Some(bytes) = bytes {
-            // Always ASCII.
-            self.reply(format_args!("{}", String::from_utf8_lossy(&bytes)));
+            self.reply_bytes(&bytes);
         }
     }
 

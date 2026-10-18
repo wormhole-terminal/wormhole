@@ -197,7 +197,7 @@ impl Terminal {
             height,
             data,
         }));
-        let cell = (u32::from(self.cell_px.0), u32::from(self.cell_px.1));
+        let cell = self.cell_size();
         self.put_image(Placing {
             image: handle,
             image_id: 0,

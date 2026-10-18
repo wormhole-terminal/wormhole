@@ -37,7 +37,7 @@ impl Terminal {
             data: decoded.rgba,
         }));
         // Raw pixels need no decoding that could fail, so nothing waits for the host.
-        let cell = (u32::from(self.cell_px.0), u32::from(self.cell_px.1));
+        let cell = self.cell_size();
         let motion = if self.modes.contains(Modes::SIXEL_DISPLAY) {
             Motion::Home
         } else if self.modes.contains(Modes::SIXEL_CURSOR_RIGHT) {

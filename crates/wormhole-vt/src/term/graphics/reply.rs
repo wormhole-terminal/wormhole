@@ -136,13 +136,24 @@ impl Gate {
 
     /// Hold the bytes of an ordinary reply behind the answers that wait.
     pub fn hold(&mut self, args: std::fmt::Arguments<'_>) {
+        self.hold_with(|bytes| {
+            let _ = bytes.write_fmt(args);
+        });
+    }
+
+    /// Hold ready-made bytes, as [`hold`](Self::hold) does.
+    pub fn hold_bytes(&mut self, data: &[u8]) {
+        self.hold_with(|bytes| bytes.extend_from_slice(data));
+    }
+
+    fn hold_with(&mut self, put: impl FnOnce(&mut Vec<u8>)) {
         if !matches!(self.parts.back(), Some(Part::Ready(_))) {
             self.parts.push_back(Part::Ready(Vec::new()));
         }
         if let Some(Part::Ready(bytes)) = self.parts.back_mut() {
             // As `Terminal::reply`: a reply past the cap is dropped whole, decided at its ESC.
             let before = bytes.len();
-            let _ = bytes.write_fmt(args);
+            put(bytes);
             if bytes.get(before) == Some(&0x1B) {
                 self.dropped = self.held >= HELD_MAX;
             }

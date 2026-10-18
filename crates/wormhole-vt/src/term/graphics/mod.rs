@@ -157,4 +157,13 @@ impl Graphics {
         }
         closed
     }
+
+    /// [`hold_reply`](Self::hold_reply) for bytes that are already made.
+    pub(super) fn hold_reply_bytes(&mut self, bytes: &[u8]) -> bool {
+        let closed = self.gate.is_closed();
+        if closed {
+            self.gate.hold_bytes(bytes);
+        }
+        closed
+    }
 }
