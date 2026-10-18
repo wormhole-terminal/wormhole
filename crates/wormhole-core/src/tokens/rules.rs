@@ -396,7 +396,7 @@ mod tests {
     #[test]
     fn builtins_are_complete_and_readable() {
         let all = builtin_tokens();
-        assert_eq!(all.len(), 25);
+        assert_eq!(all.len(), 27);
         for t in &all {
             let n = &t.name;
             assert_eq!(t.ui_tokens().count(), UI_TOKENS.len(), "{n}");
@@ -439,7 +439,10 @@ mod tests {
         }
         let light: Vec<_> =
             all.iter().filter(|t| t.appearance == Appearance::Light).map(|t| &t.name).collect();
-        assert_eq!(light, ["Catppuccin Latte", "GitHub Light", "Crimson Light", "Soltari Light"]);
+        assert_eq!(
+            light,
+            ["Catppuccin Latte", "GitHub Light", "Wormhole Light", "Crimson Light", "Soltari Light"]
+        );
     }
 
     #[test]

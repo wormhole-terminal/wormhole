@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn a_fresh_file_has_every_setting_in_order() {
         let text = fresh_text(&Settings::default()).unwrap();
-        assert!(text.starts_with("{\n  \"theme\": \"Tokyo Night\",\n  \"primary_color\": \"\","), "{text}");
+        assert!(text.starts_with("{\n  \"theme\": \"Wormhole Dark\",\n  \"primary_color\": \"\","), "{text}");
         assert!(text.ends_with("}\n"));
         assert_eq!(jsonc::parse::<Settings>(&text).unwrap(), Settings::default());
     }
@@ -196,7 +196,7 @@ mod tests {
         assert!(tabs.contains("\n\t\"font_size\": 16.0,\n"), "{tabs}");
         let comment = updated_text("{\n  \"theme\": \"Nord\" // last\n}", &settings).unwrap();
         assert!(
-            comment.starts_with("{\n  \"theme\": \"Tokyo Night\", // last\n  \"primary_color\": \"\","),
+            comment.starts_with("{\n  \"theme\": \"Wormhole Dark\", // last\n  \"primary_color\": \"\","),
             "{comment}"
         );
     }
@@ -213,7 +213,7 @@ mod tests {
     fn the_full_rewrite_keeps_schema_and_unknown_keys() {
         let old = "{ \"x-mine\": 1, \"$schema\": \"s\", \"theme\": \"Nord\" }";
         let text = rewritten_text(old, &Settings::default()).unwrap();
-        assert!(text.starts_with("{\n  \"$schema\": \"s\",\n  \"theme\": \"Tokyo Night\","), "{text}");
+        assert!(text.starts_with("{\n  \"$schema\": \"s\",\n  \"theme\": \"Wormhole Dark\","), "{text}");
         assert!(text.ends_with("  \"x-mine\": 1\n}\n"), "{text}");
         assert_eq!(jsonc::parse::<Settings>(&text).unwrap(), Settings::default());
     }

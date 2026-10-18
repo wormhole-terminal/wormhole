@@ -643,7 +643,8 @@ mod tests {
     #[test]
     fn reduce_transparency_makes_every_window_opaque() {
         let mut store = store();
-        update(&mut store, |s| s.opacity = 0.8);
+        // A theme whose muted text is lifted at 80 %: the default's is dark enough without.
+        update(&mut store, |s| (s.theme, s.opacity) = ("Tokyo Night".into(), 0.8));
         assert!(store.ui.panel.a < 1.0);
         let translucent_muted = store.ui.muted;
 
@@ -764,7 +765,7 @@ mod tests {
     #[test]
     fn each_window_draws_with_the_colours_of_its_own_look() {
         let mut store = store();
-        update(&mut store, |s| s.opacity = 0.8);
+        update(&mut store, |s| (s.theme, s.opacity) = ("Tokyo Night".into(), 0.8));
         let token = |name: &str| crate::theme_bridge::token(&store.tokens, name);
         let (translucent, opaque) = (store.ui_for(true), store.ui_for(false));
         assert_eq!(translucent, store.ui, "the main window's");

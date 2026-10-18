@@ -14,6 +14,10 @@ use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use crate::tokens::Color;
 use crate::update::UpdateChannel;
 
+/// The dark and light themes a fresh config starts with: Wormhole's own, in the app icon's blue.
+pub const DEFAULT_THEME: &str = "Wormhole Dark";
+pub const DEFAULT_THEME_LIGHT: &str = "Wormhole Light";
+
 /// Which theme a window shows: always the dark pick (`theme`), always the light
 /// pick (`theme_light`), or whichever matches the system's appearance.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -385,7 +389,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            theme: "Tokyo Night".into(),
+            theme: DEFAULT_THEME.into(),
             primary_color: String::new(),
             theme_primary: Some(true),
             // Only fresh configs: config.json is written out in full on first
@@ -428,7 +432,7 @@ impl Default for Settings {
             folder_colors: BTreeMap::new(),
             sidebar_cmd_hints: true,
             theme_mode: ThemeMode::default(),
-            theme_light: "Catppuccin Latte".into(),
+            theme_light: DEFAULT_THEME_LIGHT.into(),
             status_bar: false,
             minimap: false,
             split_gaps: true,
@@ -883,7 +887,7 @@ mod tests {
         assert!(!unset.sidebar_notes, "the rows are drawn without the notes and tasks count");
         assert!(unset.sidebar_changes);
         assert_eq!(unset.theme_mode, ThemeMode::System);
-        assert_eq!(unset.theme_light, "Catppuccin Latte");
+        assert_eq!(unset.theme_light, "Wormhole Light");
         assert!(unset.notify_needs_you && unset.notify_agent_done && unset.notify_command_done);
         assert!(unset.notify_command_failed, "a failing command is told unless switched off");
         assert_eq!(unset.notify_command_after, 10);

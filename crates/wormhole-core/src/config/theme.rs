@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use super::{Config, Settings, ThemeMode};
+use super::{Config, DEFAULT_THEME, Settings, ThemeMode};
 use crate::fsutil::{self, LinkPolicy};
 use crate::theme;
 use crate::theme_registry::{self, ThemeSource, UserTheme, UserThemes};
@@ -197,7 +197,9 @@ pub(crate) fn load_theme_path(dir: &Path, path: &Path) -> Result<ThemeTokens, St
 
 /// The default theme's tokens, what is shown when the chosen theme fails.
 pub(super) fn default_tokens() -> ThemeTokens {
-    tokens::builtins().first().cloned().unwrap_or_else(|| tokens::derive(&theme::builtins()[0]))
+    theme_registry::builtin_named(DEFAULT_THEME)
+        .cloned()
+        .unwrap_or_else(|| tokens::derive(&theme::builtins()[0]))
 }
 
 /// `settings.theme` resolved against the themes in `dir`: a user theme's name,
@@ -259,9 +261,9 @@ mod tests {
     use std::path::Path;
 
     use super::{import_into, resolve_theme, save_theme_in};
-    use crate::theme;
+    use crate::config::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
     use crate::theme_registry::UserThemes;
-    use crate::tokens::{self, ThemeFile, ThemeTokens};
+    use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
     fn write(dir: &Path, file: &str, text: &str) {
         std::fs::write(dir.join(file), text).expect("write theme");
@@ -427,6 +429,18 @@ mod tests {
         assert!(error.is_none());
     }
 
+    /// A fresh config starts with Wormhole's own theme.
+    #[test]
+    fn the_default_theme_is_wormholes_own() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        for (name, appearance) in
+            [(DEFAULT_THEME, Appearance::Dark), (DEFAULT_THEME_LIGHT, Appearance::Light)]
+        {
+            let (tokens, error) = resolve_theme(dir.path(), name);
+            assert_eq!((tokens.name.as_str(), tokens.appearance, error), (name, appearance, None));
+        }
+    }
+
     #[test]
     fn errors_name_the_theme_once() {
         let dir = tempfile::tempdir().expect("temp dir");
@@ -449,7 +463,7 @@ mod tests {
     fn unknown_theme_falls_back_with_error() {
         let dir = tempfile::tempdir().expect("temp dir");
         let (tokens, error) = resolve_theme(dir.path(), "definitely-not-a-theme");
-        assert_eq!(tokens.name, theme::builtin()[0].name);
+        assert_eq!(tokens.name, DEFAULT_THEME);
         assert!(error.is_some());
     }
 }

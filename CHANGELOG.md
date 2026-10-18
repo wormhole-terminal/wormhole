@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Wormhole, a theme of Wormhole's own in the app icon's colours: Wormhole Dark (navy black with the
+  icon's blue) and Wormhole Light (cool white with a deeper blue). It is the default for a new
+  install, under Match system its dark version in Dark Mode and its light one in Light Mode, and the
+  first card in Settings → Appearance. An existing setup keeps the theme it has.
 - Usage now shows Codex plan-limit windows and Gemini’s latest model-response token count alongside
   Claude. Enable or update the integrations in Settings → Coding agents. Missing limits are omitted,
   and expired snapshots wait for a fresh report instead of claiming an unused allowance.

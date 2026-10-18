@@ -10,6 +10,7 @@ use super::variants::variants;
 
 /// The files, in the order the picker lists them (after the imported themes).
 const SOURCES: &[(&str, &str)] = &[
+    ("Wormhole", include_str!("../themes/own/Wormhole.json")),
     ("Nebula", include_str!("../themes/own/Nebula.json")),
     ("Solar Flare", include_str!("../themes/own/Solar Flare.json")),
     ("Borealis", include_str!("../themes/own/Borealis.json")),

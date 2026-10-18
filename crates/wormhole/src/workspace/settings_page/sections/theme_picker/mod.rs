@@ -413,6 +413,7 @@ mod tests {
         ParentElement as _, Pixels, Render, Styled as _, TestAppContext, TestSupportExt as _, Window,
         WindowOptions, div, px,
     };
+    use wormhole_core::config::DEFAULT_THEME;
     use wormhole_core::theme_catalog;
 
     use super::filter_placeholder;
@@ -490,8 +491,11 @@ mod tests {
         assert_eq!(renders(), drawn, "the cards were drawn again for nothing");
 
         // Choosing another theme tells the old and the new one, and only those (the dark pick
-        // and the theme shown move together here).
-        let other = host.read_with(cx, |host, _| host.entries[1].value.clone());
+        // and the theme shown move together here). The first card is a family: the other theme
+        // is one of a card of its own.
+        let other = host.read_with(cx, |host, _| {
+            host.entries.iter().find(|e| e.family.is_none()).expect("a theme of one version").value.clone()
+        });
         cx.update(|cx| {
             host.update(cx, |host, cx| {
                 host.selected = other;
@@ -556,7 +560,7 @@ mod tests {
         // Light, then Dark.
         let height = f32::from(card_height(px(13.0)));
         click(cx, 280.0 - 12.0 - 24.0 - 12.0, height - 14.0);
-        assert_eq!(picks(cx), ("Tokyo Night".into(), "Soltari Light".into()), "the light pick only");
+        assert_eq!(picks(cx), (DEFAULT_THEME.into(), "Soltari Light".into()), "the light pick only");
         click(cx, 40.0, 30.0);
         assert_eq!(picks(cx), ("Soltari Dark".into(), "Soltari Light".into()), "both picks");
     }

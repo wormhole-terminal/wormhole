@@ -1,6 +1,6 @@
 # Bundled Theme Credits
 
-Nebula, Solar Flare, Borealis, Event Horizon, Void, Crimson, Cyberpunk, Matrix and Soltari (the
+Wormhole, Nebula, Solar Flare, Borealis, Event Horizon, Void, Crimson, Cyberpunk, Matrix and Soltari (the
 theme files in `src/themes/own/`) are Wormhole's own, made for it and covered by its license. The
 other color scheme files in `src/themes/` were taken unmodified from the `ghostty/` directory of the
 iTerm2-Color-Schemes project:

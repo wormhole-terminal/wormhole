@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use crate::config::Config;
+use crate::config::{Config, DEFAULT_THEME};
 use crate::theme_registry::{self, ThemeId, UserThemes};
 use crate::tokens::{self, ThemeTokens};
 
@@ -60,6 +60,10 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
             themes: Arc::clone(&themes),
         })
         .collect();
+    // The default theme's card leads: it is Wormhole's own, made to match the app icon.
+    if let Some((main, _)) = tokens::builtin_family(DEFAULT_THEME) {
+        entries.sort_by_key(|e| e.family.as_ref().is_none_or(|(family, _)| family != main));
+    }
     let mut user: Vec<ThemeEntry> = themes
         .themes
         .iter()
@@ -150,6 +154,7 @@ mod tests {
     use std::path::Path;
 
     use super::{catalog_in, fingerprint_in};
+    use crate::config::DEFAULT_THEME;
     use crate::tokens::{self, Appearance};
 
     const GHOSTTY: &str = "background = #fafafa\nforeground = #202020\npalette = 1=#cc0000\n";
@@ -284,6 +289,15 @@ mod tests {
         assert_eq!(entries[cards.last().expect("cards")[0]].card_label(), "Plain");
         assert_eq!(entries[soltari_index(&entries)].card_label(), "Soltari");
         assert_eq!(cards.iter().map(Vec::len).sum::<usize>(), entries.len());
+    }
+
+    #[test]
+    fn the_default_themes_card_comes_first() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let entries = catalog_in(dir.path());
+        let first = &super::cards(&entries)[0];
+        assert_eq!(entries[first[0]].card_label(), "Wormhole");
+        assert!(first.iter().any(|ix| entries[*ix].label == DEFAULT_THEME));
     }
 
     fn soltari_index(entries: &[super::ThemeEntry]) -> usize {
