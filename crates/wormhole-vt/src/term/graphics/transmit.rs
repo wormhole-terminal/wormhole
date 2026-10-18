@@ -297,11 +297,6 @@ impl Terminal {
         if slot == self.screen_slot() { &mut self.grid } else { &mut self.other }
     }
 
-    /// A cell's size in pixels, as the host gave it.
-    pub(super) fn cell_size(&self) -> (u32, u32) {
-        (u32::from(self.cell_px.0), u32::from(self.cell_px.1))
-    }
-
     /// Send out an answer (or none).
     pub(in crate::term) fn answer(&mut self, bytes: Option<Vec<u8>>) {
         if let Some(bytes) = bytes {

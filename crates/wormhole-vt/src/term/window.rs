@@ -137,6 +137,11 @@ pub enum WindowOp {
 const UNKNOWN_SCREEN_MAX: usize = 500;
 
 impl Terminal {
+    /// A cell's size in pixels, as the host gave it.
+    pub(super) fn cell_size(&self) -> (u32, u32) {
+        (u32::from(self.cell_px.0), u32::from(self.cell_px.1))
+    }
+
     /// Allow or refuse what changes the window and what reads its title (the host's setting; see
     /// the module docs).
     pub fn set_window_ops(&mut self, ops: WindowOps) {
@@ -169,7 +174,7 @@ impl Terminal {
             }
             14 => {
                 let (cols, rows) = (self.cols as u32, self.rows as u32);
-                let (cell_w, cell_h) = (u32::from(self.cell_px.0), u32::from(self.cell_px.1));
+                let (cell_w, cell_h) = self.cell_size();
                 let (width, height) = match (p1, self.window) {
                     // The window with everything around the text area.
                     (Some(2), Some(w)) => (w.width, w.height),
@@ -180,10 +185,10 @@ impl Terminal {
             15 => {
                 let (width, height) = match self.window {
                     Some(w) => (w.screen_width, w.screen_height),
-                    None => (
-                        self.cols as u32 * u32::from(self.cell_px.0),
-                        self.rows as u32 * u32::from(self.cell_px.1),
-                    ),
+                    None => {
+                        let (cell_w, cell_h) = self.cell_size();
+                        (self.cols as u32 * cell_w, self.rows as u32 * cell_h)
+                    }
                 };
                 self.reply(format_args!("\x1b[5;{height};{width}t"));
             }
@@ -212,7 +217,7 @@ impl Terminal {
             }
             4 if allowed => {
                 let (height, width) = (Extent::of(p1), Extent::of(p2));
-                let (cell_w, cell_h) = (u32::from(self.cell_px.0), u32::from(self.cell_px.1));
+                let (cell_w, cell_h) = self.cell_size();
                 let cells = |extent: Extent, cell: u32| match extent {
                     Extent::Size(pixels) => Extent::Size((pixels / cell).max(1)),
                     other => other,
