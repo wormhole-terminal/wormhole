@@ -30,13 +30,14 @@
 //! | `conformance` | DECSCL, S7C1T and S8C1T: the level and one-byte C1 controls |
 //! | `charset` | the sets G0..G3 hold: national replacement sets, DEC Technical and Supplemental, Latin-1; and the shifts |
 //! | `locator` | the DEC locator: DECELR, DECSLE, DECRQLP, DECEFR and the reports the host's pointer events make |
-//! | `reports` | DSR, DA1/2/3, XTVERSION, XTGETTCAP |
+//! | `reports` | DSR, DA1/2/3, XTVERSION |
 //! | `presentation`, `state` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | `window`, `title` | XTWINOPS: the window's reports and operations; the title, the icon name and their stack |
 //! | `osc`, `oscs` | operating system commands: collecting the string; the dispatch and the text helpers |
 //! | `osc_cwd`, `osc_link`, `osc_clipboard`, `osc_notify`, `osc_marks` | OSC 7 (the folder), 8 (hyperlinks), 52 (clipboard), 9, 9;4, 99 and 777 (notifications, progress), 133 (shell marks) |
 //! | `osc_colors`, `color` | OSC 4, 5, 10 to 19 and their resets; the parser of color specs |
-//! | `dcs` | device control strings (DECRQSS, XTGETTCAP, sixel) and APC |
+//! | `dcs` | device control strings and APC: collecting them and sending them on (sixel is read here) |
+//! | `dcs_rqss`, `dcs_tcap` | DECRQSS; XTGETTCAP |
 //! | `graphics` | kitty's graphics protocol, Sixel and iTerm2's inline images, placed in the grid |
 //! | `reset` | RIS, DECSTR, DECALN |
 //! | `resize` | the window changing size, DECCOLM |
@@ -84,6 +85,8 @@ mod control;
 mod csi;
 mod cursor;
 mod dcs;
+mod dcs_rqss;
+mod dcs_tcap;
 #[cfg(any(test, feature = "state-dump"))]
 mod dump;
 mod edit;
