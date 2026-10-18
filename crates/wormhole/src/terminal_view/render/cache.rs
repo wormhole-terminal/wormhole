@@ -47,12 +47,14 @@ impl<K, T> Default for RowCache<K, T> {
 
 impl<K: PartialEq, T> RowCache<K, T> {
     /// Bring the cache in line with `snapshot`, building rows it can't reuse. `found` is find's
-    /// matches on each row (rows past its end have none).
+    /// matches on each row (rows past its end have none); a row `redo` says of is built again,
+    /// changed or not (one drawn before all its words were shaped).
     pub fn sync(
         &mut self,
         key: K,
         snapshot: &ScreenSnapshot,
         found: &[Vec<(usize, usize, bool)>],
+        redo: impl Fn(&T) -> bool,
         mut build: impl FnMut(&[Cell], &RowExtras, &Marks) -> T,
     ) -> SyncStats {
         if self.key.as_ref() != Some(&key) {
@@ -73,7 +75,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
                 e.marks.selected == snapshot.selected_columns(row)
                     && e.marks.found.as_slice() == found.get(row).map_or(&[][..], Vec::as_slice)
             };
-            let keep = !rows[row].changed() && entry.as_ref().is_some_and(same_marks);
+            let keep =
+                !rows[row].changed() && entry.as_ref().is_some_and(|e| same_marks(e) && !redo(&e.value));
             if keep {
                 stats.kept += 1;
             } else {
@@ -85,10 +88,13 @@ impl<K: PartialEq, T> RowCache<K, T> {
             let (cells, extras) = (rows[row].cells(), rows[row].extras());
             let marks = marks(row);
             let hash = row_hash(cells, extras, &marks);
-            let reusable = self
-                .pool
-                .iter()
-                .position(|e| e.hash == hash && e.marks == marks && e.cells == cells && e.extras == *extras);
+            let reusable = self.pool.iter().position(|e| {
+                e.hash == hash
+                    && e.marks == marks
+                    && e.cells == cells
+                    && e.extras == *extras
+                    && !redo(&e.value)
+            });
             self.rows[row] = Some(match reusable {
                 Some(index) => {
                     stats.moved += 1;
@@ -154,8 +160,9 @@ fn row_hash(cells: &[Cell], extras: &RowExtras, marks: &Marks) -> u64 {
 mod tests {
     use wormhole_core::terminal::ScreenSnapshot;
     use wormhole_core::terminal::testing::TestTerm;
-    use wormhole_core::terminal::types::{Column, Line, Point, SelectionType, Side};
+    use wormhole_core::terminal::types::{Cell, Column, Line, Point, RowExtras, SelectionType, Side};
 
+    use super::super::rows::Marks;
     use super::{RowCache, SyncStats};
 
     fn term(cols: u16, rows: u16) -> TestTerm {
@@ -170,7 +177,8 @@ mod tests {
     fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, key: u32) -> SyncStats {
         let mut snapshot = ScreenSnapshot::default();
         term.snapshot(&mut snapshot, 0);
-        let stats = cache.sync(key, &snapshot, &[], |cells, _, _| cells.iter().map(|c| c.c).collect());
+        let stats =
+            cache.sync(key, &snapshot, &[], |_| false, |cells, _, _| cells.iter().map(|c| c.c).collect());
         for (row, text) in cache.rows() {
             let expected: String = snapshot.rows()[row].cells().iter().map(|c| c.c).collect();
             assert_eq!(*text, expected, "row {row} shows stale content");
@@ -225,7 +233,9 @@ mod tests {
         term.snapshot(&mut snapshot, 0);
         let mut sync = |found: &[Vec<(usize, usize, bool)>]| {
             term.snapshot(&mut snapshot, 0);
-            cache.sync(0, &snapshot, found, |cells, _, _| cells.iter().map(|c| c.c).collect()).built
+            cache
+                .sync(0, &snapshot, found, |_| false, |cells, _, _| cells.iter().map(|c| c.c).collect())
+                .built
         };
         sync(&[]);
         assert_eq!(sync(&[vec![], vec![(0, 0, true)]]), 1, "the row with a match");
@@ -233,6 +243,27 @@ mod tests {
         // Stepping to another match moves "current" between two rows.
         assert_eq!(sync(&[vec![], vec![(0, 0, false)], vec![(0, 0, true)]]), 2);
         assert_eq!(sync(&[]), 2, "closing find clears them");
+    }
+
+    #[test]
+    fn a_row_drawn_before_its_words_were_shaped_is_built_again_unchanged() {
+        let mut term = term(10, 3);
+        feed(&mut term, b"a\r\nb\r\nc");
+        let mut cache: RowCache<u32, String> = RowCache::default();
+        let mut snapshot = ScreenSnapshot::default();
+        term.snapshot(&mut snapshot, 0);
+        // Row 1 ("b") is drawn provisionally.
+        fn build(cells: &[Cell], _: &RowExtras, _: &Marks) -> String {
+            let text: String = cells.iter().map(|c| c.c).collect();
+            if text.starts_with('b') { format!("{text}?") } else { text }
+        }
+        let redo = |value: &String| value.ends_with('?');
+        assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 3);
+        term.snapshot(&mut snapshot, 0);
+        let stats = cache.sync(0, &snapshot, &[], redo, |cells, _, _| cells.iter().map(|c| c.c).collect());
+        assert_eq!((stats.built, stats.kept + stats.moved), (1, 2), "the provisional row, though unchanged");
+        term.snapshot(&mut snapshot, 0);
+        assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 0, "built in full now");
     }
 
     #[test]

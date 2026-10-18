@@ -400,18 +400,25 @@ impl Render for TerminalView {
                     colors: colors_key(&cache.snapshot.colors),
                 };
                 words.sync((font_id, font_size, cell_width));
-                cache.prepare(
+                words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));
+                let stats = cache.prepare(
                     key,
                     geometry,
                     &palette,
                     &found,
                     |segment| {
-                        words.glyphs(&segment, cell_width, |segment| {
+                        let glyphs = words.glyphs(&segment, cell_width, |segment| {
                             shape_word(segment, &text_system, &base_font, font_size, cell_width)
-                        })
+                        });
+                        (glyphs, !words.take_deferred())
                     },
                     |text, runs| shape_blurred(text, runs, &text_system, &base_font, font_size, cell_width),
                 );
+                // Words the budget didn't reach are shaped in the next frame, also when nothing
+                // else changes by then.
+                if stats.provisional > 0 {
+                    window.request_animation_frame();
+                }
                 let blinking = blink::wanted(cache.any_blinks(), window.is_window_active(), reduce_motion);
                 entity.update(cx, |this, cx| this.text_blink_wanted(blinking, cx));
                 let blink_faded = blinking && blink::faded_now();

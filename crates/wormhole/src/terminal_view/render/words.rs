@@ -8,9 +8,16 @@
 //! and painted glyph by glyph in the colors of the moment. Ligatures and
 //! contextual forms stay right: they never reach across a blank, and a word is
 //! still shaped whole with its glyphs pinned to its cells.
+//!
+//! Some screens make new words faster than CoreText shapes them: `donut` prints new runs of
+//! `.,-~:;=!*#$@` in every row of every frame, which a font with ligatures has to shape whole, and
+//! that was 30 ms a frame on an M5 Pro. So a frame shapes for [`SHAPE_BUDGET`] at most; a new word
+//! after that is drawn character by character, from glyphs shaped one each and kept, and its row
+//! is built again next frame, when the word is shaped in full (or, in an animation, gone).
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use gpui_kit::{FontId, GlyphId, Hsla, Pixels, Point};
 
@@ -76,19 +83,44 @@ impl WordKey {
 /// rather than keep a flood of one-off words (hashes, random data) forever.
 const MAX_WORDS: usize = 16_384;
 
+/// How long one frame of a terminal may spend shaping new words: half a frame at 120 Hz, which
+/// leaves the rest of the window and the GPU the other half.
+pub(super) const SHAPE_BUDGET: Duration = Duration::from_millis(4);
+
+/// How much shaping the frame being built has left.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Budget {
+    /// No limit: tests, and anything that isn't drawing a frame.
+    Unlimited,
+    Until(Instant),
+    /// Past its time: new words are drawn character by character.
+    Spent,
+}
+
 pub(super) struct WordCache<K> {
     /// What every word was shaped with (font, size, cell width, ligatures).
     key: Option<K>,
     words: HashMap<WordKey, Rc<[Shaped]>>,
-    /// Characters that stand alone, by character, wide, bold and italic.
+    /// Characters shaped one by one (those that stand alone, and a word's characters while the
+    /// frame's budget is spent), by character, wide, bold and italic.
     chars: HashMap<(char, bool, bool, bool), Rc<[Shaped]>>,
     /// The key being looked up, kept so a lookup doesn't allocate.
     scratch: WordKey,
+    budget: Budget,
+    /// A word was drawn character by character since [`Self::take_deferred`] last asked.
+    deferred: bool,
 }
 
 impl<K> Default for WordCache<K> {
     fn default() -> Self {
-        Self { key: None, words: HashMap::new(), chars: HashMap::new(), scratch: WordKey::default() }
+        Self {
+            key: None,
+            words: HashMap::new(),
+            chars: HashMap::new(),
+            scratch: WordKey::default(),
+            budget: Budget::Unlimited,
+            deferred: false,
+        }
     }
 }
 
@@ -120,6 +152,31 @@ impl<K: PartialEq> WordCache<K> {
         }
     }
 
+    /// A frame starts: until `until` it may shape new words, after that they are drawn character
+    /// by character. `None`: no limit.
+    pub fn start_frame(&mut self, until: Option<Instant>) {
+        self.budget = until.map_or(Budget::Unlimited, Budget::Until);
+    }
+
+    /// Whether a word was drawn character by character since the last call: what it was drawn in
+    /// should be built again in the next frame.
+    pub fn take_deferred(&mut self) -> bool {
+        std::mem::take(&mut self.deferred)
+    }
+
+    /// Whether the frame may still shape a word it hasn't seen.
+    fn may_shape(&mut self) -> bool {
+        match self.budget {
+            Budget::Unlimited => true,
+            Budget::Spent => false,
+            Budget::Until(until) if Instant::now() < until => true,
+            Budget::Until(_) => {
+                self.budget = Budget::Spent;
+                false
+            }
+        }
+    }
+
     /// The glyphs of `segment` in its colors, placed on a grid of `cell_width`; `shape` shapes a
     /// word (or a part of one) it hasn't seen before.
     pub fn glyphs(
@@ -130,10 +187,10 @@ impl<K: PartialEq> WordCache<K> {
     ) -> Vec<Glyph> {
         let mut out = Vec::new();
         let per_char = if segment.wide { 2 } else { 1 };
-        let split = segment.text.chars().any(stands_alone)
-            && segment.text.chars().count() * per_char == segment.cells();
-        if !split {
-            self.word(segment, 0..segment.text.len(), 0, cell_width, &mut shape, &mut out);
+        // Every character in a cell (or two) of its own: no marks or joiners that need a neighbour.
+        let one_per_cell = segment.text.chars().count() * per_char == segment.cells();
+        if !(one_per_cell && segment.text.chars().any(stands_alone)) {
+            self.word(segment, 0..segment.text.len(), 0, one_per_cell, cell_width, &mut shape, &mut out);
             return out;
         }
         // The characters that don't stand alone are shaped together, as the word they make.
@@ -145,44 +202,72 @@ impl<K: PartialEq> WordCache<K> {
                 continue;
             }
             if let Some((start, cell)) = pending.take() {
-                self.word(segment, start..byte, cell, cell_width, &mut shape, &mut out);
+                self.word(segment, start..byte, cell, true, cell_width, &mut shape, &mut out);
             }
-            let (bold, italic) = runs.at(byte).map_or((false, false), |style| (style.bold, style.italic));
-            let key = (c, segment.wide, bold, italic);
-            let shaped = match self.chars.get(&key) {
-                Some(shaped) => shaped.clone(),
-                None => {
-                    if self.chars.len() >= MAX_WORDS {
-                        self.chars.clear();
-                    }
-                    let shaped: Rc<[Shaped]> =
-                        shape(&segment.part(byte..byte + c.len_utf8(), k * per_char)).into();
-                    self.chars.insert(key, shaped.clone());
-                    shaped
-                }
-            };
-            place(segment, &shaped, byte, k * per_char, cell_width, &mut out);
+            self.character(segment, &mut runs, (byte, c), k * per_char, cell_width, &mut shape, &mut out);
         }
         if let Some((start, cell)) = pending {
-            self.word(segment, start..segment.text.len(), cell, cell_width, &mut shape, &mut out);
+            self.word(segment, start..segment.text.len(), cell, true, cell_width, &mut shape, &mut out);
         }
         out
     }
 
-    /// The glyphs of the word in `bytes` of the segment, `cell` cells in, shaped once.
+    /// The glyphs of character `c` at byte `byte` and `cell` cells into the segment, shaped once.
+    #[allow(clippy::too_many_arguments)]
+    fn character(
+        &mut self,
+        segment: &Segment,
+        runs: &mut Runs,
+        (byte, c): (usize, char),
+        cell: usize,
+        cell_width: Pixels,
+        shape: &mut impl FnMut(&Segment) -> Vec<Shaped>,
+        out: &mut Vec<Glyph>,
+    ) {
+        let (bold, italic) = runs.at(byte).map_or((false, false), |style| (style.bold, style.italic));
+        let key = (c, segment.wide, bold, italic);
+        let shaped = match self.chars.get(&key) {
+            Some(shaped) => shaped.clone(),
+            None => {
+                if self.chars.len() >= MAX_WORDS {
+                    self.chars.clear();
+                }
+                let shaped: Rc<[Shaped]> = shape(&segment.part(byte..byte + c.len_utf8(), cell)).into();
+                self.chars.insert(key, shaped.clone());
+                shaped
+            }
+        };
+        place(segment, &shaped, byte, cell, cell_width, out);
+    }
+
+    /// The glyphs of the word in `bytes` of the segment, `cell` cells in, shaped once. A new word
+    /// whose characters each have a cell (`one_per_cell`) waits for a frame with time to shape it
+    /// once this one has spent its budget, and is drawn character by character until then.
+    #[allow(clippy::too_many_arguments)]
     fn word(
         &mut self,
         segment: &Segment,
         bytes: std::ops::Range<usize>,
         cell: usize,
+        one_per_cell: bool,
         cell_width: Pixels,
         shape: &mut impl FnMut(&Segment) -> Vec<Shaped>,
         out: &mut Vec<Glyph>,
     ) {
         let whole = bytes == (0..segment.text.len());
         self.scratch.fill(segment, bytes.clone());
-        let shaped = match self.words.get(&self.scratch) {
-            Some(shaped) => shaped.clone(),
+        let shaped = match self.words.get(&self.scratch).cloned() {
+            Some(shaped) => shaped,
+            None if one_per_cell && !self.may_shape() => {
+                self.deferred = true;
+                let per_char = if segment.wide { 2 } else { 1 };
+                let mut runs = Runs::new(segment);
+                for (k, (byte, c)) in segment.text[bytes.clone()].char_indices().enumerate() {
+                    let at = (bytes.start + byte, c);
+                    self.character(segment, &mut runs, at, cell + k * per_char, cell_width, shape, out);
+                }
+                return;
+            }
             None => {
                 if self.words.len() >= MAX_WORDS {
                     self.words.clear();
@@ -256,6 +341,8 @@ mod tests {
     use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
     use wormhole_core::theme;
 
+    use std::time::Instant;
+
     use super::{Shaped, WordCache};
     use crate::palette::Palette;
     use crate::terminal_view::render::rows::{Marks, Segment, build_row};
@@ -322,6 +409,50 @@ mod tests {
         cache.sync(1);
         glyphs(&mut cache, &plain[0]);
         assert_eq!(shaped.get(), 3, "another font or size shapes again");
+    }
+
+    #[test]
+    fn past_the_budget_a_new_word_is_drawn_character_by_character_until_a_frame_shapes_it() {
+        let mut cache = WordCache::default();
+        cache.sync(0u8);
+        let asked = std::cell::RefCell::new(Vec::new());
+        let segment = &segments("=>=", &[1], &[])[0];
+        let glyphs = |cache: &mut WordCache<u8>| {
+            cache.glyphs(segment, px(8.0), |segment| {
+                asked.borrow_mut().push(segment.text.clone());
+                fake_shape(segment)
+            })
+        };
+        // Spent before it started.
+        cache.start_frame(Some(Instant::now()));
+        let by_char = glyphs(&mut cache);
+        assert!(cache.take_deferred(), "the row has to be built again");
+        assert!(!cache.take_deferred(), "asked once");
+        // The next frame has time: the word is shaped whole, in the same cells and colors.
+        cache.start_frame(None);
+        let whole = glyphs(&mut cache);
+        assert!(!cache.take_deferred());
+        assert_eq!(*asked.borrow(), ["=", ">", "=>="], "its characters once each, then the word");
+        assert_eq!(by_char, whole);
+        // Seen words don't wait, whatever is left of the budget; characters already shaped aren't
+        // shaped again.
+        cache.start_frame(Some(Instant::now()));
+        glyphs(&mut cache);
+        assert!(!cache.take_deferred());
+        assert_eq!(asked.borrow().len(), 3);
+    }
+
+    #[test]
+    fn a_word_with_a_mark_is_shaped_whatever_the_budget() {
+        let mut cache = WordCache::default();
+        cache.sync(0u8);
+        let mut extras = RowExtras::default();
+        extras.push_zerowidth(0, '\u{0301}');
+        cache.start_frame(Some(Instant::now()));
+        // Drawn by character the mark would lose its letter.
+        let (asked, _) = shaped_row(&mut cache, &row("ab"), &extras);
+        assert_eq!(asked, ["a\u{0301}b"]);
+        assert!(!cache.take_deferred());
     }
 
     #[test]

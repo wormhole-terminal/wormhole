@@ -135,6 +135,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   The tab bar's two-row, stacks and bottom-bar layouts are gone too. Old settings that named any of
   these still load and do nothing.
 
+### Fixed
+
+- A screen that keeps printing new words, such as `ttystorm donut` with a font that has ligatures,
+  no longer slows the window down: a frame took 30 ms there and takes about 3 now. A word the frame had
+  no time to shape shows without its ligatures for a frame or two.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

@@ -36,6 +36,8 @@ pub(super) struct PaintedRow<L> {
     blinks: bool,
     /// Inline images' tiles on the row (drawn from the store each frame).
     pub images: Vec<ImageRun>,
+    /// Drawn before every word on it was shaped (the frame's budget ran out): built again next frame.
+    provisional: bool,
     shapes: Vec<(usize, char, Hsla)>,
     pub quads: Vec<(Bounds<Pixels>, Hsla)>,
     pub strokes: Vec<(Path<Pixels>, Hsla)>,
@@ -54,6 +56,8 @@ pub(super) struct FrameStats {
     pub rows: SyncStats,
     pub rows_placed: usize,
     pub blurred_built: usize,
+    /// Rows drawn before all their words were shaped, which the next frame builds again.
+    pub provisional: usize,
 }
 
 /// `L` is a word as painted, `B` a faint row above the viewport.
@@ -80,7 +84,8 @@ impl<K, L, B> Default for FrameCache<K, L, B> {
 impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
     /// Bring everything in line with `snapshot` (already updated). `key` is what
     /// shaping depends on; `found` is find's matches on each viewport row; `shape` shapes one
-    /// word, `shape_blurred` one faint row above the viewport.
+    /// segment, and says whether it shaped all of it (`false`: some of it waits for a later frame),
+    /// `shape_blurred` one faint row above the viewport.
     #[allow(clippy::too_many_arguments)]
     pub fn prepare(
         &mut self,
@@ -88,15 +93,28 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
         geometry: Geometry,
         palette: &Palette,
         found: &[Vec<(usize, usize, bool)>],
-        mut shape: impl FnMut(Segment) -> L,
+        mut shape: impl FnMut(Segment) -> (L, bool),
         mut shape_blurred: impl FnMut(String, Vec<(usize, Hsla)>) -> B,
     ) -> FrameStats {
         let mut stats = FrameStats::default();
         let colors = self.snapshot.colors;
-        stats.rows = self.rows.sync(key.clone(), &self.snapshot, found, |cells, extras, marks| {
+        let redo = |painted: &PaintedRow<L>| painted.provisional;
+        stats.rows = self.rows.sync(key.clone(), &self.snapshot, found, redo, |cells, extras, marks| {
             let built = build_row(cells, extras, palette, &colors, marks);
+            let mut provisional = false;
+            let lines = built
+                .segments
+                .into_iter()
+                .map(|segment| {
+                    let col = segment.col;
+                    let (line, whole) = shape(segment);
+                    provisional |= !whole;
+                    (col, line)
+                })
+                .collect();
             PaintedRow {
-                lines: built.segments.into_iter().map(|segment| (segment.col, shape(segment))).collect(),
+                lines,
+                provisional,
                 backgrounds: built.backgrounds,
                 underlines: built.underlines,
                 struck: built.strikes,
@@ -109,6 +127,7 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
                 placed: None,
             }
         });
+        stats.provisional = self.rows.rows().filter(|(_, painted)| painted.provisional).count();
         let painter = &mut self.painter;
         for (row, painted) in self.rows.rows_mut() {
             if painted.shapes.is_empty() || painted.placed == Some((row, geometry)) {
@@ -201,7 +220,7 @@ mod tests {
     fn prepare(cache: &mut FrameCache<u8, String>, term: &mut TestTerm, geometry: Geometry) -> FrameStats {
         let palette = Palette::from_theme(&theme::builtin()[0]);
         term.snapshot(&mut cache.snapshot, 2);
-        cache.prepare(0, geometry, &palette, &[], |segment| segment.text, |text, _| text)
+        cache.prepare(0, geometry, &palette, &[], |segment| (segment.text, true), |text, _| text)
     }
 
     #[test]

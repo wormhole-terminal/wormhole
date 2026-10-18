@@ -144,7 +144,7 @@ fn frame(
             counts.lines_shaped += 1;
             counts.glyphs_shaped += segment.text.chars().count();
             let runs = segment.runs.iter().map(|(len, style)| text_run(*len, style, base_font)).collect();
-            fed(segment.text, runs)
+            (fed(segment.text, runs), true)
         },
         |text, runs| {
             let runs = runs

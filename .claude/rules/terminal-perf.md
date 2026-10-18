@@ -24,7 +24,9 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
   (`RowCache`), words are shaped once by text and fonts (`WordCache`), and characters that never
   depend on their neighbours (`stands_alone`: CJK, kana, Hangul, braille) once each. Never shape
   per frame what didn't change, and don't add a character to `stands_alone` that a font can
-  shape contextually (Latin, Arabic, marks, emoji).
+  shape contextually (Latin, Arabic, marks, emoji). A frame shapes new words for `SHAPE_BUDGET`
+  (`render/words.rs`) at most; later ones are drawn character by character and their rows built again
+  next frame, so a screen of new words every frame (`ttystorm donut` with ligatures) can't stall it.
 - **The engine's hot paths allocate nothing**: printing, scrolling, styles and links reuse the
   grid's pages and tables. `crates/wormhole-term/tests/pty_allocations.rs`
   (`reading_and_parsing_allocates_nothing`) pins the reader thread at zero allocations in floods,

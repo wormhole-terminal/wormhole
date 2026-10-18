@@ -68,10 +68,11 @@ impl Renderer {
             &self.palette,
             &[],
             |segment| {
-                words.glyphs(&segment, GEOMETRY.cell_width, |segment| {
+                let glyphs = words.glyphs(&segment, GEOMETRY.cell_width, |segment| {
                     shaped.set(shaped.get() + 1);
                     one_glyph_per_char(segment)
-                })
+                });
+                (glyphs, true)
             },
             |text, _| text,
         );
@@ -174,7 +175,14 @@ fn an_unchanged_screen_rebuilds_nothing() {
     for _ in 0..5 {
         let stats = {
             renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
-            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| Vec::new(), |text, _| text)
+            renderer.frame.prepare(
+                0,
+                GEOMETRY,
+                &renderer.palette,
+                &[],
+                |_| (Vec::new(), true),
+                |text, _| text,
+            )
         };
         assert_eq!((stats.rows.built, stats.rows_placed), (0, 0), "{stats:?}");
     }
@@ -203,7 +211,8 @@ fn blinking_text_and_overlines_reach_the_painter_and_a_phase_change_rebuilds_not
     // The clock turning (any number of times) is the same frame to the caches.
     for _ in 0..4 {
         renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
-        let stats = renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| Vec::new(), |t, _| t);
+        let stats =
+            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| (Vec::new(), true), |t, _| t);
         assert_eq!((stats.rows.built, stats.rows.moved, stats.rows_placed), (0, 0, 0), "{stats:?}");
     }
 }
