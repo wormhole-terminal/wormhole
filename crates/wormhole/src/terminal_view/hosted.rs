@@ -49,6 +49,26 @@ pub(super) struct HostState {
 /// for the same reason, and every new terminal would say it again.
 static FALLBACK_TOLD: AtomicBool = AtomicBool::new(false);
 
+/// The app is quitting and has let go of its hosts (`workspace::hosting::detach_all`). A start or
+/// attach still under way then finishes on its background thread with no view to take it, and its
+/// `Pty` would be dropped there, which closes the host: it lets go of the host instead.
+static APP_QUITTING: AtomicBool = AtomicBool::new(false);
+
+/// Called as the app quits, before the hosts are let go of.
+pub fn note_app_quitting() {
+    APP_QUITTING.store(true, Ordering::Release);
+}
+
+/// `ready`, let go of when the app quit while it was being made (see [`APP_QUITTING`]).
+fn kept_past_quit(ready: anyhow::Result<(Pty, PtyEvents)>) -> anyhow::Result<(Pty, PtyEvents)> {
+    if APP_QUITTING.load(Ordering::Acquire)
+        && let Ok((pty, _)) = &ready
+    {
+        pty.detach();
+    }
+    ready
+}
+
 impl HostState {
     pub(super) fn of(start: &Start) -> Self {
         match start {
@@ -89,7 +109,7 @@ impl TerminalView {
                             hosts_dir: &hosts_dir,
                             id: &id,
                         };
-                        wormhole_core::terminal::spawn_hosted(&host, size, &options)
+                        kept_past_quit(wormhole_core::terminal::spawn_hosted(&host, size, &options))
                     }
                 });
                 self.await_host(task, options, size, false, cx);
@@ -97,7 +117,11 @@ impl TerminalView {
             Start::Attach { socket, id, visible } => {
                 let task = cx.background_spawn({
                     let options = options.clone();
-                    async move { wormhole_core::terminal::attach_hosted(&socket, &id, &options, visible) }
+                    async move {
+                        kept_past_quit(wormhole_core::terminal::attach_hosted(
+                            &socket, &id, &options, visible,
+                        ))
+                    }
                 });
                 self.await_host(task, options, size, true, cx);
             }

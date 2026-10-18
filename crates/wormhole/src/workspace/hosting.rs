@@ -72,6 +72,8 @@ pub(super) fn adopt_orphans(cx: &mut App) {
 /// terminal, right after the quit observers run): let go of every host, so dropping a hosted `Pty`
 /// leaves its program running instead of ending it.
 pub(super) fn detach_all(cx: &mut App) {
+    // First: a start or attach that finishes after this lets go of its host too.
+    crate::terminal_view::note_app_quitting();
     let mut terminals: Vec<Entity<TerminalView>> = Vec::new();
     for window in &app(cx).windows {
         if let Some(workspace) = window.workspace.upgrade() {

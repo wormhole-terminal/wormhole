@@ -39,7 +39,7 @@ mod reported;
 mod status;
 
 pub use failed::Failure;
-pub use hosted::Start;
+pub use hosted::{Start, note_app_quitting};
 pub use input::{TerminalKeys, keystroke_spec};
 #[cfg(feature = "devctl")]
 pub(crate) use render::PAINTS;
