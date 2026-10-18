@@ -96,6 +96,24 @@ fn the_clipboard_is_stored_and_asked_for() {
 }
 
 #[test]
+fn a_clipboard_request_names_only_selections_that_exist() {
+    let mut rig = Rig::new(20, 5);
+    // What a program puts where the selection goes is repeated in the reply, into its own input.
+    rig.feed("\x1b]52;c\x7f\x7frm -rf ~ #\u{85};?\x07\x1b]52;xyz;?\x07");
+    rig.feed(&format!("\x1b]52;{};?\x07", "a".repeat(100_000)));
+    rig.feed(&format!("\x1b]52;{};?\x07", "p".repeat(100)));
+    let selections: Vec<String> = rig
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            Event::ClipboardLoad { selection, .. } => Some(selection),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(selections, ["c", "s0", "s0", "pppppppppppp"]);
+}
+
+#[test]
 fn a_clipboard_request_says_how_many_reply_bytes_came_before_it() {
     let mut rig = Rig::new(20, 5);
     rig.feed("\x1b[6n\x1b]52;c;?\x07\x1b[5n");

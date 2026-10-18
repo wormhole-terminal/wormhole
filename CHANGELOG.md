@@ -154,6 +154,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   no longer slows the window down: a frame took 30 ms there and takes about 3 now. A word the frame had
   no time to shape shows without its ligatures for a frame or two.
 
+### Security
+
+- **Low** · no advisory · affects 1.0.0–1.1.0: a program could put text of its choosing on your command
+  line. Wormhole's answer to a clipboard read repeated whatever the program named as the clipboard, so a
+  file shown with `cat` could type a command at your prompt (it did not run it: the text could not
+  hold a Return). Only the names of real clipboards come back now.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

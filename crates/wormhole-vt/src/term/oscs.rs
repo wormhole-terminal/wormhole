@@ -24,6 +24,22 @@ fn terminator(end: Terminator) -> &'static str {
     }
 }
 
+/// The selections OSC 52 may name: clipboard, primary, secondary, select and cut buffers 0 to 7.
+const CLIPBOARD_TARGETS: &[u8] = b"cpqs01234567";
+
+/// The selection an OSC 52 names, as xterm reads it: only the letters it knows count, and none is
+/// the primary one and cut buffer 0 (`s0`). The reply to a read repeats it into the program's
+/// input, so whatever else a hostile program put there must not come back.
+fn clipboard_selection(bytes: &[u8]) -> String {
+    let named: String = bytes
+        .iter()
+        .filter(|b| CLIPBOARD_TARGETS.contains(b))
+        .take(CLIPBOARD_TARGETS.len())
+        .map(|&b| char::from(b))
+        .collect();
+    if named.is_empty() { "s0".to_string() } else { named }
+}
+
 /// A short text built without allocating: `write!` into it, then read it back.
 struct StackText {
     bytes: [u8; 40],
@@ -225,8 +241,7 @@ impl Terminal {
             Some(at) => (&rest[..at], &rest[at + 1..]),
             None => return,
         };
-        // xterm: an empty selection is the primary one and cut buffer 0 (`s0`), and the reply says so.
-        let selection = if selection.is_empty() { "s0".to_string() } else { lossy(selection) };
+        let selection = clipboard_selection(selection);
         if data == b"?" {
             let replies_before = self.replies.len();
             self.push_event(Event::ClipboardLoad { selection, terminator: end, replies_before });
