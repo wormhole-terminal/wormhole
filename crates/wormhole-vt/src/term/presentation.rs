@@ -138,7 +138,8 @@ impl Terminal {
 
         self.modes.set(Modes::ORIGIN, flags & 1 != 0);
         self.place(col.clamp(1, self.cols) - 1, row.clamp(1, self.rows) - 1);
-        self.cursor.pending = flags & 8 != 0;
+        // A wrap is only ever due on the last column.
+        self.cursor.pending = flags & 8 != 0 && self.cursor.x == self.right_limit();
         let attrs = &mut self.pen.style.attrs;
         attrs.set(Flags::BOLD, rendition & 1 != 0);
         attrs.set(Flags::UNDERLINE, rendition & 2 != 0);

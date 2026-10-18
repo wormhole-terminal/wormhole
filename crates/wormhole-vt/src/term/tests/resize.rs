@@ -126,3 +126,20 @@ fn the_history_limit_belongs_to_the_main_screen_whichever_one_shows() {
     rig.feed("\x1b[?1049l");
     assert_eq!(rig.term.grid().scrollback_limit(), super::super::history_bytes(7, 12));
 }
+
+#[test]
+fn a_restored_cursor_only_has_a_wrap_due_on_the_last_column() {
+    // DECSC on the last column with the wrap due, then a wider screen: DECRC puts the cursor back
+    // where it was, mid-row, and the next character goes there.
+    let mut rig = Rig::new(10, 3);
+    rig.feed("\x1b[1;10Hz\x1b7");
+    rig.term.resize(20, 3);
+    rig.feed("\x1b8Y");
+    assert_eq!(rig.row(0), "         Y");
+    assert_eq!(rig.term.check_invariants(), Ok(()));
+    // DECRSPS saying a wrap is due at a column that is not the last.
+    let mut rig = Rig::new(10, 3);
+    rig.feed("\x1bP1$t1;1;1;@;@;H;0;2;@;BBBB\x1b\\AB");
+    assert_eq!(rig.row(0), "AB");
+    assert_eq!(rig.term.check_invariants(), Ok(()));
+}

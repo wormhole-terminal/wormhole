@@ -251,6 +251,8 @@ impl Terminal {
         self.cursor = saved.cursor;
         self.cursor.x = self.cursor.x.min(self.cols - 1);
         self.cursor.y = self.cursor.y.min(self.rows - 1);
+        // Saved on the last column of a screen that has been widened since: nothing is due there.
+        self.cursor.pending &= self.cursor.x == self.right_limit();
         self.pen.style = saved.style;
         self.pen.protected = saved.protected;
         self.modes.set(Modes::ORIGIN, saved.origin);
