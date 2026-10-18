@@ -197,8 +197,8 @@ fn a_row_dragged_onto_a_row_makes_a_split_and_between_rows_only_reorders(cx: &mu
 }
 
 #[gpui_kit::test]
-fn the_middle_of_a_row_in_another_group_still_makes_a_split_each_in_its_own_group(cx: &mut TestAppContext) {
-    if isolate("the_middle_of_a_row_in_another_group_still_makes_a_split_each_in_its_own_group") {
+fn the_middle_of_a_row_in_another_group_makes_a_split_in_that_group(cx: &mut TestAppContext) {
+    if isolate("the_middle_of_a_row_in_another_group_makes_a_split_in_that_group") {
         return;
     }
     // Two terminals in two groups of their own.
@@ -217,21 +217,27 @@ fn the_middle_of_a_row_in_another_group_still_makes_a_split_each_in_its_own_grou
     assert_eq!(onto(cx, &window), Some(1));
     release(cx, &window, middle);
     assert_eq!(panes(cx, &window), (vec![1, 2], 2), "shown side by side");
-    let chained = cx
+    // The dragged terminal joins the split's group, so the split stands in one card: no chain mark.
+    let (same_group, chained) = cx
         .update(|cx| {
             window.workspace.read_with(cx, |ws, cx| {
-                ws.session_listing(cx)
+                let groups = &ws.sidebar.view.groups;
+                let same = groups.group_of(1).is_some() && groups.group_of(1) == groups.group_of(2);
+                let chained = ws
+                    .session_listing(cx)
                     .entries
                     .iter()
                     .filter_map(|entry| match entry {
                         Entry::Row { marks, .. } => Some(marks.chain),
                         Entry::Band { .. } => None,
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
+                (same, chained)
             })
         })
         .expect("open");
-    assert_eq!(chained, [true, true], "each in its own group, joined by the chain mark");
+    assert!(same_group, "the dragged terminal is in the split's group");
+    assert_eq!(chained, [false, false], "one card, not a chain");
 }
 
 #[gpui_kit::test]
