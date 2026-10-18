@@ -25,7 +25,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   `variants` list where each version (Light, Dark, Light Minimal, …) sets only what differs, and may
   build on another version of the file. Each is a theme of its own, "Soltari Light", and the family's
   name alone means its first version. Saving a version from the Theme Studio writes it back into its
-  family's file.
+  family's file. Settings → Appearance shows a family as one card with a swatch per version: click a
+  swatch for that version, or the card under Match system for the family's light version in Light
+  Mode and its dark one in Dark Mode.
 - The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
   above it, and the terminal's text stands 12 pt from the window's edges, the sidebar, the panel and the
   status bar (the surface 8 pt, the grid 4 pt inside it, as in 1.1), so at the window's edge it lines

@@ -92,6 +92,39 @@ pub fn catalog_in(dir: &Path) -> Vec<ThemeEntry> {
     entries
 }
 
+/// The cards the picker shows, by index into `entries`: one per theme, and one per family of
+/// versions, its versions in their order. A family's versions are next to each other in a
+/// [`catalog`].
+pub fn cards(entries: &[ThemeEntry]) -> Vec<Vec<usize>> {
+    let mut cards: Vec<Vec<usize>> = Vec::new();
+    for (ix, entry) in entries.iter().enumerate() {
+        match cards.last_mut() {
+            Some(card) if family(entry).is_some() && family(&entries[card[0]]) == family(entry) => {
+                card.push(ix)
+            }
+            _ => cards.push(vec![ix]),
+        }
+    }
+    cards
+}
+
+/// Which family an entry is a version of. Two families of one name are two when they come from
+/// different files.
+fn family(e: &ThemeEntry) -> Option<(bool, &str, Option<&Path>)> {
+    let file = match &e.id {
+        ThemeId::Variant(path, _) => Some(path.as_path()),
+        _ => None,
+    };
+    e.family.as_ref().map(|(name, _)| (e.builtin, name.as_str(), file))
+}
+
+impl ThemeEntry {
+    /// What a card of this theme is called: its family's name, or its own.
+    pub fn card_label(&self) -> &str {
+        self.family.as_ref().map_or(&self.label, |(family, _)| family)
+    }
+}
+
 /// Cheap change detector for the themes dir: file names, sizes and mtimes.
 pub fn fingerprint() -> Vec<(PathBuf, u64, Option<SystemTime>)> {
     fingerprint_in(&Config::themes_dir())
@@ -227,6 +260,34 @@ mod tests {
             .map(|(f, v)| (f.as_str(), v.as_str()))
             .collect();
         assert_eq!(soltari, [("Soltari", "Light"), ("Soltari", "Dark")]);
+    }
+
+    #[test]
+    fn a_family_is_one_card() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let family = |name: &str| {
+            format!(r#"{{ "name": "{name}", "variants": [{{ "name": "Dark" }}, {{ "name": "Dim" }}] }}"#)
+        };
+        write(dir.path(), "a.json", &family("Dusk"));
+        write(dir.path(), "b.json", &family("Dusk"));
+        write(dir.path(), "c.json", r#"{ "name": "Plain" }"#);
+        let entries = catalog_in(dir.path());
+        let cards = super::cards(&entries);
+        let labels: Vec<Vec<&str>> =
+            cards.iter().map(|card| card.iter().map(|ix| entries[*ix].label.as_str()).collect()).collect();
+        let soltari = labels.iter().find(|card| card[0].starts_with("Soltari")).expect("a card");
+        assert_eq!(soltari, &["Soltari Light", "Soltari Dark"]);
+        assert!(labels.contains(&vec!["Nord"]));
+        // Two files with one family name are two cards.
+        let dusk: Vec<&Vec<&str>> = labels.iter().filter(|card| card[0].starts_with("Dusk")).collect();
+        assert_eq!(dusk, [&vec!["Dusk Dark", "Dusk Dim"], &vec!["Dusk Dark", "Dusk Dim"]]);
+        assert_eq!(entries[cards.last().expect("cards")[0]].card_label(), "Plain");
+        assert_eq!(entries[soltari_index(&entries)].card_label(), "Soltari");
+        assert_eq!(cards.iter().map(Vec::len).sum::<usize>(), entries.len());
+    }
+
+    fn soltari_index(entries: &[super::ThemeEntry]) -> usize {
+        entries.iter().position(|e| e.label == "Soltari Dark").expect("listed")
     }
 
     #[test]
