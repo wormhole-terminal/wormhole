@@ -10,8 +10,8 @@ scripts/visual-check.sh all --against origin/main # every scenario, this tree vs
 scripts/visual-check.sh all --repeat              # twice on this tree: is it deterministic?
 ```
 
-It builds this tree once (`cargo build --features devctl`, in `$CARGO_TARGET_DIR`), copies the
-binary out, and runs each scenario in its own isolated instance: scratch data dir, `HOME` and agent
+It builds this tree once (`cargo build -p wormhole -p wormhole-host --features wormhole/devctl`, in `$CARGO_TARGET_DIR`), copies
+the binary out with the session host beside it, and runs each scenario in its own isolated instance: scratch data dir, `HOME` and agent
 home, the Finder's `PATH` (`/usr/bin:/bin:/usr/sbin:/sbin`) and nowhere else to find agents'
 commands (`WORMHOLE_AGENT_PATH` empty, so no agent counts as installed whatever the Mac has; a
 `@shell` copy is the one that does), `/bin/cat` (or that copy, named like an agent) for a shell,

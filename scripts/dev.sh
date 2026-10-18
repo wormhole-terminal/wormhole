@@ -29,7 +29,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 features="${WORMHOLE_DEV_FEATURES-devctl}"
-[ -n "$features" ] && cargo_args+=(--features "$features")
+# The app and its session host: the host sits beside the app's copy, where the app looks for it.
+set_app_build_args "$features"
+cargo_args+=("${APP_BUILD_ARGS[@]}")
 notify="${WORMHOLE_DEV_NOTIFY:-1}"
 
 real_data="$HOME/Library/Application Support/$DATA_DIR_NAME"
@@ -195,9 +197,16 @@ start_app() {
 # and moved into place so the running instance keeps its own file.
 swap() {
   local built="${CARGO_TARGET_DIR:-$ROOT/target}/$profile/$APP_BINARY"
+  local built_host="${CARGO_TARGET_DIR:-$ROOT/target}/$profile/$HOST_BINARY" host="$run/bin/$HOST_BINARY"
   cp -c "$built" "$bin.new" 2>/dev/null || cp "$built" "$bin.new" || { warn "cannot copy $built"; return 1; }
+  if [ -x "$built_host" ]; then
+    cp -c "$built_host" "$host.new" 2>/dev/null || cp "$built_host" "$host.new" \
+      || { warn "cannot copy $built_host"; rm -f "$bin.new"; return 1; }
+  fi
   stop_app
   mv -f "$bin.new" "$bin"
+  # A rename, not an overwrite: hosts that run from the old file keep it open.
+  [ ! -e "$host.new" ] || mv -f "$host.new" "$host"
   start_app
 }
 

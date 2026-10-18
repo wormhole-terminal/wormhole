@@ -329,7 +329,8 @@ start_terminal() {
 start_wormhole() {
   if [ -z "$wormhole_bin" ]; then
     log "building the release app (devctl) into $TARGET_DIR/compare-build"
-    (cd "$ROOT" && CARGO_TARGET_DIR="$TARGET_DIR/compare-build" cargo build --release --features devctl --quiet)
+    set_app_build_args devctl
+    (cd "$ROOT" && CARGO_TARGET_DIR="$TARGET_DIR/compare-build" cargo build --release "${APP_BUILD_ARGS[@]}" --quiet)
     wormhole_bin="$TARGET_DIR/compare-build/release/$APP_BINARY"
   fi
   [ -x "$wormhole_bin" ] || die "no binary $wormhole_bin"

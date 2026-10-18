@@ -68,7 +68,7 @@ while [ $# -gt 0 ]; do
 done
 [ $# -ge 1 ] && [ $# -le 2 ] || usage 1
 [ "$(uname -s)" = Darwin ] || die "an instance needs macOS and a display"
-[ -x "$bin" ] || die "no $bin: build it with \`cargo build --features devctl\` (or pass --bin)"
+[ -x "$bin" ] || die "no $bin: build it with \`cargo build -p wormhole -p wormhole-host --features wormhole/devctl\` (or pass --bin)"
 
 mkdir -p "$1"
 scratch="$(cd "$1" && pwd -P)"

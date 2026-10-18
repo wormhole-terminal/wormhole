@@ -72,9 +72,11 @@ fi
 alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 
 # copy_binary <built binary> <folder>: our own copy, so a later build can't replace it while it runs.
+# The session host built beside it comes along: the app looks for it next to its own executable.
 copy_binary() {
   mkdir -p "$2"
   cp -c "$1" "$2/$APP_BINARY" 2>/dev/null || cp "$1" "$2/$APP_BINARY"
+  copy_host_beside "$1" "$2"
 }
 
 src_worktree=""
@@ -93,7 +95,8 @@ trap 'exit 130' INT TERM HUP
 build_branch() {
   if [ "$build" = 1 ]; then
     log "building this tree (--features devctl)"
-    (cd "$ROOT" && cargo build --features devctl) || die "the build failed"
+    set_app_build_args devctl "$ROOT"
+    (cd "$ROOT" && cargo build "${APP_BUILD_ARGS[@]}") || die "the build failed"
   fi
   [ -x "$TARGET_DIR/debug/$APP_BINARY" ] || die "no $TARGET_DIR/debug/$APP_BINARY (build first)"
   copy_binary "$TARGET_DIR/debug/$APP_BINARY" "$out/bin/branch"
@@ -110,13 +113,14 @@ build_rev() {
     log "building $1 (${sha:0:12}) in $src_worktree"
     git -C "$ROOT" worktree add --detach --quiet "$src_worktree" "$sha"
     "$ROOT/scripts/worktree.sh" "$src_worktree" >/dev/null 2>&1
-    (cd "$src_worktree" && CARGO_TARGET_DIR="$TARGET_DIR" cargo build --features devctl) \
+    set_app_build_args devctl "$src_worktree"
+    (cd "$src_worktree" && CARGO_TARGET_DIR="$TARGET_DIR" cargo build "${APP_BUILD_ARGS[@]}") \
       || die "the build of $1 failed"
     copy_binary "$TARGET_DIR/debug/$APP_BINARY" "$cache"
     # That build left its binary where this tree's was: put this tree's back, or a later
     # --no-build (or a devctl run from the target dir) runs the other revision. Unlink it
     # first: cargo may hard-link it to its own copy, which a plain cp would overwrite too.
-    rm -f "$TARGET_DIR/debug/$APP_BINARY"
+    rm -f "$TARGET_DIR/debug/$APP_BINARY" "$TARGET_DIR/debug/$HOST_BINARY"
     copy_binary "$out/bin/branch/$APP_BINARY" "$TARGET_DIR/debug"
     git -C "$ROOT" worktree remove --force "$src_worktree"
     src_worktree=""

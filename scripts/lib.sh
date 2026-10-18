@@ -11,6 +11,33 @@ warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; if [ -n "${GITHUB_ACT
 die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::$*"; fi; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "'$1' not found. ${2:-}"; }
 
+# set_app_build_args <comma-separated app features, may be empty> [<tree>]: fills APP_BUILD_ARGS with the
+# cargo arguments that build the app and its session host together. The host is a second binary the
+# app starts from beside its own executable (core::host_binary), and `cargo build` in the root builds
+# only the app (default-members), so whatever copies the app out for a test instance builds and
+# copies the host too. With several `-p`, a feature is named with its package (devctl becomes
+# wormhole/devctl). A tree without the host crate (an old revision) builds the app alone.
+set_app_build_args() {
+  local tree="${2:-$ROOT}" feature features="" list=()
+  APP_BUILD_ARGS=(-p wormhole)
+  [ ! -d "$tree/crates/wormhole-host" ] || APP_BUILD_ARGS+=(-p wormhole-host)
+  IFS=, read -ra list <<<"${1:-}"
+  for feature in ${list[@]+"${list[@]}"}; do
+    [ -z "$feature" ] || features="${features:+$features,}wormhole/$feature"
+  done
+  [ -z "$features" ] || APP_BUILD_ARGS+=(--features "$features")
+}
+
+# copy_host_beside <built app binary> <folder>: the session host built next to the app, copied into
+# the folder the app's own copy went to (a clone on APFS, like the app's). Nothing when there is none.
+copy_host_beside() {
+  local host
+  host="$(dirname "$1")/$HOST_BINARY"
+  [ -x "$host" ] || return 0
+  rm -f "$2/$HOST_BINARY"
+  cp -c "$host" "$2/$HOST_BINARY" 2>/dev/null || cp "$host" "$2/$HOST_BINARY"
+}
+
 # workspace.package.version from the root Cargo.toml (the only version source).
 app_version() {
   awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/^[^"]*"|".*$/,"");print;exit}' \

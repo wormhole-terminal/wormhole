@@ -128,7 +128,8 @@ trap 'exit 130' INT TERM
 
 if [ -z "$bin" ]; then
   log "building the release app (devctl) into $TARGET_DIR/perf-build"
-  (cd "$ROOT" && CARGO_TARGET_DIR="$TARGET_DIR/perf-build" cargo build --release --features devctl --quiet)
+  set_app_build_args devctl
+  (cd "$ROOT" && CARGO_TARGET_DIR="$TARGET_DIR/perf-build" cargo build --release "${APP_BUILD_ARGS[@]}" --quiet)
   bin="$TARGET_DIR/perf-build/release/$APP_BINARY"
   binary_from="HEAD"
 else
@@ -138,6 +139,8 @@ fi
 # Our own copy: a later build can't replace it while it runs.
 mkdir -p "$scratch/app"
 cp -c "$bin" "$scratch/app/$APP_BINARY" 2>/dev/null || cp "$bin" "$scratch/app/$APP_BINARY"
+# The session host beside it, where the app looks for it (a --bin without one runs in-process).
+copy_host_beside "$bin" "$scratch/app"
 bin="$scratch/app/$APP_BINARY"
 
 log "building ttystorm"

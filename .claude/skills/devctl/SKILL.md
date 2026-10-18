@@ -29,7 +29,7 @@ built last, and a rebuild would replace the file under the running process.
 ```sh
 S=<scratchpad dir>/hd-$(date +%s)            # unique per run, outside the repository
 export CARGO_TARGET_DIR=<target dir for this worktree>
-cargo build --features devctl
+cargo build -p wormhole -p wormhole-host --features wormhole/devctl   # the host sits beside the app
 scripts/devctl-instance.sh "$S" <throwaway git repo>   # prints ctl=$S/ctl and pid=<pid>
 printf 'onboarding close\nappearance dark\n' > "$S/ctl/cmd"   # a fresh data dir is a first launch
 ```
