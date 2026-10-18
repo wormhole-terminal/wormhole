@@ -117,6 +117,8 @@ enum Part {
 pub(super) struct Gate {
     parts: VecDeque<Part>,
     held: usize,
+    /// The reply being held went past the cap: its other pieces go too.
+    dropped: bool,
 }
 
 /// The most bytes held back before the oldest waiting answer is given up on, so a host that
@@ -134,16 +136,22 @@ impl Gate {
 
     /// Hold the bytes of an ordinary reply behind the answers that wait.
     pub fn hold(&mut self, args: std::fmt::Arguments<'_>) {
-        if self.held >= HELD_MAX {
-            return;
-        }
         if !matches!(self.parts.back(), Some(Part::Ready(_))) {
             self.parts.push_back(Part::Ready(Vec::new()));
         }
         if let Some(Part::Ready(bytes)) = self.parts.back_mut() {
+            // As `Terminal::reply`: a reply past the cap is dropped whole, decided at its ESC.
             let before = bytes.len();
             let _ = bytes.write_fmt(args);
-            self.held += bytes.len() - before;
+            if bytes.get(before) == Some(&0x1B) {
+                self.dropped = self.held >= HELD_MAX;
+            }
+            // Pieces that never start a reply still stop somewhere.
+            if self.dropped || self.held >= 2 * HELD_MAX {
+                bytes.truncate(before);
+            } else {
+                self.held += bytes.len() - before;
+            }
         }
     }
 
@@ -263,8 +271,12 @@ mod tests {
         let mut gate = Gate::default();
         gate.wait(ImageHandle(1), target(1));
         for _ in 0..(super::HELD_MAX / 4 + 10) {
-            gate.hold(format_args!("abcd"));
+            gate.hold(format_args!("\x1b[0n"));
         }
         assert!(gate.held <= super::HELD_MAX + 4);
+        for _ in 0..super::HELD_MAX {
+            gate.hold(format_args!("abcd"));
+        }
+        assert!(gate.held <= 2 * super::HELD_MAX + 4);
     }
 }

@@ -161,6 +161,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   new links show as plain text.
 - After a program turns on 8-bit controls, a title or other string with a dash, curly quotes or `œ` in
   it is no longer cut short and the rest shown as stray text.
+- A program that asks for thousands of reports without reading them no longer gets half an answer typed
+  into its input when Wormhole stops answering: a report past the limit is left out whole.
 
 ### Security
 

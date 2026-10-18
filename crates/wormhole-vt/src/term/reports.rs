@@ -58,18 +58,27 @@ const FEATURES: [(u16, Level); 13] = [
 ];
 
 impl Terminal {
-    /// Append a reply. Writing to a `Vec` cannot fail. A host that does not write the replies out
-    /// (the program is not reading them) must not grow the buffer without bound: past the cap
-    /// new ones are dropped.
+    /// Append a reply, or a piece of one: many are written in pieces, so that they allocate
+    /// nothing. Writing to a `Vec` cannot fail. A host that does not write the replies out (the
+    /// program is not reading them) must not grow the buffer without bound: past the cap new
+    /// replies are dropped, whole. Every reply starts with ESC and its pieces follow it before the
+    /// next one starts, so the first piece decides for the rest; half a sequence would reach the
+    /// program as typed text.
     pub(super) fn reply(&mut self, args: std::fmt::Arguments<'_>) {
         // An answer about a picture is waiting for the host: this one goes out after it.
         if self.graphics.hold_reply(args) {
-        } else if self.replies.len() < REPLIES_MAX {
-            let from = self.replies.len();
-            let _ = self.replies.write_fmt(args);
-            if self.eight_bit {
-                super::conformance::eight_bit_in_place(&mut self.replies, from);
-            }
+            return;
+        }
+        let from = self.replies.len();
+        let _ = self.replies.write_fmt(args);
+        if self.replies.get(from) == Some(&0x1B) {
+            self.reply_dropped = from >= REPLIES_MAX;
+        }
+        // Pieces that never start a reply still stop somewhere.
+        if self.reply_dropped || from >= 2 * REPLIES_MAX {
+            self.replies.truncate(from);
+        } else if self.eight_bit {
+            super::conformance::eight_bit_in_place(&mut self.replies, from);
         }
     }
 

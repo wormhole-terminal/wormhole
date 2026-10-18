@@ -287,6 +287,8 @@ pub struct Terminal {
     graphics: graphics::Graphics,
     events: Vec<Event>,
     replies: Vec<u8>,
+    /// The reply being written went past the cap: its other pieces go too (see `reply`).
+    reply_dropped: bool,
     /// The lines of history asked for, see [`Terminal::new`].
     scrollback_lines: usize,
     /// ED 3 ran and nothing but cursor moves and erases came since: an ED 2 now does not save
@@ -373,6 +375,7 @@ impl Terminal {
             graphics: graphics::Graphics::default(),
             events: Vec::new(),
             replies: Vec::new(),
+            reply_dropped: false,
             scrollback_lines,
             history_just_cleared: false,
             kept: Default::default(),

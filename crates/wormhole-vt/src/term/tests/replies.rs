@@ -173,3 +173,20 @@ fn the_terminal_can_cross_threads() {
     is_send::<crate::term::Terminal>();
     is_send::<crate::term::Event>();
 }
+
+#[test]
+fn replies_past_the_cap_are_dropped_whole() {
+    // A program asks for far more than the host collects: DA1 is written in pieces, and none may
+    // be cut, or the rest of a sequence would reach the program as typed text.
+    let mut rig = Rig::new(20, 5);
+    rig.feed(&"\x1b[c".repeat(60_000));
+    let replies = rig.replies();
+    let one = replies.split_inclusive('c').next().unwrap_or_default().to_string();
+    assert!(one.starts_with("\x1b[?") && one.len() > 5, "{one:?}");
+    // The last one kept began under the cap.
+    assert!(replies.len() >= 1 << 20 && replies.len() < (1 << 20) + one.len(), "{}", replies.len());
+    assert_eq!(replies.len() % one.len(), 0, "only whole replies");
+    // Once the host collects them, replies come again.
+    rig.feed("\x1b[5n");
+    assert_eq!(rig.replies(), "\x1b[0n");
+}
