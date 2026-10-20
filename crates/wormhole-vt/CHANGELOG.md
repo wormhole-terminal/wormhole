@@ -45,6 +45,17 @@ First public release (0.1.0).
   the clipboard, pictures, the rest of OSC 1337), titles, folders, hyperlink targets, the event and reply
   queues and the dropped-history backlog. Each value can only go below the built-in ceiling, which stays
   the default; pictures held over a lowered count or budget are evicted at once.
+- `Event::ModesChanged` and `Event::ColorsChanged`: a mode a host acts on (the mouse, bracketed paste,
+  the alternate screen, focus reports, the application cursor keys and keypad, DECBKM, the kitty
+  keyboard flags, reverse video, synchronized output, the cursor's look, the DEC locator) or the colours a
+  program set changed. At most one of each per call of `Terminal::events`, with no payload and no cost
+  while a program prints.
+- Light and dark reports: `Builder::color_scheme` and `Terminal::set_color_scheme(ColorScheme)`. `CSI ? 996 n`
+  is answered `CSI ? 997 ; 1 n` (dark) or `; 2 n` (light), and a change is reported unasked while mode 2031
+  is set (Contour's colour palette update notifications). Not answered until the host says.
+- `Event::PointerShape` for OSC 22, as a CSS cursor keyword (empty: the host's own pointer), and
+  `Event::UserVar { name, value }` for iTerm2's `SetUserVar`, base64 decoded and capped (256-byte names,
+  64 KiB values, 1 MiB queued). The rest of OSC 1337 stays `Event::Iterm`.
 - A guide in rustdoc (concepts, embedding, rendering, input, extensions, security, conformance), a README,
   and `SECURITY.md`.
 

@@ -246,6 +246,12 @@ The engine hands you untrusted data and requests. The remaining checks are yours
 - `Event::Iterm` carries the parts of OSC 1337 that are not inline images, unparsed, up to 64 KiB
   (a longer one is dropped; inline images keep their own, larger limits). iTerm2's protocol has features that act on the host. Ignore the event unless you implement it
   carefully, and never act on its content without validation.
+- `Event::UserVar` is iTerm2's `SetUserVar`, decoded: a name of at most 256 printable bytes and a value of
+  at most 64 KiB, and at most 1 MiB of values wait in the queue. The value is a program's bytes: treat it
+  as text you did not write (do not run it, do not put it in a title without cleaning it).
+- `Event::PointerShape` is a CSS cursor keyword from a fixed list, never the program's own text, so it
+  can only choose among pointers you draw. A pointer that stays after the program that asked has gone is
+  yours to prevent (reset it when the alternate screen ends or the program exits).
 - `ProgramStatus` (the [program status protocol](https://mitchellh.com/writing/program-status-osc7501), OSC 7501)
   and the strings you asked for with a `Passthrough` (`Event::Osc`, `Event::Dcs`, `Event::Apc`) are protocols of
   your own or someone else's: validate them.

@@ -85,13 +85,14 @@ focus), `extensions.md` (your own sequences), `security.md` (the threat model), 
 | Character sets | G0 to G3: ASCII, UK, DEC special graphics, DEC Technical, DEC Supplemental, ISO Latin-1 supplement, the VT200 national replacement sets (DECNRCM), locking and single shifts |
 | SGR | Bold, dim, italic, underline (single, double, curly, dotted, dashed: `4:0` to `4:5`, `21`), blink, inverse, hidden, strikethrough, overline; 16, 256 and true colours with `;` or `:`; underline colour (58, 59) |
 | Colours | Palette and dynamic colour set, query and reset: OSC 4, 5, 10 to 19 and 104, 105, 110 to 119, with the host's colours as the answer to a query |
-| Strings | Title and icon name with the XTWINOPS stack (OSC 0, 1, 2; `CSI 22/23 t`), OSC 7 (folder), OSC 8 (hyperlinks), OSC 52 (clipboard, as host requests), OSC 133 (shell marks: prompt, command, output, exit code), OSC 9, OSC 9;4 (progress), OSC 99 and OSC 777 (notifications, as host requests) |
+| Strings | Title and icon name with the XTWINOPS stack (OSC 0, 1, 2; `CSI 22/23 t`), OSC 7 (folder), OSC 8 (hyperlinks), OSC 52 (clipboard, as host requests), OSC 133 (shell marks: prompt, command, output, exit code), OSC 9, OSC 9;4 (progress), OSC 99 and OSC 777 (notifications, as host requests), OSC 22 (pointer shape) and OSC 1337 `SetUserVar`, both as host events |
 | Images | kitty graphics protocol (including Unicode placeholders), Sixel (decoded by the engine), iTerm2 inline images. The engine owns placement; the host decodes PNG/JPEG and draws |
 | Unicode | Unicode 18 cell widths, extended grapheme clusters (UAX #29) with mode 2027 (on by default), emoji variation selectors, wide characters with spacer cells |
 | Scrollback and reflow | History capped in bytes; soft-wrapped lines rewrap on resize with the cursor and pins carried along; the alternate screen is cropped or padded |
 | Keyboard | kitty keyboard protocol (five flags, a stack per screen), application cursor and keypad modes, bracketed paste, focus reports |
 | Mouse | Modes 9, 1000, 1002, 1003; encodings X10, UTF-8 (1005), URXVT (1015), SGR (1006), SGR with pixels (1016); the DEC locator (DECELR and the reports) |
-| Output control | Synchronized output (mode 2026) as a flag the host reads |
+| Output control | Synchronized output (mode 2026) as a flag the host reads; `ModesChanged` and `ColorsChanged` events instead of polling |
+| Host reports | Light and dark (`CSI ? 996 n`, mode 2031), pointer shapes (OSC 22) and iTerm2 user variables as events |
 | Host side | Damage tracking and row copies into reusable buffers, selection (cell, block, word, line) and text extraction, pins and spans that follow text through scrolling and reflow, search support |
 | Repaint writer | `repaint` serializes a terminal into VT bytes that rebuild it in another terminal, for attach and resync |
 | Window | XTWINOPS reports always; operations (move, resize, maximise, full screen) and DECRQCRA only when `Policy` allows |

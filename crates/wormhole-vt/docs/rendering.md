@@ -220,8 +220,34 @@ entries). The engine answers a program's colour query (`OSC 4;n;?`, `OSC 10;?`, 
 the program set, or else with yours. Programs use this to find out whether the terminal is dark or light.
 Without a call the engine answers with xterm's palette, a light-grey foreground and a black background.
 
+Instead of looking at `colors()` after every read, handle `Event::ColorsChanged`: it comes once for a
+change since the last time you took the events (`Terminal::events`), and never for the defaults you set
+yourself.
+
 The engine does not draw the special colours (OSC 5, bold/underline/blink/reverse/italic) or the extra
 dynamic colours (OSC 13 to 19). It keeps and answers them, and draws nothing from them.
+
+## Light and dark
+
+A program that wants to match your colours asks whether the terminal is dark or light: `CSI ? 996 n`. Tell
+the engine with `Builder::color_scheme` or `Terminal::set_color_scheme(ColorScheme::Dark | Light)`, and it
+answers `CSI ? 997 ; 1 n` (dark) or `; 2 n` (light), as in Contour's colour palette update notifications
+(<https://github.com/contour-terminal/contour/blob/master/docs/vt-extensions/color-palette-update-notifications.md>).
+A program that set mode 2031 is told by an unasked report when you change the scheme, so write the
+replies out after `set_color_scheme` as you do after a feed. Until you tell the engine, it does not
+answer 996: it has no truthful answer.
+
+## Pointer shapes and user variables
+
+A program can ask for a mouse pointer with `OSC 22 ; name`. `Event::PointerShape(name)` carries a CSS
+`cursor` keyword (`pointer`, `text`, `crosshair`, `ew-resize`, …; X11 names such as `left_ptr` and
+`xterm` are translated, anything else is dropped), or an empty name for "back to your own pointer". The
+stack and query forms of kitty's protocol are not read. Whether to show the shape is yours: a selection
+drag or a link under the pointer usually wins.
+
+iTerm2's `OSC 1337 ; SetUserVar=name=base64` arrives as `Event::UserVar { name, value }`, decoded. Names
+are at most 256 bytes of printable text and values at most 64 KiB. The rest of OSC 1337 that is not an
+inline image stays `Event::Iterm`.
 
 ## Synchronized output and bells
 

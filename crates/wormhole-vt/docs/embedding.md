@@ -263,6 +263,16 @@ The engine only records the flag. It never holds output back, and it feeds the s
   engine has no timer, so the clock is yours.
 - Remember to draw at the end: the end of an update is a reason for a frame, even if no more bytes come.
 
+## Hearing about changes
+
+Instead of reading `modes()` and `colors()` after every read, take the events. `Event::ModesChanged` says
+a mode a host acts on changed (the mouse, bracketed paste, the alternate screen, focus reports, the
+application cursor keys and keypad, the kitty keyboard flags, reverse video, synchronized output, the
+cursor's visibility, shape and blink), and `Event::ColorsChanged` that a program changed the palette.
+Neither has a payload: read `modes()`, `cursor()` or `colors()`. They come last, at most once for each
+call of `events()`, and compare with the state of the previous call, so a mode that came and went in
+between is no event, and printing costs nothing for them.
+
 ## Policy
 
 `Policy` holds the switches for the risky requests. The default is the safe one, and you turn on only
