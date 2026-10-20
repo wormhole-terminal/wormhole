@@ -11,5 +11,5 @@ The golden files are the engine's behaviour today, whatever the verdict: the gat
 | 002 | the same with the last line changed to double width | unsupported: DECDWL | the row is not widened |
 | 003 | DECDWL and DECDHL, 132 columns | unsupported: DECDWL, DECDHL | as 001 |
 | 004 | the same with the last line changed to double width, 132 columns | unsupported: DECDWL |  |
-| 005 | a frame of line-drawing characters and blinking bold text in double-height double-width size | unsupported: DECDHL | the frame is drawn in normal size, so its right border is at column 41 (the tabs stop at 41); on a VT100 a double-width line has 40 columns and the tabs stop at the last one, so the frame would be square. Bold and blink are carried |
-| 006 | half of the box stays after the scroll (DECSTBM, RI) | pass | rows 20 to 24 hold the top five rows of the box. The box is not double-height (see 005) |
+| 005 | a frame of line-drawing characters and blinking bold text in double-height double-width size | pass (text) | the right border is at column 40, the last column of a double-width line, so the frame is square as on a VT100; bold and blink are carried. The capture holds text only, so the double height itself is checked by the engine's `line-size.vtt` cases and the app's screenshots |
+| 006 | half of the box stays after the scroll (DECSTBM, RI) | pass | rows 20 to 24 hold the top five rows of the box. The box's rows keep their double width when scrolled |

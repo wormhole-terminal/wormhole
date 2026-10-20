@@ -12,10 +12,10 @@ modes: default
 07|
 08|┌──────────────────────────────────────┐
 09|┌──────────────────────────────────────┐
-10|│                                       │
-11|│                                       │
-12|│ * The mad programmer strikes again *  │
-13|│ * The mad programmer strikes again *  │
+10|│                                      │
+11|│                                      │
+12|│ * The mad programmer strikes again * │
+13|│ * The mad programmer strikes again * │
 14|│                                      │
 15|│                                      │
 16|└──────────────────────────────────────┘
