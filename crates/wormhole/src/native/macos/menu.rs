@@ -146,13 +146,37 @@ pub fn inspect(menu: &Menu, press: Option<usize>) -> Option<String> {
                 }
             }
         } else {
-            let icon =
-                item.image().map(|image| format!(" [icon {}x{}]", image.size().width, image.size().height));
+            let icon = item.image().map(|image| {
+                format!(" [icon {}x{} ink {}%]", image.size().width, image.size().height, ink(&image))
+            });
             out.push_str(&format!("{}{}\n", item.title(), icon.unwrap_or_default()));
         }
     }
     out.push_str(&format!("chosen dot: {:?}\n", parts.chosen.get()));
     Some(out)
+}
+
+/// How much of a picture is drawn rather than transparent, in percent of a grid of its pixels: an
+/// icon that is there but blank is the thing a size alone doesn't show.
+#[cfg(any(test, feature = "devctl"))]
+fn ink(image: &NSImage) -> usize {
+    use objc2_app_kit::NSBitmapImageRep;
+
+    let Some(rep) = image.TIFFRepresentation().and_then(|tiff| NSBitmapImageRep::imageRepWithData(&tiff))
+    else {
+        return 0;
+    };
+    let (w, h) = (rep.pixelsWide().max(1), rep.pixelsHigh().max(1));
+    let (mut drawn, mut seen) = (0, 0);
+    for y in (0..h).step_by((h / 16).max(1) as usize) {
+        for x in (0..w).step_by((w / 16).max(1) as usize) {
+            seen += 1;
+            if rep.colorAtX_y(x, y).is_some_and(|color| color.alphaComponent() > 0.1) {
+                drawn += 1;
+            }
+        }
+    }
+    drawn * 100 / seen.max(1)
 }
 
 /// Build `menu`, run AppKit's loop until it closes, and return the callback of the item chosen.
@@ -246,6 +270,8 @@ fn item_for(
 fn image(icon: &Icon) -> Option<Retained<NSImage>> {
     match icon {
         Icon::File(path) => appkit::file_icon(path, IMAGE_SIDE),
+        // Only where there is no icon service; the app has a file icon here.
+        Icon::Monogram(_) => None,
         Icon::Image(file) => {
             if file.bytes.is_empty() {
                 return None;
