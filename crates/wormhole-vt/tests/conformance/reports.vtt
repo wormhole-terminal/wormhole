@@ -9,6 +9,18 @@ size 10 4
 feed \e[5n
 reply \e[0n
 
+test DECREQTPARM is answered with the terminal's parameters
+spec VT100 User Guide, Request Terminal Parameters and Report Terminal Parameters: CSI sol x is answered CSI sol+2 ; parity ; nbits ; xspeed ; rspeed ; clkmul ; flags x; vttest 6/009 (the report for 1 is the one for 0 with a 3)
+size 20 4
+feed \e[0x
+reply \e[2;1;1;128;128;1;0x
+feed \e[1x
+reply \e[3;1;1;128;128;1;0x
+feed \e[x
+reply \e[2;1;1;128;128;1;0x
+feed \e[2x
+reply none
+
 test DSR 6 reports the cursor position
 spec xterm ctlseqs CSI 6 n: the result is CSI r ; c R
 size 10 4

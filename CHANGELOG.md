@@ -190,6 +190,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Text a program writes to the status line (`CSI 2 $ ~`, then `CSI 1 $ }`) is no longer drawn on the
   main screen at the cursor: Wormhole has no status line, so it drops what is written there and the
   screen and cursor stay as they were.
+- Programs that ask a terminal for its line parameters (`CSI 0 x`, DECREQTPARM, which some old
+  VT100 software still does) now get an answer instead of waiting for one.
 
 ### Security
 

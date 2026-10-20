@@ -7,15 +7,15 @@ modes: default
 02|Test of the "Request Terminal Parameters" feature, argument 0.
 03|
 04|
-05|Report is:  -- Bad format
-06|
-07|
+05|Report is: <27> [ 2 ; 1 ; 1 ; 1 2 8 ; 1 2 8 ; 1 ; 0 x  -- OK
+06| This means: Parity NONE, 8 bits, xmitspeed 38400, recvspeed 38400. (CLoCk MULti
+07|plier = 1, STP option flags = 0)
 08|
 09|
 10|Test of the "Request Terminal Parameters" feature, argument 1.
 11|
 12|
-13|Report is:  -- Bad format
+13|Report is: <27> [ 3 ; 1 ; 1 ; 1 2 8 ; 1 2 8 ; 1 ; 0 x  -- OK
 14|
 15|
 16|
@@ -28,5 +28,5 @@ modes: default
 23|
 24|Push <RETURN>
 --- attributes (columns from 1)
-05| 11 inverse
-13| 11 inverse
+05| 11-54 inverse
+13| 11-54 inverse

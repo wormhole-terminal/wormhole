@@ -145,6 +145,7 @@ impl Terminal {
             b'T' if csi.len() <= 1 => self.scroll_down(count(csi, 0)),
             b'b' => self.repeat(repeatable, count(csi, 0)),
             b'i' => self.media_copy(csi.param(0, 0)),
+            b'x' => self.request_terminal_parameters(csi.param(0, 0)),
             b'I' => self.tab_forward(count(csi, 0)),
             b'Z' => self.tab_back(count(csi, 0)),
             b'g' => match csi.param(0, 0) {

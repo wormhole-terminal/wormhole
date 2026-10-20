@@ -119,6 +119,17 @@ impl Terminal {
         }
     }
 
+    /// DECREQTPARM (`CSI Ps x`): the terminal's line parameters, answered as DECREPTPARM
+    /// `CSI Ps+2 ; 1 ; 1 ; 128 ; 128 ; 1 ; 0 x`: no parity, 8 bits, 38400 baud both ways, a clock
+    /// multiplier of 1, no flags. 0 asks once and 1 also lets the terminal report unsolicited
+    /// (`3`, the same parameters, which it never does: nothing about them changes); other values
+    /// ask nothing. The terminal has no line, so the numbers are a plausible one.
+    pub(in crate::terminal) fn request_terminal_parameters(&mut self, ps: u16) {
+        if ps <= 1 {
+            self.reply(format_args!("\x1b[{};1;1;128;128;1;0x", ps + 2));
+        }
+    }
+
     /// The cursor as CPR reports it: 1-based, relative to the margins in origin mode. A pending
     /// wrap reports the last column.
     fn report_position(&self) -> (usize, usize) {

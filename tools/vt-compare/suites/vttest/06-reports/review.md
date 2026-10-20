@@ -15,4 +15,4 @@ The golden files are the engine's behaviour today, whatever the verdict: the gat
 | 006 | primary device attributes (DA) | pass | the engine answers `CSI ? 65;1;4;6;9;15;16;17;18;21;22;28;29;52 c`, VT500 family. vttest does not know extension 52 (xterm's clipboard) and prints `BAD VALUE`: that is vttest's list, not the engine. The engine claims 17 (terminal state reports), 18 (user windows) and 21 (horizontal scrolling); see 11.2.5.4.2 and the pan tests for what is behind them |
 | 007 | secondary device attributes | pass | `CSI > 64;777;0 c`: VT520, firmware 777, keyboard ok |
 | 008 | tertiary device attributes (unit ID) | pass | `DCS ! | 00000000 ST` |
-| 009 | request terminal parameters (DECREQTPARM, arguments 0 and 1) | fail: no report | the engine sends nothing for `CSI 0 x` and `CSI 1 x`; a VT100 (and xterm) answers `CSI 2;1;1;112;112;1;0 x` and `CSI 3;...`. vttest says `Bad format` |
+| 009 | request terminal parameters (DECREQTPARM, arguments 0 and 1) | pass | `CSI 2;1;1;128;128;1;0 x` for `CSI 0 x` (no parity, 8 bits, 38400 baud, multiplier 1) and the same with a 3 for `CSI 1 x`: vttest says `OK` twice |
