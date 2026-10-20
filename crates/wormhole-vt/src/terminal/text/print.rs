@@ -61,21 +61,39 @@ impl Terminal {
     /// Write ASCII at the cursor, wrapping at the right edge. Returns the column the last byte
     /// went to: the cursor alone cannot say (it also stands at the right edge after a write that
     /// ended one column short of it, and after one that filled it with autowrap off).
-    fn write_ascii(&mut self, mut run: &[u8]) -> usize {
+    fn write_ascii(&mut self, run: &[u8]) -> usize {
+        // Two copies of the loop: the one for a screen where no row has a size is what printing
+        // was before such rows existed, with nothing asked per row.
+        if self.grid.has_line_sizes() {
+            self.write_ascii_in::<true>(run)
+        } else {
+            self.write_ascii_in::<false>(run)
+        }
+    }
+
+    #[inline(always)]
+    fn write_ascii_in<const SIZED: bool>(&mut self, mut run: &[u8]) -> usize {
         let autowrap = self.modes.contains(Modes::AUTOWRAP);
         let insert = self.modes.contains(Modes::INSERT);
         while !run.is_empty() {
             if self.cursor.pending {
                 if autowrap {
-                    self.wrap();
+                    self.wrap_in::<SIZED>();
                 } else {
                     self.cursor.pending = false;
                 }
             }
-            let y = self.cursor.y;
-            let right = self.right_limit();
-            let x = self.cursor.x.min(right);
-            let (head, rest) = run.split_at(run.len().min(right + 1 - x));
+            let (x, y) = (self.cursor.x, self.cursor.y);
+            let right = if SIZED {
+                self.right_limit()
+            } else if x <= self.margins.right {
+                self.margins.right
+            } else {
+                self.cols - 1
+            };
+            // The cursor is inside its row (`fit_cursor`); the saturation only keeps a broken
+            // invariant from becoming an overflow.
+            let (head, rest) = run.split_at(run.len().min((right + 1).saturating_sub(x)));
             if insert {
                 let bg = self.erase_color();
                 self.grid.insert_cells(y, x, right, head.len(), bg);
@@ -104,21 +122,29 @@ impl Terminal {
     /// The delayed wrap happens: the row is marked as continuing, and the cursor goes to the start
     /// of the next line (the left margin), scrolling at the bottom margin.
     pub(in crate::terminal) fn wrap(&mut self) {
+        if self.grid.has_line_sizes() { self.wrap_in::<true>() } else { self.wrap_in::<false>() }
+    }
+
+    /// [`Self::wrap`] for a screen where some row has a size (`SIZED`) or none has.
+    #[inline(always)]
+    fn wrap_in<const SIZED: bool>(&mut self) {
         let y = self.cursor.y;
         // A double-width row has no soft wrap: its text is not rejoined with the next row's
         // (reflow leaves it alone, and the half it hides would come between them).
-        if !self.grid.live_line_size(y).is_double() {
+        if !SIZED || !self.grid.live_line_size(y).is_double() {
             self.grid.set_wrapped(y, true);
         }
         let x = if self.cursor.x <= self.margins.right { self.margins.left } else { 0 };
         if y == self.margins.bottom {
-            self.scroll_up(1);
+            self.scroll_region_up(1);
         } else if y + 1 < self.rows {
             self.cursor.y += 1;
         }
         self.cursor.x = x;
         self.cursor.pending = false;
-        self.fit_cursor();
+        if SIZED {
+            self.fit_cursor_to_sized_row();
+        }
     }
 
     /// A printable character from a multi-byte sequence.

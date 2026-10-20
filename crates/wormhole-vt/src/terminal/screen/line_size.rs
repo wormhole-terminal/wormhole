@@ -36,11 +36,14 @@ impl Terminal {
 
     /// The last column of live row `y` the cursor can be in: the last of the screen, or of the
     /// half a double-width row shows. A test of one flag while no row has a size.
-    #[inline]
+    #[inline(always)]
     pub(in crate::terminal) fn row_right(&self, y: usize) -> usize {
-        if !self.grid.has_line_sizes() {
-            return self.cols - 1;
-        }
+        if self.grid.has_line_sizes() { self.sized_row_right(y) } else { self.cols - 1 }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn sized_row_right(&self, y: usize) -> usize {
         self.grid.live_line_size(y).visible_columns(self.cols) - 1
     }
 
@@ -49,15 +52,21 @@ impl Terminal {
     #[inline]
     pub(in crate::terminal) fn right_edge(&self, x: usize, y: usize) -> usize {
         let edge = if x <= self.margins.right { self.margins.right } else { self.cols - 1 };
-        edge.min(self.row_right(y))
+        if self.grid.has_line_sizes() { edge.min(self.sized_row_right(y)) } else { edge }
     }
 
     /// Bring the cursor inside its row: after a move to another row, or a scroll that put another
     /// row under it, which may show fewer columns.
-    #[inline]
+    #[inline(always)]
     pub(in crate::terminal) fn fit_cursor(&mut self) {
         if self.grid.has_line_sizes() {
-            self.cursor.x = self.cursor.x.min(self.row_right(self.cursor.y));
+            self.fit_cursor_to_sized_row();
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(in crate::terminal) fn fit_cursor_to_sized_row(&mut self) {
+        self.cursor.x = self.cursor.x.min(self.sized_row_right(self.cursor.y));
     }
 }

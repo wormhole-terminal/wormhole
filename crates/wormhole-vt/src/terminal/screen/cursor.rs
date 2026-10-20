@@ -40,7 +40,7 @@ impl Terminal {
     /// Put the cursor at `x`, `y` (inside the screen) and end a pending wrap.
     #[inline]
     pub(in crate::terminal) fn place(&mut self, x: usize, y: usize) {
-        self.cursor.x = x.min(self.row_right(y));
+        self.cursor.x = if self.grid.has_line_sizes() { x.min(self.row_right(y)) } else { x };
         self.cursor.y = y;
         self.cursor.pending = false;
     }

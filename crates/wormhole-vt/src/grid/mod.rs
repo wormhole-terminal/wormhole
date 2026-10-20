@@ -123,6 +123,9 @@ pub const DEFAULT_SCROLLBACK_BYTES: usize = 10 << 20;
 pub struct Grid {
     cols: usize,
     rows: usize,
+    /// A live row may have a size other than single (`line_size`). Kept beside the geometry: the
+    /// terminal reads it on every cursor move and print, and it shares their cache line.
+    sized: bool,
     pages: VecDeque<Page>,
     /// Serial number of the row after the last one (the next to be made).
     end: u64,
@@ -139,8 +142,6 @@ pub struct Grid {
     /// Everything on the screen changed (a resize, a clear, the view moved) and the snapshot must
     /// copy all of it, whatever the rows' own marks say.
     all_dirty: bool,
-    /// A live row may have a size other than single (`line_size`).
-    sized: bool,
     /// Rows per page, when a test wants pages small enough for the live rows to span several;
     /// 0 for the size `page_capacity` picks.
     page_rows: usize,

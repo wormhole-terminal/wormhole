@@ -8,10 +8,16 @@ impl Terminal {
     /// bottom margin, and the lines that leave the top go into the history when the region is the
     /// whole width from the first row (the grid decides).
     pub(in crate::terminal) fn scroll_up(&mut self, n: usize) {
+        self.scroll_region_up(n);
+        self.fit_cursor();
+    }
+
+    /// [`Self::scroll_up`] for the callers that bring the cursor inside its row themselves.
+    #[inline]
+    pub(in crate::terminal) fn scroll_region_up(&mut self, n: usize) {
         let region = self.region();
         let bg = self.erase_color();
         self.grid.scroll_up(region, n, bg);
-        self.fit_cursor();
     }
 
     /// Scroll the region down by `n` lines.
