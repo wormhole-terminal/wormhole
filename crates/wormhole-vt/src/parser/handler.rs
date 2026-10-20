@@ -39,7 +39,16 @@ pub trait Handler {
         bytes.len()
     }
 
-    /// A run of printable ASCII (0x20..=0x7E), as long as the input allows. Never empty.
+    /// Whether DEL (0x7F) in the ground state is a character, not nothing: it is the last position
+    /// of a 96-character set in GL (ECMA-35 6.2.1: DEL is only ignorable where it is no part of the
+    /// set). Asked at each DEL, so rarely. When it is, the parser hands the DEL over as a run of one
+    /// byte through [`print_ascii`](Handler::print_ascii).
+    fn del_is_graphic(&self) -> bool {
+        false
+    }
+
+    /// A run of printable ASCII (0x20..=0x7E), as long as the input allows. Never empty. A run of
+    /// the one byte 0x7F when [`del_is_graphic`](Handler::del_is_graphic) says so.
     fn print_ascii(&mut self, _run: &[u8]) {}
 
     /// One character of U+0080 or more: UTF-8 decoded, with every malformed part (one maximal

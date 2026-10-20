@@ -180,7 +180,7 @@ impl Charset {
         matches!(self, Charset::National(_))
     }
 
-    /// The character a GL byte (0x20..=0x7E) shows in this set.
+    /// The character a GL byte (0x20..=0x7E, and 0x7F in a 96-character set) shows in this set.
     #[inline]
     pub(in crate::terminal) fn map(self, byte: u8) -> char {
         match self {
@@ -197,7 +197,7 @@ impl Charset {
                 _ => char::from(byte),
             },
             Charset::Latin1 => match byte {
-                0x21..=0x7e => char::from(byte + 0x80),
+                0x21..=0x7f => char::from(byte + 0x80),
                 _ => char::from(byte),
             },
             Charset::National(set) => set.map(byte),
@@ -246,6 +246,12 @@ impl Charsets {
     #[inline]
     pub(in crate::terminal) fn plain(&self) -> bool {
         self.plain
+    }
+
+    /// Whether DEL is a character where it is read: the set GL shows, or the one a pending single
+    /// shift names, has 96 (its last position is 7/15, ECMA-35 6.2.1).
+    pub(in crate::terminal) fn del_is_graphic(&self) -> bool {
+        self.slots[usize::from(self.single.unwrap_or(self.gl))].is_96()
     }
 
     fn update(&mut self) {

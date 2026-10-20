@@ -325,6 +325,30 @@ feed \e-A\x0e!a\x0f!\e.A\en!a\x0f\eNb\eNc
 screen
 |¡á!¡áâã|
 
+test DEL is the last character of a 96-character set in GL
+spec ECMA-35 6.2.1 (DEL is ignorable where it is no part of the set: a 96-character set has a character at 7/15), VT510 SCS - A (ISO Latin-1 supplemental, 2/0 to 7/15); vttest 3/004 and 3/005 ("DEL should have been eaten" only for the sets that are not 96)
+known-fail: alacritty – DEL is dropped whatever GL shows
+size 20 2
+feed a\x7fb\e-A\x0e\x7f\x0f\x7fc
+screen
+|abÿc|
+
+test DEL after a single shift of a 96-character set is shifted
+spec ECMA-35 6.2.1 and VT510 SS2 (maps G2 into GL for the next character only): the DEL is that character, in a 96-character set a graphic one
+known-fail: alacritty – ESC N and ESC O (SS2, SS3) have no effect
+size 20 2
+feed \e.A\eN\x7f)\eN\x7f)
+screen
+|ÿ)ÿ)|
+
+test DEL after a single shift of a 94-character set is ignored and the shift waits
+spec ECMA-35 6.2.1 (DEL carries no information outside a 96-character set) and VT510 SS2 (the next character only); vttest 3/004 prints a blank after the DEL to be shifted in its place
+known-fail: alacritty – ESC N and ESC O (SS2, SS3) have no effect
+size 20 2
+feed \e*0\eN\x7fqq
+screen
+|─q|
+
 test a single shift takes one character from G2
 spec VT510 SS2: maps G2 into GL for the next character only
 known-fail: alacritty – ESC N and ESC O (SS2, SS3) have no effect

@@ -74,8 +74,14 @@ impl Parser {
                         return at;
                     }
                 }
-                // ECMA-35 6.2.1: DEL carries no information.
-                0x7F => at += 1,
+                // ECMA-35 6.2.1: DEL carries no information, unless the set in GL has a character
+                // there (a 96-character set): then it is that one.
+                0x7F => {
+                    if h.del_is_graphic() {
+                        h.print_ascii(&bytes[at..=at]);
+                    }
+                    at += 1;
+                }
                 // What is left is C0.
                 _ => {
                     h.execute(byte);

@@ -31,6 +31,10 @@ impl Handler for Sink<'_> {
         self.0.modes.contains(Modes::VT52)
     }
 
+    fn del_is_graphic(&self) -> bool {
+        self.0.charsets.del_is_graphic()
+    }
+
     #[inline]
     fn wants_raw(&self) -> bool {
         self.0.printing()

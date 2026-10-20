@@ -8,9 +8,9 @@ The golden files are the engine's behaviour today, whatever the verdict: the gat
 | screen | test | verdict | notes |
 |--------|------|---------|-------|
 | 001 | VT100 character sets (SCS: B, A, 0, 1, 2) | pass | US ASCII, British (`#` is a pound sign), DEC special graphics with `_` blank, alternate ROM sets 1 and 2 as xterm shows them (1 is ASCII, 2 the graphics) |
-| 002 | shift in and out (SI, SO), G0 US ASCII, G1 ISO Latin-1 | pass | G1 ISO Latin-1 (a 96-character set) shows its upper half in GL |
+| 002 | shift in and out (SI, SO), G0 US ASCII, G1 ISO Latin-1 | pass | G1 ISO Latin-1 (a 96-character set) shows its upper half in GL, DEL (7/15) as `ÿ` its last character |
 | 003 | VT220 locking shifts, NRC disabled | fail: GR invocations unsupported | the shifts into GL (LS2, LS3, rows 7 to 10 and 15 to 18, left column) are right. Every 8-bit character that vttest sends to reach GR (LS1R, LS2R, LS3R; the right column) is U+FFFD: the engine reads its input as UTF-8 only, `ESC % @` (leave UTF-8) is ignored |
-| 004 | VT220 single shift SS2, NRC disabled | pass | all 96 characters of ISO Latin-1 through ESC N. Row 20 prints `127: (` followed by `©` and no `)`: after SS2 the engine ignores the DEL and shifts the next printable character, the closing parenthesis. A VT220 shifts only the next character (is DEL one for a 96-character set? the manual does not say) |
+| 004 | VT220 single shift SS2, NRC disabled | pass | all 96 characters of ISO Latin-1 through ESC N, `127: (ÿ)` at the end of row 20: DEL is the 96th character of a 96-character set (ECMA-35 6.2.1), and the single shift is spent on it. (With a 94-character set vttest prints a blank after the DEL to be shifted in its place: the DEL is eaten and the shift waits, as the engine does) |
 | 005 | VT220 single shift SS3, NRC disabled | pass | as 004 |
 | 006 | VT100 character sets, highlighting of non-ISO-8859-1 mappings on | pass | the pound sign and the line drawing are highlighted |
 | 007 | shift in and out, highlighting on | pass |  |

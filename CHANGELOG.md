@@ -198,6 +198,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   and title modes with a status string request (`DCS $ q > 4 m ST`, `DCS $ q > 0 t ST`).
 - A terminal that a program has put back to the VT100 level (by leaving VT52 mode, or `CSI 61 " p`) no
   longer answers status string requests (DECRQSS), as a real VT100 doesn't.
+- With ISO Latin-1 in a 96-character set slot (`ESC - A`, `ESC . A`), DEL now shows `ÿ`, the last
+  character of the set, where it was dropped.
 - Return sends CR LF instead of CR while a program has new line mode set (`CSI 20 h`), as on a VT100.
 
 ### Security
