@@ -1,16 +1,15 @@
 //! Keystroke -> bytes for the PTY.
 //!
-//! Two encoders live here:
+//! The encoders themselves (the legacy xterm encoding and the kitty keyboard protocol,
+//! <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>) are `wormhole_vt::input`. This is the
+//! adapter: GPUI's key names and the app's settings become the engine's events, and the host
+//! policy stays here (what Option, Shift+Enter and Option+arrows mean in Wormhole).
 //!
-//! * the legacy xterm encoding (used when no kitty keyboard flag is set), and
-//! * the kitty keyboard protocol ("progressive enhancement",
-//!   <https://sw.kovidgoyal.net/kitty/keyboard-protocol/>), used as soon as any
-//!   of the kitty flags is pushed by the application.
-//!
-//! Only key-*press* events are encoded: the host UI only delivers key-down
-//! events, so `REPORT_EVENT_TYPES` has no visible effect (press is the default
-//! event type and is always omitted from the sequence).
+//! Only key-*press* events are encoded: the host UI only delivers key-down events, so
+//! `REPORT_EVENT_TYPES` has no visible effect (press is the default event type and is always
+//! omitted from the sequence).
 
+use wormhole_vt::input::{InputModes, Key, KeyEvent, KittyFlags, Mods, encode_key, focus};
 use wormhole_vt::TermMode;
 
 /// A GUI-independent key press.
@@ -36,279 +35,120 @@ pub fn encode(input: &KeyInput, mode: TermMode) -> Option<Vec<u8>> {
     if input.platform {
         return None;
     }
-    let kitty = mode.intersects(
-        TermMode::DISAMBIGUATE_ESC_CODES
-            | TermMode::REPORT_EVENT_TYPES
-            | TermMode::REPORT_ALTERNATE_KEYS
-            | TermMode::REPORT_ALL_KEYS_AS_ESC
-            | TermMode::REPORT_ASSOCIATED_TEXT,
-    );
-    if kitty { encode_kitty(input, mode) } else { encode_legacy(input, mode.contains(TermMode::APP_CURSOR)) }
+    let modes = InputModes::from(mode);
+    let Some(key) = key_of(input.key) else {
+        // A name that is no key the engine knows: the legacy encoding sends what it typed.
+        let text = input.key_char.filter(|text| !text.is_empty() && modes.kitty.is_empty());
+        return text.map(|text| text.as_bytes().to_vec());
+    };
+    let event = event_of(input, key, &modes)?;
+    let mut out = Vec::new();
+    encode_key(&event, &modes, &mut out).then_some(out)
 }
 
 /// What to send when the terminal gains or loses focus: `CSI I` / `CSI O`
 /// once the program asked for focus events (DECSET 1004; vim, tmux and TUIs
 /// that pause when unfocused), otherwise nothing.
-pub fn focus_report(focused: bool, mode: TermMode) -> Option<&'static [u8]> {
-    mode.contains(TermMode::FOCUS_IN_OUT).then_some(if focused { b"\x1b[I" } else { b"\x1b[O" })
+pub fn focus_report(focused: bool, mode: TermMode) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    focus(focused, &InputModes::from(mode), &mut out).then_some(out)
 }
 
-// ---------------------------------------------------------------------------
-// Legacy xterm encoding
-// ---------------------------------------------------------------------------
-
-fn encode_legacy(input: &KeyInput, app_cursor: bool) -> Option<Vec<u8>> {
-    let key = input.key;
-    let (shift, alt, control) = (input.shift, input.alt, input.control);
-    // GPUI names the space bar "space"; as Meta it is ESC SP (Option+Space would type a NBSP).
-    let key_text = if key == "space" { " " } else { key };
-    if alt && input.option_as_meta && !control && key_text.chars().count() == 1 {
-        let key = if shift { key_text.to_uppercase() } else { key_text.to_string() };
-        return Some([b"\x1b".as_slice(), key.as_bytes()].concat());
-    }
-    // xterm modifier parameter: 1 + shift + 2*alt + 4*ctrl.
-    let modcode = 1 + shift as u8 + 2 * alt as u8 + 4 * control as u8;
-
-    let cursor = |final_byte: char| {
-        if modcode > 1 {
-            format!("\x1b[1;{modcode}{final_byte}")
-        } else if app_cursor {
-            format!("\x1bO{final_byte}")
-        } else {
-            format!("\x1b[{final_byte}")
-        }
-    };
-    let tilde = |n: u8| {
-        if modcode > 1 { format!("\x1b[{n};{modcode}~") } else { format!("\x1b[{n}~") }
-    };
-    let ss3 = |final_byte: char| {
-        if modcode > 1 { format!("\x1b[1;{modcode}{final_byte}") } else { format!("\x1bO{final_byte}") }
-    };
-
-    let seq: String = match key {
-        // Shift+Enter inserts a newline in AI CLIs (same as Option+Enter).
-        "enter" if shift || alt => "\x1b\r".into(),
-        "enter" => "\r".into(),
-        "backspace" if alt => "\x1b\x7f".into(),
-        "backspace" if control => "\x08".into(),
-        "backspace" => "\x7f".into(),
-        "tab" if shift => "\x1b[Z".into(),
-        "tab" => "\t".into(),
-        "escape" => "\x1b".into(),
-        // Option+arrows jump words, like Terminal.app / iTerm2.
-        "left" if alt && !shift && !control => "\x1bb".into(),
-        "right" if alt && !shift && !control => "\x1bf".into(),
-        "up" => cursor('A'),
-        "down" => cursor('B'),
-        "right" => cursor('C'),
-        "left" => cursor('D'),
-        "home" => cursor('H'),
-        "end" => cursor('F'),
-        "insert" => tilde(2),
-        "delete" => tilde(3),
-        "pageup" => tilde(5),
-        "pagedown" => tilde(6),
-        "f1" => ss3('P'),
-        "f2" => ss3('Q'),
-        "f3" => ss3('R'),
-        "f4" => ss3('S'),
-        "f5" => tilde(15),
-        "f6" => tilde(17),
-        "f7" => tilde(18),
-        "f8" => tilde(19),
-        "f9" => tilde(20),
-        "f10" => tilde(21),
-        "f11" => tilde(23),
-        "f12" => tilde(24),
-        "space" if control => "\0".into(),
-        _ if control && key.chars().count() == 1 => {
-            let c = key.chars().next()?;
-            let byte = match c.to_ascii_lowercase() {
-                c @ 'a'..='z' => c as u8 & 0x1f,
-                '@' | '2' => 0,
-                '[' | '3' => 27,
-                '\\' | '4' => 28,
-                ']' | '5' => 29,
-                '^' | '6' | '~' => 30,
-                '_' | '-' | '7' | '/' => 31,
-                '?' | '8' => 127,
-                // As xterm, kitty and iTerm2 send them.
-                c @ ('0' | '1' | '9') => c as u8,
-                _ => return input.key_char.map(|s| s.as_bytes().to_vec()),
-            };
-            return Some(if alt { vec![0x1b, byte] } else { vec![byte] });
-        }
-        // Everything else is text. Option is *not* Meta by default so that
-        // international layouts (e.g. German Option+L = @) keep working.
-        _ => input.key_char?.to_string(),
-    };
-    Some(seq.into_bytes())
-}
-
-// ---------------------------------------------------------------------------
-// Kitty keyboard protocol
-// ---------------------------------------------------------------------------
-
-/// How a key is terminated in the kitty protocol.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Term {
-    /// `CSI code ; mods u`
-    U(u32),
-    /// `CSI number ; mods ~`
-    Tilde(u32),
-    /// `CSI 1 ; mods <letter>` (or `CSI <letter>` without modifiers)
-    Letter(char),
-}
-
-fn functional_key(key: &str) -> Option<Term> {
-    Some(match key {
-        "escape" => Term::U(27),
-        "enter" => Term::U(13),
-        "tab" => Term::U(9),
-        "backspace" => Term::U(127),
-        "insert" => Term::Tilde(2),
-        "delete" => Term::Tilde(3),
-        "pageup" => Term::Tilde(5),
-        "pagedown" => Term::Tilde(6),
-        "up" => Term::Letter('A'),
-        "down" => Term::Letter('B'),
-        "right" => Term::Letter('C'),
-        "left" => Term::Letter('D'),
-        "home" => Term::Letter('H'),
-        "end" => Term::Letter('F'),
-        "f1" => Term::Letter('P'),
-        "f2" => Term::Letter('Q'),
-        // F3 uses `CSI 13 ~` in kitty: `CSI R` collides with cursor position reports.
-        "f3" => Term::Tilde(13),
-        "f4" => Term::Letter('S'),
-        "f5" => Term::Tilde(15),
-        "f6" => Term::Tilde(17),
-        "f7" => Term::Tilde(18),
-        "f8" => Term::Tilde(19),
-        "f9" => Term::Tilde(20),
-        "f10" => Term::Tilde(21),
-        "f11" => Term::Tilde(23),
-        "f12" => Term::Tilde(24),
+/// GPUI's name for a key as the engine's [`Key`]; `None` for a name that is no key.
+fn key_of(name: &str) -> Option<Key> {
+    Some(match name {
+        "enter" => Key::Enter,
+        "tab" => Key::Tab,
+        "backspace" => Key::Backspace,
+        "escape" => Key::Escape,
+        "up" => Key::Up,
+        "down" => Key::Down,
+        "left" => Key::Left,
+        "right" => Key::Right,
+        "home" => Key::Home,
+        "end" => Key::End,
+        "pageup" => Key::PageUp,
+        "pagedown" => Key::PageDown,
+        "insert" => Key::Insert,
+        "delete" => Key::Delete,
+        // GPUI names the space bar.
+        "space" => Key::Char(' '),
         _ => {
-            // F13..F35 live in the private use area starting at 57376.
-            let n: u32 = key.strip_prefix('f')?.parse().ok()?;
-            if (13..=35).contains(&n) {
-                Term::U(57376 + n - 13)
-            } else {
-                return None;
+            let mut chars = name.chars();
+            match (chars.next()?, chars.next()) {
+                // A letter key is its own name; the engine's key is the unshifted one.
+                (c, None) => Key::Char(c.to_lowercase().next().unwrap_or(c)),
+                ('f', Some(_)) => return Key::function(name[1..].parse().ok()?),
+                _ => return None,
             }
         }
     })
 }
 
-/// Printable text (no C0/C1 controls, not empty).
-fn printable(s: &str) -> Option<&str> {
-    (!s.is_empty() && !s.chars().any(char::is_control)).then_some(s)
-}
+/// The engine's event for a press, with this app's rules about the modifiers applied. `None`: the
+/// press types nothing.
+fn event_of<'a>(input: &KeyInput<'a>, key: Key, modes: &InputModes) -> Option<KeyEvent<'a>> {
+    let kitty = !modes.kitty.is_empty();
+    let (shift, alt, control) = (input.shift, input.alt, input.control);
+    // Option as Meta is the host sending Alt with no text. Otherwise the layout composes a
+    // character with Option (German Option+L = @, US Option+A = å) and Alt is used up making it.
+    let meta = alt && input.option_as_meta;
+    let typed_text = input.key_char.is_some_and(|s| !s.is_empty() && !s.chars().any(char::is_control));
+    let is_char = matches!(key, Key::Char(_));
 
-fn single_char(s: &str) -> Option<char> {
-    let mut it = s.chars();
-    let c = it.next()?;
-    it.next().is_none().then_some(c)
-}
-
-fn encode_kitty(input: &KeyInput, mode: TermMode) -> Option<Vec<u8>> {
-    let report_all = mode.contains(TermMode::REPORT_ALL_KEYS_AS_ESC);
-    let report_alt = mode.contains(TermMode::REPORT_ALTERNATE_KEYS);
-    let report_text = report_all && mode.contains(TermMode::REPORT_ASSOCIATED_TEXT);
-
-    let functional = functional_key(input.key);
-
-    // The text this key produces. Ctrl combos never carry text, nor does
-    // Option when it is Meta.
-    let meta = input.alt && input.option_as_meta;
-    let text =
-        if input.control || meta || functional.is_some() { None } else { input.key_char.and_then(printable) };
-
-    // Option is not Meta: when Alt composed a character (German Option+L = @,
-    // US Option+A = å) the modifier was consumed by the layout, like kitty with
-    // `macos_option_as_alt no`. Only report Alt when it produced no text.
-    let alt = input.alt && text.is_none();
-    let (shift, control) = (input.shift, input.control);
-    let mods = shift as u32 + 2 * alt as u32 + 4 * control as u32;
-
-    if let Some(term) = functional {
-        // Escape is always disambiguated; Enter/Tab/Backspace stay legacy when
-        // unmodified so a shell stays usable after a crashed app; other
-        // unmodified functional keys are unambiguous in legacy form (and keep
-        // honouring DECCKM).
-        if !report_all && mods == 0 && term != Term::U(27) {
-            // Keys with no legacy form (F13+) fall through to CSI u.
-            if let Some(bytes) = encode_legacy(input, mode.contains(TermMode::APP_CURSOR)) {
-                return Some(bytes);
-            }
-        }
-        return Some(csi(term, &[], mods, None));
+    let mut mods = Mods::empty();
+    mods.set(Mods::SHIFT, shift);
+    mods.set(Mods::ALT, alt);
+    mods.set(Mods::CTRL, control);
+    if is_char && alt && !meta && !control && typed_text {
+        mods.remove(Mods::ALT);
     }
+    let text = if meta && !control { None } else { input.key_char };
 
-    // Text-producing / character keys.
-    let base_char = match input.key {
-        "space" => ' ',
-        k => single_char(k)?.to_lowercase().next()?,
-    };
-    // Unmodified (or Shift-only) text goes out as plain text unless all keys
-    // must be reported as escape codes.
-    if !report_all && (mods & !1) == 0 {
-        if let Some(t) = text {
-            return Some(t.as_bytes().to_vec());
-        }
-        if mods == 0 {
-            return input.key_char.map(|s| s.as_bytes().to_vec());
+    // GPUI gives a key no text while Control is held, or when Option started a dead key. What is
+    // left to send is a control code or Meta+key (legacy), or an escape code (kitty, which reports
+    // a modified key, and any key under "report all"); a bare key that typed nothing is nothing.
+    if is_char && input.key_char.is_none() {
+        let sends = if kitty {
+            modes.kitty.contains(KittyFlags::REPORT_ALL_KEYS) || !mods.is_empty()
+        } else {
+            control || meta
+        };
+        if !sends {
+            return None;
         }
     }
 
-    let shifted = if report_alt && shift {
-        input
-            .key_char
-            .filter(|_| !input.alt || text.is_some())
-            .and_then(single_char)
-            .filter(|c| !c.is_control() && *c != base_char)
-            .or_else(|| {
-                let up = base_char.to_uppercase().next()?;
-                (up != base_char).then_some(up)
-            })
-    } else {
-        None
-    };
-
-    let mut code = vec![base_char as u32];
-    if let Some(s) = shifted {
-        code.push(s as u32);
-    }
-    let text = if report_text { text } else { None };
-    Some(csi(Term::U(0), &code, mods, text))
-}
-
-fn csi(term: Term, code_parts: &[u32], mods: u32, text: Option<&str>) -> Vec<u8> {
-    let join = |v: &mut dyn Iterator<Item = u32>| v.map(|n| n.to_string()).collect::<Vec<_>>().join(":");
-    let mut s = String::from("\x1b[");
-    let (first, fin) = match term {
-        Term::U(n) => {
-            let first =
-                if code_parts.is_empty() { n.to_string() } else { join(&mut code_parts.iter().copied()) };
-            (first, 'u')
+    let (mut key, mut text) = (key, text);
+    if !kitty {
+        // Shift+Enter inserts a newline in AI CLIs (same as Option+Enter).
+        if key == Key::Enter && shift {
+            mods.remove(Mods::SHIFT);
+            mods.insert(Mods::ALT);
         }
-        Term::Tilde(n) => (n.to_string(), '~'),
-        Term::Letter(c) => (if mods == 0 { String::new() } else { "1".into() }, c),
-    };
-    s.push_str(&first);
-    if mods != 0 || text.is_some() {
-        s.push(';');
-        s.push_str(&(mods + 1).to_string());
+        // Option+arrows jump words, like Terminal.app / iTerm2: Meta+b and Meta+f.
+        if matches!(key, Key::Left | Key::Right) && alt && !shift && !control {
+            key = Key::Char(if key == Key::Left { 'b' } else { 'f' });
+            text = None;
+        }
     }
-    if let Some(t) = text {
-        s.push(';');
-        s.push_str(&join(&mut t.chars().map(|c| c as u32)));
-    }
-    s.push(fin);
-    s.into_bytes()
-}
 
+    let mut event = KeyEvent::new(key).with_mods(mods);
+    event.text = text;
+    // Kitty's alternate key: what Shift typed, when the layout gave something other than the key
+    // itself (GPUI hands Shift+1 over as `!`). The engine falls back to the upper case.
+    if let (Key::Char(base), true) = (key, shift) {
+        let composed = !alt || (!control && !meta && typed_text);
+        let mut chars = input.key_char.unwrap_or_default().chars();
+        if let (true, Some(c), None) = (composed, chars.next(), chars.next())
+            && !c.is_control()
+            && c != base
+        {
+            event = event.with_shifted(c);
+        }
+    }
+    Some(event)
+}
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -432,8 +272,8 @@ mod tests {
     #[test]
     fn focus_is_reported_only_when_asked_for() {
         assert_eq!(focus_report(true, NONE), None);
-        assert_eq!(focus_report(true, TermMode::FOCUS_IN_OUT), Some(&b"\x1b[I"[..]));
-        assert_eq!(focus_report(false, TermMode::FOCUS_IN_OUT | DIS), Some(&b"\x1b[O"[..]));
+        assert_eq!(focus_report(true, TermMode::FOCUS_IN_OUT), Some(b"\x1b[I".to_vec()));
+        assert_eq!(focus_report(false, TermMode::FOCUS_IN_OUT | DIS), Some(b"\x1b[O".to_vec()));
     }
 
     fn meta(mut i: KeyInput) -> KeyInput {

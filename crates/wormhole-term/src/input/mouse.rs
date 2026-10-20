@@ -1,9 +1,10 @@
 //! Mouse events -> xterm mouse reporting sequences.
 //!
-//! Supports the tracking modes 1000 (`MOUSE_REPORT_CLICK`), 1002
-//! (`MOUSE_DRAG`) and 1003 (`MOUSE_MOTION`), and the encodings X10 (default),
-//! UTF-8 (1005, `UTF8_MOUSE`) and SGR (1006, `SGR_MOUSE`).
+//! The reports are `wormhole_vt::input::encode_mouse` (tracking modes 1000, 1002 and 1003; the
+//! encodings X10, UTF-8 and SGR as far as the engine's `TermMode` carries them); this maps the
+//! app's pointer structs onto the engine's.
 
+use wormhole_vt::input::{self as vt, InputModes, Mods, encode_mouse};
 use wormhole_vt::TermMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,85 +61,35 @@ pub fn wants_locator(mode: TermMode) -> bool {
 
 /// Whether the application has requested any kind of mouse reporting.
 pub fn wants_mouse(mode: TermMode) -> bool {
-    mode.intersects(TermMode::MOUSE_MODE)
+    InputModes::from(mode).reports_mouse()
 }
 
 /// Encode a mouse event, or `None` when the current mode does not report it.
 pub fn encode(input: &MouseInput, mode: TermMode) -> Option<Vec<u8>> {
-    if !wants_mouse(mode) {
-        return None;
-    }
-    let drag = mode.intersects(TermMode::MOUSE_DRAG | TermMode::MOUSE_MOTION);
-    let any_motion = mode.contains(TermMode::MOUSE_MOTION);
-
-    let base: u32 = match input.button {
-        MouseButton::Left => 0,
-        MouseButton::Middle => 1,
-        MouseButton::Right => 2,
-        MouseButton::WheelUp => 64,
-        MouseButton::WheelDown => 65,
-        MouseButton::WheelLeft => 66,
-        MouseButton::WheelRight => 67,
-        MouseButton::None => 3,
+    let button = match input.button {
+        MouseButton::Left => vt::MouseButton::Left,
+        MouseButton::Middle => vt::MouseButton::Middle,
+        MouseButton::Right => vt::MouseButton::Right,
+        MouseButton::WheelUp => vt::MouseButton::WheelUp,
+        MouseButton::WheelDown => vt::MouseButton::WheelDown,
+        MouseButton::WheelLeft => vt::MouseButton::WheelLeft,
+        MouseButton::WheelRight => vt::MouseButton::WheelRight,
+        MouseButton::None => vt::MouseButton::None,
     };
-    let is_wheel = base >= 64;
-
-    let code = match input.action {
-        MouseAction::Press => {
-            if input.button == MouseButton::None {
-                return None;
-            }
-            base
-        }
-        MouseAction::Release => {
-            // Wheel "buttons" have no release; release of nothing is meaningless.
-            if is_wheel || input.button == MouseButton::None {
-                return None;
-            }
-            base
-        }
-        MouseAction::Motion => {
-            if is_wheel {
-                return None;
-            }
-            let allowed = if input.button == MouseButton::None { any_motion } else { drag };
-            if !allowed {
-                return None;
-            }
-            base + 32
-        }
+    let kind = match input.action {
+        MouseAction::Press => vt::MouseKind::Press,
+        MouseAction::Release => vt::MouseKind::Release,
+        MouseAction::Motion => vt::MouseKind::Motion,
     };
-    let code = code + 4 * input.shift as u32 + 8 * input.alt as u32 + 16 * input.control as u32;
-
-    // 1-based coordinates.
-    let x = input.col as u32 + 1;
-    let y = input.row as u32 + 1;
-
-    if mode.contains(TermMode::SGR_MOUSE) {
-        let fin = if input.action == MouseAction::Release { 'm' } else { 'M' };
-        return Some(format!("\x1b[<{code};{x};{y}{fin}").into_bytes());
-    }
-
-    // Normal/UTF-8 encodings can't express which button was released.
-    let code = if input.action == MouseAction::Release { 3 + (code & !3) } else { code };
-
-    let mut out = b"\x1b[M".to_vec();
-    if mode.contains(TermMode::UTF8_MOUSE) {
-        for v in [code, x, y] {
-            // Values are offset by 32 and encoded as UTF-8 up to U+07FF.
-            let c = char::from_u32(v + 32).filter(|c| (*c as u32) < 0x800)?;
-            let mut buf = [0; 4];
-            out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
-        }
-    } else {
-        // X10: one byte each; coordinates cap at 223 (255 - 32). Events outside
-        // that range can't be represented and are dropped.
-        if x > 223 || y > 223 {
-            return None;
-        }
-        out.extend([(code + 32) as u8, (x + 32) as u8, (y + 32) as u8]);
-    }
-    Some(out)
+    let mut mods = Mods::empty();
+    mods.set(Mods::SHIFT, input.shift);
+    mods.set(Mods::ALT, input.alt);
+    mods.set(Mods::CTRL, input.control);
+    // A position past u32 is past every encoding; the engine refuses it where the form has a limit.
+    let cell = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+    let event = vt::MouseEvent::new(button, kind, cell(input.col), cell(input.row)).with_mods(mods);
+    let mut out = Vec::new();
+    encode_mouse(&event, &InputModes::from(mode), &mut out).then_some(out)
 }
 
 #[cfg(test)]

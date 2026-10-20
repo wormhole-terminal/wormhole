@@ -463,13 +463,8 @@ impl TerminalView {
     /// Paste text the way a real terminal does (bracketed if the app asked).
     pub fn paste(&mut self, text: &str) {
         let Some(pty) = &self.pty else { return };
-        let text = text.replace("\r\n", "\n").replace('\n', "\r");
-        let bytes = if pty.mode().contains(TermMode::BRACKETED_PASTE) {
-            format!("\x1b[200~{}\x1b[201~", text.replace('\x1b', ""))
-        } else {
-            text
-        };
-        self.write_input(bytes.into_bytes());
+        let bytes = wormhole_core::terminal::input::paste(text, pty.mode());
+        self.write_input(bytes);
     }
 
     /// The selected text, if anything is selected.
