@@ -8,8 +8,6 @@
 //! "On the screen" means the live screen's rows, not the history; cell coordinates `x` and `y`
 //! count from 1 at the screen's top left corner.
 
-use std::collections::HashSet;
-
 use crate::terminal::Terminal;
 use crate::types::ImageHandle;
 
@@ -114,8 +112,13 @@ impl Terminal {
         }
 
         if command.free {
-            let candidates: HashSet<ImageHandle> =
+            // In the order the pictures came (handles are given out in order): the events the host
+            // hears must not depend on a hash set's random order, or the same bytes fed in other
+            // pieces would tell it the frees in another order.
+            let mut candidates: Vec<ImageHandle> =
                 removed.into_iter().chain(named.into_iter().flatten()).collect();
+            candidates.sort_unstable();
+            candidates.dedup();
             for handle in candidates {
                 let screen = self.grid_of(slot);
                 let table = &self.graphics.tables[slot];

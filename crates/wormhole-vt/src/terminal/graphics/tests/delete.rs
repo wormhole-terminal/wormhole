@@ -56,6 +56,24 @@ fn a_capital_also_frees_the_data() {
 }
 
 #[test]
+fn pictures_are_freed_in_the_order_they_came_however_the_bytes_were_cut() {
+    // The audit's seed: the frees came from a hash set, so which picture the host heard of first
+    // changed from one terminal to the next (and with how the same bytes were fed).
+    for _ in 0..20 {
+        let mut whole = scene();
+        whole.feed(&apc_bare("a=d,d=A"));
+        let whole = freed(&mut whole);
+        assert_eq!(whole.len(), 3);
+        assert!(whole.is_sorted(), "{whole:?}");
+        let mut split = scene();
+        for byte in apc_bare("a=d,d=A").bytes() {
+            split.feed_bytes(&[byte]);
+        }
+        assert_eq!(freed(&mut split), whole);
+    }
+}
+
+#[test]
 fn only_what_is_on_the_screen_goes() {
     let mut r = scene();
     // Scroll everything up and a bit more: A and B are in the history now.

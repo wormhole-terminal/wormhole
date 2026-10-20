@@ -145,6 +145,8 @@ First public release (0.1.0).
   wrap due at a right margin that was removed), a scroll that puts another row under them, a swap of the
   screens and a picture placed on a double-width row (`Terminal::check_invariants` failed after these
   four streams).
+- The pictures a delete frees (`a=d` with a capital) are announced with `Event::ImageFree` in the order they
+  came, not in a hash set's order: the same bytes fed in other pieces gave other orders.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.
