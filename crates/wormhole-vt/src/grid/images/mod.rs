@@ -153,7 +153,7 @@ impl Grid {
 
     /// Every placement, history included, one line each with its top row counted from the live
     /// screen's (negative in the history): the state dump compares these as text.
-    #[cfg(any(test, feature = "state-dump"))]
+    #[cfg(any(test, feature = "internals"))]
     pub fn describe_placements(&self) -> Vec<String> {
         let top = self.top_serial() as i64;
         self.placements
@@ -268,6 +268,7 @@ impl Grid {
 
 impl Grid {
     /// The placements' share of [`Grid::check_invariants`].
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn check_placements(&self) -> Result<(), String> {
         let (first, end) = (self.first_serial() as i64, self.end as i64);
         for (i, p) in self.placements.list.iter().enumerate() {

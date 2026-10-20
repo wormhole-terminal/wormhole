@@ -12,18 +12,20 @@
 
 use std::time::Instant;
 
-use wormhole_vt::grid::{Content, RowMark as GridMark, TextShape};
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::{ScreenChecksum, Terminal, VirtualPlacement, WindowGeometry, WindowOps};
-use wormhole_vt::types::Rgb;
-use wormhole_vt::types::{
-    COLOR_COUNT, Cell, Colors, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll, SelectionRange,
-    SelectionType, Side, TermMode,
+use wormhole_vt::Rgb;
+use wormhole_vt::image::ImagePlacement;
+use wormhole_vt::image::VirtualPlacement;
+use wormhole_vt::window::WindowGeometry;
+use wormhole_vt::{
+    COLOR_COUNT, Cell, Colors, CursorShape, Line, Point, RowExtras, Scroll, SelectionRange, SelectionType,
+    Side, TermMode,
 };
+use wormhole_vt::{Content, RowMark as GridMark, TextShape};
+use wormhole_vt::{Policy, Terminal};
 
 use super::GridSize;
 use super::marks::{Part, RowMark};
-use wormhole_vt::types::Column;
+use wormhole_vt::Column;
 
 /// Where the cursor is drawn and how.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -71,8 +73,13 @@ fn mark_from(mark: GridMark) -> RowMark {
 
 impl Screen {
     pub(crate) fn new(size: GridSize, scrollback_lines: usize) -> Self {
-        let mut term = Terminal::new(usize::from(size.cols), usize::from(size.rows), scrollback_lines);
-        term.set_cell_size(size.cell_width as u16, size.cell_height as u16);
+        // XTVERSION says what the app is called, not the engine: the crate's version is the app's.
+        let term = Terminal::builder()
+            .size(usize::from(size.cols), usize::from(size.rows))
+            .scrollback(scrollback_lines)
+            .identity("Wormhole", env!("CARGO_PKG_VERSION"))
+            .cell_size(size.cell_width as u16, size.cell_height as u16)
+            .build();
         Self { term, hold: Hold::Off }
     }
 
@@ -80,7 +87,7 @@ impl Screen {
     /// dropped: for a test terminal, which has no host to hear them.
     #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn drain_marks(&mut self, prompts: &mut u64) -> Vec<(crate::Mark, u64)> {
-        self.term.drain_events().filter_map(|event| super::engine::mark_of(event, prompts)).collect()
+        self.term.events().filter_map(|event| super::engine::mark_of(event, prompts)).collect()
     }
 
     /// Note whether a synchronized update is in progress after the engine read some output.
@@ -198,8 +205,8 @@ impl Screen {
     /// the engine makes of it, for the program.
     pub(crate) fn locator_event(
         &mut self,
-        button: Option<(wormhole_vt::terminal::LocatorButton, bool)>,
-        at: wormhole_vt::terminal::Pointer,
+        button: Option<(wormhole_vt::LocatorButton, bool)>,
+        at: wormhole_vt::Pointer,
     ) -> Vec<u8> {
         match button {
             Some((button, pressed)) => self.term.locator_button(button, pressed, at),
@@ -263,11 +270,10 @@ impl Screen {
         self.term.take_damage(damaged)
     }
 
-    /// Parse `bytes` as program output. Whole sequences only: a sequence cut in two calls is
-    /// not joined (what replaying saved text and the tests need; the PTY thread has its own
-    /// stream).
+    /// Parse `bytes` as program output (what replaying saved text and the tests need). The engine
+    /// keeps its parser, so a sequence cut between two calls is joined.
     pub(crate) fn feed(&mut self, bytes: &[u8]) {
-        self.term.advance(&mut Parser::new(), bytes);
+        self.term.feed(bytes);
         self.update_hold(Instant::now());
     }
 
@@ -289,18 +295,25 @@ impl Screen {
     /// Whether the engine answers DECRQCRA (a program reading the screen back); it does not until
     /// the host says so.
     pub(crate) fn set_screen_checksum(&mut self, allow: bool) {
-        self.term.set_screen_checksum(if allow { ScreenChecksum::Allow } else { ScreenChecksum::Deny });
+        self.change_policy(|policy| policy.screen_checksum = allow);
+    }
+
+    /// Change one switch of the engine's policy, keeping the others.
+    fn change_policy(&mut self, change: impl FnOnce(&mut Policy)) {
+        let mut policy = self.term.policy();
+        change(&mut policy);
+        self.term.set_policy(policy);
     }
 
     /// Whether a program may act on the window and read its title; it may not until the host
     /// says so.
     pub(crate) fn set_window_ops(&mut self, allow: bool) {
-        self.term.set_window_ops(if allow { WindowOps::Allow } else { WindowOps::Deny });
+        self.change_policy(|policy| policy.window_ops = allow);
     }
 
     /// Whether programs may act on the window.
     pub(crate) fn window_ops_allowed(&self) -> bool {
-        self.term.window_ops() == WindowOps::Allow
+        self.term.policy().window_ops
     }
 
     /// Where the host's window is, for the reports a program asks for.

@@ -11,7 +11,7 @@
 //! events, so `REPORT_EVENT_TYPES` has no visible effect (press is the default
 //! event type and is always omitted from the sequence).
 
-use wormhole_vt::types::TermMode;
+use wormhole_vt::TermMode;
 
 /// A GUI-independent key press.
 ///

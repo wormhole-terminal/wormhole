@@ -1,10 +1,10 @@
-//! The terminal modes the app reads.
+//! The terminal modes a host reads.
 
 use bitflags::bitflags;
 
 bitflags! {
     /// The modes programs switch (DEC private modes, ctlseqs' "DEC Private Mode Set") and the
-    /// kitty keyboard protocol's flags that change what the app sends or how it draws.
+    /// kitty keyboard protocol's flags that change what a host sends or how it draws.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct TermMode: u32 {
         /// DECTCEM (25): the cursor is shown.

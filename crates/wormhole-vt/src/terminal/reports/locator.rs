@@ -274,7 +274,6 @@ impl Terminal {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::Parser;
     use crate::terminal::{LocatorButton, Pointer, Terminal};
 
     fn at(col: usize, row: usize) -> Pointer {
@@ -282,20 +281,19 @@ mod tests {
     }
 
     fn run(term: &mut Terminal, bytes: &str) -> String {
-        let mut parser = Parser::new();
-        term.advance(&mut parser, bytes.as_bytes());
+        term.feed(bytes.as_bytes());
         String::from_utf8_lossy(&term.take_replies()).into_owned()
     }
 
     #[test]
     fn a_disabled_locator_is_unavailable() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         assert_eq!(run(&mut term, "\x1b[1'|"), "\x1b[0&w");
     }
 
     #[test]
     fn a_request_reports_the_pointer_in_cells() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[1;2'z");
         term.locator_moved(at(4, 2));
         assert_eq!(run(&mut term, "\x1b[0'|"), "\x1b[1;0;3;5;1&w");
@@ -303,7 +301,7 @@ mod tests {
 
     #[test]
     fn pixels_count_from_one() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[1;1'z");
         term.locator_moved(at(4, 2));
         assert_eq!(run(&mut term, "\x1b['|"), "\x1b[1;0;38;36;1&w");
@@ -311,7 +309,7 @@ mod tests {
 
     #[test]
     fn buttons_are_reported_when_selected() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[1'z");
         term.locator_button(LocatorButton::Left, true, at(1, 1));
         assert_eq!(run(&mut term, ""), "", "nothing is selected yet");
@@ -326,7 +324,7 @@ mod tests {
 
     #[test]
     fn once_ends_after_one_report() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[2'z");
         assert!(term.locator_enabled());
         assert_eq!(run(&mut term, "\x1b['|"), "\x1b[1;0;1;1;1&w");
@@ -336,7 +334,7 @@ mod tests {
 
     #[test]
     fn leaving_a_filter_rectangle_is_reported_once() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[1'z");
         term.locator_moved(at(5, 2));
         run(&mut term, "\x1b[2;4;4;8'w");
@@ -350,7 +348,7 @@ mod tests {
 
     #[test]
     fn mouse_tracking_and_the_locator_exclude_each_other() {
-        let mut term = Terminal::new(20, 5, 0);
+        let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[?1000h\x1b[1'z");
         assert!(term.locator_enabled());
         assert!(!term.mode().intersects(crate::types::TermMode::MOUSE_MODE));

@@ -28,7 +28,7 @@ impl Terminal {
 /// The longest capability name asked for (terminfo's are two to five characters).
 const NAME_MAX: usize = 32;
 
-/// The terminfo capabilities Wormhole answers (the values are terminfo's strings, with `\E`
+/// The terminfo capabilities answered (the values are terminfo's strings, with `\E`
 /// as ESC; an empty value is a boolean). The terminal is an xterm-256color with true color, styled
 /// and colored underlines, cursor styles, synchronized output, focus and paste reporting.
 fn capability(name: &str) -> Option<&'static str> {

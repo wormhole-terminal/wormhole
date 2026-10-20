@@ -1,12 +1,12 @@
 //! What the terminal tells its host besides the screen: the events a program's sequences cause.
 //!
-//! Events are queued in the order the sequences came and taken with [`Terminal::drain_events`]
+//! Events are queued in the order the sequences came and taken with [`Terminal::events`]
 //! (the queue keeps its capacity, so a bell or a mark allocates nothing; the events that carry
 //! text or bytes own them). Replies to the program are not events: they are bytes for the PTY, see
 //! [`Terminal::replies`].
 //!
 //! [`Terminal`]: crate::terminal::Terminal
-//! [`Terminal::drain_events`]: crate::terminal::Terminal::drain_events
+//! [`Terminal::events`]: crate::terminal::Terminal::events
 //! [`Terminal::replies`]: crate::terminal::Terminal::replies
 
 use super::graphics::ImageUpload;
@@ -25,6 +25,7 @@ pub enum Terminator {
 /// How far along a task is (OSC 9;4, ConEmu's progress report, which Windows Terminal and
 /// Ghostty speak too).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ProgressState {
     /// Going well; the percentage says how far.
     Normal,
@@ -48,6 +49,7 @@ pub struct Progress {
 /// Which prompt an OSC 133 `A` mark starts (its `k=` option): the one a command is typed at, or
 /// one of the extra prompts around it, which belong to the same command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum PromptKind {
     /// The prompt a command is typed at: a new block starts.
     Initial,
@@ -63,6 +65,7 @@ pub enum PromptKind {
 /// them into the grid (every cell printed afterwards is a prompt, command or output cell of the
 /// block); the event is for whoever keeps a log of the commands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ShellMark {
     /// `A`: a prompt starts.
     PromptStart(PromptKind),
@@ -76,6 +79,7 @@ pub enum ShellMark {
 
 /// Something a program's sequences ask of the host. See the module docs.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Event {
     /// BEL.
     Bell,
@@ -149,7 +153,7 @@ pub enum Event {
     /// [`Terminal::resize`](crate::terminal::Terminal::resize).
     ColumnsRequested(usize),
     /// A program asked the window to do something (and the host allowed it, see
-    /// [`WindowOps`](super::WindowOps)). The sizes in cells have taken effect in the engine
+    /// [`Policy::window_ops`](crate::terminal::Policy::window_ops)). The sizes in cells have taken effect in the engine
     /// already; the host makes the window match, or calls [`Terminal::resize`](crate::terminal::Terminal::resize)
     /// with the size it has.
     WindowOp(super::WindowOp),

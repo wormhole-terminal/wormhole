@@ -1,11 +1,11 @@
 //! The window operations as events, and what the host's geometry changes in the reports.
 
 use super::Rig;
-use crate::terminal::{Event, Extent, Fullscreen, Maximize, WindowGeometry, WindowOp, WindowOps};
+use crate::terminal::{Event, Extent, Fullscreen, Maximize, Policy, WindowGeometry, WindowOp};
 
 fn allowed() -> Rig {
     let mut rig = Rig::new(20, 5);
-    rig.term.set_window_ops(WindowOps::Allow);
+    rig.term.set_policy(Policy { window_ops: true, ..Policy::default() });
     rig
 }
 

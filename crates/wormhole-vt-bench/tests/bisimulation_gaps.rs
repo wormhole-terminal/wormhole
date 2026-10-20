@@ -4,7 +4,7 @@
 //! else is still right (the comparison with the mask passes). The harness is also shown to catch
 //! a repaint that is wrong without saying so.
 
-use wormhole_vt::terminal::repaint::Gaps;
+use wormhole_vt::repaint::Gaps;
 use wormhole_vt_bench::bisim::{Resize, Scenario, Setup, probe};
 
 fn scenario(input: &[u8], cols: usize, rows: usize, resizes: &[(usize, usize, usize)]) -> Scenario {

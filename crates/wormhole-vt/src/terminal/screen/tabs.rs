@@ -28,6 +28,7 @@ impl TabStops {
     }
 
     /// How many columns it has a slot for.
+    #[cfg(any(test, feature = "internals"))]
     pub(in crate::terminal) fn len(&self) -> usize {
         self.stops.len()
     }

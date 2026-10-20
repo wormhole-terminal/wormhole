@@ -6,10 +6,11 @@
 //! escape sequences is a valid script (no `0xFF` in it), so the `.vtt` cases and the recorded
 //! sessions seed the corpus as they are, and the fuzzer's splices of them stay meaningful.
 
-use wormhole_vt::grid::{Content, TextCopy, TextShape, ViewRow};
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::{Event, ScreenChecksum, Terminal};
-use wormhole_vt::types::{Cell, Column, ImageHandle, Line, Point, RowExtras, Scroll, SelectionType, Side};
+use wormhole_vt::image::ImageHandle;
+use wormhole_vt::{
+    Cell, Column, Content, Event, Line, Point, Policy, RowExtras, Scroll, SelectionType, Side, Terminal, TextCopy,
+    TextShape, ViewRow,
+};
 
 /// Reads the script's bytes, 0 once they run out.
 pub struct Bytes<'a>(pub &'a [u8]);
@@ -53,11 +54,10 @@ impl Bytes<'_> {
 /// The terminal a script makes, and what it keeps between calls.
 pub struct Run {
     pub term: Terminal,
-    parser: Parser,
     copy: TextCopy,
     rows_out: Vec<ViewRow>,
-    pins: Vec<wormhole_vt::grid::PinId>,
-    spans: Vec<wormhole_vt::terminal::PinnedSpan>,
+    pins: Vec<wormhole_vt::PinId>,
+    spans: Vec<wormhole_vt::PinnedSpan>,
     handles: Vec<ImageHandle>,
 }
 
@@ -68,13 +68,11 @@ impl Run {
         let rows = 1 + usize::from(bytes.byte()) % 40;
         let flags = bytes.byte();
         let scrollback = [0, 3, 40, 2000][usize::from(flags & 3)];
-        let mut term = Terminal::new(cols, rows, scrollback);
-        if flags & 4 != 0 {
-            term.set_screen_checksum(ScreenChecksum::Allow);
-        }
+        let mut policy = Policy::default();
+        policy.screen_checksum = flags & 4 != 0;
+        let term = Terminal::builder().size(cols, rows).scrollback(scrollback).policy(policy).build();
         let mut run = Run {
             term,
-            parser: Parser::new(),
             copy: TextCopy::new(),
             rows_out: Vec::new(),
             pins: Vec::new(),
@@ -91,14 +89,14 @@ impl Run {
     }
 
     pub fn feed(&mut self, bytes: &[u8]) {
-        self.term.advance(&mut self.parser, bytes);
+        self.term.feed(bytes);
         self.settle();
     }
 
     /// What a host does after every read: collect the events and replies, answer the pictures.
     fn settle(&mut self) {
         let mut answers = Vec::new();
-        for event in self.term.drain_events() {
+        for event in self.term.events() {
             match event {
                 Event::ImageData(upload) => answers.push(upload.image),
                 Event::ImageFree(handle) => self.handles.retain(|&h| h != handle),
@@ -108,8 +106,8 @@ impl Run {
         for (n, handle) in answers.into_iter().enumerate() {
             // Most pictures decode; some fail the way a bad file does.
             let result = match n % 5 {
-                3 => Err(wormhole_vt::terminal::ImageError::BadData),
-                4 => Err(wormhole_vt::terminal::ImageError::TooBig),
+                3 => Err(wormhole_vt::image::ImageError::BadData),
+                4 => Err(wormhole_vt::image::ImageError::TooBig),
                 _ => Ok(()),
             };
             self.term.image_decoded(handle, result);
@@ -273,12 +271,13 @@ impl Run {
                 let handle = ImageHandle::from_raw(u64::from(bytes.byte()));
                 self.term.image_decoded(handle, Ok(()));
                 if let Some(&known) = self.handles.first() {
-                    self.term.image_decoded(known, Err(wormhole_vt::terminal::ImageError::BadData));
+                    self.term.image_decoded(known, Err(wormhole_vt::image::ImageError::BadData));
                 }
             }
             20 => {
-                let toggle = [ScreenChecksum::Allow, ScreenChecksum::Deny];
-                self.term.set_screen_checksum(toggle[usize::from(bytes.byte()) % 2]);
+                let mut policy = self.term.policy();
+                policy.screen_checksum = bytes.byte() % 2 == 0;
+                self.term.set_policy(policy);
                 self.term.set_word_separators(if bytes.byte() & 1 == 0 { " " } else { "" });
             }
             _ => {

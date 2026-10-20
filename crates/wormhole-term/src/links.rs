@@ -8,7 +8,7 @@
 use std::ops::Range;
 use std::path::PathBuf;
 
-use wormhole_vt::types::{Cell, Column, Flags, Line, Point, RowExtras};
+use wormhole_vt::{Cell, Column, Flags, Line, Point, RowExtras};
 
 use super::osc::percent_decode;
 use super::procinfo;
@@ -269,7 +269,7 @@ impl Openable {
 mod tests {
     use std::path::PathBuf;
 
-    use wormhole_vt::types::{Column, Line, Point};
+    use wormhole_vt::{Column, Line, Point};
 
     use super::{Openable, find_urls, link_at};
     use crate::testing::TestTerm;

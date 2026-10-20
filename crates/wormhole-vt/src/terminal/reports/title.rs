@@ -11,7 +11,7 @@
 //!
 //! The reports (`OSC l title ST`, `OSC L icon ST`) would put text a program chose into the input
 //! of whatever program is running, so they are answered only when the host allows the window
-//! operations ([`WindowOps`](super::WindowOps)), and control characters are taken out of them.
+//! operations ([`Policy::window_ops`](crate::terminal::Policy::window_ops)), and control characters are taken out of them.
 
 use std::borrow::Cow;
 

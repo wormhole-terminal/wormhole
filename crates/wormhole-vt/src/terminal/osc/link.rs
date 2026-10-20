@@ -83,7 +83,7 @@ impl Terminal {
             None => {
                 self.link_seq += 1;
                 let mut name = StackText::new();
-                let _ = write!(name, "wormhole-link-{}", self.link_seq);
+                let _ = write!(name, "link-{}", self.link_seq);
                 Arc::from(name.as_str())
             }
         };

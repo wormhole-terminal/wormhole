@@ -1,6 +1,6 @@
 //! One row, read in place: what a serializer needs without a lookup per cell.
 //!
-//! The snapshot copy (`copy.rs`) turns a row into the types the app draws and leaves out what
+//! The snapshot copy (`copy.rs`) turns a row into the types a host draws and leaves out what
 //! only the engine itself acts on (the cell's own flags, the page-local style ids, the row's
 //! block). The repaint writer (`term::repaint`) and the state dump need all of it, and a row at
 //! a time: [`Grid::row_view`] finds the page once, and the view then answers for the whole row.
@@ -62,7 +62,7 @@ impl<'a> RowView<'a> {
         self.page.rows[self.row].wrapped()
     }
 
-    /// The command block (OSC 133) number the row was marked with, 0 for none. The mark the app
+    /// The command block (OSC 133) number the row was marked with, 0 for none. The mark a host
     /// reads (`RowMark`) is this and the parts the cells carry.
     #[inline]
     pub fn block(&self) -> u32 {

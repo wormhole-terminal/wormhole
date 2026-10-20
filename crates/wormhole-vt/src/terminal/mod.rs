@@ -68,8 +68,9 @@
 //!   the alternate one); the cursor, pen, character sets, margins and tab stops are shared by
 //!   both screens, DECSC's saved state and the kitty keyboard flags are per screen (xterm).
 //!   DECSC saves the hyperlink with the rendition.
-//! - Mode 1007 (the wheel sends arrow keys on the alternate screen) starts set, as the app has
-//!   always had it; the other modes start as xterm's do. DECSTR leaves autowrap on (ncurses sends
+//! - Mode 1007 (the wheel sends arrow keys on the alternate screen) starts set, so that a wheel
+//!   over a pager or an editor, where there is no history to scroll, moves it instead of doing
+//!   nothing; the other modes start as xterm's do. DECSTR leaves autowrap on (ncurses sends
 //!   it and expects lines to wrap). DECSCUSR 0 hands the cursor style back to the host.
 //! - A title or folder that a program sends is kept here and announced by an event without a
 //!   payload (`title()`, `cwd()`), so that a prompt that sets both costs no allocation; an empty
@@ -79,14 +80,17 @@
 //!   events and replies that nobody collects are capped, and every count is clamped to the screen.
 //!   Pictures have their own caps (`graphics`).
 
+mod builder;
+#[cfg(any(test, feature = "internals"))]
 mod check;
 mod dispatch;
-#[cfg(any(test, feature = "state-dump"))]
+#[cfg(any(test, feature = "internals"))]
 mod dump;
 mod event;
 mod graphics;
 mod modes;
 mod osc;
+mod policy;
 mod read;
 pub mod repaint;
 mod reports;
@@ -104,25 +108,26 @@ use modes::keyboard::KeyboardFlags;
 use screen::tabs::TabStops;
 use text::charset::{Charsets, Preferred};
 
-#[cfg(any(test, feature = "state-dump"))]
+pub use builder::Builder;
+#[cfg(any(test, feature = "internals"))]
 pub use dump::StateDump;
 pub use event::{Event, Progress, ProgressState, PromptKind, ShellMark, Terminator};
 pub use graphics::{
-    Compression, IMAGE_BUDGET_BYTES, ImageError, ImageFormat, ImageUpload, MAX_IMAGES, PLACEHOLDER,
-    Placeholder, VirtualPlacement, placeholder_at, strip_placeholders,
+    Compression, IMAGE_BUDGET_BYTES, ImageError, ImageFormat, ImageUpload, MAX_IMAGES, Placeholder,
+    VirtualPlacement, placeholder_at, strip_placeholders,
 };
 pub use modes::Modes;
+pub use policy::Policy;
 pub use read::search::PinnedSpan;
 pub use read::selection::DEFAULT_WORD_SEPARATORS;
-pub use read::snapshot::TerminalCursor;
-pub use reports::checksum::ScreenChecksum;
+pub use read::snapshot::Cursor;
 pub use reports::locator::{LocatorButton, Pointer};
-pub use reports::window::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp, WindowOps};
+pub use reports::window::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
 /// The cursor's place. `pending` is the delayed wrap: the last character filled the row, the next
 /// one wraps.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct Cursor {
+struct CursorPos {
     x: usize,
     y: usize,
     pending: bool,
@@ -148,7 +153,7 @@ impl Margins {
 /// character sets, the origin mode, the selective erase attribute and the wrap flag.
 #[derive(Clone, Debug)]
 struct Saved {
-    cursor: Cursor,
+    cursor: CursorPos,
     style: crate::grid::Style,
     protected: bool,
     origin: bool,
@@ -160,7 +165,7 @@ impl Default for Saved {
     /// The state a terminal starts with: home, normal rendition, ASCII.
     fn default() -> Saved {
         Saved {
-            cursor: Cursor::default(),
+            cursor: CursorPos::default(),
             style: crate::grid::Style::DEFAULT,
             protected: false,
             origin: false,
@@ -211,7 +216,7 @@ pub struct Terminal {
     other: Grid,
     cols: usize,
     rows: usize,
-    cursor: Cursor,
+    cursor: CursorPos,
     /// The rendition new text gets, the hyperlink, the shell mark and DECSCA.
     pen: Pen,
     modes: Modes,
@@ -231,8 +236,8 @@ pub struct Terminal {
     keys: [KeyboardFlags; 2],
     cursor_style: CursorStyle,
     titles: reports::title::Titles,
-    /// Whether programs may change the window and read its title.
-    window_ops: WindowOps,
+    /// What programs may do besides print; see [`Policy`].
+    policy: Policy,
     /// Where the host's window is; unknown until it says.
     window: Option<WindowGeometry>,
     folder: osc::cwd::Folder,
@@ -250,6 +255,10 @@ pub struct Terminal {
     link_seq: u64,
     /// The last hyperlinks opened, most recent first; see `intern_link`.
     recent_links: Vec<crate::types::Hyperlink>,
+    /// What XTVERSION answers: the host's name and version for the terminal.
+    identity: String,
+    /// The parser that reads `feed`'s bytes; see [`Terminal::feed`].
+    parser: Parser,
     osc: osc::OscString,
     dcs: dispatch::dcs::DcsString,
     /// Pictures: kitty's, Sixel and iTerm2's; see `graphics`.
@@ -258,7 +267,7 @@ pub struct Terminal {
     replies: Vec<u8>,
     /// The reply being written went past the cap: its other pieces go too (see `reply`).
     reply_dropped: bool,
-    /// The lines of history asked for, see [`Terminal::new`].
+    /// The lines of history asked for, see [`Builder::scrollback`].
     scrollback_lines: usize,
     /// ED 3 ran and nothing but cursor moves and erases came since: an ED 2 now does not save
     /// the screen into the history it was just asked to empty.
@@ -272,11 +281,17 @@ pub struct Terminal {
     guard_used: bool,
     /// DECSACE: which cells DECCARA and DECRARA reach.
     attr_extent: screen::rect::AttrExtent,
-    /// Whether DECRQCRA is answered; the host chooses (off by default).
-    screen_checksum: ScreenChecksum,
     /// The selection and the word separators; see `selection`.
     select: read::selection::Select,
 }
+
+// A host parses on one thread and reads on another, usually under a lock: the terminal must stay
+// `Send` (and `Sync`, for hosts that share it behind a read lock). A field that is not (an `Rc`, a
+// raw pointer) fails the build here instead of in someone else's.
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<Terminal>();
+};
 
 /// Cells are 8 bytes and a row's record 16; a history of N lines is capped at about N rows of
 /// the current width, plus this slack: the grid drops whole pages, so it keeps up to three pages
@@ -288,76 +303,21 @@ fn history_bytes(lines: usize, cols: usize) -> usize {
 }
 
 impl Terminal {
-    /// A blank terminal of `cols` by `rows` (clamped to what the grid allows) that keeps at least
-    /// `scrollback_lines` lines of history (it may keep up to a few hundred more, see
-    /// [`Terminal::scrollback_lines`]).
-    pub fn new(cols: usize, rows: usize, scrollback_lines: usize) -> Terminal {
-        let grid = Grid::new(cols, rows, history_bytes(scrollback_lines, cols));
-        let (cols, rows) = (grid.cols(), grid.rows());
-        Terminal {
-            other: Grid::new(cols, rows, 0),
-            grid,
-            cols,
-            rows,
-            cursor: Cursor::default(),
-            pen: Pen::default(),
-            modes: Modes::INITIAL,
-            recorded: 0,
-            saved_modes: Vec::new(),
-            margins: Margins::full(cols, rows),
-            tabs: TabStops::new(cols),
-            charsets: Charsets::default(),
-            locator: Default::default(),
-            preferred: Preferred::default(),
-            saved: [Saved::default(), Saved::default()],
-            keys: [KeyboardFlags::default(), KeyboardFlags::default()],
-            cursor_style: CursorStyle::default(),
-            titles: reports::title::Titles::default(),
-            window_ops: WindowOps::Deny,
-            window: None,
-            folder: osc::cwd::Folder::default(),
-            palette: osc::colors::Palette::new(),
-            cell_px: (8, 16),
-            last_char: None,
-            cluster: Cluster {
-                open: false,
-                head: 0,
-                width: 0,
-                last: ' ',
-                state: crate::unicode::GraphemeState::new(),
-            },
-            block: 0,
-            stashed_content: Content::None,
-            link_seq: 0,
-            recent_links: Vec::with_capacity(RECENT_LINKS),
-            osc: osc::OscString::default(),
-            dcs: dispatch::dcs::DcsString::default(),
-            graphics: graphics::Graphics::default(),
-            events: Vec::new(),
-            replies: Vec::new(),
-            reply_dropped: false,
-            scrollback_lines,
-            history_just_cleared: false,
-            kept: Default::default(),
-            level: Level::Vt500,
-            eight_bit: false,
-            guard_used: false,
-            attr_extent: screen::rect::AttrExtent::default(),
-            screen_checksum: ScreenChecksum::default(),
-            select: read::selection::Select::default(),
-        }
-    }
-
-    /// Feed `bytes` of program output. The parser may be cut anywhere between calls; keep one
-    /// parser per terminal.
-    pub fn advance(&mut self, parser: &mut Parser, bytes: &[u8]) {
-        parser.advance(self, bytes);
+    /// Read `bytes` of program output. They may be cut anywhere between calls, in the middle of
+    /// a sequence or of a UTF-8 character: the terminal keeps its parser's state.
+    pub fn feed(&mut self, bytes: &[u8]) {
+        // The parser calls back into the terminal, so it cannot stay inside it while it runs.
+        // It is a plain value of about a hundred bytes: moving it out and back costs less than
+        // a call, once per feed.
+        let mut parser = std::mem::take(&mut self.parser);
+        parser.advance(&mut dispatch::handler::Sink(self), bytes);
+        self.parser = parser;
         // Output scrolls rows out of the history; a selection on them is gone with them.
         self.prune_selection();
     }
 
     /// The events since the last call, oldest first.
-    pub fn drain_events(&mut self) -> std::vec::Drain<'_, Event> {
+    pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
         self.events.drain(..)
     }
 
@@ -389,7 +349,7 @@ impl Terminal {
     }
 
     /// The history the terminal was asked to keep (at least this many lines; see
-    /// [`Terminal::new`]).
+    /// [`Builder::scrollback`]).
     pub fn scrollback_lines(&self) -> usize {
         self.scrollback_lines
     }

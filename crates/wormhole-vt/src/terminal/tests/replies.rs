@@ -1,6 +1,7 @@
 //! The details of what the terminal answers.
 
 use super::Rig;
+use crate::terminal::Terminal;
 
 #[test]
 fn xtgettcap_answers_names_in_hex_one_reply_each() {
@@ -136,9 +137,29 @@ fn device_status_reports_in_the_form_xterm_documents() {
         "{replies:?}"
     );
     assert!(
-        replies.ends_with(&format!("\x1bP>|Wormhole {}\x1b\\", env!("CARGO_PKG_VERSION"))),
+        replies.ends_with(&format!("\x1bP>|wormhole-vt {}\x1b\\", env!("CARGO_PKG_VERSION"))),
         "{replies:?}"
     );
+}
+
+#[test]
+fn xtversion_says_the_name_the_host_gave() {
+    let mut term = Terminal::builder().identity("myterm", "2.5").build();
+    term.feed(b"\x1b[>q");
+    assert_eq!(term.replies(), b"\x1bP>|myterm 2.5\x1b\\");
+}
+
+#[test]
+fn an_identity_cannot_carry_a_sequence_out_of_the_reply() {
+    // The name is the host's, but a reply is a sequence the program reads: no controls in it,
+    // and a bounded length.
+    let mut term = Terminal::builder().identity("a\x1b\\b\x07", &"v".repeat(500)).build();
+    term.feed(b"\x1b[>q");
+    let reply = String::from_utf8_lossy(term.replies()).into_owned();
+    let inner = reply.strip_prefix("\x1bP>|").and_then(|r| r.strip_suffix("\x1b\\")).expect("a DCS reply");
+    assert!(inner.starts_with("a\\b "), "{inner:?}");
+    assert!(!inner.chars().any(char::is_control), "{inner:?}");
+    assert!(inner.len() <= 64 + 1 + 64 + 4, "{inner:?}");
 }
 
 #[test]

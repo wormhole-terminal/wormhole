@@ -1,7 +1,7 @@
-//! The screen and its history: what the terminal state writes into and the UI copies from.
+//! The screen and its history: what the terminal state writes into and a host copies from.
 //!
-//! No escape sequences are read here. The terminal state (`term`) decides what a sequence means
-//! and calls the operations below; the snapshot copy turns rows into what the app draws.
+//! No escape sequences are read here. The terminal state (`terminal`) decides what a sequence means
+//! and calls the operations below; the snapshot copy turns rows into what a host draws.
 //!
 //! # Shape
 //!
@@ -45,10 +45,11 @@
 //! # Lines
 //!
 //! Operations that edit the live screen take `y` and `x`, from 0 at its top left. What reads the
-//! grid, including its history, takes a [`Line`]: 0 is the live screen's top row and the history is
-//! negative, as everywhere in the app.
+//! grid, including its history, takes a [`Line`](crate::Line): 0 is the live screen's top row and the history is
+//! negative, as everywhere in the crate's API.
 
 mod cell;
+#[cfg(any(test, feature = "internals"))]
 mod check;
 mod copy;
 mod edit;
@@ -77,8 +78,11 @@ mod words;
 
 use std::collections::VecDeque;
 
-pub use cell::{Cell, Content, Spare, StyleId, flag_names};
+#[cfg(any(test, feature = "internals"))]
+pub use cell::flag_names;
+pub use cell::{Cell, Content, Spare, StyleId};
 pub use copy::ViewRow;
+#[cfg(test)]
 pub use images::MAX_PLACEMENTS;
 pub(crate) use images::NewPlacement;
 pub use links::LinkSpan;
@@ -86,6 +90,7 @@ pub use pins::PinId;
 pub use row::{Pen, Region, RowMark};
 pub use rowview::RowView;
 pub use search::{CopiedLine, TextCopy};
+#[cfg(test)]
 pub use side_tables::MAX_MARKS;
 pub use style::Style;
 pub use text::TextShape;
@@ -104,6 +109,7 @@ pub const MAX_ROWS: usize = 16_384;
 const BG_DEFAULT: Color = Color::Named(NamedColor::Background);
 
 /// The history a grid keeps by default: 10 MiB, about 15,000 lines of 80 columns.
+#[cfg(any(test, feature = "internals"))]
 pub const DEFAULT_SCROLLBACK_BYTES: usize = 10 << 20;
 
 /// The screen and its history; see the module docs.
@@ -146,6 +152,7 @@ impl Grid {
     /// A grid whose pages hold `page_rows` rows, so that tests and benchmarks can put page
     /// boundaries inside the live screen.
     #[doc(hidden)]
+    #[cfg(any(test, feature = "internals"))]
     pub fn with_page_rows(cols: usize, rows: usize, scrollback_bytes: usize, page_rows: usize) -> Grid {
         Grid::build(cols, rows, scrollback_bytes, page_rows.max(1))
     }

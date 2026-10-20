@@ -35,6 +35,7 @@
 //! the growth of the caller's buffer, which the caller keeps between calls.
 
 mod cursors;
+#[cfg(feature = "internals")]
 mod fields;
 mod pen;
 mod rows;
@@ -45,10 +46,10 @@ mod tests;
 use bitflags::bitflags;
 
 use crate::grid::Content;
-use crate::parser::Parser;
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
+#[cfg(feature = "internals")]
 pub use fields::{CELL_FLAGS, Coverage, FIELDS, MODES, StructFields};
 use pen::Pen;
 
@@ -142,6 +143,7 @@ pub struct Seeds {
 
 /// What a repaint wrote, besides the bytes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Repainted {
     pub seeds: Seeds,
     pub gaps: Gaps,
@@ -151,6 +153,7 @@ pub struct Repainted {
 
 /// Why a repaint cannot be made now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum NotReady {
     /// The parser is inside an escape sequence, a control string or a character.
     Sequence,
@@ -158,10 +161,21 @@ pub enum NotReady {
     Picture,
 }
 
+impl std::fmt::Display for NotReady {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            NotReady::Sequence => "the parser is in the middle of a sequence",
+            NotReady::Picture => "a picture is arriving in chunks",
+        })
+    }
+}
+
+impl std::error::Error for NotReady {}
+
 impl Terminal {
     /// Whether a repaint can be made now: nothing is half-read, in the parser or in the terminal.
-    pub fn repaint_ready(&self, parser: &Parser) -> Result<(), NotReady> {
-        if !parser.is_ground() {
+    pub fn repaint_ready(&self) -> Result<(), NotReady> {
+        if !self.parser.is_ground() {
             return Err(NotReady::Sequence);
         }
         if self.graphics.in_transfer() {
@@ -175,8 +189,8 @@ impl Terminal {
     /// with RIS. Apply [`Repainted::seeds`] to the receiver first (see [`Terminal::seed`]).
     ///
     /// `Err` when [`repaint_ready`](Self::repaint_ready) says no; nothing is written then.
-    pub fn repaint(&self, parser: &Parser, out: &mut Vec<u8>) -> Result<Repainted, NotReady> {
-        self.repaint_ready(parser)?;
+    pub fn repaint(&self, out: &mut Vec<u8>) -> Result<Repainted, NotReady> {
+        self.repaint_ready()?;
         let mut w = Writer::new(self, out);
         w.write_all();
         Ok(w.finish())

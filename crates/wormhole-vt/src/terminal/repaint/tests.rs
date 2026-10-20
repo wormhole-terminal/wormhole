@@ -2,7 +2,6 @@
 //! one and compares the two's whole state. The bisimulation over the corpora is in
 //! `wormhole-vt-bench`; these say which part of the state broke when it fails.
 
-use crate::parser::Parser;
 use crate::terminal::Terminal;
 
 use super::Gaps;
@@ -11,19 +10,16 @@ use super::Gaps;
 /// repaint produced no reply and that the states are the same but for what the repaint says it
 /// left out.
 fn repaint(input: &[u8], cols: usize, rows: usize) -> (Terminal, Terminal, Gaps) {
-    let mut a = Terminal::new(cols, rows, 100);
-    let mut parser = Parser::new();
-    a.advance(&mut parser, input);
+    let mut a = Terminal::builder().size(cols, rows).scrollback(100).build();
+    a.feed(input);
     a.clear_replies();
     let mut bytes = Vec::new();
-    let done = a.repaint(&parser, &mut bytes).expect("ready");
+    let done = a.repaint(&mut bytes).expect("ready");
     // A receiver that holds something else is made the same: that is what the leading RIS is for.
-    let mut b = Terminal::new(cols, rows, 100);
-    let mut noise = Parser::new();
-    b.advance(&mut noise, b"\x1b[31mjunk\x1b[?1049h\x1b[5;5Hmore\x1b]2;title\x07");
+    let mut b = Terminal::builder().size(cols, rows).scrollback(100).build();
+    b.feed(b"\x1b[31mjunk\x1b[?1049h\x1b[5;5Hmore\x1b]2;title\x07");
     b.seed(&done.seeds);
-    let mut receiver = Parser::new();
-    b.advance(&mut receiver, &bytes);
+    b.feed(&bytes);
     assert!(b.replies().is_empty(), "the repaint made the receiver reply: {:?}", b.replies());
     let (da, db) = (a.dump_state(), b.dump_state());
     assert!(
@@ -151,15 +147,14 @@ fn history_just_cleared() {
 /// Repaint after the sender was resized: the reflow leaves wrapped lines that end in blanks and
 /// continue into blank rows, which are printed to wrap from and taken back.
 fn resized(input: &str, from: (usize, usize), to: (usize, usize)) {
-    let mut a = Terminal::new(from.0, from.1, 100);
-    let mut parser = Parser::new();
-    a.advance(&mut parser, input.as_bytes());
+    let mut a = Terminal::builder().size(from.0, from.1).scrollback(100).build();
+    a.feed(input.as_bytes());
     a.resize(to.0, to.1);
     let mut bytes = Vec::new();
-    let done = a.repaint(&parser, &mut bytes).expect("ready");
-    let mut b = Terminal::new(to.0, to.1, 100);
+    let done = a.repaint(&mut bytes).expect("ready");
+    let mut b = Terminal::builder().size(to.0, to.1).scrollback(100).build();
     b.seed(&done.seeds);
-    b.advance(&mut Parser::new(), &bytes);
+    b.feed(&bytes);
     let (da, db) = (a.dump_state(), b.dump_state());
     assert!(da.same(&db), "gaps {:?}\n{}", done.gaps, da.diff(&db, 6));
 }
@@ -178,24 +173,22 @@ fn every_mode_the_tests_know_survives() {
 
 #[test]
 fn a_repaint_is_made_only_between_sequences() {
-    let mut term = Terminal::new(10, 3, 10);
-    let mut parser = Parser::new();
-    term.advance(&mut parser, b"ab\x1b[3");
+    let mut term = Terminal::builder().size(10, 3).scrollback(10).build();
+    term.feed(b"ab\x1b[3");
     let mut out = Vec::new();
-    assert_eq!(term.repaint(&parser, &mut out).unwrap_err(), super::NotReady::Sequence);
+    assert_eq!(term.repaint(&mut out).unwrap_err(), super::NotReady::Sequence);
     assert!(out.is_empty(), "nothing is written when it is refused");
-    term.advance(&mut parser, b"1m");
-    assert!(term.repaint(&parser, &mut out).is_ok());
+    term.feed(b"1m");
+    assert!(term.repaint(&mut out).is_ok());
 }
 
 #[test]
 fn seeding_sets_the_counters() {
-    let mut term = Terminal::new(10, 3, 10);
+    let mut term = Terminal::builder().size(10, 3).scrollback(10).build();
     term.seed(&super::Seeds { block: 41, link_seq: 7, image_handle: 3 });
-    let mut parser = Parser::new();
-    term.advance(&mut parser, b"\x1b]133;A\x07$ \x1b]8;;http://x\x07a");
+    term.feed(b"\x1b]133;A\x07$ \x1b]8;;http://x\x07a");
     let mut out = Vec::new();
-    let done = term.repaint(&parser, &mut out).expect("ready");
+    let done = term.repaint(&mut out).expect("ready");
     assert_eq!(done.seeds.block, 41, "the repaint's own marks count up from the first block it holds");
     assert_eq!(done.seeds.link_seq, 8);
     assert_eq!(done.seeds.image_handle, 3);

@@ -4,7 +4,7 @@
 //! (`MOUSE_DRAG`) and 1003 (`MOUSE_MOTION`), and the encodings X10 (default),
 //! UTF-8 (1005, `UTF8_MOUSE`) and SGR (1006, `SGR_MOUSE`).
 
-use wormhole_vt::types::TermMode;
+use wormhole_vt::TermMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {

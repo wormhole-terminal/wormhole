@@ -8,9 +8,8 @@ use alacritty_terminal::selection::{Selection, SelectionType as TheirType};
 use alacritty_terminal::term::test::TermSize;
 use alacritty_terminal::term::{Config, Term};
 use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
-use wormhole_vt::types::{Column as OurColumn, Line as OurLine, Point as OurPoint, SelectionType, Side};
+use wormhole_vt::Terminal;
+use wormhole_vt::{Column as OurColumn, Line as OurLine, Point as OurPoint, SelectionType, Side};
 
 use wormhole_vt_bench::rng::Rng;
 
@@ -27,8 +26,8 @@ impl Pair {
         let config = Config { scrolling_history: 200, ..Config::default() };
         let mut theirs = Term::new(config, &TermSize::new(COLS, ROWS), VoidListener);
         Processor::<StdSyncHandler>::new().advance(&mut theirs, bytes);
-        let mut ours = Terminal::new(COLS, ROWS, 200);
-        ours.advance(&mut Parser::new(), bytes);
+        let mut ours = Terminal::builder().size(COLS, ROWS).scrollback(200).build();
+        ours.feed(bytes);
         Pair { theirs, ours }
     }
 
@@ -233,7 +232,7 @@ fn text_between_is_what_alacritty_gives() {
                 )
             }));
             let Ok(theirs) = theirs else { continue };
-            let ours = pair.ours.text_between(s, e, wormhole_vt::grid::TextShape::Stream);
+            let ours = pair.ours.text_between(s, e, wormhole_vt::TextShape::Stream);
             assert_eq!(
                 theirs,
                 ours,

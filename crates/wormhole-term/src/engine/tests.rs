@@ -5,7 +5,7 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_vt::types::{COLOR_COUNT, Column, Line, Point, Rgb, SelectionType, Side};
+use wormhole_vt::{COLOR_COUNT, Column, Line, Point, Rgb, SelectionType, Side};
 
 use crate::testing::TestTerm;
 use crate::tests::{drain, wait_until};
@@ -268,8 +268,7 @@ fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it(
     use crate::pty::FairLock;
     use crate::screen::Screen;
     use std::sync::{Arc, Mutex};
-    use wormhole_vt::parser::Parser;
-    use wormhole_vt::terminal::Event;
+    use wormhole_vt::Event;
 
     let (proxy, _events) = EventProxy::new();
     let sent = Arc::new(Mutex::new(Vec::new()));
@@ -277,10 +276,10 @@ fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it(
     proxy.shared().set_writer(Box::new(move |bytes| sink.lock().expect("sink").extend(bytes)));
     // A picture that needs a decoder, then a cursor report asked after it: held behind the picture.
     let mut screen = Screen::new(SIZE, 100);
-    screen.term.advance(&mut Parser::new(), format!("\x1b_Ga=T,f=100,i=7;{PNG}\x1b\\\x1b[6n").as_bytes());
+    screen.term.feed(format!("\x1b_Ga=T,f=100,i=7;{PNG}\x1b\\\x1b[6n").as_bytes());
     let handle = screen
         .term
-        .drain_events()
+        .events()
         .find_map(|event| match event {
             Event::ImageData(upload) => Some(upload.image),
             _ => None,

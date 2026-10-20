@@ -127,6 +127,7 @@ impl Graphemes {
         }
     }
 
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn len(&self) -> usize {
         self.marks.len()
     }
@@ -353,20 +354,24 @@ impl Links {
     }
 
     /// How many cells are under a link.
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn len(&self) -> usize {
         self.runs.iter().map(|r| (r.end - r.start) as usize).sum()
     }
 
     /// Ids and counts of the links in use.
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn used(&self) -> impl Iterator<Item = (u32, u32)> + '_ {
         self.entries.iter().enumerate().filter(|(_, e)| e.refs > 0).map(|(id, e)| (id as u32, e.refs))
     }
 
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn is_indexed(&self, id: u32) -> bool {
         self.entries.get(id as usize).is_some_and(|e| e.refs > 0 && self.by_link.get(&e.link) == Some(&id))
     }
 
     /// Check that the runs are in order, apart, not empty and under links in use (for the checker).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn verify(&self) -> Result<(), String> {
         let mut end = 0;
         for run in &self.runs {

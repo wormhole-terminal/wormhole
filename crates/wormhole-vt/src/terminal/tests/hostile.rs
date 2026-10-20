@@ -1,8 +1,7 @@
 //! Input nobody should send: nothing panics, the grid stays consistent, memory stays bounded.
 
 use super::Rig;
-use crate::parser::Parser;
-use crate::terminal::Terminal;
+use crate::terminal::{Policy, Terminal};
 
 /// A tiny generator of bytes (xorshift), so that the run is the same every time.
 struct Bytes(u64);
@@ -41,7 +40,7 @@ fn random_bytes_leave_a_consistent_terminal() {
         }
         for piece in data.chunks(1 + (seed as usize % 97)) {
             rig.feed_bytes(piece);
-            rig.term.drain_events().for_each(drop);
+            rig.term.events().for_each(drop);
             rig.term.clear_replies();
         }
         rig.term.check_invariants().unwrap_or_else(|why| panic!("seed {seed}: {why}"));
@@ -76,7 +75,7 @@ fn rectangular_operations_with_wild_numbers_keep_the_grid_consistent() {
         let mut rng = Bytes(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15));
         let (cols, rows) = [(2, 1), (3, 3), (6, 4), (9, 5)][(seed % 4) as usize];
         let mut rig = Rig::new(cols, rows);
-        rig.term.set_screen_checksum(crate::terminal::ScreenChecksum::Allow);
+        rig.term.set_policy(Policy { screen_checksum: true, ..Policy::default() });
         for step in 0..300 {
             let mut pick = |n: usize| usize::from(rng.next()) % n;
             let seq = match pick(6) {
@@ -114,19 +113,18 @@ fn a_repeat_count_is_bounded_by_what_a_parameter_can_say() {
 
 #[test]
 fn a_pile_of_unfinished_strings_costs_no_memory() {
-    let mut term = Terminal::new(20, 5, 10);
-    let mut parser = Parser::new();
+    let mut term = Terminal::builder().size(20, 5).scrollback(10).build();
     for _ in 0..2000 {
-        term.advance(&mut parser, b"\x1b]0;");
-        term.advance(&mut parser, &[b'x'; 5000]);
-        term.advance(&mut parser, b"\x1bP$q");
-        term.advance(&mut parser, &[b'x'; 5000]);
-        term.advance(&mut parser, b"\x1b_G");
-        term.advance(&mut parser, &[b'x'; 5000]);
-        term.advance(&mut parser, b"\x18");
+        term.feed(b"\x1b]0;");
+        term.feed(&[b'x'; 5000]);
+        term.feed(b"\x1bP$q");
+        term.feed(&[b'x'; 5000]);
+        term.feed(b"\x1b_G");
+        term.feed(&[b'x'; 5000]);
+        term.feed(b"\x18");
     }
-    assert!(term.drain_events().count() <= 16_384);
-    term.advance(&mut parser, b"ok");
+    assert!(term.events().count() <= 16_384);
+    term.feed(b"ok");
     assert_eq!(term.row_text(crate::types::Line(0), true), "ok");
 }
 
@@ -218,7 +216,7 @@ fn host_calls_with_wild_points_between_random_bytes_keep_the_terminal_consistent
                     rig.feed("\nsome text\x1b[1m wide: \u{65e5}\u{672c}\r\n");
                 }
             }
-            rig.term.drain_events().for_each(drop);
+            rig.term.events().for_each(drop);
             rig.term.clear_replies();
             rig.term.check_invariants().unwrap_or_else(|why| panic!("seed {seed} step {step}: {why}"));
         }
@@ -280,7 +278,7 @@ fn marks_and_links_do_not_grow_the_history_past_its_cap() {
         out + "\x1b]8;;\x1b\\\r\n"
     };
     for (lines, kind) in [(4_000, "marks"), (600, "links")] {
-        let mut rig = Rig { term: Terminal::new(80, 24, 2_000), parser: Parser::new() };
+        let mut rig = Rig::with_scrollback(80, 24, 2_000);
         for line in 0..lines {
             rig.feed(&if kind == "marks" { marked.clone() } else { linked(line) });
         }

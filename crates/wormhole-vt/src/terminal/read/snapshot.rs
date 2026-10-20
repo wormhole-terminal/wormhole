@@ -1,11 +1,11 @@
-//! What the host draws and asks from: the same shape as `wormhole-core`'s `Screen` trait, so
-//! implementing it for [`Terminal`] is forwarding.
+//! What the host draws and asks from: the size, the modes, the cursor, rows copied out, damage,
+//! the view's scroll position, pins and the pictures to place.
 //!
 //! The host locks the terminal, copies what changed ([`Terminal::copy_viewport`] copies only the
 //! rows marked dirty since the last call, into buffers the host keeps) and lets go; nothing here
 //! allocates once the buffers are the right size.
 
-use crate::grid::{Grid, PinId, RowMark, ViewRow};
+use crate::grid::{PinId, RowMark, ViewRow};
 use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll, TermMode};
 
 use crate::terminal::Terminal;
@@ -13,7 +13,7 @@ use crate::terminal::modes::Modes;
 
 /// Where the cursor is and how a program wants it drawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TerminalCursor {
+pub struct Cursor {
     /// A grid point, on the first cell of a double-width character.
     pub point: Point,
     /// DECTCEM: the program shows the cursor.
@@ -47,7 +47,7 @@ impl Terminal {
         self.grid.display_offset()
     }
 
-    /// The modes the app reads: cursor, wrap, alternate screen, mouse, paste, focus and the
+    /// The modes a host reads: cursor, wrap, alternate screen, mouse, paste, focus and the
     /// kitty keyboard flags.
     pub fn mode(&self) -> TermMode {
         // The low 17 bits are the same in both sets; bit 17 is a mode of ours (insert) and the
@@ -56,7 +56,7 @@ impl Terminal {
     }
 
     /// The cursor as it is drawn.
-    pub fn cursor(&self) -> TerminalCursor {
+    pub fn cursor(&self) -> Cursor {
         let (mut x, y) = (self.cursor.x, self.cursor.y);
         let cell = self.grid.live_cell(y, x);
         let mut wide = cell.is_some_and(|cell| cell.is_wide());
@@ -64,7 +64,7 @@ impl Terminal {
             x -= 1;
             wide = true;
         }
-        TerminalCursor {
+        Cursor {
             point: Point::new(Line(y as i32), Column(x)),
             visible: self.modes.contains(Modes::SHOW_CURSOR),
             shape: self.cursor_style.shape,
@@ -79,12 +79,17 @@ impl Terminal {
         self.cursor_point()
     }
 
-    /// Copy the rows of the view into `out`; see [`Grid::copy_viewport`].
+    /// Copy the rows of the view (the live screen, or the history if the view is scrolled up)
+    /// into `out`, which is resized to the screen's height. Only rows that changed since the last
+    /// call are copied, all of them after `force`, a resize, a clear or a move of the view; every
+    /// row's `changed` says which. Clears the rows' changed marks.
     pub fn copy_viewport(&mut self, out: &mut Vec<ViewRow>, force: bool) {
         self.grid.copy_viewport(out, force);
     }
 
-    /// Copy the row at `line` (history included); see [`Grid::copy_row`].
+    /// Copy the row at `line` (history included) into `cells`, and what its cells carry beside
+    /// them into `extras` when given. Returns the block mark the row carries. Doesn't touch the
+    /// changed marks.
     pub fn copy_row(
         &self,
         line: Line,
@@ -104,12 +109,15 @@ impl Terminal {
         self.grid.row_mark(line)
     }
 
-    /// The text of `line`; see [`Grid::row_text`].
+    /// The text of `line`: characters and their marks, wide characters once, empty cells as
+    /// spaces, with trailing blanks cut when `trim` is set.
     pub fn row_text(&self, line: Line, trim: bool) -> String {
         self.grid.row_text(line, trim)
     }
 
-    /// Which viewport rows changed since the last call; see [`Grid::take_damage`].
+    /// Which rows of the view changed since the last call, as `damaged[y]`, clearing the marks.
+    /// True when everything did (the view moved, a resize, a clear), in which case `damaged` says
+    /// nothing.
     pub fn take_damage(&mut self, damaged: &mut [bool]) -> bool {
         self.grid.take_damage(damaged)
     }
@@ -124,14 +132,17 @@ impl Terminal {
         self.grid.clear_scrollback();
     }
 
-    /// The screen being shown, for everything else that reads it: cells, styles, hyperlinks,
-    /// pins.
-    pub fn grid(&self) -> &Grid {
+    /// The screen being shown, for our own tools (the fuzz targets, the benches) that look at the
+    /// storage itself.
+    #[cfg(feature = "internals")]
+    #[doc(hidden)]
+    pub fn grid(&self) -> &crate::grid::Grid {
         &self.grid
     }
 
     /// A reference to the row at `point` that follows its text while the screen scrolls and the
-    /// width is reflowed (selections, search hits and marks hold these); see [`Grid::pin`].
+    /// width is reflowed (selections, search hits and marks hold these), and says so when the row has
+    /// left the history.
     pub fn pin(&mut self, point: Point) -> PinId {
         self.grid.pin(point)
     }

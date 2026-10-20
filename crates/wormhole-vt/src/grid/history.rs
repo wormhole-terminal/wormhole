@@ -10,6 +10,7 @@ use super::{BG_DEFAULT, Grid};
 
 impl Grid {
     /// The bytes of history the grid may keep; see [`Self::set_scrollback_limit`].
+    #[cfg(any(test, feature = "internals"))]
     pub fn scrollback_limit(&self) -> usize {
         self.limit
     }
@@ -25,6 +26,7 @@ impl Grid {
     }
 
     /// Bytes the grid holds in pages (cells, row records, style and side tables).
+    #[cfg(any(test, feature = "internals"))]
     pub fn memory_bytes(&self) -> usize {
         self.pages.iter().map(Page::bytes).sum()
     }

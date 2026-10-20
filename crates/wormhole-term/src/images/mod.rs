@@ -17,7 +17,7 @@ mod store;
 
 pub use decode::{DecodeError, Decoded, Format, Limits, decode, dimensions};
 pub use store::{GLOBAL_BUDGET, Image, ImageStore, STORE_BUDGET, global_bytes};
-pub use wormhole_vt::terminal::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
+pub use wormhole_vt::image::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
 
 /// Where a placeholder cell's picture is in the store, and how many tiles it spans (kitty's
 /// virtual placements; see `Pty::virtual_placement`).
@@ -31,7 +31,7 @@ pub struct Tiles {
 }
 
 /// The key of the pixels of a picture the engine placed, in [`ImageStore`].
-pub fn key_of(handle: wormhole_vt::types::ImageHandle) -> u32 {
+pub fn key_of(handle: wormhole_vt::image::ImageHandle) -> u32 {
     super::engine::image_key(handle)
 }
 

@@ -1,7 +1,7 @@
 //! The terminal's contents as plain text: the screen (devctl, prompt grabbing)
 //! and the scrollback saved for restoring a session later.
 
-use wormhole_vt::types::{Cell, Flags, Line, RowExtras, TermMode};
+use wormhole_vt::{Cell, Flags, Line, RowExtras, TermMode};
 
 use super::screen::Screen;
 

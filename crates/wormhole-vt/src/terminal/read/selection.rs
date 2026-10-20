@@ -1,6 +1,6 @@
 //! Selecting text: the cells a mouse drag, a double click or a triple click covers.
 //!
-//! A selection is two anchors, each a [`PinId`](crate::grid::PinId) of the grid and the half of
+//! A selection is two anchors, each a [`PinId`](crate::PinId) of the grid and the half of
 //! its cell the pointer was on. Pins follow the text through output that scrolls the screen into
 //! the history and through a reflow, so the selection stays on what was selected; what it covers
 //! is worked out from the anchors each time it is asked (drawn, copied), never stored, so it also

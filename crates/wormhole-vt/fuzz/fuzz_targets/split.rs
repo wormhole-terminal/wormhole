@@ -4,12 +4,10 @@
 //! in pieces end up with the same screen, history, cursor, title and replies.
 
 use libfuzzer_sys::fuzz_target;
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
-use wormhole_vt::types::Line;
+use wormhole_vt::{Line, Terminal};
 
 fn state(term: &mut Terminal) -> String {
-    let events: Vec<_> = term.drain_events().collect();
+    let events: Vec<_> = term.events().collect();
     let replies = term.take_replies();
     let history: Vec<String> =
         (1..=term.history_size() as i32).map(|n| term.row_text(Line(-n), false)).collect();
@@ -34,17 +32,16 @@ fuzz_target!(|data: &[u8]| {
     let mut at: Vec<usize> = cuts.iter().map(|&c| c as usize % (stream.len() + 1)).collect();
     at.sort_unstable();
 
-    let mut whole = Terminal::new(cols, rows, history);
-    whole.advance(&mut Parser::new(), stream);
+    let mut whole = Terminal::builder().size(cols, rows).scrollback(history).build();
+    whole.feed(stream);
 
-    let mut split = Terminal::new(cols, rows, history);
-    let mut parser = Parser::new();
+    let mut split = Terminal::builder().size(cols, rows).scrollback(history).build();
     let mut from = 0;
     for &cut in &at {
-        split.advance(&mut parser, &stream[from..cut]);
+        split.feed(&stream[from..cut]);
         from = cut;
     }
-    split.advance(&mut parser, &stream[from..]);
+    split.feed(&stream[from..]);
 
     assert_eq!(state(&mut whole), state(&mut split), "cut at {at:?}");
 });

@@ -20,6 +20,7 @@
 use std::fmt::Write as _;
 
 use crate::grid::{Content, Grid, RowView, Style};
+use crate::parser::Parser;
 use crate::types::{Color, Line, NamedColor};
 
 use crate::terminal::Terminal;
@@ -218,6 +219,15 @@ fn content(c: Content) -> &'static str {
     }
 }
 
+/// The parser's own state: which one it is in and the bytes of a character it holds. The
+/// parameters of the last sequence are leftovers the next sequence overwrites.
+fn parser_essence(parser: &Parser) -> String {
+    let text = format!("{parser:?}");
+    let state = text.split(", cur").next().unwrap_or("");
+    let held = text.find("pending:").map_or("", |at| &text[at..]);
+    format!("{state} {held}")
+}
+
 impl Terminal {
     /// Every observable piece of the terminal's state; see the module docs.
     pub fn dump_state(&self) -> StateDump {
@@ -272,6 +282,7 @@ impl Terminal {
         d.field("a/history_just_cleared", self.history_just_cleared.to_string());
         d.field("a/level", format!("{:?} eight_bit {}", self.level, self.eight_bit));
         d.field("a/kept", format!("{:?}", self.kept));
+        d.field("a/parser", parser_essence(&self.parser));
         d.field("a/guard_used", self.guard_used.to_string());
         d.field("a/attr_extent", format!("{:?}", self.attr_extent));
         for (name, value) in self.graphics.describe() {

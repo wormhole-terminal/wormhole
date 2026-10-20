@@ -7,7 +7,7 @@
 //!
 //! Everything a cell can have beyond that lives beside it in the page, found by the cell's
 //! position: the zero-width characters of a cluster, a hyperlink. The flags say whether to look.
-//! The types the app draws ([`crate::types::Cell`], 16 bytes) are made from these in the snapshot
+//! The types a host draws ([`crate::types::Cell`], 16 bytes) are made from these in the snapshot
 //! copy.
 
 use std::fmt;
@@ -89,7 +89,7 @@ const STYLE_BITS: u64 = 0xFFFF << STYLE_SHIFT;
 /// style table, an entry in a side table or an image. One OR over a range's words, one test.
 const NEEDS_RELEASE: u64 = STYLE_BITS | ((CellFlags::SIDE_ENTRY.bits() as u64) << FLAGS_SHIFT);
 
-// `copy_page_row` hands the three layout flags to the app as `types::Flags` by shifting them to
+// `copy_page_row` hands the three layout flags to the host as `types::Flags` by shifting them to
 // bits 13..16, which only works while they sit in the same order.
 const DRAW_SHIFT: u32 = 13;
 const _: () = {
@@ -103,6 +103,7 @@ const LAYOUT: CellFlags = CellFlags::WIDE.union(CellFlags::SPACER_TAIL).union(Ce
 /// The names of the cell's flags, for the test that every one has a case in the repaint
 /// (`term::repaint::CELL_FLAGS`).
 #[doc(hidden)]
+#[cfg(any(test, feature = "internals"))]
 pub fn flag_names() -> Vec<&'static str> {
     CellFlags::all().iter_names().map(|(name, _)| name).collect()
 }
@@ -162,6 +163,7 @@ impl Cell {
 
     /// A cell from its parts; `flags` is [`Cell::flags`]'s form.
     #[inline]
+    #[cfg(any(test, feature = "internals"))]
     pub const fn new(codepoint: u32, style: StyleId, flags: u16) -> Cell {
         Cell::compose(codepoint, style, CellFlags::from_bits_retain(flags))
     }
@@ -297,7 +299,7 @@ impl Cell {
         self.flag_set().contains(CellFlags::TAB)
     }
 
-    /// The wide, tail and head flags as the app draws them, for the snapshot copy.
+    /// The wide, tail and head flags as a host draws them, for the snapshot copy.
     #[inline]
     pub(super) const fn layout_flags(self) -> Flags {
         Flags::from_bits_retain(((self.flags() & LAYOUT.bits()) as u32) << DRAW_SHIFT)

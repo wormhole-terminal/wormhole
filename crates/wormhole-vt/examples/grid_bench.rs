@@ -15,8 +15,9 @@
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::grid::{Grid, Pen, Region, Style, ViewRow};
-use wormhole_vt::types::{Color, Column, Flags, Hyperlink, Line, NamedColor, Point};
+use wormhole_vt::ViewRow;
+use wormhole_vt::grid::{Grid, Pen, Region, Style};
+use wormhole_vt::{Color, Column, Flags, Hyperlink, Line, NamedColor, Point};
 
 #[path = "../tests/common/mod.rs"]
 mod common;
@@ -224,7 +225,7 @@ fn colored_text_screen(cols: usize, rows: usize) -> Grid {
             format!("line {y}").as_bytes(),
             &Pen {
                 style: Style {
-                    fg: Color::Rgb(wormhole_vt::types::Rgb { r: (y * 7) as u8, g: 90, b: 200 }),
+                    fg: Color::Rgb(wormhole_vt::Rgb { r: (y * 7) as u8, g: 90, b: 200 }),
                     ..Style::DEFAULT
                 },
                 ..Pen::default()
@@ -242,8 +243,8 @@ fn blocks_screen(cols: usize, rows: usize) -> Grid {
             let (r, g, b) =
                 (((y * 7 + x) % 256) as u8, ((x * 13) % 256) as u8, ((y * 29 + x * 3) % 256) as u8);
             let style = Style {
-                fg: Color::Rgb(wormhole_vt::types::Rgb { r, g, b }),
-                bg: Color::Rgb(wormhole_vt::types::Rgb { r: b, g: r, b: g }),
+                fg: Color::Rgb(wormhole_vt::Rgb { r, g, b }),
+                bg: Color::Rgb(wormhole_vt::Rgb { r: b, g: r, b: g }),
                 ..Style::DEFAULT
             };
             grid.write_cluster(y, x, '\u{2580}', &[], 1, &Pen { style, ..Pen::default() });
@@ -262,7 +263,7 @@ fn marked_screen(cols: usize, rows: usize) -> Grid {
             &text(cols, y),
             &Pen {
                 link: Some(link),
-                content: wormhole_vt::grid::Content::Output,
+                content: wormhole_vt::Content::Output,
                 block: 1 + (y / 10) as u32,
                 ..plain()
             },
@@ -576,7 +577,7 @@ fn bench_memory() {
                     (0..cols / 3 / 4)
                         .map(|k| Pen {
                             style: Style {
-                                fg: Color::Rgb(wormhole_vt::types::Rgb {
+                                fg: Color::Rgb(wormhole_vt::Rgb {
                                     r: (i + k * 5) as u8,
                                     g: (k * 11) as u8,
                                     b: 90,

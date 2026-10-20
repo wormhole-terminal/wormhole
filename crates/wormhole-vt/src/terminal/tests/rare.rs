@@ -3,7 +3,7 @@
 
 use super::Rig;
 use crate::terminal::{
-    Event, Fullscreen, Maximize, Progress, ProgressState, PromptKind, ShellMark, WindowOp, WindowOps,
+    Event, Fullscreen, Maximize, Policy, Progress, ProgressState, PromptKind, ShellMark, WindowOp,
 };
 
 fn events(rig: &mut Rig) -> Vec<Event> {
@@ -139,7 +139,7 @@ fn secondary_device_attributes_carry_an_xterm_patch_level() {
 fn maximize_and_full_screen_ask_for_each_of_their_forms() {
     // xterm ctlseqs XTWINOPS 9;0..3 (restore, both, vertically, horizontally) and 10;0..2 (undo, enter, toggle).
     let mut rig = Rig::new(20, 5);
-    rig.term.set_window_ops(WindowOps::Allow);
+    rig.term.set_policy(Policy { window_ops: true, ..Policy::default() });
     rig.feed("\x1b[9;0t\x1b[9;2t\x1b[9;3t\x1b[9;9t\x1b[10;0t\x1b[10;1t\x1b[10;2t\x1b[10;7t");
     let ops: Vec<WindowOp> = events(&mut rig)
         .into_iter()
@@ -307,4 +307,24 @@ fn with_8_bit_controls_a_title_keeps_its_utf8_and_still_ends_at_st() {
         assert_eq!(rig.term.title(), Some("a \u{2014} \u{153} \u{201c}"), "cut at {cut}");
         assert_eq!(rig.row(0), "X", "cut at {cut}");
     }
+}
+
+#[test]
+fn a_sequence_cut_between_two_feeds_is_joined_by_the_terminals_own_parser() {
+    let mut rig = Rig::new(20, 3);
+    rig.feed("ab\x1b[2").feed("C\x1b]2;ti").feed("tle\x07");
+    assert_eq!(rig.cursor(), (0, 4), "CSI 2 C moved two columns on");
+    assert_eq!(rig.term.title(), Some("title"));
+}
+
+#[test]
+fn a_link_without_an_id_gets_a_numbered_one_of_its_own() {
+    // Nothing ties two such links together, so each is `link-` and the next number; one with an
+    // id of its own keeps it.
+    let mut rig = Rig::new(20, 3);
+    rig.feed("\x1b]8;;http://a\x07a\x1b]8;;\x07 \x1b]8;;http://b\x07b\x1b]8;id=x;http://c\x07c\x1b]8;;\x07");
+    let (mut cells, mut extras) = (Vec::new(), crate::RowExtras::default());
+    rig.term.copy_row(crate::Line(0), &mut cells, Some(&mut extras));
+    let ids: Vec<&str> = extras.links().map(|(_, link)| &*link.id).collect();
+    assert_eq!(ids, ["link-1", "link-2", "x"]);
 }

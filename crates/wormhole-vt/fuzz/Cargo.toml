@@ -10,7 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-wormhole-vt = { path = ".." }
+wormhole-vt = { path = "..", features = ["internals"] }
 
 [lib]
 path = "src/lib.rs"

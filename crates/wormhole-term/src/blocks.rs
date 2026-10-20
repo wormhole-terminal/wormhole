@@ -11,7 +11,7 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::types::{Column, Line, Point, TermMode};
+use wormhole_vt::{Column, Line, Point, TermMode};
 
 use super::marks::{self, Part, RowMark};
 use super::osc::{BODY_MAX_CHARS, Mark, clean};
@@ -299,7 +299,7 @@ pub fn readout_text(state: BlockState) -> Option<String> {
 pub(super) mod tests {
     use std::time::{Duration, Instant};
 
-    use wormhole_vt::types::{Line, Scroll};
+    use wormhole_vt::{Line, Scroll};
 
     use super::{
         BlockState, CommandLog, Ended, block, block_at, blocks, ended, lines_text, readout_text, took_text,

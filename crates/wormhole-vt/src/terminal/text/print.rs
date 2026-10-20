@@ -11,7 +11,7 @@
 //! by character: the first character's, 2 once a spacing mark, a conjunct's consonant or a VS16
 //! after an emoji variation base joins (terminal-unicode-core, "Variation Selector 16"), and 1
 //! again when a VS15 joins such a base (UTS #51 ED-8a; the terminal-unicode-core text leaves the
-//! width alone, which is the one place Wormhole follows the Unicode standard and wcwidth instead).
+//! width alone, which is the one place this terminal follows the Unicode standard and wcwidth instead).
 //! A cluster that no longer fits at the right margin moves to the next line whole.
 
 use crate::types::{Column, Line, Point};

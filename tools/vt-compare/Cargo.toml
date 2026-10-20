@@ -17,7 +17,7 @@ doctest = false
 [dependencies]
 wormhole-vt-bench = { path = "../../crates/wormhole-vt-bench" }
 # The parser benchmark and the selection tests use the engine directly.
-wormhole-vt = { path = "../../crates/wormhole-vt" }
+wormhole-vt = { path = "../../crates/wormhole-vt", features = ["internals"] }
 serde_json = "1"
 # The engines to compare with. Each is a black box behind its public API.
 # Wormhole ran on alacritty_terminal until its own engine replaced it; its `vte` is what the

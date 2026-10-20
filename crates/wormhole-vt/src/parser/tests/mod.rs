@@ -13,6 +13,13 @@ mod strings;
 use super::{Csi, Handler, MAX_INTERMEDIATES, MAX_PARAMS, Parser};
 use std::fmt::Write as _;
 
+/// `Terminal::feed` moves the terminal's parser out and back once per call, so the parser stays a
+/// small value: no heap buffers, and about a hundred bytes.
+#[test]
+fn the_parser_is_small_enough_to_move_on_every_feed() {
+    assert!(std::mem::size_of::<Parser>() <= 128);
+}
+
 /// How a string ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum End {

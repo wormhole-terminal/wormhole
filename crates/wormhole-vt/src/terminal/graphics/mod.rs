@@ -4,9 +4,9 @@
 //! see [`crate::grid`]'s `images`) and what a program may ask about them, and leaves the pixels to
 //! the host: it has no image decoder and does no I/O. A picture reaches the host as an
 //! [`Event::ImageData`](crate::terminal::Event::ImageData) with the bytes still encoded (PNG, a JPEG, zlib
-//! raw pixels), the host decodes it and calls [`Terminal::image_decoded`], and frees it when
+//! raw pixels), the host decodes it and calls [`Terminal::image_decoded`](crate::Terminal::image_decoded), and frees it when
 //! it hears [`Event::ImageFree`](crate::terminal::Event::ImageFree). Sixel needs no decoder: the engine
-//! turns it into RGBA itself. What to draw, and where, is [`Terminal::placements`].
+//! turns it into RGBA itself. What to draw, and where, is [`Terminal::placements`](crate::Terminal::placements).
 //!
 //! # Where each part is
 //!
@@ -65,7 +65,7 @@ mod upload;
 use crate::types::ImageHandle;
 
 pub use images::{IMAGE_BUDGET_BYTES, MAX_IMAGES};
-pub use placeholder::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
+pub use placeholder::{Placeholder, placeholder_at, strip_placeholders};
 pub use upload::{Compression, ImageError, ImageFormat, ImageUpload, VirtualPlacement};
 
 use apc::ApcReader;
@@ -103,6 +103,7 @@ pub(super) struct Graphics {
 
 impl Graphics {
     /// See [`Terminal::check_invariants`](crate::terminal::Terminal::check_invariants).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn check(&self, max_images: usize, max_bytes: u64) -> Result<(), String> {
         for (slot, table) in self.tables.iter().enumerate() {
             table.check(max_images, max_bytes).map_err(|e| format!("pictures of screen {slot}: {e}"))?;
@@ -112,7 +113,7 @@ impl Graphics {
 
     /// Everything the pictures hold as text, for the state dump (the transfer under way and the
     /// held replies included: a repaint has to cut at a point where there are none).
-    #[cfg(any(test, feature = "state-dump"))]
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn describe(&self) -> Vec<(&'static str, String)> {
         vec![
             ("a/graphics/last_handle", self.last_handle.to_string()),

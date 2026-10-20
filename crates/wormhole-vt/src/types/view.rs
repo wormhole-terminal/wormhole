@@ -37,7 +37,7 @@ pub struct SelectionRange {
     pub is_block: bool,
 }
 
-/// How the cursor is drawn (DECSCUSR's block, underline and bar, and two the app adds).
+/// How the cursor is drawn (DECSCUSR's block, underline and bar, and two a host adds: an outline for a window that is not in front, and none at all).
 #[derive(Debug, Default, Eq, PartialEq, Copy, Clone, Hash)]
 pub enum CursorShape {
     #[default]

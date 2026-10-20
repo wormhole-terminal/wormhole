@@ -4,8 +4,9 @@
 //!
 //! Its own test binary, because the allocator is global and a test elsewhere must not count here.
 
-use wormhole_vt::grid::{Grid, Pen, Region, Style, ViewRow};
-use wormhole_vt::types::{Color, NamedColor};
+use wormhole_vt::ViewRow;
+use wormhole_vt::grid::{Grid, Pen, Region, Style};
+use wormhole_vt::{Color, NamedColor};
 
 #[path = "common/mod.rs"]
 mod common;
@@ -167,9 +168,7 @@ fn copying_clusters_across_pages_and_reflowing_them_stays_valid() {
     cluster_output(&mut grid, 300);
     let marks = |grid: &Grid| -> usize {
         (-(grid.history_len() as i32)..grid.rows() as i32)
-            .map(|y| {
-                grid.row_text(wormhole_vt::types::Line(y), true).chars().filter(|c| *c == '\u{301}').count()
-            })
+            .map(|y| grid.row_text(wormhole_vt::Line(y), true).chars().filter(|c| *c == '\u{301}').count())
             .sum()
     };
     let before = marks(&grid);
@@ -177,7 +176,7 @@ fn copying_clusters_across_pages_and_reflowing_them_stays_valid() {
     let region = Region { top: 1, bottom: 10, left: 0, right: 39 };
     grid.scroll_up(region, 3, Color::Named(NamedColor::Background));
     assert!(grid.check_invariants().is_ok());
-    let at = wormhole_vt::types::Point::new(wormhole_vt::types::Line(11), wormhole_vt::types::Column(0));
+    let at = wormhole_vt::Point::new(wormhole_vt::Line(11), wormhole_vt::Column(0));
     grid.resize(60, 12, at, true);
     assert!(grid.check_invariants().is_ok());
 }

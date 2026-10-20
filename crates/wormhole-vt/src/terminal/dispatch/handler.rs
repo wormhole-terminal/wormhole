@@ -1,4 +1,8 @@
-//! The parser's callbacks: the terminal is the [`Handler`] of its own byte stream.
+//! The parser's callbacks: [`Sink`] is the [`Handler`] of the terminal's own byte stream.
+//!
+//! The terminal does not implement `Handler` itself: that would make every callback (`csi`,
+//! `osc_put`, …) a public method on `Terminal`, callable by anyone with half a sequence. The
+//! adapter is private, so the only way in is [`Terminal::feed`].
 //!
 //! Every sequence that is not text ends the grapheme cluster being built (mode 2027): the cursor
 //! may have moved, and the next character starts a cluster of its own.
@@ -7,87 +11,90 @@ use crate::parser::{Csi, Handler};
 
 use crate::terminal::{Terminal, Terminator};
 
-impl Handler for Terminal {
+/// A terminal as the parser's handler, for the length of one `feed`.
+pub(in crate::terminal) struct Sink<'a>(pub(in crate::terminal) &'a mut Terminal);
+
+impl Handler for Sink<'_> {
     #[inline]
     fn eight_bit_controls(&self) -> bool {
-        self.eight_bit
+        self.0.eight_bit
     }
 
     #[inline]
     fn print_ascii(&mut self, run: &[u8]) {
-        self.print_ascii_run(run);
+        self.0.print_ascii_run(run);
     }
 
     #[inline]
     fn print(&mut self, c: char) {
-        self.print_char(c);
+        self.0.print_char(c);
     }
 
     fn execute(&mut self, byte: u8) {
-        self.cluster.open = false;
-        self.history_just_cleared = false;
-        self.control(byte);
+        self.0.cluster.open = false;
+        self.0.history_just_cleared = false;
+        self.0.control(byte);
     }
 
     fn csi(&mut self, csi: &Csi) {
-        self.cluster.open = false;
-        self.dispatch_csi(csi);
+        self.0.cluster.open = false;
+        self.0.dispatch_csi(csi);
     }
 
     fn esc(&mut self, intermediates: &[u8], byte: u8) {
-        self.cluster.open = false;
-        self.history_just_cleared = false;
-        self.dispatch_esc(intermediates, byte);
+        self.0.cluster.open = false;
+        self.0.history_just_cleared = false;
+        self.0.dispatch_esc(intermediates, byte);
     }
 
     fn osc_start(&mut self) {
-        self.osc.start();
+        self.0.osc.start();
     }
 
     fn osc_put(&mut self, data: &[u8]) {
-        self.osc.put(data);
+        self.0.osc.put(data);
     }
 
     fn osc_end(&mut self, bel_terminated: bool) {
-        self.cluster.open = false;
-        self.finish_osc(if bel_terminated { Terminator::Bel } else { Terminator::St });
+        self.0.cluster.open = false;
+        self.0.finish_osc(if bel_terminated { Terminator::Bel } else { Terminator::St });
     }
 
     fn osc_cancel(&mut self) {
-        self.osc.cancel();
+        self.0.osc.cancel();
     }
 
     fn dcs_hook(&mut self, csi: &Csi) {
-        self.cluster.open = false;
-        self.hook_dcs(csi);
+        self.0.cluster.open = false;
+        self.0.hook_dcs(csi);
     }
 
     fn dcs_put(&mut self, data: &[u8]) {
-        self.dcs.put(data);
+        self.0.dcs.put(data);
     }
 
     fn dcs_unhook(&mut self) {
-        self.unhook_dcs();
+        self.0.unhook_dcs();
     }
 
     fn dcs_cancel(&mut self) {
-        self.dcs.cancel();
+        self.0.dcs.cancel();
     }
 
     fn apc_start(&mut self) {
-        self.dcs.start_apc();
+        self.0.dcs.start_apc();
     }
 
     fn apc_put(&mut self, data: &[u8]) {
-        self.put_apc(data);
+        self.0.put_apc(data);
     }
 
     fn apc_end(&mut self) {
-        self.cluster.open = false;
-        self.finish_apc();
+        self.0.cluster.open = false;
+        self.0.finish_apc();
     }
 
     fn apc_cancel(&mut self) {
-        self.cancel_apc();
+        self.0.cancel_apc();
     }
 }

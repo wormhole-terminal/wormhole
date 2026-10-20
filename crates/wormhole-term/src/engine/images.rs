@@ -12,8 +12,8 @@
 
 use std::sync::Arc;
 
-use wormhole_vt::terminal::{Compression, ImageError, ImageFormat, ImageUpload};
-use wormhole_vt::types::ImageHandle;
+use wormhole_vt::image::ImageHandle;
+use wormhole_vt::image::{Compression, ImageError, ImageFormat, ImageUpload};
 
 use crate::events::{EventProxy, Shared};
 use crate::images::{DecodeError, Format, Image, Limits, decode};
@@ -168,6 +168,8 @@ fn decoded(upload: &ImageUpload) -> Result<Image, ImageError> {
         ImageFormat::Rgba => Format::Rgba { width, height },
         ImageFormat::Png => Format::Png,
         ImageFormat::File => Format::Any,
+        // A format a newer engine adds is one this decoder does not read.
+        _ => return Err(ImageError::Unsupported),
     };
     let compressed = upload.compression == Compression::Zlib;
     match decode(format, &upload.data, compressed, &Limits::default()) {

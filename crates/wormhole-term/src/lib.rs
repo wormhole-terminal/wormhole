@@ -63,18 +63,24 @@ pub mod testing;
 mod text;
 
 /// The value types the screen is drawn and driven with: cells, colors, positions, modes.
-pub use wormhole_vt::types;
+pub mod types {
+    pub use wormhole_vt::image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
+    pub use wormhole_vt::{
+        COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, NamedColor,
+        Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side, TermMode,
+    };
+}
 
 /// What a program may ask of the window and what the engine needs to know of it to answer the
 /// reports (XTWINOPS); see `allow_window_ops`.
-pub use wormhole_vt::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
+pub use wormhole_vt::window::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use wormhole_vt::types::{Colors, Column, Line, Point, Scroll, SelectionType, Side, TermMode};
+use wormhole_vt::{Colors, Column, Line, Point, Scroll, SelectionType, Side, TermMode};
 
 pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
 use events::EventProxy;
@@ -310,7 +316,7 @@ impl Pty {
         at: input::mouse::LocatorPointer,
     ) {
         use input::mouse::MouseButton;
-        use wormhole_vt::terminal::LocatorButton;
+        use wormhole_vt::LocatorButton;
         let button = match button {
             Some((MouseButton::Left, pressed)) => Some((LocatorButton::Left, pressed)),
             Some((MouseButton::Middle, pressed)) => Some((LocatorButton::Middle, pressed)),
@@ -318,7 +324,7 @@ impl Pty {
             Some(_) => return,
             None => None,
         };
-        let at = wormhole_vt::terminal::Pointer { col: at.col, row: at.row, x: at.x, y: at.y };
+        let at = wormhole_vt::Pointer { col: at.col, row: at.row, x: at.x, y: at.y };
         let replies = self.term.lock().locator_event(button, at);
         if !replies.is_empty() && self.is_alive() {
             self.shared.reply(replies);

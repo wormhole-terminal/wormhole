@@ -10,7 +10,7 @@ use crate::types::{Column, Line, Point};
 
 use super::Grid;
 
-/// A handle to a pin of a grid. Copyable; stale after [`Grid::unpin`](super::Grid::unpin), which
+/// A handle to a pin of a grid. Copyable; stale after [`Terminal::unpin`](crate::Terminal::unpin), which
 /// the grid notices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PinId {

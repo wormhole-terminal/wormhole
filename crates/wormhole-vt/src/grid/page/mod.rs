@@ -127,11 +127,13 @@ impl Page {
     }
 
     /// Slots handed out (rows ever appended here, less none: dead slots count).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn slots_used(&self) -> usize {
         self.next_slot
     }
 
     /// Bytes this page holds.
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn bytes(&self) -> usize {
         self.cells.len() * size_of::<Cell>()
             + self.rows.capacity() * size_of::<Row>()
@@ -196,6 +198,7 @@ impl Page {
     }
 
     /// Every cell of the buffer, dead slots included (the checker's view).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn all_cells(&self) -> &[Cell] {
         &self.cells
     }

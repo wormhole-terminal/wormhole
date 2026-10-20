@@ -34,9 +34,8 @@ pub use scenario::{from_case, from_corpus};
 
 use std::fmt::Write as _;
 
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::repaint::{Gaps, NotReady};
-use wormhole_vt::terminal::{ScreenChecksum, StateDump, Terminal, WindowOps};
+use wormhole_vt::repaint::{Gaps, NotReady};
+use wormhole_vt::{Policy, StateDump, Terminal};
 
 use crate::engines::host_terminal;
 use crate::rng::Rng;
@@ -70,10 +69,9 @@ pub struct Scenario {
     pub resizes: Vec<Resize>,
 }
 
-/// A terminal as a host drives it: its parser, and what it says to the program and to the host.
+/// A terminal as a host drives it, and what it says to the program and to the host.
 pub struct Rig {
     pub term: Terminal,
-    pub parser: Parser,
     /// The bytes the terminal sent to the program since they were last cleared.
     pub replies: Vec<u8>,
     /// The events since then, as text (a picture's bytes are summarized).
@@ -84,21 +82,19 @@ impl Rig {
     /// A terminal of `cols` by `rows`, set up as `setup` says.
     pub fn new(setup: &Setup, cols: usize, rows: usize) -> Rig {
         let mut term = host_terminal(cols, rows, setup.scrollback);
-        if setup.allow_checksum {
-            term.set_screen_checksum(ScreenChecksum::Allow);
-        }
-        if setup.allow_window_ops {
-            term.set_window_ops(WindowOps::Allow);
-        }
-        Rig { term, parser: Parser::new(), replies: Vec::new(), events: Vec::new() }
+        let mut policy = Policy::default();
+        policy.screen_checksum = setup.allow_checksum;
+        policy.window_ops = setup.allow_window_ops;
+        term.set_policy(policy);
+        Rig { term, replies: Vec::new(), events: Vec::new() }
     }
 
     /// Parse `bytes`, keeping what the terminal said.
     pub fn feed(&mut self, bytes: &[u8]) {
-        self.term.advance(&mut self.parser, bytes);
+        self.term.feed(bytes);
         self.replies.extend_from_slice(self.term.replies());
         self.term.clear_replies();
-        for event in self.term.drain_events() {
+        for event in self.term.events() {
             self.events.push(event_summary(&format!("{event:?}")));
         }
     }
@@ -304,18 +300,6 @@ fn differ(a: &Rig, b: &Rig, gaps: Gaps) -> Option<String> {
     if !da.same(&db) {
         let _ = write!(what, "state of the engine (left) and the replica (right):\n{}", da.diff(&db, 8));
     }
-    // The parser's own state: which one it is in and the bytes of a character it holds. The
-    // parameters of the last sequence are leftovers the next sequence overwrites.
-    let essence = |p: &Parser| {
-        let text = format!("{p:?}");
-        let state = text.split(", cur").next().unwrap_or("").to_string();
-        let held = text.find("pending:").map_or("", |at| &text[at..]).to_string();
-        format!("{state} {held}")
-    };
-    let (pa, pb) = (essence(&a.parser), essence(&b.parser));
-    if pa != pb {
-        let _ = write!(what, "parser:\n    left : {pa}\n    right: {pb}\n");
-    }
     (!what.is_empty()).then_some(what)
 }
 
@@ -358,11 +342,11 @@ fn boundaries(scenario: &Scenario) -> Vec<bool> {
             rig.term.resize(r.cols, r.rows);
             next_resize += 1;
         }
-        ready.push(rig.term.repaint_ready(&rig.parser).is_ok());
+        ready.push(rig.term.repaint_ready().is_ok());
         if at < n {
-            rig.term.advance(&mut rig.parser, &scenario.bytes[at..=at]);
+            rig.term.feed(&scenario.bytes[at..=at]);
             rig.term.clear_replies();
-            rig.term.drain_events().for_each(drop);
+            rig.term.events().for_each(drop);
         }
     }
     ready
@@ -399,9 +383,9 @@ fn replica(
     scenario: &Scenario,
     a: &Rig,
     bytes: &mut Vec<u8>,
-) -> Result<(Rig, wormhole_vt::terminal::repaint::Repainted), NotReady> {
+) -> Result<(Rig, wormhole_vt::repaint::Repainted), NotReady> {
     bytes.clear();
-    let done = a.term.repaint(&a.parser, bytes)?;
+    let done = a.term.repaint(bytes)?;
     let (cols, rows) = a.size();
     let mut b = Rig::new(&scenario.setup, cols, rows);
     b.term.seed(&done.seeds);
@@ -526,7 +510,7 @@ pub fn suffix(scenario: &Scenario, cuts: &[usize], how: Resolve) -> Result<Stats
         a.play(scenario, pos, at);
         pos = at;
         let mut bytes = Vec::new();
-        let Ok(done) = a.term.repaint(&a.parser, &mut bytes) else { continue };
+        let Ok(done) = a.term.repaint(&mut bytes) else { continue };
         if done.gaps.intersects(Gaps::STICKY) {
             stats.sticky += 1;
             continue;
@@ -612,7 +596,7 @@ pub fn probe(scenario: &Scenario, at: usize, tamper: impl FnOnce(&mut Vec<u8>)) 
     let mut a = Rig::new(&scenario.setup, scenario.setup.cols, scenario.setup.rows);
     a.play(scenario, 0, at);
     let mut bytes = Vec::new();
-    let done = a.term.repaint(&a.parser, &mut bytes).expect("a point between sequences");
+    let done = a.term.repaint(&mut bytes).expect("a point between sequences");
     tamper(&mut bytes);
     let (cols, rows) = a.size();
     let mut b = Rig::new(&scenario.setup, cols, rows);

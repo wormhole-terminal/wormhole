@@ -7,8 +7,7 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
+use wormhole_vt::Terminal;
 
 thread_local! {
     /// This thread's allocations (the test harness's other threads do their own).
@@ -44,20 +43,19 @@ static ALLOCATOR: Counting = Counting;
 /// the allocations of feeding it again `rounds` times, draining what the terminal hands out the
 /// way a host does.
 fn steady(name: &str, stream: &[u8], rounds: usize) -> usize {
-    let mut term = Terminal::new(80, 24, 200);
-    let mut parser = Parser::new();
-    let run = |term: &mut Terminal, parser: &mut Parser, times: usize| {
+    let mut term = Terminal::builder().size(80, 24).scrollback(200).build();
+    let run = |term: &mut Terminal, times: usize| {
         for _ in 0..times {
             for piece in stream.chunks(4096) {
-                term.advance(parser, piece);
-                term.drain_events().for_each(drop);
+                term.feed(piece);
+                term.events().for_each(drop);
                 term.clear_replies();
             }
         }
     };
-    run(&mut term, &mut parser, 40);
+    run(&mut term, 40);
     let before = allocations();
-    run(&mut term, &mut parser, rounds);
+    run(&mut term, rounds);
     let count = allocations() - before;
     eprintln!("{name}: {count} allocations");
     count

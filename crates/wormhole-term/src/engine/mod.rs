@@ -2,7 +2,7 @@
 //! runs on the PTY thread. The PTY layer (`pty`) is core's own and knows no engine; this module
 //! gives it the screen and the [`Feed`] that parses into it.
 //!
-//! - `mod` (here): [`OwnFeed`], what the PTY thread drives (the parser, the host and a
+//! - `mod` (here): [`OwnFeed`], what the PTY thread drives (the host and a
 //!   synchronized update's deadline), and [`spawn`];
 //! - `host`: the engine's events as `PtyEvent`s, the shell marks as the command log, replies
 //!   written back to the PTY in order;
@@ -21,7 +21,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Context as _;
-use wormhole_vt::parser::Parser;
 
 use super::events::{EventProxy, Shared};
 use super::pty::{self, FairLock, Feed};
@@ -33,9 +32,8 @@ pub(super) use host::mark_of;
 use images::Uploads;
 pub(crate) use images::key as image_key;
 
-/// The parser and the host side of the engine, as the PTY thread drives them.
+/// The host side of the engine, as the PTY thread drives it (the parser is the terminal's own).
 pub(super) struct OwnFeed {
-    parser: Parser,
     host: Host,
     /// When the update in progress is given up on (a mirror of the screen's [`Hold`], which the
     /// reader asks for without the screen).
@@ -45,13 +43,13 @@ pub(super) struct OwnFeed {
 impl OwnFeed {
     pub(super) fn new(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
         let uploads = Uploads::new(proxy.clone(), screen);
-        Self { parser: Parser::new(), host: Host::new(proxy, uploads), deadline: None }
+        Self { host: Host::new(proxy, uploads), deadline: None }
     }
 }
 
 impl Feed<Screen> for OwnFeed {
     fn feed(&mut self, screen: &mut Screen, bytes: &[u8]) {
-        screen.term.advance(&mut self.parser, bytes);
+        screen.term.feed(bytes);
         screen.update_hold(Instant::now());
         self.host.settle(screen);
         self.deadline = match screen.hold {

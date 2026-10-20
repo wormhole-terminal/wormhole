@@ -1,4 +1,4 @@
-//! The snapshot copy: rows as the types the app draws, and which rows are copied.
+//! The snapshot copy: rows as the types a host draws, and which rows are copied.
 
 use super::{BG, Sim, at, bold, colored, full, plain};
 use crate::grid::{Content, DEFAULT_SCROLLBACK_BYTES, Grid, Pen, Style, ViewRow};

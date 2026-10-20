@@ -1,6 +1,6 @@
 [package]
 name = "wormhole-vt"
-description = "Wormhole's terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
+description = "A terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
 version.workspace = true
 edition.workspace = true
 # MIT, unlike the app (GPL-3.0-or-later), so other projects can embed the engine.
@@ -13,10 +13,23 @@ bitflags = "2"
 # The parser's and the grid's byte searches (SIMD; already in the dependency graph).
 memchr = "2.8"
 
+[dev-dependencies]
+# The crate's own tests, examples and benches look inside it (the grid, the invariants check, the
+# repaint's coverage tables), which only the `internals` feature opens. Naming the crate here
+# switches it on for them, so `cargo test -p wormhole-vt` needs no flag, and not for anyone who
+# depends on the crate.
+wormhole-vt = { path = ".", features = ["internals"] }
+
 [features]
-# `Terminal::dump_state`: everything observable about a terminal as named text, for the
-# bisimulation tests of the repaint writer (`wormhole-vt-bench`). Not part of the shipped engine.
-state-dump = []
+# Not for users, not stable, not versioned: what our own tools reach into. It makes the `grid`
+# module public (hidden from the docs), and adds `Terminal::grid`, `Terminal::dump_state` (the
+# whole state as named text, for the bisimulation tests of the repaint writer in
+# `wormhole-vt-bench`), `Terminal::check_invariants` and the repaint's coverage tables.
+internals = []
+
+[[example]]
+name = "grid_bench"
+required-features = ["internals"]
 
 [lints]
 workspace = true

@@ -13,28 +13,30 @@ mod snapshot;
 mod tabs;
 mod window;
 
-use crate::parser::Parser;
 use crate::terminal::Terminal;
 use crate::types::Line;
 
-/// A terminal and its parser.
+/// A terminal and the helpers the tests read it with.
 pub(super) struct Rig {
     pub term: Terminal,
-    parser: Parser,
 }
 
 impl Rig {
     pub fn new(cols: usize, rows: usize) -> Rig {
-        Rig { term: Terminal::new(cols, rows, 100), parser: Parser::new() }
+        Rig::with_scrollback(cols, rows, 100)
+    }
+
+    pub fn with_scrollback(cols: usize, rows: usize, lines: usize) -> Rig {
+        Rig { term: Terminal::builder().size(cols, rows).scrollback(lines).build() }
     }
 
     pub fn feed(&mut self, text: &str) -> &mut Rig {
-        self.term.advance(&mut self.parser, text.as_bytes());
+        self.term.feed(text.as_bytes());
         self
     }
 
     pub fn feed_bytes(&mut self, bytes: &[u8]) -> &mut Rig {
-        self.term.advance(&mut self.parser, bytes);
+        self.term.feed(bytes);
         self
     }
 
@@ -49,7 +51,7 @@ impl Rig {
     }
 
     pub fn events(&mut self) -> Vec<crate::terminal::Event> {
-        self.term.drain_events().collect()
+        self.term.events().collect()
     }
 
     pub fn cursor(&self) -> (usize, usize) {

@@ -8,9 +8,8 @@
 
 use std::ops::Range;
 
-use wormhole_vt::types::{
-    Cell, Colors, CursorShape, ImagePlacement, Line, Point, RowExtras, SelectionRange, TermMode,
-};
+use wormhole_vt::image::ImagePlacement;
+use wormhole_vt::{Cell, Colors, CursorShape, Line, Point, RowExtras, SelectionRange, TermMode};
 
 use super::blocks::BlockState;
 use super::marks::{self, RowMark};
@@ -294,7 +293,7 @@ fn cursor_row(point: Point, display_offset: usize, lines: usize) -> Option<usize
 
 #[cfg(test)]
 mod tests {
-    use wormhole_vt::types::{Column, Line, Point, Scroll, SelectionType, Side};
+    use wormhole_vt::{Column, Line, Point, Scroll, SelectionType, Side};
 
     use super::ScreenSnapshot;
     use crate::testing::TestTerm;

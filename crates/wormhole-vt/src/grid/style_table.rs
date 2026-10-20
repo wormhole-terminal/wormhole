@@ -69,6 +69,7 @@ impl StyleTable {
     }
 
     /// Check that the index finds every style in use and nothing else (for the invariant checker).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn verify(&self) -> Result<(), String> {
         let mask = self.index.len().wrapping_sub(1);
         let mut indexed = 0;
@@ -115,11 +116,13 @@ impl StyleTable {
     }
 
     #[inline]
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn refs(&self, id: StyleId) -> u32 {
         self.entries[id as usize].refs
     }
 
     /// Number of ids in use, the default one not counted.
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn live(&self) -> usize {
         self.live
     }
@@ -129,6 +132,7 @@ impl StyleTable {
     }
 
     /// Ids and use counts of every style in use (the checker compares them with the cells).
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn used(&self) -> impl Iterator<Item = (StyleId, u32)> + '_ {
         self.entries
             .iter()
@@ -149,6 +153,7 @@ impl StyleTable {
     }
 
     /// Bytes the table holds.
+    #[cfg(any(test, feature = "internals"))]
     pub(super) fn bytes(&self) -> usize {
         self.entries.capacity() * size_of::<Entry>()
             + self.free.capacity() * size_of::<StyleId>()

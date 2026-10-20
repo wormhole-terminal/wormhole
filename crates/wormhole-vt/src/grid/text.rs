@@ -13,7 +13,7 @@ use super::Grid;
 use super::cell::{Cell, Content};
 use super::page::Page;
 
-/// How [`Grid::text_between`] reads the range between two points.
+/// How [`Terminal::text_between`](crate::Terminal::text_between) reads the range between two points.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextShape {
     /// In reading order from the first point to the second: the rows in between whole, the first
@@ -238,6 +238,7 @@ impl Grid {
 
     /// The characters of the cells from `start` to `end` inclusive, rows run together with no
     /// newline and no cutting: what a search saw there, to tell whether the cells still hold it.
+    #[cfg(any(test, feature = "internals"))]
     pub fn span_text(&self, start: Point, end: Point) -> String {
         let mut out = String::new();
         self.each_span_row(start, end, |page, row, from, to| {
@@ -247,7 +248,7 @@ impl Grid {
         out
     }
 
-    /// Whether [`Grid::span_text`] of `start..=end` is `text`, without building it: one row's
+    /// Whether `Grid::span_text` of `start..=end` is `text`, without building it: one row's
     /// text at a time in a buffer that is reused.
     pub fn span_is(&self, start: Point, end: Point, text: &str) -> bool {
         let mut rest = text;

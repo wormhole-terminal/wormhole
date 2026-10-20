@@ -335,7 +335,7 @@ fn struct_fields(source: &str, name: &str) -> Option<Vec<String>> {
 /// replica equal to the engine, and a state it forgets is a replica that drifts without a sound.
 #[test]
 fn every_field_of_the_engines_state_has_a_repaint_case() {
-    use wormhole_vt::terminal::repaint::FIELDS;
+    use wormhole_vt::repaint::FIELDS;
     let mut wrong = Vec::new();
     for entry in FIELDS {
         let path = crate_dir().join("src").join(entry.file);
@@ -372,8 +372,8 @@ fn every_field_of_the_engines_state_has_a_repaint_case() {
 
 #[test]
 fn every_mode_has_a_repaint_case() {
-    use wormhole_vt::terminal::Modes;
-    use wormhole_vt::terminal::repaint::MODES;
+    use wormhole_vt::Modes;
+    use wormhole_vt::repaint::MODES;
     let flags: Vec<&str> = Modes::all().iter_names().map(|(name, _)| name).collect();
     let listed: Vec<&str> = MODES.iter().map(|(name, _)| *name).collect();
     for flag in &flags {
@@ -386,7 +386,7 @@ fn every_mode_has_a_repaint_case() {
 
 #[test]
 fn every_cell_flag_has_a_repaint_case() {
-    use wormhole_vt::terminal::repaint::CELL_FLAGS;
+    use wormhole_vt::repaint::CELL_FLAGS;
     let flags = wormhole_vt::grid::flag_names();
     for flag in &flags {
         assert!(

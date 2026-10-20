@@ -13,7 +13,7 @@
 //! of the whole grid is for a key press, not for every frame; the snapshot marks only the rows it
 //! copies). This module says what a mark is and what the rows' marks mean together.
 
-use wormhole_vt::types::{Line, TermMode};
+use wormhole_vt::{Line, TermMode};
 
 use super::screen::Screen;
 

@@ -202,7 +202,7 @@ fn events_do_not_pile_up_for_a_host_that_never_looks() {
     for i in 0..30_000 {
         rig.feed(&format!("\x1b]9;n{i}\x07"));
     }
-    assert!(rig.term.drain_events().count() <= 16_384);
+    assert!(rig.term.events().count() <= 16_384);
 }
 
 #[test]

@@ -6,7 +6,7 @@
 //! they don't all fit, the minimap shows a window of them that moves with the view, as VS Code's
 //! does: the top of the history while the view is there, the live screen while it's live.
 
-use wormhole_vt::types::{Cell, Color, Colors, Flags, Line, NamedColor};
+use wormhole_vt::{Cell, Color, Colors, Flags, Line, NamedColor};
 
 use super::screen::Screen;
 
@@ -172,7 +172,7 @@ fn line_runs<'a>(cells: impl Iterator<Item = &'a Cell>, out: &mut Vec<MinimapRun
 
 #[cfg(test)]
 mod tests {
-    use wormhole_vt::types::Scroll;
+    use wormhole_vt::Scroll;
 
     use super::{LINE_PITCH, MinimapGeometry, MinimapSnapshot};
     use crate::testing::TestTerm;

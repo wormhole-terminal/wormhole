@@ -8,7 +8,7 @@
 //! view searches again when the terminal printed.
 
 use regex::{Regex, RegexBuilder};
-use wormhole_vt::types::{Cell, Column, Flags, Line, Point, RowExtras};
+use wormhole_vt::{Cell, Column, Flags, Line, Point, RowExtras};
 
 use super::screen::Screen;
 
@@ -295,7 +295,7 @@ fn trim_end(line: &mut TextLine) {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_vt::types::{Cell, Column, Line, Point, RowExtras};
+    use wormhole_vt::{Cell, Column, Line, Point, RowExtras};
 
     use super::{FindMatch, FindOptions, FindQuery, GridText, InvalidPattern, MAX_MATCHES};
     use crate::testing::TestTerm;

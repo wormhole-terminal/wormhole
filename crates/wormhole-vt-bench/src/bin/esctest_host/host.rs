@@ -5,11 +5,8 @@
 //! of fixed size, like the app's window around a pane: the geometry the reports describe is
 //! computed from it, and the window operations move and size it the way the app's would.
 
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::{
-    Event, Extent, Fullscreen, Maximize, ScreenChecksum, Terminal, WindowGeometry, WindowOp, WindowOps,
-};
-use wormhole_vt::types::{COLOR_COUNT, NamedColor, Rgb};
+use wormhole_vt::window::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
+use wormhole_vt::{COLOR_COUNT, Event, NamedColor, Policy, Rgb, Terminal};
 
 /// A cell in pixels.
 const CELL: (u32, u32) = (7, 17);
@@ -81,15 +78,17 @@ pub struct Host {
 
 impl Host {
     pub fn new(cols: usize, rows: usize, window_ops: bool, checksum: bool) -> Host {
-        let mut term = Terminal::new(cols, rows, 1000);
-        term.set_cell_size(CELL.0 as u16, CELL.1 as u16);
-        term.set_default_colors(&theme());
-        if checksum {
-            term.set_screen_checksum(ScreenChecksum::Allow);
-        }
-        if window_ops {
-            term.set_window_ops(WindowOps::Allow);
-        }
+        let mut policy = Policy::default();
+        policy.screen_checksum = checksum;
+        policy.window_ops = window_ops;
+        let term = Terminal::builder()
+            .size(cols, rows)
+            .scrollback(1000)
+            .identity("Wormhole", env!("CARGO_PKG_VERSION"))
+            .cell_size(CELL.0 as u16, CELL.1 as u16)
+            .palette(&theme())
+            .policy(policy)
+            .build();
         let mut host = Host {
             term,
             clipboard: String::new(),
@@ -223,13 +222,14 @@ impl Host {
                     }
                 }
             }
+            _ => {}
         }
     }
 
     /// Feed what the program wrote; returns what to write back.
-    pub fn feed(&mut self, parser: &mut Parser, bytes: &[u8]) -> Vec<u8> {
-        self.term.advance(parser, bytes);
-        let events: Vec<Event> = self.term.drain_events().collect();
+    pub fn feed(&mut self, bytes: &[u8]) -> Vec<u8> {
+        self.term.feed(bytes);
+        let events: Vec<Event> = self.term.events().collect();
         let mut out = Vec::new();
         let mut sent = 0;
         for event in events {
@@ -242,7 +242,7 @@ impl Host {
                     sent = until;
                     let text = self.clipboard.clone();
                     // The engine queues the clipboard's answer after the replies it already holds.
-                    let mut answer = Terminal::new(2, 1, 0);
+                    let mut answer = Terminal::builder().size(2, 1).scrollback(0).build();
                     answer.clipboard_reply(&selection, &text, terminator);
                     out.extend(answer.take_replies());
                 }

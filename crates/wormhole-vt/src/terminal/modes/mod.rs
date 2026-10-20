@@ -2,7 +2,7 @@
 //!
 //! The low 17 bits are [`TermMode`](crate::types::TermMode)'s, bit for bit (a test checks it), so
 //! the snapshot's mode set is a mask. Everything else is state a program can switch and ask for
-//! (DECRQM) that the app reads through an accessor or not at all. What a mode *does* is in the
+//! (DECRQM) that a host reads through an accessor or not at all. What a mode *does* is in the
 //! code that reads it; this file knows the numbers, the defaults and what DECRQM answers.
 
 pub(super) mod apply;

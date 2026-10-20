@@ -125,6 +125,7 @@ impl ImageTable {
     }
 
     /// The table's own bookkeeping, for [`Terminal::check_invariants`](crate::terminal::Terminal::check_invariants).
+    #[cfg(any(test, feature = "internals"))]
     pub fn check(&self, max_images: usize, max_bytes: u64) -> Result<(), String> {
         if self.list.len() > max_images {
             return Err(format!("{} pictures, at most {max_images} allowed", self.list.len()));

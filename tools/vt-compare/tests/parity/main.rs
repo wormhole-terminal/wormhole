@@ -225,31 +225,29 @@ fn recordings() {
 /// middle: the grid stays consistent, the cursor stays on the screen.
 #[test]
 fn the_terminal_keeps_its_grid_consistent_through_streams_and_resizes() {
-    use wormhole_vt::parser::Parser;
-    use wormhole_vt::terminal::Terminal;
+    use wormhole_vt::Terminal;
     use wormhole_vt_bench::rng::Rng;
 
     let mut rng = Rng::new(77);
     for seed in 0..env("PARITY_STREAMS", 300) as u64 {
         let (cols, rows) = (rng.range(2, 40), rng.range(1, 14));
         let mut generator = StreamGen::new(seed, cols, rows);
-        let mut term = Terminal::new(cols, rows, rng.range(0, 30));
-        let mut parser = Parser::new();
+        let mut term = Terminal::builder().size(cols, rows).scrollback(rng.range(0, 30)).build();
         // Modes the generator does not know, mixed in with its streams.
-        term.advance(&mut parser, b"\x1b[?2027h\x1b[?69h\x1b[?40h");
+        term.feed(b"\x1b[?2027h\x1b[?69h\x1b[?40h");
         let stream = generator.stream(2000);
         for piece in stream.chunks(rng.range(1, 150)) {
-            term.advance(&mut parser, piece);
-            term.drain_events().for_each(drop);
+            term.feed(piece);
+            term.events().for_each(drop);
             term.clear_replies();
             if rng.one_in(8) {
                 term.resize(rng.range(2, 50), rng.range(1, 20));
             }
             if rng.one_in(30) {
-                term.advance(&mut parser, b"\x1b[?2027h\x1b[?69h\x1b[3;7s\x1b[?1049h");
+                term.feed(b"\x1b[?2027h\x1b[?69h\x1b[3;7s\x1b[?1049h");
             }
         }
-        if let Err(why) = term.grid().check_invariants() {
+        if let Err(why) = term.check_invariants() {
             panic!("seed {seed}: {why}");
         }
         let cursor = term.grid_cursor();

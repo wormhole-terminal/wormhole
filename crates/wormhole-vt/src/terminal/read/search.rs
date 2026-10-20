@@ -21,7 +21,12 @@ pub struct PinnedSpan {
 }
 
 impl Terminal {
-    /// The text of the cells from `start` to `end`; see [`Grid::text_between`](crate::grid::Grid::text_between).
+    /// The text of the cells from `start` to `end`, read as `shape` says (see [`TextShape`]).
+    ///
+    /// A `Stream` joins soft-wrapped rows without a newline; every other row end that the range
+    /// reaches gets one, except the one at the very end. Blanks at the end of a row that was not
+    /// wrapped are cut. A `Block` has a newline between rows and none after the last, and each
+    /// of its rows loses the blanks at its end.
     pub fn text_between(&self, start: Point, end: Point, shape: TextShape) -> String {
         self.grid.text_between(start, end, shape)
     }
@@ -53,8 +58,12 @@ impl Terminal {
         Some(lines)
     }
 
-    /// Copy about `rows` rows from `from` as text for a search that runs elsewhere; see
-    /// [`Grid::copy_text`](crate::grid::Grid::copy_text). Returns where the next window starts.
+    /// Copy about `rows` rows from `from` down into `out` (emptied first) as text for a search
+    /// that runs elsewhere: whole lines, it stops at the first line end at or after `rows`, so a
+    /// line is never split between windows. Returns the line the next window starts at, `None`
+    /// when the copy reached the bottom of the screen. A `from` above the history starts at its
+    /// top. Everything is read in one call and takes time in proportion to `rows`, so a host that
+    /// must not hold its lock long asks for a few hundred rows at a time.
     pub fn copy_text(&self, from: Line, rows: usize, out: &mut TextCopy) -> Option<Line> {
         self.grid.copy_text(from, rows, out)
     }
@@ -91,8 +100,9 @@ impl Terminal {
         self.grid.link_span(point)
     }
 
-    /// The text of `line` that is `content` of command block `block`; see
-    /// [`Grid::content_text`](crate::grid::Grid::content_text).
+    /// The text of the cells of `line` that are `content` of command block `block` (OSC 133):
+    /// the prompt, the command line or the output, untrimmed, a blank where a cell holds no
+    /// character. A row belongs to one block; where two meet on it, to the later.
     pub fn content_text(&self, line: Line, block: u32, content: Content) -> String {
         self.grid.content_text(line, block, content)
     }

@@ -5,7 +5,7 @@
 //! the terminal state report to be the same for all terminals"), only that restoring a report
 //! returns the terminal to the state it was in.
 //!
-//! Wormhole's report has five parts joined by `!`, each in the format of a report the manual does
+//! The report has five parts joined by `!`, each in the format of a report the manual does
 //! define:
 //!
 //! 1. the cursor information (DECCIR's data: position, rendition, protection, flags, character sets),

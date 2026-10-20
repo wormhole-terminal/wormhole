@@ -1,4 +1,4 @@
-//! One cell of the screen as the app draws it.
+//! One cell of the screen as a renderer draws it.
 
 use bitflags::bitflags;
 

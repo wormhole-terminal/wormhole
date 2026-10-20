@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::types::Line;
+use wormhole_vt::Line;
 
 use super::{
     BlockState, Direction, GridSize, Mark, Notification, Progress, ProgressState, PromptKind, Pty, PtyEvent,

@@ -16,7 +16,7 @@ use crate::types::CursorShape;
 use crate::terminal::modes::Modes;
 use crate::terminal::modes::conformance::Level;
 use crate::terminal::screen::tabs::TabStops;
-use crate::terminal::{Cursor, Event, Margins, Saved, Terminal};
+use crate::terminal::{CursorPos, Event, Margins, Saved, Terminal};
 
 impl Terminal {
     /// RIS.
@@ -31,7 +31,7 @@ impl Terminal {
         self.grid.reset();
         self.other.reset();
         self.forget_all_images();
-        self.cursor = Cursor::default();
+        self.cursor = CursorPos::default();
         self.pen = Pen::default();
         // Mode 40 is a permission rather than a state of the screen (xterm keeps it in a resource):
         // a full reset leaves it as the program set it.
@@ -95,7 +95,7 @@ impl Terminal {
             self.grid.write_ascii(y, 0, &row, &pen);
             self.grid.set_wrapped(y, false);
         }
-        self.cursor = Cursor::default();
+        self.cursor = CursorPos::default();
     }
 
     /// DECSCUSR: the shape and whether it blinks, `0` meaning the host's default.

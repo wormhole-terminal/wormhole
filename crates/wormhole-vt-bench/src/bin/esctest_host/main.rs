@@ -2,7 +2,7 @@
 //!
 //! The suite (`tools/vt-compare/suites/esctest_run.py`) runs on a pseudo-terminal that
 //! `pty_relay.py` keeps; this program is the terminal at the other end. What the suite writes goes
-//! through `wormhole_vt::terminal::Terminal` as the app feeds it, and the engine's replies go back, so
+//! through `wormhole_vt::Terminal` as the app feeds it, and the engine's replies go back, so
 //! the results are the in-app run's without opening an app: same engine, same options (the screen
 //! checksum on), the host side of the events (title, clipboard, window operations, colors) played
 //! by `host.rs` on a fake window.
@@ -27,7 +27,6 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use host::Host;
-use wormhole_vt::parser::Parser;
 
 const USAGE: &str = "\
 usage: esctest-host --out <file.jsonl> [options]
@@ -195,14 +194,13 @@ fn run(options: &Options) -> Result<(), String> {
     });
 
     let mut host = Host::new(options.cols, options.rows, options.window_ops, options.checksum);
-    let mut parser = Parser::new();
     loop {
         match receiver.recv_timeout(Duration::from_secs(120)) {
             Ok(chunk) => {
                 if options.verbose {
                     eprintln!("<< {:?}", String::from_utf8_lossy(&chunk));
                 }
-                let reply = host.feed(&mut parser, &chunk);
+                let reply = host.feed(&chunk);
                 if !reply.is_empty() {
                     if options.verbose {
                         eprintln!(">> {:?}", String::from_utf8_lossy(&reply));

@@ -1,0 +1,211 @@
+//! Making a terminal: [`Terminal::new`] for the defaults, [`Terminal::builder`] to choose.
+//!
+//! Everything a host decides once, before the first byte, is an option here; what can change while
+//! the terminal runs (the size, the palette, the cell size, the word separators, the policy) also
+//! has a setter on [`Terminal`]. The builder can grow without breaking anyone: a new option is a
+//! new method with a default.
+
+use super::{
+    Cluster, CursorPos, CursorStyle, Event, Level, Margins, Parser, Policy, RECENT_LINKS, Saved, Terminal,
+    dispatch, graphics, history_bytes, osc, read, reports, screen, text,
+};
+use crate::grid::{Content, Grid, Pen};
+use crate::terminal::modes::Modes;
+use crate::types::{COLOR_COUNT, Rgb};
+
+/// The history a terminal keeps unless the builder says otherwise, in lines.
+const DEFAULT_SCROLLBACK_LINES: usize = 10_000;
+
+/// The longest name or version XTVERSION says, each, in bytes. They come from the host, but a
+/// reply is a sequence the program reads: it must stay short and free of controls.
+const IDENTITY_PART_MAX: usize = 64;
+
+/// Options for a [`Terminal`], from [`Terminal::builder`].
+///
+/// ```
+/// use wormhole_vt::{Policy, Terminal};
+///
+/// let mut policy = Policy::default();
+/// policy.window_ops = true;
+/// let term = Terminal::builder()
+///     .size(120, 40)
+///     .scrollback(50_000)
+///     .identity("myterm", "1.2.3")
+///     .policy(policy)
+///     .cell_size(9, 18)
+///     .build();
+/// assert_eq!((term.columns(), term.screen_lines()), (120, 40));
+/// ```
+#[derive(Clone, Debug)]
+#[must_use = "a builder does nothing until `build` is called"]
+pub struct Builder {
+    cols: usize,
+    rows: usize,
+    scrollback: usize,
+    identity: String,
+    policy: Policy,
+    palette: Option<Box<[Rgb; COLOR_COUNT]>>,
+    cell: (u16, u16),
+    separators: Option<String>,
+}
+
+impl Default for Builder {
+    fn default() -> Builder {
+        Builder {
+            cols: 80,
+            rows: 24,
+            scrollback: DEFAULT_SCROLLBACK_LINES,
+            identity: identity_text("wormhole-vt", env!("CARGO_PKG_VERSION")),
+            policy: Policy::default(),
+            palette: None,
+            cell: (8, 16),
+            separators: None,
+        }
+    }
+}
+
+/// `name version` as XTVERSION answers it, cut and with the control characters left out.
+fn identity_text(name: &str, version: &str) -> String {
+    let clean = |part: &str| {
+        let mut out = String::new();
+        for c in part.chars().filter(|c| !c.is_control()) {
+            if out.len() + c.len_utf8() > IDENTITY_PART_MAX {
+                break;
+            }
+            out.push(c);
+        }
+        out
+    };
+    format!("{} {}", clean(name), clean(version))
+}
+
+impl Builder {
+    /// The size in columns and rows (80 by 24 unless set). What the grid cannot hold is clamped:
+    /// 2 to 16,384 columns, 1 to 16,384 rows.
+    pub fn size(mut self, cols: usize, rows: usize) -> Builder {
+        self.cols = cols;
+        self.rows = rows;
+        self
+    }
+
+    /// The lines of history to keep (10,000 unless set; 0 for none). It is a floor: the grid
+    /// frees whole pages, so up to a few hundred more may be kept, see [`Terminal::scrollback_lines`].
+    pub fn scrollback(mut self, lines: usize) -> Builder {
+        self.scrollback = lines;
+        self
+    }
+
+    /// The name and version XTVERSION (`CSI > q`) answers, `wormhole-vt` and this crate's version
+    /// unless set. Control characters are left out and each part is cut to 64 bytes.
+    pub fn identity(mut self, name: &str, version: &str) -> Builder {
+        self.identity = identity_text(name, version);
+        self
+    }
+
+    /// What programs may do besides print; everything is off unless set, see [`Policy`].
+    pub fn policy(mut self, policy: Policy) -> Builder {
+        self.policy = policy;
+        self
+    }
+
+    /// The host's colours, which OSC 4, 10, 11 and 12 queries are answered with until a program
+    /// changes the entry; see [`Terminal::set_default_colors`].
+    pub fn palette(mut self, palette: &[Rgb; COLOR_COUNT]) -> Builder {
+        self.palette = Some(Box::new(*palette));
+        self
+    }
+
+    /// The size of a cell in pixels (8 by 16 unless set), for the window and graphics reports;
+    /// see [`Terminal::set_cell_size`].
+    pub fn cell_size(mut self, width: u16, height: u16) -> Builder {
+        self.cell = (width, height);
+        self
+    }
+
+    /// The characters that end a word for a double click ([`DEFAULT_WORD_SEPARATORS`](crate::DEFAULT_WORD_SEPARATORS) unless
+    /// set); see [`Terminal::set_word_separators`].
+    pub fn word_separators(mut self, separators: &str) -> Builder {
+        self.separators = Some(separators.to_string());
+        self
+    }
+
+    /// Make the terminal.
+    pub fn build(self) -> Terminal {
+        let grid = Grid::new(self.cols, self.rows, history_bytes(self.scrollback, self.cols));
+        let (cols, rows) = (grid.cols(), grid.rows());
+        let mut term = Terminal {
+            other: Grid::new(cols, rows, 0),
+            grid,
+            cols,
+            rows,
+            cursor: CursorPos::default(),
+            pen: Pen::default(),
+            modes: Modes::INITIAL,
+            recorded: 0,
+            saved_modes: Vec::new(),
+            margins: Margins::full(cols, rows),
+            tabs: screen::tabs::TabStops::new(cols),
+            charsets: text::charset::Charsets::default(),
+            locator: Default::default(),
+            preferred: text::charset::Preferred::default(),
+            saved: [Saved::default(), Saved::default()],
+            keys: Default::default(),
+            cursor_style: CursorStyle::default(),
+            titles: reports::title::Titles::default(),
+            policy: self.policy,
+            window: None,
+            folder: osc::cwd::Folder::default(),
+            palette: osc::colors::Palette::new(),
+            cell_px: (self.cell.0.max(1), self.cell.1.max(1)),
+            last_char: None,
+            cluster: Cluster {
+                open: false,
+                head: 0,
+                width: 0,
+                last: ' ',
+                state: crate::unicode::GraphemeState::new(),
+            },
+            block: 0,
+            stashed_content: Content::None,
+            link_seq: 0,
+            recent_links: Vec::with_capacity(RECENT_LINKS),
+            identity: self.identity,
+            parser: Parser::new(),
+            osc: osc::OscString::default(),
+            dcs: dispatch::dcs::DcsString::default(),
+            graphics: graphics::Graphics::default(),
+            events: Vec::<Event>::new(),
+            replies: Vec::new(),
+            reply_dropped: false,
+            scrollback_lines: self.scrollback,
+            history_just_cleared: false,
+            kept: Default::default(),
+            level: Level::Vt500,
+            eight_bit: false,
+            guard_used: false,
+            attr_extent: screen::rect::AttrExtent::default(),
+            select: read::selection::Select::default(),
+        };
+        if let Some(palette) = &self.palette {
+            term.set_default_colors(palette);
+        }
+        if let Some(separators) = &self.separators {
+            term.set_word_separators(separators);
+        }
+        term
+    }
+}
+
+impl Terminal {
+    /// A blank terminal of `cols` by `rows` (clamped to what the grid allows) with the defaults:
+    /// 10,000 lines of history, nothing a program could abuse switched on. Use
+    /// [`builder`](Self::builder) to choose.
+    pub fn new(cols: usize, rows: usize) -> Terminal {
+        Builder::default().size(cols, rows).build()
+    }
+
+    /// Options for a terminal; see [`Builder`].
+    pub fn builder() -> Builder {
+        Builder::default()
+    }
+}

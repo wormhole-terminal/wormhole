@@ -56,7 +56,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("keys", Written("keyboard: CSI = u and CSI > u per screen")),
     ("cursor_style", Written("misc: DECSCUSR and mode 12")),
     ("titles", Written("titles: OSC 2, OSC 1, CSI > Ps t and the stack")),
-    ("window_ops", Host("what the host allows; set on the receiver by its host")),
+    ("policy", Host("what the host allows; set on the receiver by its host")),
     ("window", Host("where the host's window is")),
     ("folder", Written("titles: OSC 7")),
     ("palette", Written("palette: OSC 4, 5, 10 to 19")),
@@ -67,6 +67,8 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("stashed_content", Written("final_state: the main screen's pen mark is set, then `?47h` puts it aside")),
     ("link_seq", Written("Seeds::link_seq")),
     ("recent_links", Scratch("a cache of the last links, to share their text; no sequence reads it")),
+    ("identity", Host("what XTVERSION says; the receiver is made with its own")),
+    ("parser", Scratch("in the ground state between sequences (repaint_ready)")),
     ("osc", Scratch("empty between sequences (repaint_ready)")),
     ("dcs", Scratch("empty between sequences (repaint_ready)")),
     ("graphics", Gap("Gaps::PLACEMENTS and IMAGES; the handle counter is Seeds::image_handle")),
@@ -83,7 +85,6 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("kept", Written("misc: the numbers programs set for hardware we do not have")),
     ("guard_used", Written("misc: SPA then EPA")),
     ("attr_extent", Written("misc: DECSACE, through `kept`")),
-    ("screen_checksum", Host("whether DECRQCRA is answered")),
     ("select", Viewer("the selection and the word separators")),
 ];
 
@@ -226,7 +227,7 @@ const PLACEMENT: &[(&str, Coverage)] =
 /// The structs whose fields make up the engine's state.
 pub const FIELDS: &[StructFields] = &[
     StructFields { name: "Terminal", file: "terminal/mod.rs", fields: TERMINAL },
-    StructFields { name: "Cursor", file: "terminal/mod.rs", fields: CURSOR },
+    StructFields { name: "CursorPos", file: "terminal/mod.rs", fields: CURSOR },
     StructFields { name: "Margins", file: "terminal/mod.rs", fields: MARGINS },
     StructFields { name: "Saved", file: "terminal/mod.rs", fields: SAVED },
     StructFields { name: "Cluster", file: "terminal/mod.rs", fields: CLUSTER },

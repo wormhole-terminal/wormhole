@@ -11,7 +11,7 @@
 //! area is taken to be the whole screen at the origin. **Operations** that change the window
 //! (move, resize, iconify, raise, lower, maximise, full screen) and the reports of the window
 //! title and icon name are for programs the user trusts with the window: they do nothing until the
-//! host switches them on ([`Terminal::set_window_ops`]), the same way DECRQCRA is off until
+//! host switches them on ([`Policy::window_ops`](crate::terminal::Policy::window_ops)), the same way DECRQCRA is off until
 //! the host allows it. When on, the sizes in cells take effect in the engine at once (so that a
 //! program that asks for the size right after it gets the new one, as on a real terminal) and
 //! every operation is handed to the host as an [`Event::WindowOp`], which makes the window match
@@ -20,16 +20,6 @@
 use crate::parser::Csi;
 
 use crate::terminal::{Event, Terminal};
-
-/// Whether a program may change the window and read its title back; see the module docs.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum WindowOps {
-    /// The operations are ignored and the title reports unanswered. What a terminal starts with.
-    #[default]
-    Deny,
-    /// The operations are events and the title reports are answered.
-    Allow,
-}
 
 /// Where the host's window is and how big the things around it are, for the reports. Pixels are
 /// the host's, with the origin of the screen at its top left.
@@ -103,6 +93,7 @@ pub enum Fullscreen {
 
 /// What a program asked the window to do (only when the host allowed it).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum WindowOp {
     /// 1.
     Deiconify,
@@ -142,17 +133,6 @@ impl Terminal {
         (u32::from(self.cell_px.0), u32::from(self.cell_px.1))
     }
 
-    /// Allow or refuse what changes the window and what reads its title (the host's setting; see
-    /// the module docs).
-    pub fn set_window_ops(&mut self, ops: WindowOps) {
-        self.window_ops = ops;
-    }
-
-    /// Whether the window operations are allowed.
-    pub fn window_ops(&self) -> WindowOps {
-        self.window_ops
-    }
-
     /// Tell the engine where the window is, for the reports.
     pub fn set_window(&mut self, geometry: WindowGeometry) {
         self.window = Some(geometry);
@@ -162,7 +142,7 @@ impl Terminal {
     pub(in crate::terminal) fn window_operation(&mut self, csi: &Csi) {
         let ps = csi.param(0, 0);
         let (p1, p2) = (csi.get(1), csi.get(2));
-        let allowed = self.window_ops == WindowOps::Allow;
+        let allowed = self.policy.window_ops;
         match ps {
             11 => {
                 let iconified = self.window.is_some_and(|w| w.iconified);
@@ -254,7 +234,7 @@ impl Terminal {
 
     /// DECSNLS (`CSI Ps * |`): the number of lines per screen. Like DECSLPP it resizes the window.
     pub(in crate::terminal) fn set_lines_per_screen(&mut self, lines: u16) {
-        if self.window_ops == WindowOps::Allow && lines > 0 {
+        if self.policy.window_ops && lines > 0 {
             self.resize_window(Extent::Size(u32::from(lines)), Extent::Keep);
         }
     }

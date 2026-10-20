@@ -6,7 +6,7 @@ use crate::types::{Color, Flags, NamedColor};
 ///
 /// `attrs` holds only attribute bits (bold, dim, italic, the underline styles, blink, inverse,
 /// hidden, strikeout, overline); where a cell sits in a row (wide, spacer, wrap) is the cell's own
-/// flags. Kept in the form the app draws, so the snapshot copy moves it without converting.
+/// flags. Kept in the form a renderer draws, so the snapshot copy moves it without converting.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Style {
     pub fg: Color,

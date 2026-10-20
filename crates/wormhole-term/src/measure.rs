@@ -3,8 +3,6 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_vt::parser::Parser;
-
 use super::screen::Screen;
 use super::{GridSize, Pty, PtyEvent, StartOptions};
 
@@ -105,12 +103,11 @@ fn slice_times() {
         let bytes = corpus(kind, 32 << 20);
         for slice in [1 << 10, 4 << 10, 16 << 10, 32 << 10, 64 << 10, 256 << 10] {
             let mut screen = Screen::new(size, 10_000);
-            let mut parser = Parser::new();
             let mut times = Vec::with_capacity(bytes.len() / slice + 1);
             let started = Instant::now();
             for chunk in bytes.chunks(slice) {
                 let at = Instant::now();
-                screen.term.advance(&mut parser, chunk);
+                screen.term.feed(chunk);
                 times.push(at.elapsed());
             }
             let total = started.elapsed();

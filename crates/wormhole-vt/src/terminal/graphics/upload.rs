@@ -4,6 +4,7 @@ use crate::types::ImageHandle;
 
 /// How the bytes of an [`ImageUpload`] are laid out.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ImageFormat {
     /// `width * height` pixels of red, green, blue.
     Rgb,
@@ -18,6 +19,7 @@ pub enum ImageFormat {
 
 /// A transform applied to the data on top of its format.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Compression {
     /// As it is.
     None,
@@ -28,6 +30,7 @@ pub enum Compression {
 /// Why the host could not make pixels of an upload; the engine answers the program with the
 /// matching code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ImageError {
     /// The data is not the picture it says it is (`ENODATA`).
     BadData,
@@ -36,6 +39,18 @@ pub enum ImageError {
     /// A format or feature the host does not read (`EBADF`).
     Unsupported,
 }
+
+impl std::fmt::Display for ImageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            ImageError::BadData => "the data is not the picture it says it is",
+            ImageError::TooBig => "the picture decodes to more than the host keeps",
+            ImageError::Unsupported => "a picture format or feature the host does not read",
+        })
+    }
+}
+
+impl std::error::Error for ImageError {}
 
 /// A picture the host is to decode and keep under [`ImageUpload::image`] until it is told to let
 /// go ([`Event::ImageFree`](crate::terminal::Event::ImageFree)).

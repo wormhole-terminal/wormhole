@@ -32,7 +32,7 @@ path = "src/bin/esctest_host/main.rs"
 
 [dependencies]
 # The engine under test: Wormhole's own (an adapter in `engines/`).
-wormhole-vt = { workspace = true, features = ["state-dump"] }
+wormhole-vt = { workspace = true, features = ["internals"] }
 # `Attrs`, the cell attributes an adapter reports (already in the dependency graph).
 bitflags = "2"
 # vtbench's --json output (already in the dependency graph).

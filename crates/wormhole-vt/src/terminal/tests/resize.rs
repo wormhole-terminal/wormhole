@@ -63,7 +63,7 @@ fn a_resize_ends_the_scrolling_region_and_gives_new_columns_tab_stops() {
 fn a_resize_to_the_same_size_does_nothing() {
     let mut rig = Rig::new(10, 4);
     rig.feed("abcdefghij");
-    rig.term.drain_events().for_each(drop);
+    rig.term.events().for_each(drop);
     rig.term.resize(10, 4);
     rig.feed("k");
     assert_eq!(rig.row(1), "k");
@@ -107,7 +107,7 @@ fn the_history_keeps_at_least_the_lines_asked_for_and_not_much_more() {
 
 #[test]
 fn a_new_terminal_clamps_a_silly_size() {
-    let term = crate::terminal::Terminal::new(0, 0, 0);
+    let term = crate::terminal::Terminal::builder().size(0, 0).scrollback(0).build();
     assert!(term.columns() >= 2 && term.screen_lines() >= 1);
     let mut rig = Rig::new(10, 4);
     rig.term.resize(1_000_000, 1_000_000);

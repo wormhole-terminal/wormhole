@@ -70,7 +70,6 @@ impl Grid {
         Ok(())
     }
 }
-
 fn check_page(page: &Page) -> Result<(), String> {
     let cols = page.cols();
     if page.all_cells().len() != page.slots_used() * cols {

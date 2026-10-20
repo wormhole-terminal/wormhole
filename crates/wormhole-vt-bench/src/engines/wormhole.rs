@@ -1,16 +1,13 @@
 //! `wormhole-vt`'s terminal: the engine that replaces alacritty_terminal.
 
 use wormhole_vt::grid::Style;
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::{ScreenChecksum, Terminal, WindowOps};
-use wormhole_vt::types::{COLOR_COUNT, Color, Column, Flags, Line, NamedColor, Point, Rgb, TermMode};
+use wormhole_vt::{COLOR_COUNT, Color, Column, Flags, Line, NamedColor, Point, Rgb, TermMode, Terminal};
 
 use super::xterm_palette;
 use crate::engine::{Attrs, CELL_PIXELS, Cell, CellColor, Cursor, DEFAULT_COLORS, Engine};
 
 pub struct WormholeEngine {
     term: Terminal,
-    parser: Parser,
     replies: Vec<u8>,
     /// The history the tools asked for. The terminal keeps at least this many lines (it drops
     /// whole pages), the adapter shows exactly this many.
@@ -57,7 +54,6 @@ fn attrs(flags: Flags) -> Attrs {
 /// queries, and a cell of [`CELL_PIXELS`]. The bisimulation harness makes both of its terminals
 /// this way, as a host would configure the engine and its replica alike.
 pub fn host_terminal(cols: usize, rows: usize, scrollback: usize) -> Terminal {
-    let mut term = Terminal::new(cols, rows, scrollback);
     let mut palette = [Rgb::default(); COLOR_COUNT];
     for (slot, color) in palette.iter_mut().enumerate().take(256) {
         let (r, g, b) = xterm_palette(slot as u8);
@@ -68,9 +64,12 @@ pub fn host_terminal(cols: usize, rows: usize, scrollback: usize) -> Terminal {
     {
         palette[slot as usize] = Rgb { r, g, b };
     }
-    term.set_default_colors(&palette);
-    term.set_cell_size(CELL_PIXELS.0 as u16, CELL_PIXELS.1 as u16);
-    term
+    Terminal::builder()
+        .size(cols, rows)
+        .scrollback(scrollback)
+        .palette(&palette)
+        .cell_size(CELL_PIXELS.0 as u16, CELL_PIXELS.1 as u16)
+        .build()
 }
 
 impl WormholeEngine {
@@ -85,23 +84,27 @@ impl Engine for WormholeEngine {
 
     fn new(cols: usize, rows: usize, scrollback: usize) -> Self {
         let term = host_terminal(cols, rows, scrollback);
-        WormholeEngine { term, parser: Parser::new(), replies: Vec::new(), scrollback }
+        WormholeEngine { term, replies: Vec::new(), scrollback }
     }
 
     fn allow_screen_checksum(&mut self) {
-        self.term.set_screen_checksum(ScreenChecksum::Allow);
+        let mut policy = self.term.policy();
+        policy.screen_checksum = true;
+        self.term.set_policy(policy);
     }
 
     fn allow_window_ops(&mut self) {
-        self.term.set_window_ops(WindowOps::Allow);
+        let mut policy = self.term.policy();
+        policy.window_ops = true;
+        self.term.set_policy(policy);
     }
 
     fn feed(&mut self, bytes: &[u8]) {
-        self.term.advance(&mut self.parser, bytes);
+        self.term.feed(bytes);
         self.replies.extend_from_slice(self.term.replies());
         self.term.clear_replies();
         // Events are for the host; the tools read the state.
-        self.term.drain_events().for_each(drop);
+        self.term.events().for_each(drop);
     }
 
     fn resize(&mut self, cols: usize, rows: usize) {

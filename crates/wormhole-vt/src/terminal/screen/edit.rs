@@ -91,7 +91,7 @@ impl Terminal {
     }
 
     /// ED 2. On the main screen the lines that hold something go into the history first, so that
-    /// `clear` or ^L leaves them to scroll back to (as the app has always behaved); the
+    /// `clear` or ^L leaves them to scroll back to (what users of `clear` expect); the
     /// alternate screen has no history. An ED 3 just before (macOS `clear` sends `ESC[3J ESC[H
     /// ESC[2J`) means the user wants them gone: nothing is saved then.
     fn clear_screen(&mut self, bg: crate::types::Color, kind: Erase) {

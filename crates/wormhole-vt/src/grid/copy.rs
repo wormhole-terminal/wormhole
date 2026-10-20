@@ -1,4 +1,4 @@
-//! The snapshot copy: rows of the grid as the types the app draws.
+//! The snapshot copy: rows of the grid as the types a host draws.
 //!
 //! This runs under the lock the parser needs, so it is the loop the grid is shaped for. A cell is
 //! eight bytes whose style is a table lookup, so a row converts in one pass without allocating;
@@ -14,7 +14,7 @@ use super::style::Style;
 use super::{Grid, RowMark};
 
 /// One viewport row as the snapshot keeps it, and whether it was copied again by the last
-/// [`Grid::copy_viewport`].
+/// [`Terminal::copy_viewport`](crate::Terminal::copy_viewport).
 #[derive(Default)]
 pub struct ViewRow {
     pub cells: Vec<DrawCell>,

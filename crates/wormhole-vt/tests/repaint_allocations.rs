@@ -8,8 +8,7 @@
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
+use wormhole_vt::Terminal;
 
 thread_local! {
     static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
@@ -40,9 +39,8 @@ fn allocations() -> usize {
     ALLOCATIONS.with(Cell::get)
 }
 
-fn busy_terminal() -> (Terminal, Parser) {
-    let mut term = Terminal::new(100, 30, 2000);
-    let mut parser = Parser::new();
+fn busy_terminal() -> Terminal {
+    let mut term = Terminal::builder().size(100, 30).scrollback(2000).build();
     let mut stream = String::from("\x1b]2;a title\x07\x1b]7;file:///tmp/work\x07\x1b]4;1;rgb:ff/00/00\x07");
     for i in 0..3000 {
         stream.push_str(&format!(
@@ -53,24 +51,24 @@ fn busy_terminal() -> (Terminal, Parser) {
         ));
     }
     stream.push_str("\x1b[?1049h\x1b[5;5Halternate\x1b[?1049l\x1b[?1049h\x1b[3;3Hscreen");
-    term.advance(&mut parser, stream.as_bytes());
+    term.feed(stream.as_bytes());
     term.clear_replies();
-    term.drain_events().for_each(drop);
-    (term, parser)
+    term.events().for_each(drop);
+    term
 }
 
 #[test]
 fn a_repaint_into_a_used_buffer_allocates_nothing() {
-    let (term, parser) = busy_terminal();
+    let term = busy_terminal();
     let mut out = Vec::new();
     // The first repaint grows the buffer; the second is the steady state.
-    let first = term.repaint(&parser, &mut out).expect("ready");
+    let first = term.repaint(&mut out).expect("ready");
     assert!(first.gaps.is_empty(), "{:?}", first.gaps);
     assert!(first.history_lines > 1000, "a long history is what costs");
     let size = out.len();
     out.clear();
     let before = allocations();
-    let again = term.repaint(&parser, &mut out).expect("ready");
+    let again = term.repaint(&mut out).expect("ready");
     let count = allocations() - before;
     eprintln!("a repaint of {size} bytes: {count} allocations");
     assert_eq!(out.len(), size, "the same terminal repaints the same");

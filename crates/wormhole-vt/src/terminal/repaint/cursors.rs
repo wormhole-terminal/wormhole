@@ -6,7 +6,7 @@ use crate::grid::{Content, Grid, Style};
 use crate::types::{Flags, Line};
 
 use super::{Gaps, Writer};
-use crate::terminal::Cursor;
+use crate::terminal::CursorPos;
 use crate::terminal::modes::conformance::Level;
 use crate::terminal::modes::{self, Modes};
 use crate::terminal::text::charset::Charsets;
@@ -152,7 +152,7 @@ impl<'a> Writer<'a> {
 
     /// DECRSPS: the cursor's place, the delayed wrap, DECOM and the character sets in one string.
     /// Below VT300 the terminal has no such sequence and the place is the only part written.
-    fn cursor_information(&mut self, cursor: Cursor, origin: bool, charsets: &Charsets) {
+    fn cursor_information(&mut self, cursor: CursorPos, origin: bool, charsets: &Charsets) {
         let t = self.term;
         if t.level < Level::Vt300 {
             let default = Charsets::default();
@@ -266,7 +266,8 @@ impl<'a> Writer<'a> {
                 true
             };
         let origin = t.modes.contains(Modes::ORIGIN);
-        let at = if reprint { Cursor { x: t.cluster.head, y: t.cursor.y, pending: false } } else { t.cursor };
+        let at =
+            if reprint { CursorPos { x: t.cluster.head, y: t.cursor.y, pending: false } } else { t.cursor };
         self.cursor_information(at, origin, &t.charsets);
         // The pen after the string: it clears the attributes it reports.
         self.set_style(&t.pen.style);

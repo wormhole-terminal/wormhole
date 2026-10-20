@@ -1,6 +1,6 @@
 //! Character sets: G0..G3, which of them GL shows, and the single shifts.
 //!
-//! Wormhole's input is UTF-8, so only GL matters: a byte in 0x20..=0x7E goes through the set
+//! The input is UTF-8, so only GL matters: a byte in 0x20..=0x7E goes through the set
 //! invoked into GL, and anything decoded from a multi-byte sequence is printed as it is (xterm
 //! does the same in UTF-8 mode). GR has no use: LS1R, LS2R and LS3R are accepted and do nothing,
 //! because a decoded character is never a GR byte.

@@ -9,10 +9,10 @@
 use std::sync::Arc;
 
 use base64::Engine as _;
-use wormhole_vt::terminal::{
-    Event, Extent, ProgressState as EngineProgress, PromptKind as EnginePrompt, ShellMark, WindowOp,
-};
-use wormhole_vt::terminal::{Progress as EngineProgressReport, Terminator};
+use wormhole_vt::Event;
+use wormhole_vt::event::{Progress as EngineProgressReport, Terminator};
+use wormhole_vt::event::{ProgressState as EngineProgress, PromptKind as EnginePrompt, ShellMark};
+use wormhole_vt::window::{Extent, WindowOp};
 
 use super::images::Uploads;
 use crate::events::{EventProxy, PtyEvent, TextFormatter};
@@ -44,7 +44,7 @@ impl Host {
     /// the replies after it waiting, so the replies that came before the request go out first:
     /// the program reads its answers in the order it asked.
     pub(super) fn settle(&mut self, screen: &mut Screen) {
-        self.events.extend(screen.term.drain_events());
+        self.events.extend(screen.term.events());
         let mut events = std::mem::take(&mut self.events);
         for event in events.drain(..) {
             if let Event::ClipboardLoad { replies_before, .. } = &event {
@@ -101,8 +101,9 @@ impl Host {
                 proxy.send(PtyEvent::ClipboardLoad(clipboard_reply(selection, terminator), reply));
             }
             Event::Mark(mark) => {
-                let (mark, prompt) = numbered(mark, &mut self.prompts);
-                proxy.osc(Osc::Mark(mark, prompt));
+                if let Some((mark, prompt)) = numbered(mark, &mut self.prompts) {
+                    proxy.osc(Osc::Mark(mark, prompt));
+                }
             }
             Event::ProgramStatus { payload, terminator } => {
                 let end = match terminator {
@@ -138,32 +139,39 @@ impl Host {
             // The engine keeps the icon name to itself, and iTerm2's other keys (marks, the
             // current directory) are nothing Wormhole acts on today.
             Event::IconName(_) | Event::Iterm(_) => {}
+            // An event a newer engine adds (`Event` is non-exhaustive) is nothing this host acts on.
+            _ => {}
         }
     }
 }
 
 /// The shell's mark as core knows it, and the number of the prompt it belongs to (`prompts` counts
 /// the initial ones, as the engine numbers its blocks).
-fn numbered(mark: ShellMark, prompts: &mut u64) -> (Mark, u64) {
-    let mark = mark_from(mark);
+fn numbered(mark: ShellMark, prompts: &mut u64) -> Option<(Mark, u64)> {
+    let mark = mark_from(mark)?;
     if mark == Mark::PromptStart(PromptKind::Initial) {
         *prompts += 1;
     }
-    (mark, *prompts)
+    Some((mark, *prompts))
 }
 
-fn mark_from(mark: ShellMark) -> Mark {
-    match mark {
+/// `None` for a mark a newer engine adds.
+fn mark_from(mark: ShellMark) -> Option<Mark> {
+    Some(match mark {
         ShellMark::PromptStart(kind) => Mark::PromptStart(match kind {
             EnginePrompt::Initial => PromptKind::Initial,
             EnginePrompt::Secondary => PromptKind::Secondary,
             EnginePrompt::Right => PromptKind::Right,
             EnginePrompt::Continuation => PromptKind::Continuation,
+            // A prompt kind we do not know belongs to the command it sits in, like the extra
+            // prompts, and does not start a block of its own.
+            _ => PromptKind::Secondary,
         }),
         ShellMark::CommandStart => Mark::CommandStart,
         ShellMark::OutputStart => Mark::OutputStart,
         ShellMark::Finished(code) => Mark::Finished(code),
-    }
+        _ => return None,
+    })
 }
 
 fn progress_from(progress: EngineProgressReport) -> Progress {
@@ -173,6 +181,8 @@ fn progress_from(progress: EngineProgressReport) -> Progress {
             EngineProgress::Error => ProgressState::Error,
             EngineProgress::Indeterminate => ProgressState::Indeterminate,
             EngineProgress::Paused => ProgressState::Paused,
+            // A state we do not know is shown as work without a percentage.
+            _ => ProgressState::Indeterminate,
         },
         percent: progress.percent,
     }
@@ -194,7 +204,7 @@ fn clipboard_reply(selection: String, terminator: Terminator) -> TextFormatter {
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) fn mark_of(event: Event, prompts: &mut u64) -> Option<(Mark, u64)> {
     match event {
-        Event::Mark(mark) => Some(numbered(mark, prompts)),
+        Event::Mark(mark) => numbered(mark, prompts),
         _ => None,
     }
 }

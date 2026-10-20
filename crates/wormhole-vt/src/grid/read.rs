@@ -1,11 +1,12 @@
 //! Reading the grid, history included.
 //!
-//! Reads take a [`Line`](crate::types::Line) (0 is the live screen's top row, the history is
+//! Reads take a [`Line`](crate::Line) (0 is the live screen's top row, the history is
 //! negative) and answer `None` or nothing for a line the grid doesn't have.
 
 use crate::types::{Line, Point};
 
 use super::cell::Cell;
+#[cfg(any(test, feature = "internals"))]
 use super::style::Style;
 use super::text;
 use super::{Grid, RowMark};
@@ -36,6 +37,7 @@ impl Grid {
     }
 
     /// The style of the cell at `point`.
+    #[cfg(any(test, feature = "internals"))]
     pub fn style_at(&self, point: Point) -> Option<Style> {
         let cell = self.cell(point)?;
         let (page, _) = self.locate_line(point.line)?;

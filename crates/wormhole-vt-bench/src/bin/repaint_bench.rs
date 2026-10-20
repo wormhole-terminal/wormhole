@@ -12,8 +12,7 @@
 
 use std::time::{Duration, Instant};
 
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
+use wormhole_vt::Terminal;
 use wormhole_vt_bench::corpus;
 
 struct Row {
@@ -32,16 +31,15 @@ fn best(times: &mut [Duration]) -> Duration {
 
 fn measure(lines: usize, cols: usize, runs: usize) -> Row {
     let rows = 40;
-    let mut term = Terminal::new(cols, rows, lines);
-    let mut parser = Parser::new();
+    let mut term = Terminal::builder().size(cols, rows).scrollback(lines).build();
     // Log-like lines (timestamps, colored levels, text) until the history holds `lines`.
     let mut seed = 1;
     while term.history_size() < lines {
         let chunk = corpus::generate("log-lines", 1 << 20, seed).expect("the log corpus");
         for piece in chunk.bytes.chunks(64 * 1024) {
-            term.advance(&mut parser, piece);
+            term.feed(piece);
             term.clear_replies();
-            term.drain_events().for_each(drop);
+            term.events().for_each(drop);
         }
         seed += 1;
     }
@@ -50,16 +48,15 @@ fn measure(lines: usize, cols: usize, runs: usize) -> Row {
     for _ in 0..runs {
         out.clear();
         let start = Instant::now();
-        let done = term.repaint(&parser, &mut out).expect("between sequences");
+        let done = term.repaint(&mut out).expect("between sequences");
         writes.push(start.elapsed());
         std::hint::black_box(done);
     }
     let mut parses = Vec::new();
     for _ in 0..runs {
-        let mut replica = Terminal::new(cols, rows, lines);
-        let mut p = Parser::new();
+        let mut replica = Terminal::builder().size(cols, rows).scrollback(lines).build();
         let start = Instant::now();
-        replica.advance(&mut p, &out);
+        replica.feed(&out);
         parses.push(start.elapsed());
         std::hint::black_box(&replica);
     }

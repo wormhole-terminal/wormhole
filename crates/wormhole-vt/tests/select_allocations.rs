@@ -6,10 +6,9 @@
 //!
 //! Its own test binary, because the allocator is global and a test elsewhere must not count here.
 
-use wormhole_vt::grid::{TextCopy, TextShape};
-use wormhole_vt::parser::Parser;
-use wormhole_vt::terminal::Terminal;
-use wormhole_vt::types::{Column, Line, Point, SelectionType, Side};
+use wormhole_vt::Terminal;
+use wormhole_vt::{Column, Line, Point, SelectionType, Side};
+use wormhole_vt::{TextCopy, TextShape};
 
 #[path = "common/mod.rs"]
 mod common;
@@ -24,14 +23,13 @@ fn at(line: i32, column: usize) -> Point {
 
 /// A busy screen with history: words, wide characters, marks, a hyperlink, wrapped lines.
 fn terminal() -> Terminal {
-    let mut term = Terminal::new(80, 24, 500);
-    let mut parser = Parser::new();
+    let mut term = Terminal::builder().size(80, 24).scrollback(500).build();
     for i in 0..300 {
         let line = format!(
             "{i:04} the quick (brown) fox 日本語 cafe\u{301} \x1b]8;;https://example.com/{i}\x1b\\link {i}\x1b]8;;\x1b\\ {}\r\n",
             "and again ".repeat(i % 12)
         );
-        term.advance(&mut parser, line.as_bytes());
+        term.feed(line.as_bytes());
     }
     term
 }

@@ -32,12 +32,9 @@ use crate::terminal::modes::{Modes, Status};
 /// The most reply bytes kept for a host that does not collect them.
 const REPLIES_MAX: usize = 1 << 20;
 
-/// The version in XTVERSION: Wormhole's, as the crate says it.
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// The version a secondary DA reply carries: an xterm patch level, not Wormhole's version.
+/// The version a secondary DA reply carries: an xterm patch level, not the host's own version.
 /// Programs that ask (vim, esctest) compare it with xterm's patch numbers, which run from about
-/// 300 to 999; Wormhole's own version is XTVERSION's answer. It stays fixed so a release never
+/// 300 to 999; the host's own version is XTVERSION's answer. It stays fixed so a release never
 /// changes what programs conclude about the terminal (1.0.0 would have sent 10000).
 const DA2_VERSION: u32 = 777;
 
@@ -203,7 +200,9 @@ impl Terminal {
 
     /// XTVERSION.
     pub(in crate::terminal) fn report_version(&mut self) {
-        self.reply(format_args!("\x1bP>|Wormhole {VERSION}\x1b\\"));
+        let identity = std::mem::take(&mut self.identity);
+        self.reply(format_args!("\x1bP>|{identity}\x1b\\"));
+        self.identity = identity;
     }
 
     /// DECRQM for an ANSI mode.

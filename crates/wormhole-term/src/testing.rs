@@ -2,7 +2,7 @@
 //! feature in its dev-dependencies): a screen nothing listens to that is fed bytes directly, and
 //! read back in `wormhole_vt::types`.
 
-use wormhole_vt::types::{Cell, Line, Point, RowExtras, Scroll, SelectionType, Side, TermMode};
+use wormhole_vt::{Cell, Line, Point, RowExtras, Scroll, SelectionType, Side, TermMode};
 
 use super::screen::Screen;
 use super::snapshot::ScreenSnapshot;
