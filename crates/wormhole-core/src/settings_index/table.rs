@@ -233,6 +233,14 @@ const APPEARANCE: &[Group] = &[
                 &["title_border"],
             ),
             entry(
+                "column-dividers",
+                "Column dividers",
+                "The lines between the sidebar, the terminal and the right panel. Off hides them in \
+                 every theme; the edges still resize. Increase Contrast keeps them",
+                "border hairline rule separator edge columns divider",
+                &["column_dividers"],
+            ),
+            entry(
                 "status-bar",
                 "Show status bar",
                 "Branch, agents and terminal size along the bottom of every window",

@@ -135,6 +135,9 @@ pub struct Metrics {
     pub ui_font_family: Option<String>,
     pub ui_font_size: f32,
     pub border_width: f32,
+    /// The line between the window's columns (`divider`), 0 to draw none. Derived:
+    /// `border_width`.
+    pub divider_width: f32,
     /// The keyboard focus ring's line.
     pub focus_ring_width: f32,
 }
@@ -151,6 +154,7 @@ impl Default for Metrics {
             ui_font_family: None,
             ui_font_size: 13.0,
             border_width: 1.0,
+            divider_width: 1.0,
             focus_ring_width: 2.0,
         }
     }
@@ -167,6 +171,7 @@ impl Metrics {
             "spacing" => self.spacing,
             "ui_font_size" => self.ui_font_size,
             "border_width" => self.border_width,
+            "divider_width" => self.divider_width,
             "focus_ring_width" => self.focus_ring_width,
             _ => return None,
         })

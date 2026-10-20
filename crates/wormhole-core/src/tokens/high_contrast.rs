@@ -37,6 +37,8 @@ impl ThemeTokens {
             self.recipe.overrides.iter().map(|(n, e)| (n.clone(), (e.clone(), "theme".into()))).collect();
         let mut metrics = self.metrics.clone();
         metrics.focus_ring_width = metrics.focus_ring_width.max(HIGH_CONTRAST_RING);
+        // The columns stay told apart: a theme that draws no divider gets the border's line.
+        metrics.divider_width = metrics.divider_width.max(metrics.border_width);
         let rebuilt = build_variant(
             self.name.clone(),
             self.terminal.clone(),
@@ -402,5 +404,24 @@ mod tests {
             let longest = rules.keys().map(|n| chain_len(n, rules, &mut memo)).max().unwrap_or(0);
             assert!(longest < MAX_REF_DEPTH / 4, "{app:?}: chain of {longest}");
         }
+    }
+
+    /// The column dividers follow the border, and Increase Contrast never leaves the columns
+    /// without a line: a theme that draws none gets the border's width.
+    #[test]
+    fn the_dividers_follow_the_border_and_the_variant_keeps_them_drawn() {
+        let plain = builtin("Tokyo Night");
+        assert_eq!(plain.get("divider"), plain.get("border"));
+        assert_eq!(plain.metrics.divider_width, plain.metrics.border_width);
+        let high = plain.high_contrast();
+        assert_eq!(high.get("divider"), high.get("border"), "stronger with the border");
+        assert_ne!(high.get("divider"), plain.get("divider"));
+        let hidden = resolve_str(r#"{"metrics": {"divider_width": 0}}"#).unwrap();
+        assert_eq!(hidden.metrics.divider_width, 0.0);
+        assert_eq!(hidden.high_contrast().metrics.divider_width, hidden.metrics.border_width);
+        let thick = resolve_str(r#"{"metrics": {"divider_width": 3}}"#).unwrap();
+        assert_eq!(thick.high_contrast().metrics.divider_width, 3.0, "a thicker line stays");
+        let own = resolve_str(r##"{"extends": "Tokyo Night", "ui": {"divider": "#123456"}}"##).unwrap();
+        assert_eq!(own.high_contrast().get("divider"), Some(hex("#123456")));
     }
 }

@@ -195,6 +195,8 @@ impl MetricsFile {
                 .filter(|f| b.and_then(|b| b.ui_font_family.as_ref()) != Some(f)),
             ui_font_size: pick(m.ui_font_size, b.map(|b| b.ui_font_size)),
             border_width: pick(m.border_width, b.map(|b| b.border_width)),
+            // Like the chips' radius: a standalone file re-derives it from `border_width`.
+            divider_width: pick(m.divider_width, b.map_or(Some(m.border_width), |b| Some(b.divider_width))),
             focus_ring_width: pick(m.focus_ring_width, b.map(|b| b.focus_ring_width)),
         }
     }

@@ -49,6 +49,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s| TitleBorder::ALL.iter().position(|b| *b == s.title_border).unwrap_or(1),
         |s, ix| s.title_border = TitleBorder::ALL.get(ix).copied().unwrap_or_default(),
     ),
+    toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
     toggle!("title-branch-status", title_branch_status),
     toggle!("title-agent-gauge", title_agent_gauge),

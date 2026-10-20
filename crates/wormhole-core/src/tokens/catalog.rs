@@ -54,6 +54,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("trust.command", "Text", "What a project would run, in the trust notice and its window"),
     t("border", "Borders", "Hairline separators (translucent)"),
     t("border.strong", "Borders", "Control outlines (translucent)"),
+    t(
+        "divider",
+        "Borders",
+        "The lines between the window's columns: the sidebar, the terminal and the panel",
+    ),
     t("border.focus", "Borders", "Keyboard focus ring (3:1 on every surface)"),
     t("state.hover", "States", "Generic hover overlay"),
     t("state.active", "States", "Pressed overlay"),
@@ -156,6 +161,7 @@ pub const METRIC_TOKENS: &[TokenInfo] = &[
     t("metrics.radius", "Shape", "Controls and rows: buttons, inputs, selects, list rows (px)"),
     t("metrics.radius_lg", "Shape", "Cards, menus, popovers and other floating surfaces (px)"),
     t("metrics.border_width", "Shape", "Outlines and hairline rules (px)"),
+    t("metrics.divider_width", "Shape", "The lines between the window's columns (px, 0 draws none)"),
     t("metrics.focus_ring_width", "Shape", "Keyboard focus ring (px)"),
 ];
 

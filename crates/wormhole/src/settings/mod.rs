@@ -179,7 +179,7 @@ impl SettingsStore {
             asked_opacity: settings.opacity,
             fonts: ResolvedFonts::resolve(&settings, &tokens.metrics),
             icons: crate::icons::resolve(&icon_key.0, icon_key.1),
-            ui: UiColors::new(&tokens, translucency(&settings)),
+            ui: main_ui(&tokens, &settings, false),
             ui_opaque: UiColors::new(&tokens, OPAQUE_LOOK),
             error: config.error.clone().map(Into::into),
             palette,
@@ -229,7 +229,10 @@ impl SettingsStore {
             settings.opacity = 1.0;
         }
         let settings = Some(settings).filter(|s| *s != self.settings);
-        let look_changed = settings.as_ref().is_some_and(|s| translucency(s) != translucency(&self.settings));
+        let look_changed = settings.as_ref().is_some_and(|s| {
+            translucency(s) != translucency(&self.settings)
+                || s.column_dividers != self.settings.column_dividers
+        });
         if let Some(settings) = settings {
             self.settings = settings;
             self.revisions.settings += 1;
@@ -260,7 +263,7 @@ impl SettingsStore {
             self.tokens = tokens;
         }
         if theme_changed || look_changed {
-            self.ui = UiColors::new(&self.tokens, translucency(&self.settings));
+            self.ui = main_ui(&self.tokens, &self.settings, self.system.increase_contrast);
         }
         if theme_changed {
             self.ui_opaque = UiColors::new(&self.tokens, OPAQUE_LOOK);
@@ -482,6 +485,14 @@ fn translucency(settings: &Settings) -> Translucency {
     Translucency { opacity: settings.opacity, blur: settings.blur }
 }
 
+/// The main window's colours: the tokens at the window's look, and no line between the columns
+/// when the person turned Column dividers off. Increase Contrast keeps the lines, as the
+/// window's columns would otherwise be told apart by a tint alone.
+fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
+    let ui = UiColors::new(tokens, translucency(settings));
+    if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() }
+}
+
 /// An opaque window's look: nothing shows through, so the tokens stand as they are.
 const OPAQUE_LOOK: Translucency = Translucency { opacity: 1.0, blur: false };
 
@@ -659,6 +670,35 @@ mod tests {
         system(&mut store, SystemLook::default());
         assert_eq!(store.settings.opacity, 0.8);
         assert_eq!(store.ui.muted, translucent_muted);
+    }
+
+    /// Column dividers off draws no line between the main window's columns whatever the theme
+    /// says, and no other window's; Increase Contrast keeps the lines; the person's choice stays
+    /// for when it goes off.
+    #[test]
+    fn column_dividers_off_hides_them_in_the_main_window_unless_contrast_is_increased() {
+        let mut store = store();
+        let theme_width = gpui_kit::px(store.tokens.metrics.divider_width);
+        assert_eq!(store.ui.divider_width, theme_width, "shown: the theme's width");
+        assert!(theme_width > gpui_kit::px(0.0));
+
+        update(&mut store, |s| s.column_dividers = false);
+        assert_eq!(store.ui.divider_width, gpui_kit::px(0.0));
+        assert_eq!(store.ui.divider, crate::theme_bridge::token(&store.tokens, "divider"), "the color stays");
+        assert_eq!(
+            store.ui_for(false).divider_width,
+            theme_width,
+            "the Studio and Settings show the theme's"
+        );
+
+        system(&mut store, CONTRAST);
+        assert_eq!(store.ui.divider_width, gpui_kit::px(store.tokens.metrics.divider_width));
+        assert!(store.ui.divider_width > gpui_kit::px(0.0), "Increase Contrast keeps the lines");
+
+        system(&mut store, SystemLook::default());
+        assert_eq!(store.ui.divider_width, gpui_kit::px(0.0), "off again with the setting");
+        update(&mut store, |s| s.column_dividers = true);
+        assert_eq!(store.ui.divider_width, theme_width);
     }
 
     /// Increase Contrast: the theme's high-contrast variant and opaque windows, the

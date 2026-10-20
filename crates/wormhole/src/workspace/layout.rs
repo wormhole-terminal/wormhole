@@ -257,15 +257,15 @@ impl Render for Workspace {
                     })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))
-                    // The hairlines lie over the columns' edges and their handles over them.
+                    // The dividers lie over the columns' edges and their handles over them.
                     .when(columns.sidebar > 0.0 && self.in_flow(Edge::Sidebar), |d| {
                         // Glass floats inset, so no hairline runs along the column's edge.
-                        d.when(!sidebar_glass, |d| d.child(edge_rule(Edge::Sidebar, columns.sidebar, ui)))
+                        d.when(!sidebar_glass, |d| d.children(edge_rule(Edge::Sidebar, columns.sidebar, ui)))
                             .child(self.resize_handle(Edge::Sidebar, columns.sidebar, cx))
                     })
                     .when(columns.panel > 0.0 && self.in_flow(Edge::Panel), |d| {
                         let x = self.window_width - columns.panel;
-                        d.when(!sidebar_glass, |d| d.child(edge_rule(Edge::Panel, x, ui)))
+                        d.when(!sidebar_glass, |d| d.children(edge_rule(Edge::Panel, x, ui)))
                             .child(self.resize_handle(Edge::Panel, x, cx))
                     }),
             )

@@ -590,6 +590,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
         &["surface.overlay", "surface.elevated", "shadow", "text.primary", "text.muted", "metrics.radius_lg"],
     ),
     u("card", "card", Chrome, &["surface.panel", "border", "metrics.radius_lg", "metrics.border_width"]),
+    u("column.divider", "column divider", Chrome, &["divider", "metrics.divider_width"]),
     u("scrollbar", "scrollbar", Settings, &["scrollbar.thumb", "text.faint"]),
     u("terminal", "terminal", Basics, &["surface.window", "state.highlight", "terminal.*"]),
     u("code", "code", Basics, &["surface.window", "syntax.*"]),

@@ -115,6 +115,33 @@ pub(super) fn render(
                         .child("← split gaps on: the focused pane's outline, and another's"),
                 ),
         )
+        .child(
+            // The window's columns, the lines between them as the theme draws them (the person's
+            // Column dividers setting hides them in the app, not here).
+            div()
+                .flex()
+                .items_center()
+                .gap_4()
+                .child(env.mark(
+                    "column.divider",
+                    div()
+                        .flex()
+                        .w(px(DIVIDER_SAMPLE_L * 2.0))
+                        .h(px(DIVIDER_SAMPLE_H))
+                        .outlined(ui, ui.border)
+                        .child(div().w_1_4().h_full().bg(ui.panel))
+                        .child(div().w(ui.divider_width).h_full().bg(ui.divider))
+                        .child(div().flex_1().h_full().bg(ui.background))
+                        .child(div().w(ui.divider_width).h_full().bg(ui.divider))
+                        .child(div().w_1_4().h_full().bg(ui.panel_right)),
+                ))
+                .child(
+                    div()
+                        .text_caption()
+                        .text_color(ui.muted)
+                        .child("← the lines between the sidebar, the terminal and the panel"),
+                ),
+        )
         .child(drop_zones(ui))
         .child(
             div()

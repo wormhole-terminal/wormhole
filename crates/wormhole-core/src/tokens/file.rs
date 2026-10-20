@@ -213,6 +213,9 @@ pub struct MetricsFile {
     pub ui_font_size: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "whole_number")]
     pub border_width: Option<f32>,
+    /// Optional: without it, the column dividers follow `border_width`. 0 draws none.
+    #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "whole_number")]
+    pub divider_width: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none", serialize_with = "whole_number")]
     pub focus_ring_width: Option<f32>,
 }
@@ -243,6 +246,7 @@ impl MetricsFile {
             "spacing" => self.spacing,
             "ui_font_size" => self.ui_font_size,
             "border_width" => self.border_width,
+            "divider_width" => self.divider_width,
             "focus_ring_width" => self.focus_ring_width,
             _ => None,
         }
@@ -268,6 +272,7 @@ impl MetricsFile {
             "spacing" => &mut self.spacing,
             "ui_font_size" => &mut self.ui_font_size,
             "border_width" => &mut self.border_width,
+            "divider_width" => &mut self.divider_width,
             "focus_ring_width" => &mut self.focus_ring_width,
             _ => return None,
         })
@@ -285,6 +290,7 @@ impl MetricsFile {
         }
         self.ui_font_size = top.ui_font_size.or(self.ui_font_size);
         self.border_width = top.border_width.or(self.border_width);
+        self.divider_width = top.divider_width.or(self.divider_width);
         self.focus_ring_width = top.focus_ring_width.or(self.focus_ring_width);
     }
 
@@ -297,6 +303,7 @@ impl MetricsFile {
             ("spacing", self.spacing, &mut m.spacing),
             ("ui_font_size", self.ui_font_size, &mut m.ui_font_size),
             ("border_width", self.border_width, &mut m.border_width),
+            ("divider_width", self.divider_width, &mut m.divider_width),
             ("focus_ring_width", self.focus_ring_width, &mut m.focus_ring_width),
         ];
         for (name, v, dst) in nums {
@@ -310,6 +317,9 @@ impl MetricsFile {
         // Derived, like a color token without an override: see `METRIC_RULES`.
         if self.radius_chip.is_none() {
             m.radius_chip = m.radius_sm;
+        }
+        if self.divider_width.is_none() {
+            m.divider_width = m.border_width;
         }
         if let Some(f) = &self.ui_font_family {
             m.ui_font_family = Some(f.clone());
@@ -564,6 +574,7 @@ mod tests {
             "spacing",
             "ui_font_size",
             "border_width",
+            "divider_width",
             "focus_ring_width",
         ];
         for (i, key) in keys.into_iter().enumerate() {
@@ -572,5 +583,24 @@ mod tests {
             assert_eq!((file.get(key), file.get(&format!("metrics.{key}"))), (Some(value), Some(value)));
         }
         assert_eq!(file.get("ui_font_family"), None);
+    }
+
+    /// `divider_width` follows `border_width` until a file sets it; 0 is a line that is not drawn.
+    #[test]
+    fn the_divider_width_follows_the_border_and_takes_zero_to_the_range_end() {
+        let apply = |json: &str| {
+            let file: MetricsFile = serde_json::from_str(json).expect("parses");
+            let mut m = Metrics::default();
+            file.apply(&mut m).map(|()| m)
+        };
+        assert_eq!(apply("{}").unwrap().divider_width, 1.0);
+        assert_eq!(apply(r#"{"border_width": 2}"#).unwrap().divider_width, 2.0, "follows the border");
+        assert_eq!(apply(r#"{"border_width": 2, "divider_width": 1}"#).unwrap().divider_width, 1.0);
+        assert_eq!(apply(r#"{"divider_width": 0}"#).unwrap().divider_width, 0.0, "hidden");
+        assert_eq!(apply(r#"{"divider_width": 200}"#).unwrap().divider_width, 200.0);
+        for bad in ["-1", "200.5"] {
+            let err = apply(&format!(r#"{{"divider_width": {bad}}}"#)).unwrap_err();
+            assert!(err.contains("metrics.divider_width"), "{err}");
+        }
     }
 }

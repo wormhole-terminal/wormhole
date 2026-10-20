@@ -308,6 +308,10 @@ pub struct Settings {
     /// A small gap between the terminals of a split, each its own rounded surface; off joins them with
     /// a hairline.
     pub split_gaps: bool,
+    /// The lines between the sidebar, the terminal and the right panel, as the theme draws them
+    /// (`divider`, `metrics.divider_width`). Off hides them whatever the theme says; the handles
+    /// still resize. Increase Contrast keeps them.
+    pub column_dividers: bool,
     /// The line under the terminal's title row: always, only while content is under the bar, never.
     pub title_border: TitleBorder,
     /// The app the title row's Open in… button opens a terminal's folder in, by its bundle
@@ -436,6 +440,7 @@ impl Default for Settings {
             status_bar: false,
             minimap: false,
             split_gaps: true,
+            column_dividers: true,
             title_border: TitleBorder::default(),
             open_in: String::new(),
             title_branch_status: true,
@@ -551,6 +556,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "status_bar",
     "minimap",
     "split_gaps",
+    "column_dividers",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",
     // The window's chrome, one look for every window (where the terminals are listed too); and the
@@ -906,6 +912,16 @@ mod tests {
         assert!(!unset.allow_screen_checksum, "programs can't read the screen back until asked");
         assert!(!unset.allow_window_ops, "programs can't move the window or read its title until asked");
         assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
+    }
+
+    #[test]
+    fn column_dividers_are_shown_until_turned_off_and_the_persons_own() {
+        let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+        assert!(unset.column_dividers);
+        let off: Settings = jsonc::parse(r#"{ "column_dividers": false }"#).expect("valid jsonc");
+        assert!(!off.column_dividers);
+        assert!(keys().contains(&"column_dividers".to_string()));
+        assert!(APP_SETTINGS.contains(&"column_dividers") && !PROJECT_SETTINGS.contains(&"column_dividers"));
     }
 
     #[test]

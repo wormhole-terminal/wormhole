@@ -1,4 +1,4 @@
-//! The edges between the side panels and the terminal: a hairline drawn over each edge, and
+//! The edges between the side panels and the terminal: a divider drawn over each edge, and
 //! resizing the panels from it. An 8 pt handle straddles each edge; after a short hover
 //! its 2 pt line lights up, while dragging it is solid and a
 //! readout beside the pointer says the width and why it stopped. A double-click puts the
@@ -23,17 +23,22 @@ const LINE_W: f32 = 2.0;
 /// How far the readout sits from the pointer.
 const READOUT_OFFSET: f32 = 12.0;
 
-/// The hairline on `edge`, which is `x` from the window's left. It is drawn over the columns
-/// instead of being a border of one of them, so neither gives up a pixel to it: the sidebar is
-/// exactly its width (its right-hand items end 16 pt inside, on x 334 of 350) and the panel
-/// exactly its own. It lies on the terminal's side of the edge.
+/// The divider on `edge`, which is `x` from the window's left: the theme's `divider` in its
+/// `divider_width` (the border's unless it says), nothing at all when that is 0 or the person
+/// turned the dividers off. It is drawn over the columns instead of being a border of one of
+/// them, so neither gives up a pixel to it: the sidebar is exactly its width (its right-hand
+/// items end 16 pt inside, on x 334 of 350) and the panel exactly its own. It lies on the
+/// terminal's side of the edge. The handle over it is drawn either way.
 #[track_caller]
-pub(super) fn edge_rule(edge: Edge, x: f32, ui: UiColors) -> Div {
+pub(super) fn edge_rule(edge: Edge, x: f32, ui: UiColors) -> Option<Div> {
+    if ui.divider_width <= px(0.0) {
+        return None;
+    }
     let left = match edge {
         Edge::Sidebar => x,
-        Edge::Panel => x - f32::from(ui.border_width),
+        Edge::Panel => x - f32::from(ui.divider_width),
     };
-    div().absolute().top_0().bottom_0().left(px(left)).w(ui.border_width).bg(ui.border)
+    Some(div().absolute().top_0().bottom_0().left(px(left)).w(ui.divider_width).bg(ui.divider))
 }
 
 impl Workspace {

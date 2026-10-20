@@ -10,7 +10,7 @@ use super::expr::{Expr, parse_expr};
 use super::model::Appearance;
 
 /// Metrics whose default follows another metric, as `(key, source)`.
-const METRIC_RULES: &[(&str, &str)] = &[("radius_chip", "radius_sm")];
+const METRIC_RULES: &[(&str, &str)] = &[("radius_chip", "radius_sm"), ("divider_width", "border_width")];
 
 /// Default rule for a UI token, `syntax.*` or `metrics.*` node, in expression
 /// syntax. The Studio can show this as "derived from ..." next to each token.
@@ -81,6 +81,8 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "text.link" => "readable(primary, surface.window, surface.panel, 4.5)",
         "border" => p("text.primary / 12%", "text.primary / 14%"),
         "border.strong" => p("text.primary / 24%", "text.primary / 28%"),
+        // The same line as every hairline until a theme gives the columns its own.
+        "divider" => "border",
         // The primary, moved only where it would fall below 3:1 on a surface it is drawn on.
         "border.focus" => {
             "readable(primary, surface.window, surface.panel, surface.elevated, sidebar.background, \

@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Column dividers: the lines between the sidebar, the terminal and the right panel are their own
+  `divider` colour and `metrics.divider_width` in a theme (both follow the border unless set; a width
+  of 0 draws none), and Settings → Appearance → Column dividers hides them in every theme. The edges
+  still resize, and Increase Contrast keeps the lines.
 - Profiles: a whole Wormhole of its own for Work, Private or anything else, each with its terminals,
   theme, fonts, keys, notifications, trusted projects, start folder, environment, git identity and
   its own Claude and Codex login. Settings → Profile (the first page) edits the one you're in and

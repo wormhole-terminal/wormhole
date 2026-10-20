@@ -44,6 +44,7 @@ diff.hunk.text #888fae
 diff.line_number #757a94
 diff.removed #f7768e
 diff.removed.background #392835
+divider #c0caf51f
 find.match #e0af6852
 find.match.current #e0af68
 find.match.current.text #000000
@@ -153,6 +154,7 @@ metrics.radius_chip 4
 metrics.radius 6
 metrics.radius_lg 10
 metrics.border_width 1
+metrics.divider_width 1
 metrics.focus_ring_width 2
 translucent 80% blur text.primary #c0caf5
 translucent 80% blur text.muted #99a0c1
@@ -179,6 +181,7 @@ increase_contrast chip.border #c0caf57a
 increase_contrast diff.hunk.text #9aa1c1
 increase_contrast diff.line_number #797f99
 increase_contrast diff.removed #fa7890
+increase_contrast divider #c0caf552
 increase_contrast git.branch #b39cea
 increase_contrast git.branch.background #b39cea24
 increase_contrast input.border #c0caf57a

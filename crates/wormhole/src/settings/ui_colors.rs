@@ -20,6 +20,9 @@ pub struct UiColors {
     /// Cards, menus and other floating surfaces.
     pub radius_lg: Pixels,
     pub border_width: Pixels,
+    /// The line between the window's columns (`metrics.divider_width`), 0 for none; the main
+    /// window's also follows the Column dividers setting (`without_dividers`).
+    pub divider_width: Pixels,
     /// The keyboard focus ring's line (`metrics.focus_ring_width`); its color is `focus`.
     pub focus_ring_width: Pixels,
     /// The terminal / main area, at the window opacity.
@@ -77,6 +80,8 @@ pub struct UiColors {
     pub band_hover: Hsla,
     pub band_solid: Hsla,
     pub border: Hsla,
+    /// The line between the columns (`divider`, the border's unless a theme says).
+    pub divider: Hsla,
     /// Control outlines and key caps (`border.strong`).
     pub border_strong: Hsla,
     /// The keyboard focus ring (`border.focus`).
@@ -213,6 +218,7 @@ const COLORS: &[Field] = fields! {
     band_hover = "band.hover";
     band_solid = "band.solid";
     border = "border";
+    divider = "divider";
     border_strong = "border.strong";
     focus = "border.focus";
     input = "input.background";
@@ -266,6 +272,11 @@ const COLORS: &[Field] = fields! {
 };
 
 impl UiColors {
+    /// These colors with no line between the columns: the Column dividers setting, off.
+    pub(crate) fn without_dividers(self) -> Self {
+        Self { divider_width: px(0.0), ..self }
+    }
+
     /// The colors for a window that looks like `look`. A translucent one paints its surfaces at
     /// its opacity, and draws its text as core judges it on what shows through
     /// (`ThemeTokens::translucent`).
@@ -277,6 +288,7 @@ impl UiColors {
             radius: px(m.radius),
             radius_lg: px(m.radius_lg),
             border_width: px(m.border_width),
+            divider_width: px(m.divider_width),
             focus_ring_width: px(m.focus_ring_width),
             ..Self::default()
         };
