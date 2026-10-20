@@ -4,7 +4,12 @@
 use super::*;
 use style::StatusGlyph;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let app: &App = cx;
     let glyph = |id: &'static str, glyph: StatusGlyph| style::status_glyph(id, ui, glyph, app);

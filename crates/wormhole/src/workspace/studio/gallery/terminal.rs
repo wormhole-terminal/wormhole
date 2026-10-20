@@ -5,7 +5,12 @@ use super::*;
 /// A palette slot's square in the strip above the sample.
 const SLOT: f32 = 16.0;
 
-pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let tokens = env.tokens;
     let mut ansi = div().flex().flex_wrap().gap_1();
@@ -45,7 +50,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     div().flex().flex_col().gap_2().child(ansi).child(env.mark("terminal", sample)).into_any_element()
 }
 
-impl StudioWindow {
+impl GalleryView {
     /// A palette slot: its color in a small square, ringed in the primary while it is the
     /// token being edited; a click selects it.
     fn slot(&self, name: &'static str, tokens: &ThemeTokens, cx: &mut Context<Self>) -> impl IntoElement {

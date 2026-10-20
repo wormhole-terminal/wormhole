@@ -7,7 +7,12 @@ use style::{
 };
 use wormhole_core::agents::AgentId;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let app: &App = cx;
     let claude = || TileFace::Agent(AgentId::Claude);

@@ -11,6 +11,7 @@ mod diff;
 mod find;
 mod inputs;
 mod labels;
+mod layout;
 mod metrics;
 mod navigation;
 mod panel;
@@ -23,11 +24,13 @@ mod syntax;
 mod terminal;
 mod tiles;
 mod typography;
+mod view;
 mod windows;
 
-pub(super) use syntax::CodeSample;
+use syntax::CodeSample;
+pub(super) use view::GalleryView;
 
-use wormhole_core::tokens::{TOKEN_USES, uses_of};
+use wormhole_core::tokens::{TOKEN_USES, TokenUse, uses_of};
 
 use super::token_editor::EDITOR_W;
 use super::token_list::LIST_W;
@@ -116,7 +119,14 @@ struct Specimen {
     /// Where it is shown besides All; `None` for the basics (type, terminal, code, sizes).
     area: Option<Area>,
     column: Column,
-    render: fn(&StudioWindow, &Env, &mut Context<StudioWindow>) -> AnyElement,
+    /// The gap between this specimen's pieces: what its parts were separated by when they were one.
+    part_gap: f32,
+    /// About how tall each piece `render` makes is (points), until it has been built and measured:
+    /// where pieces lie is worked out from these, so that the ones in view are built and the rest
+    /// are spaces. A guess that is off is corrected as the page is scrolled, nothing worse.
+    parts: &'static [f32],
+    /// One piece: a tall specimen comes in several, so that only the ones in view are built.
+    render: fn(&GalleryView, &Env, usize, &mut Context<GalleryView>) -> AnyElement,
 }
 
 const SPECIMENS: &[Specimen] = &[
@@ -125,6 +135,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "bands, rows in every state, glyphs, status bar",
         area: Some(Area::Sidebar),
         column: Column::Left,
+        part_gap: 16.0,
+        parts: &[345.0, 527.0, 216.0, 571.0, 210.0, 217.0, 217.0, 163.0],
         render: sidebar::render,
     },
     Specimen {
@@ -132,6 +144,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "status tiles, a card, the tab bars' tabs, chips, piles and segments",
         area: Some(Area::Sidebar),
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[847.0],
         render: tiles::render,
     },
     Specimen {
@@ -139,6 +153,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "section bands, items, files, commits, icon tabs",
         area: Some(Area::Panel),
         column: Column::Right,
+        part_gap: 16.0,
+        parts: &[419.0, 328.0, 132.0, 395.0, 113.0],
         render: panel::render,
     },
     Specimen {
@@ -146,6 +162,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "header, hunk, context, removed, added, filler",
         area: Some(Area::Panel),
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[180.0],
         render: diff::render,
     },
     Specimen {
@@ -153,6 +171,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "icons, icon buttons, the × and hit areas",
         area: Some(Area::Chrome),
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[483.0],
         render: chrome::render,
     },
     Specimen {
@@ -160,6 +180,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "the find bar, matches and the current one",
         area: Some(Area::Chrome),
         column: Column::Both,
+        part_gap: 0.0,
+        parts: &[177.0],
         render: find::render,
     },
     Specimen {
@@ -167,6 +189,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "pane headers, focused and not, and the dividers",
         area: Some(Area::Chrome),
         column: Column::Both,
+        part_gap: 0.0,
+        parts: &[397.0],
         render: panes::render,
     },
     Specimen {
@@ -174,6 +198,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "tabs, chips, badges, rows, cards, tooltips",
         area: Some(Area::Chrome),
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[513.0],
         render: navigation::render,
     },
     Specimen {
@@ -181,6 +207,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "titles, section labels, empty notes, toolbars",
         area: Some(Area::Chrome),
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[188.0],
         render: labels::render,
     },
     Specimen {
@@ -188,6 +216,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "radii, the focus ring, everything chip-shaped",
         area: Some(Area::Chrome),
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[175.0],
         render: shape::render,
     },
     Specimen {
@@ -195,6 +225,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "rows, nav, controls, banners",
         area: Some(Area::Settings),
         column: Column::Both,
+        part_gap: 24.0,
+        parts: &[654.0, 368.0, 705.0],
         render: settings::render,
     },
     Specimen {
@@ -202,6 +234,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "variants and sizes",
         area: Some(Area::Settings),
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[180.0],
         render: buttons::render,
     },
     Specimen {
@@ -209,6 +243,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "fields, checkboxes and switches",
         area: Some(Area::Settings),
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[126.0],
         render: inputs::render,
     },
     Specimen {
@@ -216,6 +252,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "the select and the menu it opens",
         area: Some(Area::Settings),
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[187.0],
         render: selects::render,
     },
     Specimen {
@@ -223,6 +261,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "dialog, first-run sheet, About, Licenses",
         area: Some(Area::Settings),
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[710.0],
         render: windows::render,
     },
     Specimen {
@@ -230,6 +270,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "quick panel and palette rows, readout",
         area: Some(Area::Ambient),
         column: Column::Both,
+        part_gap: 0.0,
+        parts: &[648.0],
         render: ambient::render,
     },
     Specimen {
@@ -237,6 +279,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "16 ANSI, text, selection, cursor",
         area: None,
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[176.0],
         render: terminal::render,
     },
     Specimen {
@@ -244,6 +288,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "highlighting from the syntax tokens",
         area: None,
         column: Column::Left,
+        part_gap: 0.0,
+        parts: &[124.0],
         render: syntax::render,
     },
     Specimen {
@@ -251,6 +297,8 @@ const SPECIMENS: &[Specimen] = &[
         description: "the text roles and colors",
         area: None,
         column: Column::Right,
+        part_gap: 0.0,
+        parts: &[293.0],
         render: typography::render,
     },
     Specimen {
@@ -258,93 +306,21 @@ const SPECIMENS: &[Specimen] = &[
         description: "every size, limit, duration and easing",
         area: None,
         column: Column::Right,
+        part_gap: 24.0,
+        parts: &[657.0, 627.0],
         render: metrics::render,
     },
 ];
 
+/// How many pieces the whole page is made of (the counting tests compare what a frame builds
+/// with it).
+#[cfg(test)]
+pub(super) fn piece_count() -> usize {
+    SPECIMENS.iter().map(|s| s.parts.len()).sum()
+}
+
 /// Narrower than this, the gallery is one column.
 const TWO_COLUMNS_MIN_W: f32 = 680.0;
-
-impl StudioWindow {
-    pub(super) fn render_gallery(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui(cx);
-        let tokens = tokens_of(cx);
-        let uses = self.selected.as_deref().map(uses_of).unwrap_or_default();
-        let env = Env { ui, tokens: &tokens, uses: uses.iter().map(|u| u.id).collect() };
-        let width = f32::from(window.viewport_size().width) - LIST_W - EDITOR_W;
-        let shown = SPECIMENS.iter().filter(|s| self.area == Area::All || s.area == Some(self.area));
-        let (mut left, mut right, mut both) = (column(), column(), column());
-        for specimen in shown {
-            let content = (specimen.render)(self, &env, cx);
-            let section = section(ui, specimen.title, specimen.description, content);
-            match specimen.column {
-                Column::Right if width >= TWO_COLUMNS_MIN_W => right = right.child(section),
-                Column::Both => both = both.child(section),
-                _ => left = left.child(section),
-            }
-        }
-        div()
-            .id("studio-gallery")
-            .track_scroll(&self.gallery_scroll)
-            .flex_1()
-            .min_w_0()
-            .h_full()
-            .overflow_y_scroll()
-            .p_6()
-            .flex()
-            .flex_col()
-            .gap_4()
-            .text_color(env.tk("text.primary"))
-            .child(self.gallery_header(&uses, ui, cx))
-            .child(div().flex().items_start().gap_6().child(left).child(right))
-            .child(both)
-            .into_any_element()
-    }
-
-    /// The filter, and how many things the selected token is drawn on.
-    fn gallery_header(&self, uses: &[&TokenUse], ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
-        let mut filter = style::segmented(ui);
-        for area in Area::ALL {
-            filter = filter.child(
-                style::segment(
-                    SharedString::from(format!("studio-area-{}", area.label())),
-                    ui,
-                    area.label(),
-                    self.area == area,
-                )
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.area = area;
-                    cx.notify();
-                })),
-            );
-        }
-        let count = self.selected.as_ref().map(|name| {
-            let text = match uses.len() {
-                0 => format!("Nothing draws {name} directly"),
-                1 => format!("1 use of {name}"),
-                n => format!("{n} uses of {name}"),
-            };
-            div()
-                .min_w_0()
-                .flex()
-                .items_center()
-                .gap_1()
-                .text_caption()
-                .text_color(if uses.is_empty() { ui.faint } else { ui.link })
-                .child(style::icon(IconName::Target))
-                .child(div().min_w_0().truncate().child(text))
-        });
-        div().flex().items_center().justify_between().gap_4().child(filter).children(count).into_any_element()
-    }
-}
-
-use wormhole_core::tokens::TokenUse;
-
-/// One of the gallery's columns.
-#[track_caller]
-fn column() -> Div {
-    div().flex_1().min_w_0().flex().flex_col().gap_6()
-}
 
 /// A specimen under its label and what it shows.
 #[track_caller]
@@ -361,10 +337,15 @@ fn section(ui: UiColors, title: &'static str, description: &'static str, content
                 .child(style::section_label(ui, title))
                 .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(description)),
         )
-        // Whatever a specimen can't fit in its column is cut off rather than drawn over the other
-        // column; the inset leaves room for the uses outline round its edges.
-        .child(div().w_full().min_w_0().overflow_hidden().p_1().child(content))
+        .child(framed(content))
         .into_any_element()
+}
+
+/// What a specimen is drawn in: whatever it can't fit in its column is cut off rather than drawn
+/// over the other column; the inset leaves room for the uses outline round its edges.
+#[track_caller]
+fn framed(content: AnyElement) -> Div {
+    div().w_full().min_w_0().overflow_hidden().p_1().child(content)
 }
 
 #[cfg(test)]

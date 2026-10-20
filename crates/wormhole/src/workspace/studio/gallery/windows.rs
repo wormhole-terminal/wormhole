@@ -17,7 +17,12 @@ const SHEET_FOOTER_H: f32 = 48.0;
 const DOT: f32 = 4.0;
 const DOT_BAR: f32 = 16.0;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    _cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let surface = |d: Div| d.rounded(ui.radius_lg).outlined(ui, ui.border_strong).bg(ui.elevated);
 

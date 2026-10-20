@@ -20,7 +20,7 @@ fn builtins_only(file: &ThemeFile) -> Result<ThemeTokens, String> {
 
 /// A themes folder that is not the user's: no file is read, and "saving" fails with a
 /// word the tests recognise.
-fn themes() -> Themes {
+pub(super) fn themes() -> Themes {
     Themes { resolve: builtins_only, saved_path: |_| None, save: |_| Err("stub".into()) }
 }
 

@@ -15,12 +15,12 @@ mod devctl;
 mod draft;
 mod gallery;
 mod save;
+mod shell;
 mod title;
 mod token_editor;
 mod token_list;
+mod token_rows;
 
-use std::cell::RefCell;
-use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use gpui_kit::component::color_picker::{ColorPicker, ColorPickerEvent, ColorPickerState};
@@ -33,11 +33,12 @@ use super::*;
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
 use crate::vibrancy::Blur;
-use draft::{ANSI_NAMES, Show, Themes, draft_for, group_of, is_metric, number, override_of, set_override};
-use gallery::Area;
+use draft::{ANSI_NAMES, Themes, draft_for, group_of, is_metric, number, override_of, set_override};
+use gallery::{Area, GalleryView};
 use save::Notice;
 use title::SaveAction;
-use token_editor::FieldError;
+use token_editor::{FieldError, TokenEditorView};
+use token_list::TokenListView;
 
 /// The window's size, and the smallest it may get: the token list
 /// (300) and the editor (320) at their widths with the gallery still two columns (680, so the
@@ -73,13 +74,16 @@ pub(crate) struct StudioWindow {
     /// The draft's name, edited in place in the title row.
     name: Entity<InputState>,
     renaming: bool,
-    /// The token list's filter text and what it shows.
-    filter: Entity<InputState>,
-    show: Show,
-    /// The token list's bands that are open.
-    open_groups: BTreeSet<&'static str>,
-    /// The gallery's filter (All, Sidebar, Panel, …).
+    /// The gallery's filter (All, Sidebar, Panel, …), which narrows the token list too.
     area: Area,
+    /// The three columns, each a view of its own so that scrolling or animating one redraws
+    /// that one alone. What they show is the window's; they observe it.
+    list: Entity<TokenListView>,
+    gallery: Entity<GalleryView>,
+    editor: Entity<TokenEditorView>,
+    /// How many times an edit changed the draft or its starting point, for what is made from
+    /// them (the token list's rows) to know when to be made again.
+    revision: u64,
     /// The Save theme menu (Save as a copy, Export, Copy JSON, Use in this project).
     save_menu: bool,
     /// Whether Use in this project can write, as of when the menu opened. (Looked up then,
@@ -88,10 +92,6 @@ pub(crate) struct StudioWindow {
     menu_project: bool,
     /// What the last save, export or copy did, under the title row.
     notice: Option<Notice>,
-    /// The editor of the gallery's item that is being edited.
-    item_editor: Entity<InputState>,
-    /// The gallery's text field.
-    sample_input: Entity<InputState>,
     /// The draft has edits that are not saved as a theme.
     dirty: bool,
     /// A sheet (the close question, a name clash) is up, waiting for its answer.
@@ -100,10 +100,6 @@ pub(crate) struct StudioWindow {
     question: Option<Task<()>>,
     /// What the Studio asks of the themes folder (the user's, except in tests).
     themes: Themes,
-    /// The syntax sample, parsed once.
-    sample: RefCell<Option<gallery::CodeSample>>,
-    gallery_scroll: ScrollHandle,
-    list_scroll: ScrollHandle,
     /// An Export… waiting for its file dialog.
     export: Option<Task<()>>,
     blur: Blur,
@@ -201,10 +197,11 @@ impl StudioWindow {
             cx.new(|cx| InputState::new(window, cx).placeholder("#hex or expression, e.g. primary / 15%"));
         let name =
             cx.new(|cx| InputState::new(window, cx).default_value(draft.name.clone().unwrap_or_default()));
-        let filter = cx.new(|cx| InputState::new(window, cx).placeholder("Filter tokens"));
         let slider = cx.new(|_| SliderState::new().min(0.0).max(token_editor::METRIC_MAX).step(1.0));
-        let item_editor = cx.new(|cx| InputState::new(window, cx).default_value("Rename this task"));
-        let sample_input = cx.new(|cx| InputState::new(window, cx).placeholder("Search themes"));
+        let this = cx.entity();
+        let list = cx.new(|cx| TokenListView::new(&this, window, cx));
+        let gallery = cx.new(|cx| GalleryView::new(&this, window, cx));
+        let editor = cx.new(|cx| TokenEditorView::new(&this, cx));
         let subscriptions = vec![
             cx.subscribe_in(&picker, window, |this, _, event: &ColorPickerEvent, window, cx| {
                 let ColorPickerEvent::Change(Some(color)) = event else { return };
@@ -236,7 +233,6 @@ impl StudioWindow {
                 InputEvent::PressEnter { .. } | InputEvent::Blur => this.finish_rename(window, cx),
                 _ => {}
             }),
-            cx.observe(&filter, |_, _, cx| cx.notify()),
             // However the window goes away (⌘W, Esc, the close button), unsaved
             // edits must stop showing everywhere else.
             cx.on_release(|_, cx| {
@@ -265,22 +261,18 @@ impl StudioWindow {
             slider,
             name,
             renaming: false,
-            filter,
-            show: Show::All,
-            open_groups: BTreeSet::new(),
             area: Area::All,
+            list,
+            gallery,
+            editor,
+            revision: 0,
             save_menu: false,
             menu_project: false,
             notice: None,
-            item_editor,
-            sample_input,
             dirty: false,
             asking: false,
             question: None,
             themes,
-            sample: RefCell::new(None),
-            gallery_scroll: ScrollHandle::new(),
-            list_scroll: ScrollHandle::new(),
             export: None,
             blur,
             focus_handle,
@@ -298,7 +290,7 @@ impl StudioWindow {
         self.selected = Some(name.to_string());
         self.field_error = None;
         if let Some(group) = group_of(name) {
-            self.open_groups.insert(group);
+            self.list.update(cx, |list, cx| list.open_group(group, cx));
         }
         self.show_token(name, true, window, cx);
     }
@@ -360,6 +352,7 @@ impl StudioWindow {
         match (self.themes.resolve)(&draft) {
             Ok(resolved) => {
                 self.draft = draft;
+                self.revision += 1;
                 self.dirty = true;
                 self.field_error = None;
                 self.notice = None;
@@ -405,6 +398,7 @@ impl StudioWindow {
         let base = cx.global::<SettingsStore>().base_tokens().clone();
         self.draft = draft_for(&base, self.themes.resolve);
         self.initial = self.draft.clone();
+        self.revision += 1;
         self.dirty = false;
         self.field_error = None;
         self.notice = None;
@@ -442,44 +436,6 @@ impl StudioWindow {
     }
 }
 
-impl Render for StudioWindow {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let ui = ui(cx);
-        let translucent = settings(cx).studio_translucent;
-        self.blur.set_enabled(aux_window::wants_blur(settings(cx), translucent));
-        let surfaces = aux_window::surfaces(cx, translucent);
-        div()
-            .id("studio-window")
-            .track_focus(&self.focus_handle)
-            .key_context("StudioWindow")
-            .on_key_down(cx.listener(Self::on_key))
-            .size_full()
-            .flex()
-            .flex_col()
-            .text_color(ui.text)
-            .child(self.render_title_bar(surfaces.panel, chrome::lights_end(window), cx))
-            .children(self.render_notice(surfaces.background, cx))
-            .child(
-                div()
-                    .flex_1()
-                    .min_h_0()
-                    .flex()
-                    // Each region paints its own surface (no stacked translucent layers).
-                    .child(self.render_token_list(surfaces.panel, cx))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .h_full()
-                            .flex()
-                            .bg(surfaces.background)
-                            .child(self.render_gallery(window, cx)),
-                    )
-                    .child(self.render_token_editor(surfaces.panel_right, cx)),
-            )
-    }
-}
-
 fn color_chip(ui: UiColors, color: Color) -> Div {
     div().size(px(14.0)).flex_none().rounded(ui.radius_sm).outlined(ui, ui.border).bg(hsla(color))
 }
@@ -506,6 +462,8 @@ pub(super) fn t(tokens: &ThemeTokens, name: &str) -> Hsla {
     token(tokens, name)
 }
 
+#[cfg(all(test, feature = "devctl"))]
+mod draw_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(all(test, feature = "devctl"))]

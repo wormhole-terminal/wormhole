@@ -4,7 +4,12 @@
 use super::*;
 use crate::select;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let surface = select::menu_bg(ui, cx);
     let menu = div()

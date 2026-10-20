@@ -95,6 +95,7 @@ impl StudioWindow {
     fn switched_to(&mut self, name: &str, cx: &mut Context<Self>) {
         self.dirty = false;
         self.initial = self.draft.clone();
+        self.revision += 1;
         SettingsStore::update(cx, |s| s.theme = name.to_string());
         SettingsStore::preview_tokens(cx, None);
         cx.refresh_windows();
@@ -184,6 +185,7 @@ impl StudioWindow {
                 // Saved where it applies: closing no longer loses it.
                 self.dirty = false;
                 self.initial = self.draft.clone();
+                self.revision += 1;
                 let text = format!("Saved to {}: terminals in this project use it.", display_path(&path));
                 Notice::Saved { path, text: text.into() }
             }

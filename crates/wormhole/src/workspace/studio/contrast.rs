@@ -8,12 +8,12 @@ use wormhole_core::tokens::{ContrastCheck, ContrastIssue};
 use super::token_editor::section;
 use super::*;
 
-impl StudioWindow {
-    /// The tokens whose text falls short somewhere: the list marks them and filters by them.
-    pub(super) fn low_contrast_tokens(&self, tokens: &ThemeTokens) -> BTreeSet<String> {
-        tokens.contrast_warnings().into_iter().map(|(fg, _, _)| fg).collect()
-    }
+/// The tokens whose text falls short somewhere: the list marks them and filters by them.
+pub(super) fn low_contrast_tokens(tokens: &ThemeTokens) -> BTreeSet<String> {
+    tokens.contrast_warnings().into_iter().map(|(fg, _, _)| fg).collect()
+}
 
+impl StudioWindow {
     /// The draft's pairs that fall short, each with its fix and Show.
     pub(super) fn low_contrast_card(
         &self,

@@ -2,7 +2,12 @@
 
 use super::*;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let tk = |name: &str| env.tk(name);
     // The same components the panels are built from, on the live tokens.

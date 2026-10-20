@@ -2,7 +2,12 @@
 
 use super::*;
 
-pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     // Every chip-shaped component side by side: they share `radius_chip`.
     let chip_family = div()
@@ -68,7 +73,7 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
     shape.into_any_element()
 }
 
-impl StudioWindow {
+impl GalleryView {
     /// A corner radius metric as a sample box; clicking it selects the metric.
     pub(super) fn corner(
         &self,

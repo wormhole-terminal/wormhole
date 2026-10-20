@@ -2,7 +2,12 @@
 
 use super::*;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    _cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let buttons = div()
         .flex()
         .flex_col()

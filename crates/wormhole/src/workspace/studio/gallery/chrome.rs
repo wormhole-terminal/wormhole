@@ -4,7 +4,12 @@
 use super::*;
 use gpui_kit::component::Selectable as _;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    _cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let note =
         |text: &'static str| div().flex_1().min_w_0().pl_2().text_caption().text_color(ui.muted).child(text);

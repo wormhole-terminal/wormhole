@@ -1,6 +1,7 @@
 //! What devctl drives in the Theme Studio window (`studio-*` commands, `state`'s studio line).
 //! Compiled with the `devctl` feature only.
 
+use super::draft::Show;
 use super::*;
 
 impl Workspace {
@@ -12,6 +13,35 @@ impl Workspace {
 }
 
 #[cfg(feature = "devctl")]
+/// What happens to the gallery before each frame `studio-frames` draws.
+#[derive(Clone, Copy)]
+enum FrameMode {
+    /// Nothing: the window draws again.
+    Rest,
+    /// An animation's tick: the gallery is notified.
+    Tick,
+    /// A wheel tick: the gallery scrolls 40 px further down.
+    Scroll,
+}
+
+impl FrameMode {
+    fn parse(word: &str) -> Self {
+        match word {
+            "scroll" => Self::Scroll,
+            "tick" => Self::Tick,
+            _ => Self::Rest,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Rest => "rest",
+            Self::Tick => "tick",
+            Self::Scroll => "scroll",
+        }
+    }
+}
+
 impl Workspace {
     /// Run `f` on the open Studio (devctl drives it from a window's tick).
     pub(crate) fn with_studio(
@@ -23,30 +53,32 @@ impl Workspace {
     }
 
     /// devctl `studio-frames`: draw the Studio window `frames` times and append the timings to
-    /// `out`. With `scrolling`, each frame is after a wheel tick over the gallery (40 px further
-    /// down, back to the top at the end of the page), as the person scrolls it; without, the
-    /// window just draws again, as it does for an animation's tick.
+    /// `out`, each frame after what `mode` says happened to the gallery.
     pub(crate) fn devctl_studio_frames(
         &self,
         frames: usize,
-        scrolling: bool,
+        mode: &str,
         out: std::path::PathBuf,
         cx: &mut Context<Self>,
     ) -> anyhow::Result<()> {
         let (handle, studio) =
             app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
+        let mode = FrameMode::parse(mode);
         // Outside the tick's update: drawing renders (and so borrows) the windows.
         cx.spawn(async move |_, cx| {
             let mut times = Vec::with_capacity(frames);
-            let mut y = 0.0;
             for _ in 0..frames {
                 let Some(elapsed) = cx.update(|cx| {
                     let studio = studio.upgrade()?;
                     handle
                         .update(cx, |_, window, cx| {
-                            if scrolling {
-                                y += 40.0;
-                                studio.update(cx, |studio, cx| studio.devctl_scroll(y, cx));
+                            let gallery = studio.read(cx).gallery.clone();
+                            match mode {
+                                FrameMode::Rest => {}
+                                FrameMode::Tick => gallery.update(cx, |_, cx| cx.notify()),
+                                FrameMode::Scroll => {
+                                    gallery.update(cx, |gallery, cx| gallery.scroll_by(40.0, cx))
+                                }
                             }
                             let start = std::time::Instant::now();
                             let arena = window.draw(cx);
@@ -66,7 +98,7 @@ impl Workspace {
             let max = steady.iter().cloned().fold(0.0, f64::max);
             let line = format!(
                 "studio-frames {} n={} avg={avg:.2}ms max={max:.2}ms first={:.2}ms\n",
-                if scrolling { "scroll" } else { "rest" },
+                mode.name(),
                 times.len(),
                 times[0]
             );
@@ -139,8 +171,7 @@ impl StudioWindow {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
-        self.gallery_scroll.set_offset(point(px(0.0), px(-y)));
-        cx.notify();
+        self.gallery.update(cx, |gallery, cx| gallery.devctl_scroll(y, cx));
     }
 
     /// Type `value` into the field and press Return, as the person would: an expression
@@ -165,20 +196,19 @@ impl StudioWindow {
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_filter(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
         let (show, text) = arg.split_once(' ').unwrap_or((arg, ""));
-        self.show = match show {
+        let show = match show {
             "changed" => Show::Changed,
             "low" => Show::LowContrast,
             _ => Show::All,
         };
-        self.filter.update(cx, |f, cx| f.set_value(text.to_string(), window, cx));
-        cx.notify();
+        self.list.update(cx, |list, cx| list.devctl_filter(show, text, window, cx));
     }
 
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_area(&mut self, arg: &str, cx: &mut Context<Self>) {
-        self.area =
+        let area =
             Area::ALL.iter().copied().find(|a| a.label().eq_ignore_ascii_case(arg)).unwrap_or_default();
-        cx.notify();
+        self.set_area(area, cx);
     }
 
     /// `studio-resize <w> <h>`: the window's size, as far as its minimum lets it (AppKit holds

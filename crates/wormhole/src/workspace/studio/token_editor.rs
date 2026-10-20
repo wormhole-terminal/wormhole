@@ -13,6 +13,46 @@ use super::*;
 /// The editor's width.
 pub(super) const EDITOR_W: f32 = 320.0;
 
+/// The token editor as a view of its own: scrolling it, or the gallery or the list, redraws that
+/// one alone. Its content is the window's (the draft, the field, the contrast cards) and is made
+/// by the window's own methods, whose handlers answer to the window.
+pub(super) struct TokenEditorView {
+    studio: WeakEntity<StudioWindow>,
+    /// How often the view was drawn (the counting tests).
+    #[cfg(test)]
+    pub(super) renders: usize,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl TokenEditorView {
+    pub(super) fn new(studio: &Entity<StudioWindow>, cx: &mut Context<Self>) -> Self {
+        Self {
+            studio: studio.downgrade(),
+            #[cfg(test)]
+            renders: 0,
+            // The window says when what the editor shows changes.
+            _subscriptions: vec![
+                cx.observe(studio, |_, _, cx| cx.notify()),
+                cx.observe_global::<SettingsStore>(|_, cx| cx.notify()),
+            ],
+        }
+    }
+}
+
+impl Render for TokenEditorView {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(test)]
+        {
+            self.renders += 1;
+        }
+        let panel = aux_window::surfaces(cx, settings(cx).studio_translucent).panel_right;
+        match self.studio.upgrade() {
+            Some(studio) => studio.update(cx, |studio, cx| studio.render_token_editor(panel, cx)),
+            None => div().into_any_element(),
+        }
+    }
+}
+
 /// A metric slider's top (px): past it, a radius is round whatever the element and a line is
 /// a frame.
 pub(super) const METRIC_MAX: f32 = 24.0;
@@ -105,7 +145,7 @@ impl StudioWindow {
         self.apply_field(fixed, window, cx);
     }
 
-    pub(super) fn render_token_editor(&self, panel: Hsla, cx: &mut Context<Self>) -> AnyElement {
+    fn render_token_editor(&self, panel: Hsla, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let tokens = tokens_of(cx);
         let (code_font, _) = crate::fonts::code_font(cx);
@@ -124,9 +164,7 @@ impl StudioWindow {
         let issues = contrast_issues(&tokens, &self.draft.ui);
         div()
             .id("studio-token-editor")
-            .w(px(EDITOR_W))
-            .flex_none()
-            .h_full()
+            .size_full()
             .overflow_y_scroll()
             .flex()
             .flex_col()

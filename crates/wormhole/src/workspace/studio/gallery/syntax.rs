@@ -60,7 +60,12 @@ fn styled(highlighter: &SyntaxHighlighter, theme: &Arc<HighlightTheme>) -> Vec<L
         .collect()
 }
 
-pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let term = &env.tokens.terminal;
     let highlight = cx.global::<SettingsStore>().highlight.clone();
@@ -90,8 +95,8 @@ pub(super) fn render(studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWi
 // Counts what a test is about, per thread (tests run in parallel).
 #[cfg(test)]
 thread_local! {
-    static TALLY: RefCell<std::collections::BTreeMap<&'static str, usize>> =
-        const { RefCell::new(std::collections::BTreeMap::new()) };
+    static TALLY: std::cell::RefCell<std::collections::BTreeMap<&'static str, usize>> =
+        const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
 }
 
 #[cfg(test)]

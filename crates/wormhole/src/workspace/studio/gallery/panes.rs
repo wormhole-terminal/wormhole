@@ -5,7 +5,12 @@ use wormhole_core::panes::{Axis, Zone};
 
 use super::*;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let header = |id: &'static str, focused: bool, glyph: style::StatusGlyph, name: &'static str| {
         style::pane_header(id, ui, focused, false)

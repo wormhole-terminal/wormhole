@@ -4,7 +4,12 @@ use super::*;
 use gpui_kit::component::radio::Radio;
 use gpui_kit::component::switch::Switch;
 
-pub(super) fn render(studio: &StudioWindow, env: &Env, _cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    studio: &GalleryView,
+    env: &Env,
+    _part: usize,
+    _cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let inputs = div()
         .flex()

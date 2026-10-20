@@ -122,6 +122,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   erased with the rest.
 - A line that ends in a tab no longer takes an extra, empty row when the window gets narrower.
 - Dragging on the tab bar no longer moves the window.
+- Scrolling the Theme Studio is smooth again: the component gallery and the token list draw only what
+  is in view, each part of the window redraws on its own, and a turning status spinner no longer makes
+  the whole window redraw. The icons of Settings → Feature flags and of the palette's profile
+  commands, which were missing, show.
 
 ### Security
 

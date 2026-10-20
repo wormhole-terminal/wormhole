@@ -6,7 +6,12 @@ use std::time::Duration;
 use super::*;
 use style::motion::{self, CubicBezier};
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    part: usize,
+    _cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let pt = |v: f32| format!("{v}");
     let share = |v: f32| format!("{:.0} %", v * 100.0);
@@ -91,24 +96,21 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, _cx: &mut Context<Studio
         let ease = c.easing();
         [0.25, 0.5, 0.75].map(|t| format!("{:.2}", ease(t))).join(" ")
     });
-    div()
-        .flex()
-        .flex_wrap()
-        .gap_6()
-        .child(table(ui, "Sizes", sizes))
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .gap_4()
-                .child(table(ui, "Limits", limits))
-                .child(table(ui, "Motion", motion))
-                .child(div().text_caption().text_color(ui.muted).child(format!(
-                    "at ¼ ½ ¾: out {} · in {} · in-out {} · linear {}",
-                    ease_samples[0], ease_samples[1], ease_samples[2], ease_samples[3]
-                ))),
-        )
-        .into_any_element()
+    // The page builds one piece at a time (a piece is a stretch of the page).
+    match part {
+        0 => table(ui, "Sizes", sizes).into_any_element(),
+        _ => div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(table(ui, "Limits", limits))
+            .child(table(ui, "Motion", motion))
+            .child(div().text_caption().text_color(ui.muted).child(format!(
+                "at ¼ ½ ¾: out {} · in {} · in-out {} · linear {}",
+                ease_samples[0], ease_samples[1], ease_samples[2], ease_samples[3]
+            )))
+            .into_any_element(),
+    }
 }
 
 fn table(ui: UiColors, title: &'static str, rows: Vec<(&'static str, String)>) -> Div {

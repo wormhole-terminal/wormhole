@@ -76,6 +76,12 @@ gpui_kit::assets::icon_assets!(
         // The terminal list's New group, and the tab bars' group switcher.
         FolderPlus,
         Layers,
+        // Settings' Feature flags section (its nav and the Studio's gallery).
+        FlaskConical,
+        // The palette's profile commands.
+        AppWindow,
+        ArrowRightLeft,
+        Trash,
     ]
 );
 
@@ -261,6 +267,43 @@ mod tests {
         assert!(is_bundled(NONE));
         assert!(is_bundled(&wormhole_core::icon_theme::builtin_family().name));
         assert!(!is_bundled("Some Zed Pack"));
+    }
+
+    /// Every icon the app draws by name is served: one that isn't draws nothing, and logs an error
+    /// and asks the asset source again on every frame it is on screen.
+    #[test]
+    fn every_icon_the_app_names_is_served() {
+        use gpui_kit::assets::IconName;
+
+        fn sources(dir: &std::path::Path, text: &mut String) {
+            for entry in std::fs::read_dir(dir).expect("a source folder") {
+                let path = entry.expect("an entry").path();
+                if path.is_dir() {
+                    sources(&path, text);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    text.push_str(&std::fs::read_to_string(&path).expect("a source file"));
+                }
+            }
+        }
+        let mut text = String::new();
+        sources(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), &mut text);
+        let used: std::collections::BTreeSet<&str> = text
+            .split("IconName::")
+            .skip(1)
+            .map(|rest| &rest[..rest.find(|c: char| !c.is_ascii_alphanumeric()).unwrap_or(rest.len())])
+            .collect();
+        let (mut checked, mut missing) = (0, Vec::new());
+        for icon in IconName::ALL {
+            if !used.contains(format!("{icon:?}").as_str()) {
+                continue;
+            }
+            checked += 1;
+            if !matches!(Assets.load(&icon.path()), Ok(Some(_))) {
+                missing.push(format!("{icon:?} ({})", icon.path()));
+            }
+        }
+        assert!(missing.is_empty(), "not bundled: {}", missing.join(", "));
+        assert!(checked > 40, "only {checked} icons found in the sources");
     }
 
     #[test]

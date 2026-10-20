@@ -9,24 +9,31 @@ use style::{BannerKind, NavMark, RecorderState, SettingParts, SettingState};
 const COLUMN_W: f32 = 560.0;
 const NAV_W: f32 = 220.0;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
-    div()
-        .flex()
-        .flex_col()
-        .gap_6()
-        .child(
-            div()
-                .flex()
-                .flex_wrap()
-                .gap_6()
-                .child(env.mark("setting.row", setting_rows(ui, cx)))
-                .child(env.mark("settings.nav", nav(ui))),
-        )
-        .child(controls(env))
-        .child(env.mark("banner", banners(ui)))
-        .child(profile_marks(env))
-        .into_any_element()
+    // The page builds one piece at a time (a piece is a list item).
+    match part {
+        0 => div()
+            .flex()
+            .flex_wrap()
+            .gap_6()
+            .child(env.mark("setting.row", setting_rows(ui, cx)))
+            .child(env.mark("settings.nav", nav(ui)))
+            .into_any_element(),
+        1 => controls(env).into_any_element(),
+        _ => div()
+            .flex()
+            .flex_col()
+            .gap_6()
+            .child(env.mark("banner", banners(ui)))
+            .child(profile_marks(env))
+            .into_any_element(),
+    }
 }
 
 /// A profile's avatar at the sizes the app draws it, and the edge a window in another profile wears.

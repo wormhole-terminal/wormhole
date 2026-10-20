@@ -12,7 +12,12 @@ use wormhole_core::sidebar::GroupColor;
 /// The sidebar's width (and its minimum in the app).
 const COLUMN_W: f32 = 350.0;
 
-pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioWindow>) -> AnyElement {
+pub(super) fn render(
+    _studio: &GalleryView,
+    env: &Env,
+    part: usize,
+    cx: &mut Context<GalleryView>,
+) -> AnyElement {
     let ui = env.ui;
     let app: &App = cx;
     let glyph = |id: &'static str, glyph: StatusGlyph| style::status_glyph(id, ui, glyph, app);
@@ -99,83 +104,91 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     let card = |top: bool, bottom: bool, wash: Option<Hsla>, content: AnyElement| {
         style::card_segment(ui, metrics, top, bottom, wash, content)
     };
-    let anatomy = column(ui)
-        .child(caption(ui, "A group's card · folded · pinned and empty · a terminal in no group"))
-        .child(
-            env.mark(
-                "sidebar.card",
-                card(
-                    true,
-                    false,
-                    Some(blue),
-                    env.mark(
-                        "sidebar.band",
-                        head("g-head-open", "Release 1.2", Some(blue), false, false, vec![], None, false),
-                    )
-                    .into_any_element(),
+    let anatomy = || {
+        column(ui)
+            .child(caption(ui, "A group's card · folded · pinned and empty · a terminal in no group"))
+            .child(
+                env.mark(
+                    "sidebar.card",
+                    card(
+                        true,
+                        false,
+                        Some(blue),
+                        env.mark(
+                            "sidebar.band",
+                            head("g-head-open", "Release 1.2", Some(blue), false, false, vec![], None, false),
+                        )
+                        .into_any_element(),
+                    ),
                 ),
-            ),
-        )
-        .child(card(
-            false,
-            false,
-            Some(blue),
-            env.mark(
-                "sidebar.row",
-                tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true),
             )
-            .into_any_element(),
-        ))
-        .child(card(
-            false,
-            true,
-            Some(blue),
-            tile_row("g-row-anatomy-2", "Fix pile fan-out", StatusGlyph::NeedsYou, "Needs you · 2m", false)
+            .child(card(
+                false,
+                false,
+                Some(blue),
+                env.mark(
+                    "sidebar.row",
+                    tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true),
+                )
                 .into_any_element(),
-        ))
-        .child(card(
-            true,
-            true,
-            Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
-            head(
-                "g-head-folded",
-                "Review",
+            ))
+            .child(card(
+                false,
+                true,
+                Some(blue),
+                tile_row(
+                    "g-row-anatomy-2",
+                    "Fix pile fan-out",
+                    StatusGlyph::NeedsYou,
+                    "Needs you · 2m",
+                    false,
+                )
+                .into_any_element(),
+            ))
+            .child(card(
+                true,
+                true,
                 Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
+                head(
+                    "g-head-folded",
+                    "Review",
+                    Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
+                    true,
+                    true,
+                    vec![
+                        tile("g-folded-1", StatusGlyph::Working, style::TILE_MINI),
+                        tile("g-folded-2", StatusGlyph::NeedsYou, style::TILE_MINI),
+                        tile("g-folded-3", StatusGlyph::Idle, style::TILE_MINI),
+                    ],
+                    Some(ui.agent_attention),
+                    false,
+                )
+                .into_any_element(),
+            ))
+            .child(card(
                 true,
                 true,
-                vec![
-                    tile("g-folded-1", StatusGlyph::Working, style::TILE_MINI),
-                    tile("g-folded-2", StatusGlyph::NeedsYou, style::TILE_MINI),
-                    tile("g-folded-3", StatusGlyph::Idle, style::TILE_MINI),
-                ],
-                Some(ui.agent_attention),
-                false,
-            )
-            .into_any_element(),
-        ))
-        .child(card(
-            true,
-            true,
-            Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
-            head(
-                "g-head-empty",
-                "Docs",
                 Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
+                head(
+                    "g-head-empty",
+                    "Docs",
+                    Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
+                    false,
+                    true,
+                    vec![],
+                    None,
+                    true,
+                )
+                .into_any_element(),
+            ))
+            // A terminal in no group: the row is its card.
+            .child(style::card_segment_solo(
+                ui,
+                metrics,
                 false,
-                true,
-                vec![],
-                None,
-                true,
-            )
-            .into_any_element(),
-        ))
-        // A terminal in no group: the row is its card.
-        .child(style::card_segment_solo(
-            ui,
-            metrics,
-            false,
-            tile_row("g-row-loose", "scratch", StatusGlyph::Idle, "~", false),
-        ));
+                tile_row("g-row-loose", "scratch", StatusGlyph::Idle, "~", false),
+            ))
+    };
 
     // Every row state, two lines and one.
     let states = |two_lines: bool| {
@@ -245,18 +258,20 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
     // Project tab's choices, the dots) drawn from this theme.
     let group_colors: Vec<(GroupColor, Hsla)> =
         GroupColor::ALL.iter().map(|&color| (color, theme_bridge::hsla(color.color(env.tokens)))).collect();
-    let washed = column(ui)
-        .child(caption(ui, "Grey · Blue · Red · Yellow · Green · Pink · Purple · Cyan · Orange"))
-        .children(group_colors.iter().enumerate().map(|(ix, &(color, hsla))| {
-            let id = Box::leak(format!("g-head-{}", color.key()).into_boxed_str());
-            card(
-                true,
-                true,
-                Some(hsla),
-                head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false)
-                    .into_any_element(),
-            )
-        }));
+    let washed = || {
+        column(ui)
+            .child(caption(ui, "Grey · Blue · Red · Yellow · Green · Pink · Purple · Cyan · Orange"))
+            .children(group_colors.iter().enumerate().map(|(ix, &(color, hsla))| {
+                let id = Box::leak(format!("g-head-{}", color.key()).into_boxed_str());
+                card(
+                    true,
+                    true,
+                    Some(hsla),
+                    head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false)
+                        .into_any_element(),
+                )
+            }))
+    };
     let colors = FolderColor::ALL.map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
     let choices = div()
         .flex()
@@ -281,24 +296,26 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .items_center()
         .gap_2()
         .children(colors.iter().map(|(_, hsla)| style::color_dot(ui, *hsla, style::COLOR_DOT_MENU)));
-    let bands = column(ui)
-        .child(caption(
-            ui,
-            "A folder's colour (the Project tab): the choices · the choices a project sets · dots",
-        ))
-        .child(div().px_4().py_2().child(env.mark("folder.color", choices)))
-        .child(div().px_4().pb_2().child(locked_choices))
-        .child(div().px_4().pb_2().child(menu_dots))
-        .child(caption(
-            ui,
-            "A branch chip: the git branch and its changes, where the sidebar's rows show one",
-        ))
-        .child(
-            div()
-                .px_4()
-                .pb_2()
-                .child(env.mark("branch.chip", style::branch_chip(ui, Some("ui-unify"), Some(3)))),
-        );
+    let bands = || {
+        column(ui)
+            .child(caption(
+                ui,
+                "A folder's colour (the Project tab): the choices · the choices a project sets · dots",
+            ))
+            .child(div().px_4().py_2().child(env.mark("folder.color", choices)))
+            .child(div().px_4().pb_2().child(locked_choices))
+            .child(div().px_4().pb_2().child(menu_dots))
+            .child(caption(
+                ui,
+                "A branch chip: the git branch and its changes, where the sidebar's rows show one",
+            ))
+            .child(
+                div()
+                    .px_4()
+                    .pb_2()
+                    .child(env.mark("branch.chip", style::branch_chip(ui, Some("ui-unify"), Some(3)))),
+            )
+    };
 
     // Terminals without an agent say what runs; an idle agent shows its logo.
     let code_font = crate::fonts::code_font(app).0;
@@ -309,64 +326,66 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             ..SessionRow::new(glyph(id, g), name)
         };
     let codex = agents::agent(AgentId::Codex);
-    let plain_rows = column(ui)
-        .child(caption(ui, "Plain terminals · a pin · an idle agent's logo"))
-        .child(style::session_row(
-            "g-plain-tests",
-            ui,
-            SessionRow {
-                detail_trail: Some("1:12".into()),
-                ..plain(
-                    "g-plain-g1",
-                    "tests",
-                    StatusGlyph::Terminal { unread: false },
-                    Some("cargo test -p wormhole-core"),
-                )
-            },
-        ))
-        .child(style::session_row(
-            "g-plain-prod",
-            ui,
-            SessionRow {
-                trail: Some(glyph("g-plain-bell", StatusGlyph::Bell)),
-                ..plain(
-                    "g-plain-g2",
-                    "prod",
-                    StatusGlyph::Terminal { unread: false },
-                    Some("ssh deploy@prod-1"),
-                )
-            },
-        ))
-        .child(style::session_row(
-            "g-plain-dev",
-            ui,
-            SessionRow {
-                emphasis: true,
-                detail_trail: Some("new output".into()),
-                ..plain(
-                    "g-plain-g3",
-                    "dev server",
-                    StatusGlyph::Terminal { unread: true },
-                    Some("npm run dev"),
-                )
-            },
-        ))
-        .child(style::session_row(
-            "g-plain-pinned",
-            ui,
-            SessionRow {
-                mark: Some(Icon::new(IconName::Pin).xsmall().text_color(ui.faint).into_any_element()),
-                ..plain("g-plain-g4", "zsh", StatusGlyph::Shell, None)
-            },
-        ))
-        .child(style::session_row(
-            "g-agent-logo",
-            ui,
-            SessionRow::new(
-                style::agent_logo(codex.icon(), codex.monogram, style::ITEM_LEAD_W, ui.muted),
-                "rate limits",
-            ),
-        ));
+    let plain_rows = || {
+        column(ui)
+            .child(caption(ui, "Plain terminals · a pin · an idle agent's logo"))
+            .child(style::session_row(
+                "g-plain-tests",
+                ui,
+                SessionRow {
+                    detail_trail: Some("1:12".into()),
+                    ..plain(
+                        "g-plain-g1",
+                        "tests",
+                        StatusGlyph::Terminal { unread: false },
+                        Some("cargo test -p wormhole-core"),
+                    )
+                },
+            ))
+            .child(style::session_row(
+                "g-plain-prod",
+                ui,
+                SessionRow {
+                    trail: Some(glyph("g-plain-bell", StatusGlyph::Bell)),
+                    ..plain(
+                        "g-plain-g2",
+                        "prod",
+                        StatusGlyph::Terminal { unread: false },
+                        Some("ssh deploy@prod-1"),
+                    )
+                },
+            ))
+            .child(style::session_row(
+                "g-plain-dev",
+                ui,
+                SessionRow {
+                    emphasis: true,
+                    detail_trail: Some("new output".into()),
+                    ..plain(
+                        "g-plain-g3",
+                        "dev server",
+                        StatusGlyph::Terminal { unread: true },
+                        Some("npm run dev"),
+                    )
+                },
+            ))
+            .child(style::session_row(
+                "g-plain-pinned",
+                ui,
+                SessionRow {
+                    mark: Some(Icon::new(IconName::Pin).xsmall().text_color(ui.faint).into_any_element()),
+                    ..plain("g-plain-g4", "zsh", StatusGlyph::Shell, None)
+                },
+            ))
+            .child(style::session_row(
+                "g-agent-logo",
+                ui,
+                SessionRow::new(
+                    style::agent_logo(codex.icon(), codex.monogram, style::ITEM_LEAD_W, ui.muted),
+                    "rate limits",
+                ),
+            ))
+    };
 
     // A split's rows share one card (no mark of their own); the chain mark shows where the
     // members aren't together.
@@ -389,19 +408,21 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
         .relative()
         .children(line.map(|part| style::split_line(part, style::Metrics::default(), ui)))
     };
-    let split_rows = column(ui)
-        .child(caption(ui, "A split: its rows in one card, a line along them · the chain mark"))
-        .child(split_row("g-split-a", StatusGlyph::Working, "claude", true, None, Some(Bracket::Start)))
-        .child(split_row("g-split-b", StatusGlyph::Idle, "api-server", false, None, Some(Bracket::Mid)))
-        .child(split_row("g-split-c", StatusGlyph::Idle, "zsh", false, None, Some(Bracket::End)))
-        .child(split_row(
-            "g-split-d",
-            StatusGlyph::Idle,
-            "docs",
-            false,
-            Some(style::chain_mark(("g-split-chain", 1u64), ui).into_any_element()),
-            None,
-        ));
+    let split_rows = || {
+        column(ui)
+            .child(caption(ui, "A split: its rows in one card, a line along them · the chain mark"))
+            .child(split_row("g-split-a", StatusGlyph::Working, "claude", true, None, Some(Bracket::Start)))
+            .child(split_row("g-split-b", StatusGlyph::Idle, "api-server", false, None, Some(Bracket::Mid)))
+            .child(split_row("g-split-c", StatusGlyph::Idle, "zsh", false, None, Some(Bracket::End)))
+            .child(split_row(
+                "g-split-d",
+                StatusGlyph::Idle,
+                "docs",
+                false,
+                Some(style::chain_mark(("g-split-chain", 1u64), ui).into_any_element()),
+                None,
+            ))
+    };
 
     // What a terminal dragged over the list shows: the row it would make a split with, and
     // the line between two rows, full width outside any bracket and inset inside one.
@@ -418,79 +439,92 @@ pub(super) fn render(_studio: &StudioWindow, env: &Env, cx: &mut Context<StudioW
             ))
             .children(marks)
     };
-    let drops = column(ui)
-        .child(caption(ui, "A terminal dragged over: a row · between rows · inside a bracket"))
-        .child(drop_row("g-drop-row", vec![style::row_drop_target(ui).into_any_element()]))
-        .child(drop_row("g-drop-line", vec![style::drop_line(ui, false, true).into_any_element()]))
-        .child(drop_row("g-drop-inset", vec![style::drop_line(ui, true, true).into_any_element()]))
-        .child(drop_row("g-drop-after", Vec::new()));
+    let drops = || {
+        column(ui)
+            .child(caption(ui, "A terminal dragged over: a row · between rows · inside a bracket"))
+            .child(drop_row("g-drop-row", vec![style::row_drop_target(ui).into_any_element()]))
+            .child(drop_row("g-drop-line", vec![style::drop_line(ui, false, true).into_any_element()]))
+            .child(drop_row("g-drop-inset", vec![style::drop_line(ui, true, true).into_any_element()]))
+            .child(drop_row("g-drop-after", Vec::new()))
+    };
 
-    let glyphs = div().flex().flex_wrap().gap_4().p_2().children(
-        [
-            ("g-glyph-working", StatusGlyph::Working, "Working"),
-            ("g-glyph-running", StatusGlyph::Running, "Running"),
-            ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs you"),
-            ("g-glyph-done", StatusGlyph::Done, "Done"),
-            ("g-glyph-idle", StatusGlyph::Idle, "Idle"),
-            ("g-glyph-bell", StatusGlyph::Bell, "Bell"),
-            ("g-glyph-failed", StatusGlyph::Failed, "Failed"),
-            ("g-glyph-terminal", StatusGlyph::Terminal { unread: false }, "Terminal"),
-            ("g-glyph-unread", StatusGlyph::Terminal { unread: true }, "Unread"),
-            ("g-glyph-shell", StatusGlyph::Shell, "Shell"),
-        ]
-        .map(|(id, g, label)| {
-            div()
-                .flex()
-                .flex_col()
-                .items_center()
-                .gap_1()
-                .child(glyph(id, g))
-                .child(div().text_caption().text_color(ui.muted).child(label))
-        }),
-    );
+    let glyphs = || {
+        div().flex().flex_wrap().gap_4().p_2().children(
+            [
+                ("g-glyph-working", StatusGlyph::Working, "Working"),
+                ("g-glyph-running", StatusGlyph::Running, "Running"),
+                ("g-glyph-needs", StatusGlyph::NeedsYou, "Needs you"),
+                ("g-glyph-done", StatusGlyph::Done, "Done"),
+                ("g-glyph-idle", StatusGlyph::Idle, "Idle"),
+                ("g-glyph-bell", StatusGlyph::Bell, "Bell"),
+                ("g-glyph-failed", StatusGlyph::Failed, "Failed"),
+                ("g-glyph-terminal", StatusGlyph::Terminal { unread: false }, "Terminal"),
+                ("g-glyph-unread", StatusGlyph::Terminal { unread: true }, "Unread"),
+                ("g-glyph-shell", StatusGlyph::Shell, "Shell"),
+            ]
+            .map(|(id, g, label)| {
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap_1()
+                    .child(glyph(id, g))
+                    .child(div().text_caption().text_color(ui.muted).child(label))
+            }),
+        )
+    };
 
-    let status_bar = style::status_bar(ui, false)
-        // The terminal that has waited longest, as a button with its tile; the rest as numbers.
-        .child(
-            style::status_attention("g-status-attention", ui, false)
-                .child(style::status_tile(
-                    "g-status-attention-tile",
-                    ui,
-                    style::StatusTile {
-                        face: style::TileFace::Terminal,
-                        glyph: StatusGlyph::NeedsYou,
-                        selected: false,
-                        mini: true,
-                    },
-                    cx,
-                ))
-                .child("Fix pile fan-out")
-                .child(div().text_color(ui.attention_text).child("needs you · 2m")),
-        )
-        .child(
-            style::status_item("g-status-working", ui, false, true)
-                .child(glyph("g-status-spin", StatusGlyph::Working))
-                .child("2 working"),
-        )
-        .child(
-            style::status_item("g-status-done", ui, false, false)
-                .child(div().text_color(ui.agent_done).child(style::icon(IconName::CircleCheck)))
-                .child("1 done"),
-        )
-        .child(div().flex_1())
-        .child(style::status_separator(ui))
-        .child(style::status_text(ui).child("claude · 90×40"));
+    let status_bar = || {
+        style::status_bar(ui, false)
+            // The terminal that has waited longest, as a button with its tile; the rest as numbers.
+            .child(
+                style::status_attention("g-status-attention", ui, false)
+                    .child(style::status_tile(
+                        "g-status-attention-tile",
+                        ui,
+                        style::StatusTile {
+                            face: style::TileFace::Terminal,
+                            glyph: StatusGlyph::NeedsYou,
+                            selected: false,
+                            mini: true,
+                        },
+                        cx,
+                    ))
+                    .child("Fix pile fan-out")
+                    .child(div().text_color(ui.attention_text).child("needs you · 2m")),
+            )
+            .child(
+                style::status_item("g-status-working", ui, false, true)
+                    .child(glyph("g-status-spin", StatusGlyph::Working))
+                    .child("2 working"),
+            )
+            .child(
+                style::status_item("g-status-done", ui, false, false)
+                    .child(div().text_color(ui.agent_done).child(style::icon(IconName::CircleCheck)))
+                    .child("1 done"),
+            )
+            .child(div().flex_1())
+            .child(style::status_separator(ui))
+            .child(style::status_text(ui).child("claude · 90×40"))
+    };
 
-    div()
-        .flex()
-        .flex_col()
-        .gap_4()
-        .child(div().flex().flex_wrap().gap_4().child(anatomy).child(washed).child(bands))
-        .child(div().flex().flex_wrap().gap_4().child(states(true)).child(states(false)))
-        .child(div().flex().flex_wrap().gap_4().child(plain_rows).child(split_rows).child(drops))
-        .child(env.mark("status.glyph", glyphs))
-        .child(env.mark("status.bar", status_bar))
-        .into_any_element()
+    // The page builds one piece at a time (a piece is a list item), each as wide as the sidebar.
+    match part {
+        0 => anatomy().into_any_element(),
+        1 => washed().into_any_element(),
+        2 => bands().into_any_element(),
+        3 => div().flex().flex_wrap().gap_4().child(states(true)).child(states(false)).into_any_element(),
+        4 => plain_rows().into_any_element(),
+        5 => split_rows().into_any_element(),
+        6 => drops().into_any_element(),
+        _ => div()
+            .flex()
+            .flex_col()
+            .gap_4()
+            .child(env.mark("status.glyph", glyphs()))
+            .child(env.mark("status.bar", status_bar()))
+            .into_any_element(),
+    }
 }
 
 /// A slice of the sidebar at its width at most (a narrow gallery column
