@@ -132,6 +132,9 @@ fn run_once<E: Engine>(case: &Case, chunking: Chunking) -> Result<(), String> {
     if case.allow_window_ops {
         engine.allow_window_ops();
     }
+    if case.allow_title_report {
+        engine.allow_title_report();
+    }
     let mut replies: Vec<u8> = Vec::new();
     let mut fed = Vec::new();
     for step in &case.steps {

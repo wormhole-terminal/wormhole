@@ -25,11 +25,18 @@ use crate::terminal::Terminal;
 #[non_exhaustive]
 pub struct Policy {
     /// Whether a program may change the window (XTWINOPS: move, resize, iconify, raise, maximise,
-    /// full screen) and read its title back. Off: the operations are ignored and the title reports
-    /// unanswered. On: each operation is an [`Event::WindowOp`](crate::Event::WindowOp) and the
-    /// title reports are answered. A title is attacker-controlled text; answering puts it in the
-    /// program's input, so this is for programs the user trusts with the window.
+    /// full screen). Off: the operations are ignored. On: each is an
+    /// [`Event::WindowOp`](crate::Event::WindowOp) for the host to carry out, and a size in cells
+    /// takes effect in the engine at once. Reading the title back is a switch of its own,
+    /// [`title_report`](Self::title_report).
     pub window_ops: bool,
+    /// Whether XTWINOPS 20 and 21, the reports of the icon name and the window title, are
+    /// answered. A title is text the program (or a file `cat`ted into the terminal) chose, and the
+    /// answer is typed into the input of whatever is running, usually the shell: cleaning the
+    /// controls out does not stop it from becoming a command line the user then runs
+    /// (CVE-2003-0063, CVE-2024-38395). Off: the requests are ignored like unknown sequences. Separate
+    /// from [`window_ops`](Self::window_ops), which does not turn it on.
+    pub title_report: bool,
     /// Whether DECRQCRA, the checksum of a rectangle of the screen, is answered. The checksum of a
     /// single cell tells a program what is in it, so any program, also one on the other end of an
     /// ssh connection, could read the screen back cell by cell. Off: the request is ignored like

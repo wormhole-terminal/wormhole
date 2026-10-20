@@ -91,6 +91,7 @@ pub(super) fn spawn(
     let mut screen = Screen::new(size, options.scrollback_lines);
     screen.set_screen_checksum(options.allow_screen_checksum);
     screen.set_window_ops(options.allow_window_ops);
+    screen.set_title_report(options.allow_title_report);
     // Before the program's first byte: a terminal nobody has drawn yet is queried too.
     if let Some(colors) = options.colors {
         screen.set_default_colors(colors);

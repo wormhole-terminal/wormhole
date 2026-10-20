@@ -34,7 +34,7 @@ writes its cursor position reports back. A run takes a second, so it is the way 
 
 esctest2 is judged against the behaviour it describes, not against xterm's known-bug annotations
 (a terminal that does better than xterm is not failing), with "empty" and "blank" cells counted as one.
-Wormhole answers DECRQCRA only with `allow_screen_checksum` on (a program could otherwise read the screen back cell by cell), so the scripts start it with that key set in its throwaway config (and `allow_window_ops`, which the window-operation and title-report tests need). A terminal that does not answer DECRQCRA cannot be asked what is on screen: a test that reaches a screen
+Wormhole answers DECRQCRA only with `allow_screen_checksum` on (a program could otherwise read the screen back cell by cell), so the scripts start it with that key set in its throwaway config (and `allow_window_ops` and `allow_title_report`, which the window-operation and title-report tests need). A terminal that does not answer DECRQCRA cannot be asked what is on screen: a test that reaches a screen
 check is `unmeasurable` for it and left out of its count, and the table says how many tests that is
 (about 215 of 559 look at the screen), so the comparison between apps is also made on the tests
 every measurable app ran.

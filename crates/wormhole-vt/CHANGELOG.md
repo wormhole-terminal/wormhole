@@ -23,8 +23,8 @@ First public release (0.1.0).
 - A front door at the crate root: `Terminal::new(cols, rows)` and `Terminal::builder()` (size,
   scrollback, policy, cell size, palette, word separators, extensions). `Terminal::feed(bytes)` takes
   program output; the terminal owns its parser.
-- `Policy`, one place for every risky switch: window operations (and with them the title reports) and
-  DECRQCRA, all off by default.
+- `Policy`, one place for every risky switch: window operations, title reports and DECRQCRA, all off by
+  default. Title reports (XTWINOPS 20 and 21) are a switch of their own, `Policy::title_report`.
 - The `input` module: key encoding (legacy xterm and the kitty keyboard protocol), mouse reports (X10,
   UTF-8 and SGR), bracketed paste with the end marker removed, and focus reports, as pure functions of the
   event and the terminal's modes.
@@ -53,6 +53,7 @@ First public release (0.1.0).
 
 - Titles, icon names and folders (OSC 0, 1, 2, 7) are cleaned when they are set: C0 and C1 controls and
   DEL are dropped.
+- Title reports no longer follow `window_ops`.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.

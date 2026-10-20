@@ -500,11 +500,19 @@ const TERMINAL: &[Group] = &[
             entry(
                 "window-ops",
                 "Let programs control the window",
-                "Lets a program move, resize, minimise, raise or full-screen the window and read its \
-                 title back (xterm's window operations). A title is text a program chose, so over ssh \
-                 this lets it type into other programs. Applies to new terminals",
-                "xtwinops window operations resize move iconify fullscreen maximize title report security ssh",
+                "Lets a program move, resize, minimise, raise or full-screen the window (xterm's \
+                 window operations). Applies to new terminals",
+                "xtwinops window operations resize move iconify fullscreen maximize security ssh",
                 &["allow_window_ops"],
+            ),
+            entry(
+                "title-report",
+                "Let programs read the window title back",
+                "Answers a program's request for the window title and icon name (XTWINOPS 20 and \
+                 21). A title is text a program chose, and the answer is typed into the shell, so over \
+                 ssh this lets a program type a command line. Applies to new terminals",
+                "xtwinops title icon name report read back window security ssh esctest",
+                &["allow_title_report"],
             ),
         ],
     ),

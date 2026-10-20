@@ -175,7 +175,8 @@ what your application needs:
 use wormhole_vt::{Policy, Terminal};
 
 let mut policy = Policy::default();
-policy.window_ops = true;      // moves, resizes, title reports
+policy.window_ops = true;      // moves, resizes
+policy.title_report = false;   // reading the window title back (it is typed into the shell)
 policy.screen_checksum = false; // DECRQCRA (reading the screen back)
 
 let term = Terminal::builder().size(80, 24).policy(policy).build();

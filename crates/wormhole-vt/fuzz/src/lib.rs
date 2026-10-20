@@ -71,6 +71,8 @@ impl Run {
         let scrollback = [0, 3, 40, 2000][usize::from(flags & 3)];
         let mut policy = Policy::default();
         policy.screen_checksum = flags & 4 != 0;
+        policy.window_ops = flags & 8 != 0;
+        policy.title_report = flags & 16 != 0;
         let term = Terminal::builder().size(cols, rows).scrollback(scrollback).policy(policy).build();
         let mut run = Run {
             term,

@@ -81,6 +81,8 @@ impl Host {
         let mut policy = Policy::default();
         policy.screen_checksum = checksum;
         policy.window_ops = window_ops;
+        // esctest2 reads the title back (XTWINOPS 20 and 21), so the reports go with the operations.
+        policy.title_report = window_ops;
         let term = Terminal::builder()
             .size(cols, rows)
             .scrollback(1000)

@@ -5,7 +5,7 @@ API names assumed here (target API of engine-library.md; reconcile when phases 1
   Terminal::take_replies() -> Vec<u8>, Terminal::events() (draining iterator), Event::{Title, Bell,
   ClipboardStore, ClipboardLoad, Notification, ..}, Terminal::resize(cols, rows),
   Terminal::cell(Point) -> Option<Cell>, Point/Line/Column/Cell at the crate root, Terminal::title() -> Option<&str>, Terminal::cursor(),
-  Terminal::take_damage(&mut Damage), Policy { window_ops, screen_checksum }, input::*.
+  Terminal::take_damage(&mut Damage), Policy { window_ops, title_report, screen_checksum }, input::*.
 -->
 
 # wormhole-vt

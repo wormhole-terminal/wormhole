@@ -99,6 +99,12 @@ impl Engine for WormholeEngine {
         self.term.set_policy(policy);
     }
 
+    fn allow_title_report(&mut self) {
+        let mut policy = self.term.policy();
+        policy.title_report = true;
+        self.term.set_policy(policy);
+    }
+
     fn feed(&mut self, bytes: &[u8]) {
         self.term.feed(bytes);
         self.replies.extend_from_slice(self.term.replies());

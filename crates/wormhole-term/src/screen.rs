@@ -304,10 +304,15 @@ impl Screen {
         self.term.set_policy(policy);
     }
 
-    /// Whether a program may act on the window and read its title; it may not until the host
-    /// says so.
+    /// Whether a program may act on the window; it may not until the host says so.
     pub(crate) fn set_window_ops(&mut self, allow: bool) {
         self.change_policy(|policy| policy.window_ops = allow);
+    }
+
+    /// Whether a program may read the window title and icon name back; it may not until the host
+    /// says so.
+    pub(crate) fn set_title_report(&mut self, allow: bool) {
+        self.change_policy(|policy| policy.title_report = allow);
     }
 
     /// Whether programs may act on the window.

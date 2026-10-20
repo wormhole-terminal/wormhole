@@ -50,6 +50,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("bell-visual", bell_visual),
     toggle!("screen-checksum", allow_screen_checksum),
     toggle!("window-ops", allow_window_ops),
+    toggle!("title-report", allow_title_report),
 ];
 
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.

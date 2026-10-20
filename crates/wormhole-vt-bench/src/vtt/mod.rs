@@ -38,9 +38,11 @@ pub struct Case {
     pub scrollback_limit: usize,
     /// The engine is told to answer DECRQCRA (`screen-checksum allow`); it is off by default.
     pub allow_screen_checksum: bool,
-    /// The engine is told to act on the window operations and answer the title reports
-    /// (`window-ops allow`); they are off by default.
+    /// The engine is told to act on the window operations (`window-ops allow`); off by default.
     pub allow_window_ops: bool,
+    /// The engine is told to answer the title and icon name reports (`title-report allow`); off by
+    /// default.
+    pub allow_title_report: bool,
     pub known_fail: Vec<KnownFail>,
     pub steps: Vec<Step>,
 }

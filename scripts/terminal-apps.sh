@@ -345,7 +345,7 @@ start_wormhole() {
   mkdir -p "$dir/instance/data/themes"
   printf '{\n  "name": "xterm defaults",\n  "terminal": { "background": "#ffffff", "foreground": "#000000" }\n}\n' \
     > "$dir/instance/data/themes/xterm-defaults.json"
-  printf '{\n  "allow_screen_checksum": true,\n  "allow_window_ops": true,\n  "theme_mode": "dark",\n  "theme": "xterm defaults"\n}\n' \
+  printf '{\n  "allow_screen_checksum": true,\n  "allow_window_ops": true,\n  "allow_title_report": true,\n  "theme_mode": "dark",\n  "theme": "xterm defaults"\n}\n' \
     > "$dir/instance/data/config.json"
   "$ROOT/scripts/devctl-instance.sh" --bin "$wormhole_bin" --shell "$dir/run.sh" "$dir/instance" > "$dir/start.txt"
   local ctl="$dir/instance/ctl"

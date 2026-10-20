@@ -77,7 +77,8 @@ checks how it looks at that point.
 | `size <cols> <rows>` | the screen's size; required |
 | `scrollback-limit <n>` | lines of history the engine keeps (default 100) |
 | `screen-checksum allow` | the engine is told to answer DECRQCRA, which it keeps off otherwise (a terminal that does not have the switch ignores it) |
-| `window-ops allow` | the engine is told to act on the window operations (XTWINOPS 1 to 10, DECSLPP, DECSNLS) and to answer the title reports (XTWINOPS 20 and 21), which it keeps off otherwise |
+| `window-ops allow` | the engine is told to act on the window operations (XTWINOPS 1 to 10, DECSLPP, DECSNLS), which it keeps off otherwise |
+| `title-report allow` | the engine is told to answer the title and icon name reports (XTWINOPS 20 and 21), which it keeps off otherwise |
 | `known-fail: <engine> – <reason>` | the named engine gets this case wrong, and how (the dash may be `–`, `—`, ` - ` or ` -- `); repeat for several engines |
 
 ### Input

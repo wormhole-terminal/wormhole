@@ -16,28 +16,35 @@ size 20 5
 feed \e]2;secret\a\e[21t\e[20t
 reply none
 
+test the window title is not reported with the window operations on either
+spec xterm ctlseqs: CSI 21 t reports the title; here a switch of its own, off by default
+window-ops allow
+size 20 5
+feed \e]2;secret\a\e[21t\e[20t
+reply none
+
 test the title and the icon name are reported when the host allows it
 spec xterm ctlseqs: CSI 20 t is OSC L icon ST, CSI 21 t is OSC l title ST; OSC 0 sets both, OSC 1 the icon name, OSC 2 the title
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e]0;both\a\e[20t\e[21t
 reply \e]Lboth\e\\\e]lboth\e\\
 feed \e]1;icon\a\e]2;title\a\e[20t\e[21t
 reply \e]Licon\e\\\e]ltitle\e\\
 
-test controls are taken out of a reported title
-spec xterm ctlseqs: the title reports can be used to put text in a program's input, which is why they are off by default
+test controls are taken out of a title when it is set
+convention C0, DEL and C1 controls are dropped from a title when it is set, so none is drawn or reported (xterm replaces them in the report)
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e]2;a\u{85}b\a\e[21t
-reply \e]la b\e\\
+reply \e]lab\e\\
 
 test the title stack keeps the title and the icon name together or apart
 spec xterm ctlseqs: CSI 22 ; Ps t saves (0 both, 1 icon name, 2 title), CSI 23 ; Ps t restores
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e]1;i1\a\e]2;t1\a\e[22;0t\e]1;i2\a\e]2;t2\a\e[23;1t\e[20t\e[21t
 reply \e]Li1\e\\\e]lt2\e\\
@@ -47,7 +54,7 @@ reply \e]lt2\e\\
 test a pop takes the slot that holds what it asks for
 spec xterm ctlseqs: CSI 22 and 23 with the icon name and the title saved by separate pushes
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e]1;i1\a\e]2;t1\a\e[22;1t\e[22;2t\e]1;x\a\e]2;y\a\e[23;0t\e[20t\e[21t
 reply \e]Li1\e\\\e]lt1\e\\
@@ -55,7 +62,7 @@ reply \e]Li1\e\\\e]lt1\e\\
 test the title modes read and report in hexadecimal
 spec xterm ctlseqs: CSI > Ps t sets title modes, 0 hexadecimal set, 1 hexadecimal query; CSI > Ps T resets
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e[>0;1t\e]2;6162\a\e[21t
 reply \e]l6162\e\\
@@ -65,7 +72,7 @@ reply \e]lab\e\\
 test a full reset clears the title modes and the stack
 spec xterm ctlseqs: RIS
 known-fail: alacritty – no window operations or title reports: only CSI 18 t is answered
-window-ops allow
+title-report allow
 size 20 5
 feed \e[>0;1t\ec\e]2;ab\a\e[21t
 reply \e]lab\e\\

@@ -9,10 +9,14 @@
 //! could not learn from the tty (the size) or that matters (the window's place on the screen).
 //! The host tells the engine where its window is ([`Terminal::set_window`]); without it the text
 //! area is taken to be the whole screen at the origin. **Operations** that change the window
-//! (move, resize, iconify, raise, lower, maximise, full screen) and the reports of the window
-//! title and icon name are for programs the user trusts with the window: they do nothing until the
-//! host switches them on ([`Policy::window_ops`](crate::terminal::Policy::window_ops)), the same way DECRQCRA is off until
-//! the host allows it. When on, the sizes in cells take effect in the engine at once (so that a
+//! (move, resize, iconify, raise, lower, maximise, full screen) are for programs the user trusts
+//! with the window: they do nothing until the host switches them on
+//! ([`Policy::window_ops`](crate::terminal::Policy::window_ops)), the same way DECRQCRA is off until
+//! the host allows it. The reports of the window title and icon name (20 and 21) are a switch of
+//! their own ([`Policy::title_report`](crate::terminal::Policy::title_report)): they hand text a
+//! program chose to whatever reads the terminal's input.
+//!
+//! With the operations on, the sizes in cells take effect in the engine at once (so that a
 //! program that asks for the size right after it gets the new one, as on a real terminal) and
 //! every operation is handed to the host as an [`Event::WindowOp`], which makes the window match
 //! or sets the engine back to the size it has.
@@ -186,7 +190,7 @@ impl Terminal {
                 });
                 self.reply(format_args!("\x1b[9;{rows};{cols}t"));
             }
-            20 | 21 if allowed => self.report_title(ps == 20),
+            20 | 21 if self.policy.title_report => self.report_title(ps == 20),
             22 => self.push_title(csi.param(1, 0)),
             23 => self.pop_title(csi.param(1, 0)),
             1 if allowed => self.window_event(WindowOp::Deiconify),

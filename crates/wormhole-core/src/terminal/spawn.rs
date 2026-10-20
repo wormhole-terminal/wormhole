@@ -19,8 +19,11 @@ pub struct SpawnOptions {
     /// (`allow_screen_checksum`); the engine ignores it otherwise.
     pub allow_screen_checksum: bool,
     /// Let the program act on the window (XTWINOPS: move, resize, minimise, …; DECCOLM changing the
-    /// width) and read its title back (`allow_window_ops`); the engine ignores both otherwise.
+    /// width) (`allow_window_ops`); the engine ignores both otherwise.
     pub allow_window_ops: bool,
+    /// Answer the program's request for the window title and icon name (XTWINOPS 20 and 21)
+    /// (`allow_title_report`); the engine ignores it otherwise.
+    pub allow_title_report: bool,
     /// Extra environment, e.g. from a trusted project's `config.json`.
     pub env: BTreeMap<String, String>,
     /// The program to run instead of the login shell: the tab's profile, a trusted project's
@@ -59,6 +62,7 @@ impl SpawnOptions {
             scrollback_lines: self.scrollback_lines,
             allow_screen_checksum: self.allow_screen_checksum,
             allow_window_ops: self.allow_window_ops,
+            allow_title_report: self.allow_title_report,
             colors: self.colors.as_deref(),
         }
     }

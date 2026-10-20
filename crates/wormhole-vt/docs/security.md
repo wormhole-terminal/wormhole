@@ -1,9 +1,7 @@
 <!--
-API names assumed here: Policy { window_ops, screen_checksum } (today WindowOps::{Deny, Allow} and
+API names assumed here: Policy { window_ops, title_report, screen_checksum } (today WindowOps::{Deny, Allow} and
 ScreenChecksum::{Deny, Allow}), Terminal::{clipboard_reply, image_decoded}, Event variants, input::encode_paste.
-DECISION FOR THE LEAD: D-9 says "title reports never answered". The code today answers XTWINOPS 20/21 when
-window operations are allowed (control characters replaced by spaces). This chapter documents the code. If the
-code changes to "never", edit the "Title reports" row and the CVE table row for CVE-2003-0063.
+Title reports are `Policy::title_report` (D-24), cleaned when the title is set (D-25).
 ALSO: OSC 1337 that is not an inline image reaches the host raw as Event::Iterm (cap: 64 MiB). Listed under
 "What the host must do"; decide whether the engine should cap it lower or drop it (D-9 "no file/exec sequences").
 -->
@@ -114,16 +112,18 @@ text.
 
 Programs can ask for the window title and the icon name (XTWINOPS 20 and 21). The answer would put text
 the previous program chose into the input of the next program. The engine answers only when
-`Policy::window_ops` is on, and then it replaces control characters (including C1) with spaces. Leave the
-policy off unless you have a reason; the engine's own default is off. Setting the title
-(OSC 0, 1, 2) is not restricted: it is an event and a string you can read.
+`Policy::title_report` is on, a switch of its own that `window_ops` does not turn on. Leave it off unless
+you have a reason; the engine's own default is off. Cleaning the controls out is not enough to make a
+reported title safe, since the text can still be a command line. Setting the title (OSC 0, 1, 2) is not
+restricted: it is an event and a string you can read, and it is cleaned when it is set: C0 and C1
+controls and DEL are dropped, as they are from the icon name and the folder of OSC 7.
 
 ### Window operations and reading the screen back
 
 | Request | Default | With `Policy` |
 |---|---|---|
 | Move, resize, minimise, raise, lower, maximise, full-screen (XTWINOPS 1 to 10, DECSLPP, DECSNLS) | Ignored | `window_ops`: queued as `Event::WindowOp`; sizes in cells also take effect in the engine, up to the screen |
-| Title and icon name reports (XTWINOPS 20, 21) | Not answered | `window_ops`, see above |
+| Title and icon name reports (XTWINOPS 20, 21) | Not answered | `title_report`, see above |
 | DECCOLM (80/132 columns) | Needs mode 40, which the program sets itself, so `Policy` does not cover it | The engine takes the new width, clears and homes the screen, and queues `Event::ColumnsRequested(n)`. The host makes the window match, or calls `resize` with the size it has to say no |
 | DECRQCRA (checksum of a rectangle) | Ignored | `screen_checksum`: answered |
 | Window state, position, pixel size, cell size and text-area reports (XTWINOPS 11 to 19) | Always answered | They say nothing the program could not learn from the tty |
@@ -232,9 +232,9 @@ The engine hands you untrusted data and requests. The remaining checks are yours
   carefully, and never act on its content without validation.
 - `ProgramStatus` and custom events from extensions are your own protocol: validate them.
 
-**Policy.** Leave `window_ops` and `screen_checksum` off. If you turn `window_ops` on, clamp what a program
-asks for (position, size) to what you would allow, and remember it includes title reports. Do not turn it
-on for sessions to remote machines.
+**Policy.** Leave `window_ops`, `title_report` and `screen_checksum` off. If you turn `window_ops` on, clamp
+what a program asks for (position, size) to what you would allow. Do not turn `title_report` on for sessions
+to remote machines, or for any program whose output you did not write.
 
 **Input.**
 - Strip the bracketed-paste end marker from text you paste (the `input` module's paste encoder does it),

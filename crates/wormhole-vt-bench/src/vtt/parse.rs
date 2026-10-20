@@ -118,6 +118,7 @@ impl Parser<'_> {
                     scrollback_limit: 100,
                     allow_screen_checksum: false,
                     allow_window_ops: false,
+                    allow_title_report: false,
                     known_fail: Vec::new(),
                     steps: Vec::new(),
                 },
@@ -219,6 +220,13 @@ impl Parser<'_> {
                     return Err("window-ops allow".to_string());
                 }
                 b.case.allow_window_ops = true;
+                return Ok(());
+            }
+            "title-report" => {
+                if rest != "allow" {
+                    return Err("title-report allow".to_string());
+                }
+                b.case.allow_title_report = true;
                 return Ok(());
             }
             "known-fail:" => {

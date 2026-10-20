@@ -324,6 +324,7 @@ pub(super) fn spawn_options(
         scrollback_lines: 0,
         allow_screen_checksum: false,
         allow_window_ops: false,
+        allow_title_report: false,
         env,
         shell: Some(shell),
         welcome: false,

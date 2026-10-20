@@ -127,6 +127,34 @@ fn a_size_past_the_screen_is_cut_to_it() {
 }
 
 #[test]
+fn title_reports_are_a_switch_of_their_own() {
+    const ASK: &str = "\x1b]2;the title\x07\x1b]1;the icon\x07\x1b[21t\x1b[20t";
+    // Neither off nor the window operations on is enough.
+    let mut rig = Rig::new(20, 5);
+    rig.feed(ASK);
+    assert_eq!(rig.replies(), "");
+    let mut rig = allowed();
+    rig.feed(ASK);
+    assert_eq!(rig.replies(), "", "window_ops does not turn the title reports on");
+    // On without the window operations: the reports are answered, the operations still are not.
+    let mut rig = Rig::new(20, 5);
+    rig.term.set_policy(Policy { title_report: true, ..Policy::default() });
+    rig.feed(ASK);
+    assert_eq!(rig.replies(), "\x1b]lthe title\x1b\\\x1b]Lthe icon\x1b\\");
+    rig.feed("\x1b[2t\x1b[8;10;40t");
+    assert!(ops(&mut rig).is_empty());
+    assert_eq!((rig.term.cols(), rig.term.rows()), (20, 5));
+}
+
+#[test]
+fn a_reported_title_never_carries_a_control() {
+    let mut rig = Rig::new(20, 5);
+    rig.term.set_policy(Policy { title_report: true, ..Policy::default() });
+    rig.feed("\x1b]2;rm -rf\x08\x08\x08\u{9b}2J\u{85}\x7f\x0d\x0a\x07\x1b[21t");
+    assert_eq!(rig.replies(), "\x1b]lrm -rf2J\x1b\\");
+}
+
+#[test]
 fn hostile_numbers_do_not_panic() {
     let mut rig = allowed();
     rig.feed("\x1b[8;65535;65535t\x1b[4;65535;65535t\x1b[65535t\x1b[9;99t\x1b[10;99t\x1b[3;65535;65535t");

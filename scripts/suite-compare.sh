@@ -36,8 +36,8 @@
 #                       for this process and writes nothing; "" to leave iTerm2 as it is)
 #     --wormhole-bin <path>   a release build of Wormhole with devctl instead of building HEAD
 #                       (its throwaway config turns `allow_screen_checksum` on: Wormhole answers DECRQCRA only
-#                       then, and esctest2 reads the screen with it; and `allow_window_ops`, for the window
-#                       operations and title reports esctest2 tests)
+#                       then, and esctest2 reads the screen with it; `allow_window_ops`, for the window
+#                       operations, and `allow_title_report`, for the title reports esctest2 tests)
 #     --timeout <s>     how long one suite may take in one terminal (default 1800)
 #     --max-load <n>    wait (up to 5 minutes) before each terminal until the 1-minute load average
 #                       is below this (default 4)

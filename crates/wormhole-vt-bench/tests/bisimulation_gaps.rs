@@ -10,7 +10,14 @@ use wormhole_vt_bench::bisim::{Resize, Scenario, Setup, probe};
 fn scenario(input: &[u8], cols: usize, rows: usize, resizes: &[(usize, usize, usize)]) -> Scenario {
     Scenario {
         name: "gap".into(),
-        setup: Setup { cols, rows, scrollback: 100, allow_checksum: false, allow_window_ops: false },
+        setup: Setup {
+            cols,
+            rows,
+            scrollback: 100,
+            allow_checksum: false,
+            allow_window_ops: false,
+            allow_title_report: false,
+        },
         bytes: input.to_vec(),
         resizes: resizes.iter().map(|&(at, cols, rows)| Resize { at, cols, rows }).collect(),
     }

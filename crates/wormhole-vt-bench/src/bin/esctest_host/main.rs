@@ -35,7 +35,7 @@ usage: esctest-host --out <file.jsonl> [options]
   --suites <dir>      where fetch-suites.sh put the suites (default: the cache fetch-suites.sh fills)
   --size <cols>x<rows>  the terminal's size (default 80x25, what esctest2 resets to)
   --log <file>        esctest2's own log (default <out>.log; failures' tracebacks go to <log>.trace)
-  --no-window-ops     refuse the window operations (allow_window_ops off)
+  --no-window-ops     refuse the window operations and the title reports (allow_window_ops and allow_title_report off)
   --no-checksum       do not answer DECRQCRA (allow_screen_checksum off)
   --runner-arg <arg>  pass an argument on to esctest_run.py (repeatable)
   --verbose           print every chunk of the conversation to stderr

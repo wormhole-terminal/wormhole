@@ -236,6 +236,7 @@ impl TerminalView {
         options.scrollback_lines = store.settings.scrollback_lines;
         options.allow_screen_checksum = store.settings.allow_screen_checksum;
         options.allow_window_ops = store.settings.allow_window_ops;
+        options.allow_title_report = store.settings.allow_title_report;
         let palette = store.palette.clone();
         options.colors = Some(palette.engine_colors());
         let cwd = options.cwd.clone();

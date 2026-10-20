@@ -111,6 +111,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   colour you had already chosen stays in use.
 - Light themes are easier to read: cards keep a visible edge on white, the amber of a terminal that
   needs you holds 3:1, and a profile's letter turns black on a light colour.
+- Reading the window title back is now a setting of its own, off by default (Settings → Terminal →
+  Privacy, "Let programs read the window title back", or `allow_title_report` in `config.json`). It
+  used to come with "Let programs control the window", so if you turned that on and a program needs
+  the title, turn this on too. A title that a program sets can no longer carry control characters
+  into the window's title, the sidebar or a terminal's folder.
 
 ### Removed
 

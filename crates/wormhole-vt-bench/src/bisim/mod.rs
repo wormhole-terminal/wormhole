@@ -49,6 +49,7 @@ pub struct Setup {
     pub scrollback: usize,
     pub allow_checksum: bool,
     pub allow_window_ops: bool,
+    pub allow_title_report: bool,
 }
 
 /// A resize at an offset of the stream: it happens after that many bytes have been parsed.
@@ -85,6 +86,7 @@ impl Rig {
         let mut policy = Policy::default();
         policy.screen_checksum = setup.allow_checksum;
         policy.window_ops = setup.allow_window_ops;
+        policy.title_report = setup.allow_title_report;
         term.set_policy(policy);
         Rig { term, replies: Vec::new(), events: Vec::new() }
     }

@@ -14,8 +14,9 @@
 //! host reads with `Terminal::title` and in events is already clean.
 //!
 //! The reports (`OSC l title ST`, `OSC L icon ST`) would put that text into the input of whatever
-//! program is running, so they are answered only when the host allows the window operations
-//! ([`Policy::window_ops`](crate::terminal::Policy::window_ops)).
+//! program is running, so they are answered only when the host allows them
+//! ([`Policy::title_report`](crate::terminal::Policy::title_report)); cleaning does not make a
+//! reported title safe, it can still be a command line.
 
 use std::borrow::Cow;
 
@@ -213,10 +214,9 @@ impl Terminal {
 
     /// XTWINOPS 20 (the icon name) and 21 (the title): `OSC L text ST` and `OSC l text ST`.
     pub(in crate::terminal) fn report_title(&mut self, icon: bool) {
+        // Already free of controls: they are dropped when a title is set.
         let text =
             if icon { self.titles.icon.clone() } else { self.titles.window.clone() }.unwrap_or_default();
-        // Controls are dropped when a title is set; this stays as a second layer.
-        let text: String = text.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
         let letter = if icon { 'L' } else { 'l' };
         if self.titles.modes.contains(TitleModes::QUERY_HEX) {
             self.reply(format_args!(

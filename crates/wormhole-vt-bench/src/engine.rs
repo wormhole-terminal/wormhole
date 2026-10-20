@@ -154,9 +154,13 @@ pub trait Engine: Sized {
     /// such switch either answers or does not.
     fn allow_screen_checksum(&mut self) {}
 
-    /// Turn on the window operations (move, resize, …) and the title reports, which engines that
-    /// have them keep off until the host asks. The default does nothing.
+    /// Turn on the window operations (move, resize, …), which engines that have them keep off
+    /// until the host asks. The default does nothing.
     fn allow_window_ops(&mut self) {}
+
+    /// Turn on answering the title and icon name reports (XTWINOPS 20 and 21), which engines that
+    /// have them keep off until the host asks. The default does nothing.
+    fn allow_title_report(&mut self) {}
 
     fn feed(&mut self, bytes: &[u8]);
 

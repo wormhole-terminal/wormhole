@@ -375,10 +375,15 @@ pub struct Settings {
     /// it lets any program, also one over ssh, read the screen back cell by cell. Terminals started
     /// after the change use it.
     pub allow_screen_checksum: bool,
-    /// Let programs act on the window (move, resize, minimise, raise, full screen: XTWINOPS) and
-    /// read its title back. Off: a program can only ask for sizes and the window's place. Terminals
-    /// started after the change use it.
+    /// Let programs act on the window (move, resize, minimise, raise, full screen: XTWINOPS). Off:
+    /// a program can only ask for sizes and the window's place. Terminals started after the change
+    /// use it.
     pub allow_window_ops: bool,
+    /// Answer a program's request for the window title and icon name (XTWINOPS 20 and 21). Off:
+    /// the title is text a program chose, and the answer is typed into the shell's input, so it
+    /// lets any program, also one over ssh, type a command line. Terminals started after the
+    /// change use it.
+    pub allow_title_report: bool,
     /// Where New Terminal in New Worktree puts a worktree: under this folder (in a folder named
     /// after the repository), or, empty, beside the repository in `<name>-worktrees`.
     pub worktree_base: String,
@@ -470,6 +475,7 @@ impl Default for Settings {
             control_write: false,
             allow_screen_checksum: false,
             allow_window_ops: false,
+            allow_title_report: false,
             worktree_base: String::new(),
             feature_flags: BTreeMap::new(),
         }
@@ -599,9 +605,12 @@ pub const APP_SETTINGS: &[&str] = &[
     // Whether programs may read the screen back with DECRQCRA: a cloned repository must not be
     // able to turn that on for itself.
     "allow_screen_checksum",
-    // Whether programs may move and resize the window and read its title: a cloned repository must
-    // not be able to turn that on for itself.
+    // Whether programs may move and resize the window: a cloned repository must not be able to turn
+    // that on for itself.
     "allow_window_ops",
+    // Whether programs may read the window title back, which types it into the shell: a cloned
+    // repository must not be able to turn that on for itself.
+    "allow_title_report",
     // Where worktrees go is the person's own folder layout; a repository must not pick it.
     "worktree_base",
     // Which colour each folder wears is the person's too: a repository can tint its own title row
@@ -910,7 +919,8 @@ mod tests {
         assert!(unset.open_in.is_empty(), "Open in… picks an editor until one is chosen");
         assert!(!unset.control_write, "the command line can't type into terminals until asked");
         assert!(!unset.allow_screen_checksum, "programs can't read the screen back until asked");
-        assert!(!unset.allow_window_ops, "programs can't move the window or read its title until asked");
+        assert!(!unset.allow_window_ops, "programs can't move the window until asked");
+        assert!(!unset.allow_title_report, "programs can't read the window title back until asked");
         assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
     }
 
@@ -971,6 +981,9 @@ mod tests {
         );
         assert!(
             APP_SETTINGS.contains(&"allow_window_ops") && !PROJECT_SETTINGS.contains(&"allow_window_ops")
+        );
+        assert!(
+            APP_SETTINGS.contains(&"allow_title_report") && !PROJECT_SETTINGS.contains(&"allow_title_report")
         );
         let overrides = serde_json::json!({ "control_write": true });
         let serde_json::Value::Object(map) = overrides else { unreachable!() };
