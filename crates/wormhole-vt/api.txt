@@ -1717,6 +1717,7 @@ pub wormhole_vt::Limits::archive_backlog: usize
 pub wormhole_vt::Limits::clipboard: usize
 pub wormhole_vt::Limits::cwd: usize
 pub wormhole_vt::Limits::events: usize
+pub wormhole_vt::Limits::events_bytes: usize
 pub wormhole_vt::Limits::image_bytes: u64
 pub wormhole_vt::Limits::image_count: usize
 pub wormhole_vt::Limits::image_payload: usize

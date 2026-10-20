@@ -224,6 +224,7 @@ impl Builder {
             graphics: graphics::Graphics::default(),
             events: Vec::<Event>::new(),
             queued_values: 0,
+            queued_bytes: 0,
             replies: Vec::new(),
             reply_dropped: false,
             scrollback_lines: self.scrollback,

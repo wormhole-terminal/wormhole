@@ -89,6 +89,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("graphics", Gap("Gaps::PLACEMENTS and IMAGES; the handle counter is Seeds::image_handle")),
     ("events", Queue("drained by the host")),
     ("queued_values", Queue("the bytes of user variables waiting in the queue")),
+    ("queued_bytes", Queue("the bytes of the other events' payloads waiting in the queue")),
     ("replies", Queue("written to the program by the host")),
     ("reply_dropped", Scratch("the reply being written, one sequence's")),
     ("scrollback_lines", Host("the history setting")),

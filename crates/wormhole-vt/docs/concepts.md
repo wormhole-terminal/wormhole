@@ -234,8 +234,9 @@ assert!(matches!(events.as_slice(), [Event::Bell]));
 assert_eq!(term.events().count(), 0); // taken: the queue is empty
 ```
 
-Like replies, events are bounded: past 16,384 queued events new ones are dropped, and a run of the same
-event (a bell, a title, a folder said twice) counts once. A picture's pixels, a picture's release and a
+Like replies, events are bounded: past 16,384 queued events, or past 64 MiB of the text and data they carry
+(a clipboard store, a notification, a passed-through string), new ones are dropped whole, and a run of the
+same event (a bell, a title, a folder said twice) counts once. A picture's pixels, a picture's release and a
 reset are never dropped, so the host cannot end up holding pixels nobody can show.
 
 ## Pins and spans

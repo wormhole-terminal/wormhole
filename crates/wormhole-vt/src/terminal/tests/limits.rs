@@ -33,6 +33,7 @@ fn the_default_is_the_ceiling_and_a_value_above_it_is_cut() {
         l.cwd = usize::MAX;
         l.link_uri = usize::MAX;
         l.events = usize::MAX;
+        l.events_bytes = usize::MAX;
         l.replies = usize::MAX;
         l.archive_backlog = usize::MAX;
     });
@@ -58,6 +59,7 @@ fn the_ceilings_are_what_the_documentation_says() {
     assert_eq!((c.osc, c.clipboard, c.osc_image, c.osc_iterm), (8 << 10, 8 << 20, 64 << 20, 64 << 10));
     assert_eq!((c.title, c.cwd, c.link_uri), (4096, 4096, 8192));
     assert_eq!((c.events, c.replies, c.archive_backlog), (16_384, 1 << 20, 64 << 20));
+    assert_eq!(c.events_bytes, 64 << 20);
 }
 
 #[test]
@@ -150,6 +152,47 @@ fn undrained_events_are_held_to_the_hosts_count() {
     // Resets are never dropped, whatever the cap.
     r.feed("\x1b]9;x\x07\x1b]9;x\x07\x1bc");
     assert!(r.events().contains(&Event::FullReset));
+}
+
+/// The text of the events a host would collect: what an undrained queue holds.
+fn held_bytes(events: &[Event]) -> usize {
+    events.iter().map(Event::payload_bytes).sum()
+}
+
+#[test]
+fn undrained_clipboard_stores_are_held_to_a_byte_budget_not_only_a_count() {
+    // The audit's stream: OSC 52 strings of 8 MiB, 200 of them, nobody draining. By count alone
+    // the queue held all of them (1.6 GB of text); the budget keeps the first ones that fit.
+    let mut term = Terminal::new(80, 24);
+    let body = "A".repeat((8 << 20) - 8);
+    let store = format!("\x1b]52;c;{body}\x07");
+    for _ in 0..200 {
+        term.feed(store.as_bytes());
+    }
+    let events: Vec<Event> = term.events().collect();
+    let cap = Limits::default().events_bytes;
+    let held = held_bytes(&events);
+    assert!(held <= cap, "{held} bytes held of {cap}");
+    assert!(!events.is_empty(), "the first stores that fit are kept");
+    assert!(events.len() < 200);
+    // The host collected: stores flow again.
+    term.feed(store.as_bytes());
+    assert_eq!(term.events().count(), 1);
+}
+
+#[test]
+fn the_event_byte_budget_is_the_hosts_to_lower_and_counts_every_kind_of_text() {
+    let mut r = rig_with(lowered(|l| l.events_bytes = 100));
+    let note = |bytes: usize| format!("\x1b]9;{}\x07", "n".repeat(bytes));
+    r.feed(&(note(40) + &note(40) + &note(40)));
+    assert_eq!(r.events().len(), 2, "40 bytes each: the third would pass 100");
+    r.feed(&note(110));
+    assert!(r.events().is_empty(), "an event over the whole budget is dropped, not cut");
+    // Resets are not held to it, and a note that fits still is.
+    r.feed(&(note(70) + "\x1bc"));
+    let events = r.events();
+    assert!(events.contains(&Event::FullReset));
+    assert!(events.iter().any(|event| matches!(event, Event::Notification { body, .. } if body.len() == 70)));
 }
 
 #[test]

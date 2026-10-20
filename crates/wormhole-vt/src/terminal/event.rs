@@ -256,3 +256,26 @@ pub enum Event {
     /// [`Limits::archive_backlog`](crate::terminal::Limits::archive_backlog)).
     HistoryDropped(DroppedHistory),
 }
+
+impl Event {
+    /// The bytes of text or data the event holds while it waits in the queue, which `push_event`
+    /// adds up against [`Limits::events_bytes`](crate::terminal::Limits::events_bytes). Events
+    /// with nothing but a few numbers are 0; pictures and user variables have budgets of their own
+    /// (`image_uploads`, and 1 MiB of values).
+    pub(super) fn payload_bytes(&self) -> usize {
+        match self {
+            Event::IconName(text) | Event::PointerShape(text) => text.len(),
+            Event::Notification { title, body } => title.len() + body.len(),
+            Event::KittyNotification { metadata, payload } => metadata.len() + payload.len(),
+            Event::ClipboardStore { selection, text } => selection.len() + text.len(),
+            Event::ProgramStatus { payload, .. }
+            | Event::Osc { payload, .. }
+            | Event::Apc { payload, .. } => payload.len(),
+            Event::Iterm(bytes) => bytes.len(),
+            Event::Dcs { intermediates, payload, params, .. } => {
+                intermediates.len() + payload.len() + params.len() * 2
+            }
+            _ => 0,
+        }
+    }
+}

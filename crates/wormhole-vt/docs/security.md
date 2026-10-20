@@ -86,6 +86,7 @@ lowering is all a host can do and this table stays true whatever it asks. The re
 | Uploads waiting for the host to decode | 256 MiB in all; past that new pictures are refused | `image_uploads` |
 | Replies the host has not collected | 1 MiB; past that new replies are dropped whole | `replies` |
 | Events the host has not collected | 16,384; past that new ones are dropped, except picture uploads, picture releases, resets and dropped history | `events` |
+| Text and data in the events the host has not collected (clipboard stores, notifications, icon names, passed-through strings, iTerm2 and program status) | 64 MiB in all; past that the newest such event is dropped whole (the count above still applies) | `events_bytes` |
 | Dropped history lines the host has not collected (only when it asked for them) | 64 MiB of lines; past that the newest are counted, not kept | `archive_backlog` |
 | Replies held behind a picture decode | 1 MiB and 64 answers waiting; then the oldest is given up | |
 | Screen size | 2 to 16,384 columns, 1 to 16,384 rows | |

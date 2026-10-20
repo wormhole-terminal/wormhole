@@ -302,6 +302,8 @@ pub struct Terminal {
     events: Vec<Event>,
     /// Bytes of `Event::UserVar` values waiting in `events`.
     queued_values: usize,
+    /// Bytes of the other events' text and data waiting in `events` (`Event::payload_bytes`).
+    queued_bytes: usize,
     replies: Vec<u8>,
     /// The reply being written went past the cap: its other pieces go too (see `reply`).
     reply_dropped: bool,
@@ -367,6 +369,7 @@ impl Terminal {
     pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
         self.announce_changes();
         self.queued_values = 0;
+        self.queued_bytes = 0;
         // History lines that left since the last call come last, in the order they left.
         self.flush_archive();
         self.events.drain(..)
@@ -477,6 +480,11 @@ impl Terminal {
     /// the cap: `add_image` takes no new picture there, a picture is freed once, and resets in a
     /// row are one. The announcements of changed modes and colors are kept too (a host that
     /// never looked at them would not know its input is wrong); `events` makes two at most.
+    ///
+    /// The count is not the only cap: an event that carries text or data (a clipboard store, a
+    /// notification, a passed-through string) is also counted in bytes, and past
+    /// [`Limits::events_bytes`] the new one is dropped whole. Without it 16,384 events of 8 MiB each
+    /// held 128 GiB for a host that was not looking.
     fn push_event(&mut self, event: Event) {
         let kept = matches!(
             event,
@@ -493,6 +501,13 @@ impl Terminal {
             ) && self.events.last() == Some(&event))
         {
             return;
+        }
+        let bytes = event.payload_bytes();
+        if bytes > 0 {
+            if self.queued_bytes.saturating_add(bytes) > self.limits.events_bytes {
+                return;
+            }
+            self.queued_bytes += bytes;
         }
         self.events.push(event);
     }
