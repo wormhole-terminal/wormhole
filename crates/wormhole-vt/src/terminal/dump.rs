@@ -272,7 +272,6 @@ impl Terminal {
         d.field("a/colors", format!("{:?}", self.palette.set));
         d.field("a/special_colors", format!("{:?}", self.palette.special));
         d.field("a/extra_colors", format!("{:?}", self.palette.extra));
-        d.field("a/printer", format!("{:?}", self.printer));
         d.field("a/status", format!("{:?}", self.status));
         d.field("a/last_char", format!("{:?}", self.last_char));
         // A closed cluster's other fields are dead values: the next character overwrites them.

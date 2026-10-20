@@ -36,15 +36,6 @@ impl Handler for Sink<'_> {
     }
 
     #[inline]
-    fn wants_raw(&self) -> bool {
-        self.0.printing()
-    }
-
-    fn raw(&mut self, bytes: &[u8]) -> usize {
-        self.0.discard_printer_data(bytes)
-    }
-
-    #[inline]
     fn print_ascii(&mut self, run: &[u8]) {
         if self.0.on_status_line() {
             return;

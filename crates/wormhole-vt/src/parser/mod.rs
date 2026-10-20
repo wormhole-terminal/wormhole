@@ -147,9 +147,6 @@ impl Parser {
         let mut at = 0;
         while at < bytes.len() {
             at = match self.state {
-                State::Ground if handler.wants_raw() => {
-                    at + handler.raw(&bytes[at..]).clamp(1, bytes.len() - at)
-                }
                 State::Ground => self.ground(handler, bytes, at),
                 State::Utf8 => self.resume_utf8(handler, bytes, at),
                 State::Escape | State::EscapeSt => self.escape(handler, bytes, at),

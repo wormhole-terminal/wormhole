@@ -70,7 +70,7 @@ impl Parser {
                             return at + 1;
                         }
                     }
-                    if self.state != State::Ground || h.wants_raw() {
+                    if self.state != State::Ground {
                         return at;
                     }
                 }

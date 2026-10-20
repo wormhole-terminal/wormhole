@@ -71,8 +71,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("folder", Written("titles: OSC 7")),
     ("palette", Written("palette: OSC 4, 5, 10 to 19")),
     ("cell_px", Host("the host's cell size")),
-    ("status", Written("misc: CSI Ps $ ~, and CSI 1 $ } last (Gaps::LAST_SEQUENCE in VT52 mode)")),
-    ("printer", Written("final_state: CSI 5 i, the very last (Gaps::LAST_SEQUENCE in VT52 mode)")),
+    ("status", Written("misc: CSI Ps $ ~, and CSI 1 $ } last (Gaps::STATUS_LINE in VT52 mode)")),
     (
         "last_char",
         Written("final_state: the character printed again last (Gaps::LAST_CHAR when it cannot be)"),

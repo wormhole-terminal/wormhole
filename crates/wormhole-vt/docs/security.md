@@ -167,10 +167,10 @@ No sequence in the engine starts a program, reads or writes a file, or loads a f
 - kitty graphics **files and shared memory** (`t=f`, `t=t`, `t=s`) are refused. Every such failure is
   answered the same way (`EBADF`), so a program learns nothing about files it cannot read.
 - **Printing**, **user-defined keys**, **soft fonts** (DRCS) and **ReGIS** are not implemented. The
-  VT52's printer controls are ignored in VT52 mode. Media copy has no printer to go to: the
-  functions that print something are ignored, and the printer controller mode (`CSI 5 i`) reads and
-  drops what follows up to `CSI 4 i` without keeping it, so it cannot grow memory (a program that never
-  ends it silences its own output until the host resets the terminal).
+  VT52's printer controls are ignored in VT52 mode. **Media copy** (`CSI Ps i`, `CSI ? Ps i`) is
+  recognised and ignored, the printer controller mode (`CSI 5 i` until `CSI 4 i`) included: swallowing
+  what follows would let a stray `CSI 5 i`, from a `cat` of a binary file, silence the terminal for
+  good, a reset included, so what a program sent for a printer is drawn like any text.
 - The **status line** (DECSSDT, DECSASD) has no place on the screen: what a program writes to it while
   it is the active display is dropped, and the main display is not touched.
 - A program can put the terminal in **VT52 mode** (`CSI ? 2 l`), where no `CSI` is read, so a stray

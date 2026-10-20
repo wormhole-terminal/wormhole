@@ -18,10 +18,10 @@ in the colour menu, so the same test comes up more than once.
 | 007 | erase characters (ECH) | pass | E's with a gap before the diagonal, the lower right cleared |
 | 008 to 010 | protected areas: DECSED and DECSEL, then ED and EL, then ECH, ICH and DCH, ignoring protection (DECSCA) | pass | a solid box of `*` each time, nothing else |
 | 011 | 8-bit controls (S7C1T, S8C1T) | pass | both reports `ok` |
-| 012 to 015 | media copy: assign the printer, printer to host, printer extent (DECPEX), form feed (DECPFF) | unsupported: printer (media copy) | nothing to show, and nowhere to print: the engine has no printer (DSR says so, 003) |
-| 016 | auto-print mode (`CSI ? 5 i`) | unsupported: printer (media copy) | the screen is as asked (the pattern is visible); nothing is printed |
-| 017 | printer controller mode (`CSI 5 i`) | pass | the pattern is invisible: everything up to `CSI 4 i` is the printer's and is discarded (there is no printer, so the scrolling region is not in any output either) |
-| 018 to 021 | print page, print composed display, print all pages, print the cursor line (`CSI i`, `CSI ? 1 i`, ...) | unsupported: printer (media copy) | the screen is as asked; nothing is printed |
+| 012 to 015 | media copy: assign the printer, printer to host, printer extent (DECPEX), form feed (DECPFF) | unsupported (by design): media copy | media copy is ignored, data is shown, as in modern terminals; nothing to show, and nowhere to print (DSR says there is no printer, 003) |
+| 016 | auto-print mode (`CSI ? 5 i`) | unsupported (by design): media copy | the screen is as asked (the pattern is visible); nothing is printed |
+| 017 | printer controller mode (`CSI 5 i`) | unsupported (by design): media copy | media copy is ignored, data is shown, as in modern terminals; swallowing would let a stray sequence silence the terminal. The pattern that should be invisible is drawn, and nothing goes to a printer |
+| 018 to 021 | print page, print composed display, print all pages, print the cursor line (`CSI i`, `CSI ? 1 i`, ...) | unsupported (by design): media copy | the screen is as asked; nothing is printed |
 | 022 | soft character sets (DECDLD) | not exercised | vttest needs a font file (`-f`); none is given. The engine's DA does not claim soft characters either |
 | 023 to 024 | soft terminal reset (DECSTR) | pass | nothing is drawn by the test itself |
 | 025 | user-defined keys (DECUDK), waiting for keys | prompt | the host presses `q` |

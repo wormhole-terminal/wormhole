@@ -108,10 +108,9 @@ bitflags! {
         /// ED 3 was the last thing but cursor moves and erases, and the history is not empty (a
         /// resize put lines in it), so the "ED 3 just before" mark of the next ED 2 cannot be set.
         const HISTORY_CLEARED = 1 << 18;
-        /// The printer controller mode is on (everything the program sends is discarded until
-        /// `CSI 4 i`) or the status line is the active display (what draws is discarded), in VT52
-        /// mode, which reads no CSI to say so.
-        const LAST_SEQUENCE = 1 << 19;
+        /// The status line is the active display (what draws is dropped) in VT52 mode, which reads
+        /// no CSI to say so.
+        const STATUS_LINE = 1 << 19;
     }
 }
 
@@ -131,7 +130,7 @@ impl Gaps {
         .union(Gaps::SPACER_HEAD)
         .union(Gaps::MARK)
         .union(Gaps::CELL)
-        .union(Gaps::LAST_SEQUENCE)
+        .union(Gaps::STATUS_LINE)
         .union(Gaps::HISTORY_CLEARED)
         .union(Gaps::ALT_CONTENT);
 }
@@ -184,7 +183,7 @@ impl std::error::Error for NotReady {}
 impl Terminal {
     /// Whether a repaint can be made now: nothing is half-read, in the parser or in the terminal.
     pub fn repaint_ready(&self) -> Result<(), NotReady> {
-        if !self.parser.is_ground() || self.vt52.addressing() || self.printer.mid_sequence() {
+        if !self.parser.is_ground() || self.vt52.addressing() {
             return Err(NotReady::Sequence);
         }
         if self.graphics.in_transfer() {

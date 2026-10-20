@@ -83,11 +83,11 @@ change on purpose; update each menu's `review.md` with it.
 
 **What the screens are.** The committed screens are the engine's behaviour today. Each menu's folder has a `review.md`: every
 screen judged against what vttest says it should show (and the VT100/VT220/VT510 manuals and xterm where that is not enough),
-`pass`, `fail: <why>` or `unsupported: <feature>`. Of 455 screens, 388 pass, 5 fail, 55 are unsupported features, 6 are prompts
+`pass`, `fail: <why>` or `unsupported: <feature>`. Of 455 screens, 387 pass, 5 fail, 56 are unsupported features, 6 are prompts
 (a screen waiting for the key the host then presses) and one is not exercised. By menu (screens: pass, fail, unsupported):
 cursor movements 6: 6, 0, 0; screen features 15: 15, 0, 0; character sets 15: 12, 3, 0; double-sized characters 6: 6, 0, 0;
 keyboard 6: 0, 0, 6; terminal reports 9: 8, 0, 0 (and a prompt); VT52 mode 4: 3, 0, 0 (and a prompt); insert and delete 14: 14, 0, 0;
-known bugs 29: 29, 0, 0; reset 6: 5, 0, 1; non-vt100 345: 290, 2, 48 (and four prompts and one not exercised).
+known bugs 29: 29, 0, 0; reset 6: 5, 0, 1; non-vt100 345: 289, 2, 49 (and four prompts and one not exercised).
 
 **Left out because a person is needed** (`suites/vttest/notes.txt` lists every entry that was not run and why): the keyboard menu's
 tests that read typed keys (5.2 auto repeat, 5.3 layout, 5.4 cursor keys, 5.5 numeric keypad, 5.6 editing keypad, 5.7 function
@@ -107,7 +107,7 @@ Screen references are `<menu>/<screen>` (`3/003` is `suites/vttest/03-character-
 |-----|----------|----------|-----------|---------|
 | 8-bit characters and GR | `ESC % @` (leave UTF-8), then bytes 0xA0 to 0xFE; locking shifts into GR: `ESC ~` (LS1R), `ESC }` (LS2R), `ESC |` (LS3R) | the characters of the set designated to G1, G2, G3 in the right half | the input is UTF-8 only, by design: every such byte is U+FFFD; LS2 and LS3 into GL (`ESC n`, `ESC o`) and the single shifts work | 3/003, 3/008, 3/013, 11/187 |
 | keyboard position mode | DECKPM (`CSI ? 81 h`): keys report their position | a VT510 key reports its position, not its character | not built: xterm has no such mode either and no program asks for it (`docs/input.md`). LNM (Return sends CR LF) works since the encoder got `InputModes::new_line` | 11/135 to 139 |
-| printer | media copy: `CSI ? 9 i`, `CSI ? 8 i`, `CSI ? 5 i`, `CSI i`, `CSI ? 1 i`, `CSI ? 11 i`, DECPEX, DECPFF | text and pages go to the printer | there is no printer. The printer controller mode (`CSI 5 i` to `CSI 4 i`) swallows its data as it should (11/017); the functions that print something are ignored, and DSR says there is no printer | 11/012 to 016, 018 to 021 |
+| printer | media copy: `CSI ? 9 i`, `CSI ? 8 i`, `CSI ? 5 i`, `CSI i`, `CSI ? 1 i`, `CSI ? 11 i`, DECPEX, DECPFF | text and pages go to the printer | there is no printer, by design: media copy is ignored, the printer controller mode (`CSI 5 i` to `CSI 4 i`) included, so its data is drawn. Swallowing it would let a stray `CSI 5 i` silence the terminal for good (a reset would be swallowed too); modern terminals ignore it as well. DSR says there is no printer | 11/012 to 021 |
 | rectangle checksum | DECRQCRA: `CSI Pi;Pg;Pt;Pl;Pb;Pr * y` | the VT420's: the two's complement of the sum, with the video attributes | xterm's XTCHECKSUM variant on purpose (the plain sum of the code points, no attributes), which esctest2 reads the screen with: every character's checksum mismatches, as does the whole page's (`4273`, expected `EAED`) | 11/186, 11/187 |
 | status line | DECSSDT (`CSI Ps $ ~`), DECSASD (`CSI Ps $ }`) | text written while the status line is selected goes there | the engine draws no status line, by design: what is written to it is dropped, and the main screen and cursor are left alone (`screen/status_line.rs`) | 11/073 to 081 |
 | settings the engine does not have, asked by DECRQSS | DECPRO, DECTTC, DECTLTC; the VT520's DECATC, DECAC, DECCRTST, DECDLDA, DECSEST, DECARR, DECSTGLT, DECSZS, DECSPMA, DECTME, DECUS; xterm's modifyKeyboard, modifyCursorKeys, modifyFunctionKeys and the UTF-8 title modes | a valid reply | `DCS 0 $ r ST`, an invalid request, which is what a terminal without the setting answers (vttest prints `failed` for an answer without the request's final byte). modifyOtherKeys and the hexadecimal title modes are answered | 11/058, 11/067, 11/068, 11/210 to 220, 11/311 to 313, 11/317, 11/318 |
@@ -117,7 +117,7 @@ Screen references are `<menu>/<screen>` (`3/003` is `suites/vttest/03-character-
 | keyboard LEDs and the confidence test | DECLL, DECTST | hardware | ignored, as xterm | 5/001 to 006, 10/004 |
 
 Found by vttest and fixed (the engine's `.vtt` cases cite the screens): double-width and double-height lines (menus 4, 8, 9), REP after a
-control sequence, the printer controller mode, text for the status line, DECREQTPARM, DECSCPP, Return in new line mode, XTTITLEPOS and
+control sequence, text for the status line, DECREQTPARM, DECSCPP, Return in new line mode, XTTITLEPOS and
 DECRQSS for modifyOtherKeys and the title modes, DECRQSS at the VT100 level, DEL in a 96-character set. Judged right after all: DECCARA and
 DECRARA streams run to the screen's edges, not the margins (the VT510 manual: "not affected by page margins"; xterm's the same), though
 vttest's text says "wrapping at the margins" (11/156, 11/165).

@@ -145,7 +145,8 @@ impl Terminal {
             // With more parameters this is xterm's mouse tracking initiation, which is ignored.
             b'T' if csi.len() <= 1 => self.scroll_down(count(csi, 0)),
             b'b' => self.repeat(repeatable, count(csi, 0)),
-            b'i' => self.media_copy(csi.param(0, 0)),
+            // Media copy (MC, `CSI Ps i`) is recognised and ignored: see `terminal::media_copy`.
+            b'i' => {}
             b'x' => self.request_terminal_parameters(csi.param(0, 0)),
             b'I' => self.tab_forward(count(csi, 0)),
             b'Z' => self.tab_back(count(csi, 0)),

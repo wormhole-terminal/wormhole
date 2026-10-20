@@ -279,18 +279,13 @@ impl<'a> Writer<'a> {
                 self.cluster_text(head, t.cursor.y, source);
             }
         }
-        // Really last: the status line takes what draws after it, and the printer everything, so
-        // there is nothing to say either with in VT52 mode, which reads no CSI.
-        if t.status.active() || t.printer.on() {
+        // Really last: the status line takes what draws after it, so there is nothing to say it
+        // with in VT52 mode, which reads no CSI.
+        if t.status.active() {
             if vt52 {
-                self.gaps |= Gaps::LAST_SEQUENCE;
+                self.gaps |= Gaps::STATUS_LINE;
             } else {
-                if t.status.active() {
-                    self.put(b"\x1b[1$}");
-                }
-                if t.printer.on() {
-                    self.put(b"\x1b[5i");
-                }
+                self.put(b"\x1b[1$}");
             }
         }
     }
