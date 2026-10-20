@@ -29,6 +29,9 @@ pub enum Icon {
     /// A file's or folder's icon as the system draws it in Finder (the house for a home folder,
     /// a disk for a volume). Nothing is read here: the platform asks for the icon.
     File(PathBuf),
+    /// Two letters in a small rounded square, for an app whose icon can't be had (where there is
+    /// no icon service to ask, the fallback menu draws it; the native one has the icon).
+    Monogram(SharedString),
 }
 
 /// An item's check mark.

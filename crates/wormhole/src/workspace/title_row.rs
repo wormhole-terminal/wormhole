@@ -276,12 +276,12 @@ impl Workspace {
         with_splits: bool,
         cx: &mut Context<Self>,
     ) -> Menu {
-        let apps: Vec<(Installed, Option<Arc<Image>>)> = folder
+        let apps: Vec<(Installed, Option<Icon>)> = folder
             .map(|_| OpenIn::apps(cx))
             .unwrap_or_default()
             .into_iter()
             .map(|app| {
-                let icon = OpenIn::icon(cx, &app.bundle);
+                let icon = OpenIn::menu_icon(cx, &app);
                 (app, icon)
             })
             .collect();
@@ -306,7 +306,7 @@ impl Workspace {
 /// when `splits` says (whether the pane can split right and down), the two splits.
 fn actions_menu(
     folder: Option<&Path>,
-    apps: &[(Installed, Option<Arc<Image>>)],
+    apps: &[(Installed, Option<Icon>)],
     chosen: &str,
     splits: Option<(bool, bool)>,
     this: &WeakEntity<Workspace>,
@@ -316,7 +316,7 @@ fn actions_menu(
             let (bundle, folder) = (app.bundle.clone(), folder.to_path_buf());
             menu.item(
                 Item::new(app.name.clone())
-                    .icon(icon.clone().map(Icon::Image))
+                    .icon(icon.clone())
                     .checked(app.bundle == chosen)
                     .on_select(move |_, _| open_in::open(&bundle, &folder)),
             )
@@ -356,7 +356,7 @@ mod menu_model_tests {
 
     use super::actions_menu;
 
-    fn app(bundle: &str, name: &str) -> (Installed, Option<std::sync::Arc<gpui_kit::Image>>) {
+    fn app(bundle: &str, name: &str) -> (Installed, Option<crate::native::Icon>) {
         (Installed { bundle: bundle.into(), name: name.into(), monogram: name[..1].into() }, None)
     }
 

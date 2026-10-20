@@ -175,6 +175,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   History redrew on each poll). Git is no longer asked about such a folder again and again; a cheap
   look for a `.git` in the folder and its parents runs instead, so `git init`, `git clone` into the
   folder or a `cd` into a repository shows the repository within about half a second.
+- The Open folder in… menu in the title row shows each app's icon again (Zed, Xcode, Finder …), as
+  the Mac gives it to Finder.
 - A crash is written down: the log gets the panic's message and where it happened, and
   `logs/last-panic.txt` keeps the last one, so a crash of an app started from the Finder leaves more
   than a crash report.

@@ -11,6 +11,7 @@ use gpui_kit::component::menu::{PopupMenu, PopupMenuItem};
 use gpui_kit::*;
 
 use crate::native::menu::{Check, Entry, Icon, Menu, Swatches};
+use crate::style::TextRole as _;
 
 /// The open menu of one window, and the element that draws it.
 #[derive(Default)]
@@ -99,7 +100,7 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
                     None => PopupMenuItem::new(item.title.clone()),
                     Some(icon) => {
                         let (title, icon) = (item.title.clone(), icon.clone());
-                        PopupMenuItem::element(move |_, _| with_icon(&icon, title.clone()))
+                        PopupMenuItem::element(move |_, cx| with_icon(&icon, title.clone(), cx))
                     }
                 };
                 popup.item(shown.checked(item.check != Check::Off).disabled(!item.enabled).on_click(click))
@@ -123,11 +124,22 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
     popup
 }
 
-fn with_icon(icon: &Icon, title: SharedString) -> AnyElement {
+fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
     let picture = match icon {
         Icon::Image(file) => img(file.clone()).size_4().into_any_element(),
         // No icon service here: the folder glyph stands for any file.
         Icon::File(_) => crate::style::icon(IconName::Folder).into_any_element(),
+        Icon::Monogram(letters) => div()
+            .flex_none()
+            .size_4()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded(crate::settings::ui(cx).radius_chip)
+            .bg(crate::settings::ui(cx).hover)
+            .text_caption()
+            .child(letters.clone())
+            .into_any_element(),
     };
     div().flex().items_center().gap_2().child(picture).child(title).into_any_element()
 }

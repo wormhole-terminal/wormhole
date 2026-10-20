@@ -66,6 +66,21 @@ impl OpenIn {
         open_in::resolve(&settings(cx).open_in, &Self::apps(cx))
     }
 
+    /// The icon a menu item of the app has: the file icon of its `.app`, which AppKit gives as Finder
+    /// shows it; for an app whose place isn't known, the one drawn from its bundle (below), if that
+    /// can be read; else none.
+    pub(crate) fn menu_icon(cx: &App, app: &Installed) -> Option<crate::native::Icon> {
+        use crate::native::Icon;
+        match app_path(&app.bundle) {
+            Some(path) => Some(Icon::File(path)),
+            None => Some(match Self::icon(cx, &app.bundle) {
+                Some(image) => Icon::Image(image),
+                // What the old menu showed where the icon couldn't be read.
+                None => Icon::Monogram(app.monogram.clone().into()),
+            }),
+        }
+    }
+
     /// The app's own icon, drawn at [`ICON_PX`]; `None` when it can't be read (the button shows
     /// the app's monogram instead).
     pub(crate) fn icon(cx: &App, bundle: &str) -> Option<Arc<Image>> {
@@ -90,7 +105,8 @@ pub(crate) fn open(bundle: &str, folder: &Path) {
     }
 }
 
-/// Where the app with this bundle identifier is installed.
+/// Where the app with this bundle identifier is (Finder's is `/System/Library/CoreServices/Finder.app`),
+/// as Launch Services knows it.
 pub(crate) fn app_path(bundle: &str) -> Option<std::path::PathBuf> {
     system::app_path(bundle)
 }
@@ -201,7 +217,6 @@ mod system {
         None
     }
 
-    #[allow(dead_code)]
     pub(super) fn app_path(_: &str) -> Option<PathBuf> {
         None
     }
