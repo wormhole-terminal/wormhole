@@ -33,7 +33,7 @@ fn count() {
     let _ = ALLOCATIONS.try_with(|n| n.set(n.get() + 1));
 }
 
-fn allocations() -> usize {
+pub(super) fn allocations() -> usize {
     ALLOCATIONS.with(StdCell::get)
 }
 
@@ -237,4 +237,25 @@ fn frames_stay_within_their_allocations() {
         idle < UNCHANGED_FRAME_ALLOCATIONS && scroll < SCROLLING_FRAME_ALLOCATIONS,
         "steady frames allocate {idle} / {scroll} times"
     );
+}
+
+/// Double-width and double-height rows are built like any other: once a screen with them has
+/// been built, a frame where nothing changed stays within the same limit (the stretched glyphs'
+/// sprites are counted in `outline`'s tests).
+#[test]
+fn a_screen_with_sized_rows_is_as_cheap_when_idle() {
+    let palette = Palette::from_theme(&wormhole_core::theme::builtin()[0]);
+    let mut base_font = font("JetBrains Mono");
+    base_font.features = crate::fonts::ligature_features(false);
+    let mut term = term();
+    let rows = b"\x1b[H\x1b#6double width \x1b[31mred\x1b[0m\r\n\x1b#3tall\r\n\x1b#4tall\r\n\x1b#6\x1b[4munderlined\x1b[0m\r\n";
+    feed(&mut term, rows);
+    let mut cache = FrameCache::default();
+    frame(&mut cache, &mut term, &palette, &base_font);
+    let sized = cache.rows().filter(|(_, row)| row.size.is_double()).count();
+    assert!(sized >= 4, "the screen has {sized} sized rows");
+    let (_, idle) = measure("unchanged frame with sized rows", 20, |_| {
+        frame(&mut cache, &mut term, &palette, &base_font)
+    });
+    assert!(idle < UNCHANGED_FRAME_ALLOCATIONS, "an idle frame with sized rows allocates {idle} times");
 }

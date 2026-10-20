@@ -17,6 +17,7 @@ use gpui_kit::{
 };
 
 use super::frame::FrameCache;
+use super::outline::Outlines;
 use super::overlays::{drag_outside_listener, paint_blocks, paint_ticks};
 use super::prepare::Frame;
 use super::underline::{self, paint_underlines, underline_paint};
@@ -43,8 +44,10 @@ type Cache = FrameCache<super::shaping::ShapeKey, Vec<super::words::Glyph>, gpui
 
 impl Paint {
     pub fn run(&self, bounds: Bounds<Pixels>, frame: &Frame, window: &mut Window, cx: &mut App) {
-        let state = self.state.borrow();
-        let cache = &state.frame;
+        // Paint borrows the state mutably, for the stretched glyphs' cache to fill as it goes;
+        // nothing else touches it while a frame is painted.
+        let mut state = self.state.borrow_mut();
+        let RenderState { frame: cache, outlines, .. } = &mut *state;
         let (origin, line_height) = (frame.geometry.origin, frame.geometry.line_height);
         for (k, line) in cache.blurred() {
             let row_origin = point(origin.x, origin.y - line_height * k as f32);
@@ -75,7 +78,7 @@ impl Paint {
                 window.paint_quad(outline(cursor.rect, cursor.color, BorderStyle::Solid));
             }
         }
-        text(cache, frame, grid, window);
+        text(cache, frame, grid, outlines, window, cx);
         for paint in &frame.overlay {
             paint_image(paint, "a placed image", window);
         }
@@ -211,15 +214,27 @@ fn boxes(cache: &Cache, frame: &Frame, grid: Bounds<Pixels>, window: &mut Window
 /// The text in a layer of its own, for the same reason as the backgrounds: a glyph painted on its
 /// own goes into the bounds tree, and a full screen of text is thousands of them. The lines through
 /// and under it go in the next layer, so they still draw over the glyphs.
-fn text(cache: &Cache, frame: &Frame, grid: Bounds<Pixels>, window: &mut Window) {
+fn text(
+    cache: &Cache,
+    frame: &Frame,
+    grid: Bounds<Pixels>,
+    outlines: &mut Outlines,
+    window: &mut Window,
+    cx: &App,
+) {
     let (origin, cell_width, line_height) = frame_cells(frame);
     let font_size = px(frame.geometry.font_size);
     window.paint_layer(grid, |window| {
         for (row, painted) in cache.rows() {
             if painted.size.is_double() {
                 let at = sized::RowBox::new(painted.size, &frame.geometry, row, frame.cols);
-                let metrics = (frame.baseline_y, font_size, cell_width);
-                sized::glyphs(window, &painted.lines, &at, metrics, frame.blink_faded);
+                let metrics = sized::TextMetrics {
+                    baseline_y: frame.baseline_y,
+                    font_size,
+                    cell_width,
+                    scale: frame.geometry.scale,
+                };
+                sized::glyphs(window, &painted.lines, &at, metrics, frame.blink_faded, outlines, cx);
                 continue;
             }
             for (col, glyphs) in &painted.lines {

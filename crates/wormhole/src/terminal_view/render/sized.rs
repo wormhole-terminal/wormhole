@@ -12,19 +12,25 @@
 //!   as tall, which is what DECDHL asks for. Each row of the line draws the whole line's text,
 //!   cut to its own rectangle by a content mask: the top row the upper half, the row below the
 //!   lower half.
-//! - **Glyphs of a double-width row** are not stretched: GPUI paints a glyph at a font size (both
-//!   dimensions) and has no transform for glyphs, so a glyph twice as wide would be twice as tall,
-//!   which the row cannot hold. They keep their size and sit in the middle of their doubled
-//!   cells, so the line has the width a double-width line has and the text its normal height.
+//! - **Glyphs of a double-width row** are stretched: GPUI paints a glyph at a font size (both
+//!   dimensions) and has no transform for glyphs, so each glyph is its outline from the font
+//!   with the stretch baked in, painted as an SVG mask (`outline`). A glyph with no outline to
+//!   use (a bitmap emoji, a font that couldn't be pinned down, or any glyph off macOS) keeps its
+//!   size and sits in the middle of its doubled cells, so the line still has the width a
+//!   double-width line has and the text its normal height.
 //! - **Box drawing and block elements** are shapes, not glyphs: they are made for the scaled cell
 //!   (`shape_metrics`) and so do stretch.
 //! - Pictures are not drawn on these rows (their tiles are a cell big).
 
-use gpui_kit::{Bounds, ContentMask, Hsla, Pixels, Point, StrikethroughStyle, Window, point, px, size};
+use gpui_kit::{
+    App, Bounds, ContentMask, Hsla, Pixels, Point, StrikethroughStyle, TransformationMatrix, Window, point,
+    px, size,
+};
 use wormhole_core::terminal::types::LineSize;
 
 use super::blink;
 use super::frame::Geometry;
+use super::outline::{Outlines, Stretch};
 use super::underline::paint_underlines;
 use super::underline::{self, UnderlinePaint, underline_paint};
 use super::words::Glyph;
@@ -142,35 +148,74 @@ pub(super) fn backgrounds(
     }
 }
 
-/// A sized row's text. `baseline_y` is how far below a line's top the baseline sits at the normal
-/// size, `font_size` the normal size, `cell_width` a normal cell.
+/// What a sized row's text is drawn from: how far below a line's top the baseline sits at the
+/// normal size, the normal font size, a normal cell, and the window's scale factor.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct TextMetrics {
+    pub baseline_y: Pixels,
+    pub font_size: Pixels,
+    pub cell_width: Pixels,
+    pub scale: f32,
+}
+
+/// A sized row's text.
 pub(super) fn glyphs(
     window: &mut Window,
     words: &[(usize, Vec<Glyph>)],
     b: &RowBox,
-    (baseline_y, font_size, cell_width): (Pixels, Pixels, Pixels),
+    metrics: TextMetrics,
     blink_faded: bool,
+    outlines: &mut Outlines,
+    cx: &App,
 ) {
+    let TextMetrics { baseline_y, font_size, cell_width, scale } = metrics;
     let font_size = font_size * b.scale_y;
     let tall = b.scale_y > 1.0;
     window.with_content_mask(b.clip, |window| {
         for (col, glyphs) in words {
             let word = b.at(*col, baseline_y * b.scale_y);
             for glyph in glyphs {
-                // A tall line's glyphs are drawn twice as big and spaced twice as far; a
-                // double-width row's keep their size and are centred in their cells.
-                let x = if tall {
-                    word.x + glyph.position.x * 2.0
-                } else {
-                    let spare = if glyph.wide { cell_width } else { cell_width * 0.5 };
-                    word.x + glyph.position.x * 2.0 + spare
-                };
-                let origin = point(x, word.y + glyph.position.y * b.scale_y);
+                let color = if blink_faded && glyph.blink { blink::faded(glyph.color) } else { glyph.color };
+                // A tall line's glyphs are drawn twice as big, which is the stretch it asks for,
+                // and spaced twice as far.
+                if tall {
+                    let origin =
+                        point(word.x + glyph.position.x * 2.0, word.y + glyph.position.y * b.scale_y);
+                    let _ = if glyph.emoji {
+                        window.paint_emoji(origin, glyph.font_id, glyph.id, font_size)
+                    } else {
+                        window.paint_glyph(origin, glyph.font_id, glyph.id, font_size, color)
+                    };
+                    continue;
+                }
+                // A double-width row's glyph is its outline stretched to twice the width, so it
+                // fills its doubled cells; the first cell's left edge is where its unstretched
+                // glyph's was, twice as far from the word's start.
+                let origin = point(word.x + glyph.position.x * 2.0, word.y + glyph.position.y);
+                if !glyph.emoji {
+                    let id = (glyph.font_id, glyph.id);
+                    if let Some((sprite, bounds)) =
+                        outlines.stretched(id, f32::from(font_size), scale, Stretch::WIDE, origin)
+                    {
+                        let svg = Some(sprite.svg());
+                        let _ = window.paint_svg(
+                            bounds,
+                            sprite.path().clone(),
+                            svg,
+                            TransformationMatrix::unit(),
+                            color,
+                            cx,
+                        );
+                        continue;
+                    }
+                }
+                // No outline to stretch (a bitmap emoji, a font that couldn't be pinned down): the
+                // glyph keeps its size and sits in the middle of its doubled cells.
+                let spare = if glyph.wide { cell_width } else { cell_width * 0.5 };
+                let origin = point(origin.x + spare, origin.y);
                 let _ = if glyph.emoji {
                     window.paint_emoji(origin, glyph.font_id, glyph.id, font_size)
                 } else {
-                    let color =
-                        if blink_faded && glyph.blink { blink::faded(glyph.color) } else { glyph.color };
                     window.paint_glyph(origin, glyph.font_id, glyph.id, font_size, color)
                 };
             }

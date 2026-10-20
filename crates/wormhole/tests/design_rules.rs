@@ -278,10 +278,11 @@ fn public_fns_reads_free_functions_only() {
 /// Painting calls that each put a primitive in the scene. Outside a layer every one of them goes
 /// into GPUI's bounds tree to find its z-order; a screen of colored cells is thousands of them, and
 /// that tree once took nine tenths of the main thread.
-const PER_CELL_PAINTS: [&str; 6] = [
+const PER_CELL_PAINTS: [&str; 7] = [
     "paint_quad(",
     "paint_glyph(",
     "paint_emoji(",
+    "paint_svg(",
     "paint_path(",
     "paint_strikethrough(",
     "paint_underlines(",

@@ -27,6 +27,7 @@ mod frame;
 mod glyphs;
 mod images;
 mod minimap;
+mod outline;
 mod overlays;
 mod paint;
 mod prepare;
@@ -73,6 +74,8 @@ pub(super) struct RenderState {
     scrollbar: Option<scrollbar::ScrollbarLayout>,
     /// The inline images as GPUI frames, one conversion per image.
     images: images::ImageCache,
+    /// The faces learned and the stretched glyphs built for double-width rows.
+    outlines: outline::Outlines,
 }
 
 impl RenderState {

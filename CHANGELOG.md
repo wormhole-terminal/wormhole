@@ -64,8 +64,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Programs can draw double-width and double-height lines (`ESC # 6`, `ESC # 3`/`ESC # 4`, back to
   normal with `ESC # 5`), as vttest and banner tools do. A line of such a row takes twice the width
   (and a double-height line two rows at twice the size); selecting, clicking, the cursor and
-  find work on it. Double-width text keeps its letter shapes and is spaced out to fill the wider
-  cells.
+  find work on it. Double-width text is stretched to twice its width (bitmap emoji
+  keep their size and are centred in their cells).
 - A program can ask to be told the terminal's size in characters and in pixels, once when it asks and
   again whenever the window changes size (in-band resize notifications, mode 2048), instead of
   waiting for a signal.

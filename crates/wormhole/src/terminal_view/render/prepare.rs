@@ -117,7 +117,7 @@ impl Prepare {
         let overscan = (PADDING_Y / f32::from(line_height)).ceil() as usize;
 
         let mut state = self.state.borrow_mut();
-        let RenderState { frame: cache, images: image_cache, words, .. } = &mut *state;
+        let RenderState { frame: cache, images: image_cache, words, outlines, .. } = &mut *state;
         let mut found = Vec::new();
         let mut ticks = Vec::new();
         let palette = &self.palette;
@@ -168,7 +168,7 @@ impl Prepare {
             &found,
             |segment| {
                 let glyphs = words.glyphs(&segment, cell_width, |segment| {
-                    shape_word(segment, &text_system, base_font, font_size, cell_width)
+                    shape_word(segment, &text_system, base_font, font_size, cell_width, outlines)
                 });
                 (glyphs, !words.take_deferred())
             },

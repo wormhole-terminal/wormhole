@@ -9,6 +9,7 @@ use gpui_kit::{
 };
 use wormhole_core::terminal::types::{COLOR_COUNT, Colors};
 
+use super::outline::Outlines;
 use super::rows::{Segment, Style};
 use super::words::Shaped;
 use crate::palette::Palette;
@@ -69,11 +70,14 @@ pub(super) fn shape_word(
     base_font: &Font,
     font_size: Pixels,
     cell_width: Pixels,
+    outlines: &mut Outlines,
 ) -> Vec<Shaped> {
     let runs: Vec<TextRun> =
         segment.runs.iter().map(|(len, style)| text_run(*len, style, base_font)).collect();
     let advance = if segment.wide { cell_width * 2.0 } else { cell_width };
     let line = text_system.shape_line(segment.text.clone().into(), font_size, &runs, Some(advance));
+    // Which faces the glyphs are from is only known here, with the text and the runs at hand.
+    outlines.learn(text_system, &segment.text, &runs, &line);
     line.runs
         .iter()
         .flat_map(|run| {
