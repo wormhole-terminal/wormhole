@@ -51,6 +51,8 @@ First public release (0.1.0).
 
 ### Security
 
+- Titles, icon names and folders (OSC 0, 1, 2, 7) are cleaned when they are set: C0 and C1 controls and
+  DEL are dropped.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.

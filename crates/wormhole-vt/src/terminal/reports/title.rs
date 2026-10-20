@@ -9,9 +9,13 @@
 //! be; `CSI > Ps T` switches the same features off. A terminal that is UTF-8 throughout reads the
 //! UTF-8 forms as the plain ones.
 //!
-//! The reports (`OSC l title ST`, `OSC L icon ST`) would put text a program chose into the input
-//! of whatever program is running, so they are answered only when the host allows the window
-//! operations ([`Policy::window_ops`](crate::terminal::Policy::window_ops)), and control characters are taken out of them.
+//! A title is text a program (or a file shown with `cat`) chose, and every host draws it, so it is
+//! cleaned when it is set: C0 and C1 controls and DEL are dropped (`drop_controls`), and what the
+//! host reads with `Terminal::title` and in events is already clean.
+//!
+//! The reports (`OSC l title ST`, `OSC L icon ST`) would put that text into the input of whatever
+//! program is running, so they are answered only when the host allows the window operations
+//! ([`Policy::window_ops`](crate::terminal::Policy::window_ops)).
 
 use std::borrow::Cow;
 
@@ -96,24 +100,40 @@ fn decoded(modes: TitleModes, text: &[u8]) -> Option<Cow<'_, [u8]>> {
         .map(Cow::Owned)
 }
 
+/// Take out of `text` what no host should be handed in a title or a folder: the C0 controls, DEL
+/// and the C1 controls (`char::is_control` is exactly those). They move cursors and start
+/// sequences in whatever draws or echoes the text. The common clean string is only scanned.
+pub(in crate::terminal) fn drop_controls(text: &mut String) {
+    if text.chars().any(char::is_control) {
+        text.retain(|c| !c.is_control());
+    }
+}
+
+/// Set `slot` to `text` (cut at `TITLE_MAX`, controls dropped), reusing its buffer. Nothing, or
+/// nothing but controls, resets it: an empty title is no title.
+fn store(slot: &mut Option<String>, text: &[u8]) {
+    if text.is_empty() {
+        *slot = None;
+        return;
+    }
+    let kept = slot.get_or_insert_with(String::new);
+    fill(kept, text, TITLE_MAX);
+    drop_controls(kept);
+    if kept.is_empty() {
+        *slot = None;
+    }
+}
+
 impl Terminal {
     /// OSC 0 (both), 1 (the icon name) and 2 (the title), with the text as it came.
     pub(in crate::terminal) fn set_titles(&mut self, window: bool, icon: bool, text: &[u8]) {
         let Some(text) = decoded(self.titles.modes, text) else { return };
         if window {
-            if text.is_empty() {
-                self.titles.window = None;
-            } else {
-                fill(self.titles.window.get_or_insert_with(String::new), &text, TITLE_MAX);
-            }
+            store(&mut self.titles.window, &text);
             self.push_event(Event::Title);
         }
         if icon {
-            if text.is_empty() {
-                self.titles.icon = None;
-            } else {
-                fill(self.titles.icon.get_or_insert_with(String::new), &text, TITLE_MAX);
-            }
+            store(&mut self.titles.icon, &text);
             // OSC 0 is announced as the title; the icon name has an event of its own for OSC 1.
             if !window {
                 self.push_event(Event::IconName(self.titles.icon.clone().unwrap_or_default()));
@@ -195,7 +215,7 @@ impl Terminal {
     pub(in crate::terminal) fn report_title(&mut self, icon: bool) {
         let text =
             if icon { self.titles.icon.clone() } else { self.titles.window.clone() }.unwrap_or_default();
-        // Control characters, C1 included, are text a terminal must not hand a program back.
+        // Controls are dropped when a title is set; this stays as a second layer.
         let text: String = text.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
         let letter = if icon { 'L' } else { 'l' };
         if self.titles.modes.contains(TitleModes::QUERY_HEX) {

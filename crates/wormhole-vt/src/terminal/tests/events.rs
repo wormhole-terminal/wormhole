@@ -212,3 +212,40 @@ fn a_full_reset_is_an_event_and_forgets_the_stack() {
     assert!(rig.events().contains(&Event::FullReset));
     assert_eq!(rig.term.title(), Some("a"), "RIS keeps the title; the stack is empty");
 }
+
+#[test]
+fn controls_are_dropped_from_titles_icon_names_and_folders_when_they_are_set() {
+    let mut rig = Rig::new(20, 5);
+    // C0 (the bell and the escape end a string, so the others), DEL, and C1 as the two bytes a
+    // UTF-8 character takes.
+    rig.feed("\x1b]2;a\x01b\x08c\x7fd\u{85}e\u{9b}f\u{80}g\u{9f}h\x0ci\x07");
+    assert_eq!(rig.term.title(), Some("abcdefghi"));
+    rig.events().clear();
+    rig.feed("\x1b]1;x\u{9d}y\x03z\x07");
+    assert_eq!(rig.events(), [Event::IconName("xyz".into())]);
+    assert_eq!(rig.term.icon_name(), Some("xyz"));
+    rig.feed("\x1b]7;file://h/a\u{85}b\x01/c\x7f\x07");
+    assert_eq!(rig.term.cwd(), Some("file://h/ab/c"));
+    assert_eq!(rig.term.cwd_reports(), ["file://h/ab/c"]);
+    // What is not a control stays: format characters, marks, other scripts, a no-break space.
+    rig.feed("\x1b]2;caf\u{e9} \u{a0}\u{200d}\u{65e5}\u{672c}\x07");
+    assert_eq!(rig.term.title(), Some("caf\u{e9} \u{a0}\u{200d}\u{65e5}\u{672c}"));
+}
+
+#[test]
+fn a_title_of_nothing_but_controls_is_no_title() {
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b]2;kept\x07\x1b]2;\x01\u{85}\x7f\x07");
+    assert_eq!(rig.term.title(), None);
+    // The stack holds clean text too: whatever a push saves is what a pop brings back.
+    rig.feed("\x1b]2;a\x01b\x07\x1b[22;2t\x1b]2;other\x07\x1b[23;2t");
+    assert_eq!(rig.term.title(), Some("ab"));
+}
+
+#[test]
+fn hostile_titles_are_cleaned_in_hexadecimal_mode_too() {
+    let mut rig = Rig::new(20, 5);
+    // Title mode 0 reads hexadecimal: 61 is "a", 01 and 1b5b4a (an escape and "[J") are controls.
+    rig.feed("\x1b[>0t\x1b]2;61011b5b4a62\x07");
+    assert_eq!(rig.term.title(), Some("a[Jb"));
+}
