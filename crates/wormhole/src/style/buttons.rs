@@ -4,7 +4,6 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::button::{Button, ButtonCustomVariant, ButtonVariants};
-use gpui_kit::component::menu::DropdownMenu;
 use gpui_kit::component::{Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -151,14 +150,6 @@ impl IconButton {
         self
     }
 
-    /// For a button that opens a menu (`dropdown_menu`) in a title row: the menu takes the press
-    /// on the element that wraps the button, which a button that blocks the pointer inside it
-    /// would hide it from. Wrap the whole in an element with `.occlude()` instead.
-    pub fn menu_trigger(mut self) -> Self {
-        self.occludes = false;
-        self
-    }
-
     /// A band's +: a 24 pt face with a 16 pt glyph, still clickable across [`HIT_MIN`].
     pub fn in_band(mut self) -> Self {
         (self.glyph, self.face) = (TITLE_GLYPH, BAND_BUTTON);
@@ -229,8 +220,6 @@ impl InteractiveElement for IconButton {
         self.button.interactivity()
     }
 }
-
-impl DropdownMenu for IconButton {}
 
 impl RenderOnce for IconButton {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {

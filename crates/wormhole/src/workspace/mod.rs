@@ -68,6 +68,8 @@ mod key_tests;
 mod layout;
 pub(crate) mod menu_bar;
 #[cfg(test)]
+mod menu_tests;
+#[cfg(test)]
 mod note_tests;
 mod notes;
 pub(crate) mod notifications;

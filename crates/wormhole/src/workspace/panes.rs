@@ -6,20 +6,18 @@
 //! coming into a pane selects its row. A terminal that is in no split draws as it always did
 //! (`layout.rs`): no headers, the terminal under the floating title bar.
 
-use std::rc::Rc;
-
-use gpui_kit::component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenu, PopupMenuItem};
 use gpui_kit::component::tooltip::Tooltip;
 use wormhole_core::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId, Preset, TabPanes};
 use wormhole_core::sidebar::SplitId;
 use wormhole_core::spoken;
 
 use super::breadcrumb::terminal_tile;
-use super::focus::MenuBuilder;
 use super::session::home_dir;
 use super::splits::Split;
 use super::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
 use super::*;
+use crate::menubar::model::KeyEquivalent;
+use crate::native::{self, Anchor, Item, Menu};
 
 /// A drag on a divider, from the press to the release.
 pub(super) struct PaneDrag {
@@ -427,8 +425,7 @@ impl Workspace {
         // The terminal's own name, as its sidebar row says it (a rename shows here too).
         let name = self.find_session(id).map_or_else(|| pane.label(cx), |ix| self.sessions[ix].name(cx));
         let zoomed = split.layout.zoomed() == Some(id);
-        let build = self.pane_menu(id, cx);
-        let menu = build.clone();
+        let menu_anchor = Anchor::default();
         let zoom_tip = keymap::with_key(if zoomed { "Unzoom pane" } else { "Zoom pane" }, ActionId::ZoomPane);
         let dragged =
             DraggedTerminal::new(id, DragOrigin::PaneHeader, name.clone(), pane_glyph(status, told));
@@ -495,9 +492,14 @@ impl Workspace {
                         },
                     ))
                     .child(
-                        style::icon_button(("pane-menu", id as u64), ui, IconName::Ellipsis, "Pane menu")
-                            .in_row()
-                            .dropdown_menu(move |popup, window, cx| menu(popup, window, cx)),
+                        div().relative().flex_none().child(menu_anchor.probe()).child(
+                            style::icon_button(("pane-menu", id as u64), ui, IconName::Ellipsis, "Pane menu")
+                                .in_row()
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    let menu = this.pane_menu(id, cx);
+                                    native::show_menu(menu, menu_anchor.below(), window, cx);
+                                })),
+                        ),
                     )
                     .child(
                         style::icon_button(
@@ -513,7 +515,14 @@ impl Workspace {
                         })),
                     ),
             )
-            .context_menu(move |popup, window, cx| build(popup, window, cx))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |this, event: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    let menu = this.pane_menu(id, cx);
+                    native::show_menu(menu, event.position, window, cx);
+                }),
+            )
             .into_any_element()
     }
 
@@ -555,56 +564,63 @@ impl Workspace {
             .into_any_element()
     }
 
-    /// What builds pane `id`'s menu: Split right, Split down, Zoom pane, Move out of
-    /// split, then Close pane, each with its key. Every entry acts on this pane, which it gives
-    /// the keyboard first.
-    fn pane_menu(&self, id: PaneId, cx: &mut Context<Self>) -> MenuBuilder {
-        let this = cx.weak_entity();
+    /// Pane `id`'s menu: Split right, Split down, Zoom pane, Move out of split, then Close pane,
+    /// each with its key. Every entry acts on this pane, which it gives the keyboard first.
+    fn pane_menu(&self, id: PaneId, cx: &mut Context<Self>) -> Menu {
         let zoomed = self.active_split().is_some_and(|split| split.layout.zoomed() == Some(id));
         let split = self.active_split().is_some();
         let (right, down) = (self.can_split(Axis::Row), self.can_split(Axis::Column));
-        Rc::new(move |mut menu: PopupMenu, _: &mut Window, _: &mut Context<PopupMenu>| {
-            let item =
-                |label: &'static str,
-                 action: Box<dyn Action>,
-                 enabled: bool,
-                 run: fn(&mut Workspace, PaneId, &mut Window, &mut Context<Workspace>)| {
-                    let this = this.clone();
-                    PopupMenuItem::new(label).action(action).disabled(!enabled).on_click(
-                        move |_, window, cx| {
-                            this.update(cx, |ws, cx| {
-                                ws.focus_pane(id, window, cx);
-                                run(ws, id, window, cx);
-                            })
-                            .ok();
-                        },
-                    )
-                };
-            menu = menu
-                .item(item("Split right", Box::new(actions::SplitRight), right, |ws, _, window, cx| {
-                    ws.split_pane(Axis::Row, window, cx)
-                }))
-                .item(item("Split down", Box::new(actions::SplitDown), down, |ws, _, window, cx| {
-                    ws.split_pane(Axis::Column, window, cx)
-                }))
-                .item(item(
-                    if zoomed { "Unzoom pane" } else { "Zoom pane" },
-                    Box::new(actions::ZoomPane),
-                    split,
-                    |ws, _, _, cx| ws.toggle_zoom(cx),
-                ))
-                .item(item("Move out of split", Box::new(actions::LeaveSplit), split, |ws, id, _, cx| {
-                    if let Some(ix) = ws.find_session(id) {
-                        ws.leave_split(ix, cx);
-                    }
-                }))
-                .separator()
-                .item(item("Close pane", Box::new(actions::CloseTerminal), true, |ws, id, window, cx| {
-                    ws.close_pane(id, window, cx)
-                }));
-            menu
-        })
+        pane_menu(id, PaneFacts { zoomed, split, right, down }, &cx.weak_entity())
     }
+}
+
+/// What a pane's menu depends on.
+struct PaneFacts {
+    zoomed: bool,
+    /// The pane is in a split.
+    split: bool,
+    /// The pane can be split to its right / below.
+    right: bool,
+    down: bool,
+}
+
+/// The menu of pane `id`; every entry acts on `this`.
+fn pane_menu(id: PaneId, facts: PaneFacts, this: &WeakEntity<Workspace>) -> Menu {
+    let PaneFacts { zoomed, split, right, down } = facts;
+    let item = |label: &'static str,
+                action: ActionId,
+                enabled: bool,
+                run: fn(&mut Workspace, PaneId, &mut Window, &mut Context<Workspace>)| {
+        Item::new(label)
+            .key(keymap::key(action).and_then(KeyEquivalent::from_spec))
+            .enabled(enabled)
+            .on_select(native::run_on(this, move |ws, window, cx| {
+                ws.focus_pane(id, window, cx);
+                run(ws, id, window, cx);
+            }))
+    };
+    Menu::new()
+        .item(item("Split right", ActionId::SplitRight, right, |ws, _, window, cx| {
+            ws.split_pane(Axis::Row, window, cx)
+        }))
+        .item(item("Split down", ActionId::SplitDown, down, |ws, _, window, cx| {
+            ws.split_pane(Axis::Column, window, cx)
+        }))
+        .item(item(
+            if zoomed { "Unzoom pane" } else { "Zoom pane" },
+            ActionId::ZoomPane,
+            split,
+            |ws, _, _, cx| ws.toggle_zoom(cx),
+        ))
+        .item(item("Move out of split", ActionId::LeaveSplit, split, |ws, id, _, cx| {
+            if let Some(ix) = ws.find_session(id) {
+                ws.leave_split(ix, cx);
+            }
+        }))
+        .separator()
+        .item(item("Close pane", ActionId::CloseTerminal, true, |ws, id, window, cx| {
+            ws.close_pane(id, window, cx)
+        }))
 }
 
 /// The View → Layout action for `preset`.
@@ -614,5 +630,36 @@ pub(super) fn layout_action(preset: Preset) -> ActionId {
         Preset::TwoColumns => ActionId::LayoutColumns,
         Preset::TwoRows => ActionId::LayoutRows,
         Preset::Grid => ActionId::LayoutGrid,
+    }
+}
+
+#[cfg(test)]
+mod menu_model_tests {
+    use gpui_kit::WeakEntity;
+
+    use super::{PaneFacts, pane_menu};
+
+    fn outline(facts: PaneFacts) -> Vec<String> {
+        pane_menu(1, facts, &WeakEntity::new_invalid()).outline()
+    }
+
+    /// A lone pane can't be zoomed or left, and a pane with no room below can't split down.
+    #[test]
+    fn what_a_pane_cannot_do_is_greyed_out() {
+        assert_eq!(
+            outline(PaneFacts { zoomed: false, split: false, right: true, down: false }),
+            [
+                "- Split right",
+                "- Split down [off]",
+                "- Zoom pane [off]",
+                "- Move out of split [off]",
+                "---",
+                "- Close pane"
+            ]
+        );
+        assert_eq!(
+            outline(PaneFacts { zoomed: true, split: true, right: true, down: true })[2],
+            "- Unzoom pane"
+        );
     }
 }

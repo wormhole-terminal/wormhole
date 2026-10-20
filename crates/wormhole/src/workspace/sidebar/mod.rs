@@ -55,14 +55,13 @@ pub(super) struct SidebarState {
     hold_timer: Option<Task<()>>,
     _keys: Subscription,
     /// The terminal whose context menu is open: its row wears the focus ring.
-    menu_row: Option<i64>,
+    pub(super) menu_row: Option<i64>,
     /// The group whose head's context menu is open.
     menu_group: Option<u32>,
     /// The group whose popover is open.
     editing: Option<groups::GroupEdit>,
     /// The terminal being renamed in its row.
     pub(super) renaming: Option<rename::TerminalRename>,
-    menu_dismissed: Option<Subscription>,
     pub(super) scroll: ScrollHandle,
     /// Bring this terminal's row into view on the next frame.
     pub(super) scroll_to: Option<i64>,
@@ -103,7 +102,6 @@ impl SidebarState {
             menu_group: None,
             editing: None,
             renaming: None,
-            menu_dismissed: None,
             scroll: ScrollHandle::new(),
             scroll_to: None,
             flash: None,

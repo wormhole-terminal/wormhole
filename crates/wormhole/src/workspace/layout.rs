@@ -276,6 +276,8 @@ impl Render for Workspace {
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))
             .children(self.render_overlay())
+            // GPUI's own menu, where a native one can't open (`native::fallback`).
+            .child(crate::native::fallback::layer(window, cx))
             .children(self.render_intro(window, cx))
             .child(self.column_probe(cx))
     }

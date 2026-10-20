@@ -22,7 +22,7 @@ use wormhole_core::focus::{self, Area, EscState, Escape, Stop};
 use super::*;
 
 pub(super) use bars::TitleButton;
-pub(in crate::workspace) use menu::MenuBuilder;
+pub(in crate::workspace) use menu::key_menu_origin;
 pub(in crate::workspace) use panel::{Activate, Walkable};
 
 actions!(focus_area, [NextStop, PreviousStop]);
@@ -65,8 +65,6 @@ pub(super) struct FocusAreas {
     pub(super) status: usize,
     /// Letters typed in the sidebar to jump to a name.
     pub(super) typed: TypeAhead,
-    /// The row's menu ⌃↩ opened, while it is open.
-    menu: Option<menu::KeyMenu>,
 }
 
 impl FocusAreas {
@@ -83,7 +81,6 @@ impl FocusAreas {
             panel_at: None,
             status: 0,
             typed: TypeAhead::default(),
-            menu: None,
         }
     }
 
@@ -284,7 +281,8 @@ impl Workspace {
         let in_area = self.areas.holder(window).is_some();
         let state = EscState {
             terminal: self.active_terminal().focus_handle(cx).is_focused(window),
-            popup: self.areas.menu.is_some(),
+            // A native menu is modal: no key reaches the workspace while one is open.
+            popup: false,
             detail: self.diff_view.is_some() || self.active_terminal().read(cx).find_open(),
         };
         match focus::escape(state) {
@@ -332,7 +330,6 @@ impl Workspace {
     ) -> Stateful<Div> {
         let Some(handle) = self.areas.handle(area) else { return element };
         element
-            .children(self.key_menu_layer(area))
             .track_focus(handle)
             .key_context(AREA_CONTEXT)
             // A click in an area leaves the keyboard where it was; keys bring it here.

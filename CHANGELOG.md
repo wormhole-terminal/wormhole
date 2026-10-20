@@ -56,6 +56,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Right-click menus (a terminal's, a group's, the + button's shells, a pane's, Open in…) are the Mac's
+  own menus now, with VoiceOver, type-to-select and the system look.
 - The terminal engine, `wormhole-vt`, is now under the MIT License, so other projects can use it. The
   app stays GPL-3.0-or-later.
 - A new app icon: the `>_` prompt over a glowing disc that runs from blue to violet, on a plain tile,

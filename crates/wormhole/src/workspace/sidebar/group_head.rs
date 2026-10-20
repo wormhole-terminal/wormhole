@@ -1,15 +1,13 @@
 //! A group's head in the list: its tiles and dot while folded, its + while pinned and empty, its
 //! label's popover (`groups`), its drag, its drop and its context menu (New terminal in group,
 //! Rename…, Colour ▸, Ungroup, Pin or Unpin group, Close group, Move group to new window).
-use std::rc::Rc;
-
-use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _, PopupMenu, PopupMenuItem};
 use wormhole_core::sidebar::{GroupColor, Urgency, spoken};
 
-use super::super::focus::{MenuBuilder, SidebarStop};
+use super::super::focus::SidebarStop;
 use super::groups::{group_colors, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
+use crate::native::{self, Icon, Item, Menu};
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
@@ -109,10 +107,15 @@ impl Workspace {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(frame.metrics.row_radius)))
             });
         let element = self.with_group_drag(element, group, band.label.clone().into(), hsla, cx);
-        let build = self.group_menu(group, cx);
-        let menu: ContextMenu<Stateful<Div>> =
-            element.context_menu(move |menu, window, cx| build(menu, window, cx));
-        menu.into_any_element()
+        element
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(move |ws, event: &MouseDownEvent, window, cx| {
+                    cx.stop_propagation();
+                    ws.open_group_menu(group, event.position, window, cx);
+                }),
+            )
+            .into_any_element()
     }
 
     /// ⌃↩ with the keys on group `group`'s head: its menu, under it.
@@ -123,86 +126,39 @@ impl Workspace {
             |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
         );
         let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        let build = self.group_menu(group, cx);
-        self.open_key_menu(wormhole_core::focus::Area::Sidebar, bounds, build, window, cx);
+        self.open_group_menu(group, super::super::focus::key_menu_origin(bounds), window, cx);
     }
 
-    /// What builds group `group`'s menu.
-    fn group_menu(&self, group: u32, cx: &mut Context<Self>) -> MenuBuilder {
+    /// Open group `group`'s menu at `at`, its head wearing the ring until the menu closes.
+    fn open_group_menu(
+        &mut self,
+        group: u32,
+        at: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let found = self.sidebar.view.groups.get(group);
+        let facts = GroupFacts {
+            group,
+            color: found.and_then(|g| g.color()),
+            pinned: found.is_some_and(|g| g.pinned),
+            colors: group_colors(&self.profile, cx),
+        };
+        self.sidebar.menu_row = None;
+        self.sidebar.menu_group = Some(group);
+        cx.notify();
         let this = cx.weak_entity();
-        let profile = self.profile.clone();
-        Rc::new(move |menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>| {
-            let popup = cx.entity();
-            let (current, pinned) = this
-                .update(cx, |ws, cx| {
-                    ws.sidebar.menu_row = None;
-                    ws.sidebar.menu_group = Some(group);
-                    ws.sidebar.menu_dismissed =
-                        Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {
-                            if ws.sidebar.menu_group == Some(group) {
-                                ws.sidebar.menu_group = None;
-                                cx.notify();
-                            }
-                        }));
+        let ring = this.clone();
+        let menu = group_menu(facts, &this).on_close(move |_, cx| {
+            ring.update(cx, |ws, cx| {
+                if ws.sidebar.menu_group == Some(group) {
+                    ws.sidebar.menu_group = None;
                     cx.notify();
-                    let found = ws.sidebar.view.groups.get(group);
-                    (found.and_then(|g| g.color()), found.is_some_and(|g| g.pinned))
-                })
-                .unwrap_or((None, false));
-            let choices = group_colors(&profile, cx);
-            let ui = ui_in(&profile, cx);
-            let (add, rename, colors, ungroup, pin, close, window_move) = (
-                this.clone(),
-                this.clone(),
-                this.clone(),
-                this.clone(),
-                this.clone(),
-                this.clone(),
-                this.clone(),
-            );
-            menu.item(PopupMenuItem::new("New terminal in group").on_click(move |_, window, cx| {
-                add.update(cx, |ws, cx| ws.new_session_in_group(group, window, cx)).ok();
-            }))
-            .item(PopupMenuItem::new("Rename…").on_click(move |_, window, cx| {
-                rename.update(cx, |ws, cx| ws.start_group_edit(group, window, cx)).ok();
-            }))
-            .submenu("Colour", window, cx, move |mut submenu, _, _| {
-                for &(color, hsla) in &choices {
-                    let this = colors.clone();
-                    submenu = submenu.item(
-                        PopupMenuItem::element(move |_, _| {
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(style::color_dot(ui, hsla, style::COLOR_DOT_MENU))
-                                .child(color.label())
-                        })
-                        .checked(current == Some(color))
-                        .on_click(move |_, _, cx| {
-                            this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
-                        }),
-                    );
                 }
-                submenu
             })
-            .separator()
-            .item(PopupMenuItem::new(if pinned { "Unpin group" } else { "Pin group" }).on_click(
-                move |_, _, cx| {
-                    pin.update(cx, |ws, cx| ws.toggle_group_pin(group, cx)).ok();
-                },
-            ))
-            .item(PopupMenuItem::new("Ungroup").on_click(move |_, _, cx| {
-                ungroup.update(cx, |ws, cx| ws.ungroup(group, cx)).ok();
-            }))
-            .item(PopupMenuItem::new("Move group to new window").on_click(move |_, window, cx| {
-                window_move.update(cx, |ws, cx| ws.move_group_to_window(group, window, cx)).ok();
-            }))
-            .separator()
-            .item(PopupMenuItem::new("Close group").on_click(move |_, window, cx| {
-                close.update(cx, |ws, cx| ws.close_group(group, window, cx)).ok();
-            }))
-        })
+            .ok();
+        });
+        native::show_menu(menu, at, window, cx);
     }
 
     /// The groups a terminal's menu offers to move it to: every group, with its name and whether
@@ -215,5 +171,89 @@ impl Workspace {
             .iter()
             .map(|group| (group.id, SharedString::from(group.name.clone()), current == Some(group.id)))
             .collect()
+    }
+}
+
+/// What a group's menu is made from, as it is when the menu opens.
+struct GroupFacts {
+    group: u32,
+    /// The group's colour, if it has one.
+    color: Option<GroupColor>,
+    pinned: bool,
+    /// Every colour on offer, with how the theme draws it.
+    colors: Vec<(GroupColor, Hsla)>,
+}
+
+/// The menu of the group `facts` describe; every item acts on `this`.
+fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Menu {
+    let GroupFacts { group, color: current, pinned, colors } = facts;
+    let swatches = colors.iter().fold(Menu::new(), |menu, &(color, hsla)| {
+        menu.item(
+            Item::new(color.label())
+                .icon(Some(Icon::Swatch(hsla)))
+                .checked(current == Some(color))
+                .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_color(group, Some(color), cx))),
+        )
+    });
+    Menu::new()
+        .item(Item::new("New terminal in group").on_select(native::run_on(this, move |ws, window, cx| {
+            ws.new_session_in_group(group, window, cx)
+        })))
+        .item(
+            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
+                ws.start_group_edit(group, window, cx)
+            })),
+        )
+        .submenu("Colour", swatches)
+        .separator()
+        .item(
+            Item::new(if pinned { "Unpin group" } else { "Pin group" })
+                .on_select(native::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
+        )
+        .item(Item::new("Ungroup").on_select(native::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))))
+        .item(Item::new("Move group to new window").on_select(native::run_on(this, move |ws, window, cx| {
+            ws.move_group_to_window(group, window, cx)
+        })))
+        .separator()
+        .item(
+            Item::new("Close group")
+                .on_select(native::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui_kit::{WeakEntity, hsla};
+    use wormhole_core::sidebar::GroupColor;
+
+    use super::{GroupFacts, group_menu};
+
+    #[test]
+    fn the_colour_of_the_group_is_checked_and_pinned_reads_unpin() {
+        let facts = GroupFacts {
+            group: 1,
+            color: Some(GroupColor::Blue),
+            pinned: true,
+            colors: vec![
+                (GroupColor::Grey, hsla(0.0, 0.0, 0.5, 1.0)),
+                (GroupColor::Blue, hsla(0.6, 0.8, 0.5, 1.0)),
+            ],
+        };
+        assert_eq!(
+            group_menu(facts, &WeakEntity::new_invalid()).outline(),
+            [
+                "- New terminal in group",
+                "- Rename…",
+                "> Colour",
+                "  - Grey",
+                "  - Blue [x]",
+                "---",
+                "- Unpin group",
+                "- Ungroup",
+                "- Move group to new window",
+                "---",
+                "- Close group",
+            ]
+        );
     }
 }

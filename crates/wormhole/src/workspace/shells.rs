@@ -3,13 +3,10 @@
 //! keys and what each runs are core's `shells`; the Shell menu's "New Terminal With ▸" and the
 //! palette's "New terminal: fish" entries go through the same method.
 
-use std::rc::Rc;
-
-use gpui_kit::component::menu::{ContextMenuExt as _, PopupMenu, PopupMenuItem};
 use wormhole_core::shells::{self, ShellChoice};
 
-use super::focus::MenuBuilder;
 use super::*;
+use crate::native::{self, Item, Menu};
 use crate::settings::Settings;
 
 /// The menu's heading.
@@ -29,35 +26,60 @@ impl Workspace {
         button: impl IntoElement,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let build = self.shell_menu(cx);
+        let this = cx.weak_entity();
         div()
             .id(id)
+            .relative()
             .flex_none()
+            .debug_selector(move || id.to_string())
             .child(button)
-            .context_menu(move |menu, window, cx| build(menu, window, cx))
+            // Over the button, which blocks the pointer from what lies behind it.
+            .child(native::on_right_click(move |at, window, cx| {
+                this.update(cx, |ws, cx| {
+                    let menu = ws.shell_menu(cx);
+                    native::show_menu(menu, at, window, cx);
+                })
+                .ok();
+            }))
             .into_any_element()
     }
 
-    /// What builds the shells' menu.
-    fn shell_menu(&self, cx: &mut Context<Self>) -> MenuBuilder {
+    /// The shells' menu, with the shells and the default as they are now.
+    fn shell_menu(&self, cx: &mut Context<Self>) -> Menu {
         let settings = settings(cx);
-        let choices: Vec<ShellChoice> = shells::choices(settings);
-        let default = default_key(settings).to_string();
-        let this = cx.weak_entity();
-        Rc::new(move |mut menu: PopupMenu, _: &mut Window, _: &mut Context<PopupMenu>| {
-            menu = menu.label(MENU_TITLE);
-            for choice in &choices {
-                let (this, key) = (this.clone(), choice.key.clone());
-                menu = menu.item(
-                    PopupMenuItem::new(choice.name.clone()).checked(choice.key == default).on_click(
-                        move |_, window, cx| {
-                            let key = key.clone();
-                            this.update(cx, |ws, cx| ws.new_session_with(Some(key), window, cx)).ok();
-                        },
-                    ),
-                );
-            }
-            menu
-        })
+        shell_menu(&shells::choices(settings), default_key(settings), &cx.weak_entity())
+    }
+}
+
+/// The menu of `choices`, `default` checked; choosing one opens a terminal with it in `workspace`.
+fn shell_menu(choices: &[ShellChoice], default: &str, workspace: &WeakEntity<Workspace>) -> Menu {
+    choices.iter().fold(Menu::new().header(MENU_TITLE), |menu, choice| {
+        let key = choice.key.clone();
+        menu.item(
+            Item::new(choice.name.clone())
+                .checked(choice.key == default)
+                .on_select(native::run_on(workspace, move |ws, window, cx| {
+                    ws.new_session_with(Some(key.clone()), window, cx)
+                })),
+        )
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shell_menu;
+    use gpui_kit::WeakEntity;
+    use wormhole_core::shells::{ShellChoice, ShellKind};
+
+    fn choice(key: &str, name: &str) -> ShellChoice {
+        ShellChoice { key: key.into(), name: name.into(), command_line: name.into(), kind: ShellKind::System }
+    }
+
+    /// The default shell is the checked one, under the heading.
+    #[test]
+    fn the_default_shell_is_checked() {
+        let choices = [choice("zsh", "zsh"), choice("fish", "fish")];
+        let menu = shell_menu(&choices, "fish", &WeakEntity::new_invalid());
+        assert_eq!(menu.outline(), ["# New terminal with", "- zsh", "- fish [x]"]);
     }
 }

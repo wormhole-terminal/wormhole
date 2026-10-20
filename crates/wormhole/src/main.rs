@@ -13,6 +13,7 @@ mod inspector;
 mod intro;
 mod logging;
 mod menubar;
+mod native;
 mod palette;
 mod scroller;
 mod select;

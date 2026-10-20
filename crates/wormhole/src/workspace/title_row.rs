@@ -7,10 +7,8 @@
 //! window and a double-click does what the system setting says (zoom, or minimize).
 
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::sync::Arc;
 
-use gpui_kit::component::menu::{DropdownMenu as _, PopupMenu, PopupMenuItem};
 use wormhole_core::agents::AgentId;
 use wormhole_core::layout::title_row::{PathStep, RowFit};
 use wormhole_core::open_in::{Installed, Resolved};
@@ -18,11 +16,12 @@ use wormhole_core::panes::Axis;
 use wormhole_core::project::ProjectColor;
 
 use super::chrome::TitleDrag as _;
-use super::focus::MenuBuilder;
 use super::folder_color;
 use super::open_in::{self, OpenIn};
 use super::title_extras::ExtraFacts;
 use super::*;
+use crate::menubar::model::KeyEquivalent;
+use crate::native::{self, Anchor, Icon, Item, Menu};
 use crate::theme_bridge::token;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
@@ -202,16 +201,24 @@ impl Workspace {
         let ui = ui_in(&self.profile, cx);
         let folder = plan.facts.folder.clone();
         let menu = self.actions_menu(plan, folder.as_deref(), plan.fit.folded, cx);
+        let anchor = Anchor::default();
+        let open_menu = {
+            let anchor = anchor.clone();
+            move |window: &mut Window, cx: &mut App| {
+                native::show_menu(menu.clone(), anchor.below(), window, cx)
+            }
+        };
         if plan.fit.folded {
             return div()
                 .id("title-more")
                 .occlude()
+                .relative()
                 .flex_none()
+                .child(anchor.probe())
                 .child(
                     style::icon_button("title-more-menu", ui, IconName::Ellipsis, "Open in, split")
                         .in_title_row()
-                        .menu_trigger()
-                        .dropdown_menu_with_anchor(Anchor::TopRight, move |m, w, c| menu(m, w, c)),
+                        .on_click(move |_, window, cx| open_menu(window, cx)),
                 )
                 .into_any_element();
         }
@@ -238,12 +245,13 @@ impl Workspace {
                 div()
                     .id("open-in-chevron")
                     .occlude()
+                    .relative()
                     .flex_none()
+                    .child(anchor.probe())
                     .child(
                         style::icon_button("open-in-menu", ui, IconName::ChevronDown, "Open in another app")
                             .narrow(CHEVRON_W)
-                            .menu_trigger()
-                            .dropdown_menu_with_anchor(Anchor::TopRight, move |m, w, c| menu(m, w, c)),
+                            .on_click(move |_, window, cx| open_menu(window, cx)),
                     )
                     .into_any_element(),
             ]
@@ -261,21 +269,16 @@ impl Workspace {
             .into_any_element()
     }
 
-    /// What builds the menu of Open in… (the chevron's) or, folded, of the whole group: "Open folder
-    /// in" with every app that can (the one a click opens checked), and then the two splits.
+    /// The menu of Open in… (the chevron's) or, folded, of the whole group: "Open folder in" with
+    /// every app that can (the one a click opens checked), and then the two splits.
     fn actions_menu(
         &self,
         plan: &TitlePlan,
         folder: Option<&Path>,
         with_splits: bool,
         cx: &mut Context<Self>,
-    ) -> MenuBuilder {
-        let ui = ui_in(&self.profile, cx);
-        let this = cx.weak_entity();
-        let folder = folder.map(Path::to_path_buf);
-        let chosen = plan.app.app.bundle.clone();
+    ) -> Menu {
         let apps: Vec<(Installed, Option<Arc<Image>>)> = folder
-            .as_ref()
             .map(|_| OpenIn::apps(cx))
             .unwrap_or_default()
             .into_iter()
@@ -284,45 +287,8 @@ impl Workspace {
                 (app, icon)
             })
             .collect();
-        let (right, down) = (self.can_split(Axis::Row), self.can_split(Axis::Column));
-        Rc::new(move |mut menu: PopupMenu, _: &mut Window, _: &mut Context<PopupMenu>| {
-            if let Some(folder) = &folder {
-                menu = menu.label("Open folder in");
-                for (app, icon) in &apps {
-                    let (bundle, folder) = (app.bundle.clone(), folder.clone());
-                    let (name, monogram, icon) = (app.name.clone(), app.monogram.clone(), icon.clone());
-                    menu = menu.item(
-                        PopupMenuItem::element(move |_, _| {
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(app_icon(ui, icon.clone(), &monogram, APP_ICON))
-                                .child(name.clone())
-                        })
-                        .checked(app.bundle == chosen)
-                        .on_click(move |_, _, _| open_in::open(&bundle, &folder)),
-                    );
-                }
-            }
-            if with_splits {
-                if folder.is_some() {
-                    menu = menu.separator();
-                }
-                let item = |label: &'static str, action: Box<dyn Action>, enabled: bool, axis: Axis| {
-                    let this = this.clone();
-                    PopupMenuItem::new(label).action(action).disabled(!enabled).on_click(
-                        move |_, window, cx| {
-                            this.update(cx, |ws, cx| ws.split_pane(axis, window, cx)).ok();
-                        },
-                    )
-                };
-                menu = menu
-                    .item(item("Split right", Box::new(actions::SplitRight), right, Axis::Row))
-                    .item(item("Split down", Box::new(actions::SplitDown), down, Axis::Column));
-            }
-            menu
-        })
+        let splits = with_splits.then(|| (self.can_split(Axis::Row), self.can_split(Axis::Column)));
+        actions_menu(folder, &apps, &plan.app.app.bundle, splits, &cx.weak_entity())
     }
 
     /// Files dropped on the title bar, which covers the top of the terminal and so
@@ -338,11 +304,82 @@ impl Workspace {
     }
 }
 
+/// The actions menu: "Open folder in" `folder` with `apps` (the `chosen` bundle checked), then,
+/// when `splits` says (whether the pane can split right and down), the two splits.
+fn actions_menu(
+    folder: Option<&Path>,
+    apps: &[(Installed, Option<Arc<Image>>)],
+    chosen: &str,
+    splits: Option<(bool, bool)>,
+    this: &WeakEntity<Workspace>,
+) -> Menu {
+    let menu = match folder {
+        Some(folder) => apps.iter().fold(Menu::new().header("Open folder in"), |menu, (app, icon)| {
+            let (bundle, folder) = (app.bundle.clone(), folder.to_path_buf());
+            menu.item(
+                Item::new(app.name.clone())
+                    .icon(icon.clone().map(Icon::Image))
+                    .checked(app.bundle == chosen)
+                    .on_select(move |_, _| open_in::open(&bundle, &folder)),
+            )
+        }),
+        None => Menu::new(),
+    };
+    let Some((right, down)) = splits else { return menu };
+    let split = |label: &'static str, action: ActionId, enabled: bool, axis: Axis| {
+        Item::new(label)
+            .key(keymap::key(action).and_then(KeyEquivalent::from_spec))
+            .enabled(enabled)
+            .on_select(native::run_on(this, move |ws, window, cx| ws.split_pane(axis, window, cx)))
+    };
+    menu.separator().item(split("Split right", ActionId::SplitRight, right, Axis::Row)).item(split(
+        "Split down",
+        ActionId::SplitDown,
+        down,
+        Axis::Column,
+    ))
+}
+
 /// An app's own icon, `size` points square, or its monogram in a rounded square where the icon
 /// can't be read.
 fn app_icon(ui: UiColors, icon: Option<Arc<Image>>, monogram: &str, size: f32) -> AnyElement {
     match icon {
         Some(image) => img(image).size(px(size)).flex_none().into_any_element(),
         None => style::agent_logo(None, SharedString::from(monogram.to_string()), size, ui.text),
+    }
+}
+
+#[cfg(test)]
+mod menu_model_tests {
+    use std::path::Path;
+
+    use gpui_kit::WeakEntity;
+    use wormhole_core::open_in::Installed;
+
+    use super::actions_menu;
+
+    fn app(bundle: &str, name: &str) -> (Installed, Option<std::sync::Arc<gpui_kit::Image>>) {
+        (Installed { bundle: bundle.into(), name: name.into(), monogram: name[..1].into() }, None)
+    }
+
+    #[test]
+    fn the_chosen_app_is_checked_and_the_splits_follow_when_folded() {
+        let apps = [app("a.zed", "Zed"), app("b.code", "Code")];
+        let this = WeakEntity::new_invalid();
+        let folder = Some(Path::new("/tmp"));
+        assert_eq!(
+            actions_menu(folder, &apps, "b.code", Some((true, false)), &this).outline(),
+            ["# Open folder in", "- Zed", "- Code [x]", "---", "- Split right", "- Split down [off]"]
+        );
+        assert_eq!(
+            actions_menu(folder, &apps, "a.zed", None, &this).outline(),
+            ["# Open folder in", "- Zed [x]", "- Code"],
+            "the chevron's menu has no splits"
+        );
+        assert_eq!(
+            actions_menu(None, &[], "", Some((true, true)), &this).outline(),
+            ["- Split right", "- Split down"],
+            "no folder, no apps, and no separator before the splits"
+        );
     }
 }

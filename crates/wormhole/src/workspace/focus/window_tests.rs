@@ -184,31 +184,30 @@ fn on_a_sidebar_group_only_space_folds_it(cx: &mut TestAppContext) {
     assert_eq!(area(cx, &window), Some(Area::Sidebar), "the list keeps the keyboard");
 }
 
-/// ⌃↩ in the sidebar opens the row's menu, the one a right-click shows and
-/// Esc closes it with the keys back on the row. In a list without row menus the key is taken all
-/// the same: it never reaches the terminal while a list has the keyboard.
+/// ⌃↩ in the sidebar opens the row's menu, the one a right-click shows. The menu is a native one
+/// that holds the keys itself while it is open (a test window records it instead), so the list keeps
+/// them here. In a list without row menus the key is taken all the same: it never reaches the
+/// terminal while a list has the keyboard.
 #[gpui_kit::test]
 fn ctrl_return_opens_the_rows_menu_from_the_keyboard(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "ctrl_return_opens_the_rows_menu_from_the_keyboard") {
         return;
     }
     let window = start(cx, 2);
-    let menu_open = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.areas.menu.is_some());
+    crate::native::record::close();
 
     f6_to(cx, &window, Area::Sidebar);
-    let at = read(cx, &window, |ws| ws.areas.sidebar_at.clone());
     key(cx, &window, "ctrl-enter");
-    assert!(menu_open(cx), "⌃↩ opened the row's menu");
-    assert_ne!(area(cx, &window), Some(Area::Terminal), "the menu has the keys");
-    key(cx, &window, "escape");
-    assert!(!menu_open(cx), "Esc closed the menu");
-    assert_eq!(area(cx, &window), Some(Area::Sidebar), "the keys are back in the list");
-    assert_eq!(read(cx, &window, |ws| ws.areas.sidebar_at.clone()), at, "on the same row");
+    draw(cx, &window);
+    let menu = crate::native::record::open().expect("⌃↩ opened the row's menu");
+    assert_eq!(menu.outline().first().map(String::as_str), Some("- Rename…"), "the row's own menu");
+    assert_eq!(area(cx, &window), Some(Area::Sidebar), "the list keeps the keys; the menu is the system's");
+    assert!(crate::native::record::close().is_some(), "and it can be dismissed");
 
     drive(cx, &window, |ws, _, cx| ws.show_tab(RightTab::Notes, cx));
     f6_to(cx, &window, Area::PanelContent);
     key(cx, &window, "ctrl-enter");
-    assert!(!menu_open(cx), "the panel's rows have no menu yet");
+    assert!(crate::native::record::open().is_none(), "the panel's rows have no menu yet");
     assert_eq!(area(cx, &window), Some(Area::PanelContent), "the list kept the key");
 }
 

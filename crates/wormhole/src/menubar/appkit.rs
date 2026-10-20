@@ -10,14 +10,15 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{AnyThread, MainThreadMarker, MainThreadOnly, sel};
 use objc2_app_kit::{
-    NSCellImagePosition, NSColor, NSEventModifierFlags, NSFont, NSImage, NSImageSymbolConfiguration,
-    NSImageSymbolScale, NSMenu, NSMenuItem, NSMutableParagraphStyle, NSStatusBar, NSStatusItem,
-    NSTextAlignment, NSTextTab, NSVariableStatusItemLength,
+    NSCellImagePosition, NSColor, NSFont, NSImage, NSImageSymbolConfiguration, NSImageSymbolScale, NSMenu,
+    NSMenuItem, NSMutableParagraphStyle, NSStatusBar, NSStatusItem, NSTextAlignment, NSTextTab,
+    NSVariableStatusItemLength,
 };
 use objc2_foundation::{NSArray, NSDictionary, NSMutableAttributedString, NSRange, NSString};
 
 use super::model::{self, Entry, Glyph, ItemModel, StatusIcon};
-use super::{MenuCommand, MenuSnapshot, Rgba, StatusColors};
+use super::{MenuCommand, MenuSnapshot, StatusColors};
+use crate::native::macos::appkit::{modifier_mask, ns_color, symbol};
 use target::MenuTarget;
 use wormhole_core::notify::ItemState;
 
@@ -240,18 +241,6 @@ fn rebuild(mtm: MainThreadMarker, menu: &NSMenu, target: &MenuTarget) {
     fill(mtm, menu, target, generation, &model.entries, snapshot.colors);
 }
 
-fn symbol(name: &str, description: &str) -> Option<Retained<NSImage>> {
-    NSImage::imageWithSystemSymbolName_accessibilityDescription(
-        &NSString::from_str(name),
-        Some(&NSString::from_str(description)),
-    )
-}
-
-fn ns_color(rgba: Rgba) -> Retained<NSColor> {
-    let [r, g, b, a] = rgba.map(f64::from);
-    NSColor::colorWithSRGBRed_green_blue_alpha(r, g, b, a)
-}
-
 /// A row's glyph: the sidebar's shapes as SF Symbols, in the theme's colours (an idle or ended
 /// terminal in the system's secondary label colour).
 fn glyph_image(glyph: Glyph, colors: StatusColors) -> Option<Retained<NSImage>> {
@@ -271,21 +260,6 @@ fn glyph_image(glyph: Glyph, colors: StatusColors) -> Option<Retained<NSImage>> 
         &NSImageSymbolConfiguration::configurationWithScale(NSImageSymbolScale::Small),
     );
     names.iter().find_map(|name| symbol(name, description))?.imageWithSymbolConfiguration(&config)
-}
-
-fn modifier_mask(key: &model::KeyEquivalent) -> NSEventModifierFlags {
-    let mut mask = NSEventModifierFlags::empty();
-    for (on, flag) in [
-        (key.command, NSEventModifierFlags::Command),
-        (key.option, NSEventModifierFlags::Option),
-        (key.control, NSEventModifierFlags::Control),
-        (key.shift, NSEventModifierFlags::Shift),
-    ] {
-        if on {
-            mask |= flag;
-        }
-    }
-    mask
 }
 
 #[allow(unsafe_code)]

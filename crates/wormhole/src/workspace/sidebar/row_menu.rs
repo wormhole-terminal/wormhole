@@ -4,25 +4,42 @@
 //! Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. ⌃↩ opens it for the row the keys
 //! are on, and a group's own menu (`groups`) for the head they are on.
-use std::rc::Rc;
+use std::path::PathBuf;
 
 use wormhole_core::panes::{TabPanes, Zone};
 
-use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _, PopupMenu, PopupMenuItem};
-
-use super::super::focus::{MenuBuilder, SidebarStop};
+use super::super::focus::SidebarStop;
 use super::*;
+use crate::native::{self, Item, Menu};
+
+/// What a row's menu is made from, as it is when the menu opens.
+struct RowFacts {
+    id: i64,
+    pinned: bool,
+    in_split: bool,
+    cwd: Option<PathBuf>,
+    /// The person's groups it can go in: id, name, whether the terminal is in it.
+    groups: Vec<(u32, SharedString, bool)>,
+    /// The terminals it could show beside this one.
+    beside: Vec<(i64, SharedString)>,
+}
 
 impl Workspace {
-    /// `row` with its context menu: the last thing put on a row, since the menu wraps it.
+    /// `row` with its context menu under a right-click: the last thing put on a row.
     pub(super) fn with_row_menu(
         &self,
         row: Stateful<Div>,
         info: &RowInfo,
         cx: &mut Context<Self>,
-    ) -> ContextMenu<Stateful<Div>> {
-        let build = self.row_menu(info, cx);
-        row.context_menu(move |menu, window, cx| build(menu, window, cx))
+    ) -> Stateful<Div> {
+        let id = info.id;
+        row.on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |ws, event: &MouseDownEvent, window, cx| {
+                cx.stop_propagation();
+                ws.open_row_menu(id, event.position, window, cx);
+            }),
+        )
     }
 
     /// ⌃↩: the menu of the terminal or the band the keys are on, under it. (The "No folder" band
@@ -44,128 +61,42 @@ impl Workspace {
             .entries
             .iter()
             .position(|e| matches!(e, Entry::Row { session, .. } if infos[*session].id == id));
-        let (Some(row), Some(info)) =
-            (at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)), infos.iter().find(|i| i.id == id))
-        else {
-            return;
-        };
-        let build = self.row_menu(info, cx);
-        self.open_key_menu(wormhole_core::focus::Area::Sidebar, row, build, window, cx);
+        let Some(row) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
+        self.open_row_menu(id, super::super::focus::key_menu_origin(row), window, cx);
     }
 
-    /// What builds `info`'s row menu.
-    fn row_menu(&self, info: &RowInfo, cx: &mut Context<Self>) -> MenuBuilder {
-        let (id, pinned) = (info.id, info.pinned);
-        let in_split = self.sessions.get(info.ix).is_some_and(|session| session.split.is_some());
-        let cwd = info.cwd.clone();
+    /// Open terminal `id`'s menu at `at`, its row wearing the ring until the menu closes. Nothing
+    /// opens for a terminal that is gone.
+    fn open_row_menu(&mut self, id: i64, at: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(menu) = self.row_menu(id, cx) else { return };
+        self.sidebar.menu_row = Some(id);
+        self.sidebar.menu_group = None;
+        cx.notify();
+        native::show_menu(menu, at, window, cx);
+    }
+
+    /// Terminal `id`'s row menu, with its groups and neighbours as they are now.
+    fn row_menu(&self, id: i64, cx: &mut Context<Self>) -> Option<Menu> {
+        let ix = self.find_session(id)?;
+        let facts = RowFacts {
+            id,
+            pinned: self.split_pinned(ix),
+            in_split: self.sessions[ix].split.is_some(),
+            cwd: self.sessions[ix].terminal().read(cx).cwd.clone(),
+            groups: self.group_choices(id),
+            beside: self.beside_choices(id, cx),
+        };
         let this = cx.weak_entity();
-        Rc::new(move |menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>| {
-            let popup = cx.entity();
-            this.update(cx, |ws, cx| {
-                ws.sidebar.menu_row = Some(id);
-                ws.sidebar.menu_group = None;
-                ws.sidebar.menu_dismissed = Some(cx.subscribe(&popup, move |ws, _, _: &DismissEvent, cx| {
-                    if ws.sidebar.menu_row == Some(id) {
-                        ws.sidebar.menu_row = None;
-                        cx.notify();
-                    }
-                }));
-                cx.notify();
+        let ring = this.clone();
+        Some(row_menu(facts, &this).on_close(move |_, cx| {
+            ring.update(cx, |ws, cx| {
+                if ws.sidebar.menu_row == Some(id) {
+                    ws.sidebar.menu_row = None;
+                    cx.notify();
+                }
             })
             .ok();
-            let on = |f: fn(&mut Workspace, usize, &mut Window, &mut Context<Workspace>)| {
-                let this = this.clone();
-                move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
-                    this.update(cx, |ws, cx| {
-                        if let Some(ix) = ws.sessions.iter().position(|s| s.id == id) {
-                            f(ws, ix, window, cx);
-                        }
-                    })
-                    .ok();
-                }
-            };
-            let cwd = cwd.clone();
-            // The person's groups it can go in, as they are when the menu opens.
-            let groups = this.read_with(cx, |ws, _| ws.group_choices(id)).unwrap_or_default();
-            let grouped = groups.iter().any(|(_, _, current)| *current);
-            let (rename, new_group, into, out) = (this.clone(), this.clone(), this.clone(), this.clone());
-            let menu = menu
-                .item(PopupMenuItem::new("Rename…").on_click(move |_, window, cx| {
-                    rename.update(cx, |ws, cx| ws.start_terminal_rename(id, window, cx)).ok();
-                }))
-                .item(PopupMenuItem::new("Add terminal to new group").on_click(move |_, window, cx| {
-                    new_group.update(cx, |ws, cx| ws.group_terminal(id, window, cx)).ok();
-                }));
-            let menu = if groups.is_empty() {
-                menu.item(PopupMenuItem::new("Add terminal to group").disabled(true))
-            } else {
-                menu.submenu("Add terminal to group", window, cx, move |submenu, _, _| {
-                    groups.iter().fold(submenu, |submenu, (group, name, current)| {
-                        let (this, group) = (into.clone(), *group);
-                        submenu.item(PopupMenuItem::new(name.clone()).checked(*current).on_click(
-                            move |_, _, cx| {
-                                this.update(cx, |ws, cx| ws.move_to_group(id, group, cx)).ok();
-                            },
-                        ))
-                    })
-                })
-            };
-            // The terminals it could show beside this one, as they are when the menu opens.
-            let choices = this.read_with(cx, |ws, cx| ws.beside_choices(id, cx)).unwrap_or_default();
-            let beside_menu = this.clone();
-            let menu = menu
-                .when(grouped, |menu| {
-                    menu.item(PopupMenuItem::new("Remove from group").on_click(move |_, _, cx| {
-                        out.update(cx, |ws, cx| ws.remove_from_group(id, cx)).ok();
-                    }))
-                })
-                .item(PopupMenuItem::new("Split right").on_click(on(|ws, ix, window, cx| {
-                    ws.activate(ix, window, cx);
-                    ws.split_pane(wormhole_core::panes::Axis::Row, window, cx);
-                })))
-                .item(
-                    PopupMenuItem::new("Close terminal")
-                        .on_click(on(|ws, ix, window, cx| ws.request_close_session(ix, window, cx))),
-                )
-                .separator();
-            let menu = if choices.is_empty() {
-                menu.item(PopupMenuItem::new("Show beside…").disabled(true))
-            } else {
-                menu.submenu("Show beside…", window, cx, move |submenu, _, _| {
-                    choices.iter().fold(submenu, |submenu, (other, name)| {
-                        let (this, other) = (beside_menu.clone(), *other);
-                        submenu.item(PopupMenuItem::new(name.clone()).on_click(move |_, window, cx| {
-                            this.update(cx, |ws, cx| ws.show_beside(other, id, window, cx)).ok();
-                        }))
-                    })
-                })
-            };
-            menu.when(in_split, |menu| {
-                menu.item(PopupMenuItem::new("Remove from split").on_click(on(|ws, ix, _, cx| {
-                    ws.leave_split(ix, cx);
-                })))
-            })
-            .item(
-                PopupMenuItem::new(if pinned { "Unpin" } else { "Pin to top" })
-                    .on_click(on(|ws, ix, _, cx| ws.toggle_pin(ix, cx))),
-            )
-            .separator()
-            .item(PopupMenuItem::new("Reveal in Finder").disabled(cwd.is_none()).on_click({
-                let cwd = cwd.clone();
-                move |_, _, _| {
-                    if let Some(cwd) = &cwd {
-                        reveal_in_finder(cwd);
-                    }
-                }
-            }))
-            .item(PopupMenuItem::new("Copy path").disabled(cwd.is_none()).on_click(
-                move |_, _, cx| {
-                    if let Some(cwd) = &cwd {
-                        cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
-                    }
-                },
-            ))
-        })
+        }))
     }
 
     /// The terminals "Show beside…" offers for the terminal `id`, in the list's order: every other
@@ -224,5 +155,168 @@ pub(in crate::workspace) fn reveal_in_finder(path: &Path) {
     open.arg("-R").arg(path);
     if let Err(err) = crate::workspace::spawn::spawn_detached(open) {
         tracing::warn!("revealing {}: {err}", path.display());
+    }
+}
+
+/// The menu of the row `facts` describe; every item acts on `this`.
+fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
+    let RowFacts { id, pinned, in_split, cwd, groups, beside } = facts;
+    // An item that finds the terminal again by its id: the list may have changed while the menu
+    // was open.
+    let on = |run: fn(&mut Workspace, usize, &mut Window, &mut Context<Workspace>)| {
+        native::run_on(this, move |ws, window, cx| {
+            if let Some(ix) = ws.find_session(id) {
+                run(ws, ix, window, cx);
+            }
+        })
+    };
+    let grouped = groups.iter().any(|(_, _, current)| *current);
+    let into = Menu::new().when(!groups.is_empty(), |menu| {
+        groups.iter().fold(menu, |menu, (group, name, current)| {
+            let group = *group;
+            menu.item(
+                Item::new(name.clone())
+                    .checked(*current)
+                    .on_select(native::run_on(this, move |ws, _, cx| ws.move_to_group(id, group, cx))),
+            )
+        })
+    });
+    let next_to = beside.iter().fold(Menu::new(), |menu, (other, name)| {
+        let other = *other;
+        menu.item(
+            Item::new(name.clone())
+                .on_select(native::run_on(this, move |ws, window, cx| ws.show_beside(other, id, window, cx))),
+        )
+    });
+    Menu::new()
+        .item(
+            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
+                ws.start_terminal_rename(id, window, cx)
+            })),
+        )
+        .item(
+            Item::new("Add terminal to new group")
+                .on_select(native::run_on(this, move |ws, window, cx| ws.group_terminal(id, window, cx))),
+        )
+        .when(groups.is_empty(), |menu| menu.disabled_submenu("Add terminal to group"))
+        .when(!groups.is_empty(), |menu| menu.submenu("Add terminal to group", into))
+        .when(grouped, |menu| {
+            menu.item(
+                Item::new("Remove from group")
+                    .on_select(native::run_on(this, move |ws, _, cx| ws.remove_from_group(id, cx))),
+            )
+        })
+        .item(Item::new("Split right").on_select(on(|ws, ix, window, cx| {
+            ws.activate(ix, window, cx);
+            ws.split_pane(wormhole_core::panes::Axis::Row, window, cx);
+        })))
+        .item(
+            Item::new("Close terminal")
+                .on_select(on(|ws, ix, window, cx| ws.request_close_session(ix, window, cx))),
+        )
+        .separator()
+        .when(beside.is_empty(), |menu| menu.disabled_submenu("Show beside…"))
+        .when(!beside.is_empty(), |menu| menu.submenu("Show beside…", next_to))
+        .when(in_split, |menu| {
+            menu.item(Item::new("Remove from split").on_select(on(|ws, ix, _, cx| {
+                ws.leave_split(ix, cx);
+            })))
+        })
+        .item(
+            Item::new(if pinned { "Unpin" } else { "Pin to top" })
+                .on_select(on(|ws, ix, _, cx| ws.toggle_pin(ix, cx))),
+        )
+        .separator()
+        .item(Item::new("Reveal in Finder").enabled(cwd.is_some()).on_select({
+            let cwd = cwd.clone();
+            move |_, _| {
+                if let Some(cwd) = &cwd {
+                    reveal_in_finder(cwd);
+                }
+            }
+        }))
+        .item(Item::new("Copy path").enabled(cwd.is_some()).on_select(move |_, cx| {
+            if let Some(cwd) = &cwd {
+                cx.write_to_clipboard(ClipboardItem::new_string(cwd.to_string_lossy().into_owned()));
+            }
+        }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use gpui_kit::WeakEntity;
+
+    use super::{RowFacts, row_menu};
+
+    fn facts() -> RowFacts {
+        RowFacts {
+            id: 7,
+            pinned: false,
+            in_split: false,
+            cwd: Some(PathBuf::from("/tmp")),
+            groups: Vec::new(),
+            beside: Vec::new(),
+        }
+    }
+
+    fn outline(facts: RowFacts) -> Vec<String> {
+        row_menu(facts, &WeakEntity::new_invalid()).outline()
+    }
+
+    /// A lone terminal in no group: nothing to move to or to show beside, so those two are
+    /// greyed out, as before.
+    #[test]
+    fn a_lone_terminal_offers_no_group_and_no_neighbour() {
+        assert_eq!(
+            outline(facts()),
+            [
+                "- Rename…",
+                "- Add terminal to new group",
+                "> Add terminal to group [off]",
+                "- Split right",
+                "- Close terminal",
+                "---",
+                "> Show beside… [off]",
+                "- Pin to top",
+                "---",
+                "- Reveal in Finder",
+                "- Copy path",
+            ]
+        );
+    }
+
+    #[test]
+    fn groups_neighbours_and_state_show_up() {
+        let outline = outline(RowFacts {
+            pinned: true,
+            in_split: true,
+            cwd: None,
+            groups: vec![(1, "Work".into(), true), (2, "Play".into(), false)],
+            beside: vec![(9, "api".into())],
+            ..facts()
+        });
+        assert_eq!(
+            outline,
+            [
+                "- Rename…",
+                "- Add terminal to new group",
+                "> Add terminal to group",
+                "  - Work [x]",
+                "  - Play",
+                "- Remove from group",
+                "- Split right",
+                "- Close terminal",
+                "---",
+                "> Show beside…",
+                "  - api",
+                "- Remove from split",
+                "- Unpin",
+                "---",
+                "- Reveal in Finder [off]",
+                "- Copy path [off]",
+            ]
+        );
     }
 }
