@@ -16,6 +16,7 @@ pub(super) mod checksum;
 pub(super) mod locator;
 pub(super) mod presentation;
 pub(super) mod rqss;
+pub(super) mod scheme;
 pub(super) mod state;
 pub(super) mod tcap;
 pub(super) mod title;
@@ -154,6 +155,8 @@ impl Terminal {
                 Level::Vt300 => self.reply(format_args!("\x1b[?27;1;0n")),
                 Level::Vt400 | Level::Vt500 => self.reply(format_args!("\x1b[?27;1;0;0n")),
             },
+            // The host's color scheme (CSI ? 997 ; 1 or 2 n), when it has told us.
+            996 => self.report_color_scheme(),
             // Locator: available (53), which is the pointer; it is a mouse (57;1).
             53 | 55 => self.reply(format_args!("\x1b[?53n")),
             56 => self.reply(format_args!("\x1b[?57;1n")),

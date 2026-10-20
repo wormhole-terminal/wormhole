@@ -1,7 +1,9 @@
 //! `wormhole-vt`'s terminal: the engine that replaces alacritty_terminal.
 
 use wormhole_vt::grid::Style;
-use wormhole_vt::{COLOR_COUNT, Color, Column, Flags, Line, Modes, NamedColor, Point, Rgb, Terminal};
+use wormhole_vt::{
+    COLOR_COUNT, Color, ColorScheme, Column, Flags, Line, Modes, NamedColor, Point, Rgb, Terminal,
+};
 
 use super::xterm_palette;
 use crate::engine::{Attrs, CELL_PIXELS, Cell, CellColor, Cursor, DEFAULT_COLORS, Engine};
@@ -105,6 +107,12 @@ impl Engine for WormholeEngine {
         let mut policy = self.term.policy();
         policy.title_report = true;
         self.term.set_policy(policy);
+    }
+
+    fn set_color_scheme(&mut self, dark: bool) {
+        self.term.set_color_scheme(if dark { ColorScheme::Dark } else { ColorScheme::Light });
+        self.replies.extend_from_slice(self.term.replies());
+        self.term.clear_replies();
     }
 
     fn feed(&mut self, bytes: &[u8]) {

@@ -329,5 +329,6 @@ pub(super) fn spawn_options(
         shell: Some(shell),
         welcome: false,
         colors: None,
+        color_scheme: None,
     }
 }

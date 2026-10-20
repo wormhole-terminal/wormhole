@@ -1,0 +1,52 @@
+# Light and dark reports: CSI ? 996 n asks, CSI ? 2031 h asks to be told of changes.
+# Contour's "Color palette update notifications" is the specification; the host's scheme is a step.
+
+test a program asking for the color scheme is told dark
+spec contour color-palette-update-notifications: CSI ? 996 n is answered CSI ? 997 ; 1 n for dark
+size 10 4
+color-scheme dark
+feed \e[?996n
+reply \e[?997;1n
+
+test a program asking for the color scheme is told light
+spec contour color-palette-update-notifications: CSI ? 997 ; 2 n is light mode
+size 10 4
+color-scheme light
+feed \e[?996n
+reply \e[?997;2n
+
+test a terminal that was not told its scheme does not answer
+convention a program has to cope with terminals that stay silent; guessing would be a lie
+size 10 4
+feed \e[?996n\e[5n
+reply \e[0n
+
+test a change is reported to a program that asked to hear of changes
+spec contour color-palette-update-notifications: with mode 2031 set the terminal sends the report when the scheme changes
+size 10 4
+color-scheme dark
+feed \e[?2031h
+reply none
+color-scheme light
+reply \e[?997;2n
+color-scheme dark
+reply \e[?997;1n
+
+test a change nobody asked to hear of is not reported, and telling the same scheme again is no change
+spec contour color-palette-update-notifications: the DSR is sent when the mode is set and the scheme changed
+size 10 4
+color-scheme dark
+color-scheme light
+reply none
+feed \e[?2031h
+color-scheme light
+reply none
+feed \e[?2031l
+color-scheme dark
+reply none
+
+test mode 2031 is a mode a program can ask about
+spec xterm ctlseqs DECRQM: CSI ? Ps $ p is answered CSI ? Ps ; Pm $ y
+size 10 4
+feed \e[?2031$p\e[?2031h\e[?2031$p
+reply \e[?2031;2$y\e[?2031;1$y

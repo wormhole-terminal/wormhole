@@ -1,5 +1,5 @@
 use gpui_kit::{Hsla, rgb};
-use wormhole_core::terminal::types::{COLOR_COUNT, Cell, Color, Colors, Flags, NamedColor, Rgb};
+use wormhole_core::terminal::types::{COLOR_COUNT, Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
 
 /// Terminal colors, resolved from the active theme. Comparable, so a settings
 /// change that leaves them alone can keep the same palette (and the terminal
@@ -111,6 +111,15 @@ impl Palette {
         })
     }
 
+    /// Whether the terminal's background is light or dark, for the programs that ask
+    /// (`CSI ? 996 n`): by its luma, which is what a program choosing its colors cares about.
+    pub fn color_scheme(&self) -> ColorScheme {
+        let Rgb { r, g, b } = to_rgb(self.background);
+        // Rec. 601 weights in thousandths; half of 255,000 is the middle.
+        let luma = 299 * u32::from(r) + 587 * u32::from(g) + 114 * u32::from(b);
+        if luma >= 127_500 { ColorScheme::Light } else { ColorScheme::Dark }
+    }
+
     /// The theme's answer for every entry a program can ask about, for the engine to answer with
     /// (it keeps what a program set itself).
     pub fn engine_colors(&self) -> Box<[Rgb; COLOR_COUNT]> {
@@ -170,8 +179,8 @@ pub fn to_rgb(color: Hsla) -> Rgb {
 
 #[cfg(test)]
 mod tests {
-    use gpui_kit::Hsla;
-    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, Rgb};
+    use gpui_kit::{Hsla, rgb};
+    use wormhole_core::terminal::types::{Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
     use wormhole_core::theme;
     use wormhole_core::tokens::Color as TokenColor;
 
@@ -236,6 +245,22 @@ mod tests {
         let none = Colors::default();
         assert!(colors.iter().enumerate().all(|(slot, color)| *color == palette.query(slot, &none)));
         assert_eq!(colors[257], to_rgb(palette.background));
+    }
+
+    #[test]
+    fn the_scheme_follows_the_backgrounds_luma() {
+        let mut palette = Palette::from_theme(&theme::builtin()[0]);
+        for (background, scheme) in [
+            (0x000000, ColorScheme::Dark),
+            (0x1e1e2e, ColorScheme::Dark),
+            (0x0000ff, ColorScheme::Dark),
+            (0xffffff, ColorScheme::Light),
+            (0xfdf6e3, ColorScheme::Light),
+            (0xffff00, ColorScheme::Light),
+        ] {
+            palette.background = rgb(background).into();
+            assert_eq!(palette.color_scheme(), scheme, "{background:06x}");
+        }
     }
 
     #[test]

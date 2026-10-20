@@ -57,6 +57,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Liquid Glass, off by default (Settings → Appearance): on macOS 26 and later the sidebar's cards and
   the tabs are glass and the status bar uses the window's own material. Before macOS 26, or with
   Reduce Transparency or Increase Contrast, every surface paints itself.
+- Programs can ask whether the theme is light or dark (`CSI ? 996 n`) and ask to be told when it
+  changes (mode 2031): Neovim and other editors and TUIs that follow the terminal's colours switch with
+  it. Wormhole answers from the background of the theme in use, and reports a theme change to the
+  programs that asked.
 
 ### Changed
 

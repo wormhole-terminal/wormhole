@@ -169,12 +169,9 @@ impl Parser<'_> {
         let line = builder.case.line;
         if !builder.has_size {
             self.error(line, format!("test {:?} has no `size <cols> <rows>`", builder.case.name));
-        } else if !builder
-            .case
-            .steps
-            .iter()
-            .any(|s| !matches!(s.kind, StepKind::Feed(_) | StepKind::Resize { .. }))
-        {
+        } else if !builder.case.steps.iter().any(|s| {
+            !matches!(s.kind, StepKind::Feed(_) | StepKind::Resize { .. } | StepKind::ColorScheme { .. })
+        }) {
             self.error(line, format!("test {:?} checks nothing", builder.case.name));
         } else {
             self.cases.push(builder.case);
@@ -247,6 +244,11 @@ impl Parser<'_> {
                 }
                 StepKind::Resize { cols, rows }
             }
+            "color-scheme" => match rest {
+                "dark" => StepKind::ColorScheme { dark: true },
+                "light" => StepKind::ColorScheme { dark: false },
+                _ => return Err("color-scheme dark or color-scheme light".to_string()),
+            },
             "screen" | "scrollback" | "lines" => {
                 if !rest.is_empty() {
                     return Err("rows go on the following lines, each between `|` and `|`".to_string());

@@ -295,6 +295,8 @@ pub struct Terminal {
     attr_extent: screen::rect::AttrExtent,
     /// The selection and the word separators; see `selection`.
     select: read::selection::Select,
+    /// Whether the host draws a light or a dark scheme, once it said (`set_color_scheme`).
+    scheme: Option<crate::types::ColorScheme>,
     /// What the last `take_damage` saw of the cursor and the colours.
     seen: Seen,
     /// What the host was last told changed, see `watch`.

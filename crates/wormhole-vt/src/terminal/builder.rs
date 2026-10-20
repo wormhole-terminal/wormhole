@@ -12,7 +12,7 @@ use super::{
 use crate::grid::{BlockPart, Grid, Pen};
 use crate::passthrough::{Passthrough, PassthroughError};
 use crate::terminal::modes::Modes;
-use crate::types::{COLOR_COUNT, Rgb};
+use crate::types::{COLOR_COUNT, ColorScheme, Rgb};
 
 /// The history a terminal keeps unless the builder says otherwise, in lines.
 const DEFAULT_SCROLLBACK_LINES: usize = 10_000;
@@ -51,6 +51,7 @@ pub struct Builder {
     cell: (u16, u16),
     separators: Option<String>,
     passthrough: Passthrough,
+    scheme: Option<ColorScheme>,
 }
 
 impl Default for Builder {
@@ -67,6 +68,7 @@ impl Default for Builder {
             cell: (8, 16),
             separators: None,
             passthrough: Passthrough::new(),
+            scheme: None,
         }
     }
 }
@@ -151,6 +153,14 @@ impl Builder {
         self
     }
 
+    /// Whether the host draws a light or a dark scheme, for programs that ask (`CSI ? 996 n`);
+    /// unknown, and so unanswered, unless set. See [`Terminal::set_color_scheme`], which also tells
+    /// the programs that asked to hear of changes.
+    pub fn color_scheme(mut self, scheme: ColorScheme) -> Builder {
+        self.scheme = Some(scheme);
+        self
+    }
+
     /// The OSC, DCS and APC strings to hand to the host as events instead of dropping them (none
     /// unless set); see [`passthrough`](crate::passthrough). Refused, with the reason, when the
     /// engine reads one of them itself or one cannot match anything.
@@ -218,6 +228,7 @@ impl Builder {
             guard_used: false,
             attr_extent: screen::rect::AttrExtent::default(),
             select: read::selection::Select::default(),
+            scheme: self.scheme,
             seen: read::damage::Seen::new(),
             told: watch::Told::new(),
         };

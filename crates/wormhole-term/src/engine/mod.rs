@@ -96,6 +96,10 @@ pub(super) fn spawn(
     if let Some(colors) = options.colors {
         screen.set_default_colors(colors);
     }
+    if let Some(scheme) = options.color_scheme {
+        // The program has asked for nothing yet: there is no reply to send.
+        let _ = screen.set_color_scheme(scheme);
+    }
     // Replay the previous session's text (dimmed) before the shell starts.
     if let Some(text) = options.restore {
         restore::replay(&mut screen, text);

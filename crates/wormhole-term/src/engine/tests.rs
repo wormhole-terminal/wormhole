@@ -262,6 +262,20 @@ fn a_program_that_asks_at_once_gets_the_themes_colors_before_any_paint() {
 }
 
 #[test]
+fn a_program_asking_whether_the_theme_is_dark_is_told_and_hears_of_a_change() {
+    use wormhole_vt::ColorScheme;
+    // It asks at once (996), then asks to be told of changes (2031), says so, and waits for the
+    // report a change makes: `CSI ? 997 ; 1 n` for the dark theme it was started with, then
+    // `CSI ? 997 ; 2 n` once the theme turns light.
+    let script = r#"stty raw -echo; printf '\033[?996n'; r=$(dd bs=1 count=9 2>/dev/null); printf '\033[?2031h'; sleep 0.3; printf READY; r2=$(dd bs=1 count=9 2>/dev/null); stty sane; printf '%s%s' "$r" "$r2" | tr '\033' E; sleep 5"#;
+    let options = StartOptions { color_scheme: Some(ColorScheme::Dark), ..options() };
+    let (pty, _events) = Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", script]).expect("spawn");
+    wait_until("the program to have asked", || pty.screen_text().contains("READY"));
+    pty.set_color_scheme(ColorScheme::Light);
+    wait_until("the report of the change", || pty.screen_text().contains("E[?997;1nE[?997;2n"));
+}
+
+#[test]
 fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it() {
     use crate::events::EventProxy;
     use crate::images::DECODES_MAX;

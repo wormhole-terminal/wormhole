@@ -239,6 +239,7 @@ impl TerminalView {
         options.allow_title_report = store.settings.allow_title_report;
         let palette = store.palette.clone();
         options.colors = Some(palette.engine_colors());
+        options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
         let restored = options.restore.clone().unwrap_or_default();
         let (pty, events) = match wormhole_core::terminal::spawn(initial, &options) {
@@ -507,6 +508,7 @@ impl TerminalView {
         self.palette_given = Some(palette.clone());
         let Some(pty) = self.pty.as_ref() else { return };
         pty.set_default_colors(&palette.engine_colors());
+        pty.set_color_scheme(palette.color_scheme());
     }
 
     /// The pane's size, which window operations are sums on: what the last resize asked for while

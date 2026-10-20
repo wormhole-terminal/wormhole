@@ -82,6 +82,10 @@ pub enum StepKind {
         cols: usize,
         rows: usize,
     },
+    /// The host's color scheme: dark, or light.
+    ColorScheme {
+        dark: bool,
+    },
     /// The whole visible screen: the listed rows from the top, every other row is blank.
     Screen(Vec<String>),
     /// One row, counted from 1.

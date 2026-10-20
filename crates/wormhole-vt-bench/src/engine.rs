@@ -162,6 +162,10 @@ pub trait Engine: Sized {
     /// have them keep off until the host asks. The default does nothing.
     fn allow_title_report(&mut self) {}
 
+    /// Tell the engine the host's color scheme (`dark`, else light), for the engines that answer
+    /// `CSI ? 996 n`. The default does nothing.
+    fn set_color_scheme(&mut self, _dark: bool) {}
+
     fn feed(&mut self, bytes: &[u8]);
 
     /// Resize the screen as a window resize does (the content reflows as the engine does).

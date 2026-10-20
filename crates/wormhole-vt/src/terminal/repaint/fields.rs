@@ -89,6 +89,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("attr_extent", Written("misc: DECSACE, through `kept`")),
     ("select", Viewer("the selection and the word separators")),
     ("seen", Viewer("what the last take_damage saw of the cursor and the colours")),
+    ("scheme", Host("the host's light or dark scheme; the receiver is told its own")),
     ("told", Queue("what the host was last told changed (ModesChanged, ColorsChanged)")),
 ];
 

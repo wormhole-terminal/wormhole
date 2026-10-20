@@ -6,6 +6,18 @@
 
 use std::ops::{Index, IndexMut};
 
+/// Whether the host draws a light or a dark scheme (dark text on a light background or the
+/// reverse): what a program asks for with `CSI ? 996 n`, see
+/// [`Terminal::set_color_scheme`](crate::Terminal::set_color_scheme).
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
+#[non_exhaustive]
+pub enum ColorScheme {
+    /// Light text on a dark background.
+    Dark,
+    /// Dark text on a light background.
+    Light,
+}
+
 /// A true color.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Default, Hash)]
 pub struct Rgb {

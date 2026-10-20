@@ -151,6 +151,10 @@ fn run_once<E: Engine>(case: &Case, chunking: Chunking) -> Result<(), String> {
                 engine.resize(*cols, *rows);
                 Ok(())
             }
+            StepKind::ColorScheme { dark } => {
+                engine.set_color_scheme(*dark);
+                Ok(())
+            }
             other => {
                 replies.extend(engine.take_replies());
                 check(&mut engine, &mut replies, other)
@@ -176,6 +180,7 @@ fn step_name(kind: &StepKind) -> &'static str {
     match kind {
         StepKind::Feed(_) => "feed",
         StepKind::Resize { .. } => "resize",
+        StepKind::ColorScheme { .. } => "color-scheme",
         StepKind::Screen(_) => "screen",
         StepKind::Row { .. } => "row",
         StepKind::Cursor { .. } => "cursor",
@@ -194,7 +199,7 @@ fn step_name(kind: &StepKind) -> &'static str {
 fn check<E: Engine>(engine: &mut E, replies: &mut Vec<u8>, kind: &StepKind) -> Result<(), String> {
     let (cols, rows) = engine.size();
     match kind {
-        StepKind::Feed(_) | StepKind::Resize { .. } => Ok(()),
+        StepKind::Feed(_) | StepKind::Resize { .. } | StepKind::ColorScheme { .. } => Ok(()),
         StepKind::Screen(expected) => {
             let actual: Vec<String> = (0..rows).map(|r| engine.row_text(r)).collect();
             let mut want: Vec<String> = expected.clone();

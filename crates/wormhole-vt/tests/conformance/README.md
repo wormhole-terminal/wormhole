@@ -65,7 +65,7 @@ screen
 |    x     |
 ```
 
-A case is a script, run from the top. `feed` and `resize` change the terminal; every other line
+A case is a script, run from the top. `feed`, `resize` and `color-scheme` change the terminal; every other line
 checks how it looks at that point.
 
 ### Header
@@ -88,6 +88,7 @@ checks how it looks at that point.
 | `feed <text>` | bytes for the terminal, with the escapes below |
 | `repeat <n> <text>` | the same, `n` times (long payloads) |
 | `resize <cols> <rows>` | the window is resized |
+| `color-scheme dark` or `light` | the host tells the engine its scheme (for `CSI ? 996 n` and mode 2031); an engine without it ignores the line |
 
 Escapes in `feed`, `repeat` and in expected text: `\e` (ESC), `\a`, `\b`, `\t`, `\n`, `\v`, `\f`,
 `\r`, `\0`, `\s` (a blank), `\\`, `\xNN` (a raw byte in `feed`, so invalid UTF-8 can be written; the
@@ -163,4 +164,4 @@ writing `known-fail:`.
 
 Cases in a file are grouped by area: `cursor`, `wrap`, `erase`, `edit`, `scroll`, `margins`,
 `origin`, `tabs`, `save-restore`, `charsets`, `altscreen`, `sgr`, `unicode`, `reports`, `osc`,
-`reset`, `modes`, `parser`, `resize`.
+`reset`, `modes`, `parser`, `resize`, `color-scheme`.

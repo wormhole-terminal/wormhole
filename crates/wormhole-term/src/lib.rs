@@ -67,8 +67,8 @@ pub mod types {
     pub use wormhole_vt::image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
     pub use wormhole_vt::input::{MouseEncoding, MouseTracking};
     pub use wormhole_vt::{
-        COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, Modes,
-        NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side,
+        COLOR_COUNT, Cell, CellExtra, Color, ColorScheme, Colors, Column, CursorShape, Flags, Hyperlink,
+        Line, Modes, NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side,
     };
 }
 
@@ -149,6 +149,9 @@ pub struct StartOptions<'a> {
     /// with from its first byte; without them it answers with xterm's until
     /// [`Pty::set_default_colors`] is called, which a terminal that was never drawn has not yet.
     pub colors: Option<&'a [types::Rgb; types::COLOR_COUNT]>,
+    /// Whether the theme is light or dark, which the engine answers a program's `CSI ? 996 n` with
+    /// from its first byte; unanswered until [`Pty::set_color_scheme`] says.
+    pub color_scheme: Option<types::ColorScheme>,
 }
 
 /// A shell in a PTY with a grid and a parser on the PTY's own thread. The grid stays behind this
@@ -576,6 +579,15 @@ impl Pty {
     /// 11, 12): it answers those itself.
     pub fn set_default_colors(&self, palette: &[types::Rgb; types::COLOR_COUNT]) {
         self.term.lock().set_default_colors(palette);
+    }
+
+    /// Tell the engine whether the theme is light or dark, for the programs that ask
+    /// (`CSI ? 996 n`) and the ones that asked to hear of changes (mode 2031): they are told now.
+    pub fn set_color_scheme(&self, scheme: types::ColorScheme) {
+        let replies = self.term.lock().set_color_scheme(scheme);
+        if !replies.is_empty() && self.is_alive() {
+            self.shared.reply(replies);
+        }
     }
 
     /// The virtual placement (kitty's `U=1`) the placeholder cells with this picture id and

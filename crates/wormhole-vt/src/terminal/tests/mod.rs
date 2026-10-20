@@ -12,6 +12,7 @@ mod passthrough;
 mod rare;
 mod replies;
 mod resize;
+mod scheme;
 mod selection;
 mod snapshot;
 mod tabs;

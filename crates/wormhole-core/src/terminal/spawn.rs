@@ -37,6 +37,9 @@ pub struct SpawnOptions {
     /// with from its first byte; without them it answers with xterm's until
     /// [`Pty::set_default_colors`] is called, which a terminal that was never drawn has not yet.
     pub colors: Option<Box<[types::Rgb; types::COLOR_COUNT]>>,
+    /// Whether the theme is light or dark, which the engine answers a program's `CSI ? 996 n`
+    /// with from its first byte; unanswered until [`Pty::set_color_scheme`] says.
+    pub color_scheme: Option<types::ColorScheme>,
 }
 
 impl SpawnOptions {
@@ -64,6 +67,7 @@ impl SpawnOptions {
             allow_window_ops: self.allow_window_ops,
             allow_title_report: self.allow_title_report,
             colors: self.colors.as_deref(),
+            color_scheme: self.color_scheme,
         }
     }
 }

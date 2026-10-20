@@ -331,6 +331,15 @@ impl Screen {
         self.term.set_default_colors(palette);
     }
 
+    /// Whether the theme is light or dark; the reports the engine makes of a change, for the
+    /// program.
+    pub(crate) fn set_color_scheme(&mut self, scheme: wormhole_vt::ColorScheme) -> Vec<u8> {
+        self.term.set_color_scheme(scheme);
+        let replies = self.term.replies().to_vec();
+        self.term.clear_replies();
+        replies
+    }
+
     /// The virtual placement (kitty's `U=1`) the placeholder cells with this id belong to.
     pub(crate) fn virtual_placement(&self, image_id: u32, placement_id: u32) -> Option<VirtualPlacement> {
         self.term.virtual_placement(image_id, placement_id)

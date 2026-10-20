@@ -18,7 +18,7 @@ mod mode;
 mod view;
 
 pub use cell::{Cell, Flags};
-pub use color::{COLOR_COUNT, Color, Colors, NamedColor, Rgb};
+pub use color::{COLOR_COUNT, Color, ColorScheme, Colors, NamedColor, Rgb};
 pub use extras::{CellExtra, RowExtras};
 pub use hyperlink::{Hyperlink, LinkId};
 pub use image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
