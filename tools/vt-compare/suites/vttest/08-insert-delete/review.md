@@ -12,12 +12,12 @@ The golden files are the engine's behaviour today, whatever the verdict: the gat
 | 003 | insert mode (IRM) | pass | `A***...***B` |
 | 004 | delete character (DCH) | pass | `AB` |
 | 005 | right column staggered by one (DCH on single-width lines) | pass |  |
-| 006 | the same on double-width lines (DECDWL) | unsupported: DECDWL | the lines are single width and half the screen long; the staggering itself is right |
+| 006 | the same on double-width lines (DECDWL) | pass | all 24 rows are double-width (line sizes) and each is one shorter than the one above it: the right column is staggered by one |
 | 007 | insert character (ICH) | pass | both lines `A B C ... Z` |
 | 008 | screen accordion, 132 columns | pass |  |
 | 009 | insert and delete line, 132 columns | pass |  |
 | 010 | insert mode, 132 columns | pass |  |
 | 011 | delete character, 132 columns | pass |  |
 | 012 | right column staggered, 132 columns | pass |  |
-| 013 | the same on double-width lines, 132 columns | unsupported: DECDWL | as 006 |
+| 013 | the same on double-width lines, 132 columns | pass | as 006 |
 | 014 | insert character, 132 columns | pass |  |

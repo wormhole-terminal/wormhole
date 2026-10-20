@@ -27,5 +27,11 @@ modes: +COLUMNS_132
 22|
 23|Push <RETURN>
 24|
+--- line sizes (rows that are not normal)
+09| double-width
+11| double-height top
+12| double-height bottom
+14| double-height top
+15| double-height bottom
 --- attributes
 (none)

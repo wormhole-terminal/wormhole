@@ -27,5 +27,7 @@ modes: default
 22|O
 23|P
 24|Push <RETURN>
+--- line sizes (rows that are not normal)
+11| double-width
 --- attributes
 (none)

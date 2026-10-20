@@ -27,6 +27,17 @@ modes: default
 22|Another test pattern...  a frame with blinking bold text,
 23|all in double-height double-width size. Push <RETURN>
 24|
+--- line sizes (rows that are not normal)
+08| double-height top
+09| double-height bottom
+10| double-height top
+11| double-height bottom
+12| double-height top
+13| double-height bottom
+14| double-height top
+15| double-height bottom
+16| double-height top
+17| double-height bottom
 --- attributes (columns from 1)
 12| 3-39 bold blink
 13| 3-38 bold blink

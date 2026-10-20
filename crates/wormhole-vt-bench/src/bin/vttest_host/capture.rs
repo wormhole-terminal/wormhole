@@ -7,7 +7,7 @@
 
 use std::fmt::Write;
 
-use wormhole_vt::{Cell, Color, Column, Flags, Line, Modes, NamedColor, Point, Terminal};
+use wormhole_vt::{Cell, Color, Column, Flags, Line, LineSize, Modes, NamedColor, Point, Terminal};
 
 /// The attributes a vttest screen shows, in the order a run names them. (Wide-character and wrap
 /// flags describe the row's layout, not the cell's look: the text shows them.)
@@ -55,6 +55,19 @@ fn color(color: Color) -> Option<String> {
         Color::Named(named) => Some((named as u16).to_string()),
         Color::Indexed(n) => Some(n.to_string()),
         Color::Rgb(rgb) => Some(format!("#{:02x}{:02x}{:02x}", rgb.r, rgb.g, rgb.b)),
+    }
+}
+
+/// A row's size as the word the golden's line-size section uses (`None` for a normal row, which the
+/// section leaves out as the attribute section leaves out a plain run).
+fn size_word(size: LineSize) -> Option<&'static str> {
+    match size {
+        LineSize::Single => None,
+        LineSize::DoubleWidth => Some("double-width"),
+        LineSize::DoubleHeightTop => Some("double-height top"),
+        LineSize::DoubleHeightBottom => Some("double-height bottom"),
+        // A size added to the engine later shows up as such: the diff says so.
+        _ => Some("other"),
     }
 }
 
@@ -120,6 +133,17 @@ pub fn render(term: &Terminal, meta: &Meta) -> String {
     for row in 0..rows {
         let text = term.row_text(Line(row as i32), true);
         let _ = writeln!(out, "{:02}|{text}", row + 1);
+    }
+    // What DECDWL and DECDHL did, row by row: the text above is the cells, and a doubled row is
+    // drawn at twice the width, which only the row's size says. Left out when no row has one.
+    let sizes: Vec<String> = (0..rows)
+        .filter_map(|row| {
+            size_word(term.line_size(Line(row as i32))).map(|word| format!("{:02}| {word}\n", row + 1))
+        })
+        .collect();
+    if !sizes.is_empty() {
+        out.push_str("--- line sizes (rows that are not normal)\n");
+        sizes.iter().for_each(|line| out.push_str(line));
     }
     let mut look_lines = String::new();
     for row in 0..rows {
@@ -191,6 +215,15 @@ mod tests {
         let text = shown(b"\x1b[3 q");
         assert!(text.contains("cursor: row 1 col 1 style underline blinking\n"), "{text}");
         assert!(shown(b"").contains("cursor: row 1 col 1\n"));
+    }
+
+    #[test]
+    fn a_row_that_is_not_normal_size_is_named_and_a_screen_of_normal_rows_has_no_section() {
+        let text = shown(b"\x1b#6wide\r\n\x1b#3top\r\n\x1b#4bot");
+        let want = "--- line sizes (rows that are not normal)\n01| double-width\n02| double-height top\n\
+                    03| double-height bottom\n";
+        assert!(text.contains(want), "{text}");
+        assert!(!shown(b"plain").contains("line sizes"));
     }
 
     #[test]
