@@ -141,7 +141,7 @@ impl Gaps {
 pub struct Seeds {
     /// The number of the last command block (OSC 133) the replica has issued; the repaint's own
     /// `OSC 133;A` marks count up from it to the blocks the screen holds. This is the "oldest
-    /// retained block, minus one" the design's `seed_block_counter` takes.
+    /// retained block, minus one".
     pub block: u32,
     /// How many links without an id of their own have been given one.
     pub link_seq: u64,
@@ -153,7 +153,9 @@ pub struct Seeds {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Repainted {
+    /// The counters the replica must be given before it parses the bytes.
     pub seeds: Seeds,
+    /// What the bytes cannot rebuild.
     pub gaps: Gaps,
     /// Lines of history written.
     pub history_lines: usize,

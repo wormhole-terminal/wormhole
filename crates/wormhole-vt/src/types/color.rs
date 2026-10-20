@@ -21,8 +21,11 @@ pub enum ColorScheme {
 /// A true color.
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Default, Hash)]
 pub struct Rgb {
+    /// Red.
     pub r: u8,
+    /// Green.
     pub g: u8,
+    /// Blue.
     pub b: u8,
 }
 
@@ -31,21 +34,37 @@ pub struct Rgb {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 #[repr(u16)]
 pub enum NamedColor {
+    /// ANSI color 0.
     Black = 0,
+    /// ANSI color 1.
     Red = 1,
+    /// ANSI color 2.
     Green = 2,
+    /// ANSI color 3.
     Yellow = 3,
+    /// ANSI color 4.
     Blue = 4,
+    /// ANSI color 5.
     Magenta = 5,
+    /// ANSI color 6.
     Cyan = 6,
+    /// ANSI color 7.
     White = 7,
+    /// ANSI color 8, the bright black.
     BrightBlack = 8,
+    /// ANSI color 9, the bright red.
     BrightRed = 9,
+    /// ANSI color 10, the bright green.
     BrightGreen = 10,
+    /// ANSI color 11, the bright yellow.
     BrightYellow = 11,
+    /// ANSI color 12, the bright blue.
     BrightBlue = 12,
+    /// ANSI color 13, the bright magenta.
     BrightMagenta = 13,
+    /// ANSI color 14, the bright cyan.
     BrightCyan = 14,
+    /// ANSI color 15, the bright white.
     BrightWhite = 15,
     /// The default text color (SGR 39; OSC 10 sets it).
     Foreground = 256,

@@ -12,6 +12,8 @@ pub struct Hyperlink {
     /// What the program called it (cells with the same id belong together); a generated one when
     /// it gave none.
     pub id: LinkId,
+    /// The target, as the program sent it (control characters are refused). Untrusted: show it
+    /// before opening it.
     pub uri: Arc<str>,
 }
 

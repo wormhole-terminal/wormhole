@@ -111,11 +111,14 @@ impl SubAssign<usize> for Column {
 /// A cell's place in the grid. Points order the way text reads: by line, then by column.
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
 pub struct Point {
+    /// The row: 0 is the top of the live screen, history is negative.
     pub line: Line,
+    /// The column, counted from 0.
     pub column: Column,
 }
 
 impl Point {
+    /// The point at `line` and `column`.
     #[inline]
     pub const fn new(line: Line, column: Column) -> Point {
         Point { line, column }
@@ -138,7 +141,9 @@ impl Ord for Point {
 /// after that cell, and one that ends on its left half stops before it.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Side {
+    /// The left half.
     Left,
+    /// The right half.
     Right,
 }
 

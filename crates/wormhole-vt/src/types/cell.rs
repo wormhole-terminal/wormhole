@@ -8,20 +8,29 @@ bitflags! {
     /// A cell's attributes (SGR) and how it sits in a row.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct Flags: u32 {
+        /// SGR 1.
         const BOLD             = 1;
+        /// SGR 2.
         const DIM              = 1 << 1;
+        /// SGR 3.
         const ITALIC           = 1 << 2;
         /// The underline styles of SGR 4 and 4:1–4:5 are one flag each, and at most one is set.
         const UNDERLINE        = 1 << 3;
+        /// SGR 21 and 4:2.
         const DOUBLE_UNDERLINE = 1 << 4;
+        /// SGR 4:3.
         const UNDERCURL        = 1 << 5;
+        /// SGR 4:4.
         const DOTTED_UNDERLINE = 1 << 6;
+        /// SGR 4:5.
         const DASHED_UNDERLINE = 1 << 7;
         /// SGR 5 and 6.
         const BLINK            = 1 << 8;
+        /// SGR 7: swap the foreground and the background (the renderer does it).
         const INVERSE          = 1 << 9;
         /// SGR 8: drawn in the background's color.
         const HIDDEN           = 1 << 10;
+        /// SGR 9.
         const STRIKEOUT        = 1 << 11;
         /// SGR 53.
         const OVERLINE         = 1 << 12;
@@ -55,9 +64,13 @@ bitflags! {
 /// [`RowExtras`]: super::RowExtras
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cell {
+    /// The character; a blank cell holds a space.
     pub c: char,
+    /// The foreground, as the program asked for it.
     pub fg: Color,
+    /// The background, as the program asked for it.
     pub bg: Color,
+    /// The attributes and the layout flags.
     pub flags: Flags,
 }
 

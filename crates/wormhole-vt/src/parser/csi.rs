@@ -148,6 +148,7 @@ impl Csi {
         self.count as usize - self.sub.count_ones() as usize
     }
 
+    /// True when there are no parameters at all; see [`len`](Csi::len).
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }

@@ -111,6 +111,7 @@ impl Default for Parser {
 }
 
 impl Parser {
+    /// A parser in the ground state, with nothing pending.
     pub const fn new() -> Parser {
         Parser {
             state: State::Ground,
