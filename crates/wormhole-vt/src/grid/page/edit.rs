@@ -159,8 +159,7 @@ impl Page {
                 let cell = self.cells[at];
                 let target = to + (at - from.start);
                 if cell.has_grapheme() {
-                    let marks = self.graphemes.take(at as u32);
-                    self.graphemes.set(target as u32, marks);
+                    self.graphemes.relocate(at as u32, target as u32);
                 }
             }
             if CellFlags::in_word(any).contains(CellFlags::HYPERLINK) {

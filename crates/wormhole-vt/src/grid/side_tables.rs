@@ -1,8 +1,9 @@
-//! The page's side tables: what a few cells have beyond their eight bytes.
+//! The page's link table, and the hash map shape it shares with the marks table (`graphemes`):
+//! what a few cells have beyond their eight bytes.
 //!
 //! Both are keyed by the cell's offset in the page's cell buffer (`slot * columns + column`), which
 //! is stable while rows are moved by relinking, and both are rare enough that a hash map is the
-//! right shape: a page of plain text has none, a page of emoji has many graphemes and no links.
+//! right shape: a page of plain text has none, a page of emoji has many marks and no links.
 
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
@@ -30,125 +31,7 @@ impl Hasher for OffsetHasher {
     }
 }
 
-type ByOffset<V> = HashMap<u32, V, BuildHasherDefault<OffsetHasher>>;
-
-/// The most characters a cell keeps after its first. A cluster of a base, a joiner sequence and
-/// a few modifiers is under ten; a program that stacks thousands of combining marks on one cell
-/// (zalgo) must not make a page's memory unbounded, so the rest are dropped.
-pub const MAX_MARKS: usize = 32;
-
-/// The characters after the first of the cells that have a cluster, in print order.
-///
-/// The buffers of the cells that lost their marks are kept and handed to the next cell that gets
-/// some, so a stream of accented letters or emoji sequences allocates nothing once the page has
-/// seen as many marked cells at a time as it will.
-#[derive(Clone, Debug, Default)]
-pub(super) struct Graphemes {
-    marks: ByOffset<Vec<char>>,
-    spare: Vec<Vec<char>>,
-}
-
-/// How many spare buffers are kept.
-const SPARE_MAX: usize = 4096;
-
-impl Graphemes {
-    #[inline]
-    pub(super) fn get(&self, offset: u32) -> &[char] {
-        self.marks.get(&offset).map_or(&[], Vec::as_slice)
-    }
-
-    fn recycle(&mut self, mut marks: Vec<char>) {
-        if self.spare.len() < SPARE_MAX && marks.capacity() != 0 {
-            marks.clear();
-            self.spare.push(marks);
-        }
-    }
-
-    /// Add `c` to the cell's marks; false when the cell is full.
-    pub(super) fn push(&mut self, offset: u32, c: char) -> bool {
-        let Graphemes { marks, spare } = self;
-        // A ZWJ family has six marks: room for eight at once, instead of growing 4, then 8.
-        let marks =
-            marks.entry(offset).or_insert_with(|| spare.pop().unwrap_or_else(|| Vec::with_capacity(8)));
-        if marks.len() >= MAX_MARKS {
-            return false;
-        }
-        marks.push(c);
-        true
-    }
-
-    /// Give the cell exactly these marks (at most [`MAX_MARKS`] of them are kept).
-    pub(super) fn set_from(&mut self, offset: u32, marks: &[char]) {
-        let marks = &marks[..marks.len().min(MAX_MARKS)];
-        if marks.is_empty() {
-            self.remove(offset);
-            return;
-        }
-        let mut buffer = match self.marks.remove(&offset) {
-            Some(old) => old,
-            None => self.spare.pop().unwrap_or_default(),
-        };
-        buffer.clear();
-        buffer.extend_from_slice(marks);
-        self.marks.insert(offset, buffer);
-    }
-
-    /// Give the cell `to` a copy of the marks of the cell `from`.
-    pub(super) fn copy(&mut self, from: u32, to: u32) {
-        let Graphemes { marks, spare } = self;
-        let Some(source) = marks.get(&from) else { return };
-        let mut buffer = spare.pop().unwrap_or_default();
-        buffer.extend_from_slice(source);
-        if let Some(mut old) = marks.insert(to, buffer)
-            && spare.len() < SPARE_MAX
-            && old.capacity() != 0
-        {
-            old.clear();
-            spare.push(old);
-        }
-    }
-
-    /// Give the cell the marks in `marks`, which it takes over.
-    pub(super) fn set(&mut self, offset: u32, marks: Vec<char>) {
-        if marks.is_empty() {
-            self.remove(offset);
-        } else if let Some(old) = self.marks.insert(offset, marks) {
-            self.recycle(old);
-        }
-    }
-
-    pub(super) fn take(&mut self, offset: u32) -> Vec<char> {
-        self.marks.remove(&offset).unwrap_or_default()
-    }
-
-    pub(super) fn remove(&mut self, offset: u32) {
-        if let Some(old) = self.marks.remove(&offset) {
-            self.recycle(old);
-        }
-    }
-
-    #[cfg(any(test, feature = "internals"))]
-    pub(super) fn len(&self) -> usize {
-        self.marks.len()
-    }
-
-    pub(super) fn clear(&mut self) {
-        let Graphemes { marks, spare } = self;
-        for (_, mut old) in marks.drain() {
-            if spare.len() < SPARE_MAX && old.capacity() != 0 {
-                old.clear();
-                spare.push(old);
-            }
-        }
-    }
-
-    pub(super) fn bytes(&self) -> usize {
-        // Per entry: the key, the vector header and its (small) buffer, plus the map's control byte.
-        self.marks.capacity() * (size_of::<u32>() + size_of::<Vec<char>>() + 1)
-            + self.marks.values().map(|marks| marks.capacity() * size_of::<char>()).sum::<usize>()
-            + self.spare.iter().map(|marks| marks.capacity() * size_of::<char>()).sum::<usize>()
-    }
-}
+pub(super) type ByOffset<V> = HashMap<u32, V, BuildHasherDefault<OffsetHasher>>;
 
 #[derive(Clone, Debug)]
 struct LinkEntry {
@@ -419,26 +302,11 @@ fn same_link(a: &Hyperlink, b: &Hyperlink) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Graphemes, LINK_TEXT_MAX, Links, MAX_MARKS};
+    use super::{LINK_TEXT_MAX, Links};
     use crate::types::Hyperlink;
 
     fn link(id: &str, uri: &str) -> Hyperlink {
         Hyperlink { id: id.into(), uri: uri.into() }
-    }
-
-    #[test]
-    fn marks_pile_up_in_order_and_stop_at_the_cap() {
-        let mut graphemes = Graphemes::default();
-        assert_eq!(graphemes.get(7), &[] as &[char]);
-        assert!(graphemes.push(7, '\u{301}'));
-        assert!(graphemes.push(7, '\u{200D}'));
-        assert_eq!(graphemes.get(7), &['\u{301}', '\u{200D}']);
-        for _ in 2..MAX_MARKS {
-            assert!(graphemes.push(7, 'x'));
-        }
-        assert!(!graphemes.push(7, 'y'), "a cell keeps {MAX_MARKS} marks, no more");
-        graphemes.remove(7);
-        assert_eq!(graphemes.len(), 0);
     }
 
     #[test]

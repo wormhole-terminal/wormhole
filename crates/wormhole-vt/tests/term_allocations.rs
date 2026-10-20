@@ -170,6 +170,49 @@ fn a_hyperlink_allocates_what_it_owns_and_no_more() {
     assert!(count <= 2 * links, "{count} allocations for {links} links");
 }
 
+/// A deterministic source of numbers for the streams below: the same seed gives the same bytes.
+/// (`tests/common` has the corpora; these tests only need a few shapes, kept beside the assertions.)
+struct Lcg(u64);
+
+impl Lcg {
+    fn below(&mut self, n: u64) -> u64 {
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (self.0 >> 33) % n
+    }
+}
+
+/// Text full of wide characters and emoji clusters under mode 2027: the zero-width characters of
+/// a cell live in tables of the page that are reused with it.
+#[test]
+fn emoji_clusters_allocate_nothing_in_the_steady_state() {
+    let pieces = [
+        "日本語",
+        "テキスト",
+        "漢字",
+        "한국어",
+        "😀",
+        "🚀",
+        "👨\u{200d}👩\u{200d}👧",
+        "🇯🇵",
+        "👍🏽",
+        "e\u{301}",
+        "a\u{308}\u{323}",
+        "❤\u{fe0f}",
+        "1\u{fe0f}\u{20e3}",
+        "word ",
+        "text ",
+    ];
+    let mut rng = Lcg(7);
+    let mut text = String::from("\x1b[?2027h");
+    for _ in 0..300 {
+        for _ in 0..(5 + rng.below(25)) {
+            text.push_str(pieces[rng.below(pieces.len() as u64) as usize]);
+        }
+        text.push_str("\r\n");
+    }
+    assert_eq!(steady("emoji clusters", text.as_bytes(), 20), 0);
+}
+
 /// Asking what changed is part of every frame: once the `Damage` has seen the screen's size it
 /// allocates nothing, whether the program scrolled, moved the cursor or changed the colours.
 #[test]

@@ -158,6 +158,7 @@ fn check_page(page: &Page) -> Result<(), String> {
             }
         }
     }
+    page.graphemes.verify()?;
     if marked != page.graphemes.len() {
         return Err(format!("{} cells with marks, {} entries", marked, page.graphemes.len()));
     }

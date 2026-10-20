@@ -14,6 +14,7 @@
 //! width alone, which is the one place this terminal follows the Unicode standard and wcwidth instead).
 //! A cluster that no longer fits at the right margin moves to the next line whole.
 
+use crate::grid::MAX_MARKS;
 use crate::types::{Column, Line, Point};
 use crate::unicode::{self, GraphemeState};
 
@@ -277,7 +278,12 @@ impl Terminal {
         let (y, head) = (self.cursor.y, self.cluster.head);
         let at = Point::new(Line(y as i32), Column(head));
         let Some(base) = self.grid.cell(at).and_then(|cell| cell.character()) else { return };
-        let marks = self.grid.marks_at(at).to_vec();
+        // The marks are copied out because erasing the cell drops them; they fit a stack buffer.
+        let mut kept = ['\0'; MAX_MARKS];
+        let marks = self.grid.marks_at(at);
+        let count = marks.len().min(MAX_MARKS);
+        kept[..count].copy_from_slice(&marks[..count]);
+        let marks = &kept[..count];
         let bg = self.erase_color();
         self.grid.erase(y, head..head + 1, bg, false);
         if head == self.cols - 1 {
@@ -286,7 +292,7 @@ impl Terminal {
         self.wrap();
         let (x, y) = (self.cursor.x, self.cursor.y);
         let right = self.right_limit();
-        self.grid.write_cluster(y, x, base, &marks, 2, &self.pen);
+        self.grid.write_cluster(y, x, base, marks, 2, &self.pen);
         self.cluster.head = x;
         self.cluster.width = 2;
         self.advance_past(x + 2, right);

@@ -30,8 +30,9 @@ use std::ops::Range;
 use crate::types::Hyperlink;
 
 use super::cell::{Cell, CellFlags, Spare, StyleRun, run_of};
+use super::graphemes::Graphemes;
 use super::row::{DIRTY, Pen, Row, RowMark, WRAPPED};
-use super::side_tables::{Graphemes, Links};
+use super::side_tables::Links;
 use super::style::Style;
 use super::style_table::StyleTable;
 

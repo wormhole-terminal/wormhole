@@ -56,6 +56,7 @@ mod cell;
 mod check;
 mod copy;
 mod edit;
+mod graphemes;
 mod history;
 mod images;
 mod links;
@@ -86,6 +87,7 @@ pub use archive::{DropReason, DroppedHistory, HistoryLine};
 pub use cell::flag_names;
 pub use cell::{BlockPart, Cell, Spare, StyleId};
 pub use copy::ViewRow;
+pub use graphemes::MAX_MARKS;
 #[cfg(test)]
 pub use images::MAX_PLACEMENTS;
 pub(crate) use images::NewPlacement;
@@ -94,8 +96,6 @@ pub use pins::Pin;
 pub use row::{Pen, Region, RowMark};
 pub use rowview::RowView;
 pub use search::{CopiedLine, TextCopy};
-#[cfg(test)]
-pub use side_tables::MAX_MARKS;
 pub use style::Style;
 pub use text::TextShape;
 
