@@ -28,3 +28,13 @@ pub(super) fn with(ctx: &mut Ctx, command: &str, arg: &str) -> Result<String> {
     })?;
     Ok(String::new())
 }
+
+/// `studio-frames <n> [scroll]`: draw the Studio window n times and append the timings to
+/// `<dir>/frames.txt`. With `scroll`, each draw follows a wheel tick over the gallery.
+pub(super) fn frames(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let mut words = arg.split_whitespace();
+    let frames = words.next().and_then(|n| n.parse::<usize>().ok()).unwrap_or(40).max(1);
+    let scrolling = words.next() == Some("scroll");
+    ctx.workspace.devctl_studio_frames(frames, scrolling, ctx.dir.join("frames.txt"), ctx.cx)?;
+    Ok(String::new())
+}

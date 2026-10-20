@@ -205,6 +205,9 @@
 //!   studio-filter <all|changed|low> [text]   what the token list shows, and its filter text
 //!   studio-area <all|sidebar|panel|chrome|settings|ambient>   the gallery's filter, and the token
 //!                   list's with it (only what that part of the app draws with)
+//!   studio-frames <n> [scroll]   draw the Studio window n times and append the timings to
+//!                   <dir>/frames.txt (like `frames`); with `scroll`, each draw follows a wheel tick over
+//!                   the gallery, 40 px further down; run it once the window has drawn
 //!   studio-resize <w> <h>   the Studio window's size (the window minimum still applies)
 //!   studio-menu [save|copy|switch|json|project]   open the Save theme menu, or pick Save
 //!                   theme, Save Copy, Save Copy and Switch, Copy JSON or Use in this project from it
@@ -461,6 +464,7 @@ fn command(name: &str) -> Option<Command> {
         "studio-area" => |ctx, arg| studio::with(ctx, "studio-area", arg),
         "studio-resize" => |ctx, arg| studio::with(ctx, "studio-resize", arg),
         "studio-menu" => |ctx, arg| studio::with(ctx, "studio-menu", arg),
+        "studio-frames" => studio::frames,
         "menubar" => ambient::menubar,
         "dock" => ambient::dock,
         "menubar-icons" => ambient::menubar_icons,
