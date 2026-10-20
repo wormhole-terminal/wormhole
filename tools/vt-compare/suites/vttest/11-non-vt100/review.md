@@ -79,11 +79,11 @@ in the colour menu, so the same test comes up more than once.
 | 149 to 150 | reverse attributes in a rectangle (DECRARA): rectangle, stream | pass | as DECCARA |
 | 151 to 154 | selective erase of a rectangle (DECSERA): border, then inside | pass | protected cells stay, unprotected are erased |
 | 155 | DECCARA in a rectangle with the margins on | pass | the rectangle is inside the margins |
-| 156 | DECCARA, stream extent, margins on | fail: stream extent does not wrap at the margins | vttest: "combined with wrapping at the margins"; the engine wraps at the screen's edges (the first stripe runs to column 80 though the right margin is 40). Unsure what xterm does with the margins in a stream; the VT510 manual's wording is not at hand |
+| 156 | DECCARA, stream extent, margins on | pass | the stream runs from the first position to the second over whole rows, to the screen's edges (the first stripe to column 80 though the right margin is 40): the VT510 manual says DECCARA is "not affected by page margins", and xterm's cell loop uses the screen's first and last column for the rows between (only its repaint follows the margins). vttest's "wrapping at the margins" is not what either does; the engine keeps the manual's |
 | 157 to 160 | DECCRA with the margins on | pass |  |
 | 161 to 163 | DECERA and DECFRA with the margins on | pass |  |
 | 164 | DECRARA with the margins on | pass |  |
-| 165 | DECRARA, stream extent, margins on | fail: stream extent does not wrap at the margins | as 156 |
+| 165 | DECRARA, stream extent, margins on | pass | as 156 |
 | 166 to 169 | DECSERA with the margins on | pass |  |
 | 170 to 172 | ANSI and DEC mode reports (the VT420 menu) | pass | as 052 to 054 |
 | 173 to 178 | DECRQSS: DECELF, DECLFKC, DECSACE, DECSMKR, DECSLRM, DECSNLS | pass | valid, with the current values |

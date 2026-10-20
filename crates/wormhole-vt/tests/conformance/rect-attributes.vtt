@@ -34,6 +34,33 @@ cell 2,1 attrs=inverse
 cell 2,3 attrs=inverse
 cell 2,4 attrs=none
 cell 3,1 attrs=none
+test DECCARA in stream extent runs to the screen's edges, not the margins
+spec VT510 DECCARA: "not affected by page margins"; DECSACE 0: the stream of character positions from the first position to the second, so the rows between are whole rows; vttest 11/156 expects the stream to wrap at the margins, which the manual does not say
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 8 4
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyzABCDEF\e[?69h\e[3;5s\e[2;3r\e[1;3;3;6;7$r
+cell 1,2 attrs=none
+cell 1,3 attrs=inverse
+cell 1,8 attrs=inverse
+cell 2,1 attrs=inverse
+cell 2,8 attrs=inverse
+cell 3,6 attrs=inverse
+cell 3,7 attrs=none
+cell 4,1 attrs=none
+
+test DECRARA in stream extent runs to the screen's edges, not the margins
+spec VT510 DECRARA, as DECCARA: not affected by page margins; DECSACE 0: the stream from the first position to the second
+known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
+size 8 4
+feed abcdefgh\r\nijklmnop\r\nqrstuvwx\r\nyzABCDEF\e[?69h\e[3;5s\e[2;3r\e[1;3;3;6;7$t
+cell 1,2 attrs=none
+cell 1,3 attrs=inverse
+cell 1,8 attrs=inverse
+cell 2,1 attrs=inverse
+cell 2,8 attrs=inverse
+cell 3,6 attrs=inverse
+cell 3,7 attrs=none
+
 test DECSACE 1 is the stream too
 spec VT510 DECSACE: Ps 1 is the same as 0
 known-fail: alacritty – no DECCARA, DECRARA or DECSACE: they are ignored
