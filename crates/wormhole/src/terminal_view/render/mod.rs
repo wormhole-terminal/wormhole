@@ -45,6 +45,8 @@ mod guards;
 
 use self::frame::FrameCache;
 use self::overlays::bell_edge;
+// Only devctl asks where the ship docks from outside the renderer.
+#[cfg(feature = "devctl")]
 pub(super) use self::prepare::dock_landing;
 pub(super) use self::scrollbar::ScrollbarState;
 use self::shaping::{ShapeKey, WordsKey};
