@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use crate::types::{Color, Line};
 
 fn run_everything(seed: u64, steps: usize) {
-    use crate::grid::{Content, ViewRow};
+    use crate::grid::{BlockPart, ViewRow};
     use crate::types::{Column, Hyperlink, Point, Scroll};
     let mut rng = Rng::new(seed);
     let (mut cols, mut rows) = (rng.range(2, 16), rng.range(1, 9));
@@ -29,7 +29,7 @@ fn run_everything(seed: u64, steps: usize) {
                 pen.link = Some(links[rng.below(2)].clone());
             }
             if rng.chance(25) {
-                pen.content = [Content::Prompt, Content::Command, Content::Output][rng.below(3)];
+                pen.content = [BlockPart::Prompt, BlockPart::Command, BlockPart::Output][rng.below(3)];
                 pen.block = 1 + rng.below(3) as u32;
             }
             if rng.chance(10) {

@@ -24,7 +24,7 @@ fn every_operation_is_an_event_and_none_without_the_host() {
     let mut rig = Rig::new(20, 5);
     rig.feed("\x1b[2t\x1b[3;10;20t\x1b[8;10;40t\x1b[9;1t\x1b[10;1t\x1b[40t");
     assert!(ops(&mut rig).is_empty());
-    assert_eq!((rig.term.columns(), rig.term.screen_lines()), (20, 5));
+    assert_eq!((rig.term.cols(), rig.term.rows()), (20, 5));
 
     let mut rig = allowed();
     rig.feed("\x1b[2t\x1b[1t\x1b[5t\x1b[6t\x1b[3;10;20t\x1b[3;7t\x1b[9;1t\x1b[9;0t\x1b[10;2t\x1b[7t");
@@ -50,21 +50,17 @@ fn a_resize_in_cells_changes_the_engine_at_once_and_pixels_become_cells() {
     let mut rig = allowed();
     rig.term.set_cell_size(10, 20);
     rig.feed("\x1b[8;7;30t");
-    assert_eq!((rig.term.columns(), rig.term.screen_lines()), (30, 7));
+    assert_eq!((rig.term.cols(), rig.term.rows()), (30, 7));
     assert_eq!(ops(&mut rig), [WindowOp::ResizeCells { rows: Extent::Size(7), cols: Extent::Size(30) }]);
     // 4 takes height then width in pixels; a left-out one is left alone, a 0 is the most.
     rig.feed("\x1b[4;100;150t");
-    assert_eq!((rig.term.columns(), rig.term.screen_lines()), (15, 5));
+    assert_eq!((rig.term.cols(), rig.term.rows()), (15, 5));
     rig.feed("\x1b[4;;300t");
-    assert_eq!((rig.term.columns(), rig.term.screen_lines()), (30, 5));
+    assert_eq!((rig.term.cols(), rig.term.rows()), (30, 5));
     let largest = ops(&mut rig);
     assert_eq!(largest.len(), 2);
     rig.feed("\x1b[8;0;0t");
-    assert_eq!(
-        (rig.term.columns(), rig.term.screen_lines()),
-        (30, 5),
-        "the host decides how large is the most"
-    );
+    assert_eq!((rig.term.cols(), rig.term.rows()), (30, 5), "the host decides how large is the most");
     assert_eq!(ops(&mut rig), [WindowOp::ResizeCells { rows: Extent::Largest, cols: Extent::Largest }]);
 }
 
@@ -127,12 +123,12 @@ fn a_size_past_the_screen_is_cut_to_it() {
         iconified: false,
     });
     rig.feed("\x1b[8;9999;9999t");
-    assert_eq!((rig.term.columns(), rig.term.screen_lines()), (100, 30));
+    assert_eq!((rig.term.cols(), rig.term.rows()), (100, 30));
 }
 
 #[test]
 fn hostile_numbers_do_not_panic() {
     let mut rig = allowed();
     rig.feed("\x1b[8;65535;65535t\x1b[4;65535;65535t\x1b[65535t\x1b[9;99t\x1b[10;99t\x1b[3;65535;65535t");
-    assert!(rig.term.columns() <= 500 && rig.term.screen_lines() <= 500);
+    assert!(rig.term.cols() <= 500 && rig.term.rows() <= 500);
 }

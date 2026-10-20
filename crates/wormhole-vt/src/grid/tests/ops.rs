@@ -2,7 +2,7 @@
 //! character erased, regions of one cell.
 
 use super::{BG, at, bold, colored, plain, screen};
-use crate::grid::{Content, Grid, Pen, Style};
+use crate::grid::{BlockPart, Grid, Pen, Style};
 use crate::types::{Color, Flags, Hyperlink, Line, NamedColor};
 
 fn grid(cols: usize, rows: usize) -> Grid {
@@ -475,21 +475,21 @@ fn a_link_over_a_wide_character_covers_both_cells() {
 fn content_marks_are_read_back_per_row() {
     let mut g = grid(20, 3);
     let pen = |content, block| Pen { content, block, ..plain() };
-    g.write_ascii(0, 0, b"$ ", &pen(Content::Prompt, 7));
-    g.write_ascii(0, 2, b"ls", &pen(Content::Command, 7));
-    g.write_ascii(1, 0, b"file", &pen(Content::Output, 7));
+    g.write_ascii(0, 0, b"$ ", &pen(BlockPart::Prompt, 7));
+    g.write_ascii(0, 2, b"ls", &pen(BlockPart::Command, 7));
+    g.write_ascii(1, 0, b"file", &pen(BlockPart::Output, 7));
     g.write_ascii(2, 0, b"plain", &plain());
     let mark = g.row_mark(Line(0)).map(|m| (m.block, m.prompt, m.command, m.output));
     assert_eq!(mark, Some((7, true, true, false)));
     let mark = g.row_mark(Line(1)).map(|m| (m.block, m.prompt, m.command, m.output));
     assert_eq!(mark, Some((7, false, false, true)));
     assert_eq!(g.row_mark(Line(2)), None);
-    assert_eq!(g.cell(at(0, 3)).map(|c| c.content()), Some(Content::Command));
+    assert_eq!(g.cell(at(0, 3)).map(|c| c.content()), Some(BlockPart::Command));
     // Erasing the row forgets the block.
     g.erase(1, 0..20, BG, false);
     assert_eq!(g.row_mark(Line(1)), None);
     // A later block on the same row is the row's.
-    g.write_ascii(0, 10, b"next", &pen(Content::Prompt, 8));
+    g.write_ascii(0, 10, b"next", &pen(BlockPart::Prompt, 8));
     assert_eq!(g.row_mark(Line(0)).map(|m| m.block), Some(8));
     ok(&g);
 }

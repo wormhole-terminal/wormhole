@@ -66,7 +66,14 @@ struct Record {
     map: Map,
 }
 
-/// Rows of the grid copied as text; see the module docs.
+/// A window of the screen and history copied as text, for a search that runs without the
+/// terminal's lock: [`Terminal::copy_text`](crate::Terminal::copy_text) fills it, the host
+/// searches [`lines`](Self::lines) and turns a match back into cells with
+/// [`CopiedLine::cells`].
+///
+/// A line here is the program's line, not the screen's: rows that wrap into each other are one
+/// line, and the blanks at its end are cut. Keep one `TextCopy` and pass it to every call: it
+/// keeps its buffers, so walking the history in windows allocates once.
 #[derive(Clone, Debug, Default)]
 pub struct TextCopy {
     cols: usize,
@@ -76,7 +83,8 @@ pub struct TextCopy {
     table: Vec<CharAt>,
 }
 
-/// One line of a [`TextCopy`].
+/// One line of a [`TextCopy`]: its text, and the way back from a byte of the text to the cells it
+/// was copied from.
 #[derive(Clone, Copy, Debug)]
 pub struct CopiedLine<'a> {
     copy: &'a TextCopy,

@@ -129,7 +129,7 @@ impl Rig {
     }
 
     pub fn size(&self) -> (usize, usize) {
-        (self.term.columns(), self.term.screen_lines())
+        (self.term.cols(), self.term.rows())
     }
 }
 

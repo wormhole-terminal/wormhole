@@ -46,7 +46,7 @@ fn c_1_leaves_the_cursor_and_scrolls_nothing() {
     r.feed("\x1b[4;3H");
     r.feed(&apc("a=T,f=24,s=8,v=64,i=1,C=1,q=2", &rgb(8, 64)));
     assert_eq!(r.cursor(), (3, 2), "where it was");
-    assert_eq!(r.term.history_size(), 0, "nothing scrolled");
+    assert_eq!(r.term.history_len(), 0, "nothing scrolled");
     assert_eq!(spots(&r), [(1, 3, 2, 1, 2)], "cut at the bottom of the screen");
     let p = &placed(&r)[0];
     assert_eq!(p.source.height, 32, "and the picture with it: two of its four rows");
@@ -60,7 +60,7 @@ fn the_screen_scrolls_to_make_room_for_the_picture() {
     assert_eq!(r.cursor(), (5, 2));
     r.feed(&apc("a=T,f=24,s=8,v=48,i=1,q=2", &rgb(8, 48)));
     // Three rows from the bottom row: two lines scroll away.
-    assert_eq!(r.term.history_size(), 2);
+    assert_eq!(r.term.history_len(), 2);
     assert_eq!(spots(&r), [(1, 3, 2, 1, 3)]);
     assert_eq!(r.cursor(), (5, 3));
     assert_eq!(r.row(2), "five");
@@ -72,7 +72,7 @@ fn a_picture_taller_than_the_screen_scrolls_its_top_into_the_history() {
     r.feed(&apc("a=T,f=24,s=8,v=128,i=1,q=2", &rgb(8, 128)));
     assert_eq!(spots(&r), [(1, -3, 0, 1, 8)], "eight rows, the first three above the screen");
     assert_eq!(r.cursor(), (4, 1));
-    assert_eq!(r.term.history_size(), 3);
+    assert_eq!(r.term.history_len(), 3);
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn a_scroll_region_without_history_cuts_the_picture_to_the_region() {
     r.feed(&apc("a=T,f=24,s=8,v=160,i=1,q=2", &rgb(8, 160)));
     let [p] = placed(&r)[..] else { panic!("{:?}", spots(&r)) };
     assert_eq!((p.line.0, p.rows), (2, 5), "the five rows of the region");
-    assert_eq!(r.term.history_size(), 0);
+    assert_eq!(r.term.history_len(), 0);
     assert_eq!(r.cursor(), (6, 1));
 }
 

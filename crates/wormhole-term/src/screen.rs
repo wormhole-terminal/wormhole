@@ -16,11 +16,11 @@ use wormhole_vt::Rgb;
 use wormhole_vt::image::ImagePlacement;
 use wormhole_vt::image::VirtualPlacement;
 use wormhole_vt::window::WindowGeometry;
+use wormhole_vt::{BlockPart, Damage, RowMark as GridMark, TextShape};
 use wormhole_vt::{
     COLOR_COUNT, Cell, Colors, CursorShape, Line, Point, RowExtras, Scroll, SelectionRange, SelectionType,
     Side, TermMode,
 };
-use wormhole_vt::{Content, RowMark as GridMark, TextShape};
 use wormhole_vt::{Policy, Terminal};
 
 use super::GridSize;
@@ -100,22 +100,22 @@ impl Screen {
     }
 
     pub(crate) fn columns(&self) -> usize {
-        self.term.columns()
+        self.term.cols()
     }
 
     /// Rows of the live screen.
     pub(crate) fn screen_lines(&self) -> usize {
-        self.term.screen_lines()
+        self.term.rows()
     }
 
     /// Lines of history above the live screen.
     pub(crate) fn history_size(&self) -> usize {
-        self.term.history_size()
+        self.term.history_len()
     }
 
     /// How many lines the view is scrolled up into the history.
     pub(crate) fn display_offset(&self) -> usize {
-        self.term.display_offset()
+        self.term.scroll_offset()
     }
 
     pub(crate) fn mode(&self) -> TermMode {
@@ -170,11 +170,11 @@ impl Screen {
         // A block number past u32 is none of the engine's.
         let Ok(block) = u32::try_from(id) else { return String::new() };
         let content = match part {
-            Part::Prompt => Content::Prompt,
-            Part::Command => Content::Command,
-            Part::Output => Content::Output,
+            Part::Prompt => BlockPart::Prompt,
+            Part::Command => BlockPart::Command,
+            Part::Output => BlockPart::Output,
         };
-        self.term.content_text(line, block, content)
+        self.term.block_text(line, block, content)
     }
 
     /// The text from `start` to `end` inclusive, wrapped lines joined, as copying it would give.
@@ -246,11 +246,11 @@ impl Screen {
 
     /// Where the cursor is on the grid, whether or not it is shown.
     pub(crate) fn grid_cursor(&self) -> Point {
-        self.term.grid_cursor()
+        self.term.cursor_point()
     }
 
     pub(crate) fn scroll_display(&mut self, scroll: Scroll) {
-        self.term.scroll_display(scroll);
+        self.term.scroll(scroll);
     }
 
     /// Erase the history (the screen stays).
@@ -263,11 +263,10 @@ impl Screen {
         self.term.resize(usize::from(size.cols), usize::from(size.rows));
     }
 
-    /// Which rows changed since the last call, and forget them: `damaged[row]` (a viewport row)
-    /// is set for each. Returns whether everything changed (a resize, a scroll of the view,
-    /// the alternate screen), in which case `damaged` says nothing.
-    pub(crate) fn take_damage(&mut self, damaged: &mut [bool]) -> bool {
-        self.term.take_damage(damaged)
+    /// What changed since the last call, and forget it: the viewport rows written to, and
+    /// whether everything did (a resize, a scroll of the view, the alternate screen).
+    pub(crate) fn take_damage(&mut self, damage: &mut Damage) {
+        self.term.take_damage(damage);
     }
 
     /// Parse `bytes` as program output (what replaying saved text and the tests need). The engine

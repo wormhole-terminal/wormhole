@@ -32,7 +32,7 @@ impl Pair {
     }
 
     fn history(&self) -> i32 {
-        self.ours.history_size() as i32
+        self.ours.history_len() as i32
     }
 }
 

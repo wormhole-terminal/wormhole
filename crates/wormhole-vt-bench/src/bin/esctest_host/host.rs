@@ -143,7 +143,7 @@ impl Host {
     }
 
     fn size(&self) -> (usize, usize) {
-        (self.term.columns(), self.term.screen_lines())
+        (self.term.cols(), self.term.rows())
     }
 
     /// Resize the window so the text area is this size, as far as the screen allows: a window

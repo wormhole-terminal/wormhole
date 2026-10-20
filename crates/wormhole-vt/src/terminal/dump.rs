@@ -19,7 +19,7 @@
 
 use std::fmt::Write as _;
 
-use crate::grid::{Content, Grid, RowView, Style};
+use crate::grid::{BlockPart, Grid, RowView, Style};
 use crate::parser::Parser;
 use crate::types::{Color, Line, NamedColor};
 
@@ -210,12 +210,12 @@ fn dump_grid(dump: &mut StateDump, name: &str, grid: &Grid) {
     }
 }
 
-fn content(c: Content) -> &'static str {
+fn content(c: BlockPart) -> &'static str {
     match c {
-        Content::None => "none",
-        Content::Prompt => "prompt",
-        Content::Command => "command",
-        Content::Output => "output",
+        BlockPart::None => "none",
+        BlockPart::Prompt => "prompt",
+        BlockPart::Command => "command",
+        BlockPart::Output => "output",
     }
 }
 

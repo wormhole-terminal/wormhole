@@ -34,7 +34,7 @@ fn measure(lines: usize, cols: usize, runs: usize) -> Row {
     let mut term = Terminal::builder().size(cols, rows).scrollback(lines).build();
     // Log-like lines (timestamps, colored levels, text) until the history holds `lines`.
     let mut seed = 1;
-    while term.history_size() < lines {
+    while term.history_len() < lines {
         let chunk = corpus::generate("log-lines", 1 << 20, seed).expect("the log corpus");
         for piece in chunk.bytes.chunks(64 * 1024) {
             term.feed(piece);
@@ -66,7 +66,7 @@ fn measure(lines: usize, cols: usize, runs: usize) -> Row {
         write: best(&mut writes),
         parse: best(&mut parses),
         bytes: out.len(),
-        history: term.history_size(),
+        history: term.history_len(),
     }
 }
 

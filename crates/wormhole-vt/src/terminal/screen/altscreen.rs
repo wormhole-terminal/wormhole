@@ -6,7 +6,7 @@
 //! alternate screen has no history, and the cursor, pen and margins are the terminal's, not the
 //! screen's, so a switch moves none of them.
 
-use crate::grid::Content;
+use crate::grid::BlockPart;
 use crate::terminal::Terminal;
 use crate::terminal::modes::{Modes, Switch};
 
@@ -40,7 +40,7 @@ impl Terminal {
         std::mem::swap(&mut self.grid, &mut self.other);
         self.modes.insert(Modes::ALT_SCREEN);
         // Whatever the program prints while it owns the screen is not part of a command block.
-        self.stashed_content = std::mem::replace(&mut self.pen.content, Content::None);
+        self.stashed_content = std::mem::replace(&mut self.pen.content, BlockPart::None);
         self.sync_keyboard_flags();
         self.grid.damage_all();
         self.cluster.open = false;
@@ -63,7 +63,7 @@ impl Terminal {
             self.modes.remove(Modes::ALT_SCREEN);
             // The pictures of a screen are its own, and this one is gone from view.
             self.forget_screen_images(1);
-            self.pen.content = std::mem::replace(&mut self.stashed_content, Content::None);
+            self.pen.content = std::mem::replace(&mut self.stashed_content, BlockPart::None);
             self.sync_keyboard_flags();
             self.grid.damage_all();
             self.cluster.open = false;

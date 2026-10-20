@@ -82,7 +82,7 @@ fn a_window_of_text_for_a_search_allocates_nothing_once_the_copy_is_warm() {
     let mut copy = TextCopy::new();
     // The history's lines are of all shapes; a first walk sizes the buffers for the biggest.
     let walk = |term: &Terminal, copy: &mut TextCopy| {
-        let mut from = Line(-(term.history_size() as i32));
+        let mut from = Line(-(term.history_len() as i32));
         loop {
             let next = term.copy_text(from, 64, copy);
             assert!(copy.lines().len() > 0);

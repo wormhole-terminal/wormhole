@@ -45,7 +45,7 @@ mod tests;
 
 use bitflags::bitflags;
 
-use crate::grid::Content;
+use crate::grid::BlockPart;
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
@@ -223,7 +223,7 @@ struct Writer<'a> {
     /// Whether the receiver shows its alternate screen, and the mark its main screen's pen was
     /// in while the other shows (the switch puts it aside).
     alt: bool,
-    stash: Content,
+    stash: BlockPart,
     history_lines: usize,
     /// Columns of the blank cells of the span being written that HT must mark.
     tabs: Vec<usize>,
@@ -252,7 +252,7 @@ impl<'a> Writer<'a> {
             seed_block: None,
             counter: 0,
             alt: false,
-            stash: Content::None,
+            stash: BlockPart::None,
             history_lines: 0,
             tabs: Vec::new(),
             touched: Vec::new(),
@@ -384,9 +384,9 @@ impl<'a> Writer<'a> {
             self.alt = alt;
             // Entering puts the pen's mark aside and leaving brings it back.
             if alt {
-                self.stash = std::mem::replace(&mut self.pen.content, Content::None);
+                self.stash = std::mem::replace(&mut self.pen.content, BlockPart::None);
             } else {
-                self.pen.content = std::mem::replace(&mut self.stash, Content::None);
+                self.pen.content = std::mem::replace(&mut self.stash, BlockPart::None);
             }
         }
     }

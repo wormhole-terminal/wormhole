@@ -2,7 +2,7 @@
 //! under a point, and the copy a search runs over.
 
 use super::{Sim, at, plain};
-use crate::grid::{Content, DEFAULT_SCROLLBACK_BYTES, Pen, TextCopy, TextShape};
+use crate::grid::{BlockPart, DEFAULT_SCROLLBACK_BYTES, Pen, TextCopy, TextShape};
 use crate::types::{Hyperlink, Line};
 
 fn sim_of(text: &str) -> Sim {
@@ -133,17 +133,17 @@ fn a_span_is_the_cells_run_together() {
 #[test]
 fn content_text_is_the_part_of_a_block_on_a_row() {
     let mut sim = Sim::new(20, 3, DEFAULT_SCROLLBACK_BYTES);
-    let prompt = Pen { content: Content::Prompt, block: 4, ..plain() };
-    let command = Pen { content: Content::Command, block: 4, ..plain() };
+    let prompt = Pen { content: BlockPart::Prompt, block: 4, ..plain() };
+    let command = Pen { content: BlockPart::Command, block: 4, ..plain() };
     sim.pen = prompt;
     sim.print("$ ");
     sim.pen = command;
     sim.print("ls -l");
-    assert_eq!(sim.grid.content_text(Line(0), 4, Content::Prompt), "$ ");
-    assert_eq!(sim.grid.content_text(Line(0), 4, Content::Command), "ls -l");
-    assert_eq!(sim.grid.content_text(Line(0), 4, Content::Output), "");
-    assert_eq!(sim.grid.content_text(Line(0), 5, Content::Command), "", "another block");
-    assert_eq!(sim.grid.content_text(Line(9), 4, Content::Command), "", "no such row");
+    assert_eq!(sim.grid.block_text(Line(0), 4, BlockPart::Prompt), "$ ");
+    assert_eq!(sim.grid.block_text(Line(0), 4, BlockPart::Command), "ls -l");
+    assert_eq!(sim.grid.block_text(Line(0), 4, BlockPart::Output), "");
+    assert_eq!(sim.grid.block_text(Line(0), 5, BlockPart::Command), "", "another block");
+    assert_eq!(sim.grid.block_text(Line(9), 4, BlockPart::Command), "", "no such row");
 }
 
 // ---- words ----

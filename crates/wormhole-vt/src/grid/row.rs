@@ -1,6 +1,6 @@
 //! A row's metadata, and the types the terminal writes cells with.
 
-use super::cell::{CellFlags, Content};
+use super::cell::{BlockPart, CellFlags};
 use super::style::Style;
 use crate::types::Hyperlink;
 
@@ -37,14 +37,20 @@ impl Row {
     }
 }
 
-/// What a row carries of a command block, read back from its cells: the block's number and which
-/// parts of it are on the row. A prompt row carries the prompt and, once something is typed, the
-/// command; a long command's wrapped row the command alone; the rest the output.
+/// What a row carries of a command block (shell integration, OSC 133), read back from its cells:
+/// the block's number and which parts of it are on the row. A prompt row carries the prompt and,
+/// once something is typed, the command; a long command's wrapped row the command alone; the rest
+/// the output.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RowMark {
+    /// The block's number: counts up from 1 as prompts are marked, never 0.
     pub block: u32,
+    /// The row has cells of the block's [prompt](BlockPart::Prompt).
     pub prompt: bool,
+    /// The row has cells of the block's [command line](BlockPart::Command).
     pub command: bool,
+    /// The row has cells of the block's [output](BlockPart::Output).
     pub output: bool,
 }
 
@@ -52,9 +58,9 @@ impl RowMark {
     pub(super) fn from_parts(block: u32, parts: u8) -> Option<RowMark> {
         (block != 0 && parts != 0).then_some(RowMark {
             block,
-            prompt: parts & (1 << Content::Prompt as u8) != 0,
-            command: parts & (1 << Content::Command as u8) != 0,
-            output: parts & (1 << Content::Output as u8) != 0,
+            prompt: parts & (1 << BlockPart::Prompt as u8) != 0,
+            command: parts & (1 << BlockPart::Command as u8) != 0,
+            output: parts & (1 << BlockPart::Output as u8) != 0,
         })
     }
 }
@@ -65,8 +71,8 @@ pub struct Pen {
     pub style: Style,
     /// The hyperlink (OSC 8) the cells are under.
     pub link: Option<Hyperlink>,
-    /// What the cells are part of in a shell-integrated session; [`Content::None`] without one.
-    pub content: Content,
+    /// What the cells are part of in a shell-integrated session; [`BlockPart::None`] without one.
+    pub content: BlockPart,
     /// The command block the content belongs to; recorded on the row when `content` is set.
     pub block: u32,
     /// DECSCA: selective erase leaves the cells alone.

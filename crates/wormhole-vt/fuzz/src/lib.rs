@@ -8,8 +8,8 @@
 
 use wormhole_vt::image::ImageHandle;
 use wormhole_vt::{
-    Cell, Column, Content, Event, Line, Point, Policy, RowExtras, Scroll, SelectionType, Side, Terminal, TextCopy,
-    TextShape, ViewRow,
+    BlockPart, Cell, Column, Damage, Event, Line, Point, Policy, RowExtras, Scroll, SelectionType, Side,
+    Terminal, TextCopy, TextShape, ViewRow,
 };
 
 /// Reads the script's bytes, 0 once they run out.
@@ -56,6 +56,7 @@ pub struct Run {
     pub term: Terminal,
     copy: TextCopy,
     rows_out: Vec<ViewRow>,
+    damage: Damage,
     pins: Vec<wormhole_vt::PinId>,
     spans: Vec<wormhole_vt::PinnedSpan>,
     handles: Vec<ImageHandle>,
@@ -75,6 +76,7 @@ impl Run {
             term,
             copy: TextCopy::new(),
             rows_out: Vec::new(),
+            damage: Damage::new(),
             pins: Vec::new(),
             spans: Vec::new(),
             handles: Vec::new(),
@@ -118,18 +120,18 @@ impl Run {
 
     fn point(&self, bytes: &mut Bytes<'_>) -> Point {
         let (a, b) = (bytes.byte(), bytes.byte());
-        let history = self.term.history_size() as i32;
+        let history = self.term.history_len() as i32;
         let line = match a & 7 {
             // Mostly on the screen, sometimes in the history, now and then beyond either end.
             0 => -history - 1 - i32::from(b),
-            1 => self.term.screen_lines() as i32 + i32::from(b),
+            1 => self.term.rows() as i32 + i32::from(b),
             2 => i32::from(a >> 3).wrapping_mul(0x0101_0101).wrapping_sub(0x4000_0000),
             3 | 4 => -(i32::from(b) % (history + 1)),
-            _ => i32::from(b) % self.term.screen_lines() as i32,
+            _ => i32::from(b) % self.term.rows() as i32,
         };
         let column = match a >> 6 {
-            0 => usize::from(b) % self.term.columns(),
-            1 => self.term.columns() + usize::from(b),
+            0 => usize::from(b) % self.term.cols(),
+            1 => self.term.cols() + usize::from(b),
             2 => usize::from(b) * usize::from(a),
             _ => usize::MAX - usize::from(b),
         };
@@ -155,7 +157,7 @@ impl Run {
                     1 => Scroll::Bottom,
                     _ => Scroll::Delta(i32::from(bytes.byte() as i8) * 3),
                 };
-                self.term.scroll_display(scroll);
+                self.term.scroll(scroll);
             }
             2 => {
                 let kind = [
@@ -202,14 +204,15 @@ impl Run {
             }
             7 => {
                 self.term.copy_viewport(&mut self.rows_out, bytes.byte() & 1 == 0);
-                let mut damaged = vec![false; self.term.screen_lines()];
-                self.term.take_damage(&mut damaged);
+                self.term.take_damage(&mut self.damage);
+                assert!(self.damage.rows().all(|row| row < self.term.rows()));
             }
             8 => {
                 let (a, b) = (self.point(bytes), self.point(bytes));
                 let shape = if bytes.byte() & 1 == 0 { TextShape::Stream } else { TextShape::Block };
                 let _ = self.term.text_between(a, b, shape);
                 let _ = self.term.link_span(a);
+                let _ = self.term.cell(b);
                 let _ = self.term.grid().word_start(a, |c| c == ' ');
                 let _ = self.term.grid().word_end(b, |c| c == ' ');
                 let _ = self.term.grid().bracket_match(a);
@@ -255,9 +258,9 @@ impl Run {
                 let _ = (self.term.row_text(line, bytes.byte() & 1 == 0), self.term.is_wrapped(line));
                 let _ = self.term.row_mark(line);
                 let block = u32::from(bytes.byte());
-                let content = [Content::None, Content::Prompt, Content::Command, Content::Output]
+                let content = [BlockPart::None, BlockPart::Prompt, BlockPart::Command, BlockPart::Output]
                     [usize::from(bytes.byte()) % 4];
-                let _ = self.term.content_text(line, block, content);
+                let _ = self.term.block_text(line, block, content);
             }
             16 => {
                 let mut placements = Vec::new();
@@ -294,8 +297,8 @@ impl Run {
             panic!("{what}: {why}");
         }
         let cursor = self.term.cursor();
-        assert!(cursor.point.line.0 >= 0 && (cursor.point.line.0 as usize) < self.term.screen_lines());
-        assert!(cursor.point.column.0 < self.term.columns());
+        assert!(cursor.point.line.0 >= 0 && (cursor.point.line.0 as usize) < self.term.rows());
+        assert!(cursor.point.column.0 < self.term.cols());
     }
 
     /// Run the script to its end, checking after every step.

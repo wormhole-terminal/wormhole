@@ -250,12 +250,12 @@ fn the_terminal_keeps_its_grid_consistent_through_streams_and_resizes() {
         if let Err(why) = term.check_invariants() {
             panic!("seed {seed}: {why}");
         }
-        let cursor = term.grid_cursor();
+        let cursor = term.cursor_point();
         assert!(
-            (cursor.line.0 as usize) < term.screen_lines() && cursor.column.0 < term.columns(),
+            (cursor.line.0 as usize) < term.rows() && cursor.column.0 < term.cols(),
             "seed {seed}: cursor {cursor:?} on a {}x{} screen",
-            term.columns(),
-            term.screen_lines()
+            term.cols(),
+            term.rows()
         );
     }
 }

@@ -263,7 +263,7 @@ fn marked_screen(cols: usize, rows: usize) -> Grid {
             &text(cols, y),
             &Pen {
                 link: Some(link),
-                content: wormhole_vt::Content::Output,
+                content: wormhole_vt::BlockPart::Output,
                 block: 1 + (y / 10) as u32,
                 ..plain()
             },

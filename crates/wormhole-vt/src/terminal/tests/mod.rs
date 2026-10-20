@@ -55,7 +55,7 @@ impl Rig {
     }
 
     pub fn cursor(&self) -> (usize, usize) {
-        let point = self.term.grid_cursor();
+        let point = self.term.cursor_point();
         (point.line.0 as usize, point.column.0)
     }
 }

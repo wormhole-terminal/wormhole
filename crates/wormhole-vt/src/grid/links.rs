@@ -11,9 +11,13 @@ use super::Grid;
 /// The most rows a link is followed over, each way.
 const MAX_LINK_ROWS: usize = 16;
 
-/// A hyperlink and the cells it covers around a point.
+/// A hyperlink (OSC 8) and the cells it covers around a point, as
+/// [`Terminal::link_span`](crate::Terminal::link_span) finds them: what a host underlines when the
+/// pointer is over a link.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct LinkSpan {
+    /// The link: its target and the id that joins its pieces.
     pub link: Hyperlink,
     /// The first cell of the link.
     pub start: Point,

@@ -52,10 +52,10 @@ mod terminal;
 mod types;
 pub mod unicode;
 
-pub use grid::{Content, CopiedLine, LinkSpan, PinId, RowMark, TextCopy, TextShape, ViewRow};
+pub use grid::{BlockPart, CopiedLine, LinkSpan, PinId, RowMark, TextCopy, TextShape, ViewRow};
 pub use terminal::{
-    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Event, LocatorButton, Modes, PinnedSpan, Pointer, Policy,
-    Terminal,
+    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, LocatorButton, Modes, PinnedSpan, Pointer,
+    Policy, Terminal,
 };
 pub use types::{
     COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, NamedColor,

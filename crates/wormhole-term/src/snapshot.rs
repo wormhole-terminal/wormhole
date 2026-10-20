@@ -9,7 +9,7 @@
 use std::ops::Range;
 
 use wormhole_vt::image::ImagePlacement;
-use wormhole_vt::{Cell, Colors, CursorShape, Line, Point, RowExtras, SelectionRange, TermMode};
+use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, Point, RowExtras, SelectionRange, TermMode};
 
 use super::blocks::BlockState;
 use super::marks::{self, RowMark};
@@ -77,7 +77,7 @@ pub struct ScreenSnapshot {
     /// Rows just above the viewport, nearest first (drawn blurred under the title bar).
     above: Vec<Vec<Cell>>,
     /// Scratch: which rows the terminal reported damaged.
-    damaged: Vec<bool>,
+    damage: Damage,
     pub cursor: Option<SnapshotCursor>,
     selection: Option<SelectionRange>,
     pub mode: TermMode,
@@ -100,7 +100,7 @@ impl Default for ScreenSnapshot {
             cols: 0,
             rows: Vec::new(),
             above: Vec::new(),
-            damaged: Vec::new(),
+            damage: Damage::new(),
             cursor: None,
             selection: None,
             mode: TermMode::empty(),
@@ -188,15 +188,14 @@ impl ScreenSnapshot {
         let display_offset = screen.display_offset();
         // Clearing the history moves the view without damaging any line.
         let mut full = cols != self.cols || lines != self.rows.len() || display_offset != self.display_offset;
-        self.damaged.clear();
-        self.damaged.resize(lines, false);
-        full |= screen.take_damage(&mut self.damaged);
+        screen.take_damage(&mut self.damage);
+        full |= self.damage.is_full();
 
         self.cols = cols;
         self.display_offset = display_offset;
         self.rows.resize_with(lines, SnapshotRow::default);
         for (row, snapshot) in self.rows.iter_mut().enumerate() {
-            snapshot.changed = full || self.damaged[row];
+            snapshot.changed = full || self.damage.contains(row);
             if snapshot.changed {
                 let line = Line(row as i32 - display_offset as i32);
                 snapshot.mark = screen.copy_row(line, &mut snapshot.cells, Some(&mut snapshot.extras));

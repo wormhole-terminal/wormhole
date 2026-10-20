@@ -317,7 +317,11 @@ fn csi(seq: &[u8], context: &mut Context) -> (usize, Vec<u8>) {
     if plain && matches!(fin, b'A' | b'B' | b'E' | b'F' | b'e') && context.region {
         return (end, Vec::new());
     }
-    if plain && matches!(fin, b'H' | b'f' | b'A' | b'B' | b'C' | b'D' | b'E' | b'F' | b'G' | b'd' | b'a' | b'e' | b'`')
+    if plain
+        && matches!(
+            fin,
+            b'H' | b'f' | b'A' | b'B' | b'C' | b'D' | b'E' | b'F' | b'G' | b'd' | b'a' | b'e' | b'`'
+        )
     {
         context.after_text = false;
     }

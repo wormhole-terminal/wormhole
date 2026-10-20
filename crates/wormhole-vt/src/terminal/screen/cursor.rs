@@ -260,8 +260,10 @@ impl Terminal {
         self.pen.link = saved.link;
     }
 
-    /// Where the cursor is on the grid (the live screen's top row is line 0).
-    pub(in crate::terminal) fn cursor_point(&self) -> Point {
+    /// Where the cursor is, shown or not: the cell it is waiting on, with a wrap pending. In grid
+    /// coordinates, the live screen's top row being line 0 whatever the view shows. Unlike
+    /// [`Terminal::cursor`]'s point it is not moved back onto the first half of a wide character.
+    pub fn cursor_point(&self) -> Point {
         Point::new(Line(self.cursor.y as i32), crate::types::Column(self.cursor.x))
     }
 }

@@ -2,7 +2,7 @@
 //! cell printed will carry, kept as the bytes written so far leave them, so that a change costs
 //! only what changed.
 
-use crate::grid::{Content, Style};
+use crate::grid::{BlockPart, Style};
 use crate::types::{Color, Flags, Hyperlink, NamedColor};
 
 use super::{Gaps, Writer};
@@ -14,7 +14,7 @@ pub(super) struct Pen<'a> {
     pub(super) link: Option<&'a Hyperlink>,
     pub(super) protected: bool,
     pub(super) guarded: bool,
-    pub(super) content: Content,
+    pub(super) content: BlockPart,
     /// The block the pen belongs to; 0 before the first `OSC 133;A`.
     pub(super) block: u32,
 }
@@ -26,7 +26,7 @@ impl Default for Pen<'_> {
             link: None,
             protected: false,
             guarded: false,
-            content: Content::None,
+            content: BlockPart::None,
             block: 0,
         }
     }
@@ -182,23 +182,23 @@ impl<'a> Writer<'a> {
         self.set_link(None);
         self.set_protected(false);
         self.set_guarded(false);
-        self.want_content(0, Content::None);
+        self.want_content(0, BlockPart::None);
     }
 
     /// Bring the pen to the content `content` of block `block` (OSC 133). A block is entered by
     /// counting the receiver's counter up to it with prompt marks, which is why the blocks of
     /// the rows can only come in the order they are numbered.
-    pub(super) fn want_content(&mut self, block: u32, content: Content) {
-        if content == Content::None {
-            if self.pen.content != Content::None {
+    pub(super) fn want_content(&mut self, block: u32, content: BlockPart) {
+        if content == BlockPart::None {
+            if self.pen.content != BlockPart::None {
                 self.osc("133;D");
-                self.pen.content = Content::None;
+                self.pen.content = BlockPart::None;
             }
             return;
         }
         if block == 0 {
             self.gaps |= Gaps::BLOCKS;
-            return self.want_content(0, Content::None);
+            return self.want_content(0, BlockPart::None);
         }
         if self.pen.block != block {
             let seed = *self.seed_block.get_or_insert_with(|| block - 1);
@@ -207,24 +207,24 @@ impl<'a> Writer<'a> {
             }
             if block <= self.counter {
                 self.gaps |= Gaps::BLOCKS;
-                return self.want_content(0, Content::None);
+                return self.want_content(0, BlockPart::None);
             }
             while self.counter < block {
                 self.osc("133;A");
                 self.counter += 1;
             }
             self.pen.block = block;
-            self.pen.content = Content::Prompt;
+            self.pen.content = BlockPart::Prompt;
         }
-        if self.alt && matches!(content, Content::Command | Content::Output) {
+        if self.alt && matches!(content, BlockPart::Command | BlockPart::Output) {
             self.gaps |= Gaps::ALT_CONTENT;
             return;
         }
         if self.pen.content != content {
             self.osc(match content {
                 // A prompt that goes on in the same block: a secondary prompt does not count up.
-                Content::Prompt => "133;A;k=s",
-                Content::Command => "133;B",
+                BlockPart::Prompt => "133;A;k=s",
+                BlockPart::Command => "133;B",
                 _ => "133;C",
             });
             self.pen.content = content;

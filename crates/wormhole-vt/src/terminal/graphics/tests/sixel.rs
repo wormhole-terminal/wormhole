@@ -63,7 +63,7 @@ fn the_screen_scrolls_when_the_picture_does_not_fit_below_the_cursor() {
     // 36 pixels are 3 rows; the cursor ends on the row below, the bottom one.
     assert_eq!(spots(&r), [(0, 1, 0, 1, 3)]);
     assert_eq!(r.cursor(), (4, 0));
-    assert_eq!(r.term.history_size(), 3);
+    assert_eq!(r.term.history_len(), 3);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn with_display_scrolling_off_the_picture_is_at_the_top_left_and_the_cursor_stay
     assert_eq!(p.rows, 4, "cut at the bottom of the screen");
     assert_eq!(p.source.height, 4 * 120 / 8, "and the picture with it");
     assert_eq!(r.cursor(), (2, 4));
-    assert_eq!(r.term.history_size(), 0);
+    assert_eq!(r.term.history_len(), 0);
 }
 
 #[test]

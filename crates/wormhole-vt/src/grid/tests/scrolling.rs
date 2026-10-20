@@ -420,7 +420,7 @@ fn a_rows_block_and_wrap_follow_it_when_it_scrolls() {
         let mut g = Grid::with_page_rows(10, 5, DEFAULT_SCROLLBACK_BYTES, page_rows);
         for y in 0..5 {
             let pen =
-                crate::grid::Pen { content: crate::grid::Content::Output, block: y as u32 + 1, ..plain() };
+                crate::grid::Pen { content: crate::grid::BlockPart::Output, block: y as u32 + 1, ..plain() };
             g.write_ascii(y, 0, format!("r{y}").as_bytes(), &pen);
             g.set_wrapped(y, y % 2 == 1);
         }

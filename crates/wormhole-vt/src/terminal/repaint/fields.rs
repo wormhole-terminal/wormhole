@@ -86,6 +86,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("guard_used", Written("misc: SPA then EPA")),
     ("attr_extent", Written("misc: DECSACE, through `kept`")),
     ("select", Viewer("the selection and the word separators")),
+    ("seen", Viewer("what the last take_damage saw of the cursor and the colours")),
 ];
 
 const CURSOR: &[(&str, Coverage)] =

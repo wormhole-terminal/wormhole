@@ -21,7 +21,7 @@ use crate::types::Flags;
 pub type StyleId = u16;
 
 bitflags! {
-    /// The flag bits of a cell (bits 48..64 of its word). Bits 6 and 7 are a [`Content`], which has
+    /// The flag bits of a cell (bits 48..64 of its word). Bits 6 and 7 are a [`BlockPart`], which has
     /// no flag of its own: they pass through [`CellFlags::from_bits_retain`] and
     /// [`CellFlags::content`].
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -52,7 +52,7 @@ bitflags! {
     }
 }
 
-/// Where the two bits of a [`Content`] sit in the flags.
+/// Where the two bits of a [`BlockPart`] sit in the flags.
 const CONTENT_SHIFT: u16 = 6;
 
 impl CellFlags {
@@ -62,14 +62,14 @@ impl CellFlags {
 
     /// What a cell that is part of `content` carries.
     #[inline]
-    pub(super) const fn with_content(content: Content) -> CellFlags {
+    pub(super) const fn with_content(content: BlockPart) -> CellFlags {
         CellFlags::from_bits_retain((content as u16) << CONTENT_SHIFT)
     }
 
     /// What the cell is part of.
     #[inline]
-    pub(super) const fn content(self) -> Content {
-        Content::from_bits(self.bits() >> CONTENT_SHIFT)
+    pub(super) const fn content(self) -> BlockPart {
+        BlockPart::from_bits(self.bits() >> CONTENT_SHIFT)
     }
 
     /// The flags of the OR of some cells' words (see [`Cell::bits`]): what any of them carries.
@@ -127,27 +127,33 @@ impl From<bool> for Spare {
     }
 }
 
-/// What a cell is part of in a shell-integrated session (OSC 133): the prompt the shell printed,
-/// the command line as it was typed, or the output of the command. Written by the terminal from
-/// the shell's marks, read back as a row's [`RowMark`](super::RowMark).
+/// The part of a command block (shell integration, OSC 133) a cell belongs to: the prompt the shell
+/// printed, the command line as it was typed, or the output of the command. The terminal writes it
+/// from the shell's marks; a row's [`RowMark`](super::RowMark) says which parts it carries, and
+/// [`Terminal::block_text`](crate::Terminal::block_text) reads one part back as text.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(u8)]
-pub enum Content {
+#[non_exhaustive]
+pub enum BlockPart {
+    /// Not part of any block: text from before the first mark, or on the alternate screen.
     #[default]
     None = 0,
+    /// The prompt (OSC 133 ; A).
     Prompt = 1,
+    /// The command line the user typed (OSC 133 ; B).
     Command = 2,
+    /// The command's output (OSC 133 ; C until D).
     Output = 3,
 }
 
-impl Content {
+impl BlockPart {
     #[inline]
-    pub(super) const fn from_bits(bits: u16) -> Content {
+    pub(super) const fn from_bits(bits: u16) -> BlockPart {
         match bits & 3 {
-            1 => Content::Prompt,
-            2 => Content::Command,
-            3 => Content::Output,
-            _ => Content::None,
+            1 => BlockPart::Prompt,
+            2 => BlockPart::Command,
+            3 => BlockPart::Output,
+            _ => BlockPart::None,
         }
     }
 }
@@ -245,7 +251,7 @@ impl Cell {
     }
 
     #[inline]
-    pub const fn content(self) -> Content {
+    pub const fn content(self) -> BlockPart {
         self.flag_set().content()
     }
 
@@ -365,7 +371,7 @@ pub(super) fn run_of(cells: &[Cell]) -> StyleRun {
 
 #[cfg(test)]
 mod tests {
-    use super::{Cell, CellFlags, Content, StyleRun, run_of};
+    use super::{BlockPart, Cell, CellFlags, StyleRun, run_of};
     use crate::types::Flags;
 
     #[test]
@@ -378,20 +384,20 @@ mod tests {
 
     #[test]
     fn the_fields_do_not_overlap() {
-        let flags = CellFlags::WIDE | CellFlags::PROTECTED | CellFlags::with_content(Content::Output);
+        let flags = CellFlags::WIDE | CellFlags::PROTECTED | CellFlags::with_content(BlockPart::Output);
         let cell = Cell::compose('日' as u32, 0xBEEF, flags);
         assert_eq!(cell, Cell::new('日' as u32, 0xBEEF, flags.bits()));
         assert_eq!(cell.character(), Some('日'));
         assert_eq!(cell.style_id(), 0xBEEF);
         assert!(cell.is_wide() && cell.is_protected() && !cell.has_grapheme());
-        assert_eq!(cell.content(), Content::Output);
+        assert_eq!(cell.content(), BlockPart::Output);
         assert_eq!(cell.with_style(3).style_id(), 3);
         assert_eq!(cell.with_style(3).character(), Some('日'));
         assert_eq!(cell.with_codepoint('x' as u32).flag_set(), flags);
         assert_eq!(cell.with_codepoint('x' as u32).style_id(), 0xBEEF);
         assert!(cell.with_flags_set(CellFlags::GRAPHEME).has_grapheme());
         assert_eq!(cell.with_flags_set(CellFlags::GRAPHEME).without_flags(CellFlags::GRAPHEME), cell);
-        assert_eq!(cell.without_flags(CellFlags::WIDE).content(), Content::Output);
+        assert_eq!(cell.without_flags(CellFlags::WIDE).content(), BlockPart::Output);
         assert_eq!(cell.style_bits() >> 32, 0xBEEF);
         assert_eq!(CellFlags::in_word(cell.bits()), flags);
     }
@@ -403,7 +409,7 @@ mod tests {
         assert_eq!(cell(CellFlags::SPACER_TAIL).layout_flags(), Flags::WIDE_CHAR_SPACER);
         assert_eq!(cell(CellFlags::SPACER_HEAD).layout_flags(), Flags::LEADING_WIDE_CHAR_SPACER);
         let others = CellFlags::GRAPHEME | CellFlags::HYPERLINK | CellFlags::PROTECTED | CellFlags::IMAGE;
-        assert_eq!(cell(others | CellFlags::with_content(Content::Prompt)).layout_flags(), Flags::empty());
+        assert_eq!(cell(others | CellFlags::with_content(BlockPart::Prompt)).layout_flags(), Flags::empty());
     }
 
     #[test]

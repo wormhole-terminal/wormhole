@@ -45,10 +45,7 @@ fn random_bytes_leave_a_consistent_terminal() {
         }
         rig.term.check_invariants().unwrap_or_else(|why| panic!("seed {seed}: {why}"));
         let (y, x) = rig.cursor();
-        assert!(
-            y < rig.term.screen_lines() && x < rig.term.columns(),
-            "seed {seed}: cursor out of the screen"
-        );
+        assert!(y < rig.term.rows() && x < rig.term.cols(), "seed {seed}: cursor out of the screen");
         rig.term.resize(cols + 3, rows + 1);
         rig.term.check_invariants().unwrap_or_else(|why| panic!("seed {seed} after a resize: {why}"));
     }
@@ -149,15 +146,15 @@ fn replies_do_not_pile_up_for_a_host_that_never_collects_them() {
 fn wild_point(rng: &mut Bytes, term: &Terminal) -> crate::types::Point {
     use crate::types::{Column, Line, Point};
     let (a, b) = (usize::from(rng.next()), usize::from(rng.next()));
-    let history = term.history_size() as i32;
+    let history = term.history_len() as i32;
     let line = match a % 5 {
         0 => -history - b as i32,
-        1 => term.screen_lines() as i32 + b as i32,
+        1 => term.rows() as i32 + b as i32,
         2 => i32::MIN + b as i32,
         3 => -(b as i32 % (history + 1)),
-        _ => b as i32 % term.screen_lines() as i32,
+        _ => b as i32 % term.rows() as i32,
     };
-    let column = if a % 7 == 0 { usize::MAX - b } else { b % (term.columns() + 3) };
+    let column = if a % 7 == 0 { usize::MAX - b } else { b % (term.cols() + 3) };
     Point::new(Line(line), Column(column))
 }
 
@@ -179,7 +176,7 @@ fn host_calls_with_wild_points_between_random_bytes_keep_the_terminal_consistent
             let p = wild_point(&mut rng, &rig.term);
             match rng.next() % 12 {
                 0 => rig.term.resize(1 + usize::from(rng.next()) % 30, 1 + usize::from(rng.next()) % 12),
-                1 => rig.term.scroll_display(Scroll::Delta(i32::from(rng.next() as i8))),
+                1 => rig.term.scroll(Scroll::Delta(i32::from(rng.next() as i8))),
                 2 => rig.term.start_selection(SelectionType::Block, p, Side::Left),
                 3 => rig.term.start_selection(SelectionType::Semantic, p, Side::Right),
                 4 => {

@@ -211,7 +211,7 @@ impl<'a> Writer<'a> {
         self.set_style(&Style::DEFAULT);
         self.set_link(None);
         self.set_guarded(false);
-        self.want_content(0, crate::grid::Content::None);
+        self.want_content(0, crate::grid::BlockPart::None);
         self.out.push(b' ');
     }
 

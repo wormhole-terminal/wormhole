@@ -112,7 +112,7 @@ impl Engine for WormholeEngine {
     }
 
     fn size(&self) -> (usize, usize) {
-        (self.term.columns(), self.term.screen_lines())
+        (self.term.cols(), self.term.rows())
     }
 
     fn row_text(&self, row: usize) -> String {
@@ -155,7 +155,7 @@ impl Engine for WormholeEngine {
     }
 
     fn cursor(&self) -> Cursor {
-        let point = self.term.grid_cursor();
+        let point = self.term.cursor_point();
         Cursor {
             row: point.line.0.max(0) as usize,
             col: point.column.0,
@@ -164,7 +164,7 @@ impl Engine for WormholeEngine {
     }
 
     fn scrollback_len(&self) -> usize {
-        self.term.history_size().min(self.scrollback)
+        self.term.history_len().min(self.scrollback)
     }
 
     fn scrollback_text(&self, index: usize) -> String {

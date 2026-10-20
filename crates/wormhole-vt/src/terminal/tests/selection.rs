@@ -2,7 +2,7 @@
 //! lives through output, scrolling, reflow, the alternate screen and the history going away.
 
 use super::Rig;
-use crate::grid::{Content, TextCopy, TextShape};
+use crate::grid::{BlockPart, TextCopy, TextShape};
 use crate::types::{Column, Line, Point, SelectionRange, SelectionType, Side};
 
 fn at(line: i32, column: usize) -> Point {
@@ -221,7 +221,7 @@ fn a_selection_follows_its_text_as_output_scrolls() {
     assert_eq!(range(&rig), Some(((-2, 0), (-1, 2))), "two lines of history above the screen now");
     assert_eq!(rig.term.selection_text().as_deref(), Some("one\ntwo"));
     // Scrolling the view moves nothing: lines are grid lines.
-    rig.term.scroll_display(crate::types::Scroll::Delta(2));
+    rig.term.scroll(crate::types::Scroll::Delta(2));
     assert_eq!(range(&rig), Some(((-2, 0), (-1, 2))));
 }
 
@@ -401,9 +401,9 @@ fn the_parts_of_a_command_block_are_read_back_from_the_row() {
     let mut rig = Rig::new(30, 4);
     rig.feed("\x1b]133;A\x07$ \x1b]133;B\x07ls -l\r\n\x1b]133;C\x07out1\r\n\x1b]133;D;0\x07");
     let block = rig.term.row_mark(Line(0)).map(|mark| mark.block).expect("a block");
-    assert_eq!(rig.term.content_text(Line(0), block, Content::Prompt), "$ ");
-    assert_eq!(rig.term.content_text(Line(0), block, Content::Command), "ls -l");
-    assert_eq!(rig.term.content_text(Line(1), block, Content::Output), "out1");
+    assert_eq!(rig.term.block_text(Line(0), block, BlockPart::Prompt), "$ ");
+    assert_eq!(rig.term.block_text(Line(0), block, BlockPart::Command), "ls -l");
+    assert_eq!(rig.term.block_text(Line(1), block, BlockPart::Output), "out1");
 }
 
 #[test]

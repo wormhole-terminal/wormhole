@@ -132,3 +132,28 @@ fn a_hyperlink_allocates_what_it_owns_and_no_more() {
     let count = steady("links with an id", &repeat(with_id, 200), 20);
     assert!(count <= 2 * links, "{count} allocations for {links} links");
 }
+
+/// Asking what changed is part of every frame: once the `Damage` has seen the screen's size it
+/// allocates nothing, whether the program scrolled, moved the cursor or changed the colours.
+#[test]
+fn taking_damage_allocates_nothing() {
+    let mut term = Terminal::builder().size(80, 24).scrollback(200).build();
+    let mut damage = wormhole_vt::Damage::new();
+    let unit = "line of text\r\n\x1b[3;5Hx\x1b]4;1;#102030\x07\x1b[?25l\x1b[?25h\x1b]104\x07";
+    let stream = repeat(unit, 50);
+    let round = |term: &mut Terminal, damage: &mut wormhole_vt::Damage| {
+        for piece in stream.chunks(300) {
+            term.feed(piece);
+            term.take_damage(damage);
+            assert!(damage.rows().count() <= 24);
+        }
+    };
+    for _ in 0..40 {
+        round(&mut term, &mut damage);
+    }
+    let before = allocations();
+    for _ in 0..20 {
+        round(&mut term, &mut damage);
+    }
+    assert_eq!(allocations() - before, 0);
+}

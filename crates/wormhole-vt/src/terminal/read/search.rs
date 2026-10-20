@@ -6,7 +6,7 @@
 //!
 //! None of these allocate beyond the `String`s and buffers they hand back.
 
-use crate::grid::{Content, LinkSpan, PinId, TextCopy, TextShape};
+use crate::grid::{BlockPart, LinkSpan, PinId, TextCopy, TextShape};
 use crate::types::{Line, Point};
 
 use crate::terminal::Terminal;
@@ -100,10 +100,10 @@ impl Terminal {
         self.grid.link_span(point)
     }
 
-    /// The text of the cells of `line` that are `content` of command block `block` (OSC 133):
+    /// The text of the cells of `line` that are `part` of command block `block` (OSC 133):
     /// the prompt, the command line or the output, untrimmed, a blank where a cell holds no
     /// character. A row belongs to one block; where two meet on it, to the later.
-    pub fn content_text(&self, line: Line, block: u32, content: Content) -> String {
-        self.grid.content_text(line, block, content)
+    pub fn block_text(&self, line: Line, block: u32, part: BlockPart) -> String {
+        self.grid.block_text(line, block, part)
     }
 }

@@ -99,12 +99,13 @@ mod screen;
 mod tests;
 mod text;
 
-use crate::grid::{Content, Grid, Pen, Region};
+use crate::grid::{BlockPart, Grid, Pen, Region};
 use crate::parser::Parser;
 use crate::types::{COLOR_COUNT, Colors, CursorShape, Rgb};
 
 use modes::conformance::Level;
 use modes::keyboard::KeyboardFlags;
+use read::damage::Seen;
 use screen::tabs::TabStops;
 use text::charset::{Charsets, Preferred};
 
@@ -118,6 +119,7 @@ pub use graphics::{
 };
 pub use modes::Modes;
 pub use policy::Policy;
+pub use read::damage::Damage;
 pub use read::search::PinnedSpan;
 pub use read::selection::DEFAULT_WORD_SEPARATORS;
 pub use read::snapshot::Cursor;
@@ -250,7 +252,7 @@ pub struct Terminal {
     /// The number of the last command block (OSC 133); 0 before any.
     block: u32,
     /// The pen's shell mark while the alternate screen shows (its cells are not part of a block).
-    stashed_content: Content,
+    stashed_content: BlockPart,
     /// Hyperlinks without an id of their own get one from this count.
     link_seq: u64,
     /// The last hyperlinks opened, most recent first; see `intern_link`.
@@ -283,6 +285,8 @@ pub struct Terminal {
     attr_extent: screen::rect::AttrExtent,
     /// The selection and the word separators; see `selection`.
     select: read::selection::Select,
+    /// What the last `take_damage` saw of the cursor and the colours.
+    seen: Seen,
 }
 
 // A host parses on one thread and reads on another, usually under a lock: the terminal must stay

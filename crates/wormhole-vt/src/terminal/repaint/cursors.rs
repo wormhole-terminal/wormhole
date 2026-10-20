@@ -2,7 +2,7 @@
 //! order that lets each sequence do what it says (a mode that moves the cursor goes before the
 //! cursor is placed).
 
-use crate::grid::{Content, Grid, Style};
+use crate::grid::{BlockPart, Grid, Style};
 use crate::types::{Flags, Line};
 
 use super::{Gaps, Writer};
@@ -130,7 +130,7 @@ impl<'a> Writer<'a> {
         }
         if n > 0 {
             self.pen.block = self.counter;
-            self.pen.content = Content::Prompt;
+            self.pen.content = BlockPart::Prompt;
         }
     }
 
@@ -244,14 +244,14 @@ impl<'a> Writer<'a> {
         // The mark of the cell the pen would print is a main-screen thing: set it while the main
         // screen shows, the switch takes it along.
         let content = if alt { t.stashed_content } else { t.pen.content };
-        if content != Content::None && t.pen.block != 0 {
+        if content != BlockPart::None && t.pen.block != 0 {
             self.want_content(t.pen.block, content);
         } else {
-            self.want_content(0, Content::None);
+            self.want_content(0, BlockPart::None);
         }
         if alt {
             self.show(true);
-            if t.pen.content != Content::None {
+            if t.pen.content != BlockPart::None {
                 self.gaps |= Gaps::ALT_CONTENT;
             }
         }
@@ -325,7 +325,7 @@ fn find_char(grid: &Grid, c: char, cursor: (usize, usize)) -> Option<(usize, usi
         let cells = view.cells();
         let found = (0..cells.len()).rev().find(|&x| {
             let cell = cells[x];
-            cell.character() == Some(c) && cell.content() == Content::None && !cell.is_spacer_tail()
+            cell.character() == Some(c) && cell.content() == BlockPart::None && !cell.is_spacer_tail()
         });
         if let Some(x) = found {
             return Some((y, x));

@@ -22,14 +22,14 @@ fn a_picture_scrolls_into_the_history_with_the_text_beside_it() {
     r.feed("text ");
     put(&mut r, 1);
     r.feed("\r\nthere\r\nare\r\nsome\r\nlines\r\nmore");
-    assert_eq!(r.term.history_size(), 2);
+    assert_eq!(r.term.history_len(), 2);
     assert!(placed(&r).is_empty(), "both rows are above the screen");
-    r.term.scroll_display(Scroll::Top);
+    r.term.scroll(Scroll::Top);
     assert_eq!(spots(&r), [(1, -2, 5, 1, 2)]);
     assert_eq!(r.term.row_text(Line(-2), true), "text");
     // The view shows it where the text is.
-    r.term.scroll_display(Scroll::Delta(-1));
-    assert_eq!(r.term.display_offset(), 1);
+    r.term.scroll(Scroll::Delta(-1));
+    assert_eq!(r.term.scroll_offset(), 1);
     assert_eq!(spots(&r), [(1, -2, 5, 1, 2)], "lines are relative to the live screen, not the view");
 }
 
@@ -92,7 +92,7 @@ fn a_scroll_region_moves_the_pictures_in_it_and_deletes_the_ones_it_cuts() {
     put_here(&mut r, 1);
     r.feed("\x1b[8;1H\n");
     assert_eq!(spots(&r), [(1, 3, 0, 1, 2)], "scrolled up by the line feed at the margin");
-    assert_eq!(r.term.history_size(), 0, "a region from below the top feeds no history");
+    assert_eq!(r.term.history_len(), 0, "a region from below the top feeds no history");
     r.feed("\x1b[8;1H\n\n\n");
     assert!(placed(&r).is_empty(), "scrolled out at the top of the region");
     // A picture across the region's edge is deleted by the scroll.
@@ -110,12 +110,12 @@ fn the_screen_cleared_with_ed_2_takes_the_pictures_into_the_history() {
     put(&mut r, 1);
     r.feed("\r\n\x1b[2J");
     assert!(placed(&r).is_empty());
-    r.term.scroll_display(Scroll::Top);
+    r.term.scroll(Scroll::Top);
     assert_eq!(spots(&r).len(), 1, "scrolled back, it is where it was");
     // ED 3 empties the history, and the picture with it.
-    r.term.scroll_display(Scroll::Bottom);
+    r.term.scroll(Scroll::Bottom);
     r.feed("\x1b[3J");
-    r.term.scroll_display(Scroll::Top);
+    r.term.scroll(Scroll::Top);
     assert!(placed(&r).is_empty());
 }
 
@@ -125,12 +125,12 @@ fn the_history_dropping_its_oldest_lines_takes_their_pictures() {
     put(&mut r, 1);
     for _ in 0..40_000 {
         r.feed("\n");
-        if placed(&r).is_empty() && r.term.history_size() > 2 {
-            r.term.scroll_display(Scroll::Top);
+        if placed(&r).is_empty() && r.term.history_len() > 2 {
+            r.term.scroll(Scroll::Top);
             if spots(&r).is_empty() {
                 return;
             }
-            r.term.scroll_display(Scroll::Bottom);
+            r.term.scroll(Scroll::Bottom);
         }
     }
     panic!("the picture outlived its history");
@@ -189,7 +189,7 @@ fn the_alternate_screen_scrolls_its_pictures_without_a_history() {
     assert_eq!(spots(&r), [(1, -1, 0, 1, 3)], "its first row is off the top");
     r.feed("\n\n");
     assert!(placed(&r).is_empty());
-    assert_eq!(r.term.history_size(), 0);
+    assert_eq!(r.term.history_len(), 0);
 }
 
 #[test]

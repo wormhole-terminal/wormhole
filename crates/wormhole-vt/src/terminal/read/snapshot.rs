@@ -13,6 +13,7 @@ use crate::terminal::modes::Modes;
 
 /// Where the cursor is and how a program wants it drawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Cursor {
     /// A grid point, on the first cell of a double-width character.
     pub point: Point,
@@ -28,22 +29,32 @@ pub struct Cursor {
 
 impl Terminal {
     /// Columns of the screen.
-    pub fn columns(&self) -> usize {
+    #[must_use]
+    pub fn cols(&self) -> usize {
         self.cols
     }
 
     /// Rows of the live screen.
-    pub fn screen_lines(&self) -> usize {
+    #[must_use]
+    pub fn rows(&self) -> usize {
         self.rows
     }
 
+    /// The screen's size as `(cols, rows)`.
+    #[must_use]
+    pub fn size(&self) -> (usize, usize) {
+        (self.cols, self.rows)
+    }
+
     /// Lines of history above the live screen (0 on the alternate screen).
-    pub fn history_size(&self) -> usize {
+    #[must_use]
+    pub fn history_len(&self) -> usize {
         self.grid.history_len()
     }
 
-    /// How many lines the view is scrolled up into the history.
-    pub fn display_offset(&self) -> usize {
+    /// How many lines the view is scrolled up into the history; 0 is the live screen.
+    #[must_use]
+    pub fn scroll_offset(&self) -> usize {
         self.grid.display_offset()
     }
 
@@ -73,12 +84,6 @@ impl Terminal {
         }
     }
 
-    /// Where the cursor is on the grid, shown or not (the cell it is waiting on, with a wrap
-    /// pending).
-    pub fn grid_cursor(&self) -> Point {
-        self.cursor_point()
-    }
-
     /// Copy the rows of the view (the live screen, or the history if the view is scrolled up)
     /// into `out`, which is resized to the screen's height. Only rows that changed since the last
     /// call are copied, all of them after `force`, a resize, a clear or a move of the view; every
@@ -99,6 +104,15 @@ impl Terminal {
         self.grid.copy_row(line, cells, extras)
     }
 
+    /// The cell at `point` as a host draws it: its character, resolved colours and flags. `None`
+    /// outside the screen and the history. The characters a cluster adds, the underline colour
+    /// and the hyperlink are in the row's [`RowExtras`] ([`copy_row`](Self::copy_row)); this reads
+    /// one cell, so a host that wants a whole row copies the row.
+    #[must_use]
+    pub fn cell(&self, point: Point) -> Option<Cell> {
+        self.grid.draw_cell(point)
+    }
+
     /// Whether `line` goes on in the next row (a soft wrap).
     pub fn is_wrapped(&self, line: Line) -> bool {
         self.grid.is_wrapped(line)
@@ -115,15 +129,9 @@ impl Terminal {
         self.grid.row_text(line, trim)
     }
 
-    /// Which rows of the view changed since the last call, as `damaged[y]`, clearing the marks.
-    /// True when everything did (the view moved, a resize, a clear), in which case `damaged` says
-    /// nothing.
-    pub fn take_damage(&mut self, damaged: &mut [bool]) -> bool {
-        self.grid.take_damage(damaged)
-    }
-
-    /// Scroll the view through the history.
-    pub fn scroll_display(&mut self, scroll: Scroll) {
+    /// Scroll the view through the history. Not the program's scrolling: the screen and the
+    /// cursor stay as they are, only what [`copy_viewport`](Self::copy_viewport) shows moves.
+    pub fn scroll(&mut self, scroll: Scroll) {
         self.grid.scroll_view(scroll);
     }
 

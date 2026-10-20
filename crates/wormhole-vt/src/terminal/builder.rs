@@ -9,7 +9,7 @@ use super::{
     Cluster, CursorPos, CursorStyle, Event, Level, Margins, Parser, Policy, RECENT_LINKS, Saved, Terminal,
     dispatch, graphics, history_bytes, osc, read, reports, screen, text,
 };
-use crate::grid::{Content, Grid, Pen};
+use crate::grid::{BlockPart, Grid, Pen};
 use crate::terminal::modes::Modes;
 use crate::types::{COLOR_COUNT, Rgb};
 
@@ -34,7 +34,7 @@ const IDENTITY_PART_MAX: usize = 64;
 ///     .policy(policy)
 ///     .cell_size(9, 18)
 ///     .build();
-/// assert_eq!((term.columns(), term.screen_lines()), (120, 40));
+/// assert_eq!((term.cols(), term.rows()), (120, 40));
 /// ```
 #[derive(Clone, Debug)]
 #[must_use = "a builder does nothing until `build` is called"]
@@ -166,7 +166,7 @@ impl Builder {
                 state: crate::unicode::GraphemeState::new(),
             },
             block: 0,
-            stashed_content: Content::None,
+            stashed_content: BlockPart::None,
             link_seq: 0,
             recent_links: Vec::with_capacity(RECENT_LINKS),
             identity: self.identity,
@@ -185,6 +185,7 @@ impl Builder {
             guard_used: false,
             attr_extent: screen::rect::AttrExtent::default(),
             select: read::selection::Select::default(),
+            seen: read::damage::Seen::new(),
         };
         if let Some(palette) = &self.palette {
             term.set_default_colors(palette);

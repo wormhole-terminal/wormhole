@@ -6,7 +6,7 @@ use crate::types::SelectionType;
 use crate::types::{Column, Line, Point, Side};
 
 fn copy_row(rig: &mut Rig, row: i32) -> String {
-    let cols = rig.term.columns();
+    let cols = rig.term.cols();
     rig.term.start_selection(SelectionType::Simple, Point::new(Line(row), Column(0)), Side::Left);
     rig.term.update_selection(Point::new(Line(row), Column(cols - 1)), Side::Right);
     rig.term.selection_text().unwrap_or_default()

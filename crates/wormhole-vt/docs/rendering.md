@@ -1,10 +1,11 @@
 <!--
-API names assumed here: Terminal::take_damage(&mut Damage) with Damage::{is_full, row(y) / iter_rows},
+API names assumed here: Terminal::take_damage(&mut Damage) with Damage::{is_full, rows, contains, is_empty,
+cursor_changed, colors_changed},
 Terminal::copy_row(Line, &mut Vec<Cell>, Option<&mut RowExtras>) -> Option<RowMark> (exists today),
 Terminal::copy_viewport(&mut Vec<ViewRow>, force) (exists today; may be folded into the Damage API),
 Terminal::cursor() -> Cursor/TerminalCursor, Terminal::{start_selection, update_selection, selection_range,
 selection_text, drop_empty_selection, take_selection, link_span, has_placements, placements,
-virtual_placement, set_default_colors, colors, scroll_display, display_offset}, RowExtras,
+virtual_placement, set_default_colors, colors, scroll, scroll_offset, cell, cols, rows, size, history_len}, RowExtras,
 Cell/Color/NamedColor/Rgb/Flags, ImagePlacement, ImageHandle, ImageUpload, placeholder_at,
 strip_placeholders, PLACEHOLDER.
 -->
@@ -33,17 +34,15 @@ cheap. Do the shaping, the glyph lookups and the GPU work after the lock is rele
 The engine marks a row dirty when anything changes it. `take_damage` reports which rows of the visible
 view changed since the last call and clears the marks. It also tells you when *everything* changed: the
 view moved (you scrolled into the history), the size changed, or the screen was cleared or swapped. In
-that case the per-row answers say nothing, so redraw it all.
+that case `rows()` lists every row, so the loop below redraws it all (`is_full()` says so).
 
 ```rust,ignore
-let mut damage = Damage::default();
+let mut damage = Damage::new(); // keep it between frames
 term.take_damage(&mut damage);
 
-for y in 0..term.screen_lines() {
-    if damage.is_full() || damage.row(y) {
-        term.copy_row(Line(y as i32 - term.display_offset() as i32), &mut rows[y].cells, Some(&mut rows[y].extras));
-        rows[y].dirty = true;
-    }
+for y in damage.rows() {
+    term.copy_row(Line(y as i32 - term.scroll_offset() as i32), &mut rows[y].cells, Some(&mut rows[y].extras));
+    rows[y].dirty = true;
 }
 ```
 
@@ -57,8 +56,9 @@ Rules that keep this correct:
   same terminal, one of them gets nothing. Have one reader fan out.
 - **Output while scrolled back.** The view keeps showing the same text while new output arrives below
   it, and the damage you get is for the rows you see.
-- **Do not count on damage for the cursor.** Read `cursor()` every frame and compare it with the last
-  frame's yourself; redraw the rows it left and arrived on when it moved or its look changed.
+- **The cursor is not a row.** `cursor_changed()` says when its place, visibility or look changed; redraw the
+  rows it left and arrived on (read `cursor()` for where). `colors_changed()` says when a program set or
+  reset palette entries (OSC 4, 10, 11, 12): redraw everything if you draw with `colors()`.
 
 `copy_viewport` does the whole loop for the visible rows (it copies the changed ones into a
 `Vec<ViewRow>` and tells you which in each `changed` field) and is the shortest way to a first renderer.
@@ -66,8 +66,8 @@ Rules that keep this correct:
 ## Rows, cells and lines
 
 `Line(0)` is the top row of the live screen, history is negative (`concepts.md`). When the view is
-scrolled back, the top visible row is `Line(-display_offset)`. `scroll_display` moves the view, and
-`display_offset` tells where it is.
+scrolled back, the top visible row is `Line(-scroll_offset)`. `scroll` moves the view, and
+`scroll_offset` tells where it is. `cell(point)` reads a single cell.
 
 A row copy gives you `Cell`s (character, `fg`, `bg`, `flags`) plus a `RowExtras` with the rare things.
 Rows also carry:
@@ -102,7 +102,7 @@ character. The position is on the first cell of a wide character, so draw the bl
 `wide` is set.
 
 With a **wrap pending** (`concepts.md`), the cursor is reported on the last column, which is where it is
-drawn. `grid_cursor` is different: it gives the cell the next character will go into. Use `cursor()` for
+drawn. `cursor_point` is different: it gives the cell the next character will go into. Use `cursor()` for
 drawing.
 
 DECSCUSR 0 hands the choice back to you: shape and blink come back `None`. Keep the user's own setting for

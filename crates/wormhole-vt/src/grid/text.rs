@@ -10,11 +10,12 @@
 use crate::types::{Line, PLACEHOLDER, Point};
 
 use super::Grid;
-use super::cell::{Cell, Content};
+use super::cell::{BlockPart, Cell};
 use super::page::Page;
 
 /// How [`Terminal::text_between`](crate::Terminal::text_between) reads the range between two points.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum TextShape {
     /// In reading order from the first point to the second: the rows in between whole, the first
     /// from its column, the last up to its (a mouse selection that is not a block).
@@ -218,10 +219,10 @@ impl Grid {
         lines
     }
 
-    /// The text of the cells of `line` that are `content` of command block `block` (OSC 133):
+    /// The text of the cells of `line` that are `part` of command block `block` (OSC 133):
     /// the prompt, the command line or the output, untrimmed, a blank where a cell holds no
     /// character. A row belongs to one block; where two meet on it, to the later.
-    pub fn content_text(&self, line: Line, block: u32, content: Content) -> String {
+    pub fn block_text(&self, line: Line, block: u32, part: BlockPart) -> String {
         let mut out = String::new();
         let Some((page_ix, row)) = self.locate_line(line) else { return out };
         let page = &self.pages[page_ix];
@@ -229,7 +230,7 @@ impl Grid {
             return out;
         }
         for (x, &cell) in page.cells(row).iter().enumerate() {
-            if cell.content() == content {
+            if cell.content() == part {
                 push_cell(page, row, x, cell, &mut out);
             }
         }

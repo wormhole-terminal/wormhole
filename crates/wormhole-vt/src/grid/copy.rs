@@ -6,17 +6,20 @@
 //! characters after a cluster's first, hyperlinks, underline colors) is looked for in a second pass
 //! that runs only when the first saw a flag or the page has an underline color at all.
 
-use crate::types::{Cell as DrawCell, Color, Flags, Line, NamedColor, RowExtras};
+use crate::types::{Cell as DrawCell, Color, Flags, Line, NamedColor, Point, RowExtras};
 
 use super::cell::{Cell, CellFlags};
 use super::page::Page;
 use super::style::Style;
 use super::{Grid, RowMark};
 
-/// One viewport row as the snapshot keeps it, and whether it was copied again by the last
-/// [`Terminal::copy_viewport`](crate::Terminal::copy_viewport).
+/// One row of the view as [`Terminal::copy_viewport`](crate::Terminal::copy_viewport) fills it:
+/// the cells to draw, what they carry besides, and whether the row was copied again by that call.
+/// Keep the rows between calls: their buffers are reused.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct ViewRow {
+    /// One cell per column.
     pub cells: Vec<DrawCell>,
     /// Zero-width characters, underline colors and hyperlinks of the row's cells.
     pub extras: RowExtras,
@@ -78,6 +81,33 @@ impl Grid {
         all
     }
 
+    /// The cell at `point` (history included) as `copy_row` gives it; `None` outside the grid.
+    pub fn draw_cell(&self, point: Point) -> Option<DrawCell> {
+        if point.column.0 >= self.cols {
+            return None;
+        }
+        let (page_ix, row) = self.locate_line(point.line)?;
+        let page = &self.pages[page_ix];
+        let x = point.column.0;
+        let cell = page.cells(row)[x];
+        let mut drawn = if cell.is_blank() {
+            BLANK
+        } else {
+            let style = page.styles.styles()[cell.style_id() as usize].style();
+            DrawCell {
+                c: drawn_char(cell.codepoint()),
+                fg: style.fg,
+                bg: style.bg,
+                flags: style.attrs | cell.layout_flags(),
+            }
+        };
+        // A soft-wrapped row marks its last cell, blank or not, as `copy_row` does.
+        if x + 1 == self.cols && page.rows[row].wrapped() {
+            drawn.flags |= Flags::WRAPLINE;
+        }
+        Some(drawn)
+    }
+
     /// Copy the row at `line` (history included) into `cells`, and what its cells carry beside
     /// them into `extras` when given. Returns the block mark the row carries. Doesn't touch the
     /// changed marks.
@@ -95,6 +125,17 @@ impl Grid {
             return None;
         };
         copy_page_row(&self.pages[page], row, cells, extras)
+    }
+}
+
+/// The character a cell's code point is drawn as. ASCII, nearly all text, needs no validity check;
+/// an empty cell (an erased background, a spacer) is a space.
+#[inline]
+fn drawn_char(cp: u32) -> char {
+    if cp < 0x80 {
+        char::from(cp as u8 | (u8::from(cp == 0) * 0x20))
+    } else {
+        char::from_u32(cp).unwrap_or(' ')
     }
 }
 
@@ -129,19 +170,7 @@ fn copy_page_row(
             (fg, bg, attrs) = (style.fg, style.bg, style.attrs);
             last = key;
         }
-        let cp = cell.codepoint();
-        *dst = DrawCell {
-            // ASCII, nearly all text, needs no validity check; an empty cell (an erased background, a
-            // spacer) is a space.
-            c: if cp < 0x80 {
-                char::from(cp as u8 | (u8::from(cp == 0) * 0x20))
-            } else {
-                char::from_u32(cp).unwrap_or(' ')
-            },
-            fg,
-            bg,
-            flags: attrs | cell.layout_flags(),
-        };
+        *dst = DrawCell { c: drawn_char(cell.codepoint()), fg, bg, flags: attrs | cell.layout_flags() };
     }
     if let Some(last) = out.last_mut().filter(|_| page.rows[row].wrapped()) {
         last.flags |= Flags::WRAPLINE;

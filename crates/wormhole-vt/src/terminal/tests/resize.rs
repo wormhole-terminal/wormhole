@@ -54,7 +54,7 @@ fn a_resize_ends_the_scrolling_region_and_gives_new_columns_tab_stops() {
     rig.feed("\x1b[2;4r\x1b[3g");
     rig.term.resize(24, 6);
     rig.feed("\x1b[6;1H\n");
-    assert_eq!(rig.term.history_size(), 1, "the region is gone: the whole screen scrolled");
+    assert_eq!(rig.term.history_len(), 1, "the region is gone: the whole screen scrolled");
     rig.feed("\x1b[1;1H\tx");
     assert_eq!(rig.row(0), format!("{}x", " ".repeat(16)), "the stops of the columns that came");
 }
@@ -73,15 +73,15 @@ fn a_resize_to_the_same_size_does_nothing() {
 fn deccolm_needs_mode_40_and_asks_the_host_for_the_width() {
     let mut rig = Rig::new(100, 5);
     rig.feed("text\x1b[?3h");
-    assert_eq!(rig.term.columns(), 100, "not allowed");
+    assert_eq!(rig.term.cols(), 100, "not allowed");
     assert_eq!(rig.row(0), "text");
     rig.feed("\x1b[?40h\x1b[?3h");
-    assert_eq!(rig.term.columns(), 132);
+    assert_eq!(rig.term.cols(), 132);
     assert_eq!(rig.row(0), "", "the screen is cleared");
     assert_eq!(rig.cursor(), (0, 0));
     assert!(rig.events().contains(&Event::ColumnsRequested(132)));
     rig.feed("keep\x1b[?95h\x1b[?3l");
-    assert_eq!(rig.term.columns(), 80);
+    assert_eq!(rig.term.cols(), 80);
     assert_eq!(rig.row(0), "keep", "DECNCSM keeps the screen");
     assert!(rig.events().contains(&Event::ColumnsRequested(80)));
 }
@@ -94,7 +94,7 @@ fn the_history_keeps_at_least_the_lines_asked_for_and_not_much_more() {
         for i in 0..5000 {
             rig.feed(&format!("line {i}\r\n"));
         }
-        let kept = rig.term.history_size();
+        let kept = rig.term.history_len();
         assert!(kept >= lines, "{kept} lines kept of {lines} asked");
         // Whole pages go at once; a page is at most 128 KiB of cells.
         assert!(kept <= lines + 3 * 128 * 1024 / (40 * 8), "{kept} lines kept of {lines} asked");
@@ -108,10 +108,10 @@ fn the_history_keeps_at_least_the_lines_asked_for_and_not_much_more() {
 #[test]
 fn a_new_terminal_clamps_a_silly_size() {
     let term = crate::terminal::Terminal::builder().size(0, 0).scrollback(0).build();
-    assert!(term.columns() >= 2 && term.screen_lines() >= 1);
+    assert!(term.cols() >= 2 && term.rows() >= 1);
     let mut rig = Rig::new(10, 4);
     rig.term.resize(1_000_000, 1_000_000);
-    assert!(rig.term.columns() <= crate::grid::MAX_COLS && rig.term.screen_lines() <= crate::grid::MAX_ROWS);
+    assert!(rig.term.cols() <= crate::grid::MAX_COLS && rig.term.rows() <= crate::grid::MAX_ROWS);
     rig.feed("still works\r\n");
 }
 

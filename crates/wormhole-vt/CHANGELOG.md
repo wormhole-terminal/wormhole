@@ -30,7 +30,8 @@ First public release (0.1.0).
   event and the terminal's modes.
 - The `ext` module: extensions that claim OSC, DCS and APC sequences and private CSI finals, with payload
   caps, `Handled` or `Pass`, and a narrow context for replies and events.
-- `Damage`, a reusable description of which rows changed, and a read API for cells and rows.
+- `Damage`, a reusable description of what changed since the last look (rows, the cursor, the colours a
+  program set), and a read API for cells and rows: `Terminal::cell`, `size`.
 - Pins and spans that follow text through scrolling and reflow.
 - A guide in rustdoc (concepts, embedding, rendering, input, extensions, security, conformance), a README,
   and `SECURITY.md`.
@@ -42,6 +43,10 @@ First public release (0.1.0).
 - `grid` is private. What a host needs from it has a public home.
 - `Event` and the public enums and option structs are `#[non_exhaustive]`; `Terminal` is `Send`, checked
   at compile time.
+- The reading API has plain names: `cols`, `rows`, `history_len`, `scroll_offset`, `scroll` (were
+  `columns`, `screen_lines`, `history_size`, `display_offset`, `scroll_display`), `cursor_point` (was
+  `grid_cursor`), `block_text` and `BlockPart` (were `content_text` and `Content`); `take_damage` fills a
+  `Damage` instead of a `[bool]`.
 - The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole".
 
 ### Security

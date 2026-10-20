@@ -60,11 +60,11 @@ fn only_what_is_on_the_screen_goes() {
     let mut r = scene();
     // Scroll everything up and a bit more: A and B are in the history now.
     r.feed("\x1b[10;1H\n\n\n\n\n\n\n");
-    assert_eq!(r.term.history_size(), 7);
+    assert_eq!(r.term.history_len(), 7);
     r.feed("\x1b[1;1H");
     r.feed(&apc_bare("a=p,i=1,p=3,C=1,q=2"));
     r.feed(&apc_bare("a=d,d=a"));
-    r.term.scroll_display(crate::types::Scroll::Top);
+    r.term.scroll(crate::types::Scroll::Top);
     let in_history = left(&r);
     assert_eq!(in_history.len(), 4 - 1, "the one placed on the screen went; the others had scrolled off");
     assert!(freed(&mut r).is_empty());

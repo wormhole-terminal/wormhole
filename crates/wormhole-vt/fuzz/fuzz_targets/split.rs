@@ -10,11 +10,11 @@ fn state(term: &mut Terminal) -> String {
     let events: Vec<_> = term.events().collect();
     let replies = term.take_replies();
     let history: Vec<String> =
-        (1..=term.history_size() as i32).map(|n| term.row_text(Line(-n), false)).collect();
+        (1..=term.history_len() as i32).map(|n| term.row_text(Line(-n), false)).collect();
     format!(
         "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{history:?}\n{events:?}",
         term.screen_text(),
-        term.grid_cursor(),
+        term.cursor_point(),
         term.cursor(),
         term.title(),
         replies,

@@ -516,15 +516,15 @@ fn pins_follow_unique_characters_through_random_resizes() {
 
 #[test]
 fn command_blocks_stay_marked_through_a_reflow() {
-    use crate::grid::Content;
+    use crate::grid::BlockPart;
     let mut sim = Sim::new(30, 8, DEFAULT_SCROLLBACK_BYTES);
     let pen = |content, block| Pen { content, block, ..plain() };
-    sim.pen = pen(Content::Prompt, 3);
+    sim.pen = pen(BlockPart::Prompt, 3);
     sim.print("user@host:~$ ");
-    sim.pen = pen(Content::Command, 3);
+    sim.pen = pen(BlockPart::Command, 3);
     sim.print("echo a long command line that wraps");
     sim.newline();
-    sim.pen = pen(Content::Output, 3);
+    sim.pen = pen(BlockPart::Output, 3);
     sim.print("the output of it, which is long enough to wrap too");
     sim.newline();
     sim.pen = plain();

@@ -1,7 +1,7 @@
 //! The snapshot copy: rows as the types a host draws, and which rows are copied.
 
 use super::{BG, Sim, at, bold, colored, full, plain};
-use crate::grid::{Content, DEFAULT_SCROLLBACK_BYTES, Grid, Pen, Style, ViewRow};
+use crate::grid::{BlockPart, DEFAULT_SCROLLBACK_BYTES, Grid, Pen, Style, ViewRow};
 use crate::types::{Cell, Color, Flags, Hyperlink, Line, NamedColor, RowExtras, Scroll};
 
 fn row(grid: &Grid, line: i32) -> (Vec<Cell>, RowExtras) {
@@ -80,8 +80,8 @@ fn two_links_next_to_each_other_stay_two_runs() {
 #[test]
 fn the_mark_of_a_block_row_comes_with_the_copy() {
     let mut g = Grid::new(10, 1, DEFAULT_SCROLLBACK_BYTES);
-    g.write_ascii(0, 0, b"$ ", &Pen { content: Content::Prompt, block: 4, ..plain() });
-    g.write_ascii(0, 2, b"ls", &Pen { content: Content::Command, block: 4, ..plain() });
+    g.write_ascii(0, 0, b"$ ", &Pen { content: BlockPart::Prompt, block: 4, ..plain() });
+    g.write_ascii(0, 2, b"ls", &Pen { content: BlockPart::Command, block: 4, ..plain() });
     let mut cells = Vec::new();
     let mark = g.copy_row(Line(0), &mut cells, None);
     assert_eq!(mark.map(|m| (m.block, m.prompt, m.command, m.output)), Some((4, true, true, false)));

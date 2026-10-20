@@ -80,7 +80,7 @@ use std::collections::VecDeque;
 
 #[cfg(any(test, feature = "internals"))]
 pub use cell::flag_names;
-pub use cell::{Cell, Content, Spare, StyleId};
+pub use cell::{BlockPart, Cell, Spare, StyleId};
 pub use copy::ViewRow;
 #[cfg(test)]
 pub use images::MAX_PLACEMENTS;

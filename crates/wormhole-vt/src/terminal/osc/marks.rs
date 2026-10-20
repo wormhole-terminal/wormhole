@@ -1,7 +1,7 @@
 //! OSC 133: FinalTerm's shell marks, which divide the screen into blocks of prompt, command and
 //! output.
 
-use crate::grid::Content;
+use crate::grid::BlockPart;
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, PromptKind, ShellMark};
@@ -27,20 +27,20 @@ impl Terminal {
                     }
                 }
                 if self.pen.block != 0 {
-                    self.pen.content = Content::Prompt;
+                    self.pen.content = BlockPart::Prompt;
                 }
                 ShellMark::PromptStart(kind)
             }
             Some(b"B") => {
-                self.set_content(Content::Command);
+                self.set_content(BlockPart::Command);
                 ShellMark::CommandStart
             }
             Some(b"C") => {
-                self.set_content(Content::Output);
+                self.set_content(BlockPart::Output);
                 ShellMark::OutputStart
             }
             Some(b"D") => {
-                self.pen.content = Content::None;
+                self.pen.content = BlockPart::None;
                 let code =
                     parts.next().and_then(|c| std::str::from_utf8(c).ok()).and_then(|c| c.parse().ok());
                 ShellMark::Finished(code)
@@ -55,7 +55,7 @@ impl Terminal {
         self.grid.content_len(crate::types::Line(self.cursor.y as i32)) == 0
     }
 
-    fn set_content(&mut self, content: Content) {
+    fn set_content(&mut self, content: BlockPart) {
         if self.pen.block != 0 && !self.on_alt_screen() {
             self.pen.content = content;
         }
