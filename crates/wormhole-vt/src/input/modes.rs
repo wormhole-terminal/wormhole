@@ -21,6 +21,10 @@ pub struct InputModes {
     /// DECBKM (67): Backspace sends BS (0x08) and Control+Backspace DEL; reset (the default),
     /// DEL and BS, as xterm's `backarrowKey` does.
     pub backarrow_bs: bool,
+    /// LNM (ANSI mode 20, `CSI 20 h`): Return, and the keypad's Enter in its numeric mode, send CR
+    /// LF instead of CR (VT100 User Guide, "Line Feed/New Line Mode"; the VT52 has no such mode).
+    /// Reset (the default): CR.
+    pub new_line: bool,
     /// The kitty keyboard flags of the screen showing. Any flag set switches the key encoding to
     /// the kitty protocol.
     pub kitty: KittyFlags,
@@ -57,6 +61,7 @@ impl From<Modes> for InputModes {
             app_cursor: modes.contains(Modes::APP_CURSOR),
             app_keypad: modes.contains(Modes::APP_KEYPAD),
             backarrow_bs: modes.contains(Modes::BACKARROW_BS),
+            new_line: modes.contains(Modes::NEW_LINE),
             kitty: modes.kitty_flags(),
             modify_other_keys: modes.modify_other_keys(),
             vt52: modes.contains(Modes::VT52),
@@ -84,6 +89,7 @@ mod tests {
             Modes::APP_CURSOR
                 | Modes::APP_KEYPAD
                 | Modes::BACKARROW_BS
+                | Modes::NEW_LINE
                 | Modes::BRACKETED_PASTE
                 | Modes::FOCUS_REPORT
                 | Modes::MOUSE_DRAG
@@ -96,7 +102,7 @@ mod tests {
         );
         assert!(modes.vt52);
         assert_eq!(modes.modify_other_keys, ModifyOtherKeys::Level2);
-        assert!(modes.app_cursor && modes.app_keypad && modes.backarrow_bs);
+        assert!(modes.app_cursor && modes.app_keypad && modes.backarrow_bs && modes.new_line);
         assert!(modes.bracketed_paste && modes.focus_events);
         assert_eq!(modes.mouse, MouseTracking::Drag);
         assert_eq!(modes.mouse_encoding, MouseEncoding::Utf8);

@@ -193,6 +193,14 @@ mod tests {
     }
 
     #[test]
+    fn return_sends_cr_lf_in_new_line_mode() {
+        // `CSI 20 h` (LNM): vttest's keyboard menu and every VT100 program that sets it expect it.
+        let lnm = Modes::NEW_LINE;
+        assert_eq!(enc(k("enter", Some("\r")), lnm), s("\r\n"));
+        assert_eq!(enc(k("enter", Some("\r")), NONE), s("\r"));
+    }
+
+    #[test]
     fn modify_other_keys_tells_the_program_which_modifiers_were_held() {
         let level1 = Modes::MODIFY_OTHER_KEYS;
         let level2 = Modes::MODIFY_OTHER_KEYS | Modes::MODIFY_OTHER_KEYS_ALL;

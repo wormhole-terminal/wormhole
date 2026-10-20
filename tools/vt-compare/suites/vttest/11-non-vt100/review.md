@@ -71,7 +71,7 @@ in the colour menu, so the same test comes up more than once.
 | 127 | waiting, keypad mode set | prompt | `+APP_KEYPAD` |
 | 128 to 129 | keypad 5 with the mode set (DECNKM, or `ESC =`) | pass | the application keypad sends `ESC O u`. (Before `InputModes` had `app_keypad` it sent `5`: vttest found it) |
 | 130 to 134 | keyboard usage (DECKBUM), a letter pressed in each mode | pass | a letter is the same in data-processing and typewriter mode; the effect (shift lock) cannot be seen with it |
-| 135 to 139 | key position (DECKPM), a letter pressed in each mode | fail: DECKPM unsupported | with position reports on, a key must report its position (`CSI ... , }`); the engine sent `a` in both |
+| 135 to 139 | key position (DECKPM), a letter pressed in each mode | unsupported: DECKPM (by design) | with position reports on, a key must report its position (`CSI ... , }`); the engine sent `a` in both. A VT510 feature that xterm does not have either (its DECSET list has no mode 81): no program asks for it, so it is documented and not built (`docs/input.md`) |
 | 140 to 141 | change attributes in a rectangle (DECCARA): rectangle, then stream extent | pass | an open rectangle of reverse-video E's; with DECSACE stream it wraps at the screen's edges as the stripes require |
 | 142 to 145 | copy a rectangle (DECCRA), overlapping included | pass |  |
 | 146 | erase a rectangle (DECERA) | pass |  |

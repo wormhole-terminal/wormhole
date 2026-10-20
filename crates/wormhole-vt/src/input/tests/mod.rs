@@ -17,6 +17,7 @@ const fn modes(kitty: KittyFlags) -> InputModes {
         app_cursor: false,
         app_keypad: false,
         backarrow_bs: false,
+        new_line: false,
         kitty,
         modify_other_keys: super::ModifyOtherKeys::Off,
         vt52: false,
@@ -160,6 +161,23 @@ fn legacy_backspace_follows_decbkm() {
     assert_eq!(enc(key(Key::Backspace), bs), s("\x08"));
     assert_eq!(enc(with(key(Key::Backspace), CTRL), bs), s("\x7f"));
     assert_eq!(enc(with(key(Key::Backspace), ALT), bs), s("\x1b\x08"));
+}
+
+#[test]
+fn legacy_return_follows_lnm() {
+    // VT100 User Guide, Line Feed/New Line Mode: set, the RETURN key sends CR LF; reset, CR. The
+    // keypad's Enter is RETURN's twin in its numeric mode.
+    let lnm = InputModes { new_line: true, ..NONE };
+    assert_eq!(enc(key(Key::Enter), NONE), s("\r"));
+    assert_eq!(enc(key(Key::Enter), lnm), s("\r\n"));
+    assert_eq!(enc(with(key(Key::Enter), ALT), lnm), s("\x1b\r\n"));
+    assert_eq!(enc(key(Key::Keypad(KeypadKey::Enter)), lnm), s("\r\n"));
+    let app = InputModes { app_keypad: true, ..lnm };
+    assert_eq!(enc(key(Key::Keypad(KeypadKey::Enter)), app), s("\x1bOM"));
+    // Under the kitty protocol a plain Enter keeps its legacy bytes, so it keeps LNM's too; the
+    // VT52 has no such mode.
+    assert_eq!(enc(key(Key::Enter), InputModes { kitty: DIS, ..lnm }), s("\r\n"));
+    assert_eq!(enc(key(Key::Enter), InputModes { vt52: true, ..lnm }), s("\r"));
 }
 
 #[test]

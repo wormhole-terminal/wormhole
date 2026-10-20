@@ -7,7 +7,7 @@ modes: default
 01|Test of LineFeed/NewLine mode.
 02|
 03|NewLine mode set. Push the RETURN key:
-04| <13>  -- Not expected
+04| <13> <10>  -- OK
 05|
 06|NewLine mode reset. Push the RETURN key:
 07|
@@ -29,4 +29,4 @@ modes: default
 23|
 24|
 --- attributes (columns from 1)
-04| 1-6 inverse
+04| 1-11 inverse

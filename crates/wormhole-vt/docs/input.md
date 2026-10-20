@@ -55,6 +55,12 @@ Without any kitty flag set, keys follow xterm:
 - Modifiers on those keys go in a parameter: `CSI 1 ; m A`, where `m = 1 + shift + 2·alt + 4·ctrl`.
 - Backspace sends `DEL` (`0x7f`), and Ctrl+Backspace `BS`; a program that set DECBKM (mode 67) gets them
   the other way round. Shift+Tab sends `CSI Z`.
+- Return (and the keypad's Enter, unless the program set the application keypad) sends `CR`, or `CR LF`
+  while the program has new line mode set (LNM, `CSI 20 h`; `InputModes::new_line`). The VT52 has no such
+  mode.
+- DECKPM (key position mode, `CSI ? 81 h`, where a VT510's keys report their position instead of their
+  character) is not implemented: it is not one of xterm's modes either, no program asks for it, and the
+  engine answers DECRQM for it as an unknown mode.
 
 ### modifyOtherKeys
 

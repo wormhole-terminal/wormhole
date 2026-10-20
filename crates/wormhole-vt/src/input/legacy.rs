@@ -24,12 +24,13 @@ pub(super) fn encode(ev: &KeyEvent, modes: &InputModes, out: &mut Vec<u8>) -> bo
 
     match ev.key {
         Key::Char(c) => char_key(ev, c, out),
-        // Alt+Enter is ESC CR, which readline binds and the AI CLIs take as "newline".
+        // Alt+Enter is ESC CR, which readline binds and the AI CLIs take as "newline". LNM adds
+        // the line feed.
         Key::Enter => {
             if alt {
                 out.push(ESC);
             }
-            out.push(b'\r');
+            return_key(modes, out);
             true
         }
         // DEL, and BS with Ctrl; DECBKM swaps them (xterm's `backarrowKey`). Alt sends ESC and
@@ -213,8 +214,18 @@ fn keypad(ev: &KeyEvent, key: KeypadKey, modes: &InputModes, out: &mut Vec<u8>) 
     };
     if modes.app_keypad && !ev.mods.intersects(Mods::SHIFT | Mods::ALT | Mods::CTRL | Mods::META) {
         out.extend_from_slice(&[ESC, b'O', application]);
+    } else if key == KeypadKey::Enter {
+        return_key(modes, out);
     } else {
         out.push(typed);
     }
     true
+}
+
+/// CR, and LF after it in new line mode (LNM).
+fn return_key(modes: &InputModes, out: &mut Vec<u8>) {
+    out.push(b'\r');
+    if modes.new_line {
+        out.push(b'\n');
+    }
 }
