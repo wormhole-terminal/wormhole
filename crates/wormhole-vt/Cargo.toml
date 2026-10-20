@@ -1,12 +1,31 @@
 [package]
 name = "wormhole-vt"
-description = "A terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
-version.workspace = true
+# The engine's own version, not the app's (`workspace.package.version`): `scripts/release.sh` bumps
+# the app and leaves this alone; a release of the crate is its own tag and CHANGELOG.md.
+version = "0.1.0"
 edition.workspace = true
+# The oldest compiler that builds the library: 1.88 stabilised `let` chains (2024 edition) and
+# `slice::as_chunks`; 1.85 to 1.87 fail on exactly those. Found with `cargo +<version> check`.
+rust-version = "1.88"
+description = "A terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
 # MIT, unlike the app (GPL-3.0-or-later), so other projects can embed the engine.
 license = "MIT"
+readme = "README.md"
 repository.workspace = true
-publish.workspace = true
+homepage = "https://getwormhole.app"
+documentation = "https://docs.rs/wormhole-vt"
+keywords = ["terminal", "vt100", "ansi", "escape-sequences", "emulator"]
+categories = ["command-line-interface", "parser-implementations"]
+# The one crate of the workspace that is published (the workspace default is `false`).
+publish = true
+# What a user of the package does not need: the fuzz crate is its own package, the conformance
+# cases are run by the bench crate, which is not part of the package, and the API listing is a
+# review aid of the repository.
+exclude = ["/fuzz", "/tests/conformance", "/api.txt"]
+
+[package.metadata.docs.rs]
+# No `all-features`: the only feature is `internals`, which is not for users and stays out of the docs.
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 bitflags = "2"
