@@ -7,7 +7,6 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::buttons::icon;
-use super::metrics::Metrics;
 use crate::settings::UiColors;
 use gpui_kit::assets::IconName;
 use wormhole_core::sidebar::Bracket;
@@ -26,13 +25,8 @@ pub fn chain_mark(id: impl Into<ElementId>, ui: UiColors) -> Stateful<Div> {
         .tooltip(|window, cx| Tooltip::new("In a split with terminals in other folders").build(window, cx))
 }
 
-/// Where a split's line runs in a terminal's row: through the middle of its tile.
-pub fn split_line_x(metrics: Metrics) -> f32 {
-    metrics.row_px + metrics.tile / 2.0
-}
-
-/// The line along a split's rows, `x` in from the row's left (the middle of what it joins, see
-/// [`split_line_x`]): from the middle of the first row to the middle of the last, so it never
+/// The line along a split's rows, `x` in from the row's left (the middle of what it joins: a
+/// terminal row's tile): from the middle of the first row to the middle of the last, so it never
 /// reaches a card's edge, and drawn first so the tiles stand on it and it shows only between them.
 /// Only its two ends are rounded, so the stretches in the rows between meet without a notch.
 #[track_caller]

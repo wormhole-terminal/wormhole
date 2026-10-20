@@ -410,9 +410,10 @@ impl Workspace {
                 trail,
                 detail_trail: detail_trail.map(SharedString::from),
                 tile: Some(tile),
-                behind: place.marks.bracket.map(|part| {
-                    style::split_line(part, style::split_line_x(frame.metrics), ui).into_any_element()
-                }),
+                behind: place
+                    .marks
+                    .bracket
+                    .map(|part| style::split_line(part, split_line_x(frame.metrics), ui).into_any_element()),
                 card: true,
                 solo: place.solo,
                 metrics: frame.metrics,
@@ -539,6 +540,11 @@ const MONO_CHAR_W: f32 = 7.2;
 const CLOCK_W: f32 = 48.0;
 /// How many characters of a path fit on a row's second line before it is cut from the front.
 pub(super) const PLACE_CHARS: usize = 38;
+
+/// Where a split's line runs in a terminal's row: through the middle of its tile, which stands on it.
+fn split_line_x(metrics: style::Metrics) -> f32 {
+    metrics.row_px + metrics.tile / 2.0
+}
 
 #[cfg(test)]
 mod tests {
