@@ -253,6 +253,8 @@ impl Terminal {
         d.field("a/charsets", format!("{:?}", self.charsets));
         d.field("a/locator", format!("{:?}", self.locator.settings()));
         d.field("a/preferred", format!("{:?}", self.preferred));
+        d.field("a/sgr_stack", format!("{:?}", self.sgr_stack));
+        d.field("a/color_stack", format!("{:?}", self.color_stack));
         d.field("a/saved[0]", format!("{:?}", self.saved[0]));
         d.field("a/saved[1]", format!("{:?}", self.saved[1]));
         d.field("a/keys[0]", format!("{:?}", self.keys[0]));

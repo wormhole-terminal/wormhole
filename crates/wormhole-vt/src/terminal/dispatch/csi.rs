@@ -37,6 +37,7 @@ impl Terminal {
                 b'A' if self.level >= Level::Vt400 => self.shift_columns(Shift::Right, count(csi, 0)),
                 _ => {}
             },
+            (None, [b'#']) => self.csi_hash(csi),
             (None, [b'&']) if csi.final_byte() == b'u' => self.report_preferred_set(),
             (None, [b'!']) if csi.final_byte() == b'p' => self.soft_reset(),
             (None, [b'"']) if csi.final_byte() == b'p' => self.set_conformance_level(csi),
@@ -187,6 +188,26 @@ impl Terminal {
             b's' => self.save_private_modes(csi),
             b'r' => self.restore_private_modes(csi),
             _ => {}
+        }
+    }
+
+    /// Sequences with `#` as the intermediate: xterm's stacks of video attributes and of colors.
+    fn csi_hash(&mut self, csi: &Csi) {
+        match csi.final_byte() {
+            b'{' | b'p' => self.push_sgr(csi),
+            b'}' | b'q' => self.pop_sgr(),
+            b'|' => self.report_sgr(csi),
+            b'P' => self.each_color_slot(csi, Terminal::push_colors),
+            b'Q' => self.each_color_slot(csi, Terminal::pop_colors),
+            b'R' => self.report_color_stack(),
+            _ => {}
+        }
+    }
+
+    /// XTPUSHCOLORS and XTPOPCOLORS take a list of slots, or none (the stack's top).
+    fn each_color_slot(&mut self, csi: &Csi, action: fn(&mut Terminal, u16)) {
+        for i in 0..csi.len() {
+            action(self, csi.param(i, 0));
         }
     }
 

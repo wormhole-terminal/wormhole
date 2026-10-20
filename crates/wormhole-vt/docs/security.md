@@ -82,6 +82,7 @@ lowering is all a host can do and this table stays true whatever it asks. The re
 | Screen size | 2 to 16,384 columns, 1 to 16,384 rows | |
 | Characters after a cell's first | 32 | |
 | Kitty keyboard flag stack | 32 per screen; XTSAVE entries 64 | |
+| XTPUSHSGR and XTPUSHCOLORS stacks | 10 entries each (xterm's depth); a push on a full stack does nothing | |
 | Scrollback | What the host asks for, in bytes; the oldest page is dropped first | `Builder::scrollback` |
 
 When a host lowers a cap while the terminal runs, it applies to the next sequence: a string being read keeps
@@ -119,6 +120,8 @@ supplies. The few places a request's bytes appear in an answer are limited:
 - DECRQSS replies are built from state. An unknown request is answered `DCS 0 $ r ST` with no echo.
 - A kitty graphics reply carries the numeric ids and a fixed message.
 - A request id (the `Pi` in DECRQCRA) is a number.
+- XTREPORTSGR answers the rendition the cells of a rectangle have in common, which is attributes and
+  colours and never text; XTQMODKEYS, XTREPORTCOLORS and the in-band resize report are numbers.
 
 The reason is the history below: most of those vulnerabilities are an answer that contained attacker
 text.

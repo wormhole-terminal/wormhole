@@ -21,7 +21,7 @@
 //! | | `dcs` | device control strings and APC: collecting them and sending them on (sixel is read here; the strings a host asked for with a `Passthrough` are collected here and queued as events) |
 //! | `text/` | `print` | text: ASCII runs, wide characters, marks, grapheme clusters (mode 2027), REP, IRM |
 //! | | `charset` | the sets G0..G3 hold: national replacement sets, DEC Technical and Supplemental, Latin-1; and the shifts |
-//! | | `sgr` | SGR and the colors it sets |
+//! | | `sgr`, `sgr_stack` | SGR and the colors it sets; XTPUSHSGR, XTPOPSGR and XTREPORTSGR |
 //! | `screen/` | `cursor` | movement, margins, origin mode, tabs, DECSC/DECRC |
 //! | | `edit` | ED, EL, ECH, ICH, DCH, IL, DL, DECIC, DECDC, DECSED, DECSEL |
 //! | | `rect` | DECCARA, DECRARA, DECCRA, DECFRA, DECERA, DECSERA, DECSACE |
@@ -33,7 +33,7 @@
 //! | `modes/` | (`mod`) | the numbers that name the modes (the set itself, `Modes`, is a value type in `types/`) and the sets a soft reset and the keyboard flags are |
 //! | | `apply` | SM/RM, DECSET/DECRST, XTSAVE/XTRESTORE and what setting each does; DECRQM |
 //! | | `conformance` | DECSCL, S7C1T and S8C1T: the level and one-byte C1 controls |
-//! | | `keyboard`, `kept` | the kitty keyboard stacks; numbers kept for hardware we do not have |
+//! | | `keyboard`, `modkeys`, `kept` | the kitty keyboard stacks; XTMODKEYS and XTQMODKEYS (modifyOtherKeys); numbers kept for hardware we do not have |
 //! | `reports/` | (`mod`) | DSR, DA1/2/3, XTVERSION |
 //! | | `scheme` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031 |
 //! | | `state`, `presentation` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
@@ -44,6 +44,7 @@
 //! | `osc/` | (`mod`), `dispatch` | operating system commands: collecting the string; the dispatch and the text helpers |
 //! | | `cwd`, `link`, `clipboard`, `notify`, `marks` | OSC 7 (the folder), 8 (hyperlinks), 52 (clipboard), 9, 9;4, 99 and 777 (notifications, progress), 133 (shell marks) |
 //! | | `colors`, `spec` | OSC 4, 5, 10 to 19 and their resets; the parser of color specs |
+//! | | `color_stack` | XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS: the colors programs set, pushed and popped |
 //! | | `pointer`, `uservar` | OSC 22 (pointer shape) and iTerm2's `SetUserVar` (OSC 1337), as events |
 //! | | `base64` | base64 for the clipboard, the pictures and user variables |
 //! | `graphics/` | | kitty's graphics protocol, Sixel and iTerm2's inline images, placed in the grid |
@@ -243,6 +244,10 @@ pub struct Terminal {
     locator: reports::locator::Locator,
     /// What `<` designates (DECAUPSS).
     preferred: Preferred,
+    /// XTPUSHSGR's stack.
+    sgr_stack: text::sgr_stack::SgrStack,
+    /// XTPUSHCOLORS' stack.
+    color_stack: osc::color_stack::ColorStack,
     /// DECSC's slot, per screen (index 0: primary, 1: alternate).
     saved: [Saved; 2],
     keys: [KeyboardFlags; 2],

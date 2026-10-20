@@ -17,6 +17,7 @@ mod resize;
 mod scheme;
 mod selection;
 mod snapshot;
+mod stacks;
 mod tabs;
 mod window;
 

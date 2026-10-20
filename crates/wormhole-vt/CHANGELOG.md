@@ -20,6 +20,11 @@ First public release (0.1.0).
 
 ### Added
 
+- XTPUSHSGR, XTPOPSGR and XTREPORTSGR (`CSI Pm # {`, `CSI # }`, `CSI Pt ; Pl ; Pb ; Pr # |`; the aliases
+  `CSI # p` and `CSI # q` too): a stack of 10 pens, and the rendition a rectangle has in common.
+- XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS (`CSI # P`, `CSI # Q`, `CSI # R`): a stack of 10 palettes
+  the program set, with slots; a pop is announced with `Event::ColorsChanged`. The repaint writes both
+  stacks.
 - A front door at the crate root: `Terminal::new(cols, rows)` and `Terminal::builder()` (size,
   scrollback, policy, cell size, palette, word separators, passthrough). `Terminal::feed(bytes)` takes
   program output; the terminal owns its parser.

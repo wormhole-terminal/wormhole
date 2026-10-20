@@ -52,6 +52,8 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("charsets", Written("cursor_information: DECRSPS")),
     ("locator", Written("locator: DECELR, DECSLE, DECEFR (the pointer is the host's)")),
     ("preferred", Written("misc: DECAUPSS")),
+    ("sgr_stack", Written("sgr_stack: SGR, then XTPUSHSGR for each entry")),
+    ("color_stack", Written("palette: OSC 4, 10 to 19 and XTPUSHCOLORS for each entry")),
     ("saved", Written("saved_cursors: DECSC on each screen")),
     ("keys", Written("keyboard: CSI = u and CSI > u per screen")),
     ("cursor_style", Written("misc: DECSCUSR and mode 12")),
@@ -139,6 +141,21 @@ const GRID: &[(&str, Coverage)] = &[
     ("segments", Scratch("scratch for a scroll")),
     ("copied", Scratch("scratch for DECCRA")),
     ("copied_marks", Scratch("scratch for DECCRA")),
+];
+
+const SGR_STACK: &[(&str, Coverage)] =
+    &[("entries", Written("sgr_stack: each entry's attributes, then XTPUSHSGR"))];
+
+const SGR_ENTRY: &[(&str, Coverage)] =
+    &[("mask", Written("sgr_stack: the numbers XTPUSHSGR lists")), ("style", Written("sgr_stack: SGR"))];
+
+const COLOR_STACK: &[(&str, Coverage)] =
+    &[("entries", Written("palette: each entry's colors, then XTPUSHCOLORS"))];
+
+const COLOR_SNAPSHOT: &[(&str, Coverage)] = &[
+    ("set", Written("palette: OSC 4, 10, 11, 12")),
+    ("special", Written("palette: OSC 5")),
+    ("extra", Written("palette: OSC 13 to 19")),
 ];
 
 const PEN: &[(&str, Coverage)] = &[
@@ -268,6 +285,10 @@ pub const FIELDS: &[StructFields] = &[
     StructFields { name: "TabStops", file: "terminal/screen/tabs.rs", fields: TABS },
     StructFields { name: "Kept", file: "terminal/modes/kept.rs", fields: KEPT },
     StructFields { name: "SavedTitles", file: "terminal/reports/title.rs", fields: SAVED_TITLES },
+    StructFields { name: "SgrStack", file: "terminal/text/sgr_stack.rs", fields: SGR_STACK },
+    StructFields { name: "Entry", file: "terminal/text/sgr_stack.rs", fields: SGR_ENTRY },
+    StructFields { name: "ColorStack", file: "terminal/osc/color_stack.rs", fields: COLOR_STACK },
+    StructFields { name: "Snapshot", file: "terminal/osc/color_stack.rs", fields: COLOR_SNAPSHOT },
 ];
 
 /// Every mode flag and how a repaint covers it. A test checks it against `Modes`.

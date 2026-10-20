@@ -3,7 +3,7 @@
 //! do what it says (the locator before the mouse modes that would switch it off). `cursors` writes
 //! the counters, the saved cursors, the modes and the cursor itself.
 
-use crate::types::{CursorShape, NamedColor, Rgb};
+use crate::types::{Colors, CursorShape, NamedColor, Rgb};
 
 use super::{Gaps, Writer};
 use crate::terminal::modes;
@@ -18,6 +18,7 @@ impl<'a> Writer<'a> {
     pub(super) fn tables(&mut self) {
         self.tab_stops();
         self.palette();
+        self.sgr_stack();
         self.titles();
         self.keyboard();
         self.saved_modes();
@@ -62,6 +63,33 @@ impl<'a> Writer<'a> {
 
     fn palette(&mut self) {
         let t = self.term;
+        let mut dirty = false;
+        for saved in t.color_stack.entries() {
+            if dirty {
+                self.reset_palette();
+            }
+            self.write_palette(&saved.set, &saved.special, &saved.extra);
+            self.put(b"\x1b[#P");
+            dirty = true;
+        }
+        if dirty {
+            self.reset_palette();
+        }
+        self.write_palette(&t.palette.set, &t.palette.special, &t.palette.extra);
+    }
+
+    /// Every color a program can set goes back to the host's: OSC 104 (the palette and the special
+    /// colors) and OSC 110 to 119 (the dynamic colors).
+    fn reset_palette(&mut self) {
+        self.put(b"\x1b]104\x1b\\");
+        for command in 110..=119 {
+            self.put(b"\x1b]");
+            self.num(command);
+            self.put(b"\x1b\\");
+        }
+    }
+
+    fn write_palette(&mut self, set: &Colors, special: &[Option<Rgb>], extra: &[Option<Rgb>]) {
         let spec = |out: &mut Vec<u8>, rgb: Rgb| {
             const HEX: &[u8; 16] = b"0123456789abcdef";
             out.extend_from_slice(b"rgb:");
@@ -76,7 +104,7 @@ impl<'a> Writer<'a> {
         // OSC 4 takes pairs; sixteen at a time keeps every string short.
         let mut open = 0;
         for i in 0..256 {
-            let Some(rgb) = t.palette.set.get(i) else { continue };
+            let Some(rgb) = set.get(i) else { continue };
             if open == 0 {
                 self.put(b"\x1b]4");
             }
@@ -93,7 +121,7 @@ impl<'a> Writer<'a> {
         if open > 0 {
             self.put(b"\x1b\\");
         }
-        for (i, color) in t.palette.special.iter().enumerate() {
+        for (i, color) in special.iter().enumerate() {
             if let Some(rgb) = color {
                 self.put(b"\x1b]5;");
                 self.num(i);
@@ -105,7 +133,7 @@ impl<'a> Writer<'a> {
         for (command, named) in
             [(10, NamedColor::Foreground), (11, NamedColor::Background), (12, NamedColor::Cursor)]
         {
-            if let Some(rgb) = t.palette.set[named] {
+            if let Some(rgb) = set[named] {
                 self.put(b"\x1b]");
                 self.num(command);
                 self.out.push(b';');
@@ -113,7 +141,7 @@ impl<'a> Writer<'a> {
                 self.put(b"\x1b\\");
             }
         }
-        for (i, color) in t.palette.extra.iter().enumerate() {
+        for (i, color) in extra.iter().enumerate() {
             if let Some(rgb) = color {
                 self.put(b"\x1b]");
                 self.num(13 + i);
@@ -121,6 +149,25 @@ impl<'a> Writer<'a> {
                 spec(self.out, *rgb);
                 self.put(b"\x1b\\");
             }
+        }
+    }
+
+    // ---- the video attributes' stack ----
+
+    /// XTPUSHSGR's entries: the pen is made what each saved and pushed, for the attributes it
+    /// named. The pen the terminal has is set at the end, with the rest of its state.
+    fn sgr_stack(&mut self) {
+        let t = self.term;
+        for entry in t.sgr_stack.entries() {
+            self.set_style(&entry.style);
+            self.put(b"\x1b[");
+            for (i, number) in entry.mask.numbers().enumerate() {
+                if i > 0 {
+                    self.out.push(b';');
+                }
+                self.num(usize::from(number));
+            }
+            self.put(b"#{");
         }
     }
 

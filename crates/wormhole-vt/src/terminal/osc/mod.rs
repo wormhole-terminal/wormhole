@@ -11,6 +11,7 @@
 
 pub(super) mod base64;
 pub(super) mod clipboard;
+pub(super) mod color_stack;
 pub(super) mod colors;
 pub(super) mod cwd;
 pub(super) mod dispatch;

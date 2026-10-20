@@ -66,6 +66,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (and a double-height line two rows at twice the size); selecting, clicking, the cursor and
   find work on it. Double-width text keeps its letter shapes and is spaced out to fill the wider
   cells.
+- A program can save and restore the pen's attributes and the colours it changed (xterm's
+  `CSI # {`, `CSI # }` and `CSI # P`, `CSI # Q`), and read back what a rectangle of the screen has in
+  common (`CSI Pt ; Pl ; Pb ; Pr # |`).
 
 ### Changed
 

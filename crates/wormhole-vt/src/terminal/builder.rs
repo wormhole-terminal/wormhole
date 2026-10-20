@@ -189,6 +189,8 @@ impl Builder {
             charsets: text::charset::Charsets::default(),
             locator: Default::default(),
             preferred: text::charset::Preferred::default(),
+            sgr_stack: Default::default(),
+            color_stack: Default::default(),
             saved: [Saved::default(), Saved::default()],
             keys: Default::default(),
             cursor_style: CursorStyle::default(),

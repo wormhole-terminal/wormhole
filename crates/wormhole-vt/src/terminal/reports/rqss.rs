@@ -111,7 +111,7 @@ impl Setting {
 
 /// The SGR sequence's parameters that would set a style: `0` then what differs from the
 /// default, and the final `m`.
-struct SgrParams<'a>(&'a Style);
+pub(in crate::terminal) struct SgrParams<'a>(pub(in crate::terminal) &'a Style);
 
 impl std::fmt::Display for SgrParams<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
