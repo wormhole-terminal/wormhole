@@ -438,6 +438,14 @@ impl Terminal {
         self.palette.defaults.copy_from_slice(palette);
     }
 
+    /// The host's colors as [`set_default_colors`](Self::set_default_colors) last set them (xterm's
+    /// palette before any call): what queries are answered with unless a program changed the
+    /// entry. A program's changes are [`colors`](Self::colors).
+    #[must_use]
+    pub fn default_colors(&self) -> &[Rgb; COLOR_COUNT] {
+        &self.palette.defaults
+    }
+
     /// The size of a cell in pixels, which XTWINOPS 14 and 16, the sixel geometry and the in-band
     /// resize report (mode 2048) say. A change that the report should tell is told by the next
     /// [`resize`](Terminal::resize), which a host calls after it (also with the size it has).
