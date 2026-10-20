@@ -54,6 +54,10 @@ pub(super) struct RowBox {
     pub scale_y: f32,
     /// The row's rectangle, which what a double-height line draws is cut to.
     pub clip: Option<ContentMask<Pixels>>,
+    /// How many columns the row shows, and where the grid's right edge is: a colour that runs to
+    /// the last shown column runs on to the edge, as on a normal row.
+    pub shown: usize,
+    pub right: Pixels,
 }
 
 impl RowBox {
@@ -78,6 +82,8 @@ impl RowBox {
             cell_width: cell_width * width_scale(size),
             scale_y: height_scale(size),
             clip,
+            shown: size.visible_columns(columns),
+            right: origin.x + cell_width * columns as f32,
         }
     }
 
@@ -127,32 +133,47 @@ pub(super) fn shape_metrics(size: LineSize, geometry: &Geometry, row: usize) -> 
     }
 }
 
-/// A sized row's coloured cells. The edge cells' colour runs on into the padding on the left and
-/// at the top and bottom of the grid, as on any row, but not on the right: the cells past the half
-/// are not shown, and the row's right half is the terminal's own background.
+/// Where a sized row's colour run over columns `start..end` is painted. The edge cells' colour
+/// runs on into the padding on the left and at the top and bottom of the grid, as on any row, and
+/// on the right when the run reaches the last column the row shows: those cells are drawn twice as
+/// wide, and a selection or background that covers the rest of the row must end where a normal
+/// row's does, not short of it (with an odd number of columns by a whole cell).
+pub(super) fn background_bounds(
+    b: &RowBox,
+    (start, end): (usize, usize),
+    reach: gpui_kit::Edges<Pixels>,
+    (row, rows_in_view): (usize, usize),
+) -> Bounds<Pixels> {
+    let mut from = point(b.x(start), b.row_top);
+    let mut width = b.cell_width * (end - start) as f32;
+    let mut height = b.row_height;
+    if start == 0 {
+        from.x -= reach.left;
+        width += reach.left;
+    }
+    if end >= b.shown {
+        width = b.right + reach.right - from.x;
+    }
+    if row == 0 {
+        from.y -= reach.top;
+        height += reach.top;
+    }
+    if row + 1 >= rows_in_view {
+        height += reach.bottom;
+    }
+    Bounds::new(from, size(width, height))
+}
+
+/// A sized row's coloured cells.
 pub(super) fn backgrounds(
     window: &mut Window,
     runs: &[(usize, usize, Hsla)],
     b: &RowBox,
     reach: gpui_kit::Edges<Pixels>,
-    (row, rows_in_view): (usize, usize),
+    place: (usize, usize),
 ) {
     for (start, end, color) in runs {
-        let mut from = point(b.x(*start), b.row_top);
-        let mut width = b.cell_width * (end - start) as f32;
-        let mut height = b.row_height;
-        if *start == 0 {
-            from.x -= reach.left;
-            width += reach.left;
-        }
-        if row == 0 {
-            from.y -= reach.top;
-            height += reach.top;
-        }
-        if row + 1 >= rows_in_view {
-            height += reach.bottom;
-        }
-        window.paint_quad(gpui_kit::fill(Bounds::new(from, size(width, height)), *color));
+        window.paint_quad(gpui_kit::fill(background_bounds(b, (*start, *end), reach, place), *color));
     }
 }
 
@@ -305,7 +326,7 @@ mod tests {
     use gpui_kit::px;
     use wormhole_core::terminal::types::LineSize;
 
-    use super::{RowBox, shape_metrics};
+    use super::{RowBox, background_bounds, shape_metrics};
     use crate::terminal_view::render::frame::Geometry;
 
     const GEOMETRY: Geometry = Geometry {
@@ -352,5 +373,21 @@ mod tests {
         assert_eq!((tall.origin.x, tall.stretch), (px(10.0), 1.0));
         let wide = shape_metrics(LineSize::DoubleWidth, &GEOMETRY, 1);
         assert_eq!((wide.cell_width, wide.line_height, wide.stretch), (px(8.0), px(20.0), 2.0));
+    }
+
+    #[test]
+    fn a_colour_to_the_last_shown_column_runs_to_the_grids_edge() {
+        let reach = gpui_kit::Edges { top: px(0.0), right: px(6.0), bottom: px(0.0), left: px(4.0) };
+        // 81 columns: a double-width row shows 40 of them, 640 px, and a normal one's edge is 648 px
+        // from the grid's left.
+        let b = RowBox::new(LineSize::DoubleWidth, &GEOMETRY, 2, 81);
+        let edge = px(10.0) + px(8.0) * 81.0 + px(6.0);
+        let tail = background_bounds(&b, (10, 40), reach, (2, 10));
+        assert_eq!(tail.right(), edge, "to the edge, padding included");
+        assert_eq!(tail.left(), px(10.0 + 16.0 * 10.0));
+        let first = background_bounds(&b, (0, 3), reach, (2, 10));
+        assert_eq!((first.left(), first.right()), (px(6.0), px(58.0)), "the left padding is covered too");
+        let middle = background_bounds(&b, (3, 8), reach, (2, 10));
+        assert_eq!((middle.left(), middle.right()), (px(58.0), px(138.0)), "nothing else moves");
     }
 }
