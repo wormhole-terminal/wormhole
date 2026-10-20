@@ -192,6 +192,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   screen and cursor stay as they were.
 - Programs that ask a terminal for its line parameters (`CSI 0 x`, DECREQTPARM, which some old
   VT100 software still does) now get an answer instead of waiting for one.
+- A program can switch the terminal between 80 and 132 columns with `CSI 80 $ |` and `CSI 132 $ |`
+  (DECSCPP), without clearing the screen, like the other window resizes it may ask for.
 
 ### Security
 

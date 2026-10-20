@@ -23,7 +23,7 @@
 
 use crate::parser::Csi;
 
-use crate::terminal::{Event, Terminal};
+use crate::terminal::{Event, Margins, Terminal};
 
 /// Where the host's window is and how big the things around it are, for the reports. Pixels are
 /// the host's, with the origin of the screen at its top left.
@@ -240,6 +240,28 @@ impl Terminal {
     pub(in crate::terminal) fn set_lines_per_screen(&mut self, lines: u16) {
         if self.policy.window_ops && lines > 0 {
             self.resize_window(Extent::Size(u32::from(lines)), Extent::Keep);
+        }
+    }
+
+    /// DECSCPP (`CSI Pn $ |`): 80 columns per page for 0 and 80, 132 for 132; any other number asks
+    /// nothing. Unlike DECCOLM it does not clear the page, reset the margins or home the cursor (VT510
+    /// manual); like DECSNLS it is a window operation, so it needs [`Policy::window_ops`] and is told to
+    /// the host as the resize it is. The text is reflowed to the new width, not cut as a real
+    /// terminal's page memory is.
+    pub(in crate::terminal) fn set_columns_per_page(&mut self, cols: u16) {
+        if self.policy.window_ops && matches!(cols, 0 | 80 | 132) {
+            let cols = if cols == 0 { 80 } else { u32::from(cols) };
+            // A resize puts the margins back to the whole screen; DECSCPP keeps them (a right margin
+            // at the old edge follows the new one).
+            let (before, was) = (self.margins, self.cols);
+            self.resize_window(Extent::Keep, Extent::Size(cols));
+            let last = self.cols - 1;
+            self.margins = Margins {
+                top: before.top.min(self.rows - 1),
+                bottom: before.bottom.min(self.rows - 1),
+                left: before.left.min(last),
+                right: if before.right + 1 >= was { last } else { before.right.min(last) },
+            };
         }
     }
 

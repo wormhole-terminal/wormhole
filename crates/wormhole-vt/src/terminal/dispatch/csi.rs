@@ -64,6 +64,7 @@ impl Terminal {
                 self.state_report(csi.param(0, 0));
             }
             (None, [b'+' | b'*' | b'$']) if self.keep_setting(csi) => {}
+            (None, [b'$']) if csi.final_byte() == b'|' => self.set_columns_per_page(csi.param(0, 0)),
             (None, [b'$']) => self.csi_rectangle(csi),
             (None, [b'*']) if csi.final_byte() == b'|' => self.set_lines_per_screen(csi.param(0, 0)),
             (None, [b'*']) => match csi.final_byte() {

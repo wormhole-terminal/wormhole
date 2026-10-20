@@ -95,6 +95,34 @@ reply \e[8;27;40t\eP1$r27t\e\\
 feed \e[24*|\eP$q*|\e\\
 reply \eP1$r24*|\e\\
 
+test DECSCPP selects 80 or 132 columns without clearing or homing
+spec VT510 DECSCPP: CSI 132 $ | selects 132 columns, CSI 80 $ | (also 0) 80; the page is not cleared, the scrolling regions are kept and the cursor stays unless it is beyond the page (with the host allowing window operations)
+window-ops allow
+size 20 5
+feed \e[2;4rabc\e[132$|\e[18t\eP$q$|\e\\\eP$qr\e\\
+reply \e[8;5;132t\eP1$r132$|\e\\\eP1$r2;4r\e\\
+cursor 1,4
+row 1 |abc|
+feed \e[80$|\e[18t
+reply \e[8;5;80t
+feed \e[132$|\e[0$|\e[18t
+reply \e[8;5;80t
+feed \e[132$|\e[100$|\e[$|\e[18t
+reply \e[8;5;80t
+
+test DECSCPP with another number asks nothing
+spec VT510 DECSCPP: the numbers are 80, 132 and 0
+window-ops allow
+size 20 5
+feed \e[132$|\e[100$|\e[18t
+reply \e[8;5;132t
+
+test DECSCPP is refused unless the host allows it
+spec VT510 DECSCPP is a window operation here, as DECSNLS and DECSLPP are
+size 20 5
+feed \e[132$|\e[18t\eP$q$|\e\\
+reply \e[8;5;20t\eP1$r20$|\e\\
+
 test DECSNLS and DECSLPP are refused unless the host allows them
 spec VT510 DECSNLS, DECSLPP: change the number of lines; here a window operation
 size 20 5

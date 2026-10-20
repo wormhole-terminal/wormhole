@@ -29,7 +29,7 @@ in the colour menu, so the same test comes up more than once.
 | 027 | pan down (SU) | pass | a row of `*` on the top row |
 | 028 | pan up (SD) | pass | a row of `*` just above the message |
 | 029 to 031 | set columns per page, 80 (DECSCPP) | pass | 80 of 80 columns filled |
-| 032 | set columns per page to 132 (DECSCPP) | fail: DECSCPP unsupported | `CSI 132 $ |` is ignored: the screen stays 80 columns (80 of 132 filled). The same request is answered by DECRQSS (62) as 80 |
+| 032 | set columns per page to 132 (DECSCPP) | pass | the screen is 132 columns wide with the 80 columns DECALN filled kept ("80 of 132 columns": DECSCPP clears nothing) and the ruler runs to 132. The vttest host allows window operations, which DECSCPP is here |
 | 033 | back to the original width | pass |  |
 | 034 to 035 | set lines per page, 24 and 25 (DECSLPP) | pass | the engine is 80x24 then 80x25 (the host resizes its window) |
 | 036 to 037 | set lines per page, 36 and 48 | pass |  |
