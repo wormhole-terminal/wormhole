@@ -95,6 +95,13 @@ Wheel buttons are 64 to 67 (up, down, left, right). Motion adds 32. Shift, Alt a
 16. Many hosts keep Shift for their own selection, so that a program that grabs the mouse can still be
 selected from; that choice is yours, not the encoder's.
 
+**SGR with pixels (1016).** The report has the form of SGR's with the pointer's position in pixels, for
+the program that wants more than a cell. Give the event the pixel inside the text area, counted from 0
+(`MouseEvent::with_pixel`); the engine writes it 1-based, like every number of the SGR family, as xterm
+does (its `EmitMousePosition` adds 1 to the cell, the row and the pixels alike). kitty writes the 0-based
+pixel, a difference of one that only shows at the edge of a cell. An event without a pixel is reported
+in cells.
+
 When the program has not turned on a mouse mode, the mouse is yours: select text, scroll the history.
 On the alternate screen with mode 1007 (alternate scroll) set and no mouse mode, a host sends arrow keys
 for the wheel instead of scrolling history, because there is none.

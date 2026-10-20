@@ -142,8 +142,12 @@ pub(super) fn encode(ev: &MouseEvent, modes: &InputModes, out: &mut Vec<u8>) -> 
             + 16 * u32::from(m.contains(Mods::CTRL));
     }
 
+    // The pixel position is 1-based like every number of the SGR family: xterm writes the
+    // offset into the text area plus one (`EmitMousePosition` in button.c adds 1 to the column,
+    // the row and the pixels alike), so the first pixel is 1. kitty writes the 0-based pixel;
+    // the two differ by one pixel, which only shows at a cell's edge.
     let (x, y) = match (modes.mouse_encoding, ev.pixel) {
-        (MouseEncoding::SgrPixels, Some((x, y))) => (x, y),
+        (MouseEncoding::SgrPixels, Some((x, y))) => (x.saturating_add(1), y.saturating_add(1)),
         _ => (ev.col.saturating_add(1), ev.row.saturating_add(1)),
     };
 
@@ -347,11 +351,14 @@ mod tests {
     fn sgr_pixels_use_the_pixel_when_there_is_one() {
         let m = modes(CLICK, SgrPixels);
         let e = ev(B::Left, Press, 2, 3);
-        assert_eq!(report(e.with_pixel(37, 58), m), Some(b"\x1b[<0;37;58M".to_vec()));
+        // 1-based, as xterm writes them (button.c adds 1 to the pixel offset): the pixel 37 of
+        // the text area, counting from 0, is 38.
+        assert_eq!(report(e.with_pixel(37, 58), m), Some(b"\x1b[<0;38;59M".to_vec()));
         assert_eq!(
             report(MouseEvent { kind: Release, ..e }.with_pixel(37, 58), m),
-            Some(b"\x1b[<0;37;58m".to_vec())
+            Some(b"\x1b[<0;38;59m".to_vec())
         );
+        assert_eq!(report(e.with_pixel(0, 0), m), Some(b"\x1b[<0;1;1M".to_vec()));
         // No pixel: the cell, as plain SGR.
         assert_eq!(report(e, m), Some(b"\x1b[<0;3;4M".to_vec()));
         // The pixel does not change the other forms.

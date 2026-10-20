@@ -220,9 +220,13 @@ mod tests {
         let mut e = ev(B::Left, Press, 2, 3);
         assert_eq!(encode(&e, m), Some(b"\x1b[<0;3;4M".to_vec()), "no pixel known: the cell");
         e.pixel = Some((25, 61));
-        assert_eq!(encode(&e, m), Some(b"\x1b[<0;25;61M".to_vec()), "the pixel, as the engine writes it");
+        assert_eq!(
+            encode(&e, m),
+            Some(b"\x1b[<0;26;62M".to_vec()),
+            "the 0-based pixel as the engine writes it: 1-based, as xterm does"
+        );
         e.action = Release;
-        assert_eq!(encode(&e, m), Some(b"\x1b[<0;25;61m".to_vec()));
+        assert_eq!(encode(&e, m), Some(b"\x1b[<0;26;62m".to_vec()));
     }
 
     #[test]

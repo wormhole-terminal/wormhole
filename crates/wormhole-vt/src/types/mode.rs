@@ -264,7 +264,8 @@ pub enum MouseEncoding {
     Urxvt,
     /// SGR (1006): `CSI <`, decimal numbers, and a release has its own final byte.
     Sgr,
-    /// SGR with pixel positions (1016); falls back to cells for an event without a pixel.
+    /// SGR with pixel positions (1016), 1-based as xterm writes them; falls back to cells for an
+    /// event without a pixel.
     SgrPixels,
 }
 
