@@ -163,10 +163,11 @@ mod tests {
     }
 
     /// What the engine does by itself and the host never hears of: titles, palette, special and
-    /// dynamic colors, the clipboard and their resets (the doc lists them by hand).
-    const THE_ENGINES_OWN: [&str; 28] = [
-        "0", "1", "2", "4", "5", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "52", "104",
-        "105", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119",
+    /// dynamic colors, the clipboard and their resets (the doc lists them by hand), and the
+    /// pointer shape (OSC 22), which the engine reports and the app does not act on.
+    const THE_ENGINES_OWN: [&str; 29] = [
+        "0", "1", "2", "4", "5", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "22", "52",
+        "104", "105", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119",
     ];
 
     #[test]

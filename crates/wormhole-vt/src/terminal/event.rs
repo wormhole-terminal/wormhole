@@ -195,6 +195,20 @@ pub enum Event {
         /// How many bytes of the replies were queued before this sequence.
         replies_before: usize,
     },
+    /// OSC 22: a program asked for a mouse pointer shape. The name is a CSS `cursor` keyword
+    /// (`pointer`, `text`, `crosshair`, `ew-resize`, …; the X11 names xterm programs use are
+    /// translated, anything else is dropped), or empty for "back to the host's own pointer".
+    PointerShape(String),
+    /// iTerm2's `OSC 1337 ; SetUserVar=name=base64`, decoded: a program's named value for the
+    /// host (WezTerm-aware tools set the running command, the host name, …). The name is at most
+    /// 256 bytes of printable text, the value at most 64 KiB; a pair that does not fit is dropped.
+    /// At most 1 MiB of values wait in the queue for a host that does not take the events.
+    UserVar {
+        /// The variable's name.
+        name: String,
+        /// Its value, base64 decoded.
+        value: Vec<u8>,
+    },
     /// A picture to decode and keep (kitty's graphics protocol, Sixel, iTerm2's inline images).
     /// The host answers with [`Terminal::image_decoded`](crate::terminal::Terminal::image_decoded).
     ImageData(ImageUpload),

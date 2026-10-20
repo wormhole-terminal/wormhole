@@ -276,6 +276,8 @@ pub struct Terminal {
     /// Pictures: kitty's, Sixel and iTerm2's; see `graphics`.
     graphics: graphics::Graphics,
     events: Vec<Event>,
+    /// Bytes of `Event::UserVar` values waiting in `events`.
+    queued_values: usize,
     replies: Vec<u8>,
     /// The reply being written went past the cap: its other pieces go too (see `reply`).
     reply_dropped: bool,
@@ -340,6 +342,7 @@ impl Terminal {
     /// ([`set_archive_history`](Self::set_archive_history)), the history lines that left the engine.
     pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
         self.announce_changes();
+        self.queued_values = 0;
         // History lines that left since the last call come last, in the order they left.
         self.flush_archive();
         self.events.drain(..)
@@ -450,8 +453,10 @@ impl Terminal {
                 | Event::ColorsChanged
         );
         if (self.events.len() >= self.limits.events && !kept)
-            || (matches!(event, Event::Bell | Event::Title | Event::Cwd | Event::FullReset)
-                && self.events.last() == Some(&event))
+            || (matches!(
+                event,
+                Event::Bell | Event::Title | Event::Cwd | Event::FullReset | Event::PointerShape(_)
+            ) && self.events.last() == Some(&event))
         {
             return;
         }

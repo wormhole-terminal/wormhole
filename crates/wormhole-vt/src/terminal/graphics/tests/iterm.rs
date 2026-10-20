@@ -121,7 +121,7 @@ fn the_rest_of_the_protocol_is_the_hosts() {
 #[test]
 fn what_is_not_a_picture_is_cut_off_at_64_kib_however_it_arrives() {
     let mut r = rig(40, 10);
-    let var = |kib: usize| format!("\x1b]1337;SetUserVar=name={}\x07", "v".repeat(kib * 1024));
+    let var = |kib: usize| format!("\x1b]1337;Custom=name={}\x07", "v".repeat(kib * 1024));
     r.feed(&var(60));
     assert!(matches!(&r.events()[..], [Event::Iterm(data)] if data.len() > 60 * 1024));
     r.feed(&var(70));

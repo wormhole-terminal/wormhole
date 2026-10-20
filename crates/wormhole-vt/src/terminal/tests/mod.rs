@@ -9,6 +9,7 @@ mod hostile;
 mod keyboard;
 mod limits;
 mod passthrough;
+mod pointer_and_vars;
 mod rare;
 mod replies;
 mod resize;

@@ -17,7 +17,9 @@ pub(super) mod dispatch;
 pub(super) mod link;
 pub(super) mod marks;
 pub(super) mod notify;
+pub(super) mod pointer;
 pub(super) mod spec;
+pub(super) mod uservar;
 
 use memchr::memchr;
 
@@ -25,9 +27,13 @@ use memchr::memchr;
 pub(in crate::terminal) const SMALL: usize = 8 * 1024;
 pub(in crate::terminal) const CLIPBOARD: usize = 8 * 1024 * 1024;
 pub(in crate::terminal) const IMAGE: usize = 64 * 1024 * 1024;
-/// What of OSC 1337 is not an inline image (marks, the folder, `SetUserVar`, …) is a line or two;
-/// the host gets at most this much of it.
+/// What of OSC 1337 is not an inline image (marks, the folder, …) is a line or two; the host gets
+/// at most this much of it. User variables are bigger, see `USER_VAR`.
 pub(in crate::terminal) const ITERM_OTHER: usize = 64 * 1024;
+/// A `SetUserVar` string: 16 bytes of `1337;SetUserVar=`, a name, `=` and a value of
+/// [`uservar::VALUE_MAX`] bytes in base64, with room to spare.
+const USER_VAR: usize = 88 * 1024;
+const USER_VAR_KIND: &[u8] = b"SetUserVar=";
 /// OSC 1337 strings of these kinds are pictures and keep the picture limit; the longest prefix is
 /// `1337;MultipartFile=`, which tells them from the rest once that many bytes are in.
 const IMAGE_KINDS: [&[u8]; 3] = [b"File=", b"MultipartFile=", b"FilePart="];
@@ -44,7 +50,7 @@ enum Size {
 /// How big an OSC string with this command number may be; `None` for a number we ignore.
 fn size_of_command(number: u32) -> Option<Size> {
     match number {
-        0..=2 | 4 | 5 | 7..=19 | 99 | 104 | 105 | 110..=119 | 133 | 777 | 7501 => Some(Size::Small),
+        0..=2 | 4 | 5 | 7..=19 | 22 | 99 | 104 | 105 | 110..=119 | 133 | 777 | 7501 => Some(Size::Small),
         52 => Some(Size::Clipboard),
         1337 => Some(Size::Image),
         _ => None,
@@ -87,6 +93,11 @@ pub(crate) fn is_builtin(number: u32) -> bool {
 /// Whether an OSC 1337 string (the number and its `;` included) starts a picture.
 fn is_picture(buf: &[u8]) -> bool {
     split_number(buf).is_some_and(|(_, rest)| IMAGE_KINDS.iter().any(|kind| rest.starts_with(kind)))
+}
+
+/// Whether an OSC 1337 string (the number and its `;` included) sets a user variable.
+fn is_user_var(buf: &[u8]) -> bool {
+    split_number(buf).is_some_and(|(_, rest)| rest.starts_with(USER_VAR_KIND))
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -180,7 +191,7 @@ impl OscString {
         if self.sniff && self.buf.len() >= SNIFF {
             self.sniff = false;
             if !is_picture(&self.buf) {
-                self.limit = self.caps.other;
+                self.limit = if is_user_var(&self.buf) { USER_VAR } else { self.caps.other };
                 if self.buf.len() > self.limit {
                     self.state = State::Dropping;
                     self.buf = Vec::new();

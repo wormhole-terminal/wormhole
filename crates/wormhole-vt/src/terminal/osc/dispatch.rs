@@ -8,12 +8,12 @@
 //! asked for with a `Passthrough` is handed over raw too, ahead of this table.
 //!
 //! Each command's meaning is in a file of its own: `title` (0, 1, 2), `osc_colors`, `osc_cwd` (7),
-//! `osc_link` (8), `osc_notify` (9, 9;4, 99, 777), `osc_clipboard` (52), `osc_marks` (133); this
-//! one only sends the string to them.
+//! `osc_link` (8), `osc_notify` (9, 9;4, 99, 777), `osc_clipboard` (52), `osc_marks` (133),
+//! `pointer` (22), `uservar` (1337's SetUserVar); this one only sends the string to them.
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, Terminator};
-use crate::terminal::osc::split_number;
+use crate::terminal::osc::{USER_VAR_KIND, split_number};
 
 /// The terminator a reply to an OSC ends with: the one the request used.
 pub(in crate::terminal) fn terminator(end: Terminator) -> &'static str {
@@ -81,6 +81,7 @@ impl Terminal {
             8 => self.osc_hyperlink(rest),
             9 => self.osc_9(rest),
             10..=19 => self.osc_dynamic_colors(number, rest, end),
+            22 => self.osc_pointer_shape(rest),
             52 => self.osc_clipboard(rest, end),
             99 => self.osc_99(rest),
             104 => self.osc_reset_palette(rest),
@@ -97,10 +98,15 @@ impl Terminal {
         }
     }
 
-    /// Inline images are the engine's; the rest of iTerm2's protocol is the host's, up to
-    /// `Limits::osc_iterm` bytes (a picture keeps the picture limit).
+    /// Inline images and user variables are the engine's; the rest of iTerm2's protocol is the
+    /// host's, up to `Limits::osc_iterm` bytes (a picture keeps the picture limit).
     fn osc_1337(&mut self, buf: &mut Vec<u8>, skip: usize) {
-        if !self.iterm_image(&buf[skip..]) && buf.len() <= self.limits.osc_iterm {
+        if self.iterm_image(&buf[skip..]) {
+            return;
+        }
+        if let Some(pair) = buf[skip..].strip_prefix(USER_VAR_KIND) {
+            self.osc_user_var(pair);
+        } else if buf.len() <= self.limits.osc_iterm {
             buf.drain(..skip);
             self.push_event(Event::Iterm(std::mem::take(buf)));
         }
