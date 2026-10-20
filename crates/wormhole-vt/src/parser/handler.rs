@@ -24,6 +24,21 @@ pub trait Handler {
         false
     }
 
+    /// Whether the bytes that follow are not to be read as text and sequences but handed to
+    /// [`raw`](Handler::raw): a printer controller mode, where everything up to an end sequence is
+    /// data for a device. Asked between sequences, after each one is complete and at the start of
+    /// each call, so a handler that begins such a mode in a callback is heard before the next byte.
+    fn wants_raw(&self) -> bool {
+        false
+    }
+
+    /// The bytes from where the parser stopped, while [`wants_raw`](Handler::wants_raw) says yes.
+    /// Returns how many it used up (at least one: the parser takes a zero as one so that it always
+    /// advances); the rest is read as usual, or handed back if it asks again.
+    fn raw(&mut self, bytes: &[u8]) -> usize {
+        bytes.len()
+    }
+
     /// A run of printable ASCII (0x20..=0x7E), as long as the input allows. Never empty.
     fn print_ascii(&mut self, _run: &[u8]) {}
 

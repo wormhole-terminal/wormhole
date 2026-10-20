@@ -1,0 +1,50 @@
+# Media copy (MC) and the printer controller mode. The terminal has no printer, so what a program
+# sends to it is discarded; a case checks that it is not drawn, that nothing is answered and that
+# the end sequence is found.
+
+test printer controller mode keeps the data off the screen
+spec VT510 manual MC (CSI 5 i): in printer controller mode the terminal sends received data to the printer and not to the screen until CSI 4 i; ECMA-48 MC; vttest 11/017 ("the pattern should be invisible")
+size 20 3
+feed a\e[5ihidden\r\nand \e[1;31mthis\e[0m\e[4ib
+screen
+|ab|
+cursor 1,3
+
+test printer controller mode ends with CSI 4 i however the input is cut
+spec VT510 manual MC (CSI 4 i): ends the printer controller mode; the end sequence is found in the data, split or not
+size 20 3
+feed a\e[5i\e\e[[5\e[
+feed 4
+feed i
+feed b
+screen
+|ab|
+
+test printer controller mode is not left by a look-alike
+spec VT510 manual MC: only CSI 4 i ends the printer controller mode
+size 20 3
+feed \e[5i\e[4;1i\e[?4i\e[ 4i\e4ix
+screen
+||
+cursor 1,1
+
+test printer controller mode sends no reply
+spec VT510 manual MC: the data goes to the printer, not to the program; a report request in it is data
+size 20 3
+feed \e[5i\e[5n\e[c\e[6n\e[4i
+reply none
+
+test media copy functions that print something do nothing without a printer
+spec ECMA-48 MC (CSI 0 i), xterm ctlseqs CSI Ps i and CSI ? Ps i (print screen, print line, auto print on and off, print composed display, print all pages); there is no printer
+size 30 3
+feed a\e[ib\e[0ic\e[4id\e[?1ie\e[?4if\e[?5ig\e[?10ih\e[?11ii\e[10ij
+screen
+|abcdefghij|
+reply none
+
+test CSI 4 i outside the printer controller mode is harmless
+spec VT510 manual MC: CSI 4 i ends a mode that is not on
+size 10 3
+feed \e[4i\e[4iab
+screen
+|ab|

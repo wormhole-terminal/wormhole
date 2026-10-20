@@ -279,6 +279,15 @@ impl<'a> Writer<'a> {
                 self.cluster_text(head, t.cursor.y, source);
             }
         }
+        // Really last: the printer takes everything after it, so there is nothing to say it with
+        // in VT52 mode, which reads no CSI.
+        if t.printer.on() {
+            if vt52 {
+                self.gaps |= Gaps::PRINTER;
+            } else {
+                self.put(b"\x1b[5i");
+            }
+        }
     }
 
     /// The column the last character printed is printed again from, to leave `last_char` and the

@@ -58,6 +58,7 @@ impl Terminal {
         self.titles.modes = Default::default();
         self.reset_colors();
         self.last_char = None;
+        self.printer = Default::default();
         self.cluster.open = false;
         self.history_just_cleared = false;
         self.attr_extent = Default::default();

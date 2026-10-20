@@ -20,7 +20,7 @@ in the colour menu, so the same test comes up more than once.
 | 011 | 8-bit controls (S7C1T, S8C1T) | pass | both reports `ok` |
 | 012 to 015 | media copy: assign the printer, printer to host, printer extent (DECPEX), form feed (DECPFF) | unsupported: printer (media copy) | nothing to show, and nowhere to print: the engine has no printer (DSR says so, 003) |
 | 016 | auto-print mode (`CSI ? 5 i`) | unsupported: printer (media copy) | the screen is as asked (the pattern is visible); nothing is printed |
-| 017 | printer controller mode (`CSI 5 i`) | fail: printer controller mode | the pattern should be invisible, as it goes to the printer; it is drawn on the screen |
+| 017 | printer controller mode (`CSI 5 i`) | pass | the pattern is invisible: everything up to `CSI 4 i` is the printer's and is discarded (there is no printer, so the scrolling region is not in any output either) |
 | 018 to 021 | print page, print composed display, print all pages, print the cursor line (`CSI i`, `CSI ? 1 i`, ...) | unsupported: printer (media copy) | the screen is as asked; nothing is printed |
 | 022 | soft character sets (DECDLD) | not exercised | vttest needs a font file (`-f`); none is given. The engine's DA does not claim soft characters either |
 | 023 to 024 | soft terminal reset (DECSTR) | pass | nothing is drawn by the test itself |

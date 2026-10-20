@@ -203,6 +203,7 @@ impl Builder {
             folder: osc::cwd::Folder::default(),
             palette: osc::colors::Palette::new(),
             cell_px: (self.cell.0.max(1), self.cell.1.max(1)),
+            printer: Default::default(),
             last_char: None,
             cluster: Cluster {
                 open: false,

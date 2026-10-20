@@ -185,6 +185,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A repeat (`CSI Ps b`, REP) now repeats a character only when it comes right after one, as the
   standard and xterm have it: after a colour change, a cursor move, a line feed or another repeat it
   repeats nothing, where it used to repeat the last character printed.
+- A program's printer data (`CSI 5 i` until `CSI 4 i`, the printer controller mode) is no longer drawn
+  on the screen: with no printer to send it to, Wormhole reads and drops it.
 
 ### Security
 
