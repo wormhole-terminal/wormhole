@@ -128,6 +128,7 @@ mod window_bounds;
 mod windows;
 mod worktree;
 
+use git_panel::changes::GitPoll;
 use git_panel::{changes, diff_view, history, picker};
 use session::{Pane, Session};
 
@@ -520,6 +521,7 @@ impl Workspace {
             && self.right_tab == RightTab::History
             && (self.ticks.is_multiple_of(12) || self.history_unanswered(cx))
             && !self.active_session().history.waits_for_retry()
+            && !self.history_absent(cx)
         {
             let ix = self.active;
             self.refresh_history(ix, cx);
@@ -528,10 +530,11 @@ impl Workspace {
             if self.sessions[ix].git.waits_for_retry() {
                 continue;
             }
-            let every = if ix == self.active { 5 } else { 20 };
-            let cwd_changed = self.sessions[ix].git.cwd != self.sessions[ix].terminal().read(cx).cwd;
-            if cwd_changed || (self.ticks + ix as u64).is_multiple_of(every) {
-                self.refresh_git(ix, cx);
+            let cwd = self.sessions[ix].terminal().read(cx).cwd.clone();
+            match self.sessions[ix].git.poll(cwd.as_deref(), self.ticks + ix as u64, ix == self.active) {
+                GitPoll::Refresh => self.refresh_git(ix, cx),
+                GitPoll::Probe => self.probe_repo(ix, cx),
+                GitPoll::Idle => {}
             }
         }
         if self.ticks % 5 == 1 {

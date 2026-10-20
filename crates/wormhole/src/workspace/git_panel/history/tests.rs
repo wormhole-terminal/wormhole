@@ -251,3 +251,21 @@ fn the_files_cache_is_bounded_and_keeps_the_open_commit() {
     assert!(matches!(history.files.get("aaa"), Some(CommitFiles::Loaded(f)) if f[0].path == "keep.rs"));
     assert_eq!(history.loaded("aaa").map(Rc::strong_count), Some(1));
 }
+
+#[test]
+fn a_folder_that_is_no_repository_does_not_redraw_on_every_poll() {
+    let mut history = HistoryState::default();
+    let k = key(None);
+    let t = history.begin_refresh(k.clone()).expect("started").ticket();
+    // The first answer replaces "Reading history…".
+    assert!(history.finish_refresh(t, Some(&k), Ok(None)));
+    for _ in 0..3 {
+        let t = history.begin_refresh(k.clone()).expect("started").ticket();
+        assert!(!history.finish_refresh(t, Some(&k), Ok(None)));
+    }
+    // It left a repository: that is a change.
+    let t = history.begin_refresh(k.clone()).expect("started").ticket();
+    assert!(history.finish_refresh(t, Some(&k), log_of(&["a"])));
+    let t = history.begin_refresh(k.clone()).expect("started").ticket();
+    assert!(history.finish_refresh(t, Some(&k), Ok(None)));
+}

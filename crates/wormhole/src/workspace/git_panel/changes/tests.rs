@@ -7,6 +7,7 @@ use super::{
     display_order, untracked_apart,
 };
 use crate::workspace::git_panel::job::testing::ManualExecutor;
+use wormhole_core::git::discover::Sighting;
 use wormhole_core::git::{ChangeKind, FileChange, GitError, RepoStatus};
 
 fn change(path: &str, kind: ChangeKind) -> FileChange {
@@ -214,6 +215,118 @@ fn a_folder_that_stopped_being_a_repository_reads_as_one_that_never_was() {
     refresh(&mut session, &mut exec, Err(GitError::NotARepo));
     exec.deliver(1, &mut session);
     assert_eq!((session.git.status.as_ref(), session.git.error.as_ref()), (None, None));
+}
+
+// ------------------------------------------------------------ folders that are no repository
+
+/// Git answered "not a repository" for `/plain`; returns the state afterwards.
+fn absent_git(result: Result<Option<RepoStatus>, GitError>) -> (GitState, Refreshed) {
+    let mut git = GitState::default();
+    let k = key("/plain", None);
+    let t = git.begin_refresh(k.clone()).expect("started").ticket();
+    let refreshed = git.finish_refresh(t, Some(&k), result.map_err(anyhow::Error::from));
+    (git, refreshed)
+}
+
+#[test]
+fn a_folder_without_a_repository_answers_once_and_then_changes_nothing() {
+    for answer in [Ok(None), Err(GitError::NotARepo)] {
+        let (mut git, first) = absent_git(answer);
+        assert_eq!(first, Refreshed::Applied { changed: true });
+        let plain = std::path::Path::new("/plain");
+        assert!(git.answered_for(plain) && git.is_absent_for(plain));
+        // Every later answer is the same: nothing to redraw, not even once.
+        let k = key("/plain", None);
+        for _ in 0..3 {
+            let t = git.begin_refresh(k.clone()).expect("started").ticket();
+            assert_eq!(git.finish_refresh(t, Some(&k), Ok(None)), Refreshed::Applied { changed: false });
+            let t = git.begin_refresh(k.clone()).expect("started").ticket();
+            let err = Err(anyhow::Error::from(GitError::NotARepo));
+            assert_eq!(git.finish_refresh(t, Some(&k), err), Refreshed::Applied { changed: false });
+        }
+    }
+}
+
+#[test]
+fn looking_for_a_git_dir_replaces_polling_git_for_an_absent_repository() {
+    let (mut git, _) = absent_git(Ok(None));
+    let plain = std::path::Path::new("/plain");
+    let elsewhere = std::path::Path::new("/elsewhere");
+    assert!(!git.is_absent_for(elsewhere) && !git.begin_probe(elsewhere));
+    // One look at a time.
+    assert!(git.begin_probe(plain));
+    assert!(!git.begin_probe(plain));
+    assert_eq!(git.finish_probe(plain, None), Sighting::Unchanged);
+    // `git init`: seen, confirmed, then git is asked.
+    let root = Some(PathBuf::from("/plain"));
+    assert!(git.begin_probe(plain));
+    assert_eq!(git.finish_probe(plain, root.clone()), Sighting::LookAgain);
+    assert!(git.begin_probe(plain));
+    assert_eq!(git.finish_probe(plain, root.clone()), Sighting::AskGit);
+    // Git rejects it (a broken .git): the same sighting does not ask again.
+    let k = key("/plain", None);
+    let t = git.begin_refresh(k.clone()).expect("started").ticket();
+    git.finish_refresh(t, Some(&k), Ok(None));
+    assert!(git.begin_probe(plain));
+    assert_eq!(git.finish_probe(plain, root), Sighting::Unchanged);
+}
+
+#[test]
+fn the_tick_never_asks_git_about_a_folder_it_knows_is_no_repository() {
+    use super::GitPoll;
+    let plain = std::path::Path::new("/plain");
+    // Nothing known yet: ask at once, whatever the tick.
+    assert_eq!(GitState::default().poll(Some(plain), 3, true), GitPoll::Refresh);
+    let (git, _) = absent_git(Ok(None));
+    let polls: Vec<GitPoll> = (0..40).map(|tick| git.poll(Some(plain), tick, true)).collect();
+    assert!(polls.iter().all(|p| *p == GitPoll::Probe), "looked at every tick in front");
+    let behind = (0..40).filter(|tick| git.poll(Some(plain), *tick, false) == GitPoll::Probe).count();
+    assert_eq!(behind, 8);
+    for tick in 0..40 {
+        assert_ne!(git.poll(Some(plain), tick, tick % 2 == 0), GitPoll::Refresh);
+    }
+    // Another folder is asked about at once.
+    assert_eq!(git.poll(Some(std::path::Path::new("/other")), 1, false), GitPoll::Refresh);
+    // A repository keeps its 2 s / 8 s polls.
+    let mut repo = GitState::default();
+    let k = key("/repo", None);
+    let t = repo.begin_refresh(k.clone()).expect("started").ticket();
+    repo.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    let repo_dir = std::path::Path::new("/repo");
+    let refreshed =
+        |front| (0..40).filter(|t| repo.poll(Some(repo_dir), *t, front) == GitPoll::Refresh).count();
+    assert_eq!((refreshed(true), refreshed(false)), (8, 2));
+}
+
+#[test]
+fn a_repository_or_a_failure_ends_the_absence() {
+    let (mut git, _) = absent_git(Ok(None));
+    let k = key("/plain", None);
+    let t = git.begin_refresh(k.clone()).expect("started").ticket();
+    git.finish_refresh(t, Some(&k), Ok(Some(status(modified(&["a.rs"]), None))));
+    let plain = std::path::Path::new("/plain");
+    assert!(!git.is_absent_for(plain));
+    // Gone again, and the look starts over from "no .git in sight".
+    let t = git.begin_refresh(k.clone()).expect("started").ticket();
+    git.finish_refresh(t, Some(&k), Ok(None));
+    assert!(git.is_absent_for(plain));
+    // A failure (git is busy) is polled like any other, not looked for.
+    let t = git.begin_refresh(k.clone()).expect("started").ticket();
+    git.finish_refresh(t, Some(&k), Err(anyhow::Error::from(failed("index.lock exists"))));
+    assert!(!git.is_absent_for(plain) && !git.begin_probe(plain));
+}
+
+#[test]
+fn a_folder_git_has_not_answered_for_is_still_being_read() {
+    let mut git = GitState::default();
+    let plain = std::path::Path::new("/plain");
+    assert!(!git.answered_for(plain));
+    // A poll running over an answer already shown does not unanswer it.
+    let (answered, _) = absent_git(Ok(None));
+    git = answered;
+    let _poll = git.begin_refresh(key("/plain", None));
+    assert!(git.loading() && git.answered_for(plain));
+    assert!(!git.answered_for(std::path::Path::new("/other")));
 }
 
 // ------------------------------------------------------------ folders

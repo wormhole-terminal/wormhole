@@ -16,6 +16,7 @@ mod cmd;
 mod counts;
 mod diff;
 mod diff_text;
+pub mod discover;
 mod head;
 mod lfs;
 mod log;

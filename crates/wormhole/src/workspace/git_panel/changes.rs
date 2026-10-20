@@ -21,6 +21,7 @@ use crate::workspace::Workspace;
 use crate::workspace::focus::Walkable;
 use crate::workspace::panel_list::Rows;
 use wormhole_core::focus::list::Item;
+use wormhole_core::git::discover::{self, Absent, Sighting};
 use wormhole_core::git::{self, FileChange, GitError, RepoStatus};
 use wormhole_core::limits::count_grouped;
 use wormhole_core::panel as rules;
@@ -32,6 +33,9 @@ mod rows;
 use rows::build_tree;
 pub(super) use rows::display_order;
 use rows::{ChangeRow, Folded, Group, build_rows, collapse_key, file_name, untracked_apart};
+
+/// How long after a `.git` first shows up the second look is taken (see [`discover::Absent`]).
+const PROBE_CONFIRM: std::time::Duration = std::time::Duration::from_millis(150);
 
 /// What a status refresh is for: the folder, and the branch compared with.
 type StatusKey = (PathBuf, Option<String>);
@@ -48,6 +52,11 @@ pub struct GitState {
     error: Option<GitError>,
     /// The refresh in flight.
     job: Job<StatusKey>,
+    /// Set while git's last answer was "not a repository": git is then not polled, a cheap look
+    /// for a `.git` is (see `wormhole_core::git::discover`).
+    absent: Option<Absent>,
+    /// A look for a `.git` is running off the UI thread.
+    probing: bool,
     /// The branch list the open picker waits for (see `picker.rs`).
     pub(super) branches: Job<(Picker, PathBuf)>,
     /// Sections the user folded (`true`) or unfolded; the others follow the size rule
@@ -67,7 +76,33 @@ pub(super) enum Refreshed {
     },
 }
 
+/// What the tick does about one session's git status.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum GitPoll {
+    /// Ask git.
+    Refresh,
+    /// Look for a `.git` (a `stat` walk), not at git.
+    Probe,
+    Idle,
+}
+
 impl GitState {
+    /// What to do on tick number `tick` (already offset by the session's place, so sessions
+    /// don't all poll on the same tick) for a terminal in `cwd`. A folder git has not answered
+    /// for is asked at once. A repository is polled every 5th tick (2 s) when in front, every
+    /// 20th (8 s) behind. A folder in no repository is not polled at all: it is looked at for a
+    /// `.git` every tick in front (0.4 s), every 5th behind.
+    pub(crate) fn poll(&self, cwd: Option<&std::path::Path>, tick: u64, in_front: bool) -> GitPoll {
+        if self.cwd.as_deref() != cwd {
+            return GitPoll::Refresh;
+        }
+        if cwd.is_some_and(|cwd| self.is_absent_for(cwd)) {
+            return if in_front || tick.is_multiple_of(5) { GitPoll::Probe } else { GitPoll::Idle };
+        }
+        if tick.is_multiple_of(if in_front { 5 } else { 20 }) { GitPoll::Refresh } else { GitPoll::Idle }
+    }
+
+    #[cfg(any(test, feature = "devctl"))]
     pub fn loading(&self) -> bool {
         self.job.is_pending()
     }
@@ -77,6 +112,34 @@ impl GitState {
     /// to install them.
     pub(crate) fn waits_for_retry(&self) -> bool {
         self.error == Some(GitError::GitMissing)
+    }
+
+    /// Git said "not a repository" for `cwd` and nothing has changed since: no need to poll it.
+    pub(crate) fn is_absent_for(&self, cwd: &std::path::Path) -> bool {
+        self.error.is_none() && self.absent.as_ref().is_some_and(|absent| absent.is_for(cwd))
+    }
+
+    /// The answer shown is for `cwd`, whatever it said: the panel need not say "Reading".
+    pub(super) fn answered_for(&self, cwd: &std::path::Path) -> bool {
+        self.cwd.as_deref() == Some(cwd)
+    }
+
+    /// Start a look for a `.git` near `cwd`. False when one already runs or nothing is absent.
+    pub(crate) fn begin_probe(&mut self, cwd: &std::path::Path) -> bool {
+        if self.probing || !self.is_absent_for(cwd) {
+            return false;
+        }
+        self.probing = true;
+        true
+    }
+
+    /// A look came back with `found`: what to do about it.
+    pub(crate) fn finish_probe(&mut self, cwd: &std::path::Path, found: Option<PathBuf>) -> Sighting {
+        self.probing = false;
+        match &mut self.absent {
+            Some(absent) if absent.is_for(cwd) && self.error.is_none() => absent.observe(found),
+            _ => Sighting::Unchanged,
+        }
     }
 
     /// Start a refresh for `key`. `None` when that same refresh is already
@@ -102,18 +165,22 @@ impl GitState {
         self.cwd = Some(key.0);
         let changed = match result.map_err(|err| (GitError::of(&err), err)) {
             Ok(status) => {
-                let changed = self.status != status || self.error.is_some();
+                // The first answer for a folder also replaces "Reading git status…".
+                let changed = self.status != status || self.error.is_some() || !same_folder;
                 self.error = None;
+                self.note_absent(status.is_none());
                 self.status = status;
                 changed
             }
             // The folder stopped being a repository after git found one: as if it never was.
             Err((GitError::NotARepo, _)) => {
-                let changed = self.status.is_some() || self.error.is_some();
+                let changed = self.status.is_some() || self.error.is_some() || !same_folder;
                 (self.status, self.error) = (None, None);
+                self.note_absent(true);
                 changed
             }
             Err((error, err)) => {
+                self.absent = None;
                 if self.error.as_ref() != Some(&error) {
                     // In full, once: the panel shows git's first line.
                     tracing::warn!(cwd = ?self.cwd, "git status failed: {err:#}");
@@ -130,6 +197,20 @@ impl GitState {
             }
         };
         Refreshed::Applied { changed }
+    }
+}
+
+impl GitState {
+    /// Remember (or forget) that git said the folder is not in a repository. An answer that
+    /// repeats keeps what the looks learned, so a `.git` git rejects is not asked about again.
+    fn note_absent(&mut self, absent: bool) {
+        let Some(cwd) = self.cwd.clone().filter(|_| absent) else {
+            self.absent = None;
+            return;
+        };
+        if !self.absent.as_ref().is_some_and(|known| known.is_for(&cwd)) {
+            self.absent = Some(Absent::new(cwd));
+        }
     }
 }
 
@@ -209,6 +290,51 @@ impl Workspace {
             let _ = this.update(cx, |this, cx| this.finish_git_refresh(id, ticket, status, observed, cx));
         })
         .detach();
+    }
+
+    /// Look for a `.git` near the terminal's folder, which git said is in no repository: the
+    /// replacement for polling git about it. The `stat` walk runs off the UI thread; a change is
+    /// confirmed by a second look shortly after (`git init` writes `.git` a piece at a time), and
+    /// only then is git asked, through the normal refresh.
+    pub(crate) fn probe_repo(&mut self, ix: usize, cx: &mut Context<Self>) {
+        let Some(session) = self.sessions.get_mut(ix) else { return };
+        let Some(cwd) = session.terminal().read(cx).cwd.clone() else { return };
+        if !session.git.begin_probe(&cwd) {
+            return;
+        }
+        let id = session.id;
+        let looked = cwd.clone();
+        let task = cx.background_executor().spawn(async move { discover::probe(&looked) });
+        cx.spawn(async move |this, cx| {
+            let found = task.await;
+            let _ = this.update(cx, |this, cx| this.finish_probe(id, cwd, found, cx));
+        })
+        .detach();
+    }
+
+    fn finish_probe(&mut self, id: i64, cwd: PathBuf, found: Option<PathBuf>, cx: &mut Context<Self>) {
+        let Some(ix) = self.sessions.iter().position(|s| s.id == id) else { return };
+        match self.sessions[ix].git.finish_probe(&cwd, found) {
+            Sighting::Unchanged => {}
+            Sighting::LookAgain => {
+                cx.spawn(async move |this, cx| {
+                    cx.background_executor().timer(PROBE_CONFIRM).await;
+                    let _ = this.update(cx, |this, cx| {
+                        if let Some(ix) = this.sessions.iter().position(|s| s.id == id) {
+                            this.probe_repo(ix, cx);
+                        }
+                    });
+                })
+                .detach();
+            }
+            Sighting::AskGit => {
+                self.refresh_git(ix, cx);
+                // History would otherwise find out at its next poll.
+                if self.sessions[ix].history.root.is_none() {
+                    self.refresh_history(ix, cx);
+                }
+            }
+        }
     }
 
     fn finish_git_refresh(
@@ -334,7 +460,11 @@ impl Workspace {
                     .into_any_element();
             }
             // Not a repository: nothing to compare or refresh.
-            let text = if session.git.loading() || session.git.cwd.is_none() {
+            // "Reading" only until git has answered for this folder: a poll running on top of an
+            // answer already shown must not swap the note for it and back.
+            let answered =
+                session.terminal().read(cx).cwd.as_deref().is_some_and(|c| session.git.answered_for(c));
+            let text = if !answered {
                 "Reading git status…"
             } else {
                 "This terminal's folder isn't inside a git repository."

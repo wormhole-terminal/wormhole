@@ -146,9 +146,11 @@ impl HistoryState {
                 true
             }
             Ok(None) => {
+                // Still no repository: nothing to redraw (the note is the same).
+                let changed = self.root.is_some() || !self.commits.is_empty() || had_problem || first_answer;
                 self.root = None;
                 self.commits = Rc::default();
-                true
+                changed
             }
             Err(problem) => {
                 (self.root, self.commits, self.error) = (None, Rc::default(), None);
@@ -265,6 +267,18 @@ impl Workspace {
     pub(crate) fn history_unanswered(&self, cx: &App) -> bool {
         let session = self.active_session();
         session.terminal().read(cx).cwd.as_deref().is_some_and(|cwd| !session.history.answered_for(cwd))
+    }
+
+    /// The folder is in no repository and both tabs know it: the tick does not poll git for
+    /// History; the Changes tab's look for a `.git` asks again when one shows up.
+    pub(crate) fn history_absent(&self, cx: &App) -> bool {
+        let session = self.active_session();
+        session.terminal().read(cx).cwd.as_deref().is_some_and(|cwd| {
+            session.git.is_absent_for(cwd)
+                && session.history.root.is_none()
+                && session.history.problem.is_none()
+                && session.history.answered_for(cwd)
+        })
     }
 
     pub(crate) fn refresh_history(&mut self, ix: usize, cx: &mut Context<Self>) {
