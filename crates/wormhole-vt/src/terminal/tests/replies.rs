@@ -204,8 +204,8 @@ fn replies_past_the_cap_are_dropped_whole() {
     let replies = rig.replies();
     let one = replies.split_inclusive('c').next().unwrap_or_default().to_string();
     assert!(one.starts_with("\x1b[?") && one.len() > 5, "{one:?}");
-    // The last one kept began under the cap.
-    assert!(replies.len() >= 1 << 20 && replies.len() < (1 << 20) + one.len(), "{}", replies.len());
+    // The last one kept fitted under the cap whole; the next would not have.
+    assert!(replies.len() <= 1 << 20 && replies.len() + one.len() > 1 << 20, "{}", replies.len());
     assert_eq!(replies.len() % one.len(), 0, "only whole replies");
     // Once the host collects them, replies come again.
     rig.feed("\x1b[5n");

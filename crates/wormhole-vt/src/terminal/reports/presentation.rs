@@ -12,6 +12,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
+use crate::terminal::reports::Pieces;
 use crate::terminal::text::charset::{Charset, Preferred};
 use crate::types::Flags;
 
@@ -36,22 +37,22 @@ impl Terminal {
     /// DECRQPSR.
     pub(in crate::terminal) fn presentation_report(&mut self, ps: u16) {
         match ps {
-            1 => {
-                self.reply(format_args!("\x1bP1$u"));
-                self.write_cursor_information();
-                self.reply(format_args!("\x1b\\"));
-            }
-            2 => {
-                self.reply(format_args!("\x1bP2$u"));
-                self.write_tab_stops();
-                self.reply(format_args!("\x1b\\"));
-            }
+            1 => self.reply_with(|t, reply| {
+                reply.put(format_args!("\x1bP1$u"));
+                t.write_cursor_information(reply);
+                reply.put(format_args!("\x1b\\"));
+            }),
+            2 => self.reply_with(|t, reply| {
+                reply.put(format_args!("\x1bP2$u"));
+                t.write_tab_stops(reply);
+                reply.put(format_args!("\x1b\\"));
+            }),
             _ => {}
         }
     }
 
     /// The data string of DECCIR.
-    pub(in crate::terminal) fn write_cursor_information(&mut self) {
+    pub(in crate::terminal) fn write_cursor_information(&self, reply: &mut Pieces<'_>) {
         let (row, col) = (self.cursor.y + 1, self.cursor.x + 1);
         let attrs = self.pen.style.attrs;
         let rendition = 0x40
@@ -69,7 +70,7 @@ impl Terminal {
         let (gl, gr) = self.charsets.invoked();
         let sizes =
             0x40 | (0..4).map(|i| u8::from(self.charsets.slot(i).is_96()) << i).fold(0, |all, bit| all | bit);
-        self.reply(format_args!(
+        reply.put(format_args!(
             "{row};{col};1;{};{};{};{gl};{gr};{};",
             char::from(rendition),
             char::from(protection),
@@ -78,18 +79,17 @@ impl Terminal {
         ));
         for i in 0..4 {
             let designator = self.charsets.slot(i).designator();
-            self.reply(format_args!("{designator}"));
+            reply.put(format_args!("{designator}"));
         }
     }
 
     /// The data string of DECTABSR: the columns of the tab stops, counted from 1, between slashes.
-    pub(in crate::terminal) fn write_tab_stops(&mut self) {
-        let columns: Vec<usize> = self.tabs.columns().map(|x| x + 1).collect();
-        for (i, column) in columns.iter().enumerate() {
+    pub(in crate::terminal) fn write_tab_stops(&self, reply: &mut Pieces<'_>) {
+        for (i, column) in self.tabs.columns().map(|x| x + 1).enumerate() {
             if i > 0 {
-                self.reply(format_args!("/"));
+                reply.put(format_args!("/"));
             }
-            self.reply(format_args!("{column}"));
+            reply.put(format_args!("{column}"));
         }
     }
 

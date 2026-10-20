@@ -19,6 +19,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::{Status, Switch};
+use crate::terminal::reports::Pieces;
 use crate::terminal::reports::presentation::{CursorInformation, numbers};
 
 /// The ANSI modes a state report carries.
@@ -32,24 +33,26 @@ impl Terminal {
         if ps != 1 {
             return;
         }
-        self.reply(format_args!("\x1bP1$s"));
-        self.write_cursor_information();
-        self.reply(format_args!("!"));
-        self.write_tab_stops();
-        let m = self.margins;
-        self.reply(format_args!("!{};{};{};{}!", m.top + 1, m.bottom + 1, m.left + 1, m.right + 1));
-        self.write_mode_list(&ANSI_MODES, false);
-        self.reply(format_args!("!"));
-        self.write_mode_list(&PRIVATE_MODES, true);
-        self.reply(format_args!("\x1b\\"));
+        self.reply_with(|t, reply| {
+            reply.put(format_args!("\x1bP1$s"));
+            t.write_cursor_information(reply);
+            reply.put(format_args!("!"));
+            t.write_tab_stops(reply);
+            let m = t.margins;
+            reply.put(format_args!("!{};{};{};{}!", m.top + 1, m.bottom + 1, m.left + 1, m.right + 1));
+            t.write_mode_list(reply, &ANSI_MODES, false);
+            reply.put(format_args!("!"));
+            t.write_mode_list(reply, &PRIVATE_MODES, true);
+            reply.put(format_args!("\x1b\\"));
+        });
     }
 
-    fn write_mode_list(&mut self, modes: &[u16], private: bool) {
+    fn write_mode_list(&self, reply: &mut Pieces<'_>, modes: &[u16], private: bool) {
         let mut first = true;
         for &n in modes {
             let status = if private { self.private_status(n) } else { self.ansi_status(n) };
             if status == Status::Set {
-                self.reply(format_args!("{}{n}", if first { "" } else { ";" }));
+                reply.put(format_args!("{}{n}", if first { "" } else { ";" }));
                 first = false;
             }
         }

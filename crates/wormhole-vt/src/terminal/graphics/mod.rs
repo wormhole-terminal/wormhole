@@ -70,11 +70,11 @@ pub use placeholder::{Placeholder, placeholder_at, strip_placeholders};
 pub use upload::{Compression, ImageError, ImageFormat, ImageUpload, VirtualPlacement};
 
 pub(super) use apc::PAYLOAD_MAX;
+pub(in crate::terminal) use reply::{Error as AnswerError, Target};
 
 use apc::ApcReader;
 use command::Command;
 use images::ImageTable;
-use reply::Gate;
 
 /// Most bytes of uploads the host may leave undrained before new pictures are refused.
 pub(super) const QUEUED_BYTES_MAX: usize = 256 * 1024 * 1024;
@@ -98,8 +98,6 @@ pub(super) struct Graphics {
     tables: [ImageTable; 2],
     /// The last handle given out.
     last_handle: u64,
-    /// Replies held behind an answer that waits for the host.
-    gate: Gate,
     /// iTerm2's multipart image under way.
     multipart: Option<iterm::Multipart>,
 }
@@ -114,14 +112,13 @@ impl Graphics {
         Ok(())
     }
 
-    /// Everything the pictures hold as text, for the state dump (the transfer under way and the
-    /// held replies included: a repaint has to cut at a point where there are none).
+    /// Everything the pictures hold as text, for the state dump (the transfer under way included:
+    /// a repaint has to cut at a point where there is none).
     #[cfg(any(test, feature = "internals"))]
     pub(super) fn describe(&self) -> Vec<(&'static str, String)> {
         vec![
             ("a/graphics/last_handle", self.last_handle.to_string()),
             ("a/graphics/transfer", format!("{} {}", self.transfer.is_some(), self.multipart.is_some())),
-            ("a/graphics/gate", format!("{:?}", self.gate)),
             ("a/graphics/tables", format!("{:?}", self.tables)),
         ]
     }
@@ -150,24 +147,5 @@ impl Graphics {
     fn next_handle(&mut self) -> ImageHandle {
         self.last_handle += 1;
         ImageHandle(self.last_handle)
-    }
-
-    /// Hold a reply behind the answers that wait for the host, if any do; false when none does
-    /// and the reply can go out.
-    pub(super) fn hold_reply(&mut self, args: std::fmt::Arguments<'_>) -> bool {
-        let closed = self.gate.is_closed();
-        if closed {
-            self.gate.hold(args);
-        }
-        closed
-    }
-
-    /// [`hold_reply`](Self::hold_reply) for bytes that are already made.
-    pub(super) fn hold_reply_bytes(&mut self, bytes: &[u8]) -> bool {
-        let closed = self.gate.is_closed();
-        if closed {
-            self.gate.hold_bytes(bytes);
-        }
-        closed
     }
 }

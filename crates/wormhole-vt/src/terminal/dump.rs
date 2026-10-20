@@ -288,6 +288,7 @@ impl Terminal {
         for (name, value) in self.graphics.describe() {
             d.field(name, value);
         }
+        d.field("a/replies/held", self.replies.describe_held());
         dump_grid(&mut d, "primary", primary);
         dump_grid(&mut d, "alternate", other);
         // The names sort the way a reader looks for them; the diff walks both lists in order.

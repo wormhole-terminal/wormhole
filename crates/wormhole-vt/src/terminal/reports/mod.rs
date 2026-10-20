@@ -16,6 +16,7 @@ pub(super) mod checksum;
 pub(super) mod inband;
 pub(super) mod locator;
 pub(super) mod presentation;
+pub(super) mod queue;
 pub(super) mod rqss;
 pub(super) mod scheme;
 pub(super) mod state;
@@ -23,16 +24,13 @@ pub(super) mod tcap;
 pub(super) mod title;
 pub(super) mod window;
 
-use std::io::Write;
-
 use crate::parser::Csi;
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::conformance::Level;
 use crate::terminal::modes::{Modes, Status};
 
-/// The most reply bytes kept for a host that does not collect them.
-pub(in crate::terminal) const REPLIES_MAX: usize = 1 << 20;
+pub(in crate::terminal) use queue::{Pieces, REPLIES_MAX, ReplyQueue, Rules};
 
 /// The version a secondary DA reply carries: an xterm patch level, not the host's own version.
 /// Programs that ask (vim, esctest) compare it with xterm's patch numbers, which run from about
@@ -66,45 +64,35 @@ const FEATURES: [(u16, Level); 13] = [
 ];
 
 impl Terminal {
-    /// Append a reply, or a piece of one: many are written in pieces, so that they allocate
-    /// nothing. Writing to a `Vec` cannot fail. A host that does not write the replies out (the
-    /// program is not reading them) must not grow the buffer without bound: past the cap new
-    /// replies are dropped, whole. Every reply starts with ESC and its pieces follow it before the
-    /// next one starts, so the first piece decides for the rest; half a sequence would reach the
-    /// program as typed text.
+    /// Queue one whole reply, formatted from `args`: kept or dropped as a whole, by the cap, and in
+    /// one-byte controls under S8C1T; held behind a picture's answer that waits. See
+    /// [`ReplyQueue`]. A reply made of several parts is composed with [`reply_with`](Self::reply_with).
     pub(in crate::terminal) fn reply(&mut self, args: std::fmt::Arguments<'_>) {
-        // An answer about a picture is waiting for the host: this one goes out after it.
-        if self.graphics.hold_reply(args) {
-            return;
-        }
-        let from = self.replies.len();
-        let _ = self.replies.write_fmt(args);
-        self.settle_reply(from);
+        let rules = self.reply_rules();
+        self.replies.push_fmt(rules, args);
     }
 
-    /// [`reply`](Self::reply) for bytes that are already made (a graphics answer), with no text
-    /// in between.
+    /// [`reply`](Self::reply) for bytes that are already made (a graphics answer).
     pub(in crate::terminal) fn reply_bytes(&mut self, bytes: &[u8]) {
-        if self.graphics.hold_reply_bytes(bytes) {
-            return;
-        }
-        let from = self.replies.len();
-        self.replies.extend_from_slice(bytes);
-        self.settle_reply(from);
+        let rules = self.reply_rules();
+        self.replies.push_bytes(rules, bytes);
     }
 
-    /// What `reply` does with the bytes it just appended at `from`: the cap, decided at an ESC,
-    /// and the one-byte C1 controls.
-    fn settle_reply(&mut self, from: usize) {
-        if self.replies.get(from) == Some(&0x1B) {
-            self.reply_dropped = from >= self.limits.replies;
-        }
-        // Pieces that never start a reply still stop somewhere.
-        if self.reply_dropped || from >= 2 * self.limits.replies {
-            self.replies.truncate(from);
-        } else if self.eight_bit {
-            crate::terminal::modes::conformance::eight_bit_in_place(&mut self.replies, from);
-        }
+    /// Queue one whole reply that `compose` writes in pieces. The pieces go into a scratch buffer
+    /// (kept, so a reply allocates nothing) and the queue gets the whole, which is why a reply is
+    /// never cut in the middle: it is kept or dropped as the one thing it is. `compose` may read
+    /// the terminal.
+    pub(in crate::terminal) fn reply_with(&mut self, compose: impl FnOnce(&Terminal, &mut Pieces<'_>)) {
+        let mut scratch = self.replies.take_scratch();
+        compose(self, &mut Pieces(&mut scratch));
+        let rules = self.reply_rules();
+        self.replies.push_bytes(rules, &scratch);
+        self.replies.put_scratch(scratch);
+    }
+
+    /// What the queue needs to know of the terminal to keep a reply.
+    pub(in crate::terminal) fn reply_rules(&self) -> Rules {
+        Rules { cap: self.limits.replies, eight_bit: self.eight_bit }
     }
 
     /// DSR (`CSI Ps n`).
@@ -191,14 +179,15 @@ impl Terminal {
             self.reply(format_args!("\x1b[?1;2c"));
             return;
         }
-        // In pieces, not in a string: a reply allocates nothing.
-        self.reply(format_args!("\x1b[?{}", self.level.param()));
-        for (feature, since) in FEATURES {
-            if self.level >= since {
-                self.reply(format_args!(";{feature}"));
+        self.reply_with(|t, reply| {
+            reply.put(format_args!("\x1b[?{}", t.level.param()));
+            for (feature, since) in FEATURES {
+                if t.level >= since {
+                    reply.put(format_args!(";{feature}"));
+                }
             }
-        }
-        self.reply(format_args!("c"));
+            reply.put(format_args!("c"));
+        });
     }
 
     /// DA2: the terminal type of the conformance level's family, the version, and no ROM

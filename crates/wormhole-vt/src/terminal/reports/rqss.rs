@@ -36,40 +36,48 @@ impl Terminal {
         let protected = u8::from(self.pen.protected);
         let (rows, cols) = (self.rows, self.cols);
         let (level, c1) = (self.level.param(), u8::from(!self.eight_bit));
-        self.reply(format_args!("\x1bP1$r"));
-        match setting {
-            Setting::Sgr => self.reply(format_args!("{}", SgrParams(&style))),
-            Setting::Margins => self.reply(format_args!("{top};{bottom}r")),
-            Setting::ColumnMargins => self.reply(format_args!("{left};{right}s")),
-            Setting::CursorStyle => self.reply(format_args!("{code} q")),
-            Setting::Protection => self.reply(format_args!("{protected}\"q")),
-            Setting::Level => self.reply(format_args!("{level};{c1}\"p")),
-            Setting::Rows => self.reply(format_args!("{rows}t")),
-            Setting::Columns => self.reply(format_args!("{cols}$|")),
-            Setting::Lines => self.reply(format_args!("{rows}*|")),
-            Setting::ModifyOtherKeys => self.reply(format_args!(">4;{}m", self.modify_other_keys_level())),
-            Setting::TitleModes => {
-                self.reply(format_args!(">"));
-                let mut first = true;
-                for (_, param) in title_modes.iter().filter(|(on, _)| *on) {
-                    self.reply(format_args!("{}{param}", if first { "" } else { ";" }));
-                    first = false;
+        self.reply_with(|t, reply| {
+            reply.put(format_args!("\x1bP1$r"));
+            match setting {
+                Setting::Sgr => reply.put(format_args!("{}", SgrParams(&style))),
+                Setting::Margins => reply.put(format_args!("{top};{bottom}r")),
+                Setting::ColumnMargins => reply.put(format_args!("{left};{right}s")),
+                Setting::CursorStyle => reply.put(format_args!("{code} q")),
+                Setting::Protection => reply.put(format_args!("{protected}\"q")),
+                Setting::Level => reply.put(format_args!("{level};{c1}\"p")),
+                Setting::Rows => reply.put(format_args!("{rows}t")),
+                Setting::Columns => reply.put(format_args!("{cols}$|")),
+                Setting::Lines => reply.put(format_args!("{rows}*|")),
+                Setting::ModifyOtherKeys => {
+                    reply.put(format_args!(">4;{}m", t.modify_other_keys_level()));
                 }
-                self.reply(format_args!("t"));
-            }
-            Setting::Kept(setting) => {
-                let kept = self.kept;
-                match setting {
-                    Kept::LocalFunctions => self.reply(format_args!("{}+q", kept.local_functions)),
-                    Kept::FunctionKeyControl => self.reply(format_args!("{}*}}", kept.function_key_control)),
-                    Kept::StatusDisplay => self.reply(format_args!("{}$}}", u8::from(self.status.active()))),
-                    Kept::ModifierKeys => self.reply(format_args!("{}+r", kept.modifier_keys)),
-                    Kept::StatusLine => self.reply(format_args!("{}$~", self.status.kind())),
-                    Kept::AttributeExtent => self.reply(format_args!("{}*x", kept.attribute_extent)),
+                Setting::TitleModes => {
+                    reply.put(format_args!(">"));
+                    let mut first = true;
+                    for (_, param) in title_modes.iter().filter(|(on, _)| *on) {
+                        reply.put(format_args!("{}{param}", if first { "" } else { ";" }));
+                        first = false;
+                    }
+                    reply.put(format_args!("t"));
+                }
+                Setting::Kept(setting) => {
+                    let kept = t.kept;
+                    match setting {
+                        Kept::LocalFunctions => reply.put(format_args!("{}+q", kept.local_functions)),
+                        Kept::FunctionKeyControl => {
+                            reply.put(format_args!("{}*}}", kept.function_key_control));
+                        }
+                        Kept::StatusDisplay => {
+                            reply.put(format_args!("{}$}}", u8::from(t.status.active())));
+                        }
+                        Kept::ModifierKeys => reply.put(format_args!("{}+r", kept.modifier_keys)),
+                        Kept::StatusLine => reply.put(format_args!("{}$~", t.status.kind())),
+                        Kept::AttributeExtent => reply.put(format_args!("{}*x", kept.attribute_extent)),
+                    }
                 }
             }
-        }
-        self.reply(format_args!("\x1b\\"));
+            reply.put(format_args!("\x1b\\"));
+        });
     }
 
     /// The DECSCUSR parameter that gives the cursor the style it has.

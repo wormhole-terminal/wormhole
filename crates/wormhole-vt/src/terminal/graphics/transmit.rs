@@ -98,8 +98,8 @@ impl Terminal {
             }
             Ok(Flow::Waiting { image, assigned }) => {
                 let target = assigned.map_or(target, |id| target.with_id(id));
-                let freed = self.graphics.gate.wait(image, target);
-                self.release_replies(freed);
+                let rules = self.reply_rules();
+                self.replies.wait(rules, image, target);
             }
             Err(error) => self.answer(target.render(Err(error))),
         }
@@ -298,7 +298,7 @@ impl Terminal {
         self.forget_screen_images(1);
         self.graphics.transfer = None;
         self.graphics.multipart = None;
-        self.graphics.gate.clear();
+        self.replies.forget_held();
     }
 
     /// The grid of the screen `slot` names (0 main, 1 alternate): the one showing is `grid`, the
@@ -315,13 +315,6 @@ impl Terminal {
     pub(in crate::terminal) fn answer(&mut self, bytes: Option<Vec<u8>>) {
         if let Some(bytes) = bytes {
             self.reply_bytes(&bytes);
-        }
-    }
-
-    /// Replies the gate let go of go out ahead of anything later.
-    fn release_replies(&mut self, parts: Vec<Vec<u8>>) {
-        for part in parts {
-            self.replies.extend_from_slice(&part);
         }
     }
 
@@ -343,8 +336,7 @@ impl Terminal {
                 }
             }
         }
-        let freed = self.graphics.gate.settle(image, answer);
-        self.release_replies(freed);
+        self.replies.settle(image, answer);
     }
 }
 

@@ -89,8 +89,9 @@ pub struct Limits {
     /// 64 MiB). Past it a new event of that kind is dropped whole, the newest first, as past
     /// `events`; pictures, resets, mode changes and dropped history are still kept.
     pub events_bytes: usize,
-    /// Reply bytes the host may leave uncollected: past it new replies are dropped whole (ceiling:
-    /// 1 MiB).
+    /// Reply bytes the host may leave uncollected, those held behind a picture's answer included:
+    /// a reply that would take the queue past it is dropped whole, never cut, unless nothing else
+    /// waits (ceiling: 1 MiB).
     pub replies: usize,
     /// Bytes of dropped history lines (16 a column, and the line's side data) held for a host
     /// that does not take its events, when [`Builder::archive_history`](crate::Builder::archive_history)

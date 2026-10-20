@@ -90,8 +90,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("events", Queue("drained by the host")),
     ("queued_values", Queue("the bytes of user variables waiting in the queue")),
     ("queued_bytes", Queue("the bytes of the other events' payloads waiting in the queue")),
-    ("replies", Queue("written to the program by the host")),
-    ("reply_dropped", Scratch("the reply being written, one sequence's")),
+    ("replies", Queue("written to the program by the host (the answers held behind a picture go with it)")),
     ("scrollback_lines", Host("the history setting")),
     (
         "history_just_cleared",
@@ -202,7 +201,6 @@ const GRAPHICS: &[(&str, Coverage)] = &[
     ("transfer", Scratch("a picture in chunks: repaint_ready says no")),
     ("tables", Gap("Gaps::IMAGES")),
     ("last_handle", Written("Seeds::image_handle")),
-    ("gate", Gap("replies held for a decode; the replica never answers")),
     ("multipart", Scratch("an iTerm2 image in parts: repaint_ready says no")),
 ];
 

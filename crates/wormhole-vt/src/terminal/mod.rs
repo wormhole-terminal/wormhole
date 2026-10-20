@@ -36,6 +36,7 @@
 //! | | `conformance` | DECSCL, S7C1T and S8C1T: the level and one-byte C1 controls |
 //! | | `keyboard`, `modkeys`, `kept` | the kitty keyboard stacks; XTMODKEYS and XTQMODKEYS (modifyOtherKeys); numbers kept for hardware we do not have |
 //! | `reports/` | (`mod`) | DSR, DA1/2/3, XTVERSION |
+//! | | `queue` | the replies owed to the program: kept or dropped whole, the cap, one-byte controls, and the order behind a picture's answer |
 //! | | `scheme`, `inband` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031; the in-band resize reports of mode 2048 |
 //! | | `state`, `presentation` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | | `checksum` | DECRQCRA, and the policy that turns it on (off by default) |
@@ -304,9 +305,8 @@ pub struct Terminal {
     queued_values: usize,
     /// Bytes of the other events' text and data waiting in `events` (`Event::payload_bytes`).
     queued_bytes: usize,
-    replies: Vec<u8>,
-    /// The reply being written went past the cap: its other pieces go too (see `reply`).
-    reply_dropped: bool,
+    /// The replies owed to the program, kept whole or dropped whole; see `reports::queue`.
+    replies: reports::ReplyQueue,
     /// The lines of history asked for, see [`Builder::scrollback`].
     scrollback_lines: usize,
     /// ED 3 ran and nothing but cursor moves and erases came since: an ED 2 now does not save
@@ -378,7 +378,7 @@ impl Terminal {
     /// The bytes the program is waiting to read, in the order it asked. The host writes them to
     /// the PTY and calls [`clear_replies`](Self::clear_replies).
     pub fn replies(&self) -> &[u8] {
-        &self.replies
+        self.replies.bytes()
     }
 
     /// Forget the replies, after writing them out; the buffer is kept.
@@ -388,7 +388,7 @@ impl Terminal {
 
     /// Take the replies, leaving none.
     pub fn take_replies(&mut self) -> Vec<u8> {
-        std::mem::take(&mut self.replies)
+        self.replies.take()
     }
 
     /// The window title the program set, `None` if it never did or reset it.

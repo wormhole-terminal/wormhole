@@ -16,6 +16,7 @@ mod pointer_and_vars;
 mod rare;
 mod rectangles;
 mod replies;
+mod reply_queue;
 mod resize;
 mod scheme;
 mod selection;

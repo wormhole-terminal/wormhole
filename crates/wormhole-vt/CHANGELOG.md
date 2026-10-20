@@ -135,6 +135,12 @@ First public release (0.1.0).
   end where the whole count would have left them, the history gains fewer identical lines.
 - The table that shares cell styles hashes with a random seed per page and a folded multiply, so colors
   picked to land in one slot of its index no longer make every lookup walk a long run.
+- Replies are kept or dropped as a whole by one queue (`reports::queue`), decided when the reply is
+  complete: the piece of a reply that ended it (`ESC \`) was dropped alone when the queue filled up
+  between its pieces, leaving a string the program never saw end. The replies held behind a picture's
+  answer follow the same cap and the one-byte controls of S8C1T as the others (they bypassed both once
+  the picture was decoded), and the queue is never past its cap: a reply that does not fit is dropped,
+  unless nothing else waits.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.
