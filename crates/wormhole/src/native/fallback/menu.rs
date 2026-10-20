@@ -4,11 +4,13 @@
 
 use std::collections::HashMap;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::base::POPUP_PRIORITY;
+use gpui_kit::base::actions::Cancel;
 use gpui_kit::component::menu::{PopupMenu, PopupMenuItem};
 use gpui_kit::*;
 
-use crate::native::menu::{Check, Entry, Icon, Menu};
+use crate::native::menu::{Check, Entry, Icon, Menu, Swatches};
 
 /// The open menu of one window, and the element that draws it.
 #[derive(Default)]
@@ -102,6 +104,10 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
                 };
                 popup.item(shown.checked(item.check != Check::Off).disabled(!item.enabled).on_click(click))
             }
+            Entry::Swatches(row) => {
+                let row = row.clone();
+                popup.item(PopupMenuItem::element(move |_, cx| dots(&row, cx)))
+            }
             Entry::Submenu { title, enabled, menu } => {
                 if *enabled {
                     let menu = menu.clone();
@@ -119,8 +125,28 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
 
 fn with_icon(icon: &Icon, title: SharedString) -> AnyElement {
     let picture = match icon {
-        Icon::Swatch(color) => div().size_3().rounded_full().bg(*color).into_any_element(),
         Icon::Image(file) => img(file.clone()).size_4().into_any_element(),
+        // No icon service here: the folder glyph stands for any file.
+        Icon::File(_) => crate::style::icon(IconName::Folder).into_any_element(),
     };
     div().flex().items_center().gap_2().child(picture).child(title).into_any_element()
+}
+
+/// A row of colour dots: a click on one picks it and dismisses the menu, as the native row does.
+fn dots(row: &Swatches, cx: &App) -> AnyElement {
+    let ui = crate::settings::ui(cx);
+    div()
+        .flex()
+        .items_center()
+        .children(row.swatches.iter().enumerate().map(|(ix, swatch)| {
+            let on_pick = row.on_pick.clone();
+            crate::style::swatch(("menu-swatch", ix), ui, swatch.color, row.selected == Some(ix))
+                .role(Role::Button)
+                .aria_label(swatch.name.clone())
+                .on_click(move |_, window, cx| {
+                    on_pick(ix, window, cx);
+                    window.dispatch_action(Box::new(Cancel), cx);
+                })
+        }))
+        .into_any_element()
 }

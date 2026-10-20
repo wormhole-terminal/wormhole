@@ -3,3 +3,4 @@
 
 pub mod appkit;
 pub mod menu;
+mod swatches;

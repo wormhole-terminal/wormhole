@@ -26,7 +26,7 @@ pub enum GroupColor {
 }
 
 impl GroupColor {
-    /// In the order the group's popover offers them.
+    /// In the order the group's menu offers them.
     pub const ALL: [GroupColor; 9] = [
         Self::Grey,
         Self::Blue,

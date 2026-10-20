@@ -48,13 +48,6 @@ pub const HINT_HOLD: Duration = wormhole_core::sidebar::hints::HOLD_DELAY;
 /// The pointer rests on a resize handle this long before its line shows.
 pub const RESIZE_HANDLE_HOVER_DELAY: Duration = Duration::from_millis(150);
 
-/// The path's hover card opens after the pointer has rested on the folder this long, and closes
-/// this long after it has left the folder and the card (so crossing the gap doesn't close it).
-pub const PATH_CARD_OPEN_DELAY: Duration = Duration::from_millis(400);
-pub const PATH_CARD_CLOSE_DELAY: Duration = Duration::from_millis(200);
-/// How long Copy path says "Copied".
-pub const PATH_CARD_COPIED_FOR: Duration = Duration::from_millis(1200);
-
 /// A CSS `cubic-bezier(x1, y1, x2, y2)` timing curve.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CubicBezier(pub f32, pub f32, pub f32, pub f32);

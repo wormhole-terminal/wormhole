@@ -15,7 +15,7 @@ pub(super) fn fold(ctx: &mut Ctx, arg: &str) -> Result<String> {
     }
 }
 
-/// `group <name> <action>`: what a group's popover and menu do (`edit` opens the popover, `pin`
+/// `group <name> <action>`: what a group's menu does (`rename` makes the name a field, `pin`
 /// toggles the pin, `ungroup`, `close`, `move`, `color:<name|none>`).
 pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (name, action) =

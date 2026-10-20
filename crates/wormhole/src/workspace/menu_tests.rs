@@ -3,9 +3,10 @@
 //! records the menu it was asked to open (`native::record`, what devctl's `menu` prints): the
 //! tests right-click, read the recorded model and choose an item as a click would.
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, px, size};
+use wormhole_core::sidebar::GroupColor;
 
 use super::app::OpenWindow;
-use super::view_tests::{draw, isolate_in, read, start};
+use super::view_tests::{draw, drive, isolate_in, read, start};
 use crate::native::record;
 
 fn isolate(name: &str) -> bool {
@@ -89,4 +90,77 @@ fn right_clicking_a_row_opens_its_menu_and_pin_pins_it(cx: &mut TestAppContext) 
     pick(cx, &window, "Pin to top");
     assert!(read(cx, &window, |ws| ws.sessions[0].pinned), "the terminal is pinned");
     assert_eq!(read(cx, &window, |ws| ws.sidebar.menu_row), None, "the ring went with the menu");
+}
+
+/// Let the list's slide finish and draw the window where it lands.
+fn settle(cx: &mut TestAppContext, window: &OpenWindow) {
+    cx.executor().advance_clock(std::time::Duration::from_secs(2));
+    cx.run_until_parked();
+    draw(cx, window);
+    draw(cx, window);
+}
+
+/// A click on a group's name opens its menu (Rename…, the row of colours, the actions); choosing a
+/// colour changes the group's, Rename… makes the name a field on the head, and Pin group pins it.
+#[gpui_kit::test]
+fn clicking_a_groups_name_opens_its_menu_with_colours_and_rename(cx: &mut TestAppContext) {
+    if isolate("clicking_a_groups_name_opens_its_menu_with_colours_and_rename") {
+        return;
+    }
+    let window = open(cx, 2);
+    let group = cx
+        .update(|cx| window.workspace.update(cx, |ws, cx| ws.group_terminals(&[1], cx)))
+        .expect("the window is open");
+    draw(cx, &window);
+    draw(cx, &window);
+    record::close();
+
+    record::close();
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    let at = pointer.debug_bounds("group-label").expect("the group's name is drawn").center();
+    pointer.simulate_click(at, Modifiers::none());
+    cx.run_until_parked();
+    let menu = record::open().expect("the click opened the menu");
+    assert_eq!(menu.outline().first().map(String::as_str), Some("- Rename…"));
+    assert!(menu.outline()[2].starts_with("~ Grey | "), "{:?}", menu.outline());
+    assert!(
+        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).is_some_and(|g| !g.members.is_empty())),
+        "and the click did not fold or close anything"
+    );
+    assert!(read(cx, &window, |ws| ws.sidebar.group_renaming.is_none()));
+
+    pick(cx, &window, "colour red");
+    assert_eq!(
+        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).and_then(|g| g.color())),
+        Some(GroupColor::Red),
+        "the dot set the group's colour"
+    );
+    assert!(record::open().is_none(), "and closed the menu");
+
+    settle(cx, &window);
+    right_click(cx, &window, "group-label");
+    assert!(
+        record::open().is_some_and(|menu| menu.swatch_row().is_some()),
+        "a right-click opens the same menu"
+    );
+    pick(cx, &window, "Pin group");
+    assert!(read(cx, &window, |ws| ws.sidebar.view.groups.get(group).is_some_and(|g| g.pinned)));
+
+    settle(cx, &window);
+    right_click(cx, &window, "group-label");
+    assert!(record::open().expect("the menu").outline().contains(&"- Unpin group".to_string()));
+    pick(cx, &window, "Rename…");
+    assert_eq!(read(cx, &window, |ws| ws.sidebar.group_renaming.as_ref().map(|r| r.group)), Some(group));
+    draw(cx, &window);
+    // The name is a field now: Return keeps what was typed.
+    drive(cx, &window, |ws, window, cx| {
+        let input = ws.sidebar.group_renaming.as_ref().map(|r| r.input.clone()).expect("renaming");
+        input.update(cx, |input, cx| input.set_value("Reviews", window, cx));
+        ws.finish_group_rename(true, window, cx);
+    });
+    assert_eq!(
+        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).map(|g| g.name.clone())).as_deref(),
+        Some("Reviews")
+    );
+    assert!(read(cx, &window, |ws| ws.sidebar.group_renaming.is_none()));
 }

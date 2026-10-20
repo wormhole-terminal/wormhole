@@ -10,7 +10,6 @@ use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::tabs::{Hit, IN_NO_GROUP, search};
 
 use super::super::settings_page::update_settings;
-use super::groups::{PopoverSnapshot, group_popover};
 use super::rows::{Frame, glyph_for};
 use super::tab_bar::SetView;
 use super::*;
@@ -52,8 +51,9 @@ struct CardSnap {
     current: bool,
     spoken: SharedString,
     group: Option<u32>,
-    /// The sidebar label's popover, which the card's name and a right-click open.
-    popover: Option<PopoverSnapshot>,
+    /// The group's menu is opened by the card's name and a right-click.
+    /// The card's name as a field while the group is renamed.
+    renaming: Option<Entity<InputState>>,
 }
 
 /// A line of the search's results.
@@ -135,7 +135,7 @@ impl Workspace {
     }
 
     /// The search field opens with the popover.
-    fn start_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn start_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let input = cx.new(|cx| InputState::new(window, cx).placeholder("Go to group or terminal…"));
         let events = cx.subscribe_in(&input, window, |this, _, event: &InputEvent, window, cx| match event {
             InputEvent::PressEnter { .. } => this.switcher_enter(window, cx),
@@ -150,8 +150,8 @@ impl Workspace {
     /// Close the popover and give the keyboard back to the terminal.
     pub(super) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.sidebar.tabs.switcher.take().is_some() {
-            // A group popover open on a card goes with it.
-            self.finish_group_edit(window, cx);
+            // A group being renamed on a card goes with it.
+            self.finish_group_rename(true, window, cx);
             window.focus(&self.active_terminal().focus_handle(cx), cx);
             cx.notify();
         }
@@ -227,7 +227,10 @@ impl Workspace {
                 )
                 .into(),
                 group: look.group,
-                popover: look.group.map(|group| self.popover_snapshot(group, ui, cx)),
+                renaming: look.group.and_then(|group| {
+                    let renaming = self.sidebar.group_renaming.as_ref()?;
+                    (renaming.group == group).then(|| renaming.input.clone())
+                }),
             });
         }
         let input = self.sidebar.tabs.switcher.as_ref().map(|s| s.input.clone());
@@ -382,23 +385,27 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             on_toggle: Box::new(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx)))),
             spoken_edit: card.label.clone(),
             spoken_fold: card.spoken.clone(),
-            // The sidebar's popover on the name; one is open at a time (`sidebar.editing`).
-            wrap_label: match card.popover.clone() {
-                Some(snap) => {
-                    let this = this.clone();
-                    Box::new(move |trigger| group_popover(snap, trigger, this))
-                }
-                None => Box::new(|trigger| trigger.into_any_element()),
-            },
+            // The name opens the sidebar's group menu, under the pointer; a group in none has none.
+            on_label: group.map(|group| {
+                let this = this.clone();
+                Box::new(move |event: &ClickEvent, window: &mut Window, cx: &mut App| {
+                    let at = event.position();
+                    this.update(cx, |ws, cx| ws.open_group_menu(group, at, window, cx)).ok();
+                }) as style::ClickHandler
+            }),
+            name_edit: card
+                .renaming
+                .as_ref()
+                .map(|input| super::rename::group_name_field(input, this.clone())),
         };
         let head = style::group_head(("switch-card", set), ui, parts)
             .role(Role::Button)
             .aria_label(card.spoken.clone())
             .when_some(group, |head, group| {
                 let this = this.clone();
-                head.on_mouse_down(MouseButton::Right, move |_, window, cx| {
+                head.on_mouse_down(MouseButton::Right, move |event, window, cx| {
                     cx.stop_propagation();
-                    this.update(cx, |ws, cx| ws.start_group_edit(group, window, cx)).ok();
+                    this.update(cx, |ws, cx| ws.open_group_menu(group, event.position, window, cx)).ok();
                 })
             });
         let head = if empty && card.pinned {

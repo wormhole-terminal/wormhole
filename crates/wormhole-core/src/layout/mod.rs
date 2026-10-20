@@ -6,6 +6,7 @@
 //! [`TERMINAL_MIN`]) and the right panel. The panel is the first to give way: it shrinks from its
 //! chosen width to [`PANEL_MIN`], then hides until the window is wide enough again.
 
+pub mod path_menu;
 mod remembered;
 mod resize;
 pub mod status_bar;

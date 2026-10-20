@@ -143,3 +143,25 @@ pub(super) fn menu_close(ctx: &mut Ctx, _: &str) -> Result<String> {
     });
     Ok(String::new())
 }
+
+/// `menu-native [press <n>]`: the open menu built as the real AppKit `NSMenu` (not shown), as AppKit
+/// has it: items and, for a row of colour dots, each dot's tooltip and VoiceOver label; `press <n>`
+/// presses the n-th dot as VoiceOver does and tells which one the menu took as chosen. The check of
+/// what `menu` can't see: the AppKit side of a menu, short of a person's click in its loop.
+pub(super) fn menu_native(_: &mut Ctx, arg: &str) -> Result<String> {
+    let menu = crate::native::record::open().ok_or_else(|| anyhow::anyhow!("no menu is open"))?;
+    let press = match arg.trim().strip_prefix("press") {
+        Some(n) => Some(n.trim().parse::<usize>()?),
+        None => None,
+    };
+    #[cfg(target_os = "macos")]
+    {
+        crate::native::macos::menu::inspect(&menu, press)
+            .ok_or_else(|| anyhow::anyhow!("not on the main thread"))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (menu, press);
+        anyhow::bail!("only on macOS")
+    }
+}

@@ -82,7 +82,8 @@ pub(super) fn render(
                 on_toggle: Box::new(|_, _, _| {}),
                 spoken_edit: name.into(),
                 spoken_fold: name.into(),
-                wrap_label: Box::new(|trigger| trigger.into_any_element()),
+                on_label: None,
+                name_edit: None,
             },
         )
     };

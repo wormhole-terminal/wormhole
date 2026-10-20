@@ -272,7 +272,7 @@ impl Workspace {
     /// diff, back to the terminal; in the terminal it is the program's). Overlays (the palette,
     /// the sheet, a dialog) and text fields answer Esc themselves.
     pub(super) fn escape_key(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
-        if self.cancel_resize(cx) || self.cancel_pane_drag(cx) || self.close_path_card(cx) {
+        if self.cancel_resize(cx) || self.cancel_pane_drag(cx) {
             return true;
         }
         if self.overlay.is_some() || self.first_run.is_open() {

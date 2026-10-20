@@ -202,7 +202,8 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         on_toggle: Box::new(|_, _, _| {}),
                         spoken_edit: SharedString::default(),
                         spoken_fold: SharedString::default(),
-                        wrap_label: Box::new(|trigger| trigger.into_any_element()),
+                        on_label: None,
+                        name_edit: None,
                     },
                 )
                 .into_any_element(),
