@@ -241,7 +241,7 @@ const WINDOW: &[Slot] = &[
 ];
 
 /// "Wormhole Help" is the system's search (⌘?) until there is help to show.
-const HELP: &[Slot] = &[A(Help), A(KeyboardShortcuts), A(ShowIntro), Sep, A(ShowLogs)];
+const HELP: &[Slot] = &[A(Help), A(KeyboardShortcuts), A(ShowIntro), Sep, A(Licenses), A(ShowLogs)];
 
 const DEVELOPER: &[Slot] = &[A(Inspector)];
 

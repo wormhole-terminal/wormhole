@@ -111,11 +111,10 @@ pub fn section(id: ActionId) -> Section {
         | KeyboardShortcuts | Minimize | Zoom | BringAllToFront | LayoutColumns | LayoutRows | LayoutGrid
         | LayoutSingle => Section::View,
         About | CheckForUpdates | Settings | ThemeStudio | NewProfile | ManageProfiles | Hide
-        | HideOthers | ShowAll | Quit | ShowLogs | Inspector | Help | CommandPalette | ShowIntro
-        | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse | PlayIntroFtl | PlayIntroAurora
-        | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor | PlayWelcomePortal | PlayWelcomeLogo => {
-            Section::App
-        }
+        | HideOthers | ShowAll | Quit | ShowLogs | Licenses | Inspector | Help | CommandPalette
+        | ShowIntro | PlayIntroEmerge | PlayIntroVortex | PlayIntroCollapse | PlayIntroFtl
+        | PlayIntroAurora | PlayIntroTentacles | PlayIntroVoyage | PlayWelcomeCursor | PlayWelcomePortal
+        | PlayWelcomeLogo => Section::App,
         _ => Section::Terminal,
     }
 }

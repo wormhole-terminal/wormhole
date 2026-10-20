@@ -1,5 +1,5 @@
-//! The About window (Wormhole → About Wormhole: version, build and licences), and the
-//! Licenses window it links to.
+//! The About window (Wormhole → About Wormhole: icon, version and copyright), and the
+//! Licenses window (Help → Licenses).
 
 mod licenses;
 
@@ -9,9 +9,10 @@ use crate::icons::app_icon;
 
 pub(crate) use licenses::open_licenses;
 
-pub(super) const TAGLINE: &str = wormhole_core::welcome::TAGLINE;
-const SIZE: (f32, f32) = (440.0, 420.0);
-const ICON: f32 = 112.0;
+/// The system About panel's proportions (Terminal's is 284 wide; the copyright line here is longer), and
+/// its icon.
+const SIZE: (f32, f32) = (340.0, 196.0);
+const ICON: f32 = 64.0;
 
 /// `packaging/app.env` is where the app's identity lives; the bundle's Info.plist is filled from
 /// it too, so the copyright line here can't drift from the one Finder shows.
@@ -73,6 +74,8 @@ impl Render for AboutWindow {
         let surfaces = aux_window::surfaces(cx, false);
         let copyright = env_value(APP_ENV, "COPYRIGHT").unwrap_or_default().to_string();
 
+        // The system's About panel, as Terminal and Finder show it: icon, name, version, copyright,
+        // nothing to press. Updates are in the app menu and the licences in Help.
         div()
             .id("about-window")
             .track_focus(&self.focus_handle)
@@ -85,44 +88,18 @@ impl Render for AboutWindow {
             .flex()
             .flex_col()
             .items_center()
-            .px_6()
+            .px_4()
             .pt(px(style::TITLE_ROW_H))
-            .pb_6()
             .bg(surfaces.background)
             .text_color(ui.text)
             // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
             .child(aux_window::drag_strip())
             .child(img(app_icon(cx)).size(px(ICON)).flex_none())
-            .child(
-                div()
-                    .mt_3()
-                    .flex()
-                    .flex_col()
-                    .items_center()
-                    .gap_1()
-                    .child(div().text_title().font_weight(FontWeight::BOLD).child("Wormhole"))
-                    .child(div().text_body().text_color(ui.muted).child(version_line())),
-            )
-            .child(div().mt_3().text_body().text_center().child(TAGLINE))
-            .child(
-                div()
-                    .mt_6()
-                    .flex()
-                    .gap_2()
-                    .child(
-                        Button::new("about-updates")
-                            .small()
-                            .label("Check for Updates…")
-                            .on_click(|_, window, cx| window.dispatch_action(Box::new(CheckForUpdates), cx)),
-                    )
-                    .child(Button::new("about-licenses").small().label("Licenses…").on_click(|_, _, cx| {
-                        cx.defer(open_licenses);
-                    })),
-            )
-            .child(div().flex_1())
+            .child(div().mt_2().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
+            .child(div().mt_1().text_caption().text_color(ui.muted).child(version_line()))
             .children(
                 (!copyright.is_empty())
-                    .then(|| div().text_caption().text_color(ui.faint).text_center().child(copyright)),
+                    .then(|| div().mt_1().text_caption().text_color(ui.muted).text_center().child(copyright)),
             )
     }
 }

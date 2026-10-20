@@ -99,6 +99,7 @@ actions!(
         ToggleFullScreen,
         BringAllToFront,
         ShowLogs,
+        Licenses,
         ShowIntro,
         PlayIntroEmerge,
         PlayIntroVortex,
@@ -246,6 +247,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::ShowAll => Box::new(ShowAll),
         A::Quit => Box::new(crate::Quit),
         A::ShowLogs => Box::new(ShowLogs),
+        A::Licenses => Box::new(Licenses),
         A::ShowIntro => Box::new(ShowIntro),
         A::PlayIntroEmerge => Box::new(PlayIntroEmerge),
         A::PlayIntroVortex => Box::new(PlayIntroVortex),
@@ -370,6 +372,7 @@ pub(crate) fn init(cx: &mut App) {
         });
     });
     cx.on_action(|_: &About, cx| cx.defer(about::open_about));
+    cx.on_action(|_: &Licenses, cx| cx.defer(about::open_licenses));
     cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_page::open_settings(None, cx)));
     // ⌘O: a terminal in the picked folder, in the window in front (the status item's too).
     cx.on_action(|_: &OpenFolder, cx| cx.defer(menu_bar::open_folder));

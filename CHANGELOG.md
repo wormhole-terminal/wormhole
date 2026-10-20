@@ -60,6 +60,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   app stays GPL-3.0-or-later.
 - A new app icon: the `>_` prompt over a glowing disc that runs from blue to violet, on a plain tile,
   white in light mode and black in dark mode.
+- About Wormhole looks like the Mac's own About panel: a small window with the icon, name, version
+  and copyright. The licences moved to Help → Licenses; Check for Updates stays in the Wormhole menu.
 - A new look for the window. The terminal is a rounded surface, its text 12 pt from the window's edge
   in line with the traffic lights, the title row, the status bar and the sidebar's and panel's
   headers; the title row stands on the terminal's own colour. Split terminals are rounded surfaces of

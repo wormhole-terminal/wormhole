@@ -446,6 +446,7 @@ Help
   Keyboard Shortcuts  ⌥⌘/
   Welcome to Wormhole
   ---
+  Licenses
   Show Logs in Finder
 Developer
   Inspector  ⌥⇧⌘I

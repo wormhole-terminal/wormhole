@@ -4,11 +4,11 @@
 
 use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::intro::page::Entrance;
+use wormhole_core::welcome::TAGLINE;
 
 use super::page::Entering;
 use super::*;
 use crate::icons::app_icon;
-use crate::workspace::about::TAGLINE;
 use crate::workspace::aux_window;
 
 /// The page's width: the specimen is as wide as the sidebar's column, less the page's side padding.

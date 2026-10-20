@@ -146,6 +146,8 @@ pub enum ActionId {
     ShowAll,
     Quit,
     ShowLogs,
+    /// The third-party licences (Help → Licenses).
+    Licenses,
     /// The intro window again (Help → Welcome to Wormhole): its welcome page, with the animation.
     ShowIntro,
     /// The wormhole intro, one action per style while they are on trial.

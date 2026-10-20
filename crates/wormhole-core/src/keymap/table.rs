@@ -220,6 +220,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(ShowAll, "Show All", &[]),
         row(Quit, "Quit Wormhole", &[(CMD, "q")]),
         row(ShowLogs, "Show Logs in Finder", &[]),
+        row(Licenses, "Licenses", &[]),
         row(ShowIntro, "Welcome to Wormhole", &[]),
         // While three intro styles are on trial: a key each, to compare them quickly.
         row(PlayIntroEmerge, "Play Intro: Emerge", &[(CTRL_ALT_CMD, "1")]),
