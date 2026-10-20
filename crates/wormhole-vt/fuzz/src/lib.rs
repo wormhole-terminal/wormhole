@@ -7,6 +7,7 @@
 //! sessions seed the corpus as they are, and the fuzzer's splices of them stay meaningful.
 
 use wormhole_vt::image::ImageHandle;
+use wormhole_vt::passthrough::Passthrough;
 use wormhole_vt::{
     BlockPart, Cell, Column, Damage, Event, Line, Point, Policy, RowExtras, Scroll, SelectionType, Side,
     Terminal, TextCopy, TextShape, ViewRow,
@@ -73,7 +74,16 @@ impl Run {
         policy.screen_checksum = flags & 4 != 0;
         policy.window_ops = flags & 8 != 0;
         policy.title_report = flags & 16 != 0;
-        let term = Terminal::builder().size(cols, rows).scrollback(scrollback).policy(policy).build();
+        let mut builder = Terminal::builder().size(cols, rows).scrollback(scrollback).policy(policy);
+        // Bits 5 to 7 are the cell width when bit 4 is set; when it is not, bit 5 asks for strings
+        // passed through (tiny limits, so that the oversize path runs as often as the delivery).
+        if flags & 48 == 32 {
+            let claims = Passthrough::new().osc(51234, 16).dcs(b"!", b'z', 16).apc(b'Q', 16);
+            if let Ok(with) = builder.clone().passthrough(claims) {
+                builder = with;
+            }
+        }
+        let term = builder.build();
         let mut run = Run {
             term,
             copy: TextCopy::new(),

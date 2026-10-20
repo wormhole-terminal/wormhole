@@ -5,13 +5,14 @@
 //! are requests and are answered at once. `DCS q` is sixel, `DCS = 1 s` and `DCS = 2 s` begin and
 //! end a synchronized update in the older iTerm2 form, and APC with a `G` is the kitty graphics
 //! protocol. The image protocols are `graphics`' business; this file only collects a sixel's data
-//! and passes an APC string on as it streams in.
+//! and passes an APC string on as it streams in. A DCS or APC string the host asked for with a
+//! `Passthrough` is collected here whole, up to its limit, and queued as an event when it ends.
 
 use crate::parser::Csi;
 
-use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
 use crate::terminal::modes::conformance::Level;
+use crate::terminal::{Event, Terminal};
 
 /// Most a DECRQSS request is (the longest is two bytes).
 const RQSS_MAX: usize = 32;
@@ -32,6 +33,10 @@ enum Kind {
     /// DECRSPS and DECRSTS: a report to read back (`presentation`, `state`).
     RestorePresentation(u16),
     RestoreState(u16),
+    /// A string the host asked for, collected up to its limit: a DCS (the header is in
+    /// `DcsString::header`) or an APC (its first byte is part of the data).
+    PassDcs,
+    PassApc,
     /// An APC string whose first byte has not come.
     ApcFirst,
     /// A kitty graphics command, streamed to `graphics`.
@@ -47,6 +52,10 @@ pub(in crate::terminal) struct DcsString {
     data: Vec<u8>,
     /// The numbers before a sixel's `q`.
     params: Vec<u16>,
+    /// The limit on `data` for a string the host asked for.
+    pass_limit: usize,
+    /// The header of a DCS the host asked for, kept for the event at its end.
+    header: Option<Csi>,
 }
 
 impl DcsString {
@@ -60,6 +69,7 @@ impl DcsString {
             Kind::Decrqss => RQSS_MAX,
             Kind::Xtgettcap => TCAP_MAX,
             Kind::Sixel => SIXEL_MAX,
+            Kind::PassDcs => self.pass_limit,
             Kind::Preferred(_) => RQSS_MAX,
             Kind::RestorePresentation(_) | Kind::RestoreState(_) => {
                 crate::terminal::reports::presentation::RESTORE_MAX
@@ -87,6 +97,12 @@ impl DcsString {
 impl Terminal {
     pub(in crate::terminal) fn hook_dcs(&mut self, csi: &Csi) {
         self.dcs.data.clear();
+        if let Some(limit) = self.passthrough.dcs_cap(csi) {
+            self.dcs.pass_limit = limit;
+            self.dcs.header = Some(csi.clone());
+            self.dcs.kind = Kind::PassDcs;
+            return;
+        }
         self.dcs.kind = match (csi.marker(), csi.intermediates(), csi.final_byte()) {
             (None, [b'$'], b'q') => Kind::Decrqss,
             (None, [b'+'], b'q') => Kind::Xtgettcap,
@@ -139,6 +155,19 @@ impl Terminal {
                 }
                 // A report can be long (tab stops of a wide screen): the buffer is not kept.
             }
+            Kind::PassDcs => {
+                // The event owns the data, so the buffer goes with it.
+                let payload = std::mem::take(&mut self.dcs.data);
+                if let Some(header) = self.dcs.header.take() {
+                    self.push_event(Event::Dcs {
+                        params: header.values().to_vec(),
+                        intermediates: header.intermediates().to_vec(),
+                        final_byte: header.final_byte(),
+                        payload,
+                        replies_before: self.replies.len(),
+                    });
+                }
+            }
             Kind::Sixel => {
                 let data = std::mem::take(&mut self.dcs.data);
                 self.run_sixel(&self.dcs.params.clone(), &data);
@@ -164,17 +193,32 @@ impl Terminal {
                     self.put_kitty(&data[1..]);
                     return;
                 }
-                Some(_) => self.dcs.kind = Kind::Ignore,
+                Some(&first) => {
+                    self.dcs.kind = match self.passthrough.apc_cap(first) {
+                        Some(limit) => {
+                            self.dcs.pass_limit = limit;
+                            Kind::PassApc
+                        }
+                        None => Kind::Ignore,
+                    };
+                }
             }
         }
-        if self.dcs.kind == Kind::Apc {
-            self.put_kitty(data);
+        match self.dcs.kind {
+            Kind::Apc => self.put_kitty(data),
+            Kind::PassApc => self.dcs.append(data, self.dcs.pass_limit),
+            _ => {}
         }
     }
 
     pub(in crate::terminal) fn finish_apc(&mut self) {
-        if std::mem::take(&mut self.dcs.kind) == Kind::Apc {
-            self.finish_kitty();
+        match std::mem::take(&mut self.dcs.kind) {
+            Kind::Apc => self.finish_kitty(),
+            Kind::PassApc => {
+                let payload = std::mem::take(&mut self.dcs.data);
+                self.push_event(Event::Apc { payload, replies_before: self.replies.len() });
+            }
+            _ => {}
         }
     }
 

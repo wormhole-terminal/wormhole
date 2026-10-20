@@ -5,7 +5,8 @@
 //! command is: a title is a few kilobytes, an inline image is megabytes. The command number is
 //! read as soon as its `;` arrives, and a command nothing here acts on is thrown away without
 //! being stored. A string over its limit is dropped whole, never cut: half a clipboard or half an
-//! image is worse than none.
+//! image is worse than none. A number an extension claimed is kept up to the claim's limit
+//! instead, whatever the engine would do with it.
 
 pub(super) mod base64;
 pub(super) mod clipboard;
@@ -23,15 +24,33 @@ use memchr::memchr;
 const SMALL: usize = 8 * 1024;
 const CLIPBOARD: usize = 8 * 1024 * 1024;
 const IMAGE: usize = 64 * 1024 * 1024;
+/// What of OSC 1337 is not an inline image (marks, the folder, `SetUserVar`, …) is a line or two;
+/// the host gets at most this much of it.
+pub(in crate::terminal) const ITERM_OTHER: usize = 64 * 1024;
+/// OSC 1337 strings of these kinds are pictures and keep the picture limit; the longest prefix is
+/// `1337;MultipartFile=`, which tells them from the rest once that many bytes are in.
+const IMAGE_KINDS: [&[u8]; 3] = [b"File=", b"MultipartFile=", b"FilePart="];
+const SNIFF: usize = "1337;MultipartFile=".len();
 
 /// How much of an OSC string with this command number is kept; `None` for a number we ignore.
-fn limit_for(number: u32) -> Option<usize> {
+pub(in crate::terminal) fn limit_for(number: u32) -> Option<usize> {
     match number {
         0..=2 | 4 | 5 | 7..=19 | 99 | 104 | 105 | 110..=119 | 133 | 777 | 7501 => Some(SMALL),
         52 => Some(CLIPBOARD),
         1337 => Some(IMAGE),
         _ => None,
     }
+}
+
+/// Whether the engine acts on (or hands the host, raw) OSC `number` itself: those cannot be
+/// passed through.
+pub(crate) fn is_builtin(number: u32) -> bool {
+    limit_for(number).is_some()
+}
+
+/// Whether an OSC 1337 string (the number and its `;` included) starts a picture.
+fn is_picture(buf: &[u8]) -> bool {
+    split_number(buf).is_some_and(|(_, rest)| IMAGE_KINDS.iter().any(|kind| rest.starts_with(kind)))
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -52,6 +71,11 @@ pub(in crate::terminal) struct OscString {
     buf: Vec<u8>,
     state: State,
     limit: usize,
+    /// The OSC numbers extensions claimed and their limits on the payload.
+    claims: Vec<(u32, usize)>,
+    /// An OSC 1337 string whose kind is not known yet: it is kept to the picture limit until
+    /// `SNIFF` bytes tell, then to `ITERM_OTHER` unless it is a picture.
+    sniff: bool,
 }
 
 /// The command number at the start of `buf` (digits up to the first `;` or the end), if it has
@@ -71,6 +95,13 @@ impl OscString {
         self.buf.clear();
         self.state = State::Reading;
         self.limit = 0;
+        self.sniff = false;
+    }
+
+    /// The numbers extensions claim, for the limit of the strings that follow.
+    pub(in crate::terminal) fn set_claims(&mut self, claims: &[(u32, usize)]) {
+        self.claims.clear();
+        self.claims.extend_from_slice(claims);
     }
 
     pub(in crate::terminal) fn cancel(&mut self) {
@@ -101,21 +132,43 @@ impl OscString {
         if self.buf.len() + data.len() > self.limit {
             self.state = State::Dropping;
             self.buf = Vec::new();
-        } else {
-            self.buf.extend_from_slice(data);
+            return;
+        }
+        self.buf.extend_from_slice(data);
+        if self.sniff && self.buf.len() >= SNIFF {
+            self.sniff = false;
+            if !is_picture(&self.buf) {
+                self.limit = ITERM_OTHER;
+                if self.buf.len() > self.limit {
+                    self.state = State::Dropping;
+                    self.buf = Vec::new();
+                }
+            }
         }
     }
 
     /// The number is in `buf`: keep the string or drop it.
     fn decide(&mut self) {
-        match split_number(&self.buf).and_then(|(n, _)| limit_for(n)) {
+        let limit = split_number(&self.buf).and_then(|(number, rest)| {
+            match self.claims.iter().find(|claim| claim.0 == number) {
+                // The claim's limit counts the payload; the buffer also holds the number and `;`.
+                Some(&(_, cap)) => Some((self.buf.len() - rest.len()).saturating_add(cap)),
+                None => {
+                    // What is not a picture is cut short once that is known, see `append`.
+                    self.sniff = number == 1337;
+                    limit_for(number)
+                }
+            }
+        });
+        match limit {
             Some(limit) if self.buf.len() <= limit => {
                 self.limit = limit;
                 self.state = State::Keeping;
             }
             _ => {
+                // Only the number's probe is in the buffer: it is kept for the next string.
                 self.state = State::Dropping;
-                self.buf = Vec::new();
+                self.buf.clear();
             }
         }
     }

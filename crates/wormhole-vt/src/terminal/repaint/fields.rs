@@ -71,6 +71,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("parser", Scratch("in the ground state between sequences (repaint_ready)")),
     ("osc", Scratch("empty between sequences (repaint_ready)")),
     ("dcs", Scratch("empty between sequences (repaint_ready)")),
+    ("passthrough", Host("the strings the host asked for; the receiver is made with its own")),
     ("graphics", Gap("Gaps::PLACEMENTS and IMAGES; the handle counter is Seeds::image_handle")),
     ("events", Queue("drained by the host")),
     ("replies", Queue("written to the program by the host")),

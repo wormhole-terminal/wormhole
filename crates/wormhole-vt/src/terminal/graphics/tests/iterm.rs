@@ -118,4 +118,37 @@ fn the_rest_of_the_protocol_is_the_hosts() {
     let _ = freed(&mut r);
 }
 
+#[test]
+fn what_is_not_a_picture_is_cut_off_at_64_kib_however_it_arrives() {
+    let mut r = rig(40, 10);
+    let var = |kib: usize| format!("\x1b]1337;SetUserVar=name={}\x07", "v".repeat(kib * 1024));
+    r.feed(&var(60));
+    assert!(matches!(&r.events()[..], [Event::Iterm(data)] if data.len() > 60 * 1024));
+    r.feed(&var(70));
+    assert!(r.events().is_empty(), "past 64 KiB it is dropped whole, not handed to the host");
+    // Cut into small pieces, so the kind is not known when the first bytes arrive.
+    for piece in var(70).as_bytes().chunks(5) {
+        r.feed_bytes(piece);
+    }
+    assert!(r.events().is_empty());
+    for piece in var(10).as_bytes().chunks(5) {
+        r.feed_bytes(piece);
+    }
+    assert_eq!(r.events().len(), 1, "and the next string is read as usual");
+}
+
+#[test]
+fn a_picture_keeps_its_own_limit_past_64_kib() {
+    let mut r = rig(40, 10);
+    let mut bytes = png(100, 40);
+    bytes.resize(200 * 1024, 7);
+    r.feed(&file("inline=1", &bytes));
+    assert_eq!(uploads(&mut r).len(), 1);
+    // The multipart form too: its chunks are pictures' as well.
+    r.feed("\x1b]1337;MultipartFile=inline=1\x07");
+    r.feed(&format!("\x1b]1337;FilePart={}\x07", "A".repeat(100 * 1024)));
+    r.feed("\x1b]1337;FileEnd\x07");
+    assert!(r.events().is_empty(), "a part that is no picture shows nothing, but is no host event");
+}
+
 fn _unused(_: &Rig) {}

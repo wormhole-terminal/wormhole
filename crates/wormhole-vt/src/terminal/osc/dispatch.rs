@@ -4,7 +4,8 @@
 //! are in `osc_colors`), the OSC 8 hyperlink specification, FinalTerm's OSC 133 (shell marks),
 //! iTerm2's OSC 9 and 1337, ConEmu's OSC 9;4 progress, rxvt's OSC 777 `notify`, kitty's OSC 99.
 //! The ones whose protocol is big and not the terminal's business are handed to the host raw: 99,
-//! 7501 and what is not an inline image in 1337.
+//! 7501 (the program status protocol) and what is not an inline image in 1337. A number the host
+//! asked for with a `Passthrough` is handed over raw too, ahead of this table.
 //!
 //! Each command's meaning is in a file of its own: `title` (0, 1, 2), `osc_colors`, `osc_cwd` (7),
 //! `osc_link` (8), `osc_notify` (9, 9;4, 99, 777), `osc_clipboard` (52), `osc_marks` (133); this
@@ -12,7 +13,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, Terminator};
-use crate::terminal::osc::split_number;
+use crate::terminal::osc::{ITERM_OTHER, split_number};
 
 /// The terminator a reply to an OSC ends with: the one the request used.
 pub(in crate::terminal) fn terminator(end: Terminator) -> &'static str {
@@ -55,7 +56,16 @@ impl Terminal {
         let Some(mut buf) = self.osc.take() else { return };
         if let Some((number, rest)) = split_number(&buf) {
             let skip = buf.len() - rest.len();
-            self.run_osc(number, &mut buf, skip, end);
+            if self.passthrough.osc_caps().iter().any(|claim| claim.0 == number) {
+                // The host asked for this number (never one the engine acts on): the payload goes
+                // to it whole, after the replies the program was owed.
+                buf.drain(..skip);
+                let replies_before = self.replies.len();
+                let payload = std::mem::take(&mut buf);
+                self.push_event(Event::Osc { number, payload, terminator: end, replies_before });
+            } else {
+                self.run_osc(number, &mut buf, skip, end);
+            }
         }
         self.osc.recycle(buf);
     }
@@ -78,18 +88,21 @@ impl Terminal {
             110..=119 => self.osc_reset_dynamic(number),
             133 => self.osc_shell_mark(rest),
             777 => self.osc_777(rest),
-            1337 => {
-                // Inline images are the engine's; the rest of iTerm2's protocol is the host's.
-                if !self.iterm_image(rest) {
-                    buf.drain(..skip);
-                    self.push_event(Event::Iterm(std::mem::take(buf)));
-                }
-            }
+            1337 => self.osc_1337(buf, skip),
             7501 => {
                 buf.drain(..skip);
                 self.push_event(Event::ProgramStatus { payload: std::mem::take(buf), terminator: end });
             }
             _ => {}
+        }
+    }
+
+    /// Inline images are the engine's; the rest of iTerm2's protocol is the host's, up to
+    /// [`ITERM_OTHER`] bytes (a picture keeps the picture limit).
+    fn osc_1337(&mut self, buf: &mut Vec<u8>, skip: usize) {
+        if !self.iterm_image(&buf[skip..]) && buf.len() <= ITERM_OTHER {
+            buf.drain(..skip);
+            self.push_event(Event::Iterm(std::mem::take(buf)));
         }
     }
 }

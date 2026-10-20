@@ -10,6 +10,7 @@ use super::{
     dispatch, graphics, history_bytes, osc, read, reports, screen, text,
 };
 use crate::grid::{BlockPart, Grid, Pen};
+use crate::passthrough::{Passthrough, PassthroughError};
 use crate::terminal::modes::Modes;
 use crate::types::{COLOR_COUNT, Rgb};
 
@@ -47,6 +48,7 @@ pub struct Builder {
     palette: Option<Box<[Rgb; COLOR_COUNT]>>,
     cell: (u16, u16),
     separators: Option<String>,
+    passthrough: Passthrough,
 }
 
 impl Default for Builder {
@@ -60,6 +62,7 @@ impl Default for Builder {
             palette: None,
             cell: (8, 16),
             separators: None,
+            passthrough: Passthrough::new(),
         }
     }
 }
@@ -129,6 +132,15 @@ impl Builder {
         self
     }
 
+    /// The OSC, DCS and APC strings to hand to the host as events instead of dropping them (none
+    /// unless set); see [`passthrough`](crate::passthrough). Refused, with the reason, when the
+    /// engine reads one of them itself or one cannot match anything.
+    pub fn passthrough(mut self, passthrough: Passthrough) -> Result<Builder, PassthroughError> {
+        passthrough.check()?;
+        self.passthrough = passthrough;
+        Ok(self)
+    }
+
     /// Make the terminal.
     pub fn build(self) -> Terminal {
         let grid = Grid::new(self.cols, self.rows, history_bytes(self.scrollback, self.cols));
@@ -173,6 +185,7 @@ impl Builder {
             parser: Parser::new(),
             osc: osc::OscString::default(),
             dcs: dispatch::dcs::DcsString::default(),
+            passthrough: Passthrough::new(),
             graphics: graphics::Graphics::default(),
             events: Vec::<Event>::new(),
             replies: Vec::new(),
@@ -193,6 +206,8 @@ impl Builder {
         if let Some(separators) = &self.separators {
             term.set_word_separators(separators);
         }
+        term.osc.set_claims(self.passthrough.osc_caps());
+        term.passthrough = self.passthrough;
         term
     }
 }
@@ -203,6 +218,16 @@ impl Terminal {
     /// [`builder`](Self::builder) to choose.
     pub fn new(cols: usize, rows: usize) -> Terminal {
         Builder::default().size(cols, rows).build()
+    }
+
+    /// Change which strings are handed to the host, see [`Builder::passthrough`]. A string being
+    /// read at the time keeps the limit it started with. Refused, with nothing changed, when the
+    /// engine reads one of them itself or one cannot match anything.
+    pub fn set_passthrough(&mut self, passthrough: Passthrough) -> Result<(), PassthroughError> {
+        passthrough.check()?;
+        self.osc.set_claims(passthrough.osc_caps());
+        self.passthrough = passthrough;
+        Ok(())
     }
 
     /// Options for a terminal; see [`Builder`].

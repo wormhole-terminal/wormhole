@@ -43,7 +43,11 @@ static ALLOCATOR: Counting = Counting;
 /// the allocations of feeding it again `rounds` times, draining what the terminal hands out the
 /// way a host does.
 fn steady(name: &str, stream: &[u8], rounds: usize) -> usize {
-    let mut term = Terminal::builder().size(80, 24).scrollback(200).build();
+    steady_on(Terminal::builder().size(80, 24).scrollback(200).build(), name, stream, rounds)
+}
+
+/// [`steady`] on a terminal the caller made.
+fn steady_on(mut term: Terminal, name: &str, stream: &[u8], rounds: usize) -> usize {
     let run = |term: &mut Terminal, times: usize| {
         for _ in 0..times {
             for piece in stream.chunks(4096) {
@@ -156,4 +160,36 @@ fn taking_damage_allocates_nothing() {
         round(&mut term, &mut damage);
     }
     assert_eq!(allocations() - before, 0);
+}
+
+fn with_passthrough(passthrough: wormhole_vt::passthrough::Passthrough) -> Terminal {
+    let Ok(builder) = Terminal::builder().size(80, 24).scrollback(200).passthrough(passthrough) else {
+        panic!("the claims are fine")
+    };
+    builder.build()
+}
+
+/// Asking for strings costs nothing on the traffic nobody asked about: it is compared with the
+/// claims only when a string ends.
+#[test]
+fn passthrough_allocates_nothing_for_what_it_was_not_asked_to_pass() {
+    use wormhole_vt::passthrough::Passthrough;
+    let term = with_passthrough(Passthrough::new().osc(51234, 1024).dcs(b"!", b'z', 64).apc(b'Q', 64));
+    let unit = "text \x1b[1mbold\x1b[0m\x1b]51235;not asked\x07\x1bP!ynot asked\x1b\\\x1b_Rnot asked\x1b\\\
+                \x1b]2;title\x07\x1b[5n more text\r\n";
+    assert_eq!(steady_on(term, "unclaimed", &repeat(unit, 300), 20), 0);
+}
+
+/// A string that is passed through is an event, which owns its payload: the allocations are the
+/// payload's and no more.
+#[test]
+fn a_string_that_is_passed_through_costs_its_payload() {
+    use wormhole_vt::passthrough::Passthrough;
+    let term = with_passthrough(Passthrough::new().osc(51234, 1024).dcs(b"!", b'z', 64).apc(b'Q', 64));
+    let unit = "text\x1b]51234;payload\x07\x1bP!zdata\x1b\\\x1b_Qdata\x1b\\\r\n";
+    let strings = 3 * 300 * 20;
+    let count = steady_on(term, "passed through", &repeat(unit, 300), 20);
+    // The collected buffer each (the event owns it, so the next string starts a new one), and for a
+    // DCS also its header's numbers and intermediates.
+    assert!(count <= 6 * 300 * 20, "{count} allocations for {strings} strings");
 }

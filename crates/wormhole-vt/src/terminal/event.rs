@@ -22,6 +22,16 @@ pub enum Terminator {
     St,
 }
 
+impl Terminator {
+    /// The bytes that end a reply the same way: BEL, or `ESC \`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Terminator::Bel => "\x07",
+            Terminator::St => "\x1b\\",
+        }
+    }
+}
+
 /// How far along a task is (OSC 9;4, ConEmu's progress report, which Windows Terminal and
 /// Ghostty speak too).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -131,8 +141,9 @@ pub enum Event {
     },
     /// OSC 133 (the grid has them as well).
     Mark(ShellMark),
-    /// OSC 7501: what a program reports about itself, raw (everything after `7501;`), and how it
-    /// ended (the protocol limits the length including the terminator).
+    /// OSC 7501, the [program status protocol](https://mitchellh.com/writing/program-status-osc7501):
+    /// what a program reports about itself, raw (everything after `7501;`), and how it ended (the
+    /// protocol limits the length including the terminator).
     ProgramStatus {
         /// Everything after `7501;`.
         payload: Vec<u8>,
@@ -140,8 +151,49 @@ pub enum Event {
         terminator: Terminator,
     },
     /// OSC 1337: the parts of iTerm2's protocol that are not inline images (marks, the current
-    /// directory, …), raw, everything after `1337;`.
+    /// directory, `SetUserVar`, …), raw, everything after `1337;`. At most 64 KiB of them; a
+    /// longer one is dropped.
     Iterm(Vec<u8>),
+    /// An OSC string the host asked for with a [`Passthrough`](crate::passthrough::Passthrough):
+    /// `OSC number ; payload`, whole, raw (the payload is what a program printed: check it).
+    ///
+    /// To answer, write the reply after the first `replies_before` bytes of
+    /// [`Terminal::replies`](crate::terminal::Terminal::replies) that the program was owed before
+    /// this sequence went out (the way an OSC 52 read is answered), ended as the request was
+    /// ([`Terminator::as_str`]), so the program reads its answers in the order it asked.
+    Osc {
+        /// The command number.
+        number: u32,
+        /// Everything after the `;` (empty without one), at most the limit asked for.
+        payload: Vec<u8>,
+        /// How the string ended.
+        terminator: Terminator,
+        /// How many bytes of the replies were queued before this sequence.
+        replies_before: usize,
+    },
+    /// A DCS string the host asked for with a [`Passthrough`](crate::passthrough::Passthrough):
+    /// `DCS params intermediates final data ST`, whole. See [`Event::Osc`] on answering.
+    Dcs {
+        /// The numbers before the intermediates (an empty one reads 0).
+        params: Vec<u16>,
+        /// The intermediate bytes, 0x20..=0x2F.
+        intermediates: Vec<u8>,
+        /// The final byte.
+        final_byte: u8,
+        /// The data between the header and the string terminator, at most the limit asked for.
+        payload: Vec<u8>,
+        /// How many bytes of the replies were queued before this sequence.
+        replies_before: usize,
+    },
+    /// An APC string the host asked for with a [`Passthrough`](crate::passthrough::Passthrough):
+    /// `APC payload ST`, whole, the first byte (the one that was asked for) included. See
+    /// [`Event::Osc`] on answering.
+    Apc {
+        /// The whole string, at most the limit asked for.
+        payload: Vec<u8>,
+        /// How many bytes of the replies were queued before this sequence.
+        replies_before: usize,
+    },
     /// A picture to decode and keep (kitty's graphics protocol, Sixel, iTerm2's inline images).
     /// The host answers with [`Terminal::image_decoded`](crate::terminal::Terminal::image_decoded).
     ImageData(ImageUpload),

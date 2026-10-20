@@ -18,7 +18,7 @@
 //! |--------|------|------|
 //! | `dispatch/` | `handler` | the private adapter the parser calls into |
 //! | | `control`, `esc`, `csi` | the dispatch of controls, ESC and CSI finals |
-//! | | `dcs` | device control strings and APC: collecting them and sending them on (sixel is read here) |
+//! | | `dcs` | device control strings and APC: collecting them and sending them on (sixel is read here; the strings a host asked for with a `Passthrough` are collected here and queued as events) |
 //! | `text/` | `print` | text: ASCII runs, wide characters, marks, grapheme clusters (mode 2027), REP, IRM |
 //! | | `charset` | the sets G0..G3 hold: national replacement sets, DEC Technical and Supplemental, Latin-1; and the shifts |
 //! | | `sgr` | SGR and the colors it sets |
@@ -118,6 +118,7 @@ pub use graphics::{
     VirtualPlacement, placeholder_at, strip_placeholders,
 };
 pub use modes::Modes;
+pub(crate) use osc::is_builtin as is_builtin_osc;
 pub use policy::Policy;
 pub use read::damage::Damage;
 pub use read::search::Span;
@@ -263,6 +264,8 @@ pub struct Terminal {
     parser: Parser,
     osc: osc::OscString,
     dcs: dispatch::dcs::DcsString,
+    /// The strings the host asked to be handed over; see [`crate::passthrough`].
+    passthrough: crate::passthrough::Passthrough,
     /// Pictures: kitty's, Sixel and iTerm2's; see `graphics`.
     graphics: graphics::Graphics,
     events: Vec<Event>,

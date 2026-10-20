@@ -5,6 +5,7 @@ mod clusters;
 mod events;
 mod hostile;
 mod keyboard;
+mod passthrough;
 mod rare;
 mod replies;
 mod resize;

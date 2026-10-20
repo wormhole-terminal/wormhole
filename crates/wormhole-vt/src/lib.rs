@@ -24,6 +24,7 @@
 //!
 //! - [`parser`]: the DEC/ANSI state machine on its own, for tools that want the sequences and not
 //!   a screen;
+//! - [`passthrough`]: sequences of the host's own, handed over whole as events;
 //! - [`unicode`]: cell widths and grapheme cluster breaks from generated tables;
 //! - [`event`]: what a program's sequences ask of the host;
 //! - [`image`]: pictures (kitty graphics, Sixel, iTerm2): uploads to decode, placements to draw;
@@ -48,6 +49,7 @@ pub mod grid;
 mod grid;
 pub mod input;
 pub mod parser;
+pub mod passthrough;
 mod terminal;
 mod types;
 pub mod unicode;
