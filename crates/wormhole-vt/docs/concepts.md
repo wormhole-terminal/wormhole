@@ -113,6 +113,7 @@ Programs switch behaviour with modes (`CSI ? Ps h` and `l`, and the ANSI forms `
 | `REVERSE_VIDEO` | Draw the screen with foreground and background swapped (DECSCNM) |
 | `SYNC_OUTPUT` | A program is in the middle of an update; see `embedding.md` |
 | `GRAPHEME_CLUSTERS` | Whether widths follow clusters |
+| `INBAND_RESIZE` (2048) | Engine: the program is told of every resize in band. Call `resize` (after `set_cell_size`) and write the replies to the PTY, which now include `CSI 48 ; rows ; cols ; height ; width t` |
 
 `InputModes::from(term.modes())` turns the set into what the input encoders read. The doc of each flag
 says whether a host acts on it (**Host**) or only the engine does (**Engine**). The bit values may change

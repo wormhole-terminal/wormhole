@@ -66,6 +66,16 @@ impl Terminal {
                 self.modes.set(Modes::GRAPHEME_CLUSTERS, on);
                 self.cluster.open = false;
             }
+            // The size is told now, whether or not the mode was set (the gist: "the terminal MUST
+            // immediately report the current size if an attempt is made to enable the feature").
+            2048 => {
+                self.modes.set(Modes::INBAND_RESIZE, on);
+                if on {
+                    self.report_inband_size();
+                } else {
+                    self.forget_inband_size();
+                }
+            }
             _ => {
                 if let Some(flag) = private_flag(n) {
                     self.modes.set(flag, on);

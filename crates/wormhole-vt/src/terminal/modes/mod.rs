@@ -122,6 +122,7 @@ pub(in crate::terminal) fn private_flag(n: u16) -> Option<Modes> {
         2026 => Modes::SYNC_OUTPUT,
         2027 => Modes::GRAPHEME_CLUSTERS,
         2031 => Modes::THEME_REPORT,
+        2048 => Modes::INBAND_RESIZE,
         8452 => Modes::SIXEL_CURSOR_RIGHT,
         _ => return None,
     })

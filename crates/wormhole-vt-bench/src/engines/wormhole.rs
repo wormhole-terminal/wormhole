@@ -125,6 +125,9 @@ impl Engine for WormholeEngine {
 
     fn resize(&mut self, cols: usize, rows: usize) {
         self.term.resize(cols, rows);
+        // A program that asked to be told of resizes (in-band reports) is told now.
+        self.replies.extend_from_slice(self.term.replies());
+        self.term.clear_replies();
     }
 
     fn size(&self) -> (usize, usize) {

@@ -19,6 +19,8 @@ impl Terminal {
         let (cols, rows) =
             (cols.clamp(crate::grid::MIN_COLS, crate::grid::MAX_COLS), rows.clamp(1, crate::grid::MAX_ROWS));
         if (cols, rows) == (self.cols, self.rows) {
+            // The cell may have changed (`set_cell_size`), which in-band reports tell too.
+            self.report_inband_change();
             return;
         }
         let was_pending = self.cursor.pending;
@@ -55,6 +57,7 @@ impl Terminal {
         self.tabs.resize(self.cols);
         self.cluster.open = false;
         self.apply_history_limit();
+        self.report_inband_change();
     }
 
     /// Mode 3 (DECCOLM) set or reset.

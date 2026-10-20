@@ -250,8 +250,13 @@ impl Pty {
         }
         self.size = size;
         self.shared.set_size(size.window_size());
-        self.term.lock().resize(size);
+        let replies = self.term.lock().resize(size);
         self.io.resize(size.window_size());
+        // After the PTY has its new size: a program told in band that the window changed reads
+        // the size from the report and finds it the same everywhere.
+        if !replies.is_empty() && self.is_alive() {
+            self.shared.reply(replies);
+        }
     }
 
     pub fn size(&self) -> GridSize {
@@ -273,7 +278,10 @@ impl Pty {
     /// (XTWINOPS 8, DECSLPP, DECCOLM) was given it at once; when the window could not follow, or
     /// finished following, this makes the two agree.
     pub fn sync_size(&self) {
-        self.term.lock().resize(self.size);
+        let replies = self.term.lock().resize(self.size);
+        if !replies.is_empty() && self.is_alive() {
+            self.shared.reply(replies);
+        }
     }
 
     pub fn mode(&self) -> Modes {

@@ -31,6 +31,8 @@
 //! cursors, the modes and the cursor last, and `fields` lists every field of the engine's state and how each is covered, which
 //! `tests/structure.rs` checks against the source so that a new field cannot be forgotten.
 //!
+//! A repaint is answered by nothing the receiver says to a program, with one exception: it sets
+//! mode 2048 when the sender has it, and setting that mode is answered with a size report
 //! The writer takes `&Terminal`: it changes nothing, damage included, and allocates nothing but
 //! the growth of the caller's buffer, which the caller keeps between calls.
 

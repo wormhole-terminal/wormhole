@@ -1,0 +1,54 @@
+# In-band resize notifications, DECSET 2048: a report when the mode is set and after every resize.
+# The text is the specification at
+# https://gist.github.com/rockorager/e695fb2924d36b2bcf1fff4a3704bd83. The pixel sizes depend on the
+# cell the host gave, which these cases do not set, so they are matched with `*`.
+
+test setting 2048 reports the size at once
+spec in-band resize gist: when first enabled the terminal must send CSI 48 ; height_chars ; width_chars ; height_pix ; width_pix t
+size 10 4
+feed \e[?2048h
+reply~ \e[48;4;10;*;*t
+
+test enabling the mode again reports again
+spec in-band resize gist: if the mode is already enabled, the terminal must immediately report the current size if an attempt is made to enable the feature
+size 10 4
+feed \e[?2048h
+reply~ \e[48;4;10;*;*t
+feed \e[?2048h
+reply~ \e[48;4;10;*;*t
+
+test a resize is reported
+spec in-band resize gist: reports are sent on every resize, once the internal resize is complete
+size 10 4
+feed \e[?2048h
+reply~ \e[48;4;10;*;*t
+resize 20 6
+reply~ \e[48;6;20;*;*t
+screen
+||
+||
+||
+||
+||
+||
+
+test no report without the mode, or after it is reset
+spec in-band resize gist: the reports are enabled with DECSET and disabled with DECRST
+size 10 4
+resize 20 6
+reply none
+feed \e[?2048h
+reply~ \e[48;6;20;*;*t
+feed \e[?2048l
+resize 10 4
+reply none
+
+test DECRQM answers the mode
+spec in-band resize gist: detection is a DECRQM query, CSI ? 2048 $ p, answered CSI ? 2048 ; Ps $ y with Ps 2 for supported and not enabled and 1 for enabled
+size 10 4
+feed \e[?2048$p
+reply \e[?2048;2$y
+feed \e[?2048h
+reply~ \e[48;*t
+feed \e[?2048$p
+reply \e[?2048;1$y

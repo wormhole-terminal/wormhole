@@ -39,6 +39,7 @@ const PRIVATE: &[(Modes, u16)] = &[
     (Modes::NO_CLEAR_ON_COLUMNS, 95),
     (Modes::MOUSE_URXVT, 1015),
     (Modes::MOUSE_PIXELS, 1016),
+    (Modes::INBAND_RESIZE, 2048),
     (Modes::SYNC_OUTPUT, 2026),
     (Modes::GRAPHEME_CLUSTERS, 2027),
     (Modes::SIXEL_PRIVATE_PALETTE, 1070),

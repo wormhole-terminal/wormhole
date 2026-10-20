@@ -101,6 +101,23 @@ impl Rig {
         }
     }
 
+    /// Parse a repaint. The one reply it may make is the size report that setting DECSET 2048
+    /// (in-band resize) is answered with; a client drops its replica's replies, and the report is
+    /// not one of the queries a repaint must never write, so it is not counted.
+    pub fn feed_repaint(&mut self, bytes: &[u8]) {
+        let before = self.replies.len();
+        self.feed(bytes);
+        let made = self.replies.split_off(before);
+        self.replies.extend_from_slice(&without_size_reports(&made));
+    }
+
+    /// Resize, keeping what the terminal said about it (in-band resize reports).
+    pub fn resize(&mut self, cols: usize, rows: usize) {
+        self.term.resize(cols, rows);
+        self.replies.extend_from_slice(self.term.replies());
+        self.term.clear_replies();
+    }
+
     /// Forget the replies and events so far.
     pub fn forget(&mut self) {
         self.replies.clear();
@@ -121,7 +138,7 @@ impl Rig {
             }
             self.feed(&scenario.bytes[pos..resize.at]);
             pos = resize.at;
-            self.term.resize(resize.cols, resize.rows);
+            self.resize(resize.cols, resize.rows);
         }
         self.feed(&scenario.bytes[pos..to]);
     }
@@ -391,8 +408,26 @@ fn replica(
     let (cols, rows) = a.size();
     let mut b = Rig::new(&scenario.setup, cols, rows);
     b.term.seed(&done.seeds);
-    b.feed(bytes);
+    b.feed_repaint(bytes);
     Ok((b, done))
+}
+
+/// `replies` without the in-band size reports (`CSI 48 ; … t`) in them.
+fn without_size_reports(replies: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(replies.len());
+    let mut rest = replies;
+    while !rest.is_empty() {
+        if rest.starts_with(b"\x1b[48;")
+            && let Some(end) = rest.iter().position(|&b| b == b't')
+            && rest[2..end].iter().all(|b| b.is_ascii_digit() || *b == b';')
+        {
+            rest = &rest[end + 1..];
+        } else {
+            out.push(rest[0]);
+            rest = &rest[1..];
+        }
+    }
+    out
 }
 
 /// Check the plan's cuts, window by window; see the module docs.
@@ -426,7 +461,7 @@ pub fn check(scenario: &Scenario, plan: &Plan) -> Result<Stats, Box<Failure>> {
         };
         let fail_here = |gaps: Gaps, what: String| fail(scenario, cut, at, how.clone(), gaps, what);
         if plan.resize == ResizeAtCut::Before {
-            a.term.resize(cols, rows);
+            a.resize(cols, rows);
         }
         let (mut b, done) = match replica(scenario, &a, &mut bytes) {
             Ok(made) => made,
@@ -458,8 +493,8 @@ pub fn check(scenario: &Scenario, plan: &Plan) -> Result<Stats, Box<Failure>> {
             ));
         }
         if plan.resize == ResizeAtCut::After {
-            a.term.resize(cols, rows);
-            b.term.resize(cols, rows);
+            a.resize(cols, rows);
+            b.resize(cols, rows);
             // What a gap left out steers a resize too (a history cap, a wrap pending).
             if !done.gaps.intersects(Gaps::STICKY)
                 && let Some(what) = differ(&a, &b, done.gaps)
@@ -526,7 +561,7 @@ pub fn suffix(scenario: &Scenario, cuts: &[usize], how: Resolve) -> Result<Stats
     for (cut, at, bytes, done, (cols, rows), replies) in taken {
         let mut b = Rig::new(&scenario.setup, cols, rows);
         b.term.seed(&done.seeds);
-        b.feed(&bytes);
+        b.feed_repaint(&bytes);
         let label = format!("{how:?}, to the end");
         if !b.replies.is_empty() {
             return Err(fail(

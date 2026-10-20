@@ -263,9 +263,14 @@ impl Screen {
         self.term.clear_history();
     }
 
-    pub(crate) fn resize(&mut self, size: GridSize) {
+    /// Resize the engine's screen; the replies it makes of it, for the program (a program that
+    /// set in-band resize reports, DECSET 2048, is told the new size).
+    pub(crate) fn resize(&mut self, size: GridSize) -> Vec<u8> {
         self.term.set_cell_size(size.cell_width as u16, size.cell_height as u16);
         self.term.resize(usize::from(size.cols), usize::from(size.rows));
+        let replies = self.term.replies().to_vec();
+        self.term.clear_replies();
+        replies
     }
 
     /// What changed since the last call, and forget it: the viewport rows written to, and

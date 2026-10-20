@@ -45,6 +45,7 @@ impl Terminal {
         self.preferred = Default::default();
         self.sgr_stack = Default::default();
         self.color_stack = Default::default();
+        self.inband = Default::default();
         self.saved = [Saved::default(), Saved::default()];
         for keys in &mut self.keys {
             keys.reset();

@@ -20,6 +20,8 @@ First public release (0.1.0).
 
 ### Added
 
+- In-band resize notifications (DECSET 2048): the program is told `CSI 48 ; rows ; cols ; height ; width t`
+  when it sets the mode and after every resize, with the pixels from the cell size the host gave.
 - XTPUSHSGR, XTPOPSGR and XTREPORTSGR (`CSI Pm # {`, `CSI # }`, `CSI Pt ; Pl ; Pb ; Pr # |`; the aliases
   `CSI # p` and `CSI # q` too): a stack of 10 pens, and the rendition a rectangle has in common.
 - XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS (`CSI # P`, `CSI # Q`, `CSI # R`): a stack of 10 palettes

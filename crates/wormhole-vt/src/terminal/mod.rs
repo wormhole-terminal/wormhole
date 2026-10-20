@@ -35,7 +35,7 @@
 //! | | `conformance` | DECSCL, S7C1T and S8C1T: the level and one-byte C1 controls |
 //! | | `keyboard`, `modkeys`, `kept` | the kitty keyboard stacks; XTMODKEYS and XTQMODKEYS (modifyOtherKeys); numbers kept for hardware we do not have |
 //! | `reports/` | (`mod`) | DSR, DA1/2/3, XTVERSION |
-//! | | `scheme` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031 |
+//! | | `scheme`, `inband` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031; the in-band resize reports of mode 2048 |
 //! | | `state`, `presentation` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | | `checksum` | DECRQCRA, and the policy that turns it on (off by default) |
 //! | | `rqss`, `tcap` | DECRQSS; XTGETTCAP |
@@ -248,6 +248,8 @@ pub struct Terminal {
     sgr_stack: text::sgr_stack::SgrStack,
     /// XTPUSHCOLORS' stack.
     color_stack: osc::color_stack::ColorStack,
+    /// The size the host was last told in band (mode 2048), to tell it only when it changes.
+    inband: reports::inband::Reported,
     /// DECSC's slot, per screen (index 0: primary, 1: alternate).
     saved: [Saved; 2],
     keys: [KeyboardFlags; 2],
@@ -423,7 +425,9 @@ impl Terminal {
         self.palette.defaults.copy_from_slice(palette);
     }
 
-    /// The size of a cell in pixels, which XTWINOPS 14 and 16 and the sixel geometry report say.
+    /// The size of a cell in pixels, which XTWINOPS 14 and 16, the sixel geometry and the in-band
+    /// resize report (mode 2048) say. A change that the report should tell is told by the next
+    /// [`resize`](Terminal::resize), which a host calls after it (also with the size it has).
     pub fn set_cell_size(&mut self, width: u16, height: u16) {
         self.cell_px = (width.max(1), height.max(1));
     }

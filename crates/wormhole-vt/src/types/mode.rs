@@ -142,6 +142,10 @@ bitflags! {
         /// `?41`. **Engine**: a tab with the wrap pending wraps first (xterm's fix for curses
         /// programs that draw to the end of a row and then send a tab).
         const MORE_FIX = 1 << 48;
+        /// `?2048`. **Engine**: the host's resizes are reported to the program in band
+        /// (`CSI 48 ; rows ; cols ; height ; width t`), see
+        /// [`Terminal::resize`](crate::Terminal::resize).
+        const INBAND_RESIZE    = 1 << 50;
     }
 }
 

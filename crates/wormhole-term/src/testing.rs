@@ -40,7 +40,7 @@ impl TestTerm {
     }
 
     pub fn resize(&mut self, cols: u16, rows: u16) {
-        self.screen_mut().resize(GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 });
+        let _ = self.screen_mut().resize(GridSize { cols, rows, cell_width: 8.0, cell_height: 16.0 });
     }
 
     pub fn scroll_display(&mut self, scroll: Scroll) {

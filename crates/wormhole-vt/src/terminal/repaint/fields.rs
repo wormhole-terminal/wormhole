@@ -54,6 +54,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("preferred", Written("misc: DECAUPSS")),
     ("sgr_stack", Written("sgr_stack: SGR, then XTPUSHSGR for each entry")),
     ("color_stack", Written("palette: OSC 4, 10 to 19 and XTPUSHCOLORS for each entry")),
+    ("inband", Scratch("what the host was last told in band; a replica never answers")),
     ("saved", Written("saved_cursors: DECSC on each screen")),
     ("keys", Written("keyboard: CSI = u and CSI > u per screen")),
     ("cursor_style", Written("misc: DECSCUSR and mode 12")),
@@ -342,6 +343,7 @@ pub const MODES: &[(&str, Coverage)] = &[
     ("BELL_URGENCY", Written("modes: DECSET 1042")),
     ("REVERSE_WRAP_EXTENDED", Written("modes: DECSET 1045")),
     ("MORE_FIX", Written("modes: DECSET 41")),
+    ("INBAND_RESIZE", Written("modes: DECSET 2048")),
 ];
 
 /// The flags of a grid cell and how a repaint covers each. A test checks it against the cell's.

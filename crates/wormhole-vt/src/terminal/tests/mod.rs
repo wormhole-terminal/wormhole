@@ -6,6 +6,7 @@ mod changes;
 mod clusters;
 mod events;
 mod hostile;
+mod inband;
 mod keyboard;
 mod limits;
 mod line_size;

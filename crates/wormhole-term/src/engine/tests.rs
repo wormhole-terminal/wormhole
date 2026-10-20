@@ -276,6 +276,19 @@ fn a_program_asking_whether_the_theme_is_dark_is_told_and_hears_of_a_change() {
 }
 
 #[test]
+fn a_program_that_asked_for_in_band_resize_reports_is_told_the_size_and_each_resize() {
+    // It sets 2048 and reads the report that setting it makes (19 bytes), says so, and reads the
+    // one the resize makes (20 bytes): rows, columns, then the text area in pixels.
+    let script = r#"stty raw -echo; printf '\033[?2048h'; r=$(dd bs=1 count=19 2>/dev/null); printf READY; r2=$(dd bs=1 count=20 2>/dev/null); stty sane; printf '%s%s' "$r" "$r2" | tr '\033' E; sleep 5"#;
+    let (mut pty, _events) = spawn(script);
+    wait_until("the program to have its first report", || pty.screen_text().contains("READY"));
+    pty.resize(GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 16.0 });
+    wait_until("the report of the resize", || {
+        pty.screen_text().contains("E[48;24;80;384;640tE[48;30;100;480;800t")
+    });
+}
+
+#[test]
 fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it() {
     use crate::events::EventProxy;
     use crate::images::DECODES_MAX;
