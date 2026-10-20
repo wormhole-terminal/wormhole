@@ -21,7 +21,7 @@
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
-# The engine's outside suites (esctest2, ucs-detect; scripts/suites-gate.sh) run last, against a committed
+# The engine's outside suites (esctest2, ucs-detect, vttest; scripts/suites-gate.sh) run last, against a committed
 # expectation, when crates/wormhole-vt, the bench crate or the terminal layer (crates/wormhole-term)
 # changed, and with --all.
 # Output is quiet (test names only when they fail), so an agent reads results, not progress.
@@ -85,7 +85,7 @@ done <<<"$changed"
 
 # The outside suites test the engine, its bench host and what feeds it; their own files too.
 suites=0
-grep -Eq '^(crates/wormhole-vt/|crates/wormhole-vt-bench/|crates/wormhole-term/|scripts/suites-gate\.sh$|tools/vt-compare/(gate\.py|expected/|suites\.pin|suites/|ucs-headless\.py|fetch-suites\.sh))' <<<"$changed" && suites=1
+grep -Eq '^(crates/wormhole-vt/|crates/wormhole-vt-bench/|crates/wormhole-term/|scripts/(suites|vttest)-gate\.sh$|tools/vt-compare/(gate\.py|expected/|suites\.pin|suites/|ucs-headless\.py|fetch-suites\.sh))' <<<"$changed" && suites=1
 [ "$force_all" = 1 ] && suites=1
 
 rust_changed=0

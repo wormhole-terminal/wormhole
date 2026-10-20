@@ -3,10 +3,11 @@
 # (no window, no app) and are compared, test by test, with the committed expectation in
 # tools/vt-compare/expected/. Every test that passes there must still pass; a regression is
 # reported by name and fails the step. A known failure that starts passing is reported and the
-# expectation is left to be updated by hand.
+# expectation is left to be updated by hand. vttest runs after them (scripts/vttest-gate.sh): its
+# screens are compared with the committed ones in tools/vt-compare/suites/vttest/.
 #
-#   scripts/suites-gate.sh            # build the two hosts, run both suites, compare (about a minute)
-#   scripts/suites-gate.sh --update   # run them and rewrite the expectation from this run; review the
+#   scripts/suites-gate.sh            # build the hosts, run the suites, compare (about a minute and a half)
+#   scripts/suites-gate.sh --update   # run them and rewrite the expectations from this run; review the
 #                                     # diff and commit it (do this when a failure is fixed, or after
 #                                     # moving the pins in tools/vt-compare/suites.pin)
 #   scripts/suites-gate.sh --plan     # say what would run
@@ -25,13 +26,15 @@ for arg in "$@"; do
   case "$arg" in
     --update) update=1 ;;
     --plan) plan=1 ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) die "unknown argument: $arg (see --help)" ;;
   esac
 done
-[ "$plan" = 1 ] && { echo "build esctest-host and ucs-host (release), run esctest2 and ucs-detect headless, compare with tools/vt-compare/expected/"; exit 0; }
+[ "$plan" = 1 ] && { echo "build esctest-host and ucs-host (release), run esctest2 and ucs-detect headless, compare with tools/vt-compare/expected/"; scripts/vttest-gate.sh --plan; exit 0; }
 
-skip() { warn "outside suites skipped: $* The engine's conformance against esctest2 and ucs-detect is unchecked (scripts/suites-gate.sh)."; exit 0; }
+# vttest needs its own cache entry, so it goes on when the others cannot (it skips itself in turn).
+vttest() { if [ "$update" = 1 ]; then scripts/vttest-gate.sh --update; else scripts/vttest-gate.sh; fi; }
+skip() { warn "outside suites skipped: $* The engine's conformance against esctest2 and ucs-detect is unchecked (scripts/suites-gate.sh)."; vttest; exit $?; }
 
 command -v python3 >/dev/null || skip "python3 is not installed."
 command -v git >/dev/null || skip "git is not installed."
@@ -74,5 +77,6 @@ else
   "$SUITES_PYTHON" tools/vt-compare/gate.py ucs "$work/ucs.yaml" $flag || failed=1
 fi
 log "outside suites: $((SECONDS - start)) s"
+vttest || failed=1
 [ "$failed" = 0 ] || printf '\033[1;31mFAILED\033[0m the outside suites (scripts/suites-gate.sh)\n' >&2
 exit "$failed"
