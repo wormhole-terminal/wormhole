@@ -6,3 +6,4 @@ pub(super) mod csi;
 pub(super) mod dcs;
 pub(super) mod esc;
 pub(super) mod handler;
+pub(super) mod vt52;

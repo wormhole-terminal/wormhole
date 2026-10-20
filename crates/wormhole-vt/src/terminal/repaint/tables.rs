@@ -61,6 +61,8 @@ impl<'a> Writer<'a> {
 
     // ---- colors ----
 
+    /// The colors programs set, and the palettes they pushed: each pushed one is set and pushed
+    /// again, the receiver's colors reset between them, and the colors in force are set last.
     fn palette(&mut self) {
         let t = self.term;
         let mut dirty = false;
@@ -362,7 +364,8 @@ impl<'a> Writer<'a> {
                 }
                 continue;
             }
-            let known = modes::private_flag(n).is_some() || modes::recorded_bit(n).is_some() || n == 12;
+            let known =
+                modes::private_flag(n).is_some() || modes::recorded_bit(n).is_some() || n == 12 || n == 2;
             if known {
                 self.private_mode(n, on);
                 self.touched.push(n);

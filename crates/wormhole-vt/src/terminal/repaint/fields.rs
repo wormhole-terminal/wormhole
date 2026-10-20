@@ -52,6 +52,12 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("charsets", Written("cursor_information: DECRSPS")),
     ("locator", Written("locator: DECELR, DECSLE, DECEFR (the pointer is the host's)")),
     ("preferred", Written("misc: DECAUPSS")),
+    (
+        "vt52",
+        Written(
+            "final_state, last: `CSI ? 2 l` (which sets aside the modes and sets written before), `ESC F`",
+        ),
+    ),
     ("sgr_stack", Written("sgr_stack: SGR, then XTPUSHSGR for each entry")),
     ("color_stack", Written("palette: OSC 4, 10 to 19 and XTPUSHCOLORS for each entry")),
     ("inband", Scratch("what the host was last told in band; a replica never answers")),
@@ -142,6 +148,13 @@ const GRID: &[(&str, Coverage)] = &[
     ("segments", Scratch("scratch for a scroll")),
     ("copied", Scratch("scratch for DECCRA")),
     ("copied_marks", Scratch("scratch for DECCRA")),
+];
+
+const VT52: &[(&str, Coverage)] = &[
+    ("address", Scratch("`ESC Y` waits for its characters: repaint_ready says no")),
+    ("graphics", Written("final_state: `ESC F`")),
+    ("suspended", Written("modes: the modes written before `CSI ? 2 l` sets them aside")),
+    ("charsets", Written("final_state: DECRSPS before `CSI ? 2 l` sets them aside")),
 ];
 
 const SGR_STACK: &[(&str, Coverage)] =
@@ -286,6 +299,7 @@ pub const FIELDS: &[StructFields] = &[
     StructFields { name: "TabStops", file: "terminal/screen/tabs.rs", fields: TABS },
     StructFields { name: "Kept", file: "terminal/modes/kept.rs", fields: KEPT },
     StructFields { name: "SavedTitles", file: "terminal/reports/title.rs", fields: SAVED_TITLES },
+    StructFields { name: "Vt52", file: "terminal/dispatch/vt52.rs", fields: VT52 },
     StructFields { name: "SgrStack", file: "terminal/text/sgr_stack.rs", fields: SGR_STACK },
     StructFields { name: "Entry", file: "terminal/text/sgr_stack.rs", fields: SGR_ENTRY },
     StructFields { name: "ColorStack", file: "terminal/osc/color_stack.rs", fields: COLOR_STACK },
@@ -343,6 +357,7 @@ pub const MODES: &[(&str, Coverage)] = &[
     ("BELL_URGENCY", Written("modes: DECSET 1042")),
     ("REVERSE_WRAP_EXTENDED", Written("modes: DECSET 1045")),
     ("MORE_FIX", Written("modes: DECSET 41")),
+    ("VT52", Written("final_state, last: `CSI ? 2 l`, after everything that needs a CSI")),
     ("INBAND_RESIZE", Written("modes: DECSET 2048")),
     ("MODIFY_OTHER_KEYS", Written("modes: `CSI > 4 ; Pv m`")),
     ("MODIFY_OTHER_KEYS_ALL", Written("modes: `CSI > 4 ; 2 m`")),

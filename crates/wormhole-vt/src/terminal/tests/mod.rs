@@ -10,6 +10,7 @@ mod inband;
 mod keyboard;
 mod limits;
 mod line_size;
+mod modify_keys;
 mod passthrough;
 mod pointer_and_vars;
 mod rare;
@@ -20,6 +21,7 @@ mod selection;
 mod snapshot;
 mod stacks;
 mod tabs;
+mod vt52;
 mod window;
 
 use crate::terminal::Terminal;

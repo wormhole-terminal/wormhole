@@ -29,6 +29,11 @@
 //!   controls other than BEL, CAN, SUB and ESC are dropped from an OSC (his table ignores them),
 //!   and pass through DCS and APC data (`put` takes 0x00..=0x17, 0x19, 0x1C..=0x7E). PM and SOS
 //!   strings are consumed and never reported.
+//! - **VT52 mode.** A handler that says so ([`Handler::vt52_mode`]) gets an ESC and its one next
+//!   byte as an [`esc`](Handler::esc) with no intermediates, whatever the byte is: the VT52 has no
+//!   CSI, no strings and no intermediates (VT100 User Guide, "Valid VT52 Mode Control Sequences"),
+//!   so `ESC [` and `ESC ]` begin nothing. Asked once per ESC, so a handler that switches mode in
+//!   the middle of the input is followed at the next ESC.
 //! - **Limits.** Williams stores a fixed number of parameters and lets `collect` flag a sequence
 //!   with too many intermediates. Here that is [`MAX_PARAMS`] values and [`MAX_INTERMEDIATES`]
 //!   bytes; a CSI over either is still reported with [`Csi::overflow`] set, an ESC sequence over the

@@ -6,7 +6,7 @@ modes: default
 01|Testing Request Mode (DECRQM)/Report Mode (DECRPM)
 02|
 03|        1: DECCKM      <27> [ ? 1 ; 2 $ y  reset
-04|        2: DECANM      <27> [ ? 2 ; 3 $ y  permanently set
+04|        2: DECANM      <27> [ ? 2 ; 1 $ y  set
 05|        3: DECCOLM     <27> [ ? 3 ; 2 $ y  reset
 06|        4: DECSCLM     <27> [ ? 4 ; 2 $ y  reset
 07|        5: DECSCNM     <27> [ ? 5 ; 2 $ y  reset

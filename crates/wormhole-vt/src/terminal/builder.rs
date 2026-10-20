@@ -189,6 +189,7 @@ impl Builder {
             charsets: text::charset::Charsets::default(),
             locator: Default::default(),
             preferred: text::charset::Preferred::default(),
+            vt52: Default::default(),
             sgr_stack: Default::default(),
             color_stack: Default::default(),
             inband: Default::default(),

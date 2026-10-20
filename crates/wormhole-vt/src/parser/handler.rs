@@ -16,6 +16,14 @@ pub trait Handler {
         false
     }
 
+    /// Whether the terminal is in VT52 mode (DECANM reset), where an ESC is followed by one
+    /// final byte and nothing else: `ESC [`, `ESC ]`, `ESC P`, `ESC _`, `ESC X` and `ESC ^` begin
+    /// no sequence but are reported as [`esc`](Handler::esc) like any other final, with no
+    /// intermediates (`ESC Y`'s two following characters arrive as text). Asked once per ESC.
+    fn vt52_mode(&self) -> bool {
+        false
+    }
+
     /// A run of printable ASCII (0x20..=0x7E), as long as the input allows. Never empty.
     fn print_ascii(&mut self, _run: &[u8]) {}
 

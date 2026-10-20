@@ -73,6 +73,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   modifiers you hold on ordinary keys: Alt+key, Ctrl on the punctuation and digit keys with no
   control code, and Enter, Tab and Escape with a modifier arrive as `CSI 27 ; modifiers ; key ~`
   sequences as in xterm. Shift+Enter is then sent as Shift+Enter, not as Option+Enter.
+- Programs written for the VT52 work: `CSI ? 2 l` switches to VT52 mode (cursor movement, direct
+  cursor addressing, the graphics set, the identify request), with its cursor and keypad keys, and
+  `ESC <` switches back.
 - A program can save and restore the pen's attributes and the colours it changed (xterm's
   `CSI # {`, `CSI # }` and `CSI # P`, `CSI # Q`), and read back what a rectangle of the screen has in
   common (`CSI Pt ; Pl ; Pb ; Pr # |`).

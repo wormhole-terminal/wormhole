@@ -86,7 +86,8 @@ impl<'a> Writer<'a> {
             }
             end.saturating_sub(self.counter) as usize
         };
-        let reprinted = t.cluster.open && !self.has(Modes::INSERT);
+        let reprinted = t.cluster.open
+            && if t.modes.contains(Modes::VT52) { self.vt52_reprint() } else { !self.has(Modes::INSERT) };
         let last = t.last_char.filter(|_| !reprinted);
         if burns == 0 && last.is_none() {
             return;
@@ -205,9 +206,10 @@ impl<'a> Writer<'a> {
     /// the margins they enable.
     pub(super) fn modes(&mut self) {
         let t = self.term;
+        let now = t.modes_before_vt52();
         self.clusters_on();
         for &(flag, n) in PRIVATE {
-            let want = t.modes.contains(flag);
+            let want = now.contains(flag);
             let init = Modes::INITIAL.contains(flag);
             let always = flag == Modes::ALLOW_COLUMNS || self.touched.contains(&n);
             if want != init || always {
@@ -215,7 +217,7 @@ impl<'a> Writer<'a> {
             }
         }
         for &(flag, n) in ANSI {
-            let want = t.modes.contains(flag);
+            let want = now.contains(flag);
             if want != Modes::INITIAL.contains(flag) {
                 self.put(b"\x1b[");
                 self.num(usize::from(n));
@@ -226,19 +228,19 @@ impl<'a> Writer<'a> {
             self.private_mode(n, true);
         }
         // xterm's modifyOtherKeys: the level after the modes, as `CSI > 4 ; Pv m` says it.
-        match t.modes.modify_other_keys() {
+        match now.modify_other_keys() {
             ModifyOtherKeys::Off => {}
             ModifyOtherKeys::Level1 => self.put(b"\x1b[>4;1m"),
             ModifyOtherKeys::Level2 => self.put(b"\x1b[>4;2m"),
         }
-        if t.modes.contains(Modes::COLUMNS_132) {
+        if now.contains(Modes::COLUMNS_132) {
             self.gaps |= Gaps::COLUMNS_132;
         }
         let m = t.margins;
         if (m.top, m.bottom) != (0, t.rows - 1) {
             self.csi2(m.top + 1, m.bottom + 1, b'r');
         }
-        if t.modes.contains(Modes::LEFT_RIGHT_MARGINS) && (m.left, m.right) != (0, t.cols - 1) {
+        if now.contains(Modes::LEFT_RIGHT_MARGINS) && (m.left, m.right) != (0, t.cols - 1) {
             self.csi2(m.left + 1, m.right + 1, b's');
         }
     }
@@ -266,17 +268,21 @@ impl<'a> Writer<'a> {
         // The cursor, or the place the open cluster starts when the last character printed can
         // still be extended: it is printed again from there and leaves the cursor, the cluster
         // and `last_char` where they were.
+        // In VT52 mode it is printed again after the mode is entered (entering it closes a cluster),
+        // from where `ESC Y` can address.
+        let vt52 = t.modes.contains(Modes::VT52);
         let reprint = t.cluster.open
-            && if self.has(Modes::INSERT) || !self.cluster_matches() {
-                self.gaps |= Gaps::CLUSTER;
-                false
-            } else {
-                true
-            };
-        let origin = t.modes.contains(Modes::ORIGIN);
-        let at =
-            if reprint { CursorPos { x: t.cluster.head, y: t.cursor.y, pending: false } } else { t.cursor };
-        self.cursor_information(at, origin, &t.charsets);
+            && if vt52 { self.vt52_reprint() } else { !self.has(Modes::INSERT) && self.cluster_matches() };
+        if t.cluster.open && !reprint {
+            self.gaps |= Gaps::CLUSTER;
+        }
+        let origin = self.has(Modes::ORIGIN);
+        let at = if reprint && !vt52 {
+            CursorPos { x: t.cluster.head, y: t.cursor.y, pending: false }
+        } else {
+            t.cursor
+        };
+        self.cursor_information(at, origin, t.charsets_before_vt52());
         // The pen after the string: it clears the attributes it reports.
         self.set_style(&t.pen.style);
         self.set_link(t.pen.link.as_ref());
@@ -285,7 +291,7 @@ impl<'a> Writer<'a> {
         if t.eight_bit {
             self.put(b"\x1b G");
         }
-        if reprint {
+        if reprint && !vt52 {
             self.cluster_text(t.cluster.head, t.cursor.y);
         }
         // After ED 3 a cursor move or an erase is all that came: the next ED 2 saves nothing.
@@ -296,6 +302,25 @@ impl<'a> Writer<'a> {
                 self.gaps |= Gaps::HISTORY_CLEARED;
             }
         }
+        // Last: VT52 mode reads no CSI, and takes the modes and sets the sequences above wrote.
+        if vt52 {
+            self.put(b"\x1b[?2l");
+            if t.vt52.graphics() {
+                self.put(b"\x1bF");
+            }
+            if reprint {
+                // The cluster is printed from its head, which leaves the cursor where it is.
+                self.put(&[0x1b, b'Y', 32 + t.cursor.y as u8, 32 + t.cluster.head as u8]);
+                self.cluster_text(t.cluster.head, t.cursor.y);
+            }
+        }
+    }
+
+    /// Whether the cluster open in VT52 mode can be printed again: `ESC Y` reaches its place (the
+    /// characters after it are printable ASCII, so the numbers stop at 94) and its cell holds it.
+    fn vt52_reprint(&self) -> bool {
+        let t = self.term;
+        t.cluster.head <= 94 && t.cursor.y <= 94 && self.cluster_matches()
     }
 
     /// Whether the cell at the open cluster's head holds the cluster: its last character is the

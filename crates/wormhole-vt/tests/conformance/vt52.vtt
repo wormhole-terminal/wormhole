@@ -1,0 +1,153 @@
+# VT52 mode: DECANM reset (CSI ? 2 l) makes the terminal read the VT52's escape sequences alone and
+# ESC < brings ANSI mode back. The VT100 User Guide's "Valid VT52 Mode Control Sequences" and xterm's
+# ctlseqs ("VT52 Mode") are the texts; the VT52 Maintenance Manual (chapter 2) has the acceptance
+# tests for the direct addressing.
+
+test DECANM reset enters VT52 mode and ESC < leaves it
+spec VT100 User Guide, DECANM: the reset state interprets only VT52 sequences, the set state only ANSI ones; xterm ctlseqs: ESC < exits VT52 mode
+size 10 4
+feed \e[?2l\e[2;3Hx
+screen
+|2;3Hx|
+feed \e<\e[2;3Hy
+screen
+|2;3Hx|
+|  y|
+
+test the cursor keys' sequences move the cursor and stop at the margins
+spec VT100 User Guide, VT52 mode: ESC A, B, C and D move one position and stop at the margins; xterm ctlseqs: ESC A cursor up, ESC B down, ESC C right, ESC D left
+size 5 3
+feed \e[2;3H\e[?2l\eA\eA\eA\eD\eD\eD\eD
+cursor 1,1
+feed \eB\eB\eB\eC\eC\eC\eC\eC\eC
+cursor 3,5
+
+test ESC H homes the cursor and ESC J and ESC K erase
+spec VT100 User Guide, VT52 mode: ESC H cursor to home, ESC J erase to end of screen, ESC K erase to end of line; xterm ctlseqs VT52 Mode
+size 5 3
+feed aaaaa\r\nbbbbb\r\nccccc\e[?2l\eH\eC\eC\eK
+screen
+|aa|
+|bbbbb|
+|ccccc|
+feed \eB\eJ
+screen
+|aa|
+|bb|
+
+test ESC I is a reverse line feed that scrolls down at the top
+spec VT100 User Guide, VT52 mode: ESC I moves up one position, a scroll down at the top margin
+size 5 3
+feed a\r\nb\e[?2l\eH\eI
+screen
+||
+|a|
+|b|
+cursor 1,1
+
+test ESC Y addresses the cursor with row and column, each the number plus 32
+spec VT100 User Guide, VT52 mode: ESC Y line column, the numbers sent as ASCII codes whose values are the number plus 0378 (32); xterm ctlseqs: the screen coordinate system is 0-based
+size 20 6
+feed \e[?2l\eY#'X
+row 4 |       X|
+cursor 4,9
+
+test ESC Y reaches the corners of a 24 by 80 screen
+spec VT52 Maintenance Manual 2.4.6: ESC Y 7 o is the last position of the last line, ESC Y 7 SPACE its first, ESC Y SPACE o the last of the first line
+size 80 24
+feed \e[?2l\eY7\sa\eY7ob\eY\soc\eY\s\sd
+cell 24,1 text=a
+cell 24,80 text=b
+cell 1,80 text=c
+cell 1,1 text=d
+
+test ESC Y survives its two characters arriving apart
+spec VT100 User Guide, VT52 mode: ESC Y line column
+size 20 6
+feed \e[?2l\eY
+feed #
+feed 'X
+row 4 |       X|
+
+test an address past the screen leaves that axis where it was
+convention a coordinate the screen does not have is no move on that axis (the vttest VT52 test draws with such addresses and expects the column alone to move)
+size 10 4
+feed \e[?2l\eY!!
+cursor 2,2
+feed \eY~%
+cursor 2,6
+
+test ESC Z identifies a VT52 emulated by a VT100
+spec xterm ctlseqs VT52 Mode: ESC Z is answered ESC / Z ("I am a VT52 emulated by VT100"); VT100 User Guide: Identify, ESC / Z
+size 10 4
+feed \e[?2l\eZ
+reply \e/Z
+
+test graphics mode draws line characters until ESC G
+spec VT100 User Guide, VT52 mode: ESC F selects a special graphics character set, ESC G the ASCII set (the VT100's graphics stand in for the VT52's)
+size 10 4
+feed \e[?2l\eFlqk\eGlqk
+screen
+|┌─┐lqk|
+
+test there is no wraparound in VT52 mode
+spec VT100 User Guide, DECAWM: the reset state replaces the character at the right margin; the VT52 has no autowrap
+size 5 3
+feed \e[?2labcdefg
+screen
+|abcdg|
+cursor 1,5
+
+test ANSI mode's settings come back with ESC <
+convention VT52 mode suspends the modes that do not exist on a VT52 (autowrap, origin, insert, new line) and the character sets, and ESC < restores them (xterm does the same)
+size 5 3
+feed \e(0\e[?2lq\e<\e[1;1H\e[2Kq
+screen
+|─|
+feed \e[1;5H\e(Bab
+screen
+|─   a|
+|b|
+
+test CSI is not read in VT52 mode
+spec VT100 User Guide, DECANM: only VT52 compatible escape sequences are interpreted while DECANM is reset
+size 10 4
+feed \e[?2l\e[1;31mx
+screen
+|1;31mx|
+
+test ESC < enters VT100 mode
+spec VT510 DECANM, Table 5-1: ESC < is "Exit VT52 mode. Enter VT100 mode."; xterm sets its VT100 level on it, and DECRQM (a VT300 function) is then not answered
+size 10 4
+feed \e[?2l\e<\e[c
+reply \e[?1;2c
+feed \e[?7$p
+reply none
+
+test the VT52's printer controls are ignored
+spec VT100 User Guide DECANM: ESC ], V, W, X, ^ and _ are the printer and autoprint controls of VT52 mode, which this terminal has no printer for
+size 10 4
+feed \e[?2l\e]\eV\eW\eX\e^\e_ab
+screen
+|ab|
+
+test a full reset leaves VT52 mode
+convention RIS is not a VT52 sequence, but a program that dies in VT52 mode would leave a terminal that reset cannot bring back
+size 10 4
+feed \e[?2l\ec\e[1;3Hx
+screen
+|  x|
+
+test text and controls act as in ANSI mode
+spec VT52 Maintenance Manual 2.4.2: CTRL H moves the cursor left, CTRL I to the next tab stop, CTRL J down, CTRL M to the left-hand position
+size 12 3
+feed \e[?2lab\bc\tx\r\nhi
+screen
+|ac      x|
+|hi|
+
+test DECRQM answers DECANM as set in ANSI mode
+spec VT510 DECRQM and xterm ctlseqs: CSI ? 2 $ p; the terminal that can answer is in ANSI mode
+size 10 4
+feed \e[?2$p
+reply \e[?2;1$y

@@ -1,8 +1,9 @@
 //! The key encoders against the bytes the specifications give: xterm's ctlseqs for the legacy
 //! encoding, the kitty keyboard protocol's page for the rest. Mouse and paste have their tests
-//! beside their code; modifyOtherKeys is in the module below.
+//! beside their code; modifyOtherKeys and the VT52 keys are in the modules below.
 
 mod other_keys;
+mod vt52;
 
 use super::{
     InputModes, Key, KeyEvent, KeyKind, KeypadKey, KittyFlags, MediaKey, ModifierKey, Mods, encode_key,
@@ -17,8 +18,9 @@ const fn modes(kitty: KittyFlags) -> InputModes {
         app_keypad: false,
         backarrow_bs: false,
         kitty,
-        bracketed_paste: false,
         modify_other_keys: super::ModifyOtherKeys::Off,
+        vt52: false,
+        bracketed_paste: false,
         focus_events: false,
         mouse: super::MouseTracking::Off,
         mouse_encoding: super::MouseEncoding::X10,

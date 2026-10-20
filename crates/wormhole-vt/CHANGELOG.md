@@ -20,6 +20,11 @@ First public release (0.1.0).
 
 ### Added
 
+- VT52 mode: `CSI ? 2 l` (DECANM reset) makes the terminal read the VT52's sequences (cursor moves,
+  `ESC Y` direct addressing, `ESC F` and `ESC G` graphics, `ESC H`, `I`, `J`, `K`, `Z` answered
+  `ESC / Z`, `ESC =` and `ESC >`) and `ESC <` leaves it, at VT100 level as the VT510 manual and xterm have it. `Modes::VT52`, and the key encoder sends the
+  VT52's keys for it. The parser reads an ESC and one byte only while it lasts
+  (`Handler::vt52_mode`).
 - In-band resize notifications (DECSET 2048): the program is told `CSI 48 ; rows ; cols ; height ; width t`
   when it sets the mode and after every resize, with the pixels from the cell size the host gave.
 - xterm's modifyOtherKeys: `CSI > 4 ; Pv m` sets level 0, 1 or 2, `CSI ? 4 m` asks, `Modes::modify_other_keys`
@@ -30,6 +35,9 @@ First public release (0.1.0).
 - XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS (`CSI # P`, `CSI # Q`, `CSI # R`): a stack of 10 palettes
   the program set, with slots; a pop is announced with `Event::ColorsChanged`. The repaint writes both
   stacks.
+- `Handler::vt52_mode`, `Modes::{VT52, INBAND_RESIZE, MODIFY_OTHER_KEYS, MODIFY_OTHER_KEYS_ALL}`,
+  `ModifyOtherKeys`, and the fields `InputModes::{vt52, modify_other_keys}`.
+
 - A front door at the crate root: `Terminal::new(cols, rows)` and `Terminal::builder()` (size,
   scrollback, policy, cell size, palette, word separators, passthrough). `Terminal::feed(bytes)` takes
   program output; the terminal owns its parser.

@@ -83,10 +83,10 @@ change on purpose; update each menu's `review.md` with it.
 
 **What the screens are.** The committed screens are the engine's behaviour today. Each menu's folder has a `review.md`: every
 screen judged against what vttest says it should show (and the VT100/VT220/VT510 manuals and xterm where that is not enough),
-`pass`, `fail: <why>` or `unsupported: <feature>`. Of 454 screens, 362 pass, 18 fail, 68 are unsupported features, 5 are prompts
+`pass`, `fail: <why>` or `unsupported: <feature>`. Of 454 screens, 364 pass, 19 fail, 65 are unsupported features, 5 are prompts
 (a screen waiting for the key the host then presses) and one is not exercised. By menu (screens: pass, fail, unsupported):
 cursor movements 6: 6, 0, 0; screen features 15: 15, 0, 0; character sets 15: 12, 3, 0; double-sized characters 6: 1, 0, 5;
-keyboard 6: 0, 0, 6; terminal reports 9: 6, 2, 0 (and a prompt); VT52 mode 3: 0, 0, 3; insert and delete 14: 12, 0, 2;
+keyboard 6: 0, 0, 6; terminal reports 9: 6, 2, 0 (and a prompt); VT52 mode 3: 2, 1, 0; insert and delete 14: 12, 0, 2;
 known bugs 29: 25, 0, 4; reset 6: 5, 0, 1; non-vt100 345: 280, 13, 47 (and four prompts and one not exercised).
 
 **Left out because a person is needed** (`suites/vttest/notes.txt` lists every entry that was not run and why): the keyboard menu's
@@ -106,7 +106,7 @@ Screen references are `<menu>/<screen>` (`3/003` is `suites/vttest/03-character-
 | gap | sequence | expected | the engine | screens |
 |-----|----------|----------|-----------|---------|
 | double-width and double-height lines | DECDWL, DECDHL: `ESC # 6`, `ESC # 3`, `ESC # 4`, `ESC # 5` | each line drawn at twice the width (40 columns on an 80 column screen), a double-height line in two halves | ignored: lines are drawn in normal size (and a frame built of them is not square) | 4/001 to 005, 8/006, 8/013, 9/013, 9/016, 9/023, 9/026 |
-| VT52 mode | DECANM reset: `CSI ? 2 l`, then `ESC Y`, `ESC F`, `ESC Z` ... | the VT52's cursor addressing, graphics set and identify | ignored on purpose (always ANSI mode): every VT52 sequence is shown as text | 7/001 to 003 |
+| DECRQSS at VT100 level | `ESC <` (VT52 mode ends in VT100 mode), then `DCS $ q " p ST` | no answer: a VT100 has no DECRQSS (a real VT500 "will not recognize DECSCL at this point") | answered `DCS 1 $ r 61 ; 1 " p ST`: the engine answers DECRQSS at every level | 7/003 |
 | 8-bit characters and GR | `ESC % @` (leave UTF-8), then bytes 0xA0 to 0xFE; locking shifts into GR: `ESC ~` (LS1R), `ESC }` (LS2R), `ESC |` (LS3R) | the characters of the set designated to G1, G2, G3 in the right half | the input is UTF-8 only: every such byte is U+FFFD; LS2 and LS3 into GL (`ESC n`, `ESC o`) and the single shifts work | 3/003, 3/008, 3/013, 11/187 |
 | columns per page | DECSCPP: `CSI 132 $ |` | 132 columns | ignored, the screen stays 80 wide (DECRQSS reports 80) | 11/032 |
 | terminal parameters | DECREQTPARM: `CSI 0 x`, `CSI 1 x` | `CSI 2;1;1;112;112;1;0 x` and the solicited form | no report | 6/009 |

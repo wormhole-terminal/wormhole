@@ -33,6 +33,9 @@
 //!
 //! A repaint is answered by nothing the receiver says to a program, with one exception: it sets
 //! mode 2048 when the sender has it, and setting that mode is answered with a size report
+//! (`CSI 48 ; rows ; cols ; height ; width t`). A receiver is not connected to a program (a client
+//! drops its replica's replies), so the report goes nowhere; the bisimulation test leaves it out.
+//!
 //! The writer takes `&Terminal`: it changes nothing, damage included, and allocates nothing but
 //! the growth of the caller's buffer, which the caller keeps between calls.
 
@@ -177,7 +180,7 @@ impl std::error::Error for NotReady {}
 impl Terminal {
     /// Whether a repaint can be made now: nothing is half-read, in the parser or in the terminal.
     pub fn repaint_ready(&self) -> Result<(), NotReady> {
-        if !self.parser.is_ground() {
+        if !self.parser.is_ground() || self.vt52.addressing() {
             return Err(NotReady::Sequence);
         }
         if self.graphics.in_transfer() {
@@ -393,8 +396,9 @@ impl<'a> Writer<'a> {
         }
     }
 
-    /// Whether the mode is set in the terminal being written.
+    /// Whether the mode is set in the terminal being written: as ANSI mode has it, for a
+    /// terminal in VT52 mode, which a repaint enters last.
     fn has(&self, mode: Modes) -> bool {
-        self.term.modes.contains(mode)
+        self.term.modes_before_vt52().contains(mode)
     }
 }

@@ -6,9 +6,9 @@
 //! or the screen; the host turns its own events into [`KeyEvent`] and [`MouseEvent`] once.
 //!
 //! - [`encode_key`]: legacy xterm encoding (cursor keys with DECCKM, the keypad with DECKPAM, F1 to
-//!   F12, Control and Alt combinations), or the full
-//!   [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (all five
-//!   flags) as soon as the program has pushed one;
+//!   F12, Control and Alt combinations, and xterm's modifyOtherKeys when the program set it), or
+//!   the full [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (all
+//!   five flags) as soon as the program has pushed one; in VT52 mode the VT52's keys;
 //! - [`encode_mouse`]: the X10, UTF-8, URXVT, SGR and SGR-pixels reports for the tracking level
 //!   the program asked for;
 //! - [`paste`]: bracketed paste, with what could escape the bracket removed;
@@ -39,6 +39,7 @@ mod other_keys;
 mod paste;
 #[cfg(test)]
 mod tests;
+mod vt52;
 
 pub use key::{Key, KeyEvent, KeyKind, KeypadKey, MediaKey, ModifierKey, Mods};
 pub use modes::{InputModes, KittyFlags, ModifyOtherKeys, MouseEncoding, MouseTracking};
@@ -58,7 +59,13 @@ const ESC: u8 = 0x1b;
 /// "Option as Meta". Shortcuts that belong to the host (Cmd+C) are the host's to filter out before
 /// it calls this.
 pub fn encode_key(event: &KeyEvent, modes: &InputModes, out: &mut Vec<u8>) -> bool {
-    if modes.kitty.is_empty() { legacy::encode(event, modes, out) } else { kitty::encode(event, modes, out) }
+    if modes.vt52 {
+        vt52::encode(event, modes, out)
+    } else if modes.kitty.is_empty() {
+        legacy::encode(event, modes, out)
+    } else {
+        kitty::encode(event, modes, out)
+    }
 }
 
 /// Appends the report for a pointer event and says whether there was one: nothing is sent when the

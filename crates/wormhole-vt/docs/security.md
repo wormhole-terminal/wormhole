@@ -166,7 +166,11 @@ No sequence in the engine starts a program, reads or writes a file, or loads a f
   end and thrown away.
 - kitty graphics **files and shared memory** (`t=f`, `t=t`, `t=s`) are refused. Every such failure is
   answered the same way (`EBADF`), so a program learns nothing about files it cannot read.
-- **Printing**, **user-defined keys**, **soft fonts** (DRCS) and **ReGIS** are not implemented.
+- **Printing**, **user-defined keys**, **soft fonts** (DRCS) and **ReGIS** are not implemented. The
+  VT52's printer controls are ignored in VT52 mode.
+- A program can put the terminal in **VT52 mode** (`CSI ? 2 l`), where no `CSI` is read, so a stray
+  sequence can leave a terminal that seems not to answer. `ESC <` leaves it, so does `ESC c` (an
+  extension: the VT52 has no reset, but `reset` sends one), and a host's `Terminal::reset` does.
 - **Colour names** and device-independent colour specs are not read.
 
 ### Control characters in text you take out

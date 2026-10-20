@@ -28,6 +28,10 @@ pub struct InputModes {
     /// have no function-key form are sent as `CSI 27 ; modifiers ; code ~` when a modifier is
     /// held. The kitty flags take precedence when set.
     pub modify_other_keys: ModifyOtherKeys,
+    /// The terminal is in VT52 mode (DECANM reset): cursor keys send `ESC A` to `ESC D` whatever
+    /// DECCKM says, the keypad `ESC ? x` in application mode, and nothing is sent that needs a
+    /// `CSI` (mouse, focus and paste reports, function keys but F1 to F4 as PF1 to PF4).
+    pub vt52: bool,
     /// 2004: pastes are wrapped in `CSI 200 ~` / `CSI 201 ~`.
     pub bracketed_paste: bool,
     /// 1004: the program wants focus in and out reports.
@@ -55,6 +59,7 @@ impl From<Modes> for InputModes {
             backarrow_bs: modes.contains(Modes::BACKARROW_BS),
             kitty: modes.kitty_flags(),
             modify_other_keys: modes.modify_other_keys(),
+            vt52: modes.contains(Modes::VT52),
             bracketed_paste: modes.contains(Modes::BRACKETED_PASTE),
             focus_events: modes.contains(Modes::FOCUS_REPORT),
             mouse: modes.mouse_tracking(),
@@ -85,11 +90,13 @@ mod tests {
                 | Modes::MOUSE_UTF8
                 | Modes::KEYS_DISAMBIGUATE
                 | Modes::KEYS_ASSOCIATED_TEXT
+                | Modes::VT52
                 | Modes::MODIFY_OTHER_KEYS
                 | Modes::MODIFY_OTHER_KEYS_ALL,
         );
-        assert!(modes.app_cursor && modes.app_keypad && modes.backarrow_bs);
+        assert!(modes.vt52);
         assert_eq!(modes.modify_other_keys, ModifyOtherKeys::Level2);
+        assert!(modes.app_cursor && modes.app_keypad && modes.backarrow_bs);
         assert!(modes.bracketed_paste && modes.focus_events);
         assert_eq!(modes.mouse, MouseTracking::Drag);
         assert_eq!(modes.mouse_encoding, MouseEncoding::Utf8);

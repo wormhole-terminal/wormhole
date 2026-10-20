@@ -142,6 +142,11 @@ bitflags! {
         /// `?41`. **Engine**: a tab with the wrap pending wraps first (xterm's fix for curses
         /// programs that draw to the end of a row and then send a tab).
         const MORE_FIX = 1 << 48;
+        /// DECANM reset (`?2 l`): the terminal is in VT52 mode, where only the VT52's escape
+        /// sequences are read (`ESC <` leaves it). **Host**: the keys are the VT52's, see
+        /// [`input`](crate::input); cursor keys ignore DECCKM and the keypad sends `ESC ? x`.
+        /// Not a mode a program can set again from VT52 mode (it cannot send `CSI` there).
+        const VT52             = 1 << 49;
         /// `?2048`. **Engine**: the host's resizes are reported to the program in band
         /// (`CSI 48 ; rows ; cols ; height ; width t`), see
         /// [`Terminal::resize`](crate::Terminal::resize).
@@ -321,6 +326,7 @@ mod tests {
         assert_eq!(Modes::INITIAL.kitty_flags(), KittyFlags::empty());
         assert!(!Modes::INITIAL.contains(Modes::BACKARROW_BS), "the backarrow key sends DEL");
         assert_eq!(Modes::INITIAL.modify_other_keys(), ModifyOtherKeys::Off);
+        assert!(!Modes::INITIAL.intersects(Modes::VT52 | Modes::INBAND_RESIZE));
     }
 
     #[test]

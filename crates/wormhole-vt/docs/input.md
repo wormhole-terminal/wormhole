@@ -67,9 +67,31 @@ the level (`MODIFY_OTHER_KEYS`, `MODIFY_OTHER_KEYS_ALL`, read together as `modif
 `1 + shift + 2·alt + 4·ctrl + 8·meta` and the code is the character the key types (`A`, 65, for
 Shift+a). The rules follow xterm's table of modified keys:
 
+- **Level 1**: Shift alone still types the shifted character, and Control on a key that has a control
+  code (letters, Space, `@ [ \ ] ^ _ /`, the digits 2 to 8, `~`) still sends it. Alt and Meta on any
+  key, Control on the other characters (`! ? - 0 1 9`, …), Enter and Tab with any modifier (but Shift+Tab
+  stays `CSI Z`) and Alt+Escape are sequences.
+- **Level 2**: every key with a modifier is a sequence, Shift+Tab (`CSI 27 ; 2 ; 9 ~`) and Shift+letters
+  among them. xterm's table keeps Control+Backspace as BS and the symbol Shift types on a digit.
 - Cursor, function and keypad keys are not "other" keys and are not changed. xterm's level 3 and the
   modifier mask of `CSI > 4 : Pm m` are not implemented; the other resources of XTMODKEYS (modifyCursorKeys
   and friends) are neither kept nor answered.
+- The kitty flags take precedence when any is set. DECSTR and RIS reset the level.
+
+A host that rewrites keys before it calls the encoder (Shift+Enter as Alt+Enter, for programs that do not
+know better) should not do so for a program that asked for modifyOtherKeys: it asked to be told.
+
+### VT52 mode
+
+A program can put the terminal in VT52 mode with `CSI ? 2 l` (DECANM reset) and leave it with `ESC <`.
+`Modes::VT52` says it is on, and `InputModes` carries it: the encoder then sends the VT52's keys. The
+cursor keys are `ESC A` to `ESC D` (DECCKM makes no difference), F1 to F4 are `ESC P` to `ESC S` (the
+VT52's PF keys), the keypad sends its characters or, after `ESC =`, `ESC ? p` to `ESC ? y` and the
+other letters of its table (xterm's ctlseqs, "VT52-Style Function Keys"). Characters, Enter, Tab,
+Backspace and Escape are as in the legacy encoding without the `CSI` forms. Keys that exist only as
+`CSI` sequences (Home, End, Insert, Delete, Page Up and Down, F5 and up) send nothing, and so do the
+mouse, focus and paste reports, which need a `CSI` (pasted text is sent without markers).
+
 ### The kitty keyboard protocol
 
 A program asks for it with `CSI > flags u`. The five flags are *disambiguate escape codes* (1), *report

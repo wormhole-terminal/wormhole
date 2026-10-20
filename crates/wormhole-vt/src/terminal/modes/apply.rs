@@ -66,6 +66,12 @@ impl Terminal {
                 self.modes.set(Modes::GRAPHEME_CLUSTERS, on);
                 self.cluster.open = false;
             }
+            // DECANM: reset is VT52 mode; set is the ANSI mode the terminal is in already.
+            2 => {
+                if !on {
+                    self.enter_vt52();
+                }
+            }
             // The size is told now, whether or not the mode was set (the gist: "the terminal MUST
             // immediately report the current size if an attempt is made to enable the feature").
             2048 => {

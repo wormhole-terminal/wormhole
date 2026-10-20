@@ -116,7 +116,7 @@ fn every_mode_dec_knows_answers_something() {
             "{n}: {reply:?}"
         );
     }
-    assert_eq!(ask(&mut rig, 2), "\x1b[?2;3$y", "VT52 mode is permanently off: always ANSI");
+    assert_eq!(ask(&mut rig, 2), "\x1b[?2;1$y", "DECANM is set: the terminal that answers is in ANSI mode");
     assert_eq!(ask(&mut rig, 1001), "\x1b[?1001;4$y");
     assert_eq!(ask(&mut rig, 31337), "\x1b[?31337;0$y");
     // DECCOLM only counts when mode 40 allows it.

@@ -2,7 +2,8 @@
 //!
 //! Spec: xterm's ctlseqs ("Controls beginning with ESC") and the VT510 manual: DECSC/DECRC (7, 8),
 //! IND, NEL, HTS, RI, RIS, DECKPAM/DECKPNM (=, >), DECBI/DECFI (6, 9), the single and locking
-//! shifts, DECALN (`# 8`), the line sizes (`# 3` to `# 6`, see `screen/line_size`), DECID (Z), and `ESC ( ) * +` + final to designate G0..G3.
+//! shifts, DECALN (`# 8`), the line sizes (`# 3` to `# 6`, see `screen/line_size`), DECID (Z), and
+//! `ESC ( ) * +` + final to designate G0..G3. In VT52 mode the VT52's table is read instead (`vt52`).
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::{Modes, recorded_bit};
@@ -11,6 +12,10 @@ use crate::types::LineSize;
 
 impl Terminal {
     pub(in crate::terminal) fn dispatch_esc(&mut self, intermediates: &[u8], byte: u8) {
+        if self.modes.contains(Modes::VT52) {
+            self.dispatch_vt52(byte);
+            return;
+        }
         match (intermediates, byte) {
             ([], b'7') => self.save_cursor(),
             ([], b'8') => self.restore_cursor(),

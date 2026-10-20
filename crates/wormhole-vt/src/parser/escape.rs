@@ -6,6 +6,9 @@ impl Parser {
     /// After an ESC (`Escape`), or after the ESC that ended a string (`EscapeSt`).
     #[inline]
     pub(super) fn escape<H: Handler>(&mut self, h: &mut H, bytes: &[u8], mut at: usize) -> usize {
+        if h.vt52_mode() {
+            return self.escape_vt52(h, bytes, at);
+        }
         while at < bytes.len() {
             let byte = bytes[at];
             at += 1;
@@ -63,6 +66,34 @@ impl Parser {
                     self.c1(h, byte, false);
                     return at;
                 }
+                // DEL, and the bytes of UTF-8: not part of a sequence.
+                _ => {}
+            }
+        }
+        at
+    }
+
+    /// After an ESC in VT52 mode: the VT52 has no CSI, strings or intermediates, so the next byte
+    /// is the final one, whatever it is (VT100 User Guide, "Valid VT52 Mode Control Sequences").
+    /// Controls still act, as on a VT52, and an ESC begins over.
+    #[cold]
+    fn escape_vt52<H: Handler>(&mut self, h: &mut H, bytes: &[u8], mut at: usize) -> usize {
+        while at < bytes.len() {
+            let byte = bytes[at];
+            at += 1;
+            match byte {
+                0x20..=0x7E => {
+                    h.esc(&[], byte);
+                    self.state = State::Ground;
+                    return at;
+                }
+                0x18 | 0x1A => {
+                    h.execute(byte);
+                    self.state = State::Ground;
+                    return at;
+                }
+                0x1B => self.state = State::Escape,
+                0x00..=0x1F => h.execute(byte),
                 // DEL, and the bytes of UTF-8: not part of a sequence.
                 _ => {}
             }

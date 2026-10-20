@@ -7,6 +7,6 @@ The golden files are the engine's behaviour today, whatever the verdict: the gat
 
 | screen | test | verdict | notes |
 |--------|------|---------|-------|
-| 001 | VT52 cursor addressing and graphics (DECANM reset, `ESC Y`, `ESC F`, ...) | unsupported: VT52 mode | `CSI ? 2 l` is ignored (the engine is always in ANSI mode, by design), so every VT52 sequence is shown as text: the screen is the program's bytes drawn as characters |
-| 002 | VT52 normal and special graphics character sets | unsupported: VT52 mode | as 001 |
-| 003 | IDENTIFY (`ESC Z`) and returning to ANSI mode | unsupported: VT52 mode | the screen has only the prompt: the VT52 specific questions are not shown. (`ESC Z` in ANSI mode is answered as DECID) |
+| 001 | VT52 cursor addressing and graphics (DECANM reset, `ESC Y`, `ESC F`, ...) | pass | the screen is cleared and has the centred rectangle of `*` with `!` inside, and "Only this, and nothing more." as the text says: reverse line feed scrolls down, an address past the screen moves only the other axis |
+| 002 | VT52 normal and special graphics character sets | pass | the normal set, then the special one (`ESC F`). The graphics are the VT100's (DEC special graphics) as in xterm; the VT100 User Guide says the VT52's own differ in some characters, and no published table of them is at hand |
+| 003 | IDENTIFY (`ESC Z`) and returning to ANSI mode | fail: DECRQSS is answered at VT100 level | `ESC Z` is answered `ESC / Z` ("OK (means VT100 emulating VT52)") and `ESC <` leaves VT52 mode at VT100 level (S8C1T is then not recognised, as vttest wants), but DECRQSS for DECSCL is answered, where a VT100 has none: vttest says "DECSCL recognized -- failed". The screen shown is the prompt |

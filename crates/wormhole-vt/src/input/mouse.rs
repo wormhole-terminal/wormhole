@@ -88,7 +88,8 @@ impl MouseEvent {
 /// event, or an event the chosen encoding cannot write, gets nothing).
 pub(super) fn encode(ev: &MouseEvent, modes: &InputModes, out: &mut Vec<u8>) -> bool {
     let tracking = modes.mouse;
-    if tracking == MouseTracking::Off {
+    // VT52 mode has no CSI to report with.
+    if tracking == MouseTracking::Off || modes.vt52 {
         return false;
     }
     let base: u32 = match ev.button {

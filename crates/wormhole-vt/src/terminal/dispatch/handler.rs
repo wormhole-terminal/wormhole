@@ -9,6 +9,7 @@
 
 use crate::parser::{Csi, Handler};
 
+use crate::terminal::modes::Modes;
 use crate::terminal::{Terminal, Terminator};
 
 /// A terminal as the parser's handler, for the length of one `feed`.
@@ -17,16 +18,34 @@ pub(in crate::terminal) struct Sink<'a>(pub(in crate::terminal) &'a mut Terminal
 impl Handler for Sink<'_> {
     #[inline]
     fn eight_bit_controls(&self) -> bool {
-        self.0.eight_bit
+        // The VT52 has no C1 controls.
+        self.0.eight_bit && !self.0.modes.contains(Modes::VT52)
+    }
+
+    #[inline]
+    fn vt52_mode(&self) -> bool {
+        self.0.modes.contains(Modes::VT52)
     }
 
     #[inline]
     fn print_ascii(&mut self, run: &[u8]) {
+        // The two characters after `ESC Y` are coordinates, not text.
+        if self.0.vt52.addressing() {
+            let rest = self.0.vt52_take_address(run);
+            if !rest.is_empty() {
+                self.0.print_ascii_run(rest);
+            }
+            return;
+        }
         self.0.print_ascii_run(run);
     }
 
     #[inline]
     fn print(&mut self, c: char) {
+        if self.0.vt52.addressing() {
+            self.0.vt52_take_address_char();
+            return;
+        }
         self.0.print_char(c);
     }
 

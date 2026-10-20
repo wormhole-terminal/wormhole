@@ -1,31 +1,31 @@
 vttest 20251205 | menu 07-vt52 | screen 001
 path: 7 Test of VT52 mode
-size: 80x24  cursor: row 24 col 76
-modes: default
+size: 80x24  cursor: row 13 col 29
+modes: +VT52 -AUTOWRAP
 --- text
-01|         *
-02|          :5*
-03|
-04|             *
-05|              :3*
-06|
-07|                 *
-08|                  :1*
-09|
-10|                     *
-11|                      :/*
-12|
-13|                         *
-14|                          :-*
-15|
-16|                             *
-17|                              :+*
-18|
-19|                                 *
-20|                                  :)*
-21|
-22|                                     7)!*6d!r"f#q$r%f&q'r(f)q*r+f,q-r.f/q0r1f2q3
-23|r4f5q6r)/The screen should be cleared, and have a centered*/rectangle of "*"s wi
-24|th "!"s on the inside to the+/left and right. Only this, and,/Push <RETURN>
+01|         *************************************************************
+02|         *!                                                         !*
+03|         *!                                                         !*
+04|         *!                                                         !*
+05|         *!                                                         !*
+06|         *!                                                         !*
+07|         *!                                                         !*
+08|         *!                                                         !*
+09|         *!                                                         !*
+10|         *!    The screen should be cleared, and have a centered    !*
+11|         *!    rectangle of "*"s with "!"s on the inside to the     !*
+12|         *!    left and right. Only this, and nothing more.         !*
+13|         *!    Push <RETURN>                                        !*
+14|         *!                                                         !*
+15|         *!                                                         !*
+16|         *!                                                         !*
+17|         *!                                                         !*
+18|         *!                                                         !*
+19|         *!                                                         !*
+20|         *!                                                         !*
+21|         *!                                                         !*
+22|         *!                                                         !*
+23|         *!                                                         !*
+24|         *************************************************************
 --- attributes
 (none)

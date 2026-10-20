@@ -21,7 +21,8 @@ const PASTE_END: &[u8] = b"\x1b[201~";
 /// bracketed paste off a program reads each line as soon as the CR arrives, as xterm does for its
 /// own selection paste.
 pub fn paste(text: &str, modes: &InputModes, out: &mut Vec<u8>) {
-    let bracketed = modes.bracketed_paste;
+    // VT52 mode has no CSI: the markers would reach the program as text.
+    let bracketed = modes.bracketed_paste && !modes.vt52;
     out.reserve(text.len() + PASTE_START.len() + PASTE_END.len());
     if bracketed {
         out.extend_from_slice(PASTE_START);
@@ -49,7 +50,7 @@ pub fn paste(text: &str, modes: &InputModes, out: &mut Vec<u8>) {
 /// Appends the report for the terminal gaining or losing focus: `CSI I` or `CSI O`, once the
 /// program asked for them (mode 1004). Returns whether there was one.
 pub fn focus(focused: bool, modes: &InputModes, out: &mut Vec<u8>) -> bool {
-    if !modes.focus_events {
+    if !modes.focus_events || modes.vt52 {
         return false;
     }
     out.extend_from_slice(if focused { b"\x1b[I" } else { b"\x1b[O" });

@@ -18,6 +18,7 @@
 //! |--------|------|------|
 //! | `dispatch/` | `handler` | the private adapter the parser calls into |
 //! | | `control`, `esc`, `csi` | the dispatch of controls, ESC and CSI finals |
+//! | | `vt52` | VT52 mode (DECANM reset): its escape sequences, `ESC Y`'s two characters, the modes and sets it suspends |
 //! | | `dcs` | device control strings and APC: collecting them and sending them on (sixel is read here; the strings a host asked for with a `Passthrough` are collected here and queued as events) |
 //! | `text/` | `print` | text: ASCII runs, wide characters, marks, grapheme clusters (mode 2027), REP, IRM |
 //! | | `charset` | the sets G0..G3 hold: national replacement sets, DEC Technical and Supplemental, Latin-1; and the shifts |
@@ -58,6 +59,11 @@
 //!
 //! # Choices
 //!
+//! - In VT52 mode the parser reads an ESC and one byte only ([`Handler::vt52_mode`](
+//!   crate::parser::Handler::vt52_mode)), and the terminal reads the VT52's table (`dispatch/vt52`).
+//!   The modes a VT52 has no use for (autowrap, origin, insert, new line) are suspended while it
+//!   lasts and come back with `ESC <`, as do the character sets, and `ESC <` leaves the terminal at
+//!   VT100 level (as xterm and the VT510 manual do); the margins are not touched.
 //! - The wrap after the last column is *delayed* (the cursor stays on the last column with a
 //!   "wrap pending" flag); anything that moves the cursor clears it (terminfo's `xenl`), and so
 //!   does anything that edits the line under it (xterm: "with the right part cleared, we can't
@@ -244,6 +250,8 @@ pub struct Terminal {
     locator: reports::locator::Locator,
     /// What `<` designates (DECAUPSS).
     preferred: Preferred,
+    /// VT52 mode's state: `ESC Y` in progress, graphics mode, and what ANSI mode had.
+    vt52: dispatch::vt52::Vt52,
     /// XTPUSHSGR's stack.
     sgr_stack: text::sgr_stack::SgrStack,
     /// XTPUSHCOLORS' stack.

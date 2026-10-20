@@ -63,7 +63,6 @@ pub(in crate::terminal) enum Status {
     NotRecognized = 0,
     Set = 1,
     Reset = 2,
-    PermanentlySet = 3,
     PermanentlyReset = 4,
 }
 
@@ -182,8 +181,8 @@ pub(in crate::terminal) fn ansi_fixed(n: u16) -> Option<Status> {
 /// reported as reset, there is nothing to ask), and the ones that are permanently one way.
 pub(in crate::terminal) fn fixed_status(n: u16) -> Option<Status> {
     Some(match n {
-        // DECANM: always ANSI (VT52 mode is not supported).
-        2 => Status::PermanentlySet,
+        // DECANM: asked in ANSI mode, which is the only one that can ask.
+        2 => Status::Set,
         // DECHCCM (horizontal cursor coupling, a pan of a page wider than the window), hilite
         // mouse tracking, and xterm's 41 and 1034..1038: not supported.
         60 | 1001 | 1034 | 1035 | 1037 | 1038 => Status::PermanentlyReset,

@@ -55,12 +55,12 @@ impl Parser {
                     // nearly always in the input too: read them without a trip round the state
                     // machine, and carry on here if the sequence ends within the input.
                     match bytes.get(at + 1) {
-                        Some(b'[') => {
+                        Some(b'[') if !h.vt52_mode() => {
                             self.begin();
                             self.state = State::CsiParam;
                             at = self.params::<H, false>(h, bytes, at + 2);
                         }
-                        Some(b']') => {
+                        Some(b']') if !h.vt52_mode() => {
                             self.state = State::Osc;
                             h.osc_start();
                             at = self.osc(h, bytes, at + 2);

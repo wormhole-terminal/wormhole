@@ -43,6 +43,7 @@ impl Terminal {
         self.charsets = Default::default();
         self.locator = Default::default();
         self.preferred = Default::default();
+        self.vt52 = Default::default();
         self.sgr_stack = Default::default();
         self.color_stack = Default::default();
         self.inband = Default::default();
