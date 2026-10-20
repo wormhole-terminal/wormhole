@@ -19,6 +19,8 @@ memchr = "2.8"
 # switches it on for them, so `cargo test -p wormhole-vt` needs no flag, and not for anyone who
 # depends on the crate.
 wormhole-vt = { path = ".", features = ["internals"] }
+# Micro-benchmarks (`cargo bench -p wormhole-vt`): allocation counts and throughput per hot path.
+divan = "0.1"
 
 [features]
 # Not for users, not stable, not versioned: what our own tools reach into. It makes the `grid`
@@ -33,3 +35,7 @@ required-features = ["internals"]
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "engine"
+harness = false
