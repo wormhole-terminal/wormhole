@@ -16,7 +16,7 @@ use super::{Grid, RowMark};
 /// One row of the view as [`Terminal::copy_viewport`](crate::Terminal::copy_viewport) fills it:
 /// the cells to draw, what they carry besides, and whether the row was copied again by that call.
 /// Keep the rows between calls: their buffers are reused.
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct ViewRow {
     /// One cell per column.
