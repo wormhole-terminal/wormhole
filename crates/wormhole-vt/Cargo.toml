@@ -3,7 +3,8 @@ name = "wormhole-vt"
 description = "Wormhole's terminal engine: the escape-sequence parser, the screen and its history. No PTY, no UI."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+# MIT, unlike the app (GPL-3.0-or-later), so other projects can embed the engine.
+license = "MIT"
 repository.workspace = true
 publish.workspace = true
 

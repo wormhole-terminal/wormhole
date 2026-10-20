@@ -199,3 +199,5 @@ and takes the newer, and it shows Settings → Feature flags, which a release ot
 
 By contributing you agree that your contribution is licensed under the GNU General Public License
 v3.0 or later, the license of the project.
+A contribution to the terminal engine (`crates/wormhole-vt`) is licensed under the MIT License, the
+engine's license.

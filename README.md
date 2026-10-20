@@ -137,6 +137,8 @@ grid, corner radii, colors from design tokens). See `CONTRIBUTING.md`.
 ## License
 
 Wormhole is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
+The terminal engine, `crates/wormhole-vt`, is under the [MIT License](crates/wormhole-vt/LICENSE)
+so that other projects can use it.
 Bundled third-party assets keep their own licenses: JetBrains Mono (SIL OFL 1.1), the built-in themes
 and icons (see the license files next to them), and the Rust dependencies listed in the app's
 About → Licenses window.
