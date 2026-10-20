@@ -124,6 +124,18 @@ impl Parser {
         self.state == State::Ground
     }
 
+    /// The parts of the state that decide what the parser does next, as text for `dump_state`: the
+    /// state it is in, the bytes of a cut character it holds and the continuation bytes a string
+    /// still owes. The buffer for a cut character keeps old bytes once the character is finished,
+    /// and past `pending_len`; they are never read, so they are left out and two parsers that were
+    /// fed the same bytes in different pieces show the same.
+    #[cfg(any(test, feature = "internals"))]
+    pub(crate) fn essence(&self) -> String {
+        let held =
+            if self.state == State::Utf8 { &self.pending[..usize::from(self.pending_len)] } else { &[] };
+        format!("{:?} pending {held:?} string_utf8 {}", self.state, self.string_utf8)
+    }
+
     /// Read `bytes`, calling `handler` for what they hold. The input may end anywhere, in the
     /// middle of a sequence or of a character; the next call carries on.
     pub fn advance<H: Handler>(&mut self, handler: &mut H, bytes: &[u8]) {

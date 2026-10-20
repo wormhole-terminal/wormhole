@@ -20,7 +20,6 @@
 use std::fmt::Write as _;
 
 use crate::grid::{BlockPart, Grid, RowView, Style};
-use crate::parser::Parser;
 use crate::types::{Color, Line, NamedColor};
 
 use crate::terminal::Terminal;
@@ -219,15 +218,6 @@ fn content(c: BlockPart) -> &'static str {
     }
 }
 
-/// The parser's own state: which one it is in and the bytes of a character it holds. The
-/// parameters of the last sequence are leftovers the next sequence overwrites.
-fn parser_essence(parser: &Parser) -> String {
-    let text = format!("{parser:?}");
-    let state = text.split(", cur").next().unwrap_or("");
-    let held = text.find("pending:").map_or("", |at| &text[at..]);
-    format!("{state} {held}")
-}
-
 impl Terminal {
     /// Every observable piece of the terminal's state; see the module docs.
     pub fn dump_state(&self) -> StateDump {
@@ -282,7 +272,7 @@ impl Terminal {
         d.field("a/history_just_cleared", self.history_just_cleared.to_string());
         d.field("a/level", format!("{:?} eight_bit {}", self.level, self.eight_bit));
         d.field("a/kept", format!("{:?}", self.kept));
-        d.field("a/parser", parser_essence(&self.parser));
+        d.field("a/parser", self.parser.essence());
         d.field("a/guard_used", self.guard_used.to_string());
         d.field("a/attr_extent", format!("{:?}", self.attr_extent));
         for (name, value) in self.graphics.describe() {
@@ -293,5 +283,30 @@ impl Terminal {
         // The names sort the way a reader looks for them; the diff walks both lists in order.
         d.fields.sort_by(|(a, _), (b, _)| a.cmp(b));
         d
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::terminal::Terminal;
+
+    /// Two terminals fed the same bytes in different pieces show the same state, also when a piece
+    /// ended in the middle of a character: the parser's buffer for it keeps the old bytes.
+    #[test]
+    fn the_parser_shows_only_the_live_bytes_of_a_cut_character() {
+        let text = "a€é😀b \x1b[1m€".as_bytes();
+        let mut whole = Terminal::new(20, 3);
+        whole.feed(text);
+        let mut by_byte = Terminal::new(20, 3);
+        for byte in text {
+            by_byte.feed(&[*byte]);
+        }
+        assert_eq!(whole.dump_state().diff(&by_byte.dump_state(), 4), "");
+        // Cut inside a character, the held bytes show.
+        let mut cut = Terminal::new(20, 3);
+        cut.feed(&text[..2]);
+        let dump = cut.dump_state();
+        let parser = dump.fields.iter().find(|(name, _)| name == "a/parser").map(|(_, value)| value.as_str());
+        assert_eq!(parser, Some("Utf8 pending [226] string_utf8 0"));
     }
 }

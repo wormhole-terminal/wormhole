@@ -349,35 +349,8 @@ struct Observed {
     events: Vec<Event>,
 }
 
-/// `dump_state`'s line for the parser (`Parser { state: Utf8 pending: [226, 130, 0], pending_len: 2,
-/// string_utf8: 0 }`) with the dead bytes of `pending` left out.
-fn live_parser(dump: &str) -> String {
-    let Some(at) = dump.find(" pending: [") else { return dump.to_string() };
-    let head = &dump[..at];
-    let list = dump[at + " pending: [".len()..].split(']').next().unwrap_or("");
-    let len = dump
-        .split("pending_len: ")
-        .nth(1)
-        .and_then(|rest| rest.split(',').next())
-        .and_then(|n| n.trim().parse::<usize>().ok())
-        .unwrap_or(0);
-    // Out of the UTF-8 state nothing of the buffer is read.
-    let live = if head.contains("Utf8") { len } else { 0 };
-    let bytes: Vec<&str> = list.split(", ").take(live).collect();
-    let tail = dump.split("string_utf8: ").nth(1).unwrap_or("");
-    format!("{head} pending {bytes:?} string_utf8 {}", tail.trim_end_matches([' ', '}']))
-}
-
 fn observe(mut term: Terminal) -> Observed {
-    let mut state = term.dump_state();
-    // The parser's buffer for a half-read character keeps old bytes: after the character is
-    // finished or thrown away, and past `pending_len`. They are dead values, like a closed
-    // cluster's fields in `dump_state`; only the live part is compared.
-    for (name, value) in &mut state.fields {
-        if name == "a/parser" {
-            *value = live_parser(value);
-        }
-    }
+    let state = term.dump_state();
     let replies = term.take_replies();
     let events = term.events().collect();
     Observed { state, replies, events }
