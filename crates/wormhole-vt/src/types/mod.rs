@@ -14,6 +14,7 @@ mod extras;
 mod hyperlink;
 mod image;
 mod index;
+mod line_size;
 mod mode;
 mod view;
 
@@ -23,5 +24,6 @@ pub use extras::{CellExtra, RowExtras};
 pub use hyperlink::{Hyperlink, LinkId};
 pub use image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
 pub use index::{Column, Line, Point, Side};
+pub use line_size::LineSize;
 pub use mode::{KittyFlags, Modes, MouseEncoding, MouseTracking};
 pub use view::{CursorShape, Scroll, SelectionRange, SelectionType};

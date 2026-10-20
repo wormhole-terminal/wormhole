@@ -2,7 +2,7 @@
 
 use wormhole_vt::grid::Style;
 use wormhole_vt::{
-    COLOR_COUNT, Color, ColorScheme, Column, Flags, Line, Modes, NamedColor, Point, Rgb, Terminal,
+    COLOR_COUNT, Color, ColorScheme, Column, Flags, Line, LineSize, Modes, NamedColor, Point, Rgb, Terminal,
 };
 
 use super::xterm_palette;
@@ -141,6 +141,16 @@ impl Engine for WormholeEngine {
 
     fn row_wrapped(&self, row: usize) -> bool {
         self.term.is_wrapped(Line(row as i32))
+    }
+
+    fn row_line_size(&self, row: usize) -> Option<&'static str> {
+        Some(match self.term.line_size(Line(row as i32)) {
+            LineSize::Single => "single",
+            LineSize::DoubleWidth => "double-width",
+            LineSize::DoubleHeightTop => "double-height-top",
+            LineSize::DoubleHeightBottom => "double-height-bottom",
+            _ => "unknown",
+        })
     }
 
     fn cell(&self, row: usize, col: usize) -> Cell {

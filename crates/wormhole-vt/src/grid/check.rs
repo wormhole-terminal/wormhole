@@ -23,6 +23,7 @@ impl Grid {
     /// - Each style's count equals the cells that use it, and the table's index finds every entry.
     /// - A cell has a grapheme or link entry exactly when its flag says, and no entry is orphaned;
     ///   each link's count equals its cells.
+    /// - A double-width row is not soft-wrapped, and a screen without a flag for sizes has none.
     /// - Every pin is inside the grid or dropped, the view's offset is within the history.
     /// - Every placement has at least one cell, starts inside the width, and still has a row.
     pub fn check_invariants(&self) -> Result<(), String> {
@@ -55,6 +56,9 @@ impl Grid {
         if self.offset > self.history_len() {
             return Err(format!("view offset {} beyond the history of {}", self.offset, self.history_len()));
         }
+        if !self.sized && (0..self.rows).any(|y| self.live_line_size_unchecked(y).is_double()) {
+            return Err("a live row has a size but the grid says none does".into());
+        }
         self.check_placements()?;
         for (_, serial, col) in self.pins.live() {
             // A pin whose row is gone (before the history's start, or cut off the end) keeps
@@ -84,8 +88,11 @@ fn check_page(page: &Page) -> Result<(), String> {
         if std::mem::replace(&mut used[slot], true) {
             return Err(format!("slot {slot} is two rows"));
         }
-        if row.flags & !(DIRTY | super::row::WRAPPED) != 0 {
+        if row.flags & !(DIRTY | super::row::WRAPPED | super::row::SIZE_MASK) != 0 {
             return Err(format!("row {ix} has unknown flags {:#x}", row.flags));
+        }
+        if row.size().is_double() && row.wrapped() {
+            return Err(format!("row {ix} is double-width and soft-wrapped"));
         }
     }
     for (slot, in_use) in used.iter().enumerate() {

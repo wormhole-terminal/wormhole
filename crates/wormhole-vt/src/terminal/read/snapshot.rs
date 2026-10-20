@@ -6,7 +6,7 @@
 //! allocates once the buffers are the right size.
 
 use crate::grid::{Pin, RowMark, ViewRow};
-use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll};
+use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, LineSize, Point, RowExtras, Scroll};
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
@@ -108,6 +108,12 @@ impl Terminal {
     /// Whether `line` goes on in the next row (a soft wrap).
     pub fn is_wrapped(&self, line: Line) -> bool {
         self.grid.is_wrapped(line)
+    }
+
+    /// How big the row at `line` is drawn (DECDWL, DECDHL); `Single` for a line the terminal does
+    /// not have. The rows of [`copy_viewport`](Self::copy_viewport) carry it too.
+    pub fn line_size(&self, line: Line) -> LineSize {
+        self.grid.line_size(line)
     }
 
     /// The block mark (OSC 133) the row at `line` carries.

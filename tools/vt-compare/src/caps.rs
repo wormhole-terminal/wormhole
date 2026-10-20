@@ -23,6 +23,8 @@ pub struct Caps {
     pub attrs: Attrs,
     /// Whether a row says it continues in the next (`wrapped`, `lines`).
     pub wrapped: bool,
+    /// Whether a row says how big it is drawn (DECDWL, DECDHL; `line-size`).
+    pub line_sizes: bool,
     /// Lines scrolled off the top, readable one by one.
     pub scrollback: bool,
 }
@@ -36,6 +38,7 @@ impl Caps {
         underline_color: true,
         attrs: Attrs::all(),
         wrapped: true,
+        line_sizes: true,
         scrollback: true,
     };
 }
@@ -49,9 +52,12 @@ pub fn caps_of(name: &str) -> Caps {
             replies: false,
             links: false,
             underline_color: false,
+            line_sizes: false,
             attrs: Attrs::BOLD | Attrs::DIM | Attrs::ITALIC | Attrs::UNDERLINE | Attrs::INVERSE,
             ..Caps::ALL
         },
+        // The adapters of the other engines do not read a row's size.
+        "alacritty" | "ghostty" | "wezterm" => Caps { line_sizes: false, ..Caps::ALL },
         _ => Caps::ALL,
     }
 }
@@ -63,6 +69,7 @@ pub fn not_applicable(case: &Case, caps: &Caps) -> Option<&'static str> {
             StepKind::Reply(_) if !caps.replies => return Some("no replies"),
             StepKind::Title(_) if !caps.title => return Some("no title"),
             StepKind::Wrapped { .. } | StepKind::Lines(_) if !caps.wrapped => return Some("no wrap flag"),
+            StepKind::LineSize { .. } if !caps.line_sizes => return Some("no line sizes"),
             StepKind::Scrollback(_) | StepKind::ScrollbackLen(_) if !caps.scrollback => {
                 return Some("no history");
             }

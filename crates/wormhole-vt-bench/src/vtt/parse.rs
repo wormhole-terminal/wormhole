@@ -317,6 +317,21 @@ impl Parser<'_> {
                 };
                 StepKind::Wrapped { row: one_based(row)?, wrapped }
             }
+            "line-size" => {
+                let (row, answer) = rest.split_once(' ').ok_or("line-size <row> single|double-width|…")?;
+                let size = match answer.trim() {
+                    "single" => "single",
+                    "double-width" => "double-width",
+                    "double-height-top" => "double-height-top",
+                    "double-height-bottom" => "double-height-bottom",
+                    other => {
+                        return Err(format!(
+                            "{other:?} is none of single, double-width, double-height-top, double-height-bottom"
+                        ));
+                    }
+                };
+                StepKind::LineSize { row: one_based(row)?, size }
+            }
             other => return Err(format!("unknown directive `{other}`")),
         };
         b.case.steps.push(Step { line: number, kind });

@@ -131,6 +131,9 @@ impl Grid {
             None => 0,
         };
         self.all_dirty = true;
+        // Rows from the history may have come onto the screen.
+        self.sized = true;
+        self.recount_line_sizes();
         self.drop_placements_off_screen();
         // Rows went from the history to the screen and back: measure the pages again.
         self.pages.iter_mut().for_each(Page::forget_extra_bytes);

@@ -10,7 +10,7 @@
 //! the host has taken what is waiting: the lines that did arrive and the ones that were skipped
 //! stay in the order they left the history.
 
-use crate::types::{Cell as DrawCell, RowExtras};
+use crate::types::{Cell as DrawCell, LineSize, RowExtras};
 
 use super::copy::copy_page_row;
 use super::page::Page;
@@ -43,6 +43,8 @@ pub struct HistoryLine {
     /// The line goes on in the next row: the text of a wrapped row and of the rows after it, up
     /// to the first that is not wrapped, is one line of text.
     pub wrapped: bool,
+    /// How big the row was drawn (DECDWL, DECDHL).
+    pub size: LineSize,
 }
 
 /// History lines that left the engine, oldest first, and why. See
@@ -93,7 +95,13 @@ impl Archive {
             let mut extras = RowExtras::default();
             let mark = copy_page_row(page, row, &mut cells, Some(&mut extras));
             *used += cost + extras.heap_bytes();
-            batch.lines.push(HistoryLine { cells, extras, mark, wrapped: page.rows[row].wrapped() });
+            batch.lines.push(HistoryLine {
+                cells,
+                extras,
+                mark,
+                wrapped: page.rows[row].wrapped(),
+                size: page.rows[row].size(),
+            });
         }
         if batch.lines.is_empty() && batch.skipped == 0 {
             batches.pop();

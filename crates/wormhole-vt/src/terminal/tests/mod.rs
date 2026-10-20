@@ -8,6 +8,7 @@ mod events;
 mod hostile;
 mod keyboard;
 mod limits;
+mod line_size;
 mod passthrough;
 mod pointer_and_vars;
 mod rare;

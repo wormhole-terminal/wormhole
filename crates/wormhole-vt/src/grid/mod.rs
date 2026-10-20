@@ -24,6 +24,8 @@
 //!   scrolled-back view in `view.rs`.
 //! - Lines that leave the history can be copied out first for the host (`archive.rs`); off, the
 //!   cost is one test where a page is dropped.
+//! - A row can be double-width or half of a double-height line (`line_size.rs`): two bits of its
+//!   record, which move with it.
 //! - The snapshot copy (`copy.rs`) turns rows into [`crate::types::Cell`]s and [`crate::types::RowExtras`].
 //! - Text out of the grid (`text.rs`: a range to copy, the lines to restore; `words.rs`: the word,
 //!   bracket and line around a cell; `links.rs`: how far a hyperlink reaches; `search.rs`: a
@@ -59,6 +61,7 @@ mod edit;
 mod graphemes;
 mod history;
 mod images;
+mod line_size;
 mod links;
 mod page;
 mod pages;
@@ -136,6 +139,8 @@ pub struct Grid {
     /// Everything on the screen changed (a resize, a clear, the view moved) and the snapshot must
     /// copy all of it, whatever the rows' own marks say.
     all_dirty: bool,
+    /// A live row may have a size other than single (`line_size`).
+    sized: bool,
     /// Rows per page, when a test wants pages small enough for the live rows to span several;
     /// 0 for the size `page_capacity` picks.
     page_rows: usize,
@@ -188,6 +193,7 @@ impl Grid {
             pins: Pins::default(),
             placements: images::Placements::default(),
             all_dirty: true,
+            sized: false,
             page_rows,
             archive: None,
             segments: Vec::new(),

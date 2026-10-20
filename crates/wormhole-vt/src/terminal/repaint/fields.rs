@@ -133,6 +133,7 @@ const GRID: &[(&str, Coverage)] = &[
     ("pins", Viewer("selection anchors and search hits")),
     ("placements", Gap("Gaps::PLACEMENTS")),
     ("all_dirty", Viewer("what the snapshot must copy again")),
+    ("sized", Derived("a hint that a row has a size: set by the sizes the rows are written with")),
     ("page_rows", Scratch("a test knob")),
     ("archive", Host("the lines waiting for the host, if it asked for the history that is dropped")),
     ("segments", Scratch("scratch for a scroll")),
@@ -152,7 +153,12 @@ const PEN: &[(&str, Coverage)] = &[
 const ROW: &[(&str, Coverage)] = &[
     ("block", Written("OSC 133;A before the row's first marked cell")),
     ("slot", Scratch("where the row's cells are in the page")),
-    ("flags", Written("the wrap by printing into the next row; DIRTY is the viewer's")),
+    (
+        "flags",
+        Written(
+            "the wrap by printing into the next row; the size by `ESC # n` after the row; DIRTY is the viewer's",
+        ),
+    ),
 ];
 
 const GRAPHICS: &[(&str, Coverage)] = &[

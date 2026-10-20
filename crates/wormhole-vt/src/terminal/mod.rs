@@ -26,6 +26,7 @@
 //! | | `edit` | ED, EL, ECH, ICH, DCH, IL, DL, DECIC, DECDC, DECSED, DECSEL |
 //! | | `rect` | DECCARA, DECRARA, DECCRA, DECFRA, DECERA, DECSERA, DECSACE |
 //! | | `scroll` | IND, RI, NEL, SU, SD, DECSTBM, DECSLRM, DECBI, DECFI |
+//! | | `line_size` | DECSWL, DECDWL, DECDHL: a row drawn double-width or as half of a double-height line, and the cursor limited to the half it shows |
 //! | | `tabs` | the tab stops themselves |
 //! | | `altscreen` | 47, 1047, 1048, 1049 |
 //! | | `resize`, `reset` | the window changing size, DECCOLM; RIS, DECSTR, DECALN |

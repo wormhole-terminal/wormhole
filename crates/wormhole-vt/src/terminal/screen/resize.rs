@@ -44,6 +44,7 @@ impl Terminal {
                 self.cursor.pending = true;
             }
         }
+        self.fit_cursor();
         let saved = &mut self.saved[other_slot].cursor;
         saved.x = other_moved.column.0;
         saved.y = other_moved.line.0.max(0) as usize;

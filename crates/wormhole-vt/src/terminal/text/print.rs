@@ -72,8 +72,9 @@ impl Terminal {
                     self.cursor.pending = false;
                 }
             }
-            let (x, y) = (self.cursor.x, self.cursor.y);
+            let y = self.cursor.y;
             let right = self.right_limit();
+            let x = self.cursor.x.min(right);
             let (head, rest) = run.split_at(run.len().min(right + 1 - x));
             if insert {
                 let bg = self.erase_color();
@@ -104,7 +105,11 @@ impl Terminal {
     /// of the next line (the left margin), scrolling at the bottom margin.
     pub(in crate::terminal) fn wrap(&mut self) {
         let y = self.cursor.y;
-        self.grid.set_wrapped(y, true);
+        // A double-width row has no soft wrap: its text is not rejoined with the next row's
+        // (reflow leaves it alone, and the half it hides would come between them).
+        if !self.grid.live_line_size(y).is_double() {
+            self.grid.set_wrapped(y, true);
+        }
         let x = if self.cursor.x <= self.margins.right { self.margins.left } else { 0 };
         if y == self.margins.bottom {
             self.scroll_up(1);
@@ -113,6 +118,7 @@ impl Terminal {
         }
         self.cursor.x = x;
         self.cursor.pending = false;
+        self.fit_cursor();
     }
 
     /// A printable character from a multi-byte sequence.
@@ -249,7 +255,7 @@ impl Terminal {
     /// again and the cursor steps back to it.
     fn narrow_cluster(&mut self) {
         let (y, head) = (self.cursor.y, self.cluster.head);
-        let right = if head <= self.margins.right { self.margins.right } else { self.cols - 1 };
+        let right = self.right_edge(head, y);
         if self.grid.set_width(y, head, 1) {
             self.cluster.width = 1;
             self.cursor.pending = false;
@@ -260,7 +266,7 @@ impl Terminal {
     /// A VS16, a spacing mark or a conjunct's consonant made the cluster at `cluster.head` two cells wide.
     fn widen_cluster(&mut self) {
         let (y, head) = (self.cursor.y, self.cluster.head);
-        let right = if head <= self.margins.right { self.margins.right } else { self.cols - 1 };
+        let right = self.right_edge(head, y);
         let autowrap = self.modes.contains(Modes::AUTOWRAP);
         if head < right {
             if self.grid.set_width(y, head, 2) {

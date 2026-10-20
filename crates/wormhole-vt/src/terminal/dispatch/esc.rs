@@ -2,11 +2,12 @@
 //!
 //! Spec: xterm's ctlseqs ("Controls beginning with ESC") and the VT510 manual: DECSC/DECRC (7, 8),
 //! IND, NEL, HTS, RI, RIS, DECKPAM/DECKPNM (=, >), DECBI/DECFI (6, 9), the single and locking
-//! shifts, DECALN (`# 8`), DECID (Z), and `ESC ( ) * +` + final to designate G0..G3.
+//! shifts, DECALN (`# 8`), the line sizes (`# 3` to `# 6`, see `screen/line_size`), DECID (Z), and `ESC ( ) * +` + final to designate G0..G3.
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::{Modes, recorded_bit};
 use crate::terminal::text::charset;
+use crate::types::LineSize;
 
 impl Terminal {
     pub(in crate::terminal) fn dispatch_esc(&mut self, intermediates: &[u8], byte: u8) {
@@ -39,6 +40,11 @@ impl Terminal {
             ([], b'~') => self.charsets.invoke_right(1),
             ([], b'}') => self.charsets.invoke_right(2),
             ([], b'|') => self.charsets.invoke_right(3),
+            // DECDHL top and bottom, DECSWL and DECDWL: the cursor's row changes size.
+            ([b'#'], b'3') => self.set_line_size(LineSize::DoubleHeightTop),
+            ([b'#'], b'4') => self.set_line_size(LineSize::DoubleHeightBottom),
+            ([b'#'], b'5') => self.set_line_size(LineSize::Single),
+            ([b'#'], b'6') => self.set_line_size(LineSize::DoubleWidth),
             ([b'#'], b'8') => self.screen_alignment(),
             (_, final_byte) => self.designate_charset(intermediates, final_byte),
         }

@@ -2,13 +2,17 @@
 
 use super::cell::{BlockPart, CellFlags};
 use super::style::Style;
-use crate::types::Hyperlink;
+use crate::types::{Hyperlink, LineSize};
 
 /// The row continues in the next one: the line was wrapped by the terminal at the margin, not
 /// ended by the program.
 pub(super) const WRAPPED: u8 = 1;
 /// The row changed since the snapshot last copied it.
 pub(super) const DIRTY: u8 = 1 << 1;
+/// Where the row's [`LineSize`] sits in the flags: two bits, so a normal row (zero) costs nothing
+/// and the size moves with the record when scrolling rotates records.
+pub(super) const SIZE_SHIFT: u8 = 2;
+pub(super) const SIZE_MASK: u8 = 0b11 << SIZE_SHIFT;
 
 /// A row of a page: which slot of the page's cell buffer holds its cells, and what the terminal
 /// knows about the line.
@@ -35,6 +39,27 @@ impl Row {
     pub(super) fn wrapped(&self) -> bool {
         self.flags & WRAPPED != 0
     }
+
+    /// How big the row is drawn.
+    #[inline]
+    pub(super) fn size(&self) -> LineSize {
+        LineSize::from_bits((self.flags & SIZE_MASK) >> SIZE_SHIFT)
+    }
+
+    /// What a row copied over another takes along.
+    #[inline]
+    pub(super) fn meta(&self) -> Meta {
+        Meta { wrapped: self.wrapped(), block: self.block, size: self.size() }
+    }
+}
+
+/// What a row carries besides its cells, for the copies that move a row whole (a scroll across
+/// pages, a crop): the wrap flag, the command block and the line size.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct Meta {
+    pub(super) wrapped: bool,
+    pub(super) block: u32,
+    pub(super) size: LineSize,
 }
 
 /// What a row carries of a command block (shell integration, OSC 133), read back from its cells:

@@ -192,6 +192,7 @@ fn step_name(kind: &StepKind) -> &'static str {
         StepKind::ScrollbackLen(_) => "scrollback-len",
         StepKind::Lines(_) => "lines",
         StepKind::Wrapped { .. } => "wrapped",
+        StepKind::LineSize { .. } => "line-size",
     }
 }
 
@@ -319,6 +320,16 @@ fn check<E: Engine>(engine: &mut E, replies: &mut Vec<u8>, kind: &StepKind) -> R
             } else {
                 let word = |w: bool| if w { "wrapped into the next row" } else { "not wrapped" };
                 Err(format!("row {row} expected {}; it is {}", word(*wrapped), word(actual)))
+            }
+        }
+        StepKind::LineSize { row, size } => {
+            if *row > rows {
+                return Err(format!("row {row} is below the screen ({rows} rows)"));
+            }
+            match engine.row_line_size(row - 1) {
+                Some(actual) if actual == *size => Ok(()),
+                Some(actual) => Err(format!("row {row} expected size {size}; it is {actual}")),
+                None => Err("this engine does not report line sizes".to_string()),
             }
         }
     }

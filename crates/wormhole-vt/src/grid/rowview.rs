@@ -5,7 +5,7 @@
 //! block). The repaint writer (`term::repaint`) and the state dump need all of it, and a row at
 //! a time: [`Grid::row_view`] finds the page once, and the view then answers for the whole row.
 
-use crate::types::{Hyperlink, Line};
+use crate::types::{Hyperlink, Line, LineSize};
 
 use super::cell::Cell;
 use super::page::Page;
@@ -60,6 +60,12 @@ impl<'a> RowView<'a> {
     #[inline]
     pub fn wrapped(&self) -> bool {
         self.page.rows[self.row].wrapped()
+    }
+
+    /// How big the row is drawn.
+    #[inline]
+    pub fn line_size(&self) -> LineSize {
+        self.page.rows[self.row].size()
     }
 
     /// The command block (OSC 133) number the row was marked with, 0 for none. The mark a host

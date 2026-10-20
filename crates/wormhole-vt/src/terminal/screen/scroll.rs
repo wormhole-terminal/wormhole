@@ -11,6 +11,7 @@ impl Terminal {
         let region = self.region();
         let bg = self.erase_color();
         self.grid.scroll_up(region, n, bg);
+        self.fit_cursor();
     }
 
     /// Scroll the region down by `n` lines.
@@ -18,6 +19,7 @@ impl Terminal {
         let region = self.region();
         let bg = self.erase_color();
         self.grid.scroll_down(region, n, bg);
+        self.fit_cursor();
     }
 
     /// IND, and LF, VT and FF: down one line, scrolling at the bottom margin. The column stays.
@@ -32,6 +34,7 @@ impl Terminal {
             self.cursor.y += 1;
         }
         self.cursor.pending = false;
+        self.fit_cursor();
     }
 
     /// LF, VT and FF: IND, and with LNM also a carriage return (VT510, LNM).
@@ -58,6 +61,7 @@ impl Terminal {
             self.cursor.y -= 1;
         }
         self.cursor.pending = false;
+        self.fit_cursor();
     }
 
     /// DECSTBM. `top` and `bottom` count from 1, 0 meaning the default. Not valid (nothing
@@ -92,12 +96,13 @@ impl Terminal {
     /// (VT510, DECFI).
     pub(in crate::terminal) fn forward_index(&mut self) {
         let Terminal { cursor, margins, .. } = *self;
-        if cursor.x == margins.right && cursor.x >= margins.left {
+        let right = margins.right.min(self.row_right(cursor.y));
+        if cursor.x == right && cursor.x >= margins.left {
             let bg = self.erase_color();
             for y in margins.top..=margins.bottom {
                 self.grid.delete_cells(y, margins.left, margins.right, 1, bg);
             }
-        } else if cursor.x + 1 < self.cols {
+        } else if cursor.x < self.row_right(cursor.y) {
             self.cursor.x += 1;
         }
         self.cursor.pending = false;

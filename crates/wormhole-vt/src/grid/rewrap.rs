@@ -180,6 +180,14 @@ impl Rewrap {
             self.ti += 1;
         }
         let here = first_track..self.ti;
+        if record.size().is_double() {
+            // A double-width or double-height row is never reflowed (it keeps its cells):
+            // the line gathered so far ends before it, and the row is cropped or padded like the
+            // alternate screen's.
+            self.flush();
+            self.copy_sized_row(page, row, here, serial);
+            return;
+        }
         let width = self.next.cols;
         if self.line.cells.is_empty() && !wrapped {
             // A line of one row: the common case, copied whole when it fits.
@@ -238,6 +246,24 @@ impl Rewrap {
         dst.set_block(dst_row, page.block(row));
         for t in tracks {
             self.tracks[t].result = (new_serial, self.tracks[t].col);
+        }
+        if serial == self.used_row {
+            self.used_end = new_serial + 1;
+        }
+    }
+
+    /// A row with a size other than single, whole: its cells cut or padded to the new width, its
+    /// wrap flag, block and size kept. A cell is only cut after the half the row shows.
+    fn copy_sized_row(&mut self, page: &Page, row: usize, tracks: std::ops::Range<usize>, serial: u64) {
+        let width = self.next.cols;
+        self.next.push_row();
+        let new_serial = self.next.end - 1;
+        let Some(dst) = self.next.pages.back_mut() else { return };
+        let dst_row = dst.rows.len() - 1;
+        dst.copy_from_page(page, row, dst_row, 0..width.min(page.cols()));
+        dst.set_meta(dst_row, page.meta(row));
+        for t in tracks {
+            self.tracks[t].result = (new_serial, self.tracks[t].col.min(width - 1));
         }
         if serial == self.used_row {
             self.used_end = new_serial + 1;

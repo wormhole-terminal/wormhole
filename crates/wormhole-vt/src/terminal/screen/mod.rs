@@ -4,6 +4,7 @@
 pub(super) mod altscreen;
 pub(super) mod cursor;
 pub(super) mod edit;
+pub(super) mod line_size;
 pub(super) mod rect;
 pub(super) mod reset;
 pub(super) mod resize;

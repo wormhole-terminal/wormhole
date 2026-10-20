@@ -121,6 +121,12 @@ pub enum StepKind {
         row: usize,
         wrapped: bool,
     },
+    /// How big the row (from 1) is drawn: `single`, `double-width`, `double-height-top` or
+    /// `double-height-bottom` (DECSWL, DECDWL, DECDHL).
+    LineSize {
+        row: usize,
+        size: &'static str,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

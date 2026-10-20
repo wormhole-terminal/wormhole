@@ -9,6 +9,7 @@ impl Terminal {
     /// - Both grids are valid ([`Grid::check_invariants`](crate::grid::Grid::check_invariants)) and
     ///   have the terminal's size.
     /// - The cursor, the saved cursors and the margins are inside the screen, the margins in order.
+    /// - The cursor is in a column its row shows (a double-width row shows half).
     /// - A wrap is only pending on the cursor's last column.
     /// - There is one tab stop slot per column.
     /// - The pictures of a screen are within their count and byte budgets.
@@ -30,6 +31,13 @@ impl Terminal {
             return Err(format!(
                 "cursor at {},{} outside {}x{}",
                 self.cursor.x, self.cursor.y, self.cols, self.rows
+            ));
+        }
+        if self.cursor.x > self.row_right(self.cursor.y) {
+            return Err(format!(
+                "cursor at column {} of a row that shows {}",
+                self.cursor.x,
+                self.row_right(self.cursor.y) + 1
             ));
         }
         if self.cursor.pending && self.cursor.x != self.right_limit() {

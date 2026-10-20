@@ -103,14 +103,20 @@ impl Grid {
         page.erase(row, x.start..end, bg, spare);
     }
 
-    /// Blank whole rows `ys` (ED, and what a scroll's new lines are). Their soft wraps and blocks
-    /// are forgotten. Pictures covering any of the rows are deleted, unless the erase is selective.
+    /// Blank whole rows `ys` (ED, and what a scroll's new lines are). Their soft wraps, blocks
+    /// and sizes (`line_size`) are forgotten, but not by an erase that spares cells (selective, or
+    /// guarded areas in use). Pictures covering any of the rows are deleted, unless the erase is
+    /// selective.
     pub fn erase_rows(&mut self, ys: Range<usize>, bg: Color, spare: impl Into<Spare>) {
         let spare = spare.into();
         if spare != Spare::Selective && !self.placements.is_empty() {
             self.placements_erased(ys.start..ys.end.min(self.rows), 0..self.cols);
         }
+        let whole_screen = ys.start == 0 && ys.end >= self.rows;
         self.erase_rows_cells(ys, bg, spare);
+        if whole_screen && spare == Spare::Nothing {
+            self.recount_line_sizes();
+        }
     }
 
     /// [`Self::erase_rows`] without the pictures: for the scrolls, which place them themselves.

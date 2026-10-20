@@ -20,7 +20,7 @@
 use std::fmt::Write as _;
 
 use crate::grid::{BlockPart, Grid, RowView, Style};
-use crate::types::{Color, Line, NamedColor};
+use crate::types::{Color, Line, LineSize, NamedColor};
 
 use crate::terminal::Terminal;
 
@@ -171,7 +171,13 @@ fn row_text(grid: &Grid, line: Line) -> String {
         Some(m) => format!("{}:{}{}{}", m.block, u8::from(m.prompt), u8::from(m.command), u8::from(m.output)),
         None => "-".into(),
     };
-    let mut out = format!("{}{mark} ", if view.wrapped() { "wrap " } else { "" });
+    let size = match view.line_size() {
+        LineSize::DoubleWidth => "dwl ",
+        LineSize::DoubleHeightTop => "dhl-top ",
+        LineSize::DoubleHeightBottom => "dhl-bottom ",
+        _ => "",
+    };
+    let mut out = format!("{}{size}{mark} ", if view.wrapped() { "wrap " } else { "" });
     let mut links = view.links().peekable();
     let (mut prev, mut run_start) = (String::new(), 0usize);
     let mut token = String::new();

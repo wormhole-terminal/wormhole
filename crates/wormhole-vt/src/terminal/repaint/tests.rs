@@ -117,6 +117,31 @@ fn shell_marks() {
 }
 
 #[test]
+fn double_width_and_double_height_lines() {
+    same("\x1b#6wide\r\n\x1b#3tall\r\n\x1b#4tall\r\nplain\x1b[2;3H");
+    // Cells the row hides, a blank sized row, and the cursor on a sized row.
+    same("abcdefghijklmnopqrst\x1b[1;1H\x1b#6\x1b[3;1H\x1b#6\x1b[4;1H\x1b#3zz");
+}
+
+#[test]
+fn sized_lines_in_the_history_and_on_the_other_screen() {
+    let mut text = String::from("\x1b#6top\r\n\x1b#3a\r\n\x1b#4a\r\n");
+    for i in 0..10 {
+        text.push_str(&format!("line {i}\r\n"));
+    }
+    same(&text);
+    same("main\x1b[?1049h\x1b[2;1H\x1b#6alt\x1b[4;1H\x1b#4x\x1b[?1049l");
+}
+
+#[test]
+fn a_double_width_line_that_wrapped_is_two_lines() {
+    // The wrap happens at half the columns, where a receiver's cursor cannot be made to wait, so
+    // the engine does not call it a soft wrap (and a repaint need not say one).
+    same("\x1b#6abcdefghijklmn\r\nz");
+    same("abcdefghijklmnopqrstuvw\x1b[1;1H\x1b#6\x1b[3;1H");
+}
+
+#[test]
 fn the_cursor_with_a_wrap_pending() {
     same("01234567890123456789");
 }

@@ -4,14 +4,14 @@
 //! cursor, normal rendition, default character sets, no margins, absolute origin, replace mode,
 //! the main screen), DECSTR (Table 5-9: the modes and the rendition, not the screen's contents or
 //! the cursor's place) and DECALN (fills the screen with E, homes the cursor, margins to the
-//! extremes of the page).
+//! extremes of the page, every line single-width: the line sizes are reset as well).
 //!
 //! DECSTR leaves autowrap on. Table 5-9 resets it to the user's set-up default, which for
 //! xterm-compatible programs is on (terminfo's `am`): ncurses sends DECSTR in `rs2` and expects
 //! lines to still wrap afterwards.
 
 use crate::grid::{Pen, Style};
-use crate::types::CursorShape;
+use crate::types::{CursorShape, LineSize};
 
 use crate::terminal::modes::Modes;
 use crate::terminal::modes::conformance::Level;
@@ -94,6 +94,7 @@ impl Terminal {
         for y in 0..self.rows {
             self.grid.write_ascii(y, 0, &row, &pen);
             self.grid.set_wrapped(y, false);
+            self.grid.set_line_size(y, LineSize::Single);
         }
         self.cursor = CursorPos::default();
     }

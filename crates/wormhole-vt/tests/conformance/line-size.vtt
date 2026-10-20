@@ -1,0 +1,292 @@
+# Double-width and double-height lines: DECSWL, DECDWL and DECDHL (`ESC # 5`, `# 6`, `# 3`, `# 4`).
+#
+# The size belongs to a row and moves with it. On a double-width or double-height row every
+# character is two columns wide, so only the first half of the columns can be reached: the screens
+# here are 10 columns wide and a sized row has 5. `line-size` reads the row's size; the text checks
+# show every cell of the row, the hidden half included.
+
+test DECDWL makes the cursor's row double-width
+spec xterm ctlseqs: ESC # 6 DEC double-width line (DECDWL); VT510 DECDWL
+size 10 4
+feed \e[2;1H\e#6
+line-size 1 single
+line-size 2 double-width
+line-size 3 single
+line-size 4 single
+
+test DECDHL sets the top half and the bottom half
+spec xterm ctlseqs: ESC # 3 DEC double-height line, top half (DECDHL); ESC # 4 bottom half; VT510 DECDHL
+size 10 4
+feed \e[2;1H\e#3\e[3;1H\e#4
+line-size 1 single
+line-size 2 double-height-top
+line-size 3 double-height-bottom
+line-size 4 single
+
+test DECSWL makes the row single again
+spec xterm ctlseqs: ESC # 5 DEC single-width line (DECSWL); VT510 DECSWL
+size 10 2
+feed \e#6\e#3\e#5
+line-size 1 single
+
+test the last size set on a row is the one it has
+spec VT510 DECDWL and DECDHL: the attribute is the line's
+size 10 2
+feed \e#3\e#6
+line-size 1 double-width
+
+test the cursor cannot go past half the columns on a double-width row
+spec VT510 DECDWL: a double-width line holds half as many characters (40 in 80 columns)
+size 10 3
+feed \e#6\e[1;9H
+cursor 1,5
+
+test cursor forward stops at half the columns
+spec VT510 DECDWL, CUF: the cursor stops at the right margin, which is half the columns on such a line
+size 10 3
+feed \e#6\e[100C
+cursor 1,5
+
+test a double-height row holds half the columns too
+spec VT510 DECDHL: the two halves are double-width lines
+size 10 3
+feed \e[2;1H\e#3\e[100C
+cursor 2,5
+
+test a row not sized keeps all columns
+spec VT510 DECSWL: single-width lines hold the whole width
+size 10 3
+feed \e[2;1H\e#6\e[1;1H\e[100C
+cursor 1,10
+
+test the cursor moved to a double-width row is brought inside it
+convention the cursor cannot be where a double-width row has no column, so a vertical move onto such a row keeps the nearest one
+size 10 3
+feed \e[2;1H\e#6\e[1;9H\e[B
+cursor 2,5
+
+test setting the size moves a cursor that is past the new half
+convention the cursor cannot be where the row has no column
+size 10 3
+feed abcdefgh\e#6
+cursor 1,5
+
+test text wraps at half the columns of a double-width row
+spec VT510 DECDWL and DECAWM: the line wraps at its right margin, the half of the columns
+size 10 4
+feed \e#6abcdefg
+screen
+|abcde|
+|fg|
+cursor 2,3
+wrapped 1 no
+
+test with autowrap off the last visible column is overwritten
+spec VT510 DECAWM reset: characters past the right margin overwrite the last column; on a double-width line it is the half
+size 10 3
+feed \e[?7l\e#6abcdefgh
+screen
+|abcdh|
+cursor 1,5
+
+test a wide character that does not fit the half wraps whole
+spec VT510 DECAWM: a character that does not fit goes to the next line
+size 8 3
+feed \e#6abc\u{4e16}
+screen
+|abc|
+|\u{4e16}|
+cursor 2,3
+
+test a tab stops at the last visible column
+spec VT510 HT: the cursor stops at the right margin without a stop
+size 20 3
+feed \e#6\t\t\t
+cursor 1,10
+
+test the cells past half are kept, hidden, when the size is set
+convention the VT510 manual does not say what becomes of characters beyond the half; they stay in the row, hidden, and DECSWL shows them again
+size 10 3
+feed abcdefghij\e[1;1H\e#6
+screen
+|abcdefghij|
+line-size 1 double-width
+cursor 1,1
+feed \e#5
+screen
+|abcdefghij|
+line-size 1 single
+
+test a double-width line does not change what is written on a single one
+spec VT510 DECSWL: single-width lines are unchanged
+size 10 3
+feed \e[2;1H\e#6\e[1;1Habcdefghij
+screen
+|abcdefghij|
+line-size 1 single
+line-size 2 double-width
+
+test a size moves with its row when the region scrolls down
+spec VT510 DECDWL: the attribute is part of the line; RI scrolls lines down
+size 10 4
+feed \e[2;1H\e#6\e[1;1H\eM
+line-size 1 single
+line-size 2 single
+line-size 3 double-width
+line-size 4 single
+
+test a size moves with its row when the screen scrolls up
+spec VT510 DECDWL: the attribute is part of the line; IND scrolls lines up
+size 10 4
+feed \e[2;1H\e#6\e[3;1H\e#4\e[4;1H\n
+line-size 1 double-width
+line-size 2 double-height-bottom
+line-size 3 single
+line-size 4 single
+
+test a line that enters by scrolling is single
+spec VT510 DECDWL: new lines are single-width
+size 10 3
+feed \e#6\e[3;1H\n\n
+line-size 1 single
+line-size 2 single
+line-size 3 single
+
+test a size moves with its row when lines are inserted
+spec VT510 IL: the lines move down with their attributes; the new line is a normal one
+size 10 4
+feed \e[2;1H\e#6\e[2;1H\e[L
+line-size 2 single
+line-size 3 double-width
+line-size 4 single
+
+test a size moves with its row when lines are deleted
+spec VT510 DL: the lines move up with their attributes
+size 10 4
+feed \e[3;1H\e#3\e[2;1H\e[M
+line-size 2 double-height-top
+line-size 3 single
+
+test a size stays with the lines of a scrolling region
+spec VT510 DECSTBM and DECDWL: a scroll inside the margins moves the lines with their attributes
+size 10 5
+feed \e[3;1H\e#6\e[2;4r\e[4;1H\n
+line-size 2 double-width
+line-size 3 single
+line-size 4 single
+line-size 5 single
+
+test a row outside a scrolling region keeps its size
+spec VT510 DECSTBM: lines outside the margins do not scroll
+size 10 5
+feed \e[1;1H\e#6\e[2;4r\e[4;1H\n
+line-size 1 double-width
+
+test erasing in a line leaves its size
+spec VT510 EL: erases characters; the attribute is the line's
+size 10 3
+feed \e#6abc\e[2K
+screen
+line-size 1 double-width
+
+test erasing characters leaves the size
+spec VT510 ECH: erases characters; the attribute is the line's
+size 10 3
+feed \e#6abc\e[1;1H\e[2X
+screen
+|  c|
+line-size 1 double-width
+
+test erase in display from the cursor resets the rows below, not the cursor's
+convention ED blanks whole rows below the cursor, which lose their size; the cursor's row is only erased from the cursor
+size 10 4
+feed \e[1;1H\e#6\e[2;1H\e#6\e[3;1H\e#6\e[2;1H\e[J
+line-size 1 double-width
+line-size 2 double-width
+line-size 3 single
+
+test erase in display to the cursor resets the rows above, not the cursor's
+convention ED blanks whole rows above the cursor, which lose their size; the cursor's row is only erased up to the cursor
+size 10 4
+feed \e[1;1H\e#6\e[2;1H\e#6\e[3;1H\e#6\e[2;1H\e[1J
+line-size 1 single
+line-size 2 double-width
+line-size 3 double-width
+
+test erase in display of everything resets every row
+spec VT510 ED 2: erases the whole display; the lines become normal
+size 10 4
+feed \e[1;1H\e#6\e[2;1H\e#3\e[3;1H\e#4\e[2J
+line-size 1 single
+line-size 2 single
+line-size 3 single
+line-size 4 single
+
+test the screen alignment test makes every row single
+spec VT510 DECALN: fills the screen with E; every line is a single-width line
+size 10 3
+feed \e#6\e[2;1H\e#3\e#8
+line-size 1 single
+line-size 2 single
+
+test a full reset makes every row single
+spec VT510 RIS: returns the terminal to its initial state
+size 10 3
+feed \e#6\e[2;1H\e#3\ec
+line-size 1 single
+line-size 2 single
+
+test insert characters works inside the half
+spec VT510 ICH: characters move right up to the right margin, which is half the columns on such a line
+size 10 3
+feed abcdefghij\e[1;1H\e#6\e[2@
+screen
+|  abcfghij|
+
+test delete characters works inside the half
+spec VT510 DCH: characters move left, blanks enter at the right margin, which is half the columns on such a line
+size 10 3
+feed abcdefghij\e[1;1H\e#6\e[2P
+screen
+|cde  fghij|
+
+test a resize keeps a double-width row as it is and never rewraps it
+convention a double-width row keeps its cells and is not reflowed; the soft-wrapped lines around it are rewrapped as usual
+size 10 3
+feed abcdefghijklmno\e[1;1H\e#6\e[3;1H
+resize 20 3
+screen
+|abcdefghij|
+|klmno|
+line-size 1 double-width
+wrapped 1 no
+
+test a resize crops a double-width row to the new width
+convention a double-width row is cropped like the alternate screen's rows
+size 10 3
+feed abcdefghij\e[1;1H\e#6
+resize 6 3
+screen
+|abcdef|
+line-size 1 double-width
+
+test a resize keeps the size of the rows around it
+convention the other rows are reflowed as before and keep their sizes
+size 10 4
+feed \e[2;1H\e#3\e[3;1H\e#4
+resize 14 4
+line-size 1 single
+line-size 2 double-height-top
+line-size 3 double-height-bottom
+line-size 4 single
+
+test a double-height line is written on two rows with the same text
+spec VT510 DECDHL: the same characters are written on both lines, top half and bottom half
+size 10 3
+feed \e#3Hello\r\n\e#4Hello
+screen
+|Hello|
+|Hello|
+line-size 1 double-height-top
+line-size 2 double-height-bottom
+cursor 2,5

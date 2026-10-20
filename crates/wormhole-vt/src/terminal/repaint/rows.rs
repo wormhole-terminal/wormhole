@@ -6,10 +6,11 @@
 //! the receiver's autowrap makes the same soft wrap and a reflow later agrees). The other screen
 //! has no history and is written by addressing. A cell nothing was written to is skipped with a
 //! cursor movement or erased, never printed as a space: the receiver's cell stays what the
-//! sender's is, blank.
+//! sender's is, blank. A row with a size (DECDWL, DECDHL) gets its `ESC # n` after its cells are
+//! written: the receiver would not let the cursor reach the hidden half of the row before that.
 
 use crate::grid::{Grid, RowView, Style};
-use crate::types::{Color, Hyperlink, Line};
+use crate::types::{Color, Hyperlink, Line, LineSize};
 
 use super::{Gaps, Writer};
 
@@ -45,7 +46,11 @@ impl<'a> Writer<'a> {
         }
         let total = history + rows;
         let row_at = |n: usize| grid.row_view(Line(n as i32 - history as i32));
-        let blank = |view: &RowView<'_>| !view.wrapped() && view.cells().iter().all(|cell| cell.is_blank());
+        let blank = |view: &RowView<'_>| {
+            !view.wrapped()
+                && !view.line_size().is_double()
+                && view.cells().iter().all(|cell| cell.is_blank())
+        };
         // Rows after the last one with anything in them only matter when the screen has to scroll
         // that far to push the history up.
         // A row that wraps needs the one it wraps into, however empty.
@@ -74,6 +79,7 @@ impl<'a> Writer<'a> {
                 self.csi2(n + 1, 1, b'H');
             }
             self.row(view, next.as_ref(), wraps, continues);
+            self.line_size(view.line_size());
             continues = wraps;
             if !alt && n + 1 < end && !wraps {
                 // A scroll fills the new line with the pen's background: keep it the default.
@@ -202,6 +208,17 @@ impl<'a> Writer<'a> {
         // The blank the row before ended in stays printed if this row did not take it back.
         if owed.is_some() {
             self.gaps |= Gaps::WRAP;
+        }
+    }
+
+    /// DECDWL, DECDHL or DECSWL for the row the receiver's cursor is on (nothing for a single row,
+    /// which every row starts as).
+    fn line_size(&mut self, size: LineSize) {
+        match size {
+            LineSize::DoubleWidth => self.put(b"\x1b#6"),
+            LineSize::DoubleHeightTop => self.put(b"\x1b#3"),
+            LineSize::DoubleHeightBottom => self.put(b"\x1b#4"),
+            _ => {}
         }
     }
 

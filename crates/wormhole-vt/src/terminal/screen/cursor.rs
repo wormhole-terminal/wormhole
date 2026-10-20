@@ -24,10 +24,11 @@ pub(in crate::terminal) enum Landing {
 
 impl Terminal {
     /// The last column going right can reach from here: the right margin, or the screen's edge
-    /// for a cursor that is already beyond it.
+    /// for a cursor that is already beyond it; on a double-width or double-height row (see
+    /// `line_size`) no further than the half of the columns the row shows.
     #[inline]
     pub(in crate::terminal) fn right_limit(&self) -> usize {
-        if self.cursor.x <= self.margins.right { self.margins.right } else { self.cols - 1 }
+        self.right_edge(self.cursor.x, self.cursor.y)
     }
 
     /// The first column going left can reach from here.
@@ -39,7 +40,7 @@ impl Terminal {
     /// Put the cursor at `x`, `y` (inside the screen) and end a pending wrap.
     #[inline]
     pub(in crate::terminal) fn place(&mut self, x: usize, y: usize) {
-        self.cursor.x = x;
+        self.cursor.x = x.min(self.row_right(y));
         self.cursor.y = y;
         self.cursor.pending = false;
     }
@@ -251,6 +252,7 @@ impl Terminal {
         self.cursor = saved.cursor;
         self.cursor.x = self.cursor.x.min(self.cols - 1);
         self.cursor.y = self.cursor.y.min(self.rows - 1);
+        self.fit_cursor();
         // Saved on the last column of a screen that has been widened since: nothing is due there.
         self.cursor.pending &= self.cursor.x == self.right_limit();
         self.pen.style = saved.style;

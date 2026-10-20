@@ -189,6 +189,12 @@ pub trait Engine: Sized {
     /// program ended the line).
     fn row_wrapped(&self, row: usize) -> bool;
 
+    /// How big row `row` is drawn (DECSWL, DECDWL, DECDHL): `single`, `double-width`,
+    /// `double-height-top` or `double-height-bottom`; `None` for an engine that has no line sizes.
+    fn row_line_size(&self, _row: usize) -> Option<&'static str> {
+        None
+    }
+
     fn cell(&self, row: usize, col: usize) -> Cell;
 
     fn cursor(&self) -> Cursor;

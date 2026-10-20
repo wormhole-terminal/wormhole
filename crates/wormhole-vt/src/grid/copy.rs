@@ -6,7 +6,7 @@
 //! characters after a cluster's first, hyperlinks, underline colors) is looked for in a second pass
 //! that runs only when the first saw a flag or the page has an underline color at all.
 
-use crate::types::{Cell as DrawCell, Color, Flags, Line, NamedColor, Point, RowExtras};
+use crate::types::{Cell as DrawCell, Color, Flags, Line, LineSize, NamedColor, Point, RowExtras};
 
 use super::cell::{Cell, CellFlags};
 use super::page::Page;
@@ -27,6 +27,9 @@ pub struct ViewRow {
     pub mark: Option<RowMark>,
     /// The line goes on in the next row.
     pub wrapped: bool,
+    /// How big the row is drawn: a change of it marks the row as changed (it is in
+    /// [`Damage`](crate::Damage)), so `size` is right for every row, changed or not.
+    pub size: LineSize,
     /// The row was copied anew; the others are certainly the same as before.
     pub changed: bool,
 }
@@ -53,11 +56,13 @@ impl Grid {
             let line = Line(y as i32 - self.offset as i32);
             let Some((page_ix, row)) = self.locate_line(line) else {
                 view.cells.clear();
+                view.size = LineSize::Single;
                 view.changed = true;
                 continue;
             };
             let page = &mut self.pages[page_ix];
             view.wrapped = page.rows[row].wrapped();
+            view.size = page.rows[row].size();
             view.changed = page.take_dirty(row) || full;
             if view.changed {
                 view.mark = copy_page_row(page, row, &mut view.cells, Some(&mut view.extras));

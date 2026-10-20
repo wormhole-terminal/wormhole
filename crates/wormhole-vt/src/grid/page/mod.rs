@@ -27,11 +27,11 @@
 
 use std::ops::Range;
 
-use crate::types::Hyperlink;
+use crate::types::{Hyperlink, LineSize};
 
 use super::cell::{Cell, CellFlags, Spare, StyleRun, run_of};
 use super::graphemes::Graphemes;
-use super::row::{DIRTY, Pen, Row, RowMark, WRAPPED};
+use super::row::{DIRTY, Meta, Pen, Row, RowMark, SIZE_MASK, SIZE_SHIFT, WRAPPED};
 use super::side_tables::Links;
 use super::style::Style;
 use super::style_table::StyleTable;
@@ -246,16 +246,36 @@ impl Page {
         self.rows[row].block = block;
     }
 
-    /// Whether `row` is soft-wrapped and its block: what a row copied over another takes along.
-    pub(super) fn meta(&self, row: usize) -> (bool, u32) {
-        let record = &self.rows[row];
-        (record.wrapped(), record.block)
+    /// The size `row` is drawn at.
+    #[inline]
+    pub(super) fn line_size(&self, row: usize) -> LineSize {
+        self.rows[row].size()
     }
 
-    /// Give `row` the wrap flag and block of a row that was copied over it, and mark it changed.
-    pub(super) fn set_meta(&mut self, row: usize, (wrapped, block): (bool, u32)) {
-        self.set_wrapped(row, wrapped);
-        self.rows[row].block = block;
+    /// Give `row` the size `size`; the row is marked changed when that is a change.
+    pub(super) fn set_line_size(&mut self, row: usize, size: LineSize) {
+        let flags = &mut self.rows[row].flags;
+        let mut new = (*flags & !SIZE_MASK) | size.to_bits() << SIZE_SHIFT;
+        if size.is_double() {
+            // A row of such a size is never soft-wrapped (see `Terminal::wrap`).
+            new &= !WRAPPED;
+        }
+        if new != *flags {
+            *flags = new | DIRTY;
+        }
+    }
+
+    /// What a row copied over another takes along: its wrap flag, block and size.
+    pub(super) fn meta(&self, row: usize) -> Meta {
+        self.rows[row].meta()
+    }
+
+    /// Give `row` the wrap flag, block and size of a row that was copied over it, and mark it
+    /// changed.
+    pub(super) fn set_meta(&mut self, row: usize, meta: Meta) {
+        self.set_wrapped(row, meta.wrapped);
+        self.set_line_size(row, meta.size);
+        self.rows[row].block = meta.block;
     }
 
     // ---- releasing and filling ----

@@ -136,7 +136,8 @@ impl Terminal {
         self.cursor.pending = false;
         if self.inside_columns() {
             let bg = self.erase_color();
-            self.grid.insert_cells(self.cursor.y, self.cursor.x, self.margins.right, n, bg);
+            let right = self.margins.right.min(self.row_right(self.cursor.y));
+            self.grid.insert_cells(self.cursor.y, self.cursor.x, right, n, bg);
         }
     }
 
@@ -145,7 +146,8 @@ impl Terminal {
         self.cursor.pending = false;
         if self.inside_columns() {
             let bg = self.erase_color();
-            self.grid.delete_cells(self.cursor.y, self.cursor.x, self.margins.right, n, bg);
+            let right = self.margins.right.min(self.row_right(self.cursor.y));
+            self.grid.delete_cells(self.cursor.y, self.cursor.x, right, n, bg);
         }
     }
 
@@ -155,6 +157,7 @@ impl Terminal {
         if self.inside_columns() {
             let (y, region, bg) = (self.cursor.y, self.region(), self.erase_color());
             self.grid.insert_lines(y, region, n, bg);
+            self.fit_cursor();
         }
     }
 
@@ -164,6 +167,7 @@ impl Terminal {
         if self.inside_columns() {
             let (y, region, bg) = (self.cursor.y, self.region(), self.erase_color());
             self.grid.delete_lines(y, region, n, bg);
+            self.fit_cursor();
         }
     }
 

@@ -323,7 +323,9 @@ fn find_char(grid: &Grid, c: char, cursor: (usize, usize)) -> Option<(usize, usi
     for y in order.flatten() {
         let view = grid.row_view(Line(y as i32))?;
         let cells = view.cells();
-        let found = (0..cells.len()).rev().find(|&x| {
+        // A double-width row has its sequences' columns only in the half it shows.
+        let shown = view.line_size().visible_columns(cells.len());
+        let found = (0..shown).rev().find(|&x| {
             let cell = cells[x];
             cell.character() == Some(c) && cell.content() == BlockPart::None && !cell.is_spacer_tail()
         });
@@ -335,13 +337,14 @@ fn find_char(grid: &Grid, c: char, cursor: (usize, usize)) -> Option<(usize, usi
 }
 
 /// A row and column of `grid`'s live screen where `width` cells in a row hold nothing, have the
-/// same background, and do not reach the last column; the background.
+/// same background, and do not reach the last column the row shows; the background.
 fn blank_run(grid: &Grid, width: usize) -> Option<(usize, usize, Option<crate::types::Color>)> {
     let (cols, rows) = (grid.cols(), grid.rows());
     for y in (0..rows).rev() {
         let view = grid.row_view(Line(y as i32))?;
         let cells = view.cells();
-        for x in 0..cols.saturating_sub(width) {
+        let shown = view.line_size().visible_columns(cols);
+        for x in 0..shown.saturating_sub(width) {
             let run = &cells[x..x + width];
             if run.iter().any(|c| c.codepoint() != 0 || c.flags() != 0) {
                 continue;
