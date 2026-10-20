@@ -19,6 +19,8 @@ const LAYERS: &[(&str, &[&str])] = &[
     ("src/unicode", &["parser", "grid", "terminal"]),
     ("src/parser", &["grid", "terminal"]),
     ("src/grid", &["parser", "terminal"]),
+    // Input encoding is a pure function of an event and the modes: it never reaches the screen.
+    ("src/input", &["parser", "grid", "terminal"]),
 ];
 
 fn crate_dir() -> PathBuf {
