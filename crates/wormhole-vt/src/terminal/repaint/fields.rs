@@ -71,7 +71,8 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("folder", Written("titles: OSC 7")),
     ("palette", Written("palette: OSC 4, 5, 10 to 19")),
     ("cell_px", Host("the host's cell size")),
-    ("printer", Written("final_state: CSI 5 i, last (Gaps::PRINTER in VT52 mode)")),
+    ("status", Written("misc: CSI Ps $ ~, and CSI 1 $ } last (Gaps::LAST_SEQUENCE in VT52 mode)")),
+    ("printer", Written("final_state: CSI 5 i, the very last (Gaps::LAST_SEQUENCE in VT52 mode)")),
     (
         "last_char",
         Written("final_state: the character printed again last (Gaps::LAST_CHAR when it cannot be)"),
@@ -230,9 +231,7 @@ const TABS: &[(&str, Coverage)] = &[("stops", Written("DECRSPS 2, or HTS"))];
 const KEPT: &[(&str, Coverage)] = &[
     ("local_functions", Written("CSI Ps + q")),
     ("function_key_control", Written("CSI Ps * }")),
-    ("status_display", Written("CSI Ps $ }")),
     ("modifier_keys", Written("CSI Ps + r")),
-    ("status_line", Written("CSI Ps $ ~")),
     ("attribute_extent", Written("DECSACE")),
 ];
 

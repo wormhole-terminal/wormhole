@@ -109,8 +109,9 @@ bitflags! {
         /// resize put lines in it), so the "ED 3 just before" mark of the next ED 2 cannot be set.
         const HISTORY_CLEARED = 1 << 18;
         /// The printer controller mode is on (everything the program sends is discarded until
-        /// `CSI 4 i`) in VT52 mode, which reads no CSI to say so.
-        const PRINTER = 1 << 19;
+        /// `CSI 4 i`) or the status line is the active display (what draws is discarded), in VT52
+        /// mode, which reads no CSI to say so.
+        const LAST_SEQUENCE = 1 << 19;
     }
 }
 
@@ -130,7 +131,7 @@ impl Gaps {
         .union(Gaps::SPACER_HEAD)
         .union(Gaps::MARK)
         .union(Gaps::CELL)
-        .union(Gaps::PRINTER)
+        .union(Gaps::LAST_SEQUENCE)
         .union(Gaps::HISTORY_CLEARED)
         .union(Gaps::ALT_CONTENT);
 }

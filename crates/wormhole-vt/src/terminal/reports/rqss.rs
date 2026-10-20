@@ -37,9 +37,9 @@ impl Terminal {
                 match setting {
                     Kept::LocalFunctions => self.reply(format_args!("{}+q", kept.local_functions)),
                     Kept::FunctionKeyControl => self.reply(format_args!("{}*}}", kept.function_key_control)),
-                    Kept::StatusDisplay => self.reply(format_args!("{}$}}", kept.status_display)),
+                    Kept::StatusDisplay => self.reply(format_args!("{}$}}", u8::from(self.status.active()))),
                     Kept::ModifierKeys => self.reply(format_args!("{}+r", kept.modifier_keys)),
-                    Kept::StatusLine => self.reply(format_args!("{}$~", kept.status_line)),
+                    Kept::StatusLine => self.reply(format_args!("{}$~", self.status.kind())),
                     Kept::AttributeExtent => self.reply(format_args!("{}*x", kept.attribute_extent)),
                 }
             }

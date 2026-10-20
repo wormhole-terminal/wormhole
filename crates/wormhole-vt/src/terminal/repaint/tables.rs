@@ -298,8 +298,7 @@ impl<'a> Writer<'a> {
             (kept.local_functions, &b"+q"[..]),
             (kept.modifier_keys, b"+r"),
             (kept.function_key_control, b"*}"),
-            (kept.status_display, b"$}"),
-            (kept.status_line, b"$~"),
+            (t.status.kind(), b"$~"),
             (kept.attribute_extent, b"*x"),
         ] {
             if value != 0 {

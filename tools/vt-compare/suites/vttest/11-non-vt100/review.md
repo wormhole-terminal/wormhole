@@ -52,7 +52,7 @@ in the colour menu, so the same test comes up more than once.
 | 070 | assign the user-preferred supplemental set (DECAUPSS) | pass | ISO Latin-1 assigned; nothing is drawn |
 | 071 | DECRQUPSS | pass | `DCS 1 ! u A ST`: ISO Latin-1 |
 | 072 | window report (DECRPDE) | pass | `CSI 24;80;1;1;1 " w` |
-| 073 to 081 | status line (DECSSDT, DECSASD): simple text, graphic rendition, cursor movement | unsupported: status line | the engine has no status line (DECRQSS 065 says none), but it does not drop what is written to it: the text is drawn on the main screen at the cursor (073: `TEXT IN THE STATUS LINEThere should be ...`) |
+| 073 to 081 | status line (DECSSDT, DECSASD): simple text, graphic rendition, cursor movement | unsupported: status line display (by design) | the engine draws no status line: what is written to it while DECSASD selects it is dropped, and the main screen is as vttest asks (073: `There should be TEXT IN THE STATUS LINE` once, on row 3, from the test's own text; the text sent to the status line is not drawn, and cursor movement, erasing and renditions there leave the main cursor and pen alone). The indicator line of DECSSDT 1 and the status line's own text are not shown |
 | 082 to 083 | back index and forward index (DECBI, DECFI) | pass | the top row is numbered 1 through 20 |
 | 084 to 085 | cursor movement and other movement (CR, HT, LF, FF) within margins, no margins set | pass | the box of `*` is overwritten entirely |
 | 086 to 089 | the same two and DECBI, DECFI with origin mode, left/right margins and top/bottom margins on | pass | numbered 1 through 10, the box of `*` overwritten inside the margins |

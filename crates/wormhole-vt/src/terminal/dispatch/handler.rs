@@ -13,6 +13,7 @@
 use crate::parser::{Csi, Handler};
 
 use crate::terminal::modes::Modes;
+use crate::terminal::screen::status_line;
 use crate::terminal::{Terminal, Terminator};
 
 /// A terminal as the parser's handler, for the length of one `feed`.
@@ -41,6 +42,9 @@ impl Handler for Sink<'_> {
 
     #[inline]
     fn print_ascii(&mut self, run: &[u8]) {
+        if self.0.on_status_line() {
+            return;
+        }
         // The two characters after `ESC Y` are coordinates, not text.
         if self.0.vt52.addressing() {
             let rest = self.0.vt52_take_address(run);
@@ -54,6 +58,9 @@ impl Handler for Sink<'_> {
 
     #[inline]
     fn print(&mut self, c: char) {
+        if self.0.on_status_line() {
+            return;
+        }
         if self.0.vt52.addressing() {
             self.0.vt52_take_address_char();
             return;
@@ -64,6 +71,9 @@ impl Handler for Sink<'_> {
     fn execute(&mut self, byte: u8) {
         self.0.end_text();
         self.0.history_just_cleared = false;
+        if self.0.on_status_line() && status_line::control_acts_on_display(byte) {
+            return;
+        }
         self.0.control(byte);
     }
 

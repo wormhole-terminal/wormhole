@@ -5,7 +5,7 @@ modes: default
 --- text
 01|This is a simple test of the status-line
 02|
-03|TEXT IN THE STATUS LINEThere should be TEXT IN THE STATUS LINE
+03|There should be TEXT IN THE STATUS LINE
 04|Push <RETURN>
 05|There should be no status line
 06|Push <RETURN>

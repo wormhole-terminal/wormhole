@@ -9,4 +9,5 @@ pub(super) mod rect;
 pub(super) mod reset;
 pub(super) mod resize;
 pub(super) mod scroll;
+pub(super) mod status_line;
 pub(super) mod tabs;

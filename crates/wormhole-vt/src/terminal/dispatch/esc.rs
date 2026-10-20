@@ -7,6 +7,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::{Modes, recorded_bit};
+use crate::terminal::screen::status_line;
 use crate::terminal::text::charset;
 use crate::types::LineSize;
 
@@ -14,6 +15,9 @@ impl Terminal {
     pub(in crate::terminal) fn dispatch_esc(&mut self, intermediates: &[u8], byte: u8) {
         if self.modes.contains(Modes::VT52) {
             self.dispatch_vt52(byte);
+            return;
+        }
+        if self.on_status_line() && status_line::esc_acts_on_display(intermediates, byte) {
             return;
         }
         match (intermediates, byte) {

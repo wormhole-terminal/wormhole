@@ -326,12 +326,12 @@ feed \e]4;1;?;2;?\a
 reply~ \e]4;1;rgb:*/*/*\a\e]4;2;rgb:*/*/*\a
 
 test DECRQSS reports the settings that are only kept
-spec VT510 DECRPSS: a setting is reported as the sequence that sets it; DECELF, DECLFKC, DECSASD, DECSMKR, DECSSDT, DECSACE
+spec VT510 DECRPSS: a setting is reported as the sequence that sets it; DECELF, DECLFKC, DECSASD (selected only while DECSSDT is 2), DECSMKR, DECSSDT, DECSACE
 known-fail: alacritty – DECRQSS answers none of these settings
 size 10 4
-feed \e[1+q\e[2*}\e[1$}\e[3+r\e[1$~\e[2*x
+feed \e[1+q\e[2*}\e[2$~\e[1$}\e[3+r\e[2*x
 feed \eP$q+q\e\\\eP$q*}\e\\\eP$q$}\e\\\eP$q+r\e\\\eP$q$~\e\\\eP$q*x\e\\
-reply \eP1$r1+q\e\\\eP1$r2*}\e\\\eP1$r1$}\e\\\eP1$r3+r\e\\\eP1$r1$~\e\\\eP1$r2*x\e\\
+reply \eP1$r1+q\e\\\eP1$r2*}\e\\\eP1$r1$}\e\\\eP1$r3+r\e\\\eP1$r2$~\e\\\eP1$r2*x\e\\
 
 test DECDSR 56, 62, 63 and 85 answer that the locator is a mouse, no macro space and no sessions
 spec xterm ctlseqs DSR ?56 (the locator type, ?57;1 a mouse); VT510 DECDSR: macro space (CSI Pn * {), memory checksum (DCS Pid ! ~ xxxx ST), multiple sessions (?83)

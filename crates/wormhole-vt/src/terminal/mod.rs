@@ -277,6 +277,8 @@ pub struct Terminal {
     cell_px: (u16, u16),
     /// The printer controller mode (media copy): while on, what the program sends is discarded.
     printer: printer::Printer,
+    /// The status line's type and whether it is the active display; see `screen::status_line`.
+    status: screen::status_line::StatusLine,
     /// The graphic character printed last when nothing but text has come since, for REP: every
     /// control function forgets it (`end_text`).
     last_char: Option<char>,

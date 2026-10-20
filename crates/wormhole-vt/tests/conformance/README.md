@@ -164,4 +164,4 @@ writing `known-fail:`.
 
 Cases in a file are grouped by area: `cursor`, `wrap`, `erase`, `edit`, `scroll`, `margins`,
 `origin`, `tabs`, `save-restore`, `charsets`, `altscreen`, `sgr`, `unicode`, `reports`, `osc`,
-`reset`, `modes`, `parser`, `resize`, `color-scheme`, `media-copy`.
+`reset`, `modes`, `parser`, `resize`, `color-scheme`, `media-copy`, `status-line`.

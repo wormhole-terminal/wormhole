@@ -13,6 +13,7 @@ use crate::terminal::modes::keyboard::SetMode;
 use crate::terminal::modes::{ModeSet, Switch};
 use crate::terminal::screen::cursor::Landing;
 use crate::terminal::screen::edit::{Erase, EraseExtent, Shift};
+use crate::terminal::screen::status_line;
 
 /// A parameter as a count: 0 or none is the default.
 fn count(csi: &Csi, i: usize) -> usize {
@@ -23,7 +24,7 @@ impl Terminal {
     pub(in crate::terminal) fn dispatch_csi(&mut self, csi: &Csi) {
         // REP takes the character it repeats; every sequence, REP included, leaves none behind.
         let repeatable = self.last_char.take();
-        if csi.overflow() {
+        if csi.overflow() || (self.on_status_line() && status_line::csi_acts_on_display(csi)) {
             return;
         }
         let keeps_clear = matches!(csi.final_byte(), b'H' | b'f' | b'J' | b'K') && csi.marker().is_none();

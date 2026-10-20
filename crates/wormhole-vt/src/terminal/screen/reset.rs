@@ -59,6 +59,7 @@ impl Terminal {
         self.reset_colors();
         self.last_char = None;
         self.printer = Default::default();
+        self.status = Default::default();
         self.cluster.open = false;
         self.history_just_cleared = false;
         self.attr_extent = Default::default();
@@ -88,6 +89,8 @@ impl Terminal {
         self.cursor_style.shape = None;
         self.cursor_style.blink = None;
         self.cluster.open = false;
+        // A program that dies in the status line leaves a usable terminal.
+        self.status.deactivate();
     }
 
     /// DECALN: a screen of E's to line the picture up by.
