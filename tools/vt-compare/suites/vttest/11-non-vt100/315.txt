@@ -5,8 +5,8 @@ modes: default
 --- text
 01|Testing DECRQSS: Query Title Modes (Set window/icon labels using hexadecimal)
 02|
-03|          <27> P 0 $ r <27> \  failed
-04|
+03|          <27> P 0 $ r <27> \  failedok (valid request)
+04|         <27> [ > 0 t
 05|
 06|
 07|

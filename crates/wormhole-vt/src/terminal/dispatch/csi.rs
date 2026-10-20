@@ -208,6 +208,7 @@ impl Terminal {
             b'P' => self.each_color_slot(csi, Terminal::push_colors),
             b'Q' => self.each_color_slot(csi, Terminal::pop_colors),
             b'R' => self.report_color_stack(),
+            b'S' => self.report_title_stack_position(),
             _ => {}
         }
     }

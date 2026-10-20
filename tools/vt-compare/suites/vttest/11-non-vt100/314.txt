@@ -5,8 +5,8 @@ modes: default
 --- text
 01|Testing DECRQSS: Query Key Modifier Options (modifyOtherKeys)
 02|
-03|          <27> P 0 $ r <27> \  failed
-04|
+03|          <27> P 1 $ r > 4 ; 0 m <27> \  ok (valid request)
+04|         <27> [ > 4 ; 0 m
 05|
 06|
 07|
@@ -28,4 +28,4 @@ modes: default
 23|Push <RETURN>
 24|
 --- attributes (columns from 1)
-03| 10-30 inverse
+03| 10-40 inverse

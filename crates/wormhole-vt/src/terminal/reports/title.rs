@@ -212,6 +212,14 @@ impl Terminal {
         }
     }
 
+    /// XTTITLEPOS (`CSI # S`): `CSI Pn ; Pm # S`, where `Pn` is the current index into the title
+    /// stack (the slots in use, which is where the next XTWINOPS 22 puts its save) and `Pm` the maximum
+    /// index (the stack's depth). It says nothing of what the slots hold.
+    pub(in crate::terminal) fn report_title_stack_position(&mut self) {
+        let now = self.titles.stack.len();
+        self.reply(format_args!("\x1b[{now};{TITLE_STACK}#S"));
+    }
+
     /// XTWINOPS 20 (the icon name) and 21 (the title): `OSC L text ST` and `OSC l text ST`.
     pub(in crate::terminal) fn report_title(&mut self, icon: bool) {
         // Already free of controls: they are dropped when a title is set.

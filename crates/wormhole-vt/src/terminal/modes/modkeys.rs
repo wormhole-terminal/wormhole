@@ -53,11 +53,15 @@ impl Terminal {
         if resource != MODIFY_OTHER_KEYS {
             return;
         }
-        let level = if self.modes.contains(Modes::MODIFY_OTHER_KEYS_ALL) {
+        self.reply(format_args!("\x1b[>{MODIFY_OTHER_KEYS};{}m", self.modify_other_keys_level()));
+    }
+
+    /// modifyOtherKeys' level: 0, 1 or 2.
+    pub(in crate::terminal) fn modify_other_keys_level(&self) -> u8 {
+        if self.modes.contains(Modes::MODIFY_OTHER_KEYS_ALL) {
             2
         } else {
             u8::from(self.modes.contains(Modes::MODIFY_OTHER_KEYS))
-        };
-        self.reply(format_args!("\x1b[>{MODIFY_OTHER_KEYS};{level}m"));
+        }
     }
 }

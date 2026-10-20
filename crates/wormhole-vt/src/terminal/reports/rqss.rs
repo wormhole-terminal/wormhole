@@ -1,7 +1,17 @@
 //! DECRQSS: a setting asked for, answered as the sequence that would set it.
 //!
-//! Spec: xterm's ctlseqs. `DCS $ q Pt ST` asks and is answered `DCS 1 $ r Pt ST`, or
-//! `DCS 0 $ r ST` for a setting it does not know. `dcs` collects the request.
+//! Spec: xterm's ctlseqs. `DCS $ q Pt ST` asks and is answered `DCS 1 $ r Pt ST`, with the sequence
+//! that sets the setting in place of `Pt` (without its `CSI`), or `DCS 0 $ r ST` for a setting it
+//! does not have. `dcs` collects the request.
+//!
+//! What the engine answers, besides the VT420's settings it keeps: xterm's `> 4 m` (modifyOtherKeys, as
+//! XTMODKEYS would set it: `> 4 ; Pv m`) and `> Pm t` (the title modes that are on, as XTSMTITLE
+//! would set them: `> Pm ; Pm t`; invalid while none is, since there is nothing to restore).
+//! Not answered, because the engine has no such setting and a terminal that does not have one answers
+//! invalid: DECPRO (`}`), DECTTC (`|`), DECTLTC (`'s`), the VT520's (DECATC `, }`, DECAC `, |`, DECCRTST
+//! `- q`, DECDLDA `, z`, DECSEST `- r`, DECARR `- p`, DECSTGLT `) {`, DECSZS `, {`, DECSPMA `, x`, DECTME
+//! `SP ~`, DECUS `, y`, and the rest of that menu), and xterm's other key modifier options and key
+//! formats (`> Pm m` with a `Pm` other than 4, `> Pm f`).
 
 use crate::grid::Style;
 use crate::types::{Color, Flags, NamedColor};
@@ -14,6 +24,11 @@ impl Terminal {
             self.reply(format_args!("\x1bP0$r\x1b\\"));
             return;
         };
+        let title_modes = self.titles.modes.parts();
+        if matches!(setting, Setting::TitleModes) && title_modes.iter().all(|(on, _)| !on) {
+            self.reply(format_args!("\x1bP0$r\x1b\\"));
+            return;
+        }
         let (top, bottom, left, right) =
             (self.margins.top + 1, self.margins.bottom + 1, self.margins.left + 1, self.margins.right + 1);
         let style = self.pen.style;
@@ -32,6 +47,16 @@ impl Terminal {
             Setting::Rows => self.reply(format_args!("{rows}t")),
             Setting::Columns => self.reply(format_args!("{cols}$|")),
             Setting::Lines => self.reply(format_args!("{rows}*|")),
+            Setting::ModifyOtherKeys => self.reply(format_args!(">4;{}m", self.modify_other_keys_level())),
+            Setting::TitleModes => {
+                self.reply(format_args!(">"));
+                let mut first = true;
+                for (_, param) in title_modes.iter().filter(|(on, _)| *on) {
+                    self.reply(format_args!("{}{param}", if first { "" } else { ";" }));
+                    first = false;
+                }
+                self.reply(format_args!("t"));
+            }
             Setting::Kept(setting) => {
                 let kept = self.kept;
                 match setting {
@@ -72,6 +97,10 @@ enum Setting {
     Rows,
     Columns,
     Lines,
+    /// xterm's XTQMODKEYS for modifyOtherKeys, `> 4 m`.
+    ModifyOtherKeys,
+    /// xterm's XTSMTITLE, `> Pm t`.
+    TitleModes,
     /// A setting that is only kept, reported as the number and the sequence's tail.
     Kept(Kept),
 }
@@ -104,6 +133,11 @@ impl Setting {
             b"+r" => Setting::Kept(Kept::ModifierKeys),
             b"$~" => Setting::Kept(Kept::StatusLine),
             b"*x" => Setting::Kept(Kept::AttributeExtent),
+            b">4m" => Setting::ModifyOtherKeys,
+            // The parameters name the modes to ask about; the answer lists those that are on.
+            [b'>', params @ .., b't'] if params.iter().all(|b| b.is_ascii_digit() || *b == b';') => {
+                Setting::TitleModes
+            }
             _ => return None,
         })
     }

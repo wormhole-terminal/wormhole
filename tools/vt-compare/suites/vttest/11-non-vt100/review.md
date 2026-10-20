@@ -45,9 +45,9 @@ in the colour menu, so the same test comes up more than once.
 | 053 to 054 | DEC mode report (DECRPM, `CSI ? Ps $ p`) | pass | states match the modes (DECAWM set, DECCOLM reset ...); modes the engine does not have (DECEDM, DECLTM, DECSCFDM, DECTEM, DECEKEM, DECGEPM, DECGPCM, DECGPBM, DEC131TM, DECKKDM) answer `unknown`. DECBKM is reset (the backarrow key sends DEL) |
 | 055 to 056 | restore presentation state, cursor (DECRSPS): renditions, flags, modes, character sets | pass | all 25 checks `OK` |
 | 057 | restore presentation state, tab stops | pass | the original and four modified rulers |
-| 058 | DECRQSS: protected fields attributes (DECPRO) | unsupported: DECRQSS DECPRO | answered as an invalid request (`DCS 0 $ r`) |
+| 058 | DECRQSS: protected fields attributes (DECPRO) | unsupported: DECPRO (answered invalid) | the engine has no DECPRO setting, and a terminal without one answers `DCS 0 $ r ST`, as xterm's ctlseqs say (vttest prints `failed` because it looks for the request's final byte in the answer; its own `invalid request` verdict is for answers that carry it) |
 | 059 to 066 | DECRQSS: DECSASD, SGR, DECSCA, DECSCPP, DECSCL, DECSLPP, DECSSDT, DECSTBM | pass | each valid and the value current (conformance level 65, 7-bit controls) |
-| 067 to 068 | DECRQSS: transmit termination character (DECTTC), transmission line termination (DECTLTC) | unsupported: DECRQSS DECTTC, DECTLTC | invalid requests |
+| 067 to 068 | DECRQSS: transmit termination character (DECTTC), transmission line termination (DECTLTC) | unsupported: DECTTC, DECTLTC (answered invalid) | as 058: no such settings, `DCS 0 $ r ST` |
 | 069 | terminal state report (DECRQTS, DECTSR) | pass |  |
 | 070 | assign the user-preferred supplemental set (DECAUPSS) | pass | ISO Latin-1 assigned; nothing is drawn |
 | 071 | DECRQUPSS | pass | `DCS 1 ! u A ST`: ISO Latin-1 |
@@ -95,7 +95,7 @@ in the colour menu, so the same test comes up more than once.
 | 189 to 191 | select number of lines per screen (DECSNLS): 36, 48, 24 | pass | the engine is 80x36, 80x48, 80x24; DECRQSS answers `36 *|`, `48 *|`, `24 *|` |
 | 192 to 200 | VT520 cursor movement: HPA, CBT, CHA, CHT, HPR, VPA, CNL, CPL, VPR | pass | boxes closed, rulers and numbers in sequence (CNL numbers 1 to 19, CPL 1 to 20) |
 | 201 to 209 | the same with origin mode and margins | pass | inside the margins; with origin mode on, CPL from row 24 starts at the bottom margin |
-| 210 to 220 | DECRQSS for the VT520's settings: DECATC, DECAC, DECCRTST, DECDLDA, DECSEST, DECARR, DECSTGLT, DECSZS, DECSPMA, DECTME, DECUS | unsupported: DECRQSS for these settings | eleven invalid requests |
+| 210 to 220 | DECRQSS for the VT520's settings: DECATC, DECAC, DECCRTST, DECDLDA, DECSEST, DECARR, DECSTGLT, DECSZS, DECSPMA, DECTME, DECUS | unsupported: these settings (answered invalid) | eleven requests answered `DCS 0 $ r ST`: hardware (colour tables, screen saver, auto repeat, page memory) the engine does not have, so there is nothing to report. xterm itself only knows DECSTGLT, DECAC and DECATC on a VT525 |
 | 221 to 222 | no clear on column change (DECNCSM) off: 80 and 132 columns | pass | the screen is cleared |
 | 223 to 224 | DECNCSM on | pass | not cleared (`+NO_CLEAR_ON_COLUMNS`); the 80 columns of E's are kept in 132 |
 | 225 | DECNCSM off again | pass | cleared |
@@ -117,8 +117,11 @@ in the colour menu, so the same test comes up more than once.
 | 302 to 305 | scroll down, left, right, up (SD, SL, SR, SU) | pass | a row (SD, SU) or a column (SL, SR) of `*` where vttest says |
 | 306 | report version (XTVERSION) | pass | both forms answer `Wormhole 1.1.0` |
 | 307 to 310 | xterm's DECRPM list | pass | states match; xterm-only modes the engine has not (tek4014 38, toolbar 10, logging 46, fast scroll 1014, `XT_ALTS_OK` 1046, rxvt 2001 to 2006 but 2004) say `unknown` |
-| 311 to 318 | DECRQSS for xterm's key modifier options and title modes | unsupported: DECRQSS (modifyKeyboard, modifyCursorKeys, modifyFunctionKeys, modifyOtherKeys, title modes) | eight invalid requests |
-| 319 | title stack position (XTTITLEPOS) | unsupported: XTTITLEPOS | no report |
+| 311 to 313 | DECRQSS for xterm's key modifier options modifyKeyboard, modifyCursorKeys, modifyFunctionKeys (`> Pm m`) | unsupported: these resources (answered invalid) | the engine keeps only modifyOtherKeys (the others change how the host writes cursor and function keys, which its encoder has no switch for) |
+| 314 | DECRQSS for modifyOtherKeys | pass | `DCS 1 $ r > 4 ; 0 m ST`: the sequence XTMODKEYS would send to set the level (0 here), as xterm's replies "look like a set-mode" |
+| 315 to 316 | DECRQSS for the title modes, hexadecimal set and query (`> 0 t`, `> 1 t`) | pass | with the mode on, `DCS 1 $ r > 0 t ST` (`> 1 t`): the modes that are on as XTSMTITLE sets them. After the reset (`CSI > Ps T`) none is on, there is nothing to restore, and the answer is `DCS 0 $ r ST` (vttest prints `failed` for it, as for any answer without the request's final byte) |
+| 317 to 318 | DECRQSS for the title modes, UTF-8 set and query (`> 2 t`, `> 3 t`) | unsupported: the UTF-8 title modes (answered invalid) | the engine's strings are always UTF-8: asking for it only turns the hexadecimal form off, so no mode stays on to report |
+| 319 | title stack position (XTTITLEPOS) | pass | `CSI Pn ; 16 # S`: the index grows from 0 with each push (XTWINOPS 22) up to the depth 16 less one and falls with each pop: 15 lines `[n:16] ok`, then 15 on the way back |
 | 320 | set window title (OSC 0) | pass | the host typed a title; nothing to see on the screen |
 | 321 to 322 | modify font (OSC 50) | unsupported: OSC 50 (font) | a window feature: nothing to show |
 | 323 | report fonts (OSC 50 query) | unsupported: OSC 50 (font) | no reply: the lists are empty |

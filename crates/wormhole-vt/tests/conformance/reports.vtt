@@ -345,6 +345,36 @@ feed \e[1+q\e[2*}\e[2$~\e[1$}\e[3+r\e[2*x
 feed \eP$q+q\e\\\eP$q*}\e\\\eP$q$}\e\\\eP$q+r\e\\\eP$q$~\e\\\eP$q*x\e\\
 reply \eP1$r1+q\e\\\eP1$r2*}\e\\\eP1$r1$}\e\\\eP1$r3+r\e\\\eP1$r2$~\e\\\eP1$r2*x\e\\
 
+test XTTITLEPOS reports the place on the title stack
+spec xterm ctlseqs CSI # S: "Report position on title-stack (XTTITLEPOS)", answered CSI Pn ; Pm # S with Pn the current index and Pm the maximum index; XTWINOPS 22 pushes and 23 pops; vttest 11/319 (the index grows with each push, stays below the maximum and falls with each pop)
+size 10 4
+feed \e[#S
+reply \e[0;16#S
+feed \e[22;0t\e[22;0t\e[22;0t\e[#S
+reply \e[3;16#S
+feed \e[23;0t\e[#S
+reply \e[2;16#S
+feed \e[23;0t\e[23;0t\e[#S
+reply \e[0;16#S
+
+test DECRQSS answers modifyOtherKeys as XTMODKEYS would set it
+spec xterm ctlseqs DECRQSS: `> Pm m` (XTQMODKEYS) is answered DCS 1 $ r followed by the control string that sets it without its CSI, XTMODKEYS `CSI > Pp ; Pv m` with Pp 4 for modifyOtherKeys; vttest 11/311 to 318
+size 10 4
+feed \eP$q>4m\e\\\e[>4;2m\eP$q>4m\e\\\e[>4;1m\eP$q>4m\e\\
+reply \eP1$r>4;0m\e\\\eP1$r>4;2m\e\\\eP1$r>4;1m\e\\
+
+test DECRQSS answers the title modes that are on as XTSMTITLE would set them
+spec xterm ctlseqs DECRQSS: `> Pm t` (XTSMTITLE) is answered with the control string that sets it; XTSMTITLE `CSI > Ps t` switches a mode on and XTRMTITLE `CSI > Ps T` off; with no mode on there is nothing to restore and the request is invalid
+size 10 4
+feed \eP$q>0t\e\\\e[>0;1t\eP$q>0t\e\\\e[>0T\eP$q>0t\e\\\e[>1T\eP$q>1t\e\\
+reply \eP0$r\e\\\eP1$r>0;1t\e\\\eP1$r>1t\e\\\eP0$r\e\\
+
+test DECRQSS is invalid for settings the terminal does not have
+spec xterm ctlseqs DECRQSS: an invalid request is answered DCS 0 $ r ST; the VT510 settings DECPRO, DECTTC, DECTLTC, DECATC, DECAC, DECCRTST, DECSEST, DECARR, DECTME, and xterm's other XTQMODKEYS resources and XTQFMTKEYS, are not kept
+size 10 4
+feed \eP$q}\e\\\eP$q|\e\\\eP$q's\e\\\eP$q,}\e\\\eP$q,|\e\\\eP$q-q\e\\\eP$q-r\e\\\eP$q-p\e\\\eP$q ~\e\\\eP$q>1m\e\\\eP$q>0f\e\\
+reply \eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\\eP0$r\e\\
+
 test DECDSR 56, 62, 63 and 85 answer that the locator is a mouse, no macro space and no sessions
 spec xterm ctlseqs DSR ?56 (the locator type, ?57;1 a mouse); VT510 DECDSR: macro space (CSI Pn * {), memory checksum (DCS Pid ! ~ xxxx ST), multiple sessions (?83)
 known-fail: alacritty – DSR ?53, ?55, ?56, ?62, ?63 and ?85 are not answered
