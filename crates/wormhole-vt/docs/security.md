@@ -118,6 +118,10 @@ program cannot move or resize the window unless `Policy` allows it, and then onl
 is behind the same switch: a width change reflows the whole history, so without `window_ops` it clears and
 homes the screen and leaves the width alone (a stream of toggles cost seconds when it did not).
 
+The tables that share work between cells are keyed so that a program cannot pick its input to make them
+slow: each page's table of cell styles hashes with a random seed drawn when the page is made, so colors
+chosen to land in one slot of its index spread out instead.
+
 There are no timers in the engine, so there is nothing a program can make wait.
 
 ### Replies are built from state

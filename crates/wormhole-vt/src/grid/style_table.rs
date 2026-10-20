@@ -31,7 +31,7 @@ pub(super) struct Entry {
     style: Style,
     /// How many cells of the page use the style (0 for a free entry).
     refs: u32,
-    /// `style.table_hash()` truncated, kept so that a probe compares one number before it compares
+    /// `style.table_hash(seed)` truncated, kept so that a probe compares one number before it compares
     /// styles, and a deletion does not hash again.
     hash: u32,
 }
@@ -52,6 +52,18 @@ pub(super) struct StyleTable {
     /// Live styles with an underline color of their own: the snapshot skips the pass that looks for
     /// them when there are none.
     colored_underlines: u32,
+    /// The key of the index's hash, drawn at random for each table: what a program draws cannot be
+    /// chosen to pile into one slot without knowing it. Nothing but the slots depends on it (ids
+    /// are handed out in order of use), so two terminals fed the same bytes are the same.
+    seed: u64,
+}
+
+/// A key for a new table. `RandomState` is the standard library's source of per-process random
+/// keys, drawn from the operating system once per thread and counted up for each use, so this is a
+/// few nanoseconds and never allocates.
+fn fresh_seed() -> u64 {
+    use std::hash::BuildHasher;
+    std::hash::RandomState::new().hash_one(0x5EED_u64)
 }
 
 impl Default for StyleTable {
@@ -63,6 +75,7 @@ impl Default for StyleTable {
             live: 0,
             last: 0,
             colored_underlines: 0,
+            seed: fresh_seed(),
         }
     }
 }
@@ -78,6 +91,7 @@ impl StyleTable {
             live: 0,
             last: 0,
             colored_underlines: 0,
+            seed: 0,
         }
     }
 
@@ -93,7 +107,7 @@ impl StyleTable {
                 }
                 continue;
             }
-            if entry.hash != entry.style.table_hash() as u32 {
+            if entry.hash != entry.style.table_hash(self.seed) as u32 {
                 return Err(format!("style {id} has a stale hash"));
             }
             let mut slot = entry.hash as usize & mask;
@@ -210,7 +224,7 @@ impl StyleTable {
             self.index = vec![0; 16];
         }
         let mask = self.index.len() - 1;
-        let hash = style.table_hash() as u32;
+        let hash = style.table_hash(self.seed) as u32;
         let mut slot = hash as usize & mask;
         loop {
             match self.index[slot] {
@@ -450,6 +464,53 @@ mod tests {
         }
         assert_eq!(table.live(), 2048);
         assert_eq!(table.used().count(), 2048);
+    }
+
+    fn rgb_style(n: u32) -> Style {
+        Style { fg: Color::Rgb(Rgb { r: (n >> 16) as u8, g: (n >> 8) as u8, b: n as u8 }), ..Style::DEFAULT }
+    }
+
+    #[test]
+    fn every_table_draws_its_own_seed() {
+        let seeds: std::collections::HashSet<u64> = (0..8).map(|_| StyleTable::default().seed).collect();
+        assert!(seeds.len() > 1, "{seeds:?}");
+    }
+
+    #[test]
+    fn colors_picked_to_collide_without_the_seed_spread_out_with_it() {
+        // What an attacker who knew the hash without its key could do: 300 colors whose index
+        // slot, in a table of 4,096, is the same.
+        const MASK: u64 = 4095;
+        let colliding: Vec<Style> =
+            (0..1 << 22).map(rgb_style).filter(|s| s.table_hash(0) & MASK == 7).take(300).collect();
+        assert_eq!(colliding.len(), 300);
+        let seed = super::fresh_seed();
+        let mut load = std::collections::HashMap::<u64, usize>::new();
+        for style in &colliding {
+            *load.entry(style.table_hash(seed) & MASK).or_default() += 1;
+        }
+        let worst = load.values().max().copied().unwrap_or(0);
+        assert!(worst <= 12, "{worst} of 300 colors share a slot under a random seed");
+    }
+
+    #[test]
+    fn the_seed_changes_where_styles_sit_in_the_index_and_nothing_a_terminal_can_see() {
+        let mut a = StyleTable { seed: 1, ..StyleTable::default() };
+        let mut b = StyleTable { seed: 0xDEAD_BEEF_F00D, ..StyleTable::default() };
+        let mut ids = (Vec::new(), Vec::new());
+        for n in 0..3000u32 {
+            let s = rgb_style(n * 7919);
+            ids.0.push(a.acquire(&s, 1 + n % 3));
+            ids.1.push(b.acquire(&s, 1 + n % 3));
+            if n % 3 == 0 {
+                a.release(ids.0[n as usize], 1);
+                b.release(ids.1[n as usize], 1);
+            }
+        }
+        assert_eq!(ids.0, ids.1, "ids come in order of use");
+        assert_eq!(a.used().collect::<Vec<_>>(), b.used().collect::<Vec<_>>());
+        assert_eq!((a.live(), a.bytes()), (b.live(), b.bytes()));
+        assert!(a.verify().is_ok() && b.verify().is_ok());
     }
 
     #[test]

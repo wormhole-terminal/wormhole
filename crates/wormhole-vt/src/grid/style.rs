@@ -56,8 +56,15 @@ impl Style {
             && self.underline_color == other.underline_color
     }
 
-    /// A hash of all four fields, for the table's index.
-    pub(super) fn table_hash(&self) -> u64 {
+    /// A hash of all four fields, for the table's index, keyed with the table's `seed`.
+    ///
+    /// The key is what keeps a program from choosing colors that all land in one slot of the
+    /// index (linear probing would then walk the whole run for every lookup): it does not know the
+    /// seed, which is drawn at random when the table is made. Each field goes through a folded
+    /// multiply (the 128-bit product's two halves xored), whose high half lands in the low bits a
+    /// mask keeps; a plain multiply, as this was, passes the low bits of its input on unchanged
+    /// and so lets a key that is xored in cancel out of the collisions.
+    pub(super) fn table_hash(&self, seed: u64) -> u64 {
         fn bits(color: Color) -> u64 {
             match color {
                 Color::Named(named) => 1 << 32 | named as u16 as u64,
@@ -65,13 +72,17 @@ impl Style {
                 Color::Rgb(rgb) => 3 << 32 | (rgb.r as u64) << 16 | (rgb.g as u64) << 8 | rgb.b as u64,
             }
         }
+        #[inline(always)]
+        fn fold(h: u64, word: u64, k: u64) -> u64 {
+            let product = u128::from(h ^ word).wrapping_mul(u128::from(k));
+            (product as u64) ^ (product >> 64) as u64
+        }
         const A: u64 = 0x9E37_79B9_7F4A_7C15;
         const B: u64 = 0xC2B2_AE3D_27D4_EB4F;
-        let mut h = bits(self.fg).wrapping_mul(A);
-        h = (h.rotate_left(23) ^ bits(self.bg)).wrapping_mul(B);
-        h = (h.rotate_left(23) ^ self.underline_color.map_or(0, bits)).wrapping_mul(A);
-        h = (h.rotate_left(23) ^ self.attrs.bits() as u64).wrapping_mul(B);
-        h ^ (h >> 29)
+        let mut h = fold(seed, bits(self.fg), A);
+        h = fold(h, bits(self.bg), B);
+        h = fold(h, self.underline_color.map_or(0, bits), A);
+        fold(h, self.attrs.bits() as u64, B)
     }
 }
 

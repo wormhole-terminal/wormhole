@@ -133,6 +133,8 @@ First public release (0.1.0).
   not once for every cell (about thirty times the work of ECH per cell). REP of an ASCII character past two
   screens' worth prints two screens and the remainder that keeps the column: the screen and the cursor
   end where the whole count would have left them, the history gains fewer identical lines.
+- The table that shares cell styles hashes with a random seed per page and a folded multiply, so colors
+  picked to land in one slot of its index no longer make every lookup walk a long run.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.
