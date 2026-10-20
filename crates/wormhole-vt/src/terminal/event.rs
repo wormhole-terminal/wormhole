@@ -210,6 +210,25 @@ pub enum Event {
     /// already; the host makes the window match, or calls [`Terminal::resize`](crate::terminal::Terminal::resize)
     /// with the size it has.
     WindowOp(super::WindowOp),
+    /// A mode the host acts on changed: the mouse tracking or encoding, the alternate screen,
+    /// bracketed paste, focus reports, the application cursor keys and keypad, DECBKM, the kitty
+    /// keyboard flags, reverse video, the cursor's visibility, shape or blink, synchronized output,
+    /// mode 2031 or the DEC locator. Read the new state with
+    /// [`Terminal::modes`](crate::terminal::Terminal::modes) and
+    /// [`Terminal::cursor`](crate::terminal::Terminal::cursor).
+    ///
+    /// At most once for each call of [`Terminal::events`](crate::terminal::Terminal::events), after
+    /// the other events: the engine compares the state with the state the last call saw, so a mode
+    /// set and reset again in between is no change, any number of feeds is one event, and
+    /// nothing is done while a program prints.
+    ModesChanged,
+    /// The colors programs set over the host's palette changed (OSC 4, 5, 10 to 19 and their
+    /// resets 104, 105 and 110 to 119, or RIS): read them with
+    /// [`Terminal::colors`](crate::terminal::Terminal::colors). At most once for each call of
+    /// [`Terminal::events`](crate::terminal::Terminal::events), like `ModesChanged`. The
+    /// palette the host gave with [`Terminal::set_default_colors`](crate::terminal::Terminal::set_default_colors)
+    /// is not counted.
+    ColorsChanged,
     /// RIS: the terminal was reset to its initial state.
     FullReset,
     /// History lines left the engine, oldest first: the host asked for them with

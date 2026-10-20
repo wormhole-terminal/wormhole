@@ -102,6 +102,7 @@ mod screen;
 #[cfg(test)]
 mod tests;
 mod text;
+mod watch;
 
 use crate::grid::{BlockPart, Grid, Pen, Region};
 use crate::parser::Parser;
@@ -296,6 +297,8 @@ pub struct Terminal {
     select: read::selection::Select,
     /// What the last `take_damage` saw of the cursor and the colours.
     seen: Seen,
+    /// What the host was last told changed, see `watch`.
+    told: watch::Told,
 }
 
 // A host parses on one thread and reads on another, usually under a lock: the terminal must stay
@@ -329,9 +332,12 @@ impl Terminal {
         self.prune_selection();
     }
 
-    /// The events since the last call, oldest first, and then, when the host asked for them
+    /// The events since the last call, oldest first. A change of the modes or colors a host acts
+    /// on since the last call comes after them, once ([`Event::ModesChanged`],
+    /// [`Event::ColorsChanged`]); then, when the host asked for them
     /// ([`set_archive_history`](Self::set_archive_history)), the history lines that left the engine.
     pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
+        self.announce_changes();
         // History lines that left since the last call come last, in the order they left.
         self.flush_archive();
         self.events.drain(..)
@@ -430,9 +436,17 @@ impl Terminal {
     /// reset) is one. A picture's pixels, their release and a reset are never dropped: the host
     /// would keep pixels nobody can show, or show a picture without them. They stay bounded past
     /// the cap: `add_image` takes no new picture there, a picture is freed once, and resets in a
-    /// row are one.
+    /// row are one. The announcements of changed modes and colors are kept too (a host that
+    /// never looked at them would not know its input is wrong); `events` makes two at most.
     fn push_event(&mut self, event: Event) {
-        let kept = matches!(event, Event::ImageData(_) | Event::ImageFree(_) | Event::FullReset);
+        let kept = matches!(
+            event,
+            Event::ImageData(_)
+                | Event::ImageFree(_)
+                | Event::FullReset
+                | Event::ModesChanged
+                | Event::ColorsChanged
+        );
         if (self.events.len() >= self.limits.events && !kept)
             || (matches!(event, Event::Bell | Event::Title | Event::Cwd | Event::FullReset)
                 && self.events.last() == Some(&event))

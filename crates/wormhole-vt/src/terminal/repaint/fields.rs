@@ -89,6 +89,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("attr_extent", Written("misc: DECSACE, through `kept`")),
     ("select", Viewer("the selection and the word separators")),
     ("seen", Viewer("what the last take_damage saw of the cursor and the colours")),
+    ("told", Queue("what the host was last told changed (ModesChanged, ColorsChanged)")),
 ];
 
 const CURSOR: &[(&str, Coverage)] =
@@ -213,6 +214,13 @@ const PALETTE: &[(&str, Coverage)] = &[
     ("special", Written("palette: OSC 5")),
     ("extra", Written("palette: OSC 13 to 19")),
     ("defaults", Host("the host's palette, set on the receiver by SetColors")),
+    ("touched", Scratch("a color command ran since the feed began; the end of the feed looks")),
+];
+
+const TOLD: &[(&str, Coverage)] = &[
+    ("modes", Queue("the watched modes the host was told about")),
+    ("cursor", Queue("the cursor's look the host was told about")),
+    ("colors", Queue("the colors the host was told about")),
 ];
 
 const SAVED_TITLES: &[(&str, Coverage)] =
@@ -239,6 +247,7 @@ pub const FIELDS: &[StructFields] = &[
     StructFields { name: "Titles", file: "terminal/reports/title.rs", fields: TITLES },
     StructFields { name: "Folder", file: "terminal/osc/cwd.rs", fields: FOLDER },
     StructFields { name: "Palette", file: "terminal/osc/colors.rs", fields: PALETTE },
+    StructFields { name: "Told", file: "terminal/watch.rs", fields: TOLD },
     StructFields { name: "Grid", file: "grid/mod.rs", fields: GRID },
     StructFields { name: "Pen", file: "grid/row.rs", fields: PEN },
     StructFields { name: "Row", file: "grid/row.rs", fields: ROW },

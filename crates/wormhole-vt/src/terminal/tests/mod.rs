@@ -2,6 +2,7 @@
 //! replies in detail, the kitty keyboard flags, resizing, the snapshot, hostile input.
 
 mod archive;
+mod changes;
 mod clusters;
 mod events;
 mod hostile;

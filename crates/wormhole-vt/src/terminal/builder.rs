@@ -7,7 +7,7 @@
 
 use super::{
     Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, Saved, Terminal,
-    dispatch, graphics, history_bytes, osc, read, reports, screen, text,
+    dispatch, graphics, history_bytes, osc, read, reports, screen, text, watch,
 };
 use crate::grid::{BlockPart, Grid, Pen};
 use crate::passthrough::{Passthrough, PassthroughError};
@@ -219,6 +219,7 @@ impl Builder {
             attr_extent: screen::rect::AttrExtent::default(),
             select: read::selection::Select::default(),
             seen: read::damage::Seen::new(),
+            told: watch::Told::new(),
         };
         if let Some(palette) = &self.palette {
             term.set_default_colors(palette);

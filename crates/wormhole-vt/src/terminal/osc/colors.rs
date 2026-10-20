@@ -39,6 +39,9 @@ pub(in crate::terminal) struct Palette {
     /// The host's palette, which color queries answer with when a program has not changed an
     /// entry.
     pub(in crate::terminal) defaults: Box<[Rgb; COLOR_COUNT]>,
+    /// A command may have changed `set` since the feed began: the end of the feed compares it with
+    /// what the host was told (`watch`), and only then.
+    pub(in crate::terminal) touched: bool,
 }
 
 impl Palette {
@@ -49,6 +52,7 @@ impl Palette {
             special: [None; SPECIAL_COLORS],
             extra: [None; EXTRA_DYNAMIC],
             defaults: Box::new(crate::terminal::osc::spec::xterm_defaults()),
+            touched: false,
         }
     }
 }
@@ -100,6 +104,7 @@ impl Terminal {
     }
 
     fn set_color(&mut self, slot: Slot, color: Option<Rgb>) {
+        self.palette.touched = true;
         match slot {
             Slot::Palette(i) => self.palette.set[i] = color,
             Slot::Named(named) => self.palette.set[named] = color,
@@ -148,6 +153,7 @@ impl Terminal {
     /// OSC 104: the palette entries listed go back to the host's colors, and all of them
     /// (the special colors too) without a list.
     pub(in crate::terminal) fn osc_reset_palette(&mut self, rest: &[u8]) {
+        self.palette.touched = true;
         if rest.is_empty() {
             for slot in 0..SPECIAL_BASE {
                 self.palette.set[slot] = None;
@@ -188,6 +194,7 @@ impl Terminal {
 
     /// RIS: everything a program set.
     pub(in crate::terminal) fn reset_colors(&mut self) {
+        self.palette.touched = true;
         self.palette.set = Default::default();
         self.palette.special = [None; SPECIAL_COLORS];
         self.palette.extra = [None; EXTRA_DYNAMIC];
