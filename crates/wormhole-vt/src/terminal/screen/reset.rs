@@ -91,6 +91,8 @@ impl Terminal {
         self.cluster.open = false;
         // A program that dies in the status line leaves a usable terminal.
         self.status.deactivate();
+        // The margins are the screen's again: a wrap due at the right margin of before is not due.
+        self.normalize_cursor();
     }
 
     /// DECALN: a screen of E's to line the picture up by.

@@ -67,6 +67,6 @@ impl Terminal {
     #[cold]
     #[inline(never)]
     pub(in crate::terminal) fn fit_cursor_to_sized_row(&mut self) {
-        self.cursor.x = self.cursor.x.min(self.sized_row_right(self.cursor.y));
+        self.normalize_cursor();
     }
 }

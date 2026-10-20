@@ -59,7 +59,7 @@ impl Terminal {
                     self.margins.left = 0;
                     self.margins.right = self.cols - 1;
                     // Due at the old right margin, which is no longer an edge: nothing wraps there.
-                    self.cursor.pending &= self.cursor.x == self.right_limit();
+                    self.normalize_cursor();
                 }
             }
             2027 => {

@@ -106,6 +106,8 @@ impl Terminal {
             } else {
                 self.cursor.x = right;
             }
+            // On a double-width row the picture can take the cursor past the half that shows.
+            self.normalize_cursor();
         }
     }
 

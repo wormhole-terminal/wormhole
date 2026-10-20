@@ -44,6 +44,8 @@ impl Terminal {
         self.sync_keyboard_flags();
         self.grid.damage_all();
         self.cluster.open = false;
+        // The cursor is shared and the rows are not: this screen's row may show fewer columns.
+        self.normalize_cursor();
         if blank == Blank::Yes {
             self.clear_alt_screen();
         }
@@ -67,6 +69,7 @@ impl Terminal {
             self.sync_keyboard_flags();
             self.grid.damage_all();
             self.cluster.open = false;
+            self.normalize_cursor();
         }
     }
 

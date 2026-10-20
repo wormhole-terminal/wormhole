@@ -37,6 +37,20 @@ impl Terminal {
         if self.cursor.x >= self.margins.left { self.margins.left } else { 0 }
     }
 
+    /// Bring the cursor in line with the row under it and the margins in force, after something
+    /// changed either without moving it: a soft reset that put the margins back, a size given to
+    /// the row, a scroll that put another row under the cursor, a swap of the screens (the cursor
+    /// is shared, the rows are not), a picture that moved it. The column is cut to what the row
+    /// shows, and a delayed wrap that waits at a column that is no longer where this row wraps is
+    /// dropped (the cursor stays where it is: nothing is due there). Every change of the screen
+    /// that can leave the cursor out of step ends here, so that the checked invariants (a wrap is
+    /// only pending on the edge, the cursor is in a shown column) hold after every sequence.
+    #[inline]
+    pub(in crate::terminal) fn normalize_cursor(&mut self) {
+        self.cursor.x = self.cursor.x.min(self.row_right(self.cursor.y));
+        self.cursor.pending &= self.cursor.x == self.right_limit();
+    }
+
     /// Put the cursor at `x`, `y` (inside the screen) and end a pending wrap.
     #[inline]
     pub(in crate::terminal) fn place(&mut self, x: usize, y: usize) {
@@ -252,9 +266,8 @@ impl Terminal {
         self.cursor = saved.cursor;
         self.cursor.x = self.cursor.x.min(self.cols - 1);
         self.cursor.y = self.cursor.y.min(self.rows - 1);
-        self.fit_cursor();
         // Saved on the last column of a screen that has been widened since: nothing is due there.
-        self.cursor.pending &= self.cursor.x == self.right_limit();
+        self.normalize_cursor();
         self.pen.style = saved.style;
         self.pen.protected = saved.protected;
         self.modes.set(Modes::ORIGIN, saved.origin);

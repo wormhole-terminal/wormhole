@@ -4,6 +4,7 @@
 mod archive;
 mod changes;
 mod clusters;
+mod cursor_edges;
 mod events;
 mod hostile;
 mod inband;

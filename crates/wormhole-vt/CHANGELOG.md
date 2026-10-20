@@ -141,6 +141,10 @@ First public release (0.1.0).
   answer follow the same cap and the one-byte controls of S8C1T as the others (they bypassed both once
   the picture was decoded), and the queue is never past its cap: a reply that does not fit is dropped,
   unless nothing else waits.
+- The cursor and its delayed wrap are brought in line with the row and the margins after a soft reset (a
+  wrap due at a right margin that was removed), a scroll that puts another row under them, a swap of the
+  screens and a picture placed on a double-width row (`Terminal::check_invariants` failed after these
+  four streams).
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.
