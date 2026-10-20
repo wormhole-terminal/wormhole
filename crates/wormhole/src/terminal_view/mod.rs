@@ -30,6 +30,7 @@ mod failed;
 mod find;
 mod find_bar;
 mod input;
+mod line_size;
 mod links;
 mod render;
 mod reported;

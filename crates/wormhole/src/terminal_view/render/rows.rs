@@ -9,7 +9,7 @@
 
 use gpui_kit::Hsla;
 use wormhole_core::terminal::images::{Placeholder, placeholder_at};
-use wormhole_core::terminal::types::{Cell, Colors, Flags, RowExtras};
+use wormhole_core::terminal::types::{Cell, Colors, Flags, LineSize, RowExtras};
 
 use crate::palette::Palette;
 
@@ -157,9 +157,14 @@ impl ImageRun {
     }
 }
 
-/// What colors a row's cells beyond their own: the selection and find's matches.
+/// What a row is built with beyond its cells: the selection and find's matches, which color them,
+/// and the row's size, which says how many of them show. A row is kept or found again by its
+/// cells and these.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct Marks {
+    /// How big the row is drawn: a double-width or double-height row shows the first half of its
+    /// cells (each is drawn twice as wide by the painter, which scales by columns).
+    pub size: LineSize,
     /// The selected columns `[first, last]`.
     pub selected: Option<(usize, usize)>,
     /// Matches' columns `[first, last]`, in order; `true` on the current match.
@@ -188,7 +193,8 @@ pub(super) fn build_row(
     marks: &Marks,
 ) -> BuiltRow {
     let mut row = BuiltRow::default();
-    for (col, cell) in cells.iter().enumerate() {
+    let shown = marks.size.visible_columns(cells.len());
+    for (col, cell) in cells.iter().enumerate().take(shown) {
         if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
             continue;
         }
@@ -429,6 +435,20 @@ mod tests {
     }
 
     #[test]
+    fn a_sized_row_shows_half_its_cells() {
+        use wormhole_core::terminal::types::LineSize;
+        let mut row = cells("abcdefgh");
+        row[6].bg = Color::Named(NamedColor::Red);
+        let marks = Marks { size: LineSize::DoubleWidth, ..Marks::default() };
+        let built = build_row(&row, &RowExtras::default(), &palette(), &Colors::default(), &marks);
+        assert_eq!(texts(&built), [(0, false, "abcd")], "the cells past the half are hidden");
+        assert!(built.backgrounds.is_empty(), "and so are their backgrounds");
+        let single =
+            build_row(&row, &RowExtras::default(), &palette(), &Colors::default(), &Marks::default());
+        assert_eq!(texts(&single), [(0, false, "abcdefgh")]);
+    }
+
+    #[test]
     fn blinking_cells_are_marked_on_their_run_and_the_row() {
         let mut row = cells("ab cd");
         row[0].flags = Flags::BLINK;
@@ -493,7 +513,7 @@ mod tests {
     #[test]
     fn matches_tint_and_the_current_one_stands_out() {
         let palette = palette();
-        let marks = Marks { selected: None, found: vec![(0, 1, false), (4, 5, true)] };
+        let marks = Marks { found: vec![(0, 1, false), (4, 5, true)], ..Marks::default() };
         let extras = RowExtras::default();
         let built = build_row(&cells("ab  cd"), &extras, &palette, &Colors::default(), &marks);
         assert_eq!(
@@ -508,7 +528,8 @@ mod tests {
             "an ordinary match keeps its text color"
         );
         // A selected match shows the selection; the current match shows over it.
-        let marks = Marks { selected: Some((0, 5)), found: vec![(0, 1, false), (4, 5, true)] };
+        let marks =
+            Marks { selected: Some((0, 5)), found: vec![(0, 1, false), (4, 5, true)], ..Marks::default() };
         let built = build_row(&cells("ab  cd"), &extras, &palette, &Colors::default(), &marks);
         assert_eq!(built.backgrounds, [(0, 4, palette.selection), (4, 6, palette.find_current)]);
     }

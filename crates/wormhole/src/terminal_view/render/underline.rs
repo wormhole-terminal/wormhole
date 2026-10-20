@@ -26,7 +26,10 @@ pub(super) enum UnderlinePaint {
 
 /// Where an underline of `kind` over `cells` cells is painted. `start` is its
 /// left end at the top of the row; `y` is how far below the row's top the
-/// font's underline sits; `line_height` bounds the second line of a double one.
+/// font's underline sits; `line_height` bounds the second line of a double one. `weight` is how
+/// many times the usual thickness: 2 on a double-height line, whose lines are as thick as its
+/// text is tall.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn underline_paint(
     kind: UnderlineKind,
     start: Point<Pixels>,
@@ -34,9 +37,10 @@ pub(super) fn underline_paint(
     cell_width: Pixels,
     y: Pixels,
     line_height: Pixels,
+    weight: f32,
     out: &mut Vec<UnderlinePaint>,
 ) {
-    let t = px(THICKNESS);
+    let t = px(THICKNESS * weight);
     let width = cell_width * cells as f32;
     let at = |dy: Pixels| point(start.x, start.y + dy);
     match kind {
@@ -52,7 +56,7 @@ pub(super) fn underline_paint(
         }
         UnderlineKind::Dotted => {
             // Square dots with gaps as wide; whole dots per cell.
-            let per_cell = (f32::from(cell_width) / (THICKNESS * 2.0)).floor().max(1.0) as usize;
+            let per_cell = (f32::from(cell_width) / (THICKNESS * weight * 2.0)).floor().max(1.0) as usize;
             let step = cell_width / per_cell as f32;
             for i in 0..cells * per_cell {
                 let x = start.x + step * i as f32 + (step - t) / 2.0;
@@ -79,7 +83,7 @@ mod tests {
 
     fn paint(kind: UnderlineKind, cells: usize, y: f32) -> Vec<UnderlinePaint> {
         let mut out = Vec::new();
-        underline_paint(kind, point(px(10.0), px(100.0)), cells, px(8.0), px(y), px(18.0), &mut out);
+        underline_paint(kind, point(px(10.0), px(100.0)), cells, px(8.0), px(y), px(18.0), 1.0, &mut out);
         out
     }
 
@@ -109,6 +113,29 @@ mod tests {
         };
         assert_eq!(quads(14.0), [14.0, 16.0]);
         assert_eq!(quads(16.5), [15.0, 17.0], "moved up so the lower line ends at the row's bottom");
+    }
+
+    #[test]
+    fn a_heavier_line_is_thicker() {
+        let mut out = Vec::new();
+        underline_paint(
+            UnderlineKind::Double,
+            point(px(0.0), px(0.0)),
+            1,
+            px(16.0),
+            px(30.0),
+            px(36.0),
+            2.0,
+            &mut out,
+        );
+        let tops: Vec<(f32, f32)> = out
+            .iter()
+            .map(|p| match p {
+                UnderlinePaint::Quad(b) => (f32::from(b.top()), f32::from(b.size.height)),
+                UnderlinePaint::Line { .. } => panic!("double is quads"),
+            })
+            .collect();
+        assert_eq!(tops, [(30.0, 2.0), (34.0, 2.0)], "twice as thick, twice as far apart");
     }
 
     #[test]

@@ -18,6 +18,7 @@ mod images;
 mod minimap;
 mod rows;
 mod scrollbar;
+mod sized;
 mod underline;
 mod words;
 
@@ -144,8 +145,16 @@ const TICK_INSET: f32 = 2.0;
 struct CursorPaint {
     rect: Bounds<Pixels>,
     color: Hsla,
-    /// The character inside a block cursor, redrawn on top of it.
-    text: Option<(Point<Pixels>, ShapedLine)>,
+    /// The character inside a block cursor, redrawn on top of it: where it is painted, the line
+    /// height it is painted with and what it is cut to (a double-height line's row).
+    text: Option<CursorText>,
+}
+
+struct CursorText {
+    at: Point<Pixels>,
+    line: ShapedLine,
+    line_height: Pixels,
+    clip: Option<ContentMask<Pixels>>,
 }
 
 /// GPUI's text run for a style.
@@ -231,8 +240,16 @@ fn cursor_frame(
     let row = snapshot.rows().get(at.row)?;
     let cell = row.cells().get(at.col)?;
     let Geometry { origin, cell_width, line_height, font_size, .. } = geometry;
-    let corner = point(origin.x + cell_width * at.col as f32, origin.y + line_height * at.row as f32);
-    let width = cell_width * if at.wide { 2.0 } else { 1.0 };
+    // On a double-width or double-height row the cell is twice as wide (and its row shows the
+    // part of a tall line the row is).
+    let size = row.size();
+    let row_box = sized::RowBox::new(size, &geometry, at.row, snapshot.columns());
+    let corner = if size.is_double() {
+        point(row_box.x(at.col), row_box.row_top)
+    } else {
+        point(origin.x + cell_width * at.col as f32, origin.y + line_height * at.row as f32)
+    };
+    let width = row_box.cell_width * if at.wide { 2.0 } else { 1.0 };
     let rect = cursor::cursor_rect(at.shape, focused, corner, width, line_height);
     let shown = cell.c != ' ' && cell.c != '\0' && cell.c != '\t' && !rows::is_shape(cell.c);
     let text = (cursor::redraws_text(rect, focused) && shown).then(|| {
@@ -242,7 +259,13 @@ fn cursor_frame(
         let mut text = String::from(cell.c);
         text.extend(row.extras().zerowidth(at.col));
         let run = text_run(text.len(), &style, base_font);
-        (corner, text_system.shape_line(text.into(), px(font_size), &[run], None))
+        // A tall line's character is drawn twice as big from the line's top; a double-width
+        // row's keeps its size and is centred in its cell, as its row's glyphs are.
+        let scale = row_box.scale_y;
+        let line = text_system.shape_line(text.into(), px(font_size * scale), &[run], None);
+        let spare = if size.is_double() && scale == 1.0 { width * 0.25 } else { Pixels::ZERO };
+        let at = if size.is_double() { point(corner.x + spare, row_box.top) } else { corner };
+        CursorText { at, line, line_height: line_height * scale, clip: row_box.clip }
     });
     // OSC 12 recolors the cursor.
     let color = palette.resolve(Color::Named(NamedColor::Cursor), &snapshot.colors);
@@ -512,6 +535,11 @@ impl Render for TerminalView {
                 let grid = window.content_mask().bounds;
                 window.paint_layer(grid, |window| {
                     for (row, painted) in cache.rows() {
+                        if painted.size.is_double() {
+                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
+                            sized::backgrounds(window, &painted.backgrounds, &at, reach, (row, rows_in_view));
+                            continue;
+                        }
                         for (start, end, color) in &painted.backgrounds {
                             // The edge cells' colour runs on into the padding (Ghostty's
                             // window-padding-color = extend); the default background is the theme's.
@@ -551,13 +579,20 @@ impl Render for TerminalView {
                 }
                 // Block elements and box drawing, drawn as quads and strokes: one layer too.
                 window.paint_layer(grid, |window| {
-                    for (_, painted) in cache.rows() {
-                        for (rect, color) in &painted.quads {
-                            window.paint_quad(fill(*rect, *color));
-                        }
-                        for (path, color) in &painted.strokes {
-                            window.paint_path(path.clone(), *color);
-                        }
+                    for (row, painted) in cache.rows() {
+                        // A tall line's shapes are made for the whole line: cut to this row.
+                        let clip = painted
+                            .size
+                            .is_double_height()
+                            .then(|| sized::RowBox::new(painted.size, &frame.geometry, row, cols).clip);
+                        window.with_content_mask(clip.flatten(), |window| {
+                            for (rect, color) in &painted.quads {
+                                window.paint_quad(fill(*rect, *color));
+                            }
+                            for (path, color) in &painted.strokes {
+                                window.paint_path(path.clone(), *color);
+                            }
+                        });
                     }
                 });
                 // Unfocused cursor: hollow block.
@@ -574,6 +609,12 @@ impl Render for TerminalView {
                 // still draw over the glyphs.
                 window.paint_layer(grid, |window| {
                     for (row, painted) in cache.rows() {
+                        if painted.size.is_double() {
+                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
+                            let metrics = (frame.baseline_y, font_size, cell_width);
+                            sized::glyphs(window, &painted.lines, &at, metrics, frame.blink_faded);
+                            continue;
+                        }
                         for (col, glyphs) in &painted.lines {
                             let word = at(*col, row);
                             for glyph in glyphs {
@@ -611,6 +652,17 @@ impl Render for TerminalView {
                 let mut underlines = Vec::new();
                 window.paint_layer(grid, |window| {
                     for (row, painted) in cache.rows() {
+                        if painted.size.is_double() {
+                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
+                            let lines = sized::Lines {
+                                struck: &painted.struck,
+                                overlined: &painted.overlined,
+                                underlines: &painted.underlines,
+                            };
+                            let heights = (frame.underline_y, frame.strike_y);
+                            sized::lines(window, lines, &at, heights, &mut underlines);
+                            continue;
+                        }
                         for (first, end, color) in &painted.struck {
                             let width = cell_width * (end - first) as f32;
                             let start = at(*first, row);
@@ -639,21 +691,38 @@ impl Render for TerminalView {
                                 cell_width,
                                 y,
                                 line_height,
+                                1.0,
                                 &mut underlines,
                             );
-                            paint_underlines(&underlines, span.color, window);
+                            paint_underlines(&underlines, span.color, 1.0, window);
                         }
                     }
                 });
                 for (row, columns) in &link_rows {
+                    let size = cache.snapshot.rows().get(*row).map_or(Default::default(), |row| row.size());
+                    if size.is_double() {
+                        let at = sized::RowBox::new(size, &frame.geometry, *row, cols);
+                        let cells = (columns.start, columns.len());
+                        sized::link_underline(
+                            window,
+                            cells,
+                            &at,
+                            frame.underline_y,
+                            link_color,
+                            &mut underlines,
+                        );
+                        continue;
+                    }
                     underlines.clear();
                     let (start, cells, y) = (at(columns.start, *row), columns.len(), frame.underline_y);
                     let kind = rows::UnderlineKind::Single;
-                    underline_paint(kind, start, cells, cell_width, y, line_height, &mut underlines);
-                    paint_underlines(&underlines, link_color, window);
+                    underline_paint(kind, start, cells, cell_width, y, line_height, 1.0, &mut underlines);
+                    paint_underlines(&underlines, link_color, 1.0, window);
                 }
-                if let Some((corner, line)) = frame.cursor.as_ref().and_then(|cursor| cursor.text.as_ref()) {
-                    let _ = line.paint(*corner, line_height, TextAlign::Left, None, window, cx);
+                if let Some(text) = frame.cursor.as_ref().and_then(|cursor| cursor.text.as_ref()) {
+                    window.with_content_mask(text.clip, |window| {
+                        let _ = text.line.paint(text.at, text.line_height, TextAlign::Left, None, window, cx);
+                    });
                 }
                 paint_ticks(&frame.ticks, bounds, find_tick, window);
                 if selecting {
@@ -871,11 +940,13 @@ fn paint_ticks(ticks: &[f32], grid: Bounds<Pixels>, color: Hsla, window: &mut Wi
     }
 }
 
-fn paint_underlines(paints: &[UnderlinePaint], color: Hsla, window: &mut Window) {
+/// `weight` is how many times the usual thickness the lines are drawn (2 on a double-height line).
+fn paint_underlines(paints: &[UnderlinePaint], color: Hsla, weight: f32, window: &mut Window) {
     for paint in paints {
         match *paint {
             UnderlinePaint::Line { origin, width, wavy } => {
-                let style = UnderlineStyle { thickness: px(underline::THICKNESS), color: Some(color), wavy };
+                let thickness = px(underline::THICKNESS * weight);
+                let style = UnderlineStyle { thickness, color: Some(color), wavy };
                 window.paint_underline(origin, width, &style);
             }
             UnderlinePaint::Quad(bounds) => window.paint_quad(fill(bounds, color)),

@@ -68,7 +68,8 @@ pub mod types {
     pub use wormhole_vt::input::{MouseEncoding, MouseTracking};
     pub use wormhole_vt::{
         COLOR_COUNT, Cell, CellExtra, Color, ColorScheme, Colors, Column, CursorShape, Flags, Hyperlink,
-        Line, Modes, NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side,
+        Line, LineSize, Modes, NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType,
+        Side,
     };
 }
 

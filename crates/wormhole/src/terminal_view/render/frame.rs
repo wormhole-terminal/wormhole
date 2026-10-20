@@ -4,12 +4,13 @@
 
 use gpui_kit::{Bounds, Hsla, Path, Pixels, Point};
 use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::types::Cell;
+use wormhole_core::terminal::types::{Cell, LineSize};
 
 use super::blur::blurred_row;
 use super::cache::{RowCache, SyncStats};
 use super::glyphs::GlyphPainter;
 use super::rows::{ImageRun, Segment, Underline, build_row};
+use super::sized;
 use crate::palette::Palette;
 
 /// Where the grid is on screen, which box-drawing quads depend on.
@@ -32,6 +33,8 @@ pub(super) struct PaintedRow<L> {
     pub struck: Vec<(usize, usize, Hsla)>,
     /// `[first, end)` columns with a line along the top of the cell.
     pub overlined: Vec<(usize, usize, Hsla)>,
+    /// How big the row is drawn; the painter scales its columns by it.
+    pub size: LineSize,
     /// Text on the row blinks.
     blinks: bool,
     /// Inline images' tiles on the row (drawn from the store each frame).
@@ -114,6 +117,7 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
                 .collect();
             PaintedRow {
                 lines,
+                size: marks.size,
                 provisional,
                 backgrounds: built.backgrounds,
                 underlines: built.underlines,
@@ -133,13 +137,9 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
             if painted.shapes.is_empty() || painted.placed == Some((row, geometry)) {
                 continue;
             }
-            painter.reset(
-                geometry.origin,
-                geometry.cell_width,
-                geometry.line_height,
-                geometry.scale,
-                geometry.font_size,
-            );
+            // A double-width or double-height row's shapes are made for its own, bigger cell.
+            let cell = sized::shape_metrics(painted.size, &geometry, row);
+            painter.reset(cell.origin, cell.cell_width, cell.line_height, geometry.scale, cell.font_size);
             for (col, c, fg) in &painted.shapes {
                 painter.add(*c, *col, row, *fg);
             }
@@ -181,9 +181,13 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
         self.rows.rows().any(|(_, painted)| painted.blinks)
     }
 
-    /// Every inline image run in view, with its row.
+    /// Every inline image run in view, with its row. A double-width or double-height row draws
+    /// none: a tile is a cell big, and the row's cells are not.
     pub fn image_runs(&self) -> impl Iterator<Item = (usize, &ImageRun)> {
-        self.rows.rows().flat_map(|(row, painted)| painted.images.iter().map(move |run| (row, run)))
+        self.rows
+            .rows()
+            .filter(|(_, painted)| !painted.size.is_double())
+            .flat_map(|(row, painted)| painted.images.iter().map(move |run| (row, run)))
     }
 
     /// The faint rows above the viewport, nearest first, by distance (1 = just above).

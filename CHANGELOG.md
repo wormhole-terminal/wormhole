@@ -61,6 +61,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   changes (mode 2031), so editors and TUIs that follow the terminal's colours can switch with it.
   Wormhole answers from the background of the theme in use, and reports a theme change to the
   programs that asked.
+- Programs can draw double-width and double-height lines (`ESC # 6`, `ESC # 3`/`ESC # 4`, back to
+  normal with `ESC # 5`), as vttest and banner tools do. A line of such a row takes twice the width
+  (and a double-height line two rows at twice the size); selecting, clicking, the cursor and
+  find work on it. Double-width text keeps its letter shapes and is spaced out to fill the wider
+  cells.
 
 ### Changed
 

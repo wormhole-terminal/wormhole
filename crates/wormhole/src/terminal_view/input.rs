@@ -2,6 +2,7 @@
 
 use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::keyspec::{KeyMods, KeySpec};
+use wormhole_core::terminal::types::LineSize;
 use wormhole_core::terminal::{Direction, KeySent};
 
 use super::*;
@@ -237,14 +238,20 @@ impl TerminalView {
     /// The grid point under `position`, as the last frame showed the grid.
     pub(super) fn grid_point(&self, position: Point<Pixels>) -> Option<(GridPoint, Side)> {
         self.pty.as_ref()?;
-        let (col, row, side) = cell_at(&self.layout.get(), position)?;
+        let (col, row, side) = cell_at(&self.layout.get(), position, |row| self.row_size(row))?;
         let offset = self.render_state.borrow().display_offset() as i32;
         Some((GridPoint::new(Line(row as i32 - offset), Column(col)), side))
     }
 
     /// Viewport cell under the pointer (0-based, ignores scrollback offset).
     pub(super) fn viewport_cell(&self, position: Point<Pixels>) -> Option<(usize, usize)> {
-        cell_at(&self.layout.get(), position).map(|(col, row, _)| (col, row))
+        cell_at(&self.layout.get(), position, |row| self.row_size(row)).map(|(col, row, _)| (col, row))
+    }
+
+    /// How big viewport `row` was drawn in the last frame (double-width and double-height rows
+    /// show half the columns, twice as wide).
+    pub(super) fn row_size(&self, row: usize) -> LineSize {
+        self.render_state.borrow().snapshot().rows().get(row).map_or(LineSize::Single, |row| row.size())
     }
 
     /// Mouse events go to the app when it asked for them, unless Shift is held
@@ -413,7 +420,9 @@ impl TerminalView {
         if lines != 0 {
             pty.scroll(Scroll::Delta(lines));
         }
-        let Some((col, row, side)) = cell_at(&layout, event.position) else { return };
+        let Some((col, row, side)) = cell_at(&layout, event.position, |row| self.row_size(row)) else {
+            return;
+        };
         let offset = pty.display_offset() as i32;
         pty.update_selection(GridPoint::new(Line(row as i32 - offset), Column(col)), side);
         cx.notify();
@@ -510,17 +519,24 @@ impl TerminalView {
     }
 }
 
-/// The viewport cell under `position` (clamped to the grid) and which half of it.
-fn cell_at(layout: &Layout, position: Point<Pixels>) -> Option<(usize, usize, Side)> {
+/// The viewport cell under `position` (clamped to the grid) and which half of it. A row that is
+/// double-width or half of a double-height line has cells twice as wide and only half of them, so
+/// the column is the one the pointer is over in the row as it is drawn.
+fn cell_at(
+    layout: &Layout,
+    position: Point<Pixels>,
+    size_of: impl Fn(usize) -> LineSize,
+) -> Option<(usize, usize, Side)> {
     if layout.cols == 0 || layout.rows == 0 {
         return None;
     }
     let x = f32::from(position.x - layout.origin.x).max(0.0);
     let y = f32::from(position.y - layout.origin.y).max(0.0);
-    let cell_w = f32::from(layout.cell.width);
     let cell_h = f32::from(layout.cell.height);
-    let col = ((x / cell_w) as usize).min(layout.cols - 1);
     let row = ((y / cell_h) as usize).min(layout.rows - 1);
+    let size = size_of(row);
+    let cell_w = f32::from(layout.cell.width) * super::line_size::width_scale(size);
+    let col = ((x / cell_w) as usize).min(size.visible_columns(layout.cols) - 1);
     let side = if (x / cell_w).fract() < 0.5 { Side::Left } else { Side::Right };
     Some((col, row, side))
 }
@@ -551,9 +567,10 @@ fn drag_scroll_lines(layout: &Layout, position: Point<Pixels>) -> Option<i32> {
 mod tests {
     use gpui_kit::{Keystroke, point, px, size};
     use wormhole_core::terminal::Direction;
+    use wormhole_core::terminal::types::{LineSize, Side};
 
     use super::super::Layout;
-    use super::{TerminalCommand, drag_scroll_lines, keystroke_spec, platform_command};
+    use super::{TerminalCommand, cell_at, drag_scroll_lines, keystroke_spec, platform_command};
 
     fn layout() -> Layout {
         Layout {
@@ -564,6 +581,20 @@ mod tests {
             gutter: 12.0,
             frame: (0.0, 0.0),
         }
+    }
+
+    #[test]
+    fn a_double_width_row_has_cells_twice_as_wide_and_only_half_of_them() {
+        let layout = layout();
+        let sizes = |row: usize| if row == 1 { LineSize::DoubleWidth } else { LineSize::Single };
+        // x = 10 is the grid's left edge, a cell is 8 wide; row 1 is y 60..78.
+        let at = |x: f32, y: f32| cell_at(&layout, point(px(x), px(y)), sizes);
+        assert_eq!(at(10.0 + 8.0 * 5.0 + 1.0, 50.0), Some((5, 0, Side::Left)), "a normal row");
+        assert_eq!(at(10.0 + 16.0 * 5.0 + 1.0, 65.0), Some((5, 1, Side::Left)), "five doubled cells in");
+        assert_eq!(at(10.0 + 16.0 * 5.0 + 12.0, 65.0), Some((5, 1, Side::Right)), "the right half of it");
+        assert_eq!(at(10.0 + 16.0 * 60.0, 65.0), Some((39, 1, Side::Left)), "past the half: the last shown");
+        let tall = |_: usize| LineSize::DoubleHeightBottom;
+        assert_eq!(cell_at(&layout, point(px(10.0 + 32.0), px(65.0)), tall), Some((2, 1, Side::Left)));
     }
 
     #[test]

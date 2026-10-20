@@ -65,6 +65,7 @@ impl<K: PartialEq, T> RowCache<K, T> {
         self.rows.resize_with(rows.len(), || None);
 
         let marks = |row: usize| Marks {
+            size: rows[row].size(),
             selected: snapshot.selected_columns(row),
             found: found.get(row).cloned().unwrap_or_default(),
         };
@@ -72,7 +73,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
         let mut stale = Vec::new();
         for (row, entry) in self.rows.iter_mut().enumerate() {
             let same_marks = |e: &Entry<T>| {
-                e.marks.selected == snapshot.selected_columns(row)
+                e.marks.size == rows[row].size()
+                    && e.marks.selected == snapshot.selected_columns(row)
                     && e.marks.found.as_slice() == found.get(row).map_or(&[][..], Vec::as_slice)
             };
             let keep =
@@ -147,6 +149,7 @@ fn row_hash(cells: &[Cell], extras: &RowExtras, marks: &Marks) -> u64 {
             mix(*c as u64);
         }
     }
+    mix(marks.size as u64);
     if let Some((first, last)) = marks.selected {
         mix(first as u64 | (last as u64) << 32);
     }
@@ -264,6 +267,23 @@ mod tests {
         assert_eq!((stats.built, stats.kept + stats.moved), (1, 2), "the provisional row, though unchanged");
         term.snapshot(&mut snapshot, 0);
         assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 0, "built in full now");
+    }
+
+    #[test]
+    fn a_rows_size_is_part_of_what_it_was_built_from() {
+        let mut term = term(10, 4);
+        let mut cache = RowCache::default();
+        feed(&mut term, b"a\r\nb\r\nc");
+        sync(&mut cache, &mut term, 0);
+        // The same text at another size is another row: built again, not found by its content.
+        feed(&mut term, b"\x1b[2;1H\x1b#6");
+        let stats = sync(&mut cache, &mut term, 0);
+        assert_eq!((stats.built, stats.kept + stats.moved), (1, 3), "{stats:?}");
+        assert_eq!(sync(&mut cache, &mut term, 0).built, 0);
+        // The row scrolls up with its size, and rows of the same text but another size don't match.
+        feed(&mut term, b"\x1b[4;1H\n\n");
+        let stats = sync(&mut cache, &mut term, 0);
+        assert!(stats.built <= 2, "the new blank rows at most: {stats:?}");
     }
 
     #[test]

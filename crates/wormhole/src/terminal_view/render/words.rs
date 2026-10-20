@@ -41,6 +41,9 @@ pub(super) struct Glyph {
     pub font_id: FontId,
     pub id: GlyphId,
     pub emoji: bool,
+    /// From a word of wide characters (two cells each): a double-width row centres it in its
+    /// doubled cells.
+    pub wide: bool,
     pub color: Hsla,
     /// Blinking text: painted faded in the blink clock's off phase.
     pub blink: bool,
@@ -301,6 +304,7 @@ fn place(
             font_id: glyph.font_id,
             id: glyph.id,
             emoji: glyph.emoji,
+            wide: segment.wide,
             color: style.map(|style| style.fg).unwrap_or_default(),
             blink: style.is_some_and(|style| style.blink),
         }

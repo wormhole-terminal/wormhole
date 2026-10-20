@@ -9,7 +9,9 @@
 use std::ops::Range;
 
 use wormhole_vt::image::ImagePlacement;
-use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, Modes, Point, RowExtras, SelectionRange};
+use wormhole_vt::{
+    Cell, Colors, CursorShape, Damage, Line, LineSize, Modes, Point, RowExtras, SelectionRange,
+};
 
 use super::blocks::BlockState;
 use super::marks::{self, RowMark};
@@ -28,6 +30,8 @@ pub struct SnapshotRow {
     changed: bool,
     /// What the row carries of a command block, as of its last copy.
     mark: Option<RowMark>,
+    /// How big the row is drawn, as of its last copy (a change of it damages the row).
+    size: LineSize,
 }
 
 impl SnapshotRow {
@@ -38,6 +42,12 @@ impl SnapshotRow {
     /// What the cells carry beside them (empty for almost every row).
     pub fn extras(&self) -> &RowExtras {
         &self.extras
+    }
+
+    /// How big the row is drawn: double-width or half of a double-height line (DECDWL, DECDHL)
+    /// show half the columns, each twice as wide.
+    pub fn size(&self) -> LineSize {
+        self.size
     }
 
     /// Whether the row was copied anew in the last snapshot (its content may
@@ -199,6 +209,7 @@ impl ScreenSnapshot {
             if snapshot.changed {
                 let line = Line(row as i32 - display_offset as i32);
                 snapshot.mark = screen.copy_row(line, &mut snapshot.cells, Some(&mut snapshot.extras));
+                snapshot.size = screen.line_size(line);
                 self.saw_marks |= snapshot.mark.is_some();
             }
         }
@@ -433,6 +444,29 @@ mod tests {
         term.scroll_display(Scroll::Delta(1));
         term.snapshot(&mut snapshot, 0);
         assert_eq!(snapshot.cursor, None);
+    }
+
+    #[test]
+    fn a_rows_size_is_copied_with_it_and_damages_it() {
+        use wormhole_vt::LineSize;
+        let mut term = term(10, 4);
+        feed(&mut term, b"one\r\ntwo\r\nthree");
+        let mut snapshot = ScreenSnapshot::default();
+        term.snapshot(&mut snapshot, 0);
+        assert!(snapshot.rows().iter().all(|row| row.size() == LineSize::Single));
+        term.snapshot(&mut snapshot, 0);
+        feed(&mut term, b"\x1b[2;1H\x1b#3\x1b[3;1H\x1b#4");
+        term.snapshot(&mut snapshot, 0);
+        assert_eq!(changed(&snapshot), [1, 2], "only the rows whose size changed");
+        let sizes: Vec<LineSize> = snapshot.rows().iter().map(|row| row.size()).collect();
+        assert_eq!(
+            sizes,
+            [LineSize::Single, LineSize::DoubleHeightTop, LineSize::DoubleHeightBottom, LineSize::Single]
+        );
+        // A row the size left stays as copied while the rows around it change.
+        feed(&mut term, b"\x1b[4;1Hx");
+        term.snapshot(&mut snapshot, 0);
+        assert_eq!(snapshot.rows()[1].size(), LineSize::DoubleHeightTop);
     }
 
     /// What a full copy of a 200×60 screen of colored text costs (every row damaged: scrolling the

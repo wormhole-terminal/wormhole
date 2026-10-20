@@ -18,7 +18,7 @@ use wormhole_vt::image::VirtualPlacement;
 use wormhole_vt::window::WindowGeometry;
 use wormhole_vt::{BlockPart, Damage, RowMark as GridMark, TextShape};
 use wormhole_vt::{
-    COLOR_COUNT, Cell, Colors, CursorShape, Line, Modes, Point, RowExtras, Scroll, SelectionRange,
+    COLOR_COUNT, Cell, Colors, CursorShape, Line, LineSize, Modes, Point, RowExtras, Scroll, SelectionRange,
     SelectionType, Side,
 };
 use wormhole_vt::{Policy, Terminal};
@@ -152,6 +152,11 @@ impl Screen {
         extras: Option<&mut RowExtras>,
     ) -> Option<RowMark> {
         self.term.copy_row(line, cells, extras).map(mark_from)
+    }
+
+    /// How big `line` is drawn (DECDWL, DECDHL).
+    pub(crate) fn line_size(&self, line: Line) -> LineSize {
+        self.term.line_size(line)
     }
 
     /// Whether `line` goes on in the next row (a soft wrap, not a newline).
