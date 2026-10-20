@@ -139,7 +139,14 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
             }
             // A double-width or double-height row's shapes are made for its own, bigger cell.
             let cell = sized::shape_metrics(painted.size, &geometry, row);
-            painter.reset(cell.origin, cell.cell_width, cell.line_height, geometry.scale, cell.font_size);
+            painter.reset(
+                cell.origin,
+                cell.cell_width,
+                cell.line_height,
+                geometry.scale,
+                cell.font_size,
+                cell.stretch,
+            );
             for (col, c, fg) in &painted.shapes {
                 painter.add(*c, *col, row, *fg);
             }

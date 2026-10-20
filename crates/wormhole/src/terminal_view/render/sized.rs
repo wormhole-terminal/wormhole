@@ -18,8 +18,9 @@
 //!   use (a bitmap emoji, a font that couldn't be pinned down, or any glyph off macOS) keeps its
 //!   size and sits in the middle of its doubled cells, so the line still has the width a
 //!   double-width line has and the text its normal height.
-//! - **Box drawing and block elements** are shapes, not glyphs: they are made for the scaled cell
-//!   (`shape_metrics`) and so do stretch.
+//! - **Box drawing and block elements** are shapes, not glyphs (`shape_metrics`): a tall line's
+//!   are made for its doubled cell; a double-width row's are made for a normal cell and stretched
+//!   to twice the width, thickness of the vertical lines included, as its glyphs are.
 //! - Pictures are not drawn on these rows (their tiles are a cell big).
 
 use gpui_kit::{
@@ -100,6 +101,8 @@ pub(super) struct ShapeMetrics {
     pub cell_width: Pixels,
     pub line_height: Pixels,
     pub font_size: f32,
+    /// How many times wider the shapes are drawn than they are made.
+    pub stretch: f32,
 }
 
 pub(super) fn shape_metrics(size: LineSize, geometry: &Geometry, row: usize) -> ShapeMetrics {
@@ -111,11 +114,16 @@ pub(super) fn shape_metrics(size: LineSize, geometry: &Geometry, row: usize) -> 
         _ => origin.y + line_height * row as f32,
     };
     let painter_top = origin.y + line_height * sy * row as f32;
+    // A double-width row's shapes are made for a normal cell and stretched, so that their lines
+    // are as much thicker across as the text's stems are; a tall line's are made for its doubled
+    // cell, whose lines are thicker both ways with the font size.
+    let stretch = if size.is_double_height() { 1.0 } else { sx };
     ShapeMetrics {
         origin: point(origin.x, origin.y + (line_top - painter_top)),
-        cell_width: cell_width * sx,
+        cell_width: cell_width * sx / stretch,
         line_height: line_height * sy,
         font_size: font_size * sy,
+        stretch,
     }
 }
 
@@ -341,6 +349,8 @@ mod tests {
         }
         let tall = shape_metrics(LineSize::DoubleHeightTop, &GEOMETRY, 1);
         assert_eq!((tall.cell_width, tall.line_height, tall.font_size), (px(16.0), px(40.0), 28.0));
-        assert_eq!(tall.origin.x, px(10.0));
+        assert_eq!((tall.origin.x, tall.stretch), (px(10.0), 1.0));
+        let wide = shape_metrics(LineSize::DoubleWidth, &GEOMETRY, 1);
+        assert_eq!((wide.cell_width, wide.line_height, wide.stretch), (px(8.0), px(20.0), 2.0));
     }
 }
