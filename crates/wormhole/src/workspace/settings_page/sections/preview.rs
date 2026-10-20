@@ -14,13 +14,18 @@ const SIDEBAR_W: f32 = 320.0;
 
 /// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
 /// with the option under the pointer.
-pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+pub(in crate::workspace::settings_page) fn draw_sidebar_preview(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let ui = ui(cx);
     let s = settings(cx).clone();
     let now = Look::of(&s);
     let label =
         |text: String| div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).child(text);
-    let mut panes = div().flex().gap_4().w_full().child(
+    // In the column the two lists stack: a column's width fits one.
+    let column = window.preview_column;
+    let mut panes = div().flex().when(column, |d| d.flex_col()).gap_4().w_full().child(
         div()
             .flex_1()
             .min_w_0()
@@ -52,9 +57,11 @@ pub(super) fn draw_sidebar_preview(window: &SettingsWindow, cx: &mut Context<Set
         .flex_col()
         .gap_2()
         .child(div().p_4().rounded(ui.radius_lg).outlined(ui, ui.border).bg(ui.background).child(panes))
-        .child(div().text_caption().text_color(ui.muted).child(
-            "Live preview of the Terminals list. Hovering a density previews it next to the current one",
-        ))
+        .child(div().text_caption().text_color(ui.muted).child(if column {
+            "Live preview of the Terminals list. Hovering a density previews it under the current one"
+        } else {
+            "Live preview of the Terminals list. Hovering a density previews it next to the current one"
+        }))
         .into_any_element()
 }
 

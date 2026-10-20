@@ -54,7 +54,10 @@ const SPECIMEN: [&str; 4] = [
 /// One specimen, Terminal | Code | Interface, in the theme's terminal colors at the slot's
 /// size (the terminal's line height too); a font under the pointer in an open picker shows
 /// in it.
-fn draw_specimen(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+pub(in crate::workspace::settings_page) fn draw_specimen(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let ui = ui(cx);
     let store = cx.global::<SettingsStore>();
     let slot = window.specimen;
@@ -80,10 +83,11 @@ fn draw_specimen(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
         ))
     }));
     let line = |parts: Vec<(Hsla, &'static str)>| {
-        div()
-            .flex()
-            .whitespace_nowrap()
-            .children(parts.into_iter().map(|(color, text)| div().text_color(color).child(text)))
+        div().flex().flex_wrap().children(
+            parts
+                .into_iter()
+                .map(|(color, text)| div().flex_none().whitespace_nowrap().text_color(color).child(text)),
+        )
     };
     let fg = theme_bridge::hsla(term.foreground);
     let text = div()
@@ -112,7 +116,8 @@ fn draw_specimen(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
         .child(line(vec![(ui.muted, SPECIMEN[3])]));
     let facts = div()
         .flex()
-        .gap_4()
+        .flex_wrap()
+        .gap_x_4()
         .px_4()
         .py_2()
         .rule_top(ui)
@@ -147,6 +152,8 @@ fn draw_specimen(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
                         .child(tabs)
                         .child(
                             div()
+                                .min_w_0()
+                                .truncate()
                                 .text_caption()
                                 .text_color(ui.faint)
                                 .child("Hover a font in a list to preview it here"),

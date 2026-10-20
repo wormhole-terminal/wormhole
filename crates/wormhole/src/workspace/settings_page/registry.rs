@@ -252,16 +252,22 @@ impl SettingsWindow {
                 rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb));
             }
             let mut any_row = false;
-            for entry in group.entries {
+            let mut shown = 0;
+            for entry in group.entries.iter().filter(|entry| !self.in_column(entry.id)) {
                 let Some(setting) = control(entry.id) else {
                     tracing::warn!("settings: no control for {}", entry.id);
                     continue;
                 };
+                shown += 1;
                 any_row |= !matches!(setting.control, Control::Block(_));
                 rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), cx));
                 if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
                     rows = rows.child(div().pb_2().child(below));
                 }
+            }
+            // A group that only held the preview the column shows has nothing left to draw.
+            if shown == 0 {
+                continue;
             }
             column = column.child(if any_row { rows.rule_bottom(page.ui) } else { rows });
         }
@@ -278,6 +284,9 @@ impl SettingsWindow {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = page.ui;
+        if self.in_column(entry.id) {
+            return self.render_preview_note(entry, hit, cx);
+        }
         if let Control::Block(draw) = &setting.control {
             return draw(self, cx);
         }

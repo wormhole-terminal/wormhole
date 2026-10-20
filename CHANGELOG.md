@@ -64,6 +64,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   behind them, instead of beside them.
 - Notes and tasks in the right panel are hidden for now, behind a feature flag in development builds.
 - The Usage tab of the right panel shows while a coding agent runs in the terminal.
+- Settings: the previews are always in view. The window opens wider, to the right, with a preview
+  column beside the page: the window in miniature (Appearance and every page without a preview of its
+  own), the font specimen on Fonts, and the Terminals list on Terminals & sidebar, each following
+  what you change as you change it. The page keeps its width; in a window narrower than that, or on a
+  small screen, the previews sit in their pages as before.
 - Settings: a calmer look. The nav's rows are 13 pt and inset from its edges with a rounded
   selection, each group of sections starts a clear step below the one before it, and "Project
   folders" no longer cuts off against its Preview tag. Pages have more air at the sides, an intro

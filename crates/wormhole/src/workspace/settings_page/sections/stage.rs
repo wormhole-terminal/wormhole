@@ -1,5 +1,5 @@
 //! Appearance's live preview: the window in miniature over a wallpaper, in
-//! the current theme, primary and opacity, drawn with the design's own words at about a third of
+//! the current theme, primary and opacity, drawn with the design's own words at a little over a quarter of
 //! their size (its 1440 × 900 window at [`SCALE`]) rather than as bars. The blur isn't drawn:
 //! it is the window's own effect view behind everything GPUI paints, which a drawing inside a
 //! window can't have; the caption says so.
@@ -12,8 +12,8 @@ use crate::theme_bridge::hsla;
 
 /// The design's window at this scale: every size below is the real one times it, so the
 /// miniature keeps the window's proportions.
-const SCALE: f32 = 0.36;
-const STAGE_H: f32 = 356.0;
+const SCALE: f32 = 0.28;
+const STAGE_H: f32 = WINDOW_H + 48.0;
 const WINDOW_W: f32 = 1440.0 * SCALE;
 const WINDOW_H: f32 = 900.0 * SCALE;
 const MINI_SIDEBAR_W: f32 = 350.0 * SCALE;
@@ -49,7 +49,7 @@ const MINI_METER_H: f32 = 4.0 * SCALE;
 const MINI_CURSOR_W: f32 = 8.0 * SCALE;
 const MINI_CURSOR_H: f32 = 16.0 * SCALE;
 const MINI_DIVIDER_H: f32 = 12.0 * SCALE;
-/// The window's corners and hairlines are not scaled: a 0.36 hairline would vanish.
+/// The window's corners and hairlines are not scaled: a 0.28 hairline would vanish.
 const MINI_RADIUS: f32 = 6.0;
 const MINI_CORNER: f32 = 2.0;
 const MINI_RULE: f32 = 1.0;
@@ -62,7 +62,10 @@ const CURSOR_OPACITY: f32 = 0.8;
 const CONTEXT_USED: f32 = 0.62;
 
 /// Appearance → the window over the desktop: theme, primary and opacity as they are now.
-pub(super) fn draw_stage(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+pub(in crate::workspace::settings_page) fn draw_stage(
+    _: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     // The main window in miniature: its colours, whatever this window's look.
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();

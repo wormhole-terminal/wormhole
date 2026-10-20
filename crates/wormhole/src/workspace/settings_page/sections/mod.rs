@@ -29,10 +29,13 @@ mod updates;
 
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
+pub(super) use fonts::draw_specimen;
+pub(super) use preview::draw_sidebar_preview;
 pub(super) use profile_form::ProfileForm;
 pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
+pub(super) use stage::draw_stage;
 pub(super) use theme_picker::ThemePicker;
 
 /// The controls of a section's rows (their names and words are in core's settings index).

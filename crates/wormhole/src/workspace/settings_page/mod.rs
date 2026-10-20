@@ -5,6 +5,7 @@
 mod devctl;
 mod font_picker;
 mod nav;
+mod preview_column;
 mod recorder;
 mod registry;
 mod sections;
@@ -24,6 +25,7 @@ use crate::theme_bridge;
 use crate::vibrancy::Blur;
 use crate::workspace::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
+use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
 use registry::{ProjectSource, Segment, Setting, toggle};
 pub(crate) use sections::open_new_profile_sheet;
 use style::{SettingParts, SettingState};
@@ -37,7 +39,9 @@ const COLUMN_W: f32 = 760.0;
 const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.
 const NO_RESULTS_W: f32 = 420.0;
-/// The window: its first size and the least it shrinks to.
+/// The window: the size of a page (the nav and the content column) and the least the window
+/// shrinks to. It opens wider than the page by the preview column (`preview_column`), to the
+/// right, so the page keeps its width.
 const WINDOW_SIZE: (f32, f32) = (920.0, 720.0);
 const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
 
@@ -101,6 +105,9 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
+    /// The window is wide enough for the preview column (read at each draw): the previews are in
+    /// it, and their pages leave them out.
+    preview_column: bool,
     /// Advanced → "Reset to defaults…" was pressed: the row asks before it resets.
     confirm_reset: bool,
     /// Coding agents → the agents that aren't on PATH are listed.
@@ -154,12 +161,13 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
             return;
         }
     }
-    let options = aux_window::window_options(
+    let mut options = aux_window::window_options(
         "Settings",
         size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)),
         size(px(WINDOW_MIN.0), px(WINDOW_MIN.1)),
         cx,
     );
+    options.window_bounds = Some(WindowBounds::Windowed(opening_bounds(cx)));
     // Deferred: the new window renders right away, and this may run inside
     // another window's update.
     cx.defer(move |cx| {
@@ -171,6 +179,27 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
             Err(err) => tracing::error!("opening the settings window failed: {err:#}"),
         }
     });
+}
+
+/// Where a new window opens: centred as a window of [`WINDOW_SIZE`] would be, then grown to the
+/// right by the preview column, so the page stays where it was. A screen too narrow for that
+/// (the Dock, a small display) moves it left and then narrows it, to stay inside the usable area;
+/// below [`COLUMN_SWITCH_W`] the previews are inline in their pages.
+fn opening_bounds(cx: &App) -> Bounds<Pixels> {
+    let page = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
+    match cx.primary_display() {
+        Some(display) => grown_right(page, PREVIEW_W, display.visible_bounds()),
+        None => Bounds { size: size(page.size.width + px(PREVIEW_W), page.size.height), ..page },
+    }
+}
+
+/// `page` with `extra` more width on its right: its left edge stays, unless the screen's usable
+/// area `screen` is too narrow for that, which moves the window left, and then narrows it.
+fn grown_right(page: Bounds<Pixels>, extra: f32, screen: Bounds<Pixels>) -> Bounds<Pixels> {
+    let width = (page.size.width + px(extra)).min(screen.size.width);
+    let overflow = (page.origin.x + width - (screen.origin.x + screen.size.width)).max(px(0.0));
+    let x = (page.origin.x - overflow).max(screen.origin.x);
+    Bounds { origin: point(x, page.origin.y), size: size(width, page.size.height) }
 }
 
 /// Bring up the settings window at the row `id` itself (the command palette): its
@@ -325,6 +354,7 @@ impl SettingsWindow {
             specimen: FontSlot::Terminal,
             themes_all: false,
             sidebar_preview: None,
+            preview_column: false,
             confirm_reset: false,
             others_open: false,
             profile_form: None,
@@ -512,6 +542,8 @@ impl Render for SettingsWindow {
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
 
+        // The column comes with width: the page is drawn knowing whether it has the previews.
+        self.preview_column = window.viewport_size().width >= px(COLUMN_SWITCH_W);
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)
         } else if self.show_results {
@@ -570,6 +602,7 @@ impl Render for SettingsWindow {
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
             .child(self.render_nav(&query, surfaces.panel, cx))
             .child(content)
+            .children(self.preview_column.then(|| self.render_preview_column(surfaces.panel_right, cx)))
             .children(self.render_new_profile(cx))
     }
 }
@@ -714,5 +747,38 @@ fn open_folder(dir: &Path) {
     });
     if let Err(err) = opened {
         tracing::warn!("opening {}: {err}", dir.display());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui_kit::{Bounds, Pixels, point, px, size};
+
+    use super::grown_right;
+
+    fn bounds(x: f32, y: f32, w: f32, h: f32) -> Bounds<Pixels> {
+        Bounds { origin: point(px(x), px(y)), size: size(px(w), px(h)) }
+    }
+
+    #[test]
+    fn a_window_grows_to_the_right_and_keeps_its_left_edge() {
+        let grown = grown_right(bounds(260.0, 40.0, 920.0, 720.0), 480.0, bounds(0.0, 25.0, 2560.0, 1400.0));
+        assert_eq!(grown, bounds(260.0, 40.0, 1400.0, 720.0));
+    }
+
+    #[test]
+    fn a_screen_too_narrow_moves_it_left_then_narrows_it() {
+        let screen = bounds(0.0, 25.0, 1440.0, 875.0);
+        // Room for the width but not from x 260: it moves left until its right edge fits.
+        assert_eq!(
+            grown_right(bounds(260.0, 40.0, 920.0, 720.0), 480.0, screen),
+            bounds(40.0, 40.0, 1400.0, 720.0)
+        );
+        // Not even the width fits: the usable width, from the screen's left edge.
+        let small = bounds(0.0, 25.0, 1280.0, 775.0);
+        assert_eq!(
+            grown_right(bounds(180.0, 40.0, 920.0, 720.0), 480.0, small),
+            bounds(0.0, 40.0, 1280.0, 720.0)
+        );
     }
 }
