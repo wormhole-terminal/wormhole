@@ -8,176 +8,112 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
-- Wormhole, a theme of Wormhole's own in the app icon's colours: Wormhole Dark (navy black with the
-  icon's blue) and Wormhole Light (cool white with a deeper blue). It is the default for a new
-  install, under Match system its dark version in Dark Mode and its light one in Light Mode, and the
-  first card in Settings → Appearance. An existing setup keeps the theme it has.
-- Usage now shows Codex plan-limit windows and Gemini’s latest model-response token count alongside
-  Claude. Enable or update the integrations in Settings → Coding agents. Missing limits are omitted,
-  and expired snapshots wait for a fresh report instead of claiming an unused allowance.
-
-- Settings → Updates → Channel: Unstable updates to a build of every change as soon as it passes the
-  tests, between releases, and shows Settings → Feature flags so you can try features that are still
-  being built. Stable, the default, gets releases only. Going back to Stable keeps the build you have
-  until the next release overtakes it.
-
-- Nine new themes of Wormhole's own: Nebula (deep violet with neon pink, mint and electric blue),
-  Solar Flare (warm and hot: coral, acid lime and amber), Borealis (teal-black with aurora greens and
-  violet), two built on deep blacks, Event Horizon (near-black and cool) and Void (true black, for
-  OLED-deep blacks), Crimson (red-black, or rose-white in its light version), Cyberpunk (indigo night
-  with hot pink, cyan and signal yellow), Matrix (phosphor green on black) and Soltari (ivory with deep
-  jewel tones, or a twilight dark version). Each has its own primary colour where it has a signature
-  one (Crimson's crimson, Matrix's green, Soltari's gold), and every colour keeps at least 5:1 on its
-  background.
-- A theme file can ship several versions of a theme at once: shared colours at the top, then a
-  `variants` list where each version (Light, Dark, Light Minimal, …) sets only what differs, and may
-  build on another version of the file. Each is a theme of its own, "Soltari Light", and the family's
-  name alone means its first version. Saving a version from the Theme Studio writes it back into its
-  family's file. Settings → Appearance shows a family as one card with a swatch per version: click a
-  swatch for that version, or the card under Match system for the family's light version in Light
-  Mode and its dark one in Dark Mode.
-- The terminal is always a rounded surface, with or without Liquid Glass: the title row has its own row
-  above it, and the terminal's text stands 12 pt from the window's edges, the sidebar, the panel and the
-  status bar (the surface 8 pt, the grid 4 pt inside it, as in 1.1), so at the window's edge it lines
-  up with the traffic lights. With terminals as tabs the title row is
-  the same as with the sidebar, and the tabs sit under it, 8 pt above the surface. Glass only changes what
-  they are made of. As in 1.1 the terminal's column, title row included, is in the terminal's colour,
-  so the surface reads as the terminal itself rather than a box on the window.
-- The terminals of a split sit 8 pt apart, each its own rounded surface: its header's tile stands
-  8 pt from the surface's top and left, evenly in its corner, and its text 8 pt in, under the tile. A
-  quiet grey outline marks the one that has the keyboard (the others are dimmed), and the gap is the
-  handle that resizes them. In a narrow pane the name gives way before the buttons, and Zoom and the
-  menu before the close button, so a pane can always be closed. Settings → Terminal → Gaps between
-  split terminals turns it off for the hairline join.
-- A terminal split off a grouped one (Split Right/Down, a drag onto a pane) joins its group, right after
-  the split's other terminals, and a thin line along the split's rows, left of their tiles, shows they belong
-  together (the chain mark stays only where they can't be side by side).
-- A terminal in no group is one rounded card: the selection and the pointer colour the card itself, with no
-  second rounded shape inside it.
-- The terminals of a split that are in no group now share one card in the sidebar. The bracket along their
-  rows and the "on screen" label are gone; VoiceOver still says which are on screen.
-- The window's content lines up on one 12 pt edge: the terminal's text, the title row's first item, the
-  status bar's ends and the sidebar and panel headers. The terminal centres its grid in the pane, and the
-  edge cells' colours run out to the pane's edges. The title row has no fill of its own: its folder,
-  branch and terminal stand on the terminal's colour, above its surface.
-- Tabs keep their place when you switch between them, show their close button only under the pointer, and the
-  group switcher shows just the group's name. Every tab is a box, lined up with the terminal's edge: the
-  open one filled, the others in a fainter fill, so each one reads clearly. Too many to fit,
-  and the row scrolls sideways, bringing the selected terminal's tab into view; the + stays at the bar's
-  right end. A drag on the tab bar no longer moves the window.
-- In tabs mode, a group card in the group switcher opens the group's popover (name, colours and actions)
-  on a right-click or a click on its name.
-- The top rows are 38 points tall, which puts the traffic lights 12 pt from the window's top as from its
-  left, as far as the terminal stands from the sides and the bottom; a chip at the sidebar's top names the profile Wormhole is in
-  once there are two: its menu switches profiles (every window with it), opens a window in one,
-  moves this one, makes or manages profiles and opens Settings.
-- The sidebar has no "Terminals" heading any more: its + sits at the right end of the top row and goes
-  with the sidebar when you hide it. A long list has a scrollbar like the terminal's (it follows "Show
-  scroll bars" in System Settings) and a hairline under the top row while rows are scrolled beneath it.
-- The right panel's sections are cards like the sidebar's again, under its own tab bar: Changes, History
-  and Notes are each a stack of cards led by their heads, with the compare picker and refresh in the
-  Changes card's head. Its lists scroll like the sidebar's, with the same scrollbar and the hairline under
-  the tab bar only while rows are scrolled beneath it.
-- Terminals as tabs is one row under the title row: the profile chip, a group switcher (the group's
-  colour, name and count, with an amber dot while another group needs you) and that group's terminals as
-  tabs. As in macOS Terminal there is no tab bar while there is only one terminal; the switcher shows
-  once there is another group to switch to, the tabs once the group has more than one terminal.
-  The switcher opens a search ("Go to group or terminal…") over the groups as cards, "In no group",
-  New group and "Show all groups in the sidebar". ⌃⌥[ and ⌃⌥] go to the previous and next group and
-  ⌃⌥1–9 to a group by number, in both layouts.
 - Profiles: a whole Wormhole of its own for Work, Private or anything else, each with its terminals,
-  theme, fonts, keys, notifications, trusted projects, start folder, environment, git identity and a
-  separate Claude and Codex login. Settings → Profile (the first page) edits the one Wormhole is in and
-  makes new ones; Shell → Profile and the command palette switch ("Switch to Work"), open a window in
-  another profile or move this window to one. Switching hides the other profile's windows with their
-  terminals and agents still running. A window in another profile than the shown one wears a colour
-  edge across its top and its profile's name in the status bar. `Wormhole list` shows each terminal's
-  profile. A folder you list under a profile opens in that profile. Profiles wear the nine colours of the
-  sidebar's groups, and Settings → Coding agents installs Wormhole's status hooks into a profile's Claude
-  or Codex login folder too.
-- The status tile looks like an app icon: black for a terminal, Claude on its orange, Gemini on its
-  blue, with a faint sheen and edge. The amber edge of a terminal that needs you breathes more slowly,
-  and the tile comes in 32, 20, 18, 16 and 14 points for rows, tabs, the title row and the status bar.
-- The terminal list is redrawn as rounded cards, set in from the sidebar's edges, with a rounded
-  selection: a card for each group and a card of its own for each terminal in no group. Each
-  two-line row leads with a status tile: the agent's logo or the terminal symbol, with a light
-  circling its edge while it works (grey while a command runs), a breathing amber edge when it needs
-  you, and a badge for done, failed, new output or the bell. Under Reduce Motion the light and the
-  edge hold still.
-- Your own groups, as in a browser's tab groups: name and colour them (grey, blue, red, yellow, green,
-  pink, purple, cyan or orange) and keep them in your order among the terminals in no group, each of
-  which is a card of its own. A group's card is washed with its colour from the left; its name stands
-  alone on the head, with the chevron at the right, and folded it keeps its terminals' tiles, their
-  count and a dot while one needs you or failed. Click the label for a popover (name, colours, New
-  terminal in group, Ungroup, Close group, Pin group, Move group to new window), the chevron to fold.
-  A pinned group stays as one line when its last terminal closes; an unpinned one goes with it.
-  Drag terminals into and out of groups and groups by their head; a terminal's menu reads Rename…,
-  Add terminal to new group, Add terminal to group, Remove from group, Split right, Close terminal.
-  Close group asks once if an agent is working in it. ⌘T opens a terminal in the selected one's
-  group, ⇧⌘T in no group; folded groups are skipped by ⌘1–9.
-- Terminals can show as tabs instead of the sidebar (Settings → Show terminals in, or View → Show
-  Terminals as Tabs): one row across the top with the selected terminal's group (a menu switches to
-  another) and its tabs. The title row then shows the terminal's status as a small tile.
-- The status bar puts the terminal that has waited longest for you first, as a button with its tile,
-  its name and how long it has waited (one click goes there), and counts the rest ("2 working · 1
-  done"). Below about 1100 points the words go first.
+  theme, fonts, keys, notifications, trusted projects, start folder, environment, git identity and
+  its own Claude and Codex login. Settings → Profile (the first page) edits the one you're in and
+  makes new ones. Shell → Profile, the command palette ("Switch to Work") and a chip at the top of
+  the sidebar (shown once there are two) switch profiles, open a window in one or move this window
+  to one. Switching hides the other profile's windows, their terminals and agents still running; a
+  window in another profile than the one shown wears its colour along the top and its name in the
+  status bar. A folder listed under a profile opens in it, `Wormhole list` names each terminal's
+  profile, and Settings → Coding agents installs the status hooks into a profile's Claude or Codex
+  login too.
+- Groups of your own, as in a browser's tab groups: name them, give them one of nine colours and
+  keep them in your order among the terminals in no group. Click a group's name for its popover
+  (name, colour, New terminal in group, Ungroup, Close group, Pin group, Move group to new window)
+  and its chevron to fold it; a folded group keeps its terminals' tiles, their count and a dot while
+  one needs you. Drag terminals into and out of groups, and groups by their head. A pinned group
+  stays when its last terminal closes. ⌘T opens a terminal in the selected one's group, ⇧⌘T in no
+  group, and a terminal split off a grouped one joins its group. Close group asks first if an agent
+  is working in it.
+- Terminals can show as tabs instead of in the sidebar (Settings → Terminals & sidebar → Show
+  terminals in, or View → Show Terminals as Tabs): one row under the title row with the profile
+  chip, a group switcher (with an amber dot while another group needs you) and that group's
+  terminals. As in macOS Terminal there's no tab bar while there's only one terminal. The switcher
+  searches groups and terminals ("Go to group or terminal…"); tabs keep their place, show their
+  close button under the pointer and scroll sideways when they don't fit. ⌃⌥[ and ⌃⌥] go to the
+  previous and next group and ⌃⌥1–9 to a group by number, in either layout.
+- Ten themes of Wormhole's own. Wormhole, in the app icon's colours, is the new default: Wormhole
+  Dark in Dark Mode and Wormhole Light in Light Mode; an existing setup keeps the theme it has. With
+  it come Nebula, Solar Flare, Borealis, Event Horizon, Void (true black), Crimson, Cyberpunk, Matrix
+  and Soltari. Each uses its own primary colour where it has a signature one, and every colour keeps
+  at least 5:1 contrast on its background.
+- A theme file can hold several versions of a theme (Light, Dark, Light Minimal, …): shared colours
+  at the top and a `variants` list in which each version sets only what differs. Each version is a
+  theme of its own ("Soltari Light"), the family's name means its first version, and the Theme Studio
+  saves a version back into its family's file. Settings → Appearance shows a family as one card with
+  a swatch per version.
+- Settings → Updates → Channel: Unstable gets a build of every change as soon as it passes the
+  tests, and shows Settings → Feature flags so you can try what's still being built. Stable, the
+  default, gets releases only; going back to Stable keeps your build until the next release
+  overtakes it.
+- The Usage tab shows Codex's plan limits and Gemini's latest token count next to Claude's, and an
+  expired reading waits for a fresh one instead of showing an unused allowance. Turn the integrations
+  on or update them in Settings → Coding agents.
+- Liquid Glass, off by default (Settings → Appearance): on macOS 26 and later the sidebar's cards and
+  the tabs are glass and the status bar uses the window's own material. Before macOS 26, or with
+  Reduce Transparency or Increase Contrast, every surface paints itself.
 
 ### Changed
 
 - A new app icon: the `>_` prompt over a glowing disc that runs from blue to violet, on a plain tile,
   white in light mode and black in dark mode.
-- Settings → Appearance → Use the theme's primary colour: a switch, on by default. Turn it off to pick a
-  primary of your own for every theme; turn it back on and the theme's own returns, with your colour
-  kept for next time. A colour you had already chosen stays in use.
-
-- The status bar's size item names the program in front (the agent, or the running command), as the
-  title row does, instead of always the shell. It no longer shows the branch, its changes or the agent's
-  context: the title row has them. While the bar is shown it also says how the terminal on screen is
-  doing ("working · 4m", "needs you", "done · 2m"), before its size, and the title row leaves that out.
-- A split's pane headers name each terminal as its sidebar row does (a rename shows there too), lead
-  with its status tile and show the end of its folder, cut from the front.
-- A group whose terminals are in one repository shows its changed files (±N) once, on its first row,
-  instead of on every row; a terminal in another repository or worktree keeps its own count. A quiet
-  row's folder is in the interface font, as in the title row; commands stay in the code font.
-- Settings → Terminals & sidebar has three densities, Regular (48 pt rows with a second line), Compact
-  (32 pt, one line) and Dense (26 pt, tighter cards), each with its status tile, for the sidebar and
-  the tab bar; and "Show groups as cards" turns the cards off, leaving each group a head and its rows.
-  The old compact switch becomes Compact; View → Compact Rows is gone.
-- Liquid Glass, off by default (Settings → Appearance). On macOS 26 and later it puts the sidebar's cards
-  and the tab bar's tabs on glass and the status bar on the window's own material. The right panel
-  keeps its own surface and its tab bar at the top. Off, before macOS 26, or with Reduce Transparency or Increase Contrast, every surface paints itself.
-- Light themes: cards keep a 12 % edge where their 3 % fill vanishes on white, the amber of a card that
-  needs you holds 3:1 on it, and a profile's letter turns black on a light colour (yellow, green).
+- A new look for the window. The terminal is a rounded surface, its text 12 pt from the window's edge
+  in line with the traffic lights, the title row, the status bar and the sidebar's and panel's
+  headers; the title row stands on the terminal's own colour. Split terminals are rounded surfaces of
+  their own, 8 pt apart: the one with the keyboard has a quiet outline and the others are dimmed, the
+  gap resizes them, and Settings → Terminal → Gaps between split terminals joins them with a hairline
+  instead. Each pane's header names its terminal as the sidebar does and leads with its status tile.
+- The sidebar is a list of rounded cards: one per group and one for each terminal in no group (a
+  split's terminals share one), with the selection colouring the card itself. Its heading is gone and its + sits at the right of the top
+  row; a long list scrolls with a scrollbar that follows "Show scroll bars" in System Settings. Each
+  row leads with a status tile that looks like the agent's app icon (or a terminal's): a light circles
+  its edge while it works, its amber edge breathes while it needs you, and a badge marks done, failed,
+  new output or the bell. Under Reduce Motion they hold still.
+- Settings → Terminals & sidebar has three row densities, Regular, Compact and Dense, for the sidebar
+  and the tab bar, and "Show groups as cards" turns the cards off. View → Compact Rows becomes the
+  Compact density.
+- A group whose terminals share a repository shows its changed files (±N) once, on its first row; a
+  terminal in another repository or worktree keeps its own count.
+- The right panel's Changes, History and Notes are cards like the sidebar's, under its own tab bar,
+  with the compare picker and refresh in the Changes card's head.
+- The status bar puts the terminal that has waited longest for you first, with how long it has waited
+  (a click goes there), and counts the rest ("2 working · 1 done"). It names the program in front
+  instead of the shell and says how the terminal on screen is doing ("needs you", "done · 2m"); the
+  branch, its changes and the agent's context stay in the title row.
+- Settings → Appearance → Use the theme's primary colour, on by default. Turn it off to use your own
+  primary in every theme; turn it back on and the theme's returns, with yours kept for next time. A
+  colour you had already chosen stays in use.
+- Light themes are easier to read: cards keep a visible edge on white, the amber of a terminal that
+  needs you holds 3:1, and a profile's letter turns black on a light colour.
 
 ### Removed
 
-- The sidebar no longer groups terminals by folder, and its header is only "Terminals" and the +: the
-  filter funnel (Show, search, Hide idle), Group by, the new-group button, the Settings gear and the
-  shell chevron are gone (a right-click on the + still offers the other shells). The Order setting
-  (Stable or Classic) is gone with the folder bands it ordered; terminals keep the order you give them.
-  The tab bar's two-row, stacks and bottom-bar layouts are gone too. Old settings that named any of
-  these still load and do nothing.
+- Grouping by folder, and with it the sidebar's filter (Show, search, Hide idle), Group by, its Settings
+  gear and shell menu, and the Order setting: terminals keep the order you give them. Right-click the +
+  for another shell. The tab bar's two-row, stacked and bottom-bar layouts are gone too. Settings that
+  named any of these still load and do nothing.
 
 ### Fixed
 
-- A screen that keeps printing new words, such as `ttystorm donut` with a font that has ligatures,
-  no longer slows the window down: a frame took 30 ms there and takes about 3 now. A word the frame had
-  no time to shape shows without its ligatures for a frame or two.
-- A program can no longer freeze a terminal for seconds by moving the cursor far to the left over and
-  over with reverse wraparound on.
+- A screen that keeps printing new words, such as `ttystorm donut` with a font that has ligatures, no
+  longer slows the window down: a frame took 30 ms there and takes about 3 now. A word with no time to
+  be shaped shows without its ligatures for a frame or two.
+- A program can no longer freeze a terminal for seconds by moving the cursor far left over and over
+  with reverse wraparound on.
 - A terminal's scrollback stays near its memory limit when the output is full of combining marks or
-  links: accents stacked on every letter, or a link on every character, could make the history hold
-  many times its limit, hundreds of megabytes. Past 1 MiB of link addresses in one stretch of history,
-  new links show as plain text.
-- After a program turns on 8-bit controls, a title or other string with a dash, curly quotes or `œ` in
-  it is no longer cut short and the rest shown as stray text.
+  links, which could make it hold hundreds of megabytes. Past 1 MiB of link addresses in one stretch of
+  history, new links show as plain text.
+- After a program turns on 8-bit controls, a title or other text with a dash, curly quotes or `œ` in it
+  is no longer cut short, with the rest shown as stray characters.
 - A program that asks for thousands of reports without reading them no longer gets half an answer typed
-  into its input when Wormhole stops answering: a report past the limit is left out whole.
-- A saved terminal state that a program sends back with a mistake in it now changes nothing, as it
-  should, instead of putting back its margins and modes and stopping at the mistake.
-- A protected wide character (Chinese, Japanese, an emoji) right at the edge of a selective erase is no
-  longer erased with the rest.
+  into its input when Wormhole stops answering.
+- A saved terminal state that a program sends back with a mistake in it now changes nothing, instead
+  of putting back part of it.
+- A protected wide character (Chinese, Japanese, an emoji) at the edge of a selective erase is no longer
+  erased with the rest.
 - A line that ends in a tab no longer takes an extra, empty row when the window gets narrower.
+- Dragging on the tab bar no longer moves the window.
 
 ### Security
 
