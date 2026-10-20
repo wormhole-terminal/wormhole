@@ -86,7 +86,7 @@ mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
-mod path_card;
+mod path_menu;
 mod profile_chip;
 #[cfg(test)]
 mod profile_look_tests;
@@ -284,8 +284,8 @@ pub struct Workspace {
     crumb_drawn: std::cell::RefCell<Option<String>>,
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
-    /// The hover card under the title row's folder.
-    path_card: path_card::PathCard,
+    /// Where the title row's folder is drawn: the path menu opens under it.
+    path_anchor: crate::native::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
     status_others: Vec<(i64, Vec<status_bar::Counted>)>,
     /// Index into the active session's notes that ⌘↵ / Stash act on.
@@ -358,7 +358,6 @@ impl Workspace {
                 cx.defer(app::sync_system_look);
             } else {
                 this.hints_blur(cx);
-                this.path_card.reset();
             }
         })
         .detach();
@@ -422,7 +421,7 @@ impl Workspace {
             status_bar_drawn: None,
             crumb_drawn: Default::default(),
             ports_menu: false,
-            path_card: Default::default(),
+            path_anchor: Default::default(),
             status_others: Vec::new(),
             focused_note: None,
             editing_note: None,

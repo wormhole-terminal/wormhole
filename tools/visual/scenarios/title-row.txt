@@ -1,7 +1,7 @@
 # The refined title row: the folder cut in its middle, the branch
 # chip, the agent's icon with its live status (working, then needs you), Open in… flush with the
-# splits, the path's hover card, the row folding its buttons into ⋯ when narrow, and the sidebar
-# hidden. The project's tint and the border settings are checked by hand (they need a project).
+# splits, the folder's menu (native, so not in a shot: `menu` lists it), the row folding its buttons
+# into ⋯ when narrow, and the sidebar hidden. The project's tint and the border settings are checked by hand (they need a project).
 @fixture repo-basic
 @shell claude
 @theme Tokyo Night
@@ -10,9 +10,9 @@ hook 1 UserPromptSubmit
 @shot working
 hook 1 Notification Allow Bash?
 @shot needs-you
-path-card open
-@shot card
-path-card close
+path-menu
+menu
+menu-close
 resize 700 900
 @shot narrow
 resize 1440 900

@@ -6,6 +6,7 @@
 //! The model lives in the app, not in `wormhole-core`: choosing an item runs a closure on GPUI's
 //! `Window` and `App`, and core has no GPUI.
 
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -17,13 +18,17 @@ pub use crate::menubar::model::KeyEquivalent;
 /// so it may update any entity or open a window.
 pub type Callback = Rc<dyn Fn(&mut Window, &mut App)>;
 
+/// What choosing a swatch does, given its place in the row. Runs like a [`Callback`].
+pub type Pick = Rc<dyn Fn(usize, &mut Window, &mut App)>;
+
 /// A small picture in front of an item's title.
 #[derive(Clone)]
 pub enum Icon {
-    /// A dot in a colour (a group's colour in its Colour menu).
-    Swatch(Hsla),
     /// An app's icon, as the bytes of an image file.
     Image(Arc<Image>),
+    /// A file's or folder's icon as the system draws it in Finder (the house for a home folder,
+    /// a disk for a volume). Nothing is read here: the platform asks for the icon.
+    File(PathBuf),
 }
 
 /// An item's check mark.
@@ -98,6 +103,25 @@ pub enum Entry {
         enabled: bool,
         menu: Menu,
     },
+    /// A row of colour dots to choose one from, as Finder's tags in a file's context menu: one
+    /// click picks and closes the menu.
+    Swatches(Swatches),
+}
+
+/// A colour on offer in a [`Swatches`] row.
+#[derive(Clone)]
+pub struct Swatch {
+    pub color: Hsla,
+    /// The colour's name: its tooltip, and what VoiceOver says.
+    pub name: SharedString,
+}
+
+#[derive(Clone)]
+pub struct Swatches {
+    pub swatches: Vec<Swatch>,
+    /// The one that is the current choice: ringed.
+    pub selected: Option<usize>,
+    pub on_pick: Pick,
 }
 
 /// A menu: its rows, and what to do when it closes.
@@ -144,6 +168,17 @@ impl Menu {
         self
     }
 
+    /// A row of colour dots (see [`Entry::Swatches`]); `selected` is the ringed one.
+    pub fn swatches(
+        mut self,
+        swatches: Vec<Swatch>,
+        selected: Option<usize>,
+        on_pick: impl Fn(usize, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.entries.push(Entry::Swatches(Swatches { swatches, selected, on_pick: Rc::new(on_pick) }));
+        self
+    }
+
     pub fn when(self, condition: bool, build: impl FnOnce(Self) -> Self) -> Self {
         if condition { build(self) } else { self }
     }
@@ -163,7 +198,7 @@ impl Menu {
 impl Menu {
     /// The rows as lines of text, indented by depth, for tests and devctl: `- title [x] [off]`
     /// for an item (`[x]` checked, `[-]` mixed, `[off]` disabled), `---` a separator, `# title` a
-    /// header, `> title` a submenu.
+    /// header, `> title` a submenu, `~ Grey | Blue [x]` a row of colour dots (`[x]` the ringed one).
     pub fn outline(&self) -> Vec<String> {
         let mut out = Vec::new();
         self.outline_into(0, &mut out);
@@ -177,6 +212,17 @@ impl Menu {
                 Entry::Separator => out.push(format!("{indent}---")),
                 Entry::Header(title) => out.push(format!("{indent}# {title}")),
                 Entry::Item(item) => out.push(format!("{indent}- {}", describe(item))),
+                Entry::Swatches(row) => {
+                    let names: Vec<String> = row
+                        .swatches
+                        .iter()
+                        .enumerate()
+                        .map(|(ix, swatch)| {
+                            format!("{}{}", swatch.name, if row.selected == Some(ix) { " [x]" } else { "" })
+                        })
+                        .collect();
+                    out.push(format!("{indent}~ {}", names.join(" | ")));
+                }
                 Entry::Submenu { title, enabled, menu } => {
                     out.push(format!("{indent}> {title}{}", if *enabled { "" } else { " [off]" }));
                     menu.outline_into(depth + 1, out);
@@ -202,9 +248,17 @@ impl Menu {
                     menu.leaves_into(path, out);
                     path.pop();
                 }
-                Entry::Separator | Entry::Header(_) => {}
+                Entry::Separator | Entry::Header(_) | Entry::Swatches(_) => {}
             }
         }
+    }
+
+    /// The first row of colour dots, which `menu-pick colour` chooses from.
+    pub fn swatch_row(&self) -> Option<&Swatches> {
+        self.entries.iter().find_map(|entry| match entry {
+            Entry::Swatches(row) => Some(row),
+            _ => None,
+        })
     }
 }
 
@@ -256,7 +310,7 @@ pub fn run_on<T: 'static>(
 
 #[cfg(test)]
 mod tests {
-    use super::{Check, Item, Menu};
+    use super::{Check, Item, Menu, Swatch};
 
     fn menu() -> Menu {
         Menu::new()
@@ -291,6 +345,22 @@ mod tests {
         let menu = Menu::new().separator().item(Item::new("A")).separator().separator();
         assert_eq!(menu.outline(), ["- A", "---"]);
         assert!(Menu::new().separator().is_empty());
+    }
+
+    #[test]
+    fn a_row_of_swatches_shows_its_names_and_the_ringed_one() {
+        let swatch =
+            |name: &str| Swatch { color: gpui_kit::hsla(0.0, 0.0, 0.5, 1.0), name: name.to_string().into() };
+        let menu = Menu::new()
+            .item(Item::new("Rename…"))
+            .separator()
+            .swatches(vec![swatch("Grey"), swatch("Blue")], Some(1), |_, _, _| {})
+            .separator()
+            .item(Item::new("Ungroup"));
+        assert_eq!(menu.outline(), ["- Rename…", "---", "~ Grey | Blue [x]", "---", "- Ungroup"]);
+        let titles: Vec<String> = menu.leaves().iter().map(|leaf| leaf.full_title()).collect();
+        assert_eq!(titles, ["Rename…", "Ungroup"], "the dots are not items to number");
+        assert!(menu.swatch_row().is_some());
     }
 
     #[test]

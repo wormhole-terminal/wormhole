@@ -1,13 +1,14 @@
 //! A group's head in the list: its tiles and dot while folded, its + while pinned and empty, its
-//! label's popover (`groups`), its drag, its drop and its context menu (New terminal in group,
-//! Rename…, Colour ▸, Ungroup, Pin or Unpin group, Close group, Move group to new window).
+//! drag, its drop and its menu, which a click on the name, a right-click and ⌃↩ all open: Rename…
+//! (in place, `rename`), a row of the nine colours as Finder's tags are in its context menu, and
+//! New terminal in group, Ungroup, Close group, Pin or Unpin group, Move group to new window.
 use wormhole_core::sidebar::{GroupColor, Urgency, spoken};
 
 use super::super::focus::SidebarStop;
-use super::groups::{group_colors, group_popover};
+use super::groups::group_colors;
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
-use crate::native::{self, Icon, Item, Menu};
+use crate::native::{self, Item, Menu, Swatch};
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
@@ -53,7 +54,7 @@ impl Workspace {
             Vec::new()
         };
         let this = cx.weak_entity();
-        let (on_toggle, on_add, on_popover) = (this.clone(), this.clone(), this);
+        let (on_toggle, on_add, on_label) = (this.clone(), this.clone(), this);
         let empty = (band.pinned && band.members.is_empty()).then(|| {
             let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
             let add: ClickHandler = Box::new(move |_, window, cx| {
@@ -61,7 +62,6 @@ impl Workspace {
             });
             (tooltip, add)
         });
-        let snapshot = self.popover_snapshot(group, ui, cx);
         let parts = GroupHead {
             metrics: frame.metrics,
             name: band.label.clone().into(),
@@ -77,7 +77,11 @@ impl Workspace {
             }),
             spoken_edit: spoken::edit_label(&band.label).into(),
             spoken_fold: spoken::fold_label(&band.label, !folded).into(),
-            wrap_label: Box::new(move |trigger| group_popover(snapshot, trigger, on_popover)),
+            on_label: Some(Box::new(move |event, window, cx| {
+                let at = event.position();
+                on_label.update(cx, |this, cx| this.open_group_menu(group, at, window, cx)).ok();
+            })),
+            name_edit: self.group_rename_field(group, cx),
         };
         let id: ElementId = ElementId::Name(SharedString::from(format!("band-{}", band.key())));
         let mut label = spoken::band_label(
@@ -130,7 +134,7 @@ impl Workspace {
     }
 
     /// Open group `group`'s menu at `at`, its head wearing the ring until the menu closes.
-    fn open_group_menu(
+    pub(super) fn open_group_menu(
         &mut self,
         group: u32,
         at: Point<Pixels>,
@@ -187,38 +191,41 @@ struct GroupFacts {
 /// The menu of the group `facts` describe; every item acts on `this`.
 fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Menu {
     let GroupFacts { group, color: current, pinned, colors } = facts;
-    let swatches = colors.iter().fold(Menu::new(), |menu, &(color, hsla)| {
-        menu.item(
-            Item::new(color.label())
-                .icon(Some(Icon::Swatch(hsla)))
-                .checked(current == Some(color))
-                .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_color(group, Some(color), cx))),
-        )
-    });
+    let swatches: Vec<Swatch> =
+        colors.iter().map(|&(color, hsla)| Swatch { color: hsla, name: color.label().into() }).collect();
+    let chosen = colors.iter().position(|&(color, _)| Some(color) == current);
+    let on_pick = {
+        let this = this.clone();
+        move |ix: usize, _: &mut Window, cx: &mut App| {
+            if let Some(&(color, _)) = colors.get(ix) {
+                this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
+            }
+        }
+    };
     Menu::new()
+        .item(
+            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
+                ws.start_group_rename(group, window, cx)
+            })),
+        )
+        .separator()
+        .swatches(swatches, chosen, on_pick)
+        .separator()
         .item(Item::new("New terminal in group").on_select(native::run_on(this, move |ws, window, cx| {
             ws.new_session_in_group(group, window, cx)
         })))
-        .item(
-            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
-                ws.start_group_edit(group, window, cx)
-            })),
-        )
-        .submenu("Colour", swatches)
-        .separator()
-        .item(
-            Item::new(if pinned { "Unpin group" } else { "Pin group" })
-                .on_select(native::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
-        )
         .item(Item::new("Ungroup").on_select(native::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))))
-        .item(Item::new("Move group to new window").on_select(native::run_on(this, move |ws, window, cx| {
-            ws.move_group_to_window(group, window, cx)
-        })))
-        .separator()
         .item(
             Item::new("Close group")
                 .on_select(native::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
         )
+        .item(
+            Item::new(if pinned { "Unpin group" } else { "Pin group" })
+                .on_select(native::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
+        )
+        .item(Item::new("Move group to new window").on_select(native::run_on(this, move |ws, window, cx| {
+            ws.move_group_to_window(group, window, cx)
+        })))
 }
 
 #[cfg(test)]
@@ -228,32 +235,40 @@ mod tests {
 
     use super::{GroupFacts, group_menu};
 
-    #[test]
-    fn the_colour_of_the_group_is_checked_and_pinned_reads_unpin() {
-        let facts = GroupFacts {
+    fn facts(color: Option<GroupColor>, pinned: bool) -> GroupFacts {
+        GroupFacts {
             group: 1,
-            color: Some(GroupColor::Blue),
-            pinned: true,
+            color,
+            pinned,
             colors: vec![
                 (GroupColor::Grey, hsla(0.0, 0.0, 0.5, 1.0)),
                 (GroupColor::Blue, hsla(0.6, 0.8, 0.5, 1.0)),
             ],
-        };
+        }
+    }
+
+    #[test]
+    fn the_menu_has_the_rename_the_colour_row_and_the_actions_and_pinned_reads_unpin() {
         assert_eq!(
-            group_menu(facts, &WeakEntity::new_invalid()).outline(),
+            group_menu(facts(Some(GroupColor::Blue), true), &WeakEntity::new_invalid()).outline(),
             [
-                "- New terminal in group",
                 "- Rename…",
-                "> Colour",
-                "  - Grey",
-                "  - Blue [x]",
                 "---",
-                "- Unpin group",
+                "~ Grey | Blue [x]",
+                "---",
+                "- New terminal in group",
                 "- Ungroup",
-                "- Move group to new window",
-                "---",
                 "- Close group",
+                "- Unpin group",
+                "- Move group to new window",
             ]
         );
+    }
+
+    #[test]
+    fn a_group_without_a_colour_rings_none_and_unpinned_reads_pin() {
+        let outline = group_menu(facts(None, false), &WeakEntity::new_invalid()).outline();
+        assert_eq!(outline[2], "~ Grey | Blue");
+        assert!(outline.contains(&"- Pin group".to_string()));
     }
 }

@@ -184,7 +184,8 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             on_toggle: Box::new(|_, _, _| {}),
             spoken_edit: SharedString::default(),
             spoken_fold: SharedString::default(),
-            wrap_label: Box::new(|trigger| trigger.into_any_element()),
+            on_label: None,
+            name_edit: None,
         },
     );
     style::palette_surface(ui, true)

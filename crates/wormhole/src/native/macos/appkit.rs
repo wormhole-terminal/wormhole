@@ -1,11 +1,13 @@
 //! Pieces of AppKit that more than one native feature needs: a GPUI window's view, SF Symbols,
 //! colours and key equivalents. The status item's menu (`menubar::appkit`) uses them too.
 
+use std::path::Path;
+
 use gpui_kit::{Pixels, Point, Window};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message as _};
-use objc2_app_kit::{NSColor, NSEventModifierFlags, NSImage, NSView};
-use objc2_foundation::{NSPoint, NSString};
+use objc2_app_kit::{NSColor, NSEventModifierFlags, NSImage, NSView, NSWorkspace};
+use objc2_foundation::{NSCopying as _, NSFileManager, NSPoint, NSSize, NSString};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
 use crate::menubar::model::KeyEquivalent;
@@ -58,4 +60,23 @@ pub fn modifier_mask(key: &KeyEquivalent) -> NSEventModifierFlags {
         }
     }
     mask
+}
+
+/// The icon Finder shows for the file or folder at `path`, `side` points square. AppKit finds it
+/// (the house for the home folder, a disk for a volume, the folder's own custom one); nothing is
+/// read here, and a path that does not exist gets the generic folder's.
+pub fn file_icon(path: &Path, side: f64) -> Option<Retained<NSImage>> {
+    MainThreadMarker::new()?;
+    let icon = NSWorkspace::sharedWorkspace().iconForFile(&NSString::from_str(&path.to_string_lossy()));
+    // The workspace shares its images: size a copy, not the cached one.
+    let icon = icon.copy();
+    icon.setSize(NSSize::new(side, side));
+    Some(icon)
+}
+
+/// What Finder calls the volume the system starts from ("Macintosh HD").
+pub fn boot_volume_name() -> Option<String> {
+    MainThreadMarker::new()?;
+    let name = NSFileManager::defaultManager().displayNameAtPath(&NSString::from_str("/")).to_string();
+    (!name.is_empty()).then_some(name)
 }

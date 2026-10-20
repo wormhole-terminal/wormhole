@@ -44,7 +44,12 @@
 //!                   title (`Submenu > Title`), as a click would; or dismiss it as Esc does. These menus
 //!                   are native: no `shot` shows them and no `click` reaches them, and in a background
 //!                   instance none is shown at all (a real one would hold the instance in AppKit's
-//!                   loop), so a scenario right-clicks, reads `menu`, and picks or closes
+//!                   loop), so a scenario right-clicks, reads `menu`, and picks or closes. A row of
+//!                   colour dots (the group menu's) is a line `~ Grey | Blue [x]` (`[x]` the ringed one)
+//!                   and is chosen from with `menu-pick colour <n|name>` (`menu-pick colour blue`)
+//!   menu-native [press <n>]   the open menu built as the real AppKit NSMenu, not shown: its items and,
+//!                   for the colour dots, each dot's tooltip and VoiceOver label; `press <n>` presses
+//!                   that dot as VoiceOver does and prints which one the menu took as chosen
 //!   palette [query] | palette close   open the command palette over this window with `query`
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
@@ -84,10 +89,12 @@
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
 //!   sidebar-fold <group>   fold or open the group with this name
-//!   group <name> <edit|pin|ungroup|close|move|color:<name|none>>   what the group's popover and menu
-//!                   do: open the popover, pin or unpin, take apart, close (asks if an agent works in
-//!                   it), move to a window of its own, or colour it (grey, blue, red, yellow, green,
-//!                   pink, purple, cyan or orange)
+//!   group <name> <rename|pin|ungroup|close|move|color:<name|none>>   what the group's menu does:
+//!                   make its name a field on its head (`text <new name>` then `key enter` types and
+//!                   keeps it, `key escape` drops it), pin or unpin, take apart, close (asks if an
+//!                   agent works in it), move to a window of its own, or colour it (grey, blue, red,
+//!                   yellow, green, pink, purple, cyan or orange). A click on the group's name opens
+//!                   its menu: `click <x> <y>` on it, then `menu`
 //!   to-group <row> <name|none>   put the terminal in that row in the group, or take it out of its group
 //!   rename-edit <row>   the terminal's name becomes a field, as Rename… in its menu makes it
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
@@ -130,14 +137,15 @@
 //!   title           what the terminal's title row draws: the path as it is cut (and how many ways it
 //!                   could be), the status words, the branch chip, whether Open in… and the splits are
 //!                   one ⋯ menu, the name's width, the project's tint, the app Open in… opens and the
-//!                   apps found, whether the path's hover card is open, and the extras (the branch's
+//!                   apps found, and the extras (the branch's
 //!                   status, the agent's model and context, the ports, the pull request: what each
 //!                   says, or that the row gave it up). A test instance has no `gh` unless
 //!                   `WORMHOLE_GH_BIN` names a stand-in (a pull request is asked only in a
 //!                   trusted project); a status line is `Wormhole statusline` run with
 //!                   `WORMHOLE_SOCKET` and `WORMHOLE_TAB_ID` set to the instance's and the tab's
-//!   path-card <open|close>   open or close the hover card under the title row's path at once, as
-//!                   resting the pointer on the path does after a moment (`hover <x> <y>` does too)
+//!   path-menu       open the folder's menu as a click on the title row's folder does (read it with
+//!                   `menu`, pick with `menu-pick "Copy path"` or a folder's name; ⌃↩ on the title strip
+//!                   opens it too)
 //!   toggle-sidebar | toggle-panel   hide or show the sidebar / the right panel
 //!   profile <id> | profile-new <name> | profiles   switch Wormhole to a profile (its windows show, the
 //!                   shown profile's hide with their terminals running), make a profile (it is not
@@ -363,6 +371,7 @@ fn command(name: &str) -> Option<Command> {
         "menu" => menus::menu,
         "menu-pick" => menus::menu_pick,
         "menu-close" => menus::menu_close,
+        "menu-native" => menus::menu_native,
         "palette" => menus::palette,
         "sheet" => menus::sheet,
         "action" => menus::action,
@@ -429,7 +438,7 @@ fn command(name: &str) -> Option<Command> {
         "welcome-dock" => welcome::dock,
         "welcome-probe" => welcome::probe,
         "title" => title::title,
-        "path-card" => title::path_card,
+        "path-menu" => title::path_menu,
         "toggle-sidebar" => sessions::toggle_sidebar,
         "toggle-panel" => sessions::toggle_panel,
         "stash" => sessions::stash,

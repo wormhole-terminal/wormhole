@@ -1,6 +1,6 @@
 //! The terminal's title row content: where the selected
-//! terminal is and what it does, as the folder (cut in its middle where it is long, with the
-//! hover card of `path_card`), the branch chip, and the terminal's tool and name with its live
+//! terminal is and what it does, as the folder (cut in its middle where it is long; a click on it
+//! opens the path menu of `path_menu`), the branch chip, and the terminal's tool and name with its live
 //! status. It is one keyboard stop. Open in… and the splits sit at the right end of the row
 //! (`title_row`).
 //!
@@ -10,7 +10,6 @@ use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::component::tooltip::Tooltip;
 use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
-use super::path_card::Over;
 use super::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 use super::*;
 
@@ -142,19 +141,11 @@ impl Workspace {
                 + CRUMB_GAP,
         };
         let fit = fit_row(self.title_row_width(window), &wants);
-        TitlePlan {
-            app: super::open_in::OpenIn::resolved(cx),
-            path_x: self.title_row_pads(window).0 + CRUMB_PAD,
-            facts,
-            steps,
-            fit,
-            tint,
-        }
+        TitlePlan { app: super::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
     }
 
     /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.
-    /// The folder shows in Finder and its hover card has more; the branch opens the compare
-    /// picker; the name is what runs, with its live status next to the tool's icon.
+    /// The folder opens the path menu; the branch opens the compare picker; the name is what runs, with its live status next to the tool's icon.
     fn render_breadcrumb(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let Facts { id, folder, status, agent, told, label, words, branch, parent, .. } = &plan.facts;
@@ -164,19 +155,19 @@ impl Workspace {
         let soft = if plan.tint.is_some() { ui.text } else { ui.muted };
 
         let separator = || div().flex_none().text_color(ui.faint).child(style::icon(IconName::ChevronRight));
-        let path = folder.clone().map(|folder| {
+        let path = folder.as_ref().map(|_| {
             let text = match fit.path {
                 PathShown::Step(ix) => Some(&plan.steps[ix].text),
                 PathShown::Icon | PathShown::None => None,
             };
             div()
                 .id("crumb-folder")
+                .debug_selector(|| "crumb-folder".to_string())
                 // Cut in the middle, the folder is still read whole.
                 .role(Role::Button)
-                .aria_label(format!(
-                    "Open folder {} in Finder",
-                    plan.facts.shown.as_deref().unwrap_or_default()
-                ))
+                .aria_label(format!("Folder {}, menu", plan.facts.shown.as_deref().unwrap_or_default()))
+                // The menu opens under the folder, which the probe measures.
+                .relative()
                 .flex()
                 .flex_none()
                 .items_center()
@@ -186,6 +177,7 @@ impl Workspace {
                 .text_color(soft)
                 .cursor_pointer()
                 .hover(|d| d.text_color(ui.text))
+                .child(self.path_anchor.probe())
                 .child(div().flex_none().child(style::icon(IconName::Folder)))
                 .children(text.map(|text| {
                     div().flex().flex_none().child(div().flex_none().child(text.parents.clone())).child(
@@ -196,14 +188,7 @@ impl Workspace {
                             .child(text.last.clone()),
                     )
                 }))
-                // The folder itself in Finder, not its parent with it selected.
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    this.path_card.reset();
-                    cx.open_with_system(&folder);
-                }))
-                .on_hover(
-                    cx.listener(|this, hovered: &bool, _, cx| this.hover_path(Over::Path, *hovered, cx)),
-                )
+                .on_click(cx.listener(|this, _, window, cx| this.open_path_menu(window, cx)))
         });
         let branch = branch.as_ref().zip(fit.chip).map(|(branch, width)| {
             let (color, fill, name) = match branch {

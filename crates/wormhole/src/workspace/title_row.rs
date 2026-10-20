@@ -64,8 +64,6 @@ pub(super) struct TitlePlan {
     pub(super) fit: RowFit,
     pub(super) app: Resolved,
     pub(super) tint: Option<Tint>,
-    /// Where the folder starts, from the left edge of the terminal's column.
-    pub(super) path_x: f32,
 }
 
 /// The width of Open in… (the app's icon and its chevron), the two splits, and the one `⋯` they
@@ -107,7 +105,6 @@ impl Workspace {
         let strip = plan.as_ref().map(|plan| self.render_title_strip(plan, window, cx));
         let extras = plan.as_ref().and_then(|plan| self.render_title_extras(plan, cx));
         let actions = plan.as_ref().map(|plan| self.render_title_actions(plan, cx));
-        let card = plan.as_ref().and_then(|plan| self.render_path_card(plan, self.title_column(), cx));
         let bar = div()
             .relative()
             .flex_none()
@@ -162,7 +159,6 @@ impl Workspace {
                 ))
             })
             .child(bar)
-            .children(card)
             .into_any_element()
     }
 

@@ -227,7 +227,7 @@ impl Workspace {
         format!(
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\
              open-in: {} missing={:?} found={}\n\
-             border={:?} card={}\n\
+             border={:?}\n\
              extras: {}",
             plan.fit.words,
             plan.fit.folded,
@@ -237,14 +237,12 @@ impl Workspace {
             plan.app.missing,
             apps.join(","),
             crate::settings::settings(cx).title_border,
-            self.path_card.is_shown(),
             super::title_chips::describe(&plan),
         )
     }
 
-    /// `path-card`: open or close the path's hover card.
-    pub(crate) fn devctl_path_card(&mut self, open: bool, cx: &mut Context<Self>) {
-        self.path_card.devctl_set(open);
-        cx.notify();
+    /// `path-menu`: the folder's menu, as a click on the folder opens it.
+    pub(crate) fn devctl_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.open_path_menu(window, cx);
     }
 }

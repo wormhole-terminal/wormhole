@@ -4,6 +4,7 @@
 //! a real one would block the scripted instance in AppKit's loop and take the keys.
 
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use gpui_kit::Window;
 
@@ -37,6 +38,11 @@ pub fn close() -> Option<Vec<Callback>> {
 /// runs them where nothing is borrowed (a deferred callback of the window).
 pub fn pick(selector: &str) -> Result<(String, Vec<Callback>), String> {
     let menu = open().ok_or("no menu is open")?;
+    if let Some(name) =
+        selector.trim().strip_prefix("colour ").or_else(|| selector.trim().strip_prefix("color "))
+    {
+        return pick_swatch(&menu, name.trim());
+    }
     let leaves = menu.leaves();
     let selector = selector.trim();
     let found = match selector.parse::<usize>() {
@@ -51,6 +57,22 @@ pub fn pick(selector: &str) -> Result<(String, Vec<Callback>), String> {
     let run = found.item.on_select.clone();
     let mut callbacks = close().unwrap_or_default();
     callbacks.extend(run);
+    Ok((title, callbacks))
+}
+
+/// `colour <n|name>`: a dot of the menu's row of swatches, by its place (from 0) or its name, as a
+/// click on it would: the menu closes and the row's `on_pick` runs with its place.
+fn pick_swatch(menu: &Menu, which: &str) -> Result<(String, Vec<Callback>), String> {
+    let row = menu.swatch_row().ok_or("the menu has no row of colours")?;
+    let ix = match which.parse::<usize>() {
+        Ok(n) => (n < row.swatches.len()).then_some(n),
+        Err(_) => row.swatches.iter().position(|swatch| swatch.name.eq_ignore_ascii_case(which)),
+    }
+    .ok_or_else(|| format!("no colour {which:?}"))?;
+    let (title, on_pick) = (format!("colour {}", row.swatches[ix].name), row.on_pick.clone());
+    let mut callbacks = close().unwrap_or_default();
+    let run: Callback = Rc::new(move |window, cx| on_pick(ix, window, cx));
+    callbacks.push(run);
     Ok((title, callbacks))
 }
 

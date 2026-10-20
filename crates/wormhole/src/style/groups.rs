@@ -2,7 +2,7 @@
 //! dot of the group's colour before it where there is no card to wash), the pin after it, and the
 //! chevron at the right in a 20 box. Folded, the head also keeps its terminals' tiles, their count
 //! and a dot while one needs you or failed; a pinned group with nothing in it is one line with
-//! "No terminals" and a + instead. The label opens the group's popover, the chevron folds it.
+//! "No terminals" and a + instead. The label opens the group's menu, the chevron folds it.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
@@ -35,12 +35,13 @@ pub struct GroupHead {
     pub empty: Option<(SharedString, ClickHandler)>,
     /// What the chevron does (fold or open); the head's own click does the same.
     pub on_toggle: ClickHandler,
-    /// What VoiceOver says of the label (it opens the popover) and of the chevron (it folds).
+    /// What VoiceOver says of the label (it opens the menu) and of the chevron (it folds).
     pub spoken_edit: SharedString,
     pub spoken_fold: SharedString,
-    /// Puts the label where it opens the group's popover: given the label as a popover's trigger, it
-    /// gives back what is drawn in its place.
-    pub wrap_label: Box<dyn FnOnce(PopoverTrigger) -> AnyElement>,
+    /// What a click on the label does (the group's menu); without it the label is the head's.
+    pub on_label: Option<ClickHandler>,
+    /// The field that stands where the name is while the group is renamed in place.
+    pub name_edit: Option<AnyElement>,
 }
 
 /// An element that can be a `Popover`'s trigger: the popover marks it selected while it is open.
@@ -95,12 +96,15 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         on_toggle,
         spoken_edit,
         spoken_fold,
-        wrap_label,
+        on_label,
+        name_edit,
     } = parts;
     let id: ElementId = id.into();
     let is_empty = empty.is_some();
+    let editing = name_edit.is_some();
     let label = div()
         .id((id.clone(), "label"))
+        .debug_selector(|| "group-label".to_string())
         .role(Role::Button)
         .aria_label(spoken_edit)
         .flex()
@@ -108,8 +112,20 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         .gap_1()
         .min_w_0()
         .h_full()
+        // The field takes the line, as a terminal's does in its row.
+        .when(editing, |d| d.flex_1())
         .cursor_pointer()
-        .child(div().min_w_0().truncate().text_label().text_color(ui.text).child(name))
+        .when_some(on_label.filter(|_| !editing), |d, on_label| {
+            d.on_click(move |event, window, cx| {
+                // The label's click is the menu's; the head's own (fold) is for the rest of it.
+                cx.stop_propagation();
+                on_label(event, window, cx);
+            })
+        })
+        .map(|d| match name_edit {
+            Some(edit) => d.child(div().min_w_0().flex_1().child(edit)),
+            None => d.child(div().min_w_0().truncate().text_label().text_color(ui.text).child(name)),
+        })
         .when(pinned, |d| {
             d.child(
                 div()
@@ -172,7 +188,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         .when(!metrics.cards, |d| {
             d.when_some(color, |d, color| d.child(div().flex_none().size(px(DOT)).rounded_full().bg(color)))
         })
-        .child(wrap_label(PopoverTrigger::new(label)))
+        .child(label)
         .child(div().flex_1())
         .children(tiles)
         .child(trailing);

@@ -58,8 +58,8 @@ pub(super) struct SidebarState {
     pub(super) menu_row: Option<i64>,
     /// The group whose head's context menu is open.
     menu_group: Option<u32>,
-    /// The group whose popover is open.
-    editing: Option<groups::GroupEdit>,
+    /// The group being renamed on its head.
+    pub(super) group_renaming: Option<rename::GroupRename>,
     /// The terminal being renamed in its row.
     pub(super) renaming: Option<rename::TerminalRename>,
     pub(super) scroll: ScrollHandle,
@@ -100,7 +100,7 @@ impl SidebarState {
             _keys: keys,
             menu_row: None,
             menu_group: None,
-            editing: None,
+            group_renaming: None,
             renaming: None,
             scroll: ScrollHandle::new(),
             scroll_to: None,
@@ -407,8 +407,8 @@ impl Workspace {
         group
     }
 
-    /// devctl `group <name> <edit|pin|ungroup|close|move|color:<colour>|none>`: what the group's
-    /// popover and menu do. `edit` opens its popover.
+    /// devctl `group <name> <rename|pin|ungroup|close|move|color:<colour>|none>`: what the group's
+    /// menu does. `rename` makes its name a field.
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_group(
         &mut self,
@@ -426,7 +426,7 @@ impl Workspace {
             .map(|group| group.id)
             .ok_or_else(|| format!("no group {name:?}"))?;
         match action {
-            "edit" => self.start_group_edit(group, window, cx),
+            "rename" | "edit" => self.start_group_rename(group, window, cx),
             "pin" => self.toggle_group_pin(group, cx),
             "ungroup" => self.ungroup(group, cx),
             "close" => self.close_group(group, window, cx),

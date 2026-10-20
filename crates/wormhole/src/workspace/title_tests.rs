@@ -1,16 +1,15 @@
 //! View tests of the terminal's title row: what it keeps as the
-//! window narrows, and the path's hover card.
+//! window narrows, and the folder's menu.
 
 use std::path::PathBuf;
-use std::time::Duration;
 
-use gpui_kit::TestAppContext;
+use gpui_kit::{Modifiers, TestAppContext, VisualTestContext, point, px, size};
 use wormhole_core::agents::AgentId;
 use wormhole_core::layout::title_row::{Extra, PathShown};
 use wormhole_core::usage::Gauge;
 
-use super::path_card::Over;
-use super::view_tests::{draw, drive, isolate_in, read, start};
+use super::view_tests::{draw, drive, isolate_in, start};
+use crate::native::record;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -61,47 +60,59 @@ fn a_long_path_loses_its_middle_before_the_buttons_fold(cx: &mut TestAppContext)
     assert!(matches!(path, PathShown::Step(ix) if ix > 0), "the path was cut before the buttons folded");
 }
 
-/// Resting on the path opens the card after a moment; it stays while the pointer is on the path or
-/// the card, closes a moment after both are left, and Esc closes it at once.
+/// A click on the folder opens its menu (path, Open in Finder, Copy path, Insert into terminal and
+/// the folders down to the volume); Copy path puts the path on the clipboard, and nothing about
+/// the pointer resting on the folder opens anything.
 #[gpui_kit::test]
-fn resting_on_the_path_opens_its_card(cx: &mut TestAppContext) {
-    if isolate("resting_on_the_path_opens_its_card") {
+fn clicking_the_folder_opens_its_menu_and_copy_path_copies_it(cx: &mut TestAppContext) {
+    if isolate("clicking_the_folder_opens_its_menu_and_copy_path_copies_it") {
         return;
     }
     let window = start(cx, 1);
+    cx.simulate_window_resize(window.handle, size(px(1200.0), px(800.0)));
+    let folder = PathBuf::from("/Volumes/Work/clients/acme");
+    let set = folder.clone();
+    drive(cx, &window, move |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(set));
+    });
     draw(cx, &window);
-    let shown = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.path_card.is_shown());
-    let wait = |cx: &mut TestAppContext, ms: u64| {
-        cx.executor().advance_clock(Duration::from_millis(ms));
-        cx.run_until_parked();
-    };
+    draw(cx, &window);
+    record::close();
 
-    drive(cx, &window, |ws, _, cx| ws.hover_path(Over::Path, true, cx));
-    wait(cx, 300);
-    assert!(!shown(cx), "not yet: crossing the path on the way elsewhere opens nothing");
-    wait(cx, 200);
-    assert!(shown(cx), "after about 400 ms on the path");
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    let at = pointer.debug_bounds("crumb-folder").expect("the folder is drawn").center();
+    pointer.simulate_mouse_move(at, None, Modifiers::none());
+    pointer.simulate_mouse_move(point(at.x + px(1.0), at.y), None, Modifiers::none());
+    cx.run_until_parked();
+    assert!(record::open().is_none(), "resting on the folder opens nothing");
 
-    // Moving from the path onto the card: it stays through the gap between them.
-    drive(cx, &window, |ws, _, cx| ws.hover_path(Over::Path, false, cx));
-    wait(cx, 100);
-    drive(cx, &window, |ws, _, cx| ws.hover_path(Over::Card, true, cx));
-    wait(cx, 1000);
-    assert!(shown(cx), "while the pointer is on the card");
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    pointer.simulate_click(at, Modifiers::none());
+    cx.run_until_parked();
+    let menu = record::open().expect("the click opened the menu");
+    let outline = menu.outline();
+    assert!(outline[0].starts_with("# "), "the path heads the menu: {outline:?}");
+    assert_eq!(
+        &outline[1..6],
+        ["---", "- Open in Finder", "- Copy path", "- Insert into terminal", "---"],
+        "{outline:?}"
+    );
+    let name = folder.file_name().expect("a folder with a name").to_string_lossy().into_owned();
+    assert_eq!(outline[6], format!("- {name}"), "the folder itself comes first: {outline:?}");
 
-    drive(cx, &window, |ws, _, cx| ws.hover_path(Over::Card, false, cx));
-    wait(cx, 100);
-    assert!(shown(cx), "a moment of grace");
-    wait(cx, 200);
-    assert!(!shown(cx), "closed once both are left");
-
-    // Esc closes it at once, and only when it is open.
-    drive(cx, &window, |ws, _, cx| ws.hover_path(Over::Path, true, cx));
-    wait(cx, 500);
-    assert!(shown(cx));
-    assert!(drive(cx, &window, |ws, _, cx| ws.close_path_card(cx)));
-    assert!(!shown(cx));
-    assert!(!drive(cx, &window, |ws, _, cx| ws.close_path_card(cx)));
+    let (_, callbacks) = record::pick("Copy path").expect("the item is in the menu");
+    cx.update(|cx| {
+        window.handle.update(cx, |_, window, cx| {
+            for run in callbacks {
+                run(window, cx);
+            }
+        })
+    })
+    .expect("the window is open");
+    cx.run_until_parked();
+    let copied = cx.update(|cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(copied.as_deref(), Some(folder.to_string_lossy().as_ref()));
+    assert!(record::open().is_none(), "and the menu is closed");
 }
 
 /// A narrowing row gives up its extras after the path and before anything else, the ports a chip

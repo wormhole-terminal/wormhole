@@ -20,7 +20,16 @@ pub mod record;
 use gpui_kit::*;
 
 pub use anchor::{Anchor, on_right_click};
-pub use menu::{Icon, Item, Menu, run_on};
+pub use menu::{Icon, Item, Menu, Swatch, run_on};
+
+/// What Finder calls the volume the system starts from, as the last line of a path menu.
+pub fn boot_volume_name() -> String {
+    #[cfg(target_os = "macos")]
+    if let Some(name) = macos::appkit::boot_volume_name() {
+        return name;
+    }
+    "/".to_string()
+}
 
 /// Open `menu` at `at` (window coordinates) as the platform's own menu, and run what is chosen.
 ///

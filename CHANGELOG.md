@@ -110,6 +110,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   them. The window opens a little taller so the whole nav shows.
 - Right-click menus (a terminal's, a group's, the + button's shells, a pane's, Open in…) are the Mac's
   own menus now, with VoiceOver, type-to-select and the system look.
+- Clicking the folder in the title row opens a menu like the one a Finder window's title has: the
+  path, Open in Finder, Copy path and Insert into terminal, then the folders down to the disk with
+  their Finder icons (it replaces the card that opened when you rested on the folder). Clicking a
+  group's name opens its menu, the one a right-click shows, with Rename… (in place, on the group's
+  head) and a row of the nine colours like Finder's tags.
 - The terminal engine, `wormhole-vt`, is now under the MIT License, so other projects can use it. The
   app stays GPL-3.0-or-later.
 - A new app icon: the `>_` prompt over a glowing disc that runs from blue to violet, on a plain tile,
