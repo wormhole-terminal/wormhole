@@ -359,6 +359,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         let group = card.group;
         let empty = card.count == 0;
         let (add_this, add_label) = (this.clone(), card.label.clone());
+        let label_at = crate::native::Anchor::default();
         let parts = GroupHead {
             metrics,
             name: card.label.clone(),
@@ -385,14 +386,15 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             on_toggle: Box::new(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx)))),
             spoken_edit: card.label.clone(),
             spoken_fold: card.spoken.clone(),
-            // The name opens the sidebar's group menu, under the pointer; a group in none has none.
+            // The name opens the sidebar's group popover, under the name.
             on_label: group.map(|group| {
-                let this = this.clone();
-                Box::new(move |event: &ClickEvent, window: &mut Window, cx: &mut App| {
-                    let at = event.position();
-                    this.update(cx, |ws, cx| ws.open_group_menu(group, at, window, cx)).ok();
+                let (this, at) = (this.clone(), label_at.clone());
+                Box::new(move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
+                    let bounds = at.bounds();
+                    this.update(cx, |ws, cx| ws.open_group_popover(group, bounds, window, cx)).ok();
                 }) as style::ClickHandler
             }),
+            label_anchor: group.map(|_| label_at.clone()),
             name_edit: card
                 .renaming
                 .as_ref()

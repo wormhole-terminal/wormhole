@@ -131,7 +131,7 @@ impl Workspace {
                         .view
                         .groups
                         .get(band.group)
-                        .and_then(|group| group.color())
+                        .and_then(|group| group.paint())
                         .map_or(String::new(), |color| format!(" colour={}", color.key()));
                     out.push_str(&format!(
                         "group {:?} id={} {position}/{of}{folded}{pinned}{colored} terminals={}\n",
@@ -227,7 +227,7 @@ impl Workspace {
         format!(
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\
              open-in: {} missing={:?} found={}\n\
-             border={:?}\n\
+             border={:?} card={}\n\
              extras: {}",
             plan.fit.words,
             plan.fit.folded,
@@ -237,11 +237,20 @@ impl Workspace {
             plan.app.missing,
             apps.join(","),
             crate::settings::settings(cx).title_border,
+            self.path_card.is_shown(),
             super::title_chips::describe(&plan),
         )
     }
 
-    /// `path-menu`: the folder's menu, as a click on the folder opens it.
+    /// `path-card`: open or close the path's hover card at once; `path-menu`: the folder's menu.
+    pub(crate) fn devctl_path_card(&mut self, open: bool, window: &mut Window, cx: &mut Context<Self>) {
+        self.path_card.reset(cx);
+        if open {
+            self.open_path_card(window, cx);
+        }
+        cx.notify();
+    }
+
     pub(crate) fn devctl_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.open_path_menu(window, cx);
     }

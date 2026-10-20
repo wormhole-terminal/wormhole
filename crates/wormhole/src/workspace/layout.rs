@@ -278,6 +278,7 @@ impl Render for Workspace {
             .children(self.render_overlay())
             // GPUI's own menu, where a native one can't open (`native::fallback`).
             .child(crate::native::fallback::layer(window, cx))
+            .child(crate::native::fallback::popover_layer(window, cx))
             .children(self.render_intro(window, cx))
             .child(self.column_probe(cx))
     }

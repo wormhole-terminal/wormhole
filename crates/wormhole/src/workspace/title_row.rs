@@ -186,7 +186,7 @@ impl Workspace {
     fn title_tint(&self, cx: &App) -> Option<Tint> {
         let id = self.sessions.get(self.active)?.id;
         let group = self.sidebar.view.groups.group_of(id)?;
-        let color = self.sidebar.view.groups.get(group)?.color()?;
+        let color = self.sidebar.view.groups.get(group)?.paint()?;
         let tokens = &store_in(&self.profile, cx).tokens;
         let color = ProjectColor::from_color(color.color(tokens));
         Some(folder_color::title_tint(&self.profile, color, cx))

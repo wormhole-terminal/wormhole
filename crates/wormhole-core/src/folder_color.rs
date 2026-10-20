@@ -101,7 +101,13 @@ impl FolderColor {
 /// the groups' colours (`sidebar::GroupColor`), which are drawn the same way.
 pub(crate) fn swatch(tokens: &ThemeTokens, hue: f32, grey: bool) -> Color {
     let (lightness, chroma) = palette_character(tokens);
-    let color = Color::from_oklch(lightness, if grey { 0.0 } else { chroma }, hue);
+    legible(tokens, Color::from_oklch(lightness, if grey { 0.0 } else { chroma }, hue))
+}
+
+/// `color` as it is, unless it is hard to see on the window or the sidebar of `tokens`' theme:
+/// then moved along its lightness (hue and chroma kept) just far enough to be seen on both. So a
+/// colour of a person's own, black in a dark theme or white in a light one, is still a mark.
+pub(crate) fn legible(tokens: &ThemeTokens, color: Color) -> Color {
     [tokens.get("surface.window"), tokens.get("surface.panel")]
         .into_iter()
         .flatten()

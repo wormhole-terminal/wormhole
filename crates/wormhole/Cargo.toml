@@ -89,6 +89,10 @@ objc2-app-kit = { version = "0.3", features = [
     # mouse tracking, a tooltip and VoiceOver).
     "NSWorkspace", "NSTrackingArea", "NSAccessibility", "NSAccessibilityProtocols",
     "NSAccessibilityConstants",
+    # The popovers' native controls, and the Colours window.
+    "NSPopover", "NSViewController", "NSStackView", "NSTextField", "NSTextFieldCell", "NSColorPanel",
+    "NSColorSpace", "NSAppearance", "NSPanel", "NSLayoutAnchor", "NSLayoutConstraint", "NSTextView",
+    "NSBitmapImageRep", "NSImageRep", "NSLayoutGuide", "NSControl", "NSButtonCell",
 ] }
 
 [dev-dependencies]

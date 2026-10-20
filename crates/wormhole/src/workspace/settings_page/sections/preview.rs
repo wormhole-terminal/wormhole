@@ -203,6 +203,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         spoken_edit: SharedString::default(),
                         spoken_fold: SharedString::default(),
                         on_label: None,
+                        label_anchor: None,
                         name_edit: None,
                     },
                 )

@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::group_color::GroupColor;
+use super::group_color::{GroupColor, GroupPaint};
 
 /// One group of terminals.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,8 +16,8 @@ pub struct TermGroup {
     /// group and a drag remember it by.
     pub id: u32,
     pub name: String,
-    /// A [`GroupColor`]'s name (`blue`, `cyan` …), or empty for none; a name this build doesn't
-    /// know is kept and draws nothing.
+    /// A [`GroupColor`]'s name (`blue`, `cyan` …), `#rrggbb` for a colour of the person's own, or
+    /// empty for none; a name this build doesn't know is kept and draws nothing.
     pub color: String,
     /// The terminals in it by their id, in the order they joined.
     pub members: Vec<i64>,
@@ -38,8 +38,14 @@ fn is_false(value: &bool) -> bool {
 pub const RECOVERED_NAME: &str = "Recovered";
 
 impl TermGroup {
+    /// The named colour it has, none for a colour of its own.
     pub fn color(&self) -> Option<GroupColor> {
         GroupColor::from_key(&self.color)
+    }
+
+    /// What it is painted with: a name or a colour of its own.
+    pub fn paint(&self) -> Option<GroupPaint> {
+        GroupPaint::from_key(&self.color)
     }
 }
 
@@ -160,6 +166,13 @@ impl Groups {
         }
     }
 
+    /// Give group `id` a colour of its own (sRGB), in the place of its name.
+    pub fn set_custom_color(&mut self, id: u32, rgb: [u8; 3]) {
+        if let Some(group) = self.get_mut(id) {
+            group.color = GroupPaint::Custom(rgb).key();
+        }
+    }
+
     /// Pin group `id`, or let it go again.
     pub fn set_pinned(&mut self, id: u32, pinned: bool) {
         if let Some(group) = self.get_mut(id) {
@@ -191,7 +204,21 @@ pub fn group_key(id: u32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{GroupColor, Groups, RECOVERED_NAME, group_key};
+    use super::{GroupColor, GroupPaint, Groups, RECOVERED_NAME, group_key};
+
+    #[test]
+    fn a_colour_of_its_own_is_saved_with_the_group_and_a_name_replaces_it() {
+        let mut groups = Groups::default();
+        let id = groups.create(&[1]);
+        groups.set_custom_color(id, [0x33, 0x99, 0xcc]);
+        let saved = serde_json::to_string(&groups).expect("serializes");
+        assert!(saved.contains("#3399cc"), "{saved}");
+        let back: Groups = serde_json::from_str(&saved).expect("reads back");
+        assert_eq!(back.get(id).and_then(|g| g.paint()), Some(GroupPaint::Custom([0x33, 0x99, 0xcc])));
+        assert_eq!(back.get(id).and_then(|g| g.color()), None, "it is no named colour");
+        groups.set_color(id, Some(GroupColor::Red));
+        assert_eq!(groups.get(id).and_then(|g| g.paint()), Some(GroupPaint::Named(GroupColor::Red)));
+    }
 
     #[test]
     fn a_new_group_takes_its_members_from_the_groups_they_were_in() {

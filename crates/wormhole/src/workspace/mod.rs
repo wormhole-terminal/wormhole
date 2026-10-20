@@ -86,6 +86,7 @@ mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
+mod path_card;
 mod path_menu;
 mod profile_chip;
 #[cfg(test)]
@@ -284,7 +285,9 @@ pub struct Workspace {
     crumb_drawn: std::cell::RefCell<Option<String>>,
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
-    /// Where the title row's folder is drawn: the path menu opens under it.
+    /// The path's hover card, a popover under the title row's folder.
+    path_card: path_card::PathCard,
+    /// Where the title row's folder is drawn: the card and the path menu open under it.
     path_anchor: crate::native::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
     status_others: Vec<(i64, Vec<status_bar::Counted>)>,
@@ -358,6 +361,11 @@ impl Workspace {
                 cx.defer(app::sync_system_look);
             } else {
                 this.hints_blur(cx);
+                // A popover that is up has the key itself, which is why this window lost it.
+                if this.path_card.is_open_popover() {
+                    return;
+                }
+                this.path_card.reset(cx);
             }
         })
         .detach();
@@ -421,6 +429,7 @@ impl Workspace {
             status_bar_drawn: None,
             crumb_drawn: Default::default(),
             ports_menu: false,
+            path_card: Default::default(),
             path_anchor: Default::default(),
             status_others: Vec::new(),
             focused_note: None,

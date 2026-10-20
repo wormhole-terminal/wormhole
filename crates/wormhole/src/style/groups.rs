@@ -38,8 +38,10 @@ pub struct GroupHead {
     /// What VoiceOver says of the label (it opens the menu) and of the chevron (it folds).
     pub spoken_edit: SharedString,
     pub spoken_fold: SharedString,
-    /// What a click on the label does (the group's menu); without it the label is the head's.
+    /// What a click on the label does (opens the group's popover); without it the label is the head's.
     pub on_label: Option<ClickHandler>,
+    /// Measures the label, which the popover's arrow points at.
+    pub label_anchor: Option<crate::native::Anchor>,
     /// The field that stands where the name is while the group is renamed in place.
     pub name_edit: Option<AnyElement>,
 }
@@ -97,6 +99,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         spoken_edit,
         spoken_fold,
         on_label,
+        label_anchor,
         name_edit,
     } = parts;
     let id: ElementId = id.into();
@@ -114,6 +117,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         .h_full()
         // The field takes the line, as a terminal's does in its row.
         .when(editing, |d| d.flex_1())
+        .when_some(label_anchor, |d, anchor| d.relative().child(anchor.probe()))
         .cursor_pointer()
         .when_some(on_label.filter(|_| !editing), |d, on_label| {
             d.on_click(move |event, window, cx| {

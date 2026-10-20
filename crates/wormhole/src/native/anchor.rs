@@ -24,6 +24,11 @@ impl Anchor {
             .into_any_element()
     }
 
+    /// The element's bounds as last painted: where a popover's arrow points.
+    pub fn bounds(&self) -> Bounds<Pixels> {
+        self.0.get()
+    }
+
     /// The button's bottom left corner, where its menu starts.
     pub fn below(&self) -> Point<Pixels> {
         self.0.get().bottom_left()

@@ -1,23 +1,22 @@
-//! The folder in the title row, clicked: a native menu like the one a Finder window's title opens.
+//! The folder in the title row, right-clicked: a native menu like the one a Finder window's title opens.
 //! The path as shown (`~/Projects/tube`) heads it; Open in Finder, Copy path and Insert into
 //! terminal follow; and then the path's folders, the innermost first, down to the volume, each
 //! with the icon Finder gives it (the house for the home folder, a disk for the volume). Choosing
 //! a folder opens it in Finder.
 //!
-//! Insert into terminal types the path, quoted for the shell, at the focused terminal's prompt
-//! as a paste (so an agent's input takes it like text you pasted).
+//! It opens on a right-click of the folder (and ⌃↩ on the title strip); resting on the folder opens
+//! the hover card (`path_card`), and a click opens the folder in Finder.
 
 use std::path::Path;
 
 use wormhole_core::layout::path_menu::{self, PathFolder};
-use wormhole_core::shells;
 
 use super::*;
 use crate::native::{self, Icon, Item, Menu};
 
 impl Workspace {
-    /// Open the menu of the active terminal's folder under the folder in the title row (a click on
-    /// it, or ⌃↩ with the keys on the strip). Nothing for a terminal whose folder isn't known.
+    /// Open the menu of the active terminal's folder under the folder in the title row (a right-click
+    /// on it, or ⌃↩ with the keys on the strip). Nothing for a terminal whose folder isn't known.
     pub(super) fn open_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
@@ -25,17 +24,6 @@ impl Workspace {
         let shown = wormhole_core::sidebar::display_path(&folder, session::home_dir());
         let menu = path_menu(&folder, &shown, &native::boot_volume_name(), exited, &cx.weak_entity());
         native::show_menu(menu, self.path_anchor.below(), window, cx);
-    }
-
-    /// Insert into terminal: the folder's absolute path, in single quotes, typed at the focused
-    /// terminal as a paste (bracketed when the program asked for it), without a Return. The
-    /// terminal has the keyboard.
-    fn insert_path(&mut self, folder: &Path, window: &mut Window, cx: &mut Context<Self>) {
-        let text = insert_text(folder);
-        let terminal = self.active_terminal();
-        terminal.update(cx, |terminal, _| terminal.paste(&text));
-        self.focus_terminal(window, cx);
-        cx.notify();
     }
 }
 
@@ -47,10 +35,7 @@ fn path_menu(folder: &Path, shown: &str, volume: &str, exited: bool, this: &Weak
         .header(shown.to_string())
         .separator()
         .item(Item::new("Open in Finder").on_select(move |_, cx| cx.open_with_system(&open_of)))
-        .item(Item::new("Copy path").on_select(move |_, cx| {
-            cx.write_to_clipboard(ClipboardItem::new_string(copy_of.to_string_lossy().into_owned()));
-            crate::a11y::announce("Path copied", false);
-        }))
+        .item(Item::new("Copy path").on_select(move |_, cx| Workspace::copy_path(&copy_of, cx)))
         .item(
             Item::new("Insert into terminal")
                 .enabled(!exited)
@@ -65,25 +50,13 @@ fn path_menu(folder: &Path, shown: &str, volume: &str, exited: bool, this: &Weak
     })
 }
 
-/// What Insert into terminal types: the path in single quotes, so spaces and `$` survive.
-pub(super) fn insert_text(folder: &Path) -> String {
-    shells::single_quote(&folder.to_string_lossy())
-}
-
 #[cfg(test)]
 mod tests {
     use std::path::Path;
 
     use gpui_kit::WeakEntity;
 
-    use super::{insert_text, path_menu};
-
-    #[test]
-    fn insert_types_the_absolute_path_in_single_quotes() {
-        assert_eq!(insert_text(Path::new("/Users/ben/Projects/tube")), "'/Users/ben/Projects/tube'");
-        assert_eq!(insert_text(Path::new("/Users/ben/My Projects/$HOME")), "'/Users/ben/My Projects/$HOME'");
-        assert_eq!(insert_text(Path::new("/Users/ben/it's")), r#"'/Users/ben/it'\''s'"#);
-    }
+    use super::path_menu;
 
     fn outline(folder: &str, shown: &str, exited: bool) -> Vec<String> {
         path_menu(Path::new(folder), shown, "Macintosh HD", exited, &WeakEntity::new_invalid()).outline()

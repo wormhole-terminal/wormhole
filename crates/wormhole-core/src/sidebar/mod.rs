@@ -29,7 +29,7 @@ pub mod urgency;
 pub use arrange::Item;
 pub use density::Density;
 pub use drop::{Part, RowDrop, resolve_row_drop};
-pub use group_color::{GroupColor, WASH_FAR, WASH_PEAK, WASH_SPAN};
+pub use group_color::{GroupColor, GroupPaint, WASH_FAR, WASH_PEAK, WASH_SPAN};
 pub use groups::{Groups, TermGroup, group_key};
 pub use listing::{Band, Card, Entry, ListInput, Listing, NUMBERED, WindowSidebar};
 pub use order::SidebarNumbers;

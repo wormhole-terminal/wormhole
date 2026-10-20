@@ -197,7 +197,7 @@ impl Workspace {
         let tokens = &store_in(&self.profile, cx).tokens;
         let color = group
             .and_then(|group| self.sidebar.view.groups.get(group))
-            .and_then(|group| group.color())
+            .and_then(|group| group.paint())
             .map(|color| crate::theme_bridge::hsla(color.color(tokens)));
         SetLook { key, color, group, pinned: band.is_some_and(|band| band.pinned) }
     }

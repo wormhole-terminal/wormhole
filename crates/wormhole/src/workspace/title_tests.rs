@@ -3,7 +3,9 @@
 
 use std::path::PathBuf;
 
-use gpui_kit::{Modifiers, TestAppContext, VisualTestContext, point, px, size};
+use std::time::Duration;
+
+use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
 use wormhole_core::agents::AgentId;
 use wormhole_core::layout::title_row::{Extra, PathShown};
 use wormhole_core::usage::Gauge;
@@ -60,12 +62,13 @@ fn a_long_path_loses_its_middle_before_the_buttons_fold(cx: &mut TestAppContext)
     assert!(matches!(path, PathShown::Step(ix) if ix > 0), "the path was cut before the buttons folded");
 }
 
-/// A click on the folder opens its menu (path, Open in Finder, Copy path, Insert into terminal and
-/// the folders down to the volume); Copy path puts the path on the clipboard, and nothing about
-/// the pointer resting on the folder opens anything.
+/// Resting on the folder opens its popover after a moment (the path and three buttons); it stays
+/// while the pointer is on the folder or on the popover and closes a moment after both are left.
+/// Copy path copies and says "Copied"; a right-click on the folder opens the Finder-style path
+/// menu instead.
 #[gpui_kit::test]
-fn clicking_the_folder_opens_its_menu_and_copy_path_copies_it(cx: &mut TestAppContext) {
-    if isolate("clicking_the_folder_opens_its_menu_and_copy_path_copies_it") {
+fn resting_on_the_folder_opens_its_popover_and_a_right_click_its_menu(cx: &mut TestAppContext) {
+    if isolate("resting_on_the_folder_opens_its_popover_and_a_right_click_its_menu") {
         return;
     }
     let window = start(cx, 1);
@@ -78,29 +81,29 @@ fn clicking_the_folder_opens_its_menu_and_copy_path_copies_it(cx: &mut TestAppCo
     draw(cx, &window);
     draw(cx, &window);
     record::close();
+    record::popover_close(false);
+    let wait = |cx: &mut TestAppContext, ms: u64| {
+        cx.executor().advance_clock(Duration::from_millis(ms));
+        cx.run_until_parked();
+    };
 
     let mut pointer = VisualTestContext::from_window(window.handle, cx);
     let at = pointer.debug_bounds("crumb-folder").expect("the folder is drawn").center();
     pointer.simulate_mouse_move(at, None, Modifiers::none());
     pointer.simulate_mouse_move(point(at.x + px(1.0), at.y), None, Modifiers::none());
-    cx.run_until_parked();
-    assert!(record::open().is_none(), "resting on the folder opens nothing");
-
-    let mut pointer = VisualTestContext::from_window(window.handle, cx);
-    pointer.simulate_click(at, Modifiers::none());
-    cx.run_until_parked();
-    let menu = record::open().expect("the click opened the menu");
-    let outline = menu.outline();
-    assert!(outline[0].starts_with("# "), "the path heads the menu: {outline:?}");
+    wait(cx, 300);
+    assert!(record::open_popover().is_none(), "not yet: crossing the folder opens nothing");
+    wait(cx, 200);
+    let popover = record::open_popover().expect("after about 400 ms on the folder");
+    assert_eq!(popover.outline()[0], "popover hover");
+    assert!(popover.outline()[1].starts_with("# "));
     assert_eq!(
-        &outline[1..6],
-        ["---", "- Open in Finder", "- Copy path", "- Insert into terminal", "---"],
-        "{outline:?}"
+        popover.outline()[2],
+        "buttons: [Open in Finder] [Copy path -> Copied] [Insert into terminal]"
     );
-    let name = folder.file_name().expect("a folder with a name").to_string_lossy().into_owned();
-    assert_eq!(outline[6], format!("- {name}"), "the folder itself comes first: {outline:?}");
 
-    let (_, callbacks) = record::pick("Copy path").expect("the item is in the menu");
+    // Copy path copies the plain path, and the button says so; the popover stays.
+    let (_, callbacks) = record::popover_press("Copy path").expect("the button");
     cx.update(|cx| {
         window.handle.update(cx, |_, window, cx| {
             for run in callbacks {
@@ -111,8 +114,48 @@ fn clicking_the_folder_opens_its_menu_and_copy_path_copies_it(cx: &mut TestAppCo
     .expect("the window is open");
     cx.run_until_parked();
     let copied = cx.update(|cx| cx.read_from_clipboard().and_then(|item| item.text()));
-    assert_eq!(copied.as_deref(), Some(folder.to_string_lossy().as_ref()));
-    assert!(record::open().is_none(), "and the menu is closed");
+    // (The terminal reads its own folder from the process as time passes: whichever it has.)
+    let now = drive(cx, &window, |ws, _, cx| ws.sessions[0].terminal().read(cx).cwd.clone());
+    assert_eq!(copied.as_deref(), now.as_deref().and_then(|path| path.to_str()));
+    assert!(record::open_popover().expect("still open").outline()[2].contains("[Copied "), "it says Copied");
+
+    // Off the folder and not onto the popover: it goes a moment later. Onto the popover: it stays.
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    pointer.simulate_mouse_move(point(px(900.0), px(600.0)), None, Modifiers::none());
+    wait(cx, 100);
+    assert!(record::open_popover().is_some(), "a moment of grace");
+    let on_hover =
+        record::open_popover().and_then(|popover| popover.on_hover).expect("it reports the pointer");
+    cx.update(|cx| window.handle.update(cx, |_, window, cx| on_hover(true, window, cx))).expect("open");
+    wait(cx, 1000);
+    assert!(record::open_popover().is_some(), "while the pointer is on the popover");
+    cx.update(|cx| window.handle.update(cx, |_, window, cx| on_hover(false, window, cx))).expect("open");
+    wait(cx, 300);
+    assert!(record::open_popover().is_none(), "closed once both are left");
+
+    // The right-click is the path menu.
+    let set = folder.clone();
+    drive(cx, &window, move |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(set));
+    });
+    draw(cx, &window);
+    draw(cx, &window);
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    pointer.simulate_mouse_move(at, None, Modifiers::none());
+    pointer.simulate_mouse_down(at, MouseButton::Right, Modifiers::none());
+    pointer.simulate_mouse_up(at, MouseButton::Right, Modifiers::none());
+    cx.run_until_parked();
+    let menu = record::open().expect("the right-click opened the menu");
+    let outline = menu.outline();
+    assert!(outline[0].starts_with("# "), "the path heads the menu: {outline:?}");
+    assert_eq!(
+        &outline[1..6],
+        ["---", "- Open in Finder", "- Copy path", "- Insert into terminal", "---"],
+        "{outline:?}"
+    );
+    assert_eq!(outline[6], "- acme", "the folder itself comes first: {outline:?}");
+    assert_eq!(&outline[7..], ["- clients", "- Work"], "down to the volume it is on");
+    assert!(record::open_popover().is_none(), "and no popover with it");
 }
 
 /// A narrowing row gives up its extras after the path and before anything else, the ports a chip

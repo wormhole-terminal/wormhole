@@ -113,13 +113,19 @@ sleep 1; cat "$S/ctl/out.txt"
   `sidebar-scroll <px>`. Context menus are native macOS menus: no `shot` shows them and no `click` reaches
   them, and a background instance doesn't pop them up at all. After a `right-click`, `menu` lists the menu
   that opened (one row a line, items numbered), `menu-pick <n|title>` chooses an item as a click would and
-  `menu-close` dismisses it (the row's focus ring goes with it). A click on a group's name
-  (`click <x> <y>`) or on the title row's folder (or `path-menu`) opens the group's or the path's menu the
+  `menu-close` dismisses it (the row's focus ring goes with it). A right-click on a
+  group's name or on the title row's folder (or `path-menu`) opens the group's or the path's menu the
   same way. The group menu's row of nine colour dots is the line `~ Grey | Blue [x] | …` and is chosen with
   `menu-pick colour <n|name>`; `menu-native` builds the open menu as the real AppKit `NSMenu` without showing
   it and prints what AppKit has (icons, each dot's tooltip and VoiceOver label; `menu-native press 2`
   presses the third dot as VoiceOver does and prints which one the menu took). `group <name> rename` makes the group's name a field on its head
-  (`text <name>` + `key enter` keeps it, `key escape` drops it).
+  (`text <name>` + `key enter` keeps it, `key escape` drops it). The two cards are native popovers
+  (`NSPopover`), recorded like menus and not shown in a background instance: resting the pointer on the
+  title row's folder (`hover` it twice, or `path-card open`) opens the folder's card and a click on a
+  group's name (`click <x> <y>`) the group's; `popover` lists its rows, `popover-press <title>` presses a
+  button or action, `popover-type <text>` and `popover-key enter|escape` use its field, `popover-colour
+  <name|#rrggbb>` picks a dot or sends a colour from the Colours window, `popover-close` closes it, and
+  `popover-native [name]` draws the real AppKit controls to a PNG (`Read` it).
 - The right panel: `panel-tab notes|changes|history|project`, `project-init` (the Project tab's Create project
   folder button, for the active terminal's folder), `task-seed <open> <done>` and
   `task-done <n>` (next steps; the done ones are spread among the open ones), `note-add <text>`,

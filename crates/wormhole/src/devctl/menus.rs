@@ -165,3 +165,112 @@ pub(super) fn menu_native(_: &mut Ctx, arg: &str) -> Result<String> {
         anyhow::bail!("only on macOS")
     }
 }
+
+// ---------------------------------------------------------------------------- popovers
+
+/// Run what a popover command says is to run, deferred like a click: it updates the workspace,
+/// which a command may hold.
+fn run_deferred(ctx: &mut Ctx, callbacks: Vec<crate::native::menu::Callback>) {
+    ctx.window.defer(ctx.cx, move |window, cx| {
+        for run in callbacks {
+            run(window, cx);
+        }
+    });
+}
+
+/// `popover`: the last popover a hover, a click or a button opened, one row a line.
+pub(super) fn popover(_: &mut Ctx, _: &str) -> Result<String> {
+    Ok(crate::native::record::dump_popover())
+}
+
+/// `popover-press <title>`: press that button or action row as a click does.
+pub(super) fn popover_press(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (title, callbacks) = crate::native::record::popover_press(arg).map_err(anyhow::Error::msg)?;
+    run_deferred(ctx, callbacks);
+    Ok(format!("pressed {title}\n"))
+}
+
+/// `popover-type <text>`: type into the popover's field (it replaces what is there).
+pub(super) fn popover_type(_: &mut Ctx, arg: &str) -> Result<String> {
+    crate::native::record::popover_type(arg).map_err(anyhow::Error::msg)?;
+    Ok(String::new())
+}
+
+/// `popover-key <enter|escape>`: ↩ keeps what is in the field and closes, ⎋ drops it and closes.
+pub(super) fn popover_key(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let callbacks = crate::native::record::popover_key(arg).map_err(anyhow::Error::msg)?;
+    run_deferred(ctx, callbacks);
+    Ok(String::new())
+}
+
+/// `popover-colour <name|#rrggbb>`: a dot of the popover by name, or a colour chosen in the
+/// Colours window (`#rrggbb`: the popover's last dot, or the window `Other colour…` asked for).
+pub(super) fn popover_colour(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let callbacks = crate::native::record::popover_colour(arg).map_err(anyhow::Error::msg)?;
+    run_deferred(ctx, callbacks);
+    Ok(String::new())
+}
+
+/// `popover-close`: close it as a click outside does: the field's text is kept.
+pub(super) fn popover_close(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let Some(callbacks) = crate::native::record::popover_close(true) else {
+        anyhow::bail!("no popover is open")
+    };
+    run_deferred(ctx, callbacks);
+    Ok(String::new())
+}
+
+/// `popover-native [name]`: the open popover built as the real AppKit controls (not shown) and
+/// drawn to `<dir>/<name>.png`, as AppKit lays them out; prints its size and what it holds.
+pub(super) fn popover_native(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let popover =
+        crate::native::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
+    let name = super::file_name(arg, "popover-native")?;
+    let path = ctx.dir.join(format!("{name}.png"));
+    #[cfg(target_os = "macos")]
+    {
+        let summary = crate::native::macos::popover::render(&popover, &path)
+            .ok_or_else(|| anyhow::anyhow!("not on the main thread"))?;
+        Ok(format!("{summary}\nsaved {}\n", path.display()))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (popover, path);
+        anyhow::bail!("only on macOS")
+    }
+}
+
+thread_local! {
+    static REAL: std::cell::RefCell<Option<crate::native::Handle>> = const { std::cell::RefCell::new(None) };
+}
+
+/// `popover-real`: open the recorded popover for real, as an `NSPopover` under the window's top left
+/// corner, for a moment: the one check of AppKit's side (opening, the events a control sends, and
+/// closing) that a background instance can make. `popover-real-close` closes it again. Use it with
+/// a hover popover (`path-card open`), which doesn't take the keyboard.
+pub(super) fn popover_real(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let popover =
+        crate::native::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
+    #[cfg(target_os = "macos")]
+    {
+        use gpui_kit::{Bounds, point, px, size};
+        let anchor = Bounds::new(point(px(520.0), px(8.0)), size(px(120.0), px(24.0)));
+        match crate::native::macos::popover::show(popover, anchor, ctx.window, ctx.cx) {
+            Ok(handle) => REAL.with_borrow_mut(|real| *real = Some(handle)),
+            Err(_) => anyhow::bail!("the window has no native view"),
+        }
+        Ok(String::new())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (popover, ctx);
+        anyhow::bail!("only on macOS")
+    }
+}
+
+/// `popover-real-close`: close what `popover-real` opened, as the app does.
+pub(super) fn popover_real_close(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let handle = REAL.with_borrow_mut(Option::take).ok_or_else(|| anyhow::anyhow!("nothing was opened"))?;
+    handle.close(ctx.cx);
+    Ok(String::new())
+}
