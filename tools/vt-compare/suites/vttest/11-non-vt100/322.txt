@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 322
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 8 Test XTERM special features > 4 Font features > 1 Modify font
+size: 80x24  cursor: row 12 col 14
+modes: default
+--- text
+01|Please enter the font name.
+02|You can use '#' number to set fonts relative (with +/- sign) and
+03|absolute (with a number) based on the current font's position in
+04|the font-menu.  Examples:
+05|    "fixed" to set the current font to "fixed"
+06|    "#fixed" to set the current font to "fixed"
+07|    "#-fixed" to set the previous font to "fixed"
+08|    "#-2 fixed" to set the next-previous font to "fixed"
+09|    "#+fixed" to set the following font to "fixed"
+10|
+11|>fixed
+12|Push <RETURN>
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

@@ -21,8 +21,11 @@ one suite at a time, and makes a markdown table per suite in `results/<date>-<ma
 | [esctest2](https://github.com/ThomasDickey/esctest2) (GPL-2.0) | ~560 automated tests of escape sequences against xterm's behaviour; reads the screen back with DECRQCRA checksums | passes per terminal and per area (`esctest.md`), every test (`esctest-tests.md`) |
 | [ucs-detect](https://github.com/jquast/ucs-detect) (MIT) | how a terminal sizes Unicode: wide, narrow, ZWJ emoji, VS15/VS16, flags, languages, by cursor position reports | share sized right per category, next to the author's published results for the same terminal (`ucs-detect.md`) |
 
+A third suite runs headless against Wormhole's engine only, see [vttest](#vttest) below:
+[vttest](https://invisible-island.net/vttest/) (MIT-X11), Thomas Dickey's menu driven VT100/VT220/VT420/VT520 and xterm test program.
+
 `./fetch-suites.sh` fetches both at the commits in `suites.pin` into the cache (not into this repository)
-and makes a Python venv for them; `scripts/suite-compare.sh` calls it. `suites/` holds our side:
+and makes a Python venv for them (it also builds vttest, below); `scripts/suite-compare.sh` calls it. `suites/` holds our side:
 `esctest_run.py` runs inside the terminal (a probe of the reports esctest2 needs, then the tests, one
 JSON line each) and `report.py` makes the tables. Start with `scripts/suite-compare.sh --probe-only`
 (20 s per app) to see which apps answer what esctest2 needs.
@@ -49,6 +52,85 @@ several dozen crates) stay out of the app's `Cargo.lock`, lints and `cargo deny`
 there (Wormhole's own) is in the matrix and the table without a change here. alacritty_terminal is
 here and nowhere else: the app ran on it until its own engine replaced it. Checks: `cargo fmt`,
 `cargo clippy --all-targets -- -D warnings` and `cargo test`, all in this folder.
+
+## vttest
+
+[vttest](https://invisible-island.net/vttest/) is Thomas Dickey's test program for VT100 terminals and their successors. It is menu
+driven and draws one screen per test with a description of how that screen should look (the menus: cursor movements, screen
+features, character sets, double-sized characters, keyboard, terminal reports, VT52 mode, insert and delete, known VT100
+bugs, reset, and the non-VT100 menu with VT220 to VT520 features, ISO 6429 colours and xterm's extensions). Its licence is the
+MIT-X11 permission notice (`COPYING` in the tarball): it is only run here, downloaded into the suites cache and never linked or
+committed. `suites.pin` names the release (20251205) and the SHA-256 of its tarball; `fetch-suites.sh` checks the sum, runs
+`./configure && make` in the cache, and builds it with `suites/vttest-fast.h`, which shortens vttest's pauses between a request
+and the answer (a tenth of a second, three times for each report) to a quarter: a terminal that is a function call away answers at
+once, and the pauses only made the run take minutes. It needs `curl`, `make` and a C compiler; without them or the network the
+step is skipped with a warning.
+
+`vttest-host` (`crates/wormhole-vt-bench`) is the terminal at the other end of a pseudo-terminal (`suites/pty_relay.py` keeps
+it): the engine is fed what vttest writes, its replies go back at once, DECCOLM and the window operations are played by the same
+fake window as `esctest-host`'s (`window_host`), and the menus are walked from what vttest prints (the prompts and the entries
+on the screen), so an entry added to vttest is walked without a change. At every `Push <RETURN>` it writes the engine's screen
+to `suites/vttest/<menu>/<nn>.txt`: the rows as text (a character set maps characters before they reach the screen, so the
+line-drawing glyphs are text already), the attributes and colours of the cells as runs, the modes that differ from vttest's own
+start, the cursor with the style a program chose, and the path of choices that led there. `--only 11.3.7` walks one entry on its
+own, `--trace` prints the whole conversation, `--timing` says how long each part took. The non-VT100 menu is walked in parts, each
+in a vttest of its own, a few at once, so a whole run takes about ten seconds.
+
+`scripts/vttest-gate.sh` (run by `scripts/suites-gate.sh` and so by `scripts/check.sh` where the other suites run) walks
+vttest again and fails when a screen differs from its committed one, printing the diff (a difference is walked a second time
+before it counts, so a machine too busy to answer vttest in time does not fail it). `--update` rewrites the screens after a
+change on purpose; update each menu's `review.md` with it.
+
+**What the screens are.** The committed screens are the engine's behaviour today. Each menu's folder has a `review.md`: every
+screen judged against what vttest says it should show (and the VT100/VT220/VT510 manuals and xterm where that is not enough),
+`pass`, `fail: <why>` or `unsupported: <feature>`. Of 454 screens, 362 pass, 18 fail, 68 are unsupported features, 5 are prompts
+(a screen waiting for the key the host then presses) and one is not exercised. By menu (screens: pass, fail, unsupported):
+cursor movements 6: 6, 0, 0; screen features 15: 15, 0, 0; character sets 15: 12, 3, 0; double-sized characters 6: 1, 0, 5;
+keyboard 6: 0, 0, 6; terminal reports 9: 6, 2, 0 (and a prompt); VT52 mode 3: 0, 0, 3; insert and delete 14: 12, 0, 2;
+known bugs 29: 25, 0, 4; reset 6: 5, 0, 1; non-vt100 345: 280, 13, 47 (and four prompts and one not exercised).
+
+**Left out because a person is needed** (`suites/vttest/notes.txt` lists every entry that was not run and why): the keyboard menu's
+tests that read typed keys (5.2 auto repeat, 5.3 layout, 5.4 cursor keys, 5.5 numeric keypad, 5.6 editing keypad, 5.7 function
+keys, 5.8 answerback, 5.9 control keys), the keyboard layout test with a G0 selection (3.13), send/receive mode (11.1.2.1, local
+echo of the keys pressed), the mouse tests (11.8.5.3 to 11.8.5.8) and the Tektronix 4014 tests (11.8.6, xterm's second window).
+Where vttest waits for a few typed keys that need no person, the host types them through the engine's own key encoder (Return
+for LNM, Backspace for DECBKM, a keypad key and a letter for the VT420 keyboard modes, `q` for DECUDK) and the title, the font
+name and Bug D's answer as lines. The later models' menus list the earlier ones' as their first entry; each test runs once
+(`notes.txt` says which entries were not walked again), the character-set choices (`Specify G0` to `G3`) are left to the
+defaults, and the colour test and the origin/margin switches of the VT420 menus run with vttest's own start states.
+
+### What vttest finds that the engine fails or does not support
+
+Screen references are `<menu>/<screen>` (`3/003` is `suites/vttest/03-character-sets/003.txt`, `11/123` the non-VT100 menu's).
+
+| gap | sequence | expected | the engine | screens |
+|-----|----------|----------|-----------|---------|
+| double-width and double-height lines | DECDWL, DECDHL: `ESC # 6`, `ESC # 3`, `ESC # 4`, `ESC # 5` | each line drawn at twice the width (40 columns on an 80 column screen), a double-height line in two halves | ignored: lines are drawn in normal size (and a frame built of them is not square) | 4/001 to 005, 8/006, 8/013, 9/013, 9/016, 9/023, 9/026 |
+| VT52 mode | DECANM reset: `CSI ? 2 l`, then `ESC Y`, `ESC F`, `ESC Z` ... | the VT52's cursor addressing, graphics set and identify | ignored on purpose (always ANSI mode): every VT52 sequence is shown as text | 7/001 to 003 |
+| 8-bit characters and GR | `ESC % @` (leave UTF-8), then bytes 0xA0 to 0xFE; locking shifts into GR: `ESC ~` (LS1R), `ESC }` (LS2R), `ESC |` (LS3R) | the characters of the set designated to G1, G2, G3 in the right half | the input is UTF-8 only: every such byte is U+FFFD; LS2 and LS3 into GL (`ESC n`, `ESC o`) and the single shifts work | 3/003, 3/008, 3/013, 11/187 |
+| columns per page | DECSCPP: `CSI 132 $ |` | 132 columns | ignored, the screen stays 80 wide (DECRQSS reports 80) | 11/032 |
+| terminal parameters | DECREQTPARM: `CSI 0 x`, `CSI 1 x` | `CSI 2;1;1;112;112;1;0 x` and the solicited form | no report | 6/009 |
+| keyboard modes in the key encoder | LNM (`CSI 20 h`): Return sends CR LF; DECKPM (`CSI ? 81 h`): keys report their position | the encoding follows the mode | `wormhole_vt::input::encode_key` has no input for these two modes, so Return sends CR and a letter its character (the engine keeps LNM and answers DECRQM for it). DECBKM and DECNKM were in this row until the encoder got `backarrow_bs` and `app_keypad` | 6/003, 11/135 to 139 |
+| printer | media copy: `CSI 5 i` (controller mode), `CSI ? 5 i`, `CSI i`, `CSI ? 1 i`, DECPEX, DECPFF | text sent to the printer is not drawn in controller mode | no printer: the pattern is drawn on the screen (DSR says no printer) | 11/012 to 021 (017 is the one that shows it) |
+| rectangle checksum | DECRQCRA: `CSI Pi;Pg;Pt;Pl;Pb;Pr * y` | the VT420's: the two's complement of the sum, with the video attributes | xterm's XTCHECKSUM variant on purpose (the plain sum of the code points, no attributes), which esctest2 reads the screen with: every character's checksum mismatches, as does the whole page's (`4273`, expected `EAED`) | 11/186, 11/187 |
+| status line | DECSSDT (`CSI Ps $ ~`), DECSASD (`CSI Ps $ }`) | text written while the status line is selected goes there | the engine has none (DECRQSS answers 0) but draws the text on the main screen | 11/073 to 081 |
+| REP after a control sequence | `CSI Ps b` right after another `CSI Ps b` | ignored: a control sequence precedes it, the repeated character is forgotten (xterm) | repeated again: 12 `+` in place of 2 | 11/286, 11/301 |
+| rectangle change in stream extent with margins | DECCARA, DECRARA after DECSACE 0 or 1 and left/right margins | vttest says the stream wraps at the margins | wraps at the screen's edges (unsure what xterm does) | 11/156, 11/165 |
+| DECRQSS for settings the engine does not have | DECPRO, DECTTC, DECTLTC; the VT520's DECATC, DECAC, DECCRTST, DECDLDA, DECSEST, DECARR, DECSTGLT, DECSZS, DECSPMA, DECTME, DECUS; xterm's modifyKeyboard, modifyCursorKeys, modifyFunctionKeys, modifyOtherKeys and the title modes | a valid reply | `DCS 0 $ r ST`: an invalid request | 11/058, 11/067, 11/068, 11/210 to 220, 11/311 to 318 |
+| title stack position | XTTITLEPOS: `CSI # S` | `CSI ... # S` | no report | 11/319 |
+| font | OSC 50 (set and query) | a window feature | ignored, no reply | 11/321 to 323 |
+| user-defined keys, soft characters | DECUDK, DECDLD | keys that echo their labels, a soft font | not implemented (and DECDLD was not exercised: it needs a font file) | 11/022, 11/026 |
+| guarded areas of ISO 6429 | SPA, EPA with ERM | "there may be" a box | none | 11/285, 11/300 |
+| keyboard LEDs and the confidence test | DECLL, DECTST | hardware | ignored, as xterm | 5/001 to 006, 10/004 |
+| a note on single shifts | `ESC N` or `ESC O` followed by DEL (0x7F) with a 96-character set | the single shift is spent on the DEL, or the DEL is shifted | the DEL is ignored and the next character is the one shifted (`127: (©` in place of `127: (ÿ)`) | 3/004, 3/005 |
+
+What passes beyond the obvious: 80 and 132 columns (DECCOLM) and the window operations that resize; wrap, tabs, origin mode and
+scrolling regions; the VT100 bugs (all of them absent); character sets B, A, 0, 1 and 2, ISO Latin-1 in GL through SI, SO, LS2, LS3
+and the single shifts, and the national sets; insert and delete of characters, lines and (DECIC, DECDC) columns; the reports (DSR,
+DA 1 to 3, DECRPM, DECRQSS for the modes it has, DECCIR, DECTABSR, DECRSPS, DECTSR, window reports); left and right margins with
+every editing and movement test; the rectangular operations (DECCARA, DECCRA, DECERA, DECFRA, DECRARA, DECSERA), with and without
+margins; protected areas (DECSCA with DECSED, DECSEL); ISO 6429 colours, background colour erase, SGR 22 to 27; cursor styles
+(DECSCUSR); the alternate screens (47, 1047, 1049); XTVERSION.
 
 ## The engines
 
@@ -136,7 +218,7 @@ theme's colors, which the host plays as xterm's own, and in windows being real.
 
 ## The suites as a gate
 
-`scripts/suites-gate.sh` is the headless esctest2 run and the headless ucs-detect run together, compared
+`scripts/suites-gate.sh` is the headless esctest2 run and the headless ucs-detect run together (and then vttest, see above), compared
 test by test with `expected/esctest.tsv` and `expected/ucs.tsv` by `gate.py`: every test that passes in
 the expectation must still pass, and the ones that regressed are named. A known failure that starts to
 pass is reported and the expectation is left for a person to update (`scripts/suites-gate.sh --update`,

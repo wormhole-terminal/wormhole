@@ -1,0 +1,54 @@
+vttest 20251205 | menu 11-non-vt100 | screen 260
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 6 Test ISO-6429 colors > 6 Test of VT102-style features with BCE > 2 Test of screen features
+size: 80x24  cursor: row 20 col 73
+modes: default
+--- text
+01|1234567890123456789012345678901234567890123456789012345678901234567890123456789
+02|
+03|  This is 80 column mode, dark background.
+04|   This is 80 column mode, dark background.
+05|    This is 80 column mode, dark background.
+06|     This is 80 column mode, dark background.
+07|      This is 80 column mode, dark background.
+08|       This is 80 column mode, dark background.
+09|        This is 80 column mode, dark background.
+10|         This is 80 column mode, dark background.
+11|          This is 80 column mode, dark background.
+12|           This is 80 column mode, dark background.
+13|            This is 80 column mode, dark background.
+14|             This is 80 column mode, dark background.
+15|              This is 80 column mode, dark background.
+16|               This is 80 column mode, dark background.
+17|                This is 80 column mode, dark background.
+18|                 This is 80 column mode, dark background.
+19|                  This is 80 column mode, dark background.
+20|                   This is 80 column mode, dark background.Push <RETURN>
+21|
+22|
+23|
+24|
+--- attributes (columns from 1)
+01| 1-79 fg=3 bg=4; 80 bg=4
+02| 1-80 bg=4
+03| 1-2 bg=4; 3-42 fg=3 bg=4; 43-80 bg=4
+04| 1-3 bg=4; 4-43 fg=3 bg=4; 44-80 bg=4
+05| 1-4 bg=4; 5-44 fg=3 bg=4; 45-80 bg=4
+06| 1-5 bg=4; 6-45 fg=3 bg=4; 46-80 bg=4
+07| 1-6 bg=4; 7-46 fg=3 bg=4; 47-80 bg=4
+08| 1-7 bg=4; 8-47 fg=3 bg=4; 48-80 bg=4
+09| 1-8 bg=4; 9-48 fg=3 bg=4; 49-80 bg=4
+10| 1-9 bg=4; 10-49 fg=3 bg=4; 50-80 bg=4
+11| 1-10 bg=4; 11-50 fg=3 bg=4; 51-80 bg=4
+12| 1-11 bg=4; 12-51 fg=3 bg=4; 52-80 bg=4
+13| 1-12 bg=4; 13-52 fg=3 bg=4; 53-80 bg=4
+14| 1-13 bg=4; 14-53 fg=3 bg=4; 54-80 bg=4
+15| 1-14 bg=4; 15-54 fg=3 bg=4; 55-80 bg=4
+16| 1-15 bg=4; 16-55 fg=3 bg=4; 56-80 bg=4
+17| 1-16 bg=4; 17-56 fg=3 bg=4; 57-80 bg=4
+18| 1-17 bg=4; 18-57 fg=3 bg=4; 58-80 bg=4
+19| 1-18 bg=4; 19-58 fg=3 bg=4; 59-80 bg=4
+20| 1-19 bg=4; 20-72 fg=3 bg=4; 73-80 bg=4
+21| 1-80 bg=4
+22| 1-80 bg=4
+23| 1-80 bg=4
+24| 1-80 bg=4

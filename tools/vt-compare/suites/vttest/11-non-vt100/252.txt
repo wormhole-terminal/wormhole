@@ -1,0 +1,52 @@
+vttest 20251205 | menu 11-non-vt100 | screen 252
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 6 Test ISO-6429 colors > 6 Test of VT102-style features with BCE > 1 Test of cursor movements
+size: 80x24  cursor: row 22 col 14
+modes: default
+--- text
+01|Test of autowrap, mixing control and print characters.
+02|The left/right margins should have letters in order:
+03|I                                                                              i
+04|J                                                                              j
+05|K                                                                              k
+06|L                                                                              l
+07|M                                                                              m
+08|N                                                                              n
+09|O                                                                              o
+10|P                                                                              p
+11|Q                                                                              q
+12|R                                                                              r
+13|S                                                                              s
+14|T                                                                              t
+15|U                                                                              u
+16|V                                                                              v
+17|W                                                                              w
+18|X                                                                              x
+19|Y                                                                              y
+20|Z                                                                              z
+21|
+22|Push <RETURN>
+23|
+24|
+--- attributes (columns from 1)
+01| 1-54 fg=3 bg=4
+02| 1-52 fg=3 bg=4
+03| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+04| 1 fg=3 bg=4; 2-78 bg=4; 79-80 fg=3 bg=4
+05| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+06| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+07| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+08| 1 fg=3 bg=4; 2-78 bg=4; 79-80 fg=3 bg=4
+09| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+10| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+11| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+12| 1 fg=3 bg=4; 2-78 bg=4; 79-80 fg=3 bg=4
+13| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+14| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+15| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+16| 1 fg=3 bg=4; 2-78 bg=4; 79-80 fg=3 bg=4
+17| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+18| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+19| 1 fg=3 bg=4; 2-79 bg=4; 80 fg=3 bg=4
+20| 1 fg=3 bg=4; 2-78 bg=4; 79-80 fg=3 bg=4
+21| 1-80 bg=4
+22| 1-13 fg=3 bg=4

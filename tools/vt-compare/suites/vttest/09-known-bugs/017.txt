@@ -1,0 +1,31 @@
+vttest 20251205 | menu 09-known-bugs | screen 017
+path: 9 Test of known bugs > 4 Bug D: Narrow to wide screen
+size: 80x24  cursor: row 24 col 14
+modes: +SMOOTH_SCROLL
+--- text
+01|
+02|
+03|
+04|
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|If the bug is present, this should make things much worse!
+20|If the bug is present, this should make things much worse!
+21|If the bug is present, this should make things much worse!
+22|If the bug is present, this should make things much worse!
+23|If the bug is present, this should make things much worse!
+24|Push <RETURN>
+--- attributes
+(none)

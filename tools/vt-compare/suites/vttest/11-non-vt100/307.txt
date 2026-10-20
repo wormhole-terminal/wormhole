@@ -1,0 +1,50 @@
+vttest 20251205 | menu 11-non-vt100 | screen 307
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 8 Test XTERM special features > 2 Test reporting functions > 3 Request Mode (DECRQM)/Report Mode (DECRPM)
+size: 80x24  cursor: row 23 col 14
+modes: default
+--- text
+01|Testing Request Mode (DECRQM)/Report Mode (DECRPM)
+02|
+03|        1: DECCKM      <27> [ ? 1 ; 2 $ y  reset
+04|        2: DECANM      <27> [ ? 2 ; 3 $ y  permanently set
+05|        3: DECCOLM     <27> [ ? 3 ; 2 $ y  reset
+06|        4: DECSCLM     <27> [ ? 4 ; 2 $ y  reset
+07|        5: DECSCNM     <27> [ ? 5 ; 2 $ y  reset
+08|        6: DECOM       <27> [ ? 6 ; 2 $ y  reset
+09|        7: DECAWM      <27> [ ? 7 ; 1 $ y  set
+10|        8: DECARM      <27> [ ? 8 ; 2 $ y  reset
+11|        9: XT_MSE_X10  <27> [ ? 9 ; 2 $ y  reset
+12|       10: XT_TOOLBAR  <27> [ ? 1 0 ; 0 $ y  unknown
+13|       11: DECLTM      <27> [ ? 1 1 ; 0 $ y  unknown
+14|       12: XT_CBLINK   <27> [ ? 1 2 ; 2 $ y  reset
+15|       13: XT_OPTBLNK  <27> [ ? 1 3 ; 0 $ y  unknown
+16|       14: XT_XORBLNK  <27> [ ? 1 4 ; 0 $ y  unknown
+17|       16: DECEKEM     <27> [ ? 1 6 ; 0 $ y  unknown
+18|       18: DECPFF      <27> [ ? 1 8 ; 2 $ y  reset
+19|       19: DECPEX      <27> [ ? 1 9 ; 2 $ y  reset
+20|       25: DECTCEM     <27> [ ? 2 5 ; 1 $ y  set
+21|       30: XT_SCRLBAR  <27> [ ? 3 0 ; 0 $ y  unknown
+22|       35: XT_FONTSWT  <27> [ ? 3 5 ; 2 $ y  reset
+23|Push <RETURN>
+24|
+--- attributes (columns from 1)
+03| 23-42 inverse
+04| 23-42 inverse
+05| 23-42 inverse
+06| 23-42 inverse
+07| 23-42 inverse
+08| 23-42 inverse
+09| 23-42 inverse
+10| 23-42 inverse
+11| 23-42 inverse
+12| 23-44 inverse
+13| 23-44 inverse
+14| 23-44 inverse
+15| 23-44 inverse
+16| 23-44 inverse
+17| 23-44 inverse
+18| 23-44 inverse
+19| 23-44 inverse
+20| 23-44 inverse
+21| 23-44 inverse
+22| 23-44 inverse

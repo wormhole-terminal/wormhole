@@ -1,0 +1,31 @@
+vttest 20251205 | menu 01-cursor-movements | screen 006
+path: 1 Test of cursor movements
+size: 80x24  cursor: row 20 col 14
+modes: default
+--- text
+01|Test of leading zeros in ESC sequences.
+02|Two lines below you should see the sentence "This is a correct sentence".
+03|
+04|This is a correct sentence
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|Push <RETURN>
+21|
+22|
+23|
+24|
+--- attributes
+(none)

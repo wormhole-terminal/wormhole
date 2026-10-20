@@ -1,0 +1,31 @@
+vttest 20251205 | menu 10-reset | screen 001
+path: 10 Test of reset and self-test > 1 Reset to Initial State (RIS)
+size: 80x24  cursor: row 4 col 46
+modes: default
+--- text
+01|Reset to Initial State (RIS)
+02|(VT100 & up, not recommended)
+03|
+04|The terminal will now be RESET. Push <RETURN>
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

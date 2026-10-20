@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 085
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 3 Test of VT420 features > 2 Test cursor-movement > 10 Test other movement (CR/HT/LF/FF) within margins
+size: 80x24  cursor: row 14 col 14
+modes: default
+--- text
+01|uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+02|l                                                                              r
+03|l                                                                              r
+04|l                                                                              r
+05|l                                                                              r
+06|l                                                                              r
+07|l                                                                              r
+08|l                                                                              r
+09|l                                                                              r
+10|l                                                                              r
+11|l                                                                              r
+12|Test other movement (CR/HT/LF/FF) within margins                               r
+13|A box of *'s was written on screen border, overwritten using margins (u/d/l/r) r
+14|Push <RETURN>                                                                  r
+15|l                                                                              r
+16|l                                                                              r
+17|l                                                                              r
+18|l                                                                              r
+19|l                                                                              r
+20|l                                                                              r
+21|l                                                                              r
+22|l                                                                              r
+23|l                                                                              r
+24|dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+--- attributes
+(none)

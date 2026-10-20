@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 005
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 1 Test of VT220 features > 2 Test screen-display functions > 2 Test Visible/Invisible Cursor (DECTCEM)
+size: 80x24  cursor: row 2 col 14 (hidden)
+modes: -SHOW_CURSOR
+--- text
+01|The cursor should be invisible
+02|Push <RETURN>
+03|
+04|
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

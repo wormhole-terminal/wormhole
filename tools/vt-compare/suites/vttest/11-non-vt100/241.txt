@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 241
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 5 Test ISO-6429 cursor-movement > 7 Test Next-Line (CNL)
+size: 80x24  cursor: row 23 col 14
+modes: default
+--- text
+01|1.
+02|2.
+03|3.
+04|4.
+05|5.
+06|6.
+07|7.
+08|8.
+09|9.
+10|10.
+11|11.
+12|12.
+13|13.
+14|14.
+15|15.
+16|16.
+17|17.
+18|18.
+19|19.
+20|
+21|Test Next-Line (CNL)
+22|The lines above this should be numbered in sequence, from 1.
+23|Push <RETURN>
+24|
+--- attributes
+(none)

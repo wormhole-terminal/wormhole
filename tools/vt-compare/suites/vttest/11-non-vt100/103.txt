@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 103
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 3 Test of VT420 features > 3 Test editing sequences > 12 Test insert/delete char (ICH, DCH)
+size: 80x24  cursor: row 23 col 14
+modes: default
+--- text
+01|                                     ?                                         a
+02|                                    ?                                          b
+03|                                   ?                                           c
+04|                                  ?                                            d
+05|                                 ?                                             e
+06|                                ?                                              f
+07|                               ?                                               g
+08|                              ?                                                h
+09|                             ?                                                 i
+10|                            ?                                                  j
+11|                           ?                                                   k
+12|                          ?                                                    l
+13|                         ?                                                     m
+14|                        ?                                                      n
+15|                       ?                                                       o
+16|                      ?                                                        p
+17|                     ?                                                         q
+18|                    ?                                                          r
+19|                   ?                                                           s
+20|                  ?                                                            t
+21|----+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8
+22|If your terminal supports ICH, letters a-t are on column 80
+23|Push <RETURN>
+24|
+--- attributes
+(none)

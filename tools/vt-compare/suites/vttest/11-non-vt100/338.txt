@@ -1,0 +1,18 @@
+vttest 20251205 | menu 11-non-vt100 | screen 338
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 8 Test XTERM special features > 8 Window modify-operations (dtterm)
+size: 50x11  cursor: row 11 col 14
+modes: default
+--- text
+01|245 x 305 pixels
+02|240 x 310 pixels
+03|235 x 315 pixels
+04|230 x 320 pixels
+05|225 x 325 pixels
+06|220 x 330 pixels
+07|215 x 335 pixels
+08|210 x 340 pixels
+09|205 x 345 pixels
+10|200 x 350 pixels
+11|Push <RETURN>
+--- attributes
+(none)

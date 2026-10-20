@@ -1,0 +1,31 @@
+vttest 20251205 | menu 11-non-vt100 | screen 329
+path: 11 Test non-VT100 (e.g., VT220, XTERM) terminals > 8 Test XTERM special features > 7 Alternate-Screen features (xterm) > 4 Improved alternate screen (XFree86 xterm mode 1047)
+size: 80x24  cursor: row 22 col 14
+modes: default
+--- text
+01|Improved alternate screen (XFree86 xterm mode 1047)
+02|
+03|Test private setmode 1047 (to/from alternate screen)
+04|The original screen should be restored except for this line.
+05|unless titeInhibit resource is set, or alternate-screen is disabled.
+06|
+07|
+08|
+09|cursor save/restore ok
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|Push <RETURN>
+23|
+24|
+--- attributes
+(none)

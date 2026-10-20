@@ -1,0 +1,32 @@
+vttest 20251205 | menu 06-reports | screen 002
+state: silent without a Push <RETURN>, waiting for a key
+path: 6 Test of terminal reports > 2 Set/Reset Mode - LineFeed / Newline
+size: 80x24  cursor: row 3 col 40
+modes: +NEW_LINE
+--- text
+01|Test of LineFeed/NewLine mode.
+02|
+03|NewLine mode set. Push the RETURN key:
+04|
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

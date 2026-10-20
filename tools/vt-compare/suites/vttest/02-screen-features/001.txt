@@ -1,0 +1,31 @@
+vttest 20251205 | menu 02-screen-features | screen 001
+path: 2 Test of screen features
+size: 80x24  cursor: row 8 col 14
+modes: default
+--- text
+01|********************************************************************************
+02|********************************************************************************
+03|********************************************************************************
+04|
+05|This should be three identical lines of *'s completely filling
+06|the top of the screen without any empty lines between.
+07|(Test of WRAP AROUND mode setting.)
+08|Push <RETURN>
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

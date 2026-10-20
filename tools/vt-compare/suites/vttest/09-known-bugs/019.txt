@@ -1,0 +1,31 @@
+vttest 20251205 | menu 09-known-bugs | screen 019
+path: 9 Test of known bugs > 6 Bug F: Column mode escape sequence
+size: 132x24  cursor: row 3 col 14
+modes: +COLUMNS_132 +REVERSE_VIDEO
+--- text
+01|Test VT100 'Toggle origin mode, forget rest' bug, part 1.
+02|The screen should be in reverse, 132 column mode.
+03|Push <RETURN>
+04|
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

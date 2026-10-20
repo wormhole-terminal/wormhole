@@ -1,0 +1,31 @@
+vttest 20251205 | menu 04-double-sized | screen 004
+path: 4 Test of double-sized characters
+size: 132x24  cursor: row 23 col 14
+modes: +COLUMNS_132
+--- text
+01|132 column mode
+02|
+03|
+04|
+05|                            v------- left margin
+06|
+07|                            This is a normal-sized line
+08|
+09|              This is a Double-width line
+10|
+11|              This is a Double-width-and-height line
+12|              This is a Double-width-and-height line
+13|
+14|              This is another such line
+15|              This is another such line
+16|
+17|                            ^------- left margin
+18|
+19|
+20|
+21|This **is** a double-width line
+22|
+23|Push <RETURN>
+24|
+--- attributes
+(none)

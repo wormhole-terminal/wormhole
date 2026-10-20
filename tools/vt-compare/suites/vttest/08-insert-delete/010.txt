@@ -1,0 +1,31 @@
+vttest 20251205 | menu 08-insert-delete | screen 010
+path: 8 Test of VT102 features (Insert/Delete Char/Line)
+size: 132x24  cursor: row 4 col 77
+modes: +COLUMNS_132
+--- text
+01|A**********************************************************************************************************************************B
+02|
+03|
+04|Test of 'Insert Mode'. The top line should be 'A*** ... ***B'. Push <RETURN>
+05|
+06|
+07|
+08|
+09|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
+--- attributes
+(none)

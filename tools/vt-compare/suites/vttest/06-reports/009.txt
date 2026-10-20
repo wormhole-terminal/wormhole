@@ -1,0 +1,32 @@
+vttest 20251205 | menu 06-reports | screen 009
+path: 6 Test of terminal reports > 7 Request Terminal Parameters (DECREQTPARM)  VT100
+size: 80x24  cursor: row 24 col 14
+modes: default
+--- text
+01|
+02|Test of the "Request Terminal Parameters" feature, argument 0.
+03|
+04|
+05|Report is:  -- Bad format
+06|
+07|
+08|
+09|
+10|Test of the "Request Terminal Parameters" feature, argument 1.
+11|
+12|
+13|Report is:  -- Bad format
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|Push <RETURN>
+--- attributes (columns from 1)
+05| 11 inverse
+13| 11 inverse

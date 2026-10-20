@@ -1,0 +1,37 @@
+vttest 20251205 | menu 03-character-sets | screen 006
+path: 3 Test of character sets > 8 Test VT100 Character Sets
+size: 80x24  cursor: row 24 col 54
+modes: default
+--- text
+01|         Selected as G0 (with SI)              Selected as G1 (with SO)
+02|
+03|Character set B (US ASCII)
+04|          !"#$%&'()*+,-./0123456789:;<=>?       !"#$%&'()*+,-./0123456789:;<=>?
+05|         @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_      @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+06|         `abcdefghijklmnopqrstuvwxyz{|}~       `abcdefghijklmnopqrstuvwxyz{|}~
+07|Character set A (British)
+08|          !"£$%&'()*+,-./0123456789:;<=>?       !"£$%&'()*+,-./0123456789:;<=>?
+09|         @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_      @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+10|         `abcdefghijklmnopqrstuvwxyz{|}~       `abcdefghijklmnopqrstuvwxyz{|}~
+11|Character set 0 (DEC Special graphics and line drawing)
+12|          !"#$%&'()*+,-./0123456789:;<=>?       !"#$%&'()*+,-./0123456789:;<=>?
+13|         @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^       @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^
+14|         ◆▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·       ◆▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·
+15|Character set 1 (DEC Alternate character ROM standard characters)
+16|          !"#$%&'()*+,-./0123456789:;<=>?       !"#$%&'()*+,-./0123456789:;<=>?
+17|         @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_      @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+18|         `abcdefghijklmnopqrstuvwxyz{|}~       `abcdefghijklmnopqrstuvwxyz{|}~
+19|Character set 2 (DEC Alternate character ROM special graphics)
+20|          !"#$%&'()*+,-./0123456789:;<=>?       !"#$%&'()*+,-./0123456789:;<=>?
+21|         @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^       @ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^
+22|         ◆▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·       ◆▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£·
+23|
+24|These are the installed character sets. Push <RETURN>
+--- attributes (columns from 1)
+03| 1-26 bold
+07| 1-25 bold
+08| 13 inverse; 51 inverse
+11| 1-55 bold
+14| 10-40 inverse; 48-78 inverse
+15| 1-65 bold
+19| 1-62 bold
