@@ -42,8 +42,7 @@ First public release (0.1.0).
 - `grid` is private. What a host needs from it has a public home.
 - `Event` and the public enums and option structs are `#[non_exhaustive]`; `Terminal` is `Send`, checked
   at compile time.
-- The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole", and the
-  app's own OSC 7501 protocol is an extension outside the engine.
+- The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole".
 
 ### Security
 

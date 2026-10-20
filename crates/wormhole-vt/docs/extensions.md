@@ -139,5 +139,4 @@ stays `Send`.
 - **Return `Pass` when it is not yours.** A claim for a number is a claim for every sequence with that
   number.
 - **Pick numbers carefully.** OSC numbers are shared by every terminal. Use a number nobody uses, and
-  document it. Wormhole's own program-status protocol (OSC 7501) is the first extension to use this API:
-  it lives outside the engine, in the app's terminal layer.
+  document it.
