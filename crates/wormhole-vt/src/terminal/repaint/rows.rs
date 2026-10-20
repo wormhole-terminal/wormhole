@@ -40,7 +40,9 @@ impl<'a> Writer<'a> {
     /// Write the cells of `grid`, the main screen with its history or (`alt`) the other one.
     pub(super) fn screen_rows(&mut self, grid: &'a Grid, alt: bool) {
         let rows = grid.rows();
-        let history = if alt { 0 } else { grid.history_len() };
+        // Rows are addressed from the oldest written one, `Line(-history)`: a cap skips the
+        // oldest lines and keeps the newest.
+        let history = if alt { 0 } else { grid.history_len().min(self.max_history) };
         if !alt {
             self.history_lines = history;
         }

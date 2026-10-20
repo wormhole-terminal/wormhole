@@ -198,8 +198,18 @@ impl Terminal {
     ///
     /// `Err` when [`repaint_ready`](Self::repaint_ready) says no; nothing is written then.
     pub fn repaint(&self, out: &mut Vec<u8>) -> Result<Repainted, NotReady> {
+        self.repaint_capped(out, usize::MAX)
+    }
+
+    /// [`repaint`](Self::repaint), writing at most the `max_history` newest lines of the main
+    /// screen's history: the receiver's history starts there, the older lines are not sent. A
+    /// host attaching a viewer uses it to bound what an attach costs; the screen itself, the
+    /// alternate screen and every other piece of state are written whole as by `repaint`. The
+    /// block counter seeds from the first block the written rows carry.
+    pub fn repaint_capped(&self, out: &mut Vec<u8>, max_history: usize) -> Result<Repainted, NotReady> {
         self.repaint_ready()?;
         let mut w = Writer::new(self, out);
+        w.max_history = max_history;
         w.write_all();
         Ok(w.finish())
     }
@@ -233,6 +243,9 @@ struct Writer<'a> {
     alt: bool,
     stash: BlockPart,
     history_lines: usize,
+    /// The most lines of the main screen's history written, the newest ones
+    /// ([`Terminal::repaint_capped`]).
+    max_history: usize,
     /// Columns of the blank cells of the span being written that HT must mark.
     tabs: Vec<usize>,
     /// The modes the XTSAVE table's replay changed, which are written again.
@@ -262,6 +275,7 @@ impl<'a> Writer<'a> {
             alt: false,
             stash: BlockPart::None,
             history_lines: 0,
+            max_history: usize::MAX,
             tabs: Vec::new(),
             touched: Vec::new(),
             fix_wrap: None,

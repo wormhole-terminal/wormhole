@@ -253,3 +253,52 @@ fn thousands_of_tab_stops_on_a_very_wide_screen() {
     assert!(gaps.is_empty(), "left out: {gaps:?}");
     assert_eq!(a.tabs.columns().count(), 9_000);
 }
+
+#[test]
+fn a_capped_repaint_keeps_the_newest_history_and_the_screen() {
+    let mut a = Terminal::builder().size(20, 4).scrollback(100).build();
+    let mut text = String::new();
+    for i in 0..40 {
+        text.push_str(&format!("line {i}\r\n"));
+    }
+    a.feed(format!("\x1b]133;A\x07{text}tail").as_bytes());
+    assert!(a.history_len() > 10);
+    let capped = |cap: usize| {
+        let mut bytes = Vec::new();
+        let done = a.repaint_capped(&mut bytes, cap).expect("ready");
+        let mut b = Terminal::builder().size(20, 4).scrollback(100).build();
+        b.seed(&done.seeds);
+        b.feed(&bytes);
+        (b, done)
+    };
+    let (b, done) = capped(10);
+    assert_eq!(b.history_len(), 10);
+    assert_eq!(done.history_lines, 10);
+    // The same last ten lines of history, and the same screen.
+    for line in -10..4 {
+        let at = crate::types::Line(line);
+        assert_eq!(b.row_text(at, true), a.row_text(at, true), "line {line}");
+    }
+    assert_eq!(b.cursor().point, a.cursor().point);
+    // A cap above the history writes it all, as `repaint` does.
+    let (whole, _) = capped(usize::MAX);
+    let mut bytes = Vec::new();
+    a.repaint(&mut bytes).expect("ready");
+    let mut plain = Terminal::builder().size(20, 4).scrollback(100).build();
+    plain.feed(&bytes);
+    assert_eq!(whole.history_len(), a.history_len());
+    assert_eq!(plain.history_len(), a.history_len());
+    // No history at all: just the screen.
+    let (none, _) = capped(0);
+    assert_eq!(none.history_len(), 0);
+    assert_eq!(none.row_text(crate::types::Line(0), true), a.row_text(crate::types::Line(0), true));
+}
+
+#[test]
+fn the_default_colors_read_back_as_set() {
+    let mut term = Terminal::new(10, 3);
+    let mut palette = *term.default_colors();
+    palette[1] = crate::types::Rgb { r: 1, g: 2, b: 3 };
+    term.set_default_colors(&palette);
+    assert_eq!(term.default_colors()[1], crate::types::Rgb { r: 1, g: 2, b: 3 });
+}
