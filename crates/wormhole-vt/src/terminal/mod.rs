@@ -120,7 +120,7 @@ pub use graphics::{
 pub use modes::Modes;
 pub use policy::Policy;
 pub use read::damage::Damage;
-pub use read::search::PinnedSpan;
+pub use read::search::Span;
 pub use read::selection::DEFAULT_WORD_SEPARATORS;
 pub use read::snapshot::Cursor;
 pub use reports::locator::{LocatorButton, Pointer};

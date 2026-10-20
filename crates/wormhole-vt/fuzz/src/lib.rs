@@ -57,8 +57,8 @@ pub struct Run {
     copy: TextCopy,
     rows_out: Vec<ViewRow>,
     damage: Damage,
-    pins: Vec<wormhole_vt::PinId>,
-    spans: Vec<wormhole_vt::PinnedSpan>,
+    pins: Vec<wormhole_vt::Pin>,
+    spans: Vec<wormhole_vt::Span>,
     handles: Vec<ImageHandle>,
 }
 

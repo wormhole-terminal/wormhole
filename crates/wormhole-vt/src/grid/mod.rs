@@ -86,7 +86,7 @@ pub use copy::ViewRow;
 pub use images::MAX_PLACEMENTS;
 pub(crate) use images::NewPlacement;
 pub use links::LinkSpan;
-pub use pins::PinId;
+pub use pins::Pin;
 pub use row::{Pen, Region, RowMark};
 pub use rowview::RowView;
 pub use search::{CopiedLine, TextCopy};

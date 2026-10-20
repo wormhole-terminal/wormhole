@@ -5,7 +5,7 @@
 //! rows marked dirty since the last call, into buffers the host keeps) and lets go; nothing here
 //! allocates once the buffers are the right size.
 
-use crate::grid::{PinId, RowMark, ViewRow};
+use crate::grid::{Pin, RowMark, ViewRow};
 use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll, TermMode};
 
 use crate::terminal::Terminal;
@@ -151,22 +151,22 @@ impl Terminal {
     /// A reference to the row at `point` that follows its text while the screen scrolls and the
     /// width is reflowed (selections, search hits and marks hold these), and says so when the row has
     /// left the history.
-    pub fn pin(&mut self, point: Point) -> PinId {
+    pub fn pin(&mut self, point: Point) -> Pin {
         self.grid.pin(point)
     }
 
     /// Where the pin is now, `None` once its row has left the history.
-    pub fn pin_point(&self, pin: PinId) -> Option<Point> {
+    pub fn pin_point(&self, pin: Pin) -> Option<Point> {
         self.grid.pin_point(pin)
     }
 
     /// Forget a pin.
-    pub fn unpin(&mut self, pin: PinId) {
+    pub fn unpin(&mut self, pin: Pin) {
         self.grid.unpin(pin);
     }
 
     /// Re-aim a pin.
-    pub fn move_pin(&mut self, pin: PinId, point: Point) {
+    pub fn move_pin(&mut self, pin: Pin, point: Point) {
         self.grid.move_pin(pin, point);
     }
 

@@ -1,6 +1,6 @@
 <!--
 API names assumed here: Terminal::{new, feed, take_replies, events, modes, resize, pin, pin_point, unpin,
-span...}, Modes, Event, Pin, Span (D-16, public anchor API; today PinId and PinnedSpan), Line, Column, Point,
+span...}, Modes, Event, Pin, Span, Line, Column, Point,
 Cell, Flags, Color, Policy.
 -->
 
@@ -170,9 +170,10 @@ A host often needs to remember a place in the text: a search hit, a selection, t
 decoration. A row number is not enough, because rows move when the screen scrolls and when the width
 changes.
 
-A **pin** is a reference to a row that follows its text. It survives scrolling that appends to the
-history, and it survives reflow when a resize rewraps lines. It dies when its row is dropped from the
-history; asking for its position then returns `None`. A **span** is a start pin and an end pin.
+A **pin** ([`Pin`], made with `Terminal::pin`) is a reference to a row that follows its text. It survives
+scrolling that appends to the history, and it survives reflow when a resize rewraps lines. It dies when
+its row is dropped from the history; `Terminal::pin_point` then returns `None`. A **span** ([`Span`], made
+with `Terminal::pin_span`) is a start pin and an end pin, read back with `Terminal::span_points`.
 
 One limit to know: a scroll of only part of the screen (a region, insert or delete line) moves text
 between rows, and a pin stays on its row. Unpin what you no longer need.

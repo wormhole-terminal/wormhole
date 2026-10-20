@@ -6,18 +6,19 @@
 //!
 //! None of these allocate beyond the `String`s and buffers they hand back.
 
-use crate::grid::{BlockPart, LinkSpan, PinId, TextCopy, TextShape};
+use crate::grid::{BlockPart, LinkSpan, Pin, TextCopy, TextShape};
 use crate::types::{Line, Point};
 
 use crate::terminal::Terminal;
 
-/// A found range of cells that moves with its text: two pins of the grid. Keep it while a match
-/// is shown; [`Terminal::unpin_span`] it when it is not, because the grid tracks every pin
-/// through every reflow.
+/// A range of cells that moves with its text: two [`Pin`](crate::Pin)s, made with
+/// [`Terminal::pin_span`] (a found match, a command's output). It survives scrolling and reflow
+/// and dies with the history, like a pin. Keep it while it is shown; [`Terminal::unpin_span`] it
+/// when it is not, because the grid tracks every pin through every reflow.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PinnedSpan {
-    start: PinId,
-    end: PinId,
+pub struct Span {
+    start: Pin,
+    end: Pin,
 }
 
 impl Terminal {
@@ -74,23 +75,23 @@ impl Terminal {
     }
 
     /// Pin a found range so it follows its text.
-    pub fn pin_span(&mut self, start: Point, end: Point) -> PinnedSpan {
-        PinnedSpan { start: self.grid.pin(start), end: self.grid.pin(end) }
+    pub fn pin_span(&mut self, start: Point, end: Point) -> Span {
+        Span { start: self.grid.pin(start), end: self.grid.pin(end) }
     }
 
     /// Where the span is now, `None` once its text left the history.
-    pub fn span_points(&self, span: PinnedSpan) -> Option<(Point, Point)> {
+    pub fn span_points(&self, span: Span) -> Option<(Point, Point)> {
         Some((self.grid.pin_point(span.start)?, self.grid.pin_point(span.end)?))
     }
 
     /// Whether the span's text is still in the grid and the cells still spell `text`: a stored
     /// match that fails this is stale (the cells were overwritten, or scrolled away).
-    pub fn span_holds(&self, span: PinnedSpan, text: &str) -> bool {
+    pub fn span_holds(&self, span: Span, text: &str) -> bool {
         self.span_points(span).is_some_and(|(start, end)| self.grid.span_is(start, end, text))
     }
 
     /// Forget a pinned span.
-    pub fn unpin_span(&mut self, span: PinnedSpan) {
+    pub fn unpin_span(&mut self, span: Span) {
         self.grid.unpin(span.start);
         self.grid.unpin(span.end);
     }

@@ -4,16 +4,21 @@
 //! or the history above drops, so a pin keeps pointing at its text; once the row is older than the
 //! oldest one kept it is gone and the pin says so. A reflow gives rows new numbers, so the grid
 //! keeps every pin in a registry and rewrites them there; a selection, a mark or a search hit holds
-//! a [`PinId`], not a number.
+//! a [`Pin`], not a number.
 
 use crate::types::{Column, Line, Point};
 
 use super::Grid;
 
-/// A handle to a pin of a grid. Copyable; stale after [`Terminal::unpin`](crate::Terminal::unpin), which
-/// the grid notices.
+/// An anchor on a row of text: made with [`Terminal::pin`](crate::Terminal::pin), read back with
+/// [`Terminal::pin_point`](crate::Terminal::pin_point).
+///
+/// A pin follows its text while the screen scrolls and when the width is reflowed. It dies with
+/// the history: once its row has been dropped, `pin_point` says `None`. Copyable; stale after
+/// [`Terminal::unpin`](crate::Terminal::unpin), which the grid notices. The terminal tracks every
+/// pin through every reflow, so unpin the ones you no longer need.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct PinId {
+pub struct Pin {
     index: u32,
     generation: u32,
 }
@@ -36,27 +41,27 @@ pub(super) struct Pins {
 }
 
 impl Pins {
-    pub(super) fn add(&mut self, serial: u64, col: usize) -> PinId {
+    pub(super) fn add(&mut self, serial: u64, col: usize) -> Pin {
         if let Some(index) = self.free.pop() {
             let slot = &mut self.slots[index as usize];
             slot.serial = serial;
             slot.col = col;
             slot.live = true;
-            return PinId { index, generation: slot.generation };
+            return Pin { index, generation: slot.generation };
         }
         self.slots.push(Slot { serial, col, generation: 0, live: true });
-        PinId { index: self.slots.len() as u32 - 1, generation: 0 }
+        Pin { index: self.slots.len() as u32 - 1, generation: 0 }
     }
 
-    fn slot(&self, pin: PinId) -> Option<&Slot> {
+    fn slot(&self, pin: Pin) -> Option<&Slot> {
         self.slots.get(pin.index as usize).filter(|slot| slot.live && slot.generation == pin.generation)
     }
 
-    pub(super) fn get(&self, pin: PinId) -> Option<(u64, usize)> {
+    pub(super) fn get(&self, pin: Pin) -> Option<(u64, usize)> {
         self.slot(pin).map(|slot| (slot.serial, slot.col))
     }
 
-    pub(super) fn set(&mut self, pin: PinId, serial: u64, col: usize) {
+    pub(super) fn set(&mut self, pin: Pin, serial: u64, col: usize) {
         if self.slot(pin).is_some() {
             let slot = &mut self.slots[pin.index as usize];
             slot.serial = serial;
@@ -64,7 +69,7 @@ impl Pins {
         }
     }
 
-    pub(super) fn remove(&mut self, pin: PinId) {
+    pub(super) fn remove(&mut self, pin: Pin) {
         if self.slot(pin).is_some() {
             let slot = &mut self.slots[pin.index as usize];
             slot.live = false;
@@ -96,7 +101,7 @@ impl Pins {
 impl Grid {
     /// A reference to the row at `point` that follows its text while the screen scrolls and the
     /// width is reflowed, and says so when the row has left the history.
-    pub fn pin(&mut self, point: Point) -> PinId {
+    pub fn pin(&mut self, point: Point) -> Pin {
         let history = self.history_len() as i32;
         let line = Line(point.line.0.clamp(-history, self.rows as i32 - 1));
         let serial = self.top_serial().saturating_add_signed(line.0 as i64);
@@ -104,7 +109,7 @@ impl Grid {
     }
 
     /// Where the pin is now, `None` once its row was dropped from the history (or it was removed).
-    pub fn pin_point(&self, pin: PinId) -> Option<Point> {
+    pub fn pin_point(&self, pin: Pin) -> Option<Point> {
         let (serial, col) = self.pins.get(pin)?;
         if serial < self.first_serial() || serial >= self.end {
             return None;
@@ -114,12 +119,12 @@ impl Grid {
     }
 
     /// Forget a pin.
-    pub fn unpin(&mut self, pin: PinId) {
+    pub fn unpin(&mut self, pin: Pin) {
         self.pins.remove(pin);
     }
 
     /// Re-aim a pin.
-    pub fn move_pin(&mut self, pin: PinId, point: Point) {
+    pub fn move_pin(&mut self, pin: Pin, point: Point) {
         let history = self.history_len() as i32;
         let line = Line(point.line.0.clamp(-history, self.rows as i32 - 1));
         let serial = self.top_serial().saturating_add_signed(line.0 as i64);
