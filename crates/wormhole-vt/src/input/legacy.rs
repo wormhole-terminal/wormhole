@@ -6,13 +6,16 @@
 
 use super::key::{Key, KeyEvent, KeyKind, KeypadKey, Mods};
 use super::modes::InputModes;
-use super::{ESC, push_dec, push_typed};
+use super::{ESC, other_keys, push_dec, push_typed};
 
 /// Appends the bytes for `ev` and says whether there were any.
 pub(super) fn encode(ev: &KeyEvent, modes: &InputModes, out: &mut Vec<u8>) -> bool {
     // The legacy encoding has no key-up; a repeat is a press.
     if ev.kind == KeyKind::Release {
         return false;
+    }
+    if other_keys::encode(ev, modes, out) {
+        return true;
     }
     let m = ev.mods;
     let (shift, alt, ctrl) = (m.contains(Mods::SHIFT), m.contains(Mods::ALT), m.contains(Mods::CTRL));
@@ -156,7 +159,7 @@ fn push_str(out: &mut Vec<u8>, text: &str) -> bool {
 }
 
 /// The C0 code Control+`c` makes, as xterm, kitty and iTerm2 send it.
-fn control_byte(c: char) -> Option<u8> {
+pub(super) fn control_byte(c: char) -> Option<u8> {
     Some(match c.to_ascii_lowercase() {
         c @ 'a'..='z' => c as u8 & 0x1f,
         '@' | '2' | ' ' => 0,

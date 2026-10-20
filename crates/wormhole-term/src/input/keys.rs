@@ -10,7 +10,7 @@
 //! omitted from the sequence).
 
 use wormhole_vt::Modes;
-use wormhole_vt::input::{InputModes, Key, KeyEvent, KittyFlags, Mods, encode_key, focus};
+use wormhole_vt::input::{InputModes, Key, KeyEvent, KittyFlags, ModifyOtherKeys, Mods, encode_key, focus};
 
 /// A GUI-independent key press.
 ///
@@ -121,8 +121,9 @@ fn event_of<'a>(input: &KeyInput<'a>, key: Key, modes: &InputModes) -> Option<Ke
 
     let (mut key, mut text) = (key, text);
     if !kitty {
-        // Shift+Enter inserts a newline in AI CLIs (same as Option+Enter).
-        if key == Key::Enter && shift {
+        // Shift+Enter inserts a newline in AI CLIs (same as Option+Enter). A program that set
+        // modifyOtherKeys asked to be told which modifiers were held and gets Shift+Enter as it is.
+        if key == Key::Enter && shift && modes.modify_other_keys == ModifyOtherKeys::Off {
             mods.remove(Mods::SHIFT);
             mods.insert(Mods::ALT);
         }
@@ -189,6 +190,33 @@ mod tests {
         assert_eq!(enc(k("enter", Some("\r")), NONE), s("\r"));
         assert_eq!(enc(shift(k("enter", None)), NONE), s("\x1b\r"));
         assert_eq!(enc(alt(k("enter", None)), NONE), s("\x1b\r"));
+    }
+
+    #[test]
+    fn modify_other_keys_tells_the_program_which_modifiers_were_held() {
+        let level1 = Modes::MODIFY_OTHER_KEYS;
+        let level2 = Modes::MODIFY_OTHER_KEYS | Modes::MODIFY_OTHER_KEYS_ALL;
+        // Shift+Enter is not turned into Option+Enter for a program that asked.
+        assert_eq!(enc(shift(k("enter", None)), level1), s("\x1b[27;2;13~"));
+        assert_eq!(enc(alt(k("enter", None)), level1), s("\x1b[27;3;13~"));
+        assert_eq!(enc(k("enter", Some("\r")), level1), s("\r"));
+        // Option as Meta is Alt: an ordinary key with it is the sequence.
+        let meta = |mut i: KeyInput<'static>| {
+            i.alt = true;
+            i.option_as_meta = true;
+            i
+        };
+        assert_eq!(enc(meta(k("x", None)), level1), s("\x1b[27;3;120~"));
+        assert_eq!(enc(ctrl(k("i", None)), level2), s("\x1b[27;5;105~"));
+        assert_eq!(enc(ctrl(k("i", None)), level1), Some("\t".into()));
+        assert_eq!(enc(shift(k("tab", None)), level2), s("\x1b[27;2;9~"));
+        // Option+Left is the word jump Alt+b, and a program that asked is told it as Alt+b.
+        assert_eq!(enc(alt(k("left", None)), level2), s("\x1b[27;3;98~"));
+        assert_eq!(enc(alt(k("left", None)), level1), s("\x1b[27;3;98~"));
+        // The arrow with Control is an arrow: modifyOtherKeys leaves it alone.
+        assert_eq!(enc(ctrl(k("right", None)), level2), s("\x1b[1;5C"));
+        // The kitty protocol, once pushed, is what is used.
+        assert_eq!(enc(ctrl(k("i", None)), level2 | DIS), s("\x1b[105;5u"));
     }
 
     #[test]

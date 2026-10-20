@@ -56,6 +56,20 @@ Without any kitty flag set, keys follow xterm:
 - Backspace sends `DEL` (`0x7f`), and Ctrl+Backspace `BS`; a program that set DECBKM (mode 67) gets them
   the other way round. Shift+Tab sends `CSI Z`.
 
+### modifyOtherKeys
+
+A program that wants to tell Ctrl+I from Tab, or Alt+x from a typed `x`, without the kitty protocol
+can ask for xterm's modifyOtherKeys with `CSI > 4 ; 1 m` or `CSI > 4 ; 2 m` (and `CSI > 4 ; 0 m`, or
+`CSI > 4 m`, to turn it off; `CSI ? 4 m` asks and the engine answers `CSI > 4 ; Pv m`). `Modes` carries
+the level (`MODIFY_OTHER_KEYS`, `MODIFY_OTHER_KEYS_ALL`, read together as `modify_other_keys()`), and
+`InputModes::from(modes)` hands it to the encoder, which then writes `CSI 27 ; modifiers ; code ~`
+(xterm's `formatOtherKeys` 0) for ordinary keys with a modifier held; the modifier is
+`1 + shift + 2·alt + 4·ctrl + 8·meta` and the code is the character the key types (`A`, 65, for
+Shift+a). The rules follow xterm's table of modified keys:
+
+- Cursor, function and keypad keys are not "other" keys and are not changed. xterm's level 3 and the
+  modifier mask of `CSI > 4 : Pm m` are not implemented; the other resources of XTMODKEYS (modifyCursorKeys
+  and friends) are neither kept nor answered.
 ### The kitty keyboard protocol
 
 A program asks for it with `CSI > flags u`. The five flags are *disambiguate escape codes* (1), *report

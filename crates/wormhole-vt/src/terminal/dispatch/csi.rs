@@ -82,6 +82,7 @@ impl Terminal {
                 b'q' => self.report_version(),
                 b't' => self.set_title_modes(csi.values(), true),
                 b'T' => self.set_title_modes(csi.values(), false),
+                b'm' => self.set_key_modifier_options(csi),
                 b'u' => {
                     self.keys[self.screen_slot()].push(csi.param(0, 0) as u8);
                     self.sync_keyboard_flags();
@@ -185,6 +186,7 @@ impl Terminal {
             b'W' if csi.param(0, 0) == 5 => self.tabs.reset(self.cols),
             b'S' => self.graphics_attributes(csi),
             b'u' => self.report_keyboard_flags(),
+            b'm' => self.report_key_modifier_options(csi.param(0, 0)),
             b's' => self.save_private_modes(csi),
             b'r' => self.restore_private_modes(csi),
             _ => {}

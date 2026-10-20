@@ -344,6 +344,8 @@ pub const MODES: &[(&str, Coverage)] = &[
     ("REVERSE_WRAP_EXTENDED", Written("modes: DECSET 1045")),
     ("MORE_FIX", Written("modes: DECSET 41")),
     ("INBAND_RESIZE", Written("modes: DECSET 2048")),
+    ("MODIFY_OTHER_KEYS", Written("modes: `CSI > 4 ; Pv m`")),
+    ("MODIFY_OTHER_KEYS_ALL", Written("modes: `CSI > 4 ; 2 m`")),
 ];
 
 /// The flags of a grid cell and how a repaint covers each. A test checks it against the cell's.

@@ -146,6 +146,13 @@ bitflags! {
         /// (`CSI 48 ; rows ; cols ; height ; width t`), see
         /// [`Terminal::resize`](crate::Terminal::resize).
         const INBAND_RESIZE    = 1 << 50;
+        /// xterm's modifyOtherKeys is at level 1 or 2 (`CSI > 4 ; Pv m`). **Host**: ordinary keys
+        /// with modifiers are sent as `CSI 27 ; modifiers ; code ~`. Read the level through
+        /// [`modify_other_keys`](Modes::modify_other_keys).
+        const MODIFY_OTHER_KEYS = 1 << 51;
+        /// modifyOtherKeys is at level 2 (together with [`MODIFY_OTHER_KEYS`](Modes::MODIFY_OTHER_KEYS)):
+        /// all modifiers apply, also to the keys level 1 leaves alone.
+        const MODIFY_OTHER_KEYS_ALL = 1 << 52;
     }
 }
 
@@ -204,6 +211,18 @@ impl Modes {
         }
     }
 
+    /// The level of xterm's modifyOtherKeys the program set (`CSI > 4 ; Pv m`).
+    #[must_use]
+    pub fn modify_other_keys(self) -> ModifyOtherKeys {
+        if self.contains(Modes::MODIFY_OTHER_KEYS_ALL) {
+            ModifyOtherKeys::Level2
+        } else if self.contains(Modes::MODIFY_OTHER_KEYS) {
+            ModifyOtherKeys::Level1
+        } else {
+            ModifyOtherKeys::Off
+        }
+    }
+
     /// The kitty keyboard protocol's flags in force on the screen showing; the same five bits as
     /// `KEYS_*`, with the protocol's own values.
     #[must_use]
@@ -255,6 +274,23 @@ pub enum MouseTracking {
     Motion,
 }
 
+/// xterm's modifyOtherKeys (`CSI > 4 ; Pv m`): whether keys that have no function-key form are
+/// sent as escape sequences when a modifier is held, so that a program can tell Ctrl+I from Tab
+/// and Alt+x from a typed x. The sequences are `CSI 27 ; modifiers ; code ~` (xterm's
+/// `formatOtherKeys` 0).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[non_exhaustive]
+pub enum ModifyOtherKeys {
+    /// 0: modified keys are sent as they always were.
+    #[default]
+    Off,
+    /// 1: modified keys are sent as escape sequences, except where the legacy bytes are
+    /// unambiguous: Shift alone on a character, and Ctrl on the keys that make a control code.
+    Level1,
+    /// 2: every key with a modifier is sent as an escape sequence.
+    Level2,
+}
+
 /// How a mouse report writes its numbers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[non_exhaustive]
@@ -284,6 +320,7 @@ mod tests {
         assert_eq!(Modes::INITIAL.mouse_encoding(), MouseEncoding::X10);
         assert_eq!(Modes::INITIAL.kitty_flags(), KittyFlags::empty());
         assert!(!Modes::INITIAL.contains(Modes::BACKARROW_BS), "the backarrow key sends DEL");
+        assert_eq!(Modes::INITIAL.modify_other_keys(), ModifyOtherKeys::Off);
     }
 
     #[test]

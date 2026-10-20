@@ -35,12 +35,13 @@ mod kitty;
 mod legacy;
 mod modes;
 mod mouse;
+mod other_keys;
 mod paste;
 #[cfg(test)]
 mod tests;
 
 pub use key::{Key, KeyEvent, KeyKind, KeypadKey, MediaKey, ModifierKey, Mods};
-pub use modes::{InputModes, KittyFlags, MouseEncoding, MouseTracking};
+pub use modes::{InputModes, KittyFlags, ModifyOtherKeys, MouseEncoding, MouseTracking};
 pub use mouse::{MouseButton, MouseEvent, MouseKind};
 pub use paste::{focus, paste};
 

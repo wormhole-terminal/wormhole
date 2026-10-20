@@ -69,6 +69,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - A program can ask to be told the terminal's size in characters and in pixels, once when it asks and
   again whenever the window changes size (in-band resize notifications, mode 2048), instead of
   waiting for a signal.
+- A program that turns on xterm's modifyOtherKeys (`CSI > 4 ; 1 m` or `; 2 m`) is told which
+  modifiers you hold on ordinary keys: Alt+key, Ctrl on the punctuation and digit keys with no
+  control code, and Enter, Tab and Escape with a modifier arrive as `CSI 27 ; modifiers ; key ~`
+  sequences as in xterm. Shift+Enter is then sent as Shift+Enter, not as Option+Enter.
 - A program can save and restore the pen's attributes and the colours it changed (xterm's
   `CSI # {`, `CSI # }` and `CSI # P`, `CSI # Q`), and read back what a rectangle of the screen has in
   common (`CSI Pt ; Pl ; Pb ; Pr # |`).

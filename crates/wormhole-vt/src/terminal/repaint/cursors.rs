@@ -10,6 +10,7 @@ use crate::terminal::CursorPos;
 use crate::terminal::modes::conformance::Level;
 use crate::terminal::modes::{self, Modes};
 use crate::terminal::text::charset::Charsets;
+use crate::types::ModifyOtherKeys;
 
 /// The DEC private modes that are one flag and nothing else, with their numbers. The ones that do
 /// more than set a flag (the screens, DECCOLM, DECOM, the locator) are written by other means.
@@ -223,6 +224,12 @@ impl<'a> Writer<'a> {
         }
         for n in modes::recorded_modes(t.recorded) {
             self.private_mode(n, true);
+        }
+        // xterm's modifyOtherKeys: the level after the modes, as `CSI > 4 ; Pv m` says it.
+        match t.modes.modify_other_keys() {
+            ModifyOtherKeys::Off => {}
+            ModifyOtherKeys::Level1 => self.put(b"\x1b[>4;1m"),
+            ModifyOtherKeys::Level2 => self.put(b"\x1b[>4;2m"),
         }
         if t.modes.contains(Modes::COLUMNS_132) {
             self.gaps |= Gaps::COLUMNS_132;

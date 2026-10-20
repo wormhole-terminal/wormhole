@@ -22,6 +22,9 @@ First public release (0.1.0).
 
 - In-band resize notifications (DECSET 2048): the program is told `CSI 48 ; rows ; cols ; height ; width t`
   when it sets the mode and after every resize, with the pixels from the cell size the host gave.
+- xterm's modifyOtherKeys: `CSI > 4 ; Pv m` sets level 0, 1 or 2, `CSI ? 4 m` asks, `Modes::modify_other_keys`
+  and `InputModes::modify_other_keys` carry it, and the legacy key encoder writes
+  `CSI 27 ; modifiers ; code ~` as xterm's table of modified keys does. DECSTR and RIS reset it.
 - XTPUSHSGR, XTPOPSGR and XTREPORTSGR (`CSI Pm # {`, `CSI # }`, `CSI Pt ; Pl ; Pb ; Pr # |`; the aliases
   `CSI # p` and `CSI # q` too): a stack of 10 pens, and the rendition a rectangle has in common.
 - XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS (`CSI # P`, `CSI # Q`, `CSI # R`): a stack of 10 palettes

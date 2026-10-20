@@ -8,6 +8,7 @@ pub(super) mod apply;
 pub(super) mod conformance;
 pub(super) mod kept;
 pub(super) mod keyboard;
+pub(super) mod modkeys;
 
 pub use crate::types::Modes;
 
@@ -23,7 +24,10 @@ impl Modes {
         .union(Modes::LEFT_RIGHT_MARGINS)
         .union(Modes::GRAPHEME_CLUSTERS)
         .union(Modes::REVERSE_WRAP)
-        .union(Modes::REVERSE_WRAP_EXTENDED);
+        .union(Modes::REVERSE_WRAP_EXTENDED)
+        // xterm: DECSTR resets the key-modifier modes to their resource values (initial: 0).
+        .union(Modes::MODIFY_OTHER_KEYS)
+        .union(Modes::MODIFY_OTHER_KEYS_ALL);
 
     /// The kitty keyboard flags, bits 12..=16.
     pub(in crate::terminal) const KEYS: Modes = Modes::KEYS_DISAMBIGUATE

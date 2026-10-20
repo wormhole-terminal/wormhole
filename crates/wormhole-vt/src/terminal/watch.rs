@@ -36,6 +36,8 @@ const WATCHED: Modes = Modes::SHOW_CURSOR
     .union(Modes::KEYS_ALTERNATE_KEYS)
     .union(Modes::KEYS_ALL_AS_ESCAPES)
     .union(Modes::KEYS_ASSOCIATED_TEXT)
+    .union(Modes::MODIFY_OTHER_KEYS)
+    .union(Modes::MODIFY_OTHER_KEYS_ALL)
     .union(Modes::REVERSE_VIDEO)
     .union(Modes::SYNC_OUTPUT)
     .union(Modes::THEME_REPORT)

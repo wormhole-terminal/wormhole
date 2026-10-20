@@ -110,6 +110,7 @@ Programs switch behaviour with modes (`CSI ? Ps h` and `l`, and the ANSI forms `
 | `BRACKETED_PASTE` (2004) | Wrap pasted text in markers |
 | `FOCUS_REPORT` (1004) | Tell the program when the window gains or loses focus |
 | `KEYS_*` | The kitty keyboard flags in force: read them together as `kitty_flags()` |
+| `MODIFY_OTHER_KEYS`, `MODIFY_OTHER_KEYS_ALL` | xterm's modifyOtherKeys level, `CSI > 4 ; Pv m`: read it as `modify_other_keys()` (`input.md`) |
 | `REVERSE_VIDEO` | Draw the screen with foreground and background swapped (DECSCNM) |
 | `SYNC_OUTPUT` | A program is in the middle of an update; see `embedding.md` |
 | `GRAPHEME_CLUSTERS` | Whether widths follow clusters |
