@@ -1,5 +1,5 @@
-//! The host side of the engine for the headless run: what the app does with the engine's events,
-//! on a fake window.
+//! The host side of the engine for the headless suite runs (`esctest-host`, `vttest-host`): what the
+//! app does with the engine's events, on a fake window.
 //!
 //! The window is a text area of cells plus a frame (the sidebar and the title bar), on a screen
 //! of fixed size, like the app's window around a pane: the geometry the reports describe is
@@ -226,6 +226,11 @@ impl Host {
             }
             _ => {}
         }
+    }
+
+    /// The terminal, to read its screen.
+    pub fn term(&self) -> &Terminal {
+        &self.term
     }
 
     /// Feed what the program wrote; returns what to write back.

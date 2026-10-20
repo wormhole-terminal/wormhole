@@ -27,6 +27,10 @@ name = "fuzz-seeds"
 path = "src/bin/fuzz_seeds.rs"
 
 [[bin]]
+name = "vttest-host"
+path = "src/bin/vttest_host/main.rs"
+
+[[bin]]
 name = "esctest-host"
 path = "src/bin/esctest_host/main.rs"
 

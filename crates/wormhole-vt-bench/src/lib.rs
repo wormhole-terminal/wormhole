@@ -11,7 +11,9 @@
 //! - [`corpus`]: deterministic generators of realistic byte streams;
 //! - [`diff`]: the differential harness (two engines, one stream) and a random stream generator;
 //! - [`vtt`]: the `.vtt` conformance format (`crates/wormhole-vt/tests/conformance/README.md`)
-//!   and its runner.
+//!   and its runner;
+//! - [`window_host`]: the app's side of the engine on a fake window (events, DECCOLM, window
+//!   operations), shared by the headless suite hosts `esctest-host` and `vttest-host`.
 //!
 //! This crate depends on the engine, never the other way round: `wormhole-vt` must not know about
 //! its tools.
@@ -24,5 +26,6 @@ pub mod engine;
 pub mod engines;
 pub mod rng;
 pub mod vtt;
+pub mod window_host;
 
 pub use engine::{Attrs, Cell, CellColor, Cursor, Engine};

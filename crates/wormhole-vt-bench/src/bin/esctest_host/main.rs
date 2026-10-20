@@ -5,7 +5,7 @@
 //! through `wormhole_vt::Terminal` as the app feeds it, and the engine's replies go back, so
 //! the results are the in-app run's without opening an app: same engine, same options (the screen
 //! checksum on), the host side of the events (title, clipboard, window operations, colors) played
-//! by `host.rs` on a fake window.
+//! by `wormhole_vt_bench::window_host` on a fake window.
 //!
 //! ```sh
 //! cargo run --release -p wormhole-vt-bench --bin esctest-host -- --out /tmp/wormhole.jsonl
@@ -18,15 +18,13 @@
 // A command line tool: its output is the product, on stdout.
 #![allow(clippy::print_stdout, clippy::print_stderr)]
 
-mod host;
-
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode, Stdio};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use host::Host;
+use wormhole_vt_bench::window_host::Host;
 
 const USAGE: &str = "\
 usage: esctest-host --out <file.jsonl> [options]
