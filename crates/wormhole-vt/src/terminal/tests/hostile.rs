@@ -254,6 +254,28 @@ fn a_long_cursor_back_with_reverse_wrap_is_as_many_backspaces() {
 }
 
 #[test]
+fn styles_do_not_grow_the_history_past_its_cap() {
+    // A history of 2,000 lines of 80 cells, each cell in a colour of its own: the table of styles
+    // of a page is about four times the size of its cells, which the cap did not count.
+    let mut rig = Rig::with_scrollback(80, 24, 2_000);
+    let mut color = 0u32;
+    for _ in 0..4_000 {
+        let mut line = String::new();
+        for _ in 0..80 {
+            color += 1;
+            line += &format!("\x1b[38;2;{};{};{}mx", color >> 16 & 255, color >> 8 & 255, color & 255);
+        }
+        rig.feed(&(line + "\r\n"));
+    }
+    let grid = rig.term.grid();
+    let (held, limit) = (grid.memory_bytes(), grid.scrollback_limit());
+    // The cells' cap, as much again for the styles, and the screen's pages.
+    assert!(held < 2 * limit + 2 * 1024 * 1024, "{held} bytes held for a limit of {limit}");
+    assert!(grid.history_len() > 0, "some history stays");
+    assert_eq!(grid.check_invariants(), Ok(()));
+}
+
+#[test]
 fn repeated_long_cursor_backs_with_reverse_wrap_stay_cheap() {
     let mut rig = Rig::new(500, 200);
     rig.feed("\x1b[?45h\x1b[?1045h\x1b[200;500H");

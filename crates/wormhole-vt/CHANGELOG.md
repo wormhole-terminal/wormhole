@@ -147,6 +147,9 @@ First public release (0.1.0).
   four streams).
 - The pictures a delete frees (`a=d` with a capital) are announced with `Event::ImageFree` in the order they
   came, not in a hash set's order: the same bytes fed in other pieces gave other orders.
+- The scrollback's byte budget counts the tables of styles of the history's pages, with the marks and
+  links, as a second budget of the same size: a history in which every cell has a colour of its own held
+  five times the cap.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.

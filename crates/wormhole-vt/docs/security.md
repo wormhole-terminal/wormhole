@@ -93,7 +93,7 @@ lowering is all a host can do and this table stays true whatever it asks. The re
 | Characters after a cell's first | 32 | |
 | Kitty keyboard flag stack | 32 per screen; XTSAVE entries 64 | |
 | XTPUSHSGR and XTPUSHCOLORS stacks | 10 entries each (xterm's depth); a push on a full stack does nothing | |
-| Scrollback | What the host asks for, in bytes; the oldest page is dropped first | `Builder::scrollback` |
+| Scrollback | What the host asks for, in bytes of cells; the oldest page is dropped first. The marks, links and styles of the history may take as many bytes again | `Builder::scrollback` |
 
 When a host lowers a cap while the terminal runs, it applies to the next sequence: a string being read keeps
 the cap it started with, and events, replies and a title already kept stay as they are. Pictures are the one

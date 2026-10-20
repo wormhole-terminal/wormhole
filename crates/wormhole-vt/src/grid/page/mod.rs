@@ -143,14 +143,15 @@ impl Page {
             + self.links.bytes()
     }
 
-    /// The bytes of the marks and the links, which a program can make much larger than the cells
-    /// they are on (32 marks a cell, a link of 8 KiB a cell). Measured once and kept: a page of
-    /// history does not change until a resize, which calls [`Page::forget_extra_bytes`].
+    /// The bytes of the marks, the links and the styles, which a program can make much larger than
+    /// the cells they are on (32 marks a cell, a link of 8 KiB a cell, a style of its own of about
+    /// 30 bytes for a cell of 8). Measured once and kept: a page of history does not change until a
+    /// resize, which calls [`Page::forget_extra_bytes`].
     pub(super) fn extra_bytes(&mut self) -> usize {
         if let Some(bytes) = self.extra {
             return bytes;
         }
-        let bytes = self.graphemes.bytes() + self.links.bytes();
+        let bytes = self.graphemes.bytes() + self.links.bytes() + self.styles.used_bytes();
         self.extra = Some(bytes);
         bytes
     }

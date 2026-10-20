@@ -179,6 +179,13 @@ impl StyleTable {
         self.colored_underlines = 0;
     }
 
+    /// Bytes the styles take now: the entries (the free ones are kept for reuse) and the index.
+    /// Not the capacity, which a recycled page keeps from its last use. A page of history is
+    /// measured with this.
+    pub(super) fn used_bytes(&self) -> usize {
+        self.entries.len() * size_of::<Entry>() + self.index.len() * size_of::<StyleId>()
+    }
+
     /// Bytes the table holds.
     #[cfg(any(test, feature = "internals"))]
     pub(super) fn bytes(&self) -> usize {

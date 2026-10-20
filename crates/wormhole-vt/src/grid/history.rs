@@ -18,9 +18,10 @@ impl Grid {
 
     /// Cap the history at `bytes` of cells and row records, and drop what is over. The cap is a
     /// ceiling: the oldest pages go whole, so between one and two pages (128 KiB each at most) less
-    /// than the cap are kept. The history's combining marks and links may take as many bytes again
-    /// (they are tiny in text people read, and a program sends as many as it likes); its styles
-    /// are not counted, as a page has at most one per cell.
+    /// than the cap are kept. The history's combining marks, links and styles may take as many
+    /// bytes again (they are tiny in text people read, and a program sends as many as it likes:
+    /// a page with a different colour in every cell has a table of styles four times the size of
+    /// its cells).
     pub fn set_scrollback_limit(&mut self, bytes: usize) {
         self.limit = bytes;
         self.enforce_limit(DropReason::Limit);
