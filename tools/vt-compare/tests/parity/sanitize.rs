@@ -261,9 +261,10 @@ fn esc_kept(inter: &[u8], fin: u8, context: &mut Context) -> bool {
             context.shift_saved = context.shifted;
             true
         }
-        // DECALN (alacritty does not home the cursor or reset the margins), DECBI, DECFI, the
-        // single and locking shifts beyond SO and SI, DECID (the reply names the terminal).
-        ([b'#'], b'8') | ([], b'6' | b'9' | b'n' | b'o' | b'N' | b'O' | b'Z') => false,
+        // DECALN (alacritty does not home the cursor or reset the margins), the line sizes (it has
+        // none: the cursor keeps its columns there), DECBI, DECFI, the single and locking shifts
+        // beyond SO and SI, DECID (the reply names the terminal).
+        ([b'#'], b'3'..=b'6' | b'8') | ([], b'6' | b'9' | b'n' | b'o' | b'N' | b'O' | b'Z') => false,
         // The UK set: alacritty keeps the number sign.
         ([b'(' | b')' | b'*' | b'+'], b'A') => false,
         // A character set designation: REP repeats what was displayed, not what is drawn now.
