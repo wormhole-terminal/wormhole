@@ -35,6 +35,13 @@
 //!                         `state` says where the focus is after it: the area, the item its keys
 //!                         are on, and `ring` while the focus ring shows)
 //!   menus           the menu bar as AppKit has it, each item with its key and check mark
+//!   menu | menu-pick <n|title> | menu-close   the last context menu (a right-click, ⌃↩, a menu button):
+//!                   its rows one a line, the items numbered (`- title [x]` checked, `[off]` disabled,
+//!                   `# heading`, `> submenu` over its indented items); choose an item by number or
+//!                   title (`Submenu > Title`), as a click would; or dismiss it as Esc does. These menus
+//!                   are native: no `shot` shows them and no `click` reaches them, and in a background
+//!                   instance none is shown at all (a real one would hold the instance in AppKit's
+//!                   loop), so a scenario right-clicks, reads `menu`, and picks or closes
 //!   palette [query] | palette close   open the command palette over this window with `query`
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
@@ -78,7 +85,8 @@
 //!                   (with `project` and `locked` where the project holds it, `title` shows the tint)
 //!   hold-cmd | release-cmd   press ⌘ alone and keep it held (the ⌘1–9 keycaps show after 250 ms;
 //!                   `shot` in a later batch), or let go
-//!   right-click <x> <y>   a right-click there (a sidebar row's or group's context menu)
+//!   right-click <x> <y>   a right-click there (a sidebar row's or group's, a pane's header or the + opens its
+//!                   context menu: read it with `menu`)
 //!   sidebar-scroll <px>   scroll the terminal list (negative = up)
 //!   rows            the sidebar's list as it is drawn, one a line: each group, and each terminal's row
 //!                   with its number as `state` has it, id, name, place in its group, ⌘ number and its
@@ -334,6 +342,9 @@ fn command(name: &str) -> Option<Command> {
         "text" => input::text,
         "key" => input::key,
         "menus" => menus::menus,
+        "menu" => menus::menu,
+        "menu-pick" => menus::menu_pick,
+        "menu-close" => menus::menu_close,
         "palette" => menus::palette,
         "sheet" => menus::sheet,
         "action" => menus::action,

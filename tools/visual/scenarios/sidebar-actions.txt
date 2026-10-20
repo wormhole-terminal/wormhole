@@ -1,4 +1,5 @@
-# Row actions on the sidebar: the context menu on "diff perf" (its focus ring),
+# Row actions on the sidebar: the context menu on "diff perf" (its focus ring; the menu itself is
+# native and not in a shot: `menu` lists it, `menu-close` dismisses it),
 # the close × under the pointer on "zsh", renaming "diff perf" in place, and dragging "zsh" above
 # "sidebar polish" (the row lifts, the line shows where it lands).
 @fixture terminal
@@ -22,7 +23,8 @@ hook 2 Notification Approve cargo test?
 @wait-idle
 right-click 200 182
 @shot menu
-key escape
+menu
+menu-close
 hover 200 218
 @shot close-x
 double-click 200 170

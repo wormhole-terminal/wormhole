@@ -113,3 +113,33 @@ pub(super) fn sheet(ctx: &mut Ctx, arg: &str) -> Result<String> {
     ctx.workspace.devctl_sheet(arg, ctx.window, ctx.cx);
     Ok(String::new())
 }
+
+/// `menu`: the last menu a right-click or a menu button opened, one row a line (items numbered).
+/// A native menu can't be screenshotted, so the scripted checks read the model instead.
+pub(super) fn menu(_: &mut Ctx, _: &str) -> Result<String> {
+    Ok(crate::native::record::dump())
+}
+
+/// `menu-pick <n|title>`: choose an item of that menu as a click on it would, by its number in
+/// `menu` or its title (`Submenu > Title` inside a submenu): the menu closes, then the item runs.
+pub(super) fn menu_pick(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let (title, callbacks) = crate::native::record::pick(arg).map_err(anyhow::Error::msg)?;
+    // Deferred like a click: the item updates the workspace, which a command may hold.
+    ctx.window.defer(ctx.cx, move |window, cx| {
+        for run in callbacks {
+            run(window, cx);
+        }
+    });
+    Ok(format!("picked {title}\n"))
+}
+
+/// `menu-close`: dismiss that menu as Esc does.
+pub(super) fn menu_close(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let Some(callbacks) = crate::native::record::close() else { anyhow::bail!("no menu is open") };
+    ctx.window.defer(ctx.cx, move |window, cx| {
+        for run in callbacks {
+            run(window, cx);
+        }
+    });
+    Ok(String::new())
+}

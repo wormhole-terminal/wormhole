@@ -110,7 +110,10 @@ sleep 1; cat "$S/ctl/out.txt"
   the project's `config.json` as `project_color` when the folder's project has one, else to Wormhole's
   settings), `hold-cmd` / `release-cmd` (the ⌘1–9 keycaps show 250 ms after
   `hold-cmd`: `shot` in a later batch), `right-click <x> <y>` (a row's or a group's menu),
-  `sidebar-scroll <px>`.
+  `sidebar-scroll <px>`. Context menus are native macOS menus: no `shot` shows them and no `click` reaches
+  them, and a background instance doesn't pop them up at all. After a `right-click`, `menu` lists the menu
+  that opened (one row a line, items numbered), `menu-pick <n|title>` chooses an item as a click would and
+  `menu-close` dismisses it (the row's focus ring goes with it).
 - The right panel: `panel-tab notes|changes|history|project`, `project-init` (the Project tab's Create project
   folder button, for the active terminal's folder), `task-seed <open> <done>` and
   `task-done <n>` (next steps; the done ones are spread among the open ones), `note-add <text>`,
