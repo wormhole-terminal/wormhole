@@ -3,7 +3,7 @@
 //!
 //! Spec: Contour's "Color palette update notifications"
 //! (<https://github.com/contour-terminal/contour/blob/master/docs/vt-extensions/color-palette-update-notifications.md>),
-//! which Ghostty, kitty and others speak and Neovim and other TUIs read. `CSI ? 996 n` asks;
+//! which other terminals have adopted. `CSI ? 996 n` asks;
 //! the answer is `CSI ? 997 ; 1 n` for a dark scheme and `CSI ? 997 ; 2 n` for a light one.
 //! `CSI ? 2031 h` asks to be told: the terminal then sends the same report, unasked, whenever the
 //! scheme changes (and `CSI ? 2031 l` stops it). The spec does not say that enabling the mode
