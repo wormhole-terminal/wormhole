@@ -65,8 +65,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   gap resizes them, and Settings → Terminal → Gaps between split terminals joins them with a hairline
   instead. Each pane's header names its terminal as the sidebar does and leads with its status tile.
 - The sidebar is a list of rounded cards: one per group and one for each terminal in no group (a
-  split's terminals share one), with the selection colouring the card itself. Its heading is gone and its + sits at the right of the top
-  row; a long list scrolls with a scrollbar that follows "Show scroll bars" in System Settings. Each
+  split's terminals share one), with the selection colouring the card itself. Its heading is gone and
+  its + sits at the right of the top row; a long list scrolls with a scrollbar that follows "Show
+  scroll bars" in System Settings. Each
   row leads with a status tile that looks like the agent's app icon (or a terminal's): a light circles
   its edge while it works, its amber edge breathes while it needs you, and a badge marks done, failed,
   new output or the bell. Under Reduce Motion they hold still.
