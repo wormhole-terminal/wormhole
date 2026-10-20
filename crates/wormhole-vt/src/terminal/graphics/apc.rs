@@ -21,7 +21,7 @@ pub(super) struct Parsed {
     pub error: Option<Error>,
     /// The decoded payload.
     pub payload: Vec<u8>,
-    /// More than [`PAYLOAD_MAX`] came.
+    /// More than the payload cap (at most [`PAYLOAD_MAX`]) came.
     pub overflow: bool,
     /// The payload is not base64.
     pub bad_base64: bool,
@@ -48,6 +48,8 @@ pub(super) struct ApcReader {
     padded: bool,
     overflow: bool,
     bad_base64: bool,
+    /// Most bytes the payload may decode to: [`PAYLOAD_MAX`], or less when the host lowered it.
+    max: usize,
 }
 
 fn sextet(byte: u8) -> Option<u8> {
@@ -56,13 +58,13 @@ fn sextet(byte: u8) -> Option<u8> {
 }
 
 impl ApcReader {
-    /// A new string begins (its `G` already seen).
-    pub fn begin(&mut self) {
+    /// A new string begins (its `G` already seen); its payload may decode to `max` bytes.
+    pub fn begin(&mut self, max: usize) {
         let (mut payload, mut control) =
             (std::mem::take(&mut self.payload), std::mem::take(&mut self.control));
         payload.clear();
         control.clear();
-        *self = ApcReader { payload, control, ..ApcReader::default() };
+        *self = ApcReader { payload, control, max: max.min(PAYLOAD_MAX), ..ApcReader::default() };
     }
 
     /// The next slice of the string after the `G`.
@@ -101,7 +103,7 @@ impl ApcReader {
                 if (a | b | c | d) & 0xC0 != 0 {
                     break;
                 }
-                if self.payload.len() + 3 > PAYLOAD_MAX {
+                if self.payload.len() + 3 > self.max {
                     self.overflow = true;
                     self.payload = Vec::new();
                     return;
@@ -125,7 +127,7 @@ impl ApcReader {
             self.carry[self.carried] = value;
             self.carried += 1;
             if self.carried == 4 {
-                if self.payload.len() + 3 > PAYLOAD_MAX {
+                if self.payload.len() + 3 > self.max {
                     self.overflow = true;
                     self.payload = Vec::new();
                     return;
@@ -167,7 +169,7 @@ impl ApcReader {
 
     /// The string was cancelled: forget it.
     pub fn cancel(&mut self) {
-        self.begin();
+        self.begin(self.max);
     }
 }
 
@@ -177,7 +179,7 @@ mod tests {
 
     fn read(parts: &[&[u8]]) -> super::Parsed {
         let mut reader = ApcReader::default();
-        reader.begin();
+        reader.begin(PAYLOAD_MAX);
         for part in parts {
             reader.put(part);
         }
@@ -220,7 +222,7 @@ mod tests {
     #[test]
     fn a_payload_over_the_cap_is_dropped_whole_and_reading_goes_on() {
         let mut reader = ApcReader::default();
-        reader.begin();
+        reader.begin(PAYLOAD_MAX);
         reader.put(b"i=2;");
         let block = vec![b'A'; 4 * 1024 * 1024];
         for _ in 0..(PAYLOAD_MAX / (3 * 1024 * 1024)) + 2 {
@@ -238,7 +240,7 @@ mod tests {
         let parsed = read(&[&long, b";AAAA"]);
         assert!(parsed.error.is_some());
         let mut reader = ApcReader::default();
-        reader.begin();
+        reader.begin(PAYLOAD_MAX);
         reader.put(&long);
         assert!(reader.finish().error.is_some());
     }

@@ -6,7 +6,7 @@
 use crate::terminal::event::Event;
 use crate::terminal::osc::dispatch::fill;
 use crate::terminal::reports::title::drop_controls;
-use crate::terminal::{CWD_MAX, CWD_REPORTS_MAX, Terminal};
+use crate::terminal::{CWD_REPORTS_MAX, Terminal};
 
 /// The shell's folder as the last OSC 7 said it (empty before any), and every report since the
 /// host last looked: the first `reported` of `reports`, whose strings are reused.
@@ -20,7 +20,7 @@ pub(in crate::terminal) struct Folder {
 impl Terminal {
     /// OSC 7.
     pub(in crate::terminal) fn set_cwd(&mut self, text: &[u8]) {
-        fill(&mut self.folder.now, text, CWD_MAX);
+        fill(&mut self.folder.now, text, self.limits.cwd);
         // A folder is drawn and passed on (to a new terminal's shell): no controls, as in a title.
         drop_controls(&mut self.folder.now);
         // The report is kept in a buffer that is reused, so a prompt that says it every time

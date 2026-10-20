@@ -19,7 +19,7 @@ const RQSS_MAX: usize = 32;
 /// Most an XTGETTCAP request is.
 const TCAP_MAX: usize = 4096;
 /// Most a Sixel's data is; it is decoded when the string ends, on the parser's thread.
-const SIXEL_MAX: usize = 4 * 1024 * 1024;
+pub(in crate::terminal) const SIXEL_MAX: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum Kind {
@@ -46,10 +46,11 @@ enum Kind {
 }
 
 /// The string being read, whichever sort it is.
-#[derive(Default)]
 pub(in crate::terminal) struct DcsString {
     kind: Kind,
     data: Vec<u8>,
+    /// The limit on a Sixel's data: `SIXEL_MAX`, or what the host lowered it to.
+    sixel_max: usize,
     /// The numbers before a sixel's `q`.
     params: Vec<u16>,
     /// The limit on `data` for a string the host asked for.
@@ -58,7 +59,24 @@ pub(in crate::terminal) struct DcsString {
     header: Option<Csi>,
 }
 
+impl Default for DcsString {
+    fn default() -> DcsString {
+        DcsString {
+            kind: Kind::None,
+            data: Vec::new(),
+            sixel_max: SIXEL_MAX,
+            params: Vec::new(),
+            pass_limit: 0,
+            header: None,
+        }
+    }
+}
+
 impl DcsString {
+    pub(in crate::terminal) fn set_sixel_max(&mut self, max: usize) {
+        self.sixel_max = max;
+    }
+
     pub(in crate::terminal) fn cancel(&mut self) {
         self.kind = Kind::None;
         self.data = Vec::new();
@@ -68,7 +86,7 @@ impl DcsString {
         let limit = match self.kind {
             Kind::Decrqss => RQSS_MAX,
             Kind::Xtgettcap => TCAP_MAX,
-            Kind::Sixel => SIXEL_MAX,
+            Kind::Sixel => self.sixel_max,
             Kind::PassDcs => self.pass_limit,
             Kind::Preferred(_) => RQSS_MAX,
             Kind::RestorePresentation(_) | Kind::RestoreState(_) => {

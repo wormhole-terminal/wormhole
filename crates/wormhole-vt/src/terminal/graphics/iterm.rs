@@ -12,7 +12,6 @@
 use crate::terminal::{Event, Terminal};
 use crate::types::{Extent, SourceRect};
 
-use super::apc::PAYLOAD_MAX;
 use super::geometry::Geometry;
 use super::put::{Motion, Placing};
 use super::sniff;
@@ -20,7 +19,9 @@ use super::transmit::check_size;
 use super::upload::{Compression, ImageFormat, ImageUpload};
 
 /// Most base64 text one image may take: the payload cap's encoding.
-const BASE64_MAX: usize = PAYLOAD_MAX / 3 * 4 + 4;
+const fn base64_max(payload: usize) -> usize {
+    payload / 3 * 4 + 4
+}
 
 /// How wide or tall the picture is shown.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -163,7 +164,7 @@ impl Terminal {
             self.graphics.multipart = Some(Multipart { args, base64: Vec::new() });
         } else if let Some(part) = rest.strip_prefix(b"FilePart=") {
             if let Some(multipart) = &mut self.graphics.multipart {
-                if multipart.base64.len() + part.len() <= BASE64_MAX {
+                if multipart.base64.len() + part.len() <= base64_max(self.limits.image_payload) {
                     multipart.base64.extend_from_slice(part);
                 } else {
                     self.graphics.multipart = None;
@@ -180,7 +181,7 @@ impl Terminal {
     }
 
     fn show_iterm(&mut self, args: FileArgs, payload: &[u8]) {
-        if !args.inline || payload.len() > BASE64_MAX {
+        if !args.inline || payload.len() > base64_max(self.limits.image_payload) {
             return;
         }
         let Some(data) = crate::terminal::osc::base64::decode(payload) else { return };

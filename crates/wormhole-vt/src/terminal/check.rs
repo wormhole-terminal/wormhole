@@ -1,6 +1,5 @@
 //! The invariants of a terminal, checked: the grids' (both screens) and the state around them.
 
-use super::graphics::{IMAGE_BUDGET_BYTES, MAX_IMAGES};
 use crate::terminal::Terminal;
 
 impl Terminal {
@@ -51,6 +50,6 @@ impl Terminal {
         if self.tabs.len() != self.cols {
             return Err(format!("{} tab stop slots for {} columns", self.tabs.len(), self.cols));
         }
-        self.graphics.check(MAX_IMAGES, IMAGE_BUDGET_BYTES)
+        self.graphics.check(self.limits.image_count, self.limits.image_bytes)
     }
 }

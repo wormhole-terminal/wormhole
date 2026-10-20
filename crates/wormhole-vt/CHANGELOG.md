@@ -34,6 +34,11 @@ First public release (0.1.0).
 - `Damage`, a reusable description of what changed since the last look (rows, the cursor, the colours a
   program set), and a read API for cells and rows: `Terminal::cell`, `size`.
 - Pins and spans that follow text through scrolling and reflow.
+- `Limits`, with `Builder::limits`, `Terminal::set_limits` and `Terminal::limits`: the host lowers the
+  caps on pictures (bytes, count, one transmission, queued uploads), Sixel data, OSC strings (small ones,
+  the clipboard, pictures, the rest of OSC 1337), titles, folders, hyperlink targets, the event and reply
+  queues and the dropped-history backlog. Each value can only go below the built-in ceiling, which stays
+  the default; pictures held over a lowered count or budget are evicted at once.
 - A guide in rustdoc (concepts, embedding, rendering, input, extensions, security, conformance), a README,
   and `SECURITY.md`.
 

@@ -49,34 +49,48 @@ A hostile stream cannot make a terminal grow without limit. Strings are kept up 
 what they are. A string over its limit is **dropped whole**: half a clipboard or half an image is worse than
 none.
 
-| What | Cap |
-|---|---|
-| Parameters in a CSI | 32 values, each saturating at 65,535; 4 intermediate bytes. A sequence over the limit is reported with an overflow flag |
-| OSC string (titles, folders, colours, links, notifications, marks) | 8 KiB |
-| OSC 52 (clipboard) | 8 MiB |
-| OSC 1337 (iTerm2: images and the rest) | 64 MiB |
-| Title and folder kept | 4,096 bytes each (cut at a character); the title stack is 16 deep |
-| DECRQSS request | 32 bytes |
-| XTGETTCAP request | 4,096 bytes (a capability name is at most 32) |
-| Sixel data | 4 MiB |
-| DECRSPS and DECRSTS data | 32 KiB |
-| kitty graphics: control data | 2,048 bytes |
-| kitty graphics: one transmission | 32 MiB |
-| One picture | 10,000 pixels a side and 16 million pixels |
-| Pictures kept | 1,024 per screen and 128 MiB (as RGBA); least recently used leave first |
-| Placements | 4,096 per screen |
-| Uploads waiting for the host to decode | 256 MiB in all; past that new pictures are refused |
-| Replies the host has not collected | 1 MiB; past that new replies are dropped whole |
-| Events the host has not collected | 16,384; past that new ones are dropped, except picture uploads, picture releases and resets |
-| Replies held behind a picture decode | 1 MiB and 64 answers waiting; then the oldest is given up |
-| Screen size | 2 to 16,384 columns, 1 to 16,384 rows |
-| Characters after a cell's first | 32 |
-| Kitty keyboard flag stack | 32 per screen; XTSAVE entries 64 |
-| Scrollback | What the host asks for, in bytes; the oldest page is dropped first |
+The numbers below are the built-in **ceilings**, which are what a terminal uses unless the host says
+otherwise. A host that has no use for them can lower the ones with a name in the last column, with
+`Limits` (`Builder::limits`, `Terminal::set_limits`). A value above its ceiling is cut to it, so
+lowering is all a host can do and this table stays true whatever it asks. The rest are fixed.
+
+| What | Ceiling | `Limits` field |
+|---|---|---|
+| Parameters in a CSI | 32 values, each saturating at 65,535; 4 intermediate bytes. A sequence over the limit is reported with an overflow flag | |
+| OSC string (titles, folders, colours, links, notifications, marks) | 8 KiB | `osc` |
+| OSC 52 (clipboard) | 8 MiB | `clipboard` |
+| OSC 1337 (iTerm2): a picture | 64 MiB | `osc_image` |
+| OSC 1337 (iTerm2): anything else | 64 KiB | `osc_iterm` |
+| Title (and icon name) kept | 4,096 bytes (cut at a character); the title stack is 16 deep | `title` |
+| Folder (OSC 7) kept | 4,096 bytes (cut at a character) | `cwd` |
+| Hyperlink target | 8 KiB (a longer one is ignored, like one with a control character) | `link_uri` |
+| DECRQSS request | 32 bytes | |
+| XTGETTCAP request | 4,096 bytes (a capability name is at most 32) | |
+| Sixel data | 4 MiB | `sixel` |
+| DECRSPS and DECRSTS data | 32 KiB | |
+| kitty graphics: control data | 2,048 bytes | |
+| kitty graphics: one transmission, and one iTerm2 file | 32 MiB | `image_payload` |
+| One picture | 10,000 pixels a side and 16 million pixels | |
+| Pictures kept | 1,024 per screen | `image_count` |
+| Pictures kept, as RGBA | 128 MiB per screen; least recently used leave first | `image_bytes` |
+| Placements | 4,096 per screen | |
+| Uploads waiting for the host to decode | 256 MiB in all; past that new pictures are refused | `image_uploads` |
+| Replies the host has not collected | 1 MiB; past that new replies are dropped whole | `replies` |
+| Events the host has not collected | 16,384; past that new ones are dropped, except picture uploads, picture releases and resets | `events` |
+| Replies held behind a picture decode | 1 MiB and 64 answers waiting; then the oldest is given up | |
+| Screen size | 2 to 16,384 columns, 1 to 16,384 rows | |
+| Characters after a cell's first | 32 | |
+| Kitty keyboard flag stack | 32 per screen; XTSAVE entries 64 | |
+| Scrollback | What the host asks for, in bytes; the oldest page is dropped first | `Builder::scrollback` |
+
+When a host lowers a cap while the terminal runs, it applies to the next sequence: a string being read keeps
+the cap it started with, and events, replies and a title already kept stay as they are. Pictures are the one
+exception: those held over a lowered count or budget are evicted at once, the least recently used first, and
+each is announced with `Event::ImageFree`.
 
 An unfinished string costs nothing beyond the bytes seen so far, and a string whose number the engine
 ignores is never stored. A picture-heavy stream can still make a terminal hold a large amount (up to the
-picture budgets above, per screen, plus queued uploads); drain events promptly, since uploads leave the
+picture budgets above, per screen, plus queued uploads; lower them with `Limits` if that is too much); drain events promptly, since uploads leave the
 queue when you take the event, and decode with limits of your own.
 
 ### Time is bounded
@@ -199,7 +213,8 @@ The engine hands you untrusted data and requests. The remaining checks are yours
   never call `clipboard_reply`, nothing is sent. A secret on the clipboard (a password, a one-time code)
   is exactly what a hostile program is after.
 - `ClipboardStore` overwrites what the user copied. Decide whether to allow it, ask, cap the size (the
-  engine allows up to 8 MiB), or limit it to sessions you trust. Show that it happened.
+  engine allows up to 8 MiB; `Limits::clipboard` lowers it), or limit it to sessions you trust. Show
+  that it happened.
 
 **Hyperlinks (OSC 8).**
 - Show the target (a status line, a tooltip) before it is opened. The text of a link and its target are

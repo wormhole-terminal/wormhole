@@ -6,7 +6,8 @@
 //! read as soon as its `;` arrives, and a command nothing here acts on is thrown away without
 //! being stored. A string over its limit is dropped whole, never cut: half a clipboard or half an
 //! image is worse than none. A number an extension claimed is kept up to the claim's limit
-//! instead, whatever the engine would do with it.
+//! instead, whatever the engine would do with it. The limits below are ceilings: the host can lower
+//! each (`Limits`).
 
 pub(super) mod base64;
 pub(super) mod clipboard;
@@ -21,9 +22,9 @@ pub(super) mod spec;
 use memchr::memchr;
 
 /// Longest payload kept, by command (bytes, the number and its `;` included).
-const SMALL: usize = 8 * 1024;
-const CLIPBOARD: usize = 8 * 1024 * 1024;
-const IMAGE: usize = 64 * 1024 * 1024;
+pub(in crate::terminal) const SMALL: usize = 8 * 1024;
+pub(in crate::terminal) const CLIPBOARD: usize = 8 * 1024 * 1024;
+pub(in crate::terminal) const IMAGE: usize = 64 * 1024 * 1024;
 /// What of OSC 1337 is not an inline image (marks, the folder, `SetUserVar`, …) is a line or two;
 /// the host gets at most this much of it.
 pub(in crate::terminal) const ITERM_OTHER: usize = 64 * 1024;
@@ -32,20 +33,55 @@ pub(in crate::terminal) const ITERM_OTHER: usize = 64 * 1024;
 const IMAGE_KINDS: [&[u8]; 3] = [b"File=", b"MultipartFile=", b"FilePart="];
 const SNIFF: usize = "1337;MultipartFile=".len();
 
-/// How much of an OSC string with this command number is kept; `None` for a number we ignore.
-pub(in crate::terminal) fn limit_for(number: u32) -> Option<usize> {
+/// Which of the limits rules a command's string.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Size {
+    Small,
+    Clipboard,
+    Image,
+}
+
+/// How big an OSC string with this command number may be; `None` for a number we ignore.
+fn size_of_command(number: u32) -> Option<Size> {
     match number {
-        0..=2 | 4 | 5 | 7..=19 | 99 | 104 | 105 | 110..=119 | 133 | 777 | 7501 => Some(SMALL),
-        52 => Some(CLIPBOARD),
-        1337 => Some(IMAGE),
+        0..=2 | 4 | 5 | 7..=19 | 99 | 104 | 105 | 110..=119 | 133 | 777 | 7501 => Some(Size::Small),
+        52 => Some(Size::Clipboard),
+        1337 => Some(Size::Image),
         _ => None,
+    }
+}
+
+/// The limits on OSC strings, by size class: the ceilings above unless the host lowered them. A
+/// string being read keeps the ones it started with.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::terminal) struct Caps {
+    pub small: usize,
+    pub clipboard: usize,
+    pub image: usize,
+    /// OSC 1337 that is not a picture.
+    pub other: usize,
+}
+
+impl Default for Caps {
+    fn default() -> Caps {
+        Caps { small: SMALL, clipboard: CLIPBOARD, image: IMAGE, other: ITERM_OTHER }
+    }
+}
+
+impl Caps {
+    fn of(self, size: Size) -> usize {
+        match size {
+            Size::Small => self.small,
+            Size::Clipboard => self.clipboard,
+            Size::Image => self.image,
+        }
     }
 }
 
 /// Whether the engine acts on (or hands the host, raw) OSC `number` itself: those cannot be
 /// passed through.
 pub(crate) fn is_builtin(number: u32) -> bool {
-    limit_for(number).is_some()
+    size_of_command(number).is_some()
 }
 
 /// Whether an OSC 1337 string (the number and its `;` included) starts a picture.
@@ -74,8 +110,9 @@ pub(in crate::terminal) struct OscString {
     /// The OSC numbers extensions claimed and their limits on the payload.
     claims: Vec<(u32, usize)>,
     /// An OSC 1337 string whose kind is not known yet: it is kept to the picture limit until
-    /// `SNIFF` bytes tell, then to `ITERM_OTHER` unless it is a picture.
+    /// `SNIFF` bytes tell, then to `Caps::other` unless it is a picture.
     sniff: bool,
+    caps: Caps,
 }
 
 /// The command number at the start of `buf` (digits up to the first `;` or the end), if it has
@@ -102,6 +139,11 @@ impl OscString {
     pub(in crate::terminal) fn set_claims(&mut self, claims: &[(u32, usize)]) {
         self.claims.clear();
         self.claims.extend_from_slice(claims);
+    }
+
+    /// The limits for the strings that follow.
+    pub(in crate::terminal) fn set_caps(&mut self, caps: Caps) {
+        self.caps = caps;
     }
 
     pub(in crate::terminal) fn cancel(&mut self) {
@@ -138,7 +180,7 @@ impl OscString {
         if self.sniff && self.buf.len() >= SNIFF {
             self.sniff = false;
             if !is_picture(&self.buf) {
-                self.limit = ITERM_OTHER;
+                self.limit = self.caps.other;
                 if self.buf.len() > self.limit {
                     self.state = State::Dropping;
                     self.buf = Vec::new();
@@ -156,7 +198,7 @@ impl OscString {
                 None => {
                     // What is not a picture is cut short once that is known, see `append`.
                     self.sniff = number == 1337;
-                    limit_for(number)
+                    size_of_command(number).map(|size| self.caps.of(size))
                 }
             }
         });

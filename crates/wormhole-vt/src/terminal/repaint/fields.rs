@@ -57,6 +57,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("cursor_style", Written("misc: DECSCUSR and mode 12")),
     ("titles", Written("titles: OSC 2, OSC 1, CSI > Ps t and the stack")),
     ("policy", Host("what the host allows; set on the receiver by its host")),
+    ("limits", Host("the caps the host set; the receiver is made with its own")),
     ("window", Host("where the host's window is")),
     ("folder", Written("titles: OSC 7")),
     ("palette", Written("palette: OSC 4, 5, 10 to 19")),

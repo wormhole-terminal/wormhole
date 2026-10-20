@@ -151,6 +151,30 @@ never has history.
 Memory is allocated as needed and a dropped page is reused for the next, so a full history does not keep
 growing.
 
+## Limits
+
+The engine caps everything a program can make it hold: strings, pictures, queues (`security.md` lists
+them). Those numbers are the **ceilings**. A host can lower any of them with `Limits`, at the builder or
+later; a value above its ceiling is cut to it.
+
+```rust,ignore
+use wormhole_vt::{Limits, Terminal};
+
+let mut limits = Limits::default(); // the ceilings
+limits.image_bytes = 32 << 20; // pictures: 32 MiB of pixels a screen, not 128
+limits.clipboard = 64 * 1024; // OSC 52: 64 KiB
+limits.title = 200; // titles are cut at 200 bytes
+
+let mut term = Terminal::builder().limits(limits).build();
+// ... later, a lower budget while memory is tight; pictures over it are evicted at once
+limits.image_bytes = 8 << 20;
+term.set_limits(limits);
+```
+
+A string over its cap is dropped whole (a title and a folder are cut at a character instead). A change
+at run time applies from the next sequence; the one exception is the pictures held over a lowered count
+or budget, which are evicted, least recently used first, each announced with `Event::ImageFree`.
+
 ## Synchronized output
 
 Mode 2026 lets a program bracket a redraw: `CSI ? 2026 h` begins an update, `CSI ? 2026 l` ends it.

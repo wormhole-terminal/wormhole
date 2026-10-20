@@ -76,6 +76,19 @@ fn text_with_wrap_and_scroll_allocates_nothing() {
     assert_eq!(steady("lines", &repeat(&format!("{line}\r\n"), 400), 20), 0);
 }
 
+/// Lowered caps cost nothing: the terminal reads them where a string ends or a picture is made.
+#[test]
+fn lowered_limits_allocate_nothing() {
+    let line = "the quick brown fox jumps over the lazy dog, again and again and again and again, ";
+    let stream = repeat(&format!("{line}\r\n\x1b]0;a title that is long\x07"), 400);
+    let mut limits = wormhole_vt::Limits::default();
+    limits.image_bytes = 1 << 20;
+    limits.title = 10;
+    limits.osc = 64;
+    let term = Terminal::builder().size(80, 24).scrollback(200).limits(limits).build();
+    assert_eq!(steady_on(term, "limits lowered", &stream, 20), 0);
+}
+
 #[test]
 fn colors_and_attributes_allocate_nothing() {
     let unit = "\x1b[1;31mred\x1b[0m \x1b[38;5;208morange\x1b[48;2;1;2;3m rgb \x1b[4:3;58;2;9;9;9mcurl\x1b[0m plain text\r\n";

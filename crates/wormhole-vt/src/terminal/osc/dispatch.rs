@@ -13,7 +13,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, Terminator};
-use crate::terminal::osc::{ITERM_OTHER, split_number};
+use crate::terminal::osc::split_number;
 
 /// The terminator a reply to an OSC ends with: the one the request used.
 pub(in crate::terminal) fn terminator(end: Terminator) -> &'static str {
@@ -98,9 +98,9 @@ impl Terminal {
     }
 
     /// Inline images are the engine's; the rest of iTerm2's protocol is the host's, up to
-    /// [`ITERM_OTHER`] bytes (a picture keeps the picture limit).
+    /// `Limits::osc_iterm` bytes (a picture keeps the picture limit).
     fn osc_1337(&mut self, buf: &mut Vec<u8>, skip: usize) {
-        if !self.iterm_image(&buf[skip..]) && buf.len() <= ITERM_OTHER {
+        if !self.iterm_image(&buf[skip..]) && buf.len() <= self.limits.osc_iterm {
             buf.drain(..skip);
             self.push_event(Event::Iterm(std::mem::take(buf)));
         }

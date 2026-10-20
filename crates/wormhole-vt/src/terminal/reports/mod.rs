@@ -30,7 +30,7 @@ use crate::terminal::modes::conformance::Level;
 use crate::terminal::modes::{Modes, Status};
 
 /// The most reply bytes kept for a host that does not collect them.
-const REPLIES_MAX: usize = 1 << 20;
+pub(in crate::terminal) const REPLIES_MAX: usize = 1 << 20;
 
 /// The version a secondary DA reply carries: an xterm patch level, not the host's own version.
 /// Programs that ask (vim, esctest) compare it with xterm's patch numbers, which run from about
@@ -95,10 +95,10 @@ impl Terminal {
     /// and the one-byte C1 controls.
     fn settle_reply(&mut self, from: usize) {
         if self.replies.get(from) == Some(&0x1B) {
-            self.reply_dropped = from >= REPLIES_MAX;
+            self.reply_dropped = from >= self.limits.replies;
         }
         // Pieces that never start a reply still stop somewhere.
-        if self.reply_dropped || from >= 2 * REPLIES_MAX {
+        if self.reply_dropped || from >= 2 * self.limits.replies {
             self.replies.truncate(from);
         } else if self.eight_bit {
             crate::terminal::modes::conformance::eight_bit_in_place(&mut self.replies, from);

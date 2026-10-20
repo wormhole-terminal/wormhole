@@ -47,7 +47,7 @@
 //! | `read/` | `snapshot` | what the host draws from |
 //! | | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //! | `repaint/` | | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered |
-//! | (top) | `event`, `policy`, `builder` | what the host hears; the risky switches; how a terminal is made |
+//! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
 //!
 //! # Choices
@@ -78,7 +78,8 @@
 //! - A hostile program cannot make the terminal grow without bound: strings are kept up to a limit
 //!   per kind (a title 8 KiB, a clipboard 8 MiB, an image 64 MiB) and dropped whole beyond it,
 //!   events and replies that nobody collects are capped, and every count is clamped to the screen.
-//!   Pictures have their own caps (`graphics`).
+//!   Pictures have their own caps (`graphics`). Each cap is a ceiling the host can lower
+//!   ([`Limits`]), never raise.
 
 mod builder;
 #[cfg(any(test, feature = "internals"))]
@@ -88,6 +89,7 @@ mod dispatch;
 mod dump;
 mod event;
 mod graphics;
+mod limits;
 mod modes;
 mod osc;
 mod policy;
@@ -117,6 +119,7 @@ pub use graphics::{
     Compression, IMAGE_BUDGET_BYTES, ImageError, ImageFormat, ImageUpload, MAX_IMAGES, Placeholder,
     VirtualPlacement, placeholder_at, strip_placeholders,
 };
+pub use limits::Limits;
 pub use modes::Modes;
 pub(crate) use osc::is_builtin as is_builtin_osc;
 pub use policy::Policy;
@@ -200,6 +203,7 @@ struct Cluster {
 }
 
 /// The longest title kept, in bytes. A program that sends more gets it cut (at a character).
+/// Like the other caps below and in the modules, a ceiling: [`Limits`] can lower it.
 const TITLE_MAX: usize = 4096;
 /// The longest folder kept, in bytes.
 const CWD_MAX: usize = 4096;
@@ -241,6 +245,8 @@ pub struct Terminal {
     titles: reports::title::Titles,
     /// What programs may do besides print; see [`Policy`].
     policy: Policy,
+    /// The caps a program's sequences are held to; see [`Limits`].
+    limits: Limits,
     /// Where the host's window is; unknown until it says.
     window: Option<WindowGeometry>,
     folder: osc::cwd::Folder,
@@ -422,7 +428,7 @@ impl Terminal {
     /// row are one.
     fn push_event(&mut self, event: Event) {
         let kept = matches!(event, Event::ImageData(_) | Event::ImageFree(_) | Event::FullReset);
-        if (self.events.len() >= EVENTS_MAX && !kept)
+        if (self.events.len() >= self.limits.events && !kept)
             || (matches!(event, Event::Bell | Event::Title | Event::Cwd | Event::FullReset)
                 && self.events.last() == Some(&event))
         {

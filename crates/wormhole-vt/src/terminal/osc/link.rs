@@ -41,9 +41,10 @@ impl Terminal {
             self.pen.link = None;
             return;
         }
-        // The target is text a user may be shown and click: no control characters.
+        // The target is text a user may be shown and click: no control characters, and not longer
+        // than the host's limit (the OSC string's own cap is the ceiling).
         let Ok(uri) = std::str::from_utf8(uri) else { return };
-        if uri.chars().any(char::is_control) {
+        if uri.len() > self.limits.link_uri || uri.chars().any(char::is_control) {
             return;
         }
         let id = params

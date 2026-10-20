@@ -8,13 +8,13 @@ use crate::grid::Grid;
 use crate::terminal::{Event, Terminal};
 use crate::types::ImageHandle;
 
-use super::apc::{PAYLOAD_MAX, Parsed};
+use super::Transfer;
+use super::apc::Parsed;
 use super::command::{Action, Command, Medium};
-use super::images::{IMAGE_BUDGET_BYTES, Image};
+use super::images::Image;
 use super::reply::{Error, Target};
 use super::sniff;
 use super::upload::{Compression, ImageError, ImageFormat, ImageUpload};
-use super::{QUEUED_BYTES_MAX, Transfer};
 
 /// Most pixels on a side: kitty's own limit.
 pub const MAX_DIMENSION: u32 = 10_000;
@@ -40,7 +40,7 @@ struct Checked {
 impl Terminal {
     /// An APC string that starts with `G` begins.
     pub(in crate::terminal) fn begin_kitty(&mut self) {
-        self.graphics.apc.begin();
+        self.graphics.apc.begin(self.limits.image_payload);
     }
 
     pub(in crate::terminal) fn put_kitty(&mut self, data: &[u8]) {
@@ -66,7 +66,7 @@ impl Terminal {
             if let Err(error) = usable {
                 return self.answer(target.render(Err(error)));
             }
-            if transfer.data.len() + payload.len() > PAYLOAD_MAX {
+            if transfer.data.len() + payload.len() > self.limits.image_payload {
                 return self.answer(target.render(Err(Error::TooBig)));
             }
             transfer.data.extend_from_slice(&payload);
@@ -212,7 +212,7 @@ impl Terminal {
         bytes: usize,
     ) -> Result<(ImageHandle, Option<u32>), Error> {
         let cost = u64::from(width) * u64::from(height) * 4;
-        if cost > IMAGE_BUDGET_BYTES || self.events.len() >= super::super::EVENTS_MAX {
+        if cost > self.limits.image_bytes || self.events.len() >= self.limits.events {
             return Err(Error::TooBig);
         }
         let queued: usize = self
@@ -223,14 +223,14 @@ impl Terminal {
                 _ => 0,
             })
             .sum();
-        if queued + bytes > QUEUED_BYTES_MAX {
+        if queued + bytes > self.limits.image_uploads {
             return Err(Error::TooBig);
         }
         let slot = self.screen_slot();
         if let Some(old) = self.graphics.tables[slot].by_id(id) {
             self.free_image(slot, old);
         }
-        while self.graphics.tables[slot].is_full(cost) {
+        while self.graphics.tables[slot].is_full(cost, self.limits.image_count, self.limits.image_bytes) {
             let grid = self.grid_of(slot);
             let victim = self.graphics.tables[slot]
                 .victim(|image| grid.is_placed(image.handle) || !image.virtuals.is_empty());
@@ -266,6 +266,20 @@ impl Terminal {
         let grid = self.grid_of_mut(slot);
         grid.delete_image_placements(image.handle);
         self.push_event(Event::ImageFree(image.handle));
+    }
+
+    /// The host lowered the picture limits ([`Terminal::set_limits`]): evict, on both screens,
+    /// what no longer fits, the way a new picture does.
+    pub(in crate::terminal) fn enforce_image_limits(&mut self) {
+        for slot in 0..2 {
+            while self.graphics.tables[slot].is_over(self.limits.image_count, self.limits.image_bytes) {
+                let grid = self.grid_of(slot);
+                let victim = self.graphics.tables[slot]
+                    .victim(|image| grid.is_placed(image.handle) || !image.virtuals.is_empty());
+                let Some(victim) = victim else { break };
+                self.free_image(slot, victim);
+            }
+        }
     }
 
     /// Forget every picture of the screen `slot` (0 main, 1 alternate): the host is told to let

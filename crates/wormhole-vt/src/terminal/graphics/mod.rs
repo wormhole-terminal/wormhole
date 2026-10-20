@@ -39,7 +39,8 @@
 //! - **Memory**: a command's payload is capped at 32 MiB decoded, a screen keeps at most 1,024
 //!   pictures in 128 MiB (as RGBA), the least recently used going first (those nothing is
 //!   placed from before those that something is), at most 4,096 placements are kept per
-//!   screen, and the uploads waiting for the host are capped at 256 MiB.
+//!   screen, and the uploads waiting for the host are capped at 256 MiB. The host can lower each
+//!   of these (`Limits`); lowering the pictures' count or bytes evicts at once.
 //! - **Not done**: animation frames (`a=f`, `a=a`, `a=c`), files and shared memory as the medium
 //!   (`t=f`, `t=t`, `t=s`: the engine does no I/O, and every one is refused alike with `EBADF`),
 //!   relative placements (`P`, `Q`, `H`, `V`), a compressed PNG, Sixel's private palette
@@ -68,13 +69,15 @@ pub use images::{IMAGE_BUDGET_BYTES, MAX_IMAGES};
 pub use placeholder::{Placeholder, placeholder_at, strip_placeholders};
 pub use upload::{Compression, ImageError, ImageFormat, ImageUpload, VirtualPlacement};
 
+pub(super) use apc::PAYLOAD_MAX;
+
 use apc::ApcReader;
 use command::Command;
 use images::ImageTable;
 use reply::Gate;
 
 /// Most bytes of uploads the host may leave undrained before new pictures are refused.
-const QUEUED_BYTES_MAX: usize = 256 * 1024 * 1024;
+pub(super) const QUEUED_BYTES_MAX: usize = 256 * 1024 * 1024;
 
 /// A transmission waiting for its next chunk.
 #[derive(Debug)]

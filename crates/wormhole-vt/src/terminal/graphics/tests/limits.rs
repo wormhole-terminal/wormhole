@@ -185,3 +185,140 @@ fn a_full_event_queue_still_tells_the_host_which_pictures_go() {
     assert_eq!(count(|event| matches!(event, Event::ImageFree(_))), 100);
     assert_eq!(count(|event| matches!(event, Event::FullReset)), 1, "resets in a row are one");
 }
+// ---- the host's limits (`Limits`) ----
+
+/// Limits with one change from the ceilings.
+fn lowered(change: impl FnOnce(&mut crate::terminal::Limits)) -> crate::terminal::Limits {
+    let mut limits = crate::terminal::Limits::default();
+    change(&mut limits);
+    limits
+}
+
+/// Store a PNG header of this size under `id` and hand the host's answer back.
+fn store(r: &mut crate::terminal::tests::Rig, id: u32, w: u32, h: u32) {
+    r.feed(&apc(&format!("a=t,f=100,i={id},q=2"), &png(w, h)));
+    for up in uploads(r) {
+        r.term.image_decoded(up.image, Ok(()));
+    }
+}
+
+#[test]
+fn lowering_the_byte_budget_evicts_the_oldest_pictures_at_once() {
+    let mut r = rig(40, 6);
+    // 1,000 x 1,000 pixels: 4 MB each.
+    for id in 1..=5 {
+        store(&mut r, id, 1000, 1000);
+    }
+    assert!(freed(&mut r).is_empty());
+    r.term.set_limits(lowered(|l| l.image_bytes = 9_000_000));
+    assert_eq!(freed(&mut r).len(), 3, "two fit in 9 MB; the three oldest went");
+    r.feed(&apc_bare("a=p,i=3"));
+    assert!(r.replies().contains("ENOENT"));
+    r.feed(&apc_bare("a=p,i=4"));
+    assert!(r.replies().contains("OK"));
+    // The budget is the host's from now on: a picture over it is refused, others make room.
+    r.feed(&apc("a=t,f=100,i=50,q=0", &png(3000, 1000)));
+    assert!(r.replies().contains("EFBIG"));
+    assert!(freed(&mut r).is_empty(), "a refused picture evicts nothing");
+    r.feed(&apc("a=t,f=100,i=51,q=2", &png(1000, 1000)));
+    assert_eq!(freed(&mut r).len(), 1, "8 MB held and 4 MB more: one leaves");
+}
+
+#[test]
+fn lowering_the_count_evicts_what_is_not_placed_first() {
+    let mut r = rig(40, 6);
+    r.feed(&apc("a=T,f=24,s=8,v=16,i=1,q=2", &rgb(8, 16)));
+    for id in 2..=6 {
+        r.feed(&apc(&format!("a=t,f=24,s=1,v=1,i={id},q=2"), &rgb(1, 1)));
+    }
+    r.events();
+    r.term.set_limits(lowered(|l| l.image_count = 2));
+    assert_eq!(freed(&mut r).len(), 4);
+    assert_eq!(spots(&r).len(), 1, "the placed picture stayed");
+    r.feed(&apc_bare("a=p,i=6,C=1"));
+    assert!(r.replies().contains("OK"), "the newest of the others stayed");
+    r.feed(&apc_bare("a=p,i=2"));
+    assert!(r.replies().contains("ENOENT"));
+    // The count holds for new pictures too.
+    r.feed(&apc("a=t,f=24,s=1,v=1,i=9,q=2", &rgb(1, 1)));
+    assert_eq!(freed(&mut r).len(), 1);
+}
+
+#[test]
+fn the_picture_limits_reach_both_screens() {
+    let mut r = rig(40, 6);
+    for id in 1..=4 {
+        r.feed(&apc(&format!("a=t,f=24,s=1,v=1,i={id},q=2"), &rgb(1, 1)));
+    }
+    r.feed("\x1b[?1049h");
+    for id in 1..=4 {
+        r.feed(&apc(&format!("a=t,f=24,s=1,v=1,i={id},q=2"), &rgb(1, 1)));
+    }
+    r.events();
+    r.term.set_limits(lowered(|l| l.image_count = 1));
+    assert_eq!(freed(&mut r).len(), 6);
+}
+
+#[test]
+fn a_transmission_over_the_hosts_payload_cap_is_refused() {
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(|l| l.image_payload = 200));
+    r.feed(&apc("a=t,f=24,s=10,v=10,i=1", &rgb(10, 10)));
+    assert!(r.replies().contains("EFBIG"), "300 bytes of pixels");
+    assert!(uploads(&mut r).is_empty());
+    r.feed(&apc("a=t,f=24,s=5,v=5,i=2", &rgb(5, 5)));
+    assert!(r.replies().contains("Gi=2;OK"), "75 bytes");
+    // Chunks add up.
+    r.feed(&apc("a=t,f=24,s=9,v=9,i=3,m=1", &rgb(9, 4)));
+    r.feed(&apc("m=1", &rgb(9, 4)));
+    r.feed(&apc("m=0", &rgb(9, 1)));
+    assert!(r.replies().contains("EFBIG"), "243 bytes in three chunks");
+}
+
+#[test]
+fn an_inline_file_over_the_hosts_caps_is_ignored() {
+    let file =
+        |bytes: &[u8]| format!("\x1b]1337;File=inline=1:{}\x07", crate::terminal::osc::base64::encode(bytes));
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(|l| l.image_payload = 20));
+    r.feed(&file(&png(10, 10)));
+    assert!(uploads(&mut r).is_empty(), "33 bytes of file against 20");
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(|l| l.osc_image = 40));
+    r.feed(&file(&png(10, 10)));
+    assert!(uploads(&mut r).is_empty(), "the string is longer than the OSC cap for pictures");
+    r.term.set_limits(crate::terminal::Limits::default());
+    r.feed(&file(&png(10, 10)));
+    assert_eq!(uploads(&mut r).len(), 1);
+}
+
+#[test]
+fn a_sixel_over_the_hosts_cap_is_dropped() {
+    // Nothing but the data between the header and the terminator: 22 bytes, then 62.
+    let sixel = |bands: usize| format!("\x1bP9;1q\"1;1\n#1;2;100;0;0#1{}\x1b\\", "~".repeat(bands));
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(|l| l.sixel = 40));
+    r.feed(&sixel(5));
+    assert_eq!(uploads(&mut r).len(), 1);
+    r.feed(&sixel(40));
+    assert!(uploads(&mut r).is_empty(), "the data is longer than 40 bytes");
+}
+
+#[test]
+fn pictures_waiting_for_the_host_are_held_to_the_hosts_size() {
+    let mut r = rig(40, 6);
+    // The header of a PNG is 33 bytes: one fits in 50, two do not.
+    r.term.set_limits(lowered(|l| l.image_uploads = 50));
+    r.feed(&apc("a=t,f=100,i=1", &png(10, 10)));
+    r.feed(&apc("a=t,f=100,i=2", &png(10, 10)));
+    let first = uploads(&mut r);
+    assert_eq!(first.len(), 1, "the second was refused");
+    // The answers wait for the first picture's decode, in order.
+    assert_eq!(r.replies(), "");
+    r.term.image_decoded(first[0].image, Ok(()));
+    let replies = r.replies();
+    assert!(replies.contains("Gi=1;OK") && replies.contains("Gi=2;EFBIG"), "{replies:?}");
+    // Taking the events freed the room.
+    r.feed(&apc("a=t,f=100,i=3", &png(10, 10)));
+    assert_eq!(uploads(&mut r).len(), 1);
+}

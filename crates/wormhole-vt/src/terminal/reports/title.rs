@@ -24,7 +24,7 @@ use bitflags::bitflags;
 
 use crate::terminal::event::Event;
 use crate::terminal::osc::dispatch::fill;
-use crate::terminal::{TITLE_MAX, TITLE_STACK, Terminal};
+use crate::terminal::{TITLE_STACK, Terminal};
 
 impl TitleModes {
     /// Each mode with the parameter of `CSI > Ps t` that switches it on.
@@ -110,15 +110,15 @@ pub(in crate::terminal) fn drop_controls(text: &mut String) {
     }
 }
 
-/// Set `slot` to `text` (cut at `TITLE_MAX`, controls dropped), reusing its buffer. Nothing, or
+/// Set `slot` to `text` (cut at `max` bytes, controls dropped), reusing its buffer. Nothing, or
 /// nothing but controls, resets it: an empty title is no title.
-fn store(slot: &mut Option<String>, text: &[u8]) {
+fn store(slot: &mut Option<String>, text: &[u8], max: usize) {
     if text.is_empty() {
         *slot = None;
         return;
     }
     let kept = slot.get_or_insert_with(String::new);
-    fill(kept, text, TITLE_MAX);
+    fill(kept, text, max);
     drop_controls(kept);
     if kept.is_empty() {
         *slot = None;
@@ -130,11 +130,11 @@ impl Terminal {
     pub(in crate::terminal) fn set_titles(&mut self, window: bool, icon: bool, text: &[u8]) {
         let Some(text) = decoded(self.titles.modes, text) else { return };
         if window {
-            store(&mut self.titles.window, &text);
+            store(&mut self.titles.window, &text, self.limits.title);
             self.push_event(Event::Title);
         }
         if icon {
-            store(&mut self.titles.icon, &text);
+            store(&mut self.titles.icon, &text, self.limits.title);
             // OSC 0 is announced as the title; the icon name has an event of its own for OSC 1.
             if !window {
                 self.push_event(Event::IconName(self.titles.icon.clone().unwrap_or_default()));

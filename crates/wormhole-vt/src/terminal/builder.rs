@@ -6,8 +6,8 @@
 //! new method with a default.
 
 use super::{
-    Cluster, CursorPos, CursorStyle, Event, Level, Margins, Parser, Policy, RECENT_LINKS, Saved, Terminal,
-    dispatch, graphics, history_bytes, osc, read, reports, screen, text,
+    Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, RECENT_LINKS, Saved,
+    Terminal, dispatch, graphics, history_bytes, osc, read, reports, screen, text,
 };
 use crate::grid::{BlockPart, Grid, Pen};
 use crate::passthrough::{Passthrough, PassthroughError};
@@ -45,6 +45,7 @@ pub struct Builder {
     scrollback: usize,
     identity: String,
     policy: Policy,
+    limits: Limits,
     palette: Option<Box<[Rgb; COLOR_COUNT]>>,
     cell: (u16, u16),
     separators: Option<String>,
@@ -59,6 +60,7 @@ impl Default for Builder {
             scrollback: DEFAULT_SCROLLBACK_LINES,
             identity: identity_text("wormhole-vt", env!("CARGO_PKG_VERSION")),
             policy: Policy::default(),
+            limits: Limits::default(),
             palette: None,
             cell: (8, 16),
             separators: None,
@@ -108,6 +110,13 @@ impl Builder {
     /// What programs may do besides print; everything is off unless set, see [`Policy`].
     pub fn policy(mut self, policy: Policy) -> Builder {
         self.policy = policy;
+        self
+    }
+
+    /// The caps on what a program's sequences make the terminal hold (the built-in ceilings unless
+    /// set); each value can only be lowered, see [`Limits`].
+    pub fn limits(mut self, limits: Limits) -> Builder {
+        self.limits = limits.clamped();
         self
     }
 
@@ -165,6 +174,7 @@ impl Builder {
             cursor_style: CursorStyle::default(),
             titles: reports::title::Titles::default(),
             policy: self.policy,
+            limits: self.limits,
             window: None,
             folder: osc::cwd::Folder::default(),
             palette: osc::colors::Palette::new(),
@@ -208,6 +218,7 @@ impl Builder {
         }
         term.osc.set_claims(self.passthrough.osc_caps());
         term.passthrough = self.passthrough;
+        term.apply_limits();
         term
     }
 }

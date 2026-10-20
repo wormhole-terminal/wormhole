@@ -89,8 +89,17 @@ impl ImageTable {
         next
     }
 
-    pub fn is_full(&self, cost: u64) -> bool {
-        self.list.len() >= MAX_IMAGES || self.bytes + cost > IMAGE_BUDGET_BYTES
+    /// Whether a picture of `cost` bytes needs one to leave first, with at most `count` pictures
+    /// and `budget` bytes kept (the host's limits, never above `MAX_IMAGES` and
+    /// `IMAGE_BUDGET_BYTES`).
+    pub fn is_full(&self, cost: u64, count: usize, budget: u64) -> bool {
+        self.list.len() >= count || self.bytes + cost > budget
+    }
+
+    /// Whether the table holds more than `count` pictures or `budget` bytes: the limits were
+    /// lowered under it.
+    pub fn is_over(&self, count: usize, budget: u64) -> bool {
+        self.list.len() > count || self.bytes > budget
     }
 
     /// Add a picture. The caller made room (`is_full`).

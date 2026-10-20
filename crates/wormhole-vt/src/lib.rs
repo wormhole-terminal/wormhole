@@ -34,7 +34,8 @@
 //! # Guarantees
 //!
 //! Input never panics, and never makes the terminal grow without bound: every string is capped,
-//! queues nobody drains are capped, counts are clamped to the screen. Replies are built from the
+//! queues nobody drains are capped, counts are clamped to the screen. The caps are ceilings the host
+//! can lower with [`Limits`], never raise. Replies are built from the
 //! engine's state, never from the request's bytes, and a title is never reported back unless the
 //! host's [`Policy`] says so.
 
@@ -56,8 +57,8 @@ pub mod unicode;
 
 pub use grid::{BlockPart, CopiedLine, LinkSpan, Pin, RowMark, TextCopy, TextShape, ViewRow};
 pub use terminal::{
-    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, LocatorButton, Modes, Pointer, Policy, Span,
-    Terminal,
+    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, Limits, LocatorButton, Modes, Pointer, Policy,
+    Span, Terminal,
 };
 pub use types::{
     COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, NamedColor,
