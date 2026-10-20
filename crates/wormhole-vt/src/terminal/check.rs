@@ -12,6 +12,8 @@ impl Terminal {
     /// - The cursor is in a column its row shows (a double-width row shows half).
     /// - A wrap is only pending on the cursor's last column.
     /// - There is one tab stop slot per column.
+    /// - A cluster is only open while the character REP repeats is remembered (every control function
+    ///   ends both), and its column is on the screen.
     /// - The pictures of a screen are within their count and byte budgets.
     pub fn check_invariants(&self) -> Result<(), String> {
         self.grid.check_invariants().map_err(|e| format!("screen: {e}"))?;
@@ -54,6 +56,12 @@ impl Terminal {
         let m = self.margins;
         if m.top > m.bottom || m.bottom >= self.rows || m.left > m.right || m.right >= self.cols {
             return Err(format!("margins {m:?} outside {}x{} or out of order", self.cols, self.rows));
+        }
+        if self.cluster.open && (self.last_char.is_none() || self.cluster.head >= self.cols) {
+            return Err(format!(
+                "a cluster open at column {} with last character {:?}",
+                self.cluster.head, self.last_char
+            ));
         }
         if self.tabs.len() != self.cols {
             return Err(format!("{} tab stop slots for {} columns", self.tabs.len(), self.cols));
