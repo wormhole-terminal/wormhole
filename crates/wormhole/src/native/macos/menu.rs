@@ -184,7 +184,13 @@ fn build(mtm: MainThreadMarker, menu: &Menu, target: &Target, parts: &mut Parts)
             Entry::Item(item) => item_for(mtm, item, target, &mut parts.callbacks),
             Entry::Swatches(row) => {
                 let ns_item = NSMenuItem::new(mtm);
-                ns_item.setView(Some(&swatches::row_view(mtm, parts.picks.len(), row, &parts.chosen)));
+                ns_item.setView(Some(&swatches::row_view(
+                    mtm,
+                    parts.picks.len(),
+                    row,
+                    &parts.chosen,
+                    swatches::Use::menu(),
+                )));
                 parts.picks.push(row.on_pick.clone());
                 ns_item
             }

@@ -1,14 +1,14 @@
 //! A group's head in the list: its tiles and dot while folded, its + while pinned and empty, its
-//! drag, its drop and its menu, which a click on the name, a right-click and ⌃↩ all open: Rename…
-//! (in place, `rename`), a row of the nine colours as Finder's tags are in its context menu, and
-//! New terminal in group, Ungroup, Close group, Pin or Unpin group, Move group to new window.
-use wormhole_core::sidebar::{GroupColor, Urgency, spoken};
+//! drag, its drop, the popover its name opens (`group_popover`) and its context menu, which a
+//! right-click and ⌃↩ open: Rename… (in place, `rename`), a row of the nine colours as Finder's tags
+//! are in its context menu, Other colour…, and the actions.
+use wormhole_core::sidebar::{Urgency, spoken};
 
 use super::super::focus::SidebarStop;
-use super::groups::group_colors;
+use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
-use crate::native::{self, Item, Menu, Swatch};
+use crate::native::{self, Anchor};
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
@@ -29,7 +29,7 @@ impl Workspace {
         let ui = frame.ui;
         let band = &listing.bands[band_ix];
         let group = band.group;
-        let color = self.sidebar.view.groups.get(group).and_then(|g| g.color());
+        let color = self.sidebar.view.groups.get(group).and_then(|g| g.paint());
         let tokens = &store_in(&self.profile, cx).tokens;
         let hsla = color.map(|color| theme_bridge::hsla(color.color(tokens)));
         let folded = band.folded;
@@ -55,6 +55,9 @@ impl Workspace {
         };
         let this = cx.weak_entity();
         let (on_toggle, on_add, on_label) = (this.clone(), this.clone(), this);
+        // The popover's arrow points at the name, which the probe on it measures.
+        let label_at = Anchor::default();
+        let label_anchor = label_at.clone();
         let empty = (band.pinned && band.members.is_empty()).then(|| {
             let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
             let add: ClickHandler = Box::new(move |_, window, cx| {
@@ -77,17 +80,18 @@ impl Workspace {
             }),
             spoken_edit: spoken::edit_label(&band.label).into(),
             spoken_fold: spoken::fold_label(&band.label, !folded).into(),
-            on_label: Some(Box::new(move |event, window, cx| {
-                let at = event.position();
-                on_label.update(cx, |this, cx| this.open_group_menu(group, at, window, cx)).ok();
+            on_label: Some(Box::new(move |_, window, cx| {
+                let at = label_at.bounds();
+                on_label.update(cx, |this, cx| this.open_group_popover(group, at, window, cx)).ok();
             })),
+            label_anchor: Some(label_anchor),
             name_edit: self.group_rename_field(group, cx),
         };
         let id: ElementId = ElementId::Name(SharedString::from(format!("band-{}", band.key())));
         let mut label = spoken::band_label(
             &band.label,
             band.pinned,
-            color.map(GroupColor::label),
+            color.map(wormhole_core::sidebar::GroupPaint::label),
             band.members.len(),
             alerts,
             !folded,
@@ -141,13 +145,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let found = self.sidebar.view.groups.get(group);
-        let facts = GroupFacts {
-            group,
-            color: found.and_then(|g| g.color()),
-            pinned: found.is_some_and(|g| g.pinned),
-            colors: group_colors(&self.profile, cx),
-        };
+        let facts = self.group_facts(group, cx);
         self.sidebar.menu_row = None;
         self.sidebar.menu_group = Some(group);
         cx.notify();
@@ -165,6 +163,22 @@ impl Workspace {
         native::show_menu(menu, at, window, cx);
     }
 
+    /// Open group `group`'s popover under its name (`anchor`): the name in a field, the colours, and
+    /// the actions.
+    pub(super) fn open_group_popover(
+        &mut self,
+        group: u32,
+        anchor: Bounds<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(name) = self.sidebar.view.groups.get(group).map(|g| g.name.clone()) else { return };
+        let facts = self.group_facts(group, cx);
+        let appearance = store_in(&self.profile, cx).tokens.appearance;
+        let popover = group_popover(facts, name, appearance, &cx.weak_entity());
+        native::show_popover(popover, anchor, window, cx);
+    }
+
     /// The groups a terminal's menu offers to move it to: every group, with its name and whether
     /// the terminal is in it.
     pub(super) fn group_choices(&self, id: i64) -> Vec<(u32, SharedString, bool)> {
@@ -178,67 +192,19 @@ impl Workspace {
     }
 }
 
-/// What a group's menu is made from, as it is when the menu opens.
-struct GroupFacts {
-    group: u32,
-    /// The group's colour, if it has one.
-    color: Option<GroupColor>,
-    pinned: bool,
-    /// Every colour on offer, with how the theme draws it.
-    colors: Vec<(GroupColor, Hsla)>,
-}
-
-/// The menu of the group `facts` describe; every item acts on `this`.
-fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Menu {
-    let GroupFacts { group, color: current, pinned, colors } = facts;
-    let swatches: Vec<Swatch> =
-        colors.iter().map(|&(color, hsla)| Swatch { color: hsla, name: color.label().into() }).collect();
-    let chosen = colors.iter().position(|&(color, _)| Some(color) == current);
-    let on_pick = {
-        let this = this.clone();
-        move |ix: usize, _: &mut Window, cx: &mut App| {
-            if let Some(&(color, _)) = colors.get(ix) {
-                this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
-            }
-        }
-    };
-    Menu::new()
-        .item(
-            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
-                ws.start_group_rename(group, window, cx)
-            })),
-        )
-        .separator()
-        .swatches(swatches, chosen, on_pick)
-        .separator()
-        .item(Item::new("New terminal in group").on_select(native::run_on(this, move |ws, window, cx| {
-            ws.new_session_in_group(group, window, cx)
-        })))
-        .item(Item::new("Ungroup").on_select(native::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))))
-        .item(
-            Item::new("Close group")
-                .on_select(native::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
-        )
-        .item(
-            Item::new(if pinned { "Unpin group" } else { "Pin group" })
-                .on_select(native::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
-        )
-        .item(Item::new("Move group to new window").on_select(native::run_on(this, move |ws, window, cx| {
-            ws.move_group_to_window(group, window, cx)
-        })))
-}
-
 #[cfg(test)]
 mod tests {
     use gpui_kit::{WeakEntity, hsla};
-    use wormhole_core::sidebar::GroupColor;
+    use wormhole_core::sidebar::{GroupColor, GroupPaint};
 
-    use super::{GroupFacts, group_menu};
+    use super::super::group_popover::{GroupFacts, group_menu};
 
     fn facts(color: Option<GroupColor>, pinned: bool) -> GroupFacts {
         GroupFacts {
             group: 1,
-            color,
+            paint: color.map(GroupPaint::Named),
+            custom: None,
+            shown: None,
             pinned,
             colors: vec![
                 (GroupColor::Grey, hsla(0.0, 0.0, 0.5, 1.0)),
@@ -255,6 +221,7 @@ mod tests {
                 "- Rename…",
                 "---",
                 "~ Grey | Blue [x]",
+                "- Other colour…",
                 "---",
                 "- New terminal in group",
                 "- Ungroup",
@@ -269,6 +236,7 @@ mod tests {
     fn a_group_without_a_colour_rings_none_and_unpinned_reads_pin() {
         let outline = group_menu(facts(None, false), &WeakEntity::new_invalid()).outline();
         assert_eq!(outline[2], "~ Grey | Blue");
+        assert_eq!(outline[3], "- Other colour…");
         assert!(outline.contains(&"- Pin group".to_string()));
     }
 }

@@ -31,18 +31,23 @@ const HEIGHT: f64 = 28.0;
 const DOT: f64 = 14.0;
 const DOT_HOVER: f64 = 16.0;
 const RING: f64 = 20.0;
+/// The colour wheel's wedges.
+const WEDGES: usize = 6;
 
 /// Which dot was clicked: the row's place in its menu and the dot's in the row.
 pub type Chosen = Rc<Cell<Option<(usize, usize)>>>;
 
 pub struct DotIvars {
-    rgba: [f32; 4],
+    rgba: Cell<Option<[f32; 4]>>,
     name: String,
     row: usize,
     index: usize,
-    selected: bool,
+    selected: Cell<bool>,
     hovered: Cell<bool>,
     chosen: Chosen,
+    /// In a popover: tell the app which dot was clicked, through its queue. A menu has none: its
+    /// pop-up reads `chosen` once the loop has returned.
+    notify: Option<Rc<dyn Fn(usize)>>,
 }
 
 define_class!(
@@ -66,13 +71,33 @@ define_class!(
             };
             let side = if ivars.hovered.get() { DOT_HOVER } else { DOT };
             let dot = NSBezierPath::bezierPathWithOvalInRect(around(side));
-            appkit::ns_color(ivars.rgba).setFill();
-            dot.fill();
+            match ivars.rgba.get() {
+                Some(rgba) => {
+                    appkit::ns_color(rgba).setFill();
+                    dot.fill();
+                }
+                // No colour of one's own yet: the wheel to pick one from.
+                None => {
+                    let centre = NSPoint::new(
+                        bounds.origin.x + bounds.size.width / 2.0,
+                        bounds.origin.y + bounds.size.height / 2.0,
+                    );
+                    for wedge in 0..WEDGES {
+                        let (from, to) = (360.0 / WEDGES as f64 * wedge as f64, 360.0 / WEDGES as f64 * (wedge + 1) as f64);
+                        let path = NSBezierPath::bezierPath();
+                        path.moveToPoint(centre);
+                        path.appendBezierPathWithArcWithCenter_radius_startAngle_endAngle(centre, side / 2.0, from, to);
+                        path.closePath();
+                        NSColor::colorWithHue_saturation_brightness_alpha(from / 360.0, 0.75, 0.95, 1.0).setFill();
+                        path.fill();
+                    }
+                }
+            }
             // A hairline so a pale colour on a pale menu still has an edge.
             NSColor::separatorColor().setStroke();
             dot.setLineWidth(0.5);
             dot.stroke();
-            if ivars.selected {
+            if ivars.selected.get() {
                 // Inside the cell, with the stroke's own width left.
                 let ring = NSBezierPath::bezierPathWithOvalInRect(around(RING - 1.5));
                 NSColor::labelColor().setStroke();
@@ -116,6 +141,12 @@ define_class!(
             self.setNeedsDisplay(true);
         }
 
+        // A stack view lays a view out by its size when it has no constraints of its own.
+        #[unsafe(method(intrinsicContentSize))]
+        fn intrinsic_content_size(&self) -> NSSize {
+            NSSize::new(CELL, CELL)
+        }
+
         // VoiceOver's press on the button (and the keyboard through it).
         #[unsafe(method(accessibilityPerformPress))]
         fn accessibility_perform_press(&self) -> bool {
@@ -136,11 +167,24 @@ impl Dot {
         unsafe { msg_send![super(this), initWithFrame: frame] }
     }
 
-    /// Write the choice down and close the menu; the pop-up runs it afterwards.
+    /// Write the choice down and close the menu; the pop-up runs it afterwards. In a popover tell
+    /// the app's queue, and ring this dot instead of the one that was.
     #[allow(unsafe_code)]
     fn choose(&self) {
         let ivars = self.ivars();
         ivars.chosen.set(Some((ivars.row, ivars.index)));
+        if let Some(notify) = &ivars.notify {
+            // SAFETY: the superview is the row that holds the dot, alive while the dot is.
+            if let Some(row) = unsafe { self.superview() } {
+                for sibling in row.subviews().iter() {
+                    if let Some(dot) = sibling.downcast_ref::<Dot>() {
+                        dot.ivars().selected.set(std::ptr::eq(dot, self));
+                        dot.setNeedsDisplay(true);
+                    }
+                }
+            }
+            notify(ivars.index);
+        }
         if let Some(item) = self.enclosingMenuItem() {
             // SAFETY: `menu` is the item's weak back-reference; the menu is alive while it is
             // tracking, and a menu that is gone leaves `None`.
@@ -151,38 +195,74 @@ impl Dot {
     }
 }
 
+/// How the row is used: in a menu (no `notify`, a margin like a menu item's) or in a popover (which
+/// is told of each click, and has the dot for a colour of one's own).
+pub struct Use {
+    pub inset: f64,
+    pub notify: Option<Rc<dyn Fn(usize)>>,
+    /// The colour of one's own: the last dot, which is ringed when it has a colour.
+    pub custom: Option<Option<[f32; 4]>>,
+}
+
+impl Use {
+    pub fn menu() -> Self {
+        Self { inset: INSET, notify: None, custom: None }
+    }
+}
+
+/// The row as one view: a dot per swatch, left to right, and the dot for a colour of one's own
+/// when `how.custom` says. `row` is the row's place among the menu's, which `chosen` is told with
+/// the dot's.
 #[allow(unsafe_code)]
-/// The row as one view for a menu item: a dot per swatch, left to right. `row` is the row's place
-/// among the menu's, which `chosen` is told with the dot's.
-pub fn row_view(mtm: MainThreadMarker, row: usize, swatches: &Swatches, chosen: &Chosen) -> Retained<NSView> {
-    let width = 2.0 * INSET + CELL * swatches.swatches.len() as f64;
+pub fn row_view(
+    mtm: MainThreadMarker,
+    row: usize,
+    swatches: &Swatches,
+    chosen: &Chosen,
+    how: Use,
+) -> Retained<NSView> {
+    let count = swatches.swatches.len() + usize::from(how.custom.is_some());
+    let width = 2.0 * how.inset + CELL * count as f64;
     let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width, HEIGHT));
     let container = NSView::initWithFrame(NSView::alloc(mtm), frame);
     container.setAccessibilityElement(false);
-    for (index, swatch) in swatches.swatches.iter().enumerate() {
+    let named = swatches.swatches.iter().enumerate().map(|(index, swatch)| {
         let rgba = gpui_kit::Rgba::from(swatch.color);
+        (
+            index,
+            Some([rgba.r, rgba.g, rgba.b, rgba.a]),
+            swatch.name.to_string(),
+            swatches.selected == Some(index),
+        )
+    });
+    let custom = how.custom.map(|color| {
+        let name = if color.is_some() { "Custom colour" } else { "Other colour…" };
+        (swatches.swatches.len(), color, name.to_string(), color.is_some())
+    });
+    for (index, rgba, name, selected) in named.chain(custom) {
         let cell = NSRect::new(
-            NSPoint::new(INSET + CELL * index as f64, (HEIGHT - CELL) / 2.0),
+            NSPoint::new(how.inset + CELL * index as f64, (HEIGHT - CELL) / 2.0),
             NSSize::new(CELL, CELL),
         );
         let dot = Dot::new(
             mtm,
             cell,
             DotIvars {
-                rgba: [rgba.r, rgba.g, rgba.b, rgba.a],
-                name: swatch.name.to_string(),
+                rgba: Cell::new(rgba),
+                name,
                 row,
                 index,
-                selected: swatches.selected == Some(index),
+                selected: Cell::new(selected),
                 hovered: Cell::new(false),
                 chosen: chosen.clone(),
+                notify: how.notify.clone(),
             },
         );
         let name = NSString::from_str(&dot.ivars().name);
         dot.setToolTip(Some(&name));
         dot.setAccessibilityElement(true);
         dot.setAccessibilityLabel(Some(&name));
-        dot.setAccessibilitySelected(dot.ivars().selected);
+        dot.setAccessibilitySelected(dot.ivars().selected.get());
         // SAFETY: a constant AppKit defines, read on the main thread.
         dot.setAccessibilityRole(Some(unsafe { NSAccessibilityButtonRole }));
         // The area follows the view's bounds, so the highlight needs no layout code.
@@ -203,4 +283,10 @@ pub fn row_view(mtm: MainThreadMarker, row: usize, swatches: &Swatches, chosen: 
         container.addSubview(&dot);
     }
     container
+}
+
+/// The row's size: its width at `inset`, and its height.
+pub fn row_size(swatches: &Swatches, custom: bool, inset: f64) -> NSSize {
+    let count = swatches.swatches.len() + usize::from(custom);
+    NSSize::new(2.0 * inset + CELL * count as f64, HEIGHT)
 }

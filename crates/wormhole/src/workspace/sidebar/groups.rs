@@ -114,6 +114,19 @@ impl Workspace {
         self.mark_dirty(cx);
     }
 
+    /// Give group `group` a colour of its own, as the system's colour panel chose it.
+    pub(in crate::workspace) fn set_group_custom_color(
+        &mut self,
+        group: u32,
+        color: Hsla,
+        cx: &mut Context<Self>,
+    ) {
+        let rgba = Rgba::from(color);
+        let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
+        self.sidebar.view.groups.set_custom_color(group, [byte(rgba.r), byte(rgba.g), byte(rgba.b)]);
+        self.mark_dirty(cx);
+    }
+
     /// Pin group `group` (it stays, as a line, when its last terminal closes) or let it go again.
     pub(in crate::workspace) fn toggle_group_pin(&mut self, group: u32, cx: &mut Context<Self>) {
         let pinned = self.sidebar.view.groups.get(group).is_some_and(|group| group.pinned);

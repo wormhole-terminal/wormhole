@@ -2,7 +2,7 @@
 //! Pink Purple Cyan Orange. Like a folder's colour (`FolderColor`) they are names, and what each
 //! looks like comes from the theme; the stored word is the lower-case name.
 
-use crate::folder_color::swatch;
+use crate::folder_color::{legible, swatch};
 use crate::tokens::{Color, ThemeTokens};
 
 /// How a group's colour washes its card: from `WASH_PEAK` of the colour at the card's left edge down
@@ -115,9 +115,94 @@ impl GroupColor {
     }
 }
 
+/// What a group is painted with: one of the nine names, or a colour of the person's own, chosen
+/// in the system's colour panel and saved as `#rrggbb` (sRGB) in the place of the name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GroupPaint {
+    Named(GroupColor),
+    Custom([u8; 3]),
+}
+
+impl GroupPaint {
+    /// A name, or `#rrggbb`; anything else (a name a newer build saved) is nothing.
+    pub fn from_key(key: &str) -> Option<Self> {
+        if let Some(hex) = key.strip_prefix('#') {
+            let valid = hex.len() == 6 && hex.bytes().all(|b| b.is_ascii_hexdigit());
+            let value = u32::from_str_radix(hex, 16).ok().filter(|_| valid)?;
+            return Some(Self::Custom([(value >> 16) as u8, (value >> 8) as u8, value as u8]));
+        }
+        GroupColor::from_key(key).map(Self::Named)
+    }
+
+    /// How it is saved with the window.
+    pub fn key(self) -> String {
+        match self {
+            Self::Named(color) => color.key().to_string(),
+            Self::Custom([r, g, b]) => format!("#{r:02x}{g:02x}{b:02x}"),
+        }
+    }
+
+    /// How VoiceOver says it.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Named(color) => color.label(),
+            Self::Custom(_) => "Custom colour",
+        }
+    }
+
+    /// The colour in `tokens`' theme. A named one is worked out from the theme (`GroupColor::color`).
+    /// One of a person's own is theirs as chosen, light or dark: it is moved along its lightness only
+    /// where the theme's window or sidebar would hide it (the same rule that lets the named ones
+    /// be seen), and the washes and tints over cards, which are translucent, take it as it comes.
+    pub fn color(self, tokens: &ThemeTokens) -> Color {
+        match self {
+            Self::Named(color) => color.color(tokens),
+            Self::Custom([r, g, b]) => {
+                legible(tokens, Color::rgba(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::GroupColor;
+    use super::{GroupColor, GroupPaint};
+
+    #[test]
+    fn a_colour_of_ones_own_is_written_as_hex_and_read_back() {
+        let paint = GroupPaint::Custom([0x12, 0xab, 0xff]);
+        assert_eq!(paint.key(), "#12abff");
+        assert_eq!(GroupPaint::from_key("#12abff"), Some(paint));
+        assert_eq!(GroupPaint::from_key("#12ABFF"), Some(paint));
+        assert_eq!(GroupPaint::from_key("blue"), Some(GroupPaint::Named(GroupColor::Blue)));
+        for key in ["", "#", "#fff", "#12abfg", "#12abff00", "12abff", "+12abff"] {
+            assert_eq!(GroupPaint::from_key(key), None, "{key:?}");
+        }
+    }
+
+    /// Any colour a person picks is seen on the window and the sidebar of every theme, and text
+    /// still reads on its wash: the extremes are the cases that would not.
+    #[test]
+    fn a_colour_of_ones_own_is_seen_and_its_wash_reads_in_every_theme() {
+        use crate::tokens::{Color, builtins};
+        let extremes = [[0, 0, 0], [255, 255, 255], [128, 128, 128], [255, 255, 0], [0, 0, 255], [255, 0, 0]];
+        for tokens in builtins() {
+            let get = |name: &str| tokens.get(name).expect(name);
+            let column = get("sidebar.background").over(get("surface.window").over(Color::BLACK));
+            let card = get("card").over(column);
+            for rgb in extremes {
+                let shown = GroupPaint::Custom(rgb).color(tokens);
+                for surface in ["surface.window", "surface.panel"] {
+                    let ratio = Color::contrast_ratio(shown, get(surface).with_alpha(1.0));
+                    assert!(ratio >= 2.95, "{}: {rgb:?} on {surface} is {ratio:.2}", tokens.name);
+                }
+                let wash = shown.with_alpha(super::WASH_PEAK).over(card);
+                let ratio = Color::contrast_ratio(get("text.primary").over(wash), wash);
+                assert!(ratio >= 4.45, "{}: text on a {rgb:?} wash is {ratio:.2}", tokens.name);
+            }
+        }
+    }
+
     use crate::tokens::{Color, builtins};
 
     #[test]

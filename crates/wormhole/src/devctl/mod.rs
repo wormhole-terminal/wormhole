@@ -50,6 +50,23 @@
 //!   menu-native [press <n>]   the open menu built as the real AppKit NSMenu, not shown: its items and,
 //!                   for the colour dots, each dot's tooltip and VoiceOver label; `press <n>` presses
 //!                   that dot as VoiceOver does and prints which one the menu took as chosen
+//!   popover | popover-press <title> | popover-close   the last popover (the folder's hover card, a group's
+//!                   name): its rows one a line (`# path`, `field "name" (focused)`, `buttons: [Open in
+//!                   Finder] [Copy path -> Copied]` the `->` being what a button says after a press,
+//!                   `colours: Grey | Blue [x] | … | custom`, `- action`); press a button or an action row
+//!                   by its title as a click does, or close it as a click outside does (the field's text
+//!                   is kept). In a background instance (and in tests) it is not shown: a real one is a
+//!                   window of AppKit's with its own keyboard
+//!   popover-type <text> | popover-key <enter|escape>   type into its field (replacing what is there);
+//!                   ↩ keeps it and closes, ⎋ drops it and closes
+//!   popover-colour <name|#rrggbb>   a dot of the colours by name (the popover stays), or a colour from
+//!                   the Colours window (`#rrggbb`: the last dot, or the window that `Other colour…` in a
+//!                   group's menu asked for)
+//!   popover-native [name]   the open popover built as the real AppKit controls (not shown) and drawn to
+//!                   <dir>/<name>.png as AppKit lays them out, in the theme's light or dark
+//!   popover-real | popover-real-close   open the recorded popover for real (an `NSPopover` at the window's
+//!                   top left) and close it again: the check of AppKit's side that a background instance
+//!                   can make; use it with a hover popover (`path-card open`), which takes no keys
 //!   palette [query] | palette close   open the command palette over this window with `query`
 //!                   typed (a prefix picks the scope: `@` terminals, `>` actions …; in an open palette
 //!                   it replaces what is typed), or close it; it opens after this batch
@@ -93,8 +110,8 @@
 //!                   make its name a field on its head (`text <new name>` then `key enter` types and
 //!                   keeps it, `key escape` drops it), pin or unpin, take apart, close (asks if an
 //!                   agent works in it), move to a window of its own, or colour it (grey, blue, red,
-//!                   yellow, green, pink, purple, cyan or orange). A click on the group's name opens
-//!                   its menu: `click <x> <y>` on it, then `menu`
+//!                   yellow, green, pink, purple, cyan or orange). A click on the group's name
+//!                   (`click <x> <y>`) opens its popover (`popover`), a right-click its menu (`menu`)
 //!   to-group <row> <name|none>   put the terminal in that row in the group, or take it out of its group
 //!   rename-edit <row>   the terminal's name becomes a field, as Rename… in its menu makes it
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it
@@ -143,7 +160,10 @@
 //!                   `WORMHOLE_GH_BIN` names a stand-in (a pull request is asked only in a
 //!                   trusted project); a status line is `Wormhole statusline` run with
 //!                   `WORMHOLE_SOCKET` and `WORMHOLE_TAB_ID` set to the instance's and the tab's
-//!   path-menu       open the folder's menu as a click on the title row's folder does (read it with
+//!   path-card <open|close>   open or close the hover card (a popover: read it with `popover`) under
+//!                   the title row's folder at once, as resting the pointer on it does after a moment
+//!                   (`hover <x> <y>` does too)
+//!   path-menu       open the folder's Finder-style menu as a right-click on it does (read it with
 //!                   `menu`, pick with `menu-pick "Copy path"` or a folder's name; ⌃↩ on the title strip
 //!                   opens it too)
 //!   toggle-sidebar | toggle-panel   hide or show the sidebar / the right panel
@@ -372,6 +392,15 @@ fn command(name: &str) -> Option<Command> {
         "menu-pick" => menus::menu_pick,
         "menu-close" => menus::menu_close,
         "menu-native" => menus::menu_native,
+        "popover" => menus::popover,
+        "popover-press" => menus::popover_press,
+        "popover-type" => menus::popover_type,
+        "popover-key" => menus::popover_key,
+        "popover-colour" => menus::popover_colour,
+        "popover-close" => menus::popover_close,
+        "popover-native" => menus::popover_native,
+        "popover-real" => menus::popover_real,
+        "popover-real-close" => menus::popover_real_close,
         "palette" => menus::palette,
         "sheet" => menus::sheet,
         "action" => menus::action,
@@ -438,6 +467,7 @@ fn command(name: &str) -> Option<Command> {
         "welcome-dock" => welcome::dock,
         "welcome-probe" => welcome::probe,
         "title" => title::title,
+        "path-card" => title::path_card,
         "path-menu" => title::path_menu,
         "toggle-sidebar" => sessions::toggle_sidebar,
         "toggle-panel" => sessions::toggle_panel,

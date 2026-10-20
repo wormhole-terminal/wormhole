@@ -83,6 +83,7 @@ pub(super) fn render(
                 spoken_edit: name.into(),
                 spoken_fold: name.into(),
                 on_label: None,
+                label_anchor: None,
                 name_edit: None,
             },
         )

@@ -3,7 +3,7 @@
 //! records the menu it was asked to open (`native::record`, what devctl's `menu` prints): the
 //! tests right-click, read the recorded model and choose an item as a click would.
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, px, size};
-use wormhole_core::sidebar::GroupColor;
+use wormhole_core::sidebar::{GroupColor, GroupPaint};
 
 use super::app::OpenWindow;
 use super::view_tests::{draw, drive, isolate_in, read, start};
@@ -100,67 +100,132 @@ fn settle(cx: &mut TestAppContext, window: &OpenWindow) {
     draw(cx, window);
 }
 
-/// A click on a group's name opens its menu (Rename…, the row of colours, the actions); choosing a
-/// colour changes the group's, Rename… makes the name a field on the head, and Pin group pins it.
+/// Run what a recorded popover command left to run, as its task would after the controls.
+fn run(cx: &mut TestAppContext, window: &OpenWindow, callbacks: Vec<crate::native::menu::Callback>) {
+    cx.update(|cx| {
+        window.handle.update(cx, |_, window, cx| {
+            for run in callbacks {
+                run(window, cx);
+            }
+        })
+    })
+    .expect("the window is open");
+    cx.run_until_parked();
+}
+
+fn paint(cx: &mut TestAppContext, window: &OpenWindow, group: u32) -> Option<GroupPaint> {
+    read(cx, window, |ws| ws.sidebar.view.groups.get(group).and_then(|g| g.paint()))
+}
+
+/// A click on a group's name opens its popover: the name in a field that has the keyboard, the
+/// colours and the actions. A dot or a colour of one's own changes the group's colour live (and a
+/// custom one is saved with the window), Return keeps a typed name, Esc drops it, and an action
+/// does what its menu item does. A right-click on the name opens the native menu instead.
 #[gpui_kit::test]
-fn clicking_a_groups_name_opens_its_menu_with_colours_and_rename(cx: &mut TestAppContext) {
-    if isolate("clicking_a_groups_name_opens_its_menu_with_colours_and_rename") {
+fn clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu(cx: &mut TestAppContext) {
+    if isolate("clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu") {
         return;
     }
     let window = open(cx, 2);
     let group = cx
         .update(|cx| window.workspace.update(cx, |ws, cx| ws.group_terminals(&[1], cx)))
         .expect("the window is open");
-    draw(cx, &window);
-    draw(cx, &window);
+    // The rows slide to their new places; the pointer acts on them once they have.
+    settle(cx, &window);
     record::close();
 
-    record::close();
     let mut pointer = VisualTestContext::from_window(window.handle, cx);
     let at = pointer.debug_bounds("group-label").expect("the group's name is drawn").center();
     pointer.simulate_click(at, Modifiers::none());
     cx.run_until_parked();
-    let menu = record::open().expect("the click opened the menu");
-    assert_eq!(menu.outline().first().map(String::as_str), Some("- Rename…"));
-    assert!(menu.outline()[2].starts_with("~ Grey | "), "{:?}", menu.outline());
-    assert!(
-        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).is_some_and(|g| !g.members.is_empty())),
-        "and the click did not fold or close anything"
-    );
-    assert!(read(cx, &window, |ws| ws.sidebar.group_renaming.is_none()));
-
-    pick(cx, &window, "colour red");
+    assert!(record::open().is_none(), "a click opens no menu");
+    let popover = record::open_popover().expect("the click opened the popover");
+    let outline = popover.outline();
+    assert_eq!(outline[0], "popover transient");
+    assert_eq!(outline[1], "field \"Group 1\" (focused)", "the name has the keyboard at once");
+    assert!(outline[2].starts_with("colours: Grey | Blue [x] | "), "{outline:?}");
+    assert!(outline[2].ends_with(" | custom"), "the colour wheel after the nine: {outline:?}");
     assert_eq!(
-        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).and_then(|g| g.color())),
-        Some(GroupColor::Red),
-        "the dot set the group's colour"
+        &outline[3..],
+        [
+            "---",
+            "- New terminal in group",
+            "- Ungroup",
+            "- Close group",
+            "- Pin group",
+            "- Move group to new window"
+        ]
     );
-    assert!(record::open().is_none(), "and closed the menu");
+    assert!(read(cx, &window, |ws| !ws.sidebar.view.groups.get(group).expect("group").members.is_empty()));
 
-    settle(cx, &window);
-    right_click(cx, &window, "group-label");
-    assert!(
-        record::open().is_some_and(|menu| menu.swatch_row().is_some()),
-        "a right-click opens the same menu"
+    // A dot sets the group's colour while the popover stays.
+    run(cx, &window, record::popover_colour("red").expect("a dot"));
+    assert_eq!(paint(cx, &window, group), Some(GroupPaint::Named(GroupColor::Red)));
+    assert!(record::open_popover().is_some(), "the popover stays open");
+    // A colour from the Colours window is the group's own, and it is saved with the window.
+    run(cx, &window, record::popover_colour("#336699").expect("the last dot"));
+    assert_eq!(paint(cx, &window, group), Some(GroupPaint::Custom([0x33, 0x66, 0x99])));
+    let saved = cx
+        .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.window_record(cx)))
+        .expect("the window is open");
+    let layout: super::Layout =
+        serde_json::from_str(saved.layout.as_deref().expect("a layout")).expect("it reads back");
+    assert_eq!(
+        layout.sidebar.groups.get(group).and_then(|g| g.paint()),
+        Some(GroupPaint::Custom([0x33, 0x66, 0x99])),
+        "the colour of its own is saved with the window"
     );
-    pick(cx, &window, "Pin group");
+    run(cx, &window, record::popover_colour("green").expect("a dot"));
+    assert_eq!(paint(cx, &window, group), Some(GroupPaint::Named(GroupColor::Green)), "a name replaces it");
+
+    // Esc drops what was typed; Return keeps it.
+    record::popover_type("Nope").expect("the field");
+    run(cx, &window, record::popover_key("escape").expect("escape"));
+    assert_eq!(
+        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).map(|g| g.name.clone())).as_deref(),
+        Some("Group 1")
+    );
+    assert!(record::open_popover().is_none(), "and it closed");
+    settle(cx, &window);
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    pointer.simulate_click(at, Modifiers::none());
+    cx.run_until_parked();
+    record::popover_type("Reviews").expect("the field");
+    run(cx, &window, record::popover_key("enter").expect("return"));
+    assert_eq!(
+        read(cx, &window, |ws| ws.sidebar.view.groups.get(group).map(|g| g.name.clone())).as_deref(),
+        Some("Reviews")
+    );
+
+    // An action: it closes the popover and does what its menu item does.
+    settle(cx, &window);
+    let mut pointer = VisualTestContext::from_window(window.handle, cx);
+    pointer.simulate_click(at, Modifiers::none());
+    cx.run_until_parked();
+    let (_, callbacks) = record::popover_press("Pin group").expect("an action");
+    run(cx, &window, callbacks);
     assert!(read(cx, &window, |ws| ws.sidebar.view.groups.get(group).is_some_and(|g| g.pinned)));
+    assert!(record::open_popover().is_none());
 
+    // The right-click is the native menu, with Other colour… and Rename… (in place).
     settle(cx, &window);
     right_click(cx, &window, "group-label");
-    assert!(record::open().expect("the menu").outline().contains(&"- Unpin group".to_string()));
+    let menu = record::open().expect("a right-click opens the menu");
+    assert!(menu.swatch_row().is_some());
+    assert!(menu.outline().contains(&"- Other colour…".to_string()), "{:?}", menu.outline());
+    assert!(menu.outline().contains(&"- Unpin group".to_string()));
     pick(cx, &window, "Rename…");
     assert_eq!(read(cx, &window, |ws| ws.sidebar.group_renaming.as_ref().map(|r| r.group)), Some(group));
     draw(cx, &window);
     // The name is a field now: Return keeps what was typed.
     drive(cx, &window, |ws, window, cx| {
         let input = ws.sidebar.group_renaming.as_ref().map(|r| r.input.clone()).expect("renaming");
-        input.update(cx, |input, cx| input.set_value("Reviews", window, cx));
+        input.update(cx, |input, cx| input.set_value("Ship it", window, cx));
         ws.finish_group_rename(true, window, cx);
     });
     assert_eq!(
         read(cx, &window, |ws| ws.sidebar.view.groups.get(group).map(|g| g.name.clone())).as_deref(),
-        Some("Reviews")
+        Some("Ship it")
     );
     assert!(read(cx, &window, |ws| ws.sidebar.group_renaming.is_none()));
 }

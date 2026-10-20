@@ -80,3 +80,12 @@ pub fn boot_volume_name() -> Option<String> {
     let name = NSFileManager::defaultManager().displayNameAtPath(&NSString::from_str("/")).to_string();
     (!name.is_empty()).then_some(name)
 }
+
+/// `bounds`, a rectangle in the window as GPUI has it, in `view`'s own coordinates.
+pub fn rect(view: &NSView, bounds: gpui_kit::Bounds<Pixels>) -> objc2_foundation::NSRect {
+    let top_left = location(view, bounds.origin);
+    let (w, h) = (f64::from(f32::from(bounds.size.width)), f64::from(f32::from(bounds.size.height)));
+    // In a view whose y runs up, the rectangle's origin is its bottom left.
+    let y = if view.isFlipped() { top_left.y } else { top_left.y - h };
+    objc2_foundation::NSRect::new(NSPoint::new(top_left.x, y), NSSize::new(w, h))
+}

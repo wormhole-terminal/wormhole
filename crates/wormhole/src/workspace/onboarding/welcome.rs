@@ -185,6 +185,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             spoken_edit: SharedString::default(),
             spoken_fold: SharedString::default(),
             on_label: None,
+            label_anchor: None,
             name_edit: None,
         },
     );

@@ -4,7 +4,8 @@
 //! `objc2` and `unsafe`), `fallback/` GPUI's own for platforms with no native one, which is also
 //! what a window without a native view gets.
 //!
-//! Context menus are the first to live here. The dialogs, the status item's menu (`menubar`), the
+//! Context menus and popovers (`popover`: the folder's hover card, a group's name card) live here, and
+//! the system's colour panel (`pick_colour`). The dialogs, the status item's menu (`menubar`), the
 //! window's blur (`vibrancy`), the traffic lights, Touch ID (`auth`) and the rest of what is
 //! AppKit's are meant to move here one by one, each as a neutral file beside `menu.rs` and an
 //! implementation in `macos/`.
@@ -14,6 +15,7 @@ pub mod fallback;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;
+pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;
 
@@ -21,6 +23,7 @@ use gpui_kit::*;
 
 pub use anchor::{Anchor, on_right_click};
 pub use menu::{Icon, Item, Menu, Swatch, run_on};
+pub use popover::{ColourChange, Handle, Popover};
 
 /// What Finder calls the volume the system starts from, as the last line of a path menu.
 pub fn boot_volume_name() -> String {
@@ -50,4 +53,33 @@ pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut Ap
         Err(menu) => menu,
     };
     fallback::menu::show(menu, at, window, cx);
+}
+
+/// Open `popover` under `anchor` (the element's bounds in the window) as the platform's own, and
+/// run what is done in it, a moment later and outside every borrow of the app (see `popover`).
+/// The handle closes it from the app (a hover popover is closed by the app).
+pub fn show_popover(popover: Popover, anchor: Bounds<Pixels>, window: &mut Window, cx: &mut App) -> Handle {
+    #[cfg(any(test, feature = "devctl"))]
+    if let Some(handle) = record::keep_popover(&popover, window) {
+        return handle;
+    }
+    #[cfg(target_os = "macos")]
+    let popover = match macos::popover::show(popover, anchor, window, cx) {
+        Ok(handle) => return handle,
+        Err(popover) => popover,
+    };
+    fallback::popover::show(popover, anchor, window, cx)
+}
+
+/// Open the system's Colours window showing `start`; each colour chosen in it reaches `on_change`,
+/// the latest per tick, outside every borrow of the app. Nowhere to open it, nothing happens.
+pub fn pick_colour(start: Hsla, on_change: ColourChange, window: &mut Window, cx: &mut App) {
+    #[cfg(any(test, feature = "devctl"))]
+    if record::keep_colour(&on_change) {
+        return;
+    }
+    #[cfg(target_os = "macos")]
+    macos::colour::pick(start, on_change, window, cx);
+    #[cfg(not(target_os = "macos"))]
+    let _ = (start, on_change, window, cx);
 }

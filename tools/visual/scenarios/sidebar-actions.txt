@@ -37,7 +37,8 @@ mouse-drag 200 150
 mouse-up 200 150
 @shot dropped
 # A group's name is a field while it is renamed (Rename… in its menu, which is native and not in a
-# shot: a click on the name opens it, `menu` lists it with its row of colours).
+# shot: a right-click on the name opens it, `menu` lists it with its row of colours; a click on the
+# name opens the group's popover, `popover` lists it).
 group-new Review 1
 @wait-idle
 @sleep 500

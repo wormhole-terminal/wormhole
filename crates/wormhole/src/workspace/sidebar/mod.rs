@@ -29,6 +29,7 @@ mod drag;
 mod facts;
 mod group_actions;
 mod group_head;
+mod group_popover;
 mod groups;
 mod hints;
 mod keys;
@@ -214,7 +215,7 @@ impl Workspace {
                 .groups
                 .iter()
                 .filter_map(|group| {
-                    let color = group.color()?;
+                    let color = group.paint()?;
                     Some((group.id, crate::theme_bridge::hsla(color.color(tokens))))
                 })
                 .collect()
