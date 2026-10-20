@@ -1,4 +1,8 @@
-# Setup guidance before any agent reports limits or response tokens.
+# Setup guidance before any agent reports limits or response tokens. The tab is only there while
+# an agent is detected, so the shell is a copy of cat named `claude`.
+@fixture repo-basic
+@shell claude
+@wait-idle
 @theme Tokyo Night
 @size 1440 900
 panel-tab usage

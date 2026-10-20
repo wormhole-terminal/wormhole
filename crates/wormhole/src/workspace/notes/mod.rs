@@ -416,6 +416,10 @@ impl Workspace {
     pub(crate) fn show_tab(&mut self, tab: RightTab, cx: &mut Context<Self>) {
         // The Notes tab is gone while its flag is off.
         let tab = if tab == RightTab::Notes && !notes_on(cx) { RightTab::Changes } else { tab };
+        let tab = if tab == RightTab::Usage && !self.usage_tab_on(cx) { RightTab::Changes } else { tab };
+        if tab == RightTab::Usage && self.right_tab != RightTab::Usage {
+            self.tab_before_usage = Some(self.right_tab);
+        }
         if tab != self.right_tab {
             self.panel_scroll.set_offset(Point::default());
         }

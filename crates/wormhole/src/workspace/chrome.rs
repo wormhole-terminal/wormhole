@@ -360,7 +360,16 @@ impl Workspace {
                     RightTab::Notes,
                 ))
             })
-            .child(tab("tab-usage", IconName::Gauge, "Usage", ActionId::ShowUsage, None, RightTab::Usage))
+            .when(tabs.contains(&RightTab::Usage), |d| {
+                d.child(tab(
+                    "tab-usage",
+                    IconName::Gauge,
+                    "Usage",
+                    ActionId::ShowUsage,
+                    None,
+                    RightTab::Usage,
+                ))
+            })
             // Whenever the terminal has a folder: its colour is set there, and its project made.
             // Last, so the tabs before it never shift when it comes and goes.
             .when(tabs.contains(&RightTab::Project), |d| {

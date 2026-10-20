@@ -625,7 +625,9 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
             .on_action(cx.listener(|this, _: &ShowChanges, _, cx| this.show_tab(RightTab::Changes, cx)))
             .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(RightTab::History, cx)))
-            .on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(RightTab::Usage, cx)))
+            .when(self.usage_tab_on(cx), |root| {
+                root.on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(RightTab::Usage, cx)))
+            })
             // Any terminal whose folder is known has the tab, with a project or not.
             .when(has_folder, |root| {
                 root.on_action(

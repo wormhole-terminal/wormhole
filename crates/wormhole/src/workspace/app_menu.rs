@@ -128,6 +128,9 @@ impl Workspace {
         if self.active_folder(cx).is_none() || !super::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
         }
+        if !self.usage_tab_on(cx) {
+            state.hidden.push(ShowUsage);
+        }
         if !super::notes::notes_on(cx) {
             state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
         }

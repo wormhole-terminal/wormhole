@@ -54,6 +54,18 @@ fn the_shortcut_keys_reach_their_actions(cx: &mut TestAppContext) {
     read(cx, &window, |ws| assert!(ws.right_tab == RightTab::History, "⌃⌘2: History"));
     key(cx, &window, "ctrl-cmd-3");
     read(cx, &window, |ws| assert!(ws.right_tab == RightTab::Notes, "⌃⌘3: Notes"));
+    // Usage is there while an agent is.
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[ws.active]
+            .terminal()
+            .update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude));
+    });
+    // Usage is there while an agent is.
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[ws.active]
+            .terminal()
+            .update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude));
+    });
     key(cx, &window, "ctrl-cmd-4");
     read(cx, &window, |ws| assert!(ws.right_tab == RightTab::Usage, "⌃⌘4: Usage"));
     key(cx, &window, "ctrl-cmd-1");

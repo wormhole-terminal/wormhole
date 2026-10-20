@@ -1,6 +1,8 @@
-//! View tests of the right panel's optional tabs: Notes behind its feature flag.
+//! View tests of the right panel's optional tabs: Notes behind its feature flag, Usage while a
+//! coding agent is detected on screen.
 
 use gpui_kit::TestAppContext;
+use wormhole_core::agents::AgentId;
 use wormhole_core::features::FeatureFlag;
 use wormhole_core::keymap::ActionId;
 
@@ -50,4 +52,53 @@ fn notes_and_their_actions_are_gone_while_the_flag_is_off(cx: &mut TestAppContex
     set_notes_flag(cx, true);
     let (listed, tab, hidden) = state(cx);
     assert!(listed && tab == RightTab::Notes && !hidden.contains(&ActionId::NewNote), "on again: back");
+}
+
+#[gpui_kit::test]
+fn the_usage_tab_follows_the_agent(cx: &mut TestAppContext) {
+    if isolate("the_usage_tab_follows_the_agent") {
+        return;
+    }
+    let window = start(cx, 2);
+    draw(cx, &window);
+    let usage = |cx: &mut TestAppContext| {
+        drive(cx, &window, |ws, _, cx| {
+            (
+                ws.panel_tab_list(cx).contains(&RightTab::Usage),
+                ws.menu_state(cx).hidden.contains(&ActionId::ShowUsage),
+            )
+        })
+    };
+    assert_eq!(usage(cx), (false, true), "no agent: no tab, no key");
+    drive(cx, &window, |ws, _, cx| ws.show_tab(RightTab::Usage, cx));
+    assert!(read(cx, &window, |ws| ws.right_tab != RightTab::Usage), "and it can't be shown");
+
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+    });
+    assert_eq!(usage(cx), (true, false), "an agent runs: the tab and its key are there");
+
+    drive(cx, &window, |ws, _, cx| {
+        ws.show_tab(RightTab::History, cx);
+        ws.show_tab(RightTab::Usage, cx);
+    });
+    assert!(read(cx, &window, |ws| ws.right_tab == RightTab::Usage));
+
+    // Another terminal, without an agent: back to the tab before Usage.
+    drive(cx, &window, |ws, window, cx| {
+        ws.activate(1, window, cx);
+        ws.leave_missing_tab(cx);
+    });
+    assert!(!usage(cx).0);
+    assert!(read(cx, &window, |ws| ws.right_tab == RightTab::History), "back to History");
+
+    // The agent going away does the same, to Changes when nothing was open before.
+    drive(cx, &window, |ws, window, cx| {
+        ws.activate(0, window, cx);
+        ws.show_tab(RightTab::Changes, cx);
+        ws.show_tab(RightTab::Usage, cx);
+        ws.sessions[0].terminal().update(cx, |t, _| t.agent = None);
+        ws.leave_missing_tab(cx);
+    });
+    assert!(read(cx, &window, |ws| ws.right_tab == RightTab::Changes));
 }

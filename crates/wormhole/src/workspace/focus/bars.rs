@@ -84,6 +84,13 @@ impl Workspace {
         false
     }
 
+    /// Whether the Usage tab is offered: a coding agent is detected in a terminal on screen (the
+    /// selected one, or any pane of its split). It reads the same `TerminalView::agent` the title
+    /// row's context status is keyed on (`agent_gauge`).
+    pub(in crate::workspace) fn usage_tab_on(&self, cx: &App) -> bool {
+        self.on_screen_sessions().into_iter().any(|ix| self.sessions[ix].terminal().read(cx).agent.is_some())
+    }
+
     /// Leave a tab that is no longer in the panel's list (Usage once the agent is gone, Notes
     /// with its flag off): back to the tab before Usage, else Changes.
     pub(in crate::workspace) fn leave_missing_tab(&mut self, cx: &mut Context<Self>) {
@@ -108,7 +115,9 @@ impl Workspace {
         if super::notes::notes_on(cx) {
             tabs.push(RightTab::Notes);
         }
-        tabs.push(RightTab::Usage);
+        if self.usage_tab_on(cx) {
+            tabs.push(RightTab::Usage);
+        }
         // The Project tab belongs to the project-folder feature, so it's gone while that flag is
         // off (see `features`). It comes last so that the other tabs keep their place, and their
         // keys, whether it is there or not.
