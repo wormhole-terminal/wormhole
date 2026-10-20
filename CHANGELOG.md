@@ -124,8 +124,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
-- The app icon's swirl now sits in a glass disc on a plain tile: light blue on white in light mode, deep
-  blue on black in dark mode.
+- A new app icon: the `>_` prompt over a glowing disc that runs from blue to violet, on a plain tile,
+  white in light mode and black in dark mode.
 - Settings → Appearance → Use the theme's primary colour: a switch, on by default. Turn it off to pick a
   primary of your own for every theme; turn it back on and the theme's own returns, with your colour
   kept for next time. A colour you had already chosen stays in use.
