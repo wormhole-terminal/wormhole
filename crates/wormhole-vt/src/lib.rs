@@ -46,6 +46,7 @@
 pub mod grid;
 #[cfg(not(feature = "internals"))]
 mod grid;
+pub mod input;
 pub mod parser;
 mod terminal;
 mod types;
