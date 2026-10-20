@@ -71,8 +71,8 @@ let term = Terminal::builder()
 
 The chapters under `docs/` go on from here: `concepts.md` (the model), `embedding.md` (the PTY loop,
 threads, resizing), `rendering.md` (damage, cursor, selection, images), `input.md` (keys, mouse, paste,
-focus), `extensions.md` (your own sequences), `security.md` (the threat model) and `conformance.md`
-(how the engine is tested).
+focus), `extensions.md` (your own sequences), `security.md` (the threat model), `conformance.md`
+(how the engine is tested) and `tools.md` (debugging a stream, benchmarks, profiling, fuzzing).
 
 ## What it does
 
