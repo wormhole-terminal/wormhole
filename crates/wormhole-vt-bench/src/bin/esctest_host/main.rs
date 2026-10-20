@@ -2,7 +2,7 @@
 //!
 //! The suite (`tools/vt-compare/suites/esctest_run.py`) runs on a pseudo-terminal that
 //! `pty_relay.py` keeps; this program is the terminal at the other end. What the suite writes goes
-//! through `wormhole_vt::term::Terminal` as the app feeds it, and the engine's replies go back, so
+//! through `wormhole_vt::terminal::Terminal` as the app feeds it, and the engine's replies go back, so
 //! the results are the in-app run's without opening an app: same engine, same options (the screen
 //! checksum on), the host side of the events (title, clipboard, window operations, colors) played
 //! by `host.rs` on a fake window.

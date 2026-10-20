@@ -226,7 +226,7 @@ fn recordings() {
 #[test]
 fn the_terminal_keeps_its_grid_consistent_through_streams_and_resizes() {
     use wormhole_vt::parser::Parser;
-    use wormhole_vt::term::Terminal;
+    use wormhole_vt::terminal::Terminal;
     use wormhole_vt_bench::rng::Rng;
 
     let mut rng = Rng::new(77);

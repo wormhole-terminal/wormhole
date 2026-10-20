@@ -2,7 +2,7 @@
 //!
 //! The engine owns where a picture goes (the placements, which scroll, reflow and are erased with
 //! the text) and the host owns the pixels: it decodes what an
-//! [`Event::ImageData`](crate::term::Event::ImageData) carries, keeps it under the picture's
+//! [`Event::ImageData`](crate::terminal::Event::ImageData) carries, keeps it under the picture's
 //! [`ImageHandle`], and draws each [`ImagePlacement`] it is given over the cells it names.
 
 use super::index::Line;

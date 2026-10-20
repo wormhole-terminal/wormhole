@@ -26,7 +26,7 @@ use super::images::{DECODES_MAX, ImageStore};
 use super::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
 use super::procinfo;
 use super::program_status::{self, ProgramStatus};
-use wormhole_vt::term::WindowOp;
+use wormhole_vt::terminal::WindowOp;
 
 /// Turns clipboard text into the escape sequence a program expects.
 pub type TextFormatter = Arc<dyn Fn(&str) -> String + Sync + Send + 'static>;

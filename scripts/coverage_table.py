@@ -11,11 +11,11 @@ import sys
 
 
 def module_of(path):
-    """parser, unicode, types, grid, grid/page, grid/images, term, term/graphics, term/charset."""
+    """parser, unicode, types, grid, grid/page, grid/images, terminal, terminal/graphics, terminal/osc."""
     parts = path.split("/crates/wormhole-vt/src/", 1)[-1].split("/")
     if len(parts) == 1:
         return "(lib)"
-    if len(parts) >= 3 and parts[0] in ("term", "grid"):
+    if len(parts) >= 3 and parts[0] in ("terminal", "grid"):
         return f"{parts[0]}/{parts[1]}"
     return parts[0]
 

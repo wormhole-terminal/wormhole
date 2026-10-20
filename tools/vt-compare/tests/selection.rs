@@ -9,7 +9,7 @@ use alacritty_terminal::term::test::TermSize;
 use alacritty_terminal::term::{Config, Term};
 use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 use wormhole_vt::types::{Column as OurColumn, Line as OurLine, Point as OurPoint, SelectionType, Side};
 
 use wormhole_vt_bench::rng::Rng;

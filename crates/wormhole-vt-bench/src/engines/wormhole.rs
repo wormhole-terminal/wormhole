@@ -2,7 +2,7 @@
 
 use wormhole_vt::grid::Style;
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::{ScreenChecksum, Terminal, WindowOps};
+use wormhole_vt::terminal::{ScreenChecksum, Terminal, WindowOps};
 use wormhole_vt::types::{COLOR_COUNT, Color, Column, Flags, Line, NamedColor, Point, Rgb, TermMode};
 
 use super::xterm_palette;

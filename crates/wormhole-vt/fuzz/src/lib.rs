@@ -8,7 +8,7 @@
 
 use wormhole_vt::grid::{Content, TextCopy, TextShape, ViewRow};
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::{Event, ScreenChecksum, Terminal};
+use wormhole_vt::terminal::{Event, ScreenChecksum, Terminal};
 use wormhole_vt::types::{Cell, Column, ImageHandle, Line, Point, RowExtras, Scroll, SelectionType, Side};
 
 /// Reads the script's bytes, 0 once they run out.
@@ -57,7 +57,7 @@ pub struct Run {
     copy: TextCopy,
     rows_out: Vec<ViewRow>,
     pins: Vec<wormhole_vt::grid::PinId>,
-    spans: Vec<wormhole_vt::term::PinnedSpan>,
+    spans: Vec<wormhole_vt::terminal::PinnedSpan>,
     handles: Vec<ImageHandle>,
 }
 
@@ -108,8 +108,8 @@ impl Run {
         for (n, handle) in answers.into_iter().enumerate() {
             // Most pictures decode; some fail the way a bad file does.
             let result = match n % 5 {
-                3 => Err(wormhole_vt::term::ImageError::BadData),
-                4 => Err(wormhole_vt::term::ImageError::TooBig),
+                3 => Err(wormhole_vt::terminal::ImageError::BadData),
+                4 => Err(wormhole_vt::terminal::ImageError::TooBig),
                 _ => Ok(()),
             };
             self.term.image_decoded(handle, result);
@@ -273,7 +273,7 @@ impl Run {
                 let handle = ImageHandle::from_raw(u64::from(bytes.byte()));
                 self.term.image_decoded(handle, Ok(()));
                 if let Some(&known) = self.handles.first() {
-                    self.term.image_decoded(known, Err(wormhole_vt::term::ImageError::BadData));
+                    self.term.image_decoded(known, Err(wormhole_vt::terminal::ImageError::BadData));
                 }
             }
             20 => {

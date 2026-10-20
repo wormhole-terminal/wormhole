@@ -9,10 +9,10 @@
 use std::sync::Arc;
 
 use base64::Engine as _;
-use wormhole_vt::term::{
+use wormhole_vt::terminal::{
     Event, Extent, ProgressState as EngineProgress, PromptKind as EnginePrompt, ShellMark, WindowOp,
 };
-use wormhole_vt::term::{Progress as EngineProgressReport, Terminator};
+use wormhole_vt::terminal::{Progress as EngineProgressReport, Terminator};
 
 use super::images::Uploads;
 use crate::events::{EventProxy, PtyEvent, TextFormatter};

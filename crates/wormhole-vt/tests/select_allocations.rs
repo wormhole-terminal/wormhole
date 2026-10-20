@@ -8,7 +8,7 @@
 
 use wormhole_vt::grid::{TextCopy, TextShape};
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 use wormhole_vt::types::{Column, Line, Point, SelectionType, Side};
 
 #[path = "common/mod.rs"]

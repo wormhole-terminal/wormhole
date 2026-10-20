@@ -8,7 +8,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 
 thread_local! {
     /// This thread's allocations (the test harness's other threads do their own).

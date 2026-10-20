@@ -127,7 +127,7 @@ mod tests {
     /// The OSC numbers the engine acts on: the patterns that open an arm of `run_osc`
     /// (`0 | 2 =>`, `10..=12 =>`, `99 => {`).
     fn engine_osc_numbers() -> BTreeSet<String> {
-        let source = include_str!("../../wormhole-vt/src/term/oscs.rs");
+        let source = include_str!("../../wormhole-vt/src/terminal/osc/dispatch.rs");
         let run = source.split("fn run_osc(").nth(1).expect("run_osc");
         let body = &run[..run.find("\n    }\n").expect("the end of run_osc")];
         let mut numbers = BTreeSet::new();

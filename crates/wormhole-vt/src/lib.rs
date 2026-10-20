@@ -15,6 +15,6 @@
 
 pub mod grid;
 pub mod parser;
-pub mod term;
+pub mod terminal;
 pub mod types;
 pub mod unicode;

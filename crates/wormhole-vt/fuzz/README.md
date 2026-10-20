@@ -47,4 +47,4 @@ generated corpora and, when `tools/vt-corpus` has them, of the recorded sessions
 fuzzer grows from there is not committed (it is rebuilt in minutes); `scripts/fuzz.sh min` shrinks it.
 
 The in-tree tests run the same checks on generated streams on every `cargo test`
-(`src/parser/tests/property.rs`, `src/term/tests/hostile.rs`, the grid's random tests).
+(`src/parser/tests/property.rs`, `src/terminal/tests/hostile.rs`, the grid's random tests).

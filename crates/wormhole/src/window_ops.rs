@@ -13,7 +13,7 @@
 //! layout have followed a resize: the engine answers the size reports for the size it was asked
 //! for, and the pane's size here is the one asked for until the layout shows it. Positions are in points from the top left corner of the screen the window is on.
 //!
-//! The engine has already taken the sizes in cells (see `wormhole_vt::term::WindowOps`); the pane
+//! The engine has already taken the sizes in cells (see `wormhole_vt::terminal::WindowOps`); the pane
 //! is resized by the window's layout, and the caller asks the terminal to bring the engine to the
 //! pane's size (`Pty::sync_size`) once that is done.
 

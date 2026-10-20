@@ -35,8 +35,8 @@ pub use scenario::{from_case, from_corpus};
 use std::fmt::Write as _;
 
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::repaint::{Gaps, NotReady};
-use wormhole_vt::term::{ScreenChecksum, StateDump, Terminal, WindowOps};
+use wormhole_vt::terminal::repaint::{Gaps, NotReady};
+use wormhole_vt::terminal::{ScreenChecksum, StateDump, Terminal, WindowOps};
 
 use crate::engines::host_terminal;
 use crate::rng::Rng;
@@ -399,7 +399,7 @@ fn replica(
     scenario: &Scenario,
     a: &Rig,
     bytes: &mut Vec<u8>,
-) -> Result<(Rig, wormhole_vt::term::repaint::Repainted), NotReady> {
+) -> Result<(Rig, wormhole_vt::terminal::repaint::Repainted), NotReady> {
     bytes.clear();
     let done = a.term.repaint(&a.parser, bytes)?;
     let (cols, rows) = a.size();

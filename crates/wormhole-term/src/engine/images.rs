@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use wormhole_vt::term::{Compression, ImageError, ImageFormat, ImageUpload};
+use wormhole_vt::terminal::{Compression, ImageError, ImageFormat, ImageUpload};
 use wormhole_vt::types::ImageHandle;
 
 use crate::events::{EventProxy, Shared};

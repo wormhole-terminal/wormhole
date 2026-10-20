@@ -6,7 +6,7 @@
 //! computed from it, and the window operations move and size it the way the app's would.
 
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::{
+use wormhole_vt::terminal::{
     Event, Extent, Fullscreen, Maximize, ScreenChecksum, Terminal, WindowGeometry, WindowOp, WindowOps,
 };
 use wormhole_vt::types::{COLOR_COUNT, NamedColor, Rgb};

@@ -13,7 +13,7 @@
 use std::time::{Duration, Instant};
 
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 use wormhole_vt_bench::corpus;
 
 struct Row {

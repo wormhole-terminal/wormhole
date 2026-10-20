@@ -67,7 +67,7 @@ pub use wormhole_vt::types;
 
 /// What a program may ask of the window and what the engine needs to know of it to answer the
 /// reports (XTWINOPS); see `allow_window_ops`.
-pub use wormhole_vt::term::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
+pub use wormhole_vt::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -310,7 +310,7 @@ impl Pty {
         at: input::mouse::LocatorPointer,
     ) {
         use input::mouse::MouseButton;
-        use wormhole_vt::term::LocatorButton;
+        use wormhole_vt::terminal::LocatorButton;
         let button = match button {
             Some((MouseButton::Left, pressed)) => Some((LocatorButton::Left, pressed)),
             Some((MouseButton::Middle, pressed)) => Some((LocatorButton::Middle, pressed)),
@@ -318,7 +318,7 @@ impl Pty {
             Some(_) => return,
             None => None,
         };
-        let at = wormhole_vt::term::Pointer { col: at.col, row: at.row, x: at.x, y: at.y };
+        let at = wormhole_vt::terminal::Pointer { col: at.col, row: at.row, x: at.x, y: at.y };
         let replies = self.term.lock().locator_event(button, at);
         if !replies.is_empty() && self.is_alive() {
             self.shared.reply(replies);

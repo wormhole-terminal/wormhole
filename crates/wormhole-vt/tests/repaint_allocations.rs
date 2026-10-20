@@ -9,7 +9,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 
 thread_local! {
     static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };

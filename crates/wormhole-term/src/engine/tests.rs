@@ -269,7 +269,7 @@ fn a_decoder_that_panics_refuses_the_picture_and_releases_the_replies_behind_it(
     use crate::screen::Screen;
     use std::sync::{Arc, Mutex};
     use wormhole_vt::parser::Parser;
-    use wormhole_vt::term::Event;
+    use wormhole_vt::terminal::Event;
 
     let (proxy, _events) = EventProxy::new();
     let sent = Arc::new(Mutex::new(Vec::new()));

@@ -17,7 +17,7 @@ mod store;
 
 pub use decode::{DecodeError, Decoded, Format, Limits, decode, dimensions};
 pub use store::{GLOBAL_BUDGET, Image, ImageStore, STORE_BUDGET, global_bytes};
-pub use wormhole_vt::term::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
+pub use wormhole_vt::terminal::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
 
 /// Where a placeholder cell's picture is in the store, and how many tiles it spans (kitty's
 /// virtual placements; see `Pty::virtual_placement`).

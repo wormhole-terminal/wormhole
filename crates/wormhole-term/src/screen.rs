@@ -14,7 +14,7 @@ use std::time::Instant;
 
 use wormhole_vt::grid::{Content, RowMark as GridMark, TextShape};
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::{ScreenChecksum, Terminal, VirtualPlacement, WindowGeometry, WindowOps};
+use wormhole_vt::terminal::{ScreenChecksum, Terminal, VirtualPlacement, WindowGeometry, WindowOps};
 use wormhole_vt::types::Rgb;
 use wormhole_vt::types::{
     COLOR_COUNT, Cell, Colors, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll, SelectionRange,
@@ -198,8 +198,8 @@ impl Screen {
     /// the engine makes of it, for the program.
     pub(crate) fn locator_event(
         &mut self,
-        button: Option<(wormhole_vt::term::LocatorButton, bool)>,
-        at: wormhole_vt::term::Pointer,
+        button: Option<(wormhole_vt::terminal::LocatorButton, bool)>,
+        at: wormhole_vt::terminal::Pointer,
     ) -> Vec<u8> {
         match button {
             Some((button, pressed)) => self.term.locator_button(button, pressed, at),

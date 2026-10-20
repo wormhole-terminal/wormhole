@@ -5,7 +5,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::terminal::Terminal;
 use wormhole_vt::types::Line;
 
 fn state(term: &mut Terminal) -> String {
