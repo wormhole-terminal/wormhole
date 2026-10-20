@@ -29,11 +29,12 @@
 //! | | `tabs` | the tab stops themselves |
 //! | | `altscreen` | 47, 1047, 1048, 1049 |
 //! | | `resize`, `reset` | the window changing size, DECCOLM; RIS, DECSTR, DECALN |
-//! | `modes/` | (`mod`) | the mode set and the numbers that name the modes |
+//! | `modes/` | (`mod`) | the numbers that name the modes (the set itself, `Modes`, is a value type in `types/`) and the sets a soft reset and the keyboard flags are |
 //! | | `apply` | SM/RM, DECSET/DECRST, XTSAVE/XTRESTORE and what setting each does; DECRQM |
 //! | | `conformance` | DECSCL, S7C1T and S8C1T: the level and one-byte C1 controls |
 //! | | `keyboard`, `kept` | the kitty keyboard stacks; numbers kept for hardware we do not have |
 //! | `reports/` | (`mod`) | DSR, DA1/2/3, XTVERSION |
+//! | | `scheme` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031 |
 //! | | `state`, `presentation` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | | `checksum` | DECRQCRA, and the policy that turns it on (off by default) |
 //! | | `rqss`, `tcap` | DECRQSS; XTGETTCAP |
@@ -42,13 +43,15 @@
 //! | `osc/` | (`mod`), `dispatch` | operating system commands: collecting the string; the dispatch and the text helpers |
 //! | | `cwd`, `link`, `clipboard`, `notify`, `marks` | OSC 7 (the folder), 8 (hyperlinks), 52 (clipboard), 9, 9;4, 99 and 777 (notifications, progress), 133 (shell marks) |
 //! | | `colors`, `spec` | OSC 4, 5, 10 to 19 and their resets; the parser of color specs |
-//! | | `base64` | base64 for the clipboard and the pictures |
+//! | | `pointer`, `uservar` | OSC 22 (pointer shape) and iTerm2's `SetUserVar` (OSC 1337), as events |
+//! | | `base64` | base64 for the clipboard, the pictures and user variables |
 //! | `graphics/` | | kitty's graphics protocol, Sixel and iTerm2's inline images, placed in the grid |
 //! | `read/` | `snapshot` | what the host draws from |
 //! | | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //! | `repaint/` | | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered |
 //! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
 //! | | `archive` | handing the host the history lines that leave the engine (opt-in; the copying is the grid's) |
+//! | | `watch` | `ModesChanged` and `ColorsChanged`: what changed since the host last took the events |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
 //!
 //! # Choices
