@@ -23,7 +23,8 @@
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
 # The engine's outside suites (esctest2, ucs-detect, vttest; scripts/suites-gate.sh) run last, against a committed
 # expectation, when crates/wormhole-vt, the bench crate or the terminal layer (crates/wormhole-term)
-# changed, and with --all.
+# changed, and with --all. So does the engine's public API listing (scripts/vt-api.sh: crates/wormhole-vt/api.txt
+# against the code), which is skipped with a warning where nightly Rust or cargo-public-api is missing.
 # Output is quiet (test names only when they fail), so an agent reads results, not progress.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -88,6 +89,11 @@ suites=0
 grep -Eq '^(crates/wormhole-vt/|crates/wormhole-vt-bench/|crates/wormhole-term/|scripts/(suites|vttest)-gate\.sh$|tools/vt-compare/(gate\.py|expected/|suites\.pin|suites/|ucs-headless\.py|fetch-suites\.sh))' <<<"$changed" && suites=1
 [ "$force_all" = 1 ] && suites=1
 
+# The engine's public API listing is checked when its sources or the listing change.
+api=0
+grep -Eq '^(crates/wormhole-vt/(src/|Cargo\.toml|api\.txt)|scripts/vt-api\.sh$)' <<<"$changed" && api=1
+[ "$force_all" = 1 ] && api=1
+
 rust_changed=0
 grep -q '\.rs$' <<<"$changed" && rust_changed=1
 
@@ -118,6 +124,7 @@ case "$scope" in
 esac
 [ "$deps" = 1 ] && steps+=("cargo deny check")
 [ "$suites" = 1 ] && steps+=("scripts/suites-gate.sh")
+[ "$api" = 1 ] && steps+=("scripts/vt-api.sh")
 
 # The history steps go first. They read the git history, so they run for every scope, `none` included.
 history=("python3 scripts/commits.py check-range $base..HEAD"
