@@ -12,7 +12,7 @@ pub(crate) use licenses::open_licenses;
 /// The system About panel's proportions (Terminal's is 284 wide; the copyright line here is longer), and
 /// its icon.
 const SIZE: (f32, f32) = (340.0, 196.0);
-const ICON: f32 = 64.0;
+pub(super) const ICON: f32 = 64.0;
 
 /// `packaging/app.env` is where the app's identity lives; the bundle's Info.plist is filled from
 /// it too, so the copyright line here can't drift from the one Finder shows.
@@ -26,13 +26,18 @@ fn env_value<'a>(env: &'a str, key: &str) -> Option<&'a str> {
         .next()
 }
 
-fn version_line() -> String {
+pub(super) fn version_line() -> String {
     let version = env!("CARGO_PKG_VERSION");
     if cfg!(debug_assertions) {
         format!("Version {version} (debug build)")
     } else {
         format!("Version {version}")
     }
+}
+
+/// The copyright line of the About window, as `packaging/app.env` has it.
+pub(super) fn copyright() -> String {
+    env_value(APP_ENV, "COPYRIGHT").unwrap_or_default().to_string()
 }
 
 /// About's and Licenses' colours: opaque windows, with the theme's own text colours. It shadows
@@ -72,7 +77,7 @@ impl Render for AboutWindow {
         let ui = ui(cx);
         // Opaque: a small window of text, not a place for the blur.
         let surfaces = aux_window::surfaces(cx, false);
-        let copyright = env_value(APP_ENV, "COPYRIGHT").unwrap_or_default().to_string();
+        let copyright = copyright();
 
         // The system's About panel, as Terminal and Finder show it: icon, name, version, copyright,
         // nothing to press. Updates are in the app menu and the licences in Help.

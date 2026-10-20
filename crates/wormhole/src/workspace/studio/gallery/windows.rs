@@ -3,9 +3,10 @@
 //! window's parts on the live tokens; the windows themselves need their own state.
 
 use super::*;
+use crate::workspace::about;
 
-/// The About window's icon, drawn small.
-const ABOUT_ICON: f32 = 48.0;
+/// The About window's width: its content is drawn on a card that wide.
+const ABOUT_W: f32 = 340.0;
 /// The Licenses window's package list, drawn small.
 const LICENSE_LIST_W: f32 = 120.0;
 /// A scrollbar's thumb as the lists draw it.
@@ -116,24 +117,20 @@ pub(super) fn render(
                 ),
         );
 
-    // About: the icon, the name and version, and the way to the licenses.
+    // About, as the system's panel shows it: the icon, the name, the version and the copyright,
+    // nothing to press (updates are in the app menu, the licences in Help).
     let about = surface(div())
+        .w_full()
+        .max_w(px(ABOUT_W))
         .flex()
         .flex_col()
         .items_center()
-        .gap_1()
-        .p_4()
-        .child(img(crate::icons::app_icon_for(env.tokens.appearance)).size(px(ABOUT_ICON)).flex_none())
-        .child(div().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
-        .child(div().text_caption().text_color(ui.muted).child("Version 0.1.0"))
-        .child(
-            div()
-                .pt_2()
-                .flex()
-                .gap_2()
-                .child(Button::new("g-about-updates").small().label("Check for Updates…"))
-                .child(Button::new("g-about-licenses").small().label("Licenses…")),
-        );
+        .px_4()
+        .py_4()
+        .child(img(crate::icons::app_icon_for(env.tokens.appearance)).size(px(about::ICON)).flex_none())
+        .child(div().mt_2().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
+        .child(div().mt_1().text_caption().text_color(ui.muted).child(about::version_line()))
+        .child(div().mt_1().text_caption().text_color(ui.muted).text_center().child(about::copyright()));
 
     // Licenses: the packages (one selected, the list scrolled) and the selected one's text.
     let package = |id: &'static str, name: &'static str, selected: bool| {
