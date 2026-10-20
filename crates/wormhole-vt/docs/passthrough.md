@@ -8,20 +8,24 @@ the host's code, and it does not interpret the string.
 
 ## Asking
 
-A [`Passthrough`](crate::passthrough::Passthrough) lists what the host wants and how much of it:
+A `Passthrough` lists what the host wants and how much of it:
 
-```rust,ignore
-use wormhole_vt::passthrough::Passthrough;
+```rust
 use wormhole_vt::Terminal;
+use wormhole_vt::passthrough::{Passthrough, PassthroughError};
 
-let term = Terminal::builder()
-    .passthrough(
-        Passthrough::new()
-            .osc(51234, 1024)        // OSC 51234 ; payload ST, up to 1 KiB of payload
-            .dcs(b"!", b'z', 64 * 1024) // DCS params ! z data ST, up to 64 KiB of data
-            .apc(b'Q', 4096),        // APC Q... ST, up to 4 KiB, the Q included
-    )?
-    .build();
+fn main() -> Result<(), PassthroughError> {
+    let term = Terminal::builder()
+        .passthrough(
+            Passthrough::new()
+                .osc(51234, 1024) // OSC 51234 ; payload ST, up to 1 KiB of payload
+                .dcs(b"!", b'z', 64 * 1024) // DCS params ! z data ST, up to 64 KiB of data
+                .apc(b'Q', 4096), // APC Q... ST, up to 4 KiB, the Q included
+        )?
+        .build();
+    assert_eq!(term.cols(), 80);
+    Ok(())
+}
 ```
 
 `Terminal::set_passthrough` changes the choice while the terminal runs. A refused value
@@ -60,14 +64,36 @@ carries it. A host that answers at once writes `replies()[..replies_before]`, th
 rest. A host that answers later holds the place (as a host does while it asks the user about a clipboard read). The reply ends the
 way the request did (`Terminator::as_str`).
 
-```rust,ignore
-for event in term.events() {
-    if let Event::Osc { number: 51234, payload, terminator, replies_before } = event {
-        if payload == b"ping" {
-            let answer = format!("\x1b]51234;pong{}", terminator.as_str());
-            input.splice(replies_before..replies_before, answer.into_bytes());
+```rust
+use wormhole_vt::passthrough::Passthrough;
+use wormhole_vt::{Event, Terminal};
+
+/// What the program is owed: the engine's replies, with our answers at the places they belong.
+fn input_for_the_program(term: &mut Terminal) -> Vec<u8> {
+    let mut input = term.take_replies();
+    let mut answers = Vec::new();
+    for event in term.events() {
+        if let Event::Osc { number: 51234, payload, terminator, replies_before } = event {
+            if payload == b"ping" {
+                let answer = format!("\x1b]51234;pong{}", terminator.as_str());
+                answers.push((replies_before, answer));
+            }
         }
     }
+    // From the back, so that the places still to come do not move.
+    for (at, answer) in answers.into_iter().rev() {
+        input.splice(at..at, answer.into_bytes());
+    }
+    input
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut term = Terminal::builder().passthrough(Passthrough::new().osc(51234, 1024))?.build();
+
+    // The program asks where the cursor is, pings us, and asks again.
+    term.feed(b"\x1b[6n\x1b]51234;ping\x07\x1b[6n");
+    assert_eq!(input_for_the_program(&mut term), b"\x1b[1;1R\x1b]51234;pong\x07\x1b[1;1R");
+    Ok(())
 }
 ```
 
@@ -105,8 +131,8 @@ clipboard or the title, the engine already queues an event for it (`Event::Clipb
 
 So a `PassthroughError` is returned for:
 
-- the OSC numbers the engine acts on: 0, 1, 2, 4, 5, 7, 8, 9, 10 to 19, 52, 99, 104, 105, 110 to 119,
-  133, 777, 1337 and 7501 (the [program status
+- the OSC numbers the engine acts on: 0, 1, 2, 4, 5, 7 to 19, 22, 52, 99, 104, 105, 110 to 119, 133,
+  777, 1337 and 7501 (the [program status
   protocol](https://mitchellh.com/writing/program-status-osc7501), which arrives as
   `Event::ProgramStatus`);
 - the DCS strings it streams into decoders and tables it cannot replay to a handler: Sixel (`q`),

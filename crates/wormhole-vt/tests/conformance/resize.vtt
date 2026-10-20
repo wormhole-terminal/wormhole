@@ -1,8 +1,7 @@
 # Resizing: the screen reflows, the cursor stays on its text.
 #
-# xterm itself does not reflow (it cuts and pads lines); Wormhole's engine does, as the design in
-# docs/engine.md says, so these cases are conventions of the engine rather than of a published
-# text. They pin down what must stay true: the text, its order and where the cursor is.
+# xterm itself does not reflow (it cuts and pads lines); this engine does, so these cases are
+# conventions of the engine rather than of a published text. They pin down what must stay true: the text, its order and where the cursor is.
 
 test widening joins a wrapped row
 convention rows that were wrapped by autowrap are one line again when the screen is wide enough

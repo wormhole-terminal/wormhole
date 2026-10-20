@@ -1,11 +1,3 @@
-<!--
-API names assumed here: Policy { window_ops, title_report, screen_checksum } (today WindowOps::{Deny, Allow} and
-ScreenChecksum::{Deny, Allow}), Terminal::{clipboard_reply, image_decoded}, Event variants, input::encode_paste.
-Title reports are `Policy::title_report` (D-24), cleaned when the title is set (D-25).
-ALSO: OSC 1337 that is not an inline image reaches the host raw as Event::Iterm (cap: 64 MiB). Listed under
-"What the host must do"; decide whether the engine should cap it lower or drop it (D-9 "no file/exec sequences").
--->
-
 # Security
 
 A terminal reads whatever a program prints. That includes `cat` of a file from the internet, the banner of
@@ -48,6 +40,23 @@ corruption. A panic on any input is a bug: report it (`SECURITY.md`).
 A hostile stream cannot make a terminal grow without limit. Strings are kept up to a limit that depends on
 what they are. A string over its limit is **dropped whole**: half a clipboard or half an image is worse than
 none.
+
+```rust
+use wormhole_vt::Terminal;
+
+let mut term = Terminal::new(80, 24);
+
+// A title of 10,000 bytes is over the 8 KiB limit of an OSC string: it is dropped, not cut.
+let mut long = b"\x1b]2;".to_vec();
+long.extend(std::iter::repeat_n(b'a', 10_000));
+long.push(0x07);
+term.feed(&long);
+assert_eq!(term.title(), None);
+
+// The terminal reads on as usual.
+term.feed(b"\x1b]2;ok\x07");
+assert_eq!(term.title(), Some("ok"));
+```
 
 The numbers below are the built-in **ceilings**, which are what a terminal uses unless the host says
 otherwise. A host that has no use for them can lower the ones with a name in the last column, with
@@ -136,6 +145,23 @@ reported title safe, since the text can still be a command line. Setting the tit
 restricted: it is an event and a string you can read, and it is cleaned when it is set: C0 and C1
 controls and DEL are dropped, as they are from the icon name and the folder of OSC 7.
 
+```rust
+use wormhole_vt::{Policy, Terminal};
+
+let mut term = Terminal::new(80, 24);
+term.feed(b"\x1b]2;a\x01b\x7fc\x07"); // control characters (here ^A and DEL) are dropped when it is set
+assert_eq!(term.title(), Some("abc"));
+
+term.feed(b"\x1b[21t"); // the program asks for the title back
+assert!(term.take_replies().is_empty(), "not answered: Policy::title_report is off");
+
+let mut policy = Policy::default();
+policy.title_report = true;
+term.set_policy(policy);
+term.feed(b"\x1b[21t");
+assert!(!term.take_replies().is_empty());
+```
+
 ### Window operations and reading the screen back
 
 | Request | Default | With `Policy` |
@@ -150,12 +176,46 @@ DECRQCRA is off because the checksum of one cell tells a program what is in it, 
 on the far end of an ssh connection, could read the screen back cell by cell. Turn it on only for test
 harnesses.
 
+```rust
+use wormhole_vt::{Event, Policy, Terminal};
+
+let mut term = Terminal::new(80, 24);
+term.feed(b"\x1b[8;40;100t"); // resize the window to 40 x 100 cells
+term.feed(b"\x1b[1;1;1;1;1*y"); // DECRQCRA: the checksum of one cell
+assert_eq!((term.cols(), term.rows()), (80, 24), "ignored");
+assert!(term.take_replies().is_empty());
+assert!(term.events().all(|event| !matches!(event, Event::WindowOp(_))));
+
+let mut policy = Policy::default();
+policy.window_ops = true;
+policy.screen_checksum = true;
+term.set_policy(policy);
+term.feed(b"\x1b[8;40;100t\x1b[1;1;1;1;1*y");
+assert_eq!((term.cols(), term.rows()), (100, 40), "the engine takes the size at once");
+assert!(term.events().any(|event| matches!(event, Event::WindowOp(_))));
+assert!(!term.take_replies().is_empty());
+```
+
 ### Clipboard and notifications are requests
 
 The engine has no clipboard and no notification centre. OSC 52 becomes `ClipboardStore` or
 `ClipboardLoad`; OSC 9, 99 and 777 become notification events. The text is the program's, as sent. The
 engine does not decide anything about them, and a clipboard read is never answered unless the host calls
 `clipboard_reply`.
+
+```rust
+use wormhole_vt::{Event, Terminal};
+
+let mut term = Terminal::new(80, 24);
+term.feed(b"\x1b]52;c;?\x07"); // a program asks for the clipboard
+assert!(term.take_replies().is_empty(), "the engine never answers by itself");
+let events: Vec<Event> = term.events().collect();
+assert!(matches!(&events[..], [Event::ClipboardLoad { .. }]));
+
+term.feed(b"\x1b]52;c;aGVsbG8=\x07"); // and one writes "hello" to it
+let events: Vec<Event> = term.events().collect();
+assert!(matches!(&events[..], [Event::ClipboardStore { text, .. }] if text == "hello"));
+```
 
 ### Sequences that are not implemented, on purpose
 

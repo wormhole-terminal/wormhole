@@ -1,9 +1,3 @@
-<!--
-Assumed API names: Terminal::{new, builder, feed}, Policy, input, passthrough, Damage, Pin/Span (see README.md and
-docs/*.md headers). The "Changed" list repeats decisions D-4 to D-16 of the library spec; trim it to what
-phases 1-3 actually shipped before release.
--->
-
 # Changelog
 
 All notable changes to `wormhole-vt` are listed here. The format follows
@@ -37,15 +31,20 @@ First public release (0.1.0).
   stacks.
 - `Handler::vt52_mode`, `Modes::{VT52, INBAND_RESIZE, MODIFY_OTHER_KEYS, MODIFY_OTHER_KEYS_ALL}`,
   `ModifyOtherKeys`, and the fields `InputModes::{vt52, modify_other_keys}`.
-
+- Double-width and double-height lines: DECDWL (`ESC # 6`), DECDHL (`ESC # 3` and `ESC # 4`) and DECSWL
+  (`ESC # 5`). The size is per row and moves with it (scrolling, insert and delete line, the history),
+  the cursor and the right margin stop at half the columns, and such a row is never reflowed. The host
+  reads it as `LineSize`: `Terminal::line_size`, `ViewRow::size`, `HistoryLine::size`; the repaint writes
+  it.
 - A front door at the crate root: `Terminal::new(cols, rows)` and `Terminal::builder()` (size,
   scrollback, policy, cell size, palette, word separators, passthrough). `Terminal::feed(bytes)` takes
   program output; the terminal owns its parser.
 - `Policy`, one place for every risky switch: window operations, title reports and DECRQCRA, all off by
   default. Title reports (XTWINOPS 20 and 21) are a switch of their own, `Policy::title_report`.
-- The `input` module: key encoding (legacy xterm and the kitty keyboard protocol), mouse reports (X10,
-  UTF-8 and SGR), bracketed paste with the end marker removed, and focus reports, as pure functions of the
-  event and the terminal's modes.
+- The `input` module: key encoding (legacy xterm, modifyOtherKeys, the VT52's keys and the kitty keyboard
+  protocol), mouse reports (X10, UTF-8, URXVT, SGR and SGR with pixels), bracketed paste with ESC and the
+  C1 controls removed, and focus reports, as pure functions of the event and the modes the program set
+  (`InputModes`, made from `Modes`).
 - The `passthrough` module: ask for OSC numbers, DCS and APC introducers the engine does not know and get
   them whole as `Event::Osc`, `Event::Dcs` and `Event::Apc`, with a payload limit and the `replies_before`
   mark a host answers at, so replies keep their order.
@@ -74,8 +73,17 @@ First public release (0.1.0).
 - `Event::PointerShape` for OSC 22, as a CSS cursor keyword (empty: the host's own pointer), and
   `Event::UserVar { name, value }` for iTerm2's `SetUserVar`, base64 decoded and capped (256-byte names,
   64 KiB values, 1 MiB queued). The rest of OSC 1337 stays `Event::Iterm`.
-- A guide in rustdoc (concepts, embedding, rendering, input, extensions, security, conformance), a README,
-  and `SECURITY.md`.
+- Documentation: the README is the crate's front page, the `guide` module holds the chapters (concepts,
+  embedding, rendering, input, passthrough, security, conformance, tools) with code that `cargo test`
+  runs, `#![deny(missing_docs)]` keeps every public item described, and `SECURITY.md` says how to report a
+  vulnerability.
+- Examples: `quickstart`, `ansi_to_html`, `repaint`, `custom_osc`, `vtdump`, `vtreplay` and the
+  benchmarks `profile_feed`, `unicode_bench` and `grid_bench`.
+- `api.txt`: the public API as `cargo public-api` lists it, with `scripts/vt-api.sh` to check or update
+  it, so an API change is always a visible diff.
+- Compile-time checks that `Terminal`, `Builder` and the value types are `Send` and `Sync`, and that the
+  error types implement `std::error::Error`.
+- The minimum supported Rust version is 1.88.
 
 ### Changed
 
@@ -89,14 +97,19 @@ First public release (0.1.0).
   shell runs in has it, so the backarrow key sends DEL until a program sets it; `InputModes::backarrow_bs`
   says which.
 - `grid` is private. What a host needs from it has a public home.
-- `Event` and the public enums and option structs are `#[non_exhaustive]`; `Terminal` is `Send`, checked
-  at compile time.
+- `Event` and the public enums and option structs are `#[non_exhaustive]`; `Terminal` is `Send` and `Sync`,
+  checked at compile time.
 - The reading API has plain names: `cols`, `rows`, `history_len`, `scroll_offset`, `scroll` (were
   `columns`, `screen_lines`, `history_size`, `display_offset`, `scroll_display`), `cursor_point` (was
   `grid_cursor`), `block_text` and `BlockPart` (were `content_text` and `Content`); `take_damage` fills a
   `Damage` instead of a `[bool]`.
 - The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole".
 - OSC 1337 that is not an inline image reaches the host capped at 64 KiB (it was 64 MiB).
+- Media copy (`CSI Ps i`, `CSI ? Ps i`) is recognised and ignored, the printer controller mode
+  (`CSI 5 i` until `CSI 4 i`) included: what follows is drawn. There is no printer, and swallowing the
+  data would let a stray `CSI 5 i` silence the terminal for good.
+- The crate has its own version, `0.1.0`, `rust-version` and package metadata; it is no longer versioned
+  with the Wormhole app.
 - `Hyperlink::id` is a `LinkId`, not an `Arc<str>`: it derefs to `str`, and ids of up to 22 bytes (every
   generated one) are stored in the value, so a link costs no allocation for its id. The text of
   addresses is shared through a bounded table, so a link that repeats costs none for its address either.

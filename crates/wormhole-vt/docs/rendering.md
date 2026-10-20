@@ -1,15 +1,3 @@
-<!--
-API names assumed here: Terminal::take_damage(&mut Damage) with Damage::{is_full, rows, contains, is_empty,
-cursor_changed, colors_changed},
-Terminal::copy_row(Line, &mut Vec<Cell>, Option<&mut RowExtras>) -> Option<RowMark> (exists today),
-Terminal::copy_viewport(&mut Vec<ViewRow>, force) (exists today; may be folded into the Damage API),
-Terminal::cursor() -> Cursor/TerminalCursor, Terminal::{start_selection, update_selection, selection_range,
-selection_text, drop_empty_selection, take_selection, link_span, has_placements, placements,
-virtual_placement, set_default_colors, colors, scroll, scroll_offset, cell, cols, rows, size, history_len}, RowExtras,
-Cell/Color/NamedColor/Rgb/Flags, ImagePlacement, ImageHandle, ImageUpload, placeholder_at,
-strip_placeholders, PLACEHOLDER.
--->
-
 # Rendering
 
 The engine draws nothing. It keeps the screen in a form that is cheap to copy from and tells you which
@@ -36,14 +24,35 @@ view changed since the last call and clears the marks. It also tells you when *e
 view moved (you scrolled into the history), the size changed, or the screen was cleared or swapped. In
 that case `rows()` lists every row, so the loop below redraws it all (`is_full()` says so).
 
-```rust,ignore
-let mut damage = Damage::new(); // keep it between frames
-term.take_damage(&mut damage);
+```rust
+use wormhole_vt::{Cell, Damage, Line, RowExtras, Terminal};
 
-for y in damage.rows() {
-    term.copy_row(Line(y as i32 - term.scroll_offset() as i32), &mut rows[y].cells, Some(&mut rows[y].extras));
-    rows[y].dirty = true;
+/// Your copy of one visible row, and what you built from it.
+#[derive(Default)]
+struct Row {
+    cells: Vec<Cell>,
+    extras: RowExtras,
+    dirty: bool,
 }
+
+fn frame(term: &mut Terminal, damage: &mut Damage, rows: &mut Vec<Row>) {
+    rows.resize_with(term.rows(), Row::default);
+    term.take_damage(damage);
+
+    for y in damage.rows() {
+        let line = Line(y as i32 - term.scroll_offset() as i32);
+        let row = &mut rows[y];
+        term.copy_row(line, &mut row.cells, Some(&mut row.extras));
+        row.dirty = true;
+    }
+}
+
+let mut term = Terminal::new(80, 24);
+let mut damage = Damage::new(); // keep it between frames
+let mut rows = Vec::new(); // and these
+term.feed(b"hello");
+frame(&mut term, &mut damage, &mut rows);
+assert_eq!(rows[0].cells[0].c, 'h');
 ```
 
 Rules that keep this correct:
@@ -113,12 +122,21 @@ that case.
 The engine keeps the selection, because it must follow the text. Selection endpoints are pins, so a
 selection stays on the text it was made on while output scrolls and while the window is resized.
 
-```rust,ignore
-term.start_selection(SelectionType::Simple, point, Side::Left);   // mouse down
-term.update_selection(point, Side::Right);                        // drag
-if let Some(range) = term.selection_range() { /* highlight these cells */ }
-let text = term.selection_text();                                 // copy
-term.drop_empty_selection();                                      // mouse up without a drag
+```rust
+use wormhole_vt::{Column, Line, Point, SelectionType, Side, Terminal};
+
+let mut term = Terminal::new(40, 5);
+term.feed(b"hello wide world");
+let at = |col| Point::new(Line(0), Column(col));
+
+term.start_selection(SelectionType::Simple, at(0), Side::Left); // mouse down
+term.update_selection(at(4), Side::Right); // drag
+if let Some(range) = term.selection_range() {
+    // highlight the cells from range.start to range.end
+    assert_eq!((range.start, range.end), (at(0), at(4)));
+}
+assert_eq!(term.selection_text().as_deref(), Some("hello")); // copy
+term.drop_empty_selection(); // mouse up without a drag
 ```
 
 - `side` is the half of the cell the pointer is on. A drag from the middle of one cell to the middle of
@@ -142,11 +160,22 @@ the lock.
 
 OSC 8 links are on the cells a program printed while the link was open. You get them per row:
 
-```rust,ignore
-for (columns, link) in rows[y].extras.links() {
+```rust
+use wormhole_vt::{Line, RowExtras, Terminal};
+
+let mut term = Terminal::new(40, 3);
+term.feed(b"see \x1b]8;id=a;https://example.org\x07the docs\x1b]8;;\x07 here");
+let (mut cells, mut extras) = (Vec::new(), RowExtras::default());
+term.copy_row(Line(0), &mut cells, Some(&mut extras));
+
+for (columns, link) in extras.links() {
     // columns: Range<usize>; link.uri (an Arc<str>), link.id (a LinkId, which derefs to str)
+    assert_eq!(columns, 4..12);
+    assert_eq!(&*link.uri, "https://example.org");
+    assert_eq!(&*link.id, "a");
 }
-let link = rows[y].extras.hyperlink(col); // for a hover test
+let link = extras.hyperlink(5); // for a hover test
+assert!(link.is_some());
 ```
 
 A link is a run: one entry for a link across 80 cells. `link_span(point)` tells how far a link reaches
@@ -217,7 +246,7 @@ screen, since any cell may use that entry. RIS and the reset sequences (OSC 104,
 
 For the other direction, tell the engine what your theme's colours are (`set_default_colors`, 259
 entries). The engine answers a program's colour query (`OSC 4;n;?`, `OSC 10;?`, `OSC 11;?`) with a colour
-the program set, or else with yours. Programs use this to find out whether the terminal is dark or light.
+the program set, or else with yours. A program can ask this to find out whether the terminal is dark or light.
 Without a call the engine answers with xterm's palette, a light-grey foreground and a black background.
 
 Instead of looking at `colors()` after every read, handle `Event::ColorsChanged`: it comes once for a

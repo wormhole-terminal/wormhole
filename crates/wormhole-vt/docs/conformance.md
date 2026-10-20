@@ -1,8 +1,3 @@
-<!--
-No target-API names are used in this chapter. Commands and paths are those of the repository today
-(tests/conformance, crates/wormhole-vt-bench, tools/vt-compare, scripts/*.sh); re-check them if the phases move files.
--->
-
 # Conformance
 
 How we know the engine does what the specifications say, and how you can check it yourself.

@@ -1,9 +1,3 @@
-<!--
-API names assumed here: Terminal::{new, builder, feed, take_replies, replies, clear_replies, events, resize,
-set_scrollback_lines, set_cell_size, set_window, synchronized_output, clipboard_reply, image_decoded},
-Builder::{size, scrollback_lines, policy, cell_size}, Policy, Event variants, Terminator.
--->
-
 # Embedding
 
 The engine is the middle of a terminal. The host supplies everything around it: a PTY (or a pipe, a
@@ -16,41 +10,54 @@ decisions that are yours.
 read bytes from the PTY --> feed --> write replies to the PTY --> handle events --> draw
 ```
 
-```rust,ignore
+```rust
+use std::io::{self, Read, Write};
 use wormhole_vt::{Event, Terminal};
 
-let mut term = Terminal::builder()
-    .size(cols, rows)
-    .scrollback_lines(10_000)
-    .cell_size(cell_w, cell_h) // pixels; used for a few reports and for pictures
-    .build();
+fn run(mut pty: impl Read + Write, cols: usize, rows: usize) -> io::Result<()> {
+    let mut term = Terminal::builder()
+        .size(cols, rows)
+        .scrollback(10_000)
+        .cell_size(9, 18) // pixels; used for a few reports and for pictures
+        .build();
 
-let mut buf = [0u8; 16 * 1024];
-loop {
-    let n = pty.read(&mut buf)?;
-    if n == 0 {
-        break;
-    }
-    term.feed(&buf[..n]);
-
-    // 1. Answer the program. Do this before anything slow: a program may be blocked on it.
-    let replies = term.take_replies();
-    if !replies.is_empty() {
-        pty.write_all(&replies)?;
-    }
-
-    // 2. Do what the program asked for.
-    for event in term.events() {
-        match event {
-            Event::Bell => ring_bell(),
-            Event::Title => set_window_title(term.title()),
-            Event::ClipboardStore { text, .. } => clipboard.set(text), // after your own checks
-            _ => {} // Event is #[non_exhaustive]
+    let mut buf = [0u8; 16 * 1024];
+    loop {
+        let n = pty.read(&mut buf)?;
+        if n == 0 {
+            return Ok(());
         }
-    }
+        term.feed(&buf[..n]);
 
-    // 3. Draw, if something changed.
+        // 1. Answer the program. Do this before anything slow: a program may be blocked on it.
+        let replies = term.take_replies();
+        if !replies.is_empty() {
+            pty.write_all(&replies)?;
+        }
+
+        // 2. Do what the program asked for. `events()` borrows the terminal until the loop ends,
+        //    so note what to read afterwards (the title) and act on it then.
+        let mut title_changed = false;
+        for event in term.events() {
+            match event {
+                Event::Bell => ring_bell(),
+                Event::Title => title_changed = true,
+                Event::ClipboardStore { text, .. } => set_clipboard(&text), // after your own checks
+                _ => {} // Event is #[non_exhaustive]
+            }
+        }
+        if title_changed {
+            set_window_title(term.title().unwrap_or_default());
+        }
+
+        // 3. Draw, if something changed (see "Rendering").
+    }
 }
+
+// Yours: the window, the clipboard and the bell.
+fn ring_bell() {}
+fn set_clipboard(_text: &str) {}
+fn set_window_title(_title: &str) {}
 ```
 
 Points that are easy to get wrong:
@@ -84,8 +91,9 @@ read is not allowed, it does not call `clipboard_reply`; see `security.md`.
 
 ## Threads and locking
 
-The engine has no locks, no threads and no global state. `Terminal` is `Send`: build it on one thread
-and move it to another. Two threads that touch it at once need a lock of yours.
+The engine has no locks, no threads and no global state. `Terminal` is `Send` and `Sync` (checked at
+compile time): build it on one thread and move it to another, or share it behind a lock of yours. Two
+threads that mutate it at once need that lock; reads (`&Terminal`) can share a read lock.
 
 The usual shape is a reader thread that owns the PTY and a UI thread that draws:
 
@@ -138,7 +146,7 @@ where the window is with `set_window` so that XTWINOPS position and size reports
 
 ## Scrollback sizing
 
-The history is capped in bytes. `scrollback_lines(n)` asks for at least `n` lines at the current width.
+The history is capped in bytes. `Builder::scrollback(n)` asks for at least `n` lines at the current width.
 Each cell is 8 bytes and each row record 16, so a line of 80 columns costs about 656 bytes and 10,000
 lines about 6.5 MB. The engine drops whole pages (up to 128 KiB each), oldest first, and keeps room for
 three pages of slack, so the history can hold a little more or less than `n` lines. Do not rely on the exact
@@ -157,34 +165,45 @@ The engine keeps as much history as you ask for and lets go of the rest. A host 
 unlimited scrollback on disk, a searchable session log) can ask for the lines as they leave, instead of
 reading them early or losing them:
 
-```rust,ignore
-use std::io::Write;
+```rust
+use std::io::{self, Write};
 use wormhole_vt::{Event, Flags, HistoryLine, Terminal};
 
-let mut term = Terminal::builder()
-    .size(cols, rows)
-    .scrollback(2_000) // what the engine itself keeps, for scrolling back and for selecting
-    .archive_history(true) // hand the host the lines that leave
-    .build();
-let mut log = std::io::BufWriter::new(std::fs::File::create("scrollback.txt")?);
+fn main() -> io::Result<()> {
+    let mut term = Terminal::builder()
+        .size(80, 24)
+        .scrollback(2_000) // what the engine itself keeps, for scrolling back and for selecting
+        .archive_history(true) // hand the host the lines that leave
+        .build();
+    let mut log = Vec::new(); // a file in a real host
 
-// ... in the loop of "The loop", where the events are taken:
-for event in term.events() {
-    match event {
-        Event::HistoryDropped(batch) => {
+    // Enough output to push lines out of the history.
+    for n in 0..4_000 {
+        term.feed(format!("line {n}\r\n").as_bytes());
+    }
+    keep_history(&mut term, &mut log)?;
+
+    assert!(String::from_utf8_lossy(&log).starts_with("line 0\n"));
+    Ok(())
+}
+
+/// Take the events (after each read, in the loop of "The loop") and write the lines that left.
+fn keep_history(term: &mut Terminal, log: &mut impl Write) -> io::Result<()> {
+    for event in term.events() {
+        if let Event::HistoryDropped(batch) = event {
             for line in &batch.lines {
-                write_row(&mut log, line)?;
+                write_row(log, line)?;
             }
             if batch.skipped > 0 {
                 writeln!(log, "[{} lines were not kept]", batch.skipped)?;
             }
         }
-        _ => {}
     }
+    Ok(())
 }
 
 /// The row's text; a row that wraps goes on in the next one, so no newline after it.
-fn write_row(out: &mut impl Write, line: &HistoryLine) -> std::io::Result<()> {
+fn write_row(out: &mut impl Write, line: &HistoryLine) -> io::Result<()> {
     let mut text = String::new();
     for (col, cell) in line.cells.iter().enumerate() {
         if !cell.flags.contains(Flags::WIDE_CHAR_SPACER) {
@@ -230,7 +249,7 @@ The engine caps everything a program can make it hold: strings, pictures, queues
 them). Those numbers are the **ceilings**. A host can lower any of them with `Limits`, at the builder or
 later; a value above its ceiling is cut to it.
 
-```rust,ignore
+```rust
 use wormhole_vt::{Limits, Terminal};
 
 let mut limits = Limits::default(); // the ceilings
@@ -239,9 +258,12 @@ limits.clipboard = 64 * 1024; // OSC 52: 64 KiB
 limits.title = 200; // titles are cut at 200 bytes
 
 let mut term = Terminal::builder().limits(limits).build();
+assert_eq!(term.limits().title, 200);
+
 // ... later, a lower budget while memory is tight; pictures over it are evicted at once
 limits.image_bytes = 8 << 20;
 term.set_limits(limits);
+assert_eq!(term.limits().image_bytes, 8 << 20);
 ```
 
 A string over its cap is dropped whole (a title and a folder are cut at a character instead). A change
@@ -278,15 +300,16 @@ between is no event, and printing costs nothing for them.
 `Policy` holds the switches for the risky requests. The default is the safe one, and you turn on only
 what your application needs:
 
-```rust,ignore
+```rust
 use wormhole_vt::{Policy, Terminal};
 
 let mut policy = Policy::default();
-policy.window_ops = true;      // moves, resizes
-policy.title_report = false;   // reading the window title back (it is typed into the shell)
+policy.window_ops = true; // moves, resizes
+policy.title_report = false; // reading the window title back (it is typed into the shell)
 policy.screen_checksum = false; // DECRQCRA (reading the screen back)
 
 let term = Terminal::builder().size(80, 24).policy(policy).build();
+assert!(term.policy().window_ops);
 ```
 
 `security.md` says what each switch exposes.
@@ -294,8 +317,33 @@ let term = Terminal::builder().size(80, 24).policy(policy).build();
 ## Persistence and attach
 
 To rebuild a terminal elsewhere (a detached session, a replica, a checkpoint), the repaint writer
-serializes a terminal's state as VT bytes that a fresh terminal parses into the same state:
-`repaint_ready(&parser)` tells whether the terminal is between sequences, and `repaint` writes the bytes.
-It reports what VT cannot say (pictures and a few corner cases) as `Gaps`. Counters that no sequence can
-set (block numbers, generated link ids, picture handles) are `Seeds` that you apply before parsing the
-repaint.
+serializes a terminal's state as VT bytes that a fresh terminal parses into the same state.
+`repaint_ready` tells whether the terminal is between sequences (a repaint made in the middle of one is
+refused with `NotReady`), and `repaint` appends the bytes to a buffer you keep. It reports what VT cannot
+say (pictures and a few corner cases) as `Gaps`. Counters that no sequence can set (block numbers,
+generated link ids, picture handles) are `Seeds` that you apply with `seed` before parsing the repaint.
+
+```rust
+use std::error::Error;
+use wormhole_vt::Terminal;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut original = Terminal::new(40, 10);
+    original.feed(b"\x1b[1;31mred\x1b[0m and \x1b]8;;https://example.org\x07plain\x1b]8;;\x07\r\nnext");
+
+    // The bytes that rebuild it ...
+    let mut bytes = Vec::new();
+    let painted = original.repaint(&mut bytes)?;
+
+    // ... in a terminal of the same size, which also gets the counters VT cannot set.
+    let mut replica = Terminal::new(40, 10);
+    replica.seed(&painted.seeds);
+    replica.feed(&bytes);
+
+    assert_eq!(replica.screen_text(), original.screen_text());
+    assert_eq!(replica.cursor(), original.cursor());
+    Ok(())
+}
+```
+
+`examples/repaint.rs` does the same and checks every cell.

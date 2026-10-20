@@ -1,45 +1,7 @@
-//! A terminal engine: bytes from a program in, screen state and events out.
-//!
-//! No PTY, no threads, no UI and no I/O: the host owns the process and the reader and draws what
-//! the engine holds. Every escape sequence a program sends is read here, so nothing parses the
-//! output a second time.
-//!
-//! ```
-//! use wormhole_vt::{Line, Terminal};
-//!
-//! let mut term = Terminal::new(80, 24);
-//! term.feed(b"hello \x1b[1mworld\x1b[0m\r\n");
-//! assert_eq!(term.row_text(Line(0), true), "hello world");
-//! ```
-//!
-//! # The front door
-//!
-//! [`Terminal`] (made with [`Terminal::new`] or [`Terminal::builder`]) is the engine: `feed` it a
-//! program's output, read the screen back, send what [`replies`](Terminal::replies) holds to the
-//! program and handle the [`events`](Terminal::events) (title, bell, clipboard, pictures, …). What
-//! a program may do beyond printing is a [`Policy`], all off by default. The types it speaks in
-//! (cells, colours, positions, modes) are at the root of the crate.
-//!
-//! Modules for the groups that need a namespace:
-//!
-//! - [`parser`]: the DEC/ANSI state machine on its own, for tools that want the sequences and not
-//!   a screen;
-//! - [`passthrough`]: sequences of the host's own, handed over whole as events;
-//! - [`unicode`]: cell widths and grapheme cluster breaks from generated tables;
-//! - [`event`]: what a program's sequences ask of the host;
-//! - [`image`]: pictures (kitty graphics, Sixel, iTerm2): uploads to decode, placements to draw;
-//! - [`window`]: what XTWINOPS lets a program ask of the window, and where the window is;
-//! - [`repaint`]: the VT bytes that rebuild one terminal's state in another.
-//!
-//! # Guarantees
-//!
-//! Input never panics, and never makes the terminal grow without bound: every string is capped,
-//! queues nobody drains are capped, counts are clamped to the screen. The caps are ceilings the host
-//! can lower with [`Limits`], never raise. Replies are built from the
-//! engine's state, never from the request's bytes, and a title is never reported back unless the
-//! host's [`Policy`] says so.
-
+#![doc = include_str!("../README.md")]
 #![forbid(unsafe_code)]
+#![deny(missing_docs)]
+#![warn(rustdoc::broken_intra_doc_links, rustdoc::private_intra_doc_links, rustdoc::bare_urls)]
 
 // The storage. Public only to our own tools, behind the `internals` feature; what a host needs
 // from it is re-exported below, so the layout can change without a major release.
@@ -48,6 +10,7 @@
 pub mod grid;
 #[cfg(not(feature = "internals"))]
 mod grid;
+pub mod guide;
 pub mod input;
 pub mod parser;
 pub mod passthrough;

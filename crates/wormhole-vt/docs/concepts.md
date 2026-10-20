@@ -1,9 +1,3 @@
-<!--
-API names assumed here: Terminal::{new, feed, take_replies, events, modes, resize, pin, pin_point, unpin,
-span...}, Modes, Event, Pin, Span, Line, Column, Point,
-Cell, Flags, Color, Policy.
--->
-
 # Concepts
 
 This chapter explains the model: what a terminal is to this library, what it keeps, and how it talks to
@@ -26,6 +20,23 @@ Nothing happens between calls. There are no timers, no threads and no callbacks.
 and a UTF-8 character may be cut in the middle. Feeding a stream whole or one byte at a time gives the
 same screen. The conformance suite checks that for every case.
 
+```rust
+use wormhole_vt::Terminal;
+
+let stream = "\x1b[1;32mgr\u{e9}en\x1b[0m \u{1f600}\r\nx".as_bytes();
+
+let mut whole = Terminal::new(20, 3);
+whole.feed(stream);
+
+let mut by_byte = Terminal::new(20, 3);
+for byte in stream {
+    by_byte.feed(std::slice::from_ref(byte));
+}
+
+assert_eq!(whole.screen_text(), by_byte.screen_text());
+assert_eq!(whole.cursor(), by_byte.cursor());
+```
+
 ## The screen and the history
 
 The terminal has two **screens**: the main screen and the alternate screen (modes 47, 1047 and 1049).
@@ -45,6 +56,16 @@ for sizing.
 
 Scrolling the whole screen up appends to the history; no cell moves. Scrolling only a part of the screen
 (a region that starts below the top row, or insert/delete line) does not feed the history.
+
+```rust
+use wormhole_vt::{Line, Terminal};
+
+let mut term = Terminal::new(10, 3);
+term.feed(b"one\r\ntwo\r\nthree\r\nfour"); // "one" scrolled off the top
+assert_eq!(term.history_len(), 1);
+assert_eq!(term.row_text(Line(-1), true), "one"); // the newest row of history
+assert_eq!(term.row_text(Line(0), true), "two"); // the top row of the live screen
+```
 
 ## Cells and styles
 
@@ -74,6 +95,21 @@ the `WIDE_CHAR` flag. The second has `WIDE_CHAR_SPACER` and holds nothing. If a 
 fit at the end of a row, the engine leaves a blank with `LEADING_WIDE_CHAR_SPACER` there and puts the
 character on the next row.
 
+```rust
+use wormhole_vt::{Column, Flags, Line, Point, Terminal};
+
+let mut term = Terminal::new(5, 2);
+term.feed("a\u{4e16}".as_bytes()); // "a世": the ideograph is two cells wide
+let cell = |col| term.cell(Point::new(Line(0), Column(col))).expect("inside the screen");
+assert!(cell(1).flags.contains(Flags::WIDE_CHAR) && cell(1).c == '\u{4e16}');
+assert!(cell(2).flags.contains(Flags::WIDE_CHAR_SPACER));
+
+term.feed("b\u{4e16}".as_bytes()); // one column is left after "b": too few for another wide one
+let cell = |line, col| term.cell(Point::new(Line(line), Column(col))).expect("inside the screen");
+assert!(cell(0, 4).flags.contains(Flags::LEADING_WIDE_CHAR_SPACER));
+assert_eq!(cell(1, 0).c, '\u{4e16}');
+```
+
 With grapheme clustering on (mode 2027, on by default), a cluster such as a flag, a family emoji or a
 letter with several marks is one group of cells, as wide as its first character, or 2 when a variation
 selector or a spacing mark makes it wide. It is never wider than 2. With mode 2027 off, every code point
@@ -94,6 +130,19 @@ is reported on the last column.
 
 A row that was continued by wrapping is marked as **soft-wrapped**. Resizing rewraps soft-wrapped lines.
 Hard line breaks stay.
+
+```rust
+use wormhole_vt::{Line, Terminal};
+
+let mut term = Terminal::new(4, 3);
+term.feed(b"abcd"); // fills the row: the cursor waits on the last column
+assert_eq!(term.cursor().point.column.0, 3);
+assert!(!term.is_wrapped(Line(0)));
+
+term.feed(b"e"); // wraps first, then prints
+assert!(term.is_wrapped(Line(0)));
+assert_eq!(term.row_text(Line(1), true), "e");
+```
 
 ## Modes
 
@@ -163,12 +212,27 @@ with `Terminal::events()`:
 - `Mark` (OSC 133 shell marks: prompt start, command start, output start, finished with an exit code)
 - `ImageData` and `ImageFree` (pictures to decode and release)
 - `ColumnsRequested` (DECCOLM) and `WindowOp` (window control, only when `Policy` allows)
+- `ModesChanged` and `ColorsChanged` (a mode a host acts on, or the palette, changed; read the new state),
+  `PointerShape` (OSC 22) and `UserVar` (iTerm2's `SetUserVar`)
+- `HistoryDropped` (lines that left the history, when the host asked for them: `embedding.md`)
+- `ProgramStatus` (OSC 7501) and `Iterm` (the rest of OSC 1337)
+- `Osc`, `Dcs` and `Apc`: the strings the host asked for (`passthrough.md`)
 - `FullReset`
 
 `Event` is `#[non_exhaustive]`: match with a wildcard arm.
 
 Events carry what the program sent, raw. The text of a notification or a clipboard store is the
 program's. The host must treat it as untrusted (`security.md`).
+
+```rust
+use wormhole_vt::{Event, Terminal};
+
+let mut term = Terminal::new(80, 24);
+term.feed(b"\x07\x07\x07"); // a run of the same event counts once
+let events: Vec<Event> = term.events().collect();
+assert!(matches!(events.as_slice(), [Event::Bell]));
+assert_eq!(term.events().count(), 0); // taken: the queue is empty
+```
 
 Like replies, events are bounded: past 16,384 queued events new ones are dropped, and a run of the same
 event (a bell, a title, a folder said twice) counts once. A picture's pixels, a picture's release and a
@@ -180,10 +244,27 @@ A host often needs to remember a place in the text: a search hit, a selection, t
 decoration. A row number is not enough, because rows move when the screen scrolls and when the width
 changes.
 
-A **pin** ([`Pin`], made with `Terminal::pin`) is a reference to a row that follows its text. It survives
+A **pin** (`Pin`, made with `Terminal::pin`) is a reference to a row that follows its text. It survives
 scrolling that appends to the history, and it survives reflow when a resize rewraps lines. It dies when
-its row is dropped from the history; `Terminal::pin_point` then returns `None`. A **span** ([`Span`], made
+its row is dropped from the history; `Terminal::pin_point` then returns `None`. A **span** (`Span`, made
 with `Terminal::pin_span`) is a start pin and an end pin, read back with `Terminal::span_points`.
+
+```rust
+use wormhole_vt::{Column, Line, Point, Terminal};
+
+let mut term = Terminal::new(10, 3);
+term.feed(b"0123456789abc"); // "abc" wraps onto the second row
+let at = |line, column| Point::new(Line(line), Column(column));
+let pin = term.pin(at(1, 0)); // the 'a'
+
+term.feed(b"\r\nx\r\ny"); // the screen scrolls: the row moves up, into the history
+assert_eq!(term.pin_point(pin), Some(at(0, 0)));
+
+term.resize(20, 3); // the wrapped line is joined again: the 'a' is column 10 of its row
+let after = term.pin_point(pin).expect("the row is still there");
+assert_eq!(term.cell(after).map(|cell| cell.c), Some('a'));
+term.unpin(pin);
+```
 
 One limit to know: a scroll of only part of the screen (a region, insert or delete line) moves text
 between rows, and a pin stays on its row. Unpin what you no longer need.
@@ -202,4 +283,4 @@ resize the window, ones that read the window's title back, and ones that read th
 - It does not draw, measure fonts or know about pixels, except the cell size the host tells it, which it
   needs for a few reports and for placing pictures.
 - It does not know about your application. There is no application-specific sequence in it; ask for
-  your own strings as a passthrough (`extensions.md`).
+  your own strings as a passthrough (`passthrough.md`).
