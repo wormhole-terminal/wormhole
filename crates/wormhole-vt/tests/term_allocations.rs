@@ -76,17 +76,37 @@ fn text_with_wrap_and_scroll_allocates_nothing() {
     assert_eq!(steady("lines", &repeat(&format!("{line}\r\n"), 400), 20), 0);
 }
 
-/// Lowered caps cost nothing: the terminal reads them where a string ends or a picture is made.
+/// Lines leaving the history cost nothing when the host did not ask for them, with the caps at
+/// their ceilings or lowered; and asking for them costs nothing while nothing leaves.
 #[test]
-fn lowered_limits_allocate_nothing() {
+fn history_leaving_allocates_nothing_unless_the_host_asked_for_it() {
     let line = "the quick brown fox jumps over the lazy dog, again and again and again and again, ";
-    let stream = repeat(&format!("{line}\r\n\x1b]0;a title that is long\x07"), 400);
+    let stream = repeat(&format!("{line}\r\n"), 400);
     let mut limits = wormhole_vt::Limits::default();
     limits.image_bytes = 1 << 20;
-    limits.title = 10;
-    limits.osc = 64;
-    let term = Terminal::builder().size(80, 24).scrollback(200).limits(limits).build();
-    assert_eq!(steady_on(term, "limits lowered", &stream, 20), 0);
+    limits.title = 100;
+    limits.archive_backlog = 1 << 20;
+    let term = Terminal::builder().size(80, 24).scrollback(200).limits(limits).archive_history(false).build();
+    assert_eq!(steady_on(term, "archive off, limits lowered", &stream, 20), 0);
+    // Nothing leaves while the history grows (its pages are allocated either way): switching the
+    // archive on adds nothing to that.
+    let history =
+        |archive| Terminal::builder().size(80, 24).scrollback(1_000_000).archive_history(archive).build();
+    let without = steady_on(history(false), "growing history, archive off", &stream, 20);
+    assert_eq!(steady_on(history(true), "growing history, archive on", &stream, 20), without);
+}
+
+/// What archiving costs per line that leaves: a vector of the row's cells, and a little for the batches.
+#[test]
+fn archiving_allocates_a_vector_per_line_and_no_more() {
+    let line = "the quick brown fox jumps over the lazy dog, again and again and again and again, ";
+    let stream = repeat(&format!("{line}\r\n"), 400);
+    let term = Terminal::builder().size(80, 24).scrollback(200).archive_history(true).build();
+    let rounds = 20;
+    let count = steady_on(term, "archive on", &stream, rounds);
+    // 400 lines of 82 characters are 800 rows a round, all of which leave once the history is full.
+    let lines = 800 * rounds;
+    assert!(count <= lines + lines / 10, "{count} allocations for {lines} lines");
 }
 
 #[test]

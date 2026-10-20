@@ -26,7 +26,8 @@ fn escaped(bytes: &[u8]) -> Vec<u8> {
     bytes.iter().flat_map(|&b| if b == 0xFF { vec![0xFF, 0xFF] } else { vec![b] }).collect()
 }
 
-/// The header `fuzz::Run::new` reads: columns, rows and the flag byte.
+/// The header `fuzz::Run::new` reads: columns, rows, the flag byte and the options byte (history
+/// handed over to the host, the caps at their ceilings, events taken after every step).
 fn script_header(cols: usize, rows: usize, history: usize, checksum: bool) -> Vec<u8> {
     let history = match history {
         0 => 0,
@@ -34,7 +35,12 @@ fn script_header(cols: usize, rows: usize, history: usize, checksum: bool) -> Ve
         11..=500 => 2,
         _ => 3,
     };
-    vec![(cols.max(1) - 1) as u8 % 120, (rows.max(1) - 1) as u8 % 40, history | (u8::from(checksum) << 2) | 8]
+    vec![
+        (cols.max(1) - 1) as u8 % 120,
+        (rows.max(1) - 1) as u8 % 40,
+        history | (u8::from(checksum) << 2) | 8,
+        1,
+    ]
 }
 
 /// Where the next string (APC, DCS, or OSC 1337) in `bytes` starts and ends, ST or BEL included.

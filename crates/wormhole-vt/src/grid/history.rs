@@ -3,6 +3,7 @@
 
 use crate::types::Color;
 
+use super::archive::DropReason;
 use super::cell::Cell;
 use super::page::Page;
 use super::row::{Region, Row};
@@ -22,7 +23,7 @@ impl Grid {
     /// are not counted, as a page has at most one per cell.
     pub fn set_scrollback_limit(&mut self, bytes: usize) {
         self.limit = bytes;
-        self.enforce_limit();
+        self.enforce_limit(DropReason::Limit);
     }
 
     /// Bytes the grid holds in pages (cells, row records, style and side tables).
@@ -39,8 +40,9 @@ impl Grid {
     /// Drop history over the cap: the oldest pages, whole, that hold no live row. The page being
     /// filled turns into history row by row, so room for all of it is kept free: the history never
     /// outgrows the cap between two pages, and ends up a page or two short of it. The marks and
-    /// links of the pages that are all history have a cap of the same size.
-    pub(super) fn enforce_limit(&mut self) {
+    /// links of the pages that are all history have a cap of the same size. `reason` is what the
+    /// archive says about the lines that go.
+    pub(super) fn enforce_limit(&mut self, reason: DropReason) {
         let room = self.pages.back().map_or(0, Page::capacity);
         let max_rows = (self.limit / self.row_cost()).saturating_sub(room);
         let top = self.top_serial();
@@ -56,16 +58,18 @@ impl Grid {
                 break;
             }
             extra -= first.extra_bytes();
-            self.drop_first_page();
+            self.drop_first_page(reason);
         }
         if self.limit == 0 && self.history_len() > 0 {
-            self.drop_history_rows(self.history_len());
+            self.drop_history_rows(self.history_len(), reason);
         }
         self.offset = self.offset.min(self.history_len());
         self.prune_placements();
     }
 
-    pub(super) fn drop_first_page(&mut self) {
+    pub(super) fn drop_first_page(&mut self, reason: DropReason) {
+        let count = self.pages.front().map_or(0, |page| page.rows.len());
+        self.archive_rows(0, count, reason);
         let page = self.pages.pop_front();
         if self.spare.is_none() {
             self.spare = page;
@@ -74,13 +78,14 @@ impl Grid {
 
     /// Drop the oldest `n` rows of history (at most all of it): whole pages while they fit, then
     /// the first rows of the page that holds the rest.
-    pub(super) fn drop_history_rows(&mut self, mut n: usize) {
+    pub(super) fn drop_history_rows(&mut self, mut n: usize, reason: DropReason) {
         while n > 0 {
             let Some(len) = self.pages.front().map(|page| page.rows.len()) else { break };
             if len <= n && self.pages.len() > 1 {
                 n -= len;
-                self.drop_first_page();
+                self.drop_first_page(reason);
             } else {
+                self.archive_rows(0, n.min(len), reason);
                 if let Some(first) = self.pages.front_mut() {
                     first.drop_front_rows(n.min(len));
                 }
@@ -93,7 +98,7 @@ impl Grid {
 
     /// Forget the history. The screen stays; pins into the history are gone.
     pub fn clear_scrollback(&mut self) {
-        self.drop_history_rows(self.history_len());
+        self.drop_history_rows(self.history_len(), DropReason::Cleared);
         self.offset = 0;
         self.all_dirty = true;
     }

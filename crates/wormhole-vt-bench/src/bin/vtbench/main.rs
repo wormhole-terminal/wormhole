@@ -11,6 +11,10 @@
 //! engine; `allocs/MB` counts allocator calls per megabyte over a whole first pass (the screen and
 //! history grow during it), `steady/MB` over a second pass on the same engine, once everything is
 //! full. A debug build says nothing about speed: use `--release`.
+//!
+//! `VTBENCH_ARCHIVE=1` makes the `wormhole` engine hand the host the history lines that leave it
+//! (`Terminal::set_archive_history`), which the adapter then drops with the other events: it
+//! measures what archiving costs the host that keeps nothing of them.
 // A command line tool: its output is the product, on stdout.
 #![allow(clippy::print_stdout)]
 

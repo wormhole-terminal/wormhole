@@ -34,6 +34,7 @@ fn the_default_is_the_ceiling_and_a_value_above_it_is_cut() {
         l.link_uri = usize::MAX;
         l.events = usize::MAX;
         l.replies = usize::MAX;
+        l.archive_backlog = usize::MAX;
     });
     assert_eq!(high.clamped(), ceiling);
     assert_eq!(Terminal::builder().limits(high).build().limits(), ceiling);
@@ -56,7 +57,7 @@ fn the_ceilings_are_what_the_documentation_says() {
     assert_eq!((c.image_uploads, c.image_payload, c.sixel), (256 << 20, 32 << 20, 4 << 20));
     assert_eq!((c.osc, c.clipboard, c.osc_image, c.osc_iterm), (8 << 10, 8 << 20, 64 << 20, 64 << 10));
     assert_eq!((c.title, c.cwd, c.link_uri), (4096, 4096, 8192));
-    assert_eq!((c.events, c.replies), (16_384, 1 << 20));
+    assert_eq!((c.events, c.replies, c.archive_backlog), (16_384, 1 << 20, 64 << 20));
 }
 
 #[test]

@@ -83,7 +83,9 @@ impl Engine for WormholeEngine {
     const NAME: &'static str = "wormhole";
 
     fn new(cols: usize, rows: usize, scrollback: usize) -> Self {
-        let term = host_terminal(cols, rows, scrollback);
+        let mut term = host_terminal(cols, rows, scrollback);
+        // vtbench measures what handing over the history that leaves costs (see its docs).
+        term.set_archive_history(std::env::var_os("VTBENCH_ARCHIVE").is_some());
         WormholeEngine { term, replies: Vec::new(), scrollback }
     }
 

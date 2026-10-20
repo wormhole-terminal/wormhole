@@ -28,11 +28,13 @@ byte string; the test names the input's origin), then delete the artifact.
 | `term` | a script (below): a terminal of any size and history, the program's bytes and the host's calls mixed | no panic, hang or runaway memory; `Terminal::check_invariants` after every step |
 | `graphics` | frames of kitty APC commands, Sixel DCS, iTerm2 OSC 1337 files and plain text, around arbitrary bytes (a frame's payload can be base64 encoded by the target so that real pictures get through), the host answering every picture | the same as `term`, and the pictures stay within their budgets |
 
-A **script** (`src/lib.rs`) is a 3-byte header (columns, rows, history size and flags: screen checksum
-answered, mode 2027 on, cell size known) and then the stream, in which `0xFF` and an opcode is a call of
+A **script** (`src/lib.rs`) is a 4-byte header (columns, rows, history size and flags: screen checksum
+answered, mode 2027 on, cell size known; then options: the history that leaves handed to the host, with
+a small backlog or not, lowered caps, a host that does not take its events) and then the stream, in which `0xFF` and an opcode is a call of
 the host: resize, scroll the view, select (all four kinds), update or take the selection, copy text for a
 search and pin the matches, copy the viewport and the damage, text between points, pins, clearing
-history, changing the history limit, the snapshot reads, answering a picture the engine never asked for.
+history, changing the history limit, the snapshot reads, answering a picture the engine never asked for,
+switching the history archive on and off, a host that stops taking events, and changing the caps.
 Points are mostly on the screen, sometimes in the history, now and then wild. `0xFF 0xFF` is a literal
 `0xFF`. A byte string of plain escape sequences is a valid script, so the `.vtt` cases and the corpora
 seed it as they are.

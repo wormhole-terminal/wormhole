@@ -10,6 +10,7 @@
 //! [`Terminal::replies`]: crate::terminal::Terminal::replies
 
 use super::graphics::ImageUpload;
+use crate::grid::DroppedHistory;
 use crate::types::ImageHandle;
 
 /// How an OSC string ended: a reply ends the same way (xterm), and OSC 7501 limits the length of
@@ -211,4 +212,12 @@ pub enum Event {
     WindowOp(super::WindowOp),
     /// RIS: the terminal was reset to its initial state.
     FullReset,
+    /// History lines left the engine, oldest first: the host asked for them with
+    /// [`Terminal::set_archive_history`](crate::terminal::Terminal::set_archive_history) and keeps them if it
+    /// wants more history than the engine holds. Never lost without a trace: when the host left too
+    /// many undrained, [`DroppedHistory::skipped`] counts the ones that were not kept. Events of
+    /// this kind come after the others of the same [`events`](crate::terminal::Terminal::events) call, in the
+    /// order the lines left, and are not subject to the queue's cap (the backlog has its own,
+    /// [`Limits::archive_backlog`](crate::terminal::Limits::archive_backlog)).
+    HistoryDropped(DroppedHistory),
 }

@@ -48,6 +48,7 @@
 //! | | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //! | `repaint/` | | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered |
 //! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
+//! | | `archive` | handing the host the history lines that leave the engine (opt-in; the copying is the grid's) |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
 //!
 //! # Choices
@@ -81,6 +82,7 @@
 //!   Pictures have their own caps (`graphics`). Each cap is a ceiling the host can lower
 //!   ([`Limits`]), never raise.
 
+mod archive;
 mod builder;
 #[cfg(any(test, feature = "internals"))]
 mod check;
@@ -329,8 +331,11 @@ impl Terminal {
         self.prune_selection();
     }
 
-    /// The events since the last call, oldest first.
+    /// The events since the last call, oldest first, and then, when the host asked for them
+    /// ([`set_archive_history`](Self::set_archive_history)), the history lines that left the engine.
     pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
+        // History lines that left since the last call come last, in the order they left.
+        self.flush_archive();
         self.events.drain(..)
     }
 

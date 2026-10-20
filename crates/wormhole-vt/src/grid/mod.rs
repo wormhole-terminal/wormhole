@@ -22,6 +22,8 @@
 //! - A **resize** that changes the width rewraps soft-wrapped lines (`resize.rs`; the rebuild itself is
 //!   `rewrap.rs`). The history's cap and clearing are in `history.rs`, the page list in `pages.rs`, the
 //!   scrolled-back view in `view.rs`.
+//! - Lines that leave the history can be copied out first for the host (`archive.rs`); off, the
+//!   cost is one test where a page is dropped.
 //! - The snapshot copy (`copy.rs`) turns rows into [`crate::types::Cell`]s and [`crate::types::RowExtras`].
 //! - Text out of the grid (`text.rs`: a range to copy, the lines to restore; `words.rs`: the word,
 //!   bracket and line around a cell; `links.rs`: how far a hyperlink reaches; `search.rs`: a
@@ -48,6 +50,7 @@
 //! grid, including its history, takes a [`Line`](crate::Line): 0 is the live screen's top row and the history is
 //! negative, as everywhere in the crate's API.
 
+mod archive;
 mod cell;
 #[cfg(any(test, feature = "internals"))]
 mod check;
@@ -78,6 +81,7 @@ mod words;
 
 use std::collections::VecDeque;
 
+pub use archive::{DropReason, DroppedHistory, HistoryLine};
 #[cfg(any(test, feature = "internals"))]
 pub use cell::flag_names;
 pub use cell::{BlockPart, Cell, Spare, StyleId};
@@ -135,6 +139,9 @@ pub struct Grid {
     /// Rows per page, when a test wants pages small enough for the live rows to span several;
     /// 0 for the size `page_capacity` picks.
     page_rows: usize,
+    /// Where history lines are collected when they are dropped, if the host asked for them; see
+    /// `archive`. Only the main screen's grid has one.
+    archive: Option<Box<archive::Archive>>,
     /// Scratch for scrolling a region across pages, kept so that doing so allocates nothing.
     segments: Vec<(usize, usize, usize)>,
     /// Scratch for copying a rectangle (DECCRA): one row's cells and their marks, kept so that
@@ -182,6 +189,7 @@ impl Grid {
             placements: images::Placements::default(),
             all_dirty: true,
             page_rows,
+            archive: None,
             segments: Vec::new(),
             copied: Vec::new(),
             copied_marks: Vec::new(),

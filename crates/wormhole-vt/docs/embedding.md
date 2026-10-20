@@ -151,6 +151,79 @@ never has history.
 Memory is allocated as needed and a dropped page is reused for the next, so a full history does not keep
 growing.
 
+## Keeping the history that leaves the engine
+
+The engine keeps as much history as you ask for and lets go of the rest. A host that wants more (an
+unlimited scrollback on disk, a searchable session log) can ask for the lines as they leave, instead of
+reading them early or losing them:
+
+```rust,ignore
+use std::io::Write;
+use wormhole_vt::{Event, Flags, HistoryLine, Terminal};
+
+let mut term = Terminal::builder()
+    .size(cols, rows)
+    .scrollback(2_000) // what the engine itself keeps, for scrolling back and for selecting
+    .archive_history(true) // hand the host the lines that leave
+    .build();
+let mut log = std::io::BufWriter::new(std::fs::File::create("scrollback.txt")?);
+
+// ... in the loop of "The loop", where the events are taken:
+for event in term.events() {
+    match event {
+        Event::HistoryDropped(batch) => {
+            for line in &batch.lines {
+                write_row(&mut log, line)?;
+            }
+            if batch.skipped > 0 {
+                writeln!(log, "[{} lines were not kept]", batch.skipped)?;
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The row's text; a row that wraps goes on in the next one, so no newline after it.
+fn write_row(out: &mut impl Write, line: &HistoryLine) -> std::io::Result<()> {
+    let mut text = String::new();
+    for (col, cell) in line.cells.iter().enumerate() {
+        if !cell.flags.contains(Flags::WIDE_CHAR_SPACER) {
+            text.push(cell.c);
+            text.extend(line.extras.zerowidth(col)); // accents and the rest of a cluster
+        }
+    }
+    if line.wrapped {
+        out.write_all(text.as_bytes())
+    } else {
+        writeln!(out, "{}", text.trim_end())
+    }
+}
+```
+
+What you get:
+
+- **Every line that leaves, once, oldest first.** A line leaves when output scrolls it past the limit
+  (`DropReason::Scrolled`), when the history is emptied (`Cleared`: ED 3, a full reset, `clear_history`;
+  a host that treats clearing as "forget it" skips these batches) or when the limit falls
+  (`Limit`: `set_scrollback_lines`, or a resize that makes rows costlier, such as a wider screen). The
+  alternate screen has none, and only lines that leave after you switched it on are handed over.
+- **A row as `copy_row` gives it:** its cells with their colours and attributes, the hyperlinks,
+  underline colours and zero-width characters beside them (`extras`), the shell mark, and `wrapped`. A
+  soft-wrapped line is several rows, all but the last with `wrapped` set: join them, and a long line is
+  whole again. A resize that changes the width rewraps the history before it cuts it, so the rows that
+  leave then have the new width.
+- **Batches follow the pages the engine drops**, one event for a run of lines with the same reason, and
+  they come after the other events of the same `events()` call.
+- **Nothing is held for ever.** The lines wait in the engine until you call `events()`, up to
+  `Limits::archive_backlog` (64 MiB at most; about 1.4 KB a line of 80 columns). If you do not
+  take them, the newest lines past the budget are not kept, only counted: `skipped` says how many came
+  right after the `lines` of that batch. Take the events after each read, also when you feed large
+  slices, and the budget is never reached.
+- **It costs nothing off.** The default is off, and then the engine does no work and no allocation for it
+  beyond one test where a page is dropped. On, a line costs one allocation for its cells.
+
+`set_archive_history(false)` hands over what waits and stops.
+
 ## Limits
 
 The engine caps everything a program can make it hold: strings, pictures, queues (`security.md` lists

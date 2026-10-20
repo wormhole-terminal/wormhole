@@ -9,8 +9,8 @@
 use wormhole_vt::image::ImageHandle;
 use wormhole_vt::passthrough::Passthrough;
 use wormhole_vt::{
-    BlockPart, Cell, Column, Damage, Event, Line, Point, Policy, RowExtras, Scroll, SelectionType, Side,
-    Terminal, TextCopy, TextShape, ViewRow,
+    BlockPart, Cell, Column, Damage, Event, Limits, Line, Point, Policy, RowExtras, Scroll, SelectionType,
+    Side, Terminal, TextCopy, TextShape, ViewRow,
 };
 
 /// Reads the script's bytes, 0 once they run out.
@@ -61,6 +61,11 @@ pub struct Run {
     pins: Vec<wormhole_vt::Pin>,
     spans: Vec<wormhole_vt::Span>,
     handles: Vec<ImageHandle>,
+    /// Whether the host takes the events after each step. Off, they pile up against the caps, the
+    /// dropped history's backlog included.
+    drain: bool,
+    /// The history lines handed over so far, and the ones counted as skipped.
+    archived: (usize, usize),
 }
 
 impl Run {
@@ -74,7 +79,26 @@ impl Run {
         policy.screen_checksum = flags & 4 != 0;
         policy.window_ops = flags & 8 != 0;
         policy.title_report = flags & 16 != 0;
-        let mut builder = Terminal::builder().size(cols, rows).scrollback(scrollback).policy(policy);
+        // The second byte: whether the history that leaves is handed over, with a small backlog now
+        // and then; lowered picture and string caps; a host that does not take its events.
+        let knobs = bytes.byte();
+        let mut limits = Limits::default();
+        if knobs & 2 != 0 {
+            limits.archive_backlog = 1 << (8 + usize::from(knobs >> 4));
+        }
+        if knobs & 4 != 0 {
+            limits.image_bytes = 1 << (10 + usize::from(knobs >> 4));
+            limits.image_count = usize::from(knobs >> 5);
+            limits.osc = 16 << (knobs >> 4);
+            limits.title = usize::from(knobs >> 3);
+            limits.events = 1 + usize::from(knobs);
+        }
+        let mut builder = Terminal::builder()
+            .size(cols, rows)
+            .scrollback(scrollback)
+            .policy(policy)
+            .limits(limits)
+            .archive_history(knobs & 1 != 0);
         // Bits 5 to 7 are the cell width when bit 4 is set; when it is not, bit 5 asks for strings
         // passed through (tiny limits, so that the oversize path runs as often as the delivery).
         if flags & 48 == 32 {
@@ -92,6 +116,8 @@ impl Run {
             pins: Vec::new(),
             spans: Vec::new(),
             handles: Vec::new(),
+            drain: knobs & 8 == 0,
+            archived: (0, 0),
         };
         if flags & 8 != 0 {
             run.feed(b"\x1b[?2027h");
@@ -109,11 +135,21 @@ impl Run {
 
     /// What a host does after every read: collect the events and replies, answer the pictures.
     fn settle(&mut self) {
+        if !self.drain {
+            self.term.clear_replies();
+            return;
+        }
         let mut answers = Vec::new();
         for event in self.term.events() {
             match event {
                 Event::ImageData(upload) => answers.push(upload.image),
                 Event::ImageFree(handle) => self.handles.retain(|&h| h != handle),
+                Event::HistoryDropped(batch) => {
+                    assert!(batch.lines.iter().all(|line| !line.cells.is_empty()), "an archived row has cells");
+                    assert!(!batch.lines.is_empty() || batch.skipped > 0, "an empty batch");
+                    self.archived.0 += batch.lines.len();
+                    self.archived.1 += batch.skipped;
+                }
                 _ => {}
             }
         }
@@ -158,7 +194,7 @@ impl Run {
     /// One host call.
     fn call(&mut self, bytes: &mut Bytes<'_>) {
         let op = bytes.byte();
-        match op % 22 {
+        match op % 25 {
             0 => {
                 let (cols, rows) = (1 + usize::from(bytes.byte()) % 150, 1 + usize::from(bytes.byte()) % 50);
                 self.term.resize(cols, rows);
@@ -294,6 +330,24 @@ impl Run {
                 policy.screen_checksum = bytes.byte() % 2 == 0;
                 self.term.set_policy(policy);
                 self.term.set_word_separators(if bytes.byte() & 1 == 0 { " " } else { "" });
+            }
+            22 => {
+                let on = bytes.byte() & 1 == 0;
+                self.term.set_archive_history(on);
+                assert_eq!(self.term.archive_history(), on);
+            }
+            23 => self.drain = bytes.byte() & 1 == 0,
+            24 => {
+                let mut limits = Limits::default();
+                let (a, b) = (bytes.byte(), bytes.byte());
+                limits.image_bytes = u64::from(a) << (b % 24);
+                limits.image_count = usize::from(a % 8);
+                limits.archive_backlog = usize::from(b) << (a % 16);
+                limits.osc = usize::from(a) * 4;
+                limits.events = usize::from(b);
+                limits.replies = usize::from(a) << (b % 8);
+                self.term.set_limits(limits);
+                assert!(self.term.limits().image_bytes <= Limits::default().image_bytes);
             }
             _ => {
                 self.term.set_cell_size(u16::from(bytes.byte()), u16::from(bytes.byte()));

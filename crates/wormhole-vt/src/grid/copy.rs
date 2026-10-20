@@ -140,7 +140,7 @@ fn drawn_char(cp: u32) -> char {
 }
 
 /// Convert row `row` of `page`.
-fn copy_page_row(
+pub(super) fn copy_page_row(
     page: &Page,
     row: usize,
     out: &mut Vec<DrawCell>,

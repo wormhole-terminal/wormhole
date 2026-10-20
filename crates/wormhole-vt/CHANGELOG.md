@@ -34,6 +34,12 @@ First public release (0.1.0).
 - `Damage`, a reusable description of what changed since the last look (rows, the cursor, the colours a
   program set), and a read API for cells and rows: `Terminal::cell`, `size`.
 - Pins and spans that follow text through scrolling and reflow.
+- `Event::HistoryDropped`: the history lines that leave the engine (scrolled past the limit, cleared by
+  ED 3, a full reset or `clear_history`, or cut because the limit fell) handed to the host in order, in
+  batches with their reason (`DropReason`), each row with its cells, colours, hyperlinks and wrap flag
+  (`HistoryLine`). Opt-in with `Builder::archive_history` or `Terminal::set_archive_history`, free when
+  off. The lines wait for the host in a bounded backlog; past it the newest are counted in
+  `DroppedHistory::skipped`.
 - `Limits`, with `Builder::limits`, `Terminal::set_limits` and `Terminal::limits`: the host lowers the
   caps on pictures (bytes, count, one transmission, queued uploads), Sixel data, OSC strings (small ones,
   the clipboard, pictures, the rest of OSC 1337), titles, folders, hyperlink targets, the event and reply

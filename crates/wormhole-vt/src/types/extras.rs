@@ -71,6 +71,17 @@ impl RowExtras {
         self.cells.is_empty() && self.links.is_empty()
     }
 
+    /// Bytes the row holds on the heap, for a host or the engine that keeps many rows: the lists,
+    /// and the text of each link counted as if it were the row's own (rows share a link's text,
+    /// so this is an upper bound).
+    pub(crate) fn heap_bytes(&self) -> usize {
+        let links: usize = self.links.iter().map(|span| span.link.id.len() + span.link.uri.len()).sum();
+        self.cells.capacity() * size_of::<Entry>()
+            + self.marks.capacity() * size_of::<char>()
+            + self.links.capacity() * size_of::<LinkSpan>()
+            + links
+    }
+
     /// Forget everything, keeping the buffers for the next row copied into this one.
     pub fn clear(&mut self) {
         self.cells.clear();

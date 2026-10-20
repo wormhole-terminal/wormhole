@@ -1,6 +1,7 @@
 //! Unit tests for what the conformance suite (`tests/conformance`) does not say: the events and
 //! replies in detail, the kitty keyboard flags, resizing, the snapshot, hostile input.
 
+mod archive;
 mod clusters;
 mod events;
 mod hostile;

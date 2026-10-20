@@ -13,6 +13,9 @@ use super::{CWD_MAX, EVENTS_MAX, TITLE_MAX, Terminal, osc, reports};
 /// Most bytes of a hyperlink's target. An OSC string is at most 8 KiB anyway; the cap exists so a
 /// host can lower it.
 const LINK_URI_MAX: usize = 8 * 1024;
+/// Most bytes of dropped history lines held for a host that does not take them (see
+/// [`Builder::archive_history`](crate::Builder::archive_history)). A line costs 16 bytes a column.
+const ARCHIVE_BACKLOG_MAX: usize = 64 << 20;
 
 /// The caps a host can lower: how much a program's sequences can make the terminal hold.
 ///
@@ -76,11 +79,15 @@ pub struct Limits {
     /// (ceiling: 8 KiB).
     pub link_uri: usize,
     /// Events the host may leave undrained: past it new ones are dropped, except pictures' pixels
-    /// and their release, and resets (ceiling: 16,384).
+    /// and their release, resets and dropped history (ceiling: 16,384).
     pub events: usize,
     /// Reply bytes the host may leave uncollected: past it new replies are dropped whole (ceiling:
     /// 1 MiB).
     pub replies: usize,
+    /// Bytes of dropped history lines (16 a column, and the line's side data) held for a host
+    /// that does not take its events, when [`Builder::archive_history`](crate::Builder::archive_history)
+    /// is on; past it the newest lines are counted, not kept (ceiling: 64 MiB).
+    pub archive_backlog: usize,
 }
 
 impl Limits {
@@ -100,6 +107,7 @@ impl Limits {
         link_uri: LINK_URI_MAX,
         events: EVENTS_MAX,
         replies: reports::REPLIES_MAX,
+        archive_backlog: ARCHIVE_BACKLOG_MAX,
     };
 
     /// These limits with every value above its ceiling cut to it. [`Builder::limits`] and
@@ -123,6 +131,7 @@ impl Limits {
             link_uri: self.link_uri.min(c.link_uri),
             events: self.events.min(c.events),
             replies: self.replies.min(c.replies),
+            archive_backlog: self.archive_backlog.min(c.archive_backlog),
         }
     }
 }
@@ -162,5 +171,6 @@ impl Terminal {
         });
         self.dcs.set_sixel_max(limits.sixel);
         self.enforce_image_limits();
+        self.set_archive_cap(limits.archive_backlog);
     }
 }

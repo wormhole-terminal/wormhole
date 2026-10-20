@@ -46,6 +46,7 @@ pub struct Builder {
     identity: String,
     policy: Policy,
     limits: Limits,
+    archive: bool,
     palette: Option<Box<[Rgb; COLOR_COUNT]>>,
     cell: (u16, u16),
     separators: Option<String>,
@@ -61,6 +62,7 @@ impl Default for Builder {
             identity: identity_text("wormhole-vt", env!("CARGO_PKG_VERSION")),
             policy: Policy::default(),
             limits: Limits::default(),
+            archive: false,
             palette: None,
             cell: (8, 16),
             separators: None,
@@ -117,6 +119,14 @@ impl Builder {
     /// set); each value can only be lowered, see [`Limits`].
     pub fn limits(mut self, limits: Limits) -> Builder {
         self.limits = limits.clamped();
+        self
+    }
+
+    /// Hand the host the history lines that leave the engine as
+    /// [`Event::HistoryDropped`](crate::Event::HistoryDropped) (off unless set); see
+    /// [`Terminal::set_archive_history`].
+    pub fn archive_history(mut self, on: bool) -> Builder {
+        self.archive = on;
         self
     }
 
@@ -219,6 +229,9 @@ impl Builder {
         term.osc.set_claims(self.passthrough.osc_caps());
         term.passthrough = self.passthrough;
         term.apply_limits();
+        if self.archive {
+            term.set_archive_history(true);
+        }
         term
     }
 }

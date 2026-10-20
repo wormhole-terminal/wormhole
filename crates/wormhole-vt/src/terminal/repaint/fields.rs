@@ -131,6 +131,7 @@ const GRID: &[(&str, Coverage)] = &[
     ("placements", Gap("Gaps::PLACEMENTS")),
     ("all_dirty", Viewer("what the snapshot must copy again")),
     ("page_rows", Scratch("a test knob")),
+    ("archive", Host("the lines waiting for the host, if it asked for the history that is dropped")),
     ("segments", Scratch("scratch for a scroll")),
     ("copied", Scratch("scratch for DECCRA")),
     ("copied_marks", Scratch("scratch for DECCRA")),

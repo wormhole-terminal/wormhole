@@ -55,7 +55,10 @@ mod terminal;
 mod types;
 pub mod unicode;
 
-pub use grid::{BlockPart, CopiedLine, LinkSpan, Pin, RowMark, TextCopy, TextShape, ViewRow};
+pub use grid::{
+    BlockPart, CopiedLine, DropReason, DroppedHistory, HistoryLine, LinkSpan, Pin, RowMark, TextCopy,
+    TextShape, ViewRow,
+};
 pub use terminal::{
     Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, Limits, LocatorButton, Modes, Pointer, Policy,
     Span, Terminal,

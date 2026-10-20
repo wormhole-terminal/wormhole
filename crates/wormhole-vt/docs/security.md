@@ -76,7 +76,8 @@ lowering is all a host can do and this table stays true whatever it asks. The re
 | Placements | 4,096 per screen | |
 | Uploads waiting for the host to decode | 256 MiB in all; past that new pictures are refused | `image_uploads` |
 | Replies the host has not collected | 1 MiB; past that new replies are dropped whole | `replies` |
-| Events the host has not collected | 16,384; past that new ones are dropped, except picture uploads, picture releases and resets | `events` |
+| Events the host has not collected | 16,384; past that new ones are dropped, except picture uploads, picture releases, resets and dropped history | `events` |
+| Dropped history lines the host has not collected (only when it asked for them) | 64 MiB of lines; past that the newest are counted, not kept | `archive_backlog` |
 | Replies held behind a picture decode | 1 MiB and 64 answers waiting; then the oldest is given up | |
 | Screen size | 2 to 16,384 columns, 1 to 16,384 rows | |
 | Characters after a cell's first | 32 | |

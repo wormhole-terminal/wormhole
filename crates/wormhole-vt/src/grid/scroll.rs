@@ -13,6 +13,7 @@ use std::ops::Range;
 
 use crate::types::Color;
 
+use super::archive::DropReason;
 use super::page::Page;
 use super::row::Region;
 use super::{Grid, Spare};
@@ -297,7 +298,7 @@ impl Grid {
         }
         // The history only outgrows its cap when a page is added.
         if new_page {
-            self.enforce_limit();
+            self.enforce_limit(DropReason::Scrolled);
         }
     }
 }
