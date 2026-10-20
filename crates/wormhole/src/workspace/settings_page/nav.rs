@@ -1,11 +1,12 @@
 //! The settings window's nav: "Settings" under the traffic lights, the
 //! search field with its count and clear button, then the sections under their group labels,
-//! 28 high and full width, the current one on the sidebar's selected tint. While searching,
+//! 28 high and inset 8 from the nav's edges (rounded, like System Settings), the current one on
+//! the sidebar's selected tint. Each group starts a clear step below the one before. While searching,
 //! a section shows how many settings it holds that match, and dims when it holds none.
 
 use std::collections::HashMap;
 
-use wormhole_core::settings_index::{NavGroup, Query};
+use wormhole_core::settings_index::Query;
 
 use super::*;
 use style::NavMark;
@@ -43,7 +44,40 @@ impl SettingsWindow {
         let total: usize = hits.values().sum();
         let attention = self.agents.as_ref().is_some_and(|agents| agents.needs_repair() > 0);
 
-        let mut nav = div()
+        let mut rows = div().flex_none().flex().flex_col().px_2();
+        let mut group = None;
+        // Only the sections shown for this build: the Preview group (feature flags, and a feature's
+        // own section while its flag is on) is there only in a dev build, so a release never lists it.
+        for section in Section::visible(settings(cx)) {
+            let nav_group = section.info().nav;
+            if group != Some(nav_group) {
+                group = Some(nav_group);
+                if !nav_group.title().is_empty() {
+                    rows = rows.child(style::nav_group_label(ui, nav_group.title()));
+                }
+            }
+            let mark = match hits.get(&section) {
+                _ if !searching && section == Section::Agents && attention => NavMark::Attention,
+                // A preview section wears its tag when not searching; search marks override it.
+                _ if !searching && section.is_preview() => NavMark::Preview,
+                _ if !searching => NavMark::None,
+                Some(n) => NavMark::Hits(*n),
+                None => NavMark::NoHits,
+            };
+            let selected = section == self.section && !self.show_results;
+            rows = rows.child(
+                style::nav_row(
+                    SharedString::from(format!("settings-nav-{section:?}")),
+                    ui,
+                    section_icon(section),
+                    section.title(),
+                    selected,
+                    mark,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
+            );
+        }
+        div()
             .id("settings-nav")
             .flex()
             .flex_col()
@@ -57,6 +91,7 @@ impl SettingsWindow {
             .rule_right(ui)
             .child(
                 div()
+                    .flex_none()
                     .flex()
                     .items_center()
                     .h(px(style::TITLE_ROW_H))
@@ -65,7 +100,7 @@ impl SettingsWindow {
             )
             .child(self.render_profile_line(ui, cx))
             .child(
-                div().px_4().pb_2().child(
+                div().flex_none().px_4().pt_2().pb_2().child(
                     Input::new(&self.search)
                         .small()
                         .cleanable(true)
@@ -80,40 +115,9 @@ impl SettingsWindow {
                             )
                         }),
                 ),
-            );
-        let mut group = None;
-        // Only the sections shown for this build: the Preview group (feature flags, and a feature's
-        // own section while its flag is on) is there only in a dev build, so a release never lists it.
-        for section in Section::visible(settings(cx)) {
-            let nav_group = section.info().nav;
-            if group != Some(nav_group) {
-                group = Some(nav_group);
-                if !nav_group.title().is_empty() {
-                    nav = nav.child(group_label(ui, nav_group));
-                }
-            }
-            let mark = match hits.get(&section) {
-                _ if !searching && section == Section::Agents && attention => NavMark::Attention,
-                // A preview section wears its tag when not searching; search marks override it.
-                _ if !searching && section.is_preview() => NavMark::Preview,
-                _ if !searching => NavMark::None,
-                Some(n) => NavMark::Hits(*n),
-                None => NavMark::NoHits,
-            };
-            let selected = section == self.section && !self.show_results;
-            nav = nav.child(
-                style::nav_row(
-                    SharedString::from(format!("settings-nav-{section:?}")),
-                    ui,
-                    section_icon(section),
-                    section.title(),
-                    selected,
-                    mark,
-                )
-                .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
-            );
-        }
-        nav.into_any_element()
+            )
+            .child(rows)
+            .into_any_element()
     }
 }
 
@@ -126,23 +130,12 @@ impl SettingsWindow {
         div()
             .flex()
             .items_center()
+            .flex_none()
             .gap_2()
             .px_4()
-            .pb_2()
+            .mt_1()
+            .h(px(style::ROW_H))
             .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
-            .child(
-                div()
-                    .min_w_0()
-                    .truncate()
-                    .text_body()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .child(profile.name.clone()),
-            )
+            .child(div().min_w_0().truncate().text_label().child(profile.name.clone()))
     }
-}
-
-/// A group's label in the nav ("LOOK"): caption caps at x 16, at the bottom of a 28 row.
-#[track_caller]
-fn group_label(ui: UiColors, group: NavGroup) -> Div {
-    div().flex().items_end().h(px(style::ROW_H)).px_4().pb_1().child(style::section_label(ui, group.title()))
 }

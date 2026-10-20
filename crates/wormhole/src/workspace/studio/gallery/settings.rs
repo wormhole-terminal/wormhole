@@ -249,7 +249,7 @@ fn slider_track(ui: UiColors) -> AnyElement {
 const SLIDER_TRACK: f32 = 4.0;
 const SLIDER_KNOB: f32 = 16.0;
 
-/// The settings nav's items: normal, current, needs attention, search hits, none.
+/// The settings nav's group labels and items: normal, current, needs attention, search hits, none.
 fn nav(ui: UiColors) -> Div {
     div()
         .flex()
@@ -257,9 +257,11 @@ fn nav(ui: UiColors) -> Div {
         .w(px(NAV_W))
         .bg(ui.panel)
         .outlined(ui, ui.border)
-        .py_2()
+        .p_2()
+        .child(style::nav_group_label(ui, "Look"))
         .child(style::nav_row("g-nav-look", ui, IconName::Palette, "Appearance", false, NavMark::None))
         .child(style::nav_row("g-nav-fonts", ui, IconName::ALargeSmall, "Fonts", true, NavMark::None))
+        .child(style::nav_group_label(ui, "Agents"))
         .child(style::nav_row(
             "g-nav-agents",
             ui,

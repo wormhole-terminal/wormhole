@@ -33,10 +33,12 @@ use style::{SettingParts, SettingState};
 const PAGE_TOP: f32 = style::TITLE_ROW_H;
 /// The content column: the widest a page grows.
 const COLUMN_W: f32 = 760.0;
+/// A page's intro line wraps at a readable length, not across the whole column.
+const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.
 const NO_RESULTS_W: f32 = 420.0;
 /// The window: its first size and the least it shrinks to.
-const WINDOW_SIZE: (f32, f32) = (920.0, 660.0);
+const WINDOW_SIZE: (f32, f32) = (920.0, 720.0);
 const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
 
 /// What the Terminals & sidebar preview shows beside the current look while the pointer is
@@ -476,7 +478,7 @@ impl SettingsWindow {
         div()
             .flex()
             .flex_col()
-            .gap_2()
+            .gap_1()
             .child(
                 div()
                     .flex()
@@ -487,7 +489,7 @@ impl SettingsWindow {
                     .child(div().text_title().font_weight(FontWeight::BOLD).child(title))
                     .children(action),
             )
-            .child(div().text_body().text_color(ui.muted).child(intro))
+            .child(div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(intro))
             .into_any_element()
     }
 }
@@ -528,8 +530,8 @@ impl Render for SettingsWindow {
             .h_full()
             .overflow_y_scroll()
             .track_scroll(&self.content_scroll)
-            .px_6()
-            .pb_6()
+            .px_8()
+            .pb_8()
             .pt(px(PAGE_TOP))
             .child(
                 div()

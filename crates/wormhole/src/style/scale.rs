@@ -29,6 +29,8 @@ pub const ROW_TWO_LINE_H: f32 = 44.0;
 pub const NAME_LINE: f32 = 1.25;
 /// The second line of a two-line row, in rems (16).
 pub const META_LINE: f32 = 1.0;
+/// The settings nav's group label with the step above it: 12 of space, a caption line, 4 below.
+pub const NAV_GROUP_H: f32 = 32.0;
 /// A folder band in the sidebar, a section band in the right panel.
 pub const BAND_H: f32 = 32.0;
 /// A folder band with its second line (the folder's path, ±N and branch): the height of a

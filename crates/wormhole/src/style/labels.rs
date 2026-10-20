@@ -6,13 +6,31 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::scale::{BADGE_H, BRANCH_CHIP_MAX, BRANCH_CHIP_MIN, Edges, MARK_DOT, TextRole};
+use super::scale::{BADGE_H, BRANCH_CHIP_MAX, BRANCH_CHIP_MIN, Edges, MARK_DOT, NAV_GROUP_H, TextRole};
 use crate::settings::UiColors;
 
 /// The small uppercase heading above a group of rows or settings (12 / 600, muted).
 #[track_caller]
 pub fn section_label(ui: UiColors, text: &str) -> Div {
     div().text_caption().font_weight(FontWeight::SEMIBOLD).text_color(ui.muted).child(text.to_uppercase())
+}
+
+/// A group's label in the settings nav ("LOOK"): caption caps (12 / 500, muted) at the bottom of
+/// a [`NAV_GROUP_H`] box, so a group is set off from the rows above by a clear step and the
+/// label reads as a caption, not as another row. Its text starts at the row's icon (x 16) inside
+/// the nav's `_2` inset.
+#[track_caller]
+pub fn nav_group_label(ui: UiColors, text: &str) -> Div {
+    div()
+        .flex()
+        .items_end()
+        .h(px(NAV_GROUP_H))
+        .px_2()
+        .pb_1()
+        .text_caption()
+        .font_weight(FontWeight::MEDIUM)
+        .text_color(ui.muted)
+        .child(text.to_uppercase())
 }
 
 /// The bold title of a panel: "Terminals" over the sidebar list, "Settings" over its nav.

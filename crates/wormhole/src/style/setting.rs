@@ -13,7 +13,7 @@ use std::ops::Range;
 
 use super::buttons::icon_button;
 use super::controls::keycap;
-use super::labels::{changed_dot, section_label, tint_chip};
+use super::labels::{changed_dot, tint_chip};
 use super::scale::{
     CONTROL_H, Edges, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
 };
@@ -234,9 +234,9 @@ fn out_of_reach(id: impl Into<ElementId>, control: AnyElement) -> AnyElement {
         .into_any_element()
 }
 
-/// The head of a group of [`setting`] rows: the section label, and a quiet note
-/// at the right ("Same values as the funnel"). The rows follow with their hairlines; end the
-/// group with `rule_bottom`.
+/// The head of a group of [`setting`] rows: the group's name as a heading (16 / 600) with a
+/// step of space above it, and a quiet note at the right ("Same values as the funnel"). The
+/// rows follow with their hairlines; end the group with `rule_bottom`.
 #[track_caller]
 pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div {
     div()
@@ -246,14 +246,21 @@ pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div
         .gap_4()
         .h(px(GROUP_HEAD_H))
         .pb_2()
-        .child(section_label(ui, title))
+        .child(
+            div()
+                .text_heading()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(ui.text)
+                .child(title.to_string()),
+        )
         .children(aside.map(|aside| {
             div().min_w_0().truncate().text_caption().text_color(ui.faint).child(aside.to_string())
         }))
 }
 
-/// A group head's height: its label sits at the bottom, a step above the first row.
-const GROUP_HEAD_H: f32 = 28.0;
+/// A group head's height: its name sits at the bottom, a clear step below the group above and a
+/// small one above the first row's hairline.
+const GROUP_HEAD_H: f32 = 40.0;
 
 /// A text button in the link color ("Edit in Fonts", "Open Notifications"), with an arrow
 /// after it when it takes you to another page. Add `.on_click(…)`.

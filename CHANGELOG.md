@@ -64,6 +64,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   behind them, instead of beside them.
 - Notes and tasks in the right panel are hidden for now, behind a feature flag in development builds.
 - The Usage tab of the right panel shows while a coding agent runs in the terminal.
+- Settings: a calmer look. The nav's rows are 13 pt and inset from its edges with a rounded
+  selection, each group of sections starts a clear step below the one before it, and "Project
+  folders" no longer cuts off against its Preview tag. Pages have more air at the sides, an intro
+  that wraps at a readable width and group headings in a larger, heavier type than the rows under
+  them. The window opens a little taller so the whole nav shows.
 - Right-click menus (a terminal's, a group's, the + button's shells, a pane's, Open in…) are the Mac's
   own menus now, with VoiceOver, type-to-select and the system look.
 - The terminal engine, `wormhole-vt`, is now under the MIT License, so other projects can use it. The

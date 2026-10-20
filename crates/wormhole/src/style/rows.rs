@@ -463,9 +463,11 @@ pub enum NavMark {
     Preview,
 }
 
-/// An item of the settings nav: [`ROW_H`] tall and as wide as the nav, its icon in
-/// the lead column and its name at x 40; the current page is the opaque tint of the
-/// sidebar's selected row with its icon and name (600) in the tint's text color.
+/// An item of the settings nav, like a row of System Settings' sidebar: [`ROW_H`] tall, its
+/// 16 pt icon in the lead column and its name (13) a gap after it. The row sits in a container
+/// inset by `_2` (`nav_inset`), so its rounded hover and selection float in from the nav's edges
+/// while the icon still starts at x 16. The current page is the opaque tint of the sidebar's
+/// selected row, its icon and name (600) in the tint's text color.
 #[track_caller]
 pub fn nav_row(
     id: impl Into<ElementId>,
@@ -488,8 +490,9 @@ pub fn nav_row(
         .gap_2()
         .w_full()
         .h(px(ROW_H))
-        .px_4()
-        .text_body()
+        .px_2()
+        .rounded(ui.radius_sm)
+        .text_label()
         .cursor_pointer()
         .when(selected, |d| d.bg(ui.selected_row))
         .hover(move |d| if selected { d } else { d.bg(ui.hover) })
