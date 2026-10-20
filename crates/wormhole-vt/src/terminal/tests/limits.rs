@@ -120,10 +120,11 @@ fn the_clipboard_has_a_cap_of_its_own() {
 #[test]
 fn the_rest_of_osc_1337_has_a_cap_of_its_own() {
     let mut r = rig_with(lowered(|l| l.osc_iterm = 64));
-    let var = |bytes: usize| format!("\x1b]1337;SetUserVar=name={}\x07", "v".repeat(bytes));
-    r.feed(&var(10));
+    // A user variable has a cap of its own (`SetUserVar`); any other kind is held to this one.
+    let other = |bytes: usize| format!("\x1b]1337;Custom=id={}\x07", "v".repeat(bytes));
+    r.feed(&other(10));
     assert_eq!(r.events().len(), 1);
-    r.feed(&var(100));
+    r.feed(&other(100));
     assert!(r.events().is_empty());
 }
 
