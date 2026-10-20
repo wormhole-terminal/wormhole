@@ -1,5 +1,5 @@
 //! A split in the terminal list: every terminal of a split is a row of its own, next to the others
-//! in one card, joined by a thin line left of the tiles; a chain mark on each says they belong
+//! in one card, joined by a thin line through the middle of their tiles, behind them; a chain mark on each says they belong
 //! together when they can't be next to each other. The row that has the selected look stays one: the focused terminal's.
 
 use gpui_kit::component::tooltip::Tooltip;
@@ -26,11 +26,17 @@ pub fn chain_mark(id: impl Into<ElementId>, ui: UiColors) -> Stateful<Div> {
         .tooltip(|window, cx| Tooltip::new("In a split with terminals in other folders").build(window, cx))
 }
 
-/// The line along a split's rows, left of their tiles: from the middle of the first row to the
-/// middle of the last, so it never reaches a card's edge. Only its two ends are rounded, so the
-/// stretches in the rows between meet without a notch.
+/// Where a split's line runs in a terminal's row: through the middle of its tile.
+pub fn split_line_x(metrics: Metrics) -> f32 {
+    metrics.row_px + metrics.tile / 2.0
+}
+
+/// The line along a split's rows, `x` in from the row's left (the middle of what it joins, see
+/// [`split_line_x`]): from the middle of the first row to the middle of the last, so it never
+/// reaches a card's edge, and drawn first so the tiles stand on it and it shows only between them.
+/// Only its two ends are rounded, so the stretches in the rows between meet without a notch.
 #[track_caller]
-pub fn split_line(part: Bracket, metrics: Metrics, ui: UiColors) -> Div {
+pub fn split_line(part: Bracket, x: f32, ui: UiColors) -> Div {
     let (top, bottom) = match part {
         Bracket::Start => (relative(0.5), px(0.0).into()),
         Bracket::Mid => (px(0.0).into(), px(0.0).into()),
@@ -38,7 +44,7 @@ pub fn split_line(part: Bracket, metrics: Metrics, ui: UiColors) -> Div {
     };
     div()
         .absolute()
-        .left(px((metrics.row_px / 2.0 - 1.0).max(1.0)))
+        .left(px(x - 1.0))
         .top(top)
         .bottom(bottom)
         .w(px(2.0))

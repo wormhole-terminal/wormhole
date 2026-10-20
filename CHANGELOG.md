@@ -56,6 +56,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- The line that joins a split's terminals in the sidebar runs through the middle of their tiles,
+  behind them, instead of beside them.
 - Right-click menus (a terminal's, a group's, the + button's shells, a pane's, Open in…) are the Mac's
   own menus now, with VoiceOver, type-to-select and the system look.
 - The terminal engine, `wormhole-vt`, is now under the MIT License, so other projects can use it. The

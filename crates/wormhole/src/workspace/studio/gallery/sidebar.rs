@@ -402,11 +402,14 @@ pub(super) fn render(
                 detail: Some("Idle".into()),
                 selected,
                 trail,
+                // These rows lead with a glyph, 16 in (`px_4`), not a tile: the line runs through it.
+                behind: line.map(|part| {
+                    style::split_line(part, 16.0 + style::ITEM_LEAD_W / 2.0, ui).into_any_element()
+                }),
                 ..SessionRow::new(glyph(Box::leak(format!("{id}-glyph").into_boxed_str()), g), name)
             },
         )
         .relative()
-        .children(line.map(|part| style::split_line(part, style::Metrics::default(), ui)))
     };
     let split_rows = || {
         column(ui)

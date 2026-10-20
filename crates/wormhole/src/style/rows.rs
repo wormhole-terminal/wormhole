@@ -102,6 +102,9 @@ pub struct SessionRow {
     /// A `style::status_tile` beside the lines, in place of `glyph`: the name and the second line
     /// start after it.
     pub tile: Option<AnyElement>,
+    /// Drawn first, under the tile and the lines, placed by the caller (absolutely, in the row):
+    /// a split's line, which the tiles stand on.
+    pub behind: Option<AnyElement>,
     /// In a card (or lined up with one): inset by the row's own padding instead of 16, the selection
     /// and hover rounded.
     pub card: bool,
@@ -193,6 +196,7 @@ impl SessionRow {
             trail: None,
             detail_trail: None,
             tile: None,
+            behind: None,
             card: false,
             solo: false,
             metrics: Metrics::default(),
@@ -219,6 +223,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         trail,
         detail_trail,
         tile,
+        behind,
         card,
         solo,
         metrics,
@@ -337,6 +342,7 @@ pub fn session_row(id: impl Into<ElementId>, ui: UiColors, row: SessionRow) -> S
         .cursor_pointer()
         .when(selected && !solo, |d| d.bg(ui.selected_row))
         .when(!solo, |d| d.hover(move |d| if selected { d } else { d.bg(ui.hover) }))
+        .children(behind)
         .children(tile)
         .child(lines)
 }

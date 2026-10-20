@@ -410,6 +410,9 @@ impl Workspace {
                 trail,
                 detail_trail: detail_trail.map(SharedString::from),
                 tile: Some(tile),
+                behind: place.marks.bracket.map(|part| {
+                    style::split_line(part, style::split_line_x(frame.metrics), ui).into_any_element()
+                }),
                 card: true,
                 solo: place.solo,
                 metrics: frame.metrics,
@@ -461,7 +464,6 @@ impl Workspace {
                 d.tooltip(move |window, cx| two_line_tooltip(name.clone(), second.clone(), ui, window, cx))
             })
             .children(flash)
-            .children(place.marks.bracket.map(|part| style::split_line(part, frame.metrics, ui)))
             .when(self.sidebar.menu_row == Some(id) || ring, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
