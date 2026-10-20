@@ -227,10 +227,12 @@ The engine hands you untrusted data and requests. The remaining checks are yours
 - Answer every `ImageData` with exactly one `image_decoded`, and free pixels on `ImageFree`.
 
 **Raw events.**
-- `Event::Iterm` carries the parts of OSC 1337 that are not inline images, unparsed, up to the OSC cap
-  of 64 MiB. iTerm2's protocol has features that act on the host. Ignore the event unless you implement it
+- `Event::Iterm` carries the parts of OSC 1337 that are not inline images, unparsed, up to 64 KiB
+  (a longer one is dropped; inline images keep their own, larger limits). iTerm2's protocol has features that act on the host. Ignore the event unless you implement it
   carefully, and never act on its content without validation.
-- `ProgramStatus` and custom events from extensions are your own protocol: validate them.
+- `ProgramStatus` (the [program status protocol](https://mitchellh.com/writing/program-status-osc7501), OSC 7501)
+  and the strings you asked for with a `Passthrough` (`Event::Osc`, `Event::Dcs`, `Event::Apc`) are protocols of
+  your own or someone else's: validate them.
 
 **Policy.** Leave `window_ops`, `title_report` and `screen_checksum` off. If you turn `window_ops` on, clamp
 what a program asks for (position, size) to what you would allow. Do not turn `title_report` on for sessions

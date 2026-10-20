@@ -1,7 +1,7 @@
 <!--
 API names assumed here (target API of engine-library.md; reconcile when phases 1-3 land):
   Terminal::new(cols, rows), Terminal::builder() -> Builder, Builder::{size, scrollback_lines, policy,
-  cell_size, palette, word_separators, extension, build}, Terminal::feed(&[u8]),
+  cell_size, palette, word_separators, passthrough, build}, Terminal::feed(&[u8]),
   Terminal::take_replies() -> Vec<u8>, Terminal::events() (draining iterator), Event::{Title, Bell,
   ClipboardStore, ClipboardLoad, Notification, ..}, Terminal::resize(cols, rows),
   Terminal::cell(Point) -> Option<Cell>, Point/Line/Column/Cell at the crate root, Terminal::title() -> Option<&str>, Terminal::cursor(),

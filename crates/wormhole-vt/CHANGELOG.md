@@ -1,5 +1,5 @@
 <!--
-Assumed API names: Terminal::{new, builder, feed}, Policy, input, ext, Damage, Pin/Span (see README.md and
+Assumed API names: Terminal::{new, builder, feed}, Policy, input, passthrough, Damage, Pin/Span (see README.md and
 docs/*.md headers). The "Changed" list repeats decisions D-4 to D-16 of the library spec; trim it to what
 phases 1-3 actually shipped before release.
 -->
@@ -21,15 +21,16 @@ First public release (0.1.0).
 ### Added
 
 - A front door at the crate root: `Terminal::new(cols, rows)` and `Terminal::builder()` (size,
-  scrollback, policy, cell size, palette, word separators, extensions). `Terminal::feed(bytes)` takes
+  scrollback, policy, cell size, palette, word separators, passthrough). `Terminal::feed(bytes)` takes
   program output; the terminal owns its parser.
 - `Policy`, one place for every risky switch: window operations, title reports and DECRQCRA, all off by
   default. Title reports (XTWINOPS 20 and 21) are a switch of their own, `Policy::title_report`.
 - The `input` module: key encoding (legacy xterm and the kitty keyboard protocol), mouse reports (X10,
   UTF-8 and SGR), bracketed paste with the end marker removed, and focus reports, as pure functions of the
   event and the terminal's modes.
-- The `ext` module: extensions that claim OSC, DCS and APC sequences and private CSI finals, with payload
-  caps, `Handled` or `Pass`, and a narrow context for replies and events.
+- The `passthrough` module: ask for OSC numbers, DCS and APC introducers the engine does not know and get
+  them whole as `Event::Osc`, `Event::Dcs` and `Event::Apc`, with a payload limit and the `replies_before`
+  mark a host answers at, so replies keep their order.
 - `Damage`, a reusable description of what changed since the last look (rows, the cursor, the colours a
   program set), and a read API for cells and rows: `Terminal::cell`, `size`.
 - Pins and spans that follow text through scrolling and reflow.
@@ -48,6 +49,7 @@ First public release (0.1.0).
   `grid_cursor`), `block_text` and `BlockPart` (were `content_text` and `Content`); `take_damage` fills a
   `Damage` instead of a `[bool]`.
 - The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole".
+- OSC 1337 that is not an inline image reaches the host capped at 64 KiB (it was 64 MiB).
 
 ### Security
 

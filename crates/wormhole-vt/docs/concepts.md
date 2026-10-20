@@ -191,5 +191,5 @@ resize the window, ones that read the window's title back, and ones that read th
 - It does not decode PNG or JPEG. It hands the encoded bytes to the host (`rendering.md`).
 - It does not draw, measure fonts or know about pixels, except the cell size the host tells it, which it
   needs for a few reports and for placing pictures.
-- It does not know about your application. There is no application-specific sequence in it; use an
-  extension (`extensions.md`).
+- It does not know about your application. There is no application-specific sequence in it; ask for
+  your own strings as a passthrough (`extensions.md`).

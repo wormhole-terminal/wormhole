@@ -1,142 +1,127 @@
-<!--
-THIS CHAPTER DESCRIBES THE API BEING BUILT (phase 3, D-14). Every name below is assumed:
-ext::{Extension, Claims, Handled, Context, ExtensionId}, Extension::{claims, osc, dcs, apc, csi_private},
-Claims::{osc(number, max_payload), dcs(intermediates, final), apc(introducer, max_payload), csi_private(final)},
-Handled::{Yes, Pass}, Context::{reply, emit, cursor, size, pin}, Builder::extension(Box<dyn Extension + Send>),
-Terminal::{add_extension, remove_extension}, Event::Custom(..) carrying the extension's own event type.
-Reconcile with the real names before release.
--->
+# Your own sequences
 
-# Extensions
+Programs invent sequences, and so do hosts. A shell prompt wants to say what command ran, a build tool
+wants to show a progress bar, an application wants to report its own state. The engine reads every
+sequence it knows and drops the rest. **Passthrough** is how a host asks to be given the ones it
+wants: the engine collects the string whole and hands it over as an event. The engine does not run
+the host's code, and it does not interpret the string.
 
-> **This chapter describes the API as designed. It is being built.** Names and signatures may differ in
-> the first release; the behaviour described here is the contract the implementation is held to.
+## Asking
 
-The terminal speaks a long list of sequences, and programs invent more. A shell prompt wants to say what
-command ran. A build tool wants to show a progress bar. An application wants to report its own status. An
-**extension** is a way for the host to add its own sequences without forking the engine, and without
-giving up the engine's guarantees about hostile input.
-
-## The model
-
-An extension is an object that implements the `Extension` trait. The host registers it on the builder or
-at runtime. The extension declares what it wants to see, its **claims**:
-
-- an **OSC number**, with a **payload cap** (how many bytes of payload it accepts);
-- a **DCS** or **APC** introducer, with a cap;
-- a **private CSI final** (a final byte after a private marker like `?` or `>`).
-
-The engine caches the claims of all extensions in bitsets. When a sequence arrives, one check on the
-bitset decides whether any extension wants it. If none does, the sequence takes the engine's normal path
-and the extensions cost one branch. This is why the trait can be a trait object (`Box<dyn Extension +
-Send>`): only claimed sequences ever call it, so the dynamic call is not on the path of ordinary text.
+A [`Passthrough`](crate::passthrough::Passthrough) lists what the host wants and how much of it:
 
 ```rust,ignore
-use wormhole_vt::ext::{Claims, Context, Extension, Handled};
+use wormhole_vt::passthrough::Passthrough;
+use wormhole_vt::Terminal;
 
-/// Our own OSC 7777: the program says what it is working on.
-struct WorkingOn;
-
-impl Extension for WorkingOn {
-    fn claims(&self) -> Claims {
-        Claims::new().osc(7777, 1024) // OSC 7777, payloads up to 1 KiB
-    }
-
-    fn osc(&mut self, number: u32, payload: &[u8], cx: &mut Context<'_>) -> Handled {
-        if number != 7777 {
-            return Handled::Pass;
-        }
-        let Ok(text) = std::str::from_utf8(payload) else {
-            return Handled::Yes; // ours, but malformed: swallow it
-        };
-        cx.emit(WorkingOnChanged { text: text.to_owned() });
-        Handled::Yes
-    }
-}
-
-let term = Terminal::builder().extension(Box::new(WorkingOn)).build();
+let term = Terminal::builder()
+    .passthrough(
+        Passthrough::new()
+            .osc(51234, 1024)        // OSC 51234 ; payload ST, up to 1 KiB of payload
+            .dcs(b"!", b'z', 64 * 1024) // DCS params ! z data ST, up to 64 KiB of data
+            .apc(b'Q', 4096),        // APC Q... ST, up to 4 KiB, the Q included
+    )?
+    .build();
 ```
 
-## Handled and Pass
+`Terminal::set_passthrough` changes the choice while the terminal runs. A refused value
+(`PassthroughError`) changes nothing.
 
-Extensions form a stack. The **newest registered is asked first**. A handler returns:
+Each claim carries its **limit**. A string over its limit is **dropped whole**: nothing is queued and
+the string after it is read as usual. A string is never cut, because half a message is worse than none
+and the host would have to guess whether it was cut. The limit is part of the claim so that a reviewer
+can see in one line how much memory a program can make the terminal hold for it. Choose the smallest
+number that works: titles take 8 KiB in the engine, an image protocol takes megabytes, a status message a
+few hundred bytes. No limit goes above `MAX_BYTES` (1 MiB); a larger one is clamped.
 
-- `Handled::Yes`: the extension dealt with the sequence. Nobody else sees it, including the engine.
-- `Handled::Pass`: the extension declined. The next older extension that claimed it is asked, and after
-  the last one, the built-in handler runs.
+An unclaimed string is never collected. A claim costs memory only while a claimed string is arriving.
 
-So an extension can add a sequence the engine does not know, or take over one it does (for example to
-log OSC 8, or to pass OSC 52 through a policy of its own), and it can wrap the built-in behaviour: look,
-then `Pass`.
+## Reading
 
-Claims are matched before the handler runs. A claim for a number does not mean the extension must handle
-every payload; it may `Pass` on a payload it does not understand.
+The strings arrive in the event stream, in order with the engine's own events:
 
-## Payloads
+- `Event::Osc { number, payload, terminator, replies_before }`: `OSC number ; payload`, the payload being
+  what follows the first `;` (empty without one).
+- `Event::Dcs { params, intermediates, final_byte, payload, replies_before }`: the header of the DCS and
+  its data. A DCS with a private marker (`DCS = …`) is not matched.
+- `Event::Apc { payload, replies_before }`: the whole string, its first byte included (the byte that was
+  claimed), so one handler can tell its claims apart.
 
-The parser streams strings in pieces and never buffers them. For a claimed sequence, the engine collects
-the payload and delivers it **whole**, up to the claim's cap, in one call. Over the cap, the payload is
-**dropped whole and the extension is not called**. A string is never cut in the middle: half a message is
-worse than none, and the extension would have to guess whether it was cut.
+The payload is what a program printed. Validate it, bound anything you build from it, and never use it as
+a path, a command or a format string.
 
-This is deliberately different from an interface that hands over a stream of chunks (every extension would
-need its own state machine) and from one that buffers without a limit (every extension is a memory
-exhaustion bug waiting for a hostile program). The cap is part of the claim, so a reviewer can see in one
-line how much memory an extension lets a program use. Choose the smallest number that works. Titles use
-8 KiB in the engine; an image protocol is megabytes; a status message is a few hundred bytes.
+## Replying, in order
 
-An unclaimed sequence is never collected. A claim costs memory only while a claimed string is arriving.
+A program that asks a question reads its answers in the order it asked. Your answer may come later, from
+another thread, but it still has to be written to the program's input *between* the engine's replies to
+what came before it and to what came after. `replies_before` is how many bytes of
+`Terminal::replies()` the engine had queued when the string ended, exactly as `Event::ClipboardLoad`
+carries it. A host that answers at once writes `replies()[..replies_before]`, then its answer, then the
+rest. A host that answers later holds the place (as a host does while it asks the user about a clipboard read). The reply ends the
+way the request did (`Terminator::as_str`).
 
-## Context
+```rust,ignore
+for event in term.events() {
+    if let Event::Osc { number: 51234, payload, terminator, replies_before } = event {
+        if payload == b"ping" {
+            let answer = format!("\x1b]51234;pong{}", terminator.as_str());
+            input.splice(replies_before..replies_before, answer.into_bytes());
+        }
+    }
+}
+```
 
-The handler gets a narrow `Context`, not the terminal. It can:
+`examples/custom_osc.rs` is this, whole. Never build the answer from the request's bytes: a reply that
+contains what the program sent is the oldest bug in terminal security (`security.md`). Put a number or a
+fixed word in it.
 
-- `reply(bytes)`: queue bytes for the program's input. The engine applies its reply cap and ordering
-  (`concepts.md`). Build the reply from your own state, never from the payload; see `security.md`.
-- `emit(event)`: queue a custom event for the host. It appears in the event stream in order with the
-  built-in events. This is how an extension talks to the host's UI.
-- `cursor()` and `size()`: where the cursor is and how big the screen is.
-- `pin(point)`: pin a position so the host or the extension can refer to that text later, through
-  scrolling and reflow (`concepts.md`).
+## Why the host's code does not run in `feed`
 
-It cannot change cells, modes or the cursor, and it cannot read the screen. An extension is a *reader of
-sequences*, not a way into the engine's state. If a feature needs more (decorations over text, for
-example), build it on pins and events in the host.
+The engine does not call back into the host when a claimed string ends; it queues an event. There are
+three reasons.
 
-## Why there is no async
+- **No foreign code in the parser.** A handler running inside `feed` would run on the parsing path, under
+  the host's lock, and could be slow, block, take a lock of its own or panic. With events, the engine's
+  time per byte is the engine's own, and a panic in the host's handling is the host's, outside the
+  parser.
+- **No waiting.** A handler that needs the host (a clipboard, a prompt, a network call) would have to
+  stall the parser, because the bytes behind the string may depend on the answer, and a stalled parser
+  stalls the terminal. An event never makes the engine wait; the host answers when it can, at the place
+  `replies_before` names.
+- **Nothing to get wrong about the screen.** A handler could reach into the engine's state in the middle
+  of a sequence. An event is data. The host reads the screen from the terminal as it always does, between
+  calls.
 
-Some designs let a handler return a future so it can wait for the host. This engine does not. A handler
-that needs the host does this:
+The price is that the host cannot change how the engine treats a sequence, only get a copy of one the
+engine would have dropped. That is deliberate.
 
-1. It emits an event and returns `Handled::Yes`.
-2. The host does its work, however long it takes, on its own thread.
-3. The host calls back into the terminal with the answer (a reply to write, a state change).
+## Why the engine's own sequences cannot be claimed
 
-Reasons: the engine has no executor and no lock to hold across an await point. While a handler waits,
-the parser would have to stop, because the bytes behind a sequence may depend on it, and a stalled parser
-stalls the whole terminal. xterm.js, whose handler model this design follows, lets a handler return a
-promise and pauses parsing until it settles; this engine keeps the model and drops that part. With
-events, the engine never waits, and the order of replies stays what `concepts.md` says: the order of the
-questions.
+A built-in stays built-in. Claiming OSC 52 would let a host replace the clipboard policy with one of its
+own, and then every embedder would have to know whose OSC 52 it is talking to; a claim on the title would
+let a bug in a host's handler change what a terminal does for every program. If you want to see the
+clipboard or the title, the engine already queues an event for it (`Event::ClipboardStore`,
+`Event::ClipboardLoad`, `Event::Title`), and if you want to refuse one, `Policy` is the place.
 
-The clipboard read and the picture decode in the built-in engine work the same way (`embedding.md`).
+So a `PassthroughError` is returned for:
 
-## Registering and removing
+- the OSC numbers the engine acts on: 0, 1, 2, 4, 5, 7, 8, 9, 10 to 19, 52, 99, 104, 105, 110 to 119,
+  133, 777, 1337 and 7501 (the [program status
+  protocol](https://mitchellh.com/writing/program-status-osc7501), which arrives as
+  `Event::ProgramStatus`);
+- the DCS strings it streams into decoders and tables it cannot replay to a handler: Sixel (`q`),
+  DECRQSS (`$ q`), XTGETTCAP (`+ q`), DECAUPSS (`! u`), DECRSPS (`$ t`) and DECRSTS (`$ p`);
+- the kitty graphics protocol (`APC G`);
+- numbers and bytes that no sequence can carry (an OSC number of more than five digits, an APC that
+  starts with a control).
 
-On the builder, extensions are present from the first byte. At runtime, `add_extension` pushes onto the
-stack and `remove_extension` takes one off by the id it returned. Claims are recomputed on each change.
-Registration is for the host, from the thread that owns the terminal; extensions are `Send` so the terminal
-stays `Send`.
+Control sequences (CSI) cannot be claimed at all: their parameters are already parsed and a host that
+needs one can add it to the engine, with a test.
 
-## Rules for writing one
+## Rules for choosing a sequence
 
-- **Treat the payload as hostile.** It is what a program printed. Validate it, bound anything you build
-  from it, and never use it as a path, a command or a format string.
-- **Never echo it.** A reply that contains request bytes is the oldest bug in terminal security
-  (`security.md`). Put a number or a fixed word in the reply.
-- **Keep it small.** A handler runs on the parsing path, under the host's lock. Do not do I/O, take
-  locks or allocate without need. `emit` and let the host do the work.
-- **Return `Pass` when it is not yours.** A claim for a number is a claim for every sequence with that
-  number.
-- **Pick numbers carefully.** OSC numbers are shared by every terminal. Use a number nobody uses, and
-  document it.
+- **Pick numbers carefully.** OSC numbers are shared by every terminal. Use a private-use style number
+  nobody uses (the examples use 51234) and document it, or use a published one and implement its spec.
+- **Return the same answer to the same question.** A program that probes for a feature should get a
+  reply whose shape does not depend on what it sent.
+- **Do the work outside `feed`.** Handle the event after you release the terminal's lock.
