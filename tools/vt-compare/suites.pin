@@ -7,6 +7,14 @@ esctest2_rev=2798f12149a19c3295e9b4853ab2da4b2eff1b2b
 # ucs-detect: Jeff Quast's Unicode width measurement. MIT.
 ucs_detect_repo=https://github.com/jquast/ucs-detect.git
 ucs_detect_rev=50f011d991a28d76fbe12767360841196e49074f
+# vttest: Thomas Dickey's VT100/VT220/xterm test program (a menu driven program that draws screens whose
+# correct look it prints beside them). A source tarball, checked against this SHA-256 before it is built
+# (the release is also signed: vttest-<version>.tgz.asc beside it). Its licence (the MIT-X11 permission
+# notice, COPYING in the tarball) allows use and redistribution; it is only run here, never linked into
+# anything and never committed.
+vttest_version=20251205
+vttest_url=https://invisible-island.net/archives/vttest/vttest-20251205.tgz
+vttest_sha256=cd6886f9aefe6a3f6c566fa61271a55710901a71849c630bf5376aa984bf77cc
 # The Python packages ucs-detect asks for, installed into a venv in the cache. Exact versions, so
 # a run measures the same wcwidth tables the published results were made with.
 py_packages="blessed==1.50.0 prettytable pyyaml<7 requests wcwidth==0.8.4"
