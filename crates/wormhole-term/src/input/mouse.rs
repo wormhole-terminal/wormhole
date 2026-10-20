@@ -4,8 +4,8 @@
 //! encodings X10, UTF-8 and SGR as far as the engine's `TermMode` carries them); this maps the
 //! app's pointer structs onto the engine's.
 
-use wormhole_vt::input::{self as vt, InputModes, Mods, encode_mouse};
 use wormhole_vt::TermMode;
+use wormhole_vt::input::{self as vt, InputModes, Mods, encode_mouse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {

@@ -3,8 +3,8 @@
 //!
 //! The encodings are `wormhole_vt::input`; `keys` and `mouse` adapt the app's events to it.
 
-use wormhole_vt::input::{InputModes, paste as encode_paste};
 use wormhole_vt::TermMode;
+use wormhole_vt::input::{InputModes, paste as encode_paste};
 
 pub mod app_selection;
 pub mod file_drop;
