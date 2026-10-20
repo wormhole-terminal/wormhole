@@ -14,19 +14,9 @@
 //! 80.
 
 use std::ops::Range;
-use std::sync::Arc;
 
 use super::color::Color;
-
-/// A hyperlink (OSC 8). Cells printed under one share it; two with the same id and target are
-/// the same link.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Hyperlink {
-    /// What the program called it (cells with the same id belong together); a generated one when
-    /// it gave none.
-    pub id: Arc<str>,
-    pub uri: Arc<str>,
-}
+use super::hyperlink::Hyperlink;
 
 /// What one cell has beyond its [`Cell`](super::Cell).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

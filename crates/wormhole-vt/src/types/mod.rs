@@ -11,6 +11,7 @@
 mod cell;
 mod color;
 mod extras;
+mod hyperlink;
 mod image;
 mod index;
 mod mode;
@@ -18,7 +19,8 @@ mod view;
 
 pub use cell::{Cell, Flags};
 pub use color::{COLOR_COUNT, Color, Colors, NamedColor, Rgb};
-pub use extras::{CellExtra, Hyperlink, RowExtras};
+pub use extras::{CellExtra, RowExtras};
+pub use hyperlink::{Hyperlink, LinkId};
 pub use image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
 pub use index::{Column, Line, Point, Side};
 pub use mode::TermMode;

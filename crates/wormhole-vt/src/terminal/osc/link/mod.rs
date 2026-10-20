@@ -3,7 +3,7 @@
 mod text;
 
 use crate::terminal::Terminal;
-use crate::types::Hyperlink;
+use crate::types::{Hyperlink, LinkId};
 
 pub(in crate::terminal) use text::LinkText;
 
@@ -43,7 +43,7 @@ impl Terminal {
             Some(id) => self.link_text.id(id),
             None => {
                 self.link_seq += 1;
-                LinkText::fresh_id(self.link_seq)
+                LinkId::generated(self.link_seq)
             }
         };
         Hyperlink { id, uri }

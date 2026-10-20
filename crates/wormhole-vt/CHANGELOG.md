@@ -61,6 +61,9 @@ First public release (0.1.0).
   `Damage` instead of a `[bool]`.
 - The engine no longer names the app: XTVERSION and generated link ids no longer say "Wormhole".
 - OSC 1337 that is not an inline image reaches the host capped at 64 KiB (it was 64 MiB).
+- `Hyperlink::id` is a `LinkId`, not an `Arc<str>`: it derefs to `str`, and ids of up to 22 bytes (every
+  generated one) are stored in the value, so a link costs no allocation for its id. The text of
+  addresses is shared through a bounded table, so a link that repeats costs none for its address either.
 
 ### Security
 

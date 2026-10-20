@@ -86,7 +86,8 @@ impl Links {
     /// The id of `link`, counting `n` more cells under it.
     pub(super) fn acquire(&mut self, link: &Hyperlink, n: u32) -> u32 {
         if let Some(entry) = self.entries.get_mut(self.last as usize).filter(|e| e.refs != 0) {
-            // Cells printed under one link share its two `Arc`s, so this is two pointer compares.
+            // Cells printed under one link share its address and id, so this is a pointer compare and a
+            // short id's bytes.
             if same_link(&entry.link, link) {
                 entry.refs += n;
                 return self.last;
@@ -297,7 +298,7 @@ fn link_text(link: &Hyperlink) -> usize {
 }
 
 fn same_link(a: &Hyperlink, b: &Hyperlink) -> bool {
-    std::sync::Arc::ptr_eq(&a.id, &b.id) && std::sync::Arc::ptr_eq(&a.uri, &b.uri)
+    a.id.is_same(&b.id) && std::sync::Arc::ptr_eq(&a.uri, &b.uri)
 }
 
 #[cfg(test)]

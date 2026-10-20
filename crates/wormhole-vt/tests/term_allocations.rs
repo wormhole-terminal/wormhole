@@ -171,12 +171,15 @@ impl Lcg {
 /// Hyperlinks cost nothing once their text is known: the same link again, a listing of files
 /// printed again and again (`ls --hyperlink`, a build log naming its sources), links with ids and
 /// without. What the page keeps of a link (a run of cells and a count) lives in tables that are
-/// reused with the page. The one thing left is the fresh id of a link that gave none (`link-N`, a
-/// string of its own, as nothing ties two such links together): one allocation each.
+/// reused with the page, and a short id (all the generated ones) is stored in the link itself.
 #[test]
 fn links_allocate_nothing_once_their_text_is_known() {
     let with_id = "\x1b]8;id=a1;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
     assert_eq!(steady("one link with an id", &repeat(with_id, 200), 20), 0);
+    // An id too long to be stored in the link is shared like the address.
+    let long_id =
+        "\x1b]8;id=a-link-id-of-more-than-twenty-two-bytes;file:///work/src/lib.rs\x07lib.rs\x1b]8;;\x07\r\n";
+    assert_eq!(steady("one link with a long id", &repeat(long_id, 200), 20), 0);
 
     // The same files under 40 ids, in an order a program chose.
     let mut rng = Lcg(5);
@@ -187,10 +190,9 @@ fn links_allocate_nothing_once_their_text_is_known() {
     }
     assert_eq!(steady("mixed", mixed.as_bytes(), 20), 0);
 
-    // No id: the address is shared and the fresh id is all the link allocates.
+    // No id: every link gets one of its own, and the same address is still shared.
     let without_id = "\x1b]8;;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
-    let count = steady("one link", &repeat(without_id, 200), 20);
-    assert!(count <= 200 * 20, "{count} allocations for {} links", 200 * 20);
+    assert_eq!(steady("one link without an id", &repeat(without_id, 200), 20), 0);
 
     // A listing of 300 files, each a link of its own.
     let mut listing = String::new();
@@ -201,8 +203,7 @@ fn links_allocate_nothing_once_their_text_is_known() {
             listing.push_str("\r\n");
         }
     }
-    let count = steady("listing", listing.as_bytes(), 20);
-    assert!(count <= 300 * 20, "{count} allocations for {} links", 300 * 20);
+    assert_eq!(steady("listing", listing.as_bytes(), 20), 0);
 }
 
 /// Text full of wide characters and emoji clusters under mode 2027: the zero-width characters of

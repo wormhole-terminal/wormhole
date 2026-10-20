@@ -144,7 +144,7 @@ OSC 8 links are on the cells a program printed while the link was open. You get 
 
 ```rust,ignore
 for (columns, link) in rows[y].extras.links() {
-    // columns: Range<usize>; link.uri, link.id
+    // columns: Range<usize>; link.uri (an Arc<str>), link.id (a LinkId, which derefs to str)
 }
 let link = rows[y].extras.hyperlink(col); // for a hover test
 ```

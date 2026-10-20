@@ -64,8 +64,8 @@ pub use terminal::{
     Span, Terminal,
 };
 pub use types::{
-    COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, NamedColor,
-    Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side, TermMode,
+    COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, LinkId,
+    NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side, TermMode,
 };
 
 /// What a program's sequences ask of the host, and the values that come with them.
