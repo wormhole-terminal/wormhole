@@ -54,6 +54,7 @@ fn main() {
     // under the old codename.
     let migrated = wormhole_core::store::migrate_legacy_data();
     let _log_guard = logging::init();
+    logging::install_panic_hook();
     match migrated {
         Ok(Some(dir)) => tracing::info!(dir = %dir.display(), "moved the data of an earlier version here"),
         Ok(None) => {}

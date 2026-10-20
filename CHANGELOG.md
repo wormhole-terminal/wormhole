@@ -101,6 +101,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A crash is written down: the log gets the panic's message and where it happened, and
+  `logs/last-panic.txt` keeps the last one, so a crash of an app started from the Finder leaves more
+  than a crash report.
 - A screen that keeps printing new words, such as `ttystorm donut` with a font that has ligatures, no
   longer slows the window down: a frame took 30 ms there and takes about 3 now. A word with no time to
   be shaped shows without its ligatures for a frame or two.
