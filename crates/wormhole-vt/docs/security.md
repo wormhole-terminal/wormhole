@@ -109,9 +109,9 @@ queue when you take the event, and decode with limits of your own.
 Each sequence costs time proportional to its length and to a count the engine has clamped. A repeat count
 (REP) is at most what one parameter can say (65,535). Rectangle operations are cut to the screen. A
 hyperlink's reach is followed over at most 16 rows each way. Sixel decoding has a work budget. A
-program cannot move or resize the window unless `Policy` allows it, and then only up to the screen. The one
-exception is DECCOLM, which changes the engine's width to 80 or 132 columns (see below) and asks the host
-to follow.
+program cannot move or resize the window unless `Policy` allows it, and then only up to the screen. DECCOLM
+is behind the same switch: a width change reflows the whole history, so without `window_ops` it clears and
+homes the screen and leaves the width alone (a stream of toggles cost seconds when it did not).
 
 There are no timers in the engine, so there is nothing a program can make wait.
 
@@ -168,7 +168,7 @@ assert!(!term.take_replies().is_empty());
 |---|---|---|
 | Move, resize, minimise, raise, lower, maximise, full-screen (XTWINOPS 1 to 10, DECSLPP, DECSNLS) | Ignored | `window_ops`: queued as `Event::WindowOp`; sizes in cells also take effect in the engine, up to the screen |
 | Title and icon name reports (XTWINOPS 20, 21) | Not answered | `title_report`, see above |
-| DECCOLM (80/132 columns) | Needs mode 40, which the program sets itself, so `Policy` does not cover it | The engine takes the new width, clears and homes the screen, and queues `Event::ColumnsRequested(n)`. The host makes the window match, or calls `resize` with the size it has to say no |
+| DECCOLM (80/132 columns) | Needs mode 40, which the program sets itself. Clears and homes the screen and resets the margins, but the width stays | `window_ops`: the engine takes the new width, and queues `Event::ColumnsRequested(n)` when it changed. The host makes the window match, or calls `resize` with the size it has to say no |
 | DECRQCRA (checksum of a rectangle) | Ignored | `screen_checksum`: answered |
 | Window state, position, pixel size, cell size and text-area reports (XTWINOPS 11 to 19) | Always answered | They say nothing the program could not learn from the tty |
 

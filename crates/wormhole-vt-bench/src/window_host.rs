@@ -254,15 +254,11 @@ impl Host {
                     out.extend(answer.take_replies());
                 }
                 Event::WindowOp(op) => self.window_op(op),
-                // DECCOLM: the window is made to match when the app allows window operations.
-                Event::ColumnsRequested(cols) => {
-                    if self.window_ops {
-                        let rows = self.size().1;
-                        self.set_size(cols, rows);
-                    } else {
-                        let (cols, rows) = (80, 25);
-                        self.term.resize(cols, rows);
-                    }
+                // DECCOLM: the engine sends this only when window operations are on (it keeps the
+                // width otherwise), and the window is made to match.
+                Event::ColumnsRequested(cols) if self.window_ops => {
+                    let rows = self.size().1;
+                    self.set_size(cols, rows);
                 }
                 _ => {}
             }

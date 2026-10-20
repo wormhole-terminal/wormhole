@@ -117,20 +117,16 @@ impl Host {
                 }
             }
             Event::FullReset => proxy.osc(Osc::FullReset),
-            // The pane's size is the window's: a program that asks for 132 columns (DECCOLM) gets
-            // them cleared and homed, and the grid goes back to the width the PTY has, so the two
-            // keep agreeing.
-            // With window operations on, the UI is asked for the width instead, and brings the
-            // engine back to the pane's size when it is done.
+            // The pane's size is the window's: without window operations the engine clears and
+            // homes the screen for DECCOLM and keeps the width the PTY has, and sends no event.
+            // With them on, the engine has taken the width and the UI is asked for it, and brings
+            // the engine back to the pane's size when it is done.
             Event::ColumnsRequested(cols) => {
                 if screen.window_ops_allowed() {
                     proxy.send(PtyEvent::WindowOp(WindowOp::ResizeCells {
                         rows: Extent::Keep,
                         cols: Extent::Size(cols as u32),
                     }));
-                } else {
-                    let size = proxy.shared().size();
-                    screen.term.resize(usize::from(size.num_cols), usize::from(size.num_lines));
                 }
             }
             Event::WindowOp(op) => proxy.send(PtyEvent::WindowOp(op)),

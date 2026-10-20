@@ -22,8 +22,9 @@ impl Terminal {
     /// RIS.
     pub fn reset(&mut self) {
         // A screen DECCOLM made 132 columns wide goes back to 80 (xterm: a full reset checks that
-        // the width can change and that it is changed).
-        if self.modes.contains(Modes::COLUMNS_132) {
+        // the width can change and that it is changed). Without `window_ops` DECCOLM never changed
+        // the width, so there is nothing to undo.
+        if self.modes.contains(Modes::COLUMNS_132) && self.policy.window_ops && self.cols != 80 {
             self.resize(80, self.rows);
             self.push_event(Event::ColumnsRequested(80));
         }

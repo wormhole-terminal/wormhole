@@ -20,7 +20,6 @@ use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, AtomicUsize,
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Instant;
 
-use super::WindowSize;
 use super::blocks::CommandLog;
 use super::images::{DECODES_MAX, ImageStore};
 use super::osc::{Mark, Notification, Osc, Progress, ProgressState, PromptKind};
@@ -165,8 +164,6 @@ pub(super) struct Shared {
     /// An `Output` is queued and the UI hasn't taken it yet.
     output_pending: AtomicBool,
     exited: AtomicBool,
-    /// The grid size in cells and pixels, packed, for size queries.
-    size: AtomicU64,
     /// Where query replies go (the PTY's input); set once the PTY exists.
     writer: OnceLock<Writer>,
     /// Replies waiting behind one the UI hasn't given yet.
@@ -301,24 +298,6 @@ impl Shared {
 
     pub(super) fn set_writer(&self, writer: Writer) {
         let _ = self.writer.set(writer);
-    }
-
-    pub(super) fn set_size(&self, size: WindowSize) {
-        let packed = u64::from(size.num_lines)
-            | u64::from(size.num_cols) << 16
-            | u64::from(size.cell_width) << 32
-            | u64::from(size.cell_height) << 48;
-        self.size.store(packed, Ordering::Release);
-    }
-
-    pub(super) fn size(&self) -> WindowSize {
-        let packed = self.size.load(Ordering::Acquire);
-        WindowSize {
-            num_lines: packed as u16,
-            num_cols: (packed >> 16) as u16,
-            cell_width: (packed >> 32) as u16,
-            cell_height: (packed >> 48) as u16,
-        }
     }
 
     /// The lock is held while sending, so replies go out in the order they were queued.

@@ -70,8 +70,65 @@ fn a_resize_to_the_same_size_does_nothing() {
 }
 
 #[test]
+fn deccolm_clears_and_homes_but_keeps_the_width_without_window_operations() {
+    // VT510 DECCOLM: clear the screen, reset the margins, home the cursor. The width is the
+    // window's, which a program may change only with `Policy::window_ops`.
+    let mut rig = Rig::new(100, 5);
+    rig.feed("text\x1b[2;4r\x1b[?40h\x1b[?3h");
+    assert_eq!((rig.term.cols(), rig.term.rows()), (100, 5));
+    assert_eq!(rig.row(0), "", "cleared");
+    assert_eq!(rig.cursor(), (0, 0));
+    assert!(rig.term.modes().contains(crate::types::Modes::COLUMNS_132), "still recorded");
+    assert!(!rig.events().iter().any(|event| matches!(event, Event::ColumnsRequested(_))));
+    rig.feed("\x1b[?3l");
+    assert_eq!(rig.term.cols(), 100);
+    assert!(!rig.term.modes().contains(crate::types::Modes::COLUMNS_132));
+}
+
+#[test]
+fn a_stream_of_deccolm_toggles_neither_resizes_nor_touches_the_history() {
+    // The audit's storm: `?40h` once, then `?3h ?3l` over and over reflowed the whole history twice
+    // a toggle. The width not changing is what shows no reflow ran: a reflow needs a new width.
+    let mut rig = Rig::with_scrollback(80, 24, 10_000);
+    for i in 0..10_000 {
+        rig.feed(&format!("line {i}\r\n"));
+    }
+    let history = rig.term.history_len();
+    assert!(history > 9_000, "{history}");
+    rig.events();
+    let mut storm = String::from("\x1b[?40h");
+    for _ in 0..2_000 {
+        storm.push_str("\x1b[?3h\x1b[?3l");
+    }
+    rig.feed(&storm);
+    assert_eq!((rig.term.cols(), rig.term.rows()), (80, 24));
+    assert_eq!(rig.term.history_len(), history);
+    let events = rig.events();
+    assert!(
+        !events.iter().any(|event| matches!(event, Event::ColumnsRequested(_))),
+        "no resize was asked for: {} events",
+        events.len()
+    );
+}
+
+#[test]
+fn deccolm_toggles_with_window_operations_reflow_once_a_change_and_not_at_all_when_the_width_matches() {
+    let mut rig = Rig::new(80, 5);
+    rig.term.set_policy(crate::terminal::Policy { window_ops: true, ..Default::default() });
+    rig.feed("\x1b[?40h\x1b[?3l");
+    assert!(
+        !rig.events().iter().any(|event| matches!(event, Event::ColumnsRequested(_))),
+        "80 columns asked of an 80 column screen: nothing to ask the host"
+    );
+    rig.feed("\x1b[?3h");
+    assert_eq!(rig.term.cols(), 132);
+    assert!(rig.events().contains(&Event::ColumnsRequested(132)));
+}
+
+#[test]
 fn deccolm_needs_mode_40_and_asks_the_host_for_the_width() {
     let mut rig = Rig::new(100, 5);
+    rig.term.set_policy(crate::terminal::Policy { window_ops: true, ..Default::default() });
     rig.feed("text\x1b[?3h");
     assert_eq!(rig.term.cols(), 100, "not allowed");
     assert_eq!(rig.row(0), "text");

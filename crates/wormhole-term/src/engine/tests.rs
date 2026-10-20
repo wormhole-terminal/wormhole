@@ -87,6 +87,16 @@ fn deccolm_asks_the_ui_for_the_width_when_window_operations_are_allowed() {
 }
 
 #[test]
+fn deccolm_clears_but_keeps_the_pane_width_and_asks_the_ui_for_nothing_by_default() {
+    // The program asks for the text area in characters (XTWINOPS 18) right after DECCOLM; the engine
+    // used to take 132 columns and resize back, reflowing the history twice for every toggle.
+    let script = r#"sleep 0.3; stty raw -echo; printf '\033[?40h\033[?3h\033[18t'; r=$(dd bs=1 count=10 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; printf done; sleep 5"#;
+    let (pty, ops) = window_ops(&options(), script);
+    assert!(ops.is_empty(), "{ops:?}");
+    assert!(pty.screen_text().contains("E[8;24;80t"), "{:?}", pty.screen_text());
+}
+
+#[test]
 fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     let script = format!(
         "printf '\\033_Ga=T,f=100,i=7,c=3,r=2,q=2;{PNG}\\033\\\\'; printf 'done\\n'; read go; \

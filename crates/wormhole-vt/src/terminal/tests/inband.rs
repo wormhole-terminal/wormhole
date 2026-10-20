@@ -86,6 +86,7 @@ fn a_full_reset_turns_it_off() {
 #[test]
 fn deccolm_reports_its_new_width() {
     let mut rig = rig(80, 24);
+    rig.term.set_policy(crate::terminal::Policy { window_ops: true, ..Default::default() });
     rig.feed("\x1b[?40h\x1b[?2048h");
     let _ = rig.replies();
     rig.feed("\x1b[?3h");

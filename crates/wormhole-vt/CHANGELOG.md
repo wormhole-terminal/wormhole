@@ -119,6 +119,12 @@ First public release (0.1.0).
 - Titles, icon names and folders (OSC 0, 1, 2, 7) are cleaned when they are set: C0 and C1 controls and
   DEL are dropped.
 - Title reports no longer follow `window_ops`.
+- DECCOLM (`CSI ? 3 h/l`) changes the width only when `Policy::window_ops` allows it, the gate
+  DECSCPP and DECSLPP are behind. Without it the mode is recorded, the screen is cleared (unless mode 95
+  keeps it), the margins and tab stops are reset and the cursor goes home, but the terminal is not
+  resized and `Event::ColumnsRequested` is not sent. A resize reflows the whole history, so a few
+  kilobytes of toggles used to freeze a terminal for seconds. `ColumnsRequested` is also not sent when the
+  width already is the one asked for.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.

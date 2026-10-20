@@ -202,6 +202,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Security
 
+- **Medium** · no advisory · affects 1.0.0–1.1.0: a program could freeze a terminal for seconds with
+  a few kilobytes of output. The 80/132-column switch (`CSI ? 3 h` and `l`, after `CSI ? 40 h`) rewrapped
+  the whole scrollback twice each time, so a file shown with `cat` that toggled it thousands of times
+  stalled the pane. The switch now clears the screen and homes the cursor without changing the width,
+  unless "Let programs control the window" is on.
 - **Low** · no advisory · affects 1.0.0–1.1.0: a program could put text of its choosing on your command
   line. Wormhole's answer to a clipboard read repeated whatever the program named as the clipboard, so a
   file shown with `cat` could type a command at your prompt (it did not run it: the text could not

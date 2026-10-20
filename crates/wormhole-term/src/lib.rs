@@ -187,7 +187,6 @@ impl Pty {
     ) -> anyhow::Result<(Self, PtyEvents)> {
         let (proxy, events) = EventProxy::new();
         let shared = proxy.shared().clone();
-        shared.set_size(size.window_size());
         let engine::Spawned { screen, io, pid } = engine::spawn(size, options, &launch, proxy, &shared)?;
         Ok((
             Self {
@@ -249,7 +248,6 @@ impl Pty {
             return;
         }
         self.size = size;
-        self.shared.set_size(size.window_size());
         let replies = self.term.lock().resize(size);
         self.io.resize(size.window_size());
         // After the PTY has its new size: a program told in band that the window changed reads

@@ -80,7 +80,7 @@ Three requests cannot be answered by the engine alone:
 |---|---|---|
 | `ClipboardLoad` (OSC 52 read) | Writes the replies owed before the request (`replies_before` bytes of `replies()`), then the answer from `clipboard_reply(selection, text, terminator)` | Nothing is sent. The program gets no answer |
 | `ImageData` (a picture to decode) | Calls `image_decoded(handle, Ok(()))` or `Err(..)`. The engine holds later replies behind the answer, so the program reads them in order | After 1 MiB of held replies, or 64 waiting answers, the oldest waiting answer is given up |
-| `ColumnsRequested`, `WindowOp` | Resizes the window and calls `resize`, or calls `resize` with the size it has | The engine keeps the size the sequence gave it, which may not match your window |
+| `ColumnsRequested`, `WindowOp` | Resizes the window and calls `resize`, or calls `resize` with the size it has | Only with `Policy::window_ops`. The engine keeps the size the sequence gave it, which may not match your window |
 
 For a clipboard read the order is yours to keep: the program expects its answers in the order it asked, so
 write the bytes it was owed before the read first, then the clipboard's answer.
@@ -134,10 +134,10 @@ What happens:
   gives new columns the default tab stops.
 - All rows count as damaged (`rendering.md`).
 
-DECCOLM (`CSI ? 3 h/l`, 132 and 80 columns) works only when the program has set mode 40. The engine then
-takes the new width itself (it clears and homes the screen, unless mode 95 is set) and queues
-`Event::ColumnsRequested(n)`. Resize your window to `n` columns, or call `resize` with the size you have to
-put the terminal back.
+DECCOLM (`CSI ? 3 h/l`, 132 and 80 columns) works only when the program has set mode 40. The engine clears
+and homes the screen (unless mode 95 is set). With `Policy::window_ops` on it also takes the new width itself
+and queues `Event::ColumnsRequested(n)`: resize your window to `n` columns, or call `resize` with the size
+you have to put the terminal back. Without the policy the width stays yours and no event is sent.
 
 If you allow window operations (`Policy::window_ops`), a program can ask for a size in cells; the engine
 takes the size at once (so a program that asks right after gets the new answer) and queues

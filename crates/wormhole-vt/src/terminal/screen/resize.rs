@@ -5,6 +5,7 @@
 //! and margins (the screen they were set on is gone), and gives new columns the default tab
 //! stops. Spec for DECCOLM: xterm's ctlseqs, `CSI ? 3 h/l`: set 132 / 80 columns, clear the
 //! screen, reset the margins; allowed only with mode 40 set; mode 95 (DECNCSM) keeps the screen.
+//! The width itself changes only with `Policy::window_ops` (see `set_column_mode`).
 
 use crate::types::{Color, Column, Line, NamedColor, Point};
 
@@ -62,6 +63,14 @@ impl Terminal {
     }
 
     /// Mode 3 (DECCOLM) set or reset.
+    ///
+    /// DECCOLM's other effects (the screen cleared unless DECNCSM keeps it, the margins and tab
+    /// stops back to the page, the cursor home; the VT510 manual lists them) always happen. The
+    /// width changes only where the host lets a program change its window
+    /// ([`Policy::window_ops`](crate::Policy::window_ops), the gate DECSCPP and DECSLPP are behind):
+    /// a resize reflows the whole history, so a few kilobytes of `?3h ?3l` toggles cost seconds, and
+    /// the host then had to resize the terminal back. Without the policy the mode is still recorded
+    /// (DECRQM tells it) and the width stays what the window has.
     pub(in crate::terminal) fn set_column_mode(&mut self, switch: Switch) {
         let wide = switch.is_set();
         if !self.modes.contains(Modes::ALLOW_COLUMNS) {
@@ -73,11 +82,16 @@ impl Terminal {
         if !(self.modes.contains(Modes::NO_CLEAR_ON_COLUMNS) && self.level >= Level::Vt500) {
             self.grid.erase_rows(0..self.rows, Color::Named(NamedColor::Background), false);
         }
-        self.resize(cols, self.rows);
+        let resized = self.policy.window_ops && cols != self.cols;
+        if resized {
+            self.resize(cols, self.rows);
+        }
         self.margins = Margins::full(self.cols, self.rows);
         self.modes.remove(Modes::LEFT_RIGHT_MARGINS);
         self.tabs = TabStops::new(self.cols);
         self.home();
-        self.push_event(Event::ColumnsRequested(cols));
+        if resized {
+            self.push_event(Event::ColumnsRequested(cols));
+        }
     }
 }

@@ -215,8 +215,10 @@ pub enum Event {
     /// A picture is gone (deleted, replaced, evicted, or its screen was left): the host drops the
     /// pixels it kept under the handle.
     ImageFree(ImageHandle),
-    /// DECCOLM changed the width of the screen (mode 40 allows it): the host should resize the
-    /// window to this many columns, or take the terminal back to its own size with
+    /// DECCOLM changed the width of the screen (mode 40 allows it, and so does
+    /// [`Policy::window_ops`](crate::terminal::Policy::window_ops); without it DECCOLM clears and
+    /// homes the screen but never changes the width, and this event is not sent): the host should
+    /// resize the window to this many columns, or take the terminal back to its own size with
     /// [`Terminal::resize`](crate::terminal::Terminal::resize).
     ColumnsRequested(usize),
     /// A program asked the window to do something (and the host allowed it, see
