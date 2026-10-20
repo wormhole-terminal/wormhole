@@ -124,6 +124,14 @@ reply \e[?1;2c
 feed \e[?7$p
 reply none
 
+test DECRQSS is not recognised at the VT100 level that ESC < enters
+spec VT510 DECRQSS is a VT320 function (vttest: "VT340 implements DECRQSS"); after ESC < the terminal is at the VT100 level, where it is not answered; vttest 7/003 ("A real VT500 will not recognize DECSCL at this point")
+size 10 4
+feed \e[?2l\e<\eP$q"p\e\\
+reply none
+feed \e[63;1"p\eP$q"p\e\\
+reply \eP1$r63;1"p\e\\
+
 test the VT52's printer controls are ignored
 spec VT100 User Guide DECANM: ESC ], V, W, X, ^ and _ are the printer and autoprint controls of VT52 mode, which this terminal has no printer for
 size 10 4

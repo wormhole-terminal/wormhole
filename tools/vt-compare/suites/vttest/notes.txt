@@ -12,6 +12,7 @@
 05-keyboard: 5.7 Function Keys: not run, it needs a person at the keyboard (the test reads the keys pressed)
 05-keyboard: 5.8 AnswerBack: not run, it needs a person at the keyboard (the test reads the keys pressed)
 05-keyboard: 5.9 Control Keys: not run, it needs a person at the keyboard (the test reads the keys pressed)
+07-vt52: 7 Test of VT52 mode: silent without a prompt, return pressed
 11-non-vt100: 11.1.2.1 Test Send/Receive mode (SRM): not run, it waits for keys to be pressed to show local echo
 11-non-vt100: 11.2.1 Test VT220 features: not run, the same menu as 11.1, which ran
 11-non-vt100: 11.2.2.3 Test Vertical Cursor Coupling (DECVCCM): vttest has not written it

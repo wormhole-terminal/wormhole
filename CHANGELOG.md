@@ -196,6 +196,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (DECSCPP), without clearing the screen, like the other window resizes it may ask for.
 - A program can ask where it is on the title stack (`CSI # S`) and read back its modifyOtherKeys level
   and title modes with a status string request (`DCS $ q > 4 m ST`, `DCS $ q > 0 t ST`).
+- A terminal that a program has put back to the VT100 level (by leaving VT52 mode, or `CSI 61 " p`) no
+  longer answers status string requests (DECRQSS), as a real VT100 doesn't.
 - Return sends CR LF instead of CR while a program has new line mode set (`CSI 20 h`), as on a VT100.
 
 ### Security

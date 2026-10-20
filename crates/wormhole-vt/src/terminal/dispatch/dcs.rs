@@ -122,7 +122,9 @@ impl Terminal {
             return;
         }
         self.dcs.kind = match (csi.marker(), csi.intermediates(), csi.final_byte()) {
-            (None, [b'$'], b'q') => Kind::Decrqss,
+            // DECRQSS is a VT320 feature (VT510 manual; vttest: "VT340 implements DECRQSS"): a terminal
+            // at the VT100 or VT200 level, as ESC < leaves VT52 mode, does not recognise it.
+            (None, [b'$'], b'q') if self.level >= Level::Vt300 => Kind::Decrqss,
             (None, [b'+'], b'q') => Kind::Xtgettcap,
             (None, [], b'q') => {
                 self.dcs.params.clear();
