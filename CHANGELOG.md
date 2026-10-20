@@ -202,6 +202,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Security
 
+- **Low** · no advisory · affects 1.0.0–1.1.0: a program could hide text in a notification. Wormhole
+  cleaned notification text of control characters and some invisible ones, but let through characters
+  that draw nothing (Hangul and Mongolian fillers, the combining grapheme joiner, tag characters and
+  variation selectors), which can carry a message you cannot see or make a line read differently from
+  what it holds. They are dropped now, except the one emoji or text selector that follows a symbol.
+  A malformed percent escape in a folder a program reports (`%+F`) is refused too.
 - **Medium** · no advisory · affects 1.0.0–1.1.0: a program could freeze a terminal for seconds with
   a few kilobytes of output. The 80/132-column switch (`CSI ? 3 h` and `l`, after `CSI ? 40 h`) rewrapped
   the whole scrollback twice each time, so a file shown with `cat` that toggled it thousands of times

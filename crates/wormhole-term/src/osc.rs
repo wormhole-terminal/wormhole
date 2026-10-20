@@ -117,14 +117,19 @@ fn local_path(path: &str) -> Option<PathBuf> {
 }
 
 /// `%XX` decoded; `None` when the result isn't UTF-8 (a path that isn't text isn't a folder we
-/// can show).
+/// can show) or a `%` is not followed by two hexadecimal digits (`from_str_radix` alone would
+/// take `%+F` for 15).
 pub fn percent_decode(bytes: &[u8]) -> Option<String> {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
         match bytes[i] {
             b'%' if i + 2 < bytes.len() => {
-                let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).ok()?;
+                let digits = &bytes[i + 1..i + 3];
+                if !digits.iter().all(u8::is_ascii_hexdigit) {
+                    return None;
+                }
+                let hex = std::str::from_utf8(digits).ok()?;
                 out.push(u8::from_str_radix(hex, 16).ok()?);
                 i += 3;
             }
@@ -146,18 +151,32 @@ pub(crate) fn notification(title: &str, body: &str) -> Option<Notification> {
 }
 
 /// Program text as a banner may show it: on one line, whitespace runs folded, without control
-/// characters or the invisible formatting ones (bidi overrides, zero-width joiners, soft hyphens)
-/// that could disguise what it says, and cut to `max_chars` with an ellipsis.
+/// characters or the invisible formatting ones (bidi overrides, zero-width joiners, soft hyphens,
+/// fillers, tag characters, variation selectors) that could disguise what it says or carry data
+/// the reader cannot see, and cut to `max_chars` with an ellipsis.
 pub fn clean(raw: &str, max_chars: usize) -> String {
     let mut out = String::new();
     let mut pending_space = false;
+    // Whether the character last kept can take a variation selector (see `takes_selector`).
+    let mut selectable = false;
     for c in raw.chars() {
         if c.is_whitespace() {
             pending_space = !out.is_empty();
+            selectable = false;
             continue;
         }
         if c.is_control() || is_invisible(c) {
             continue;
+        }
+        if is_presentation_selector(c) {
+            // Emoji and text presentation (✔︎ ✔️, 1️⃣) are shown, so one is kept right after a
+            // character that can have it; any other is a hidden bit (or byte, in a run).
+            if !selectable {
+                continue;
+            }
+            selectable = false;
+        } else {
+            selectable = takes_selector(c);
         }
         if pending_space {
             out.push(' ');
@@ -172,17 +191,44 @@ pub fn clean(raw: &str, max_chars: usize) -> String {
     out
 }
 
-/// Unicode formatting characters that show nothing themselves but change how what follows reads.
+/// Unicode characters that show nothing themselves: formatting ones that change how what follows
+/// reads (bidi controls, joiners), blanks that take up room and look like nothing (the Hangul and
+/// Mongolian fillers, the combining grapheme joiner), tags (a whole alphabet that renders as
+/// nothing, used to hide text in an emoji) and the variation selectors, except the two that
+/// choose between text and emoji presentation, which `clean` keeps where they have something to
+/// act on (`is_presentation_selector`).
 fn is_invisible(c: char) -> bool {
     matches!(
         c,
         '\u{00AD}'
+            | '\u{034F}'
+            | '\u{061C}'
+            | '\u{115F}'
+            | '\u{1160}'
+            | '\u{180E}'
             | '\u{200B}'..='\u{200F}'
             | '\u{202A}'..='\u{202E}'
             | '\u{2060}'..='\u{2064}'
             | '\u{2066}'..='\u{206F}'
+            | '\u{3164}'
+            | '\u{FE00}'..='\u{FE0D}'
             | '\u{FEFF}'
+            | '\u{FFA0}'
+            | '\u{E0000}'..='\u{E007F}'
+            | '\u{E0100}'..='\u{E01EF}'
     )
+}
+
+/// VS15 and VS16: text and emoji presentation.
+fn is_presentation_selector(c: char) -> bool {
+    matches!(c, '\u{FE0E}' | '\u{FE0F}')
+}
+
+/// Whether a presentation selector after `c` means anything: a symbol or emoji, or a digit, `#` or
+/// `*` (keycaps). Letters and ASCII punctuation never take one, so one there carries nothing a
+/// reader sees.
+fn takes_selector(c: char) -> bool {
+    (!c.is_alphabetic() && !c.is_ascii_punctuation()) || matches!(c, '#' | '*')
 }
 
 /// Kitty's notifications (OSC 99) arrive as `metadata ; payload`, the metadata `key=value` pairs
@@ -362,5 +408,52 @@ mod tests {
         let huge = "y ".repeat(1000);
         assert_eq!(clean(&huge, BODY_MAX_CHARS).chars().count(), BODY_MAX_CHARS + 1);
         assert_eq!(clean("\u{1b}\u{7f}\u{9b}", 10), "");
+    }
+
+    #[test]
+    fn invisible_characters_are_dropped_wherever_they_would_hide_something() {
+        // Fillers and joiners that are blank without being space, an Arabic letter mark, and the
+        // Mongolian vowel separator.
+        for hidden in ['\u{061C}', '\u{180E}', '\u{115F}', '\u{1160}', '\u{3164}', '\u{FFA0}', '\u{034F}'] {
+            assert_eq!(clean(&format!("a{hidden}b"), 10), "ab", "U+{:04X}", u32::from(hidden));
+            assert_eq!(clean(&hidden.to_string(), 10), "", "U+{:04X} alone", u32::from(hidden));
+        }
+        // Tag characters spell text that no font draws: a whole message after an emoji.
+        let tagged: String = "\u{1F600}"
+            .chars()
+            .chain("hide me".chars().map(|c| char::from_u32(0xE0000 + c as u32).unwrap_or(' ')))
+            .collect();
+        assert_eq!(clean(&tagged, 100), "\u{1F600}");
+        assert_eq!(clean("a\u{E0001}\u{E007F}b", 100), "ab");
+        // Variation selectors 1 to 14 and the supplement are never kept.
+        assert_eq!(clean("a\u{FE00}b\u{FE0D}c\u{E0100}d\u{E01EF}e", 100), "abcde");
+        assert_eq!(clean("\u{FE00}\u{FE0F}", 100), "");
+    }
+
+    #[test]
+    fn the_emoji_selector_stays_on_an_emoji_and_goes_everywhere_else() {
+        // VS16 after a symbol, VS15 for the text form, a keycap: shown, so kept (once).
+        assert_eq!(clean("done \u{2714}\u{FE0F}", 100), "done \u{2714}\u{FE0F}");
+        assert_eq!(clean("\u{2714}\u{FE0E}", 100), "\u{2714}\u{FE0E}");
+        assert_eq!(clean("1\u{FE0F}\u{20E3}", 100), "1\u{FE0F}\u{20E3}");
+        // A run of them is a hidden message (one bit each); only the first has anything to act on.
+        assert_eq!(clean("\u{2714}\u{FE0F}\u{FE0E}\u{FE0F}\u{FE0F}", 100), "\u{2714}\u{FE0F}");
+        // After a letter, a space or at the start there is nothing to choose.
+        assert_eq!(clean("a\u{FE0F}b\u{FE0E}", 100), "ab");
+        assert_eq!(clean("a \u{FE0F}b", 100), "a b");
+        assert_eq!(clean("\u{FE0F}x", 100), "x");
+        assert_eq!(clean("!\u{FE0F}", 100), "!");
+    }
+
+    #[test]
+    fn percent_decoding_wants_two_hexadecimal_digits() {
+        use super::percent_decode;
+        assert_eq!(percent_decode(b"a%20b").as_deref(), Some("a b"));
+        assert_eq!(percent_decode(b"%41%4a%4A").as_deref(), Some("AJJ"));
+        // `from_str_radix` takes a sign: `%+F` was 15, and `%-1` an error only by accident.
+        for bad in [&b"%+F"[..], b"%+f", b"%-1", b"%F+", b"% 1", b"%\xe2\x82", b"%1", b"%", b"%zz"] {
+            assert_eq!(percent_decode(bad), None, "{:?}", String::from_utf8_lossy(bad));
+        }
+        assert_eq!(cwd("file://h/a%+Fb"), None);
     }
 }
