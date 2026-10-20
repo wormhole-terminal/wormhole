@@ -5,3 +5,4 @@
 
 pub mod alloc;
 pub mod rng;
+pub mod streams;
