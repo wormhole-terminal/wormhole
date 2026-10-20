@@ -211,8 +211,6 @@ const TITLE_MAX: usize = 4096;
 const CWD_MAX: usize = 4096;
 /// The title stack's depth (xterm keeps 10).
 const TITLE_STACK: usize = 16;
-/// How many recent hyperlinks are remembered to share their text.
-const RECENT_LINKS: usize = 8;
 /// How many OSC 7 reports are kept for a host that is not looking.
 pub const CWD_REPORTS_MAX: usize = 16;
 /// Events kept for a host that is not looking.
@@ -264,8 +262,8 @@ pub struct Terminal {
     stashed_content: BlockPart,
     /// Hyperlinks without an id of their own get one from this count.
     link_seq: u64,
-    /// The last hyperlinks opened, most recent first; see `intern_link`.
-    recent_links: Vec<crate::types::Hyperlink>,
+    /// The text of the hyperlinks opened lately, shared; see `osc::link`.
+    link_text: osc::link::LinkText,
     /// What XTVERSION answers: the host's name and version for the terminal.
     identity: String,
     /// The parser that reads `feed`'s bytes; see [`Terminal::feed`].

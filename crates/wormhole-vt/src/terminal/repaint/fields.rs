@@ -67,7 +67,7 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("block", Written("Seeds::block, and OSC 133;A marks that count up from it")),
     ("stashed_content", Written("final_state: the main screen's pen mark is set, then `?47h` puts it aside")),
     ("link_seq", Written("Seeds::link_seq")),
-    ("recent_links", Scratch("a cache of the last links, to share their text; no sequence reads it")),
+    ("link_text", Scratch("a cache of the text of the last links, to share it; no sequence reads it")),
     ("identity", Host("what XTVERSION says; the receiver is made with its own")),
     ("parser", Scratch("in the ground state between sequences (repaint_ready)")),
     ("osc", Scratch("empty between sequences (repaint_ready)")),

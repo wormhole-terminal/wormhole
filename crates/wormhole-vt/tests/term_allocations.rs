@@ -157,19 +157,6 @@ fn switching_screens_allocates_nothing() {
     assert_eq!(steady("altscreen", &repeat(unit, 300), 20), 0);
 }
 
-/// A hyperlink owns its target and its id (two `Arc<str>`): that is all it allocates, however
-/// many cells it covers or lines it scrolls past.
-#[test]
-fn a_hyperlink_allocates_what_it_owns_and_no_more() {
-    let unit = "\x1b]8;;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
-    let links = 200 * 20;
-    let count = steady("links", &repeat(unit, 200), 20);
-    assert!(count <= 2 * links, "{count} allocations for {links} links");
-    let with_id = "\x1b]8;id=a1;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
-    let count = steady("links with an id", &repeat(with_id, 200), 20);
-    assert!(count <= 2 * links, "{count} allocations for {links} links");
-}
-
 /// A deterministic source of numbers for the streams below: the same seed gives the same bytes.
 /// (`tests/common` has the corpora; these tests only need a few shapes, kept beside the assertions.)
 struct Lcg(u64);
@@ -179,6 +166,43 @@ impl Lcg {
         self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         (self.0 >> 33) % n
     }
+}
+
+/// Hyperlinks cost nothing once their text is known: the same link again, a listing of files
+/// printed again and again (`ls --hyperlink`, a build log naming its sources), links with ids and
+/// without. What the page keeps of a link (a run of cells and a count) lives in tables that are
+/// reused with the page. The one thing left is the fresh id of a link that gave none (`link-N`, a
+/// string of its own, as nothing ties two such links together): one allocation each.
+#[test]
+fn links_allocate_nothing_once_their_text_is_known() {
+    let with_id = "\x1b]8;id=a1;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
+    assert_eq!(steady("one link with an id", &repeat(with_id, 200), 20), 0);
+
+    // The same files under 40 ids, in an order a program chose.
+    let mut rng = Lcg(5);
+    let mut mixed = String::new();
+    for _ in 0..600 {
+        let (id, file) = (rng.below(40), rng.below(300));
+        mixed.push_str(&format!("\x1b]8;id=l{id};https://example.com/{file}\x1b\\word{id}\x1b]8;;\x1b\\ "));
+    }
+    assert_eq!(steady("mixed", mixed.as_bytes(), 20), 0);
+
+    // No id: the address is shared and the fresh id is all the link allocates.
+    let without_id = "\x1b]8;;file:///work/src/main.rs\x07main.rs:12\x1b]8;;\x07 text\r\n";
+    let count = steady("one link", &repeat(without_id, 200), 20);
+    assert!(count <= 200 * 20, "{count} allocations for {} links", 200 * 20);
+
+    // A listing of 300 files, each a link of its own.
+    let mut listing = String::new();
+    for n in 0..300 {
+        let target = format!("file:///work/crate{}/src/module{n}.rs", n % 7);
+        listing.push_str(&format!("\x1b]8;;{target}\x1b\\file{n}.rs\x1b]8;;\x1b\\  "));
+        if n % 6 == 5 {
+            listing.push_str("\r\n");
+        }
+    }
+    let count = steady("listing", listing.as_bytes(), 20);
+    assert!(count <= 300 * 20, "{count} allocations for {} links", 300 * 20);
 }
 
 /// Text full of wide characters and emoji clusters under mode 2027: the zero-width characters of

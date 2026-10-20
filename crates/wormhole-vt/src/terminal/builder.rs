@@ -6,8 +6,8 @@
 //! new method with a default.
 
 use super::{
-    Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, RECENT_LINKS, Saved,
-    Terminal, dispatch, graphics, history_bytes, osc, read, reports, screen, text,
+    Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, Saved, Terminal,
+    dispatch, graphics, history_bytes, osc, read, reports, screen, text,
 };
 use crate::grid::{BlockPart, Grid, Pen};
 use crate::passthrough::{Passthrough, PassthroughError};
@@ -200,7 +200,7 @@ impl Builder {
             block: 0,
             stashed_content: BlockPart::None,
             link_seq: 0,
-            recent_links: Vec::with_capacity(RECENT_LINKS),
+            link_text: osc::link::LinkText::default(),
             identity: self.identity,
             parser: Parser::new(),
             osc: osc::OscString::default(),

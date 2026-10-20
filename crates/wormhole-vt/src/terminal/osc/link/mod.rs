@@ -1,36 +1,11 @@
 //! OSC 8: hyperlinks. The pen carries the link, so every cell printed while it is set is part of it.
 
-use std::fmt::Write as _;
-use std::sync::Arc;
+mod text;
 
+use crate::terminal::Terminal;
 use crate::types::Hyperlink;
 
-use crate::terminal::{RECENT_LINKS, Terminal};
-
-/// A short text built without allocating: `write!` into it, then read it back.
-struct StackText {
-    bytes: [u8; 40],
-    len: usize,
-}
-
-impl StackText {
-    fn new() -> StackText {
-        StackText { bytes: [0; 40], len: 0 }
-    }
-
-    fn as_str(&self) -> &str {
-        std::str::from_utf8(&self.bytes[..self.len]).unwrap_or("")
-    }
-}
-
-impl std::fmt::Write for StackText {
-    fn write_str(&mut self, text: &str) -> std::fmt::Result {
-        let end = self.len + text.len();
-        self.bytes.get_mut(self.len..end).ok_or(std::fmt::Error)?.copy_from_slice(text.as_bytes());
-        self.len = end;
-        Ok(())
-    }
-}
+pub(in crate::terminal) use text::LinkText;
 
 impl Terminal {
     /// OSC 8 `params ; uri`: the cells printed from here on are a link, until an empty `uri`.
@@ -60,37 +35,17 @@ impl Terminal {
         self.pen.link = Some(self.intern_link(id, uri));
     }
 
-    /// The link `id` (or none) and `uri` name. The text of the last few is kept, so that a
-    /// program that prints the same file name or address again and again (a build log, a file
-    /// listing, an agent naming the files it touched) shares one allocation of it; a link with no
-    /// id of its own gets a fresh id, since nothing ties two of them together.
+    /// The link `id` (or none) and `uri` name, made of the shared text of the links before it; a
+    /// link with no id of its own gets a fresh one, since nothing ties two of them together.
     fn intern_link(&mut self, id: Option<&str>, uri: &str) -> Hyperlink {
-        let hit = self
-            .recent_links
-            .iter()
-            .position(|link| &*link.uri == uri && id.is_none_or(|id| &*link.id == id));
-        let shared_uri = hit.map(|at| {
-            // Most recent first.
-            let link = self.recent_links.remove(at);
-            self.recent_links.insert(0, link.clone());
-            link
-        });
-        if let (Some(link), Some(_)) = (&shared_uri, id) {
-            return link.clone();
-        }
-        let uri: Arc<str> = shared_uri.map_or_else(|| Arc::from(uri), |link| link.uri);
-        let id: Arc<str> = match id {
-            Some(id) => Arc::from(id),
+        let uri = self.link_text.uri(uri);
+        let id = match id {
+            Some(id) => self.link_text.id(id),
             None => {
                 self.link_seq += 1;
-                let mut name = StackText::new();
-                let _ = write!(name, "link-{}", self.link_seq);
-                Arc::from(name.as_str())
+                LinkText::fresh_id(self.link_seq)
             }
         };
-        let link = Hyperlink { id, uri };
-        self.recent_links.truncate(RECENT_LINKS - 1);
-        self.recent_links.insert(0, link.clone());
-        link
+        Hyperlink { id, uri }
     }
 }
