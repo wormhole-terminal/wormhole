@@ -7,17 +7,32 @@
 //! glyph by glyph from that cache (`FrameCache`). The view is
 //! embedded with `.cached(..)`, so window frames the terminal didn't cause
 //! (sidebar, tick, hover) reuse its last paint instead of running any of this.
+//!
+//! This file is the `Render` impl and what the canvas keeps between frames; the work is split
+//! by what it is:
+//!
+//! - a frame: `prepare` (layout, snapshot, rows, the cursor and pictures), then `paint` (the
+//!   layers in order); `frame`, `cache`, `rows`, `words` and `shaping` are what they build on
+//! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`, `blur`,
+//!   `sized` (double-width and double-height rows)
+//! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
+//!   `minimap`, `exited` (the bar of a finished shell)
 
 mod blink;
 mod blur;
 mod cache;
 mod cursor;
+mod exited;
 mod frame;
 mod glyphs;
 mod images;
 mod minimap;
+mod overlays;
+mod paint;
+mod prepare;
 mod rows;
 mod scrollbar;
+mod shaping;
 mod sized;
 mod underline;
 mod words;
@@ -27,55 +42,19 @@ mod bench;
 #[cfg(test)]
 mod guards;
 
-use self::frame::{FrameCache, Geometry};
-use self::rows::{Segment, Style};
+use self::frame::FrameCache;
+use self::overlays::bell_edge;
+pub(super) use self::prepare::dock_landing;
 pub(super) use self::scrollbar::ScrollbarState;
-use self::underline::{UnderlinePaint, underline_paint};
-use self::words::{Glyph, Shaped, WordCache};
+use self::shaping::{ShapeKey, WordsKey};
+use self::words::{Glyph, WordCache};
 use super::blocks;
 use super::input::TerminalCommand;
 use super::*;
-use crate::palette::Palette;
 use crate::scroller::ScrollerPrefs;
-use crate::style::{Edges, TextRole};
-use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::component::input as text_input;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use wormhole_core::keymap;
 use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::images::Tiles;
-use wormhole_core::terminal::types::{COLOR_COUNT, Color, Colors, NamedColor};
-
-/// What every cached row was shaped with; any change rebuilds them all.
-#[derive(Clone, PartialEq)]
-struct ShapeKey {
-    /// Compared by value: a settings change that leaves the colors alone (or
-    /// rebuilds an equal palette) keeps the rows.
-    palette: Rc<Palette>,
-    ligatures: bool,
-    font: FontId,
-    font_size: Pixels,
-    cell_width: Pixels,
-    /// The colors programs set (OSC 4/10/11): a cell keeps its content when its
-    /// palette entry changes, so a row found again by content would be stale.
-    colors: u64,
-}
-
-/// What a word's glyphs were shaped with: the font (its features carry the
-/// ligatures), its size and the cell they are pinned to.
-type WordsKey = (FontId, Pixels, Pixels);
-
-/// A fingerprint of the runtime color overrides.
-fn colors_key(colors: &Colors) -> u64 {
-    (0..COLOR_COUNT).fold(0u64, |hash, index| {
-        let value =
-            colors[index].map_or(u64::MAX, |c| u64::from(c.r) << 16 | u64::from(c.g) << 8 | u64::from(c.b));
-        (hash.rotate_left(5) ^ value).wrapping_mul(0x517c_c1b7_2722_0a95)
-    })
-}
+use wormhole_core::terminal::types::NamedColor;
 
 /// Terminal grids painted since launch, for devctl's `paints` (frames actually drawn, which no
 /// program in the terminal can see).
@@ -113,182 +92,6 @@ impl RenderState {
     }
 }
 
-/// The per-frame part, handed from prepaint to paint.
-struct Frame {
-    geometry: Geometry,
-    /// How far the first and last columns' and rows' backgrounds run out past the grid.
-    reach: gpui_kit::Edges<Pixels>,
-    cols: usize,
-    rows: usize,
-    cursor: Option<CursorPaint>,
-    /// Find's matches along the scrollback, 0 at its top and 1 at the screen's bottom.
-    ticks: Vec<f32>,
-    /// How far below a row's top the font's underline sits.
-    underline_y: Pixels,
-    /// How far below a row's top its baseline sits, and its strikethrough.
-    baseline_y: Pixels,
-    strike_y: Pixels,
-    /// Blinking text is in the clock's off half (never while nothing blinks, the window is behind
-    /// or Reduce Motion is on).
-    blink_faded: bool,
-    /// The inline images' tiles in view, and the pictures placed under the text.
-    images: Vec<images::ImagePaint>,
-    /// The pictures placed over the text.
-    overlay: Vec<images::ImagePaint>,
-}
-
-/// Find's match ticks: along the pane's right edge, in its padding, beside the grid.
-const TICK_W: f32 = 6.0;
-const TICK_H: f32 = 2.0;
-const TICK_INSET: f32 = 2.0;
-
-struct CursorPaint {
-    rect: Bounds<Pixels>,
-    color: Hsla,
-    /// The character inside a block cursor, redrawn on top of it: where it is painted, the line
-    /// height it is painted with and what it is cut to (a double-height line's row).
-    text: Option<CursorText>,
-}
-
-struct CursorText {
-    at: Point<Pixels>,
-    line: ShapedLine,
-    line_height: Pixels,
-    clip: Option<ContentMask<Pixels>>,
-}
-
-/// GPUI's text run for a style.
-fn text_run(len: usize, style: &Style, base_font: &Font) -> TextRun {
-    let mut font = base_font.clone();
-    if style.bold {
-        font.weight = FontWeight::BOLD;
-    }
-    if style.italic {
-        font.style = FontStyle::Italic;
-    }
-    TextRun {
-        len,
-        font,
-        color: style.fg,
-        background_color: None,
-        underline: None,
-        strikethrough: style
-            .strike
-            .then_some(StrikethroughStyle { thickness: px(1.0), color: Some(style.fg) }),
-    }
-}
-
-/// Shape one word of a row, each glyph pinned to its cells.
-fn shape_word(
-    segment: &Segment,
-    text_system: &WindowTextSystem,
-    base_font: &Font,
-    font_size: Pixels,
-    cell_width: Pixels,
-) -> Vec<Shaped> {
-    let runs: Vec<TextRun> =
-        segment.runs.iter().map(|(len, style)| text_run(*len, style, base_font)).collect();
-    let advance = if segment.wide { cell_width * 2.0 } else { cell_width };
-    let line = text_system.shape_line(segment.text.clone().into(), font_size, &runs, Some(advance));
-    line.runs
-        .iter()
-        .flat_map(|run| {
-            run.glyphs.iter().map(|glyph| Shaped {
-                position: glyph.position,
-                index: glyph.index,
-                font_id: run.font_id,
-                id: glyph.id,
-                emoji: glyph.is_emoji,
-            })
-        })
-        .collect()
-}
-
-/// Shape a faint row above the viewport.
-fn shape_blurred(
-    text: String,
-    runs: Vec<(usize, Hsla)>,
-    text_system: &WindowTextSystem,
-    base_font: &Font,
-    font_size: Pixels,
-    cell_width: Pixels,
-) -> ShapedLine {
-    let runs: Vec<TextRun> = runs
-        .into_iter()
-        .map(|(len, color)| TextRun {
-            len,
-            font: base_font.clone(),
-            color,
-            background_color: None,
-            underline: None,
-            strikethrough: None,
-        })
-        .collect();
-    text_system.shape_line(text.into(), font_size, &runs, Some(cell_width))
-}
-
-/// The cursor's rectangle and, inside a block, its character redrawn.
-fn cursor_frame(
-    snapshot: &ScreenSnapshot,
-    palette: &Palette,
-    focused: bool,
-    geometry: Geometry,
-    text_system: &WindowTextSystem,
-    base_font: &Font,
-) -> Option<CursorPaint> {
-    let at = snapshot.cursor?;
-    let row = snapshot.rows().get(at.row)?;
-    let cell = row.cells().get(at.col)?;
-    let Geometry { origin, cell_width, line_height, font_size, .. } = geometry;
-    // On a double-width or double-height row the cell is twice as wide (and its row shows the
-    // part of a tall line the row is).
-    let size = row.size();
-    let row_box = sized::RowBox::new(size, &geometry, at.row, snapshot.columns());
-    let corner = if size.is_double() {
-        point(row_box.x(at.col), row_box.row_top)
-    } else {
-        point(origin.x + cell_width * at.col as f32, origin.y + line_height * at.row as f32)
-    };
-    let width = row_box.cell_width * if at.wide { 2.0 } else { 1.0 };
-    let rect = cursor::cursor_rect(at.shape, focused, corner, width, line_height);
-    let shown = cell.c != ' ' && cell.c != '\0' && cell.c != '\t' && !rows::is_shape(cell.c);
-    let text = (cursor::redraws_text(rect, focused) && shown).then(|| {
-        let selected = snapshot.selected_columns(at.row).is_some_and(|(a, b)| (a..=b).contains(&at.col));
-        let (_, background) = palette.cell_colors(cell, selected, &snapshot.colors);
-        let style = Style::of(cell, cursor::text_color(palette, background));
-        let mut text = String::from(cell.c);
-        text.extend(row.extras().zerowidth(at.col));
-        let run = text_run(text.len(), &style, base_font);
-        // A tall line's character is drawn twice as big from the line's top; a double-width
-        // row's keeps its size and is centred in its cell, as its row's glyphs are.
-        let scale = row_box.scale_y;
-        let line = text_system.shape_line(text.into(), px(font_size * scale), &[run], None);
-        let spare = if size.is_double() && scale == 1.0 { width * 0.25 } else { Pixels::ZERO };
-        let at = if size.is_double() { point(corner.x + spare, row_box.top) } else { corner };
-        CursorText { at, line, line_height: line_height * scale, clip: row_box.clip }
-    });
-    // OSC 12 recolors the cursor.
-    let color = palette.resolve(Color::Named(NamedColor::Cursor), &snapshot.colors);
-    Some(CursorPaint { rect, color, text })
-}
-
-/// Where the start animation's ship docks: the middle of the chevron of `dock` (in cells, from the
-/// grid's top left, so a cell's middle is `n + 0.5`) and how tall that chevron is, in window points.
-pub(super) fn dock_landing(
-    origin: Point<Pixels>,
-    cell: Size<Pixels>,
-    dock: wormhole_core::welcome::DockCell,
-) -> wormhole_core::intro::voyage::Landing {
-    let chevron = [f32::from(origin.x + cell.width * dock.col), f32::from(origin.y + cell.height * dock.row)];
-    wormhole_core::intro::voyage::Landing::on_chevron(chevron, f32::from(cell.height) * dock.rows)
-}
-
-/// Tell the start animation where its ship docks (`dock_landing`), every frame the grid is laid out.
-fn report_dock(cx: &App, origin: Point<Pixels>, cell: Size<Pixels>, dock: wormhole_core::welcome::DockCell) {
-    let landing = dock_landing(origin, cell, dock);
-    crate::intro::set_landing(cx, [landing.centre[0], landing.centre[1], landing.size]);
-}
-
 impl Render for TerminalView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.redraw.rendered();
@@ -307,7 +110,6 @@ impl Render for TerminalView {
         let exited = self.status == Status::Exited;
         let draws_cursor = cursor::drawn(self.status) && !self.cursor_off;
         let reduce_motion = cx.reduce_motion();
-        let blink_allowed = !reduce_motion;
         let bell_glow = self.bell_glow().then_some(store.ui.agent_attention);
         let ui = store.ui;
         let drop_tint = token(&store.tokens, "state.highlight");
@@ -325,409 +127,38 @@ impl Render for TerminalView {
             self.render_state.borrow().snapshot().colors[NamedColor::Background].map(crate::palette::to_hsla);
         let has_blocks = self.pty.as_ref().is_some_and(Pty::has_blocks);
 
+        let prepare = prepare::Prepare {
+            font_size: font_size_setting,
+            line_height: line_height_setting,
+            ligatures,
+            base_font,
+            palette: palette.clone(),
+            focused,
+            draws_cursor,
+            reduce_motion,
+            dock,
+            layout: layout_cell,
+            state: prepaint_state,
+            entity,
+        };
+        let paint = paint::Paint {
+            state: paint_state,
+            hovered_block,
+            ui,
+            focused,
+            link_rows,
+            link_color,
+            find_tick,
+            selecting,
+            view: weak,
+        };
         let grid = canvas(
-            move |bounds, window, cx| {
-                let font_size = px(font_size_setting);
-                let text_system = window.text_system().clone();
-                let font_id = text_system.resolve_font(&base_font);
-                let cell_width =
-                    text_system.advance(font_id, font_size, 'm').map(|size| size.width).unwrap_or(px(8.4));
-                let line_height = px((font_size_setting * line_height_setting).round());
-                let cols = (f32::from(bounds.size.width) / f32::from(cell_width)).floor().max(2.0) as usize;
-                let rows = (f32::from(bounds.size.height) / f32::from(line_height)).floor().max(1.0) as usize;
-                // Whole cells only: what is left over is split evenly, so the grid is centred in
-                // the padded area (whole points, so the glyphs stay where the pixels are).
-                let spare_x = (f32::from(bounds.size.width) - f32::from(cell_width) * cols as f32).max(0.0);
-                let spare_y = (f32::from(bounds.size.height) - f32::from(line_height) * rows as f32).max(0.0);
-                let area = bounds;
-                let (left, top) = ((spare_x / 2.0).floor(), (spare_y / 2.0).floor());
-                let bounds = Bounds::new(
-                    point(area.origin.x + px(left), area.origin.y + px(top)),
-                    size(cell_width * cols as f32, line_height * rows as f32),
-                );
-                // How far the edge cells' backgrounds run out: to the pane's edges.
-                let reach = gpui_kit::Edges {
-                    left: px(left + PADDING_X),
-                    top: px(top + PADDING_Y),
-                    right: px(spare_x - left + PADDING_X),
-                    bottom: px(spare_y - top + PADDING_Y),
-                };
-                let viewport = window.viewport_size();
-                let frame = (
-                    (f32::from(viewport.width) - f32::from(bounds.size.width)).max(0.0),
-                    (f32::from(viewport.height) - f32::from(bounds.size.height)).max(0.0),
-                );
-                layout_cell.set(Layout {
-                    origin: bounds.origin,
-                    cell: size(cell_width, line_height),
-                    cols,
-                    rows,
-                    gutter: left + PADDING_X,
-                    frame,
-                });
-                if let Some(dock) = dock {
-                    report_dock(cx, bounds.origin, size(cell_width, line_height), dock);
-                }
-                let geometry = crate::window_ops::geometry(
-                    window,
-                    cx,
-                    crate::window_ops::PaneSize {
-                        cell: (f32::from(cell_width), f32::from(line_height)),
-                        cols,
-                        rows,
-                        frame,
-                    },
-                );
-                // Rows just above the viewport, kept for the soft edge at the top.
-                let overscan = (PADDING_Y / f32::from(line_height)).ceil() as usize;
-
-                let mut state = prepaint_state.borrow_mut();
-                let RenderState { frame: cache, images: image_cache, words, .. } = &mut *state;
-                let mut found = Vec::new();
-                let mut ticks = Vec::new();
-                let has_terminal = entity.update(cx, |this, cx| {
-                    this.resize(GridSize {
-                        cols: cols as u16,
-                        rows: rows as u16,
-                        cell_width: f32::from(cell_width),
-                        cell_height: f32::from(line_height),
-                    });
-                    this.share_palette(&palette);
-                    this.share_window(geometry);
-                    let Some(pty) = &this.pty else { return false };
-                    pty.snapshot(&mut cache.snapshot, overscan);
-                    found = this.found_rows(&cache.snapshot);
-                    ticks = this.found_ticks(&cache.snapshot);
-                    this.mode = cache.snapshot.mode;
-                    let blinking = cache.snapshot.cursor.is_some_and(|cursor| cursor.blinking);
-                    this.blink_wanted(blinking && focused && blink_allowed, cx);
-                    true
-                });
-                if !has_terminal {
-                    return None;
-                }
-
-                let geometry = Geometry {
-                    origin: bounds.origin,
-                    cell_width,
-                    line_height,
-                    scale: window.scale_factor(),
-                    font_size: font_size_setting,
-                };
-                let key = ShapeKey {
-                    palette: palette.clone(),
-                    ligatures,
-                    font: font_id,
-                    font_size,
-                    cell_width,
-                    colors: colors_key(&cache.snapshot.colors),
-                };
-                words.sync((font_id, font_size, cell_width));
-                words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));
-                let stats = cache.prepare(
-                    key,
-                    geometry,
-                    &palette,
-                    &found,
-                    |segment| {
-                        let glyphs = words.glyphs(&segment, cell_width, |segment| {
-                            shape_word(segment, &text_system, &base_font, font_size, cell_width)
-                        });
-                        (glyphs, !words.take_deferred())
-                    },
-                    |text, runs| shape_blurred(text, runs, &text_system, &base_font, font_size, cell_width),
-                );
-                // Words the budget didn't reach are shaped in the next frame, also when nothing
-                // else changes by then.
-                if stats.provisional > 0 {
-                    window.request_animation_frame();
-                }
-                let blinking = blink::wanted(cache.any_blinks(), window.is_window_active(), reduce_motion);
-                entity.update(cx, |this, cx| this.text_blink_wanted(blinking, cx));
-                let blink_faded = blinking && blink::faded_now();
-                let cursor = draws_cursor
-                    .then(|| {
-                        cursor_frame(&cache.snapshot, &palette, focused, geometry, &text_system, &base_font)
-                    })
-                    .flatten();
-                let underline_y = underline_y_offset(
-                    line_height,
-                    text_system.ascent(font_id, font_size),
-                    text_system.descent(font_id, font_size),
-                );
-                // Where a line of the base font puts its baseline and strikethrough (as
-                // `ShapedLine::paint` does), so every row's glyphs sit on the same one.
-                let (baseline_y, strike_y) = {
-                    let run = text_run(1, &Style::of(&Default::default(), palette.foreground), &base_font);
-                    let line = text_system.shape_line("m".into(), font_size, &[run], None);
-                    let baseline = (line_height - line.ascent - line.descent) / 2.0 + line.ascent;
-                    (baseline, (line.ascent * 0.5 + baseline) * 0.5)
-                };
-                // The pictures: under the placeholder cells and placed in the grid. The terminal's
-                // lock for what the engine knows of the placeholders, then the store's for the
-                // pixels; never both at once.
-                let (images, overlay) = entity.read(cx).pty.as_ref().map_or_else(Default::default, |pty| {
-                    let mut tiles: HashMap<(u32, u32), Tiles> = HashMap::new();
-                    for (_, run) in cache.image_runs() {
-                        let pair = (run.image, run.placement);
-                        if let Entry::Vacant(slot) = tiles.entry(pair)
-                            && let Some(found) = pty.virtual_placement(pair.0, pair.1)
-                        {
-                            slot.insert(found);
-                        }
-                    }
-                    let store = &mut pty.images();
-                    let mut paints =
-                        images::image_paints(cache.image_runs(), &tiles, store, image_cache, geometry);
-                    let snapshot = &cache.snapshot;
-                    let (under, over) = images::placement_paints(
-                        snapshot.placements(),
-                        snapshot.display_offset,
-                        store,
-                        image_cache,
-                        bounds,
-                        geometry,
-                    );
-                    paints.extend(under);
-                    (paints, over)
-                });
-                Some(Frame {
-                    geometry,
-                    reach,
-                    cols,
-                    rows,
-                    cursor,
-                    ticks,
-                    underline_y,
-                    baseline_y,
-                    strike_y,
-                    blink_faded,
-                    images,
-                    overlay,
-                })
-            },
+            move |bounds, window, cx| prepare.run(bounds, window, cx),
             move |bounds, frame, window, cx| {
                 let Some(frame) = frame else { return };
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                let state = paint_state.borrow();
-                let cache = &state.frame;
-                let Geometry { origin, cell_width, line_height, .. } = frame.geometry;
-                let (reach, cols, rows_in_view) = (frame.reach, frame.cols, frame.rows);
-                let font_size = px(frame.geometry.font_size);
-                let at = |col: usize, row: usize| {
-                    point(origin.x + cell_width * col as f32, origin.y + line_height * row as f32)
-                };
-                for (k, line) in cache.blurred() {
-                    let row_origin = point(origin.x, origin.y - line_height * k as f32);
-                    for (dx, dy) in blur::BLUR_TAPS {
-                        let tap = point(row_origin.x + px(dx), row_origin.y + px(dy));
-                        let _ = line.paint(tap, line_height, TextAlign::Left, None, window, cx);
-                    }
-                }
-                paint_blocks(&cache.snapshot, hovered_block, ui, bounds, origin, line_height, window);
-                // Each quad painted outside a layer goes into the scene's bounds tree to find its
-                // z-order, and a screen of colored cells is thousands of them: in a full-screen
-                // truecolor animation that tree took nine tenths of the main thread, and the window
-                // stopped answering. A layer gives everything in it one order. The cells' quads
-                // never overlap one another, so nothing about the stacking changes; the images
-                // stay between the two layers, where they are now.
-                let grid = window.content_mask().bounds;
-                window.paint_layer(grid, |window| {
-                    for (row, painted) in cache.rows() {
-                        if painted.size.is_double() {
-                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
-                            sized::backgrounds(window, &painted.backgrounds, &at, reach, (row, rows_in_view));
-                            continue;
-                        }
-                        for (start, end, color) in &painted.backgrounds {
-                            // The edge cells' colour runs on into the padding (Ghostty's
-                            // window-padding-color = extend); the default background is the theme's.
-                            let mut from = at(*start, row);
-                            let mut width = cell_width * (end - start) as f32;
-                            let mut height = line_height;
-                            if *start == 0 {
-                                from.x -= reach.left;
-                                width += reach.left;
-                            }
-                            if *end >= cols {
-                                width += reach.right;
-                            }
-                            if row == 0 {
-                                from.y -= reach.top;
-                                height += reach.top;
-                            }
-                            if row + 1 >= rows_in_view {
-                                height += reach.bottom;
-                            }
-                            window.paint_quad(fill(Bounds::new(from, size(width, height)), *color));
-                        }
-                    }
-                });
-                for paint in &frame.images {
-                    let painted = window.paint_image(
-                        paint.bounds,
-                        paint.image_bounds,
-                        Corners::default(),
-                        paint.image.clone(),
-                        0,
-                        false,
-                    );
-                    if let Err(err) = painted {
-                        tracing::debug!("an inline image didn't paint: {err}");
-                    }
-                }
-                // Block elements and box drawing, drawn as quads and strokes: one layer too.
-                window.paint_layer(grid, |window| {
-                    for (row, painted) in cache.rows() {
-                        // A tall line's shapes are made for the whole line: cut to this row.
-                        let clip = painted
-                            .size
-                            .is_double_height()
-                            .then(|| sized::RowBox::new(painted.size, &frame.geometry, row, cols).clip);
-                        window.with_content_mask(clip.flatten(), |window| {
-                            for (rect, color) in &painted.quads {
-                                window.paint_quad(fill(*rect, *color));
-                            }
-                            for (path, color) in &painted.strokes {
-                                window.paint_path(path.clone(), *color);
-                            }
-                        });
-                    }
-                });
-                // Unfocused cursor: hollow block.
-                if let Some(cursor) = &frame.cursor {
-                    if focused {
-                        window.paint_quad(fill(cursor.rect, cursor.color));
-                    } else {
-                        window.paint_quad(outline(cursor.rect, cursor.color, BorderStyle::Solid));
-                    }
-                }
-                // The text in a layer of its own, for the same reason as the backgrounds: a glyph
-                // painted on its own goes into the bounds tree, and a full screen of text is
-                // thousands of them. The lines through and under it go in the next layer, so they
-                // still draw over the glyphs.
-                window.paint_layer(grid, |window| {
-                    for (row, painted) in cache.rows() {
-                        if painted.size.is_double() {
-                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
-                            let metrics = (frame.baseline_y, font_size, cell_width);
-                            sized::glyphs(window, &painted.lines, &at, metrics, frame.blink_faded);
-                            continue;
-                        }
-                        for (col, glyphs) in &painted.lines {
-                            let word = at(*col, row);
-                            for glyph in glyphs {
-                                let origin = point(
-                                    word.x + glyph.position.x,
-                                    word.y + frame.baseline_y + glyph.position.y,
-                                );
-                                let _ = if glyph.emoji {
-                                    window.paint_emoji(origin, glyph.font_id, glyph.id, font_size)
-                                } else {
-                                    let color = if frame.blink_faded && glyph.blink {
-                                        blink::faded(glyph.color)
-                                    } else {
-                                        glyph.color
-                                    };
-                                    window.paint_glyph(origin, glyph.font_id, glyph.id, font_size, color)
-                                };
-                            }
-                        }
-                    }
-                });
-                for paint in &frame.overlay {
-                    let painted = window.paint_image(
-                        paint.bounds,
-                        paint.image_bounds,
-                        Corners::default(),
-                        paint.image.clone(),
-                        0,
-                        false,
-                    );
-                    if let Err(err) = painted {
-                        tracing::debug!("a placed image didn't paint: {err}");
-                    }
-                }
-                let mut underlines = Vec::new();
-                window.paint_layer(grid, |window| {
-                    for (row, painted) in cache.rows() {
-                        if painted.size.is_double() {
-                            let at = sized::RowBox::new(painted.size, &frame.geometry, row, cols);
-                            let lines = sized::Lines {
-                                struck: &painted.struck,
-                                overlined: &painted.overlined,
-                                underlines: &painted.underlines,
-                            };
-                            let heights = (frame.underline_y, frame.strike_y);
-                            sized::lines(window, lines, &at, heights, &mut underlines);
-                            continue;
-                        }
-                        for (first, end, color) in &painted.struck {
-                            let width = cell_width * (end - first) as f32;
-                            let start = at(*first, row);
-                            let style = StrikethroughStyle { thickness: px(1.0), color: Some(*color) };
-                            window.paint_strikethrough(
-                                point(start.x, start.y + frame.strike_y),
-                                width,
-                                &style,
-                            );
-                        }
-                        for (first, end, color) in &painted.overlined {
-                            // The same weight as an underline, along the top of the cell.
-                            let width = cell_width * (end - first) as f32;
-                            let size = size(width, px(underline::THICKNESS));
-                            window.paint_quad(fill(Bounds::new(at(*first, row), size), *color));
-                        }
-                        for span in &painted.underlines {
-                            underlines.clear();
-                            let cells = span.end - span.first;
-                            let start = at(span.first, row);
-                            let y = frame.underline_y;
-                            underline_paint(
-                                span.kind,
-                                start,
-                                cells,
-                                cell_width,
-                                y,
-                                line_height,
-                                1.0,
-                                &mut underlines,
-                            );
-                            paint_underlines(&underlines, span.color, 1.0, window);
-                        }
-                    }
-                });
-                for (row, columns) in &link_rows {
-                    let size = cache.snapshot.rows().get(*row).map_or(Default::default(), |row| row.size());
-                    if size.is_double() {
-                        let at = sized::RowBox::new(size, &frame.geometry, *row, cols);
-                        let cells = (columns.start, columns.len());
-                        sized::link_underline(
-                            window,
-                            cells,
-                            &at,
-                            frame.underline_y,
-                            link_color,
-                            &mut underlines,
-                        );
-                        continue;
-                    }
-                    underlines.clear();
-                    let (start, cells, y) = (at(columns.start, *row), columns.len(), frame.underline_y);
-                    let kind = rows::UnderlineKind::Single;
-                    underline_paint(kind, start, cells, cell_width, y, line_height, 1.0, &mut underlines);
-                    paint_underlines(&underlines, link_color, 1.0, window);
-                }
-                if let Some(text) = frame.cursor.as_ref().and_then(|cursor| cursor.text.as_ref()) {
-                    window.with_content_mask(text.clip, |window| {
-                        let _ = text.line.paint(text.at, text.line_height, TextAlign::Left, None, window, cx);
-                    });
-                }
-                paint_ticks(&frame.ticks, bounds, find_tick, window);
-                if selecting {
-                    drag_outside_listener(weak.clone(), window);
-                }
+                paint.run(bounds, &frame, window, cx);
             },
         )
         .size_full();
@@ -826,38 +257,6 @@ impl Render for TerminalView {
     }
 }
 
-/// The command blocks: the hovered block's tint under its rows, and each block's gutter
-/// mark in the pane's left padding, from the block's first row to its last one in view.
-fn paint_blocks(
-    snapshot: &ScreenSnapshot,
-    hovered: Option<u64>,
-    ui: crate::settings::UiColors,
-    pane: Bounds<Pixels>,
-    origin: Point<Pixels>,
-    line_height: Pixels,
-    window: &mut Window,
-) {
-    let left = pane.left() - px(PADDING_X);
-    let rows = snapshot.rows().len();
-    for span in snapshot.block_spans() {
-        let top = origin.y + line_height * span.rows.start as f32;
-        let height = line_height * span.rows.len() as f32;
-        if hovered == Some(span.id) {
-            let tint = Bounds::new(point(left, top), size(pane.right() - left, height));
-            window.paint_quad(fill(tint, ui.hover));
-        }
-        let Some(color) = blocks::mark_color(span.state, ui) else { continue };
-        // Inset where the block starts or ends in view, so neighbours don't run into each other.
-        let inset_top = if span.starts { px(blocks::MARK_INSET) } else { Pixels::ZERO };
-        let inset_bottom = if span.rows.end < rows { px(blocks::MARK_INSET) } else { Pixels::ZERO };
-        let mark = Bounds::new(
-            point(left + px(blocks::MARK_X), top + inset_top),
-            size(px(blocks::MARK_W), height - inset_top - inset_bottom),
-        );
-        window.paint_quad(fill(mark, color).corner_radii(px(blocks::MARK_W / 2.0)));
-    }
-}
-
 impl TerminalView {
     /// How far the grid stays from the pane's right edge: the padding, and the minimap when it is
     /// shown or the scrollbar's gutter (the legacy style; the overlay one takes no room). The
@@ -866,112 +265,4 @@ impl TerminalView {
         PADDING_X
             + if settings_in(profile, cx).minimap { minimap::MINIMAP_W } else { ScrollerPrefs::gutter(cx) }
     }
-
-    /// The bar along the bottom of a pane whose shell has ended: what ended and how, a
-    /// new shell in the same tab, or closing the tab.
-    fn render_exited(&self, cx: &mut Context<Self>) -> AnyElement {
-        let ui = store_in(&self.profile, cx).ui;
-        let what = match self.exit_code {
-            Some(code) => format!("{} exited with code {code}", self.shell),
-            None => format!("{} exited", self.shell),
-        };
-        div()
-            .id("exited-bar")
-            .absolute()
-            .left_0()
-            .right_0()
-            .bottom_0()
-            .h(px(crate::style::TITLE_ROW_H))
-            .flex()
-            .items_center()
-            .gap_2()
-            .pl_4()
-            .pr_2()
-            .bg(ui.panel)
-            .rule_top(ui)
-            .cursor(CursorStyle::Arrow)
-            // The pane below it would start a selection.
-            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-            .child(div().text_color(ui.muted).child(crate::style::icon(IconName::Terminal)))
-            .child(div().flex_1().min_w_0().truncate().text_caption().text_color(ui.muted).child(what))
-            .child(
-                Button::new("exited-restart")
-                    .small()
-                    .outline()
-                    .icon(IconName::RefreshCw)
-                    .label("Restart")
-                    .on_click(cx.listener(|_, _, _, cx| cx.emit(TerminalEvent::Restart))),
-            )
-            .child(
-                div()
-                    .id("exited-close")
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .h(px(crate::style::CONTROL_H))
-                    .px_2()
-                    .rounded(ui.radius)
-                    .text_caption()
-                    .text_color(ui.muted)
-                    .cursor_pointer()
-                    .hover(move |d| d.bg(ui.hover).text_color(ui.text))
-                    .child("Close terminal")
-                    .child(crate::style::keycap(ui, keymap::glyphs(keymap::ActionId::CloseTerminal)))
-                    .on_click(cx.listener(|_, _, _, cx| cx.emit(TerminalEvent::Close))),
-            )
-            .into_any_element()
-    }
-}
-
-/// Find's ticks: one per match (one per pixel row, however many matches share it), along the
-/// pane's right edge, the grid's height standing for the whole scrollback.
-fn paint_ticks(ticks: &[f32], grid: Bounds<Pixels>, color: Hsla, window: &mut Window) {
-    let x = grid.right() + px(PADDING_X - TICK_INSET - TICK_W);
-    let height = f32::from(grid.size.height) - TICK_H;
-    let mut last = None;
-    for at in ticks {
-        let y = (at * height).round();
-        if last == Some(y) {
-            continue;
-        }
-        last = Some(y);
-        let tick = Bounds::new(point(x, grid.top() + px(y)), size(px(TICK_W), px(TICK_H)));
-        window.paint_quad(fill(tick, color).corner_radii(px(TICK_H / 2.0)));
-    }
-}
-
-/// `weight` is how many times the usual thickness the lines are drawn (2 on a double-height line).
-fn paint_underlines(paints: &[UnderlinePaint], color: Hsla, weight: f32, window: &mut Window) {
-    for paint in paints {
-        match *paint {
-            UnderlinePaint::Line { origin, width, wavy } => {
-                let thickness = px(underline::THICKNESS * weight);
-                let style = UnderlineStyle { thickness, color: Some(color), wavy };
-                window.paint_underline(origin, width, &style);
-            }
-            UnderlinePaint::Quad(bounds) => window.paint_quad(fill(bounds, color)),
-        }
-    }
-}
-
-/// The visual bell's glow along the pane's edge.
-const BELL_EDGE_W: f32 = 2.0;
-
-fn bell_edge(ui: crate::settings::UiColors, color: Hsla) -> Div {
-    let mut edge = div().absolute().inset_0().rounded(ui.radius_lg).border_color(color);
-    let width = Some(px(BELL_EDGE_W).into());
-    let b = &mut edge.style().border_widths;
-    (b.top, b.right, b.bottom, b.left) = (width, width, width, width);
-    edge
-}
-
-/// While a selection is dragged, follow the pointer outside the pane too (the
-/// pane's own move handler only runs while it is hovered).
-fn drag_outside_listener(entity: WeakEntity<TerminalView>, window: &mut Window) {
-    window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
-        if phase != DispatchPhase::Bubble {
-            return;
-        }
-        let _ = entity.update(cx, |this, cx| this.drag_selection_outside(event, cx));
-    });
 }

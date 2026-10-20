@@ -17,7 +17,7 @@ use gpui_kit::{Font, SharedString, TextRun, font, point, px};
 use wormhole_core::terminal::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
-use super::text_run;
+use super::shaping::text_run;
 use crate::palette::Palette;
 
 /// Counts this thread's allocations, so tests running in parallel don't

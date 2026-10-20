@@ -23,10 +23,11 @@
 use gpui_kit::{Bounds, ContentMask, Hsla, Pixels, Point, StrikethroughStyle, Window, point, px, size};
 use wormhole_core::terminal::types::LineSize;
 
+use super::blink;
 use super::frame::Geometry;
+use super::underline::paint_underlines;
 use super::underline::{self, UnderlinePaint, underline_paint};
 use super::words::Glyph;
-use super::{blink, paint_underlines};
 use crate::terminal_view::line_size::{Half, half, height_scale, width_scale};
 
 /// Where a sized row and the line it belongs to are on screen.

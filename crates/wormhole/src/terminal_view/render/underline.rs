@@ -5,7 +5,7 @@
 //! the wave); double, dotted and dashed ones are quads. Dots and dashes are laid
 //! out per cell, so they line up from row to row like the characters do.
 
-use gpui_kit::{Bounds, Pixels, Point, point, px, size};
+use gpui_kit::{Bounds, Hsla, Pixels, Point, UnderlineStyle, Window, fill, point, px, size};
 
 use super::rows::UnderlineKind;
 
@@ -70,6 +70,20 @@ pub(super) fn underline_paint(
                 let x = start.x + cell_width * i as f32 + (cell_width - dash) / 2.0;
                 out.push(UnderlinePaint::Quad(Bounds::new(point(x, start.y + y), size(dash, t))));
             }
+        }
+    }
+}
+
+/// `weight` is how many times the usual thickness the lines are drawn (2 on a double-height line).
+pub(super) fn paint_underlines(paints: &[UnderlinePaint], color: Hsla, weight: f32, window: &mut Window) {
+    for paint in paints {
+        match *paint {
+            UnderlinePaint::Line { origin, width, wavy } => {
+                let thickness = px(THICKNESS * weight);
+                let style = UnderlineStyle { thickness, color: Some(color), wavy };
+                window.paint_underline(origin, width, &style);
+            }
+            UnderlinePaint::Quad(bounds) => window.paint_quad(fill(bounds, color)),
         }
     }
 }

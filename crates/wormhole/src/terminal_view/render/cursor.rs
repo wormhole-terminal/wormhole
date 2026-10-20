@@ -2,9 +2,16 @@
 
 use std::time::Duration;
 
-use gpui_kit::{Bounds, Context, Hsla, Pixels, Point, point, px, size};
-use wormhole_core::terminal::types::CursorShape;
+use gpui_kit::{
+    Bounds, ContentMask, Context, Font, Hsla, Pixels, Point, ShapedLine, WindowTextSystem, point, px, size,
+};
+use wormhole_core::terminal::ScreenSnapshot;
+use wormhole_core::terminal::types::{Color, CursorShape, NamedColor};
 
+use super::frame::Geometry;
+use super::rows::{self, Style};
+use super::shaping::text_run;
+use super::sized;
 use crate::palette::Palette;
 use crate::terminal_view::{Status, TerminalView};
 
@@ -87,6 +94,66 @@ pub(super) fn redraws_text(rect: Bounds<Pixels>, focused: bool) -> bool {
 /// background so it reads as cut out of the block.
 pub(super) fn text_color(palette: &Palette, cell_background: Hsla) -> Hsla {
     palette.cursor_text.unwrap_or(cell_background)
+}
+
+pub(super) struct CursorPaint {
+    pub rect: Bounds<Pixels>,
+    pub color: Hsla,
+    /// The character inside a block cursor, redrawn on top of it: where it is painted, the line
+    /// height it is painted with and what it is cut to (a double-height line's row).
+    pub text: Option<CursorText>,
+}
+
+pub(super) struct CursorText {
+    pub at: Point<Pixels>,
+    pub line: ShapedLine,
+    pub line_height: Pixels,
+    pub clip: Option<ContentMask<Pixels>>,
+}
+
+/// The cursor's rectangle and, inside a block, its character redrawn.
+pub(super) fn cursor_frame(
+    snapshot: &ScreenSnapshot,
+    palette: &Palette,
+    focused: bool,
+    geometry: Geometry,
+    text_system: &WindowTextSystem,
+    base_font: &Font,
+) -> Option<CursorPaint> {
+    let at = snapshot.cursor?;
+    let row = snapshot.rows().get(at.row)?;
+    let cell = row.cells().get(at.col)?;
+    let Geometry { origin, cell_width, line_height, font_size, .. } = geometry;
+    // On a double-width or double-height row the cell is twice as wide (and its row shows the
+    // part of a tall line the row is).
+    let size = row.size();
+    let row_box = sized::RowBox::new(size, &geometry, at.row, snapshot.columns());
+    let corner = if size.is_double() {
+        point(row_box.x(at.col), row_box.row_top)
+    } else {
+        point(origin.x + cell_width * at.col as f32, origin.y + line_height * at.row as f32)
+    };
+    let width = row_box.cell_width * if at.wide { 2.0 } else { 1.0 };
+    let rect = cursor_rect(at.shape, focused, corner, width, line_height);
+    let shown = cell.c != ' ' && cell.c != '\0' && cell.c != '\t' && !rows::is_shape(cell.c);
+    let text = (redraws_text(rect, focused) && shown).then(|| {
+        let selected = snapshot.selected_columns(at.row).is_some_and(|(a, b)| (a..=b).contains(&at.col));
+        let (_, background) = palette.cell_colors(cell, selected, &snapshot.colors);
+        let style = Style::of(cell, text_color(palette, background));
+        let mut text = String::from(cell.c);
+        text.extend(row.extras().zerowidth(at.col));
+        let run = text_run(text.len(), &style, base_font);
+        // A tall line's character is drawn twice as big from the line's top; a double-width
+        // row's keeps its size and is centred in its cell, as its row's glyphs are.
+        let scale = row_box.scale_y;
+        let line = text_system.shape_line(text.into(), px(font_size * scale), &[run], None);
+        let spare = if size.is_double() && scale == 1.0 { width * 0.25 } else { Pixels::ZERO };
+        let at = if size.is_double() { point(corner.x + spare, row_box.top) } else { corner };
+        CursorText { at, line, line_height: line_height * scale, clip: row_box.clip }
+    });
+    // OSC 12 recolors the cursor.
+    let color = palette.resolve(Color::Named(NamedColor::Cursor), &snapshot.colors);
+    Some(CursorPaint { rect, color, text })
 }
 
 #[cfg(test)]
