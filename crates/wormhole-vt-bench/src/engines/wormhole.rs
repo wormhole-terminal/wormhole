@@ -1,7 +1,7 @@
 //! `wormhole-vt`'s terminal: the engine that replaces alacritty_terminal.
 
 use wormhole_vt::grid::Style;
-use wormhole_vt::{COLOR_COUNT, Color, Column, Flags, Line, NamedColor, Point, Rgb, TermMode, Terminal};
+use wormhole_vt::{COLOR_COUNT, Color, Column, Flags, Line, Modes, NamedColor, Point, Rgb, Terminal};
 
 use super::xterm_palette;
 use crate::engine::{Attrs, CELL_PIXELS, Cell, CellColor, Cursor, DEFAULT_COLORS, Engine};
@@ -167,7 +167,7 @@ impl Engine for WormholeEngine {
         Cursor {
             row: point.line.0.max(0) as usize,
             col: point.column.0,
-            visible: self.term.mode().contains(TermMode::SHOW_CURSOR),
+            visible: self.term.modes().contains(Modes::SHOW_CURSOR),
         }
     }
 
@@ -196,6 +196,6 @@ impl Engine for WormholeEngine {
     }
 
     fn alt_screen(&self) -> bool {
-        self.term.mode().contains(TermMode::ALT_SCREEN)
+        self.term.modes().contains(Modes::ALT_SCREEN)
     }
 }

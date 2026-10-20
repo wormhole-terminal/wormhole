@@ -1,7 +1,7 @@
 //! The terminal's contents as plain text: the screen (devctl, prompt grabbing)
 //! and the scrollback saved for restoring a session later.
 
-use wormhole_vt::{Cell, Flags, Line, RowExtras, TermMode};
+use wormhole_vt::{Cell, Flags, Line, Modes, RowExtras};
 
 use super::screen::Screen;
 
@@ -38,7 +38,7 @@ pub(super) fn screen_text(screen: &Screen) -> String {
 /// Soft-wrapped rows come back as one line (a restore re-wraps it to the new
 /// width) and combining marks stay with their characters.
 pub(super) fn scrollback_text(screen: &Screen, max_lines: usize) -> Option<String> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
     let top = screen.topmost_line().0;

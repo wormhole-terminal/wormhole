@@ -723,7 +723,7 @@ impl Render for TerminalView {
             // A program that takes the mouse gets clicks, not a text selection (⇧ still selects).
             .cursor(if self.hovered_link.is_some() {
                 CursorStyle::PointingHand
-            } else if self.mode.intersects(TermMode::MOUSE_MODE) {
+            } else if self.mode.mouse_tracking() != MouseTracking::Off {
                 CursorStyle::Arrow
             } else {
                 CursorStyle::IBeam

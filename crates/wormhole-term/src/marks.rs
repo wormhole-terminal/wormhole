@@ -13,7 +13,7 @@
 //! of the whole grid is for a key press, not for every frame; the snapshot marks only the rows it
 //! copies). This module says what a mark is and what the rows' marks mean together.
 
-use wormhole_vt::{Line, TermMode};
+use wormhole_vt::{Line, Modes};
 
 use super::screen::Screen;
 
@@ -77,7 +77,7 @@ fn starts_prompt(screen: &Screen, line: Line) -> bool {
 /// Every line a prompt starts on, oldest first; none while a full-screen program has the screen
 /// (the alternate screen has no history and no prompts).
 pub(super) fn prompt_lines(screen: &Screen) -> Vec<Line> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return Vec::new();
     }
     (screen.topmost_line().0..=screen.bottommost_line().0)
@@ -88,7 +88,7 @@ pub(super) fn prompt_lines(screen: &Screen) -> Vec<Line> {
 
 /// The nearest line a prompt starts on, strictly above or below `from`.
 pub(super) fn prompt_line(screen: &Screen, from: Line, direction: Direction) -> Option<Line> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
     let (top, bottom) = (screen.topmost_line(), screen.bottommost_line());

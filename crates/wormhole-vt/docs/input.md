@@ -53,7 +53,8 @@ Without any kitty flag set, keys follow xterm:
   application cursor keys (mode 1, DECCKM). Insert, Delete, Page Up and Page Down send `CSI n ~`.
   Function keys: F1 to F4 send `SS3 P` to `S`, F5 and up send `CSI n ~`.
 - Modifiers on those keys go in a parameter: `CSI 1 ; m A`, where `m = 1 + shift + 2·alt + 4·ctrl`.
-- Backspace sends `DEL` (`0x7f`); Shift+Tab sends `CSI Z`.
+- Backspace sends `DEL` (`0x7f`), and Ctrl+Backspace `BS`; a program that set DECBKM (mode 67) gets them
+  the other way round. Shift+Tab sends `CSI Z`.
 
 ### The kitty keyboard protocol
 
@@ -130,6 +131,7 @@ or the pane's focus changes, not only the window's.
 ## Application keypad and other modes
 
 Mode 66 (application keypad) and its older forms (`ESC =`, `ESC >`) change what the keypad's keys send.
-The keys encoder reads the mode from `Modes`; you do not need to track it. Modes that only exist in the
+Build the encoders' `InputModes` with `InputModes::from(term.modes())` (or from `&Modes`); you do not need
+to track the mode yourself. Modes that only exist in the
 VT510's hardware set-up (keyboard usage, key position) are recorded and reported by DECRQM but have no
 effect on the encoders.

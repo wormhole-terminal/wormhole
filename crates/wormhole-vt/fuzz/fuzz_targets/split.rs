@@ -18,7 +18,7 @@ fn state(term: &mut Terminal) -> String {
         term.cursor(),
         term.title(),
         replies,
-        term.mode(),
+        term.modes(),
     )
 }
 

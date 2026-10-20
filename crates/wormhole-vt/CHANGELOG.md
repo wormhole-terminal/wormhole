@@ -52,6 +52,13 @@ First public release (0.1.0).
 
 - The engine is licensed under the MIT licence (the rest of the Wormhole repository keeps its own).
 - One `Cell`, one `Extent` and one `Modes` type; the second cell type and the `TermMode` bit set are gone.
+  `Modes` (a bit set, every flag documented with its number) answers `mouse_tracking()`,
+  `mouse_encoding()` and `kitty_flags()`, and `InputModes` is made from it with `From<Modes>` and
+  `From<&Modes>`, which now carries the application keypad, X10 tracking, URXVT, SGR-pixels and DECBKM
+  too. `Terminal::mode()` is gone; `Terminal::modes()` adds `Modes::LOCATOR` while the DEC locator is on.
+- DECBKM (mode 67) starts reset, as xterm-256color's terminfo (`kbs=^?`) and every other terminal a
+  shell runs in has it, so the backarrow key sends DEL until a program sets it; `InputModes::backarrow_bs`
+  says which.
 - `grid` is private. What a host needs from it has a public home.
 - `Event` and the public enums and option structs are `#[non_exhaustive]`; `Terminal` is `Send`, checked
   at compile time.

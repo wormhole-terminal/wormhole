@@ -9,7 +9,7 @@
 use std::ops::Range;
 
 use wormhole_vt::image::ImagePlacement;
-use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, Point, RowExtras, SelectionRange, TermMode};
+use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, Modes, Point, RowExtras, SelectionRange};
 
 use super::blocks::BlockState;
 use super::marks::{self, RowMark};
@@ -80,7 +80,7 @@ pub struct ScreenSnapshot {
     damage: Damage,
     pub cursor: Option<SnapshotCursor>,
     selection: Option<SelectionRange>,
-    pub mode: TermMode,
+    pub mode: Modes,
     pub display_offset: usize,
     pub history_size: usize,
     /// Colors programs set at runtime (OSC 4/10/11/12), by palette index.
@@ -103,7 +103,7 @@ impl Default for ScreenSnapshot {
             damage: Damage::new(),
             cursor: None,
             selection: None,
-            mode: TermMode::empty(),
+            mode: Modes::empty(),
             display_offset: 0,
             history_size: 0,
             colors: Colors::default(),
@@ -243,7 +243,7 @@ impl ScreenSnapshot {
     /// later (`set_block_states`).
     fn resolve_blocks(&mut self, screen: &Screen) {
         self.spans.clear();
-        if !self.saw_marks || screen.mode().contains(TermMode::ALT_SCREEN) {
+        if !self.saw_marks || screen.mode().contains(Modes::ALT_SCREEN) {
             return;
         }
         // Also when the top row is marked: a prompt row whose block began above (a secondary

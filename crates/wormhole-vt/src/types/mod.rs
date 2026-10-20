@@ -23,5 +23,5 @@ pub use extras::{CellExtra, RowExtras};
 pub use hyperlink::{Hyperlink, LinkId};
 pub use image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
 pub use index::{Column, Line, Point, Side};
-pub use mode::TermMode;
+pub use mode::{KittyFlags, Modes, MouseEncoding, MouseTracking};
 pub use view::{CursorShape, Scroll, SelectionRange, SelectionType};

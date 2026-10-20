@@ -65,9 +65,10 @@ mod text;
 /// The value types the screen is drawn and driven with: cells, colors, positions, modes.
 pub mod types {
     pub use wormhole_vt::image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
+    pub use wormhole_vt::input::{MouseEncoding, MouseTracking};
     pub use wormhole_vt::{
-        COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, NamedColor,
-        Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side, TermMode,
+        COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, Modes,
+        NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side,
     };
 }
 
@@ -80,7 +81,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use wormhole_vt::{Colors, Column, Line, Point, Scroll, SelectionType, Side, TermMode};
+use wormhole_vt::{Colors, Column, Line, Modes, Point, Scroll, SelectionType, Side};
 
 pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
 use events::EventProxy;
@@ -271,7 +272,7 @@ impl Pty {
         self.term.lock().resize(self.size);
     }
 
-    pub fn mode(&self) -> TermMode {
+    pub fn mode(&self) -> Modes {
         self.term.lock().mode()
     }
 
@@ -295,7 +296,7 @@ impl Pty {
     /// modes. When it does, the selection goes and the view returns to the live
     /// screen, as typing does in any terminal. One lock for all of it, since the
     /// PTY thread may hold the lock for a whole read while output streams.
-    pub fn send_key(&self, encode: impl FnOnce(TermMode) -> Option<Vec<u8>>) -> KeySent {
+    pub fn send_key(&self, encode: impl FnOnce(Modes) -> Option<Vec<u8>>) -> KeySent {
         let (bytes, view_changed) = {
             let mut term = self.term.lock();
             let Some(bytes) = encode(term.mode()) else { return KeySent::Nothing };
@@ -310,7 +311,7 @@ impl Pty {
         KeySent::Sent { view_changed }
     }
 
-    /// The pointer for a program that asked for the DEC locator (`TermMode::LOCATOR`): a button
+    /// The pointer for a program that asked for the DEC locator (`Modes::LOCATOR`): a button
     /// went down or up (`Some`) or the pointer moved (`None`). What the program asked to be told
     /// goes to its input.
     pub fn locator(

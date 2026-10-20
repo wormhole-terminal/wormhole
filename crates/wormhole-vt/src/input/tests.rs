@@ -13,6 +13,7 @@ const fn modes(kitty: KittyFlags) -> InputModes {
     InputModes {
         app_cursor: false,
         app_keypad: false,
+        backarrow_bs: false,
         kitty,
         bracketed_paste: false,
         focus_events: false,
@@ -143,6 +144,17 @@ fn legacy_text_and_alt() {
     // A key that typed nothing and has no modifiers types itself.
     assert_eq!(enc(key(Key::Char('a')), NONE), s("a"));
     assert_eq!(enc(with(key(Key::Char('é')), SHIFT), NONE), s("É"));
+}
+
+#[test]
+fn legacy_backspace_follows_decbkm() {
+    // VT520 DECBKM: set, the backarrow key sends BS; reset (the start), DEL. xterm swaps the two
+    // for Control.
+    let bs = InputModes { backarrow_bs: true, ..NONE };
+    assert_eq!(enc(key(Key::Backspace), NONE), s("\x7f"));
+    assert_eq!(enc(key(Key::Backspace), bs), s("\x08"));
+    assert_eq!(enc(with(key(Key::Backspace), CTRL), bs), s("\x7f"));
+    assert_eq!(enc(with(key(Key::Backspace), ALT), bs), s("\x1b\x08"));
 }
 
 #[test]

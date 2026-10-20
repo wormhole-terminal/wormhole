@@ -107,6 +107,7 @@ use crate::grid::{BlockPart, Grid, Pen, Region};
 use crate::parser::Parser;
 use crate::types::{COLOR_COUNT, Colors, CursorShape, Rgb};
 
+use modes::Modes;
 use modes::conformance::Level;
 use modes::keyboard::KeyboardFlags;
 use read::damage::Seen;
@@ -122,7 +123,6 @@ pub use graphics::{
     VirtualPlacement, placeholder_at, strip_placeholders,
 };
 pub use limits::Limits;
-pub use modes::Modes;
 pub(crate) use osc::is_builtin as is_builtin_osc;
 pub use policy::Policy;
 pub use read::damage::Damage;
@@ -383,9 +383,11 @@ impl Terminal {
         main.set_scrollback_limit(history_bytes(self.scrollback_lines, self.cols));
     }
 
-    /// The modes as programs set them.
+    /// The modes as programs set them, with [`Modes::LOCATOR`] while a program has the DEC
+    /// locator on. See [`Modes`] for which of them a host acts on.
+    #[must_use]
     pub fn modes(&self) -> Modes {
-        self.modes
+        if self.locator.enabled() { self.modes | Modes::LOCATOR } else { self.modes }
     }
 
     /// The palette entries programs changed (OSC 4, 10, 11, 12) and have not reset.

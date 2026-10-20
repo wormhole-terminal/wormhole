@@ -90,7 +90,7 @@ focus), `extensions.md` (your own sequences), `security.md` (the threat model), 
 | Unicode | Unicode 18 cell widths, extended grapheme clusters (UAX #29) with mode 2027 (on by default), emoji variation selectors, wide characters with spacer cells |
 | Scrollback and reflow | History capped in bytes; soft-wrapped lines rewrap on resize with the cursor and pins carried along; the alternate screen is cropped or padded |
 | Keyboard | kitty keyboard protocol (five flags, a stack per screen), application cursor and keypad modes, bracketed paste, focus reports |
-| Mouse | Modes 1000, 1002, 1003; encodings X10, UTF-8 (1005), SGR (1006); the DEC locator (DECELR and the reports) |
+| Mouse | Modes 9, 1000, 1002, 1003; encodings X10, UTF-8 (1005), URXVT (1015), SGR (1006), SGR with pixels (1016); the DEC locator (DECELR and the reports) |
 | Output control | Synchronized output (mode 2026) as a flag the host reads |
 | Host side | Damage tracking and row copies into reusable buffers, selection (cell, block, word, line) and text extraction, pins and spans that follow text through scrolling and reflow, search support |
 | Repaint writer | `repaint` serializes a terminal into VT bytes that rebuild it in another terminal, for attach and resync |

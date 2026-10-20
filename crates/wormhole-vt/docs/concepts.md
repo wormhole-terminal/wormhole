@@ -102,16 +102,22 @@ Programs switch behaviour with modes (`CSI ? Ps h` and `l`, and the ANSI forms `
 
 | Modes | What the host does with it |
 |---|---|
-| `ALT_SCREEN` | Whether the alternate screen shows. Full-screen programs; a host often turns the scroll wheel into arrow keys here (`ALTERNATE_SCROLL`) |
-| `SHOW_CURSOR`, cursor shape | Draw or hide the cursor |
-| `APP_CURSOR`, `APP_KEYPAD` | Choose key encodings (`input.md`) |
-| `MOUSE_*` | Whether and how to report the mouse |
-| `BRACKETED_PASTE` | Wrap pasted text in markers |
-| `FOCUS_REPORT` | Tell the program when the window gains or loses focus |
-| `KEYS_*` | The kitty keyboard flags in force |
+| `ALT_SCREEN` | Whether the alternate screen shows. Full-screen programs; a host often turns the scroll wheel into arrow keys here (`ALTERNATE_SCROLL`, 1007) |
+| `SHOW_CURSOR` (25), cursor shape | Draw or hide the cursor |
+| `APP_CURSOR` (1), `APP_KEYPAD` (66), `BACKARROW_BS` (67) | Choose key encodings (`input.md`) |
+| `MOUSE_X10` (9), `MOUSE_CLICK` (1000), `MOUSE_DRAG` (1002), `MOUSE_MOTION` (1003), and `MOUSE_UTF8` (1005), `MOUSE_SGR` (1006), `MOUSE_URXVT` (1015), `MOUSE_PIXELS` (1016) | Whether and how to report the mouse: read them as `mouse_tracking()` and `mouse_encoding()` |
+| `LOCATOR` | A program has the DEC locator on: send the pointer to `locator_moved` and `locator_button`, not as mouse reports |
+| `BRACKETED_PASTE` (2004) | Wrap pasted text in markers |
+| `FOCUS_REPORT` (1004) | Tell the program when the window gains or loses focus |
+| `KEYS_*` | The kitty keyboard flags in force: read them together as `kitty_flags()` |
 | `REVERSE_VIDEO` | Draw the screen with foreground and background swapped (DECSCNM) |
 | `SYNC_OUTPUT` | A program is in the middle of an update; see `embedding.md` |
 | `GRAPHEME_CLUSTERS` | Whether widths follow clusters |
+
+`InputModes::from(term.modes())` turns the set into what the input encoders read. The doc of each flag
+says whether a host acts on it (**Host**) or only the engine does (**Engine**). The bit values may change
+between versions: use the names. To hear when a host-relevant mode changes, handle `Event::ModesChanged`
+(`rendering.md`).
 
 Many more modes are *recorded*: the terminal remembers them and answers DECRQM, but they change nothing
 here (for example the VT510's hardware and set-up modes). Modes belong to the terminal, not to a screen:
@@ -122,7 +128,8 @@ which only permits switching between 80 and 132 columns, stays as the program se
 (DECSTR, `CSI ! p`) resets the keyboard modes and the ones that decide how text is placed (insert,
 origin, margins, reverse wrap). Mouse, paste and focus modes belong to the program that set them and
 stay. The starting values follow xterm, with two choices of this engine: grapheme clusters (2027) and
-the wheel-sends-arrows mode (1007) start on.
+the wheel-sends-arrows mode (1007) start on. The backarrow key (DECBKM, 67) starts reset, so Backspace
+sends DEL.
 
 ## The reply channel
 

@@ -6,7 +6,7 @@
 //! allocates once the buffers are the right size.
 
 use crate::grid::{Pin, RowMark, ViewRow};
-use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll, TermMode};
+use crate::types::{Cell, Column, CursorShape, ImagePlacement, Line, Point, RowExtras, Scroll};
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
@@ -56,14 +56,6 @@ impl Terminal {
     #[must_use]
     pub fn scroll_offset(&self) -> usize {
         self.grid.display_offset()
-    }
-
-    /// The modes a host reads: cursor, wrap, alternate screen, mouse, paste, focus and the
-    /// kitty keyboard flags.
-    pub fn mode(&self) -> TermMode {
-        // The low 17 bits are the same in both sets; bit 17 is a mode of ours (insert) and the
-        // locator's is not one of the terminal's modes, so it is added by hand.
-        TermMode::from_bits_truncate((self.modes.bits() & 0x1_ffff) as u32) | self.locator_mode()
     }
 
     /// The cursor as it is drawn.

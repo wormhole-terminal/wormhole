@@ -14,7 +14,6 @@
 //! modes are alternatives: switching on one switches the other off.
 
 use crate::parser::Csi;
-use crate::types::TermMode;
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
@@ -155,11 +154,6 @@ impl Terminal {
     /// Whether a program asked for locator reports: the host should deliver the pointer.
     pub fn locator_enabled(&self) -> bool {
         self.locator.enabled()
-    }
-
-    /// The mode set the host reads, with [`TermMode::LOCATOR`] when a program asked for the locator.
-    pub(in crate::terminal) fn locator_mode(&self) -> TermMode {
-        if self.locator.enabled() { TermMode::LOCATOR } else { TermMode::empty() }
     }
 
     /// The pointer moved. Reported only when it left the filter rectangle a program set.
@@ -351,8 +345,8 @@ mod tests {
         let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
         run(&mut term, "\x1b[?1000h\x1b[1'z");
         assert!(term.locator_enabled());
-        assert!(!term.mode().intersects(crate::types::TermMode::MOUSE_MODE));
-        assert!(term.mode().contains(crate::types::TermMode::LOCATOR));
+        assert_eq!(term.modes().mouse_tracking(), crate::types::MouseTracking::Off);
+        assert!(term.modes().contains(crate::types::Modes::LOCATOR));
         run(&mut term, "\x1b[?1000h");
         assert!(!term.locator_enabled());
     }

@@ -156,6 +156,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   is in view, each part of the window redraws on its own, and a turning status spinner no longer makes
   the whole window redraw. The icons of Settings → Feature flags and of the palette's profile
   commands, which were missing, show.
+- A program can now switch on the application keypad, X10 mouse reports (mode 9), URXVT mouse reports
+  (1015), pixel-position mouse reports (1016) and Backspace sending BS (DECBKM), and the terminal does
+  what it asks. Until now only the other mouse modes and the cursor keys were followed.
 
 ### Security
 

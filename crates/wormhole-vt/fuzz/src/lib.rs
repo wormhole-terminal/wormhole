@@ -313,7 +313,7 @@ impl Run {
             16 => {
                 let mut placements = Vec::new();
                 self.term.placements(&mut placements);
-                let _ = (self.term.has_placements(), self.term.cursor(), self.term.mode(), self.term.modes());
+                let _ = (self.term.has_placements(), self.term.cursor(), self.term.modes());
             }
             17 => self.feed(b"\x1b[?2027h"),
             18 => self.feed(b"\x1b[?2027l"),

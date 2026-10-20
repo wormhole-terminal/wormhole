@@ -9,7 +9,7 @@
 //! `REPORT_EVENT_TYPES` has no visible effect (press is the default event type and is always
 //! omitted from the sequence).
 
-use wormhole_vt::TermMode;
+use wormhole_vt::Modes;
 use wormhole_vt::input::{InputModes, Key, KeyEvent, KittyFlags, Mods, encode_key, focus};
 
 /// A GUI-independent key press.
@@ -30,7 +30,7 @@ pub struct KeyInput<'a> {
 }
 
 /// Encode a key press for the PTY. `None` means "nothing to send".
-pub fn encode(input: &KeyInput, mode: TermMode) -> Option<Vec<u8>> {
+pub fn encode(input: &KeyInput, mode: Modes) -> Option<Vec<u8>> {
     // Cmd shortcuts belong to the application.
     if input.platform {
         return None;
@@ -49,7 +49,7 @@ pub fn encode(input: &KeyInput, mode: TermMode) -> Option<Vec<u8>> {
 /// What to send when the terminal gains or loses focus: `CSI I` / `CSI O`
 /// once the program asked for focus events (DECSET 1004; vim, tmux and TUIs
 /// that pause when unfocused), otherwise nothing.
-pub fn focus_report(focused: bool, mode: TermMode) -> Option<Vec<u8>> {
+pub fn focus_report(focused: bool, mode: Modes) -> Option<Vec<u8>> {
     let mut out = Vec::new();
     focus(focused, &InputModes::from(mode), &mut out).then_some(out)
 }
@@ -157,13 +157,13 @@ fn event_of<'a>(input: &KeyInput<'a>, key: Key, modes: &InputModes) -> Option<Ke
 mod tests {
     use super::*;
 
-    const NONE: TermMode = TermMode::empty();
-    const DIS: TermMode = TermMode::DISAMBIGUATE_ESC_CODES;
+    const NONE: Modes = Modes::empty();
+    const DIS: Modes = Modes::KEYS_DISAMBIGUATE;
 
     fn k<'a>(key: &'a str, key_char: Option<&'a str>) -> KeyInput<'a> {
         KeyInput { key, key_char, ..Default::default() }
     }
-    fn enc(i: KeyInput, mode: TermMode) -> Option<String> {
+    fn enc(i: KeyInput, mode: Modes) -> Option<String> {
         encode(&i, mode).map(|b| String::from_utf8(b).unwrap())
     }
     fn s(x: &str) -> Option<String> {
@@ -204,11 +204,11 @@ mod tests {
     #[test]
     fn legacy_arrows_and_app_cursor() {
         assert_eq!(enc(k("up", None), NONE), s("\x1b[A"));
-        assert_eq!(enc(k("down", None), TermMode::APP_CURSOR), s("\x1bOB"));
-        assert_eq!(enc(k("home", None), TermMode::APP_CURSOR), s("\x1bOH"));
+        assert_eq!(enc(k("down", None), Modes::APP_CURSOR), s("\x1bOB"));
+        assert_eq!(enc(k("home", None), Modes::APP_CURSOR), s("\x1bOH"));
         assert_eq!(enc(k("end", None), NONE), s("\x1b[F"));
         assert_eq!(enc(shift(k("up", None)), NONE), s("\x1b[1;2A"));
-        assert_eq!(enc(ctrl(k("right", None)), TermMode::APP_CURSOR), s("\x1b[1;5C"));
+        assert_eq!(enc(ctrl(k("right", None)), Modes::APP_CURSOR), s("\x1b[1;5C"));
         assert_eq!(enc(shift(alt(k("left", None))), NONE), s("\x1b[1;4D"));
     }
 
@@ -272,8 +272,8 @@ mod tests {
     #[test]
     fn focus_is_reported_only_when_asked_for() {
         assert_eq!(focus_report(true, NONE), None);
-        assert_eq!(focus_report(true, TermMode::FOCUS_IN_OUT), Some(b"\x1b[I".to_vec()));
-        assert_eq!(focus_report(false, TermMode::FOCUS_IN_OUT | DIS), Some(b"\x1b[O".to_vec()));
+        assert_eq!(focus_report(true, Modes::FOCUS_REPORT), Some(b"\x1b[I".to_vec()));
+        assert_eq!(focus_report(false, Modes::FOCUS_REPORT | DIS), Some(b"\x1b[O".to_vec()));
     }
 
     fn meta(mut i: KeyInput) -> KeyInput {
@@ -288,7 +288,7 @@ mod tests {
         assert_eq!(enc(meta(k("b", Some("∫"))), NONE), s("\x1bb"));
         assert_eq!(enc(shift(meta(k("b", Some("ı")))), NONE), s("\x1bB"));
         assert_eq!(enc(meta(k("b", Some("∫"))), DIS), s("\x1b[98;3u"));
-        assert_eq!(enc(meta(k("b", Some("∫"))), DIS | TermMode::REPORT_ALL_KEYS_AS_ESC), s("\x1b[98;3u"));
+        assert_eq!(enc(meta(k("b", Some("∫"))), DIS | Modes::KEYS_ALL_AS_ESCAPES), s("\x1b[98;3u"));
         // Without it, Option composes text (German Option+L = @).
         assert_eq!(enc(alt(k("l", Some("@"))), NONE), s("@"));
         // Keys without text keep their own Option meaning.
@@ -343,7 +343,7 @@ mod tests {
     fn kitty_functional_keys() {
         // Unmodified functional keys stay legacy (and honour DECCKM).
         assert_eq!(enc(k("up", None), DIS), s("\x1b[A"));
-        assert_eq!(enc(k("up", None), DIS | TermMode::APP_CURSOR), s("\x1bOA"));
+        assert_eq!(enc(k("up", None), DIS | Modes::APP_CURSOR), s("\x1bOA"));
         assert_eq!(enc(k("f1", None), DIS), s("\x1bOP"));
         assert_eq!(enc(k("delete", None), DIS), s("\x1b[3~"));
         // Modified: no Option word jump, proper CSI encoding.
@@ -358,28 +358,28 @@ mod tests {
 
     #[test]
     fn kitty_report_all() {
-        let m = DIS | TermMode::REPORT_ALL_KEYS_AS_ESC;
+        let m = DIS | Modes::KEYS_ALL_AS_ESCAPES;
         assert_eq!(enc(k("a", Some("a")), m), s("\x1b[97u"));
         assert_eq!(enc(shift(k("a", Some("A"))), m), s("\x1b[97;2u"));
         assert_eq!(enc(k("enter", Some("\r")), m), s("\x1b[13u"));
         assert_eq!(enc(k("tab", None), m), s("\x1b[9u"));
         assert_eq!(enc(k("backspace", None), m), s("\x1b[127u"));
         assert_eq!(enc(k("escape", None), m), s("\x1b[27u"));
-        assert_eq!(enc(k("up", None), m | TermMode::APP_CURSOR), s("\x1b[A"));
+        assert_eq!(enc(k("up", None), m | Modes::APP_CURSOR), s("\x1b[A"));
         assert_eq!(enc(k("f1", None), m), s("\x1b[P"));
         assert_eq!(enc(k("insert", None), m), s("\x1b[2~"));
         assert_eq!(enc(k("space", Some(" ")), m), s("\x1b[32u"));
         // Report-all without disambiguate also works.
-        assert_eq!(enc(k("z", Some("z")), TermMode::REPORT_ALL_KEYS_AS_ESC), s("\x1b[122u"));
+        assert_eq!(enc(k("z", Some("z")), Modes::KEYS_ALL_AS_ESCAPES), s("\x1b[122u"));
     }
 
     #[test]
     fn kitty_alternate_keys() {
-        let m = DIS | TermMode::REPORT_ALTERNATE_KEYS;
+        let m = DIS | Modes::KEYS_ALTERNATE_KEYS;
         // Shift+text without report-all is still plain text.
         assert_eq!(enc(shift(k("a", Some("A"))), m), s("A"));
         assert_eq!(enc(ctrl(shift(k("a", None))), m), s("\x1b[97:65;6u"));
-        let m = m | TermMode::REPORT_ALL_KEYS_AS_ESC;
+        let m = m | Modes::KEYS_ALL_AS_ESCAPES;
         assert_eq!(enc(shift(k("a", Some("A"))), m), s("\x1b[97:65;2u"));
         // GPUI hands Shift+1 over already shifted (`!`, Shift off) and the
         // unshifted key can't be recovered, so this differs from the spec's
@@ -392,24 +392,24 @@ mod tests {
 
     #[test]
     fn kitty_associated_text() {
-        let m = DIS | TermMode::REPORT_ALL_KEYS_AS_ESC | TermMode::REPORT_ASSOCIATED_TEXT;
+        let m = DIS | Modes::KEYS_ALL_AS_ESCAPES | Modes::KEYS_ASSOCIATED_TEXT;
         assert_eq!(enc(k("a", Some("a")), m), s("\x1b[97;1;97u"));
         assert_eq!(enc(shift(k("a", Some("A"))), m), s("\x1b[97;2;65u"));
         assert_eq!(enc(alt(k("l", Some("@"))), m), s("\x1b[108;1;64u"));
         // Ctrl combos and functional keys carry no text.
         assert_eq!(enc(ctrl(k("a", Some("\x01"))), m), s("\x1b[97;5u"));
         assert_eq!(enc(k("enter", Some("\r")), m), s("\x1b[13u"));
-        let m = m | TermMode::REPORT_ALTERNATE_KEYS;
+        let m = m | Modes::KEYS_ALTERNATE_KEYS;
         assert_eq!(enc(shift(k("a", Some("A"))), m), s("\x1b[97:65;2;65u"));
         // Associated text without report-all is ignored.
-        let m = DIS | TermMode::REPORT_ASSOCIATED_TEXT;
+        let m = DIS | Modes::KEYS_ASSOCIATED_TEXT;
         assert_eq!(enc(k("a", Some("a")), m), s("a"));
     }
 
     #[test]
     fn kitty_event_types_flag_only() {
         // Press events are the default type and never carry `:1`.
-        let m = TermMode::REPORT_EVENT_TYPES;
+        let m = Modes::KEYS_EVENT_TYPES;
         assert_eq!(enc(k("escape", None), m), s("\x1b[27u"));
         assert_eq!(enc(shift(k("enter", None)), m), s("\x1b[13;2u"));
         assert_eq!(enc(k("a", Some("a")), m), s("a"));

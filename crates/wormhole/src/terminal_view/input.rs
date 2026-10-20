@@ -266,7 +266,13 @@ impl TerminalView {
         let Some((col, row)) = self.viewport_cell(position) else {
             return true;
         };
-        if action == mouse::MouseAction::Motion {
+        // A program that asked for pixels (1016) hears every move; the others only a new cell.
+        let pixel = mouse::wants_pixels(mode).then(|| {
+            let origin = self.layout.get().origin;
+            let from_corner = |at: Pixels, corner: Pixels| f32::from(at - corner).max(0.0) as u32;
+            (from_corner(position.x, origin.x), from_corner(position.y, origin.y))
+        });
+        if action == mouse::MouseAction::Motion && pixel.is_none() {
             if self.last_mouse_cell == Some((col, row)) {
                 return true;
             }
@@ -280,6 +286,7 @@ impl TerminalView {
             shift: modifiers.shift,
             alt: modifiers.alt,
             control: modifiers.control,
+            pixel,
         };
         if let (Some(bytes), Some(pty)) = (mouse::encode(&input, mode), &self.pty) {
             pty.write(bytes);
@@ -458,9 +465,9 @@ impl TerminalView {
             return;
         }
         let Some(pty) = &self.pty else { return };
-        if mode.contains(TermMode::ALT_SCREEN) && mode.contains(TermMode::ALTERNATE_SCROLL) {
+        if mode.contains(Modes::ALT_SCREEN) && mode.contains(Modes::ALTERNATE_SCROLL) {
             // Full-screen apps (vim, less) get arrow keys instead.
-            let key: &[u8] = match (whole > 0, mode.contains(TermMode::APP_CURSOR)) {
+            let key: &[u8] = match (whole > 0, mode.contains(Modes::APP_CURSOR)) {
                 (true, true) => b"\x1bOA",
                 (true, false) => b"\x1b[A",
                 (false, true) => b"\x1bOB",

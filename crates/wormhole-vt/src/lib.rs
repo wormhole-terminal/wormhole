@@ -60,12 +60,12 @@ pub use grid::{
     TextShape, ViewRow,
 };
 pub use terminal::{
-    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, Limits, LocatorButton, Modes, Pointer, Policy,
-    Span, Terminal,
+    Builder, Cursor, DEFAULT_WORD_SEPARATORS, Damage, Event, Limits, LocatorButton, Pointer, Policy, Span,
+    Terminal,
 };
 pub use types::{
-    COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, LinkId,
-    NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side, TermMode,
+    COLOR_COUNT, Cell, CellExtra, Color, Colors, Column, CursorShape, Flags, Hyperlink, Line, LinkId, Modes,
+    NamedColor, Point, Rgb, RowExtras, Scroll, SelectionRange, SelectionType, Side,
 };
 
 /// What a program's sequences ask of the host, and the values that come with them.

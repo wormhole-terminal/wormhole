@@ -11,7 +11,7 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::{Column, Line, Point, TermMode};
+use wormhole_vt::{Column, Line, Modes, Point};
 
 use super::marks::{self, Part, RowMark};
 use super::osc::{BODY_MAX_CHARS, Mark, clean};
@@ -142,7 +142,7 @@ pub(super) fn blocks(screen: &Screen, log: &CommandLog) -> Vec<Block> {
 
 /// The block whose text `line` is in, if any.
 pub(super) fn block_at(screen: &Screen, line: Line, log: &CommandLog) -> Option<Block> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
     // The nearest marked row at or above `line` says which block, and the block's prompt is the
@@ -164,7 +164,7 @@ pub(super) fn block_at(screen: &Screen, line: Line, log: &CommandLog) -> Option<
 
 /// The block with this id, if its cells are still on the grid.
 pub(super) fn block(screen: &Screen, id: u64, log: &CommandLog) -> Option<Block> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
     // Newer blocks are nearer the bottom: the search starts there.
@@ -235,7 +235,7 @@ const LAST_LINE_WINDOW: i32 = 40;
 /// The shell has printed its next prompt by the time anyone asks, so the finished block is the
 /// last one or the one before it.
 pub(super) fn ended(screen: &Screen, log: &CommandLog, code: i32) -> Option<Ended> {
-    if screen.mode().contains(TermMode::ALT_SCREEN) {
+    if screen.mode().contains(Modes::ALT_SCREEN) {
         return None;
     }
     let mut at = screen.bottommost_line();

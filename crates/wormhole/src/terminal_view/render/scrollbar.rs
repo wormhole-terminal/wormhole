@@ -57,7 +57,7 @@ impl TerminalView {
             move |bounds, _window, cx| {
                 let mut state = prepaint_state.borrow_mut();
                 let snapshot = state.snapshot();
-                let drawn = !snapshot.mode.contains(TermMode::ALT_SCREEN);
+                let drawn = !snapshot.mode.contains(Modes::ALT_SCREEN);
                 let geometry = ScrollbarGeometry {
                     history: snapshot.history_size,
                     rows: snapshot.rows().len(),

@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::terminal::types::{
-    Column, Line, Point as GridPoint, Scroll, SelectionType, Side, TermMode,
+    Column, Line, Modes, MouseTracking, Point as GridPoint, Scroll, SelectionType, Side,
 };
 
 use wormhole_core::profile::ProfileId;
@@ -129,7 +129,7 @@ pub struct TerminalView {
     render_state: Rc<RefCell<render::RenderState>>,
     /// Terminal modes as of the last frame, for mouse and scroll handling
     /// (asking the terminal would mean waiting on its lock during output).
-    mode: TermMode,
+    mode: Modes,
     selecting: bool,
     /// Button held while the app receives mouse reports.
     mouse_button: Option<mouse::MouseButton>,
@@ -315,7 +315,7 @@ impl TerminalView {
             window_sync: None,
             layout: Rc::default(),
             render_state: Rc::default(),
-            mode: TermMode::empty(),
+            mode: Modes::empty(),
             selecting: false,
             mouse_button: None,
             last_mouse_cell: None,
@@ -458,7 +458,7 @@ impl TerminalView {
     /// Whether the program in front takes a paste as text (it turned bracketed paste on): without
     /// it, every line of a paste is typed as if Return were pressed after it.
     pub fn bracketed_paste(&self) -> bool {
-        self.pty.as_ref().is_some_and(|pty| pty.mode().contains(TermMode::BRACKETED_PASTE))
+        self.pty.as_ref().is_some_and(|pty| pty.mode().contains(Modes::BRACKETED_PASTE))
     }
 
     /// Paste text the way a real terminal does (bracketed if the app asked).

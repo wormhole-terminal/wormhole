@@ -282,6 +282,7 @@ pub const MODES: &[(&str, Coverage)] = &[
     ("ORIGIN", Written("cursor_information: DECRSPS flags")),
     ("AUTO_REPEAT", Written("modes: DECSET 8")),
     ("MOUSE_X10", Written("modes: DECSET 9")),
+    ("LOCATOR", Derived("the Locator's own fields: `modes()` adds it while the locator is on")),
     ("ALLOW_COLUMNS", Written("modes: DECSET 40, always")),
     ("REVERSE_WRAP", Written("modes: DECSET 45")),
     ("APP_KEYPAD", Written("modes: DECSET 66")),

@@ -2,7 +2,7 @@
 //! feature in its dev-dependencies): a screen nothing listens to that is fed bytes directly, and
 //! read back in `wormhole_vt::types`.
 
-use wormhole_vt::{Cell, Line, Point, RowExtras, Scroll, SelectionType, Side, TermMode};
+use wormhole_vt::{Cell, Line, Modes, Point, RowExtras, Scroll, SelectionType, Side};
 
 use super::screen::Screen;
 use super::snapshot::ScreenSnapshot;
@@ -101,7 +101,7 @@ impl TestTerm {
         self.screen().display_offset()
     }
 
-    pub fn mode(&self) -> TermMode {
+    pub fn mode(&self) -> Modes {
         self.screen().mode()
     }
 

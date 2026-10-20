@@ -18,8 +18,8 @@ use wormhole_vt::image::VirtualPlacement;
 use wormhole_vt::window::WindowGeometry;
 use wormhole_vt::{BlockPart, Damage, RowMark as GridMark, TextShape};
 use wormhole_vt::{
-    COLOR_COUNT, Cell, Colors, CursorShape, Line, Point, RowExtras, Scroll, SelectionRange, SelectionType,
-    Side, TermMode,
+    COLOR_COUNT, Cell, Colors, CursorShape, Line, Modes, Point, RowExtras, Scroll, SelectionRange,
+    SelectionType, Side,
 };
 use wormhole_vt::{Policy, Terminal};
 
@@ -118,8 +118,8 @@ impl Screen {
         self.term.scroll_offset()
     }
 
-    pub(crate) fn mode(&self) -> TermMode {
-        self.term.mode()
+    pub(crate) fn mode(&self) -> Modes {
+        self.term.modes()
     }
 
     /// The palette entries programs have overridden (OSC 4/10/11/12).

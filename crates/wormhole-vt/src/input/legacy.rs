@@ -29,12 +29,13 @@ pub(super) fn encode(ev: &KeyEvent, modes: &InputModes, out: &mut Vec<u8>) -> bo
             out.push(b'\r');
             true
         }
-        // Alt sends ESC DEL, Ctrl sends BS (xterm's `backarrowKey` default with `ctrl` swapping).
+        // DEL, and BS with Ctrl; DECBKM swaps them (xterm's `backarrowKey`). Alt sends ESC and
+        // DEL (BS with DECBKM) whatever else is held.
         Key::Backspace => {
             if alt {
-                out.extend_from_slice(&[ESC, 0x7f]);
+                out.extend_from_slice(&[ESC, if modes.backarrow_bs { 0x08 } else { 0x7f }]);
             } else {
-                out.push(if ctrl { 0x08 } else { 0x7f });
+                out.push(if ctrl != modes.backarrow_bs { 0x08 } else { 0x7f });
             }
             true
         }
