@@ -60,6 +60,8 @@ pub struct MenuState {
     pub off: Vec<ActionId>,
     pub checked: Vec<ActionId>,
     pub disabled: Vec<ActionId>,
+    /// Actions whose feature is off: not in the menus, the palette or the shortcut sheet at all.
+    pub hidden: Vec<ActionId>,
     /// The sidebar's numbered terminals (⌘1–9) by name, and which one is selected.
     pub terminals: Vec<String>,
     pub current_terminal: Option<usize>,
@@ -89,6 +91,7 @@ impl MenuState {
             && self.off == other.off
             && self.checked == other.checked
             && self.disabled == other.disabled
+            && self.hidden == other.hidden
             && self.current_terminal == other.current_terminal
             && self.recent == other.recent
             && self.project_actions == other.project_actions
@@ -376,7 +379,7 @@ fn submenu(title: &str, mut items: Vec<Item>, empty: &'static str) -> Item {
 
 fn action_item(id: ActionId, state: &MenuState) -> Option<Item> {
     let entry = entry(id)?;
-    if entry.stage != Stage::Now || (entry.debug_only && !state.debug) {
+    if entry.stage != Stage::Now || (entry.debug_only && !state.debug) || state.hidden.contains(&id) {
         return None;
     }
     // In a split ⌘W closes the focused pane (the pane menu says so), so its item does too.

@@ -266,7 +266,7 @@ impl Workspace {
             .child(self.render_panel_tabs(window, cx))
             // The Notes tab's one action sits beside the panel toggle rather than
             // on a row of its own above the list.
-            .when(self.right_tab == RightTab::Notes, |d| {
+            .when(self.right_tab == RightTab::Notes && super::notes::notes_on(cx), |d| {
                 d.child(
                     div().id("panel-actions").occlude().flex_none().child(
                         style::icon_tab(
@@ -350,7 +350,16 @@ impl Workspace {
                 None,
                 RightTab::History,
             ))
-            .child(tab("tab-notes", IconName::FileText, "Notes", ActionId::ShowNotes, None, RightTab::Notes))
+            .when(tabs.contains(&RightTab::Notes), |d| {
+                d.child(tab(
+                    "tab-notes",
+                    IconName::FileText,
+                    "Notes",
+                    ActionId::ShowNotes,
+                    None,
+                    RightTab::Notes,
+                ))
+            })
             .child(tab("tab-usage", IconName::Gauge, "Usage", ActionId::ShowUsage, None, RightTab::Usage))
             // Whenever the terminal has a folder: its colour is set there, and its project made.
             // Last, so the tabs before it never shift when it comes and goes.

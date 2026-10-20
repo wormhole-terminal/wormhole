@@ -12,6 +12,9 @@ impl Workspace {
             window.focus(&terminal_focus, cx);
             return;
         }
+        if !super::notes::notes_on(cx) {
+            return;
+        }
         let session = self.active_session();
         let target = self
             .focused_note

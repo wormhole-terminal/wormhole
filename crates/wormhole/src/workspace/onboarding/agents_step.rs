@@ -248,6 +248,7 @@ impl Workspace {
             ("Jot a note for this folder", &[ActionId::NewNote]),
             ("Hide the side panels", &[ActionId::ToggleSidebar, ActionId::ToggleRightPanel]),
         ];
+        let notes_on = crate::workspace::notes::notes_on(cx);
         let command_done = settings(cx).notify_command_done;
         div()
             .flex()
@@ -268,30 +269,29 @@ impl Workspace {
                                     .font_weight(FontWeight::MEDIUM)
                                     .child("Use Wormhole as a terminal"),
                             )
-                            .child(
-                                div()
-                                    .text_caption()
-                                    .text_color(ui.selected_muted)
-                                    .child("Notes, next steps and the git panel work in any shell."),
-                            ),
+                            .child(div().text_caption().text_color(ui.selected_muted).child(if notes_on {
+                                "Notes, next steps and the git panel work in any shell."
+                            } else {
+                                "The git panel works in any shell."
+                            })),
                     ),
             )
             .child(div().px_6().pt_4().pb_2().child(style::section_label(ui, "Things to try first")))
-            .children(KEYS.map(|(label, actions)| {
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .h(px(style::ROW_H + 4.0))
-                    .px_6()
-                    .rule_top(ui)
-                    .child(div().text_body().child(label))
-                    .child(
-                        div().flex().gap_1().children(
+            .children(KEYS.into_iter().filter(|(_, a)| notes_on || a != &[ActionId::NewNote]).map(
+                |(label, actions)| {
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .h(px(style::ROW_H + 4.0))
+                        .px_6()
+                        .rule_top(ui)
+                        .child(div().text_body().child(label))
+                        .child(div().flex().gap_1().children(
                             actions.iter().map(|action| style::keycap(ui, keymap::glyphs(*action))),
-                        ),
-                    )
-            }))
+                        ))
+                },
+            ))
             .child(
                 div()
                     .flex()

@@ -66,9 +66,10 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
     AppState::with_workspace(front, cx, move |ws, window, cx| {
         crate::background::activate_window(window, cx);
         let project = ws.project_keys(cx);
+        let hidden = ws.menu_state(cx).hidden;
         let return_focus = ws.end_overlay(window, cx);
         let workspace = cx.weak_entity();
-        let sheet = cx.new(|cx| ShortcutSheet::new(workspace, project, hotkey, &query, window, cx));
+        let sheet = cx.new(|cx| ShortcutSheet::new(workspace, project, hidden, hotkey, &query, window, cx));
         ws.show_overlay(OverlayView::Sheet(sheet), return_focus, cx);
     });
 }
@@ -91,6 +92,7 @@ impl ShortcutSheet {
     fn new(
         workspace: WeakEntity<Workspace>,
         project: Option<ProjectKeys>,
+        hidden: Vec<wormhole_core::keymap::ActionId>,
         hotkey: Option<String>,
         query: &str,
         window: &mut Window,
@@ -121,7 +123,7 @@ impl ShortcutSheet {
         Self {
             workspace,
             filter,
-            sections: sheet::sections(),
+            sections: sheet::sections_without(&hidden),
             project,
             hotkey,
             _subscriptions: subscriptions,

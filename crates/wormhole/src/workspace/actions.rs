@@ -623,7 +623,6 @@ impl Workspace {
             }))
             .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| this.toggle_sidebar(cx)))
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
-            .on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
             .on_action(cx.listener(|this, _: &ShowChanges, _, cx| this.show_tab(RightTab::Changes, cx)))
             .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(RightTab::History, cx)))
             .on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(RightTab::Usage, cx)))
@@ -643,8 +642,11 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Bigger, _, cx| this.zoom_font(Some(1.0), cx)))
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
-            .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
-            .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))
+            .when(super::notes::notes_on(cx), |root| {
+                root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
+                    .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
+                    .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))
+            })
             // Find works on the terminal in front, so not while a diff covers it.
             .when(self.diff_view.is_none(), |root| {
                 root.on_action(cx.listener(|this, _: &Find, window, cx| {

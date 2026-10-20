@@ -84,12 +84,31 @@ impl Workspace {
         false
     }
 
+    /// Leave a tab that is no longer in the panel's list (Usage once the agent is gone, Notes
+    /// with its flag off): back to the tab before Usage, else Changes.
+    pub(in crate::workspace) fn leave_missing_tab(&mut self, cx: &mut Context<Self>) {
+        if self.panel_tab_list(cx).contains(&self.right_tab) {
+            return;
+        }
+        let back = self
+            .tab_before_usage
+            .take()
+            .filter(|tab| *tab != self.right_tab && self.panel_tab_list(cx).contains(tab))
+            .unwrap_or(RightTab::Changes);
+        self.show_tab(back, cx);
+    }
+
     /// The right panel's tabs as they are on screen. Project is there for any terminal that has a
     /// folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
     /// one, where the project folder is made. It stays while it is the tab on show, so a terminal
     /// whose folder isn't known for a moment doesn't pull it out from under the person.
     pub(in crate::workspace) fn panel_tab_list(&self, cx: &App) -> Vec<RightTab> {
-        let mut tabs = vec![RightTab::Changes, RightTab::History, RightTab::Notes, RightTab::Usage];
+        let mut tabs = vec![RightTab::Changes, RightTab::History];
+        // Notes is behind its flag; when it's off Usage simply follows History.
+        if super::notes::notes_on(cx) {
+            tabs.push(RightTab::Notes);
+        }
+        tabs.push(RightTab::Usage);
         // The Project tab belongs to the project-folder feature, so it's gone while that flag is
         // off (see `features`). It comes last so that the other tabs keep their place, and their
         // keys, whether it is there or not.

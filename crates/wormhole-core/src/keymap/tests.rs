@@ -285,6 +285,7 @@ fn front_window() -> MenuState {
         off: vec![ToggleStatusBar, ToggleMinimap, FullScreen, ZoomPane],
         checked: vec![ShowChanges],
         disabled: vec![],
+        hidden: vec![],
         terminals: ["sidebar polish", "diff perf", "zsh", "auth tokens", "rate limits"]
             .map(String::from)
             .to_vec(),

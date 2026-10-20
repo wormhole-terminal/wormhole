@@ -19,7 +19,7 @@ impl Workspace {
             self.folder_projects.clear();
             // The Project tab is gone with the feature; leave it showing nothing.
             if self.right_tab == RightTab::Project {
-                self.right_tab = RightTab::Notes;
+                self.right_tab = RightTab::Changes;
                 moved = true;
             }
             for session in &mut self.sessions {

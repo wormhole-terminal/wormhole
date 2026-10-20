@@ -71,7 +71,7 @@ pub(crate) mod menu_bar;
 mod menu_tests;
 #[cfg(test)]
 mod note_tests;
-mod notes;
+pub(crate) mod notes;
 pub(crate) mod notifications;
 mod onboarding;
 pub(crate) mod open_in;
@@ -82,6 +82,8 @@ mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
 mod panel_list;
+#[cfg(test)]
+mod panel_tab_tests;
 mod panes;
 mod path_card;
 mod profile_chip;
@@ -236,6 +238,9 @@ pub struct Workspace {
     /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
     sidebar: sidebar::SidebarState,
     right_tab: RightTab,
+    /// The tab that was open when Usage was opened: where the panel goes back to when no agent
+    /// is left to show usage for.
+    tab_before_usage: Option<RightTab>,
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
@@ -389,6 +394,7 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             right_tab: RightTab::default(),
+            tab_before_usage: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,
             branches: Vec::new(),
@@ -509,6 +515,7 @@ impl Workspace {
             cx.notify();
         }
         self.sync_close_dot(window, cx);
+        self.leave_missing_tab(cx);
         if self.notes_visible()
             && self.right_tab == RightTab::History
             && (self.ticks.is_multiple_of(12) || self.history_unanswered(cx))

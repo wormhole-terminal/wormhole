@@ -117,6 +117,9 @@ impl Session {
 
     /// Notes with something in them plus tasks not done yet.
     pub(super) fn open_items(&self, cx: &App) -> usize {
+        if !notes::notes_on(cx) {
+            return 0;
+        }
         let notes = self.notes.iter().filter(|note| !notes::is_blank_note(note.state.read(cx))).count();
         notes + self.tasks.iter().filter(|t| !t.done).count()
     }

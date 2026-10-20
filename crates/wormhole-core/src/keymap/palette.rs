@@ -127,7 +127,7 @@ pub fn actions(state: &MenuState) -> Vec<Action> {
     let mut actions: Vec<Action> = entries()
         .iter()
         .filter(|e| e.stage == Stage::Now && e.palette && (!e.debug_only || state.debug))
-        .filter(|e| !state.disabled.contains(&e.id))
+        .filter(|e| !state.disabled.contains(&e.id) && !state.hidden.contains(&e.id))
         .map(|e| Action {
             id: e.id,
             label: label_in(e, !state.off.contains(&e.id), state.split),

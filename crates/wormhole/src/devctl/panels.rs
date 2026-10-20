@@ -116,6 +116,9 @@ pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "usage" => RightTab::Usage,
         other => return Err(anyhow!("expected changes, history, notes, usage or project, got {other:?}")),
     };
+    if tab == RightTab::Notes && !crate::workspace::notes::notes_on(ctx.cx) {
+        return Ok("notes and tasks are off (feature_flags.notes_and_tasks)".into());
+    }
     ctx.workspace.show_tab(tab, ctx.cx);
     Ok(String::new())
 }

@@ -68,7 +68,7 @@ impl Frame {
             metrics: Metrics::of(s.density, s.show_groups_as_cards),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
-            show_notes: s.sidebar_notes,
+            show_notes: s.sidebar_notes && super::notes::notes_on(cx),
             hints: ws.hints_showing(cx),
             code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,

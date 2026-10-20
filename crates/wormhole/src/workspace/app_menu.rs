@@ -101,7 +101,7 @@ fn folder_name(root: &Path) -> String {
 
 impl Workspace {
     /// What the menus show about this window.
-    fn menu_state(&self, cx: &App) -> MenuState {
+    pub(super) fn menu_state(&self, cx: &App) -> MenuState {
         use ActionId::*;
         let mut state = MenuState::default();
         if !self.sidebar_shown() {
@@ -127,6 +127,9 @@ impl Workspace {
         // The Project tab needs a folder, and the whole project-folder feature behind its flag.
         if self.active_folder(cx).is_none() || !super::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
+        }
+        if !super::notes::notes_on(cx) {
+            state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
         }
         if let Some(project) =
             self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))

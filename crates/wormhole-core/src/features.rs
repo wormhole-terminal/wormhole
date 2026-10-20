@@ -27,16 +27,21 @@ pub enum FeatureFlag {
     /// window's sidebar and chrome showing, instead of the intro window that stands in for the
     /// terminal. Off, the first launch and Help → Welcome to Wormhole open the intro window.
     TerminalWelcome,
+    /// Notes and next steps (tasks) of each terminal: the right panel's Notes tab, its actions
+    /// (New Note, Stash Prompt, Show Notes), the open-items count in the sidebar and in the close
+    /// questions, and the project notes sync. What was written stays in the database.
+    NotesAndTasks,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 2] = [Self::ProjectFolders, Self::TerminalWelcome];
+    pub const ALL: [FeatureFlag; 3] = [Self::ProjectFolders, Self::TerminalWelcome, Self::NotesAndTasks];
 
     /// The key this flag has under `feature_flags` in `config.json`.
     pub fn key(self) -> &'static str {
         match self {
             Self::ProjectFolders => "project_folders",
             Self::TerminalWelcome => "terminal_welcome",
+            Self::NotesAndTasks => "notes_and_tasks",
         }
     }
 
@@ -49,6 +54,7 @@ impl FeatureFlag {
         match self {
             Self::ProjectFolders => "Project folders",
             Self::TerminalWelcome => "Terminal welcome",
+            Self::NotesAndTasks => "Notes and tasks",
         }
     }
 
@@ -63,6 +69,10 @@ impl FeatureFlag {
                 "The first-run welcome as a program in the first terminal, with the sidebar showing, \
                  instead of the intro window."
             }
+            Self::NotesAndTasks => {
+                "Notes and next steps for each terminal: the right panel's Notes tab, their keys and \
+                 the open count in the sidebar."
+            }
         }
     }
 
@@ -73,6 +83,8 @@ impl FeatureFlag {
             Self::ProjectFolders => false,
             // Until the user has seen it and approved: the intro window stays the first run.
             Self::TerminalWelcome => false,
+            // Hidden for now; what people wrote stays in the database.
+            Self::NotesAndTasks => false,
         }
     }
 }
@@ -166,6 +178,16 @@ mod tests {
         let on = BTreeMap::from([("terminal_welcome".to_string(), true)]);
         assert!(!enabled_in(FeatureFlag::TerminalWelcome, &on, RELEASE), "a release ignores the map");
         assert_eq!(FeatureFlag::from_key("terminal_welcome"), Some(FeatureFlag::TerminalWelcome));
+    }
+
+    #[test]
+    fn notes_and_tasks_has_its_key_and_ships_hidden() {
+        assert_eq!(FeatureFlag::NotesAndTasks.key(), "notes_and_tasks");
+        assert_eq!(FeatureFlag::from_key("notes_and_tasks"), Some(FeatureFlag::NotesAndTasks));
+        assert!(!FeatureFlag::NotesAndTasks.released());
+        assert!(enabled_in(FeatureFlag::NotesAndTasks, &BTreeMap::new(), DEV));
+        let on = BTreeMap::from([("notes_and_tasks".to_string(), true)]);
+        assert!(!enabled_in(FeatureFlag::NotesAndTasks, &on, RELEASE));
     }
 
     #[test]

@@ -145,11 +145,23 @@ const SHEET: &[(&str, &[RowSpec])] = &[
 
 /// The sheet's sections with the rows whose keys work today (the system's Help search counts).
 pub fn sections() -> Vec<Section> {
+    sections_without(&[])
+}
+
+/// [`sections`] minus the rows that list any of `hidden` (actions whose feature is off).
+pub fn sections_without(hidden: &[ActionId]) -> Vec<Section> {
     SHEET
         .iter()
         .map(|(title, rows)| Section {
             title,
-            rows: rows.iter().filter_map(|&(label, actions, style)| row(label, actions, style)).collect(),
+            rows: rows
+                .iter()
+                .filter_map(|&(label, actions, style)| {
+                    let shown: Vec<ActionId> =
+                        actions.iter().copied().filter(|a| !hidden.contains(a)).collect();
+                    if shown.is_empty() { None } else { row(label, &shown, style) }
+                })
+                .collect(),
         })
         .filter(|section| !section.rows.is_empty())
         .collect()

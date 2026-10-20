@@ -19,6 +19,12 @@ const NOTE_ROWS_MAX: usize = 1000;
 /// ... and the fewest rows an editor has, however short its text.
 const NOTE_ROWS_MIN: usize = 3;
 
+/// Whether notes and tasks are on: the `notes_and_tasks` feature flag. Off, no tab, key, count or
+/// sync shows or reacts, while what was written stays in the database for when it is on again.
+pub(crate) fn notes_on(cx: &App) -> bool {
+    crate::settings::settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::NotesAndTasks)
+}
+
 impl Workspace {
     pub(super) fn add_note(
         &mut self,
@@ -79,6 +85,9 @@ impl Workspace {
     }
 
     pub(super) fn new_note(&mut self, text: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
+        if !notes_on(cx) {
+            return;
+        }
         self.reveal_notes_tab(cx);
         let ix = self.add_note(self.active, text, false, window, cx);
         self.focused_note = Some(ix);
@@ -327,6 +336,9 @@ impl Workspace {
 
     /// Move the prompt typed in the terminal (or the selection) into a new note.
     pub(crate) fn stash_prompt(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !notes_on(cx) {
+            return;
+        }
         let Some(text) = self.active_terminal().read(cx).grab_prompt() else {
             return;
         };
@@ -359,8 +371,11 @@ impl Workspace {
         let ui = ui_in(&self.profile, cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Notes until the next refresh resets it.
-        let tab =
-            if self.panel_tab_list(cx).contains(&self.right_tab) { self.right_tab } else { RightTab::Notes };
+        let tab = if self.panel_tab_list(cx).contains(&self.right_tab) {
+            self.right_tab
+        } else {
+            RightTab::Changes
+        };
         div()
             .relative()
             .flex()
@@ -399,6 +414,8 @@ impl Workspace {
     }
 
     pub(crate) fn show_tab(&mut self, tab: RightTab, cx: &mut Context<Self>) {
+        // The Notes tab is gone while its flag is off.
+        let tab = if tab == RightTab::Notes && !notes_on(cx) { RightTab::Changes } else { tab };
         if tab != self.right_tab {
             self.panel_scroll.set_offset(Point::default());
         }
