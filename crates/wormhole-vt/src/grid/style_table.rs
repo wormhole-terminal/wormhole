@@ -13,6 +13,19 @@
 use super::cell::StyleId;
 use super::style::{LAYOUT_FLAGS, Style};
 
+#[cfg(test)]
+thread_local! {
+    /// Calls of `acquire` on this thread, for the tests that count what an operation costs in
+    /// style lookups (a test runs on one thread, so they do not see each other's).
+    static ACQUIRES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The calls of `StyleTable::acquire` so far on this thread.
+#[cfg(test)]
+pub fn acquires() -> usize {
+    ACQUIRES.with(std::cell::Cell::get)
+}
+
 #[derive(Clone, Debug)]
 pub(super) struct Entry {
     style: Style,
@@ -166,6 +179,8 @@ impl StyleTable {
     /// a second entry for the same look.
     #[inline]
     pub(super) fn acquire(&mut self, style: &Style, n: u32) -> StyleId {
+        #[cfg(test)]
+        ACQUIRES.with(|count| count.set(count.get() + 1));
         if style.attrs.intersects(LAYOUT_FLAGS) {
             return self.acquire_without_layout(style, n);
         }

@@ -14,6 +14,7 @@ mod modify_keys;
 mod passthrough;
 mod pointer_and_vars;
 mod rare;
+mod rectangles;
 mod replies;
 mod resize;
 mod scheme;

@@ -26,10 +26,10 @@ impl Grid {
     pub fn fill_rect(&mut self, area: Region, c: char, pen: &Pen) {
         let area = self.inside(area);
         self.placements_erased(area.top..area.bottom + 1, area.left..area.right + 1);
+        // A row at a time: one style count and one link for the run, not for every cell.
         for y in area.top..=area.bottom {
-            for x in area.left..=area.right {
-                self.write_cluster(y, x, c, &[], 1, pen);
-            }
+            let (page, row) = self.page_row_mut(y);
+            page.fill_char(row, area.left, area.right - area.left + 1, c, pen);
         }
     }
 

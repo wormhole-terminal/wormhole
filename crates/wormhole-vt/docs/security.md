@@ -108,7 +108,11 @@ queue when you take the event, and decode with limits of your own.
 ### Time is bounded
 
 Each sequence costs time proportional to its length and to a count the engine has clamped. A repeat count
-(REP) is at most what one parameter can say (65,535). Rectangle operations are cut to the screen. A
+(REP) is at most what one parameter can say (65,535), and past two screens' worth of an ASCII character it
+prints two screens and the remainder that keeps the cursor's column (the screen and the cursor end up
+the same; the history gains fewer identical lines). Rectangle operations are cut to the screen and cost a
+style lookup per run of cells with one look, not per cell (a full-screen DECFRA, DECCRA or DECSERA is a
+few lookups a row). A
 hyperlink's reach is followed over at most 16 rows each way. Sixel decoding has a work budget. A
 program cannot move or resize the window unless `Policy` allows it, and then only up to the screen. DECCOLM
 is behind the same switch: a width change reflows the whole history, so without `window_ops` it clears and

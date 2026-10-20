@@ -338,6 +338,7 @@ impl Terminal {
     /// function itself: the text ends with it, so a second REP repeats nothing.
     pub(in crate::terminal) fn repeat(&mut self, last: Option<char>, n: usize) {
         let Some(c) = last else { return };
+        let n = self.repeat_count(c, n);
         if c.is_ascii() {
             let block = [c as u8; 256];
             let mut left = n;
@@ -352,6 +353,29 @@ impl Terminal {
             }
         }
         self.end_text();
+    }
+
+    /// How many copies of `c` REP really prints for a request of `n`. Past two screens' worth the
+    /// copies only write the same character over a screen that is full of it already and push
+    /// more identical lines into the history, so the count is cut to two screens plus what the
+    /// row length leaves over: the screen and the cursor end up where `n` copies would have left
+    /// them (each row holds `cols` copies, so the cursor's column depends on `n` modulo `cols`).
+    /// What differs is only how many identical lines the history gained. Only for the case that
+    /// is exactly periodic: an ASCII character (one cell, never part of a cluster), autowrap on,
+    /// margins the whole width, no row drawn double. Anything else prints all `n`, which a
+    /// parameter already keeps at 65,535.
+    fn repeat_count(&self, c: char, n: usize) -> usize {
+        let whole = self.cols * self.rows * 2;
+        if n <= whole
+            || !c.is_ascii()
+            || !self.modes.contains(Modes::AUTOWRAP)
+            || self.margins.left != 0
+            || self.margins.right + 1 != self.cols
+            || self.grid.has_line_sizes()
+        {
+            return n;
+        }
+        whole + (n - whole) % self.cols
     }
 
     /// A control function ends the text: the cluster being built cannot grow, and REP has no

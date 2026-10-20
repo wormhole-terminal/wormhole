@@ -129,6 +129,10 @@ First public release (0.1.0).
   (ceiling 64 MiB) bounds the text and data of clipboard stores, notifications, icon names and passed-through,
   iTerm2 and program status strings, and a new event past it is dropped whole. By count alone 16,384 stores
   of 8 MiB were allowed to wait.
+- DECFRA, DECCRA and DECSERA look a style up once for each run of cells with one look, as DECERA does,
+  not once for every cell (about thirty times the work of ECH per cell). REP of an ASCII character past two
+  screens' worth prints two screens and the remainder that keeps the column: the screen and the cursor
+  end where the whole count would have left them, the history gains fewer identical lines.
 - Documented guarantees: input never panics or grows memory without bound, replies are built from the
   engine's state, title reports and window operations are off unless the host allows them, and clipboard
   and notifications are requests to the host. See `docs/security.md`.

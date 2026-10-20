@@ -95,11 +95,22 @@ impl Page {
         let base = self.base_of(row);
         // Whole destination first: a wide character half under it must not keep its other half.
         self.guard_edges(base, col, col + cells.len());
-        for (i, cell) in cells.iter().enumerate() {
-            let cell_marks = marks.get(cell.marks.clone()).unwrap_or(&[]);
-            self.put(row, col + i, cell.c, cell_marks, &cell.style, cell.link.as_ref(), cell.flags);
+        let at = base + col;
+        self.release_range(at, at + cells.len());
+        // A run of cells with one look is counted once, not looked up cell by cell: a copy of a
+        // screen is a hash per row, not per cell.
+        let mut i = 0;
+        while i < cells.len() {
+            let style = &cells[i].style;
+            let run = cells[i..].iter().take_while(|cell| cell.style == *style).count();
+            let id = self.styles.acquire(style, run as u32);
+            for (k, cell) in cells[i..i + run].iter().enumerate() {
+                let cell_marks = marks.get(cell.marks.clone()).unwrap_or(&[]);
+                self.place(at + i + k, cell.c, cell_marks, id, cell.link.as_ref(), cell.flags);
+            }
+            i += run;
         }
-        self.mend_copied_edges(base + col, base + col + cells.len());
+        self.mend_copied_edges(at, at + cells.len());
         self.touch(row);
     }
 }

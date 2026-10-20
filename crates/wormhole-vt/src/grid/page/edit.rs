@@ -41,14 +41,23 @@ impl Page {
     }
 
     fn erase_unspared(&mut self, a: usize, b: usize, bg: Color, spare: Spare) {
+        // Each run of cells the erase reaches is counted once, like a plain erase of the row: the
+        // style is looked up per run, not per cell (DECSERA over a screen with a few protected
+        // cells is a handful of runs).
         let erased = Style::erased(bg);
-        for at in a..b {
+        let mut at = a;
+        while at < b {
             if self.cells[at].is_spared(spare) {
+                at += 1;
                 continue;
             }
-            self.release(at, at + 1);
-            let id = self.styles.acquire(&erased, 1);
-            self.cells[at] = Cell::compose(0, id, CellFlags::empty());
+            let start = at;
+            while at < b && !self.cells[at].is_spared(spare) {
+                at += 1;
+            }
+            let id = self.styles.acquire(&erased, (at - start) as u32);
+            self.release_range(start, at);
+            self.cells[start..at].fill(Cell::compose(0, id, CellFlags::empty()));
         }
     }
 

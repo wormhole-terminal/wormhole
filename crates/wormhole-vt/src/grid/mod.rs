@@ -100,6 +100,8 @@ pub use row::{Pen, Region, RowMark};
 pub use rowview::RowView;
 pub use search::{CopiedLine, TextCopy};
 pub use style::Style;
+#[cfg(test)]
+pub use style_table::acquires as style_acquires;
 pub use text::TextShape;
 
 use crate::types::{Color, NamedColor};

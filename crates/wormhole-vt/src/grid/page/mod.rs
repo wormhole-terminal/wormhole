@@ -29,7 +29,7 @@ use std::ops::Range;
 
 use crate::types::{Hyperlink, LineSize};
 
-use super::cell::{Cell, CellFlags, Spare, StyleRun, run_of};
+use super::cell::{Cell, CellFlags, Spare, StyleId, StyleRun, run_of};
 use super::graphemes::Graphemes;
 use super::row::{DIRTY, Meta, Pen, Row, RowMark, SIZE_MASK, SIZE_SHIFT, WRAPPED};
 use super::side_tables::Links;
@@ -386,6 +386,19 @@ impl Page {
         if n == 0 {
             return;
         }
+        let (a, b, template) = self.claim_run(row, col, n, pen);
+        for (cell, &byte) in self.cells[a..b].iter_mut().zip(bytes) {
+            *cell = template.with_codepoint(byte as u32);
+        }
+        self.note_written(row, pen);
+    }
+
+    /// Take over the `n` cells from `col` of `row` for a write in `pen`'s look: the edges of the
+    /// run no longer cut a wide character, the style is counted once for all `n` cells and what
+    /// they held is given back, and the run is put under the pen's link. Gives the absolute
+    /// offsets of the run and the cell (without a character) every one of them becomes.
+    #[inline]
+    fn claim_run(&mut self, row: usize, col: usize, n: usize, pen: &Pen) -> (usize, usize, Cell) {
         let base = self.base_of(row);
         let (a, b) = (base + col, base + col + n);
         self.guard_edges(base, col, col + n);
@@ -399,10 +412,18 @@ impl Page {
         {
             flags |= CellFlags::HYPERLINK;
         }
-        let template = Cell::compose(0, style, flags);
-        for (cell, &byte) in self.cells[a..b].iter_mut().zip(bytes) {
-            *cell = template.with_codepoint(byte as u32);
+        (a, b, Cell::compose(0, style, flags))
+    }
+
+    /// Write `c`, one cell wide and without marks, in `n` cells from `col` of `row` in `pen`'s
+    /// look: DECFRA's row, one style count and one link for the run where `write_char` made them
+    /// cell by cell.
+    pub(super) fn fill_char(&mut self, row: usize, col: usize, n: usize, c: char, pen: &Pen) {
+        if n == 0 {
+            return;
         }
+        let (a, b, template) = self.claim_run(row, col, n, pen);
+        self.cells[a..b].fill(template.with_codepoint(c as u32));
         self.note_written(row, pen);
     }
 
@@ -555,6 +576,20 @@ impl Page {
         let at = self.base_of(row) + col;
         self.release_range(at, at + 1);
         let id = self.styles.acquire(style, 1);
+        self.place(at, c, marks, id, link, flags);
+    }
+
+    /// Set the cell at absolute offset `at` to `c` in style `id`, which the caller has counted,
+    /// with the marks, link and flags given. What the cell held was given back already.
+    pub(super) fn place(
+        &mut self,
+        at: usize,
+        c: Option<char>,
+        marks: &[char],
+        id: StyleId,
+        link: Option<&Hyperlink>,
+        flags: CellFlags,
+    ) {
         let mut flags = flags - CellFlags::SIDE_ENTRY;
         if !marks.is_empty() {
             flags |= CellFlags::GRAPHEME;
