@@ -182,6 +182,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   (1015), pixel-position mouse reports (1016) and Backspace sending BS (DECBKM), and the terminal does
   what it asks. Until now only the other mouse modes and the cursor keys were followed.
 - Pixel-position mouse reports (mode 1016) count from 1, as xterm's do, instead of from 0.
+- A repeat (`CSI Ps b`, REP) now repeats a character only when it comes right after one, as the
+  standard and xterm have it: after a colour change, a cursor move, a line feed or another repeat it
+  repeats nothing, where it used to repeat the last character printed.
 
 ### Security
 

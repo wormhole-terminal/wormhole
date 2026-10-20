@@ -71,14 +71,10 @@ fn insert_mode_keeps_a_cluster_from_being_reopened() {
 }
 
 #[test]
-fn a_screen_filled_by_decaln_has_no_last_character() {
-    gap_is_visible(&scenario(b"\x1b#8", 6, 3, &[]), Gaps::LAST_CHAR, "a/last_char");
-}
-
-#[test]
-fn a_last_character_with_no_free_cell_and_none_on_screen() {
-    // DECFRA fills the screen with '%' after '@' was the last character printed.
-    gap_is_visible(&scenario(b"QRSTUVWX\r\nYZ6789!@\x1b[37$x", 8, 2, &[]), Gaps::TOUCH, "a/last_char");
+fn insert_mode_keeps_the_last_character_from_being_repeated() {
+    // REP repeats a character only when text came last, and printing it again to say so would
+    // insert.
+    gap_is_visible(&scenario(b"\x1b[4hx", 10, 3, &[]), Gaps::LAST_CHAR, "a/last_char");
 }
 
 #[test]

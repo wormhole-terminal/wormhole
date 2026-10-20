@@ -5,7 +5,10 @@
 //! adapter is private, so the only way in is [`Terminal::feed`].
 //!
 //! Every sequence that is not text ends the grapheme cluster being built (mode 2027): the cursor
-//! may have moved, and the next character starts a cluster of its own.
+//! may have moved, and the next character starts a cluster of its own. It also ends the character
+//! REP repeats: ECMA-48's REP repeats "the preceding character" if that is a graphic one, and a
+//! control function is not (xterm forgets it the same way, a control sequence or a C0 control
+//! returns its parser to the ground state with no character in hand).
 
 use crate::parser::{Csi, Handler};
 
@@ -50,18 +53,19 @@ impl Handler for Sink<'_> {
     }
 
     fn execute(&mut self, byte: u8) {
-        self.0.cluster.open = false;
+        self.0.end_text();
         self.0.history_just_cleared = false;
         self.0.control(byte);
     }
 
     fn csi(&mut self, csi: &Csi) {
+        // `dispatch_csi` forgets the character REP repeats, after REP has had it.
         self.0.cluster.open = false;
         self.0.dispatch_csi(csi);
     }
 
     fn esc(&mut self, intermediates: &[u8], byte: u8) {
-        self.0.cluster.open = false;
+        self.0.end_text();
         self.0.history_just_cleared = false;
         self.0.dispatch_esc(intermediates, byte);
     }
@@ -75,7 +79,7 @@ impl Handler for Sink<'_> {
     }
 
     fn osc_end(&mut self, bel_terminated: bool) {
-        self.0.cluster.open = false;
+        self.0.end_text();
         self.0.finish_osc(if bel_terminated { Terminator::Bel } else { Terminator::St });
     }
 
@@ -84,7 +88,7 @@ impl Handler for Sink<'_> {
     }
 
     fn dcs_hook(&mut self, csi: &Csi) {
-        self.0.cluster.open = false;
+        self.0.end_text();
         self.0.hook_dcs(csi);
     }
 
@@ -109,7 +113,7 @@ impl Handler for Sink<'_> {
     }
 
     fn apc_end(&mut self) {
-        self.0.cluster.open = false;
+        self.0.end_text();
         self.0.finish_apc();
     }
 

@@ -2,7 +2,7 @@
 //! order that lets each sequence do what it says (a mode that moves the cursor goes before the
 //! cursor is placed).
 
-use crate::grid::{BlockPart, Grid, Style};
+use crate::grid::BlockPart;
 use crate::types::{Flags, Line};
 
 use super::{Gaps, Writer};
@@ -59,11 +59,11 @@ const ANSI: &[(Modes, u16)] =
     &[(Modes::KEYBOARD_LOCK, 2), (Modes::INSERT, 4), (Modes::SEND_RECEIVE, 12), (Modes::NEW_LINE, 20)];
 
 impl<'a> Writer<'a> {
-    // ---- the counters and the cell `last_char` lives in ----
+    // ---- the block counter ----
 
-    /// `last_char`, and the block counter if the rows left it short of the sender's: both are only
-    /// set by printing and by prompt marks, so they are done on a blank cell that is erased after.
-    pub(super) fn touch_and_counters(&mut self) {
+    /// The block counter, if the rows left it short of the sender's: it is only set by prompt
+    /// marks, which are written here as many times as it lacks.
+    pub(super) fn counters(&mut self) {
         let t = self.term;
         let end = t.block;
         let burns = if t.pen.block == 0 {
@@ -86,42 +86,8 @@ impl<'a> Writer<'a> {
             }
             end.saturating_sub(self.counter) as usize
         };
-        let reprinted = t.cluster.open
-            && if t.modes.contains(Modes::VT52) { self.vt52_reprint() } else { !self.has(Modes::INSERT) };
-        let last = t.last_char.filter(|_| !reprinted);
-        if burns == 0 && last.is_none() {
-            return;
-        }
-        self.reset_pen();
-        let primary = if t.on_alt_screen() { &t.other } else { &t.grid };
-        let Some(c) = last else {
-            self.burn(burns);
-            return;
-        };
-        // A cell that already shows the character is printed again, as it is: it sets
-        // `last_char` and changes nothing else.
-        if let Some((y, x)) = find_char(primary, c, (t.cursor.x, t.cursor.y))
-            && let Some(view) = primary.row_view(Line(y as i32))
-        {
-            let link = view.links().find(|&(lo, hi, _)| lo <= x && x < hi).map(|(_, _, link)| link);
-            self.csi2(y + 1, x + 1, b'H');
-            self.put_cell(&view, x, link);
-            self.burn(burns);
-            return;
-        }
-        // Otherwise it is printed on a blank cell, which is erased again: with the background it
-        // had.
-        let width = crate::unicode::GraphemeState::new().step(c).width.max(1) as usize;
-        if let Some((y, x, bg)) = blank_run(primary, width) {
-            self.csi2(y + 1, x + 1, b'H');
-            let mut buf = [0u8; 4];
-            self.put(c.encode_utf8(&mut buf).as_bytes());
-            self.burn(burns);
-            self.set_style(&bg.map_or(Style::DEFAULT, Style::erased));
-            self.csi2(y + 1, x + 1, b'H');
-            self.csi_count(width, b'X');
-        } else {
-            self.gaps |= Gaps::TOUCH;
+        if burns > 0 {
+            self.reset_pen();
             self.burn(burns);
         }
     }
@@ -265,22 +231,19 @@ impl<'a> Writer<'a> {
                 self.gaps |= Gaps::ALT_CONTENT;
             }
         }
-        // The cursor, or the place the open cluster starts when the last character printed can
-        // still be extended: it is printed again from there and leaves the cursor, the cluster
-        // and `last_char` where they were.
+        // The cursor, or the place the last character printed starts when it can still be extended
+        // or repeated (the open cluster, or REP's character: nothing but text came after it): it
+        // is printed again from there, which leaves the cursor, the cluster and `last_char` where
+        // they were.
         // In VT52 mode it is printed again after the mode is entered (entering it closes a cluster),
         // from where `ESC Y` can address.
         let vt52 = t.modes.contains(Modes::VT52);
-        let reprint = t.cluster.open
-            && if vt52 { self.vt52_reprint() } else { !self.has(Modes::INSERT) && self.cluster_matches() };
-        if t.cluster.open && !reprint {
-            self.gaps |= Gaps::CLUSTER;
-        }
+        let reprint = self.tail(vt52);
+        let head = reprint.map(|(head, _)| head);
         let origin = self.has(Modes::ORIGIN);
-        let at = if reprint && !vt52 {
-            CursorPos { x: t.cluster.head, y: t.cursor.y, pending: false }
-        } else {
-            t.cursor
+        let at = match head {
+            Some(head) if !vt52 => CursorPos { x: head, y: t.cursor.y, pending: false },
+            _ => t.cursor,
         };
         self.cursor_information(at, origin, t.charsets_before_vt52());
         // The pen after the string: it clears the attributes it reports.
@@ -291,8 +254,10 @@ impl<'a> Writer<'a> {
         if t.eight_bit {
             self.put(b"\x1b G");
         }
-        if reprint && !vt52 {
-            self.cluster_text(t.cluster.head, t.cursor.y);
+        if let Some((head, source)) = reprint
+            && !vt52
+        {
+            self.cluster_text(head, t.cursor.y, source);
         }
         // After ED 3 a cursor move or an erase is all that came: the next ED 2 saves nothing.
         if t.history_just_cleared {
@@ -308,19 +273,40 @@ impl<'a> Writer<'a> {
             if t.vt52.graphics() {
                 self.put(b"\x1bF");
             }
-            if reprint {
-                // The cluster is printed from its head, which leaves the cursor where it is.
-                self.put(&[0x1b, b'Y', 32 + t.cursor.y as u8, 32 + t.cluster.head as u8]);
-                self.cluster_text(t.cluster.head, t.cursor.y);
+            if let Some((head, source)) = reprint {
+                // The text is printed from its head, which leaves the cursor where it is.
+                self.put(&[0x1b, b'Y', 32 + t.cursor.y as u8, 32 + head as u8]);
+                self.cluster_text(head, t.cursor.y, source);
             }
         }
     }
 
-    /// Whether the cluster open in VT52 mode can be printed again: `ESC Y` reaches its place (the
-    /// characters after it are printable ASCII, so the numbers stop at 94) and its cell holds it.
-    fn vt52_reprint(&self) -> bool {
+    /// The column the last character printed is printed again from, to leave `last_char` and the
+    /// open cluster as they are in the sender: a control function forgets both, so only a screen
+    /// whose last act was text has either, and only printing it last can say so. `None` when
+    /// there is nothing to say, or it cannot be said: then the gap says it.
+    fn tail(&mut self, vt52: bool) -> Option<(usize, Option<u8>)> {
         let t = self.term;
-        t.cluster.head <= 94 && t.cursor.y <= 94 && self.cluster_matches()
+        t.last_char?;
+        let head = t.cluster.head;
+        // In VT52 mode `ESC Y` reaches the place (the numbers stop at 94), and the mode has no
+        // insert. Elsewhere printing the character again must not insert, which would move the
+        // rest of the row.
+        let fits = if vt52 { head <= 94 && t.cursor.y <= 94 } else { !self.has(Modes::INSERT) };
+        let made = if !fits {
+            None
+        } else if t.cluster.open {
+            self.cluster_matches().then_some(None)
+        } else {
+            self.char_source(head)
+        };
+        if made.is_none() {
+            self.gaps |= Gaps::LAST_CHAR;
+            if t.cluster.open {
+                self.gaps |= Gaps::CLUSTER;
+            }
+        }
+        made.map(|source| (head, source))
     }
 
     /// Whether the cell at the open cluster's head holds the cluster: its last character is the
@@ -333,61 +319,63 @@ impl<'a> Writer<'a> {
         last == Some(t.cluster.last) && !cell.is_spacer_tail()
     }
 
-    /// The cluster at column `x` of row `y`, as the characters that make it.
-    fn cluster_text(&mut self, x: usize, y: usize) {
+    /// How to print `last_char`, not in an open cluster, from `head` so that the cursor ends where
+    /// it is: `Some(None)` as its cell holds it, `Some(Some(byte))` as the byte a set mapped to it
+    /// (printing the character itself would be mapped again, or, with the cluster mode on, would
+    /// open the cluster a mapped character closes), `None` when the cell does not show it where
+    /// the cursor says or no byte makes it.
+    fn char_source(&self, head: usize) -> Option<Option<u8>> {
+        let t = self.term;
+        let c = t.last_char?;
+        let view = t.grid.row_view(Line(t.cursor.y as i32))?;
+        let cell = *view.cells().get(head)?;
+        if cell.character() != Some(c) || cell.is_spacer_tail() {
+            return None;
+        }
+        // Where the print leaves the cursor: after the character, or on the last column with the
+        // wrap pending (or, with autowrap off, over the last cell).
+        let end = head + if cell.is_wide() { 2 } else { 1 };
+        let right = t.right_limit();
+        let lands = if end <= right {
+            t.cursor.x == end && !t.cursor.pending
+        } else {
+            t.cursor.x == right && t.cursor.pending == t.modes.contains(Modes::AUTOWRAP)
+        };
+        if !lands {
+            return None;
+        }
+        // Below VT300 the sets are not written (`Gaps::LOW_LEVEL`), so the receiver's are the defaults.
+        if t.level < Level::Vt300 && t.charsets != Charsets::default() {
+            return None;
+        }
+        let clusters = t.modes.contains(Modes::GRAPHEME_CLUSTERS);
+        if t.charsets.plain() {
+            // A closed cluster in cluster mode is a mapped character's (a mark that began its own
+            // cluster is the other case, and not worth a byte).
+            return (!clusters).then_some(None);
+        }
+        if !c.is_ascii() && !clusters {
+            return Some(None);
+        }
+        let mut sets = t.charsets;
+        let set = sets.take_active();
+        (0x20..=0x7eu8).find(|&byte| set.map(byte) == c).map(Some)
+    }
+
+    /// The cluster at column `x` of row `y`, as the characters that make it; its first character
+    /// as `source` when that is a byte a set maps to it.
+    fn cluster_text(&mut self, x: usize, y: usize, source: Option<u8>) {
         let t = self.term;
         let Some(view) = t.grid.row_view(crate::types::Line(y as i32)) else { return };
         let cell = view.cells()[x];
         let c = cell.character().unwrap_or(' ');
         let mut buf = [0u8; 4];
-        self.put(c.encode_utf8(&mut buf).as_bytes());
+        match source {
+            Some(byte) => self.put(&[byte]),
+            None => self.put(c.encode_utf8(&mut buf).as_bytes()),
+        }
         for &mark in view.marks(x) {
             self.put(mark.encode_utf8(&mut buf).as_bytes());
         }
     }
-}
-
-/// A cell of `grid`'s live screen that shows `c` as its character and no block mark, the nearest
-/// to `cursor` (a character printed last is usually just before it).
-fn find_char(grid: &Grid, c: char, cursor: (usize, usize)) -> Option<(usize, usize)> {
-    let rows = grid.rows();
-    let order = (0..rows)
-        .flat_map(|d| [cursor.1.checked_sub(d), (d > 0).then(|| cursor.1 + d).filter(|y| *y < rows)]);
-    for y in order.flatten() {
-        let view = grid.row_view(Line(y as i32))?;
-        let cells = view.cells();
-        // A double-width row has its sequences' columns only in the half it shows.
-        let shown = view.line_size().visible_columns(cells.len());
-        let found = (0..shown).rev().find(|&x| {
-            let cell = cells[x];
-            cell.character() == Some(c) && cell.content() == BlockPart::None && !cell.is_spacer_tail()
-        });
-        if let Some(x) = found {
-            return Some((y, x));
-        }
-    }
-    None
-}
-
-/// A row and column of `grid`'s live screen where `width` cells in a row hold nothing, have the
-/// same background, and do not reach the last column the row shows; the background.
-fn blank_run(grid: &Grid, width: usize) -> Option<(usize, usize, Option<crate::types::Color>)> {
-    let (cols, rows) = (grid.cols(), grid.rows());
-    for y in (0..rows).rev() {
-        let view = grid.row_view(Line(y as i32))?;
-        let cells = view.cells();
-        let shown = view.line_size().visible_columns(cols);
-        for x in 0..shown.saturating_sub(width) {
-            let run = &cells[x..x + width];
-            if run.iter().any(|c| c.codepoint() != 0 || c.flags() != 0) {
-                continue;
-            }
-            let style = view.style(run[0].style_id());
-            let same = run.iter().all(|c| view.style(c.style_id()) == style);
-            if same && (style.is_default() || *style == Style::erased(style.bg)) {
-                return Some((y, x, (!style.is_default()).then_some(style.bg)));
-            }
-        }
-    }
-    None
 }

@@ -71,7 +71,10 @@ const TERMINAL: &[(&str, Coverage)] = &[
     ("folder", Written("titles: OSC 7")),
     ("palette", Written("palette: OSC 4, 5, 10 to 19")),
     ("cell_px", Host("the host's cell size")),
-    ("last_char", Written("touch_and_counters, or the open cluster printed again")),
+    (
+        "last_char",
+        Written("final_state: the character printed again last (Gaps::LAST_CHAR when it cannot be)"),
+    ),
     ("cluster", Written("final_state: the cluster is printed again (Gaps::CLUSTER when it cannot be)")),
     ("block", Written("Seeds::block, and OSC 133;A marks that count up from it")),
     ("stashed_content", Written("final_state: the main screen's pen mark is set, then `?47h` puts it aside")),

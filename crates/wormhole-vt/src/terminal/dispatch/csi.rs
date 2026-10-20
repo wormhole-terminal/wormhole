@@ -21,6 +21,8 @@ fn count(csi: &Csi, i: usize) -> usize {
 
 impl Terminal {
     pub(in crate::terminal) fn dispatch_csi(&mut self, csi: &Csi) {
+        // REP takes the character it repeats; every sequence, REP included, leaves none behind.
+        let repeatable = self.last_char.take();
         if csi.overflow() {
             return;
         }
@@ -29,7 +31,7 @@ impl Terminal {
             self.history_just_cleared = false;
         }
         match (csi.marker(), csi.intermediates()) {
-            (None, []) => self.csi_plain(csi),
+            (None, []) => self.csi_plain(csi, repeatable),
             (Some(b'?'), []) => self.csi_private(csi),
             (None, [b' ']) => match csi.final_byte() {
                 b'q' => self.set_cursor_style(csi.param(0, 0)),
@@ -109,7 +111,7 @@ impl Terminal {
     }
 
     /// Sequences without a marker or intermediates.
-    fn csi_plain(&mut self, csi: &Csi) {
+    fn csi_plain(&mut self, csi: &Csi, repeatable: Option<char>) {
         match csi.final_byte() {
             b'm' => self.sgr(csi),
             b'H' | b'f' => self.position(count(csi, 0) - 1, count(csi, 1) - 1),
@@ -140,7 +142,7 @@ impl Terminal {
             b'S' => self.scroll_up(count(csi, 0)),
             // With more parameters this is xterm's mouse tracking initiation, which is ignored.
             b'T' if csi.len() <= 1 => self.scroll_down(count(csi, 0)),
-            b'b' => self.repeat_last(count(csi, 0)),
+            b'b' => self.repeat(repeatable, count(csi, 0)),
             b'I' => self.tab_forward(count(csi, 0)),
             b'Z' => self.tab_back(count(csi, 0)),
             b'g' => match csi.param(0, 0) {

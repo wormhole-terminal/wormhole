@@ -209,7 +209,8 @@ struct Cluster {
     /// Whether the character before the cursor was printed by the last operation and can still
     /// be extended. Any sequence that is not text closes it.
     open: bool,
-    /// The column of the cluster's first cell.
+    /// The column of the cluster's first cell; after a character printed outside a cluster (mode
+    /// 2027 off, or mapped by a set), the column of that character.
     head: usize,
     width: u8,
     last: char,
@@ -273,7 +274,8 @@ pub struct Terminal {
     palette: osc::colors::Palette,
     /// A cell in pixels, for XTWINOPS 14, 16 and XTSMGRAPHICS.
     cell_px: (u16, u16),
-    /// The last graphic character printed, for REP.
+    /// The graphic character printed last when nothing but text has come since, for REP: every
+    /// control function forgets it (`end_text`).
     last_char: Option<char>,
     cluster: Cluster,
     /// The number of the last command block (OSC 133); 0 before any.

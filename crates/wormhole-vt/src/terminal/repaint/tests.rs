@@ -155,13 +155,39 @@ fn a_cluster_that_can_still_grow() {
 fn a_cluster_in_the_last_column_with_autowrap_off() {
     same("\x1b[?7labcdefghijklmnopqrstu");
     same("\x1b[?7labcdefghijklmnopqrst\u{e9}");
-    // A wide character with one cell left is dropped, and is not what REP repeats.
-    same("\x1b[?7labcdefghijklmnopqrst\u{4e2d}");
+}
+
+#[test]
+fn a_wide_character_dropped_at_the_edge_leaves_a_gap() {
+    // It is dropped, and is not what REP repeats: `t` is, with the cluster closed, which printing
+    // `t` again in the cluster mode would open. The repaint says so and nothing else differs.
+    let mut a = Terminal::builder().size(20, 6).build();
+    a.feed("\x1b[?7labcdefghijklmnopqrst\u{4e2d}".as_bytes());
+    let mut bytes = Vec::new();
+    let done = a.repaint(&mut bytes).expect("ready");
+    let mut b = Terminal::builder().size(20, 6).build();
+    b.seed(&done.seeds);
+    b.feed(&bytes);
+    assert_eq!(done.gaps, Gaps::LAST_CHAR);
+    let diff = a.dump_state().diff(&b.dump_state(), 6);
+    assert!(diff.starts_with("a/last_char\n") && diff.matches("left :").count() == 1, "{diff}");
 }
 
 #[test]
 fn the_last_character_for_repeat() {
+    // A control function forgets it, so it is only there when text came last; the repaint prints
+    // it again last.
     same("xyz\r\n\x1b[2;1H");
+    same("xyz");
+    same("xyz\r\nabc");
+    same("\x1b[31mxyz\x1b[1;44m\u{4e2d}");
+    same("abcdefghijklmnopqrst");
+    same("abcdefghijklmnopqrstu");
+    same("\x1b[?7labcdefghijklmnopqrstu");
+    same("\x1b(0qqx");
+    // A screen filled by DECALN or DECFRA, or one where nothing was ever printed, has none.
+    same("\x1b#8");
+    same("ab\x1b[37$x");
 }
 
 #[test]

@@ -310,9 +310,6 @@ impl<'a> Writer<'a> {
     /// Print the cell at `x` of `view` with the pen it was written with.
     pub(super) fn put_cell(&mut self, view: &RowView<'a>, x: usize, link: Option<&'a Hyperlink>) {
         let cell = view.cells()[x];
-        if self.term.last_char.is_none() {
-            self.gaps |= Gaps::LAST_CHAR;
-        }
         let marks: &[char] = if cell.has_grapheme() { view.marks(x) } else { &[] };
         self.cluster_mode(cell, marks);
         // The cell before was printed with the same look and nothing came between: the pen is

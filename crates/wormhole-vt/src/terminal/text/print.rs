@@ -33,6 +33,7 @@ impl Terminal {
         let Some(&last) = run.last() else { return };
         self.last_char = Some(char::from(last));
         let head = self.write_ascii(run);
+        self.cluster.head = head;
         if self.modes.contains(Modes::GRAPHEME_CLUSTERS) {
             self.start_cluster_after_ascii(char::from(last), head);
         }
@@ -50,7 +51,7 @@ impl Terminal {
             let c = self.charsets.take_active().map(byte);
             self.last_char = Some(c);
             if c.is_ascii() {
-                self.write_ascii(&[c as u8]);
+                self.cluster.head = self.write_ascii(&[c as u8]);
             } else {
                 self.put_char(c, 1);
             }
@@ -332,9 +333,11 @@ impl Terminal {
 
     // ---- REP ----
 
-    /// REP: print the last graphic character `n` more times, as if typed.
-    pub(in crate::terminal) fn repeat_last(&mut self, n: usize) {
-        let Some(c) = self.last_char else { return };
+    /// REP: print `last`, the graphic character just before this sequence, `n` more times, as if
+    /// typed. Nothing when a control function came between (`last` is `None`). REP is a control
+    /// function itself: the text ends with it, so a second REP repeats nothing.
+    pub(in crate::terminal) fn repeat(&mut self, last: Option<char>, n: usize) {
+        let Some(c) = last else { return };
         if c.is_ascii() {
             let block = [c as u8; 256];
             let mut left = n;
@@ -348,5 +351,14 @@ impl Terminal {
                 self.print_char(c);
             }
         }
+        self.end_text();
+    }
+
+    /// A control function ends the text: the cluster being built cannot grow, and REP has no
+    /// graphic character to repeat any more.
+    #[inline]
+    pub(in crate::terminal) fn end_text(&mut self) {
+        self.cluster.open = false;
+        self.last_char = None;
     }
 }

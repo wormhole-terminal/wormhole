@@ -87,8 +87,6 @@ bitflags! {
         const COLOR = 1 << 7;
         /// A title, icon name or folder holds bytes that would end the sequence that sets it.
         const TEXT = 1 << 8;
-        /// `last_char` or the counters needed a free cell to be set in and the screen has none.
-        const TOUCH = 1 << 9;
         /// A spacer head (the blank a wide character that did not fit left) with no wide
         /// character on the next row.
         const SPACER_HEAD = 1 << 10;
@@ -100,8 +98,9 @@ bitflags! {
         /// The last character printed can still be extended, and either insert mode is on, which
         /// printing it again to say so would act on, or the cluster is not what its cell holds.
         const CLUSTER = 1 << 13;
-        /// No character was ever printed (`last_char` is none) but the screen holds text: it
-        /// came from DECALN or DECFRA, and printing it in a repaint sets `last_char`.
+        /// The last thing the program did was print a character (so REP repeats it), and the repaint
+        /// cannot print it again last to say so: insert mode is on, a set maps it, the cluster mode
+        /// is on and a set mapped it, or its cell does not show it where the cursor says.
         const LAST_CHAR = 1 << 14;
         /// A cell's characters make a cell of another width or shape in the receiver, whether it
         /// clusters characters or not.
@@ -293,9 +292,9 @@ impl<'a> Writer<'a> {
             self.screen_rows(hidden, true);
             self.show(false);
         }
-        // The tables, then the counters and the cell that carries `last_char`.
+        // The tables, then the block counter.
         self.tables();
-        self.touch_and_counters();
+        self.counters();
         // The state of the cursor, per screen, then the real one.
         self.saved_cursors();
         self.modes();

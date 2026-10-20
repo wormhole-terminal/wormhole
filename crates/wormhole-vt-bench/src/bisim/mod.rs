@@ -284,7 +284,7 @@ impl std::fmt::Display for Failure {
 fn masked(name: &str, gaps: Gaps) -> bool {
     (gaps.contains(Gaps::PLACEMENTS) && name.contains("/placement["))
         || (gaps.contains(Gaps::CLUSTER) && name == "a/cluster")
-        || (gaps.intersects(Gaps::TOUCH | Gaps::LAST_CHAR) && name == "a/last_char")
+        || (gaps.contains(Gaps::LAST_CHAR) && name == "a/last_char")
         || (gaps.contains(Gaps::HISTORY_CLEARED) && name == "a/history_just_cleared")
         || (gaps.contains(Gaps::LOW_LEVEL)
             && (name == "a/charsets" || name == "a/cursor" || name.starts_with("a/saved[")))

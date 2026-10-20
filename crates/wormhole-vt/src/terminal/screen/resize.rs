@@ -55,7 +55,8 @@ impl Terminal {
         current.y = current.y.min(self.rows - 1);
         self.margins = Margins::full(self.cols, self.rows);
         self.tabs.resize(self.cols);
-        self.cluster.open = false;
+        // The rows are rearranged: the character REP repeats may no longer stand where it did.
+        self.end_text();
         self.apply_history_limit();
         self.report_inband_change();
     }

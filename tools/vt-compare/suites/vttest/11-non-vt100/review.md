@@ -107,13 +107,13 @@ in the colour menu, so the same test comes up more than once.
 | 246 to 249 | background colour erase (BCE) with ED, EL, ECH and indexing; blue then black | pass | every cell of the screen has the background (`bg=4`, then `bg=0`), the box in yellow |
 | 250 to 284 | the cursor movement, screen features and insert/delete tests again with colours on (BCE) | pass | the text of every screen is identical to the uncoloured run (menus 1, 2 and 8) and the colours are carried. Not every cell has the blue background: the cells DECALN fills with E (250, 251) and the rows DECCOLM clears or the test never writes (252, 253, 255, 267, 268) keep the default; vttest says "no cells with the default background" only for 246 and 248. Unsure what xterm gives those |
 | 285 | protected areas as ISO 6429 guards (SPA, EPA), colours on | unsupported: SPA/EPA | vttest: "There may be a solid box"; there is none |
-| 286 | repeat (REP), colours on | fail: REP repeats after a control sequence | as 301 |
+| 286 | repeat (REP), colours on | pass | as 301 |
 | 287 to 290 | scroll down, left, right, up (SD, SL, SR, SU), colours on | pass |  |
 | 291 to 294 | scrolling regions (the menu 2 tests) with colours | pass |  |
 | 295 to 296 | graphic rendition pattern with colours, then in reverse video | pass |  |
 | 297 to 299 | graphic rendition pattern with the ISO 6429 codes SGR 22 to 27, 39, 49 and 8 | pass | hidden text, default colours and the resets are carried; row 20 intentionally has no background |
 | 300 | protected areas as ISO 6429 guards (SPA, EPA) | unsupported: SPA/EPA | vttest says "may"; no box (DEC terminals do not implement ERM either) |
-| 301 | repeat (REP) | fail: REP repeats after a control sequence | vttest: a diagonal of 2 `+`; each row shows 12. The second `CSI 10 b` right after a REP should be ignored ("since a control sequence precedes", xterm forgets the character); the engine repeats the `+` ten more times |
+| 301 | repeat (REP) | pass | a diagonal of 2 `+`: the second `CSI 10 b` right after a REP is ignored ("since a control sequence precedes"): a control function forgets the character REP repeats, REP included |
 | 302 to 305 | scroll down, left, right, up (SD, SL, SR, SU) | pass | a row (SD, SU) or a column (SL, SR) of `*` where vttest says |
 | 306 | report version (XTVERSION) | pass | both forms answer `Wormhole 1.1.0` |
 | 307 to 310 | xterm's DECRPM list | pass | states match; xterm-only modes the engine has not (tek4014 38, toolbar 10, logging 46, fast scroll 1014, `XT_ALTS_OK` 1046, rxvt 2001 to 2006 but 2004) say `unknown` |
