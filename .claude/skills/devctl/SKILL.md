@@ -120,11 +120,11 @@ sleep 1; cat "$S/ctl/out.txt"
   it and prints what AppKit has (icons, each dot's tooltip and VoiceOver label; `menu-native press 2`
   presses the third dot as VoiceOver does and prints which one the menu took). `group <name> rename` makes the group's name a field on its head
   (`text <name>` + `key enter` keeps it, `key escape` drops it). The two cards are native popovers
-  (`NSPopover`), recorded like menus and not shown in a background instance: resting the pointer on the
-  title row's folder (`hover` it twice, or `path-card open`) opens the folder's card and a click on a
-  group's name (`click <x> <y>`) the group's; `popover` lists its rows, `popover-press <title>` presses a
-  button or action, `popover-type <text>` and `popover-key enter|escape` use its field, `popover-colour
-  <name|#rrggbb>` picks a dot or sends a colour from the Colours window, `popover-close` closes it, and
+  (`NSPopover`), recorded like menus and not shown in a background instance. Resting the pointer on the
+  title row's folder (`hover` it twice, or `path-card open`) opens the folder's card, a click on a
+  group's name (`click <x> <y>`) the group's. Read it with `popover`; then use `popover-press <title>`
+  for a button or an action, `popover-type <text>` and `popover-key enter|escape` for its field,
+  `popover-colour <name|#rrggbb>` for a dot or a colour from the Colours window, and `popover-close`.
   `popover-native [name]` draws the real AppKit controls to a PNG (`Read` it).
 - The right panel: `panel-tab notes|changes|history|project`, `project-init` (the Project tab's Create project
   folder button, for the active terminal's folder), `task-seed <open> <done>` and
