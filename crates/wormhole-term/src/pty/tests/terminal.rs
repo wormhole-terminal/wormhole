@@ -73,9 +73,12 @@ fn sane_makes_a_hostile_line_discipline_sane() {
 #[test]
 fn ctrl_c_interrupts_the_program_in_the_foreground() {
     // The line discipline turns 0x03 into SIGINT for the terminal's foreground group, which
-    // takes the sleep with it; the shell traps it and goes on.
+    // takes the sleep with it; the shell traps it and goes on. The ^C has to come once the sleep
+    // is running: sent after the shell printed "ready" but before it started the sleep, the shell
+    // only notes the signal and the sleep then runs its 30 seconds (a quarter of the runs did this).
     let run = run("/bin/sh", &["-c", "trap 'echo interrupted' INT; echo ready; sleep 30; echo after"]);
     run.wait_for("ready");
+    run.wait_for_child("sleep");
     run.control.input(b"\x03".as_slice().into());
     run.wait_for("after");
     assert!(run.text().contains("interrupted"));

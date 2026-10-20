@@ -73,6 +73,25 @@ impl Run {
         }
     }
 
+    /// Waits until the program has a child process running `name` (after its `exec`, so with the
+    /// program's own signal dispositions). What a program prints says only that it got as far as
+    /// printing: a shell that prints and then starts `sleep` has not started it yet, and a signal
+    /// sent in between lands on the shell, not on the `sleep`.
+    pub(super) fn wait_for_child(&self, name: &str) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            let found = std::process::Command::new("pgrep")
+                .args(["-P", &self.pid.to_string(), "-x", name])
+                .output()
+                .is_ok_and(|out| out.status.success());
+            if found {
+                return;
+            }
+            assert!(Instant::now() < deadline, "no child {name:?} of {}; got {:?}", self.pid, self.text());
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
     /// The exit the terminal reported: `Some(code)` for an exit, `Some(None)` for one without a
     /// code (a signal), `None` when nothing was reported within `within`.
     pub(super) fn exit(&self, within: Duration) -> Option<Option<i32>> {
