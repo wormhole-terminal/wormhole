@@ -133,6 +133,15 @@ mod tests {
     }
 
     #[test]
+    fn a_component_has_one_to_four_digits() {
+        assert_eq!(parse_color(b"rgb:/00/00"), None);
+        assert_eq!(parse_color(b"rgb:ff//00"), None);
+        assert_eq!(parse_color(b"rgb:00/00/"), None);
+        assert_eq!(parse_color(b"rgb:fffff/00/00"), None);
+        assert_eq!(parse_color(b"rgb:ffff/ffff/ffff"), rgb(255, 255, 255));
+    }
+
+    #[test]
     fn replies_repeat_the_byte() {
         assert_eq!(ColorSpec(Rgb { r: 0x1e, g: 0xff, b: 0 }).to_string(), "rgb:1e1e/ffff/0000");
     }
@@ -141,6 +150,12 @@ mod tests {
     fn the_default_palette_is_xterms() {
         let palette = xterm_defaults();
         assert_eq!(palette[196], Rgb { r: 255, g: 0, b: 0 });
+        // The 6 by 6 by 6 cube: red changes every 36 entries, green every 6 and blue every one.
+        assert_eq!(palette[16 + 36], Rgb { r: 95, g: 0, b: 0 });
+        assert_eq!(palette[16 + 6], Rgb { r: 0, g: 95, b: 0 });
+        assert_eq!(palette[16 + 30], Rgb { r: 0, g: 255, b: 0 });
+        assert_eq!(palette[16 + 1], Rgb { r: 0, g: 0, b: 95 });
+        assert_eq!(palette[16 + 36 + 12 + 3], Rgb { r: 95, g: 135, b: 175 });
         assert_eq!(palette[232], Rgb { r: 8, g: 8, b: 8 });
         assert_eq!(palette[1], Rgb { r: 0xcd, g: 0, b: 0 });
     }

@@ -160,6 +160,21 @@ fn slots_store_and_restore_without_pushing_or_popping() {
 }
 
 #[test]
+fn a_store_in_a_slot_that_holds_a_palette_replaces_it_and_leaves_the_others() {
+    let mut rig = Rig::new(20, 4);
+    // Two palettes pushed: red, then green.
+    rig.feed("\x1b]4;1;rgb:ff/00/00\x07\x1b[#P\x1b]4;1;rgb:00/ff/00\x07\x1b[#P");
+    // Blue into the first slot, white into the second.
+    rig.feed("\x1b]4;1;rgb:00/00/ff\x07\x1b[1#P\x1b]4;1;rgb:ff/ff/ff\x07\x1b[2#P");
+    rig.feed("\x1b[#R");
+    assert_eq!(rig.replies(), "\x1b[?2;2#Q", "no slot was added");
+    rig.feed("\x1b[1#Q");
+    assert_eq!(rig.term.colors()[1], Some(Rgb { r: 0, g: 0, b: 255 }));
+    rig.feed("\x1b[2#Q");
+    assert_eq!(rig.term.colors()[1], Some(Rgb { r: 255, g: 255, b: 255 }));
+}
+
+#[test]
 fn the_color_stack_is_ten_deep_and_the_report_counts_it() {
     let mut rig = Rig::new(20, 4);
     rig.feed("\x1b[#R");

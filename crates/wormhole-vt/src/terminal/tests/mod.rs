@@ -9,6 +9,7 @@ mod cursor_edges;
 mod events;
 mod feed;
 mod hostile;
+mod hyperlinks;
 mod inband;
 mod keyboard;
 mod limits;

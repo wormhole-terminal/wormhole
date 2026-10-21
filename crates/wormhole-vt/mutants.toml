@@ -368,4 +368,13 @@ exclude_re = [
     "replace Terminal::forget_inband_size with \\(\\)",
     # DECSCPP keeps the rows, so the margins that were inside them still are: the `min` is no cut.
     "window\\.rs:(267:47|268:53): replace - with [/+] in Terminal::set_columns_per_page",
+
+    # -- terminal/osc/
+    # A text of exactly the limit is cut to itself.
+    "payload\\.rs:5:19: replace > with >= in cut",
+    # The cap of a pointer name is above every name there is (32 bytes; the longest is 18), and no
+    # shape has an empty name: a name the check lets through is no shape, and `shape` says so.
+    "pointer\\.rs:79:(24|38): replace (\\|\\| with &&|> with (==|>=)) in shape",
+    # The digits of a component are shifted four places up, which leave no bit for the digit's own.
+    "spec\\.rs:63:28: replace \\| with \\^ in hex",
 ]

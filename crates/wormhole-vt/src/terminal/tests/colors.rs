@@ -31,6 +31,32 @@ fn special_colors_go_back_to_the_hosts_one_by_one_or_all_at_once() {
 }
 
 #[test]
+fn only_the_five_special_colors_are_named_by_osc_4_past_the_palette() {
+    let mut rig = Rig::new(20, 5);
+    // 256 to 260 are the special colors.
+    rig.feed("\x1b]4;260;rgb:11/22/33\x07\x1b]4;260;?\x07");
+    assert_eq!(rig.replies(), "\x1b]4;260;rgb:1111/2222/3333\x07");
+    // Past them there is nothing to set, and nothing to answer.
+    rig.feed(
+        "\x1b]4;261;rgb:11/22/33\x07\x1b]4;261;?\x07\x1b]4;1000;?\x07\x1b]4;1280;?\x07\x1b]4;65535;?\x07",
+    );
+    assert_eq!(rig.replies(), "");
+}
+
+#[test]
+fn each_of_the_dynamic_colors_13_to_19_is_its_own() {
+    let mut rig = Rig::new(20, 5);
+    // One command sets seven: 13 and the six after it.
+    let specs: Vec<String> = (1..=7).map(|n| format!("rgb:{n:02x}/00/00")).collect();
+    rig.feed(&format!("\x1b]13;{}\x07", specs.join(";")));
+    for command in 13..=19 {
+        rig.feed(&format!("\x1b]{command};?\x07"));
+        let want = format!("\x1b]{command};rgb:{n:02x}{n:02x}/0000/0000\x07", n = command - 12);
+        assert_eq!(rig.replies(), want, "OSC {command}");
+    }
+}
+
+#[test]
 fn colors_are_the_hosts_until_a_program_changes_them() {
     use crate::types::{COLOR_COUNT, NamedColor, Rgb};
     let mut rig = Rig::new(10, 4);

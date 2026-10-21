@@ -250,7 +250,7 @@ impl OscString {
 
 #[cfg(test)]
 mod tests {
-    use super::{OscString, split_number};
+    use super::{Caps, OscString, split_number};
 
     fn feed(parts: &[&[u8]]) -> Option<Vec<u8>> {
         let mut osc = OscString::default();
@@ -277,6 +277,82 @@ mod tests {
         assert_eq!(feed(&[b"133;A"]).as_deref(), Some(&b"133;A"[..]));
         assert_eq!(feed(&[b"1", b"3", b"3", b";", b"A"]).as_deref(), Some(&b"133;A"[..]));
         assert_eq!(feed(&[b"104"]).as_deref(), Some(&b"104"[..]));
+    }
+
+    #[test]
+    fn a_cancelled_string_is_gone() {
+        let mut osc = OscString::default();
+        osc.start();
+        osc.put(b"2;title");
+        osc.cancel();
+        assert_eq!(osc.take(), None);
+    }
+
+    #[test]
+    fn a_run_of_digits_that_is_no_command_number_is_dropped_as_soon_as_it_is_seen() {
+        // Without a `;` the number is only known to be too long once six digits have come: the
+        // string must not be gathered while the program goes on sending them.
+        let mut osc = OscString::default();
+        osc.start();
+        for _ in 0..10 {
+            osc.put(b"1");
+        }
+        assert_eq!(osc.state, super::State::Dropping);
+        assert!(osc.buf.is_empty());
+    }
+
+    #[test]
+    fn what_is_not_a_picture_is_held_to_the_cap_for_it_once_the_kind_is_known() {
+        let big = vec![b'v'; 70_000];
+        // Neither a picture nor a user variable: the 64 KiB for the rest of OSC 1337.
+        assert_eq!(feed(&[b"1337;Custom=x", &big]), None);
+        // A user variable may be bigger, up to 88 KiB, and a picture much bigger still.
+        assert!(feed(&[b"1337;SetUserVar=x=", &big]).is_some());
+        assert_eq!(feed(&[b"1337;SetUserVar=x=", &vec![b'v'; 100_000]]), None);
+        assert!(feed(&[b"1337;File=inline=1:", &big]).is_some());
+        // The multipart form's name is cut in two here: the kind is known when the last of it is in.
+        assert!(feed(&[b"1337;Multipa", b"rtFile=", &big]).is_some());
+    }
+
+    #[test]
+    fn a_string_of_exactly_the_cap_for_what_is_not_a_picture_is_kept() {
+        let mut osc = OscString::default();
+        osc.set_caps(Caps { other: 30, ..Caps::default() });
+        // 30 bytes: the number, `;`, `Custom=` and 17 more.
+        let text = |len: usize| {
+            let mut text = b"1337;Custom=".to_vec();
+            text.resize(len, b'x');
+            text
+        };
+        osc.start();
+        osc.put(&text(30));
+        assert_eq!(osc.take().map(|kept| kept.len()), Some(30));
+        osc.start();
+        osc.put(&text(31));
+        assert_eq!(osc.take(), None);
+    }
+
+    #[test]
+    fn a_command_without_a_payload_is_judged_by_the_cap_when_it_ends() {
+        let mut osc = OscString::default();
+        osc.set_caps(Caps { small: 2, ..Caps::default() });
+        osc.start();
+        osc.put(b"104");
+        assert_eq!(osc.take(), None, "three bytes against a cap of two");
+        osc.set_caps(Caps { small: 3, ..Caps::default() });
+        osc.start();
+        osc.put(b"104");
+        assert_eq!(osc.take().as_deref(), Some(&b"104"[..]), "and against three");
+    }
+
+    #[test]
+    fn a_buffer_given_back_is_kept_for_the_next_string_up_to_64_kib() {
+        for (capacity, kept) in [(2000, true), (64 * 1024, true), (64 * 1024 + 1, false), (128 * 1024, false)]
+        {
+            let mut osc = OscString::default();
+            osc.recycle(Vec::with_capacity(capacity));
+            assert_eq!(osc.buf.capacity() >= capacity, kept, "capacity {capacity}");
+        }
     }
 
     #[test]

@@ -171,6 +171,35 @@ fn what_a_full_screen_program_prints_is_not_a_block() {
 }
 
 #[test]
+fn the_marks_of_a_block_do_not_reach_what_a_full_screen_program_prints() {
+    let mut rig = Rig::new(20, 4);
+    rig.feed("\x1b]133;A\x07$ \x1b]133;B\x07vim\r\n\x1b]133;C\x07\x1b[?1049h");
+    // On the alternate screen B and C change nothing: what is printed there is no part of a block.
+    rig.feed("\x1b[H\x1b]133;B\x07\x1b]133;C\x07hello");
+    assert_eq!(rig.term.row_mark(Line(0)), None);
+}
+
+#[test]
+fn a_prompt_gives_its_row_the_block_only_while_the_row_is_blank() {
+    let block = |rig: &Rig| rig.term.grid().row_view(Line(0)).map(|row| row.block());
+    let mut rig = Rig::new(20, 4);
+    rig.feed("\x1b]133;A\x07");
+    assert_eq!(block(&rig), Some(1), "nothing is written there yet, so the row is the block's now");
+    let mut rig = Rig::new(20, 4);
+    rig.feed("ab\x1b]133;A\x07");
+    assert_eq!(block(&rig), Some(0), "text that came before the prompt is not part of its block");
+}
+
+#[test]
+fn an_osc_9_is_a_conemu_command_only_when_its_first_part_is_one_or_two_digits() {
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b]9;123\x07\x1b]9;a\x07\x1b]9;1a\x07\x1b]9;12;x\x07\x1b]9;123;x\x07");
+    let said = |body: &str| Event::Notification { title: String::new(), body: body.into() };
+    // 12 is a ConEmu command that does nothing here; the others are text.
+    assert_eq!(rig.events(), [said("123"), said("a"), said("1a"), said("123;x")]);
+}
+
+#[test]
 fn events_do_not_pile_up_for_a_host_that_never_looks() {
     let mut rig = Rig::new(20, 5);
     for i in 0..30_000 {

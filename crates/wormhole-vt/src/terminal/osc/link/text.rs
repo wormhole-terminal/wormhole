@@ -218,6 +218,36 @@ mod tests {
     }
 
     #[test]
+    fn a_pass_over_a_full_table_counts_the_bytes_of_what_it_keeps() {
+        let mut text = LinkText::default();
+        let held: Vec<Arc<str>> = (0..3).map(|n| text.uri(&format!("held/{n}"))).collect();
+        for n in 0..URIS.entries - 3 {
+            drop(text.uri(&format!("fill/{n}")));
+        }
+        assert_eq!(text.uris.strings.len(), URIS.entries);
+        for n in 0..URIS.entries / 8 - 1 {
+            drop(text.uri(&format!("refused/{n}")));
+        }
+        let newcomer = "the one that finds room";
+        drop(text.uri(newcomer));
+        assert_eq!(text.uris.strings.len(), 4, "the three that are held, and the newcomer");
+        assert_eq!(text.uris.bytes, 3 * "held/0".len() + newcomer.len());
+        drop(held);
+    }
+
+    #[test]
+    fn a_single_byte_fed_to_the_hasher_changes_its_value_and_its_value_depends_on_the_byte() {
+        let mut hasher = TextHasher(7);
+        let before = hasher.finish();
+        hasher.write_u8(1);
+        let one = hasher.finish();
+        assert_ne!(before, one);
+        let mut other = TextHasher(7);
+        other.write_u8(2);
+        assert_ne!(one, other.finish());
+    }
+
+    #[test]
     fn the_same_text_is_one_allocation() {
         let mut text = LinkText::default();
         let (a, b) = (text.uri("https://example.com/a"), text.uri("https://example.com/a"));
