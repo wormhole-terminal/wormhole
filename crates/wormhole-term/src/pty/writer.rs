@@ -27,10 +27,10 @@ impl Input {
     /// Queue `bytes` behind what is waiting. A piece is a whole reply, key or paste: when the
     /// queue is over [`QUEUE_MAX`] the oldest pieces go, whole, so that no reply is ever cut (half
     /// of one reaches the program as typed text). The piece being written, which the program has
-    /// part of, and the newest are never dropped.
-    pub(super) fn push(&mut self, bytes: Cow<'static, [u8]>) {
+    /// part of, and the newest are never dropped. Returns how many bytes were dropped.
+    pub(super) fn push(&mut self, bytes: Cow<'static, [u8]>) -> usize {
         if bytes.is_empty() {
-            return;
+            return 0;
         }
         self.queued += bytes.len();
         self.queue.push_back(bytes);
@@ -48,6 +48,7 @@ impl Input {
         if dropped > 0 {
             tracing::debug!("the program does not read its input: dropped {dropped} bytes of it");
         }
+        dropped
     }
 
     /// What is next to write.
@@ -153,11 +154,14 @@ mod tests {
     fn a_program_that_never_reads_gets_the_newest_pieces_whole_and_the_queue_stays_bounded() {
         let mut input = Input::default();
         // 3,000 replies of 1,000 bytes each, each one byte value so a cut one shows.
+        let mut dropped = 0;
         for i in 0..3_000usize {
-            input.push(vec![(i % 251) as u8; 1_000].into());
+            dropped += input.push(vec![(i % 251) as u8; 1_000].into());
             assert!(input.queued <= QUEUE_MAX, "{} bytes after {i}", input.queued);
         }
         let out = drain(&mut input);
+        // A hosted terminal acknowledges dropped bytes as taken, so nothing may go missing.
+        assert_eq!(out.len() + dropped, 3_000 * 1_000);
         assert!(out.len() <= QUEUE_MAX && out.len() > QUEUE_MAX - 1_000, "{}", out.len());
         assert!(out.chunks(1_000).all(|piece| piece.iter().all(|&b| b == piece[0])), "a piece was cut");
         assert_eq!(out.last(), Some(&((2_999 % 251) as u8)), "the newest is the last");

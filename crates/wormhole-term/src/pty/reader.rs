@@ -57,7 +57,8 @@ pub(super) struct Core {
     messages: Vec<Msg>,
     /// The terminal was closed: end the program, giving it this long.
     close: Option<Duration>,
-    /// Told how much input the master has taken (a hosted terminal's), and the count.
+    /// Told how much input the master has taken (a hosted terminal's), and the count: written to
+    /// the master or dropped for a program that does not read it (`Input::push`).
     pub(super) input_hook: Option<InputHook>,
     pub(super) input_total: u64,
 }
@@ -286,10 +287,13 @@ impl Core {
         }
         let mut messages = std::mem::take(&mut self.messages);
         self.inbox.take(&mut messages);
+        let before = self.input_total;
         for msg in messages.drain(..) {
             match msg {
                 // Nobody reads what a program that closed its terminal would be sent.
-                Msg::Input(bytes) if self.master.is_open() => self.input.push(bytes),
+                Msg::Input(bytes) if self.master.is_open() => {
+                    self.input_total += self.input.push(bytes) as u64;
+                }
                 Msg::Input(_) => {}
                 Msg::Resize(size) => {
                     if let Err(err) = open::set_size(self.master.file(), size) {
@@ -300,6 +304,13 @@ impl Core {
             }
         }
         self.messages = messages;
+        // Dropped input counts as taken: a hosted terminal's client counts the bytes it may still
+        // send by the acknowledgements, and would otherwise lose that room for good.
+        if self.input_total != before
+            && let Some(hook) = &self.input_hook
+        {
+            hook(self.input_total);
+        }
     }
 
     /// No more output will come; the child may still run (a program can close its standard

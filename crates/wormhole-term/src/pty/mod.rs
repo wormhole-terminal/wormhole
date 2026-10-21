@@ -86,8 +86,8 @@ impl Control {
     }
 }
 
-/// Told, on the reader thread, how many bytes of input the master has taken in all (a hosted
-/// terminal acknowledges its client's input with it). Must not block.
+/// Told, on the reader thread, how many bytes of input the master has taken in all, dropped ones
+/// included (a hosted terminal acknowledges its client's input with it). Must not block.
 pub(crate) type InputHook = Box<dyn Fn(u64) + Send>;
 
 /// What a hosted terminal's host side adds to the reader thread; a local terminal has none.
