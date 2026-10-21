@@ -377,4 +377,14 @@ exclude_re = [
     "pointer\\.rs:79:(24|38): replace (\\|\\| with &&|> with (==|>=)) in shape",
     # The digits of a component are shifted four places up, which leave no bit for the digit's own.
     "spec\\.rs:63:28: replace \\| with \\^ in hex",
+
+    # -- terminal/text/
+    # A mark that extends a cluster to the width it has already (a mark on a wide cluster, or on a
+    # narrow one that stays so) only runs `widen_cluster` or `narrow_cluster` over a cluster that is
+    # that wide: the width is set to what it is, and the cursor, which has not moved, is put where
+    # it stands (the wrap that waits at the edge is the autowrap mode's, as when it was printed).
+    "print\\.rs:(290|291):18: replace match guard self\\.cluster\\.width == [12] with true in Terminal::extend_cluster",
+    # Two screens' worth is a whole number of rows, so (n + whole) and (n - whole) have the same
+    # remainder by the width.
+    "print\\.rs:393:20: replace - with \\+ in Terminal::repeat_count",
 ]

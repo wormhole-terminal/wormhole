@@ -17,6 +17,7 @@ mod line_size;
 mod modify_keys;
 mod passthrough;
 mod pointer_and_vars;
+mod printing;
 mod rectangles;
 mod replies;
 mod reply_queue;

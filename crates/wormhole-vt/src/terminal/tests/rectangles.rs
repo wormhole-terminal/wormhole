@@ -111,6 +111,48 @@ fn a_repeat_count_of_several_screens_ends_where_the_whole_count_would() {
     }
 }
 
+/// A screen of 20 by 5 whose history can hold the lines that 4,000 characters push into it.
+fn deep() -> Rig {
+    Rig::with_scrollback(20, 5, 1000)
+}
+
+#[test]
+fn a_repeat_that_is_not_periodic_adds_every_one_of_its_lines_to_the_history() {
+    // The cut only drops lines that are the same as the ones kept, which is so where the text
+    // goes round the whole row: with another character, margins or a row that shows half of it, it
+    // does not, and every copy has to be printed.
+    let setups = [
+        ("a character that is not ASCII", "", "é"),
+        ("a left margin", "\x1b[?69h\x1b[5;20s\x1b[1;5H", "a"),
+        ("a right margin", "\x1b[?69h\x1b[1;15s", "a"),
+        ("a double-width row", "\x1b[3;1H\x1b#6\x1b[1;1H", "a"),
+    ];
+    for (what, setup, c) in setups {
+        let mut reference = deep();
+        reference.feed(setup);
+        reference.feed(&c.repeat(4_001));
+        let mut repeated = deep();
+        repeated.feed(setup);
+        repeated.feed(c);
+        repeated.feed("\x1b[4000b");
+        assert!(reference.term.history_len() > 100, "{what}: the text fills the history");
+        assert_eq!(repeated.term.history_len(), reference.term.history_len(), "{what}");
+        assert_eq!(state(&mut repeated), state(&mut reference), "{what}");
+    }
+}
+
+#[test]
+fn a_repeat_of_up_to_two_screens_and_a_row_is_printed_whole() {
+    // 20 by 5 is 200 cells in two screens; only what is past that and a whole number of rows is cut.
+    for n in [150usize, 200, 201, 219] {
+        let mut reference = deep();
+        reference.feed(&"a".repeat(n + 1));
+        let mut repeated = deep();
+        repeated.feed(&format!("a\x1b[{n}b"));
+        assert_eq!(repeated.term.history_len(), reference.term.history_len(), "{n} copies");
+    }
+}
+
 #[test]
 fn a_big_repeat_count_is_cut_for_the_cost_and_left_alone_where_it_is_not_periodic() {
     let mut rig = Rig::with_scrollback(20, 5, 10);
