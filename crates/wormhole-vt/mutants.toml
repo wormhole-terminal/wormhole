@@ -387,4 +387,113 @@ exclude_re = [
     # Two screens' worth is a whole number of rows, so (n + whole) and (n - whole) have the same
     # remainder by the width.
     "print\\.rs:393:20: replace - with \\+ in Terminal::repeat_count",
+
+    # ---- The rest of the engine: parser, input, types, unicode and the terminal around the grid.
+
+    # -- input/
+    # Shift, Alt, Control and Meta are four distinct bits: OR and XOR of them agree.
+    "input/legacy\\.rs:127:38: replace \\| with \\^ in char_key",
+    "input/legacy\\.rs:215:(60|72|85): replace \\| with \\^ in keypad",
+    "input/other_keys\\.rs:38:38: replace \\| with \\^ in encode",
+    # The legacy encoder, which the VT52 one calls with its modes, never reads the `vt52` flag.
+    "input/vt52\\.rs:46:17: delete field vt52 from struct InputModes expression in encode",
+    # The keypad's navigation keys that VT52 mode has no twin for: `keypad_character`, where the arm's
+    # absence sends them, answers `false` for them as well.
+    "input/vt52\\.rs:71:9: delete match arm KeypadKey::PageUp",
+
+    # -- parser/
+    # `ground` reads `ESC [` and `ESC ]` itself as a shortcut for the state machine, which reads them
+    # the same way: a guard that is never true, or an index that misses them, sends them the long way.
+    "parser/ground\\.rs:(57:40|70:39): replace \\+ with \\* in Parser::ground",
+    "parser/ground\\.rs:(58|63):39: replace match guard !h\\.vt52_mode\\(\\) with false in Parser::ground",
+    # A character cut by the end of the input is only ever resumed at the start of the next one (the
+    # state is set as the input ends), so `at` is 0.
+    "parser/ground\\.rs:100:47: replace - with \\+ in Parser::resume_utf8",
+    # `string_run` looks at the byte `find` stopped on and goes on when it is no stopper: a lane flagged
+    # too soon (one set whatever the byte, or `|` for `^` of two bits that are never both set) only costs
+    # the speed of the scan. What must not happen, a stopper passed over, is tested.
+    "parser/scan\\.rs:36:5: replace is_control_or_del -> u64 with 1",
+    "parser/scan\\.rs:37:17: replace \\* with [/+] in is_control_or_del",
+    "parser/scan\\.rs:37:25: replace \\| with \\^ in is_control_or_del",
+    "parser/scan\\.rs:37:(39|44): replace & with \\| in is_control_or_del",
+    # The block test is a shortcut: a block it fails goes through the words, which are exact.
+    "parser/scan\\.rs:107:57: replace < with <= in string_run",
+    "parser/scan\\.rs:107:65: replace \\| with \\^ in string_run",
+    # More of the same: a check of continuation bytes that is never true sends the bytes the slow way,
+    # sextets joined with `^` are joined with `|` (their places do not overlap), and a code point that
+    # comes out under the smallest of its length fails the check after it and goes the slow way too.
+    # The slow way, `exact`, is tested on its own (utf8.rs).
+    "parser/utf8\\.rs:(40:16|40:30|51:16|51:30|51:44): replace \\^ with \\| in decode",
+    "parser/utf8\\.rs:(42:36|53:36): replace \\| with [&\\^] in decode",
+    "parser/utf8\\.rs:(42:62|53:63|53:89): replace \\| with \\^ in decode",
+    "parser/utf8\\.rs:96:22: replace \\| with \\^ in exact",
+
+    # -- terminal/base64.rs
+    # Sextets shifted into places that do not overlap.
+    "terminal/base64\\.rs:44:(37|63|88): replace \\| with \\^ in decode",
+
+    # -- terminal/builder.rs
+    # The same call as `Builder::default()`.
+    "replace Terminal::builder -> Builder with Default::default\\(\\)",
+
+    # -- terminal/dispatch/
+    # Media copy (`CSI Ps i`) has an arm of its own so that it reads as recognised; without it the
+    # final byte falls to the arm that ignores every other.
+    "terminal/dispatch/csi\\.rs:149:13: delete match arm b'i' in Terminal::csi_plain",
+    # `cancel_kitty` resets the reader the next kitty string resets at its start (`begin_kitty`), and
+    # nothing reads it in between.
+    "terminal/dispatch/dcs\\.rs:246:26: replace == with != in Terminal::cancel_apc",
+
+    # -- terminal/modes/
+    # Every caller of `set_private_mode` runs after a CSI or a DCS hook, which closed the cluster.
+    "terminal/modes/apply\\.rs:65:13: delete match arm 2027 in Terminal::set_private_mode",
+    # Two distinct bits.
+    "terminal/modes/modkeys\\.rs:41:56: replace \\| with \\^ in Terminal::set_key_modifier_options",
+
+    # -- terminal/read/
+    # The tail of a wide character is never in column 0 (`check_invariants` refuses one).
+    "terminal/read/snapshot\\.rs:66:64: replace > with >= in Terminal::cursor",
+    # The anchors are cells of the grid (a pin that left it ends the selection) and the cells a
+    # selection covers lie between them, so neither half of the check ever holds.
+    "terminal/read/selection\\.rs:229:27: replace \\|\\| with && in Terminal::covered",
+
+    # -- terminal/repaint/
+    # After text with no control function since, the cursor is on the column after the character
+    # (`end`) and never waits to wrap before the last one: the first half of `lands` decides alone.
+    "terminal/repaint/cursors\\.rs:349:31: replace && with \\|\\| in Writer<'a>::char_source",
+
+    # -- terminal/screen/
+    # Two distinct bits.
+    "screen/cursor\\.rs:209:58: replace \\| with \\^ in Terminal::reverse_wraps",
+    "screen/cursor\\.rs:260:71: replace \\| with \\^ in Terminal::tab_forward",
+    "screen/reset\\.rs:101:41: replace \\| with \\^ in Terminal::screen_alignment",
+    "screen/rect\\.rs:87:54: replace \\| with \\^ in AttrEdit::reverse",
+    # A cursor that gets as far as the wrap-back is on the left edge, so it is not right of the right
+    # margin: the right margin is where it goes, and `cols - 1` is never taken.
+    "screen/cursor\\.rs:249:104: replace - with [/+] in Terminal::backspace_step",
+    # A resize cuts the saved cursors to the screen, and the grid gives back a cursor inside it, so
+    # a saved cursor is inside the screen when it is restored (and `normalize_cursor` cuts the column).
+    "screen/cursor\\.rs:31[12]:53: replace - with [/+] in Terminal::restore_cursor",
+    # The grid cuts every rectangle to its screen, and `restyle` skips the rows and columns past it: the
+    # bottom and right edges of a region, and the defaults for them, can be a row or column too far.
+    "screen/rect\\.rs:(120:42|122:40): replace - with [/+] in Corners::region",
+    "screen/rect\\.rs:133:45: replace - with [/+] in Terminal::corners",
+    # A stream whose top is below its bottom or the screen has no rows to visit: the early return is
+    # the loop's own condition.
+    "screen/rect\\.rs:194:49: replace \\|\\| with && in Terminal::change_attributes",
+    "screen/rect\\.rs:197:57: replace - with [/+] in Terminal::change_attributes",
+    # U+00FF is in the range of the first alternative already.
+    "screen/rect\\.rs:226:38: replace > with >= in Terminal::fill_rectangle",
+    # Stops are added for the columns past the old width (at least 2): column 0 is not among them.
+    # And `prev` searching from the floor itself instead of one past it lands on the floor either
+    # way, for it is what an empty search gives.
+    "screen/tabs\\.rs:27:63: replace > with >= in TabStops::resize",
+    "screen/tabs\\.rs:68:16: replace \\+ with \\* in TabStops::prev",
+
+    # -- unicode/
+    # The automaton's build visits one state and one class too many: a row of the table no step
+    # reaches and a column (the start class) no character has.
+    "unicode/grapheme\\.rs:(133:17|135:17): replace < with <= in build",
+    # A state number under 64 and the break bit 0x80 share no bit.
+    "unicode/grapheme\\.rs:148:48: replace \\| with \\^ in build",
 ]
