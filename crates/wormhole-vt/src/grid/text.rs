@@ -7,7 +7,7 @@
 //! Everything here reads; the output is a `String` the caller owns (the one allocation) or one it
 //! passes in.
 
-use crate::types::{Line, PLACEHOLDER, Point};
+use crate::types::{Cell as DrawCell, Column, Line, PLACEHOLDER, Point};
 
 use super::Grid;
 use super::cell::{BlockPart, Cell};
@@ -235,6 +235,21 @@ impl Grid {
             }
         }
         out
+    }
+
+    /// The cells of `line` that are `part` of command block `block`, as [`Grid::draw_cell`] gives
+    /// them: what [`Grid::block_text`] says, with how each cell is drawn (concealed, colors).
+    pub fn block_cells(&self, line: Line, block: u32, part: BlockPart) -> Vec<DrawCell> {
+        let Some((page_ix, row)) = self.locate_line(line) else { return Vec::new() };
+        let page = &self.pages[page_ix];
+        if block == 0 || page.rows[row].block != block {
+            return Vec::new();
+        }
+        let cells = page.cells(row);
+        (0..cells.len())
+            .filter(|&x| cells[x].content() == part)
+            .filter_map(|x| self.draw_cell(Point::new(line, Column(x))))
+            .collect()
     }
 
     /// The characters of the cells from `start` to `end` inclusive, rows run together with no

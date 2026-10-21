@@ -146,6 +146,23 @@ fn content_text_is_the_part_of_a_block_on_a_row() {
     assert_eq!(sim.grid.block_text(Line(9), 4, BlockPart::Command), "", "no such row");
 }
 
+#[test]
+fn block_cells_are_the_cells_of_the_part_as_they_are_drawn() {
+    let mut sim = Sim::new(20, 3, DEFAULT_SCROLLBACK_BYTES);
+    let prompt = Pen { content: BlockPart::Prompt, block: 4, ..plain() };
+    let command = Pen { content: BlockPart::Command, block: 4, ..plain() };
+    sim.pen = prompt;
+    sim.print("$ ");
+    sim.pen = command;
+    sim.print("ls");
+    let cells = sim.grid.block_cells(Line(0), 4, BlockPart::Command);
+    assert_eq!(cells.iter().map(|cell| cell.c).collect::<String>(), "ls");
+    assert!(cells.iter().all(|cell| !cell.flags.contains(crate::types::Flags::HIDDEN)));
+    assert_eq!(sim.grid.block_cells(Line(0), 4, BlockPart::Prompt).len(), 2);
+    assert!(sim.grid.block_cells(Line(0), 5, BlockPart::Command).is_empty(), "another block");
+    assert!(sim.grid.block_cells(Line(9), 4, BlockPart::Command).is_empty(), "no such row");
+}
+
 // ---- words ----
 
 #[test]

@@ -7,7 +7,7 @@
 //! None of these allocate beyond the `String`s and buffers they hand back.
 
 use crate::grid::{BlockPart, LinkSpan, Pin, TextCopy, TextShape};
-use crate::types::{Line, Point};
+use crate::types::{Cell, Line, Point};
 
 use crate::terminal::Terminal;
 
@@ -106,5 +106,11 @@ impl Terminal {
     /// character. A row belongs to one block; where two meet on it, to the later.
     pub fn block_text(&self, line: Line, block: u32, part: BlockPart) -> String {
         self.grid.block_text(line, block, part)
+    }
+
+    /// The cells [`Terminal::block_text`] reads, as they are drawn: their colors and attributes,
+    /// for judging whether a command line shows what it holds.
+    pub fn block_cells(&self, line: Line, block: u32, part: BlockPart) -> Vec<Cell> {
+        self.grid.block_cells(line, block, part)
     }
 }

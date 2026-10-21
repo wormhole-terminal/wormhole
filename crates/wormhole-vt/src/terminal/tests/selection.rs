@@ -407,6 +407,19 @@ fn the_parts_of_a_command_block_are_read_back_from_the_row() {
 }
 
 #[test]
+fn the_cells_of_a_command_are_read_back_with_how_they_are_drawn() {
+    let mut rig = Rig::new(30, 4);
+    rig.feed("\x1b]133;A\x07$ \x1b]133;B\x07ls \x1b[8mrm\x1b[0m\r\n\x1b]133;C\x07out\r\n\x1b]133;D;0\x07");
+    let block = rig.term.row_mark(Line(0)).map(|mark| mark.block).expect("a block");
+    let cells = rig.term.block_cells(Line(0), block, BlockPart::Command);
+    assert_eq!(cells.iter().map(|cell| cell.c).collect::<String>(), "ls rm");
+    let hidden: Vec<bool> =
+        cells.iter().map(|cell| cell.flags.contains(crate::types::Flags::HIDDEN)).collect();
+    assert_eq!(hidden, [false, false, false, true, true]);
+    assert!(rig.term.block_cells(Line(1), block, BlockPart::Command).is_empty());
+}
+
+#[test]
 fn a_selection_range_is_a_plain_value() {
     let mut rig = Rig::new(10, 3);
     rig.feed("abc");
