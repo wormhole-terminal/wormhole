@@ -6,6 +6,15 @@
 # and the bench crate's, which hold the .vtt conformance runner and the differential tests.
 test_package = ["wormhole-vt", "wormhole-vt-bench"]
 
+# Only the libraries and the integration tests, for the build and the run: no examples (their logic
+# runs in tests/examples.rs), no doctests and none of the bench crate's tool binaries, which every
+# mutant would otherwise build again (they were most of the 40 s a mutant's build took).
+additional_cargo_args = ["--lib", "--test", "*"]
+
+# nextest runs the test binaries side by side instead of one after another, and stops at the first
+# failure, which is how most mutants end.
+test_tool = "nextest"
+
 # A mutant that turns a loop endless must end as "timeout", which counts as caught. The tests run in
 # about ten seconds, so a generous multiple of that is a hang and not a slow machine.
 timeout_multiplier = 3.0

@@ -4,10 +4,12 @@ name: Engine
 # Linux minutes are free for a public repository):
 # - the outside conformance suites (esctest2, ucs-detect, vttest; scripts/suites-gate.sh), when the
 #   engine, its bench crate, the terminal layer or the suites' files change, and by hand;
-# - mutation testing (cargo-mutants; scripts/mutants.sh), only by hand: Actions → Engine → Run
-#   workflow with "mutants" on, or `gh workflow run engine.yml -f mutants=true`. It takes hours, so
-#   it is split into 40 shards (about 11,000 mutants, one a minute per build slot), which GitHub runs
-#   20 at a time; each uploads its mutants.out folder, also when it runs out of time.
+# - mutation testing (cargo-mutants; scripts/mutants.sh) of the lines a change touches, with the
+#   suites: minutes, and each missed mutant is a warning on its line;
+# - all of it, only by hand: Actions → Engine → Run workflow with "mutants" on, or
+#   `gh workflow run engine.yml -f mutants=true`. About 11,000 mutants take hours, so they are split
+#   into 16 shards, which leaves 4 of the 20 jobs GitHub runs at once for everything else; each
+#   uploads its mutants.out folder, also when it runs out of time.
 on:
   push:
     branches: [main]
@@ -17,6 +19,7 @@ on:
       - crates/wormhole-term/**
       - scripts/suites-gate.sh
       - scripts/vttest-gate.sh
+      - scripts/mutants.sh
       - tools/vt-compare/**
       - .github/workflows/engine.yml
   pull_request:
@@ -26,12 +29,13 @@ on:
       - crates/wormhole-term/**
       - scripts/suites-gate.sh
       - scripts/vttest-gate.sh
+      - scripts/mutants.sh
       - tools/vt-compare/**
       - .github/workflows/engine.yml
   workflow_dispatch:
     inputs:
       mutants:
-        description: Run mutation testing instead of the suites (hours, 40 shards)
+        description: Run mutation testing instead of the suites (hours, 16 shards)
         type: boolean
         default: false
       area:
@@ -69,15 +73,60 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: scripts/suites-gate.sh
 
+  mutants-diff:
+    name: Mutants in the change
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: The engine lines the change touches
+        id: diff
+        env:
+          # A pull request is checked out as its merge into the base, so the base is the change's start.
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git diff "$BASE" HEAD -- crates/wormhole-vt/src > "$RUNNER_TEMP/change.diff"
+          if [ -s "$RUNNER_TEMP/change.diff" ]; then echo "any=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Rust (the version in rust-toolchain.toml)
+        if: steps.diff.outputs.any
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: steps.diff.outputs.any
+        with:
+          key: mutants-diff
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        if: steps.diff.outputs.any
+        with:
+          tool: cargo-mutants,cargo-nextest
+      # Warnings for now, not a failure: the full run's misses are still being closed. Once they are,
+      # a missed mutant here fails the job.
+      - name: cargo-mutants on the changed lines
+        if: steps.diff.outputs.any
+        timeout-minutes: 75
+        run: |
+          # Fails when nothing could be measured (the unmutated tests fail, say).
+          scripts/mutants.sh --jobs 2 --mem-cap 1536 --in-diff "$RUNNER_TEMP/change.diff"
+          # Two calls, "engine" and "repaint", two lists; each line is "path:line:column: replace …".
+          cat target/mutants/*/mutants.out/missed.txt > "$RUNNER_TEMP/missed.txt" 2>/dev/null || true
+          [ -s "$RUNNER_TEMP/missed.txt" ] || exit 0
+          while IFS=: read -r file line _ what; do
+            echo "::warning file=$file,line=$line::No test notices this mutant:$what"
+          done < "$RUNNER_TEMP/missed.txt"
+          { echo "### Missed mutants"; echo; sed 's/^/- /' "$RUNNER_TEMP/missed.txt"; } >> "$GITHUB_STEP_SUMMARY"
+
   mutants:
-    name: Mutants ${{ matrix.shard }}/40
+    name: Mutants ${{ matrix.shard }}/16
     if: ${{ inputs.mutants }}
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Rust (the version in rust-toolchain.toml)
@@ -88,28 +137,20 @@ jobs:
           save-if: false
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
-          tool: cargo-mutants
-      # A missed mutant is a finding to read, not a broken build: the job succeeds and the lists
-      # go into the artifact (missed.txt is the one to read).
-      - name: cargo-mutants, shard ${{ matrix.shard }} of 40
+          tool: cargo-mutants,cargo-nextest
+      # A missed mutant is a finding to read, not a broken build: the job succeeds and the lists go
+      # into the artifact (missed.txt is the one to read). It fails when nothing could be measured.
+      - name: cargo-mutants, shard ${{ matrix.shard }} of 16
         # Ends before the job does, so the step below still uploads what this shard finished.
         timeout-minutes: 330
         env:
           AREA: ${{ inputs.area }}
         run: |
-          # A mutant can turn a loop that allocates into an endless one, which eats the runner's
-          # 16 GB until GitHub loses it (most likely what ended half the first run). Cargo starts
-          # every test binary through this runner, which caps its address space: the allocation
-          # fails, the test aborts, and the mutant counts as caught. Two builds run at once, so two
-          # caps fit in the runner's memory.
-          runner="$RUNNER_TEMP/capped-test.sh"
-          printf '#!/bin/sh\nulimit -v 6291456\nexec "$@"\n' > "$runner"
-          chmod +x "$runner"
-          export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$runner"
-          # Each area writes target/mutants/<area>/mutants.out (scripts/mutants.sh).
-          args=(--jobs 2)
+          # The cap keeps a mutant's runaway allocations from taking the runner down (mutants.sh says
+          # why): 2 builds × 4 cores × 1.5 GB fits in its 16 GB.
+          args=(--jobs 2 --mem-cap 1536)
           [ -n "$AREA" ] && args+=(--area "$AREA")
-          scripts/mutants.sh "${args[@]}" --shard "${{ matrix.shard }}/40" || true
+          scripts/mutants.sh "${args[@]}" --shard "${{ matrix.shard }}/16"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ always() }}
         with:
