@@ -121,13 +121,14 @@ fn a_repeat_that_is_not_periodic_adds_every_one_of_its_lines_to_the_history() {
     // The cut only drops lines that are the same as the ones kept, which is so where the text
     // goes round the whole row: with another character, margins or a row that shows half of it, it
     // does not, and every copy has to be printed.
+    // Lines scrolled between side margins never reach the history, so only the other two fill it.
     let setups = [
-        ("a character that is not ASCII", "", "é"),
-        ("a left margin", "\x1b[?69h\x1b[5;20s\x1b[1;5H", "a"),
-        ("a right margin", "\x1b[?69h\x1b[1;15s", "a"),
-        ("a double-width row", "\x1b[3;1H\x1b#6\x1b[1;1H", "a"),
+        ("a character that is not ASCII", "", "é", true),
+        ("a left margin", "\x1b[?69h\x1b[5;20s\x1b[1;5H", "a", false),
+        ("a right margin", "\x1b[?69h\x1b[1;15s", "a", false),
+        ("a double-width row", "\x1b[3;1H\x1b#6\x1b[1;1H", "a", true),
     ];
-    for (what, setup, c) in setups {
+    for (what, setup, c, fills_history) in setups {
         let mut reference = deep();
         reference.feed(setup);
         reference.feed(&c.repeat(4_001));
@@ -135,7 +136,7 @@ fn a_repeat_that_is_not_periodic_adds_every_one_of_its_lines_to_the_history() {
         repeated.feed(setup);
         repeated.feed(c);
         repeated.feed("\x1b[4000b");
-        assert!(reference.term.history_len() > 100, "{what}: the text fills the history");
+        assert_eq!(reference.term.history_len() > 100, fills_history, "{what}: the history");
         assert_eq!(repeated.term.history_len(), reference.term.history_len(), "{what}");
         assert_eq!(state(&mut repeated), state(&mut reference), "{what}");
     }
