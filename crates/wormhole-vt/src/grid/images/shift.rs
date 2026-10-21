@@ -1,7 +1,7 @@
 //! Placements when rows move: a part of the screen scrolls, or rows under a scroll region are
 //! carried down past new history.
 
-use crate::grid::row::Region;
+use crate::grid::region::Region;
 
 use super::super::Grid;
 

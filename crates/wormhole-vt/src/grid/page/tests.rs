@@ -2,7 +2,7 @@
 
 use super::Page;
 use crate::grid::cell::{CellFlags, Spare};
-use crate::grid::row::Pen;
+use crate::grid::pen::Pen;
 use crate::grid::style::Style;
 use crate::types::{Color, Flags, NamedColor};
 

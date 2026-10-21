@@ -289,7 +289,7 @@ pub const FIELDS: &[StructFields] = &[
     StructFields { name: "Palette", file: "terminal/osc/colors.rs", fields: PALETTE },
     StructFields { name: "Told", file: "terminal/watch.rs", fields: TOLD },
     StructFields { name: "Grid", file: "grid/mod.rs", fields: GRID },
-    StructFields { name: "Pen", file: "grid/row.rs", fields: PEN },
+    StructFields { name: "Pen", file: "grid/pen.rs", fields: PEN },
     StructFields { name: "Row", file: "grid/row.rs", fields: ROW },
     StructFields { name: "Style", file: "grid/style.rs", fields: STYLE },
     StructFields { name: "Placement", file: "grid/images/mod.rs", fields: PLACEMENT },

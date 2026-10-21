@@ -1,8 +1,7 @@
-//! A row's metadata, and the types the terminal writes cells with.
+//! A row's metadata: the record a page keeps per row, and the command block a row carries.
 
-use super::cell::{BlockPart, CellFlags};
-use super::style::Style;
-use crate::types::{Hyperlink, LineSize};
+use super::cell::BlockPart;
+use crate::types::LineSize;
 
 /// The row continues in the next one: the line was wrapped by the terminal at the margin, not
 /// ended by the program.
@@ -87,47 +86,5 @@ impl RowMark {
             command: parts & (1 << BlockPart::Command as u8) != 0,
             output: parts & (1 << BlockPart::Output as u8) != 0,
         })
-    }
-}
-
-/// What the terminal writes cells with: its pen. Kept by the terminal, borrowed for each write.
-#[derive(Clone, Debug, Default)]
-pub struct Pen {
-    pub style: Style,
-    /// The hyperlink (OSC 8) the cells are under.
-    pub link: Option<Hyperlink>,
-    /// What the cells are part of in a shell-integrated session; [`BlockPart::None`] without one.
-    pub content: BlockPart,
-    /// The command block the content belongs to; recorded on the row when `content` is set.
-    pub block: u32,
-    /// DECSCA: selective erase leaves the cells alone.
-    pub protected: bool,
-    /// SPA to EPA: ED, EL and ECH leave the cells alone.
-    pub guarded: bool,
-}
-
-impl Pen {
-    #[inline]
-    pub(super) fn cell_flags(&self) -> CellFlags {
-        let protected = if self.protected { CellFlags::PROTECTED } else { CellFlags::empty() };
-        let guarded = if self.guarded { CellFlags::GUARDED } else { CellFlags::empty() };
-        protected | guarded | CellFlags::with_content(self.content)
-    }
-}
-
-/// A rectangle of the screen in cells, edges included: the scroll region between the top and bottom
-/// margins (DECSTBM) and the left and right ones (DECLRMM).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Region {
-    pub top: usize,
-    pub bottom: usize,
-    pub left: usize,
-    pub right: usize,
-}
-
-impl Region {
-    /// The whole screen of this size.
-    pub fn full(cols: usize, rows: usize) -> Region {
-        Region { top: 0, bottom: rows.saturating_sub(1), left: 0, right: cols.saturating_sub(1) }
     }
 }

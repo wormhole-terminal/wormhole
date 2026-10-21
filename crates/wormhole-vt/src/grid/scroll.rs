@@ -15,7 +15,7 @@ use crate::types::Color;
 
 use super::archive::DropReason;
 use super::page::Page;
-use super::row::Region;
+use super::region::Region;
 use super::{Grid, Spare};
 
 impl Grid {

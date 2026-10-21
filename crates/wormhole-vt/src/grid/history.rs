@@ -6,7 +6,8 @@ use crate::types::Color;
 use super::archive::DropReason;
 use super::cell::Cell;
 use super::page::Page;
-use super::row::{Region, Row};
+use super::region::Region;
+use super::row::Row;
 use super::{BG_DEFAULT, Grid};
 
 impl Grid {
