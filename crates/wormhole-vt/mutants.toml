@@ -20,7 +20,7 @@ exclude_globs = [
     # it is the measuring stick, not the thing measured.
     "**/src/terminal/dump.rs",
     # The invariants checkers (grid and terminal) the tests call; a mutant here weakens a test, it never changes what
-    # the engine does, and the structure of the checks is itself under test in tests/invariants.rs.
+    # the engine does, and the structure of the checks is itself under test in tests/invariants/.
     "**/src/grid/check.rs",
     "**/src/terminal/check.rs",
 ]

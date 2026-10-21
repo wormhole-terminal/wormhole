@@ -107,7 +107,7 @@ scripts/profile-vt.sh --alloc --corpus links
 state, a count and not a time, so they hold on any machine), the structure test (layers depend only
 downwards, files stay under 1,000 lines) and the invariants below.
 
-**The invariant tests** (`tests/invariants.rs`, `tests/invariants_memory.rs`) check properties that must
+**The invariant tests** (`tests/invariants/`, `tests/invariants_memory.rs`) check properties that must
 hold for every input, on streams generated from a seed: a stream fed whole, cut at every byte and cut
 in random pieces leaves the same state, replies and events; resizing through any sizes and back
 loses no character; every reply is a well-formed sequence that carries no text the request chose;
