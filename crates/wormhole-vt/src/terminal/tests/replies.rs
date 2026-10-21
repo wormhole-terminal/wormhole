@@ -201,6 +201,21 @@ fn an_identity_cannot_carry_a_sequence_out_of_the_reply() {
 }
 
 #[test]
+fn each_part_of_an_identity_keeps_its_first_64_bytes_and_no_character_in_two_halves() {
+    let identity = |name: &str| {
+        let mut term = Terminal::builder().identity(name, "v").build();
+        term.feed(b"\x1b[>q");
+        String::from_utf8(term.replies().to_vec()).expect("an identity is text")
+    };
+    for (name, kept) in [("n".repeat(63), 63), ("n".repeat(64), 64), ("n".repeat(65), 64)] {
+        assert_eq!(identity(&name), format!("\x1bP>|{} v\x1b\\", &name[..kept]), "{} bytes", name.len());
+    }
+    // Two bytes each: 32 fit, and a 33rd would end at 66.
+    assert_eq!(identity(&"é".repeat(40)), format!("\x1bP>|{} v\x1b\\", "é".repeat(32)));
+    assert_eq!(identity(&format!("{}é", "n".repeat(63))), format!("\x1bP>|{} v\x1b\\", "n".repeat(63)));
+}
+
+#[test]
 fn a_reply_buffer_is_kept_by_the_host() {
     let mut rig = Rig::new(10, 4);
     rig.feed("\x1b[5n");

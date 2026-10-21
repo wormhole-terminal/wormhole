@@ -282,6 +282,26 @@ fn what_the_host_does_not_take_is_counted_not_kept() {
 }
 
 #[test]
+fn a_backlog_set_later_applies_to_the_archive_that_is_running() {
+    let cost = 20 * size_of::<crate::types::Cell>() + size_of::<HistoryLine>();
+    let mut term = archiving(20);
+    term.set_limits(Limits { archive_backlog: 300 * cost, ..Limits::default() });
+    for i in 0..6000 {
+        term.feed(format!("{i:05}\r\n").as_bytes());
+    }
+    let kept: usize = dropped(&mut term).iter().map(|b| b.lines.len()).sum();
+    assert_eq!(kept, 300);
+
+    // Limits do not switch an archive on that was not asked for.
+    let mut term = Terminal::builder().size(20, 5).scrollback(20).build();
+    term.set_limits(Limits { archive_backlog: 300 * cost, ..Limits::default() });
+    for i in 0..6000 {
+        term.feed(format!("{i:05}\r\n").as_bytes());
+    }
+    assert!(dropped(&mut term).is_empty());
+}
+
+#[test]
 fn a_skip_stays_in_the_batch_of_its_reason() {
     let limits = Limits { archive_backlog: 1, ..Limits::default() }; // less than a line
     let mut term =

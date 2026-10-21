@@ -159,6 +159,13 @@ fn the_separators_are_the_hosts_to_choose() {
 }
 
 #[test]
+fn a_terminal_can_start_with_the_separators_of_the_host() {
+    let term = crate::Terminal::builder().word_separators(" ._").build();
+    assert_eq!(term.word_separators(), " ._");
+    assert_eq!(crate::Terminal::new(10, 2).word_separators(), crate::terminal::DEFAULT_WORD_SEPARATORS);
+}
+
+#[test]
 fn a_word_goes_over_a_soft_wrap_but_not_a_line_end() {
     let mut rig = Rig::new(5, 5);
     rig.feed("abc defghij\r\nklm");
