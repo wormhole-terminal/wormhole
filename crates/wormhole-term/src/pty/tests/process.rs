@@ -22,16 +22,15 @@ fn the_output_of_a_program_that_finished_before_the_reader_started_is_not_lost()
     // A short-lived program writes and exits within microseconds, and on a busy machine the
     // reader thread has not read yet. macOS throws away what is unread when the last descriptor
     // of the terminal closes, so the reader holds one of its own until the output is read (it
-    // failed once on CI with an empty screen). Here the program is reaped and 50 ms pass before
-    // the reader exists, which loses the output every time without that.
+    // failed once on CI with an empty screen). Here 200 ms pass before the reader exists. The
+    // program is not waited for in that time: as the terminal's controlling process, its exit
+    // waits for the output to be read (XNU's `ttywait`), which only the reader does.
     let (proxy, events) = EventProxy::new();
     let screen = Arc::new(FairLock::new(Vec::new()));
-    let started =
-        start_when(&launch("/bin/echo", &["hello"]), SIZE, screen.clone(), Collect, proxy, |child| {
-            child.wait().expect("echo ends");
-            std::thread::sleep(Duration::from_millis(50));
-        })
-        .expect("starts");
+    let started = start_when(&launch("/bin/echo", &["hello"]), SIZE, screen.clone(), Collect, proxy, |_| {
+        std::thread::sleep(Duration::from_millis(200));
+    })
+    .expect("starts");
     let run = Run { control: started.control, screen, events, pid: started.pid };
     run.wait_for("hello\r\n");
     assert_eq!(run.exit(Duration::from_secs(10)), Some(Some(0)));
