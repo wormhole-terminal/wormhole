@@ -450,3 +450,51 @@ fn a_span_of_one_cell_or_more_is_compared_and_one_outside_the_screen_is_not() {
     assert!(!sim.grid.span_is(at(0, 0), at(0, 99), "abcdef"), "ends past the last column");
     assert!(!sim.grid.span_is(at(0, 99), at(1, 2), "ghi"), "starts past the last column");
 }
+
+#[test]
+fn a_range_on_the_last_row_is_cut_at_its_own_columns() {
+    let sim = sim(10, 3, "ab\ncd\nefghij");
+    assert_eq!(stream(&sim, (2, 1), (2, 3)), "fgh", "starting on the last row");
+    assert_eq!(stream(&sim, (1, 0), (2, 2)), "cd\nefg", "ending on it: not the whole row");
+    assert_eq!(block(&sim, (2, 1), (2, 3)), "fgh", "a block starting on it");
+}
+
+#[test]
+fn a_block_that_ends_on_the_oldest_line_of_the_history_is_copied() {
+    let mut sim = Sim::new(10, 2, DEFAULT_SCROLLBACK_BYTES);
+    for i in 0..4 {
+        sim.print(&format!("row{i}\n"));
+    }
+    let top = -(sim.grid.history_len() as i32);
+    assert_eq!(block(&sim, (top, 0), (top, 2)), "row");
+}
+
+#[test]
+fn a_block_has_no_line_end_after_its_last_row_however_far_the_range_runs_past_it() {
+    let sim = sim(10, 3, "ab\ncd\nef");
+    assert_eq!(block(&sim, (1, 0), (9, 1)), "cd\nef");
+}
+
+#[test]
+fn text_appended_to_a_buffer_keeps_what_the_buffer_ended_with() {
+    let sim = sim(10, 3, "ab");
+    let mut out = String::from("keep\n");
+    // A few blank cells in the middle of a row are no text, and no line end.
+    sim.grid.push_text_between(at(1, 1), at(1, 3), TextShape::Stream, &mut out);
+    assert_eq!(out, "keep\n");
+}
+
+#[test]
+fn the_last_line_of_a_range_is_kept_whole_when_the_row_after_it_does_not_exist() {
+    let mut sim = sim(5, 3, "ab\ncd\nefg");
+    sim.grid.set_wrapped(2, true);
+    // The last row says it goes on, and there is no row after it: it is the end all the same.
+    assert_eq!(sim.grid.logical_lines(Line(0), Line(99)), ["ab", "cd", "efg  "]);
+}
+
+#[test]
+fn a_word_is_looked_for_around_the_last_column_when_the_click_is_past_it() {
+    let sim = sim(20, 3, "foo bar");
+    assert_eq!(sim.grid.word_start(at(0, 99), is_sep), at(0, 19));
+    assert_eq!(sim.grid.word_end(at(0, 99), is_sep), at(0, 19));
+}
