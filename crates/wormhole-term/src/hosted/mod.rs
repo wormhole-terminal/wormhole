@@ -111,7 +111,6 @@ impl HostedTerminal {
         // The events side of the proxy goes unused: a tapped proxy queues nothing for a UI.
         let (proxy, _events) = EventProxy::tapped(core.clone());
         let shared = proxy.shared().clone();
-        shared.set_size(grid.window_size());
         let mut screen = Screen::new(grid, spawn.options.scrollback_lines as usize);
         apply_options(&mut screen, &spawn.options);
         if let Some(colors) = &spawn.colors {
@@ -210,7 +209,6 @@ impl HostedTerminal {
             self.core.stream.push_mark(mark);
             mark
         };
-        self.shared.set_size(grid.window_size());
         if !self.finished() && !self.closed {
             self.control.resize(grid.window_size());
         }

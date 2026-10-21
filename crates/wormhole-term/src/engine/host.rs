@@ -75,8 +75,8 @@ impl Host {
     }
 
     /// [`settle`](Self::settle) for a replica: its replies and its reports are the host's to give,
-    /// so only the pictures are kept (the UI draws its own decode), and a column change the window
-    /// may not follow is undone as the host undoes it, to the size the host last applied.
+    /// so only the pictures are kept (the UI draws its own decode). A column change (DECCOLM) asks
+    /// for nothing without window operations, and with them the host's engine asks the window.
     fn settle_replica(&mut self, screen: &mut Screen) {
         self.events.extend(screen.term.events());
         let mut events = std::mem::take(&mut self.events);
@@ -84,10 +84,6 @@ impl Host {
             match event {
                 Event::ImageData(upload) => self.uploads.begin(screen, upload),
                 Event::ImageFree(image) => self.uploads.free(image),
-                Event::ColumnsRequested(_) if !screen.window_ops_allowed() => {
-                    let size = self.proxy.shared().size();
-                    screen.term.resize(usize::from(size.num_cols), usize::from(size.num_lines));
-                }
                 _ => {}
             }
         }

@@ -270,7 +270,6 @@ impl Pty {
         self.size = size;
         match &self.io {
             Backend::Local(io) => {
-                self.shared.set_size(size.window_size());
                 let replies = self.term.lock().resize(size);
                 io.resize(size.window_size());
                 // After the PTY has its new size: a program told in band that the window changed

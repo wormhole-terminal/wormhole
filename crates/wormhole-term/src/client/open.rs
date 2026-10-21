@@ -249,7 +249,6 @@ pub(crate) fn hosted(
 ) -> anyhow::Result<(Pty, PtyEvents)> {
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
-    shared.set_size(replica.window_size());
     let replica_options = ReplicaOptions::of(options);
     let mut screen = replica_options.screen(replica);
     if let Some(colors) = options.colors {
@@ -263,7 +262,7 @@ pub(crate) fn hosted(
     let input = link.clone();
     shared.set_writer(Box::new(move |bytes| input.send(super::link::Cmd::Input(bytes.into()))));
     let sink = Sink::new(screen.clone(), feed, proxy.clone());
-    let state = State::new(link.clone(), proxy, sink, replica_options, first);
+    let state = State::new(link.clone(), proxy, sink, replica, replica_options, first);
     let client = Client::new(joined.stream, joined.dec, poller, state)?;
     std::thread::Builder::new().name("host client".into()).spawn(move || client.run())?;
     let pty = Pty {

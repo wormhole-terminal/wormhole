@@ -39,7 +39,7 @@ use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_size};
 use super::{ACK_EVERY, INPUT_WINDOW, PING_IDLE, WINDOW};
 use crate::GridSize;
 use crate::engine::OwnFeed;
-use crate::events::{EventProxy, Shared};
+use crate::events::EventProxy;
 use crate::hosted::ATTACH_HISTORY_LINES;
 use crate::pty::{Flow, Sink};
 use crate::screen::Screen;
@@ -73,7 +73,8 @@ enum End {
 pub(crate) struct State {
     link: Arc<Link>,
     proxy: EventProxy,
-    shared: Arc<Shared>,
+    /// The size the host last applied, which the replica has.
+    size: GridSize,
     replica: Sink<Screen, OwnFeed>,
     options: ReplicaOptions,
     /// Frames to write, and how much of them is written.
@@ -114,14 +115,14 @@ impl State {
         link: Arc<Link>,
         proxy: EventProxy,
         replica: Sink<Screen, OwnFeed>,
+        size: GridSize,
         options: ReplicaOptions,
         first: StreamMode,
     ) -> Self {
-        let shared = proxy.shared().clone();
         let mut state = Self {
             link,
             proxy,
-            shared,
+            size,
             replica,
             options,
             out: Vec::new(),
@@ -301,10 +302,10 @@ impl State {
             let Some(awaiting) = self.awaiting.take() else { return };
             // The new stream begins here: what came before it was the old one's.
             self.order = StreamOrder::new();
-            let size = awaiting.resize.map_or_else(|| self.replica_size(), |a| grid_of(a.size));
+            let size = awaiting.resize.map_or(self.size, |a| grid_of(a.size));
             if let Some(applied) = awaiting.resize {
                 let _ = self.order.resize_applied(&applied);
-                self.shared.set_size(size.window_size());
+                self.size = size;
             }
             let seeds = awaiting.seeds.unwrap_or_default();
             let options = self.options;
@@ -332,23 +333,13 @@ impl State {
         }
     }
 
-    fn replica_size(&self) -> GridSize {
-        let size = self.shared.size();
-        GridSize {
-            cols: size.num_cols,
-            rows: size.num_lines,
-            cell_width: f32::from(size.cell_width),
-            cell_height: f32::from(size.cell_height),
-        }
-    }
-
     fn resized(&mut self, applied: wire::ResizeApplied) {
         if let Some(awaiting) = &mut self.awaiting {
             awaiting.resize = Some(applied);
             return;
         }
         let size = grid_of(applied.size);
-        self.shared.set_size(size.window_size());
+        self.size = size;
         // A headless replica is not kept up to date, so it is not resized either.
         if self.mode == StreamMode::None {
             return;
