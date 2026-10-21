@@ -50,6 +50,16 @@ exclude_re = [
     # -- grid/cell.rs: a style id and a code point fill exactly the bits the mask just cleared.
     "replace \\| with \\^ in Cell::with_style",
     "replace \\| with \\^ in Cell::with_codepoint",
+    # The three fields of a word (code point, style id, flags) fill places that do not overlap, and
+    # so do the two masks that make `NEEDS_RELEASE`.
+    "replace \\| with \\^ in Cell::compose",
+    "grid/cell\\.rs:90:39: replace \\| with \\^",
+    # Every caller asks for the grapheme and the hyperlink itself once inside: this only skips that.
+    "replace Cell::has_side_entry -> bool with true",
+    # What the repaint does with a cell that has no character: only the tab mark, the spacers' flags
+    # (both tested before it) and a mark with nothing to combine with are ever on one, because
+    # nothing the engine writes puts another flag on a cell without a code point.
+    "replace Cell::flags_but_tab -> u16 with 0",
 
     # -- grid/copy.rs
     # A cell's style never has layout bits (the style table strips them), so OR and XOR of the two
@@ -77,12 +87,58 @@ exclude_re = [
     # Scrolling the screen's used rows by none does nothing.
     "replace > with >= in Grid::scroll_screen_into_history",
 
+    # -- grid/images/
+    # No placement starts on a row below the last: the invariants refuse it.
+    "view\\.rs:46:19: replace < with <= in Hit::on_screen",
+    # `drop_headless` has dropped every placement right of the new edge before the rebuild, and the
+    # carried anchors stay inside it, so none is left for this to drop.
+    "mod\\.rs:264:9: replace Grid::drop_placements_off_screen with \\(\\)",
+    "mod\\.rs:265:47: replace < with <= in Grid::drop_placements_off_screen",
+
+    # -- grid/link_table.rs
+    # `last` is only a cache, and one that is read only where its entry is in use.
+    "link_table\\.rs:105:26: replace == with != in Links::release",
+    # The fast path of `attach`: when the last run starts before the offset, the partition point is the
+    # end anyway. And no run starts at the offset, for the cells there were given back first.
+    "link_table\\.rs:120:27: replace match guard last.start >= offset with true in Links::attach",
+    "link_table\\.rs:120:89: replace < with <= in Links::attach",
+    # A run that starts where the cut ends adds a piece with no cells (released and attached by none),
+    # and is put back as it was.
+    "link_table\\.rs:180:75: replace < with <= in Links::cut",
+    # A cache of the last link looked up: the lookup by value finds the same entry.
+    "replace same_link -> bool with false",
+
+    # -- grid/links.rs
+    # `link_run(above, cols - 1)` only finds a run that holds the last column, so it ends there.
+    "links\\.rs:42:35: replace match guard hi \\+ 1 == self.cols with true in Grid::link_span",
+    # Runs of one link that are next to each other are one run (`attach` joins them), so no run ends
+    # where another that holds the column begins; and in the wrap checks the guard stops it anyway.
+    "links\\.rs:71:53: replace < with <= in Grid::link_run",
+
     # -- grid/page/edit.rs
     # Nothing is shifted when the kept part is empty: the second split is of a column already split,
     # and the move is of no cells.
     "edit\\.rs:112:21: replace > with >= in Page::insert_cells",
     "edit\\.rs:116:21: replace > with >= in Page::insert_cells",
     "edit\\.rs:163:67: replace \\| with \\^ in Page::move_cells",
+    # A move of no distance walks either way to the same end.
+    "edit\\.rs:167:32: replace > with >= in Page::move_cells",
+
+    # -- grid/page/mod.rs
+    # The flags that are set together are distinct bits: OR and XOR agree.
+    "mod\\.rs:233:31: replace \\| with \\^ in Page::set_wrapped",
+    "mod\\.rs:260:45: replace \\| with \\^ in Page::set_line_size",
+    # A tail is never in column 0: it follows its head.
+    "mod\\.rs:337:16: replace > with >= in Page::split_wide_at",
+    # `split_wide_at` refuses the column past the row itself; and the halves of a wide character carry
+    # the same protection, so asking the cell at the edge or the one before it is the same question.
+    "mod\\.rs:374:31: replace < with <= in Page::guard_edges_sparing",
+    "mod\\.rs:374:69: replace - with / in Page::guard_edges_sparing",
+
+    # -- grid/page/rect.rs
+    # A tail is never in column 0, and a wide character is never in the last column.
+    "rect\\.rs:39:23: replace > with >= in Page::restyle",
+    "rect\\.rs:42:45: replace < with <= in Page::restyle",
 
     # -- grid/page/write.rs
     # Pen flags never include the wide or tail flag (distinct bits), nor do the tail's flags.
@@ -93,6 +149,14 @@ exclude_re = [
     "write\\.rs:167:44: replace \\+ with \\* in Page::set_width",
     # The flags that make the tail are distinct bits: OR and XOR agree.
     "replace \\| with \\^ in Page::set_width",
+
+    # -- grid/pages.rs
+    # The walk back over four pages is a shortcut: staying on the same page four times and then
+    # searching is the same answer.
+    "pages\\.rs:39:18: replace -= with /= in Grid::locate",
+
+    # -- grid/pen.rs: protected, guarded and the block's part are three places that do not overlap.
+    "replace \\| with \\^ in Pen::cell_flags",
 
     # -- grid/rect.rs
     # `Page::restyle` returns for an empty range too, before touching anything.
@@ -110,6 +174,25 @@ exclude_re = [
     "resize\\.rs:86:56: replace && with \\|\\| in Grid::resize",
     # The rows up to the last text and the cursor already reach the cursor's row.
     "resize\\.rs:111:49: replace \\+ with \\* in Grid::resize",
+    # Where the new end is the old one, nothing is dropped or cut either way (a loop of no rows).
+    "resize\\.rs:117:20: replace > with >= in Grid::resize",
+    # The cursor's column is inside the new width before this: every path that gives it one cuts it.
+    "resize\\.rs:141:85: replace - with [/+] in Grid::resize",
+    # With one page, the rows to drop are fewer than the page has (the screen keeps at least one), so
+    # the page is never the whole of them.
+    "resize\\.rs:147:41: replace > with >= in Grid::drop_tail_rows",
+
+    # -- grid/rewrap.rs
+    # A style is in the line's list and in its map both, so either finds it.
+    "rewrap\\.rs:68:42: replace <= with > in LineBuf::style_index",
+    # A cell on the end of the line, or past it, goes just after the text either way.
+    "rewrap\\.rs:227:33: replace < with <= in Rewrap::row",
+    # Copying no cells is a copy of an empty range, which `copy_from_page` returns from.
+    "rewrap\\.rs:243:16: replace > with >= in Rewrap::copy_row",
+    # A wide character is always followed by its second half in the line: the check that it is
+    # there never fails.
+    "rewrap\\.rs:294:52: replace \\+ with \\* in Rewrap::emit_line",
+    "rewrap\\.rs:294:56: replace < with <= in Rewrap::emit_line",
 
     # -- grid/scroll.rs
     # A scroll over several pages that is not rotated is copied row by row, with the same result.
@@ -120,6 +203,10 @@ exclude_re = [
     # The rows appended are blank already: erasing them with the default background changes nothing.
     "scroll\\.rs:290:18: replace > with >= in Grid::scroll_into_history",
     "replace bg_is_default -> bool with false",
+    # Every caller passes rows inside the screen (the region is cut to it), and a one-row region has
+    # its row dirtied by the blanking of the row that leaves.
+    "scroll\\.rs:76:35: replace - with [/+] in Grid::mark_rows_dirty",
+    "scroll\\.rs:77:15: replace > with (==|>=) in Grid::mark_rows_dirty",
 
     # -- grid/search.rs
     # A column number is under 2^31, so the wide bit is never one of its bits.
@@ -127,8 +214,24 @@ exclude_re = [
     # An entry for the first trimmed byte is never looked up: a range ends inside the text.
     "replace < with <= in finish_line",
 
+    # -- grid/style.rs: the tag of a kind of color, and the three bytes of a color, are put in places
+    # that do not overlap, so OR and XOR make one number.
+    "style\\.rs:(70:48|71:47|72:44|72:67|72:89): replace \\| with \\^ in Style::table_hash::bits",
+
+    # -- grid/style_table.rs
+    # `last` is a cache of the style the last lookup found: the index finds it as well, and the cache
+    # is cleared when its entry is freed.
+    "style_table\\.rs:212:17: replace != with == in StyleTable::acquire",
+    "style_table\\.rs:214:27: replace != with == in StyleTable::acquire",
+    "style_table\\.rs:349:22: replace == with != in StyleTable::remove",
+
     # -- grid/text.rs: `push_slice` cuts the last column to the row's width.
     "replace - with [/+] in Grid::each_span_row",
+    "text\\.rs:211:27: replace - with [/+] in Grid::logical_lines",
+    # A range wholly above the history or below the screen has no row to walk anyway: the loops that
+    # follow are empty for it.
+    "text\\.rs:141:35: replace \\|\\| with && in Grid::push_text_between",
+    "text\\.rs:175:37: replace \\|\\| with && in Grid::push_text_between",
 
     # -- grid/words.rs
     # A line above the first is not wrapped, so stepping up to it from the first stays put; and a
