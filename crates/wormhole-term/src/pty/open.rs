@@ -13,8 +13,9 @@ use crate::WindowSize;
 pub(super) struct Pair {
     /// Ours: non-blocking and close-on-exec, so no program we start holds it open.
     pub master: File,
-    /// The program's: it becomes the child's standard streams and controlling terminal. Dropped
-    /// in the parent once the child has it, or the master never reports the child's end.
+    /// The program's: it becomes the child's standard streams and controlling terminal. The
+    /// reader keeps it only where the system loses a program's last output without it, and
+    /// lets go of it when the program has exited and its output is read (`reader::Core::slave`).
     pub slave: OwnedFd,
 }
 

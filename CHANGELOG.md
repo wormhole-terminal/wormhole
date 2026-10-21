@@ -201,6 +201,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - With ISO Latin-1 in a 96-character set slot (`ESC - A`, `ESC . A`), DEL now shows `ÿ`, the last
   character of the set, where it was dropped.
 - Return sends CR LF instead of CR while a program has new line mode set (`CSI 20 h`), as on a VT100.
+- A terminal whose program is a short command rather than a shell (a shell profile that runs one, a
+  program that fails at once) could stay empty, its output, often the error that explains why, lost:
+  on macOS the system throws away what a program wrote when its terminal closes before it is read,
+  and a short command is gone before the terminal's reader gets to it. The terminal now keeps its
+  end open until the output is read.
 
 ### Security
 

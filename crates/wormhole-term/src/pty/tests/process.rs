@@ -6,12 +6,33 @@ use std::time::Duration;
 
 use super::{Collect, Run, SIZE, kill, launch, run, run_launch};
 use crate::events::EventProxy;
-use crate::pty::{FairLock, start};
+use crate::pty::{FairLock, start, start_when};
 
 #[test]
 fn a_program_s_output_is_read_and_its_exit_reported() {
     let run = run("/bin/echo", &["hello"]);
     // The line discipline turns the newline into a carriage return and a newline.
+    run.wait_for("hello\r\n");
+    assert_eq!(run.exit(Duration::from_secs(10)), Some(Some(0)));
+    assert_eq!(run.text(), "hello\r\n");
+}
+
+#[test]
+fn the_output_of_a_program_that_finished_before_the_reader_started_is_not_lost() {
+    // A short-lived program writes and exits within microseconds, and on a busy machine the
+    // reader thread has not read yet. macOS throws away what is unread when the last descriptor
+    // of the terminal closes, so the reader holds one of its own until the output is read (it
+    // failed once on CI with an empty screen). Here the program is reaped and 50 ms pass before
+    // the reader exists, which loses the output every time without that.
+    let (proxy, events) = EventProxy::new();
+    let screen = Arc::new(FairLock::new(Vec::new()));
+    let started =
+        start_when(&launch("/bin/echo", &["hello"]), SIZE, screen.clone(), Collect, proxy, |child| {
+            child.wait().expect("echo ends");
+            std::thread::sleep(Duration::from_millis(50));
+        })
+        .expect("starts");
+    let run = Run { control: started.control, screen, events, pid: started.pid };
     run.wait_for("hello\r\n");
     assert_eq!(run.exit(Duration::from_secs(10)), Some(Some(0)));
     assert_eq!(run.text(), "hello\r\n");

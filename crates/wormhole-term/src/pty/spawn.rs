@@ -45,14 +45,15 @@ pub struct Launch {
 }
 
 /// Start `launch.shell` on `slave`, which the child takes for its standard streams and its
-/// controlling terminal. The parent's copies of the slave are closed when this returns.
-pub(super) fn spawn(launch: &Launch, slave: OwnedFd) -> io::Result<Child> {
+/// controlling terminal. The copies of the slave made for the child are closed when this returns;
+/// `slave` itself stays the caller's (see `reader::Core::slave` for why it may keep it).
+pub(super) fn spawn(launch: &Launch, slave: &OwnedFd) -> io::Result<Child> {
     let mut command = Command::new(&launch.shell.program);
     command.args(&launch.shell.args).envs(&launch.env);
     command
         .stdin(Stdio::from(slave.try_clone()?))
         .stdout(Stdio::from(slave.try_clone()?))
-        .stderr(Stdio::from(slave));
+        .stderr(Stdio::from(slave.try_clone()?));
     // A path with a NUL in it can't be one, and the chdir would fail anyway.
     let cwd = launch.cwd.as_ref().and_then(|dir| CString::new(dir.as_os_str().as_bytes()).ok());
     add_pre_exec(&mut command, cwd);

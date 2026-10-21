@@ -29,7 +29,9 @@ fn read_sizes() {
             ("as fast as it can, readv of 256 KiB", Duration::ZERO, true),
         ] {
             let open::Pair { master, slave } = open::open(SIZE).expect("opens");
-            let mut child = spawn::spawn(&launch("/bin/sh", &["-c", &script]), slave).expect("starts");
+            let mut child = spawn::spawn(&launch("/bin/sh", &["-c", &script]), &slave).expect("starts");
+            // The end of the output is the master's EOF, which needs every copy of the slave closed.
+            drop(slave);
             let mut buf = vec![0u8; 1 << 20];
             let (mut sizes, mut total) = (Vec::new(), 0usize);
             let started = Instant::now();

@@ -8,6 +8,7 @@
 
 use std::io::{self, Read as _};
 use std::num::NonZeroUsize;
+use std::os::fd::OwnedFd;
 use std::process::{Child, ExitStatus};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -38,6 +39,14 @@ const DRAIN_MAX: usize = 1024 * 1024;
 pub(super) struct Core {
     pub(super) master: Master,
     pub(super) child: Child,
+    /// Our copy of the slave, held until the program has exited and its output is read. On macOS
+    /// the system throws away what a program wrote that nobody has read yet when the last
+    /// descriptor of its terminal closes, and a short-lived program (`echo`) closes it within
+    /// microseconds of writing, before this thread has got to its first read: the screen stays
+    /// empty (measured: a read 20 ms late finds nothing 200 times in 200, and everything 200 in
+    /// 200 with a copy held open). Elsewhere what was written stays readable. The cost: the
+    /// master no longer reports the end of the output, which the exit watch tells instead.
+    slave: Option<OwnedFd>,
     pub(super) poller: Arc<Poller>,
     /// Who tells the thread that the child exited.
     exit: Watch,
@@ -115,6 +124,7 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
             core: Core {
                 master,
                 child,
+                slave: None,
                 poller,
                 exit,
                 inbox,
@@ -123,6 +133,13 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
                 close: None,
             },
         }
+    }
+
+    /// Keep `slave` open until the program has exited and its output is read, where the system
+    /// needs that (see `Core::slave`); anywhere else it is closed at once.
+    pub(super) fn holding(mut self, slave: OwnedFd) -> Self {
+        self.core.slave = cfg!(target_os = "macos").then_some(slave);
+        self
     }
 
     /// Run until the program is gone (and reported) or the terminal is closed (and the program
@@ -208,6 +225,8 @@ impl<S: Send + 'static, F: Feed<S>> Reader<S, F> {
             }
         }
         exit::unwatch(&self.core.poller, &self.core.child);
+        // Everything it wrote is read now.
+        self.core.slave = None;
         self.sink.report_exit(status.and_then(|status| status.code()));
     }
 }

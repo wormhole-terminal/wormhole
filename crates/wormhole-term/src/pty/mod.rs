@@ -31,6 +31,7 @@ mod writer;
 
 use std::borrow::Cow;
 use std::io;
+use std::process::Child;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -94,13 +95,28 @@ pub(crate) fn start<S: Send + 'static, F: Feed<S>>(
     feed: F,
     proxy: EventProxy,
 ) -> io::Result<Started> {
+    start_when(launch, size, screen, feed, proxy, |_| {})
+}
+
+/// [`start`], calling `before_reading` with the program once it runs and before the thread that
+/// reads its output exists: a test's way to have the program finish first, as it does when the
+/// machine is busy.
+fn start_when<S: Send + 'static, F: Feed<S>>(
+    launch: &Launch,
+    size: WindowSize,
+    screen: Arc<FairLock<S>>,
+    feed: F,
+    proxy: EventProxy,
+    before_reading: impl FnOnce(&mut Child),
+) -> io::Result<Started> {
     let open::Pair { master, slave } = open::open(size)?;
     let poller = Arc::new(Poller::new()?);
     let master = Master::new(master, poller.clone())?;
     let inbox = Arc::new(Inbox::new(poller.clone()));
-    let child = spawn::spawn(launch, slave)?;
+    let mut child = spawn::spawn(launch, &slave)?;
     let pid = child.id();
-    let reader = Reader::new(master, child, poller, inbox.clone(), screen, feed, proxy);
+    before_reading(&mut child);
+    let reader = Reader::new(master, child, poller, inbox.clone(), screen, feed, proxy).holding(slave);
     // When this fails the reader is dropped with the master, which hangs the terminal up on the
     // program.
     std::thread::Builder::new().name("PTY reader".into()).spawn(move || reader.run())?;
