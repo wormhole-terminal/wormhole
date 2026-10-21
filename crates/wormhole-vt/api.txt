@@ -2115,6 +2115,7 @@ impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::archive_history(&self) -> bool
 pub fn wormhole_vt::Terminal::set_archive_history(&mut self, bool)
 impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::block_cells(&self, wormhole_vt::Line, u32, wormhole_vt::BlockPart) -> alloc::vec::Vec<wormhole_vt::Cell>
 pub fn wormhole_vt::Terminal::block_text(&self, wormhole_vt::Line, u32, wormhole_vt::BlockPart) -> alloc::string::String
 pub fn wormhole_vt::Terminal::copy_text(&self, wormhole_vt::Line, usize, &mut wormhole_vt::TextCopy) -> core::option::Option<wormhole_vt::Line>
 pub fn wormhole_vt::Terminal::link_span(&self, wormhole_vt::Point) -> core::option::Option<wormhole_vt::LinkSpan>
@@ -2155,26 +2156,21 @@ pub fn wormhole_vt::Terminal::synchronized_output(&self) -> bool
 pub fn wormhole_vt::Terminal::unpin(&mut self, wormhole_vt::Pin)
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::clear_cwd_reports(&mut self)
+pub fn wormhole_vt::Terminal::cwd(&self) -> core::option::Option<&str>
 pub fn wormhole_vt::Terminal::cwd_reports(&self) -> &[alloc::string::String]
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::clear_replies(&mut self)
-pub fn wormhole_vt::Terminal::colors(&self) -> wormhole_vt::Colors
-pub fn wormhole_vt::Terminal::cwd(&self) -> core::option::Option<&str>
-pub fn wormhole_vt::Terminal::events(&mut self) -> alloc::vec::drain::Drain<'_, wormhole_vt::Event>
-pub fn wormhole_vt::Terminal::feed(&mut self, &[u8])
-pub fn wormhole_vt::Terminal::modes(&self) -> wormhole_vt::Modes
 pub fn wormhole_vt::Terminal::replies(&self) -> &[u8]
-pub fn wormhole_vt::Terminal::scrollback_lines(&self) -> usize
-pub fn wormhole_vt::Terminal::set_cell_size(&mut self, u16, u16)
-pub fn wormhole_vt::Terminal::set_default_colors(&mut self, &[wormhole_vt::Rgb; 259])
-pub fn wormhole_vt::Terminal::set_scrollback_lines(&mut self, usize)
 pub fn wormhole_vt::Terminal::take_replies(&mut self) -> alloc::vec::Vec<u8>
-pub fn wormhole_vt::Terminal::title(&self) -> core::option::Option<&str>
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::clipboard_reply(&mut self, &str, &str, wormhole_vt::event::Terminator)
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::color_scheme(&self) -> core::option::Option<wormhole_vt::ColorScheme>
 pub fn wormhole_vt::Terminal::set_color_scheme(&mut self, wormhole_vt::ColorScheme)
+impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::colors(&self) -> wormhole_vt::Colors
+pub fn wormhole_vt::Terminal::default_colors(&self) -> &[wormhole_vt::Rgb; 259]
+pub fn wormhole_vt::Terminal::set_default_colors(&mut self, &[wormhole_vt::Rgb; 259])
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::cursor_point(&self) -> wormhole_vt::Point
 impl wormhole_vt::Terminal
@@ -2187,7 +2183,12 @@ pub fn wormhole_vt::Terminal::take_selection(&mut self) -> bool
 pub fn wormhole_vt::Terminal::update_selection(&mut self, wormhole_vt::Point, wormhole_vt::Side)
 pub fn wormhole_vt::Terminal::word_separators(&self) -> &str
 impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::events(&mut self) -> alloc::vec::drain::Drain<'_, wormhole_vt::Event>
+impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::feed(&mut self, &[u8])
+impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::icon_name(&self) -> core::option::Option<&str>
+pub fn wormhole_vt::Terminal::title(&self) -> core::option::Option<&str>
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::image_decoded(&mut self, wormhole_vt::image::ImageHandle, core::result::Result<(), wormhole_vt::image::ImageError>)
 impl wormhole_vt::Terminal
@@ -2198,10 +2199,13 @@ pub fn wormhole_vt::Terminal::locator_button(&mut self, wormhole_vt::LocatorButt
 pub fn wormhole_vt::Terminal::locator_enabled(&self) -> bool
 pub fn wormhole_vt::Terminal::locator_moved(&mut self, wormhole_vt::Pointer)
 impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::modes(&self) -> wormhole_vt::Modes
+impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::policy(&self) -> wormhole_vt::Policy
 pub fn wormhole_vt::Terminal::set_policy(&mut self, wormhole_vt::Policy)
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::repaint(&self, &mut alloc::vec::Vec<u8>) -> core::result::Result<wormhole_vt::repaint::Repainted, wormhole_vt::repaint::NotReady>
+pub fn wormhole_vt::Terminal::repaint_capped(&self, &mut alloc::vec::Vec<u8>, usize) -> core::result::Result<wormhole_vt::repaint::Repainted, wormhole_vt::repaint::NotReady>
 pub fn wormhole_vt::Terminal::repaint_ready(&self) -> core::result::Result<(), wormhole_vt::repaint::NotReady>
 pub fn wormhole_vt::Terminal::seed(&mut self, &wormhole_vt::repaint::Seeds)
 pub fn wormhole_vt::Terminal::seed_block_counter(&mut self, u32)
@@ -2210,6 +2214,10 @@ pub fn wormhole_vt::Terminal::reset(&mut self)
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::resize(&mut self, usize, usize)
 impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::scrollback_lines(&self) -> usize
+pub fn wormhole_vt::Terminal::set_scrollback_lines(&mut self, usize)
+impl wormhole_vt::Terminal
+pub fn wormhole_vt::Terminal::set_cell_size(&mut self, u16, u16)
 pub fn wormhole_vt::Terminal::set_window(&mut self, wormhole_vt::window::WindowGeometry)
 impl wormhole_vt::Terminal
 pub fn wormhole_vt::Terminal::take_damage(&mut self, &mut wormhole_vt::Damage)
