@@ -10,20 +10,24 @@
 
 mod cell;
 mod color;
+mod cursor;
 mod extras;
 mod hyperlink;
 mod image;
 mod index;
 mod line_size;
 mod mode;
-mod view;
+mod scroll;
+mod selection;
 
 pub use cell::{Cell, Flags};
 pub use color::{COLOR_COUNT, Color, ColorScheme, Colors, NamedColor, Rgb};
+pub use cursor::CursorShape;
 pub use extras::{CellExtra, RowExtras};
 pub use hyperlink::{Hyperlink, LinkId};
 pub use image::{Extent, ImageHandle, ImagePlacement, PLACEHOLDER, SourceRect};
 pub use index::{Column, Line, Point, Side};
 pub use line_size::LineSize;
 pub use mode::{KittyFlags, Modes, ModifyOtherKeys, MouseEncoding, MouseTracking};
-pub use view::{CursorShape, Scroll, SelectionRange, SelectionType};
+pub use scroll::Scroll;
+pub use selection::{SelectionRange, SelectionType};
