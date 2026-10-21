@@ -1,6 +1,6 @@
 //! Moving the cursor: CUP and its relatives, the controls that move it, tabs, DECSC and DECRC.
 //!
-//! Every move clears the delayed wrap (xterm's `xenl`; see the module docs of `term`). Rows are
+//! Every move clears the delayed wrap (xterm's `xenl`; see the module docs of `terminal`). Rows are
 //! limited by the scrolling region and columns by the left and right margins, but only when the
 //! cursor starts inside them: a cursor outside a margin may move to the edge of the screen
 //! (VT510, CUU/CUD/CUF/CUB: "the cursor stops at the margin" when it is inside).

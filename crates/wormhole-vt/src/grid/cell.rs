@@ -101,7 +101,7 @@ const _: () = {
 const LAYOUT: CellFlags = CellFlags::WIDE.union(CellFlags::SPACER_TAIL).union(CellFlags::SPACER_HEAD);
 
 /// The names of the cell's flags, for the test that every one has a case in the repaint
-/// (`term::repaint::CELL_FLAGS`).
+/// (`terminal::repaint::CELL_FLAGS`).
 #[doc(hidden)]
 #[cfg(any(test, feature = "internals"))]
 pub fn flag_names() -> Vec<&'static str> {

@@ -2,7 +2,7 @@
 //!
 //! The snapshot copy (`copy.rs`) turns a row into the types a host draws and leaves out what
 //! only the engine itself acts on (the cell's own flags, the page-local style ids, the row's
-//! block). The repaint writer (`term::repaint`) and the state dump need all of it, and a row at
+//! block). The repaint writer (`terminal::repaint`) and the state dump need all of it, and a row at
 //! a time: [`Grid::row_view`] finds the page once, and the view then answers for the whole row.
 
 use crate::types::{Hyperlink, Line, LineSize};

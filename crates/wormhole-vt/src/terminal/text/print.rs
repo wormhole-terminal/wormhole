@@ -1,6 +1,6 @@
 //! Printing text: ASCII runs, wide characters, zero-width marks, grapheme clusters, REP.
 //!
-//! The delayed wrap (see the module docs of `term`) is `Cursor::pending`: writing in the last
+//! The delayed wrap (see the module docs of `terminal`) is `Cursor::pending`: writing in the last
 //! column leaves the cursor there, and the next graphic character first wraps. Autowrap (DECAWM)
 //! off keeps the cursor in the last column and overwrites it. A run of ASCII is written one row
 //! segment at a time with one call into the grid; everything else goes character by character.

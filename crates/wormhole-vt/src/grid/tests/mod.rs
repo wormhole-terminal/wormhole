@@ -75,7 +75,7 @@ pub(super) fn logical_lines(grid: &Grid) -> Vec<String> {
 }
 
 /// A little terminal over a grid: a cursor, autowrap and line feeds, enough to make the wrapped
-/// lines and the history real programs make. (The real one is `term`.)
+/// lines and the history real programs make. (The real one is `terminal`.)
 pub(super) struct Sim {
     pub grid: Grid,
     pub x: usize,

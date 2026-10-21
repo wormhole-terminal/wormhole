@@ -283,6 +283,25 @@ fn the_layer_check_reads_use_trees_and_ignores_comments_and_strings() {
     assert!(roots(&["types"], "use crate::terminal_size;").iter().all(|r| r != "term"));
 }
 
+/// Names that say nothing about what a module holds: whatever does not fit elsewhere ends up in
+/// them. A new piece of code gets a module named for its concept instead.
+const GRAB_BAGS: &[&str] = &["util", "utils", "misc", "helpers", "common", "stuff", "tools"];
+
+#[test]
+fn no_module_is_named_for_being_left_over() {
+    let mut files = Vec::new();
+    rust_files(&crate_dir().join("src"), &mut files);
+    let names: Vec<String> = files.iter().map(|path| relative(path)).collect();
+    let bags: Vec<&String> = names
+        .iter()
+        .filter(|name| {
+            let module = module_of(name.strip_prefix("src/").unwrap_or(name));
+            module.iter().any(|part| GRAB_BAGS.contains(part))
+        })
+        .collect();
+    assert!(bags.is_empty(), "a module named for what is left over, not for what it is: {bags:#?}");
+}
+
 #[test]
 fn the_engine_has_no_unsafe_code() {
     let lib = fs::read_to_string(crate_dir().join("src/lib.rs")).expect("lib.rs");
