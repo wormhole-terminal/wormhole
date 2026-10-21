@@ -167,6 +167,43 @@ mod tests {
         assert_eq!(term.replies(), b"\x1bP1$r0m\x1b\\");
     }
 
+    /// Feed `sequence` to a terminal showing `abc` and `xyz` while its status line is the display, and
+    /// return the two rows when the main display is back.
+    fn rows_after_in_the_status_line(sequence: &[u8]) -> (String, String) {
+        let mut term = Terminal::new(30, 3);
+        term.feed(b"abc\r\nxyz\x1b[1;1H\x1b[2$~\x1b[1$}");
+        term.feed(sequence);
+        term.feed(b"\x1b[0$}");
+        (row(&term, 0), row(&term, 1))
+    }
+
+    #[test]
+    fn what_changes_the_main_display_is_ignored_in_the_status_line() {
+        let untouched = ("abc".to_string(), "xyz".to_string());
+        for (name, sequence) in [
+            ("DECSED", &b"\x1b[?2J"[..]),
+            ("DECSEL", b"\x1b[?2K"),
+            ("DECERA", b"\x1b[1;1;2;3$z"),
+            ("DECFRA", b"\x1b[35;1;1;2;3$x"),
+            ("DECSERA", b"\x1b[1;1;2;3${"),
+            ("DECCRA", b"\x1b[1;1;1;3;1;2;1;1$v"),
+            ("DECIC", b"\x1b[1'}"),
+            ("DECDC", b"\x1b[1'~"),
+            ("SL", b"\x1b[1 @"),
+            ("SR", b"\x1b[1 A"),
+            ("DECALN", b"\x1b#8"),
+        ] {
+            assert_eq!(rows_after_in_the_status_line(sequence), untouched, "{name}");
+        }
+    }
+
+    #[test]
+    fn escape_sequences_that_leave_the_display_alone_still_work_in_the_status_line() {
+        let mut term = Terminal::new(30, 3);
+        term.feed(b"\x1b[2$~\x1b[1$}\x1b=");
+        assert!(term.modes().contains(crate::terminal::modes::Modes::APP_KEYPAD));
+    }
+
     #[test]
     fn the_selection_is_ignored_unless_the_line_is_host_writable() {
         let mut term = Terminal::new(30, 3);

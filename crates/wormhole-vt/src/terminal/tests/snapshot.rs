@@ -63,6 +63,16 @@ fn damage_lists_the_rows_a_program_wrote_to() {
 }
 
 #[test]
+fn the_history_asked_for_is_what_the_terminal_says_it_keeps() {
+    let mut term = crate::Terminal::builder().size(10, 3).scrollback(123).build();
+    assert_eq!(term.scrollback_lines(), 123);
+    term.set_scrollback_lines(7);
+    assert_eq!(term.scrollback_lines(), 7);
+    term.set_scrollback_lines(0);
+    assert_eq!(term.scrollback_lines(), 0);
+}
+
+#[test]
 fn damage_is_full_when_the_view_moves_or_the_size_changes() {
     let mut rig = Rig::new(10, 3);
     let mut damage = Damage::new();

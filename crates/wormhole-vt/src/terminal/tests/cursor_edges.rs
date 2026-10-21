@@ -82,6 +82,67 @@ fn forward_index_stops_at_the_last_column_a_double_width_row_shows() {
 }
 
 #[test]
+fn a_cursor_beyond_the_right_margin_goes_no_further_than_the_last_column() {
+    let mut rig = Rig::new(10, 3);
+    checked(&mut rig, &["\x1b[?69h", "\x1b[1;5s", "\x1b[1;10H"]);
+    assert_eq!(rig.cursor(), (0, 9));
+    // Forward, tab and forward index have nowhere to go; the margin is not the edge for it.
+    for step in ["\x1b[5C", "\t", "\x1b9"] {
+        checked(&mut rig, &[step]);
+        assert_eq!(rig.cursor(), (0, 9), "{step:?}");
+    }
+}
+
+#[test]
+fn back_index_at_the_left_edge_outside_a_left_margin_stays_there() {
+    let mut rig = Rig::new(10, 3);
+    checked(&mut rig, &["\x1b[?69h", "\x1b[3;8s", "\x1b[1;1H", "\x1b6"]);
+    assert_eq!(rig.cursor(), (0, 0));
+}
+
+#[test]
+fn reverse_wraparound_goes_round_the_top_to_the_bottom_margin_or_the_screen() {
+    // Extended reverse wraparound at the top row: a region that starts below it sends the cursor
+    // to the last row of the screen (there is no line above, and the region does not hold the
+    // cursor), one that starts at it to the region's last row.
+    let mut rig = Rig::new(10, 6);
+    checked(&mut rig, &["\x1b[?1045h", "\x1b[3;4r", "\x1b[1;1H", "\x08"]);
+    assert_eq!(rig.cursor(), (5, 9));
+    let mut rig = Rig::new(10, 6);
+    checked(&mut rig, &["\x1b[?1045h", "\x1b[1;3r", "\x1b[1;1H", "\x08"]);
+    assert_eq!(rig.cursor(), (2, 9));
+}
+
+#[test]
+fn a_column_in_origin_mode_counts_from_the_left_margin() {
+    let mut rig = Rig::new(10, 3);
+    checked(&mut rig, &["\x1b[?6h", "\x1b[5G"]);
+    assert_eq!(rig.cursor(), (0, 4));
+    checked(&mut rig, &["\x1b[?69h", "\x1b[3;8s", "\x1b[?6h", "\x1b[2G"]);
+    assert_eq!(rig.cursor(), (0, 3), "the left margin is the third column: the second from it is the fourth");
+    checked(&mut rig, &["\x1b[9G"]);
+    assert_eq!(rig.cursor(), (0, 7), "and no further than the right margin");
+}
+
+#[test]
+fn leaving_the_alternate_screen_that_was_not_entered_restores_nothing() {
+    let mut rig = Rig::new(10, 5);
+    checked(&mut rig, &["\x1b[2;2H", "\x1b7", "\x1b[4;5H", "\x1b[?1049l"]);
+    assert_eq!(rig.cursor(), (3, 4), "the cursor DECSC saved is for 1049 to give back, not 1049 l alone");
+    checked(&mut rig, &["\x1b[?1049h", "\x1b[1;1H", "\x1b[?1049l"]);
+    assert_eq!(rig.cursor(), (3, 4), "entering saved this one");
+}
+
+#[test]
+fn screen_alignment_leaves_origin_mode_and_the_margins_modes() {
+    let mut rig = Rig::new(10, 3);
+    checked(&mut rig, &["\x1b[?69h", "\x1b[3;8s", "\x1b[?6h", "\x1b#8"]);
+    let modes = rig.term.modes();
+    assert!(!modes.contains(crate::types::Modes::ORIGIN));
+    assert!(!modes.contains(crate::types::Modes::LEFT_RIGHT_MARGINS));
+}
+
+#[test]
 fn inserting_and_deleting_columns_work_only_with_the_cursor_inside_the_region() {
     // The rows outside the scrolling region.
     let mut rig = Rig::new(8, 4);
