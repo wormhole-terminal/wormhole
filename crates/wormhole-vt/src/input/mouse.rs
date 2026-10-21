@@ -260,6 +260,9 @@ mod tests {
         assert_eq!(report(ev(B::Left, Release, 1, 1), m), None);
         assert_eq!(report(ev(B::WheelUp, Press, 1, 1), m), None);
         assert_eq!(report(ev(B::Left, Motion, 1, 1), m), None);
+        // All three buttons are the mode's, the right one included.
+        assert_eq!(report(ev(B::Middle, Press, 1, 1), m), Some(b"\x1b[M!\"\"".to_vec()));
+        assert_eq!(report(ev(B::Right, Press, 1, 1), m), Some(b"\x1b[M\"\"\"".to_vec()));
     }
 
     #[test]

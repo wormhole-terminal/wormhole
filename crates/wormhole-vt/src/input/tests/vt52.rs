@@ -54,6 +54,9 @@ fn the_keypad_sends_its_characters_or_esc_question_mark_in_application_mode() {
         assert_eq!(enc(key(Key::Keypad(pad)), application), s(app), "{pad:?}");
     }
     assert_eq!(enc(key(Key::Keypad(KeypadKey::Left)), application), s("\x1bD"));
+    assert_eq!(enc(key(Key::Keypad(KeypadKey::Right)), application), s("\x1bC"));
+    assert_eq!(enc(key(Key::Keypad(KeypadKey::Up)), application), s("\x1bA"));
+    assert_eq!(enc(key(Key::Keypad(KeypadKey::Down)), application), s("\x1bB"));
 }
 
 #[test]
@@ -64,6 +67,8 @@ fn characters_are_as_ever_and_nothing_needs_a_csi() {
     assert_eq!(enc(with(key(Key::Char('a')), ALT), m), s("\x1ba"));
     assert_eq!(enc(key(Key::Enter), m), s("\r"));
     assert_eq!(enc(with(key(Key::Tab), SHIFT), m), s("\t"));
+    // Only Tab loses its Shift: on a character it is what makes the capital.
+    assert_eq!(enc(with(key(Key::Char('a')), SHIFT), m), s("A"));
     assert_eq!(enc(key(Key::Escape), m), s("\x1b"));
     for gone in [Key::Home, Key::End, Key::Insert, Key::Delete, Key::PageUp, Key::PageDown] {
         assert_eq!(enc(key(gone), m), None, "{gone:?}");

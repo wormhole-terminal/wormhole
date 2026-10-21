@@ -117,6 +117,22 @@ mod tests {
     }
 
     #[test]
+    fn a_borrowed_set_of_modes_lands_like_an_owned_one() {
+        let set = Modes::APP_CURSOR | Modes::BRACKETED_PASTE | Modes::MOUSE_DRAG;
+        assert_eq!(InputModes::from(&set), InputModes::from(set));
+        assert!(InputModes::from(&set).app_cursor);
+    }
+
+    #[test]
+    fn mouse_reports_are_asked_for_by_every_level_but_off() {
+        assert!(!InputModes::default().reports_mouse());
+        for tracking in [MouseTracking::X10, MouseTracking::Click, MouseTracking::Drag, MouseTracking::Motion]
+        {
+            assert!(InputModes { mouse: tracking, ..InputModes::default() }.reports_mouse(), "{tracking:?}");
+        }
+    }
+
+    #[test]
     fn the_modes_that_were_out_of_reach_land_too() {
         let modes = InputModes::from(Modes::MOUSE_X10 | Modes::MOUSE_PIXELS);
         assert_eq!((modes.mouse, modes.mouse_encoding), (MouseTracking::X10, MouseEncoding::SgrPixels));
