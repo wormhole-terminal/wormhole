@@ -6,8 +6,11 @@
 //! # Shape
 //!
 //! - A **cell** ([`Cell`]) is eight bytes: code point, style id, flags. All zero bits is a blank.
-//! - Rows live in **pages** (`page/`). A page has its own style table (styles interned with use
-//!   counts) and side tables for the characters after a cluster's first and for hyperlinks. Pages
+//! - Rows live in **pages** (`page/`). A page has its own style table (`style_table.rs`, styles
+//!   interned with use counts) and side tables for the characters after a cluster's first
+//!   (`graphemes.rs`) and for hyperlinks (`link_table.rs`), both keyed by a cell's offset in the
+//!   page (`offset_map.rs`). Writing a cell takes the pen (`pen.rs`); scrolling a part of the screen
+//!   names it as a region (`region.rs`). Pages
 //!   are a list, oldest first; the **live screen is the last
 //!   `rows` rows** of the list and everything before it is the history. A page holds a few hundred
 //!   rows (at most 128 KiB of cells).
