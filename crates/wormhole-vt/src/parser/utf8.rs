@@ -97,3 +97,30 @@ fn exact(bytes: &[u8]) -> Decoded {
     }
     Decoded::Char(char::from_u32(cp).unwrap_or(REPLACEMENT), len)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `decode` takes every well-formed character by its fast paths, so `exact` is never asked for
+    /// one through the parser: it is checked here on its own, against the standard library's encoder.
+    #[test]
+    fn the_exact_decoder_reads_every_character_by_itself() {
+        let mut buf = [0u8; 4];
+        for c in (0x80..=0x10FFFF).filter_map(char::from_u32) {
+            let bytes = c.encode_utf8(&mut buf).as_bytes();
+            assert_eq!(exact(bytes), Decoded::Char(c, bytes.len()), "{c:?}");
+        }
+    }
+
+    #[test]
+    fn the_exact_decoder_waits_for_the_rest_of_a_cut_character() {
+        for c in ['é', '€', '\u{D7FF}', '\u{10000}', '\u{10FFFF}'] {
+            let mut buf = [0u8; 4];
+            let bytes = c.encode_utf8(&mut buf).as_bytes();
+            for cut in 1..bytes.len() {
+                assert_eq!(exact(&bytes[..cut]), Decoded::Incomplete, "{c:?} cut at {cut}");
+            }
+        }
+    }
+}

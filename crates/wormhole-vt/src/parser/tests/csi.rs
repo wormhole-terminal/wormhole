@@ -240,3 +240,50 @@ fn sgr_churn() {
     assert_eq!(c.groups().count(), 10);
     assert_eq!(c.param(9, 0), 58);
 }
+
+#[test]
+fn a_sequence_without_parameters_is_the_only_empty_one() {
+    // The parser always reports at least one (maybe empty) parameter; only a fresh value has none.
+    assert!(Csi::new().is_empty());
+    assert_eq!(Csi::new().len(), 0);
+    assert!(!csi(b"\x1b[m").is_empty());
+    assert!(!csi(b"\x1b[1;2m").is_empty());
+}
+
+#[test]
+fn two_sequences_are_equal_when_every_part_of_them_is() {
+    assert!(csi(b"\x1b[?1;2:3;;4 !q") == csi(b"\x1b[?1;2:3;;4 !q"));
+    // Each pair differs in one part alone: the values, which are sub-parameters, which are empty,
+    // the marker, the intermediates, the final byte and the overflow flag.
+    let pairs: [(&[u8], &[u8]); 7] = [
+        (b"\x1b[1m", b"\x1b[2m"),
+        (b"\x1b[1:2m", b"\x1b[1;2m"),
+        (b"\x1b[;1m", b"\x1b[0;1m"),
+        (b"\x1b[?1h", b"\x1b[>1h"),
+        (b"\x1b[1 q", b"\x1b[1!q"),
+        (b"\x1b[1m", b"\x1b[1n"),
+        (b"\x1b[1 !\"#$q", b"\x1b[1 !\"#q"),
+    ];
+    for (a, b) in pairs {
+        let (a, b) = (csi(a), csi(b));
+        assert!(a != b, "{a:?} and {b:?}");
+        assert!(b != a, "{b:?} and {a:?}");
+    }
+    // The values a longer sequence left in the parser's array past the count are not part of one.
+    let events = run(b"\x1b[1;2;3m\x1b[4m");
+    let Event::Csi(second) = &events[1] else { panic!("{events:?}") };
+    assert!(*second == csi(b"\x1b[4m"));
+}
+
+#[test]
+fn the_parameter_groups_know_how_many_are_left() {
+    // Three parameters in four values: 1, 2:3 and 4.
+    let c = csi(b"\x1b[1;2:3;4m");
+    let mut groups = c.groups();
+    for left in (0..=3).rev() {
+        assert_eq!(groups.size_hint(), (left, Some(left)));
+        assert_eq!(groups.len(), left);
+        groups.next();
+    }
+    assert_eq!(groups.size_hint(), (0, Some(0)), "past the end it stays at none");
+}
