@@ -34,7 +34,11 @@ done
 
 # vttest needs its own cache entry, so it goes on when the others cannot (it skips itself in turn).
 vttest() { if [ "$update" = 1 ]; then scripts/vttest-gate.sh --update; else scripts/vttest-gate.sh; fi; }
-skip() { warn "outside suites skipped: $* The engine's conformance against esctest2 and ucs-detect is unchecked (scripts/suites-gate.sh)."; vttest; exit $?; }
+# SUITES_REQUIRED=1 (CI) turns a skip into a failure: there a missing suite is a broken job, not a plane.
+skip() {
+  [ "${SUITES_REQUIRED:-0}" = 1 ] && die "outside suites cannot run: $*"
+  warn "outside suites skipped: $* The engine's conformance against esctest2 and ucs-detect is unchecked (scripts/suites-gate.sh)."; vttest; exit $?
+}
 
 command -v python3 >/dev/null || skip "python3 is not installed."
 command -v git >/dev/null || skip "git is not installed."

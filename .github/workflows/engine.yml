@@ -1,0 +1,107 @@
+name: Engine
+
+# The terminal engine's slow checks, on Linux (the engine is plain Rust with no platform code, and
+# Linux minutes are free for a public repository):
+# - the outside conformance suites (esctest2, ucs-detect, vttest; scripts/suites-gate.sh), when the
+#   engine, its bench crate, the terminal layer or the suites' files change, and by hand;
+# - mutation testing (cargo-mutants; scripts/mutants.sh), only by hand: Actions → Engine → Run
+#   workflow with "mutants" on, or `gh workflow run engine.yml -f mutants=true`. It takes hours, so
+#   it is split into eight shards that run side by side; each uploads its mutants.out folder.
+on:
+  push:
+    branches: [main]
+    paths:
+      - crates/wormhole-vt/**
+      - crates/wormhole-vt-bench/**
+      - crates/wormhole-term/**
+      - scripts/suites-gate.sh
+      - scripts/vttest-gate.sh
+      - tools/vt-compare/**
+      - .github/workflows/engine.yml
+  pull_request:
+    paths:
+      - crates/wormhole-vt/**
+      - crates/wormhole-vt-bench/**
+      - crates/wormhole-term/**
+      - scripts/suites-gate.sh
+      - scripts/vttest-gate.sh
+      - tools/vt-compare/**
+      - .github/workflows/engine.yml
+  workflow_dispatch:
+    inputs:
+      mutants:
+        description: Run mutation testing instead of the suites (hours, eight shards)
+        type: boolean
+        default: false
+      area:
+        description: "Only this area of the engine (scripts/mutants.sh --help lists them; empty: all)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engine-${{ github.event.pull_request.number || github.ref }}-${{ inputs.mutants || false }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
+jobs:
+  suites:
+    name: Outside suites (Linux)
+    if: ${{ !inputs.mutants }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # A suite that cannot be fetched or built fails the job instead of skipping itself.
+      SUITES_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: suites
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: scripts/suites-gate.sh
+
+  mutants:
+    name: Mutants ${{ matrix.shard }}/8
+    if: ${{ inputs.mutants }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (the version in rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: mutants
+          save-if: false
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: cargo-mutants
+      # A missed mutant is a finding to read, not a broken build: the job succeeds and the lists
+      # go into the artifact (missed.txt is the one to read).
+      - name: cargo-mutants, shard ${{ matrix.shard }} of 8
+        env:
+          AREA: ${{ inputs.area }}
+        run: |
+          # Each area writes target/mutants/<area>/mutants.out (scripts/mutants.sh).
+          args=(--jobs 2)
+          [ -n "$AREA" ] && args+=(--area "$AREA")
+          scripts/mutants.sh "${args[@]}" --shard "${{ matrix.shard }}/8" || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: mutants-${{ matrix.shard }}
+          path: target/mutants/*/mutants.out
+          if-no-files-found: warn
+          retention-days: 30

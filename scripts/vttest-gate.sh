@@ -33,7 +33,10 @@ for arg in "$@"; do
 done
 [ "$plan" = 1 ] && { echo "build vttest-host (release), walk vttest's menus headless, compare every screen with tools/vt-compare/suites/vttest/"; exit 0; }
 
-skip() { warn "vttest skipped: $* The engine's conformance against vttest is unchecked (scripts/vttest-gate.sh)."; exit 0; }
+skip() {
+  [ "${SUITES_REQUIRED:-0}" = 1 ] && die "vttest cannot run: $*"   # CI: see scripts/suites-gate.sh
+  warn "vttest skipped: $* The engine's conformance against vttest is unchecked (scripts/vttest-gate.sh)."; exit 0
+}
 
 command -v python3 >/dev/null || skip "python3 is not installed."
 fetch_log="$(mktemp "${TMPDIR:-/tmp}/vttest-fetch.XXXXXX")"
