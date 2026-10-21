@@ -4,17 +4,17 @@ use super::{BG, Sim, at, full, plain};
 use crate::grid::{DEFAULT_SCROLLBACK_BYTES, Grid, NewPlacement, Region};
 use crate::types::{Extent, ImageHandle, ImagePlacement, Line, SourceRect};
 
-fn ok(grid: &Grid) {
+pub(super) fn ok(grid: &Grid) {
     if let Err(e) = grid.check_invariants() {
         panic!("{e}");
     }
 }
 
-fn handle(n: u64) -> ImageHandle {
+pub(super) fn handle(n: u64) -> ImageHandle {
     ImageHandle(n)
 }
 
-fn new(image: u64, cols: usize, rows: usize) -> NewPlacement {
+pub(super) fn new(image: u64, cols: usize, rows: usize) -> NewPlacement {
     NewPlacement {
         image: handle(image),
         image_id: 0,
@@ -29,18 +29,18 @@ fn new(image: u64, cols: usize, rows: usize) -> NewPlacement {
     }
 }
 
-fn shown(grid: &Grid) -> Vec<ImagePlacement> {
+pub(super) fn shown(grid: &Grid) -> Vec<ImagePlacement> {
     let mut out = Vec::new();
     grid.copy_placements(&mut out, (8, 16));
     out
 }
 
 /// (image, line, column, cols, rows) of what is shown.
-fn spots(grid: &Grid) -> Vec<(u64, i32, usize, usize, usize)> {
+pub(super) fn spots(grid: &Grid) -> Vec<(u64, i32, usize, usize, usize)> {
     shown(grid).iter().map(|p| (p.image.get(), p.line.0, p.column, p.cols, p.rows)).collect()
 }
 
-fn grid(cols: usize, rows: usize) -> Grid {
+pub(super) fn grid(cols: usize, rows: usize) -> Grid {
     Grid::new(cols, rows, DEFAULT_SCROLLBACK_BYTES)
 }
 

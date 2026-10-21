@@ -289,3 +289,6 @@ impl Grid {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;
