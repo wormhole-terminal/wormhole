@@ -13,6 +13,7 @@
 //! whatever program is running (xterm leaves them off by default for the same reason).
 
 pub(super) mod checksum;
+pub(super) mod hex;
 pub(super) mod inband;
 pub(super) mod locator;
 pub(super) mod presentation;

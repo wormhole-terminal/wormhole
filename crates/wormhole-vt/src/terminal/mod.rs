@@ -40,7 +40,7 @@
 //! | | `scheme`, `inband` | the host's light or dark scheme: `CSI ? 996 n`, mode 2031; the in-band resize reports of mode 2048 |
 //! | | `state`, `presentation` | DECRQPSR (cursor information, tab stops), DECRQTSR, and DECRSPS and DECRSTS to put them back; DECRQDE; the user-preferred supplemental set |
 //! | | `checksum` | DECRQCRA, and the policy that turns it on (off by default) |
-//! | | `rqss`, `tcap` | DECRQSS; XTGETTCAP |
+//! | | `rqss`, `tcap`, `hex` | DECRQSS; XTGETTCAP; bytes as hex digits, for the reports that spell text so |
 //! | | `window`, `title` | XTWINOPS: the window's reports and operations; the title, the icon name and their stack |
 //! | | `locator` | the DEC locator: DECELR, DECSLE, DECRQLP, DECEFR and the reports the host's pointer events make |
 //! | `osc/` | (`mod`), `dispatch`, `payload` | operating system commands: collecting the string; which command it is; the payload as text |

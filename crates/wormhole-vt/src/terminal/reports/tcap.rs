@@ -4,7 +4,7 @@
 //! `DCS 0 + r ST`) for each name, the names and values hex encoded. `dcs` collects the request.
 
 use crate::terminal::Terminal;
-use crate::terminal::dispatch::dcs::Hex;
+use crate::terminal::reports::hex::Hex;
 
 impl Terminal {
     /// One reply per name asked for.

@@ -229,7 +229,7 @@ impl Terminal {
         if self.titles.modes.contains(TitleModes::QUERY_HEX) {
             self.reply(format_args!(
                 "\x1b]{letter}{}\x1b\\",
-                crate::terminal::dispatch::dcs::Hex(text.as_bytes())
+                crate::terminal::reports::hex::Hex(text.as_bytes())
             ));
         } else {
             self.reply(format_args!("\x1b]{letter}{text}\x1b\\"));
