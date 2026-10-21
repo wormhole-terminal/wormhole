@@ -196,6 +196,27 @@ fn the_event_byte_budget_is_the_hosts_to_lower_and_counts_every_kind_of_text() {
 }
 
 #[test]
+fn the_event_byte_budget_holds_exactly_its_size() {
+    let mut r = rig_with(lowered(|l| l.events_bytes = 100));
+    let note = |bytes: usize| format!("\x1b]9;{}\x07", "n".repeat(bytes));
+    r.feed(&(note(50) + &note(50)));
+    assert_eq!(r.events().len(), 2, "100 bytes of a budget of 100");
+    r.feed(&(note(50) + &note(50) + &note(1)));
+    assert_eq!(r.events().len(), 2, "one byte more is over it");
+}
+
+#[test]
+fn an_event_without_text_is_kept_when_the_budget_was_lowered_below_what_waits() {
+    let mut r = rig_with(Limits::default());
+    r.feed(&format!("\x1b]9;{}\x07", "n".repeat(40)));
+    r.term.set_limits(lowered(|l| l.events_bytes = 10));
+    r.feed("\x07");
+    let events = r.events();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[1], Event::Bell, "it has no bytes to count against the budget");
+}
+
+#[test]
 fn unread_replies_are_held_to_the_hosts_size() {
     let mut r = rig_with(lowered(|l| l.replies = 40));
     r.feed(&"\x1b[5n".repeat(100));

@@ -272,3 +272,45 @@ fn the_choice_can_change_while_the_terminal_runs() {
     r.feed("\x1b]51234;gone\x07");
     assert!(r.events().is_empty());
 }
+
+#[test]
+fn the_highest_osc_number_and_the_first_printable_apc_byte_can_be_claimed() {
+    let mut r = rig(Passthrough::new().osc(99_999, 10).apc(b' ', 10));
+    r.feed("\x1b]99999;x\x07\x1b_ hello\x1b\\");
+    assert_eq!(
+        r.events(),
+        [osc(99_999, "x", Terminator::Bel, 0), Event::Apc { payload: b" hello".to_vec(), replies_before: 0 }]
+    );
+}
+
+#[test]
+fn claiming_a_string_again_changes_its_limit() {
+    let events_of = |claims: Passthrough, input: &str| {
+        let mut r = rig(claims);
+        r.feed(input);
+        r.events()
+    };
+    let dcs = |payload: &str| Event::Dcs {
+        params: vec![0],
+        intermediates: b"!".to_vec(),
+        final_byte: b'z',
+        payload: payload.as_bytes().to_vec(),
+        replies_before: 0,
+    };
+    let apc = |payload: &str| Event::Apc { payload: payload.as_bytes().to_vec(), replies_before: 0 };
+    // Raised, and lowered: each replaces the earlier limit instead of adding a claim after it.
+    let raised =
+        Passthrough::new().dcs(b"!", b'z', 4).dcs(b"", b'y', 4).dcs(b"!", b'z', 8).apc(b'Q', 4).apc(b'Q', 8);
+    assert_eq!(events_of(raised.clone(), "\x1bP!zabcdefgh\x1b\\"), [dcs("abcdefgh")]);
+    assert_eq!(events_of(raised, "\x1b_Qabcdefg\x1b\\"), [apc("Qabcdefg")]);
+    let lowered = Passthrough::new().dcs(b"!", b'z', 8).dcs(b"!", b'z', 4).apc(b'Q', 8).apc(b'Q', 4);
+    assert_eq!(events_of(lowered.clone(), "\x1bP!zabcde\x1b\\"), []);
+    assert_eq!(events_of(lowered, "\x1b_Qabcde\x1b\\"), []);
+}
+
+#[test]
+fn a_terminal_that_passes_something_through_is_not_empty() {
+    assert!(!Passthrough::new().osc(51234, 1).is_empty());
+    assert!(!Passthrough::new().dcs(b"!", b'z', 1).is_empty());
+    assert!(!Passthrough::new().apc(b'Q', 1).is_empty());
+}

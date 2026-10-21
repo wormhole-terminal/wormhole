@@ -107,4 +107,16 @@ mod tests {
         assert_eq!(decode(b"!"), None);
         assert_eq!(decode(b""), Some(Vec::new()));
     }
+
+    #[test]
+    fn padding_inside_the_text_is_refused_wherever_it_falls_in_a_group() {
+        // `=` passes the scan for garbage, so inside the text it is what the table calls invalid:
+        // in any one place of a group, or in several, the whole text is refused.
+        for mask in 1u8..16 {
+            let group: Vec<u8> = (0..4).map(|i| if mask >> i & 1 == 1 { b'=' } else { b'A' }).collect();
+            let text = [group.as_slice(), b"AAAA"].concat();
+            assert_eq!(decode(&text), None, "{}", String::from_utf8_lossy(&text));
+        }
+        assert_eq!(decode(b"AAAAAAAA").as_deref(), Some(&[0u8; 6][..]));
+    }
 }

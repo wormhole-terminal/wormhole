@@ -135,3 +135,18 @@ impl Handler for Sink<'_> {
         self.0.cancel_apc();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::terminal::Terminal;
+
+    #[test]
+    fn a_cancelled_osc_is_closed_and_acts_on_nothing() {
+        let mut term = Terminal::new(40, 3);
+        // A title string that CAN stops after its number: it is open and kept until then.
+        term.feed(b"\x1b]0;half");
+        term.feed(b"\x18");
+        assert_eq!(term.title(), None);
+        assert!(term.osc.take().is_none(), "no string is left open to be finished");
+    }
+}

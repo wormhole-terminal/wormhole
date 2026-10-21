@@ -270,4 +270,29 @@ mod tests {
         term.feed(&blank_sixel(100_000));
         assert_eq!(term.dcs.data.capacity(), 0, "past 64 KiB it is given back");
     }
+
+    #[test]
+    fn a_cancelled_dcs_leaves_nothing_open_and_gives_its_buffer_back() {
+        let mut term = Terminal::new(40, 10);
+        let mut sixel = b"\x1bPq".to_vec();
+        sixel.extend(std::iter::repeat_n(b'$', 5000));
+        term.feed(&sixel);
+        assert_eq!(term.dcs.kind, super::Kind::Sixel);
+        assert!(term.dcs.data.capacity() >= 5000);
+        // CAN ends the string without acting on it.
+        term.feed(b"\x18");
+        assert_eq!(term.dcs.kind, super::Kind::None);
+        assert_eq!(term.dcs.data.capacity(), 0);
+    }
+
+    #[test]
+    fn a_cancelled_apc_leaves_nothing_open() {
+        let mut term = Terminal::new(40, 10);
+        for (start, open) in [(&b"\x1b_"[..], super::Kind::ApcFirst), (b"\x1b_Ga=q,i=1", super::Kind::Apc)] {
+            term.feed(start);
+            assert_eq!(term.dcs.kind, open);
+            term.feed(b"\x1a");
+            assert_eq!(term.dcs.kind, super::Kind::None, "{open:?} cancelled");
+        }
+    }
 }

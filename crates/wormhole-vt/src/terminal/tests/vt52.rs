@@ -114,6 +114,32 @@ fn an_address_past_the_screen_leaves_that_axis_alone() {
 }
 
 #[test]
+fn an_address_as_far_as_the_screen_is_wide_or_tall_is_past_it() {
+    let mut rig = vt52(10, 4);
+    rig.feed("\x1bY\x21\x21");
+    assert_eq!(rig.cursor(), (1, 1));
+    // Row 4 on a screen of rows 0 to 3 and column 10 on one of columns 0 to 9: each is out.
+    rig.feed("\x1bY\x24\x23");
+    assert_eq!(rig.cursor(), (1, 3), "the row was past the last, the column 3");
+    rig.feed("\x1bY\x23\x2a");
+    assert_eq!(rig.cursor(), (3, 3), "the row 3, the column was past the last");
+    // The last row and column themselves are in.
+    rig.feed("\x1bY\x23\x29");
+    assert_eq!(rig.cursor(), (3, 9));
+}
+
+#[test]
+fn a_character_beyond_ascii_is_a_coordinate_past_the_screen() {
+    let mut rig = vt52(10, 4);
+    // The row is out of range, so the cursor stays on its row; the column is 3.
+    rig.feed("\x1bY\u{e9}#X");
+    assert_eq!((rig.row(0), rig.cursor()), ("   X".into(), (0, 4)));
+    // And as the column it keeps the column.
+    rig.feed("\x1bY\x22\u{e9}Y");
+    assert_eq!((rig.row(2), rig.cursor()), ("    Y".into(), (2, 5)));
+}
+
+#[test]
 fn controls_and_an_escape_act_inside_a_direct_address() {
     let mut rig = vt52(10, 4);
     rig.feed("\x1bY\n\x20\x20X");
@@ -186,6 +212,17 @@ fn ansi_modes_are_suspended_and_come_back() {
     );
     rig.feed("\x1b[1;1H\x1b[2Kq");
     assert_eq!(rig.row(0), "\u{2500}", "G0 is the graphics set again");
+}
+
+#[test]
+fn modes_that_were_off_stay_off_when_vt52_mode_is_left() {
+    let mut rig = Rig::new(5, 3);
+    // Autowrap off, and insert, new line and origin mode as they start (off).
+    rig.feed("\x1b[?7l\x1b[?2l\x1b<");
+    let m = rig.term.modes();
+    assert!(!m.intersects(Modes::INSERT | Modes::NEW_LINE | Modes::ORIGIN | Modes::AUTOWRAP));
+    rig.feed("abcdefg");
+    assert_eq!(rig.row(0), "abcdg", "still no wrap");
 }
 
 #[test]

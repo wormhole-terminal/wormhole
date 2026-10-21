@@ -116,6 +116,16 @@ mod tests {
     }
 
     #[test]
+    fn adding_flags_that_are_on_already_keeps_them_on() {
+        let mut keys = KeyboardFlags::default();
+        keys.push(5);
+        keys.set(5, SetMode::Or);
+        assert_eq!(keys.current(), 5);
+        keys.set(7, SetMode::Or);
+        assert_eq!(keys.current(), 7);
+    }
+
+    #[test]
     fn the_stack_is_bounded() {
         let mut keys = KeyboardFlags::default();
         for i in 0..100u8 {

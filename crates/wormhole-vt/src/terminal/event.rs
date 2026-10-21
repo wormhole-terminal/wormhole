@@ -337,3 +337,39 @@ impl Terminal {
         self.events.push(event);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Event, Terminator};
+
+    #[test]
+    fn an_event_weighs_the_bytes_of_every_text_it_carries() {
+        let s = |text: &str| text.to_string();
+        let weigh = |event: Event| event.payload_bytes();
+        assert_eq!(weigh(Event::IconName(s("abc"))), 3);
+        assert_eq!(weigh(Event::PointerShape(s("ab"))), 2);
+        assert_eq!(weigh(Event::Notification { title: s("ab"), body: s("cde") }), 5);
+        assert_eq!(weigh(Event::KittyNotification { metadata: s("ab"), payload: s("cdef") }), 6);
+        assert_eq!(weigh(Event::ClipboardStore { selection: s("c"), text: s("defg") }), 5);
+        let payload = b"abcd".to_vec();
+        let status = Event::ProgramStatus { payload: payload.clone(), terminator: Terminator::Bel };
+        assert_eq!(weigh(status), 4);
+        let osc =
+            Event::Osc { number: 9, payload: payload.clone(), terminator: Terminator::St, replies_before: 7 };
+        assert_eq!(weigh(osc), 4);
+        assert_eq!(weigh(Event::Apc { payload: payload.clone(), replies_before: 7 }), 4);
+        assert_eq!(weigh(Event::Iterm(b"abcde".to_vec())), 5);
+        // A DCS: the intermediates, the data, and two bytes for each number of the header.
+        let dcs = Event::Dcs {
+            params: vec![1, 2, 3],
+            intermediates: b"$+".to_vec(),
+            final_byte: b'q',
+            payload,
+            replies_before: 0,
+        };
+        assert_eq!(weigh(dcs), 2 + 4 + 3 * 2);
+        // What is only a few numbers weighs nothing.
+        assert_eq!(weigh(Event::Bell), 0);
+        assert_eq!(weigh(Event::ColumnsRequested(80)), 0);
+    }
+}
