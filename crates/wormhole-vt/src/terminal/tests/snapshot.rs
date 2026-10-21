@@ -184,3 +184,28 @@ fn a_pin_follows_its_text_through_scrolling() {
     rig.term.unpin(pin);
     assert_eq!(rig.term.pin_point(pin), None);
 }
+
+#[test]
+fn synchronized_output_can_be_begun_and_ended_with_the_dcs_form() {
+    // The synchronized output specification: DCS = 1 s ST begins an update, DCS = 2 s ST ends it.
+    let mut rig = Rig::new(20, 5);
+    assert!(!rig.term.synchronized_output());
+    rig.feed("\x1bP=1s\x1b\\");
+    assert!(rig.term.synchronized_output());
+    rig.feed("\x1bP=3s\x1b\\");
+    assert!(rig.term.synchronized_output(), "a number it does not have changes nothing");
+    rig.feed("\x1bP=2s\x1b\\");
+    assert!(!rig.term.synchronized_output());
+}
+
+#[test]
+fn a_link_without_an_id_gets_a_numbered_one_of_its_own() {
+    // Nothing ties two such links together, so each is `link-` and the next number; one with an
+    // id of its own keeps it.
+    let mut rig = Rig::new(20, 3);
+    rig.feed("\x1b]8;;http://a\x07a\x1b]8;;\x07 \x1b]8;;http://b\x07b\x1b]8;id=x;http://c\x07c\x1b]8;;\x07");
+    let (mut cells, mut extras) = (Vec::new(), crate::RowExtras::default());
+    rig.term.copy_row(crate::Line(0), &mut cells, Some(&mut extras));
+    let ids: Vec<&str> = extras.links().map(|(_, link)| &*link.id).collect();
+    assert_eq!(ids, ["link-1", "link-2", "x"]);
+}

@@ -4,8 +4,10 @@
 mod archive;
 mod changes;
 mod clusters;
+mod colors;
 mod cursor_edges;
 mod events;
+mod feed;
 mod hostile;
 mod inband;
 mod keyboard;
@@ -14,7 +16,6 @@ mod line_size;
 mod modify_keys;
 mod passthrough;
 mod pointer_and_vars;
-mod rare;
 mod rectangles;
 mod replies;
 mod reply_queue;
@@ -24,6 +25,7 @@ mod selection;
 mod snapshot;
 mod stacks;
 mod tabs;
+mod title;
 mod vt52;
 mod window;
 

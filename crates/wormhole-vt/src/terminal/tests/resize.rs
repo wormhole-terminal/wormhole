@@ -1,7 +1,7 @@
 //! Resizing, DECCOLM, the history cap.
 
 use super::Rig;
-use crate::terminal::Event;
+use crate::terminal::{Event, Policy};
 use crate::types::Line;
 
 #[test]
@@ -210,4 +210,15 @@ fn a_tab_after_the_text_is_not_text_when_the_lines_rewrap() {
     rig.term.resize(2, 3);
     assert_eq!((rig.row(0), rig.row(1)), ("ab".to_string(), "c".to_string()));
     assert_eq!(rig.cursor(), (1, 1));
+}
+
+#[test]
+fn a_decolm_request_is_one_for_the_host_and_resets_to_80_when_it_is_left() {
+    // xterm ctlseqs mode 3 (DECCOLM) needs mode 40; the terminal asks the host for 132 columns.
+    let mut rig = Rig::new(100, 5);
+    rig.term.set_policy(Policy { window_ops: true, ..Policy::default() });
+    rig.feed("\x1b[?40h\x1b[?3h");
+    assert!(rig.events().contains(&Event::ColumnsRequested(132)));
+    rig.feed("\x1b[?3l");
+    assert!(rig.events().contains(&Event::ColumnsRequested(80)));
 }

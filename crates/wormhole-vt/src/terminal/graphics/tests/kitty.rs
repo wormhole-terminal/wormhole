@@ -211,3 +211,43 @@ fn replies_that_are_not_about_pictures_keep_their_order() {
     r.feed(&format!("\x1b[5n{}\x1b[5n", apc("a=t,f=24,s=1,v=1,i=1", &rgb(1, 1))));
     assert_eq!(r.replies(), "\x1b[0n\x1b_Gi=1;OK\x1b\\\x1b[0n");
 }
+
+#[test]
+fn a_single_command_with_more_payload_than_the_cap_is_refused_and_the_stream_goes_on() {
+    // kitty graphics protocol: the payload is base64; the engine keeps no more than 32 MiB decoded
+    // (a command fed whole, so the fast path of the decoder meets the cap, not the chunk logic).
+    let mut r = rig(40, 10);
+    let mut big = String::from("\x1b_Ga=t,f=32,s=100,v=100,i=3;");
+    big.push_str(&"AAAA".repeat(12 * 1024 * 1024));
+    big.push_str("\x1b\\ok");
+    r.feed(&big);
+    assert!(uploads(&mut r).is_empty());
+    assert!(r.replies().starts_with("\x1b_Gi=3;EFBIG"), "{:?}", r.replies());
+    assert_eq!(r.row(0), "ok");
+}
+
+#[test]
+fn the_host_may_refuse_a_picture_as_too_big_or_of_a_kind_it_cannot_read() {
+    // The engine passes the host's verdict on as the protocol's codes (kitty: EFBIG, ENOTSUP).
+    let mut r = rig(40, 10);
+    r.feed(&apc("a=T,f=100,i=1,q=0", &png(8, 8)));
+    r.feed(&apc("a=T,f=100,i=2,q=0", &png(8, 8)));
+    let up = uploads(&mut r);
+    r.term.image_decoded(up[0].image, Err(ImageError::TooBig));
+    r.term.image_decoded(up[1].image, Err(ImageError::Unsupported));
+    let reply = r.replies();
+    assert!(reply.contains("Gi=1;EFBIG"), "{reply:?}");
+    assert!(reply.contains("Gi=2;E"), "{reply:?}");
+    assert!(spots(&r).is_empty());
+    assert_eq!(freed(&mut r).len(), 2);
+}
+
+#[test]
+fn raw_pixels_ask_for_their_size_in_bytes_and_only_data_that_long_is_taken() {
+    // kitty: f=24 is RGB, 3 bytes a pixel: a payload shorter than s*v*3 cannot be a picture.
+    let mut r = rig(40, 10);
+    r.feed(&apc("a=t,f=24,s=4,v=4,i=1", &[0; 10]));
+    let up = uploads(&mut r);
+    assert!(up.is_empty() || (up[0].format, up[0].compression) == (ImageFormat::Rgb, Compression::None));
+    assert!(r.replies().contains("Gi=1;"), "the program is told either way");
+}

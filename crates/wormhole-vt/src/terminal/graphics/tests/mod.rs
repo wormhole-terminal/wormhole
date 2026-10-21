@@ -8,7 +8,6 @@ mod iterm;
 mod kitty;
 mod limits;
 mod place;
-mod rare;
 mod screen;
 mod sixel;
 

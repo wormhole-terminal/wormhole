@@ -71,35 +71,6 @@ fn window_reports_use_the_cell_size_the_host_gave() {
 }
 
 #[test]
-fn colors_are_the_hosts_until_a_program_changes_them() {
-    use crate::types::{COLOR_COUNT, NamedColor, Rgb};
-    let mut rig = Rig::new(10, 4);
-    let mut palette = [Rgb::default(); COLOR_COUNT];
-    palette[1] = Rgb { r: 0x11, g: 0x22, b: 0x33 };
-    palette[NamedColor::Foreground as usize] = Rgb { r: 0xaa, g: 0xbb, b: 0xcc };
-    palette[NamedColor::Cursor as usize] = Rgb { r: 1, g: 2, b: 3 };
-    rig.term.set_default_colors(&palette);
-    rig.feed("\x1b]4;1;?\x07\x1b]10;?\x1b\\\x1b]12;?\x07");
-    assert_eq!(
-        rig.replies(),
-        "\x1b]4;1;rgb:1111/2222/3333\x07\x1b]10;rgb:aaaa/bbbb/cccc\x1b\\\x1b]12;rgb:0101/0202/0303\x07"
-    );
-    // Set two at once with 10, ask for the second; set a palette entry with a short form.
-    rig.feed("\x1b]10;#ff0000;rgb:0/f/0\x07\x1b]11;?\x07\x1b]4;1;#00f;2;?\x07");
-    assert_eq!(rig.replies(), "\x1b]11;rgb:0000/ffff/0000\x07\x1b]4;2;rgb:0000/0000/0000\x07");
-    assert_eq!(rig.term.colors()[NamedColor::Foreground], Some(Rgb { r: 255, g: 0, b: 0 }));
-    assert_eq!(rig.term.colors()[1], Some(Rgb { r: 0, g: 0, b: 0xf0 }), "#00f is the top bits of the byte");
-    // Resets.
-    rig.feed("\x1b]104;1\x07\x1b]110\x07\x1b]111\x07");
-    assert_eq!(rig.term.colors()[1], None);
-    assert_eq!(rig.term.colors()[NamedColor::Foreground], None);
-    assert_eq!(rig.term.colors()[NamedColor::Background], None);
-    rig.feed("\x1b]4;5;rgb:1/2/3;6;rgb:4/5/6\x07\x1b]104\x07");
-    assert_eq!(rig.term.colors()[5], None);
-    assert_eq!(rig.term.colors()[6], None);
-}
-
-#[test]
 fn every_mode_dec_knows_answers_something() {
     let mut rig = Rig::new(10, 4);
     let ask = |rig: &mut Rig, n: u16| {
@@ -225,4 +196,104 @@ fn a_state_report_with_one_bad_part_changes_nothing() {
     // The same report, whole, is put back.
     rig.feed("\x1bP1$p2;3;1;C;@;@;0;2;@;BBBB!5!2;4;1;10!4!69\x1b\\\x1b[1$u");
     assert_eq!(rig.replies(), "\x1bP1$s2;3;1;C;@;@;0;2;@;BBBB!5!2;4;1;10!4!69\x1b\\");
+}
+
+#[test]
+fn xtgettcap_answers_every_capability_it_lists_and_refuses_the_rest() {
+    // xterm ctlseqs XTGETTCAP: DCS + q Pt ST asks for hex-encoded names; DCS 1 + r Pt = Pt ST answers
+    // (the name and the value, hex), DCS 0 + r ST refuses.
+    fn hex(text: &str) -> String {
+        text.bytes().map(|b| format!("{b:02x}")).collect()
+    }
+    // The terminal's values come back in upper case, a name as it was sent.
+    fn upper(text: &str) -> String {
+        hex(text).to_uppercase()
+    }
+    let mut rig = Rig::new(20, 5);
+    for (name, value) in [
+        ("setrgbf", "\x1b[38;2;%p1%d;%p2%d;%p3%dm"),
+        ("setrgbb", "\x1b[48;2;%p1%d;%p2%d;%p3%dm"),
+        ("Smulx", "\x1b[4:%p1%dm"),
+        ("Ss", "\x1b[%p1%d q"),
+        ("Se", "\x1b[2 q"),
+        ("Ms", "\x1b]52;%p1%s;%p2%s\x07"),
+    ] {
+        rig.feed(&format!("\x1bP+q{}\x1b\\", hex(name)));
+        assert_eq!(rig.replies(), format!("\x1bP1+r{}={}\x1b\\", hex(name), upper(value)), "{name}");
+    }
+    rig.feed(&format!("\x1bP+q{}\x1b\\", hex("Setulc")));
+    assert!(rig.replies().starts_with(&format!("\x1bP1+r{}=", hex("Setulc"))));
+    rig.feed(&format!("\x1bP+q{};{}\x1b\\", hex("nosuchcap"), hex("Tc")));
+    assert_eq!(rig.replies(), format!("\x1bP0+r\x1b\\\x1bP1+r{}\x1b\\", hex("Tc")), "a boolean has no value");
+    rig.feed("\x1bP+qzz\x1b\\\x1bP+q4\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP0+r\x1b\\\x1bP0+r\x1b\\", "names that are not hex");
+}
+
+#[test]
+fn the_save_cursor_mode_is_an_action_and_reads_as_reset() {
+    // xterm ctlseqs DECRQM / mode 1048: save and restore the cursor; asking says reset (2).
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b[?1048$p");
+    assert_eq!(rig.replies(), "\x1b[?1048;2$y");
+}
+
+#[test]
+fn the_keyboard_status_report_depends_on_the_conformance_level() {
+    // VT510 DECDSR 26 (keyboard): the VT200 family answers language only, VT300 adds the status,
+    // VT400 and up add the type (xterm's DECSCL levels: 61 VT100 to 65 VT500).
+    for (level, want) in [
+        (62, "\x1b[?27;1n"),
+        (63, "\x1b[?27;1;0n"),
+        (64, "\x1b[?27;1;0;0n"),
+        (65, "\x1b[?27;1;0;0n"),
+        (61, "\x1b[?27;1n"),
+    ] {
+        let mut rig = Rig::new(20, 5);
+        rig.feed(&format!("\x1b[{level};1\"p\x1b[?26n"));
+        assert_eq!(rig.replies(), want, "level {level}");
+    }
+}
+
+#[test]
+fn secondary_device_attributes_name_the_family_of_the_level() {
+    // xterm ctlseqs: CSI > c answers CSI > Pp ; Pv ; Pc c with Pp 0 VT100, 1 VT220, 24 VT320, 41 VT420, 64 VT520.
+    for (level, family) in [(61, "0"), (62, "1"), (63, "24"), (64, "41"), (65, "64")] {
+        let mut rig = Rig::new(20, 5);
+        rig.feed(&format!("\x1b[{level};1\"p\x1b[>c"));
+        let reply = rig.replies();
+        assert!(reply.starts_with(&format!("\x1b[>{family};")), "level {level}: {reply:?}");
+    }
+}
+
+#[test]
+fn secondary_device_attributes_carry_an_xterm_patch_level() {
+    // Programs compare DA2's version with xterm's patch numbers (esctest wants 314 to 999), so a
+    // 1.x release must not send its own version there.
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b[>c");
+    assert_eq!(rig.replies(), "\x1b[>64;777;0c");
+}
+
+#[test]
+fn a_tab_stop_report_read_back_sets_those_stops_and_a_bad_one_changes_nothing() {
+    // VT510 DECRSPS (DCS 2 $ t D...D ST): the tab stop report DECTABSR gives, columns joined by `/`;
+    // a report with an invalid value is ignored (the manual: "the terminal ignores the rest").
+    let mut rig = Rig::new(40, 3);
+    let stops = |rig: &mut Rig| {
+        let mut found = Vec::new();
+        for _ in 0..4 {
+            rig.feed("\t");
+            found.push(rig.cursor().1 + 1);
+        }
+        rig.feed("\r");
+        found
+    };
+    rig.feed("\x1b[3g\x1bP2$t5/12/30\x1b\\");
+    assert_eq!(stops(&mut rig), [5, 12, 30, 40]);
+    for bad in ["5/x", "0/5", "5/41", "5//7", "-3"] {
+        rig.feed(&format!("\x1bP2$t{bad}\x1b\\"));
+        assert_eq!(stops(&mut rig), [5, 12, 30, 40], "{bad}");
+    }
+    rig.feed("\x1bP2$t\x1b\\");
+    assert_eq!(stops(&mut rig), [40, 40, 40, 40], "an empty report clears them all");
 }

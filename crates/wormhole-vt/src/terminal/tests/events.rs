@@ -6,32 +6,6 @@ use crate::terminal::{Event, Progress, ProgressState, PromptKind, ShellMark, Ter
 use crate::types::Line;
 
 #[test]
-fn titles_are_set_reset_and_stacked() {
-    let mut rig = Rig::new(20, 5);
-    rig.feed("\x1b]0;one\x07");
-    assert_eq!(rig.term.title(), Some("one"));
-    assert_eq!(rig.events(), [Event::Title]);
-    rig.feed("\x1b[22;0t\x1b]2;two\x1b\\\x1b[23;0t");
-    assert_eq!(rig.term.title(), Some("one"));
-    assert_eq!(rig.events(), [Event::Title]);
-    rig.feed("\x1b]2;\x07");
-    assert_eq!(rig.term.title(), None, "an empty title is no title");
-    rig.feed("\x1b]1;icon\x07");
-    assert_eq!(rig.events(), [Event::Title, Event::IconName("icon".into())]);
-    // Popping with nothing on the stack does nothing.
-    rig.feed("\x1b[23;0t");
-    assert!(rig.events().is_empty());
-}
-
-#[test]
-fn a_long_title_is_cut_at_a_character() {
-    let mut rig = Rig::new(20, 5);
-    rig.feed(&format!("\x1b]0;{}\x07", "é".repeat(3000)));
-    let title = rig.term.title().map(str::len).unwrap_or(0);
-    assert!(title <= 4096 && title > 4000, "{title} bytes");
-}
-
-#[test]
 fn the_working_folder_is_kept_and_announced() {
     let mut rig = Rig::new(20, 5);
     assert_eq!(rig.term.cwd(), None);
@@ -214,38 +188,37 @@ fn a_full_reset_is_an_event_and_forgets_the_stack() {
 }
 
 #[test]
-fn controls_are_dropped_from_titles_icon_names_and_folders_when_they_are_set() {
+fn progress_has_a_paused_state_and_clamps_what_it_cannot_read() {
+    // ConEmu's OSC 9;4: 0 remove, 1 normal, 2 error, 3 indeterminate, 4 paused (warning).
     let mut rig = Rig::new(20, 5);
-    // C0 (the bell and the escape end a string, so the others), DEL, and C1 as the two bytes a
-    // UTF-8 character takes.
-    rig.feed("\x1b]2;a\x01b\x08c\x7fd\u{85}e\u{9b}f\u{80}g\u{9f}h\x0ci\x07");
-    assert_eq!(rig.term.title(), Some("abcdefghi"));
-    rig.events().clear();
-    rig.feed("\x1b]1;x\u{9d}y\x03z\x07");
-    assert_eq!(rig.events(), [Event::IconName("xyz".into())]);
-    assert_eq!(rig.term.icon_name(), Some("xyz"));
-    rig.feed("\x1b]7;file://h/a\u{85}b\x01/c\x7f\x07");
-    assert_eq!(rig.term.cwd(), Some("file://h/ab/c"));
-    assert_eq!(rig.term.cwd_reports(), ["file://h/ab/c"]);
-    // What is not a control stays: format characters, marks, other scripts, a no-break space.
-    rig.feed("\x1b]2;caf\u{e9} \u{a0}\u{200d}\u{65e5}\u{672c}\x07");
-    assert_eq!(rig.term.title(), Some("caf\u{e9} \u{a0}\u{200d}\u{65e5}\u{672c}"));
+    rig.feed(
+        "\x1b]9;4;4;30\x07\x1b]9;4;1;abc\x07\x1b]9;4;1; 70 \x07\x1b]9;4;2;4000000000\x07\x1b]9;4;7;50\x07",
+    );
+    assert_eq!(
+        rig.events(),
+        [
+            Event::Progress(Some(Progress { state: ProgressState::Paused, percent: 30 })),
+            Event::Progress(Some(Progress { state: ProgressState::Normal, percent: 0 })),
+            Event::Progress(Some(Progress { state: ProgressState::Normal, percent: 70 })),
+            Event::Progress(Some(Progress { state: ProgressState::Error, percent: 100 })),
+        ],
+        "a state that does not exist is ignored"
+    );
 }
 
 #[test]
-fn a_title_of_nothing_but_controls_is_no_title() {
+fn the_other_prompt_kinds_do_not_start_a_block() {
+    // OSC 133 (the FinalTerm / semantic prompts spec): A with k=i (default), s, r or c.
     let mut rig = Rig::new(20, 5);
-    rig.feed("\x1b]2;kept\x07\x1b]2;\x01\u{85}\x7f\x07");
-    assert_eq!(rig.term.title(), None);
-    // The stack holds clean text too: whatever a push saves is what a pop brings back.
-    rig.feed("\x1b]2;a\x01b\x07\x1b[22;2t\x1b]2;other\x07\x1b[23;2t");
-    assert_eq!(rig.term.title(), Some("ab"));
-}
-
-#[test]
-fn hostile_titles_are_cleaned_in_hexadecimal_mode_too() {
-    let mut rig = Rig::new(20, 5);
-    // Title mode 0 reads hexadecimal: 61 is "a", 01 and 1b5b4a (an escape and "[J") are controls.
-    rig.feed("\x1b[>0t\x1b]2;61011b5b4a62\x07");
-    assert_eq!(rig.term.title(), Some("a[Jb"));
+    rig.feed("\x1b]133;A\x07$ \x1b]133;A;k=s\x07> \x1b]133;A;k=r\x07<\x1b]133;A;k=c\x07+\x1b]133;A;k=x\x07");
+    assert_eq!(
+        rig.events(),
+        [
+            Event::Mark(ShellMark::PromptStart(PromptKind::Initial)),
+            Event::Mark(ShellMark::PromptStart(PromptKind::Secondary)),
+            Event::Mark(ShellMark::PromptStart(PromptKind::Right)),
+            Event::Mark(ShellMark::PromptStart(PromptKind::Continuation)),
+            Event::Mark(ShellMark::PromptStart(PromptKind::Initial)),
+        ]
+    );
 }

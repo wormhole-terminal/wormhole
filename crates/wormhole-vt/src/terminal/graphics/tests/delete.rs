@@ -1,7 +1,7 @@
 //! Deleting: kitty, "Deleting images". Lower case deletes placements, upper case also frees the
 //! pictures' data.
 
-use super::{apc, apc_bare, freed, placed, rgb, rig, spots, uploads};
+use super::{apc, apc_bare, freed, placed, png, rgb, rig, spots, uploads};
 use crate::terminal::tests::Rig;
 
 /// Three pictures (ids 1, 2, 3; number 7 on picture 2) and four placements, all with `C=1`:
@@ -206,4 +206,27 @@ fn an_answer_names_the_ids_of_the_command() {
     let up = uploads(&mut r);
     assert!(up.is_empty());
     let _ = placed(&r);
+}
+
+#[test]
+fn a_delete_the_protocol_does_not_have_and_one_without_its_key_change_nothing() {
+    // kitty graphics protocol, "Deleting images": d= takes a, i, n, c, f, p, q, r, x, y, z (upper
+    // case frees the data); i and n need an image id or number.
+    let mut r = rig(40, 10);
+    r.feed(&apc("a=T,f=100,i=7", &png(16, 16)));
+    let up = uploads(&mut r);
+    r.term.image_decoded(up[0].image, Ok(()));
+    r.replies();
+    for control in ["a=d,d=w,i=7", "a=d,d=i", "a=d,d=n", "a=d,d=I,i=0", "a=d,d=n,I=99"] {
+        r.feed(&apc_bare(control));
+        let reply = r.replies();
+        assert!(!reply.contains("ENOENT"), "{control}: {reply:?}");
+        assert_eq!(spots(&r).len(), 1, "{control} left the picture");
+        assert!(freed(&mut r).is_empty(), "{control}");
+    }
+    r.feed(&apc_bare("a=d,d=w,i=7"));
+    assert!(r.replies().contains("Gi=7;EINVAL"), "an error names the picture it was about");
+    r.feed(&apc_bare("a=d,d=I,i=7"));
+    assert!(spots(&r).is_empty());
+    assert_eq!(freed(&mut r), [up[0].image]);
 }

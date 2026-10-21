@@ -153,3 +153,33 @@ fn a_sixel_cut_into_pieces_is_the_same() {
     );
     assert_eq!(spots(&a), spots(&b));
 }
+
+#[test]
+fn a_sixel_color_in_hls_is_converted_with_hue_0_blue() {
+    // DEC VT330/VT340 Programmer Reference, "Color introducer": #Pc;1;Ph;Pl;Ps is hue, lightness,
+    // saturation; the hue wheel has blue at 0, red at 120 and green at 240 degrees.
+    let mut r = rig(40, 10);
+    r.feed("\x1bPq#1;1;0;50;100#1~#2;1;120;50;100#2~#3;1;240;50;100#3~#4;1;0;100;0#4~\x1b\\");
+    let up = uploads(&mut r);
+    assert_eq!(up.len(), 1);
+    let pixel = |x: usize| &up[0].data[x * 4..x * 4 + 4];
+    assert_eq!(pixel(0), [0, 0, 255, 255]);
+    assert_eq!(pixel(1), [255, 0, 0, 255]);
+    assert_eq!(pixel(2), [0, 255, 0, 255]);
+    assert_eq!(pixel(3), [255, 255, 255, 255], "full lightness is white whatever the hue");
+}
+
+#[test]
+fn a_sixel_that_paints_the_same_wide_band_again_and_again_runs_out_of_work() {
+    // The data can overpaint a band forever (`$` returns to the left edge); the work is bounded
+    // by what a picture could need, so the picture is dropped and the stream goes on.
+    let mut r = rig(40, 10);
+    let mut data = String::from("\x1bPq#1;2;100;0;0");
+    for _ in 0..2000 {
+        data.push_str("#1!9999~$");
+    }
+    data.push_str("\x1b\\ok");
+    r.feed(&data);
+    assert!(uploads(&mut r).is_empty());
+    assert_eq!(r.row(0), "ok");
+}

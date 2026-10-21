@@ -464,3 +464,37 @@ fn points_from_anywhere_never_panic() {
         }
     }
 }
+
+#[test]
+fn every_kind_of_bracket_finds_its_partner_across_nesting_and_rows() {
+    use crate::types::{Column, Line, Point};
+    let mut rig = Rig::new(10, 3);
+    rig.feed("a(b[c{d<e>f}g]h)i\r\n<x>");
+    let at = |line: i32, column: usize| Point::new(Line(line), Column(column));
+    let grid = rig.term.grid();
+    // Row 0 is `a(b[c{d<e>`, row 1 is `f}g]h)i`, wrapped at ten columns.
+    assert_eq!(grid.bracket_match(at(0, 1)), Some(at(1, 5)), "( to its ) over every other kind");
+    assert_eq!(grid.bracket_match(at(1, 5)), Some(at(0, 1)));
+    assert_eq!(grid.bracket_match(at(0, 3)), Some(at(1, 3)), "[ to ] on the next row");
+    assert_eq!(grid.bracket_match(at(1, 3)), Some(at(0, 3)));
+    assert_eq!(grid.bracket_match(at(0, 5)), Some(at(1, 1)), "curly braces");
+    assert_eq!(grid.bracket_match(at(1, 1)), Some(at(0, 5)));
+    assert_eq!(grid.bracket_match(at(0, 7)), Some(at(0, 9)), "< to >");
+    assert_eq!(grid.bracket_match(at(0, 9)), Some(at(0, 7)));
+    assert_eq!(grid.bracket_match(at(0, 0)), None, "not a bracket");
+    assert_eq!(grid.bracket_match(at(2, 0)), Some(at(2, 2)));
+}
+
+#[test]
+fn a_bracket_with_no_partner_finds_none() {
+    use crate::types::{Column, Line, Point};
+    let mut rig = Rig::new(10, 3);
+    rig.feed("(((  )]>");
+    let at = |column: usize| Point::new(Line(0), Column(column));
+    let grid = rig.term.grid();
+    assert_eq!(grid.bracket_match(at(0)), None, "the outer ( has no ) left");
+    assert_eq!(grid.bracket_match(at(1)), None);
+    assert_eq!(grid.bracket_match(at(2)), Some(at(5)));
+    assert_eq!(grid.bracket_match(at(6)), None, "] has no [");
+    assert_eq!(grid.bracket_match(at(7)), None, "> has no <");
+}
