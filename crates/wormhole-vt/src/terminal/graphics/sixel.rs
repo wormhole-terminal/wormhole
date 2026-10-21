@@ -384,6 +384,21 @@ mod tests {
         assert!(matches!(square(&heavy), Err(SixelError::TooBig | SixelError::TooMuchWork)));
     }
 
+    #[test]
+    fn a_picture_as_wide_as_allowed_is_drawn() {
+        let image = square(b"!10000~").expect("decodes");
+        assert_eq!((image.width, image.height), (10_000, 6));
+    }
+
+    #[test]
+    fn hls_colors_follow_lightness_and_saturation_and_the_hue_goes_round() {
+        assert_eq!(hls_to_rgb(120, 50, 50), [191, 64, 64], "red, half saturated");
+        assert_eq!(hls_to_rgb(120, 25, 100), [128, 0, 0], "a dark red");
+        assert_eq!(hls_to_rgb(0, 50, 0), [128, 128, 128], "no saturation is gray");
+        assert_eq!(hls_to_rgb(480, 50, 50), hls_to_rgb(120, 50, 50), "a turn and a third");
+        assert_eq!(hls_to_rgb(u32::MAX, 50, 50), hls_to_rgb(u32::MAX % 360, 50, 50), "the biggest hue");
+    }
+
     /// Found by the fuzzer (`graphics`, `term`, `split`): an aspect ratio of two huge numbers
     /// overflowed the rounding of pan / pad.
     #[test]

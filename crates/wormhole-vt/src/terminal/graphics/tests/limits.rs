@@ -276,6 +276,33 @@ fn a_transmission_over_the_hosts_payload_cap_is_refused() {
 }
 
 #[test]
+fn chunks_that_add_up_to_less_than_the_payload_cap_are_accepted() {
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(|l| l.image_payload = 200));
+    // Three chunks of 30 bytes: 90 in all, under the cap (the chunks are not multiplied).
+    r.feed(&apc("a=t,f=24,s=5,v=6,i=3,m=1", &rgb(5, 2)));
+    r.feed(&apc("m=1", &rgb(5, 2)));
+    r.feed(&apc("m=0", &rgb(5, 2)));
+    assert!(r.replies().contains("Gi=3;OK"));
+    assert_eq!(uploads(&mut r).len(), 1);
+}
+
+#[test]
+fn an_inline_file_that_takes_exactly_the_encoding_of_the_payload_cap_is_shown() {
+    let file =
+        |bytes: &[u8]| format!("\x1b]1337;File=inline=1:{}\x07", crate::terminal::base64::encode(bytes));
+    let mut r = rig(40, 6);
+    // A cap of 30 bytes allows 44 characters of base64 (ten groups of four, and one more group for a
+    // part): the 33 bytes of a PNG header are 44 characters, so they just fit; a cap of 29 allows 40.
+    r.term.set_limits(lowered(|l| l.image_payload = 30));
+    r.feed(&file(&png(10, 10)));
+    assert_eq!(uploads(&mut r).len(), 1);
+    r.term.set_limits(lowered(|l| l.image_payload = 29));
+    r.feed(&file(&png(10, 10)));
+    assert!(uploads(&mut r).is_empty(), "44 characters against 40");
+}
+
+#[test]
 fn an_inline_file_over_the_hosts_caps_is_ignored() {
     let file =
         |bytes: &[u8]| format!("\x1b]1337;File=inline=1:{}\x07", crate::terminal::base64::encode(bytes));

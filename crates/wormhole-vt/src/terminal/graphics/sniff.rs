@@ -171,6 +171,11 @@ mod tests {
         let mut ext = vec![0; 4];
         ext.extend_from_slice(&[99, 0, 0, 49, 0, 0]);
         assert_eq!(dimensions(&riff(b"VP8X", &ext)), Some((100, 50)));
+        // The sizes have three bytes, least significant first: all of them count.
+        let mut ext = vec![0; 4];
+        ext.extend_from_slice(&[0x01, 0x02, 0x03, 0x06, 0x05, 0x04]);
+        let (width, height) = (1 + (2 << 8) + (3 << 16) + 1, 6 + (5 << 8) + (4 << 16) + 1);
+        assert_eq!(dimensions(&riff(b"VP8X", &ext)), Some((width, height)));
     }
 
     #[test]

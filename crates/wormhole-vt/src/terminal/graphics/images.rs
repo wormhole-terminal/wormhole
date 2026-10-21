@@ -162,3 +162,48 @@ impl ImageTable {
         std::mem::take(&mut self.list)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Image, ImageTable};
+    use crate::types::ImageHandle;
+
+    /// A picture of 2 by 2 pixels, 16 bytes decoded.
+    fn image(handle: u64, id: u32, number: u32) -> Image {
+        Image { handle: ImageHandle(handle), id, number, width: 2, height: 2, used: 0, virtuals: Vec::new() }
+    }
+
+    #[test]
+    fn a_number_finds_the_newest_picture_sent_with_it() {
+        let mut table = ImageTable::default();
+        for (handle, number) in [(1, 5), (2, 0), (3, 7), (4, 5)] {
+            table.insert(image(handle, 0, number));
+        }
+        assert_eq!(table.by_number(5), Some(3), "the later of two");
+        assert_eq!(table.by_number(7), Some(2));
+        assert_eq!(table.by_number(9), None, "no picture has it");
+        assert_eq!(table.by_number(0), None, "0 is no number");
+    }
+
+    #[test]
+    fn a_picture_sent_by_number_gets_the_smallest_id_nobody_has() {
+        let mut table = ImageTable::default();
+        assert_eq!(table.free_id(), 1);
+        for (handle, id) in [(1, 1), (2, 2), (3, 4), (4, 0)] {
+            table.insert(image(handle, id, 0));
+        }
+        assert_eq!(table.free_id(), 3, "the gap below 4");
+        table.insert(image(5, 3, 0));
+        assert_eq!(table.free_id(), 5);
+    }
+
+    #[test]
+    fn a_picture_that_fills_the_budget_exactly_fits() {
+        let mut table = ImageTable::default();
+        table.insert(image(1, 1, 0));
+        assert!(!table.is_full(16, 10, 32), "16 and 16 bytes are the 32 of the budget");
+        assert!(table.is_full(17, 10, 32), "a byte over");
+        assert!(table.is_full(1, 1, 1024), "the count is full");
+        assert!(!table.is_full(1, 2, 1024));
+    }
+}

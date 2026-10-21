@@ -249,3 +249,25 @@ impl Terminal {
         self.dcs.cancel();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::terminal::Terminal;
+
+    /// A Sixel of nothing but carriage returns: `n` bytes of data that paint no pixel.
+    fn blank_sixel(n: usize) -> Vec<u8> {
+        let mut bytes = b"\x1bPq".to_vec();
+        bytes.extend(std::iter::repeat_n(b'$', n));
+        bytes.extend_from_slice(b"\x1b\\");
+        bytes
+    }
+
+    #[test]
+    fn the_buffer_of_a_picture_is_kept_for_the_next_unless_it_grew_big() {
+        let mut term = Terminal::new(40, 10);
+        term.feed(&blank_sixel(20_000));
+        assert!(term.dcs.data.capacity() >= 20_000, "kept: the next picture needs no new buffer");
+        term.feed(&blank_sixel(100_000));
+        assert_eq!(term.dcs.data.capacity(), 0, "past 64 KiB it is given back");
+    }
+}

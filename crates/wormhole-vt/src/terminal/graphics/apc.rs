@@ -235,6 +235,26 @@ mod tests {
     }
 
     #[test]
+    fn the_payload_cap_is_exact_for_groups_that_arrive_a_byte_at_a_time() {
+        let bytewise = |max: usize, text: &[u8]| {
+            let mut reader = ApcReader::default();
+            reader.begin(max);
+            reader.put(b";");
+            for byte in text {
+                reader.put(&[*byte]);
+            }
+            reader.finish()
+        };
+        // Two groups of four characters are six bytes; the cap allows the last of them exactly.
+        let at_the_cap = bytewise(6, b"AAECAwQF");
+        assert!(!at_the_cap.overflow);
+        assert_eq!(at_the_cap.payload, [0, 1, 2, 3, 4, 5]);
+        assert!(bytewise(5, b"AAECAwQF").overflow, "a byte over");
+        assert!(!bytewise(3, b"AAEC").overflow, "one group, three bytes, room for three");
+        assert!(bytewise(2, b"AAEC").overflow);
+    }
+
+    #[test]
     fn control_data_without_end_is_an_error_not_a_panic() {
         let long = vec![b'i'; 10_000];
         let parsed = read(&[&long, b";AAAA"]);
