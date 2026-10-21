@@ -62,7 +62,9 @@ mod graphemes;
 mod history;
 mod images;
 mod line_size;
+mod link_table;
 mod links;
+mod offset_map;
 mod page;
 mod pages;
 mod pen;
@@ -76,7 +78,6 @@ mod row;
 mod rowview;
 mod scroll;
 mod search;
-mod side_tables;
 mod style;
 mod style_table;
 #[cfg(test)]

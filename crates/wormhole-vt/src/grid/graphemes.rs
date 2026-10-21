@@ -9,7 +9,7 @@
 //! scrolling past them allocate nothing once the page has held as many at a time as it will, and a
 //! page that is recycled keeps its arena for the next one.
 
-use super::side_tables::ByOffset;
+use super::offset_map::ByOffset;
 
 /// The most characters a cell keeps after its first. A cluster of a base, a joiner sequence and
 /// a few modifiers is under ten; a program that stacks thousands of combining marks on one cell

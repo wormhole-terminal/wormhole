@@ -1,37 +1,13 @@
-//! The page's link table, and the hash map shape it shares with the marks table (`graphemes`):
-//! what a few cells have beyond their eight bytes.
+//! The page's link table: the hyperlinks its cells are under, interned, and the runs of cells under
+//! each.
 //!
-//! Both are keyed by the cell's offset in the page's cell buffer (`slot * columns + column`), which
-//! is stable while rows are moved by relinking, and both are rare enough that a hash map is the
-//! right shape: a page of plain text has none, a page of emoji has many marks and no links.
+//! The runs are keyed by the cell's offset in the page's cell buffer (`slot * columns + column`),
+//! which is stable while rows are moved by relinking. Links are rare enough that a list beside the
+//! cells is the right shape: a page of plain text has none.
 
 use std::collections::HashMap;
-use std::hash::{BuildHasherDefault, Hasher};
 
 use crate::types::Hyperlink;
-
-/// Hashes the `u32` cell offsets that key the tables: one multiply, where SipHash would cost more
-/// than the lookup is worth for a key nobody chooses adversarially.
-#[derive(Default)]
-pub(super) struct OffsetHasher(u64);
-
-impl Hasher for OffsetHasher {
-    fn finish(&self) -> u64 {
-        self.0 ^ (self.0 >> 32)
-    }
-
-    fn write(&mut self, bytes: &[u8]) {
-        for &byte in bytes {
-            self.0 = (self.0 ^ byte as u64).wrapping_mul(0x0100_0000_01B3);
-        }
-    }
-
-    fn write_u32(&mut self, n: u32) {
-        self.0 = (n as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-    }
-}
-
-pub(super) type ByOffset<V> = HashMap<u32, V, BuildHasherDefault<OffsetHasher>>;
 
 #[derive(Clone, Debug)]
 struct LinkEntry {

@@ -31,9 +31,9 @@ use crate::types::{Hyperlink, LineSize};
 
 use super::cell::{Cell, CellFlags, Spare, StyleId, StyleRun, run_of};
 use super::graphemes::Graphemes;
+use super::link_table::Links;
 use super::pen::Pen;
 use super::row::{DIRTY, Meta, Row, RowMark, SIZE_MASK, SIZE_SHIFT, WRAPPED};
-use super::side_tables::Links;
 use super::style::Style;
 use super::style_table::StyleTable;
 
@@ -439,7 +439,7 @@ impl Page {
     }
 
     /// Put the `n` cells from `a` under `link`; false when the page has no room for another link's
-    /// text (`side_tables::LINK_TEXT_MAX`) and they stay without one.
+    /// text (`link_table::LINK_TEXT_MAX`) and they stay without one.
     pub(super) fn attach_link(&mut self, a: usize, n: usize, link: &Hyperlink) -> bool {
         if !self.links.has_room_for(link) {
             return false;
