@@ -180,5 +180,10 @@ mod tests {
         let mut column = Column(2);
         column += 1;
         assert_eq!((column - 1, column + 4), (Column(2), Column(7)));
+        column -= 2;
+        assert_eq!(column, Column(1));
+        let mut column = Column(9);
+        column -= 4;
+        assert_eq!(column, Column(5));
     }
 }

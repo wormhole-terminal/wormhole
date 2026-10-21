@@ -209,6 +209,34 @@ mod tests {
     }
 
     #[test]
+    fn an_id_is_not_equal_to_other_text() {
+        let short = LinkId::new("l7");
+        let long = LinkId::new(&"x".repeat(40));
+        assert_ne!(short, *"l8");
+        assert_ne!(short, *"l");
+        assert_ne!(long, *"x");
+        assert_eq!(short, "l7");
+        assert_ne!(short, "l8");
+        assert_ne!(short, "");
+        assert_eq!(long, "x".repeat(40).as_str());
+        assert_ne!(long, "x".repeat(39).as_str());
+    }
+
+    #[test]
+    fn an_id_hashes_as_the_text_it_is() {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        fn hash_of(value: &impl Hash) -> u64 {
+            let mut hasher = DefaultHasher::new();
+            value.hash(&mut hasher);
+            hasher.finish()
+        }
+        let long = "x".repeat(40);
+        assert_eq!(hash_of(&LinkId::new("l7")), hash_of(&"l7"));
+        assert_eq!(hash_of(&LinkId::new(&long)), hash_of(&long.as_str()));
+        assert_ne!(hash_of(&LinkId::new("l7")), hash_of(&LinkId::new("l8")));
+    }
+
+    #[test]
     fn the_longest_inline_id_fits_and_the_next_is_shared() {
         for len in [0, 1, 21, 22, 23, 60] {
             let text = "a".repeat(len);
