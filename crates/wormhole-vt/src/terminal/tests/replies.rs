@@ -95,6 +95,36 @@ fn cursor_style_is_what_the_program_chose() {
 }
 
 #[test]
+fn decrqss_gives_back_the_decscusr_number_of_every_cursor_style() {
+    let mut rig = Rig::new(20, 5);
+    for ps in [1, 2, 3, 4, 5, 6, 0] {
+        rig.feed(&format!("\x1b[{ps} q\x1bP$q q\x1b\\"));
+        assert_eq!(rig.replies(), format!("\x1bP1$r{ps} q\x1b\\"), "DECSCUSR {ps}");
+    }
+    // The blink alone, with no shape chosen, is the host's shape: none to give back.
+    rig.feed("\x1b[?12h\x1bP$q q\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP1$r0 q\x1b\\");
+}
+
+#[test]
+fn decrqss_writes_the_bright_colors_by_their_short_codes_from_the_first_of_them() {
+    let mut rig = Rig::new(20, 5);
+    // 90 and 100 are the bright black, which is the 8 that the plain colors (30 to 37) stop below.
+    rig.feed("\x1b[90;100m\x1bP$qm\x1b\\\x1b[97;107m\x1bP$qm\x1b\\\x1b[37;47m\x1bP$qm\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP1$r0;90;100m\x1b\\\x1bP1$r0;97;107m\x1b\\\x1bP1$r0;37;47m\x1b\\");
+}
+
+#[test]
+fn a_cursor_report_has_the_rendition_of_the_pen_a_bit_for_each_of_four_attributes() {
+    let mut rig = Rig::new(20, 5);
+    // Bold, underline, blink and inverse are the bits 0 to 3 of the character after `@`.
+    for (sgr, rendition) in [("", '@'), ("1", 'A'), ("4", 'B'), ("5", 'D'), ("7", 'H'), ("1;4;5;7", 'O')] {
+        rig.feed(&format!("\x1b[0;{sgr}m\x1b[1$w"));
+        assert_eq!(rig.replies(), format!("\x1bP1$u1;1;1;{rendition};@;@;0;2;@;BBBB\x1b\\"), "SGR {sgr:?}");
+    }
+}
+
+#[test]
 fn window_reports_use_the_cell_size_the_host_gave() {
     let mut rig = Rig::new(10, 4);
     rig.term.set_cell_size(9, 18);
@@ -287,6 +317,13 @@ fn xtgettcap_answers_every_capability_it_lists_and_refuses_the_rest() {
         ("Ss", "\x1b[%p1%d q"),
         ("Se", "\x1b[2 q"),
         ("Ms", "\x1b]52;%p1%s;%p2%s\x07"),
+        ("BE", "\x1b[?2004h"),
+        ("BD", "\x1b[?2004l"),
+        ("PS", "\x1b[200~"),
+        ("PE", "\x1b[201~"),
+        ("fe", "\x1b[?1004h"),
+        ("fd", "\x1b[?1004l"),
+        ("Sync", "\x1bP=%p1%ds\x1b\\"),
     ] {
         rig.feed(&format!("\x1bP+q{}\x1b\\", hex(name)));
         assert_eq!(rig.replies(), format!("\x1bP1+r{}={}\x1b\\", hex(name), upper(value)), "{name}");

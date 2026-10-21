@@ -344,4 +344,28 @@ exclude_re = [
     # `min` never cuts. And the work, a multiple of six, never is the budget, a power of two.
     "sixel\\.rs:240:40: replace - with \\+ in decode",
     "sixel\\.rs:242:22: replace > with >= in decode",
+
+    # -- terminal/reports/
+    # The four mouse tracking modes are four bits: OR and XOR of them agree.
+    "locator\\.rs:219:(44|64|86): replace \\| with \\^ in Terminal::enable_locator",
+    # A locator is switched on only at VT300 and above, and the level changes only with DECSCL, a hard
+    # reset that switches it off again: below VT300 it is off, and the other half of the test says so.
+    "locator\\.rs:259:23: replace < with == in Terminal::enable_filter_rectangle",
+    # The attribute bits of a cursor report's rendition, and the 0x40 and the sizes' bits, are
+    # distinct places (the flags and the protection's bits are in the entry for the lines above).
+    "presentation\\.rs:(59|60|61|62):13: replace \\| with \\^ in Terminal::write_cursor_information",
+    "presentation\\.rs:72:(18|104): replace \\| with \\^ in Terminal::write_cursor_information",
+    # A color of an SGR string is named only for the foreground and the background (the first match
+    # arm takes the defaults), whose guard has a base; an underline color is never a named one, and no
+    # named color is 16.
+    "rqss\\.rs:201:42: replace && with \\|\\| in write_color",
+    "rqss\\.rs:201:60: replace < with <= in write_color",
+    # A name of a terminfo capability is under nine characters; one that is longer is refused as
+    # a name that is not one, in the length test or by the lookup, with the same answer.
+    "tcap\\.rs:61:(52|56): replace (/ with \\*|> with >=) in decode_hex",
+    # While the mode is on, the size last reported is the one the DECSET that turned it on made: what
+    # a reset forgets is never read before that replaces it.
+    "replace Terminal::forget_inband_size with \\(\\)",
+    # DECSCPP keeps the rows, so the margins that were inside them still are: the `min` is no cut.
+    "window\\.rs:(267:47|268:53): replace - with [/+] in Terminal::set_columns_per_page",
 ]

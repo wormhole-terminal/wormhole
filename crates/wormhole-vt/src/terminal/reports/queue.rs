@@ -303,6 +303,42 @@ mod tests {
     }
 
     #[test]
+    fn replies_held_behind_a_picture_may_fill_the_cap_to_the_byte() {
+        // Three replies of four bytes are the twelve of the cap; the fourth is dropped whole. The
+        // sizes are added up, not multiplied (4 times 4 is 16).
+        let rules = Rules { cap: 12, eight_bit: false };
+        let mut queue = ReplyQueue::default();
+        queue.wait(rules, ImageHandle(1), target(1));
+        for _ in 0..4 {
+            queue.push_fmt(rules, format_args!("\x1b[0n"));
+        }
+        queue.settle(ImageHandle(1), Ok(()));
+        assert_eq!(text(&queue), "\x1b_Gi=1;OK\x1b\\\x1b[0n\x1b[0n\x1b[0n");
+    }
+
+    #[test]
+    fn what_waits_behind_a_picture_is_described_for_the_state_dump() {
+        let mut queue = ReplyQueue::default();
+        assert!(queue.describe_held().ends_with("held 0"));
+        queue.wait(SEVEN, ImageHandle(1), target(1));
+        queue.push_fmt(SEVEN, format_args!("\x1b[0n"));
+        let described = queue.describe_held();
+        assert!(described.contains("Waiting") && described.contains("Ready"), "{described}");
+        assert!(described.ends_with("held 4"), "{described}");
+    }
+
+    #[test]
+    fn the_oldest_answer_is_given_up_on_only_past_the_most_that_may_wait() {
+        let mut queue = ReplyQueue::default();
+        for n in 0..WAITING_MAX as u64 {
+            queue.wait(SEVEN, ImageHandle(n), target(n as u32 + 1));
+        }
+        assert!(queue.bytes().is_empty(), "as many as are allowed wait");
+        queue.wait(SEVEN, ImageHandle(1000), target(1000));
+        assert_eq!(text(&queue), "\x1b_Gi=1;ENODATA:the picture was not decoded in time\x1b\\");
+    }
+
+    #[test]
     fn what_is_released_counts_against_the_cap_like_what_is_held() {
         let rules = Rules { cap: 100, eight_bit: false };
         let mut queue = ReplyQueue::default();

@@ -20,6 +20,7 @@ mod rectangles;
 mod replies;
 mod reply_queue;
 mod resize;
+mod restore;
 mod scheme;
 mod selection;
 mod snapshot;

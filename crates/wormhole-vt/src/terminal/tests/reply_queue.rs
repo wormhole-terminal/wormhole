@@ -145,6 +145,22 @@ fn replies_released_after_a_decode_stay_under_the_cap() {
 }
 
 #[test]
+fn a_full_reset_forgets_what_waited_for_a_picture_and_what_was_held_behind_it() {
+    let mut rig = Rig::new(80, 24);
+    rig.feed(&format!("\x1b_Ga=T,f=100,i=1;{PNG}\x1b\\\x1b[5n"));
+    let handles = waiting(&mut rig);
+    assert!(rig.term.replies().is_empty(), "held behind the picture's answer");
+    rig.feed("\x1bc");
+    // Nothing waits any more: a new reply goes straight out, and a late decode brings nothing back.
+    rig.feed("\x1b[5n");
+    assert_eq!(rig.term.replies(), b"\x1b[0n");
+    for handle in handles {
+        rig.term.image_decoded(handle, Ok(()));
+    }
+    assert_eq!(rig.term.replies(), b"\x1b[0n");
+}
+
+#[test]
 fn replies_held_behind_a_picture_are_held_to_the_cap() {
     let cap = 4096;
     let mut rig = with_cap(cap);

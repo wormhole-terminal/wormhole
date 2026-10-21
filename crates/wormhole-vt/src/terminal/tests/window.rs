@@ -67,6 +67,45 @@ fn a_resize_in_cells_changes_the_engine_at_once_and_pixels_become_cells() {
 }
 
 #[test]
+fn a_resize_with_one_side_asked_for_the_most_is_the_hosts_to_make() {
+    let mut rig = allowed();
+    rig.feed("\x1b[8;0;40t\x1b[8;7;0t");
+    assert_eq!((rig.term.cols(), rig.term.rows()), (20, 5), "the engine waits to hear how large is the most");
+    assert_eq!(
+        ops(&mut rig),
+        [
+            WindowOp::ResizeCells { rows: Extent::Largest, cols: Extent::Size(40) },
+            WindowOp::ResizeCells { rows: Extent::Size(7), cols: Extent::Largest },
+        ]
+    );
+}
+
+#[test]
+fn a_decsnls_of_no_lines_asks_for_nothing() {
+    let mut rig = allowed();
+    rig.feed("\x1b[0*|");
+    assert!(ops(&mut rig).is_empty());
+    assert_eq!((rig.term.cols(), rig.term.rows()), (20, 5));
+    rig.feed("\x1b[7*|");
+    assert_eq!(ops(&mut rig), [WindowOp::ResizeCells { rows: Extent::Size(7), cols: Extent::Keep }]);
+    assert_eq!(rig.term.rows(), 7);
+}
+
+#[test]
+fn decscpp_keeps_the_margins_and_a_right_margin_at_the_edge_follows_it() {
+    let mut rig = allowed();
+    rig.feed("\x1b[2;4r\x1b[132$|");
+    assert_eq!(rig.term.cols(), 132);
+    rig.feed("\x1bP$qr\x1b\\\x1bP$qs\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP1$r2;4r\x1b\\\x1bP1$r1;132s\x1b\\");
+    // A right margin inside the screen stays where it was.
+    let mut rig = allowed();
+    rig.feed("\x1b[?69h\x1b[3;10s\x1b[132$|\x1bP$qs\x1b\\");
+    assert_eq!(rig.term.cols(), 132);
+    assert_eq!(rig.replies(), "\x1bP1$r3;10s\x1b\\");
+}
+
+#[test]
 fn the_hosts_geometry_is_what_the_reports_say() {
     let mut rig = Rig::new(20, 5);
     rig.term.set_cell_size(10, 20);

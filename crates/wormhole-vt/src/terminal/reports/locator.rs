@@ -340,6 +340,114 @@ mod tests {
         assert_eq!(run(&mut term, ""), "", "a rectangle is used once");
     }
 
+    /// A terminal at the conformance level DECSCL sets (61 to 65), which resets it.
+    fn at_level(level: u16) -> Terminal {
+        let mut term = Terminal::builder().size(20, 8).scrollback(0).build();
+        run(&mut term, &format!("\x1b[{level};1\"p"));
+        term
+    }
+
+    #[test]
+    fn the_locator_is_a_vt300_function_whose_sequences_a_vt200_ignores() {
+        let mut term = at_level(62);
+        run(&mut term, "\x1b[1'z");
+        assert!(!term.locator_enabled());
+        run(&mut term, "\x1b[1;3'{");
+        let events = term.locator.settings();
+        assert_eq!((events.on_down, events.on_up), (false, false));
+        assert_eq!(run(&mut term, "\x1b[1'|"), "", "not even the answer that there is no locator");
+        // A VT300 has all of them.
+        let mut term = at_level(63);
+        run(&mut term, "\x1b[1;3'{");
+        let events = term.locator.settings();
+        assert_eq!((events.on_down, events.on_up), (true, true));
+        assert_eq!(run(&mut term, "\x1b[1'|"), "\x1b[0&w");
+        run(&mut term, "\x1b[1'z");
+        assert!(term.locator_enabled());
+    }
+
+    #[test]
+    fn a_request_for_anything_but_one_report_is_not_answered() {
+        let mut term = at_level(63);
+        assert_eq!(run(&mut term, "\x1b[2'|\x1b[7'|"), "");
+        run(&mut term, "\x1b[1'z");
+        assert_eq!(run(&mut term, "\x1b[2'|"), "");
+        assert_eq!(run(&mut term, "\x1b[0'|"), "\x1b[1;0;1;1;1&w");
+    }
+
+    #[test]
+    fn each_selection_of_transitions_sets_or_clears_its_own() {
+        let mut term = at_level(63);
+        let events = |term: &Terminal| {
+            let settings = term.locator.settings();
+            (settings.on_down, settings.on_up, settings.filter)
+        };
+        run(&mut term, "\x1b[1;3'{");
+        assert_eq!(events(&term), (true, true, None));
+        run(&mut term, "\x1b[2'{");
+        assert_eq!(events(&term), (false, true, None), "2: not the downs");
+        run(&mut term, "\x1b[1'{\x1b[4'{");
+        assert_eq!(events(&term), (true, false, None), "4: not the ups");
+        // 0 is none of them, and a rectangle that was waiting to be left goes too.
+        run(&mut term, "\x1b[1;3'{\x1b[1'z\x1b[2;3;4;6'w");
+        assert!(events(&term).2.is_some());
+        run(&mut term, "\x1b[0'{");
+        assert_eq!(events(&term), (false, false, None));
+        run(&mut term, "\x1b[1;3'{\x1b['{");
+        assert_eq!(events(&term), (false, false, None), "no number is 0 as well");
+    }
+
+    /// Whether the pointer moved to column `col` and row `row` (from 0) is reported as having left
+    /// the rectangle of rows 2 to 4 and columns 3 to 6 (from 1), which was set while it was inside.
+    fn leaves(col: usize, row: usize) -> bool {
+        let mut term = Terminal::builder().size(20, 8).scrollback(0).build();
+        run(&mut term, "\x1b[1'z");
+        term.locator_moved(at(3, 2));
+        run(&mut term, "\x1b[2;3;4;6'w");
+        term.locator_moved(at(col, row));
+        !run(&mut term, "").is_empty()
+    }
+
+    #[test]
+    fn a_filter_rectangle_is_left_only_past_each_of_its_four_edges() {
+        // Rows 2 to 4 are 1 to 3 from 0, and columns 3 to 6 are 2 to 5: the edges are inside it.
+        for (col, row) in [(2, 1), (5, 1), (2, 3), (5, 3), (3, 2)] {
+            assert!(!leaves(col, row), "column {col}, row {row} is inside");
+        }
+        assert!(leaves(3, 0), "above");
+        assert!(leaves(3, 4), "below");
+        assert!(leaves(1, 2), "left of it");
+        assert!(leaves(6, 2), "right of it");
+    }
+
+    #[test]
+    fn a_rectangle_needs_a_locator_that_is_on_and_a_zero_edge_is_where_the_pointer_is() {
+        let mut term = at_level(63);
+        run(&mut term, "\x1b[2;3;4;6'w");
+        assert_eq!(term.locator.settings().filter, None, "there is no locator to leave it");
+        run(&mut term, "\x1b[1'z");
+        term.locator_moved(at(4, 2));
+        run(&mut term, "\x1b[2;3;4;6'w");
+        assert_eq!(term.locator.settings().filter, Some([2, 3, 4, 6]));
+        // 0 and no number both say "the pointer's own": row 3 and column 5, counted from 1.
+        run(&mut term, "\x1b[0;0;0;0'w");
+        assert_eq!(term.locator.settings().filter, Some([3, 5, 3, 5]));
+        run(&mut term, "\x1b[;;;'w");
+        assert_eq!(term.locator.settings().filter, Some([3, 5, 3, 5]));
+    }
+
+    #[test]
+    fn every_mouse_tracking_mode_is_switched_off_by_the_locator() {
+        // Each of the four is its own bit, and each has to be taken down.
+        for mode in [9, 1000, 1002, 1003] {
+            let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
+            run(&mut term, &format!("\x1b[?{mode}h"));
+            assert_ne!(term.modes().mouse_tracking(), crate::types::MouseTracking::Off, "mode {mode}");
+            run(&mut term, "\x1b[1'z");
+            assert_eq!(term.modes().mouse_tracking(), crate::types::MouseTracking::Off, "mode {mode}");
+        }
+    }
+
     #[test]
     fn mouse_tracking_and_the_locator_exclude_each_other() {
         let mut term = Terminal::builder().size(20, 5).scrollback(0).build();
