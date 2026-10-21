@@ -210,9 +210,13 @@ fn a_full_reset_goes_back_to_80_columns_only_from_the_132_a_program_asked_for() 
 fn a_new_terminal_clamps_a_silly_size() {
     let term = crate::terminal::Terminal::builder().size(0, 0).scrollback(0).build();
     assert!(term.cols() >= 2 && term.rows() >= 1);
+    // One side at a time: both at their limit is a 2 GB screen, more than a test should take.
     let mut rig = Rig::new(10, 4);
-    rig.term.resize(1_000_000, 1_000_000);
-    assert!(rig.term.cols() <= crate::grid::MAX_COLS && rig.term.rows() <= crate::grid::MAX_ROWS);
+    rig.term.resize(1_000_000, 3);
+    assert_eq!((rig.term.cols(), rig.term.rows()), (crate::grid::MAX_COLS, 3));
+    rig.feed("still works\r\n");
+    rig.term.resize(3, 1_000_000);
+    assert_eq!((rig.term.cols(), rig.term.rows()), (3, crate::grid::MAX_ROWS));
     rig.feed("still works\r\n");
 }
 
