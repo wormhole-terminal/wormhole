@@ -2,9 +2,9 @@
 //! reach it as events, and its answer comes back through [`Terminal::clipboard_reply`].
 
 use crate::terminal::Terminal;
+use crate::terminal::base64;
 use crate::terminal::event::{Event, Terminator};
-use crate::terminal::osc::base64;
-use crate::terminal::osc::dispatch::{lossy, terminator};
+use crate::terminal::osc::payload::lossy;
 
 /// The selections OSC 52 may name: clipboard, primary, secondary, select and cut buffers 0 to 7.
 const CLIPBOARD_TARGETS: &[u8] = b"cpqs01234567";
@@ -43,6 +43,6 @@ impl Terminal {
     /// as the request was.
     pub fn clipboard_reply(&mut self, selection: &str, text: &str, end: Terminator) {
         let data = base64::encode(text.as_bytes());
-        self.reply(format_args!("\x1b]52;{selection};{data}{}", terminator(end)));
+        self.reply(format_args!("\x1b]52;{selection};{data}{}", end.as_str()));
     }
 }

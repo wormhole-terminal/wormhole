@@ -4,7 +4,7 @@
 //! several times between two looks, every report in [`Terminal::cwd_reports`].
 
 use crate::terminal::event::Event;
-use crate::terminal::osc::dispatch::fill;
+use crate::terminal::osc::payload::fill;
 use crate::terminal::reports::title::drop_controls;
 use crate::terminal::{CWD_REPORTS_MAX, Terminal};
 

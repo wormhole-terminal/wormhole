@@ -4,7 +4,7 @@
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, Progress, ProgressState};
-use crate::terminal::osc::dispatch::lossy;
+use crate::terminal::osc::payload::lossy;
 
 impl Terminal {
     /// OSC 9: iTerm2's notification, ConEmu's numbered commands (of which `4` is progress and `9`

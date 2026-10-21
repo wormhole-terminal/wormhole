@@ -2,7 +2,7 @@
 
 use super::Rig;
 use crate::terminal::Event;
-use crate::terminal::osc::base64;
+use crate::terminal::base64;
 
 fn shape(name: &str) -> Event {
     Event::PointerShape(name.to_string())

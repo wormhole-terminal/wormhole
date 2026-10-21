@@ -1,54 +1,19 @@
-//! What each operating system command is, and the text helpers they share.
+//! What each operating system command is: the table that sends a string to the file that reads it.
 //!
 //! Spec: xterm's ctlseqs ("Operating System Commands": 0, 1, 2 titles, 52 clipboard; the colors
-//! are in `osc_colors`), the OSC 8 hyperlink specification, FinalTerm's OSC 133 (shell marks),
+//! are in `colors`), the OSC 8 hyperlink specification, FinalTerm's OSC 133 (shell marks),
 //! iTerm2's OSC 9 and 1337, ConEmu's OSC 9;4 progress, rxvt's OSC 777 `notify`, kitty's OSC 99.
 //! The ones whose protocol is big and not the terminal's business are handed to the host raw: 99,
 //! 7501 (the program status protocol) and what is not an inline image in 1337. A number the host
 //! asked for with a `Passthrough` is handed over raw too, ahead of this table.
 //!
-//! Each command's meaning is in a file of its own: `title` (0, 1, 2), `osc_colors`, `osc_cwd` (7),
-//! `osc_link` (8), `osc_notify` (9, 9;4, 99, 777), `osc_clipboard` (52), `osc_marks` (133),
-//! `pointer` (22), `uservar` (1337's SetUserVar); this one only sends the string to them.
+//! Each command's meaning is in a file of its own: `reports/title` (0, 1, 2), `colors`, `cwd` (7),
+//! `link` (8), `notify` (9, 9;4, 99, 777), `clipboard` (52), `marks` (133), `pointer` (22),
+//! `uservar` (1337's SetUserVar); this one only sends the string to them.
 
 use crate::terminal::Terminal;
 use crate::terminal::event::{Event, Terminator};
 use crate::terminal::osc::{USER_VAR_KIND, split_number};
-
-/// The terminator a reply to an OSC ends with: the one the request used.
-pub(in crate::terminal) fn terminator(end: Terminator) -> &'static str {
-    match end {
-        Terminator::Bel => "\x07",
-        Terminator::St => "\x1b\\",
-    }
-}
-
-/// Cut `text` to at most `max` bytes, at a character boundary.
-fn cut(text: &mut String, max: usize) {
-    if text.len() > max {
-        let mut at = max;
-        while !text.is_char_boundary(at) {
-            at -= 1;
-        }
-        text.truncate(at);
-    }
-}
-
-pub(in crate::terminal) fn lossy(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
-}
-
-/// Replace `text`'s contents with `bytes` (invalid UTF-8 as U+FFFD), cut to `max` bytes at a
-/// character boundary. Reuses the string's buffer: a title or folder that changes with every
-/// prompt costs no allocation.
-pub(in crate::terminal) fn fill(text: &mut String, bytes: &[u8], max: usize) {
-    text.clear();
-    match std::str::from_utf8(bytes) {
-        Ok(valid) => text.push_str(valid),
-        Err(_) => text.push_str(&String::from_utf8_lossy(bytes)),
-    }
-    cut(text, max);
-}
 
 impl Terminal {
     /// The OSC string has ended.

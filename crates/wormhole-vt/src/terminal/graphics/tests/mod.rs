@@ -12,7 +12,7 @@ mod rare;
 mod screen;
 mod sixel;
 
-use crate::terminal::osc::base64;
+use crate::terminal::base64;
 use crate::terminal::tests::Rig;
 use crate::terminal::{Event, ImageUpload};
 use crate::types::{ImageHandle, ImagePlacement};

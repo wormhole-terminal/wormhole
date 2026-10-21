@@ -130,7 +130,7 @@ fn what_the_hosts_image_code_gets_arrives_whole_whatever_the_cuts() {
     // A big picture, cut at an awkward size: kitty raw RGBA, 600 by 100.
     let pixels = vec![0x5Au8; 600 * 100 * 4];
     let apc =
-        format!("\x1b_Ga=t,f=32,s=600,v=100,i=1,q=2;{}\x1b\\", crate::terminal::osc::base64::encode(&pixels));
+        format!("\x1b_Ga=t,f=32,s=600,v=100,i=1,q=2;{}\x1b\\", crate::terminal::base64::encode(&pixels));
     for piece in apc.as_bytes().chunks(777) {
         rig.feed_bytes(piece);
     }

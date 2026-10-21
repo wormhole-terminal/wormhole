@@ -1,7 +1,7 @@
 //! iTerm2's inline images: the "Inline Images Protocol" page.
 
 use super::{CELL, freed, placed, png, rig, spots, uploads};
-use crate::terminal::osc::base64;
+use crate::terminal::base64;
 use crate::terminal::tests::Rig;
 use crate::terminal::{Event, ImageFormat};
 use crate::types::Extent;

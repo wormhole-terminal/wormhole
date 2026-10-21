@@ -278,7 +278,7 @@ fn a_transmission_over_the_hosts_payload_cap_is_refused() {
 #[test]
 fn an_inline_file_over_the_hosts_caps_is_ignored() {
     let file =
-        |bytes: &[u8]| format!("\x1b]1337;File=inline=1:{}\x07", crate::terminal::osc::base64::encode(bytes));
+        |bytes: &[u8]| format!("\x1b]1337;File=inline=1:{}\x07", crate::terminal::base64::encode(bytes));
     let mut r = rig(40, 6);
     r.term.set_limits(lowered(|l| l.image_payload = 20));
     r.feed(&file(&png(10, 10)));

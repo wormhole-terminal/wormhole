@@ -1,4 +1,5 @@
-//! Base64 (RFC 4648, the standard alphabet) for OSC 52, which carries clipboard text in it.
+//! Base64 (RFC 4648, the standard alphabet): what OSC 52, user variables, kitty's graphics and
+//! iTerm2's inline images carry their data in.
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

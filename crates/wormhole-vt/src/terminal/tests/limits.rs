@@ -106,7 +106,7 @@ fn a_string_being_read_keeps_the_cap_it_started_with() {
 fn the_clipboard_has_a_cap_of_its_own() {
     let mut r = rig_with(lowered(|l| l.clipboard = 64));
     let store =
-        |bytes: usize| format!("\x1b]52;c;{}\x07", crate::terminal::osc::base64::encode(&vec![b'a'; bytes]));
+        |bytes: usize| format!("\x1b]52;c;{}\x07", crate::terminal::base64::encode(&vec![b'a'; bytes]));
     r.feed(&store(20));
     assert!(matches!(&r.events()[..], [Event::ClipboardStore { text, .. }] if text.len() == 20));
     r.feed(&store(100));

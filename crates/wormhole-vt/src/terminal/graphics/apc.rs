@@ -7,7 +7,7 @@
 
 use super::command::{CONTROL_MAX, Command};
 use super::reply::Error;
-use crate::terminal::osc::base64::{INVALID, VALUES};
+use crate::terminal::base64::{INVALID, VALUES};
 
 /// Most bytes one command's payload may decode to (a PNG of a screenshot is a few megabytes;
 /// raw 4K RGBA is 33 MB).

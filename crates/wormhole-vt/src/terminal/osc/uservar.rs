@@ -10,8 +10,8 @@
 //! [`VALUE_MAX`] bytes is dropped whole.
 
 use crate::terminal::Terminal;
+use crate::terminal::base64::{INVALID, VALUES, decode};
 use crate::terminal::event::Event;
-use crate::terminal::osc::base64::{INVALID, VALUES, decode};
 
 /// The longest name kept, in bytes.
 pub(in crate::terminal) const NAME_MAX: usize = 256;
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn a_value_is_at_most_64_kib_decoded() {
-        let encoded = |len: usize| super::super::base64::encode(&vec![b'x'; len]);
+        let encoded = |len: usize| crate::terminal::base64::encode(&vec![b'x'; len]);
         let fits = format!("v={}", encoded(VALUE_MAX));
         assert_eq!(parse(fits.as_bytes()).map(|(_, value)| value.len()), Some(VALUE_MAX));
         let over = format!("v={}", encoded(VALUE_MAX + 1));

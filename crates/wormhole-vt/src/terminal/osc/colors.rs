@@ -19,7 +19,6 @@ use crate::types::{COLOR_COUNT, Colors, NamedColor, Rgb};
 
 use crate::terminal::Terminal;
 use crate::terminal::event::Terminator;
-use crate::terminal::osc::dispatch::terminator;
 use crate::terminal::osc::spec::{ColorSpec, parse_color};
 
 /// How many special colors there are: bold, underline, blink, reverse, italic.
@@ -127,7 +126,7 @@ impl Terminal {
             };
             if spec == b"?" {
                 let color = ColorSpec(self.color_of(slot));
-                let end = terminator(end);
+                let end = end.as_str();
                 self.reply(format_args!("\x1b]{command};{n};{color}{end}"));
             } else if let Some(color) = parse_color(spec) {
                 self.set_color(slot, Some(color));
@@ -142,7 +141,7 @@ impl Terminal {
             let Some(slot) = dynamic_slot(command) else { break };
             if spec == b"?" {
                 let color = ColorSpec(self.color_of(slot));
-                let end = terminator(end);
+                let end = end.as_str();
                 self.reply(format_args!("\x1b]{command};{color}{end}"));
             } else if let Some(color) = parse_color(spec) {
                 self.set_color(slot, Some(color));

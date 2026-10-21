@@ -184,7 +184,7 @@ impl Terminal {
         if !args.inline || payload.len() > base64_max(self.limits.image_payload) {
             return;
         }
-        let Some(data) = crate::terminal::osc::base64::decode(payload) else { return };
+        let Some(data) = crate::terminal::base64::decode(payload) else { return };
         let Some((width, height)) = sniff::dimensions(&data) else { return };
         if check_size(width, height).is_err() {
             return;

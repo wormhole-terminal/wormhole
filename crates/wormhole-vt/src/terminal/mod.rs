@@ -43,18 +43,18 @@
 //! | | `rqss`, `tcap` | DECRQSS; XTGETTCAP |
 //! | | `window`, `title` | XTWINOPS: the window's reports and operations; the title, the icon name and their stack |
 //! | | `locator` | the DEC locator: DECELR, DECSLE, DECRQLP, DECEFR and the reports the host's pointer events make |
-//! | `osc/` | (`mod`), `dispatch` | operating system commands: collecting the string; the dispatch and the text helpers |
+//! | `osc/` | (`mod`), `dispatch`, `payload` | operating system commands: collecting the string; which command it is; the payload as text |
 //! | | `cwd`, `link`, `clipboard`, `notify`, `marks` | OSC 7 (the folder), 8 (hyperlinks), 52 (clipboard), 9, 9;4, 99 and 777 (notifications, progress), 133 (shell marks) |
 //! | | `colors`, `spec` | OSC 4, 5, 10 to 19 and their resets; the parser of color specs |
 //! | | `color_stack` | XTPUSHCOLORS, XTPOPCOLORS and XTREPORTCOLORS: the colors programs set, pushed and popped |
 //! | | `pointer`, `uservar` | OSC 22 (pointer shape) and iTerm2's `SetUserVar` (OSC 1337), as events |
-//! | | `base64` | base64 for the clipboard, the pictures and user variables |
 //! | `graphics/` | | kitty's graphics protocol, Sixel and iTerm2's inline images, placed in the grid |
 //! | `read/` | `snapshot` | what the host draws from |
 //! | | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //! | `repaint/` | | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered |
 //! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
 //! | | `archive` | handing the host the history lines that leave the engine (opt-in; the copying is the grid's) |
+//! | | `base64` | base64 for the clipboard, user variables and the pictures |
 //! | | `watch` | `ModesChanged` and `ColorsChanged`: what changed since the host last took the events |
 //! | | `passthrough` | [`Passthrough`](passthrough::Passthrough): the OSC, DCS and APC strings a host claims, and the refusal of the ones the engine reads itself (public as `wormhole_vt::passthrough`) |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
@@ -96,6 +96,7 @@
 //!   ([`Limits`]), never raise.
 
 mod archive;
+mod base64;
 mod builder;
 #[cfg(any(test, feature = "internals"))]
 mod check;

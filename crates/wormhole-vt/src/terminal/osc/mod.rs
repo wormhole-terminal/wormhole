@@ -9,7 +9,6 @@
 //! instead, whatever the engine would do with it. The limits below are ceilings: the host can lower
 //! each (`Limits`).
 
-pub(super) mod base64;
 pub(super) mod clipboard;
 pub(super) mod color_stack;
 pub(super) mod colors;
@@ -18,6 +17,7 @@ pub(super) mod dispatch;
 pub(super) mod link;
 pub(super) mod marks;
 pub(super) mod notify;
+pub(super) mod payload;
 pub(super) mod pointer;
 pub(super) mod spec;
 pub(super) mod uservar;

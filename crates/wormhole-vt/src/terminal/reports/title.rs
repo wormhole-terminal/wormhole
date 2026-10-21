@@ -23,7 +23,7 @@ use std::borrow::Cow;
 use bitflags::bitflags;
 
 use crate::terminal::event::Event;
-use crate::terminal::osc::dispatch::fill;
+use crate::terminal::osc::payload::fill;
 use crate::terminal::{TITLE_STACK, Terminal};
 
 impl TitleModes {

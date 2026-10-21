@@ -103,7 +103,7 @@ fn an_inline_file_with_only_a_height_keeps_its_shape_unless_told_not_to() {
     // preserveAspectRatio=0 stretches to the given size.
     let mut r = rig(40, 20);
     let file = |args: &str| {
-        format!("\x1b]1337;File=inline=1;{args}:{}\x07", crate::terminal::osc::base64::encode(&png(100, 40)))
+        format!("\x1b]1337;File=inline=1;{args}:{}\x07", crate::terminal::base64::encode(&png(100, 40)))
     };
     r.feed(&file("height=5"));
     r.feed("\r\n");
@@ -119,7 +119,7 @@ fn a_multipart_file_that_is_started_again_or_never_ended_leaves_nothing_behind()
     // iTerm2: MultipartFile=args, then FilePart=base64 pieces, then FileEnd.
     let mut r = rig(40, 20);
     let bytes = png(40, 40);
-    let b64 = crate::terminal::osc::base64::encode(&bytes);
+    let b64 = crate::terminal::base64::encode(&bytes);
     let (a, b) = b64.split_at(b64.len() / 2);
     r.feed(&format!("\x1b]1337;MultipartFile=inline=1\x07\x1b]1337;FilePart={a}\x07"));
     // A second start throws the first away; a part with no start and an end with no start are ignored.
