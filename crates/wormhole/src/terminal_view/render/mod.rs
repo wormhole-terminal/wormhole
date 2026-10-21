@@ -30,6 +30,7 @@ mod minimap;
 mod outline;
 mod overlays;
 mod paint;
+mod pane_bar;
 mod prepare;
 mod rows;
 mod scrollbar;
@@ -259,6 +260,7 @@ impl Render for TerminalView {
             .children(self.render_block_readout(cx))
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
+            .children(self.render_pane_bar(exited, cx))
     }
 }
 

@@ -489,6 +489,22 @@ const TERMINAL: &[Group] = &[
         "Privacy",
         &[
             entry(
+                "clipboard-read",
+                "Programs reading the clipboard",
+                "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask \
+                 puts a question over that terminal; the clipboard often holds a password",
+                "osc 52 clipboard read paste copy password ask allow deny security ssh",
+                &["clipboard_read"],
+            ),
+            entry(
+                "clipboard-write",
+                "Programs setting the clipboard",
+                "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. \
+                 The terminal says when one does",
+                "osc 52 clipboard write copy set security ssh notice",
+                &["clipboard_write"],
+            ),
+            entry(
                 "screen-checksum",
                 "Let programs read the screen back",
                 "Answers a program's request for the checksum of part of the screen (DECRQCRA), which \

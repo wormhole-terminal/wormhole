@@ -489,9 +489,12 @@ impl Workspace {
         let mut changed = false;
         // Only the selected terminal and the panes shown with it are on screen.
         let on_screen: Vec<bool> = (0..self.sessions.len()).map(|ix| self.on_screen(ix)).collect();
+        // A program's clipboard read is asked about only where the question can be seen.
+        let looking = focus::in_front(window);
         for (session, is_active) in self.sessions.iter().zip(on_screen) {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {
+                terminal.set_on_screen(is_active && looking);
                 let before = terminal.status();
                 let mut changed = terminal.tick(is_active, window_active);
                 if is_active && window_active {

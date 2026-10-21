@@ -105,7 +105,7 @@ impl FocusAreas {
 
 /// Whether `window` is the one in front, as far as the ring goes. devctl can say so in place of
 /// macOS (`window-front`), to see the ring without taking the front from the app the person uses.
-fn in_front(window: &Window) -> bool {
+pub(in crate::workspace) fn in_front(window: &Window) -> bool {
     #[cfg(feature = "devctl")]
     if let Some(front) = FRONT.get() {
         return front;

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::clipboard::{ClipboardRead, ClipboardWrite};
 use crate::features::{self, FeatureFlag, FlagMode};
 use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
@@ -384,6 +385,11 @@ pub struct Settings {
     /// lets any program, also one over ssh, type a command line. Terminals started after the
     /// change use it.
     pub allow_title_report: bool,
+    /// What a program that asks to read the clipboard (OSC 52) gets: a question over its terminal
+    /// (the default), the text, or nothing. Applies at once, to every terminal.
+    pub clipboard_read: ClipboardRead,
+    /// Whether a program may set the clipboard (OSC 52), which the terminal then says in a notice.
+    pub clipboard_write: ClipboardWrite,
     /// Where New Terminal in New Worktree puts a worktree: under this folder (in a folder named
     /// after the repository), or, empty, beside the repository in `<name>-worktrees`.
     pub worktree_base: String,
@@ -476,6 +482,8 @@ impl Default for Settings {
             allow_screen_checksum: false,
             allow_window_ops: false,
             allow_title_report: false,
+            clipboard_read: ClipboardRead::default(),
+            clipboard_write: ClipboardWrite::default(),
             worktree_base: String::new(),
             feature_flags: BTreeMap::new(),
         }
@@ -611,6 +619,10 @@ pub const APP_SETTINGS: &[&str] = &[
     // Whether programs may read the window title back, which types it into the shell: a cloned
     // repository must not be able to turn that on for itself.
     "allow_title_report",
+    // Whether programs may read or set the clipboard: a cloned repository must not be able to
+    // open it for itself.
+    "clipboard_read",
+    "clipboard_write",
     // Where worktrees go is the person's own folder layout; a repository must not pick it.
     "worktree_base",
     // Which colour each folder wears is the person's too: a repository can tint its own title row

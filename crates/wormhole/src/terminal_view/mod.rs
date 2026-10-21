@@ -32,6 +32,7 @@ mod find_bar;
 mod input;
 mod line_size;
 mod links;
+mod pane_bar;
 mod render;
 mod reported;
 mod status;
@@ -149,6 +150,12 @@ pub struct TerminalView {
     /// The command that last left the foreground: the tab keeps its name while its result is
     /// unseen ("cargo test ✓").
     finished_command: Option<String>,
+    /// The bar along the pane's bottom: a program's question about reading the clipboard (OSC 52)
+    /// and short notices.
+    bar: pane_bar::State,
+    /// The terminal is shown in a window in front, as of the workspace's last tick: the state in
+    /// which a program's clipboard read may be asked about at all.
+    on_screen: bool,
     /// The bell rang in a terminal without an agent and nobody has looked since.
     bell_rang: bool,
     /// When a bell last counted as "needs you" (at most once a minute).
@@ -328,6 +335,8 @@ impl TerminalView {
             program_in_foreground: false,
             foreground: None,
             finished_command: None,
+            bar: pane_bar::State::default(),
+            on_screen: false,
             bell_rang: false,
             bell_counted: None,
             at_prompt: None,

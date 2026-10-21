@@ -1,7 +1,8 @@
 //! Terminal: scrollback, the minimap, Option as Meta per side, the font in use (set in
 //! Fonts), the shell a new terminal runs and the profiles config.json lists, the bell and
-//! whether programs may read the screen back and control the window.
+//! whether programs may read the screen back, read or set the clipboard and control the window.
 
+use wormhole_core::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::shells::{self, ShellChoice, ShellKind};
 
@@ -48,6 +49,18 @@ pub(super) const SETTINGS: &[Setting] = &[
     .describe(describe_worktree_base),
     toggle!("bell-sound", bell_sound),
     toggle!("bell-visual", bell_visual),
+    Setting::segmented(
+        "clipboard-read",
+        &[Segment::text("Ask"), Segment::text("Allow"), Segment::text("Deny")],
+        |s| ClipboardRead::ALL.iter().position(|o| *o == s.clipboard_read).unwrap_or(0),
+        |s, ix| s.clipboard_read = ClipboardRead::ALL.get(ix).copied().unwrap_or_default(),
+    ),
+    Setting::segmented(
+        "clipboard-write",
+        &[Segment::text("Allow"), Segment::text("Deny")],
+        |s| ClipboardWrite::ALL.iter().position(|o| *o == s.clipboard_write).unwrap_or(0),
+        |s, ix| s.clipboard_write = ClipboardWrite::ALL.get(ix).copied().unwrap_or_default(),
+    ),
     toggle!("screen-checksum", allow_screen_checksum),
     toggle!("window-ops", allow_window_ops),
     toggle!("title-report", allow_title_report),

@@ -26,3 +26,15 @@ pub(super) fn block(ctx: &mut Ctx, arg: &str) -> Result<String> {
     terminal.update(ctx.cx, |terminal, cx| terminal.devctl_block(n - 1, action, cx))?;
     Ok(String::new())
 }
+
+/// `pane-bar`: what the bar over the active terminal says (a question, a notice, or none).
+pub(super) fn pane_bar(ctx: &mut Ctx, _: &str) -> Result<String> {
+    Ok(ctx.workspace.active_terminal().read(ctx.cx).devctl_pane_bar())
+}
+
+/// `clipboard-answer <once|always|deny>`: the bar's buttons.
+pub(super) fn clipboard_answer(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let terminal = ctx.workspace.active_terminal();
+    terminal.update(ctx.cx, |terminal, cx| terminal.devctl_clipboard_answer(arg.trim(), cx))?;
+    Ok(String::new())
+}

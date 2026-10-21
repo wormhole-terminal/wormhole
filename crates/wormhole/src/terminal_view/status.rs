@@ -448,23 +448,10 @@ impl TerminalView {
                 }
                 self.ring(cx);
             }
-            PtyEvent::ClipboardStore(text) => {
-                // A copy on select takes the clipboard; keep what it held for ⌘V over the selection.
-                let replaced = self
-                    .app_selection
-                    .copy_from_selection(Instant::now())
-                    .then(|| cx.read_from_clipboard().and_then(|item| item.text()));
-                cx.write_to_clipboard(ClipboardItem::new_string(text.clone()));
-                if let Some(replaced) = replaced {
-                    self.app_selection.copied(text, replaced);
-                }
-            }
+            PtyEvent::ClipboardStore(text) => self.clipboard_store(text, cx),
             // Answered through `reply`, which keeps the answer in its place among the replies the
             // PTY thread gives (a cursor position asked for after it waits for it).
-            PtyEvent::ClipboardLoad(format, reply) => {
-                let text = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
-                reply.send(format(&text).into_bytes());
-            }
+            PtyEvent::ClipboardLoad(format, reply) => self.clipboard_load(format, reply, cx),
             // The workspace owns the window.
             PtyEvent::WindowOp(op) => cx.emit(TerminalEvent::WindowOp(op)),
             // The screen stays: the last output (often why it exited) can still

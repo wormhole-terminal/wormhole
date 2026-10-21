@@ -19,6 +19,9 @@
 //!                   its lines, how its command went and the command
 //!   block <n> <select|copy-output|copy-command|rerun>   the Edit menu's action on the n-th block as
 //!                   `blocks` lists them (`key cmd-up` / `key cmd-down` jump between the prompts)
+//!   pane-bar        what the bar over the active terminal says: a program's question about reading
+//!                   the clipboard (OSC 52), a notice (a copy it made, a refusal), or `none`
+//!   clipboard-answer <once|always|deny>   the bar's three buttons
 //!   images          the active terminal's inline images (kitty, iTerm2, Sixel), one a line: id, size,
 //!                   decoded bytes or `decoding`, and each placement's cells
 //!   state           dump terminals, statuses, cwds and notes
@@ -321,6 +324,8 @@ fn command(name: &str) -> Option<Command> {
         "screen" => shots::screen,
         "blocks" => blocks::blocks,
         "block" => blocks::block,
+        "pane-bar" => blocks::pane_bar,
+        "clipboard-answer" => blocks::clipboard_answer,
         "images" => blocks::images,
         "state" => shots::state,
         "studio-shot" => shots::studio_shot,

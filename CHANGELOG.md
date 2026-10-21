@@ -217,6 +217,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   line. Wormhole's answer to a clipboard read repeated whatever the program named as the clipboard, so a
   file shown with `cat` could type a command at your prompt (it did not run it: the text could not
   hold a Return). Only the names of real clipboards come back now.
+- **Medium** · no advisory · affects 0.1.0–1.1.0: a program could read your clipboard. A program in a
+  terminal, also one over ssh or a file shown with `cat`, could ask for the clipboard with OSC 52 and
+  got its text at once, which is often a password. Now a bar over that terminal asks first, naming the
+  program: Allow once, Always for this terminal (until it closes) or Deny. One question at a time, none
+  for a terminal you cannot see, and 30 seconds without an answer deny. Settings → Terminal → Privacy
+  has "Programs reading the clipboard" (`clipboard_read`: ask, allow or deny; a project cannot set it).
+  A program setting the clipboard is still allowed, now with a notice over the pane saying how much it
+  copied, and "Programs setting the clipboard" (`clipboard_write`) turns it off.
 
 ## [1.1.0] - 2026-10-15
 

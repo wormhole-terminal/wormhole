@@ -7,6 +7,7 @@
 
 pub mod agents;
 pub mod cli_tool;
+pub mod clipboard;
 mod color;
 pub mod config;
 pub mod default_terminal;

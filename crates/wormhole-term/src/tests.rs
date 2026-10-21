@@ -121,6 +121,28 @@ fn a_query_the_ui_drops_lets_the_replies_behind_it_go() {
 }
 
 #[test]
+fn a_read_the_ui_refuses_with_an_empty_reply_lets_the_replies_behind_it_go() {
+    // A refused clipboard read (the setting says deny, or the person did) is answered with nothing
+    // while the reply is still held: the cursor position asked for after it goes out, and nothing
+    // of the refused read reaches the program (which reads six bytes: only the cursor's).
+    let script = r#"stty raw -echo; printf '\033]52;c;?\033\\\033[6n'; r=$(dd bs=1 count=6 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
+    let (pty, events) = spawn("/bin/sh", &["-c", script]);
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let reply = loop {
+        assert!(Instant::now() < deadline, "timed out waiting for the clipboard request");
+        match events.try_recv() {
+            Some(PtyEvent::ClipboardLoad(_, reply)) => break reply,
+            Some(_) => {}
+            None => std::thread::sleep(Duration::from_millis(10)),
+        }
+    };
+    std::thread::sleep(Duration::from_millis(200));
+    reply.send(Vec::new());
+    wait_until("the cursor reply", || pty.screen_text().contains("E[1;1R"));
+    assert!(!pty.screen_text().contains("]52"), "{:?}", pty.screen_text());
+}
+
+#[test]
 fn text_area_size_queries_are_answered_without_the_ui() {
     // CSI 14 t: the text area in pixels, `CSI 4 ; height ; width t`.
     let script = r#"stty raw -echo; printf '\033[14t'; r=$(dd bs=1 count=12 2>/dev/null); stty sane; printf '%s' "$r" | tr '\033' E; sleep 5"#;
