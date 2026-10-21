@@ -138,4 +138,82 @@ exclude_re = [
     "words\\.rs:76:27: replace < with <= in Grid::step_right",
     "words\\.rs:110:35: replace < with <= in Grid::bracket_match",
     "words\\.rs:117:31: replace > with >= in Grid::bracket_match",
+
+    # -- input/
+    # The Alt and Meta bits are distinct: OR and XOR agree.
+    "mouse\\.rs:142:52: replace \\| with \\^ in encode",
+    # The legacy form has only the three buttons, wheels and no motion in it: the code stays under
+    # 96, so `code + 32` never reaches 255.
+    "mouse\\.rs:195:48: replace > with (==|>=) in encode",
+    # A capacity hint (what `Vec::with_capacity` is, and the same rule). The first `+` made a
+    # subtraction is not one: a text under six bytes then underflows, which a test sees.
+    "paste\\.rs:26:28: replace \\+ with \\* in paste",
+    "paste\\.rs:26:48: replace \\+ with [-*] in paste",
+
+    # -- parser/
+    # Bit 7 of a lane is set by at most one of the two terms (a byte under 0x20 and DEL are not both).
+    "scan\\.rs:23:29: replace \\| with \\^ in not_printable",
+    # The fast paths of `decode` are shortcuts for `exact`, which gives the same character: a mutant
+    # that makes a shortcut fail only sends the bytes the slow way. The `|` joins bits that do not
+    # overlap, and the `&` of the lead byte of four, mutated, makes a code point too big to be one.
+    "utf8\\.rs:33:15: replace \\^ with \\| in decode",
+    "utf8\\.rs:35:35: replace \\| with \\^ in decode",
+    "utf8\\.rs:53:22: replace & with [\\^|] in decode",
+
+    # -- terminal/base64.rs
+    # Sextets joined to the left of six free bits, and bytes put in 8-bit places: no overlap.
+    "base64\\.rs:57:30: replace \\| with \\^ in decode",
+    "base64\\.rs:69:75: replace \\| with \\^ in encode",
+    # A tail has two or three characters (one is refused before): `4 - n` and `4 / n` are 2 and 1.
+    "base64\\.rs:59:25: replace - with / in decode",
+
+    # -- terminal/dispatch/
+    # The next APC string starts by clearing what a cancelled one left (`start_apc`, `begin_kitty`), and
+    # a cancelled one is never finished.
+    "replace <impl Handler for Sink<'_>>::apc_cancel with \\(\\)",
+    # The suspended modes (autowrap, origin, insert, new line) are off while VT52 mode lasts, and
+    # nothing in it turns them on: they are not in `self.modes` when they are in `suspended`.
+    "replace \\| with \\^ in Terminal::modes_before_vt52",
+
+    # -- terminal/graphics/
+    # The groups of sextets are joined where their bits do not overlap.
+    "apc\\.rs:111:(57|74|91): replace \\| with \\^ in ApcReader::payload",
+    # Ids are unique (`check` says so) and sorted, so once one is past `next` all the others are: the
+    # `break` is an early exit.
+    "images\\.rs:85:26: replace > with (<|==|>=) in ImageTable::free_id",
+    # The measuring walk's early exits for a picture too wide or too tall: the check after it says
+    # the same (and a height is a multiple of six, which is never 10,000).
+    "sixel\\.rs:210:43: replace \\|\\| with && in decode",
+    "sixel\\.rs:210:58: replace > with (==|>=) in decode",
+    # Three bytes of a size are three disjoint places.
+    "sniff\\.rs:28:(26|49): replace \\| with \\^ in le24",
+
+    # -- terminal/modes/mod.rs: LOCATOR is only ever added by `modes()` itself.
+    "replace \\| with \\^ in Terminal::modes",
+
+    # -- terminal/read/selection.rs: a block's columns are at most the screen's width, so its last
+    # is at most the last column, and its first (before the last) is under it.
+    "selection\\.rs:(205:63|206:70): replace - with [/+] in Terminal::covered",
+
+    # -- terminal/reports/
+    # `invoke` keeps the low two bits of a set's number, and '0' + n has the same ones as n.
+    "replace - with \\+ in CursorInformation::read",
+    # The bits of a cursor report's flags are distinct places.
+    "presentation\\.rs:(63|66|67|68|69):[0-9]+: replace \\| with \\^ in Terminal::write_cursor_information",
+    # Only the foreground and background are written with a name, and they are never the bright ones
+    # beyond 15 or an underline's: the guard is true for every color that gets here.
+    "replace match guard base != 0 && \\(named as u16\\) < 16 with true in write_color",
+
+    # -- terminal/screen/reset.rs: neither starting mode is in the other set (the mode 40 permission is
+    # not an initial mode; the three DECSTR sets are distinct).
+    "replace \\| with \\^ in Terminal::reset",
+    "replace \\| with \\^ in Terminal::soft_reset",
+
+    # -- terminal/text/
+    # What a push saves and what is cleared are distinct bits; the style's underline color is the
+    # one `..style` already gives.
+    "replace \\| with \\^ in Entry::restore",
+    "sgr_stack\\.rs:195:37: delete field underline_color from struct Style expression in Terminal::report_sgr",
+    # Bold and dim are two bits.
+    "sgr\\.rs:75:49: replace \\| with \\^ in Style::apply",
 ]
