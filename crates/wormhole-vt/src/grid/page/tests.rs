@@ -4,8 +4,9 @@ use super::Page;
 use crate::grid::BlockPart;
 use crate::grid::cell::{CellFlags, Spare};
 use crate::grid::pen::Pen;
+use crate::grid::row::Row;
 use crate::grid::style::Style;
-use crate::types::{Color, Flags, NamedColor};
+use crate::types::{Color, Flags, Hyperlink, NamedColor};
 
 fn page(cols: usize, rows: usize) -> Page {
     let mut page = Page::new(1, 0, cols, rows);
@@ -219,4 +220,102 @@ fn putting_a_cell_gives_back_what_it_replaces() {
     page.put(0, 1, Some('b'), &[], &Style::DEFAULT, None, CellFlags::empty());
     assert_eq!(page.styles.live(), 0, "nothing uses the red look any more");
     assert_eq!(text(&page, 0), ".b..");
+}
+
+#[test]
+fn a_new_row_is_numbered_and_a_touched_row_is_marked_changed() {
+    let mut page = Page::new(1, 0, 4, 2);
+    assert_eq!(page.push_row(), 0);
+    assert_eq!(page.push_row(), 1);
+    assert!(page.take_dirty(0), "a new row has not been copied yet");
+    assert!(!page.take_dirty(0), "and is not marked again");
+    page.touch(0);
+    assert!(page.take_dirty(0));
+    assert!(page.take_dirty(1));
+}
+
+#[test]
+fn the_slots_of_rows_dropped_from_the_end_are_handed_out_again() {
+    let mut page = page(4, 3);
+    page.drop_back_rows(2);
+    assert_eq!((page.rows.len(), page.slots_used()), (1, 1));
+    assert_eq!(page.all_cells().len(), 4, "the buffer ends where the last slot in use does");
+    assert_eq!(page.push_row(), 1);
+    assert_eq!(page.rows[1].slot, 1);
+}
+
+#[test]
+fn the_bytes_a_page_holds_are_its_cells_rows_styles_marks_and_links() {
+    let mut page = page(6, 2);
+    let link = Hyperlink { id: "1".into(), uri: "https://x".into() };
+    page.write_ascii(0, 0, b"ab", &Pen { link: Some(link), ..red() });
+    page.write_char(1, 0, 'e', &[], 1, &Pen::default());
+    page.push_mark(1, 0, '\u{301}');
+    let (styles, marks, links) = (page.styles.bytes(), page.graphemes.bytes(), page.links.bytes());
+    assert!(styles > 0 && marks > 0 && links > 0, "every part is there to be counted");
+    let expected = size_of_val(page.all_cells()) + page.rows.capacity() * size_of::<Row>();
+    assert_eq!(page.bytes(), expected + styles + marks + links);
+}
+
+#[test]
+fn the_weight_of_a_pages_extras_is_measured_once_until_it_is_forgotten() {
+    let mut page = page(6, 2);
+    page.write_ascii(0, 0, b"a", &red());
+    let measured = page.extra_bytes();
+    let bold = Pen { style: Style { attrs: Flags::BOLD, ..Style::DEFAULT }, ..Pen::default() };
+    page.write_ascii(1, 0, b"b", &bold);
+    assert_eq!(page.extra_bytes(), measured, "kept while nobody says the page changed");
+    page.forget_extra_bytes();
+    assert!(page.extra_bytes() > measured, "a look of its own more");
+}
+
+#[test]
+fn a_row_copied_onto_itself_stays_as_it_is() {
+    let mut page = page(6, 1);
+    page.write_char(0, 0, 'e', &['\u{301}'], 1, &red());
+    page.write_ascii(0, 1, b"xy", &Pen::default());
+    page.copy_within_page(0, 0, 0..6);
+    assert_eq!(page.graphemes.get(page.offset(0, 0)), &['\u{301}']);
+    assert_eq!(page.styles.refs(page.cells(0)[0].style_id()), 1);
+    assert_eq!(text(&page, 0), "exy...");
+}
+
+/// The columns that are bold after the columns `from..to` of a row of `ab`, a wide character and
+/// `cd` were made bold.
+fn made_bold(from: usize, to: usize) -> Vec<usize> {
+    let mut page = page(8, 1);
+    page.write_ascii(0, 0, b"ab", &Pen::default());
+    page.write_char(0, 2, '日', &[], 2, &Pen::default());
+    page.write_ascii(0, 4, b"cd", &Pen::default());
+    page.restyle(0, from..to, |style| Style { attrs: Flags::BOLD, ..*style });
+    (0..8).filter(|&x| page.styles.get(page.cells(0)[x].style_id()).attrs == Flags::BOLD).collect()
+}
+
+#[test]
+fn restyling_from_the_tail_or_up_to_the_head_of_a_wide_character_takes_all_of_it() {
+    // The wide character is in columns 2 and 3.
+    assert_eq!(made_bold(3, 5), [2, 3, 4], "starting on its second half");
+    assert_eq!(made_bold(1, 3), [1, 2, 3], "ending on its first half");
+    assert_eq!(made_bold(4, 6), [4, 5], "beside it");
+}
+
+#[test]
+fn cells_copied_with_a_link_the_destination_has_no_room_for_come_without_it() {
+    let link = |id: &str, size: usize| Hyperlink { id: id.into(), uri: "x".repeat(size).into() };
+    let mut destination = Page::new(2, 0, 6, 1);
+    destination.push_row();
+    // Fill the destination's links up to their cap, as a page of long links would.
+    let mut n = 0;
+    while destination.links.has_room_for(&link(&n.to_string(), 64 * 1024)) {
+        destination.links.acquire(&link(&n.to_string(), 64 * 1024), 1);
+        n += 1;
+    }
+    let mut source = Page::new(3, 0, 6, 1);
+    source.push_row();
+    // A link no shorter than the one that did not fit last, and not one the destination has.
+    source.write_ascii(0, 1, b"ab", &Pen { link: Some(link("zzz", 64 * 1024)), ..Pen::default() });
+    destination.copy_from_page(&source, 0, 0, 0..6);
+    assert_eq!(text(&destination, 0), ".ab...");
+    assert!(destination.cells(0).iter().all(|cell| !cell.has_hyperlink()), "no cell claims a link");
+    assert_eq!(destination.links.at(destination.offset(0, 1)), None);
 }

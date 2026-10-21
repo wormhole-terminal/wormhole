@@ -279,7 +279,7 @@ fn same_link(a: &Hyperlink, b: &Hyperlink) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{LINK_TEXT_MAX, Links};
+    use super::{LINK_TEXT_MAX, LinkEntry, LinkRun, Links};
     use crate::types::Hyperlink;
 
     fn link(id: &str, uri: &str) -> Hyperlink {
@@ -381,5 +381,84 @@ mod tests {
         assert!(links.has_room_for(&long(n)));
         links.clear();
         assert_eq!(links.text, 0);
+    }
+
+    #[test]
+    fn a_link_released_for_the_last_time_gives_its_text_back() {
+        let mut links = Links::default();
+        let a = links.acquire(&link("1", "https://a"), 1); // ten bytes
+        links.acquire(&link("22", "https://bbb"), 1); // thirteen
+        assert_eq!(links.text, 23);
+        links.release(a, 1);
+        assert_eq!(links.text, 13);
+    }
+
+    #[test]
+    fn two_links_with_one_id_and_two_targets_are_two_entries() {
+        let mut links = Links::default();
+        let a = links.acquire(&link("x", "https://a"), 1);
+        let b = links.acquire(&link("x", "https://b"), 1);
+        assert_ne!(a, b);
+        assert_eq!(&*links.link(b).uri, "https://b");
+    }
+
+    #[test]
+    fn the_runs_that_touch_a_range_stop_before_a_run_that_starts_where_it_ends() {
+        let mut links = Links::default();
+        let (a, b) = (links.acquire(&link("1", "https://a"), 3), links.acquire(&link("2", "https://b"), 3));
+        links.attach(0, 3, a);
+        links.attach(3, 3, b);
+        assert_eq!(links.within(0, 3).collect::<Vec<_>>(), [(0, 3, a)]);
+        assert_eq!(links.within(2, 4).collect::<Vec<_>>(), [(2, 3, a), (3, 4, b)]);
+    }
+
+    #[test]
+    fn a_link_is_indexed_when_it_is_in_use_and_findable() {
+        let mut links = Links::default();
+        let id = links.acquire(&link("1", "https://a"), 2);
+        assert!(links.is_indexed(id));
+        links.by_link.clear();
+        assert!(!links.is_indexed(id), "in use, and found by nobody");
+        let mut links = Links::default();
+        let id = links.acquire(&link("1", "https://a"), 2);
+        links.entries[id as usize].refs = 0;
+        assert!(!links.is_indexed(id), "findable, and in use by no cell");
+        assert!(!links.is_indexed(7), "an entry that is not there");
+    }
+
+    /// A table with ten cells under one link and the runs `(start, end)` laid over it.
+    fn laid(runs: &[(u32, u32)]) -> Links {
+        let mut links = Links::default();
+        let id = links.acquire(&link("1", "https://a"), 10);
+        links.runs.extend(runs.iter().map(|&(start, end)| LinkRun { start, end, id }));
+        links
+    }
+
+    #[test]
+    fn the_checker_refuses_runs_that_are_empty_overlap_or_are_under_a_link_nobody_uses() {
+        assert!(laid(&[(0, 2), (4, 6)]).verify().is_ok());
+        assert!(laid(&[(0, 2), (2, 4)]).verify().is_ok(), "next to each other");
+        assert!(laid(&[(3, 3)]).verify().is_err(), "empty");
+        assert!(laid(&[(0, 4), (2, 6)]).verify().is_err(), "overlapping");
+        let mut unused = laid(&[(0, 2)]);
+        unused.entries[0].refs = 0;
+        assert!(unused.verify().is_err(), "under a link no cell is under");
+    }
+
+    #[test]
+    fn the_bytes_a_link_table_holds_are_its_entries_index_runs_and_text() {
+        let mut links = Links::default();
+        let a = links.acquire(&link("1", "https://a"), 4);
+        let b = links.acquire(&link("2", "https://b"), 3);
+        links.attach(0, 4, a);
+        links.attach(8, 3, b);
+        links.detach(1, 2); // leaves a piece in the scratch list
+        assert!(links.entries.capacity() > 0 && links.by_link.capacity() > 0);
+        assert!(links.runs.capacity() > 0 && links.scratch.capacity() > 0 && links.text > 0);
+        let expected = links.entries.capacity() * size_of::<LinkEntry>()
+            + links.by_link.capacity() * (size_of::<Hyperlink>() + size_of::<u32>() + 1)
+            + (links.runs.capacity() + links.scratch.capacity()) * size_of::<LinkRun>()
+            + links.text;
+        assert_eq!(links.bytes(), expected);
     }
 }

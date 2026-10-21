@@ -29,3 +29,34 @@ impl Hasher for OffsetHasher {
 }
 
 pub(super) type ByOffset<V> = HashMap<u32, V, BuildHasherDefault<OffsetHasher>>;
+
+#[cfg(test)]
+mod tests {
+    use std::hash::Hasher;
+
+    use super::OffsetHasher;
+
+    #[test]
+    fn an_offset_is_one_multiply_and_its_high_half_is_folded_into_the_low() {
+        let mut hasher = OffsetHasher::default();
+        hasher.write_u32(1);
+        let product = 0x9E37_79B9_7F4A_7C15_u64;
+        assert_eq!(hasher.finish(), product ^ (product >> 32));
+        hasher.write_u32(7);
+        let product = 7_u64.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        assert_eq!(hasher.finish(), product ^ (product >> 32), "the offset replaces what was hashed");
+    }
+
+    #[test]
+    fn bytes_are_hashed_one_at_a_time_in_order() {
+        let (mut ab, mut ba) = (OffsetHasher::default(), OffsetHasher::default());
+        ab.write(b"ab");
+        ba.write(b"ba");
+        let mut state = 0_u64;
+        for byte in *b"ab" {
+            state = (state ^ u64::from(byte)).wrapping_mul(0x0100_0000_01B3);
+        }
+        assert_eq!(ab.finish(), state ^ (state >> 32));
+        assert_ne!(ab.finish(), ba.finish());
+    }
+}

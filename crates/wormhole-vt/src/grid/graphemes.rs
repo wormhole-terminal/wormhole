@@ -219,7 +219,7 @@ impl Graphemes {
 
 #[cfg(test)]
 mod tests {
-    use super::{Graphemes, MAX_MARKS, class_for};
+    use super::{Entry, Graphemes, MAX_MARKS, class_for};
 
     #[test]
     fn marks_pile_up_in_order_and_stop_at_the_cap() {
@@ -307,5 +307,76 @@ mod tests {
         assert_eq!(graphemes.len(), 0);
         assert_eq!(graphemes.arena.capacity(), capacity, "the next page reuses the arena");
         assert!(graphemes.verify().is_ok());
+    }
+
+    #[test]
+    fn the_first_mark_reserves_room_for_a_few_dozen() {
+        let mut graphemes = Graphemes::default();
+        assert!(graphemes.push(3, 'a'));
+        assert!(graphemes.arena.capacity() >= 128);
+        assert!(graphemes.entries.capacity() >= 16);
+    }
+
+    #[test]
+    fn a_slot_that_is_big_enough_is_kept_for_other_marks_and_a_bigger_one_is_found_when_it_is_not() {
+        let mut graphemes = Graphemes::default();
+        graphemes.set_from(1, &['a', 'b', 'c']); // a slot of four
+        graphemes.set_from(2, &['x']); // the slot after it
+        let slot = graphemes.entries[&1];
+        graphemes.set_from(1, &['d', 'e']);
+        let kept = graphemes.entries[&1];
+        assert_eq!((kept.start, kept.class), (slot.start, slot.class), "two marks fit the slot of four");
+        let five = ['a', 'b', 'c', 'd', 'e'];
+        graphemes.set_from(1, &five);
+        assert_eq!(graphemes.get(1), &five);
+        assert_eq!(graphemes.get(2), &['x'], "the marks of the cell next to it are not written over");
+        assert!(graphemes.verify().is_ok());
+    }
+
+    #[test]
+    fn the_bytes_a_table_holds_are_its_entries_arena_and_free_lists() {
+        let mut graphemes = Graphemes::default();
+        for cell in 0..5 {
+            for mark in ['a', 'b', 'c'] {
+                graphemes.push(cell, mark);
+            }
+        }
+        // Two slots given up make a free list.
+        graphemes.remove(0);
+        graphemes.remove(1);
+        let free: usize = graphemes.free.iter().map(|list| list.capacity()).sum();
+        assert!(graphemes.entries.capacity() > 0 && graphemes.arena.capacity() > 0 && free > 0);
+        let per_entry = size_of::<u32>() + size_of::<Entry>() + 1;
+        assert_eq!(
+            graphemes.bytes(),
+            graphemes.entries.capacity() * per_entry
+                + graphemes.arena.capacity() * size_of::<char>()
+                + free * size_of::<u32>()
+        );
+    }
+
+    /// A table holding `(offset, start, len, class)` entries in an arena of twelve characters.
+    fn holding(entries: &[(u32, u32, u8, u8)]) -> Graphemes {
+        let mut graphemes = Graphemes::default();
+        graphemes.arena.resize(12, 'a');
+        for &(offset, start, len, class) in entries {
+            graphemes.entries.insert(offset, Entry { start, len, class });
+        }
+        graphemes
+    }
+
+    #[test]
+    fn the_checker_accepts_slots_with_gaps_between_them() {
+        assert!(holding(&[(1, 0, 2, 0), (2, 4, 1, 0)]).verify().is_ok());
+        assert!(holding(&[(1, 0, 2, 0), (2, 2, 4, 1)]).verify().is_ok(), "or none");
+    }
+
+    #[test]
+    fn the_checker_refuses_a_slot_that_is_empty_too_small_overlapping_or_outside_the_arena() {
+        assert!(holding(&[(1, 0, 0, 0)]).verify().is_err(), "no marks");
+        assert!(holding(&[(1, 0, 3, 0)]).verify().is_err(), "three marks in a slot of two");
+        assert!(holding(&[(1, 0, 2, 1), (2, 2, 1, 0)]).verify().is_err(), "a slot inside another");
+        assert!(holding(&[(1, 0, 1, 0), (2, 0, 1, 0)]).verify().is_err(), "two cells on one slot");
+        assert!(holding(&[(1, 11, 1, 0)]).verify().is_err(), "a slot past the end of the arena");
     }
 }
