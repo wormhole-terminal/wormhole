@@ -152,6 +152,16 @@ mod tests {
     }
 
     #[test]
+    fn a_size_that_is_not_whole_pixels_is_rounded_to_the_nearest() {
+        // 6:5, one column of 8 pixels is 6.67 pixels tall: 7, not 6.
+        let g = requested(whole(6, 5), 1, 0, (0, 0), CELL);
+        assert_eq!(g.extent, Extent::Pixels { width: 8, height: 7 });
+        // And 7:5 gives 5.71 for the same: 6.
+        let g = requested(whole(7, 5), 1, 0, (0, 0), CELL);
+        assert_eq!(g.extent, Extent::Pixels { width: 8, height: 6 });
+    }
+
+    #[test]
     fn a_part_of_the_picture_is_what_is_sized() {
         let part = SourceRect { x: 10, y: 10, width: 30, height: 20 };
         let g = requested(part, 0, 0, (0, 0), CELL);

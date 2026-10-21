@@ -275,6 +275,15 @@ mod tests {
     }
 
     #[test]
+    fn a_terminal_without_a_width_does_not_squeeze_the_picture() {
+        // There is nothing to be wider than: the picture keeps its size (the scaling would make it
+        // one pixel tall).
+        let g = FileArgs::default().geometry((100, 40), CELL, (0, 24));
+        assert_eq!((g.cols, g.rows), (13, 3));
+        assert_eq!(g.extent, Extent::Pixels { width: 100, height: 40 });
+    }
+
+    #[test]
     fn one_size_keeps_the_shape_unless_told_not_to() {
         let kept = FileArgs::parse("width=10").geometry((100, 50), CELL, SCREEN);
         assert_eq!((kept.cols, kept.rows), (10, 3));

@@ -319,4 +319,29 @@ exclude_re = [
     "sgr_stack\\.rs:195:37: delete field underline_color from struct Style expression in Terminal::report_sgr",
     # Bold and dim are two bits.
     "sgr\\.rs:75:49: replace \\| with \\^ in Style::apply",
+
+    # ---- terminal/{graphics,reports,osc,text}: the second run's equivalent mutants.
+
+    # -- terminal/graphics/
+    # Four base64 characters at a time is a shortcut past the one-by-one reading, which reads the
+    # same bytes and keeps the same cap: a mutant that makes the shortcut refuse every group (the
+    # mask turned into an XOR or an OR can never be zero) only takes the slow way.
+    "apc\\.rs:103:36: replace & with [\\^|] in ApcReader::payload",
+    # The same disjoint sextets as the fast path's (a six-bit value shifted to the top of a byte and
+    # the rest of a byte shifted down).
+    "apc\\.rs:(136:(57|74|91)|154:42|156:46): replace \\| with \\^ in ApcReader::(payload|finish)",
+    # At a width of exactly the terminal's, scaling the picture by `screen_w / w` is scaling by one.
+    "iterm\\.rs:129:27: replace > with >= in FileArgs::geometry",
+    # An id's red, green and blue bytes, and the high byte of a long id over the 24 bits of the
+    # color, are in separate places.
+    "placeholder\\.rs:(349:(51|75)|366:31): replace \\| with \\^ in (id_bits|placeholder_at)",
+    # The cursor is put in the last column and `normalize_cursor` cuts any column to the row's
+    # last right after, so a column past it (the `+` and the `/`) comes to the same one; and the
+    # width the picture reaches is only tested for being at the edge, which `cols + x0` is as much.
+    "put\\.rs:104:43: replace - with [/+] in Terminal::put_image",
+    "put\\.rs:102:58: replace - with \\+ in Terminal::put_image",
+    # Every painted run was measured by the first walk, so the width has room for it at `x`: the
+    # `min` never cuts. And the work, a multiple of six, never is the budget, a power of two.
+    "sixel\\.rs:240:40: replace - with \\+ in decode",
+    "sixel\\.rs:242:22: replace > with >= in decode",
 ]

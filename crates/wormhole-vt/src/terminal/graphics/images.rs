@@ -206,4 +206,56 @@ mod tests {
         assert!(table.is_full(1, 1, 1024), "the count is full");
         assert!(!table.is_full(1, 2, 1024));
     }
+
+    #[test]
+    fn a_table_is_over_its_limits_only_past_them() {
+        let mut table = ImageTable::default();
+        table.insert(image(1, 1, 0));
+        table.insert(image(2, 2, 0));
+        assert!(!table.is_over(2, 32), "two pictures and 32 bytes are the limits, not past them");
+        assert!(table.is_over(1, 32), "one picture too many");
+        assert!(table.is_over(2, 31), "a byte too many");
+    }
+
+    #[test]
+    fn a_picture_that_was_used_is_the_last_to_be_evicted() {
+        let mut table = ImageTable::default();
+        for handle in 1..=3 {
+            table.insert(image(handle, handle as u32, 0));
+        }
+        assert_eq!(table.victim(|_| false), Some(0), "the oldest");
+        table.touch(0);
+        assert_eq!(table.victim(|_| false), Some(1), "the first was used again, so the next is oldest");
+        table.touch(1);
+        table.touch(0);
+        assert_eq!(table.victim(|_| false), Some(2));
+        // One that something is placed from goes last, whatever its age.
+        assert_eq!(
+            table.victim(|i| i.handle == ImageHandle(3)),
+            Some(1),
+            "not the oldest of all, which is placed"
+        );
+        assert_eq!(table.victim(|_| true), Some(2), "when all are in use, the least recently used");
+        table.touch(7); // no such picture: nothing happens
+    }
+
+    #[test]
+    fn the_check_finds_a_table_that_is_over_its_limits_or_holds_a_picture_twice() {
+        let mut table = ImageTable::default();
+        for (handle, id) in [(1, 1), (2, 2), (3, 0), (4, 0)] {
+            table.insert(image(handle, id, 0));
+        }
+        // Four pictures of 16 bytes: the limits themselves are allowed, a unit less is not.
+        assert_eq!(table.check(4, 64), Ok(()), "two without an id are not the same id");
+        assert!(table.check(3, 64).is_err_and(|e| e.contains("4 pictures, at most 3")));
+        assert!(table.check(5, 63).is_err_and(|e| e.contains("64 bytes, at most 63")));
+        let mut twice = ImageTable::default();
+        twice.insert(image(1, 1, 0));
+        twice.insert(image(1, 2, 0));
+        assert!(twice.check(10, 1024).is_err_and(|e| e.contains("handle")));
+        let mut same_id = ImageTable::default();
+        same_id.insert(image(1, 5, 0));
+        same_id.insert(image(2, 5, 0));
+        assert!(same_id.check(10, 1024).is_err_and(|e| e.contains("picture id 5")));
+    }
 }

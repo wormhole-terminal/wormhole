@@ -230,3 +230,16 @@ fn a_delete_the_protocol_does_not_have_and_one_without_its_key_change_nothing() 
     assert!(spots(&r).is_empty());
     assert_eq!(freed(&mut r), [up[0].image]);
 }
+
+#[test]
+fn a_delete_with_a_placement_id_takes_only_that_virtual_placement_of_the_picture() {
+    let mut r = rig(40, 10);
+    r.feed(&apc("a=t,f=24,s=16,v=16,i=5,q=2", &rgb(16, 16)));
+    r.feed(&apc_bare("a=p,i=5,U=1,p=2,c=2,r=1,q=2"));
+    r.feed(&apc_bare("a=p,i=5,U=1,p=3,c=4,r=3,q=2"));
+    r.feed(&apc_bare("a=d,d=i,i=5,p=2,q=2"));
+    let size = |placement| r.term.virtual_placement(5, placement).map(|v| (v.placement_id, v.cols, v.rows));
+    assert_eq!(size(3), Some((3, 4, 3)), "the other one is still declared");
+    // A cell that names the gone one is sized by the newest, which is the other.
+    assert_eq!(size(2), Some((3, 4, 3)));
+}

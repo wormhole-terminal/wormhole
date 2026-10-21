@@ -153,6 +153,52 @@ mod tests {
         assert_eq!(dimensions(&jpeg[..20]), None, "cut short");
     }
 
+    /// A start-of-frame segment for 32 by 16 pixels.
+    const FRAME: [u8; 10] = [0xFF, 0xC0, 0x00, 0x08, 8, 0x00, 0x10, 0x00, 0x20, 3];
+
+    fn jpeg_with(segments: &[&[u8]]) -> Vec<u8> {
+        let mut jpeg = vec![0xFF, 0xD8];
+        for segment in segments {
+            jpeg.extend_from_slice(segment);
+        }
+        jpeg.extend_from_slice(&FRAME);
+        jpeg
+    }
+
+    #[test]
+    fn jpeg_markers_without_a_length_are_skipped_and_one_of_two_bytes_is_an_empty_segment() {
+        // TEM and a restart marker have no length: the bytes after them are the next marker.
+        assert_eq!(dimensions(&jpeg_with(&[&[0xFF, 0x01], &[0xFF, 0xD3]])), Some((32, 16)));
+        // A segment's length counts its own two bytes, so 2 is a segment with nothing in it.
+        assert_eq!(dimensions(&jpeg_with(&[&[0xFF, 0xE0, 0x00, 0x02]])), Some((32, 16)));
+        // And a length under that is no segment at all.
+        assert_eq!(dimensions(&jpeg_with(&[&[0xFF, 0xE0, 0x00, 0x01]])), None);
+    }
+
+    #[test]
+    fn a_scan_or_the_end_of_the_image_before_a_frame_header_is_no_size() {
+        // The frame header that follows is not the picture's: the data it would describe is over.
+        assert_eq!(dimensions(&jpeg_with(&[&[0xFF, 0xDA, 0x00, 0x04, 0, 0]])), None);
+        assert_eq!(dimensions(&jpeg_with(&[&[0xFF, 0xD9, 0x00, 0x02]])), None);
+    }
+
+    #[test]
+    fn a_bmp_has_the_old_12_byte_header_or_one_of_at_least_40_bytes() {
+        let bmp = |size: u32, width: &[u8], height: &[u8]| {
+            let mut out = b"BM".to_vec();
+            out.extend_from_slice(&[0; 12]);
+            out.extend_from_slice(&size.to_le_bytes());
+            out.extend_from_slice(width);
+            out.extend_from_slice(height);
+            out
+        };
+        assert_eq!(dimensions(&bmp(12, &30u16.to_le_bytes(), &20u16.to_le_bytes())), Some((30, 20)));
+        let (width, height) = (30i32.to_le_bytes(), 20i32.to_le_bytes());
+        assert_eq!(dimensions(&bmp(40, &width, &height)), Some((30, 20)));
+        assert_eq!(dimensions(&bmp(20, &width, &height)), None, "a header of a size nobody wrote");
+        assert_eq!(dimensions(&bmp(39, &width, &height)), None);
+    }
+
     #[test]
     fn webp_in_its_three_forms() {
         let riff = |kind: &[u8], body: &[u8]| {

@@ -349,3 +349,42 @@ fn pictures_waiting_for_the_host_are_held_to_the_hosts_size() {
     r.feed(&apc("a=t,f=100,i=3", &png(10, 10)));
     assert_eq!(uploads(&mut r).len(), 1);
 }
+
+/// What the host is handed, and what the program is told at once, for a PNG header of this size
+/// when the host has set these limits.
+fn png_sent(limits: impl FnOnce(&mut crate::terminal::Limits), w: u32, h: u32) -> (usize, String) {
+    let mut r = rig(40, 6);
+    r.term.set_limits(lowered(limits));
+    r.feed(&apc("a=t,f=100,i=1,q=0", &png(w, h)));
+    (uploads(&mut r).len(), r.replies())
+}
+
+#[test]
+fn a_picture_may_have_the_most_pixels_the_sides_and_the_total_allow_and_no_more() {
+    // 10,000 on a side, and 16 Mi pixels in all (4,096 square).
+    for (w, h) in [(10_000, 1), (1, 10_000), (4096, 4096)] {
+        let (sent, reply) = png_sent(|_| {}, w, h);
+        assert_eq!((sent, reply.as_str()), (1, ""), "{w} by {h} waits for the host's decode");
+    }
+    for (w, h) in [(10_001, 1), (1, 10_001), (4097, 4096)] {
+        let (sent, reply) = png_sent(|_| {}, w, h);
+        assert_eq!(sent, 0, "{w} by {h}");
+        assert!(reply.contains("EFBIG"), "{w} by {h}: {reply:?}");
+    }
+    // A picture with no pixels is no picture, whichever side says so.
+    for (w, h) in [(0, 10), (10, 0)] {
+        let (sent, reply) = png_sent(|_| {}, w, h);
+        assert_eq!(sent, 0, "{w} by {h}");
+        assert!(reply.contains("ENODATA"), "{w} by {h}: {reply:?}");
+    }
+}
+
+#[test]
+fn a_picture_that_takes_exactly_the_hosts_byte_budget_or_queue_is_kept() {
+    // 10 by 10 pixels are 400 bytes decoded; its header, 33 bytes, is what waits for the host.
+    assert_eq!(png_sent(|l| l.image_bytes = 400, 10, 10), (1, String::new()));
+    let (sent, reply) = png_sent(|l| l.image_bytes = 400, 10, 11);
+    assert_eq!(sent, 0);
+    assert!(reply.contains("EFBIG"), "{reply:?}");
+    assert_eq!(png_sent(|l| l.image_uploads = 33, 10, 10), (1, String::new()));
+}

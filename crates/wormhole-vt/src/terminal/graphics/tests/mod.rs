@@ -1,12 +1,15 @@
 //! Tests of the picture protocols through the whole terminal: kitty's graphics commands (`kitty`,
 //! `place`, `delete`), Sixel (`sixel`), iTerm2's inline images (`iterm`), what happens to
-//! placements as the screen scrolls, is erased and resized (`screen`), and limits and hostile
-//! input (`limits`). Each cites the section of the protocol document it checks.
+//! placements as the screen scrolls, is erased and resized (`screen`), pictures that arrive in
+//! pieces (`pieces`), limits and hostile input (`limits`), and the check of the tables
+//! (`invariants`). Each cites the section of the protocol document it checks.
 
 mod delete;
+mod invariants;
 mod iterm;
 mod kitty;
 mod limits;
+mod pieces;
 mod place;
 mod screen;
 mod sixel;

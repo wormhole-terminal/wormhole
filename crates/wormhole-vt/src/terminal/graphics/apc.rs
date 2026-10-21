@@ -175,7 +175,7 @@ impl ApcReader {
 
 #[cfg(test)]
 mod tests {
-    use super::{ApcReader, PAYLOAD_MAX};
+    use super::{ApcReader, CONTROL_MAX, Error, PAYLOAD_MAX};
 
     fn read(parts: &[&[u8]]) -> super::Parsed {
         let mut reader = ApcReader::default();
@@ -252,6 +252,102 @@ mod tests {
         assert!(bytewise(5, b"AAECAwQF").overflow, "a byte over");
         assert!(!bytewise(3, b"AAEC").overflow, "one group, three bytes, room for three");
         assert!(bytewise(2, b"AAEC").overflow);
+    }
+
+    #[test]
+    fn the_payload_cap_is_exact_for_groups_that_arrive_whole() {
+        // The same limit as above on the fast path, which takes four characters at once.
+        let whole = |max: usize, text: &[u8]| {
+            let mut reader = ApcReader::default();
+            reader.begin(max);
+            reader.put(b";");
+            reader.put(text);
+            reader.finish()
+        };
+        let at_the_cap = whole(6, b"AAECAwQF");
+        assert!(!at_the_cap.overflow);
+        assert_eq!(at_the_cap.payload, [0, 1, 2, 3, 4, 5]);
+        assert!(whole(5, b"AAECAwQF").overflow, "a byte over");
+        assert!(!whole(3, b"AAEC").overflow, "one group, three bytes, room for three");
+        assert!(whole(2, b"AAEC").overflow);
+    }
+
+    #[test]
+    fn a_payload_over_the_cap_is_dropped_whole_even_when_its_last_group_came_in_pieces() {
+        // The group that did not fit was being read a character at a time: what it held is no part
+        // of the payload that is handed over.
+        let mut reader = ApcReader::default();
+        reader.begin(2);
+        reader.put(b";");
+        for byte in b"AAEC" {
+            reader.put(&[*byte]);
+        }
+        let parsed = reader.finish();
+        assert!(parsed.overflow);
+        assert!(parsed.payload.is_empty());
+    }
+
+    #[test]
+    fn a_character_that_is_not_base64_is_found_wherever_it_stands_in_a_group() {
+        // Four characters are tested at once, by their values together: two that are not base64
+        // must not hide each other.
+        for group in ["!AAA", "A!AA", "AA!A", "AAA!", "!!AA", "A!!A", "!A!A", "AA!!", "!!!!"] {
+            assert!(read(&[b";", group.as_bytes()]).bad_base64, "{group}");
+        }
+        assert!(!read(&[b";", b"AAAA"]).bad_base64);
+    }
+
+    #[test]
+    fn nothing_is_read_after_an_error_or_the_padding() {
+        // The error: the three bytes read before it stay, what comes after is not added.
+        let broken = read(&[b";AAEC!", b"AAEC"]);
+        assert!(broken.bad_base64);
+        assert_eq!(broken.payload, [0, 1, 2]);
+        // The padding ends the data, in the same slice and in the next.
+        assert_eq!(read(&[b";aGk=AAEC"]).payload, b"hi");
+        assert_eq!(read(&[b";aGk=", b"AAEC"]).payload, b"hi");
+    }
+
+    #[test]
+    fn a_cancelled_string_leaves_nothing_of_its_command_and_keeps_its_buffers() {
+        let mut reader = ApcReader::default();
+        reader.begin(PAYLOAD_MAX);
+        reader.put(b"i=5,a=T;AAECAwQF");
+        reader.cancel();
+        // What a string has held is kept for the next one, not allocated again.
+        assert!(reader.control.capacity() >= 7 && reader.payload.capacity() >= 6);
+        // The next string's start would clear the command too, but none may be left meanwhile.
+        let parsed = reader.finish();
+        assert_eq!(parsed.command, super::Command::default());
+        assert!(parsed.payload.is_empty() && parsed.error.is_none());
+    }
+
+    #[test]
+    fn control_data_over_its_cap_is_held_to_it_and_says_so() {
+        let mut reader = ApcReader::default();
+        reader.begin(PAYLOAD_MAX);
+        reader.put(&vec![b'i'; 10_000]);
+        assert_eq!(reader.control.len(), CONTROL_MAX + 1, "marked as too long, not kept");
+        reader.put(&vec![b'i'; 10_000]);
+        assert_eq!(reader.control.len(), CONTROL_MAX + 1);
+        assert_eq!(reader.finish().error, Some(Error::Invalid("control data too long")));
+    }
+
+    #[test]
+    fn control_data_in_pieces_is_added_up_not_multiplied_and_may_fill_its_cap() {
+        // 200 bytes in two slices: 10,000 if the two sizes were multiplied.
+        let mut first = b"i=1".to_vec();
+        first.resize(100, b',');
+        let parsed = read(&[&first, &[b','; 100], b";AAEC"]);
+        assert_eq!((parsed.command.id, parsed.error), (1, None));
+        assert_eq!(parsed.payload, [0, 1, 2]);
+        // The cap itself is allowed, in one piece or two; a byte more is too long.
+        let mut full = b"i=1".to_vec();
+        full.resize(CONTROL_MAX, b',');
+        assert_eq!(read(&[&full]).error, None);
+        assert_eq!(read(&[&full[..1000], &full[1000..]]).error, None);
+        full.push(b',');
+        assert_eq!(read(&[&full]).error, Some(Error::Invalid("control data too long")));
     }
 
     #[test]

@@ -251,3 +251,36 @@ fn raw_pixels_ask_for_their_size_in_bytes_and_only_data_that_long_is_taken() {
     assert!(up.is_empty() || (up[0].format, up[0].compression) == (ImageFormat::Rgb, Compression::None));
     assert!(r.replies().contains("Gi=1;"), "the program is told either way");
 }
+
+#[test]
+fn an_upload_says_how_many_bytes_the_host_will_hold_for_it_decoded() {
+    let mut r = rig(40, 10);
+    r.feed(&apc("a=t,f=24,s=2,v=3,i=1,q=2", &rgb(2, 3)));
+    r.feed(&apc("a=t,f=100,i=2,q=2", &png(30, 20)));
+    let sizes: Vec<u64> = uploads(&mut r).iter().map(|up| up.decoded_bytes()).collect();
+    assert_eq!(sizes, [2 * 3 * 4, 30 * 20 * 4], "RGBA, whatever the format sent");
+}
+
+#[test]
+fn a_payload_that_is_not_base64_is_refused_alone_or_as_a_chunk() {
+    let mut r = rig(40, 10);
+    r.feed("\x1b_Ga=t,f=24,s=1,v=1,i=5;!!!!\x1b\\");
+    assert!(uploads(&mut r).is_empty());
+    assert_eq!(r.replies(), "\x1b_Gi=5;EINVAL:the payload is not base64\x1b\\");
+    // The last chunk of a transmission: the whole of it is refused, and the next command is a command.
+    r.feed(&apc("a=t,f=24,s=1,v=1,i=6,m=1", &rgb(1, 1)));
+    r.feed("\x1b_Gm=0;!!!!\x1b\\");
+    assert!(uploads(&mut r).is_empty());
+    assert_eq!(r.replies(), "\x1b_Gi=6;EINVAL:the payload is not base64\x1b\\");
+    r.feed(&apc("a=t,f=24,s=1,v=1,i=7", &rgb(1, 1)));
+    assert_eq!(uploads(&mut r).len(), 1);
+}
+
+#[test]
+fn a_cancelled_command_leaves_nothing_behind_in_the_reader() {
+    let mut r = rig(40, 10);
+    r.feed("\x1b_Ga=t,f=24,s=1,v=1,i=5;AAEC\x18");
+    let left = r.term.graphics.apc.finish();
+    assert_eq!(left.command.id, 0, "its keys are gone");
+    assert!(left.payload.is_empty(), "and its data");
+}

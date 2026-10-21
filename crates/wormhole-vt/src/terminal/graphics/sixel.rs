@@ -399,6 +399,54 @@ mod tests {
         assert_eq!(hls_to_rgb(u32::MAX, 50, 50), hls_to_rgb(u32::MAX % 360, 50, 50), "the biggest hue");
     }
 
+    #[test]
+    fn hues_between_the_primaries_mix_their_two_neighbours_in_every_sector_of_the_wheel() {
+        // Full saturation at half lightness; DEC's degrees have blue at 0, red at 120, green at 240.
+        assert_eq!(hls_to_rgb(150, 50, 100), [255, 128, 0], "from red toward green");
+        assert_eq!(hls_to_rgb(210, 50, 100), [128, 255, 0], "from there to green");
+        assert_eq!(hls_to_rgb(330, 50, 100), [0, 128, 255], "from cyan toward blue");
+    }
+
+    #[test]
+    fn a_picture_may_be_as_tall_and_as_big_as_allowed_and_no_more() {
+        // The size the raster attributes declare counts as the painted one.
+        let tall = decode(b"\"1;1;1;10000~", 9).expect("decodes");
+        assert_eq!((tall.width, tall.height), (1, 10_000));
+        assert_eq!(decode(b"\"1;1;1;10001~", 9), Err(SixelError::TooBig));
+        // 4,096 on both sides are the 16 Mi pixels of the most.
+        let most = decode(b"\"1;1;4096;4096~", 9).expect("decodes");
+        assert_eq!((most.width, most.height), (4096, 4096));
+        assert_eq!(decode(b"\"1;1;4097;4096~", 9), Err(SixelError::TooBig));
+    }
+
+    #[test]
+    fn blank_columns_cost_no_work() {
+        // A band painted once, then 1,200 runs of 9,999 columns of nothing: 72 million of work if
+        // they were counted, over the budget.
+        let mut data = b"!9999~$".to_vec();
+        for _ in 0..1200 {
+            data.extend_from_slice(b"!9999?$");
+        }
+        let image = square(&data).expect("blank runs are free");
+        assert_eq!((image.width, image.height), (9999, 6));
+    }
+
+    #[test]
+    fn painting_over_and_over_is_held_to_the_work_budget() {
+        // Ten rows to a pixel and 10,000 columns of one sixel row, each time: 600,000 of work for a
+        // picture of 600,000 pixels. The budget is 64 Mi: 111 times is within it, 112 is not.
+        let over = |times: usize| {
+            let mut data = b"\"10;1;1;6".to_vec();
+            for _ in 0..times {
+                data.extend_from_slice(b"!10000@$");
+            }
+            decode(&data, 9)
+        };
+        let image = over(111).expect("66.6 million of work");
+        assert_eq!((image.width, image.height), (10_000, 60));
+        assert_eq!(over(112), Err(SixelError::TooMuchWork), "67.2 million");
+    }
+
     /// Found by the fuzzer (`graphics`, `term`, `split`): an aspect ratio of two huge numbers
     /// overflowed the rounding of pan / pad.
     #[test]

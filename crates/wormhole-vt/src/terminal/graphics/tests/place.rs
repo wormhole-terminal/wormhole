@@ -207,3 +207,29 @@ fn a_picture_that_leaves_the_cursor_leaves_a_pending_wrap_too() {
     assert_eq!(r.row(0), "0123456789");
     assert_eq!(r.row(1), "x", "the wrap that was waiting still happens");
 }
+
+#[test]
+fn a_cursor_below_the_scrolling_region_cuts_the_picture_at_the_screens_last_row() {
+    let mut r = rig(40, 10);
+    // The region is rows 2 to 4 and has no history behind it; the cursor is on row 7, under it.
+    r.feed("\x1b[2;4r\x1b[7;1H");
+    r.feed(&apc("a=T,f=24,s=8,v=80,i=1,q=2", &rgb(8, 80)));
+    assert_eq!(spots(&r), [(1, 6, 0, 1, 4)], "five rows of picture, four rows left under the cursor");
+    assert_eq!(r.cursor(), (9, 1));
+    assert_eq!(r.term.history_len(), 0);
+}
+
+#[test]
+fn a_part_of_a_picture_without_a_size_runs_to_the_pictures_edge() {
+    let mut r = rig(40, 10);
+    store(&mut r, 1, 16, 32);
+    r.feed(&apc_bare("a=p,i=1,x=4,y=8,C=1,q=2"));
+    let [p] = placed(&r)[..] else { panic!("{:?}", spots(&r)) };
+    assert_eq!(p.source, SourceRect { x: 4, y: 8, width: 12, height: 24 });
+    assert_eq!((p.cols, p.rows), (2, 2));
+    // One that does name a size is cut at the edge too.
+    r.feed(&apc_bare("a=p,i=1,p=2,x=4,y=8,w=100,h=100,C=1,q=2"));
+    let shown = placed(&r);
+    let cut = shown.iter().find(|p| p.placement_id == 2).expect("placed");
+    assert_eq!(cut.source, SourceRect { x: 4, y: 8, width: 12, height: 24 });
+}

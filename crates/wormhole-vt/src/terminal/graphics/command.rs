@@ -272,7 +272,7 @@ impl Command {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Command, Medium, Quiet, Selector};
+    use super::{Action, CONTROL_MAX, Command, Medium, Quiet, Selector};
     use crate::terminal::graphics::reply::Error;
 
     fn parse(text: &str) -> Command {
@@ -335,8 +335,21 @@ mod tests {
     }
 
     #[test]
+    fn control_data_may_be_as_long_as_the_cap_and_no_longer() {
+        let mut control = b"i=1".to_vec();
+        control.resize(CONTROL_MAX, b',');
+        let (command, error) = Command::parse(&control);
+        assert_eq!((command.id, error), (1, None), "empty pairs are skipped");
+        control.push(b',');
+        assert_eq!(Command::parse(&control).1, Some(Error::Invalid("control data too long")));
+    }
+
+    #[test]
     fn bad_input_is_an_error_that_keeps_the_ids_read_so_far() {
-        for bad in ["a", "i=x", "i=-1", "a=TT", "a=z", "t=x", "d=!", "s=99999999999", "=1", "i=1,I=2"] {
+        // `o=1` is the only one a letter's lookup alone does not refuse: the compression key reads
+        // a letter and accepts any other than `z`.
+        for bad in ["a", "i=x", "i=-1", "a=TT", "a=z", "t=x", "d=!", "o=1", "s=99999999999", "=1", "i=1,I=2"]
+        {
             let (_, error) = Command::parse(bad.as_bytes());
             assert!(matches!(error, Some(Error::Invalid(_))), "{bad}");
         }
