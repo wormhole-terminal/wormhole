@@ -360,6 +360,9 @@ impl Entry {
 }
 
 #[cfg(test)]
+mod audit;
+
+#[cfg(test)]
 mod tests {
     use super::{Style, StyleTable};
     use crate::types::{Color, Flags, NamedColor, Rgb};
@@ -518,6 +521,27 @@ mod tests {
         assert_eq!(a.used().collect::<Vec<_>>(), b.used().collect::<Vec<_>>());
         assert_eq!((a.live(), a.bytes()), (b.live(), b.bytes()));
         assert!(a.verify().is_ok() && b.verify().is_ok());
+    }
+
+    #[test]
+    fn two_styles_whose_hashes_collide_stay_two_entries() {
+        // What the seed makes a stranger's guess: two looks with the same 32 bits of hash, found by
+        // brute force for one seed.
+        let seed = 7;
+        let mut seen = std::collections::HashMap::<u32, u32>::new();
+        let (first, second) = (0..1_u32 << 20)
+            .find_map(|n| {
+                let hash = rgb_style(n).table_hash(seed) as u32;
+                seen.insert(hash, n).map(|earlier| (rgb_style(earlier), rgb_style(n)))
+            })
+            .expect("two of a million looks share 32 bits of hash");
+        let mut table = StyleTable { seed, ..StyleTable::default() };
+        let a = table.acquire(&first, 1);
+        let b = table.acquire(&second, 1);
+        assert_ne!(a, b);
+        assert_eq!((table.get(a), table.get(b)), (&first, &second));
+        assert_eq!(table.acquire(&second, 1), b, "and each is still found");
+        assert!(table.verify().is_ok());
     }
 
     #[test]

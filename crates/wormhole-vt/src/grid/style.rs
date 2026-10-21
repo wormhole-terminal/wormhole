@@ -91,3 +91,54 @@ impl Default for Style {
         Style::DEFAULT
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Style;
+    use crate::types::{Color, NamedColor, Rgb};
+
+    const SEED: u64 = 0x1234_5678_9ABC_DEF0;
+
+    fn hash_with_underline(color: Option<Color>) -> u64 {
+        Style { underline_color: color, ..Style::DEFAULT }.table_hash(SEED)
+    }
+
+    #[test]
+    fn the_first_color_of_each_kind_hashes_differently_from_no_color_and_from_the_others() {
+        // All of them have the number 0, so only their kind tells them apart.
+        let hashes = [
+            None,
+            Some(Color::Named(NamedColor::Black)),
+            Some(Color::Indexed(0)),
+            Some(Color::Rgb(Rgb { r: 0, g: 0, b: 0 })),
+        ]
+        .map(hash_with_underline);
+        for (i, a) in hashes.iter().enumerate() {
+            for b in &hashes[i + 1..] {
+                assert_ne!(a, b);
+            }
+        }
+    }
+
+    #[test]
+    fn colors_of_one_kind_hash_by_their_number() {
+        let named = |color| hash_with_underline(Some(Color::Named(color)));
+        assert_ne!(named(NamedColor::Red), named(NamedColor::Green));
+        let indexed = |n| hash_with_underline(Some(Color::Indexed(n)));
+        assert_ne!(indexed(1), indexed(2));
+    }
+
+    #[test]
+    fn about_half_the_bits_of_a_hash_are_set() {
+        // A folded product has half its bits set on average. The two halves ORed, as a slip of the
+        // operator would make it, have three quarters.
+        let colors = 2000_u32;
+        let set: u32 = (0..colors)
+            .map(|n| {
+                let fg = Color::Rgb(Rgb { r: n as u8, g: (n >> 8) as u8, b: (n * 7) as u8 });
+                Style { fg, ..Style::DEFAULT }.table_hash(SEED).count_ones()
+            })
+            .sum();
+        assert!((28 * colors..36 * colors).contains(&set), "{set} bits set in {colors} hashes");
+    }
+}
