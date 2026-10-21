@@ -403,7 +403,7 @@ fn drawing_order_is_by_z_then_age_and_the_view_picks_what_it_shows() {
 #[test]
 fn a_placement_is_at_least_one_cell() {
     let mut g = grid(20, 6);
-    assert!(g.place_image(Line(1), 3, new(7, 0, 0)));
+    assert!(g.place_image(Line(1), 3, NewPlacement { cols: 0, rows: 0, ..new(7, 4, 2) }));
     assert_eq!(spots(&g), [(7, 1, 3, 1, 1)]);
 }
 
