@@ -22,7 +22,9 @@ fn ops(rig: &mut Rig) -> Vec<WindowOp> {
 #[test]
 fn every_operation_is_an_event_and_none_without_the_host() {
     let mut rig = Rig::new(20, 5);
-    rig.feed("\x1b[2t\x1b[3;10;20t\x1b[8;10;40t\x1b[9;1t\x1b[10;1t\x1b[40t");
+    rig.feed(
+        "\x1b[1t\x1b[2t\x1b[3;10;20t\x1b[4;100;150t\x1b[5t\x1b[6t\x1b[8;10;40t\x1b[9;1t\x1b[10;1t\x1b[40t",
+    );
     assert!(ops(&mut rig).is_empty());
     assert_eq!((rig.term.cols(), rig.term.rows()), (20, 5));
 

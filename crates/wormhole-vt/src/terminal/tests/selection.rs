@@ -352,6 +352,18 @@ fn a_found_span_follows_its_text_and_says_when_it_is_stale() {
 }
 
 #[test]
+fn a_span_that_was_unpinned_is_gone_while_its_text_is_not() {
+    let mut rig = Rig::new(10, 4);
+    rig.feed("needle");
+    let span = rig.term.pin_span(at(0, 0), at(0, 5));
+    assert_eq!(rig.term.span_points(span), Some((at(0, 0), at(0, 5))));
+    rig.term.unpin_span(span);
+    assert_eq!(rig.term.span_points(span), None, "nothing follows the text any more");
+    assert!(!rig.term.span_holds(span, "needle"));
+    assert!(rig.term.span_is(at(0, 0), at(0, 5), "needle"), "the cells are as they were");
+}
+
+#[test]
 fn a_stored_match_is_stale_once_its_cells_were_overwritten() {
     let mut rig = Rig::new(20, 3);
     rig.feed("needle");

@@ -101,6 +101,16 @@ fn the_report_holds_what_every_cell_of_the_rectangle_has_in_common() {
 }
 
 #[test]
+fn the_report_gives_an_underline_color_only_when_every_cell_has_it() {
+    let mut rig = Rig::new(10, 3);
+    rig.feed("\x1b[58;5;1mab\x1b[58;5;2mc\x1b[0m");
+    rig.feed("\x1b[1;1;1;2#|");
+    assert_eq!(rig.replies(), "\x1b[0;58;5;1m");
+    rig.feed("\x1b[1;1;1;3#|");
+    assert_eq!(rig.replies(), "\x1b[0m");
+}
+
+#[test]
 fn an_upside_down_rectangle_is_not_answered() {
     let mut rig = Rig::new(10, 3);
     rig.feed("\x1b[3;1;1;5#|");

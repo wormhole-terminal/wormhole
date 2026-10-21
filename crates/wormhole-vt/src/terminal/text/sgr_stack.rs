@@ -235,4 +235,21 @@ mod tests {
         bold_and_underline.restore(&mut pen);
         assert_eq!(pen.attrs, Flags::ITALIC | Flags::BOLD | Flags::UNDERCURL);
     }
+
+    #[test]
+    fn a_double_underline_comes_back_alone_and_one_that_was_off_takes_nothing_with_it() {
+        // Saved on: it replaces the other kinds of underline.
+        let mut pen = Style::DEFAULT;
+        pen.attrs = Flags::DOUBLE_UNDERLINE;
+        let on = Entry::save(Mask(Mask::DOUBLE_UNDERLINE), &pen);
+        pen.attrs = Flags::UNDERCURL;
+        on.restore(&mut pen);
+        assert_eq!(pen.attrs, Flags::DOUBLE_UNDERLINE);
+        // Saved off: the underline the pen has now is not the push's business.
+        let mut pen = Style::DEFAULT;
+        let off = Entry::save(Mask(Mask::DOUBLE_UNDERLINE), &pen);
+        pen.attrs = Flags::UNDERCURL | Flags::BOLD;
+        off.restore(&mut pen);
+        assert_eq!(pen.attrs, Flags::UNDERCURL | Flags::BOLD);
+    }
 }

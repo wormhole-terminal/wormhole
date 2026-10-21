@@ -56,6 +56,18 @@ fn titles_are_set_reset_and_stacked() {
 }
 
 #[test]
+fn popping_the_title_and_the_icon_name_takes_both_slots_they_were_saved_in() {
+    let mut rig = Rig::new(20, 5);
+    // Two slots: the title in one, the icon name in the other.
+    rig.feed("\x1b]2;T1\x07\x1b]1;I1\x07\x1b[22;2t\x1b[22;1t");
+    rig.feed("\x1b]2;T2\x07\x1b]1;I2\x07\x1b[23;0t");
+    assert_eq!((rig.term.title(), rig.term.icon_name()), (Some("T1"), Some("I1")));
+    // Both are used up: a pop now has nothing to bring back.
+    rig.feed("\x1b]1;I3\x07\x1b[23;1t");
+    assert_eq!(rig.term.icon_name(), Some("I3"));
+}
+
+#[test]
 fn a_long_title_is_cut_at_a_character() {
     let mut rig = Rig::new(20, 5);
     rig.feed(&format!("\x1b]0;{}\x07", "é".repeat(3000)));

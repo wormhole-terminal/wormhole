@@ -31,6 +31,43 @@ fn decrqss_describes_the_pen_as_the_sequence_that_sets_it() {
 }
 
 #[test]
+fn decrqss_lists_the_title_modes_that_are_on_whatever_modes_the_request_names() {
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1bP$q>t\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP0$r\x1b\\", "none is on: there is nothing to restore");
+    rig.feed("\x1b[>0;1t\x1bP$q>t\x1b\\\x1bP$q>1;0t\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP1$r>0;1t\x1b\\\x1bP1$r>0;1t\x1b\\");
+    // Only numbers and semicolons name modes.
+    rig.feed("\x1bP$q>xt\x1b\\\x1bP$q>1 t\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP0$r\x1b\\\x1bP0$r\x1b\\");
+}
+
+#[test]
+fn xtsmgraphics_answers_a_read_and_refuses_to_set() {
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1b[?1;3;16S\x1b[?2;3;100;100S\x1b[?3;3;0S");
+    assert_eq!(rig.replies(), "\x1b[?1;3;0S\x1b[?2;3;0S\x1b[?3;3;0S");
+}
+
+#[test]
+fn a_cursor_report_read_back_sets_the_sets_the_sizes_say() {
+    // DECRSPS with a 96-character set in each of G2 and G3 (`L` is the sizes: bits 2 and 3), and the
+    // report that follows says the same. Slots 0 and 1 are 94-character sets: 'B' is ASCII.
+    let mut rig = Rig::new(20, 5);
+    rig.feed("\x1bP1$t1;1;1;@;@;@;0;2;L;B0AA\x1b\\\x1b[1$w");
+    assert_eq!(rig.replies(), "\x1bP1$u1;1;1;@;@;@;0;2;L;B0AA\x1b\\");
+}
+
+#[test]
+fn a_terminal_state_report_read_back_without_column_margins_makes_the_columns_the_screen() {
+    let mut rig = Rig::new(20, 4);
+    // The state report of a terminal with the margins 2;3 for the rows and none at the sides.
+    rig.feed("\x1bP1$p2;3;1;C;@;@;0;2;@;BBBB!5/10!2;3;1;20!4;20!1;5;7\x1b\\");
+    rig.feed("\x1bP$qs\x1b\\\x1bP$qr\x1b\\");
+    assert_eq!(rig.replies(), "\x1bP1$r1;20s\x1b\\\x1bP1$r2;3r\x1b\\");
+}
+
+#[test]
 fn cursor_style_is_what_the_program_chose() {
     let mut rig = Rig::new(20, 5);
     let style = |rig: &Rig| {
@@ -157,6 +194,39 @@ fn modes_can_be_saved_and_restored() {
     assert_eq!(rig.replies(), "\x1b[?7;1$y");
     rig.feed("\x1b[?1000s\x1b[?1000h\x1b[?1000r\x1b[?1000$p");
     assert_eq!(rig.replies(), "\x1b[?1000;2$y");
+}
+
+#[test]
+fn only_sixty_four_modes_can_be_saved_at_once() {
+    let mut rig = Rig::new(10, 4);
+    // Sixty-four numbers fill the list (no matter what the modes are), the next is not kept.
+    for n in 3000..3064 {
+        rig.feed(&format!("\x1b[?{n}s"));
+    }
+    rig.feed("\x1b[?2004h\x1b[?2004s\x1b[?2004l\x1b[?2004r\x1b[?2004$p");
+    assert_eq!(rig.replies(), "\x1b[?2004;2$y", "the sixty-fifth was not saved, so nothing is restored");
+    // One that is saved again takes its own place, not another.
+    rig.feed("\x1b[?3000s\x1b[?3000s\x1b[?2004h\x1b[?2004s\x1b[?2004l\x1b[?2004r\x1b[?2004$p");
+    assert_eq!(rig.replies(), "\x1b[?2004;2$y", "the list is still full");
+}
+
+#[test]
+fn a_known_intermediate_with_another_final_byte_asks_and_changes_nothing() {
+    let mut rig = Rig::new(10, 3);
+    // CSI & u (DECRQUPSS) and CSI ! p (DECSTR) have neighbours that are not them.
+    rig.feed("\x1b[4h\x1b[&x\x1b[!x");
+    assert_eq!(rig.replies(), "");
+    assert!(rig.term.modes().contains(crate::types::Modes::INSERT), "no soft reset happened");
+}
+
+#[test]
+fn restoring_a_presentation_report_is_a_vt300_feature() {
+    // DECRSPS with the tab stops of columns 5 and 10: a VT200 does not read it, a VT300 does.
+    let mut rig = Rig::new(20, 3);
+    rig.feed("\x1b[62;1\"p\x1bP2$t5/10\x1b\\\r\tX");
+    assert_eq!(rig.row(0), "        X", "the stops are still every eight columns");
+    rig.feed("\x1b[63;1\"p\x1bP2$t5/10\x1b\\\r\tY");
+    assert_eq!(rig.row(0), "    Y", "the first stop is the fifth column");
 }
 
 #[test]

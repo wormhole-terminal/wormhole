@@ -223,6 +223,40 @@ fn claims_that_match_nothing_are_refused() {
 }
 
 #[test]
+fn osc_dcs_and_apc_claims_share_the_limit_of_256() {
+    let refused = |claim: Passthrough| Terminal::builder().passthrough(claim).err();
+    let mut claims = Passthrough::new();
+    for number in 20_000..20_100 {
+        claims = claims.osc(number, 1);
+    }
+    for intermediate in 0x20u8..=0x2F {
+        for final_byte in *b"rsvwxyz" {
+            claims = claims.dcs(&[intermediate], final_byte, 1);
+        }
+    }
+    for first in *b"abcdefghijklmnopqrstuvwxyzABCDEF0123456789!\"" {
+        claims = claims.apc(first, 1);
+    }
+    assert_eq!(refused(claims.clone()), None, "100 and 112 and 44 are the 256 allowed");
+    assert_eq!(refused(claims.osc(20_100, 1)), Some(PassthroughError::TooMany), "and one more is too many");
+}
+
+#[test]
+fn dcs_claims_that_share_a_final_byte_or_the_intermediates_are_still_separate_claims() {
+    let mut r = rig(Passthrough::new().dcs(b"", b'z', 64).dcs(b"!", b'z', 64).dcs(b"!", b'y', 64));
+    r.feed("\x1bPzone\x1b\\\x1bP!ztwo\x1b\\\x1bP!ythree\x1b\\");
+    let payloads: Vec<Vec<u8>> = r
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            Event::Dcs { payload, .. } => Some(payload),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(payloads, [b"one".to_vec(), b"two".to_vec(), b"three".to_vec()]);
+}
+
+#[test]
 fn the_choice_can_change_while_the_terminal_runs() {
     let mut r = Rig::new(20, 5);
     r.feed("\x1b]51234;before\x07");
