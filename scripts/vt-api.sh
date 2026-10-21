@@ -10,7 +10,8 @@
 # It lists the API with cargo-public-api, which reads the crate's rustdoc JSON, and that needs a
 # nightly toolchain (rustup toolchain install nightly) and the tool (cargo install --locked
 # cargo-public-api). Without either the check is skipped with a warning, never failed, so the gate
-# works on a machine that has neither; CI that must check it installs both. The listing is of the
+# works on a machine that has neither; CI installs both and sets API_REQUIRED=1, which makes a skip a
+# failure. The listing is of the
 # crate as a user builds it (default features), without blanket and auto trait impls.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -28,7 +29,11 @@ done
 
 snapshot=crates/wormhole-vt/api.txt
 
-skip() { warn "wormhole-vt's public API is unchecked: $*"; exit 0; }
+skip() {
+  [ "${API_REQUIRED:-}" = 1 ] && die "wormhole-vt's public API cannot be checked: $*"
+  warn "wormhole-vt's public API is unchecked: $*"
+  exit 0
+}
 
 cargo public-api --version >/dev/null 2>&1 || skip "cargo-public-api is not installed (cargo install --locked cargo-public-api)."
 cargo +nightly --version >/dev/null 2>&1 || skip "no nightly toolchain (rustup toolchain install nightly), which rustdoc JSON needs."
