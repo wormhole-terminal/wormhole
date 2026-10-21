@@ -1,7 +1,7 @@
 //! Mode 2027 and the zero-width characters without it.
 
 use super::Rig;
-use crate::types::Line;
+use crate::types::{Flags, Line};
 
 fn cell(rig: &Rig, x: usize) -> (String, bool) {
     let point = crate::types::Point::new(Line(0), crate::types::Column(x));
@@ -109,6 +109,36 @@ fn a_wide_character_that_does_not_fit_without_autowrap_leaves_no_trace() {
         rig.feed("\x1b[b");
         assert_eq!(cell(&rig, 4).0, "d", "{clusters}: REP repeats the last character that was printed");
     }
+}
+
+/// The flags of the cell at `(y, x)` as the host draws it.
+fn flags(rig: &Rig, y: i32, x: usize) -> Flags {
+    let point = crate::types::Point::new(Line(y), crate::types::Column(x));
+    rig.term.cell(point).map(|cell| cell.flags).unwrap_or_default()
+}
+
+#[test]
+fn a_heart_made_wide_in_the_last_column_leaves_a_spacer_head_and_moves_to_the_next_row() {
+    let mut rig = Rig::new(5, 3);
+    // U+2764 is narrow until VS16 makes it an emoji: it no longer fits where it was.
+    rig.feed("abcd\u{2764}\u{fe0f}");
+    assert_eq!(rig.row(0), "abcd", "the heart left its cell");
+    assert_eq!(rig.row(1), "\u{2764}\u{fe0f}");
+    assert!(flags(&rig, 0, 4).contains(Flags::LEADING_WIDE_CHAR_SPACER), "the row's end is a spacer head");
+    assert_eq!(rig.term.check_invariants(), Ok(()));
+}
+
+#[test]
+fn a_heart_made_wide_at_the_right_margin_leaves_that_cell_blank_and_no_spacer_head() {
+    let mut rig = Rig::new(8, 3);
+    rig.feed("\x1b[?69h\x1b[1;5s");
+    rig.feed("abcd\u{2764}\u{fe0f}");
+    assert_eq!(rig.row(0), "abcd", "the heart left the margin's last cell blank");
+    assert_eq!(rig.row(1), "\u{2764}\u{fe0f}");
+    // The row ends at the margin, not at the screen's edge: there is no spacer head to put.
+    assert!(!flags(&rig, 0, 7).contains(Flags::LEADING_WIDE_CHAR_SPACER));
+    assert!(!flags(&rig, 0, 4).contains(Flags::LEADING_WIDE_CHAR_SPACER));
+    assert_eq!(rig.term.check_invariants(), Ok(()));
 }
 
 #[test]

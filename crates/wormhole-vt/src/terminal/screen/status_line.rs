@@ -150,6 +150,24 @@ mod tests {
     }
 
     #[test]
+    fn controls_that_do_not_move_the_cursor_still_act_in_the_status_line() {
+        let mut term = Terminal::new(30, 3);
+        term.feed(b"\x1b[2$~\x1b[1$}\x07");
+        assert!(term.events().any(|event| event == crate::terminal::Event::Bell), "the bell rings");
+    }
+
+    #[test]
+    fn the_pen_sequences_are_ignored_in_the_status_line_and_the_others_are_not() {
+        let mut term = Terminal::new(30, 3);
+        // Protection (DECSCA) would reach the main display's pen; it is ignored there.
+        term.feed(b"\x1b[2$~\x1b[1$}\x1b[1\"q\x1b[0$}abc\x1b[?2K");
+        assert_eq!(row(&term, 0), "", "the text was not protected: the selective erase took it");
+        // So are pushing and popping the SGR stack: popping there brings nothing back.
+        term.feed(b"\x1b[1m\x1b[#{\x1b[0m\x1b[2$~\x1b[1$}\x1b[#}\x1b[0$}\x1bP$qm\x1b\\");
+        assert_eq!(term.replies(), b"\x1bP1$r0m\x1b\\");
+    }
+
+    #[test]
     fn the_selection_is_ignored_unless_the_line_is_host_writable() {
         let mut term = Terminal::new(30, 3);
         term.feed(b"\x1b[1$}a");

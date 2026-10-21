@@ -163,6 +163,50 @@ fn the_history_keeps_at_least_the_lines_asked_for_and_not_much_more() {
 }
 
 #[test]
+fn the_history_cap_is_the_lines_at_their_width_and_three_pages_of_slack() {
+    use crate::terminal::screen::history::history_bytes;
+    // A cell is eight bytes and a row's record sixteen; the grid drops whole pages of up to 128 KiB,
+    // so the cap allows three more.
+    assert_eq!(history_bytes(0, 80), 3 * 128 * 1024);
+    assert_eq!(history_bytes(100, 80), 100 * (80 * 8 + 16) + 3 * 128 * 1024);
+    assert_eq!(history_bytes(usize::MAX, 80), usize::MAX, "no overflow");
+}
+
+#[test]
+fn a_saved_cursor_stays_on_a_screen_that_shrinks() {
+    let mut rig = Rig::new(10, 5);
+    rig.feed("\x1b[5;10H\x1b7");
+    rig.term.resize(6, 3);
+    assert_eq!(rig.term.check_invariants(), Ok(()));
+    rig.feed("\x1b8X");
+    assert_eq!(rig.row(2), "     X", "restored at the last cell of the smaller screen");
+}
+
+#[test]
+fn a_full_reset_goes_back_to_80_columns_only_from_the_132_a_program_asked_for() {
+    let allowed = || crate::terminal::Policy { window_ops: true, ..Default::default() };
+    // DECCOLM to 132 columns, then RIS: the width goes back, and the host is told.
+    let mut rig = Rig::new(80, 5);
+    rig.term.set_policy(allowed());
+    rig.feed("\x1b[?40h\x1b[?3h");
+    assert_eq!(rig.term.cols(), 132);
+    rig.events();
+    rig.feed("\x1bc");
+    assert_eq!(rig.term.cols(), 80);
+    assert!(rig.events().contains(&Event::ColumnsRequested(80)));
+    // A screen DECCOLM never touched stays as the window has it, whatever its width.
+    let mut rig = Rig::new(100, 5);
+    rig.term.set_policy(allowed());
+    rig.feed("\x1bc");
+    assert_eq!(rig.term.cols(), 100);
+    assert!(!rig.events().iter().any(|event| matches!(event, Event::ColumnsRequested(_))));
+    // DECCOLM without the window operations only records the mode: there is no width to undo.
+    let mut rig = Rig::new(100, 5);
+    rig.feed("\x1b[?40h\x1b[?3h\x1bc");
+    assert_eq!(rig.term.cols(), 100);
+}
+
+#[test]
 fn a_new_terminal_clamps_a_silly_size() {
     let term = crate::terminal::Terminal::builder().size(0, 0).scrollback(0).build();
     assert!(term.cols() >= 2 && term.rows() >= 1);

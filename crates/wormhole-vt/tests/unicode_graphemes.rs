@@ -68,6 +68,15 @@ fn step_answers_both_with_the_same_state() {
 }
 
 #[test]
+fn step_gives_every_ascii_character_the_width_the_tables_do() {
+    // Printable ASCII takes a shortcut past the tables; the controls, DEL included, do not.
+    for c in (0..=0x7Fu8).map(char::from) {
+        assert_eq!(GraphemeState::new().step(c).width, width(c), "U+{:04X}", c as u32);
+    }
+    assert_eq!(GraphemeState::new().step('\u{7f}').width, 0, "DEL is not a character");
+}
+
+#[test]
 fn the_first_character_always_starts_a_cluster() {
     for c in (0..=0x10FFFFu32).filter_map(char::from_u32) {
         assert!(breaks(&mut GraphemeState::new(), c), "U+{:04X}", c as u32);

@@ -62,3 +62,38 @@ fn a_picture_placed_on_a_double_width_row_leaves_the_cursor_where_the_row_shows(
     let mut rig = Rig::new(4, 3);
     checked(&mut rig, &["\x1b#6", "\x1b_Ga=T,f=24,s=1,v=1,i=5,c=4;AAAA\x1b\\"]);
 }
+
+#[test]
+fn a_wrap_below_the_scrolling_region_stays_on_the_last_row() {
+    let mut rig = Rig::new(5, 4);
+    checked(&mut rig, &["\x1b[1;2r", "\x1b[4;1H", "abcdefg"]);
+    // Below the region nothing scrolls and there is no row under the last: the text wraps onto itself.
+    assert_eq!(rig.row(3), "fgcde");
+    assert_eq!(rig.cursor(), (3, 2));
+}
+
+#[test]
+fn forward_index_stops_at_the_last_column_a_double_width_row_shows() {
+    let mut rig = Rig::new(10, 3);
+    // The row shows five columns and the left margin is past them: at the fifth there is no margin
+    // to scroll at and no column to move to.
+    checked(&mut rig, &["\x1b#6", "\x1b[?69h", "\x1b[8;10s", "\x1b[1;5H", "\x1b9"]);
+    assert_eq!(rig.cursor(), (0, 4));
+}
+
+#[test]
+fn inserting_and_deleting_columns_work_only_with_the_cursor_inside_the_region() {
+    // The rows outside the scrolling region.
+    let mut rig = Rig::new(8, 4);
+    checked(&mut rig, &["\x1b[2;3r", "\x1b[2;1Habcdefgh", "\x1b[3;1Hijklmnop", "\x1b[1;3H"]);
+    checked(&mut rig, &["\x1b[1'}", "\x1b[1'~"]);
+    assert_eq!((rig.row(1), rig.row(2)), ("abcdefgh".into(), "ijklmnop".into()));
+    // The columns outside the margins.
+    let mut rig = Rig::new(8, 4);
+    checked(&mut rig, &["\x1b[?69h", "\x1b[3;6s", "abcdef", "\x1b[1;1H"]);
+    checked(&mut rig, &["\x1b[1'}", "\x1b[1'~"]);
+    assert_eq!(rig.row(0), "abcdef");
+    // Inside both they do act: the f is pushed past the right margin.
+    checked(&mut rig, &["\x1b[1;4H", "\x1b[1'}"]);
+    assert_eq!(rig.row(0), "abc de");
+}

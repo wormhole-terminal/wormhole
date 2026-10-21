@@ -93,6 +93,13 @@ fn tab_stops_and_tab_marks() {
 }
 
 #[test]
+fn vt52_mode_with_and_without_its_graphics_set() {
+    // The graphics set is entered with ESC F only when the terminal is in it.
+    repaint(b"abc\x1b[?2l", 20, 6);
+    repaint(b"abc\x1b[?2l\x1bFdef", 20, 6);
+}
+
+#[test]
 fn modes_and_margins() {
     same("\x1b[?2004h\x1b[?1000h\x1b[?1006h\x1b[?25l\x1b[20h\x1b[2;5r\x1b[?6h\x1b[2;2Hx");
 }
