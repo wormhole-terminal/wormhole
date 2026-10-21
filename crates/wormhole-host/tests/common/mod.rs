@@ -16,9 +16,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
-use wormhole_vt::types::Line;
+use wormhole_vt::{Line, Point, Terminal};
 use wormhole_wire::io::{FrameReader, FrameWriter, RecvError};
 use wormhole_wire::{
     self as wire, AppVersion, Attach, CHANNEL_LOCAL, DetachReason, EventKind, Features, Message, Role,
@@ -288,7 +286,6 @@ pub struct Client {
     reader: FrameReader<UnixStream>,
     writer: FrameWriter<UnixStream>,
     pub replica: Terminal,
-    parser: Parser,
     pub order: StreamOrder,
     /// Acknowledge each `Out` as it is read (a client that keeps up).
     pub auto_ack: bool,
@@ -303,8 +300,10 @@ impl Client {
         Self {
             reader: FrameReader::new(stream),
             writer: FrameWriter::new(write),
-            replica: Terminal::new(usize::from(SIZE.cols), usize::from(SIZE.rows), 1000),
-            parser: Parser::new(),
+            replica: Terminal::builder()
+                .size(usize::from(SIZE.cols), usize::from(SIZE.rows))
+                .scrollback(1000)
+                .build(),
             order: StreamOrder::new(),
             auto_ack: true,
             log: Vec::new(),
@@ -339,7 +338,7 @@ impl Client {
         match got {
             Got::Out(offset, bytes) => {
                 self.order.out(&wire::Out { offset: *offset, bytes }).expect("Out in order");
-                self.replica.advance(&mut self.parser, bytes);
+                self.replica.feed(bytes);
                 self.replica.clear_replies();
                 if self.auto_ack {
                     let end = offset + bytes.len() as u64;
@@ -357,7 +356,7 @@ impl Client {
                     bytes,
                 };
                 self.order.repaint(&part).expect("Repaint in order");
-                self.replica.advance(&mut self.parser, bytes);
+                self.replica.feed(bytes);
                 self.replica.clear_replies();
             }
             Got::Resized(applied) => {
@@ -365,7 +364,7 @@ impl Client {
                 self.replica.resize(usize::from(applied.size.cols), usize::from(applied.size.rows));
             }
             Got::Seeds { block, link_seq, image_handle } => {
-                let seeds = wormhole_vt::term::repaint::Seeds {
+                let seeds = wormhole_vt::repaint::Seeds {
                     block: *block,
                     link_seq: *link_seq,
                     image_handle: *image_handle,
@@ -375,7 +374,7 @@ impl Client {
             Got::Welcome(w) => self.welcome = Some(*w),
             _ => {}
         }
-        let _ = self.replica.drain_events().count();
+        let _ = self.replica.events().count();
     }
 
     /// Read until `pred` holds for a frame; that frame. Fails after [`PATIENCE`].
@@ -493,14 +492,14 @@ impl Client {
 
     /// The replica's visible rows, trimmed, one per line.
     pub fn screen_text(&self) -> String {
-        let rows = self.replica.screen_lines() as i32;
+        let rows = self.replica.rows() as i32;
         (0..rows).map(|row| self.replica.row_text(Line(row), true)).collect::<Vec<_>>().join("\n")
     }
 
     /// The replica's history and screen rows, and its cursor.
-    pub fn picture(&self) -> (Vec<String>, wormhole_vt::types::Point) {
-        let top = -(self.replica.history_size() as i32);
-        let rows = self.replica.screen_lines() as i32;
+    pub fn picture(&self) -> (Vec<String>, Point) {
+        let top = -(self.replica.history_len() as i32);
+        let rows = self.replica.rows() as i32;
         let text = (top..rows).map(|row| self.replica.row_text(Line(row), true)).collect();
         (text, self.replica.cursor().point)
     }

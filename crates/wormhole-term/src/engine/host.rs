@@ -78,7 +78,7 @@ impl Host {
     /// so only the pictures are kept (the UI draws its own decode), and a column change the window
     /// may not follow is undone as the host undoes it, to the size the host last applied.
     fn settle_replica(&mut self, screen: &mut Screen) {
-        self.events.extend(screen.term.drain_events());
+        self.events.extend(screen.term.events());
         let mut events = std::mem::take(&mut self.events);
         for event in events.drain(..) {
             match event {

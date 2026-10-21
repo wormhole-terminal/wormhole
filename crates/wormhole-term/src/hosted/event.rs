@@ -1,7 +1,7 @@
 //! The events a hosted terminal's host tells its clients, owned (the wire's `Event` borrows), and the
 //! mapping of window operations to and from the wire's three numbers.
 
-use wormhole_vt::term::{Extent, Fullscreen, Maximize, WindowOp};
+use wormhole_vt::window::{Extent, Fullscreen, Maximize, WindowOp};
 use wormhole_wire as wire;
 
 /// One event of the program (or of the host), without the stream offset it happened at.
@@ -104,9 +104,10 @@ fn extent_from_wire(n: u32) -> Extent {
 /// A window operation as the wire's `WindowOp{op, a, b}`: `op` is XTWINOPS' number (1 deiconify, 2
 /// iconify, 3 move to `a`,`b` pixels as two's complement, 5 raise, 6 lower, 8 resize to `a` rows and
 /// `b` columns where `u32::MAX` keeps and 0 is the largest, 9 maximize `a` = 0 restore, 1 both, 2
-/// vertical, 3 horizontal, 10 full screen `a` = 0 exit, 1 enter, 2 toggle).
-pub fn window_op_to_wire(op: WindowOp) -> (u8, u32, u32) {
-    match op {
+/// vertical, 3 horizontal, 10 full screen `a` = 0 exit, 1 enter, 2 toggle). `None` for an
+/// operation of a newer engine that the wire has no number for yet.
+pub fn window_op_to_wire(op: WindowOp) -> Option<(u8, u32, u32)> {
+    Some(match op {
         WindowOp::Deiconify => (1, 0, 0),
         WindowOp::Iconify => (2, 0, 0),
         WindowOp::Move { x, y } => (3, x as u32, y as u32),
@@ -132,7 +133,8 @@ pub fn window_op_to_wire(op: WindowOp) -> (u8, u32, u32) {
             },
             0,
         ),
-    }
+        _ => return None,
+    })
 }
 
 /// The inverse of [`window_op_to_wire`]; `None` for a number this version does not know.
@@ -179,7 +181,7 @@ mod tests {
             WindowOp::Fullscreen(Fullscreen::Toggle),
         ];
         for op in ops {
-            let (code, a, b) = window_op_to_wire(op);
+            let (code, a, b) = window_op_to_wire(op).expect("the wire knows it");
             assert_eq!(window_op_from_wire(code, a, b), Some(op), "{op:?}");
         }
         assert_eq!(window_op_from_wire(99, 0, 0), None);

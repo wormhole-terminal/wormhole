@@ -28,7 +28,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use polling::{Event, Events, PollMode, Poller};
-use wormhole_vt::term::repaint::Seeds;
+use wormhole_vt::repaint::Seeds;
 use wormhole_wire::{
     self as wire, Attach, CHANNEL_LOCAL, Decoder, DetachReason, Message, StreamMode, StreamOrder,
 };
@@ -356,7 +356,8 @@ impl State {
         if let Err(err) = self.order.resize_applied(&applied) {
             return self.resync(&format!("a resize out of order: {err:?}"));
         }
-        self.replica.update(|screen, _| screen.resize(size));
+        // The host answers the program, an in-band size report included: the replica's go nowhere.
+        self.replica.update(|screen, _| drop(screen.resize(size)));
     }
 
     fn event(&mut self, kind: wire::EventKind<'_>) {

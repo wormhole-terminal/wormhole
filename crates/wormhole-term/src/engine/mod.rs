@@ -51,21 +51,21 @@ impl OwnFeed {
     /// which the UI draws from its own decode.
     pub(crate) fn replica(proxy: EventProxy, screen: Arc<FairLock<Screen>>) -> Self {
         let uploads = Uploads::replica(proxy.clone(), screen);
-        Self { parser: Parser::new(), host: Host::replica(proxy, uploads), deadline: None }
+        Self { host: Host::replica(proxy, uploads), deadline: None }
     }
 
-    /// Start over with a fresh parser, for a fresh screen (a replica about to parse a repaint).
+    /// Start over for a fresh screen (a replica about to parse a repaint), whose terminal comes
+    /// with a fresh parser.
     pub(crate) fn reset(&mut self) {
-        self.parser = Parser::new();
         self.deadline = None;
     }
 }
 
 impl OwnFeed {
-    /// Whether the parser and the terminal are between sequences, so a repaint can be made (see
-    /// `hosted`): the parser is this feed's own.
+    /// Whether the terminal and its parser are between sequences, so a repaint can be made (see
+    /// `hosted`).
     pub(super) fn repaint_ready(&self, screen: &Screen) -> bool {
-        screen.term.repaint_ready(&self.parser).is_ok()
+        screen.term.repaint_ready().is_ok()
     }
 }
 

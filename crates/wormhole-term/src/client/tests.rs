@@ -7,8 +7,7 @@ use std::io;
 use std::os::unix::net::UnixStream;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::parser::Parser;
-use wormhole_vt::term::Terminal;
+use wormhole_vt::Terminal;
 use wormhole_wire::io::{FrameReader, FrameWriter, RecvError};
 use wormhole_wire::{self as wire, CHANNEL_LOCAL, Decoder, DetachReason, EventKind, Message, StreamMode};
 
@@ -137,12 +136,11 @@ fn next_event(events: &PtyEvents, what: &str, mut pred: impl FnMut(&PtyEvent) ->
 }
 
 /// A host-side terminal of `cols` x `rows` after `text`, and its repaint.
-fn repaint_of(cols: usize, rows: usize, text: &[u8]) -> (Vec<u8>, wormhole_vt::term::repaint::Seeds) {
-    let mut term = Terminal::new(cols, rows, 1000);
-    let mut parser = Parser::new();
-    term.advance(&mut parser, text);
+fn repaint_of(cols: usize, rows: usize, text: &[u8]) -> (Vec<u8>, wormhole_vt::repaint::Seeds) {
+    let mut term = Terminal::builder().size(cols, rows).scrollback(1000).build();
+    term.feed(text);
     let mut bytes = Vec::new();
-    let made = term.repaint(&parser, &mut bytes).expect("between sequences");
+    let made = term.repaint(&mut bytes).expect("between sequences");
     (bytes, made.seeds)
 }
 
@@ -152,7 +150,7 @@ fn send_repaint(
     offset: u64,
     size: wire::Size,
     bytes: &[u8],
-    seeds: wormhole_vt::term::repaint::Seeds,
+    seeds: wormhole_vt::repaint::Seeds,
 ) {
     script.send(&Message::ResizeApplied(wire::ResizeApplied { offset, epoch: 0, req: 0, size }));
     let seeds = EventKind::RepaintSeeds {

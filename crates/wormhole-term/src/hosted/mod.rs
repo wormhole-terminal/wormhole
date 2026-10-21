@@ -37,8 +37,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
-use wormhole_vt::parser::Parser;
-use wormhole_vt::types::{COLOR_COUNT, NamedColor, Rgb};
+use wormhole_vt::{COLOR_COUNT, NamedColor, Rgb};
 use wormhole_wire as wire;
 
 use self::tap::{Core, HostedFeed};
@@ -51,7 +50,7 @@ use crate::{GridSize, Launch, Shell};
 pub use self::tap::{CLIPBOARD_TIMEOUT, now_ms};
 pub use event::{HostEvent, window_op_from_wire, window_op_to_wire};
 pub use stream::{Cursor, FORWARD_CAP, Next, ResizeMark, Stream, Wake};
-pub use wormhole_vt::term::repaint::{Gaps, NotReady};
+pub use wormhole_vt::repaint::{Gaps, NotReady};
 
 /// The most history lines an attach's repaint carries (the design's `attach_history_lines`; until
 /// history pages exist, a reattach restores at most this much).
@@ -235,9 +234,8 @@ impl HostedTerminal {
         if !self.core.ready.load(Ordering::Acquire) {
             return Err(NotReady::Sequence);
         }
-        // The feed's own parser is between sequences (`ready`, set under this lock), which is all
-        // the writer asks a parser about.
-        let made = screen.term.repaint_capped(&Parser::new(), out, max_history.min(ATTACH_HISTORY_LINES))?;
+        // `ready` is set under this lock; the writer checks the terminal's own parser again.
+        let made = screen.term.repaint_capped(out, max_history.min(ATTACH_HISTORY_LINES))?;
         let offset = self.core.stream.total();
         let cursor = self.core.stream.register(true, Duration::ZERO, wake);
         Ok(Repainted {

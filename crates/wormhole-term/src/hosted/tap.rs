@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use wormhole_vt::types::TermMode;
+use wormhole_vt::Modes;
 use wormhole_wire as wire;
 
 use super::event::{HostEvent, window_op_to_wire};
@@ -110,7 +110,7 @@ impl Core {
     pub fn publish(&self, screen: &Screen, ready: bool) {
         self.history_lines.store(screen.history_size().min(u32::MAX as usize) as u32, Ordering::Release);
         self.screen_rows.store(screen.screen_lines() as u32, Ordering::Release);
-        self.alt_screen.store(screen.mode().contains(TermMode::ALT_SCREEN), Ordering::Release);
+        self.alt_screen.store(screen.mode().contains(Modes::ALT_SCREEN), Ordering::Release);
         self.ready.store(ready, Ordering::Release);
         self.progress.fetch_add(1, Ordering::AcqRel);
     }
@@ -288,7 +288,7 @@ impl Tap for Core {
             }
             Heard::ClipboardLoad(format, reply) => return self.clipboard_load(format, reply, at),
             Heard::WindowOp(op) => {
-                let (op, a, b) = window_op_to_wire(op);
+                let Some((op, a, b)) = window_op_to_wire(op) else { return };
                 HostEvent::WindowOp { op, a, b }
             }
             Heard::FullReset => {

@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use wormhole_vt::term::repaint::Seeds;
+use wormhole_vt::repaint::Seeds;
 use wormhole_wire::{self as wire, EventKind, MarkKind};
 
 use super::link::{Cmd, Link};

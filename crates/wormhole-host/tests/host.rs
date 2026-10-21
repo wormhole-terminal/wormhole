@@ -88,7 +88,7 @@ fn a_resize_is_in_the_stream_where_it_was_applied() {
     let resized = client.until("ResizeApplied", |g| matches!(g, Got::Resized(r) if r.req == 7));
     let Got::Resized(applied) = resized else { unreachable!() };
     assert_eq!(applied.size, size);
-    assert_eq!((client.replica.columns(), client.replica.screen_lines()), (100, 30));
+    assert_eq!((client.replica.cols(), client.replica.rows()), (100, 30));
     client.input(b"\r");
     client.until_text("30 100");
     // A storm: the host applies the latest of what came within its 8 ms.
