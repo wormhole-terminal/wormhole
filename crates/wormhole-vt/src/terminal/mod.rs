@@ -23,13 +23,14 @@
 //! | `text/` | `print` | text: ASCII runs, wide characters, marks, grapheme clusters (mode 2027), REP, IRM |
 //! | | `charset` | the sets G0..G3 hold: national replacement sets, DEC Technical and Supplemental, Latin-1; and the shifts |
 //! | | `sgr`, `sgr_stack` | SGR and the colors it sets; XTPUSHSGR, XTPOPSGR and XTREPORTSGR |
-//! | `screen/` | `cursor` | movement, margins, origin mode, tabs, DECSC/DECRC |
+//! | `screen/` | `cursor` | where the cursor is, its movement, origin mode, DECSC/DECRC and the slot they use |
 //! | | `edit` | ED, EL, ECH, ICH, DCH, IL, DL, DECIC, DECDC, DECSED, DECSEL |
 //! | | `rect` | DECCARA, DECRARA, DECCRA, DECFRA, DECERA, DECSERA, DECSACE |
-//! | | `scroll` | IND, RI, NEL, SU, SD, DECSTBM, DECSLRM, DECBI, DECFI |
+//! | | `scroll` | the margins; IND, RI, NEL, SU, SD, DECSTBM, DECSLRM, DECBI, DECFI |
 //! | | `line_size` | DECSWL, DECDWL, DECDHL: a row drawn double-width or as half of a double-height line, and the cursor limited to the half it shows |
 //! | | `tabs` | the tab stops themselves |
 //! | | `altscreen` | 47, 1047, 1048, 1049 |
+//! | | `history` | how much history the main screen keeps: the host's line count as the grid's byte cap |
 //! | | `resize`, `reset` | the window changing size, DECCOLM; RIS, DECSTR, DECALN |
 //! | `modes/` | (`mod`) | the numbers that name the modes (the set itself, `Modes`, is a value type in `types/`) and the sets a soft reset and the keyboard flags are |
 //! | | `apply` | SM/RM, DECSET/DECRST, XTSAVE/XTRESTORE and what setting each does; DECRQM |
@@ -52,10 +53,11 @@
 //! | `read/` | `snapshot` | what the host draws from |
 //! | | `selection`, `search` | selecting, copying text, the text a search runs over, links and marks under a point |
 //! | `repaint/` | | the VT bytes that rebuild this terminal in another one (a host's attach and resync), `fields` listing how each piece of state is covered |
-//! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
+//! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears and the queue it waits in; the risky switches; the caps the host can lower; how a terminal is made |
 //! | | `archive` | handing the host the history lines that leave the engine (opt-in; the copying is the grid's) |
 //! | | `base64` | base64 for the clipboard, user variables and the pictures |
 //! | | `watch` | `ModesChanged` and `ColorsChanged`: what changed since the host last took the events |
+//! | | `media_copy` | media copy (`CSI Ps i`): recognised and ignored; no code, only the decision and its test |
 //! | | `passthrough` | [`Passthrough`](passthrough::Passthrough): the OSC, DCS and APC strings a host claims, and the refusal of the ones the engine reads itself (public as `wormhole_vt::passthrough`) |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
 //!
@@ -120,16 +122,18 @@ mod tests;
 mod text;
 mod watch;
 
-use crate::grid::{BlockPart, Grid, Pen, Region};
+use crate::grid::{BlockPart, Grid, Pen};
 use crate::parser::Parser;
-use crate::types::{COLOR_COUNT, Colors, CursorShape, Rgb};
 
 use modes::Modes;
 use modes::conformance::Level;
 use modes::keyboard::KeyboardFlags;
 use read::damage::Seen;
+use screen::cursor::{CursorPos, CursorStyle, Saved};
+use screen::scroll::Margins;
 use screen::tabs::TabStops;
 use text::charset::{Charsets, Preferred};
+use text::print::Cluster;
 
 pub use builder::Builder;
 #[cfg(any(test, feature = "internals"))]
@@ -140,6 +144,7 @@ pub use graphics::{
     VirtualPlacement, placeholder_at, strip_placeholders,
 };
 pub use limits::Limits;
+pub use osc::cwd::CWD_REPORTS_MAX;
 pub use policy::Policy;
 pub use read::damage::Damage;
 pub use read::search::Span;
@@ -147,91 +152,6 @@ pub use read::selection::DEFAULT_WORD_SEPARATORS;
 pub use read::snapshot::Cursor;
 pub use reports::locator::{LocatorButton, Pointer};
 pub use reports::window::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
-
-/// The cursor's place. `pending` is the delayed wrap: the last character filled the row, the next
-/// one wraps.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct CursorPos {
-    x: usize,
-    y: usize,
-    pending: bool,
-}
-
-/// The scrolling region (DECSTBM) and the left and right margins (DECSLRM), always inside the
-/// screen and covering it whole until a program says otherwise. Edges included.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Margins {
-    top: usize,
-    bottom: usize,
-    left: usize,
-    right: usize,
-}
-
-impl Margins {
-    fn full(cols: usize, rows: usize) -> Margins {
-        Margins { top: 0, bottom: rows - 1, left: 0, right: cols - 1 }
-    }
-}
-
-/// What DECSC saves (and DECRC brings back): VT510 DECSC lists the position, the rendition, the
-/// character sets, the origin mode, the selective erase attribute and the wrap flag.
-#[derive(Clone, Debug)]
-struct Saved {
-    cursor: CursorPos,
-    style: crate::grid::Style,
-    protected: bool,
-    origin: bool,
-    charsets: Charsets,
-    link: Option<crate::types::Hyperlink>,
-}
-
-impl Default for Saved {
-    /// The state a terminal starts with: home, normal rendition, ASCII.
-    fn default() -> Saved {
-        Saved {
-            cursor: CursorPos::default(),
-            style: crate::grid::Style::DEFAULT,
-            protected: false,
-            origin: false,
-            charsets: Charsets::default(),
-            link: None,
-        }
-    }
-}
-
-/// The cursor's look as DECSCUSR and mode 12 asked for it; `None` leaves each to the host.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct CursorStyle {
-    shape: Option<CursorShape>,
-    blink: Option<bool>,
-}
-
-/// A grapheme cluster being built in mode 2027: where the last printed character stands, how wide
-/// the cluster is so far, and the state of the UAX #29 automaton.
-#[derive(Clone, Copy, Debug)]
-struct Cluster {
-    /// Whether the character before the cursor was printed by the last operation and can still
-    /// be extended. Any sequence that is not text closes it.
-    open: bool,
-    /// The column of the cluster's first cell; after a character printed outside a cluster (mode
-    /// 2027 off, or mapped by a set), the column of that character.
-    head: usize,
-    width: u8,
-    last: char,
-    state: crate::unicode::GraphemeState,
-}
-
-/// The longest title kept, in bytes. A program that sends more gets it cut (at a character).
-/// Like the other caps below and in the modules, a ceiling: [`Limits`] can lower it.
-const TITLE_MAX: usize = 4096;
-/// The longest folder kept, in bytes.
-const CWD_MAX: usize = 4096;
-/// The title stack's depth (xterm keeps 10).
-const TITLE_STACK: usize = 16;
-/// How many OSC 7 reports are kept for a host that is not looking.
-pub const CWD_REPORTS_MAX: usize = 16;
-/// Events kept for a host that is not looking.
-const EVENTS_MAX: usize = 16_384;
 
 /// The terminal state; see the module docs.
 pub struct Terminal {
@@ -341,15 +261,6 @@ const _: () = {
     assert_send_sync::<Terminal>();
 };
 
-/// Cells are 8 bytes and a row's record 16; a history of N lines is capped at about N rows of
-/// the current width, plus this slack: the grid drops whole pages, so it keeps up to three pages
-/// (128 KiB each) fewer lines than the cap allows, and the slack buys them back.
-const HISTORY_SLACK: usize = 3 * 128 * 1024;
-
-fn history_bytes(lines: usize, cols: usize) -> usize {
-    lines.saturating_mul(cols * 8 + 16).saturating_add(HISTORY_SLACK)
-}
-
 impl Terminal {
     /// Read `bytes` of program output. They may be cut anywhere between calls, in the middle of
     /// a sequence or of a UTF-8 character: the terminal keeps its parser's state.
@@ -362,155 +273,5 @@ impl Terminal {
         self.parser = parser;
         // Output scrolls rows out of the history; a selection on them is gone with them.
         self.prune_selection();
-    }
-
-    /// The events since the last call, oldest first. A change of the modes or colors a host acts
-    /// on since the last call comes after them, once ([`Event::ModesChanged`],
-    /// [`Event::ColorsChanged`]); then, when the host asked for them
-    /// ([`set_archive_history`](Self::set_archive_history)), the history lines that left the engine.
-    pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
-        self.announce_changes();
-        self.queued_values = 0;
-        self.queued_bytes = 0;
-        // History lines that left since the last call come last, in the order they left.
-        self.flush_archive();
-        self.events.drain(..)
-    }
-
-    /// The bytes the program is waiting to read, in the order it asked. The host writes them to
-    /// the PTY and calls [`clear_replies`](Self::clear_replies).
-    pub fn replies(&self) -> &[u8] {
-        self.replies.bytes()
-    }
-
-    /// Forget the replies, after writing them out; the buffer is kept.
-    pub fn clear_replies(&mut self) {
-        self.replies.clear();
-    }
-
-    /// Take the replies, leaving none.
-    pub fn take_replies(&mut self) -> Vec<u8> {
-        self.replies.take()
-    }
-
-    /// The window title the program set, `None` if it never did or reset it.
-    pub fn title(&self) -> Option<&str> {
-        self.titles.window.as_deref()
-    }
-
-    /// The shell's folder as it said (OSC 7: `file://host/path`, percent-encoded), `None` before it
-    /// said anything.
-    pub fn cwd(&self) -> Option<&str> {
-        (!self.folder.now.is_empty()).then_some(self.folder.now.as_str())
-    }
-
-    /// The history the terminal was asked to keep (at least this many lines; see
-    /// [`Builder::scrollback`]).
-    pub fn scrollback_lines(&self) -> usize {
-        self.scrollback_lines
-    }
-
-    /// Change how much history is kept; lines over it are dropped now.
-    pub fn set_scrollback_lines(&mut self, lines: usize) {
-        self.scrollback_lines = lines;
-        self.apply_history_limit();
-    }
-
-    /// Give the main screen the history the configuration asks for at the current width. The
-    /// alternate screen never has any, so the grid that is not showing is the main one while it shows.
-    fn apply_history_limit(&mut self) {
-        let main = if self.on_alt_screen() { &mut self.other } else { &mut self.grid };
-        main.set_scrollback_limit(history_bytes(self.scrollback_lines, self.cols));
-    }
-
-    /// The modes as programs set them, with [`Modes::LOCATOR`] while a program has the DEC
-    /// locator on. See [`Modes`] for which of them a host acts on.
-    #[must_use]
-    pub fn modes(&self) -> Modes {
-        if self.locator.enabled() { self.modes | Modes::LOCATOR } else { self.modes }
-    }
-
-    /// The palette entries programs changed (OSC 4, 10, 11, 12) and have not reset.
-    pub fn colors(&self) -> Colors {
-        self.palette.set
-    }
-
-    /// The host's colors, which OSC 4, 10, 11 and 12 queries are answered with unless the program
-    /// changed the entry. Without a call the palette is xterm's with a light-gray foreground on
-    /// black. Entry `i` is `NamedColor`'s slot (0..=255 the palette, then foreground, background
-    /// and cursor).
-    pub fn set_default_colors(&mut self, palette: &[Rgb; COLOR_COUNT]) {
-        self.palette.defaults.copy_from_slice(palette);
-    }
-
-    /// The host's colors as [`set_default_colors`](Self::set_default_colors) last set them (xterm's
-    /// palette before any call): what queries are answered with unless a program changed the
-    /// entry. A program's changes are [`colors`](Self::colors).
-    #[must_use]
-    pub fn default_colors(&self) -> &[Rgb; COLOR_COUNT] {
-        &self.palette.defaults
-    }
-
-    /// The size of a cell in pixels, which XTWINOPS 14 and 16, the sixel geometry and the in-band
-    /// resize report (mode 2048) say. A change that the report should tell is told by the next
-    /// [`resize`](Terminal::resize), which a host calls after it (also with the size it has).
-    pub fn set_cell_size(&mut self, width: u16, height: u16) {
-        self.cell_px = (width.max(1), height.max(1));
-    }
-
-    /// The scrolling region as the grid wants it.
-    #[inline]
-    fn region(&self) -> Region {
-        Region {
-            top: self.margins.top,
-            bottom: self.margins.bottom,
-            left: self.margins.left,
-            right: self.margins.right,
-        }
-    }
-
-    /// The color erased and scrolled-in cells get: the pen's background.
-    #[inline]
-    fn erase_color(&self) -> crate::types::Color {
-        self.pen.style.bg
-    }
-
-    /// Queue an event. A host that never drains them does not grow without bound: past the cap
-    /// new ones are dropped, and a run of the same event (a bell, a title, a folder said twice, a
-    /// reset) is one. A picture's pixels, their release and a reset are never dropped: the host
-    /// would keep pixels nobody can show, or show a picture without them. They stay bounded past
-    /// the cap: `add_image` takes no new picture there, a picture is freed once, and resets in a
-    /// row are one. The announcements of changed modes and colors are kept too (a host that
-    /// never looked at them would not know its input is wrong); `events` makes two at most.
-    ///
-    /// The count is not the only cap: an event that carries text or data (a clipboard store, a
-    /// notification, a passed-through string) is also counted in bytes, and past
-    /// [`Limits::events_bytes`] the new one is dropped whole. Without it 16,384 events of 8 MiB each
-    /// held 128 GiB for a host that was not looking.
-    fn push_event(&mut self, event: Event) {
-        let kept = matches!(
-            event,
-            Event::ImageData(_)
-                | Event::ImageFree(_)
-                | Event::FullReset
-                | Event::ModesChanged
-                | Event::ColorsChanged
-        );
-        if (self.events.len() >= self.limits.events && !kept)
-            || (matches!(
-                event,
-                Event::Bell | Event::Title | Event::Cwd | Event::FullReset | Event::PointerShape(_)
-            ) && self.events.last() == Some(&event))
-        {
-            return;
-        }
-        let bytes = event.payload_bytes();
-        if bytes > 0 {
-            if self.queued_bytes.saturating_add(bytes) > self.limits.events_bytes {
-                return;
-            }
-            self.queued_bytes += bytes;
-        }
-        self.events.push(event);
     }
 }

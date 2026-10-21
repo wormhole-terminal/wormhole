@@ -22,9 +22,15 @@ use std::borrow::Cow;
 
 use bitflags::bitflags;
 
+use crate::terminal::Terminal;
 use crate::terminal::event::Event;
 use crate::terminal::osc::payload::fill;
-use crate::terminal::{TITLE_STACK, Terminal};
+
+/// The longest title kept, in bytes. A program that sends more gets it cut (at a character).
+/// Like the other caps in the modules, a ceiling: [`Limits`](crate::Limits) can lower it.
+pub(in crate::terminal) const TITLE_MAX: usize = 4096;
+/// The title stack's depth (xterm keeps 10).
+pub(in crate::terminal) const TITLE_STACK: usize = 16;
 
 impl TitleModes {
     /// Each mode with the parameter of `CSI > Ps t` that switches it on.
@@ -126,6 +132,11 @@ fn store(slot: &mut Option<String>, text: &[u8], max: usize) {
 }
 
 impl Terminal {
+    /// The window title the program set, `None` if it never did or reset it.
+    pub fn title(&self) -> Option<&str> {
+        self.titles.window.as_deref()
+    }
+
     /// OSC 0 (both), 1 (the icon name) and 2 (the title), with the text as it came.
     pub(in crate::terminal) fn set_titles(&mut self, window: bool, icon: bool, text: &[u8]) {
         let Some(text) = decoded(self.titles.modes, text) else { return };

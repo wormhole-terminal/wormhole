@@ -12,6 +12,8 @@ pub(super) mod modkeys;
 
 pub use crate::types::Modes;
 
+use crate::terminal::Terminal;
+
 impl Modes {
     /// What DECSTR resets: the modes of the keyboard and of how text is placed. Mouse, paste and
     /// focus modes belong to the program that set them and stay.
@@ -190,6 +192,15 @@ pub(in crate::terminal) fn fixed_status(n: u16) -> Option<Status> {
         1048 => Status::Reset,
         _ => return None,
     })
+}
+
+impl Terminal {
+    /// The modes as programs set them, with [`Modes::LOCATOR`] while a program has the DEC
+    /// locator on. See [`Modes`] for which of them a host acts on.
+    #[must_use]
+    pub fn modes(&self) -> Modes {
+        if self.locator.enabled() { self.modes | Modes::LOCATOR } else { self.modes }
+    }
 }
 
 #[cfg(test)]

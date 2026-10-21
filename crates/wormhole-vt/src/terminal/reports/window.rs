@@ -132,6 +132,13 @@ pub enum WindowOp {
 const UNKNOWN_SCREEN_MAX: usize = 500;
 
 impl Terminal {
+    /// The size of a cell in pixels, which XTWINOPS 14 and 16, the sixel geometry and the in-band
+    /// resize report (mode 2048) say. A change that the report should tell is told by the next
+    /// [`resize`](Terminal::resize), which a host calls after it (also with the size it has).
+    pub fn set_cell_size(&mut self, width: u16, height: u16) {
+        self.cell_px = (width.max(1), height.max(1));
+    }
+
     /// A cell's size in pixels, as the host gave it.
     pub(in crate::terminal) fn cell_size(&self) -> (u32, u32) {
         (u32::from(self.cell_px.0), u32::from(self.cell_px.1))

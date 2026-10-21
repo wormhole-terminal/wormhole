@@ -181,7 +181,7 @@ fn the_history_limit_belongs_to_the_main_screen_whichever_one_shows() {
     rig.term.set_scrollback_lines(7);
     assert_eq!(rig.term.grid().scrollback_limit(), 0);
     rig.feed("\x1b[?1049l");
-    assert_eq!(rig.term.grid().scrollback_limit(), super::super::history_bytes(7, 12));
+    assert_eq!(rig.term.grid().scrollback_limit(), crate::terminal::screen::history::history_bytes(7, 12));
 }
 
 #[test]

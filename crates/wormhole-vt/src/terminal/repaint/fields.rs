@@ -279,11 +279,11 @@ const PLACEMENT: &[(&str, Coverage)] =
 /// The structs whose fields make up the engine's state.
 pub const FIELDS: &[StructFields] = &[
     StructFields { name: "Terminal", file: "terminal/mod.rs", fields: TERMINAL },
-    StructFields { name: "CursorPos", file: "terminal/mod.rs", fields: CURSOR },
-    StructFields { name: "Margins", file: "terminal/mod.rs", fields: MARGINS },
-    StructFields { name: "Saved", file: "terminal/mod.rs", fields: SAVED },
-    StructFields { name: "Cluster", file: "terminal/mod.rs", fields: CLUSTER },
-    StructFields { name: "CursorStyle", file: "terminal/mod.rs", fields: CURSOR_STYLE },
+    StructFields { name: "CursorPos", file: "terminal/screen/cursor.rs", fields: CURSOR },
+    StructFields { name: "Margins", file: "terminal/screen/scroll.rs", fields: MARGINS },
+    StructFields { name: "Saved", file: "terminal/screen/cursor.rs", fields: SAVED },
+    StructFields { name: "Cluster", file: "terminal/text/print.rs", fields: CLUSTER },
+    StructFields { name: "CursorStyle", file: "terminal/screen/cursor.rs", fields: CURSOR_STYLE },
     StructFields { name: "Titles", file: "terminal/reports/title.rs", fields: TITLES },
     StructFields { name: "Folder", file: "terminal/osc/cwd.rs", fields: FOLDER },
     StructFields { name: "Palette", file: "terminal/osc/colors.rs", fields: PALETTE },

@@ -21,6 +21,21 @@ use crate::unicode::{self, GraphemeState};
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
 
+/// A grapheme cluster being built in mode 2027: where the last printed character stands, how wide
+/// the cluster is so far, and the state of the UAX #29 automaton.
+#[derive(Clone, Copy, Debug)]
+pub(in crate::terminal) struct Cluster {
+    /// Whether the character before the cursor was printed by the last operation and can still
+    /// be extended. Any sequence that is not text closes it.
+    pub(in crate::terminal) open: bool,
+    /// The column of the cluster's first cell; after a character printed outside a cluster (mode
+    /// 2027 off, or mapped by a set), the column of that character.
+    pub(in crate::terminal) head: usize,
+    pub(in crate::terminal) width: u8,
+    pub(in crate::terminal) last: char,
+    pub(in crate::terminal) state: GraphemeState,
+}
+
 impl Terminal {
     /// A run of printable ASCII (0x20..=0x7E).
     #[inline]

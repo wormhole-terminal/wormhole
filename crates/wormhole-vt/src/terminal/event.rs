@@ -9,6 +9,7 @@
 //! [`Terminal::events`]: crate::terminal::Terminal::events
 //! [`Terminal::replies`]: crate::terminal::Terminal::replies
 
+use super::Terminal;
 use super::graphics::ImageUpload;
 use crate::grid::DroppedHistory;
 use crate::types::ImageHandle;
@@ -277,5 +278,62 @@ impl Event {
             }
             _ => 0,
         }
+    }
+}
+
+/// Events kept for a host that is not looking.
+pub(super) const EVENTS_MAX: usize = 16_384;
+
+impl Terminal {
+    /// The events since the last call, oldest first. A change of the modes or colors a host acts
+    /// on since the last call comes after them, once ([`Event::ModesChanged`],
+    /// [`Event::ColorsChanged`]); then, when the host asked for them
+    /// ([`set_archive_history`](Self::set_archive_history)), the history lines that left the engine.
+    pub fn events(&mut self) -> std::vec::Drain<'_, Event> {
+        self.announce_changes();
+        self.queued_values = 0;
+        self.queued_bytes = 0;
+        // History lines that left since the last call come last, in the order they left.
+        self.flush_archive();
+        self.events.drain(..)
+    }
+
+    /// Queue an event. A host that never drains them does not grow without bound: past the cap
+    /// new ones are dropped, and a run of the same event (a bell, a title, a folder said twice, a
+    /// reset) is one. A picture's pixels, their release and a reset are never dropped: the host
+    /// would keep pixels nobody can show, or show a picture without them. They stay bounded past
+    /// the cap: `add_image` takes no new picture there, a picture is freed once, and resets in a
+    /// row are one. The announcements of changed modes and colors are kept too (a host that
+    /// never looked at them would not know its input is wrong); `events` makes two at most.
+    ///
+    /// The count is not the only cap: an event that carries text or data (a clipboard store, a
+    /// notification, a passed-through string) is also counted in bytes, and past
+    /// [`Limits::events_bytes`](crate::Limits::events_bytes) the new one is dropped whole. Without it 16,384 events of 8 MiB each
+    /// held 128 GiB for a host that was not looking.
+    pub(in crate::terminal) fn push_event(&mut self, event: Event) {
+        let kept = matches!(
+            event,
+            Event::ImageData(_)
+                | Event::ImageFree(_)
+                | Event::FullReset
+                | Event::ModesChanged
+                | Event::ColorsChanged
+        );
+        if (self.events.len() >= self.limits.events && !kept)
+            || (matches!(
+                event,
+                Event::Bell | Event::Title | Event::Cwd | Event::FullReset | Event::PointerShape(_)
+            ) && self.events.last() == Some(&event))
+        {
+            return;
+        }
+        let bytes = event.payload_bytes();
+        if bytes > 0 {
+            if self.queued_bytes.saturating_add(bytes) > self.limits.events_bytes {
+                return;
+            }
+            self.queued_bytes += bytes;
+        }
+        self.events.push(event);
     }
 }

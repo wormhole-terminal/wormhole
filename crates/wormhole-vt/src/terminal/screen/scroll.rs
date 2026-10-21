@@ -1,9 +1,43 @@
 //! Line feeds, scrolling and the margins that bound it.
 
+use crate::grid::Region;
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
 
+/// The scrolling region (DECSTBM) and the left and right margins (DECSLRM), always inside the
+/// screen and covering it whole until a program says otherwise. Edges included.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::terminal) struct Margins {
+    pub(in crate::terminal) top: usize,
+    pub(in crate::terminal) bottom: usize,
+    pub(in crate::terminal) left: usize,
+    pub(in crate::terminal) right: usize,
+}
+
+impl Margins {
+    pub(in crate::terminal) fn full(cols: usize, rows: usize) -> Margins {
+        Margins { top: 0, bottom: rows - 1, left: 0, right: cols - 1 }
+    }
+}
+
 impl Terminal {
+    /// The scrolling region as the grid wants it.
+    #[inline]
+    pub(in crate::terminal) fn region(&self) -> Region {
+        Region {
+            top: self.margins.top,
+            bottom: self.margins.bottom,
+            left: self.margins.left,
+            right: self.margins.right,
+        }
+    }
+
+    /// The color erased and scrolled-in cells get: the pen's background.
+    #[inline]
+    pub(in crate::terminal) fn erase_color(&self) -> crate::types::Color {
+        self.pen.style.bg
+    }
+
     /// Scroll the region up by `n` lines: blank lines (in the pen's background) enter at the
     /// bottom margin, and the lines that leave the top go into the history when the region is the
     /// whole width from the first row (the grid decides).

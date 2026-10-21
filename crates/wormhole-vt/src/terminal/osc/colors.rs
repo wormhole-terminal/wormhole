@@ -87,6 +87,27 @@ fn number(text: &[u8]) -> Option<usize> {
 }
 
 impl Terminal {
+    /// The palette entries programs changed (OSC 4, 10, 11, 12) and have not reset.
+    pub fn colors(&self) -> Colors {
+        self.palette.set
+    }
+
+    /// The host's colors, which OSC 4, 10, 11 and 12 queries are answered with unless the program
+    /// changed the entry. Without a call the palette is xterm's with a light-gray foreground on
+    /// black. Entry `i` is `NamedColor`'s slot (0..=255 the palette, then foreground, background
+    /// and cursor).
+    pub fn set_default_colors(&mut self, palette: &[Rgb; COLOR_COUNT]) {
+        self.palette.defaults.copy_from_slice(palette);
+    }
+
+    /// The host's colors as [`set_default_colors`](Self::set_default_colors) last set them (xterm's
+    /// palette before any call): what queries are answered with unless a program changed the
+    /// entry. A program's changes are [`colors`](Self::colors).
+    #[must_use]
+    pub fn default_colors(&self) -> &[Rgb; COLOR_COUNT] {
+        &self.palette.defaults
+    }
+
     /// The color in force for `slot`: the program's, else the host's.
     fn color_of(&self, slot: Slot) -> Rgb {
         match slot {

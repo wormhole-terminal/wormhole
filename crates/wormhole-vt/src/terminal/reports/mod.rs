@@ -65,6 +65,22 @@ const FEATURES: [(u16, Level); 13] = [
 ];
 
 impl Terminal {
+    /// The bytes the program is waiting to read, in the order it asked. The host writes them to
+    /// the PTY and calls [`clear_replies`](Self::clear_replies).
+    pub fn replies(&self) -> &[u8] {
+        self.replies.bytes()
+    }
+
+    /// Forget the replies, after writing them out; the buffer is kept.
+    pub fn clear_replies(&mut self) {
+        self.replies.clear();
+    }
+
+    /// Take the replies, leaving none.
+    pub fn take_replies(&mut self) -> Vec<u8> {
+        self.replies.take()
+    }
+
     /// Queue one whole reply, formatted from `args`: kept or dropped as a whole, by the cap, and in
     /// one-byte controls under S8C1T; held behind a picture's answer that waits. See
     /// [`ReplyQueue`]. A reply made of several parts is composed with [`reply_with`](Self::reply_with).

@@ -6,9 +6,10 @@
 //! new method with a default.
 
 use super::passthrough::{Passthrough, PassthroughError};
+use super::screen::history::history_bytes;
 use super::{
     Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, Saved, Terminal,
-    dispatch, graphics, history_bytes, osc, read, reports, screen, text, watch,
+    dispatch, graphics, osc, read, reports, screen, text, watch,
 };
 use crate::grid::{BlockPart, Grid, Pen};
 use crate::terminal::modes::Modes;

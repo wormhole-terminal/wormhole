@@ -8,10 +8,54 @@
 //! DECSC and DECRC carry the hyperlink (OSC 8) with the rendition: the OSC 8 text calls the link
 //! "a cell attribute like color", and the rendition is what DECSC exists to save.
 
-use crate::types::{Line, Point};
+use crate::grid::Style;
+use crate::types::{CursorShape, Hyperlink, Line, Point};
 
 use crate::terminal::Terminal;
 use crate::terminal::modes::Modes;
+use crate::terminal::text::charset::Charsets;
+
+/// The cursor's place. `pending` is the delayed wrap: the last character filled the row, the next
+/// one wraps.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(in crate::terminal) struct CursorPos {
+    pub(in crate::terminal) x: usize,
+    pub(in crate::terminal) y: usize,
+    pub(in crate::terminal) pending: bool,
+}
+
+/// What DECSC saves (and DECRC brings back): VT510 DECSC lists the position, the rendition, the
+/// character sets, the origin mode, the selective erase attribute and the wrap flag.
+#[derive(Clone, Debug)]
+pub(in crate::terminal) struct Saved {
+    pub(in crate::terminal) cursor: CursorPos,
+    pub(in crate::terminal) style: Style,
+    pub(in crate::terminal) protected: bool,
+    pub(in crate::terminal) origin: bool,
+    pub(in crate::terminal) charsets: Charsets,
+    pub(in crate::terminal) link: Option<Hyperlink>,
+}
+
+impl Default for Saved {
+    /// The state a terminal starts with: home, normal rendition, ASCII.
+    fn default() -> Saved {
+        Saved {
+            cursor: CursorPos::default(),
+            style: Style::DEFAULT,
+            protected: false,
+            origin: false,
+            charsets: Charsets::default(),
+            link: None,
+        }
+    }
+}
+
+/// The cursor's look as DECSCUSR and mode 12 asked for it; `None` leaves each to the host.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(in crate::terminal) struct CursorStyle {
+    pub(in crate::terminal) shape: Option<CursorShape>,
+    pub(in crate::terminal) blink: Option<bool>,
+}
 
 /// Where a vertical move lands in its row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -7,8 +7,11 @@
 //! never raise one above the ceiling, so the guarantees in `docs/security.md` hold whatever the
 //! host asks. The caps are read where a string ends or an allocation is made, never per byte.
 
+use super::event::EVENTS_MAX;
 use super::graphics::{IMAGE_BUDGET_BYTES, MAX_IMAGES};
-use super::{CWD_MAX, EVENTS_MAX, TITLE_MAX, Terminal, osc, reports};
+use super::osc::cwd::CWD_MAX;
+use super::reports::title::TITLE_MAX;
+use super::{Terminal, osc, reports};
 
 /// Most bytes of a hyperlink's target. An OSC string is at most 8 KiB anyway; the cap exists so a
 /// host can lower it.
