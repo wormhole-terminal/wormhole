@@ -13,7 +13,6 @@ mod grid;
 pub mod guide;
 pub mod input;
 pub mod parser;
-pub mod passthrough;
 mod terminal;
 mod types;
 pub mod unicode;
@@ -58,7 +57,7 @@ pub mod window {
     pub use crate::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 }
 
-pub use terminal::repaint;
+pub use terminal::{passthrough, repaint};
 
 /// The whole state as named text, for our tests that compare two terminals.
 #[cfg(feature = "internals")]

@@ -139,7 +139,7 @@ impl Passthrough {
     pub fn osc(mut self, number: u32, max_bytes: usize) -> Passthrough {
         if number > 99_999 {
             self.fail(PassthroughError::OscNumber(number));
-        } else if crate::terminal::is_builtin_osc(number) {
+        } else if super::osc::is_builtin(number) {
             self.fail(PassthroughError::ReservedOsc(number));
         } else if self.count() >= MAX_CLAIMS {
             self.fail(PassthroughError::TooMany);

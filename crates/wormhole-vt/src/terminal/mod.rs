@@ -56,6 +56,7 @@
 //! | (top) | `event`, `policy`, `limits`, `builder` | what the host hears; the risky switches; the caps the host can lower; how a terminal is made |
 //! | | `archive` | handing the host the history lines that leave the engine (opt-in; the copying is the grid's) |
 //! | | `watch` | `ModesChanged` and `ColorsChanged`: what changed since the host last took the events |
+//! | | `passthrough` | [`Passthrough`](passthrough::Passthrough): the OSC, DCS and APC strings a host claims, and the refusal of the ones the engine reads itself (public as `wormhole_vt::passthrough`) |
 //! | | `check`, `dump` | the invariants check (tests, and feature `internals`); the whole state as named text, for the tests that compare two terminals (feature `internals`) |
 //!
 //! # Choices
@@ -107,6 +108,7 @@ mod limits;
 mod media_copy;
 mod modes;
 mod osc;
+pub mod passthrough;
 mod policy;
 mod read;
 pub mod repaint;
@@ -137,7 +139,6 @@ pub use graphics::{
     VirtualPlacement, placeholder_at, strip_placeholders,
 };
 pub use limits::Limits;
-pub(crate) use osc::is_builtin as is_builtin_osc;
 pub use policy::Policy;
 pub use read::damage::Damage;
 pub use read::search::Span;
@@ -297,7 +298,7 @@ pub struct Terminal {
     osc: osc::OscString,
     dcs: dispatch::dcs::DcsString,
     /// The strings the host asked to be handed over; see [`crate::passthrough`].
-    passthrough: crate::passthrough::Passthrough,
+    passthrough: passthrough::Passthrough,
     /// Pictures: kitty's, Sixel and iTerm2's; see `graphics`.
     graphics: graphics::Graphics,
     events: Vec<Event>,

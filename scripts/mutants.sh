@@ -61,7 +61,7 @@ glob_for() {
     graphics) echo '**/src/terminal/graphics/**' ;;
     repaint) echo '**/src/terminal/repaint/**' ;;
     input) echo '**/src/input/**' ;;
-    passthrough) echo '**/src/passthrough.rs' ;;
+    passthrough) echo '**/src/terminal/passthrough.rs' ;;
   esac
 }
 ALL_AREAS=(parser unicode grid dispatch text screen osc reports graphics repaint input passthrough rest)

@@ -2,7 +2,7 @@
 //! in the replies a host answers at; the engine's own strings cannot be asked for.
 
 use super::Rig;
-use crate::passthrough::{MAX_BYTES, Passthrough, PassthroughError};
+use crate::terminal::passthrough::{MAX_BYTES, Passthrough, PassthroughError};
 use crate::terminal::{Event, Terminal, Terminator};
 
 fn rig(passthrough: Passthrough) -> Rig {

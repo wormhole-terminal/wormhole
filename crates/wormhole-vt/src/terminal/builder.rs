@@ -5,12 +5,12 @@
 //! has a setter on [`Terminal`]. The builder can grow without breaking anyone: a new option is a
 //! new method with a default.
 
+use super::passthrough::{Passthrough, PassthroughError};
 use super::{
     Cluster, CursorPos, CursorStyle, Event, Level, Limits, Margins, Parser, Policy, Saved, Terminal,
     dispatch, graphics, history_bytes, osc, read, reports, screen, text, watch,
 };
 use crate::grid::{BlockPart, Grid, Pen};
-use crate::passthrough::{Passthrough, PassthroughError};
 use crate::terminal::modes::Modes;
 use crate::types::{COLOR_COUNT, ColorScheme, Rgb};
 
