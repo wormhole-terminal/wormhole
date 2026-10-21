@@ -1,6 +1,7 @@
 //! Page operations on their own, without the grid around them.
 
 use super::Page;
+use crate::grid::BlockPart;
 use crate::grid::cell::{CellFlags, Spare};
 use crate::grid::pen::Pen;
 use crate::grid::style::Style;
@@ -151,4 +152,71 @@ fn a_row_copied_to_another_page_brings_its_styles() {
     let id = b.cells(0)[0].style_id();
     assert_eq!(b.styles.get(id).attrs, Flags::BOLD);
     assert_eq!(b.styles.refs(id), 3);
+}
+
+#[test]
+fn widening_a_character_gives_its_tail_the_same_protection_and_block() {
+    let mut page = page(6, 1);
+    let pen = Pen { protected: true, guarded: true, content: BlockPart::Command, block: 3, ..Pen::default() };
+    page.write_char(0, 1, '❤', &[], 1, &pen);
+    assert!(page.set_width(0, 1, 2));
+    let tail = page.cells(0)[2];
+    assert!(tail.is_spacer_tail());
+    assert!(
+        tail.flag_set().contains(CellFlags::PROTECTED | CellFlags::GUARDED),
+        "the tail is as protected as its head, or an erase would split the pair"
+    );
+    assert_eq!(tail.content(), BlockPart::Command, "and part of the same block");
+}
+
+#[test]
+fn erasing_part_of_a_row_keeps_its_block_and_only_the_whole_row_forgets_it() {
+    let mut page = page(6, 1);
+    let bg = Color::Named(NamedColor::Background);
+    page.write_ascii(0, 0, b"abcdef", &Pen { content: BlockPart::Output, block: 7, ..Pen::default() });
+    assert_eq!(page.rows[0].block, 7);
+    page.erase(0, 0..3, bg, Spare::Nothing);
+    assert_eq!(page.rows[0].block, 7, "the rest of the row is still the block's");
+    page.erase(0, 3..6, bg, Spare::Nothing);
+    assert_eq!(page.rows[0].block, 7, "so is its start");
+    page.erase(0, 0..6, bg, Spare::Nothing);
+    assert_eq!(page.rows[0].block, 0);
+}
+
+#[test]
+fn a_tab_marks_only_a_cell_that_holds_nothing() {
+    let mut page = page(6, 1);
+    page.write_ascii(0, 0, b"a", &Pen::default());
+    page.write_char(0, 1, '日', &[], 2, &Pen::default());
+    for col in [0, 2, 3] {
+        page.mark_tab(0, col);
+    }
+    // A character, the tail of a wide one (no character, but a flag) and a blank.
+    assert!(!page.cells(0)[0].is_tab_start(), "a character is not a gap");
+    assert!(!page.cells(0)[2].is_tab_start(), "nor is the second half of a wide one");
+    assert!(page.cells(0)[3].is_tab_start());
+}
+
+#[test]
+fn a_shift_that_stops_short_of_the_last_column_keeps_the_spacer_head() {
+    let mut page = page(6, 1);
+    let bg = Color::Named(NamedColor::Background);
+    page.write_spacer_head(0, &Pen::default());
+    page.insert_cells(0, 0, 3, 1, bg);
+    assert!(page.cells(0)[5].is_spacer_head());
+    page.delete_cells(0, 0, 3, 1, bg);
+    assert!(page.cells(0)[5].is_spacer_head());
+    // A shift that reaches the last cell moves it: what is left there is an ordinary blank.
+    page.delete_cells(0, 2, 5, 1, bg);
+    assert!(!page.cells(0)[5].is_spacer_head());
+}
+
+#[test]
+fn putting_a_cell_gives_back_what_it_replaces() {
+    let mut page = page(4, 1);
+    page.write_ascii(0, 1, b"a", &red());
+    assert_eq!(page.styles.live(), 1);
+    page.put(0, 1, Some('b'), &[], &Style::DEFAULT, None, CellFlags::empty());
+    assert_eq!(page.styles.live(), 0, "nothing uses the red look any more");
+    assert_eq!(text(&page, 0), ".b..");
 }

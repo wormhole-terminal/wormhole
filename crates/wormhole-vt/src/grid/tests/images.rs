@@ -138,6 +138,36 @@ fn every_erase_that_reaches_a_placement_deletes_it() {
 }
 
 #[test]
+fn a_rectangle_filled_or_copied_over_a_placement_deletes_it_down_to_its_last_row_and_column() {
+    // A one-cell picture at (line, column) after DECFRA over rows 1 and 2, columns 0 to 3.
+    let filled = |line, column| {
+        let mut g = grid(20, 6);
+        g.place_image(Line(line), column, new(1, 1, 1));
+        g.fill_rect(Region { top: 1, bottom: 2, left: 0, right: 3 }, 'x', &plain());
+        g.has_placements()
+    };
+    assert!(!filled(1, 0) && !filled(2, 3), "its corners");
+    assert!(!filled(2, 0), "its last row");
+    assert!(!filled(1, 3), "its last column");
+    assert!(filled(3, 0), "the row under it");
+    assert!(filled(1, 4), "the column beside it");
+
+    // The same after DECCRA of three by three cells to row 1, column 1 (over rows 1 to 3 and
+    // columns 1 to 3): the pictures under the target go, not those under the source.
+    let copied = |line, column| {
+        let mut g = grid(20, 6);
+        g.place_image(Line(line), column, new(1, 1, 1));
+        g.copy_rect(Region { top: 0, bottom: 2, left: 0, right: 2 }, 1, 1);
+        g.has_placements()
+    };
+    assert!(!copied(3, 1), "its last row");
+    assert!(!copied(1, 3), "its last column");
+    assert!(!copied(2, 2), "inside");
+    assert!(copied(0, 0), "under the source only");
+    assert!(copied(4, 1) && copied(1, 4), "beside the target");
+}
+
+#[test]
 fn selective_erase_and_printing_leave_a_placement_alone() {
     let mut g = grid(20, 6);
     g.place_image(Line(1), 4, new(1, 4, 3));
@@ -368,6 +398,106 @@ fn drawing_order_is_by_z_then_age_and_the_view_picks_what_it_shows() {
     assert!(shown(&g).is_empty(), "not in the view");
     g.scroll_view(crate::types::Scroll::Top);
     assert_eq!(shown(&g).len(), 3);
+}
+
+#[test]
+fn a_placement_is_at_least_one_cell() {
+    let mut g = grid(20, 6);
+    assert!(g.place_image(Line(1), 3, new(7, 0, 0)));
+    assert_eq!(spots(&g), [(7, 1, 3, 1, 1)]);
+}
+
+#[test]
+fn deleting_placements_counts_them_and_damages_the_screen_only_when_some_went() {
+    let mut g = grid(20, 6);
+    g.place_image(Line(0), 0, new(1, 1, 1));
+    g.place_image(Line(1), 0, new(2, 1, 1));
+    let mut damaged = [false; 6];
+    g.take_damage(&mut damaged);
+    let (mut removed, mut first) = (Vec::new(), true);
+    let gone = g.delete_placements(|_| std::mem::take(&mut first), &mut removed);
+    assert_eq!(gone, 1, "the first of two");
+    assert_eq!(removed.iter().map(|image| image.get()).collect::<Vec<_>>(), [1]);
+    assert!(g.take_damage(&mut damaged), "a picture that went is a screen that changed");
+    assert_eq!(g.delete_placements(|_| false, &mut removed), 0);
+    assert!(!g.take_damage(&mut damaged), "and none that went is not");
+    assert_eq!(g.placement_count(), 1);
+}
+
+#[test]
+fn deleting_the_placements_of_a_picture_damages_the_screen_only_when_some_went() {
+    let mut g = grid(20, 6);
+    g.place_image(Line(0), 0, new(1, 1, 1));
+    g.place_image(Line(1), 0, new(2, 1, 1));
+    let mut damaged = [false; 6];
+    g.take_damage(&mut damaged);
+    g.delete_image_placements(handle(9));
+    assert!(!g.take_damage(&mut damaged), "there was none of it");
+    g.delete_image_placements(handle(2));
+    assert!(g.take_damage(&mut damaged));
+    assert_eq!(spots(&g), [(1, 0, 0, 1, 1)]);
+}
+
+#[test]
+fn clearing_the_placements_leaves_none_and_damages_the_screen_when_there_were_some() {
+    let mut g = grid(20, 6);
+    g.place_image(Line(0), 0, new(1, 1, 1));
+    let mut damaged = [false; 6];
+    g.take_damage(&mut damaged);
+    g.clear_placements();
+    assert!(!g.has_placements());
+    assert!(g.take_damage(&mut damaged));
+    g.clear_placements();
+    assert!(!g.take_damage(&mut damaged), "nothing to clear, nothing to redraw");
+}
+
+#[test]
+fn the_rows_a_picture_uses_are_counted_from_the_top_of_the_screen() {
+    let mut g = grid(10, 6);
+    let region = full(&g);
+    // Three lines in the history: the screen's top row is no longer row 0 of everything.
+    g.scroll_up(region, 3, BG);
+    g.place_image(Line(1), 0, new(1, 2, 2));
+    assert_eq!(g.used_rows(), 3, "down to the picture's last row");
+}
+
+#[test]
+fn an_erase_of_nothing_deletes_no_picture() {
+    let mut g = grid(20, 6);
+    g.place_image(Line(0), 0, new(1, 8, 3));
+    // No rows, and no columns: the cells of a picture are not touched, though the empty range
+    // starts inside it.
+    g.erase_rows(1..1, BG, false);
+    g.placements_erased(0..6, 3..3);
+    assert_eq!(g.placement_count(), 1);
+    // Rows past the screen's last, where the picture reaches (it is taller than the screen).
+    g.place_image(Line(0), 10, new(2, 2, 20));
+    g.erase(9, 0..20, BG, false);
+    assert_eq!(g.placement_count(), 2);
+    g.erase(2, 0..20, BG, false);
+    assert_eq!(g.placement_count(), 0, "a row it covers erases both");
+    ok(&g);
+}
+
+#[test]
+fn a_picture_taller_than_the_screen_stays_when_the_whole_screen_scrolls() {
+    let mut g = grid(10, 4);
+    g.place_image(Line(0), 0, new(1, 2, 10));
+    let region = full(&g);
+    g.scroll_up(region, 1, BG);
+    assert_eq!(g.placement_count(), 1, "its rows below the screen are not cut off from the rest");
+    ok(&g);
+}
+
+#[test]
+fn a_reflow_drops_a_placement_that_starts_at_the_new_edge_and_keeps_the_one_inside_it() {
+    let mut g = grid(10, 6);
+    g.place_image(Line(0), 3, new(1, 1, 1));
+    g.place_image(Line(1), 4, new(2, 1, 1));
+    g.resize(4, 6, at(5, 0), true);
+    assert!(g.is_placed(handle(1)), "the last column");
+    assert!(!g.is_placed(handle(2)), "one past it");
+    ok(&g);
 }
 
 #[test]

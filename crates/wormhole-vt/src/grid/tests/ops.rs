@@ -25,6 +25,17 @@ fn a_new_grid_is_blank_and_valid() {
 }
 
 #[test]
+fn a_row_is_as_long_as_its_last_cell_with_anything_in_it() {
+    let mut g = grid(10, 3);
+    g.write_ascii(0, 2, b"abc", &plain());
+    g.erase(1, 6..7, Color::Named(NamedColor::Blue), false);
+    assert_eq!(g.content_len(Line(0)), 5);
+    assert_eq!(g.content_len(Line(1)), 7, "an erased background is something");
+    assert_eq!(g.content_len(Line(2)), 0, "a blank row has none");
+    assert_eq!(g.content_len(Line(9)), 0, "nor has a row that is not there");
+}
+
+#[test]
 fn the_size_is_kept_inside_what_a_page_can_hold() {
     let g = Grid::new(0, 0, 0);
     assert_eq!((g.cols(), g.rows()), (crate::grid::MIN_COLS, 1));

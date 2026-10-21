@@ -168,6 +168,65 @@ fn damage_can_be_taken_as_flags() {
 }
 
 #[test]
+fn a_list_of_the_wrong_length_is_copied_whole() {
+    let mut g = Grid::new(10, 4, DEFAULT_SCROLLBACK_BYTES);
+    g.write_ascii(3, 0, b"end", &plain());
+    let mut rows = Vec::new();
+    copy(&mut g, &mut rows);
+    assert_eq!(copy(&mut g, &mut rows), [false; 4]);
+    // A host that kept fewer rows than the screen has (the rows are the right width) still gets
+    // all of them: the ones it lacks were never copied, whether or not they changed.
+    rows.truncate(2);
+    assert_eq!(copy(&mut g, &mut rows), [true; 4]);
+    assert_eq!(rows[3].cells[0].c, 'e');
+}
+
+#[test]
+fn damage_is_by_row_of_the_view_when_it_is_scrolled_back() {
+    let mut sim = Sim::new(6, 4, DEFAULT_SCROLLBACK_BYTES);
+    sim.print("1\n2\n3\n4\n5\n6\n7\n8");
+    let g = &mut sim.grid;
+    g.scroll_view(Scroll::Delta(2));
+    let mut damaged = [false; 4];
+    assert!(g.take_damage(&mut damaged), "the view moved");
+    // The live screen's first row is the third row of a view scrolled back by two.
+    g.write_ascii(0, 0, b"x", &plain());
+    assert!(!g.take_damage(&mut damaged));
+    assert_eq!(damaged, [false, false, true, false]);
+}
+
+#[test]
+fn a_scroll_of_a_part_of_the_screen_damages_its_rows_in_every_page_it_spans() {
+    use crate::grid::Region;
+    // Three pages of two rows: the rows 1 to 4 of the region are in all of them.
+    let mut g = Grid::with_page_rows(6, 6, DEFAULT_SCROLLBACK_BYTES, 2);
+    let mut damaged = [false; 6];
+    g.take_damage(&mut damaged);
+    g.scroll_up(Region { top: 1, bottom: 4, left: 0, right: 5 }, 1, BG);
+    assert!(!g.take_damage(&mut damaged));
+    assert_eq!(damaged, [false, true, true, true, true, false]);
+}
+
+#[test]
+fn only_a_scroll_of_the_whole_screen_damages_all_of_it() {
+    use crate::grid::Region;
+    let mut g = Grid::new(6, 4, DEFAULT_SCROLLBACK_BYTES);
+    let mut damaged = [false; 4];
+    g.take_damage(&mut damaged);
+
+    g.scroll_down(Region { top: 0, bottom: 1, left: 0, right: 5 }, 1, BG);
+    assert!(!g.take_damage(&mut damaged), "a region from the top row is not the screen");
+    assert_eq!(damaged, [true, true, false, false]);
+
+    g.insert_lines(1, full(&g), 1, BG);
+    assert!(!g.take_damage(&mut damaged), "nor is one down to the bottom row");
+    assert_eq!(damaged, [false, true, true, true]);
+
+    g.scroll_down(full(&g), 1, BG);
+    assert!(g.take_damage(&mut damaged), "the whole screen is");
+}
+
+#[test]
 fn a_style_nobody_uses_any_more_is_not_copied_stale() {
     let mut g = Grid::new(6, 1, DEFAULT_SCROLLBACK_BYTES);
     g.write_ascii(0, 0, b"ab", &colored(1));

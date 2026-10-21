@@ -414,6 +414,52 @@ fn page_memory_is_reused_once_the_history_is_full() {
     ok(&sim.grid);
 }
 
+/// The lines after rows `top..=bottom` of `lines` scroll by `n`, up or down, on a plain list.
+fn moved(lines: &[String], top: usize, bottom: usize, n: usize, up: bool) -> Vec<String> {
+    let mut out = lines.to_vec();
+    let n = n.min(bottom - top + 1);
+    let part = &mut out[top..=bottom];
+    let len = part.len();
+    if up {
+        part.rotate_left(n);
+        part[len - n..].iter_mut().for_each(String::clear);
+    } else {
+        part.rotate_right(n);
+        part[..n].iter_mut().for_each(String::clear);
+    }
+    out
+}
+
+#[test]
+fn a_region_scrolls_the_same_whatever_pages_it_spans() {
+    let rows = 8;
+    for page_rows in [1, 2, 3, 4, 5, 8] {
+        for top in 0..rows {
+            for bottom in top..rows {
+                for n in 1..=3 {
+                    for up in [true, false] {
+                        let mut g = Grid::with_page_rows(10, rows, DEFAULT_SCROLLBACK_BYTES, page_rows);
+                        numbered(&mut g, rows);
+                        let before = screen(&g);
+                        let region = Region { top, bottom, left: 0, right: 9 };
+                        if up {
+                            g.scroll_up(region, n, BG);
+                        } else {
+                            g.scroll_down(region, n, BG);
+                        }
+                        assert_eq!(
+                            screen(&g),
+                            moved(&before, top, bottom, n, up),
+                            "pages of {page_rows} rows, region {top}..={bottom}, by {n}, up: {up}"
+                        );
+                        ok(&g);
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn a_rows_block_and_wrap_follow_it_when_it_scrolls() {
     for page_rows in [1, 2, 3, 100] {

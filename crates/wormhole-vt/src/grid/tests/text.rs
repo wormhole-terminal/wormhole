@@ -390,3 +390,63 @@ fn copying_reuses_the_buffers() {
     }
     assert_eq!(out.capacities(), (text, table, lines), "nothing grows once the first copy sized it");
 }
+
+#[test]
+fn lines_of_plain_ascii_cost_no_table_on_any_row() {
+    let sim = sim(10, 4, "one\ntwo\nthree");
+    let mut out = TextCopy::new();
+    sim.grid.copy_text(Line(0), 4, &mut out);
+    assert_eq!(out.capacities().1, 0, "byte n is cell n, so there is nothing to look up");
+    assert_eq!(find(&out, "wo"), Some(((1, 1), (1, 2))));
+    assert_eq!(find(&out, "hree"), Some(((2, 1), (2, 4))));
+}
+
+#[test]
+fn the_cells_of_a_match_in_a_later_line_count_from_that_lines_start() {
+    // The second line's bytes start after the first's in the copy's text, but its cells start at 0.
+    let sim = sim(10, 4, "ab\ncd日ef");
+    let (out, _) = copy(&sim, 0, 4);
+    assert_eq!(find(&out, "ef"), Some(((1, 4), (1, 5))));
+    assert_eq!(find(&out, "d日"), Some(((1, 1), (1, 3))));
+}
+
+#[test]
+fn a_wrapped_line_that_ends_on_the_last_row_is_one_line() {
+    let sim = sim(5, 3, "abcdefghijkl");
+    let (out, next) = copy(&sim, 0, 3);
+    assert_eq!(lines(&out), ["abcdefghijkl"]);
+    assert_eq!(next, None);
+}
+
+#[test]
+fn a_line_wrapped_over_more_rows_than_the_slack_allows_is_cut_there() {
+    // 55 characters over 11 rows, for a window of one row: a line may go on for four times that.
+    let sim = sim(5, 12, &"x".repeat(55));
+    let (out, next) = copy(&sim, 0, 1);
+    assert_eq!(lines(&out), ["x".repeat(20)]);
+    assert_eq!(next, Some(Line(4)), "the next window starts where this one stopped");
+}
+
+#[test]
+fn a_word_stops_at_a_line_end_even_when_the_row_before_is_full() {
+    // The first row is full to its last cell but was ended with a newline, not wrapped.
+    let sim = sim(5, 3, "abcde\nfgh");
+    assert_eq!(sim.grid.word_start(at(1, 1), is_sep), at(1, 0));
+    assert_eq!(sim.grid.word_start(at(1, 0), is_sep), at(1, 0));
+}
+
+#[test]
+fn the_last_row_is_the_end_of_a_line_whatever_its_wrap_mark_says() {
+    let mut sim = sim(5, 3, "abc");
+    sim.grid.set_wrapped(2, true);
+    assert_eq!(sim.grid.line_extent(Line(2)), (Line(2), Line(2)), "there is no row below to go on in");
+}
+
+#[test]
+fn a_span_of_one_cell_or_more_is_compared_and_one_outside_the_screen_is_not() {
+    let sim = sim(6, 2, "abcdef\nghijkl");
+    assert!(sim.grid.span_is(at(0, 1), at(0, 1), "b"), "one cell");
+    assert!(sim.grid.span_is(at(0, 3), at(1, 2), "defghi"), "rows run together");
+    assert!(!sim.grid.span_is(at(0, 0), at(0, 99), "abcdef"), "ends past the last column");
+    assert!(!sim.grid.span_is(at(0, 99), at(1, 2), "ghi"), "starts past the last column");
+}

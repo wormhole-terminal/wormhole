@@ -40,7 +40,102 @@ exclude_re = [
     # Capacity hints change speed and memory, never a result; the allocation counters in
     # tests/*_allocations.rs guard the speed.
     "Vec::with_capacity",
-]
 
-# Equivalent mutants found by the first run (no observable difference): see the list the run
-# produced, one line each with the reason. Added below as they are decided.
+    # Equivalent mutants found by the first run (no observable difference): see the list the run
+    # produced, one line each with the reason. Added below as they are decided. A regex names the
+    # function when every mutant of that kind in it is equivalent, and the line and column (which
+    # drift: a mutant that comes back after an edit above it is checked again) when the function
+    # has others of that kind that a test does catch.
+
+    # -- grid/cell.rs: a style id and a code point fill exactly the bits the mask just cleared.
+    "replace \\| with \\^ in Cell::with_style",
+    "replace \\| with \\^ in Cell::with_codepoint",
+
+    # -- grid/copy.rs
+    # A cell's style never has layout bits (the style table strips them), so OR and XOR of the two
+    # agree; so do the two flags (distinct bits) of the extras test.
+    "replace \\| with \\^ in Grid::draw_cell",
+    "replace \\| with \\^ in copy_page_row",
+    # A zero code point is a zero byte, which has no bit in common with the 0x20 it becomes; and
+    # 0x80 is U+0080 either way.
+    "replace \\| with \\^ in drawn_char",
+    "replace < with <= in drawn_char",
+
+    # -- grid/edit.rs: `erase_cells` is reached from `erase`, which has refused an empty or outside
+    # range already, and from scrolls that pass rows and columns inside the screen.
+    "replace \\|\\| with && in Grid::erase_cells",
+
+    # -- grid/history.rs
+    # With one page, that page holds the live rows, so the loop's own check of the first page
+    # ends it whether or not the condition lets it start.
+    "history\\.rs:57:32: replace > with >= in Grid::enforce_limit",
+    # An empty history is no work either way: nothing is dropped from zero rows.
+    "history\\.rs:65:50: replace > with >= in Grid::enforce_limit",
+    # Asked for none, the loop's pass over zero rows records and drops nothing; a lone page is
+    # never longer than the history asked for, which is at most the history.
+    "replace > with >= in Grid::drop_history_rows",
+    # Scrolling the screen's used rows by none does nothing.
+    "replace > with >= in Grid::scroll_screen_into_history",
+
+    # -- grid/page/edit.rs
+    # Nothing is shifted when the kept part is empty: the second split is of a column already split,
+    # and the move is of no cells.
+    "edit\\.rs:112:21: replace > with >= in Page::insert_cells",
+    "edit\\.rs:116:21: replace > with >= in Page::insert_cells",
+    "edit\\.rs:163:67: replace \\| with \\^ in Page::move_cells",
+
+    # -- grid/page/write.rs
+    # Pen flags never include the wide or tail flag (distinct bits), nor do the tail's flags.
+    "replace \\| with \\^ in Page::write_char",
+    # A spacer tail is never in column 0: it follows its head.
+    "replace > with >= in Page::push_mark",
+    # The cell at `col` is narrow and no tail, so cutting at `col` rather than `col + 1` cuts nothing.
+    "write\\.rs:167:44: replace \\+ with \\* in Page::set_width",
+    # The flags that make the tail are distinct bits: OR and XOR agree.
+    "replace \\| with \\^ in Page::set_width",
+
+    # -- grid/rect.rs
+    # `Page::restyle` returns for an empty range too, before touching anything.
+    "rect\\.rs:18:37: replace < with <= in Grid::restyle",
+    # Each row is read whole before it is written, so the order of the rows does not matter
+    # when the rectangle moves sideways only.
+    "replace > with >= in Grid::copy_rect",
+
+    # -- grid/resize.rs
+    # A pin or a picture never sits on the row after the last (`end`): both are cut at it.
+    "resize\\.rs:72:65: replace < with <= in Grid::resize",
+    "resize\\.rs:86:63: replace < with <= in Grid::resize",
+    # Where the top row is above the first, the picture is not reflowed (the width is the same,
+    # or it was dropped before), so carrying it along puts it back where it was.
+    "resize\\.rs:86:56: replace && with \\|\\| in Grid::resize",
+    # The rows up to the last text and the cursor already reach the cursor's row.
+    "resize\\.rs:111:49: replace \\+ with \\* in Grid::resize",
+
+    # -- grid/scroll.rs
+    # A scroll over several pages that is not rotated is copied row by row, with the same result.
+    "replace Grid::rotate_across_pages -> bool with false",
+    "replace < with <= in Grid::rotate_across_pages",
+    # Without rows under the region there is nothing to move down.
+    "scroll\\.rs:284:18: replace > with >= in Grid::scroll_into_history",
+    # The rows appended are blank already: erasing them with the default background changes nothing.
+    "scroll\\.rs:290:18: replace > with >= in Grid::scroll_into_history",
+    "replace bg_is_default -> bool with false",
+
+    # -- grid/search.rs
+    # A column number is under 2^31, so the wide bit is never one of its bits.
+    "replace \\| with \\^ in Building::character",
+    # An entry for the first trimmed byte is never looked up: a range ends inside the text.
+    "replace < with <= in finish_line",
+
+    # -- grid/text.rs: `push_slice` cuts the last column to the row's width.
+    "replace - with [/+] in Grid::each_span_row",
+
+    # -- grid/words.rs
+    # A line above the first is not wrapped, so stepping up to it from the first stays put; and a
+    # step past the last line or the first ends the walk (no cell) as no step does.
+    "replace > with >= in Grid::line_extent",
+    "words\\.rs:61:27: replace > with >= in Grid::step_left",
+    "words\\.rs:76:27: replace < with <= in Grid::step_right",
+    "words\\.rs:110:35: replace < with <= in Grid::bracket_match",
+    "words\\.rs:117:31: replace > with >= in Grid::bracket_match",
+]
