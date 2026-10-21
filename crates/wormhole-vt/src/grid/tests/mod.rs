@@ -1,10 +1,11 @@
 //! The grid's tests: unit tests per operation (`ops`), arguments past the screen's edge
 //! (`clamping`), scrolling (`scrolling`), what is left to copy (`damage`), the history's cap
-//! (`history`), the page list (`pages`), reflow (`reflow`) and the other resizes (`resizing`), the
-//! size hint of double-width rows (`line_sizes`), picture placements (`images`, and their edges in
-//! `image_edges`), rows read in place (`row_views`), the snapshot copy (`snapshot`), text and words
-//! (`text`), how far a link reaches (`link_spans`) and a randomized comparison with a model
-//! (`random`). Every test that changes a grid ends with [`Grid::check_invariants`].
+//! (`history`), the page list (`pages`), reflow (`reflow`), its bookkeeping (`rewrap`) and the
+//! other resizes (`resizing`), the size hint of double-width rows (`line_sizes`), picture
+//! placements (`images`, and their edges in `image_edges`), rows read in place (`row_views`), the
+//! snapshot copy (`snapshot`), text and words (`text`), how far a link reaches (`link_spans`) and a
+//! randomized comparison with a model (`random`). Every test that changes a grid ends with
+//! [`Grid::check_invariants`].
 
 mod clamping;
 mod damage;
@@ -19,6 +20,7 @@ mod pages;
 mod random;
 mod reflow;
 mod resizing;
+mod rewrap;
 mod row_views;
 mod scrolling;
 mod snapshot;
