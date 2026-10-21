@@ -225,6 +225,19 @@ fn a_reflowed_screen() {
 }
 
 #[test]
+fn the_modes_that_are_only_recorded_survive() {
+    // The first of the VT510's hardware modes, others from the middle of the list and the last.
+    same("\x1b[?18h");
+    same("\x1b[?19h\x1b[?57h\x1b[?73h\x1b[?106h");
+    same("\x1b[?18h\x1b[?34h\x1b[?64h\x1b[?81h\x1b[?100h\x1b[?106h\x1b[?100l");
+}
+
+#[test]
+fn a_saved_cursor_beyond_a_narrower_screen_is_cut_to_it() {
+    resized("\x1b[2;9H\x1b7\x1b[1;1H", (10, 3), (5, 3));
+}
+
+#[test]
 fn every_mode_the_tests_know_survives() {
     same("\x1b[?1h\x1b[?5h\x1b[?7l\x1b[?45h\x1b[?66h\x1b[?1004h\x1b[?2026h\x1b[?9h\x1b[?1049h");
 }
