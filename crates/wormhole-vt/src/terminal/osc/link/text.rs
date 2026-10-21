@@ -160,9 +160,62 @@ impl LinkText {
 
 #[cfg(test)]
 mod tests {
+    use std::hash::Hasher;
     use std::sync::Arc;
 
-    use super::{LinkText, URIS};
+    use super::{LinkText, TextHasher, URIS};
+
+    fn hash(seed: u64, bytes: &[u8]) -> u64 {
+        let mut hasher = TextHasher(seed);
+        hasher.write(bytes);
+        hasher.finish()
+    }
+
+    #[test]
+    fn a_hash_is_the_multiply_and_fold_of_the_seed_and_the_bytes() {
+        // Pinned, so that every part of the mix is in the value: the seed, the multiply, both halves
+        // of the product, the whole words, and the tail with its length (so "a" and "a\0" differ).
+        let seed = 0x0123_4567_89ab_cdef;
+        assert_eq!(hash(seed, b""), 0x1bf6_395f_4cd2_512c);
+        assert_eq!(hash(seed, b"a"), 0x964a_11c2_7e51_675b);
+        assert_eq!(hash(seed, b"a\0"), 0x7770_e603_997b_9cf0);
+        assert_eq!(hash(seed, b"abcdefgh"), 0xf5aa_6593_bb7f_b61d);
+        assert_eq!(hash(seed, b"abcdefghij"), 0x3600_965c_939b_9943);
+        // The extreme seeds still tell texts apart.
+        assert_ne!(hash(0, b"a"), hash(0, b"b"));
+        assert_ne!(hash(u64::MAX, b"a"), hash(u64::MAX, b"b"));
+    }
+
+    #[test]
+    fn the_tables_hold_as_many_bytes_as_their_limits_say() {
+        let mut text = LinkText::default();
+        // 1,500 addresses of a kilobyte: 1.5 MiB, under the 2 MiB of the table.
+        for n in 0..1500 {
+            let uri = format!("https://example.com/{n}/{}", "p".repeat(1000));
+            let first = text.uri(&uri);
+            assert!(Arc::ptr_eq(&first, &text.uri(&uri)), "address {n} is kept");
+        }
+        // A hundred ids of a kilobyte: 100 KB of the 128 KiB of the ids' table.
+        for n in 0..100 {
+            let id = format!("{n}-{}", "i".repeat(1000));
+            assert!(text.id(&id).is_same(&text.id(&id)), "id {n} is kept");
+        }
+    }
+
+    #[test]
+    fn a_full_table_looks_for_strings_nobody_holds_after_an_eighth_of_its_size_in_refusals() {
+        let mut text = LinkText::default();
+        for n in 0..URIS.entries {
+            drop(text.uri(&format!("fill/{n}")));
+        }
+        assert_eq!(text.uris.strings.len(), URIS.entries);
+        for n in 0..URIS.entries / 8 - 1 {
+            drop(text.uri(&format!("refused/{n}")));
+        }
+        assert_eq!(text.uris.strings.len(), URIS.entries, "refused, and not yet looked through");
+        drop(text.uri("the one that finds room"));
+        assert_eq!(text.uris.strings.len(), 1, "the pass freed the table, and the string took a place");
+    }
 
     #[test]
     fn the_same_text_is_one_allocation() {
