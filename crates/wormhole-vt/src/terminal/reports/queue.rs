@@ -263,9 +263,9 @@ mod tests {
         // The queue emptied, a reply bigger than the cap is the only thing waiting: kept.
         queue.clear();
         queue.push_fmt(rules, format_args!("\x1b]52;c;{}\x07", "A".repeat(100)));
-        assert_eq!(queue.len(), 111);
+        assert_eq!(queue.len(), 108);
         queue.push_fmt(rules, format_args!("\x1b[0n"));
-        assert_eq!(queue.len(), 111, "and nothing joins it");
+        assert_eq!(queue.len(), 108, "and nothing joins it");
     }
 
     #[test]
