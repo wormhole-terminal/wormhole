@@ -109,8 +109,10 @@ fn level_2_keeps_what_xterms_table_keeps() {
     let m = other(L2);
     // The symbol Shift types on a digit stays a symbol.
     assert_eq!(enc(with(typed('1', "!"), SHIFT), m), s("!"));
-    // Control+Backspace is BS at every level.
+    // Control+Backspace is BS at every level, but with a second modifier it is a sequence.
     assert_eq!(enc(with(key(Key::Backspace), CTRL), m), s("\x08"));
+    assert_eq!(enc(with(key(Key::Backspace), CTRL | SHIFT), m), s("\x1b[27;6;127~"));
+    assert_eq!(enc(with(key(Key::Backspace), CTRL | ALT), m), s("\x1b[27;7;127~"));
     // Unmodified keys are as ever, and the other kinds of key are not "other" keys.
     assert_eq!(enc(typed('a', "a"), m), s("a"));
     assert_eq!(enc(key(Key::Enter), m), s("\r"));

@@ -3,6 +3,7 @@
 
 mod csi;
 mod ground;
+mod handler_modes;
 mod property;
 mod reference;
 mod scan;
@@ -51,6 +52,9 @@ pub struct Recorder {
     apc: Option<Vec<u8>>,
     /// The `print_ascii` and `osc_put`-style calls, to see how the input was cut up.
     pub calls: Vec<String>,
+    /// What the handler answers to `Handler::vt52_mode` and `Handler::eight_bit_controls`.
+    pub vt52: bool,
+    pub eight_bit: bool,
 }
 
 /// What every `Csi` the parser hands out must satisfy (the fuzz target checks the same).
@@ -91,6 +95,12 @@ impl Recorder {
 }
 
 impl Handler for Recorder {
+    fn vt52_mode(&self) -> bool {
+        self.vt52
+    }
+    fn eight_bit_controls(&self) -> bool {
+        self.eight_bit
+    }
     fn print_ascii(&mut self, run: &[u8]) {
         assert!(!run.is_empty(), "empty print_ascii");
         assert!(run.iter().all(|b| (0x20..=0x7E).contains(b)), "not printable ASCII: {run:?}");

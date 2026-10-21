@@ -2,6 +2,7 @@
 //! encoding, the kitty keyboard protocol's page for the rest. Mouse and paste have their tests
 //! beside their code; modifyOtherKeys and the VT52 keys are in the modules below.
 
+mod keypad;
 mod other_keys;
 mod vt52;
 
