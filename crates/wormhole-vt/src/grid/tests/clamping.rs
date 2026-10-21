@@ -88,3 +88,32 @@ fn a_scroll_region_past_the_screen_is_the_screen_to_its_edge() {
     assert_eq!(g.history_len(), 1, "a full-width scroll from the top row feeds the history");
     ok(&g);
 }
+
+#[test]
+fn an_argument_one_past_the_last_row_or_column_is_outside() {
+    // The nearest wrong values: a row after the last is not indexed, and a column after the last
+    // is not the first cell of the next row (a mark there would land on it).
+    let mut g = grid(6, 3);
+    g.write_ascii(0, 0, b"abc", &plain());
+    let (rows, cols) = (g.rows(), g.cols());
+    g.insert_cells(rows, 0, 5, 1, BG);
+    g.delete_cells(rows, 0, 5, 1, BG);
+    g.set_wrapped(rows, true);
+    g.set_row_block(rows, 7);
+    g.mark_tab(rows, 0);
+    g.mark_tab(0, cols);
+    assert!(!g.live_cell(1, 0).is_some_and(|cell| cell.is_tab_start()), "the row after, not the column");
+    assert_eq!(screen(&g), ["abc", "", ""]);
+    ok(&g);
+}
+
+#[test]
+fn a_shift_whose_margin_is_past_the_last_column_runs_to_the_last_column() {
+    let mut g = grid(6, 1);
+    g.write_ascii(0, 0, b"abcdef", &plain());
+    g.insert_cells(0, 1, 99, 1, BG);
+    assert_eq!(screen(&g)[0], "a bcde", "f is pushed off the row");
+    g.delete_cells(0, 1, 99, 1, BG);
+    assert_eq!(screen(&g)[0], "abcde");
+    ok(&g);
+}

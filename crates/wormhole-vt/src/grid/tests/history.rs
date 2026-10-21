@@ -2,7 +2,7 @@
 //! cap drops a page. Pages of one row make the arithmetic exact: every row scrolled off is a page.
 
 use super::{BG, full, plain};
-use crate::grid::{DEFAULT_SCROLLBACK_BYTES, Grid, Pen};
+use crate::grid::{DEFAULT_SCROLLBACK_BYTES, Grid, HistoryLine, Pen};
 use crate::types::Hyperlink;
 
 fn ok(grid: &Grid) {
@@ -101,5 +101,22 @@ fn a_history_over_the_cap_for_its_links_drops_pages_until_it_is_under() {
     // Room for the rows themselves, but only one and a half pages' worth of links: two pages go.
     g.set_scrollback_limit(weight + weight / 2);
     assert_eq!(g.history_len(), 1);
+    ok(&g);
+}
+
+#[test]
+fn an_archived_row_costs_its_links_too_so_the_backlog_cap_counts_them() {
+    let mut g = one_row_pages();
+    let link = Hyperlink { id: "l".into(), uri: "https://example.com/".repeat(100).into() };
+    g.write_ascii(0, 0, b"x", &Pen { link: Some(link), ..plain() });
+    scroll_off(&mut g, 2);
+    // Room for the cells of a row and a little more, which is less than the link's text.
+    let cost = 16 * size_of::<crate::types::Cell>() + size_of::<HistoryLine>();
+    g.set_archive(Some(cost + 1));
+    g.set_scrollback_limit(0);
+    let batches = g.take_archive();
+    assert_eq!(batches.len(), 1);
+    assert_eq!((batches[0].lines.len(), batches[0].skipped), (1, 1), "the second row did not fit");
+    assert!(batches[0].lines[0].extras.links().next().is_some(), "the first came with its link");
     ok(&g);
 }
