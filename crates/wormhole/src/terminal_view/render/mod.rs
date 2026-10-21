@@ -209,7 +209,7 @@ impl Render for TerminalView {
                     this.block_action(blocks::BlockAction::CopyCommand, cx)
                 }))
                 .on_action(cx.listener(|this, _: &RerunCommand, _, cx| {
-                    this.block_action(blocks::BlockAction::Rerun, cx)
+                    this.block_action(blocks::BlockAction::PutAtPrompt, cx)
                 }))
             })
             .on_hover(cx.listener(|this, hovered: &bool, _, cx| {

@@ -138,6 +138,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   used to come with "Let programs control the window", so if you turned that on and a program needs
   the title, turn this on too. A title that a program sets can no longer carry control characters
   into the window's title, the sidebar or a terminal's folder.
+- Edit → Rerun Command is now Put Command at Prompt: it types a finished block's command at the
+  prompt and leaves the Return to you, and says why in a notice over the pane when it will not.
 
 ### Removed
 
@@ -225,6 +227,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   has "Programs reading the clipboard" (`clipboard_read`: ask, allow or deny; a project cannot set it).
   A program setting the clipboard is still allowed, now with a notice over the pane saying how much it
   copied, and "Programs setting the clipboard" (`clipboard_write`) turns it off.
+- **Medium** · no advisory · affects 0.3.0–1.1.0: a program could make Rerun Command run something
+  other than the command you saw. The command is read back from the screen, and a program can draw
+  text so it cannot be seen (concealed, in the background's own colour, or as characters that draw
+  nothing), so a block that looked like `ls` could hold `ls; rm -rf ~`; Rerun typed it and pressed
+  Return. Put Command at Prompt (the renamed action) refuses a command with any such text, and never
+  presses Return.
 
 ## [1.1.0] - 2026-10-15
 

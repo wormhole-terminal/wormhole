@@ -9,11 +9,11 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::spoken;
 use wormhole_core::terminal::types::{Line, Scroll};
-use wormhole_core::terminal::{Block, BlockState, Direction, took_text};
+use wormhole_core::terminal::{Block, BlockState, Direction, command_to_prompt, took_text};
 
 use super::{Layout, TerminalView};
 use crate::settings::{UiColors, store_in};
-use crate::style;
+use crate::style::{self, BannerKind};
 
 /// The gutter mark: a 2 pt bar inside the pane's left padding, 1 pt from its edge, inset where
 /// the block starts or ends in view (the padding is at least the window's edge inset).
@@ -39,7 +39,8 @@ pub(super) enum BlockAction {
     SelectOutput,
     CopyOutput,
     CopyCommand,
-    Rerun,
+    /// Type the command at the prompt, for the person to run with Return.
+    PutAtPrompt,
 }
 
 /// The gutter mark's color for a block in this state: the status colors for a command that
@@ -152,9 +153,11 @@ impl TerminalView {
     }
 
     /// Select Output selects the block's output lines and shows them; Copy Output and Copy
-    /// Command put them on the clipboard; Rerun Command types the command at the prompt (the
-    /// line the shell has so far cleared with ⌃U, as ⌘⌫ does) and runs it, only while the shell
-    /// is at its prompt, since a running program would get the text as input.
+    /// Command put them on the clipboard; Put Command at Prompt types the command at the prompt
+    /// (the line the shell has so far cleared with ⌃U, as ⌘⌫ does) without running it, only while
+    /// the shell is at its prompt, since a running program would get the text as input, and only
+    /// when the whole command is shown as it is typed: text a program drew hidden, in its
+    /// background's color or as invisible characters is refused, and the bar says so.
     pub(super) fn run_block_action(&mut self, block: &Block, action: BlockAction, cx: &mut Context<Self>) {
         let Some(pty) = &self.pty else { return };
         match action {
@@ -173,18 +176,35 @@ impl TerminalView {
                     cx.write_to_clipboard(ClipboardItem::new_string(block.command.clone()));
                 }
             }
-            BlockAction::Rerun => {
+            BlockAction::PutAtPrompt => {
                 if block.command.is_empty() {
                     return;
                 }
                 if pty.at_prompt() != Some(true) {
-                    tracing::info!("rerun: the shell isn't at its prompt");
+                    tracing::info!("put at prompt: the shell isn't at its prompt");
                     return;
                 }
-                self.write_input(b"\x15".to_vec());
-                self.paste(&block.command);
-                self.write_input(b"\r".to_vec());
-                cx.notify();
+                // The command is only typed if every cell of it shows what it holds, as drawn
+                // with this terminal's colors; the Return is the person's.
+                let cells = pty.command_cells(block);
+                let palette = store_in(&self.profile, cx).palette.clone();
+                let state = self.render_state.borrow();
+                let overrides = &state.snapshot().colors;
+                let typed = command_to_prompt(&block.command, &cells, pty.mode(), |color| {
+                    palette.resolve(color, overrides)
+                });
+                drop(state);
+                match typed {
+                    Ok(bytes) => {
+                        self.write_input(bytes);
+                        cx.notify();
+                    }
+                    Err(refusal) => {
+                        let text = format!("Not put at the prompt: {}", refusal.reason());
+                        crate::a11y::announce(&text, false);
+                        self.say_in_bar(BannerKind::Warning, text, cx);
+                    }
+                }
             }
         }
     }
@@ -267,14 +287,14 @@ impl TerminalView {
         out
     }
 
-    /// `block <n> <select|copy-output|copy-command|rerun>`.
+    /// `block <n> <select|copy-output|copy-command|to-prompt>`.
     pub fn devctl_block(&mut self, n: usize, action: &str, cx: &mut Context<Self>) -> anyhow::Result<()> {
         let action = match action {
             "select" => BlockAction::SelectOutput,
             "copy-output" => BlockAction::CopyOutput,
             "copy-command" => BlockAction::CopyCommand,
-            "rerun" => BlockAction::Rerun,
-            other => anyhow::bail!("expected select, copy-output, copy-command or rerun, got {other:?}"),
+            "to-prompt" => BlockAction::PutAtPrompt,
+            other => anyhow::bail!("expected select, copy-output, copy-command or to-prompt, got {other:?}"),
         };
         let block = self
             .pty

@@ -165,18 +165,8 @@ pub fn clean(raw: &str, max_chars: usize) -> String {
             selectable = false;
             continue;
         }
-        if c.is_control() || is_invisible(c) {
+        if !keeps(c, &mut selectable) {
             continue;
-        }
-        if is_presentation_selector(c) {
-            // Emoji and text presentation (✔︎ ✔️, 1️⃣) are shown, so one is kept right after a
-            // character that can have it; any other is a hidden bit (or byte, in a run).
-            if !selectable {
-                continue;
-            }
-            selectable = false;
-        } else {
-            selectable = takes_selector(c);
         }
         if pending_space {
             out.push(' ');
@@ -189,6 +179,41 @@ pub fn clean(raw: &str, max_chars: usize) -> String {
         out.push('…');
     }
     out
+}
+
+/// Whether `clean` keeps the non-blank character `c`; `selectable` is whether the one kept before
+/// it can take a presentation selector, and is updated.
+fn keeps(c: char, selectable: &mut bool) -> bool {
+    if c.is_control() || is_invisible(c) {
+        return false;
+    }
+    if is_presentation_selector(c) {
+        // Emoji and text presentation (✔︎ ✔️, 1️⃣) are shown, so one is kept right after a
+        // character that can have it; any other is a hidden bit (or byte, in a run).
+        if !*selectable {
+            return false;
+        }
+        *selectable = false;
+    } else {
+        *selectable = takes_selector(c);
+    }
+    true
+}
+
+/// Whether `raw` has a character that does not show as itself: one `clean` would drop (control and
+/// invisible formatting characters, a presentation selector with nothing to act on), or a blank
+/// that is not the space, tab or newline it looks like (no-break and other Unicode spaces, which a
+/// shell does not read as a space). For text that is about to be typed as it was shown, where
+/// cleaning it would be a different command.
+pub fn hides_text(raw: &str) -> bool {
+    let mut selectable = false;
+    raw.chars().any(|c| {
+        if c.is_whitespace() {
+            selectable = false;
+            return !matches!(c, ' ' | '\t' | '\n');
+        }
+        !keeps(c, &mut selectable)
+    })
 }
 
 /// Unicode characters that show nothing themselves: formatting ones that change how what follows
@@ -428,6 +453,38 @@ mod tests {
         // Variation selectors 1 to 14 and the supplement are never kept.
         assert_eq!(clean("a\u{FE00}b\u{FE0D}c\u{E0100}d\u{E01EF}e", 100), "abcde");
         assert_eq!(clean("\u{FE00}\u{FE0F}", 100), "");
+    }
+
+    #[test]
+    fn text_hides_something_exactly_where_cleaning_it_would_change_it() {
+        use super::hides_text;
+        for shown in [
+            "ls -l",
+            "echo 'Ünïcödé ✓'",
+            "a\tb",
+            "one\ntwo",
+            "done \u{2714}\u{FE0F}",
+            "",
+            "1\u{FE0F}\u{20E3}",
+        ] {
+            assert!(!hides_text(shown), "{shown:?}");
+        }
+        for hidden in [
+            "a\u{200B}b",
+            "a\u{202E}b",
+            "a\u{E0041}b",
+            "a\u{FE00}b",
+            "a\u{FE0F}b",
+            "a\x1bb",
+            "a\rb",
+            "a\u{3164}b",
+        ] {
+            assert!(hides_text(hidden), "{hidden:?}");
+            assert_ne!(clean(hidden, 100), hidden, "cleaning it changes it: {hidden:?}");
+        }
+        // A blank that is not a space: it looks like one and a shell does not read it as one.
+        assert!(hides_text("rm\u{00A0}-rf"));
+        assert!(hides_text("a\u{2003}b"));
     }
 
     #[test]

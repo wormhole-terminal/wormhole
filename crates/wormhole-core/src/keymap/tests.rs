@@ -378,7 +378,7 @@ Edit
   Select Output
   Copy Output
   Copy Command
-  Rerun Command
+  Put Command at Prompt
 View
   Hide Sidebar  ⌃⌘S
   Hide Right Panel  ⌥⌘I

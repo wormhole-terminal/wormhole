@@ -17,7 +17,7 @@
 //!   screen          dump the active terminal's visible text
 //!   blocks          the active terminal's command blocks (a shell with integration), one a line:
 //!                   its lines, how its command went and the command
-//!   block <n> <select|copy-output|copy-command|rerun>   the Edit menu's action on the n-th block as
+//!   block <n> <select|copy-output|copy-command|to-prompt>   the Edit menu's action on the n-th block as
 //!                   `blocks` lists them (`key cmd-up` / `key cmd-down` jump between the prompts)
 //!   pane-bar        what the bar over the active terminal says: a program's question about reading
 //!                   the clipboard (OSC 52), a notice (a copy it made, a refusal), or `none`

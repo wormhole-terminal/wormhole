@@ -30,7 +30,7 @@ and GPUI Kit, with its own terminal engine.
   palette. A terminal remembers its shell across a restart.
 - **Command blocks** – with shell integration (OSC 133) every command is a block:
   a green or red mark in the gutter, ⌘↑ / ⌘↓ between prompts, the exit code and
-  time on hover, and Select / Copy Output, Copy Command and Rerun from the Edit
+  time on hover, and Select / Copy Output, Copy Command and Put Command at Prompt from the Edit
   menu.
 - **Inline images** – kitty's graphics protocol, iTerm2's inline images and
   Sixel show pictures in the grid that scroll and reflow with the text (`icat`,

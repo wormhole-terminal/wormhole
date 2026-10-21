@@ -39,6 +39,7 @@
 
 pub mod agents;
 mod blocks;
+mod command_to_prompt;
 mod engine;
 mod events;
 pub mod find;
@@ -85,6 +86,7 @@ use std::time::Duration;
 use wormhole_vt::{Colors, Column, Line, Modes, Point, Scroll, SelectionType, Side};
 
 pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
+pub use command_to_prompt::{Refusal, command_to_prompt};
 use events::EventProxy;
 use events::Shared;
 pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
@@ -561,6 +563,11 @@ impl Pty {
     pub fn block(&self, id: u64) -> Option<Block> {
         let term = self.term.lock();
         blocks::block(&term, id, &self.shared.commands())
+    }
+
+    /// The cells of `block`'s command line as they are drawn, for [`command_to_prompt`].
+    pub fn command_cells(&self, block: &Block) -> Vec<wormhole_vt::Cell> {
+        blocks::command_cells(&self.term.lock(), block)
     }
 
     /// The command that most recently finished with exit code `code`: what it was, how long it ran

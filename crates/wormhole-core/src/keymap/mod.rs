@@ -128,6 +128,8 @@ pub enum ActionId {
     SelectOutput,
     CopyOutput,
     CopyCommand,
+    /// "Put Command at Prompt": it once ran the command ("Rerun Command"), and the id stays so a
+    /// key bound to it keeps working.
     RerunCommand,
     // Notes.
     NewNote,

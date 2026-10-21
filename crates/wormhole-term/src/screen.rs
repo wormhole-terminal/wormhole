@@ -27,6 +27,15 @@ use super::GridSize;
 use super::marks::{Part, RowMark};
 use wormhole_vt::Column;
 
+/// The engine's name for a part of a block.
+fn content_of(part: Part) -> BlockPart {
+    match part {
+        Part::Prompt => BlockPart::Prompt,
+        Part::Command => BlockPart::Command,
+        Part::Output => BlockPart::Output,
+    }
+}
+
 /// Where the cursor is drawn and how.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct ScreenCursor {
@@ -174,12 +183,14 @@ impl Screen {
     pub(crate) fn part_text(&self, line: Line, id: u64, part: Part) -> String {
         // A block number past u32 is none of the engine's.
         let Ok(block) = u32::try_from(id) else { return String::new() };
-        let content = match part {
-            Part::Prompt => BlockPart::Prompt,
-            Part::Command => BlockPart::Command,
-            Part::Output => BlockPart::Output,
-        };
-        self.term.block_text(line, block, content)
+        self.term.block_text(line, block, content_of(part))
+    }
+
+    /// The cells of `line` that carry `part` of block `id`, as they are drawn: the other side of
+    /// [`Screen::part_text`], for judging whether the text shows what it holds.
+    pub(crate) fn part_cells(&self, line: Line, id: u64, part: Part) -> Vec<Cell> {
+        let Ok(block) = u32::try_from(id) else { return Vec::new() };
+        self.term.block_cells(line, block, content_of(part))
     }
 
     /// The text from `start` to `end` inclusive, wrapped lines joined, as copying it would give.

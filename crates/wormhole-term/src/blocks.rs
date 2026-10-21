@@ -11,7 +11,7 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use wormhole_vt::{Column, Line, Modes, Point};
+use wormhole_vt::{Cell, Column, Line, Modes, Point};
 
 use super::marks::{self, Part, RowMark};
 use super::osc::{BODY_MAX_CHARS, Mark, clean};
@@ -217,6 +217,17 @@ fn block_from(screen: &Screen, start: Line, log: &CommandLog) -> Option<Block> {
     Some(Block { id, start, output, end, command: command.trim_end().to_string(), state: log.state(id) })
 }
 
+/// The cells of `block`'s command line as they are drawn, in reading order.
+pub(super) fn command_cells(screen: &Screen, block: &Block) -> Vec<Cell> {
+    let mut cells = Vec::new();
+    let mut line = block.start;
+    while line <= block.end {
+        cells.extend(screen.part_cells(line, block.id, Part::Command));
+        line += 1;
+    }
+    cells
+}
+
 /// What a command that has just finished with a failing exit code left, for telling about it
 /// outside the grid (a banner, a row): the command line, how long it ran and the last thing it
 /// printed. Text from the program, so cleaned like its notifications are.
@@ -420,6 +431,33 @@ pub(super) mod tests {
         term.feed(b"\x1b[?1049hvim");
         assert!(blocks(term.screen(), &log).is_empty());
         assert_eq!(block_at(term.screen(), Line(0), &log), None);
+    }
+
+    #[test]
+    fn a_commands_cells_are_read_back_with_how_they_are_drawn() {
+        use wormhole_vt::Modes;
+
+        use super::command_cells;
+        use crate::command_to_prompt::{Refusal, command_to_prompt};
+
+        // `ls ` then `rm` concealed (SGR 8); the second command is plain.
+        let (term, log) = shown(
+            10,
+            b"\x1b]133;A\x07$ \x1b]133;B\x07ls \x1b[8mrm\x1b[0m\r\n\x1b]133;C\x07x\r\n\x1b]133;D;0\x07\
+            \x1b]133;A\x07$ \x1b]133;B\x07ls\r\n\x1b]133;C\x07x\r\n\x1b]133;D;0\x07",
+        );
+        let found = blocks(term.screen(), &log);
+        let cells = command_cells(term.screen(), &found[0]);
+        assert_eq!(cells.iter().map(|cell| cell.c).collect::<String>(), "ls rm");
+        assert_eq!(
+            command_to_prompt(&found[0].command, &cells, Modes::empty(), |color| color),
+            Err(Refusal::Concealed)
+        );
+        let cells = command_cells(term.screen(), &found[1]);
+        assert_eq!(
+            command_to_prompt(&found[1].command, &cells, Modes::empty(), |color| color),
+            Ok(b"\x15ls".to_vec())
+        );
     }
 
     #[test]

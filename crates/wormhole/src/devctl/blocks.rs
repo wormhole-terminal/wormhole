@@ -15,12 +15,12 @@ pub(super) fn images(ctx: &mut Ctx, _: &str) -> Result<String> {
     Ok(ctx.workspace.active_terminal().read(ctx.cx).devctl_images())
 }
 
-/// `block <n> <select|copy-output|copy-command|rerun>`: the action on the n-th block.
+/// `block <n> <select|copy-output|copy-command|to-prompt>`: the action on the n-th block.
 pub(super) fn block(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let n = words.next().and_then(|n| n.parse::<usize>().ok()).filter(|n| *n > 0);
     let (Some(n), Some(action)) = (n, words.next()) else {
-        return Err(anyhow!("expected <n> <select|copy-output|copy-command|rerun>"));
+        return Err(anyhow!("expected <n> <select|copy-output|copy-command|to-prompt>"));
     };
     let terminal = ctx.workspace.active_terminal();
     terminal.update(ctx.cx, |terminal, cx| terminal.devctl_block(n - 1, action, cx))?;

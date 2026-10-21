@@ -201,7 +201,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(SelectOutput, "Select Output", &[]).scope(Scope::Terminal),
         row(CopyOutput, "Copy Output", &[]).scope(Scope::Terminal),
         row(CopyCommand, "Copy Command", &[]).scope(Scope::Terminal),
-        row(RerunCommand, "Rerun Command", &[]).scope(Scope::Terminal),
+        row(RerunCommand, "Put Command at Prompt", &[]).scope(Scope::Terminal),
         // Notes.
         row(NewNote, "New Note", &[(ALT_CMD, "n")]),
         row(StashPrompt, "Stash Prompt", &[(ALT_CMD, "s")]),
