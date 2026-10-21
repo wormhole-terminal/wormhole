@@ -503,7 +503,8 @@ impl Workspace {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {
                 // A split joined or left since the selection last changed.
-                terminal.set_on_screen(is_active && looking);
+                terminal.set_on_screen(is_active);
+                terminal.set_in_front(is_active && looking);
                 let before = terminal.status();
                 let mut changed = terminal.tick(is_active, window_active);
                 if is_active && window_active {

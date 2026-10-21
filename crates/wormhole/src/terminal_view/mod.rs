@@ -157,7 +157,7 @@ pub struct TerminalView {
     bar: pane_bar::State,
     /// The terminal is shown in a window in front, as of the workspace's last tick: the state in
     /// which a program's clipboard read may be asked about at all.
-    on_screen: bool,
+    in_front: bool,
     /// The bell rang in a terminal without an agent and nobody has looked since.
     bell_rang: bool,
     /// When a bell last counted as "needs you" (at most once a minute).
@@ -327,7 +327,7 @@ impl TerminalView {
             foreground: None,
             finished_command: None,
             bar: pane_bar::State::default(),
-            on_screen: false,
+            in_front: false,
             bell_rang: false,
             bell_counted: None,
             at_prompt: None,

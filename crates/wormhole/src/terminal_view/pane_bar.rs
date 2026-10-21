@@ -99,7 +99,7 @@ impl TerminalView {
     /// path below either answers it or keeps it in the question, which answers it later.
     pub(super) fn clipboard_load(&mut self, format: TextFormatter, reply: Reply, cx: &mut Context<Self>) {
         let policy = settings_in(&self.profile, cx).clipboard_read;
-        match self.bar.gate.request(policy, self.on_screen) {
+        match self.bar.gate.request(policy, self.in_front) {
             Request::Answer => self.give_clipboard(&format, &reply, cx),
             Request::Deny => {
                 if policy == ClipboardRead::Ask {
@@ -166,8 +166,8 @@ impl TerminalView {
 
     /// The terminal is shown in a window in front (set by the workspace's tick): the only state
     /// in which a question can be asked.
-    pub fn set_on_screen(&mut self, on_screen: bool) {
-        self.on_screen = on_screen;
+    pub fn set_in_front(&mut self, in_front: bool) {
+        self.in_front = in_front;
     }
 }
 
