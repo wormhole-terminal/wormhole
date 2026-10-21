@@ -234,7 +234,21 @@ impl Host {
     }
 
     /// Feed what the program wrote; returns what to write back.
+    ///
+    /// The window acts on an operation where its sequence ends, before the next byte, as a terminal
+    /// that sizes its window as it parses would: the bytes are fed in pieces that end at the last
+    /// byte of a window operation (`t`) or of DECCOLM (`h`, `l`). Fed whole, a read would print what
+    /// follows a resize at the old size, and where a read ends is the system's choice (a vttest
+    /// screen of pixel resizes came out scrolled differently from one run to the next).
     pub fn feed(&mut self, bytes: &[u8]) -> Vec<u8> {
+        let mut out = Vec::new();
+        for piece in bytes.split_inclusive(|&b| matches!(b, b't' | b'h' | b'l')) {
+            out.extend(self.feed_piece(piece));
+        }
+        out
+    }
+
+    fn feed_piece(&mut self, bytes: &[u8]) -> Vec<u8> {
         self.term.feed(bytes);
         let events: Vec<Event> = self.term.events().collect();
         let mut out = Vec::new();

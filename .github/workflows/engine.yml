@@ -75,6 +75,16 @@ jobs:
           key: suites
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: scripts/suites-gate.sh
+      # vttest's screens as this run gives them, to compare and commit when a change is meant.
+      - name: The vttest screens this run gives
+        if: ${{ failure() }}
+        run: scripts/vttest-gate.sh --update || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() }}
+        with:
+          name: vttest-screens
+          path: tools/vt-compare/suites/vttest
+          retention-days: 7
 
   api:
     name: Public API
