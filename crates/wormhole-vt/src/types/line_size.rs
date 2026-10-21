@@ -70,3 +70,22 @@ impl LineSize {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::LineSize;
+
+    #[test]
+    fn only_the_two_halves_of_a_tall_line_are_double_height() {
+        let heights = [
+            (LineSize::Single, false),
+            (LineSize::DoubleWidth, false),
+            (LineSize::DoubleHeightTop, true),
+            (LineSize::DoubleHeightBottom, true),
+        ];
+        for (size, tall) in heights {
+            assert_eq!(size.is_double_height(), tall, "{size:?}");
+            assert_eq!(size.is_double(), size != LineSize::Single, "{size:?}");
+        }
+    }
+}

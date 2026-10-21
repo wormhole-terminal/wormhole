@@ -261,6 +261,32 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_run_of_columns_is_no_hyperlink() {
+        let mut extras = RowExtras::default();
+        extras.push_link(3, 3, Hyperlink { id: "a".into(), uri: "https://a".into() });
+        assert!(extras.is_empty());
+        assert_eq!(extras.links().count(), 0);
+        assert!(extras.hyperlink(3).is_none());
+    }
+
+    #[test]
+    fn a_row_weighs_its_lists_and_the_text_of_its_links() {
+        use super::{Entry, LinkSpan};
+        use std::mem::size_of;
+        let mut extras = RowExtras::default();
+        assert_eq!(extras.heap_bytes(), 0);
+        extras.push_cell(1, Some(Color::Indexed(4)), &['a', 'b', 'c']);
+        extras.push_link(0, 4, Hyperlink { id: "id".into(), uri: "https://x".into() });
+        extras.push_link(5, 6, Hyperlink { id: "k".into(), uri: "u".into() });
+        let lists = extras.cells.capacity() * size_of::<Entry>()
+            + extras.marks.capacity() * size_of::<char>()
+            + extras.links.capacity() * size_of::<LinkSpan>();
+        // The text of each link counts whole, as if the row owned it: "id" and "https://x", "k" and "u".
+        assert_eq!(extras.heap_bytes(), lists + (2 + 9) + (1 + 1));
+        assert!(lists > 0);
+    }
+
+    #[test]
     fn clearing_keeps_the_buffers() {
         let mut extras = RowExtras::default();
         extras.push_cell(0, None, &['a'; 40]);
