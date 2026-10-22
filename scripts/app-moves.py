@@ -408,6 +408,10 @@ def move(plan: Plan) -> int:
         missing = [m.src for m in plan.moves if m not in pending]
         raise SystemExit("app-moves: half moved: %s are already in place" % ", ".join(missing))
     fmap = plan.file_map()
+    # `git mv a b` into a folder that exists puts `a` inside it (b/a): refuse rather than nest.
+    for m in plan.moves:
+        if m.is_dir and os.path.isdir(os.path.join(plan.src, m.dst)):
+            raise SystemExit("app-moves: %s already exists: `git mv` would nest %s in it" % (m.dst, m.src))
 
     # The declarations first (while the old files are where they were): out of the old parents.
     shims: Dict[str, List[str]] = {}
