@@ -142,7 +142,7 @@ impl ProjectHub {
     }
 
     /// `id` was just handed out: whatever base was kept under it belongs to a session that is gone.
-    pub(super) fn id_allocated(&mut self, id: i64) {
+    pub(crate) fn id_allocated(&mut self, id: i64) {
         self.notes_bases.remove(id);
     }
 

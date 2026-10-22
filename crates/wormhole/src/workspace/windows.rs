@@ -51,7 +51,7 @@ impl Workspace {
 
     /// [`new_window_in`](Self::new_window_in) in `profile`, which may not be the one this window
     /// (or Wormhole) is in: then the new window is the odd one.
-    pub(super) fn new_window_in_profile(
+    pub(crate) fn new_window_in_profile(
         &mut self,
         cwd: Option<String>,
         profile: ProfileId,

@@ -31,6 +31,17 @@ pub(crate) fn open_alert(
     });
 }
 
+/// Longest program or terminal name a question keeps.
+const PROGRAM_MAX: usize = 40;
+
+/// A program's name, or a terminal's, as a question lists it: a long one cut short.
+pub(crate) fn shortened(name: &str) -> String {
+    match name.char_indices().nth(PROGRAM_MAX) {
+        Some((cut, _)) => format!("{}…", &name[..cut]),
+        None => name.to_string(),
+    }
+}
+
 /// What a question before closing a terminal or a window says.
 pub(crate) struct CloseQuestion {
     pub title: SharedString,

@@ -175,7 +175,7 @@ impl AppState {
         let target = target.clone();
         // A start folder of its own (the profile's), not the window in front's.
         if with_front_workspace(cx, |ws, window, cx| {
-            let cwd = (ws.profile == target).then(|| ws.default_cwd(cx)).flatten();
+            let cwd = (*ws.profile() == target).then(|| ws.default_cwd(cx)).flatten();
             ws.new_window_in_profile(cwd, target.clone(), window, cx);
         })
         .is_none()

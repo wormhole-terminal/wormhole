@@ -10,10 +10,11 @@ use gpui_kit::*;
 use wormhole_core::agents::agent;
 
 use crate::terminal_view::Status;
+use crate::workspace::Workspace;
 use crate::workspace::app::{app, app_mut};
-use crate::workspace::session::{Session, shortened};
+use crate::workspace::dialog::{self, shortened};
+use crate::workspace::restart_facts::RestartFacts;
 use crate::workspace::updates::{self, UpdatePhase};
-use crate::workspace::{Workspace, dialog};
 
 /// How long every terminal must stay idle, without a break, before the app restarts by itself. An
 /// agent is idle for a moment between its steps, so a single quiet look would restart under it.
@@ -33,13 +34,12 @@ pub(super) struct Running {
 }
 
 impl Running {
-    fn of(session: &Session, cx: &App) -> Self {
-        let terminal = session.terminal().read(cx);
+    fn of(facts: RestartFacts) -> Self {
         Self {
-            name: session.name(cx).to_string(),
-            agent: terminal.agent.map(|id| agent(id).short_name()),
-            status: terminal.status(),
-            program: terminal.foreground().map(|foreground| foreground.command.clone()),
+            name: facts.name,
+            agent: facts.agent.map(|id| agent(id).short_name()),
+            status: facts.status,
+            program: facts.program,
         }
     }
 
@@ -126,20 +126,20 @@ fn workspaces(cx: &App) -> Vec<Entity<Workspace>> {
 fn running_terminals(cx: &App) -> Vec<Running> {
     let mut running = Vec::new();
     for workspace in workspaces(cx) {
-        let sessions = &workspace.read(cx).sessions;
-        // A hosted terminal goes on running through the relaunch.
-        let cut_off = |s: &&Session| s.needs_close_confirmation(cx) && !s.is_hosted(cx);
-        running.extend(sessions.iter().filter(cut_off).map(|s| Running::of(s, cx)));
+        running.extend(
+            workspace.read(cx).restart_facts(cx).into_iter().filter(|facts| facts.cut_off).map(Running::of),
+        );
     }
     running
 }
 
 fn all_idle(cx: &App) -> bool {
     workspaces(cx).iter().all(|workspace| {
-        workspace.read(cx).sessions.iter().filter(|session| !session.is_hosted(cx)).all(|session| {
-            let terminal = session.terminal().read(cx);
-            is_idle(terminal.status(), terminal.program_in_foreground(), terminal.agent.is_some())
-        })
+        workspace
+            .read(cx)
+            .restart_facts(cx)
+            .iter()
+            .all(|facts| is_idle(facts.status, facts.program_in_foreground, facts.agent.is_some()))
     })
 }
 

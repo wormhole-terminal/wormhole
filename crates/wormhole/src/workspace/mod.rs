@@ -58,7 +58,7 @@ mod clear_tests;
 mod close_tests;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
-mod dialog;
+pub(crate) mod dialog;
 #[cfg(test)]
 mod drag_tests;
 #[cfg(test)]
@@ -106,6 +106,7 @@ pub(crate) mod recent_projects;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
+pub(crate) mod restart_facts;
 mod save;
 mod saved_layout;
 mod session;

@@ -158,7 +158,7 @@ impl Workspace {
     /// This window and its terminals go to profile `target`: its record and its terminals'
     /// scrollback are saved into that profile's database and removed from the old one. The
     /// terminals themselves are untouched, so they keep the environment they started with.
-    pub(super) fn rehome(&mut self, target: &ProfileId, cx: &mut Context<Self>) -> Result<(), String> {
+    pub(crate) fn rehome(&mut self, target: &ProfileId, cx: &mut Context<Self>) -> Result<(), String> {
         let from = self.profile.clone();
         if &from == target {
             return Ok(());

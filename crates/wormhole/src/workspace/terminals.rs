@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::settings::settings_in;
@@ -126,7 +127,7 @@ impl Workspace {
     }
 
     /// Where a new terminal starts: where the current one is.
-    pub(super) fn default_cwd(&self, cx: &App) -> Option<String> {
+    pub(crate) fn default_cwd(&self, cx: &App) -> Option<String> {
         self.sessions
             .get(self.active)
             .and_then(|s| s.terminal().read(cx).cwd.clone())
@@ -282,6 +283,16 @@ impl Workspace {
 
     pub(super) fn active_session(&self) -> &Session {
         &self.sessions[self.active]
+    }
+
+    /// The selected terminal's name, as the sidebar shows it.
+    pub(crate) fn active_session_name(&self, cx: &App) -> SharedString {
+        self.active_session().name(cx)
+    }
+
+    /// The profile this window belongs to.
+    pub(crate) fn profile(&self) -> &ProfileId {
+        &self.profile
     }
 
     /// The project folder of the terminal in front (what Settings marks "set by this project").

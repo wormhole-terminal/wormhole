@@ -12,6 +12,7 @@ use wormhole_core::view::sidebar::{SplitId, names};
 
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::workspace::app::app;
+use crate::workspace::dialog::shortened;
 use crate::workspace::git_panel::{changes, history};
 use crate::workspace::notes::{Note, TaskItem};
 use crate::workspace::{Workspace, notes, tasks};
@@ -267,8 +268,7 @@ pub(super) fn close_session_detail(
     sentences.join(" ")
 }
 
-/// Longest program name a question keeps, and how many names it lists before "and N more".
-const PROGRAM_MAX: usize = 40;
+/// How many names the question lists before "and N more".
 const PROGRAMS_LISTED: usize = 4;
 
 /// How many different programs `programs` holds.
@@ -277,14 +277,6 @@ fn programs_named(programs: &[String]) -> usize {
     names.sort_unstable();
     names.dedup();
     names.len()
-}
-
-/// A program's name, or a terminal's, as a question lists it: a long one cut short.
-pub(super) fn shortened(name: &str) -> String {
-    match name.char_indices().nth(PROGRAM_MAX) {
-        Some((cut, _)) => format!("{}…", &name[..cut]),
-        None => name.to_string(),
-    }
 }
 
 /// The programs that end, as Terminal's question lists them: "claude, npm run dev", each once, in

@@ -362,7 +362,7 @@ enum Click {
 }
 
 /// An agent's hook for session 2 (a background session), as the hook socket delivers it.
-pub(super) fn hook(
+pub(crate) fn hook(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     tab: i64,
