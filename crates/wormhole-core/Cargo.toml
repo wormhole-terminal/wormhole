@@ -59,6 +59,8 @@ dev-key = []
 # `terminal::testing`: terminals without a PTY, for the app's render tests (its dev-dependencies
 # turn this on, so the shipped build never has it).
 test-support = ["wormhole-term/test-support"]
+# Counters of what reading output costs, for the app's devctl `perf-profile`.
+perf-counters = ["wormhole-term/perf-counters"]
 
 [lints]
 workspace = true

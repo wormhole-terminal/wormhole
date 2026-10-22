@@ -56,6 +56,7 @@ mod links;
 mod marks;
 pub mod minimap;
 mod osc;
+pub mod perf;
 mod ports;
 mod procinfo;
 pub mod program_status;

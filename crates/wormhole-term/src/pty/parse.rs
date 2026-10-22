@@ -8,6 +8,7 @@ use std::time::Instant;
 
 use super::lock::FairLock;
 use crate::events::EventProxy;
+use crate::perf::{self, Side};
 
 /// How many bytes the parser gets per turn at the screen's lock, which is the longest the UI's
 /// snapshot waits behind it. `measure::slice_times` parses 32 MiB of log lines, truecolor cells,
@@ -63,8 +64,10 @@ impl<S, F: Feed<S>> Sink<S, F> {
             let (slice, rest) = bytes.split_at(bytes.len().min(SLICE));
             bytes = rest;
             {
-                let mut screen = self.screen.lock();
+                let mut screen = self.screen.lock_as(Side::Reader);
+                let parsing = perf::clock();
                 self.feed.feed(&mut screen, slice);
+                perf::parsed(slice.len(), parsing);
             }
             self.proxy.wakeup();
             if between() == Flow::Stop {
@@ -88,7 +91,7 @@ impl<S, F: Feed<S>> Sink<S, F> {
     pub(crate) fn expire_sync(&mut self) {
         if self.feed.deadline().is_some_and(|at| at <= Instant::now()) {
             {
-                let mut screen = self.screen.lock();
+                let mut screen = self.screen.lock_as(Side::Reader);
                 self.feed.expire(&mut screen);
             }
             self.proxy.wakeup();
@@ -99,7 +102,7 @@ impl<S, F: Feed<S>> Sink<S, F> {
     /// hosted terminal's replica is reset for a repaint and resized when the host says so).
     pub(crate) fn update(&mut self, change: impl FnOnce(&mut S, &mut F)) {
         {
-            let mut screen = self.screen.lock();
+            let mut screen = self.screen.lock_as(Side::Reader);
             change(&mut screen, &mut self.feed);
         }
         self.proxy.wakeup();

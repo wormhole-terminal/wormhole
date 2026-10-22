@@ -17,6 +17,8 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
+use crate::perf::{self, Held, Side};
+
 /// A mutex with fair hand-over (see the module docs). A thread that panicked while holding it
 /// does not poison it for the others: the screen is read for what it shows, whatever state a bug
 /// left it in, which beats a UI that panics on every lock.
@@ -25,8 +27,12 @@ pub(crate) struct FairLock<T> {
     data: Mutex<T>,
 }
 
-/// The data under [`FairLock`].
-pub(crate) struct FairGuard<'a, T>(MutexGuard<'a, T>);
+/// The data under [`FairLock`]. The data's guard comes first, so it is let go of before `held`
+/// counts how long it was held (only while `perf-profile` counts).
+pub(crate) struct FairGuard<'a, T> {
+    data: MutexGuard<'a, T>,
+    _held: Held,
+}
 
 impl<T> FairLock<T> {
     /// A lock around `value`.
@@ -36,11 +42,17 @@ impl<T> FairLock<T> {
 
     /// Wait for the lock behind everyone who asked before.
     pub(crate) fn lock(&self) -> FairGuard<'_, T> {
+        self.lock_as(Side::Ui)
+    }
+
+    /// [`lock`](Self::lock), counted as `side`'s wait and hold when profiling.
+    pub(crate) fn lock_as(&self, side: Side) -> FairGuard<'_, T> {
+        let asked = perf::clock();
         let turn = self.next.lock().unwrap_or_else(PoisonError::into_inner);
         let data = self.data.lock().unwrap_or_else(PoisonError::into_inner);
         // The turn goes on only now: whoever asks next queues behind the data's next holder.
         drop(turn);
-        FairGuard(data)
+        FairGuard { data, _held: Held::new(side, asked) }
     }
 }
 
@@ -48,13 +60,13 @@ impl<T> Deref for FairGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        &self.0
+        &self.data
     }
 }
 
 impl<T> DerefMut for FairGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
-        &mut self.0
+        &mut self.data
     }
 }
 
@@ -121,6 +133,27 @@ mod tests {
         let data = std::sync::Mutex::new(0usize);
         let worst = worst_wait(Box::new(move |f| f(&mut data.lock().expect("not poisoned"))));
         eprintln!("a plain mutex: the waiter let {worst} holds go by");
+    }
+
+    /// The one test that counts: the counters are the whole process's, so parallel tests can't
+    /// disturb it beyond adding to them.
+    #[cfg(feature = "perf-counters")]
+    #[test]
+    fn profiling_counts_each_sides_locks_and_stops_when_asked() {
+        use crate::perf::{self, Side};
+        let lock = FairLock::new(0u32);
+        perf::start();
+        *lock.lock_as(Side::Reader) += 1;
+        *lock.lock() += 1;
+        perf::parsed(100, perf::clock());
+        let counted = perf::stop();
+        // Other tests' terminals may be reading meanwhile: they add, never take away.
+        assert!(counted.reader.locks >= 1 && counted.ui.locks >= 1, "{counted:?}");
+        assert!(counted.bytes >= 100 && counted.slices >= 1, "{counted:?}");
+        // Stopped: nothing more is counted.
+        drop(lock.lock_as(Side::Reader));
+        perf::parsed(5, perf::clock());
+        assert_eq!(perf::read(), counted);
     }
 
     #[test]
