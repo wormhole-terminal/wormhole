@@ -15,7 +15,13 @@
 //! - `instance`: who serves the socket;
 //! - `server`: the listener thread (connections from this user only);
 //! - `client`: the `hook` and `statusline` command lines;
+//! - `hosts`: the session hosts seen from outside (ids, their folder, which are alive, ending one);
+//! - `host_binary`: where the session host's executable is;
 //! - `test_support`: the bounded receive the tests share.
+//!
+//! Tier 5: it uses `storage`, `agents`, `update`, `config` and `notify`. `terminal` and
+//! `onboarding` sit above it, so a terminal's environment can name the socket without the socket
+//! knowing about terminals.
 
 mod client;
 pub mod control;

@@ -1,12 +1,13 @@
 //! Wormhole's UI-independent core.
 //!
-//! Everything here builds and tests without GPUI: the terminal engine
-//! (PTY + screen + key/mouse encoding), git access, settings and
-//! themes, file icon themes, persistence, coding-agent detection and status hooks, and
-//! the self-updater.
+//! Everything here builds and tests without GPUI: git access, settings and
+//! themes, file icon themes, persistence, coding-agent status hooks, starting a terminal's
+//! program, and the self-updater. The terminal itself (the PTY, the screen, key and mouse
+//! encoding, agent detection) is `wormhole_term`, its own crate so the session host can link it
+//! without the rest of core.
 //!
 //! Its modules are grouped by domain, lowest first; a domain uses only the ones
-//! before it (`scripts/structure.json`'s `layers` checks it):
+//! before it or in its own tier (`scripts/structure.json`'s `layers` checks it):
 //! `platform`, `storage`, `keys`; `theme`, `agents`, `update`; `view`, `project`; `config`; `git`, `notify`;
 //! `ipc`; `terminal`; `onboarding`.
 

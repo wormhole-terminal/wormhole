@@ -5,6 +5,14 @@
 //! applied key by key (one bad value doesn't reset the rest), and changes made
 //! in the app stay in memory until the file is fixed. Saving edits the file in
 //! place (see `file`), so comments and keys we don't know survive.
+//!
+//! The domain also holds what is a setting in all but file: a profile, a whole set of settings
+//! (`profile`), the feature flags (`features`), the Settings window's table of every setting
+//! (`settings_index`) and what a program may do with the clipboard (`clipboard`). Tier 3: it uses
+//! the tiers below for the values it stores and checks (`storage`, `theme`, `agents`, `update`,
+//! `view`, and `project` for a trusted project's overrides). `git`, `notify`, `ipc`, `terminal`
+//! and `onboarding` read settings; config never uses them, so a setting can't depend on what
+//! it configures.
 
 pub mod clipboard;
 pub mod features;

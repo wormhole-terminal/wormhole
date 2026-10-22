@@ -3,6 +3,11 @@
 //! Every loader returns `Ok(None)` when its file is absent, so each feature is optional. Whether a
 //! feature is *used* is decided by the caller from [`ProjectPrefs`] (per-user toggles) and
 //! [`TrustStore`] (nothing executable runs before the user approved the folder's current contents).
+//!
+//! Tier 2, beside `view`: it uses `storage` (capped reads that never leave the repository),
+//! `keys` (an action's shortcut) and `theme` (the project's colour), never settings or the running
+//! app. That is what lets `config`, one tier up, lay a trusted project's overrides over the
+//! user's settings without a circle.
 
 mod actions;
 mod color;

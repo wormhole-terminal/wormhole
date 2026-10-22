@@ -5,6 +5,11 @@
 //! agent to call back into Wormhole; `integrations` installs that for the
 //! agents with a documented hook mechanism, the rest fall back to the
 //! terminal-output heuristic.
+//!
+//! The registry and the foreground detection themselves are `wormhole_term`'s, so the session
+//! host has them without core; this domain holds what needs files: installing hooks
+//! (`integrations`), finding an agent on PATH, its logo, and the plan usage an agent's status line
+//! reports (`usage`). Tier 1: it uses only `storage`, never settings or the running app.
 
 mod icons;
 pub mod integrations;

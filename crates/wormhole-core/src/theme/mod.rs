@@ -2,6 +2,13 @@
 //! Alacritty (.toml) formats, plus a set of bundled themes.
 //!
 //! All colors are packed as `0xRRGGBB`.
+//!
+//! The domain is everything that decides how Wormhole looks, as data: these terminal themes, the
+//! design tokens (`tokens`), the theme files found on disk and in the gallery (`registry`,
+//! `catalog`), file icon themes (`icon_theme`), a folder's colour (`folder_color`) and fonts
+//! (`fonts`). Tier 1: it uses only `storage`, to read theme and font files. It never reads
+//! settings; the chosen theme comes to it as a value, so settings, views and the Studio can all
+//! build on it.
 
 pub mod catalog;
 pub mod folder_color;

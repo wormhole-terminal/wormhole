@@ -5,6 +5,10 @@
 //! Plain shells are first-class: a long command that ends (or fails, with its exit code, where the
 //! shell has integration) and the bell are told like an agent's question or its finishing. So are
 //! programs that report their own status (OSC 7501) without being a coding agent.
+//!
+//! Tier 4, beside `git`: it reads `config` (which events to tell, the badge and the sound) and
+//! `view` (the sidebar's and VoiceOver's words), and nothing above. Never git, the socket or the
+//! app: the facts come to it as values, which is what keeps it pure.
 
 mod announce;
 mod burst;

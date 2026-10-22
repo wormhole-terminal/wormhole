@@ -9,6 +9,10 @@
 //! key compiled into the app, is the authority; the feed's sha256 is only an early integrity check.
 //! Because an attacker who controls the feed could pair an old (validly signed) archive with a new
 //! version number, [`install`] also checks the version inside the extracted bundle's Info.plist.
+//!
+//! `licenses` is here too: what the shipped build is made of changes with each release. Tier 1:
+//! the domain uses only `storage`. Settings (the channel, when to check) come to it as values, so
+//! it never reads them.
 
 mod archive;
 mod channel;

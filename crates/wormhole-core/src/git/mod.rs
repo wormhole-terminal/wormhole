@@ -11,6 +11,10 @@
 //! builder with the same hardening (and hooks off), only on the user's action, confirmed in the
 //! app, never forced. Nothing else writes. (`pr` is not git at all: it asks the GitHub CLI for a
 //! branch's pull request, read-only, for a trusted project, with a scrubbed environment.)
+//!
+//! Tier 4, beside `notify`: it uses `storage`, `config` (size units), `agents` (finding `gh`)
+//! and `view` (the panels' caps and wording). Nothing it uses reads git, so the panels' data
+//! never goes round in a circle; `ipc`, `terminal` and `onboarding` sit above it.
 
 mod cmd;
 mod counts;
