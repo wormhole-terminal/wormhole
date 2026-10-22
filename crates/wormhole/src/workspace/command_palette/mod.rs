@@ -26,7 +26,7 @@ use wormhole_core::view::sidebar::display_path;
 
 use crate::settings::settings;
 use crate::workspace::app::{AppState, OpenWindow, app, open_tab};
-use crate::workspace::overlay::OverlayView;
+use crate::workspace::overlay::{OverlayKind, OverlayView};
 use crate::workspace::{Workspace, settings_page};
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
@@ -84,7 +84,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let cwd = ws.active_terminal().read(cx).cwd.clone();
         let palette =
             cx.new(|cx| CommandPalette::new(workspace, window_id, snapshot, cwd, &query, window, cx));
-        ws.show_overlay(OverlayView::Palette(palette), return_focus, cx);
+        ws.show_overlay(OverlayView { kind: OverlayKind::Palette, view: palette.into() }, return_focus, cx);
     });
 }
 
@@ -625,7 +625,7 @@ impl Workspace {
             self.close_overlay(window, cx);
             return;
         }
-        if let Some(palette) = self.palette() {
+        if let Some(palette) = self.overlay_of::<CommandPalette>() {
             palette.update(cx, |palette, cx| {
                 palette.scope = Scope::All;
                 palette.set_query(arg, window, cx);
@@ -643,6 +643,7 @@ impl Workspace {
 mod tests {
     use gpui_kit::{Focusable as _, TestAppContext};
 
+    use super::CommandPalette;
     use crate::workspace::app::OpenWindow;
     use crate::workspace::view_tests::{draw, isolate_in, press, read, start};
 
@@ -683,7 +684,11 @@ mod tests {
         // A prefix narrows it; Esc goes back to everything, then closes.
         key(cx, &window, "@");
         let scope = cx
-            .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.palette().map(|p| p.read(cx).scope)))
+            .update(|cx| {
+                window
+                    .workspace
+                    .read_with(cx, |ws, cx| ws.overlay_of::<CommandPalette>().map(|p| p.read(cx).scope))
+            })
             .ok()
             .flatten();
         assert_eq!(scope, Some(wormhole_core::view::search::Scope::Terminals));

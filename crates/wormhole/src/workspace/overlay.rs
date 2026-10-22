@@ -8,13 +8,29 @@ use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
-use crate::workspace::command_palette::CommandPalette;
-use crate::workspace::shortcut_sheet::ShortcutSheet;
 
 /// Which overlay is open.
-pub(super) enum OverlayView {
-    Palette(Entity<CommandPalette>),
-    Sheet(Entity<ShortcutSheet>),
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum OverlayKind {
+    Palette,
+    Sheet,
+}
+
+impl OverlayKind {
+    /// What VoiceOver calls the dialog.
+    fn name(self) -> &'static str {
+        match self {
+            OverlayKind::Palette => "Command palette",
+            OverlayKind::Sheet => "Keyboard shortcuts",
+        }
+    }
+}
+
+/// The overlay's view, kept as an `AnyView` so the window draws it without naming the palette's or
+/// the sheet's type (they sit above the window); who needs the entity downcasts it ([`Workspace::overlay_of`]).
+pub(super) struct OverlayView {
+    pub kind: OverlayKind,
+    pub view: AnyView,
 }
 
 pub(super) struct Overlay {
@@ -71,38 +87,28 @@ impl Workspace {
         cx.notify();
     }
 
+    fn overlay_is(&self, kind: OverlayKind) -> bool {
+        self.overlay.as_ref().is_some_and(|o| o.view.kind == kind)
+    }
+
     pub(super) fn palette_open(&self) -> bool {
-        matches!(self.overlay.as_ref().map(|o| &o.view), Some(OverlayView::Palette(_)))
+        self.overlay_is(OverlayKind::Palette)
     }
 
     pub(super) fn sheet_open(&self) -> bool {
-        matches!(self.overlay.as_ref().map(|o| &o.view), Some(OverlayView::Sheet(_)))
+        self.overlay_is(OverlayKind::Sheet)
     }
 
-    /// The open palette, if any (devctl types into it).
+    /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).
     #[cfg(feature = "devctl")]
-    pub(crate) fn palette(&self) -> Option<Entity<CommandPalette>> {
-        match self.overlay.as_ref().map(|o| &o.view) {
-            Some(OverlayView::Palette(palette)) => Some(palette.clone()),
-            _ => None,
-        }
-    }
-
-    /// The open sheet, if any (devctl types into it).
-    #[cfg(feature = "devctl")]
-    pub(crate) fn sheet(&self) -> Option<Entity<ShortcutSheet>> {
-        match self.overlay.as_ref().map(|o| &o.view) {
-            Some(OverlayView::Sheet(sheet)) => Some(sheet.clone()),
-            _ => None,
-        }
+    pub(crate) fn overlay_of<T: 'static>(&self) -> Option<Entity<T>> {
+        self.overlay.as_ref()?.view.view.clone().downcast::<T>().ok()
     }
 
     /// The overlay over everything else in the window.
     pub(super) fn render_overlay(&self) -> Option<AnyElement> {
-        let (view, name) = match &self.overlay.as_ref()?.view {
-            OverlayView::Palette(palette) => (palette.clone().into_any_element(), "Command palette"),
-            OverlayView::Sheet(sheet) => (sheet.clone().into_any_element(), "Keyboard shortcuts"),
-        };
+        let open = &self.overlay.as_ref()?.view;
+        let (view, name) = (open.view.clone().into_any_element(), open.kind.name());
         // The scrim and the card fade in together, in `MOTION_POPOVER`; they come in mounted,
         // so each opening starts it again. Under Reduce Motion GPUI draws the last frame: a cut.
         Some(

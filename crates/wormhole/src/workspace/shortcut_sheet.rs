@@ -17,7 +17,7 @@ use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::app::{AppState, OpenWindow, app};
-use crate::workspace::overlay::{OverlayView, scrim};
+use crate::workspace::overlay::{OverlayKind, OverlayView, scrim};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.
 const TOP: f32 = 56.0;
@@ -76,7 +76,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let return_focus = ws.end_overlay(window, cx);
         let workspace = cx.weak_entity();
         let sheet = cx.new(|cx| ShortcutSheet::new(workspace, project, hidden, hotkey, &query, window, cx));
-        ws.show_overlay(OverlayView::Sheet(sheet), return_focus, cx);
+        ws.show_overlay(OverlayView { kind: OverlayKind::Sheet, view: sheet.into() }, return_focus, cx);
     });
 }
 
@@ -388,7 +388,7 @@ impl Workspace {
             self.close_overlay(window, cx);
             return;
         }
-        if let Some(sheet) = self.sheet() {
+        if let Some(sheet) = self.overlay_of::<ShortcutSheet>() {
             sheet.update(cx, |sheet, cx| {
                 sheet.filter.update(cx, |filter, cx| filter.set_value(arg, window, cx));
                 cx.notify();
