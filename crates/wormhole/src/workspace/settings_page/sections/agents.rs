@@ -338,7 +338,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                                                 "Reveal in Finder",
                                             )
                                             .in_row()
-                                            .on_click(move |_, _, _| reveal_file(&full)),
+                                            .on_click(move |_, _, cx| reveal_file(&full, cx)),
                                         )
                                 })),
                         ),
@@ -446,12 +446,8 @@ fn login_row(
 }
 
 /// Select a file in the Finder.
-fn reveal_file(path: &Path) {
-    let mut cmd = std::process::Command::new("open");
-    cmd.arg("-R").arg(path);
-    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
-        tracing::warn!("revealing {}: {err}", path.display());
-    }
+fn reveal_file(path: &Path, cx: &App) {
+    cx.reveal_path(path);
 }
 
 /// The agents that aren't on PATH, folded into one row that lists them when opened.

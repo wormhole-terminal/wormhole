@@ -492,7 +492,7 @@ impl SettingsWindow {
                     .small()
                     .icon(IconName::ExternalLink)
                     .label(format!("Show {} in Finder", project.folder.dir_name()))
-                    .on_click(move |_, _, _| reveal(&reveal_root)),
+                    .on_click(move |_, _, cx| reveal(&reveal_root, cx)),
             );
 
         div()

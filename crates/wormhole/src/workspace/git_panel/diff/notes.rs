@@ -177,7 +177,7 @@ impl Workspace {
                     .when(view.on_disk().is_some(), |d| {
                         d.child(
                             button("diff-reveal", view.reveal_label())
-                                .on_click(cx.listener(|this, _, _, _| this.reveal_diff_file())),
+                                .on_click(cx.listener(|this, _, _, cx| this.reveal_diff_file(cx))),
                         )
                     }),
             )

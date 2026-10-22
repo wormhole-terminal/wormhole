@@ -25,8 +25,8 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
     Setting::custom("fonts-folder", |_, _| {
-        open_button("fonts-folder", IconName::ExternalLink, "Open fonts folder", || {
-            open_folder(&crate::active_profile::paths().fonts_dir())
+        open_button("fonts-folder", IconName::ExternalLink, "Open fonts folder", |cx| {
+            open_folder(&crate::active_profile::paths().fonts_dir(), cx)
         })
     }),
     Setting::custom("custom-fonts", |_, _| div().into_any_element()).describe(describe_custom),

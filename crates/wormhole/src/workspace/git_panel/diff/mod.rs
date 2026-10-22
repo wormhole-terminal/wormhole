@@ -248,13 +248,9 @@ impl Workspace {
     }
 
     /// Show the open diff's file in the Finder (the card of a diff too large to load).
-    pub(crate) fn reveal_diff_file(&mut self) {
+    pub(crate) fn reveal_diff_file(&mut self, cx: &App) {
         let Some(path) = self.diff_view.as_ref().and_then(DiffView::on_disk) else { return };
-        let mut open = std::process::Command::new("open");
-        open.arg("-R").arg(&path);
-        if let Err(err) = crate::platform::spawn::spawn_detached(open) {
-            tracing::warn!("revealing {}: {err}", path.display());
-        }
+        cx.reveal_path(&path);
     }
 
     pub(crate) fn close_diff(&mut self, window: &mut Window, cx: &mut Context<Self>) {

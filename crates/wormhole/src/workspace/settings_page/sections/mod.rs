@@ -155,13 +155,13 @@ impl SettingsWindow {
 }
 
 /// A row's button that opens something (a folder, a file).
-fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn()) -> AnyElement {
+fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn(&App)) -> AnyElement {
     Button::new(id)
         .outline()
         .small()
         .icon(icon)
         .label(label)
-        .on_click(move |_, _, _| open())
+        .on_click(move |_, _, cx| open(cx))
         .into_any_element()
 }
 
@@ -173,12 +173,8 @@ pub(super) fn open_in_editor(path: &Path) {
 }
 
 /// Show a folder in the Finder.
-fn reveal(path: &Path) {
-    let mut cmd = std::process::Command::new("open");
-    cmd.arg(path);
-    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
-        tracing::warn!("opening {}: {err}", path.display());
-    }
+fn reveal(path: &Path, cx: &App) {
+    cx.open_with_system(path);
 }
 
 /// Import a theme file the person picks; a failure is said on the Appearance page.

@@ -57,8 +57,8 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("title-pull-request", title_pull_request),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {
-        open_button("icon-themes-folder", IconName::ExternalLink, "Open folder", || {
-            open_folder(&crate::icons::user_dir())
+        open_button("icon-themes-folder", IconName::ExternalLink, "Open folder", |cx| {
+            open_folder(&crate::icons::user_dir(), cx)
         })
     }),
 ];

@@ -157,12 +157,8 @@ impl Workspace {
 
 /// Show a terminal's folder in the Finder, selected in its parent (also Terminal → Reveal in
 /// Finder).
-pub(in crate::workspace) fn reveal_in_finder(path: &Path) {
-    let mut open = std::process::Command::new("open");
-    open.arg("-R").arg(path);
-    if let Err(err) = crate::platform::spawn::spawn_detached(open) {
-        tracing::warn!("revealing {}: {err}", path.display());
-    }
+pub(in crate::workspace) fn reveal_in_finder(path: &Path, cx: &App) {
+    cx.reveal_path(path);
 }
 
 /// The menu of the row `facts` describe; every item acts on `this`.
@@ -240,9 +236,9 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
         .separator()
         .item(Item::new("Reveal in Finder").enabled(cwd.is_some()).on_select({
             let cwd = cwd.clone();
-            move |_, _| {
+            move |_, cx| {
                 if let Some(cwd) = &cwd {
-                    reveal_in_finder(cwd);
+                    reveal_in_finder(cwd, cx);
                 }
             }
         }))

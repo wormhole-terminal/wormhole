@@ -610,7 +610,7 @@ impl Workspace {
             .when(has_folder, |root| {
                 root.on_action(cx.listener(|this, _: &RevealInFinder, _, cx| {
                     if let Some(cwd) = this.active_terminal().read(cx).cwd.clone() {
-                        sidebar::reveal_in_finder(&cwd);
+                        sidebar::reveal_in_finder(&cwd, cx);
                     }
                 }))
                 .on_action(cx.listener(|this, _: &CopyPath, _, cx| {

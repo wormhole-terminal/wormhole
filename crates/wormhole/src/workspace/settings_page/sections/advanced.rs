@@ -8,18 +8,17 @@ use super::*;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("open-config", |_, _| {
-        open_button(
-            "open-config",
-            IconName::CodeXml,
-            "Open",
-            || open_in_editor(&SettingsStore::config_path()),
-        )
+        open_button("open-config", IconName::CodeXml, "Open", |_| {
+            open_in_editor(&SettingsStore::config_path())
+        })
     }),
     Setting::custom("open-data", |_, _| {
-        open_button("open-data", IconName::FolderOpen, "Show in Finder", || reveal(&data_dir()))
+        open_button("open-data", IconName::FolderOpen, "Show in Finder", |cx| reveal(&data_dir(), cx))
     }),
     Setting::custom("open-logs", |_, _| {
-        open_button("open-logs", IconName::FolderOpen, "Show in Finder", || reveal(&data_dir().join("logs")))
+        open_button("open-logs", IconName::FolderOpen, "Show in Finder", |cx| {
+            reveal(&data_dir().join("logs"), cx)
+        })
     }),
     Setting::custom("reset-settings", draw_reset).below(|w, cx| w.render_reset_question(cx)),
     Setting::custom("reset-tips", draw_reset_tips),

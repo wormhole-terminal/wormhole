@@ -57,7 +57,7 @@ impl Workspace {
                 let terminal = self.target_terminal(target, Some(folder.root.clone()), window, cx);
                 paste_into(&terminal, &body, *submit, cx);
             }
-            ActionKind::Open { url } => open_url(url),
+            ActionKind::Open { url } => open_url(url, cx),
             ActionKind::Chain { steps } => {
                 for step in steps {
                     match step {
@@ -203,13 +203,9 @@ fn paste_into(terminal: &Entity<TerminalView>, text: &str, submit: bool, cx: &mu
     }
 }
 
-fn open_url(url: &str) {
-    // Loaders only accept http(s) URLs; `open` hands them to the default browser.
-    let mut cmd = std::process::Command::new("open");
-    cmd.arg(url);
-    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
-        tracing::warn!("opening {url}: {err}");
-    }
+fn open_url(url: &str, cx: &App) {
+    // Loaders only accept http(s) URLs; the system hands them to the default browser.
+    cx.open_url(url);
 }
 
 /// Is this keystroke the key `spec` names? `fn` doesn't count, as before; a US keyboard's
