@@ -300,7 +300,7 @@ impl StudioWindow {
 
     /// Select a token: the editor shows it, the list opens its band, the gallery outlines its
     /// uses.
-    pub(crate) fn select_token(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
+    fn select_token(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
         self.selected = Some(name.to_string());
         self.field_error = None;
         if let Some(group) = group_of(name) {
@@ -468,11 +468,11 @@ fn metric_chip(ui: UiColors, name: &str, value: f32) -> Div {
     }
 }
 
-pub(crate) fn tokens_of(cx: &App) -> Arc<ThemeTokens> {
+fn tokens_of(cx: &App) -> Arc<ThemeTokens> {
     cx.global::<SettingsStore>().tokens.clone()
 }
 
-pub(crate) fn t(tokens: &ThemeTokens, name: &str) -> Hsla {
+fn t(tokens: &ThemeTokens, name: &str) -> Hsla {
     token(tokens, name)
 }
 
