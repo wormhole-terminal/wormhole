@@ -37,6 +37,7 @@ dbg_macro = "warn"
 todo = "warn"
 unwrap_used = "warn"
 print_stdout = "warn"
+wildcard_imports = "warn"
 
 # GPUI is slow unoptimized; optimize dependencies even in dev builds.
 [profile.dev]
