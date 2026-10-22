@@ -233,6 +233,7 @@ mod tests {
                 "---",
                 "~ Grey | Blue [x]",
                 "- Other colour…",
+                "- No colour",
                 "---",
                 "- Set folder…",
                 "---",
@@ -250,8 +251,16 @@ mod tests {
         let outline =
             group_menu(facts(None, false, Some("~/Projects/foo")), &WeakEntity::new_invalid()).outline();
         assert_eq!(
-            outline[3..9],
-            ["- Other colour…", "---", "- ~/Projects/foo [off]", "- Set folder…", "- Clear folder", "---"],
+            outline[3..10],
+            [
+                "- Other colour…",
+                "- No colour [x]",
+                "---",
+                "- ~/Projects/foo [off]",
+                "- Set folder…",
+                "- Clear folder",
+                "---"
+            ],
             "{outline:?}"
         );
         let none = group_menu(facts(None, false, None), &WeakEntity::new_invalid()).outline();
@@ -259,10 +268,18 @@ mod tests {
     }
 
     #[test]
-    fn a_group_without_a_colour_rings_none_and_unpinned_reads_pin() {
+    fn a_group_with_a_colour_offers_no_colour_unchecked() {
+        let outline =
+            group_menu(facts(Some(GroupColor::Blue), false, None), &WeakEntity::new_invalid()).outline();
+        assert_eq!(outline[4], "- No colour");
+    }
+
+    #[test]
+    fn a_group_without_a_colour_checks_no_colour_and_unpinned_reads_pin() {
         let outline = group_menu(facts(None, false, None), &WeakEntity::new_invalid()).outline();
         assert_eq!(outline[2], "~ Grey | Blue");
         assert_eq!(outline[3], "- Other colour…");
+        assert_eq!(outline[4], "- No colour [x]");
         assert!(outline.contains(&"- Pin group".to_string()));
     }
 }

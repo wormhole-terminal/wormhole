@@ -17,6 +17,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   group): it opens a new terminal in the group.
 - A group with a folder shows it under its name on its head (`~/Projects/app`, cut from the front when
   long; after the name in Dense). Settings → Terminals & sidebar → Show group folders turns it off.
+- A group's colour can be taken away: "No colour" in its menu (checked when it has none), and an
+  empty ring with a slash first among the colours in the popover its name opens.
 
 ### Changed
 

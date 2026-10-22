@@ -1,9 +1,10 @@
 //! A group's popover and context menu, from one description of the group (`GroupFacts`). The name
 //! on its head opens the popover: the name in a field that has the keyboard at once, the nine
-//! colours (the current one ringed) and a last dot that opens the system's Colours window for a
-//! colour of one's own, then the group's folder (shown greyed out, with Set folder… and, when there
-//! is one, Clear folder) and the actions. The right-click menu is Rename… (in place, `rename`),
-//! the same dots, Other colour…, the same folder lines, and the same actions.
+//! colours (the current one ringed) with an empty ring first that takes the colour away and a last
+//! dot that opens the system's Colours window for a colour of one's own, then the group's folder
+//! (shown greyed out, with Set folder… and, when there is one, Clear folder) and the actions. The
+//! right-click menu is Rename… (in place, `rename`), the same dots, Other colour…, No colour
+//! (checked when the group has none), the same folder lines, and the same actions.
 
 use wormhole_core::sidebar::{GroupColor, GroupPaint};
 use wormhole_core::tokens::Appearance;
@@ -53,21 +54,41 @@ fn from_bytes([r, g, b]: [u8; 3]) -> Hsla {
     Rgba { r: f32::from(r) / 255.0, g: f32::from(g) / 255.0, b: f32::from(b) / 255.0, a: 1.0 }.into()
 }
 
-/// The named colours as dots, which is ringed, and what a click on one does.
+/// What the empty ring at the start of the popover's dots is called, and the menu's item.
+const NO_COLOUR: &str = "No colour";
+
+/// The named colours as dots, which is ringed, and what a click on one does. With `none` an empty
+/// ring comes first, which takes the colour away and is ringed while the group has none (the
+/// menu has an item for that instead).
 fn dots(
     facts: &GroupFacts,
+    none: bool,
     this: &WeakEntity<Workspace>,
 ) -> (Vec<Swatch>, Option<usize>, native::menu::Pick) {
-    let swatches: Vec<Swatch> = facts
-        .colors
-        .iter()
-        .map(|&(color, hsla)| Swatch { color: hsla, name: color.label().into() })
+    let lead = usize::from(none);
+    let swatches: Vec<Swatch> = none
+        .then(|| Swatch::none(NO_COLOUR))
+        .into_iter()
+        .chain(facts.colors.iter().map(|&(color, hsla)| Swatch { color: hsla, name: color.label().into() }))
         .collect();
-    let chosen = facts.colors.iter().position(|&(color, _)| facts.paint == Some(GroupPaint::Named(color)));
+    let chosen = if facts.paint.is_none() {
+        none.then_some(0)
+    } else {
+        facts
+            .colors
+            .iter()
+            .position(|&(color, _)| facts.paint == Some(GroupPaint::Named(color)))
+            .map(|ix| ix + lead)
+    };
     let (group, colors, this) = (facts.group, facts.colors.clone(), this.clone());
-    let on_pick: native::menu::Pick = std::rc::Rc::new(move |ix, _, cx| {
-        if let Some(&(color, _)) = colors.get(ix) {
-            this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
+    let on_pick: native::menu::Pick = std::rc::Rc::new(move |ix, _, cx| match ix.checked_sub(lead) {
+        Some(ix) => {
+            if let Some(&(color, _)) = colors.get(ix) {
+                this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
+            }
+        }
+        None => {
+            this.update(cx, |ws, cx| ws.set_group_color(group, None, cx)).ok();
         }
     });
     (swatches, chosen, on_pick)
@@ -125,7 +146,7 @@ pub(super) fn group_popover(
     this: &WeakEntity<Workspace>,
 ) -> Popover {
     let group = facts.group;
-    let (swatches, chosen, on_pick) = dots(&facts, this);
+    let (swatches, chosen, on_pick) = dots(&facts, true, this);
     let commit = {
         let this = this.clone();
         move |text: &str, _: &mut Window, cx: &mut App| {
@@ -174,7 +195,7 @@ pub(super) fn group_popover(
 /// The menu of the group `facts` describe; every item acts on `this`.
 pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Menu {
     let group = facts.group;
-    let (swatches, chosen, on_pick) = dots(&facts, this);
+    let (swatches, chosen, on_pick) = dots(&facts, false, this);
     let (start, on_change) = (facts.custom.or(facts.shown).unwrap_or(START), follow(group, this));
     let menu =
         Menu::new()
@@ -187,6 +208,11 @@ pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Men
                 Item::new("Other colour…")
                     .checked(facts.custom.is_some())
                     .on_select(move |window, cx| native::pick_colour(start, on_change.clone(), window, cx)),
+            )
+            .item(
+                Item::new(NO_COLOUR)
+                    .checked(facts.paint.is_none())
+                    .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_color(group, None, cx))),
             )
             .separator();
     let menu = folder_items(group, facts.folder.as_deref(), this).into_iter().fold(menu, Menu::item);

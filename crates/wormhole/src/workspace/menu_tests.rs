@@ -143,7 +143,7 @@ fn clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu(cx: &mut 
     let outline = popover.outline();
     assert_eq!(outline[0], "popover transient");
     assert_eq!(outline[1], "field \"Group 1\" (focused)", "the name has the keyboard at once");
-    assert!(outline[2].starts_with("colours: Grey | Blue [x] | "), "{outline:?}");
+    assert!(outline[2].starts_with("colours: No colour | Grey | Blue [x] | "), "{outline:?}");
     assert!(outline[2].ends_with(" | custom"), "the colour wheel after the nine: {outline:?}");
     assert_eq!(
         &outline[3..],
@@ -179,6 +179,10 @@ fn clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu(cx: &mut 
     );
     run(cx, &window, record::popover_colour("green").expect("a dot"));
     assert_eq!(paint(cx, &window, group), Some(GroupPaint::Named(GroupColor::Green)), "a name replaces it");
+    // The empty ring takes the colour away.
+    run(cx, &window, record::popover_colour("No colour").expect("the empty ring"));
+    assert_eq!(paint(cx, &window, group), None);
+    run(cx, &window, record::popover_colour("green").expect("a dot"));
 
     // Esc drops what was typed; Return keeps it.
     record::popover_type("Nope").expect("the field");

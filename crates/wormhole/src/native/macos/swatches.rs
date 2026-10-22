@@ -1,5 +1,6 @@
 //! A row of colour dots as a menu item's own view, the way Finder shows its tags in a file's
-//! context menu: nine round buttons in a line, the current one ringed, a highlight under the
+//! context menu: nine round buttons in a line (a popover's first may be an empty ring with a slash:
+//! no colour), the current one ringed, a highlight under the
 //! pointer, a tooltip with the colour's name and the name for VoiceOver. One click picks and closes
 //! the menu.
 //!
@@ -72,6 +73,24 @@ define_class!(
             let side = if ivars.hovered.get() { DOT_HOVER } else { DOT };
             let dot = NSBezierPath::bezierPathWithOvalInRect(around(side));
             match ivars.rgba.get() {
+                // No colour: no fill, a slash through the ring.
+                Some(rgba) if rgba[3] == 0.0 => {
+                    let slash = NSBezierPath::bezierPath();
+                    let inset = side * 0.15;
+                    slash.moveToPoint(NSPoint::new(
+                        bounds.origin.x + (bounds.size.width - side) / 2.0 + inset,
+                        bounds.origin.y + (bounds.size.height - side) / 2.0 + inset,
+                    ));
+                    slash.lineToPoint(NSPoint::new(
+                        bounds.origin.x + (bounds.size.width + side) / 2.0 - inset,
+                        bounds.origin.y + (bounds.size.height + side) / 2.0 - inset,
+                    ));
+                    NSColor::secondaryLabelColor().setStroke();
+                    slash.setLineWidth(1.0);
+                    slash.stroke();
+                    dot.setLineWidth(1.0);
+                    dot.stroke();
+                }
                 Some(rgba) => {
                     appkit::ns_color(rgba).setFill();
                     dot.fill();

@@ -119,6 +119,13 @@ pub struct Swatch {
     pub name: SharedString,
 }
 
+impl Swatch {
+    /// The dot that takes the colour away: an empty ring with a slash through it, not a colour (drawn so by its zero alpha).
+    pub fn none(name: impl Into<SharedString>) -> Self {
+        Self { color: Hsla { h: 0.0, s: 0.0, l: 0.0, a: 0.0 }, name: name.into() }
+    }
+}
+
 #[derive(Clone)]
 pub struct Swatches {
     pub swatches: Vec<Swatch>,
