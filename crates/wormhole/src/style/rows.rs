@@ -356,9 +356,9 @@ pub const TILE_GAP: f32 = 10.0;
 /// first line (the card's rounded top), `bottom` the last (its rounded bottom, and `card_gap` under
 /// it). The gaps are part of the stretch, so a drop there lands on its line. Without cards the lines
 /// stand in by the same margin with no fill or edge, and the gap under a group is what sets it apart.
-/// A group's colour (`wash`) fills the card evenly at 12 %, or with `metrics.fade_wash` tints it from
-/// its left edge, 12 % fading to 3 % at 60 % of its width: each stretch draws the same, so the card
-/// reads as one.
+/// A group's colour (`wash`) fills the card evenly at `WASH_PEAK` (22 %), or with `metrics.fade_wash`
+/// tints it from its left edge, `WASH_PEAK` fading to 3 % at 60 % of its width: each stretch draws the
+/// same, so the card reads as one.
 #[track_caller]
 pub fn card_segment(
     ui: UiColors,

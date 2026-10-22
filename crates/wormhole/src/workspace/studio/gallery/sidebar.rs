@@ -107,6 +107,9 @@ pub(super) fn render(
                 },
             )
         };
+    // A card is washed with its colour moved just far enough for the text to read (`GroupColor::wash`);
+    // the head's dot keeps the colour itself.
+    let wash = |color: GroupColor| Some(theme_bridge::hsla(color.wash(env.tokens)));
     let card = |top: bool, bottom: bool, wash: Option<Hsla>, content: AnyElement| {
         style::card_segment(ui, metrics, top, bottom, wash, content)
     };
@@ -122,7 +125,7 @@ pub(super) fn render(
                     card(
                         true,
                         false,
-                        Some(blue),
+                        wash(GroupColor::Blue),
                         env.mark(
                             "sidebar.band",
                             head(
@@ -144,7 +147,7 @@ pub(super) fn render(
             .child(card(
                 false,
                 false,
-                Some(blue),
+                wash(GroupColor::Blue),
                 env.mark(
                     "sidebar.row",
                     tile_row("g-row-anatomy-1", "Sidebar cards", StatusGlyph::Working, "Working · 4m", true),
@@ -154,7 +157,7 @@ pub(super) fn render(
             .child(card(
                 false,
                 true,
-                Some(blue),
+                wash(GroupColor::Blue),
                 tile_row(
                     "g-row-anatomy-2",
                     "Fix pile fan-out",
@@ -167,7 +170,7 @@ pub(super) fn render(
             .child(card(
                 true,
                 true,
-                Some(theme_bridge::hsla(GroupColor::Pink.color(env.tokens))),
+                wash(GroupColor::Pink),
                 head(
                     "g-head-folded",
                     "Review",
@@ -188,7 +191,7 @@ pub(super) fn render(
             .child(card(
                 true,
                 true,
-                Some(theme_bridge::hsla(GroupColor::Orange.color(env.tokens))),
+                wash(GroupColor::Orange),
                 head(
                     "g-head-empty",
                     "Docs",
@@ -206,7 +209,7 @@ pub(super) fn render(
             .child(card(
                 true,
                 true,
-                Some(blue),
+                wash(GroupColor::Blue),
                 head(
                     "g-head-folder",
                     "Release 1.2",
@@ -305,7 +308,7 @@ pub(super) fn render(
                 card(
                     true,
                     true,
-                    Some(hsla),
+                    wash(color),
                     head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false, None)
                         .into_any_element(),
                 )

@@ -43,6 +43,7 @@ struct CardSnap {
     set: usize,
     label: SharedString,
     color: Option<Hsla>,
+    wash: Option<Hsla>,
     pinned: bool,
     /// The loudest first.
     tiles: Vec<TileSnap>,
@@ -212,6 +213,7 @@ impl Workspace {
                 set: at,
                 label: set.label.clone().into(),
                 color: look.color,
+                wash: look.wash,
                 pinned: look.pinned,
                 tiles: members.into_iter().map(snap_tile).collect(),
                 count: set.members.len(),
@@ -420,7 +422,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         } else {
             head
         };
-        let wash = card.color;
+        let wash = card.wash;
         let segment = style::card_segment(ui, metrics, true, true, wash, head);
         // The open group wears a ring in the primary.
         let ring = card.current.then(|| {

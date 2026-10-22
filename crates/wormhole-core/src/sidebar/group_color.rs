@@ -7,10 +7,50 @@ use crate::tokens::{Color, ThemeTokens};
 
 /// How a group's colour washes its card: `WASH_PEAK` of the colour all over it, or, with fading
 /// turned on (`fade_group_colors`), from `WASH_PEAK` at the card's left edge down to `WASH_FAR` at
-/// `WASH_SPAN` of its width, and `WASH_FAR` from there on.
-pub const WASH_PEAK: f32 = 0.12;
+/// `WASH_SPAN` of its width, and `WASH_FAR` from there on. The colour is the group's `wash`, which
+/// is the colour as it is seen on the head and in the menu moved just far enough in lightness for
+/// the card's text to read on the fill.
+pub const WASH_PEAK: f32 = 0.22;
 pub const WASH_FAR: f32 = 0.03;
 pub const WASH_SPAN: f32 = 0.6;
+
+/// The text a card's wash must leave readable, and the contrast each needs: the primary text, the
+/// second lines, and the amber of a terminal that needs you (its text and its edge).
+const WASH_TEXT: [(&str, f32); 4] =
+    [("text.primary", 4.5), ("text.muted", 3.5), ("agent.attention.text", 4.0), ("agent.attention", 3.0)];
+
+/// The card a group's wash lies on in `tokens`' theme: the card's own fill over the sidebar.
+fn wash_backdrop(tokens: &ThemeTokens) -> Option<Color> {
+    let column = tokens.get("sidebar.background")?.over(tokens.get("surface.window")?.over(Color::BLACK));
+    Some(tokens.get("card")?.over(column))
+}
+
+/// `mark` (a group's colour as seen on the head) as its wash is made of: itself where the card's text
+/// reads on `WASH_PEAK` of it, else moved along its lightness toward the card's (hue and chroma
+/// kept) as little as it takes for every text in `WASH_TEXT` to. Bright colours on a dark theme
+/// and dark ones on a light theme are what it moves, since they pull the fill toward the text.
+fn wash_tint(tokens: &ThemeTokens, mark: Color) -> Color {
+    let Some(card) = wash_backdrop(tokens) else { return mark };
+    let reads = |tint: Color| {
+        let fill = tint.with_alpha(WASH_PEAK).over(card);
+        WASH_TEXT.iter().all(|&(name, min)| {
+            tokens.get(name).is_none_or(|text| Color::contrast_ratio(text.over(fill), fill) >= min)
+        })
+    };
+    if reads(mark) {
+        return mark;
+    }
+    let (lightness, chroma, hue) = mark.to_oklch();
+    let toward = card.to_oklch().0;
+    let at = |t: f32| Color::from_oklch(lightness + (toward - lightness) * t, chroma, hue);
+    // Contrast grows as the tint nears the card's lightness, so bisect for the least move.
+    let (mut lo, mut hi) = (0.0f32, 1.0f32);
+    for _ in 0..16 {
+        let mid = (lo + hi) / 2.0;
+        if reads(at(mid)) { hi = mid } else { lo = mid }
+    }
+    at(hi)
+}
 
 /// A group's colour.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -114,6 +154,12 @@ impl GroupColor {
     pub fn color(self, tokens: &ThemeTokens) -> Color {
         swatch(tokens, self.hue(), self == Self::Grey)
     }
+
+    /// The colour its card is washed with: [`GroupColor::color`] moved just far enough for the
+    /// card's text to read on the fill (see `wash_tint`).
+    pub fn wash(self, tokens: &ThemeTokens) -> Color {
+        wash_tint(tokens, self.color(tokens))
+    }
 }
 
 /// What a group is painted with: one of the nine names, or a colour of the person's own, chosen
@@ -163,6 +209,12 @@ impl GroupPaint {
             }
         }
     }
+
+    /// The colour its card is washed with: [`GroupPaint::color`] moved just far enough for the card's
+    /// text to read on the fill. The head's dot and the menu keep the colour itself.
+    pub fn wash(self, tokens: &ThemeTokens) -> Color {
+        wash_tint(tokens, self.color(tokens))
+    }
 }
 
 #[cfg(test)]
@@ -197,7 +249,7 @@ mod tests {
                     let ratio = Color::contrast_ratio(shown, get(surface).with_alpha(1.0));
                     assert!(ratio >= 2.95, "{}: {rgb:?} on {surface} is {ratio:.2}", tokens.name);
                 }
-                let wash = shown.with_alpha(super::WASH_PEAK).over(card);
+                let wash = GroupPaint::Custom(rgb).wash(tokens).with_alpha(super::WASH_PEAK).over(card);
                 let ratio = Color::contrast_ratio(get("text.primary").over(wash), wash);
                 assert!(ratio >= 4.45, "{}: text on a {rgb:?} wash is {ratio:.2}", tokens.name);
             }
@@ -244,9 +296,10 @@ mod tests {
         }
     }
 
-    /// Text lies on the wash at its strongest (the card's left edge): over the card's own fill, on
-    /// the sidebar. The board's text colours are fixed, so the second lines may sink to 3.5 and 4:1
-    /// under the strongest wash; the primary text and the amber edge keep their full ratios.
+    /// Text lies on the wash at its strongest (the even fill, or the card's left edge when fading):
+    /// over the card's own fill, on the sidebar. The wash is the colour moved only as far as it takes
+    /// for the primary text (4.5:1), the second lines (3.5), the amber text (4) and the amber edge
+    /// (3) to read, so this holds at any `WASH_PEAK`.
     #[test]
     fn text_on_a_groups_wash_reads_in_every_theme() {
         for tokens in builtins() {
@@ -254,7 +307,7 @@ mod tests {
             let column = get("sidebar.background").over(get("surface.window").over(Color::BLACK));
             let card = get("card").over(column);
             for color in GroupColor::ALL {
-                let wash = color.color(tokens).with_alpha(super::WASH_PEAK).over(card);
+                let wash = color.wash(tokens).with_alpha(super::WASH_PEAK).over(card);
                 for (name, min) in [
                     ("text.primary", 4.5),
                     ("text.muted", 3.5),
@@ -271,6 +324,27 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// The wash keeps its colour (hue, and some chroma) and only gives up lightness, and a colour
+    /// the text already reads on is washed with as it is.
+    #[test]
+    fn a_wash_is_the_colour_moved_only_as_far_as_the_text_needs() {
+        let mut moved = 0;
+        for tokens in builtins() {
+            for color in GroupColor::ALL.into_iter().filter(|&c| c != GroupColor::Grey) {
+                let (mark, wash) = (color.color(tokens), color.wash(tokens));
+                if mark == wash {
+                    continue;
+                }
+                moved += 1;
+                let ((_, mark_chroma, mark_hue), (_, wash_chroma, wash_hue)) =
+                    (mark.to_oklch(), wash.to_oklch());
+                let apart = (mark_hue - wash_hue).abs().min(360.0 - (mark_hue - wash_hue).abs());
+                assert!(apart < 12.0 && wash_chroma > 0.4 * mark_chroma, "{}: {}", tokens.name, color.key());
+            }
+        }
+        assert!(moved > 0, "some colour on some theme is too bright or dark for its wash");
     }
 
     #[test]

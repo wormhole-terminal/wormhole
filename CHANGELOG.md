@@ -22,6 +22,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - A group's colour fills its card evenly now. Settings → Terminals & sidebar → Fade group colours
   brings back the fade, where the colour is strongest at the card's left edge and fades out across it.
+- A group's colour is stronger on its card (22 % of it, up from 12 %). Where the card's text would
+  stop reading on that much of a bright or dark colour, the card gets the colour a shade nearer the
+  card's own lightness, so names, second lines and the amber of a terminal that needs you stay clear
+  in every theme.
 
 ## [1.2.0] - 2026-10-22
 

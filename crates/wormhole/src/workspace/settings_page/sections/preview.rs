@@ -192,11 +192,11 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .child(header);
     for (cx_ix, card) in SAMPLES.iter().enumerate() {
         let mut lines: Vec<AnyElement> = Vec::new();
-        let wash = card.group.map(|_| {
-            theme_bridge::hsla(
-                wormhole_core::sidebar::GroupColor::Blue.color(&cx.global::<SettingsStore>().tokens),
-            )
-        });
+        let tokens = &cx.global::<SettingsStore>().tokens;
+        let blue = wormhole_core::sidebar::GroupColor::Blue;
+        // The head's dot is the colour itself; the card is washed with it moved for the text.
+        let mark = card.group.map(|_| theme_bridge::hsla(blue.color(tokens)));
+        let wash = card.group.map(|_| theme_bridge::hsla(blue.wash(tokens)));
         if let Some(title) = card.group {
             lines.push(
                 style::group_head(
@@ -207,7 +207,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         name: title.into(),
                         tooltip: None,
                         folder: card.folder.map(SharedString::from),
-                        color: wash,
+                        color: mark,
                         folded: false,
                         pinned: false,
                         tiles: Vec::new(),

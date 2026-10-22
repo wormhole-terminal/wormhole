@@ -53,6 +53,8 @@ pub(in crate::workspace) struct TabBarState {
 pub(super) struct SetLook {
     pub(super) key: String,
     pub(super) color: Option<Hsla>,
+    /// The colour its card is washed with (`GroupPaint::wash`).
+    pub(super) wash: Option<Hsla>,
     pub(super) group: Option<u32>,
     pub(super) pinned: bool,
 }
@@ -195,11 +197,11 @@ impl Workspace {
         let key = band.map_or_else(|| "ungrouped".to_string(), |band| band.key());
         let group = band.map(|band| band.group);
         let tokens = &store_in(&self.profile, cx).tokens;
-        let color = group
-            .and_then(|group| self.sidebar.view.groups.get(group))
-            .and_then(|group| group.paint())
-            .map(|color| crate::theme_bridge::hsla(color.color(tokens)));
-        SetLook { key, color, group, pinned: band.is_some_and(|band| band.pinned) }
+        let paint =
+            group.and_then(|group| self.sidebar.view.groups.get(group)).and_then(|group| group.paint());
+        let color = paint.map(|color| crate::theme_bridge::hsla(color.color(tokens)));
+        let wash = paint.map(|color| crate::theme_bridge::hsla(color.wash(tokens)));
+        SetLook { key, color, wash, group, pinned: band.is_some_and(|band| band.pinned) }
     }
 
     /// Open set `set`: the terminal last selected in it, else its first; an empty group gets a new

@@ -216,7 +216,7 @@ impl Workspace {
                 .iter()
                 .filter_map(|group| {
                     let color = group.paint()?;
-                    Some((group.id, crate::theme_bridge::hsla(color.color(tokens))))
+                    Some((group.id, crate::theme_bridge::hsla(color.wash(tokens))))
                 })
                 .collect()
         };
