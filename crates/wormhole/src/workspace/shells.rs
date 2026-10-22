@@ -3,11 +3,13 @@
 //! keys and what each runs are core's `shells`; the Shell menu's "New Terminal With ▸" and the
 //! palette's "New terminal: fish" entries go through the same method.
 
+use gpui_kit::*;
 use wormhole_core::shells::{self, ShellChoice};
 
-use super::*;
+use super::Workspace;
 use crate::platform::{self, Item, Menu};
 use crate::settings::Settings;
+use crate::settings::settings;
 
 /// The menu's heading.
 const MENU_TITLE: &str = "New terminal with";

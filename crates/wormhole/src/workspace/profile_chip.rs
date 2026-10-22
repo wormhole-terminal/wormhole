@@ -5,14 +5,20 @@
 //! a profile, to Settings and to the page that manages them. Each row runs the action the Shell →
 //! Profile menu and the command palette run.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::popover::Popover;
+use gpui_kit::*;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::profile::ProfileId;
 use wormhole_core::spoken;
 
+use super::Workspace;
 use super::actions::SwitchProfile;
 use super::actions::{ManageProfiles, MoveWindowToProfile, NewProfile, OpenSettings, OpenWindowInProfile};
-use super::*;
+use super::app::app;
 use crate::select;
+use crate::settings::{UiColors, store_in, ui_in};
+use crate::style;
 use crate::style::{PopoverRow, popover_heading, popover_row, popover_rule};
 use crate::theme_bridge;
 

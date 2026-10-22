@@ -9,19 +9,26 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::layout::title_row::{PathStep, RowFit};
 use wormhole_core::open_in::{Installed, Resolved};
 use wormhole_core::panes::Axis;
 use wormhole_core::project::ProjectColor;
 
+use super::Workspace;
 use super::chrome::TitleDrag as _;
 use super::folder_color;
 use super::open_in::{self, OpenIn};
 use super::title_extras::ExtraFacts;
-use super::*;
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::{self, Anchor, Icon, Item, Menu};
+use crate::settings::{UiColors, store_in, ui_in};
+use crate::style::{self, Edges};
+use crate::terminal_view::Status;
 use crate::theme_bridge::token;
 
 /// What the title row says about the terminal it is for, gathered once per frame.

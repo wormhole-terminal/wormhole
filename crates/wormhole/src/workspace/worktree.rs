@@ -11,15 +11,22 @@
 
 use std::path::{Path, PathBuf};
 
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::button::{Button, ButtonVariant};
 use gpui_kit::component::dialog::{Cancel, Confirm, DialogFooter};
+use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::*;
 use wormhole_core::git::worktree::{self, Worktree};
 use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
 use wormhole_core::project::Feature;
 
 use super::app::{AppState, app, app_mut};
-use super::*;
+use super::{Workspace, dialog, project, session};
+use crate::settings::{settings, ui};
+use crate::style::{self, TextRole};
+use crate::terminal_view::Status;
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to
 /// run in the terminal once it opens, and why the last Create was refused.

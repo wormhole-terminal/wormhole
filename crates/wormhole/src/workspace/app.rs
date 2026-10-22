@@ -15,17 +15,28 @@
 //! own flag, which its animations follow.
 
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
+use gpui_kit::*;
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
+use wormhole_core::ipc;
+use wormhole_core::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
 use wormhole_core::profile::{DataRoot, ProfileId, ProfileList};
 use wormhole_core::store::{Store, WindowRecord};
 use wormhole_core::tokens::Appearance;
 
-use super::*;
+use super::{
+    Layout, Workspace, app_menu, aux_window, chrome, control, menu_bar, notifications, onboarding, profiles,
+    project, settings_page, studio, update_restart, updates, window_bounds,
+};
 use crate::menubar::MenuCommand;
+use crate::platform::vibrancy;
+use crate::settings::SettingsStore;
 use crate::settings::SystemLook;
+use crate::style;
 
 const TICK: Duration = Duration::from_millis(400);
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);

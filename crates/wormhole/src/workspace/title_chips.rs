@@ -7,9 +7,11 @@
 //! stretch that is otherwise the window's title bar. Every chip is its own button for the pointer
 //! and for VoiceOver.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Selectable;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::*;
 use wormhole_core::git::pr::{Checks, PrState, PullRequest};
 use wormhole_core::layout::title_row::{Extra, Extras};
 use wormhole_core::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
@@ -18,8 +20,10 @@ use wormhole_core::usage::Gauge;
 use super::breadcrumb::{CRUMB_GAP, Measure};
 use super::title_extras::ExtraFacts;
 use super::title_row::TitlePlan;
-use super::*;
+use super::{RightTab, Workspace};
 use crate::select;
+use crate::settings::{UiColors, ui_in};
+use crate::style;
 
 /// The gap in front of each chip at the right end of the row (`ml_2`).
 const CHIP_GAP: f32 = 8.0;

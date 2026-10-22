@@ -1,8 +1,10 @@
 //! The status item, the Dock (badge and menu) and the global hotkey: keeps them in step with the
 //! settings and the terminals of every window, and carries out what the user picks.
 
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use gpui_kit::*;
 use wormhole_core::config::HotkeyAction;
 use wormhole_core::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
@@ -10,11 +12,12 @@ use wormhole_core::project::Feature;
 use wormhole_core::store::Store;
 
 use super::app::{AppState, app, app_mut, open_tab};
-use super::*;
+use super::{Workspace, actions, settings_page, updates};
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
+use crate::settings::{settings, ui};
 
 const RECENT_PROJECTS: usize = 8;
 

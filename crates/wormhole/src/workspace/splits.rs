@@ -8,13 +8,16 @@
 //! a split's members are next to each other in the window's order, they share the pin, and a new
 //! pane is a new session. Drawing a split is `panes.rs`.
 
+use gpui_kit::*;
 use wormhole_core::panes::{
     Axis, DropError, Leave, PANE_MIN_H, PANE_MIN_W, PaneId, Preset, Room, TabPanes, Zone,
 };
 use wormhole_core::sidebar::SplitId;
 use wormhole_core::store::{SessionRecord, SplitRecord};
 
-use super::*;
+use super::{Workspace, notifications};
+use crate::style;
+use crate::terminal_view::TerminalView;
 
 /// A split: its id (one counter with the sessions') and the layout its members share.
 pub(super) struct Split {

@@ -1,7 +1,19 @@
 //! One window's life: opening siblings, closing, saving, and being the one in front.
-use super::app::{app, app_mut, open_workspace_window_in};
-use super::*;
+use std::path::PathBuf;
+use std::time::Duration;
+
+use gpui_kit::*;
 use wormhole_core::layout::RememberedPanes;
+use wormhole_core::profile::ProfileId;
+use wormhole_core::sidebar::WindowSidebar;
+use wormhole_core::store::{SessionRecord, WindowRecord};
+
+use super::app::AppState;
+use super::app::{app, app_mut, open_workspace_window_in};
+use super::session::{self, Session};
+use super::{Layout, Workspace, dialog, notifications, window_bounds};
+use crate::settings::settings;
+use crate::terminal_view::Status;
 
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a

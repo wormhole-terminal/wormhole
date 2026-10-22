@@ -8,14 +8,20 @@
 //! at (it stays in the file, for if the project folder goes away). Every other folder has the
 //! person's own, for every window, which never reaches a repository.
 
+use std::path::{Path, PathBuf};
+
+use gpui_kit::*;
 use wormhole_core::folder_color::FolderColor;
+use wormhole_core::profile::ProfileId;
 use wormhole_core::project::{Feature, ProjectColor, ProjectColorChoice};
 use wormhole_core::tokens::{Color, ThemeTokens};
 
+use super::Workspace;
+use super::app::app;
 use super::project::{project_folders_on, set_project_color};
 use super::settings_page::update_settings;
 use super::title_row::Tint;
-use super::*;
+use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
 
 /// Where a folder's colour lives, and what it is now.

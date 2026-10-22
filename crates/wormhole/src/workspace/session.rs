@@ -2,12 +2,18 @@
 //! to it. Several of them may be shown together as a split (`splits.rs`); each is still a row of its
 //! own, with its own notes and tasks.
 use std::cell::RefCell;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
+use gpui_kit::*;
 use wormhole_core::panes::PaneId;
 use wormhole_core::sidebar::{SplitId, names};
+use wormhole_core::store::{NoteRecord, SessionRecord, TaskRecord};
 
-use super::*;
+use super::app::app;
+use super::git_panel::{changes, history};
+use super::{Note, TaskItem, Workspace, notes, tasks};
+use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {

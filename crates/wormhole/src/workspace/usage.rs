@@ -3,11 +3,15 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::progress::Progress;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::agents;
 use wormhole_core::usage::{self, PlanLimit, Usage};
 
+use super::Workspace;
 use super::app::app;
-use super::*;
+use crate::settings::{UiColors, ui_in};
+use crate::style::{self, TextRole};
 
 /// From this share used on, a bar turns to the warning color, and at the limit to danger.
 const WARN_AT: f32 = 0.8;

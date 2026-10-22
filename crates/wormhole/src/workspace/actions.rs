@@ -9,24 +9,32 @@
 //! off the app's keys), and the app keys a terminal would send to its program (F6) are left to
 //! the bindings.
 
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use gpui_kit::component::WindowExt as _;
 use gpui_kit::component::input;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::intro::{Handover, Style};
 use wormhole_core::keymap::{self, ActionId, Scope, Stage};
 use wormhole_core::keyspec::KeySpec;
+use wormhole_core::profile::ProfileId;
 use wormhole_core::sidebar::TerminalsIn;
 use wormhole_core::sidebar::order::shortcut_target;
 
 use super::app::{self, AppState, app};
 use super::settings_page::update_settings;
-use super::*;
+use super::{
+    RightTab, Workspace, about, actions, ambient, app_menu, command_palette, focus, menu_bar, onboarding,
+    settings_page, shortcut_sheet, sidebar, studio, updates,
+};
 use crate::menubar::MenuCommand;
+use crate::settings::{SettingsStore, settings};
 use crate::terminal_view::{
     ClearBuffer, CopyCommand, CopyOutput, FONT_SIZES, NextPrompt, PreviousPrompt, RerunCommand, SelectOutput,
     TerminalKeys, keystroke_spec,
 };
-use wormhole_core::intro::{Handover, Style};
 
 actions!(
     workspace,

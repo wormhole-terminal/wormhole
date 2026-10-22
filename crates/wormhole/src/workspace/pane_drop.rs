@@ -8,11 +8,15 @@
 //! whether it works `TabPanes::can_join` / `can_move_to`; the overlay draws no animation, so Reduce
 //! Motion has nothing to hold still.
 
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::panes::{DropError, PaneId, Rect, TabPanes, Zone, drop_target, hint_rect, preview_rect};
 use wormhole_core::sidebar::SplitId;
 
+use super::Workspace;
 use super::terminal_drag::{DraggedTerminal, PaneHover};
-use super::*;
+use crate::settings::ui_in;
+use crate::style;
 
 /// What a hint on a zone says a drop will do.
 fn hint_text(zone: Zone, moving: bool, target: &str) -> String {

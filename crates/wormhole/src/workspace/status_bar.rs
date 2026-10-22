@@ -11,14 +11,20 @@
 //! (`wormhole_core::layout::status_bar`).
 use std::time::Instant;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::focus::Area;
 use wormhole_core::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::spoken;
 
+use super::Workspace;
 use super::app::{app, open_tab};
-use super::*;
+use crate::settings::{settings_in, ui_in};
+use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
+use crate::terminal_view::Status;
 
 /// One terminal (a sidebar row) as the bar counts it.
 #[derive(Clone)]

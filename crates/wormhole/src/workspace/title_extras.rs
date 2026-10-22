@@ -17,14 +17,16 @@
 
 use std::time::{Duration, Instant};
 
+use gpui_kit::*;
 use wormhole_core::git::pr::{self, Branch, PullRequest, Settled};
 use wormhole_core::terminal::Notification;
 use wormhole_core::terminal::listening_ports;
 use wormhole_core::title_extras::BranchStatus;
 use wormhole_core::usage::Gauge;
 
+use super::Workspace;
 use super::app::{app, app_mut};
-use super::*;
+use crate::settings::settings_in;
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);

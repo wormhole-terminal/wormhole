@@ -1,7 +1,9 @@
 //! What the window's shortcuts do beyond calling one method (⇧⌘E, stepping terminals), and
 //! Esc, which means something different in each place. The keys themselves are bound from
 //! core's keymap table (`actions`).
-use super::*;
+use gpui_kit::*;
+
+use super::Workspace;
 
 impl Workspace {
     /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the note being worked on

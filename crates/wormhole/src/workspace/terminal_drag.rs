@@ -6,10 +6,12 @@
 //! so what is read while drawing is this.
 
 use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::*;
 use wormhole_core::panes::{PaneId, Zone};
 use wormhole_core::sidebar::Part;
 
-use super::*;
+use crate::settings::ui;
+use crate::style;
 use crate::style::StatusGlyph;
 
 /// Where a drag was picked up.

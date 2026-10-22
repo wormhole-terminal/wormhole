@@ -2,9 +2,13 @@
 //! sheet, one at a time, each on a scrim that takes the clicks. Closing one gives the
 //! keyboard back to whatever had it when it opened ("focus returns where it was").
 
+use gpui_kit::*;
+
+use super::Workspace;
 use super::command_palette::CommandPalette;
 use super::shortcut_sheet::ShortcutSheet;
-use super::*;
+use crate::settings::SettingsStore;
+use crate::style;
 use crate::theme_bridge::token;
 
 /// Which overlay is open.

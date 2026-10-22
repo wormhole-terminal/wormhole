@@ -6,19 +6,21 @@
 //! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key is `packaging/updater.pub`, the same
 //! file `scripts/package.sh` checks the signing key against.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 use std::time::SystemTime;
 
+use gpui_kit::*;
+use wormhole_core::store::Store;
 use wormhole_core::update::{
     self, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
-use wormhole_core::store::Store;
-
 use super::app::{app, app_mut};
 use super::update_restart::IdleWatch;
-use super::*;
+use crate::settings::{SettingsStore, settings};
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
 const SCHEDULE_KEY: &str = "update_schedule";

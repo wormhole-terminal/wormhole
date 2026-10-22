@@ -8,7 +8,9 @@
 //! profile (`Workspace.profile`) and saves into that profile's database, shown or parked.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
+use gpui_kit::*;
 use wormhole_core::git::worktree;
 use wormhole_core::git::worktree::Worktrees;
 use wormhole_core::layout::REMEMBERED_PANES_KEY;
@@ -17,9 +19,12 @@ use wormhole_core::onboarding::DISMISSED_TIPS_KEY;
 use wormhole_core::onboarding::DismissedTips;
 use wormhole_core::profile::{DataRoot, NewProfile, ProfileId, ProfileList, ProfilePaths};
 use wormhole_core::store::Store;
+use wormhole_core::store::{SessionRecord, WindowRecord};
 
 use super::app::{AppState, OpenWindow};
-use super::*;
+use super::app::{app, app_mut};
+use super::{Workspace, menu_bar, project};
+use crate::settings::{SettingsStore, settings};
 
 impl AppState {
     /// The profile Wormhole is in.

@@ -2,8 +2,11 @@
 //! regions want it, the keys that tell them apart (and stack them), and the probes that tell it
 //! where they are.
 
-use super::*;
+use gpui_kit::*;
+
+use super::Workspace;
 use crate::platform::vibrancy::GlassRect;
+use crate::settings::store_in;
 
 /// How far a probe's glass is inset from its parent: left, top, right, bottom.
 #[derive(Clone, Copy)]

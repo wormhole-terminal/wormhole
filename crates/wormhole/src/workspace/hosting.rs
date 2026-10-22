@@ -6,14 +6,17 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use gpui_kit::*;
 use wormhole_core::hosts::{self, HostMeta, LaunchHosts, Restore};
 use wormhole_core::profile::{DataRoot, ProfileList};
+use wormhole_core::store::SessionRecord;
 use wormhole_core::store::Store;
 use wormhole_core::terminal::SpawnOptions;
 
+use super::Workspace;
 use super::app::{AppState, app, app_mut};
-use super::*;
 use crate::terminal_view::Start;
+use crate::terminal_view::TerminalView;
 
 /// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
 fn host_binary() -> Option<&'static PathBuf> {

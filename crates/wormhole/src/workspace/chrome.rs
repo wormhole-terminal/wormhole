@@ -4,12 +4,19 @@
 //! macOS draws at the left); the sidebar's title row leaves room for the lights above the
 //! "Terminals" header, the terminal's carries the selected terminal's breadcrumb and the split
 //! buttons, and the right panel's its tab bar.
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::focus::Area;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::layout::{Edge, PanelToggle};
 use wormhole_core::spoken::{self, PanelTab};
 
+use super::app::app;
 use super::focus::TitleButton;
-use super::*;
+use super::{RightTab, Workspace};
+use crate::settings::{store_in, ui_in};
+use crate::style;
 
 /// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
 /// call over the board's 20, which left the lights hanging right of everything below them). They

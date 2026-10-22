@@ -1,16 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
-use gpui_kit::component::input::{Input, InputEvent, InputState, TextareaState};
-use gpui_kit::component::{Icon, Sizable};
+use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::platform::vibrancy;
-use crate::settings::{SettingsStore, UiColors, settings, settings_in, store_in, ui, ui_in};
-use crate::style::{self, Edges, TextRole};
+use crate::settings::{settings_in, ui_in};
 #[cfg(feature = "devctl")]
 pub(crate) use about::devctl_command as devctl_about;
 #[cfg(feature = "devctl")]
@@ -23,7 +20,6 @@ pub(crate) use app_menu::dump as menu_dump;
 pub(crate) use default_terminal::{listen as listen_for_opened, serve as serve_opened};
 #[cfg(feature = "devctl")]
 pub(crate) use focus::set_front;
-use gpui_kit::assets::IconName;
 #[cfg(feature = "devctl")]
 pub(crate) use project::devctl_trust_shot;
 #[cfg(feature = "devctl")]
@@ -31,8 +27,6 @@ pub(crate) use updates::devctl_installed as devctl_update_installed;
 pub(crate) use windows::{request_quit, request_quit_ending_hosts};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
-use wormhole_core::ipc;
-use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::profile::ProfileId;
 use wormhole_core::sidebar::WindowSidebar;
 
@@ -149,10 +143,10 @@ pub(crate) enum RightTab {
     Usage,
     Project,
 }
-use crate::terminal_view::{Status, TerminalEvent, TerminalView};
-use wormhole_core::store::{NoteRecord, SessionRecord, TaskRecord, WindowRecord};
+use crate::terminal_view::{Status, TerminalView};
+use wormhole_core::store::{SessionRecord, WindowRecord};
 
-use wormhole_core::layout::{Columns, Edge, Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+use wormhole_core::layout::{Edge, Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 /// A window's layout as saved with it.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default)]

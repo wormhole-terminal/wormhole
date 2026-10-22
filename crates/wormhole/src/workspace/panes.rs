@@ -6,18 +6,28 @@
 //! coming into a pane selects its row. A terminal that is in no split draws as it always did
 //! (`layout.rs`): no headers, the terminal under the floating title bar.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId, Preset, TabPanes};
 use wormhole_core::sidebar::SplitId;
 use wormhole_core::spoken;
+use wormhole_core::store::SessionRecord;
 
+use super::app::app;
 use super::breadcrumb::terminal_tile;
+use super::session::Pane;
 use super::session::home_dir;
 use super::splits::Split;
 use super::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
-use super::*;
+use super::{Workspace, notifications};
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::{self, Anchor, Item, Menu};
+use crate::settings::{settings_in, ui_in};
+use crate::style;
+use crate::terminal_view::TerminalEvent;
 
 /// A drag on a divider, from the press to the release.
 pub(super) struct PaneDrag {

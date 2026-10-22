@@ -6,13 +6,22 @@
 //!
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
+use gpui_kit::assets::IconName;
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::component::{Icon, Sizable};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::agents::AgentId;
 use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
+use super::git_panel::picker;
 use super::path_card::Over;
 use super::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
-use super::*;
+use super::{RightTab, Workspace};
+use crate::settings::{UiColors, settings_in, ui_in};
+use crate::style::{self, TextRole};
+use crate::terminal_view::{Status, TerminalView};
 
 impl Workspace {
     /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.

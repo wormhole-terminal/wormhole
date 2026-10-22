@@ -4,8 +4,13 @@
 //! readout beside the pointer says the width and why it stopped. A double-click puts the
 //! default width back, Esc puts back where the drag began. The rules are core's
 //! (`wormhole_core::layout`).
-use super::*;
+use gpui_kit::*;
 use wormhole_core::layout::Resize;
+use wormhole_core::layout::{Edge, Panes};
+
+use super::Workspace;
+use crate::settings::{UiColors, ui_in};
+use crate::style;
 
 /// A drag on a panel's edge, from the press to the release.
 pub(super) struct ResizeDrag {

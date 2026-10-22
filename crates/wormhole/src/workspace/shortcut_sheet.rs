@@ -4,14 +4,20 @@
 //! block of their own. Typing filters by label or key ("⌘W" finds Close terminal); Esc clears, then
 //! closes, and the keyboard goes back where it was.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::keymap::sheet::{self, Filtered, Hit, Keys, Row};
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::keyspec::KeySpec;
 use wormhole_core::project::Feature;
 
+use super::Workspace;
 use super::app::{AppState, OpenWindow, app};
 use super::overlay::{OverlayView, scrim};
-use super::*;
+use crate::settings::{UiColors, settings, ui};
+use crate::style::{self, Edges, TextRole};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.
 const TOP: f32 = 56.0;

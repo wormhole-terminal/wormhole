@@ -4,12 +4,16 @@
 //! app's tick, once every terminal has been idle for a while (`IDLE_FOR`).
 
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
+use gpui_kit::*;
 use wormhole_core::agents::agent;
 
+use super::app::{app, app_mut};
 use super::session::{Session, shortened};
 use super::updates::{self, UpdatePhase};
-use super::*;
+use super::{Workspace, dialog};
+use crate::terminal_view::Status;
 
 /// How long every terminal must stay idle, without a break, before the app restarts by itself. An
 /// agent is idle for a moment between its steps, so a single quiet look would restart under it.

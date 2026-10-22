@@ -10,8 +10,11 @@
 //! by its id), so the protocol's `tab` and `pane` ids are the terminal's.
 
 use std::path::Path;
+use std::time::Duration;
 use std::time::Instant;
 
+use gpui_kit::*;
+use wormhole_core::agents::AgentId;
 use wormhole_core::ipc::control::{
     Action, ErrorCode, Limited, Listing, Opened, PROTOCOL_VERSION, PaneInfo, RateLimits, Reached, Reply,
     Request, SEND_TEXT_MAX_BYTES, SendTarget, StatusInfo, Summary, TabInfo, Target, TerminalInfo,
@@ -21,7 +24,9 @@ use wormhole_core::terminal::Notification;
 
 use super::ambient::state_of;
 use super::app::{AppState, OpenWindow, app};
-use super::*;
+use super::{Workspace, notifications};
+use crate::settings::settings;
+use crate::terminal_view::TerminalView;
 
 /// Each caller's budgets, app-wide (a tab's requests count the same whichever window they reach).
 #[derive(Default)]

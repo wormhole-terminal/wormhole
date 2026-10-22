@@ -2,14 +2,21 @@
 //! time; a task left or made empty is never kept.
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
 use gpui_kit::component::input::Position;
+use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::limits::count_grouped;
 use wormhole_core::reorder;
+use wormhole_core::spoken;
 
 use super::items::{ItemKey, item_key, with_item_keys};
 use super::notes::NotesView;
-use super::*;
-use wormhole_core::limits::count_grouped;
-use wormhole_core::spoken;
+use super::{RightTab, TaskItem, Workspace};
+use crate::settings::UiColors;
+use crate::style;
 
 /// The task being written or edited in place.
 pub(super) struct TaskEdit {

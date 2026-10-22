@@ -4,11 +4,14 @@
 //! closes with Esc or ⌘W. Under Reduce Transparency the settings in force say an opacity of 1,
 //! so a window asked to be translucent gets the opaque surfaces and no blur too.
 
+use gpui_kit::*;
 use wormhole_core::tokens::{Color, OPAQUE};
 
+use super::app::AppState;
 use super::app::app_mut;
-use super::*;
 use crate::settings::Settings;
+use crate::settings::SettingsStore;
+use crate::style;
 use crate::theme_bridge::hsla;
 use crate::workspace::chrome::TitleDrag as _;
 

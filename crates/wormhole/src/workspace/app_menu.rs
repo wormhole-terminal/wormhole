@@ -7,6 +7,10 @@
 //! GPUI keeps the actions of every menu bar it was given for the life of the app, so the menus
 //! are not rebuilt for each step of a title an agent animates: a change of names alone waits
 //! [`NAMES_EVERY`].
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+use gpui_kit::*;
 use wormhole_core::keymap::ActionId;
 use wormhole_core::keymap::menus::{self, Command, Item, MenuState};
 use wormhole_core::project::Feature;
@@ -17,7 +21,8 @@ use super::actions::{
     RunProjectAction, SwitchProfile, gpui_action,
 };
 use super::app::{AppState, app};
-use super::*;
+use super::{RightTab, Workspace};
+use crate::settings::settings;
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);

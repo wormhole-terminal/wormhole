@@ -8,9 +8,10 @@
 //! the terminal off instead (it reads from the left). Either way the terminal never lies under the
 //! sliding column, which paints its own translucent surface over the blur, as it does at rest. The
 //! traffic lights and the collapse button never move. Under Reduce Motion both are cuts.
+use gpui_kit::*;
 use wormhole_core::layout::Edge;
 
-use super::*;
+use super::Workspace;
 use crate::style::motion::{EASE_IN, EASE_OUT, MOTION_PANEL, MOTION_PANEL_EXIT};
 
 /// A column on its way in or out.
