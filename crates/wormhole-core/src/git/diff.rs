@@ -4,32 +4,12 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use super::lfs::{self, LfsChange};
-use super::{ChangeKind, DiffSpec, EMPTY_TREE, FileChange, GitCmd, GitError, MAX_TEXT_BYTES, Side, sides};
+use super::lfs;
+use super::{
+    ChangeKind, DiffLine, DiffSpec, EMPTY_TREE, FileChange, FileDiff, GitCmd, GitError, Hunk, LineKind,
+    MAX_TEXT_BYTES, Side, sides,
+};
 use crate::storage::fsutil::{self, LinkPolicy};
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LineKind {
-    Context,
-    Added,
-    Removed,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct DiffLine {
-    pub kind: LineKind,
-    pub old: Option<u32>,
-    pub new: Option<u32>,
-    pub text: String,
-    /// Git's "\ No newline at end of file" followed this line.
-    pub no_newline: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Hunk {
-    pub header: String,
-    pub lines: Vec<DiffLine>,
-}
 
 /// For each line of a hunk, the line of the file as it is now that an editor should open for it:
 /// its own number on the new side; for a removed line, which has none there, the line that
@@ -48,39 +28,6 @@ pub fn lines_in_new_file(lines: &[DiffLine]) -> Vec<Option<u32>> {
         found[ix] = found[ix].or(before);
     }
     found
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct FileDiff {
-    pub hunks: Vec<Hunk>,
-    pub binary: bool,
-    /// The file doesn't exist on the old side (`new file mode`, `--- /dev/null`).
-    pub new_file: bool,
-    /// The file doesn't exist on the new side (`deleted file mode`, `+++ /dev/null`).
-    pub deleted_file: bool,
-    /// `rename from <path>`: where the file was before.
-    pub renamed_from: Option<String>,
-    /// `old mode` / `new mode`, e.g. `("100644", "100755")`.
-    pub mode_change: Option<(String, String)>,
-    /// Full file contents for syntax highlighting (None if missing/binary/over the limit).
-    pub old_text: Option<String>,
-    pub new_text: Option<String>,
-    /// The patch is bigger than [`DiffLimits::max_patch_bytes`], so `hunks` and the texts are
-    /// left out (everything else is at its default but [`FileDiff::patch_bytes`]). Ask before
-    /// loading it, then ask again with [`diff_with_limits`] and [`DiffLimits::LOAD_ANYWAY`].
-    pub too_large: bool,
-    /// With [`FileDiff::too_large`]: how big the patch is, unless it is bigger than
-    /// [`DIFF_MEASURE_BYTES`] (`None`).
-    pub patch_bytes: Option<u64>,
-    /// A binary file's size on its old and new side, in bytes (`None` for a side the file
-    /// doesn't have, or whose size could not be read).
-    pub sizes: (Option<u64>, Option<u64>),
-    /// Each side of the file is a Git LFS pointer: what they point at. Their lines are left out
-    /// of `hunks`, which is empty.
-    pub lfs: Option<LfsChange>,
-    /// The patch has more lines than [`DiffLimits::max_highlight_lines`]: the hunks are all
-    /// there, but the texts are left out, so it shows without syntax colors.
-    pub highlight_skipped: bool,
 }
 
 /// A patch bigger than this is not loaded until the user asks for it.
