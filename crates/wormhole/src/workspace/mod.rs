@@ -56,9 +56,9 @@ pub(crate) mod actions;
 pub(crate) mod ambient;
 pub(crate) mod app;
 pub(crate) mod app_look;
-mod aux_window;
+pub(crate) mod aux_window;
 mod breadcrumb;
-mod chrome;
+pub(crate) mod chrome;
 #[cfg(test)]
 mod clear_tests;
 #[cfg(test)]
@@ -115,7 +115,7 @@ mod reported_tests;
 mod resize;
 mod save;
 mod saved_layout;
-mod session;
+pub(crate) mod session;
 pub(crate) mod settings_page;
 pub(crate) mod shells;
 mod shortcuts;

@@ -80,10 +80,7 @@ impl FrontWindow {
     fn read(cx: &App) -> Self {
         AppState::front_window(cx)
             .and_then(|window| {
-                window
-                    .workspace
-                    .read_with(cx, |ws, _| Self { project: ws.active_session().project.clone() })
-                    .ok()
+                window.workspace.read_with(cx, |ws, _| Self { project: ws.active_project_root() }).ok()
             })
             .unwrap_or_default()
     }
@@ -414,7 +411,7 @@ impl SettingsWindow {
 
     /// The row `reveal_row` asked for, if it is on this page: `render_page` marks it and
     /// anchors it, so the scroll can find it once the page is laid out.
-    pub(super) fn revealed_row(&self) -> Option<(&'static str, ScrollAnchor)> {
+    fn revealed_row(&self) -> Option<(&'static str, ScrollAnchor)> {
         self.revealed.clone().filter(|_| !self.show_results)
     }
 

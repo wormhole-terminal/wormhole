@@ -284,6 +284,11 @@ impl Workspace {
         &self.sessions[self.active]
     }
 
+    /// The project folder of the terminal in front (what Settings marks "set by this project").
+    pub(crate) fn active_project_root(&self) -> Option<PathBuf> {
+        self.active_session().project.clone()
+    }
+
     pub(crate) fn active_terminal(&self) -> Entity<TerminalView> {
         self.active_session().terminal().clone()
     }
