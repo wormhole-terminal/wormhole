@@ -104,6 +104,10 @@ pub(super) fn signatures_match() {
     same! {
         a11y::wake_tree: fn(&Window);
         window::lights_opacity: fn(&Window) -> Option<(f32, bool)>;
+        inspect::menu_bar: fn() -> Option<String>;
+        inspect::menu: fn(&super::Menu, Option<usize>) -> anyhow::Result<String>;
+        inspect::popover: fn(&super::Popover, &Path) -> anyhow::Result<String>;
+        inspect::show_popover: fn(super::Popover, gpui_kit::Bounds<gpui_kit::Pixels>, &mut Window, &mut App) -> anyhow::Result<super::Handle>;
         status_item::save_icons: fn(&Path, &str, crate::menubar::StatusColors) -> anyhow::Result<Vec<std::path::PathBuf>>;
     }
     // Touch ID's implementations are left out of test builds, which use a stub of their own.
