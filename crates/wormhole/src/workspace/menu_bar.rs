@@ -14,7 +14,7 @@ use super::*;
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
-use crate::platform::status_item::MenuBar;
+use crate::platform::status_item::{self, MenuBar};
 
 const RECENT_PROJECTS: usize = 8;
 
@@ -108,11 +108,6 @@ impl MenuState {
         if !registers(spec, self.hotkey_paused) {
             return;
         }
-        if crate::background::on() {
-            // A test instance leaves the keys of the person at the Mac alone.
-            tracing::info!(spec, "background mode: the global hotkey is not registered");
-            return;
-        }
         match Hotkey::register(spec) {
             Ok(key) => {
                 let tx = self.tx.clone();
@@ -156,15 +151,13 @@ fn registers(spec: &str, paused: bool) -> bool {
 pub(super) fn sync(cx: &mut App) {
     let (enabled, spec) = {
         let s = settings(cx);
-        // A test instance in background mode keeps out of the menu bar; devctl's `menubar` still
-        // shows the menu it would have.
-        (s.menu_bar && !crate::background::on(), s.hotkey.trim().to_string())
+        (s.menu_bar, s.hotkey.trim().to_string())
     };
     let mut hotkey_changed = false;
     {
         let menu = &mut app_mut(cx).menu;
         if enabled && menu.bar.is_none() {
-            menu.bar = MenuBar::install(menu.tx.clone());
+            menu.bar = status_item::install(menu.tx.clone());
         } else if !enabled {
             menu.bar = None;
             menu.animation = None;
@@ -234,11 +227,9 @@ fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
     let state = app(cx);
     let menu = &state.menu;
     let recent_projects = menu.recent.iter().map(|root| (project_name(root), root.clone())).collect();
-    // Background mode registers no hotkey, but its menu shows the key as it would be; so does a
-    // hotkey held off while a new one is recorded.
-    let registered = menu.hotkey.is_some()
-        || (menu.hotkey_paused && menu.hotkey_error.is_none())
-        || crate::background::on();
+    // A hotkey held off while a new one is recorded shows as it would be (as background mode's,
+    // which holds nothing, does).
+    let registered = menu.hotkey.is_some() || (menu.hotkey_paused && menu.hotkey_error.is_none());
     let hotkey = menu.applied_hotkey.as_deref().filter(|_| registered);
     let key = |spec: &str| spec.parse::<KeySpec>().ok().and_then(|spec| KeyEquivalent::from_spec(&spec));
     let s = settings(cx);
@@ -460,7 +451,7 @@ pub(crate) fn dump(cx: &App) -> String {
 #[cfg(feature = "devctl")]
 pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<Vec<PathBuf>> {
     let colors = snapshot(Vec::new(), cx).colors;
-    crate::platform::status_item::save_icons(dir, prefix, colors)
+    status_item::save_icons(dir, prefix, colors)
 }
 
 /// devctl: the Dock's badge, bounces and menu.

@@ -55,6 +55,11 @@ fn install_handler() {
 
 /// A registered global hotkey. Dropping it (or [`Hotkey::unregister`]) releases the key.
 pub struct Hotkey {
+    /// `None` in background mode, where nothing is registered.
+    held: Option<Held>,
+}
+
+struct Held {
     hotkey: HotKey,
     // Dropping the manager unregisters the key and removes its Carbon handler.
     _manager: GlobalHotKeyManager,
@@ -63,7 +68,13 @@ pub struct Hotkey {
 impl Hotkey {
     /// Registers `spec` (e.g. `"alt-space"`, `"cmd-`"`, `"ctrl-alt-t"`) system-wide.
     /// Must be called on the main thread. Fails if another app already owns the combination.
+    /// A test instance in background mode leaves the keys of the person at the Mac alone: it gets
+    /// a hotkey that holds nothing, so the app shows the key as it would be.
     pub fn register(spec: &str) -> Result<Self, String> {
+        if super::background_mode::on() {
+            tracing::info!(spec, "background mode: the global hotkey is not registered");
+            return Ok(Self { held: None });
+        }
         if !super::os::hotkey::on_registering_thread() {
             return Err("global hotkeys must be registered on the main thread".into());
         }
@@ -74,7 +85,7 @@ impl Hotkey {
         manager.register(hotkey).map_err(|e| format!("could not register {spec:?}: {e}"))?;
         with_dispatch(|d| d.ids.push(hotkey.id()));
         tracing::info!(spec, "registered global hotkey");
-        Ok(Self { hotkey, _manager: manager })
+        Ok(Self { held: Some(Held { hotkey, _manager: manager }) })
     }
 
     /// Calls `f` on the main thread for every press (replacing any previous callback), e.g. to
@@ -86,12 +97,13 @@ impl Hotkey {
 
 impl Drop for Hotkey {
     fn drop(&mut self) {
+        let Some(held) = &self.held else { return };
         with_dispatch(|d| {
-            if let Some(i) = d.ids.iter().position(|id| *id == self.hotkey.id()) {
+            if let Some(i) = d.ids.iter().position(|id| *id == held.hotkey.id()) {
                 d.ids.swap_remove(i);
             }
         });
-        tracing::info!(hotkey = %self.hotkey, "unregistered global hotkey");
+        tracing::info!(hotkey = %held.hotkey, "unregistered global hotkey");
     }
 }
 
