@@ -141,7 +141,7 @@ class Plan:
         self.reexports: Dict[str, str] = spec.get("reexports", {})
         # A re-export is named by its path below this module (`workspace::init_actions`).
         self.reexport_base: str = spec.get("reexport_base", "workspace")
-        self.layers: dict = spec.get("layers", {})
+        self.layers = spec.get("layers", {})  # a spec, or a list of them
         self.fixups: List[dict] = spec.get("fixups", [])
         # Leaves of moved modules that comments name in backticks (`app_tick::x`): by default the renamed ones.
         self.prose_leaves: Optional[List[str]] = spec.get("prose")
@@ -505,24 +505,28 @@ def restructure(plan: Plan, fmap: Dict[str, str]) -> None:
     data = json.loads(read(path))
     crate = os.path.basename(plan.crate_dir)
     renames = plan.renames()
-    spec = plan.layers
+    # One spec, or a list of them applied in turn (a series that puts modules at two places of the order).
+    specs = plan.layers if isinstance(plan.layers, list) else [plan.layers]
 
     def names(tier) -> List[str]:
         return tier if isinstance(tier, list) else [tier]
 
-    drop = set(spec.get("remove", []))
-    out = []
-    for tier in data["config"]["layers"][crate]:
-        keep = [renames.get(n, n) for n in names(tier) if n not in drop]
-        if keep:
-            out.append(keep if isinstance(tier, list) and len(keep) > 1 else keep[0])
-    present = {n for tier in out for n in names(tier)}
-    if "after" in spec:
-        at = next(i for i, tier in enumerate(out) if spec["after"] in names(tier)) + 1
-        for tier in spec.get("insert", []):
-            if not all(n in present for n in names(tier)):
-                out.insert(at, tier)
-                at += 1
+    out = data["config"]["layers"][crate]
+    for spec in specs:
+        drop = set(spec.get("remove", []))
+        kept = []
+        for tier in out:
+            keep = [renames.get(n, n) for n in names(tier) if n not in drop]
+            if keep:
+                kept.append(keep if isinstance(tier, list) and len(keep) > 1 else keep[0])
+        out = kept
+        present = {n for tier in out for n in names(tier)}
+        if "after" in spec:
+            at = next(i for i, tier in enumerate(out) if spec["after"] in names(tier)) + 1
+            for tier in spec.get("insert", []):
+                if not all(n in present for n in names(tier)):
+                    out.insert(at, tier)
+                    at += 1
     data["config"]["layers"][crate] = out
 
     prefix = plan.crate_dir + "/src/"
