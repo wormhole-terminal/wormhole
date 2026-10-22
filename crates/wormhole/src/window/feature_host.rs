@@ -209,6 +209,15 @@ impl Workspace {
     pub(in crate::window) fn session_record(&self, ix: usize, cx: &App) -> SessionRecord {
         let session = &self.sessions[ix];
         let mut record = session.record(cx);
+        // The app installs the table at launch. Without one, no feature writes its part, and a save
+        // would replace the notes and tasks stored for the terminal with none. Never silently.
+        #[cfg(not(test))]
+        if self.features.is_empty() {
+            tracing::error!(
+                "saving terminal {} with no feature table: its notes and tasks are left out",
+                session.id
+            );
+        }
         for (at, def) in self.features.iter().enumerate() {
             if let (Some(state), Some(entity)) = (def.state.as_ref(), self.feature_entity(at)) {
                 (state.record)(entity, session.id, &mut record, cx);
