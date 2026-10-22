@@ -240,6 +240,9 @@ pub struct Settings {
     /// Which Option keys send Esc+key (a side set to Meta can't type @ { [ on some layouts).
     pub option_as_meta: OptionAsMeta,
     pub scrollback_lines: usize,
+    /// Save each terminal's last lines (encrypted, in the profile's `scrollback.db`) and show them
+    /// again after a restart. Off: nothing is saved, and what was is erased.
+    pub restore_terminal_text: bool,
     /// macOS notifications when a background session finishes or needs you.
     pub notifications: bool,
     /// Changes panel: show files as a folder tree instead of a flat list.
@@ -428,6 +431,7 @@ impl Default for Settings {
             compact_sidebar: false,
             option_as_meta: OptionAsMeta::Off,
             scrollback_lines: 10_000,
+            restore_terminal_text: true,
             notifications: true,
             changes_tree: true,
             group_untracked: true,
@@ -616,6 +620,9 @@ pub const APP_SETTINGS: &[&str] = &[
     // Programs to run are the person's own choice; a project names its shell with `shell`.
     "default_shell",
     "shells",
+    // Whether terminals' text is kept on disk: a cloned repository must not be able to turn that
+    // on for itself.
+    "restore_terminal_text",
     // Whether scripts may type into terminals and open them: a cloned repository must not be
     // able to turn that on for itself.
     "control_write",

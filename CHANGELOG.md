@@ -19,6 +19,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   long; after the name in Dense). Settings → Terminals & sidebar → Show group folders turns it off.
 - A group's colour can be taken away: "No colour" in its menu (checked when it has none), and an
   empty ring with a slash first among the colours in the popover its name opens.
+- Settings → Terminal → Restore terminal text after restart (on, as before): off, Wormhole no longer
+  saves the last lines of your terminals to show them again after a restart, and erases what it has
+  saved. For one terminal, "Don't keep this terminal's text" in its menu in the sidebar does the
+  same.
 
 ### Changed
 

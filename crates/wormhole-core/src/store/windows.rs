@@ -28,7 +28,7 @@ impl Store {
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
         let mut sessions = conn.prepare_cached(
-            "SELECT id, name, tasks_collapsed, notes_collapsed, pinned, split_id FROM sessions
+            "SELECT id, name, tasks_collapsed, notes_collapsed, pinned, split_id, forget_text FROM sessions
              WHERE window_id = ? ORDER BY position",
         )?;
         let mut splits =
@@ -53,6 +53,7 @@ impl Store {
                         notes_collapsed: row.get(3)?,
                         pinned: row.get(4)?,
                         split_id: row.get(5)?,
+                        forget_text: row.get(6)?,
                         ..Default::default()
                     })
                 })?

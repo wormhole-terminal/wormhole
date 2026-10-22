@@ -36,7 +36,7 @@ impl AppState {
         }
     }
 
-    fn store_of_mut(&mut self, profile: &ProfileId) -> Option<&mut Store> {
+    pub(super) fn store_of_mut(&mut self, profile: &ProfileId) -> Option<&mut Store> {
         if profile == self.profiles.active_id() {
             self.store.as_mut()
         } else {

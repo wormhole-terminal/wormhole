@@ -387,6 +387,13 @@ const TERMINAL: &[Group] = &[
                 &["scrollback_lines"],
             ),
             entry(
+                "restore-text",
+                "Restore terminal text after restart",
+                "Encrypted and kept only on this Mac. Off erases what's saved",
+                "scrollback history saved restore privacy secrets encrypted keychain",
+                &["restore_terminal_text"],
+            ),
+            entry(
                 "minimap",
                 "Show minimap",
                 "The scrollback drawn small along the terminal's right edge. Click or drag it to \

@@ -55,7 +55,8 @@ pub(super) const SCHEMA: &str = "
         tasks_collapsed INTEGER NOT NULL DEFAULT 0,
         notes_collapsed INTEGER NOT NULL DEFAULT 0,
         pinned INTEGER NOT NULL DEFAULT 0,
-        split_id INTEGER
+        split_id INTEGER,
+        forget_text INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS splits (
         id INTEGER PRIMARY KEY,

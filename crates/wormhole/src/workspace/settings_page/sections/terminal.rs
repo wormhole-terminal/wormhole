@@ -1,4 +1,4 @@
-//! Terminal: scrollback, the minimap, Option as Meta per side, the font in use (set in
+//! Terminal: scrollback, whether its text comes back after a restart, the minimap, Option as Meta per side, the font in use (set in
 //! Fonts), the shell a new terminal runs and the profiles config.json lists, the bell and
 //! whether programs may read the screen back, read or set the clipboard and control the window.
 
@@ -17,6 +17,7 @@ const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("scrollback", draw_scrollback),
+    toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
     Setting::segmented(

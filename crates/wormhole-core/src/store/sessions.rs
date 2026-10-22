@@ -83,12 +83,13 @@ pub(super) fn write_session(
     // `active_tab` is a column a later step drops: a session never selects a tab now.
     exec(
         conn,
-        "INSERT INTO sessions (id, window_id, position, name, tasks_collapsed, notes_collapsed, pinned, split_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+        "INSERT INTO sessions (id, window_id, position, name, tasks_collapsed, notes_collapsed, pinned, split_id,
+                               forget_text)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
          ON CONFLICT(id) DO UPDATE SET window_id = ?2, position = ?3, name = ?4, tasks_collapsed = ?5,
-                                       notes_collapsed = ?6, pinned = ?7, split_id = ?8
+                                       notes_collapsed = ?6, pinned = ?7, split_id = ?8, forget_text = ?9
          WHERE window_id IS NOT ?2 OR position IS NOT ?3 OR name IS NOT ?4 OR tasks_collapsed IS NOT ?5
-            OR notes_collapsed IS NOT ?6 OR pinned IS NOT ?7 OR split_id IS NOT ?8",
+            OR notes_collapsed IS NOT ?6 OR pinned IS NOT ?7 OR split_id IS NOT ?8 OR forget_text IS NOT ?9",
         params![
             session.id,
             window_id,
@@ -98,8 +99,12 @@ pub(super) fn write_session(
             session.notes_collapsed,
             session.pinned,
             session.split_id,
+            session.forget_text,
         ],
     )?;
+    if session.forget_text {
+        exec(conn, "DELETE FROM saved.scrollback WHERE tab_id = ?1", [session.id])?;
+    }
     write_terminal(conn, session)?;
     // A blank note or task is one still being written (or emptied to be thrown
     // away): it is never saved, so it can't come back as an empty entry.

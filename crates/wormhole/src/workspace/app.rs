@@ -342,6 +342,7 @@ impl AppState {
         cx.on_window_closed(window_closed).detach();
         notifications::init(cx);
         updates::init(cx);
+        super::saved_text::init(cx);
 
         cx.spawn(async move |cx| {
             while let Ok(message) = hook_events.recv().await {

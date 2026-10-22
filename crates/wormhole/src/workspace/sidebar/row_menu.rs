@@ -1,6 +1,7 @@
 //! A row's context menu, in a browser's words: Rename…, Add terminal to new group, Add terminal to
 //! group ▸ (the person's groups), Remove from group, Split right, Close terminal; then Show beside…
 //! (which terminal to show next to this one, making a split), Remove from split, Pin to top / Unpin,
+//! Don't keep this terminal's text (ticked when chosen; greyed out while no terminal's text is kept);
 //! Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. ⌃↩ opens it for the row the keys
 //! are on, and a group's own menu (`groups`) for the head they are on.
@@ -16,6 +17,10 @@ use crate::native::{self, Item, Menu};
 struct RowFacts {
     id: i64,
     pinned: bool,
+    /// Its text isn't kept for a restart.
+    forget_text: bool,
+    /// Restore terminal text after restart is on.
+    restoring: bool,
     in_split: bool,
     cwd: Option<PathBuf>,
     /// The person's groups it can go in: id, name, whether the terminal is in it.
@@ -81,6 +86,8 @@ impl Workspace {
         let facts = RowFacts {
             id,
             pinned: self.split_pinned(ix),
+            forget_text: self.sessions[ix].forget_text,
+            restoring: settings_in(&self.profile, cx).restore_terminal_text,
             in_split: self.sessions[ix].split.is_some(),
             cwd: self.sessions[ix].terminal().read(cx).cwd.clone(),
             groups: self.group_choices(id),
@@ -160,7 +167,7 @@ pub(in crate::workspace) fn reveal_in_finder(path: &Path) {
 
 /// The menu of the row `facts` describe; every item acts on `this`.
 fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
-    let RowFacts { id, pinned, in_split, cwd, groups, beside } = facts;
+    let RowFacts { id, pinned, forget_text, restoring, in_split, cwd, groups, beside } = facts;
     // An item that finds the terminal again by its id: the list may have changed while the menu
     // was open.
     let on = |run: fn(&mut Workspace, usize, &mut Window, &mut Context<Workspace>)| {
@@ -226,6 +233,12 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
             Item::new(if pinned { "Unpin" } else { "Pin to top" })
                 .on_select(on(|ws, ix, _, cx| ws.toggle_pin(ix, cx))),
         )
+        .item(
+            Item::new("Don't keep this terminal's text")
+                .checked(forget_text)
+                .enabled(restoring)
+                .on_select(on(|ws, ix, _, cx| ws.toggle_forget_text(ix, cx))),
+        )
         .separator()
         .item(Item::new("Reveal in Finder").enabled(cwd.is_some()).on_select({
             let cwd = cwd.clone();
@@ -254,6 +267,8 @@ mod tests {
         RowFacts {
             id: 7,
             pinned: false,
+            forget_text: false,
+            restoring: true,
             in_split: false,
             cwd: Some(PathBuf::from("/tmp")),
             groups: Vec::new(),
@@ -280,6 +295,7 @@ mod tests {
                 "---",
                 "> Show beside… [off]",
                 "- Pin to top",
+                "- Don't keep this terminal's text",
                 "---",
                 "- Reveal in Finder",
                 "- Copy path",
@@ -287,10 +303,18 @@ mod tests {
         );
     }
 
+    /// With Restore terminal text after restart off nothing is kept anyway: the choice is greyed out.
+    #[test]
+    fn the_text_choice_is_off_while_no_text_is_kept() {
+        let outline = outline(RowFacts { restoring: false, ..facts() });
+        assert!(outline.contains(&"- Don't keep this terminal's text [off]".to_string()), "{outline:?}");
+    }
+
     #[test]
     fn groups_neighbours_and_state_show_up() {
         let outline = outline(RowFacts {
             pinned: true,
+            forget_text: true,
             in_split: true,
             cwd: None,
             groups: vec![(1, "Work".into(), true), (2, "Play".into(), false)],
@@ -313,6 +337,7 @@ mod tests {
                 "  - api",
                 "- Remove from split",
                 "- Unpin",
+                "- Don't keep this terminal's text [x]",
                 "---",
                 "- Reveal in Finder [off]",
                 "- Copy path [off]",

@@ -1,7 +1,7 @@
 //! Terminal scrollback, one per terminal (a `tabs` row, which has its session's id), kept sealed in a
 //! file of its own (`saved_text`) so saving a window never touches it.
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use rusqlite::Connection;
 
 use super::Store;
@@ -53,6 +53,19 @@ impl Store {
         Ok(())
     }
 
+    /// Erase every terminal's saved text (Restore terminal text after restart turned off): the rows
+    /// go with `secure_delete`, the file is rewritten without its free pages and its WAL emptied.
+    /// Returns how many terminals had text.
+    pub fn erase_saved_text(&self) -> Result<usize> {
+        self.saved.forget_all();
+        let removed = super::exec(&self.conn, "DELETE FROM saved.scrollback", [])?;
+        if removed > 0 {
+            self.conn.execute_batch("VACUUM saved").context("rewriting the saved text's file")?;
+            self.checkpoint()?;
+        }
+        Ok(removed)
+    }
+
     /// The text of a terminal's sealed record, as `load` gives it.
     pub(super) fn open_scrollback(&self, tab_id: i64, sealed: Option<Vec<u8>>) -> Option<String> {
         self.saved.open(tab_id, &sealed?)
@@ -68,12 +81,14 @@ fn write_scrollback(conn: &Connection, saved: &Keeper, tab_id: i64, text: &str) 
         return Ok(None);
     }
     let Some(sealed) = saved.seal(tab_id, text)? else { return Ok(None) };
-    // `WHERE EXISTS` is the pane check (no foreign key reaches across files) and also what lets
-    // SQLite parse an upsert on an INSERT ... SELECT.
+    // `WHERE EXISTS` is the pane check (no foreign key reaches across files), and keeps out a
+    // terminal whose text the person asked not to keep; it is also what lets SQLite parse an upsert
+    // on an INSERT ... SELECT.
     let changed = conn
         .prepare_cached(
             "INSERT INTO saved.scrollback (tab_id, sealed)
-             SELECT ?1, ?2 WHERE EXISTS (SELECT 1 FROM main.tabs WHERE id = ?1)
+             SELECT ?1, ?2 WHERE EXISTS (SELECT 1 FROM main.tabs t JOIN main.sessions s ON s.id = t.session_id
+                                         WHERE t.id = ?1 AND NOT s.forget_text)
              ON CONFLICT(tab_id) DO UPDATE SET sealed = excluded.sealed",
         )?
         .execute((tab_id, sealed))?;

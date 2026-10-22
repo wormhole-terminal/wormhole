@@ -40,6 +40,9 @@ pub struct SessionRecord {
     pub tasks: Vec<TaskRecord>,
     /// Pinned to the top of its group in the sidebar. Every member of a split carries the flag.
     pub pinned: bool,
+    /// The person asked for this terminal's text not to be kept ("Don't keep this terminal's text"):
+    /// nothing of it is saved, and what was is deleted.
+    pub forget_text: bool,
     /// The terminal's working folder.
     pub cwd: Option<String>,
     /// The shell profile it was opened with (`shells`' key), `None` for the default: a restart of

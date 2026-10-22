@@ -119,3 +119,35 @@ fn a_development_build_keeps_its_key_in_an_owner_only_file() {
     let store = Store::open_at(&dir).expect("opens");
     assert_eq!(store.load().expect("loads")[0].sessions[0].scrollback.as_deref(), Some("kept"));
 }
+
+#[test]
+fn erasing_takes_every_terminals_text_off_the_disk() {
+    let dir = temp_dir("sealed-erase");
+    let mut store = store_with_text(&dir, FakePlatform::with_key(1));
+    store.checkpoint().expect("checkpoint");
+    let record = super::erasure::sealed_record(&store, 1)[100..164].to_vec();
+    assert!(!super::erasure::bytes_on_disk(&dir, &record).is_empty());
+    assert_eq!(store.erase_saved_text().expect("erases"), 2);
+    assert_eq!(super::erasure::bytes_on_disk(&dir, &record), Vec::<String>::new());
+    assert!(store.load().expect("loads")[0].sessions.iter().all(|s| s.scrollback.is_none()));
+    // What a terminal shows next is saved again (the setting turned back on).
+    assert_eq!(store.save_scrollbacks(&[(1, "again")]).expect("saves"), 1);
+}
+
+#[test]
+fn a_terminal_whose_text_is_not_kept_has_none_saved() {
+    let dir = temp_dir("sealed-opt-out");
+    let mut store = store_with_text(&dir, FakePlatform::with_key(1));
+    let mut quiet = session(1, "/a");
+    quiet.forget_text = true;
+    store.save_window(&window(1, vec![quiet, session(2, "/b")])).expect("saves");
+    assert_eq!(count(&store, "SELECT COUNT(*) FROM saved.scrollback WHERE tab_id = 1"), 0, "deleted");
+    assert_eq!(store.save_scrollbacks(&[(1, "more"), (2, "other")]).expect("saves"), 1, "only 2's");
+    let loaded = store.load().expect("loads");
+    assert!(loaded[0].sessions[0].forget_text, "the choice is kept");
+    assert_eq!(loaded[0].sessions[0].scrollback, None);
+    assert_eq!(loaded[0].sessions[1].scrollback.as_deref(), Some("other"));
+    // Kept again once the person changes their mind.
+    store.save_window(&window(1, vec![session(1, "/a"), session(2, "/b")])).expect("saves");
+    assert_eq!(store.save_scrollbacks(&[(1, "more")]).expect("saves"), 1);
+}

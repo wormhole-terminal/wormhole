@@ -99,6 +99,9 @@ pub(crate) mod quick_panel;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
+mod saved_text;
+#[cfg(test)]
+mod saved_text_tests;
 mod session;
 mod settings_page;
 mod shells;
@@ -647,18 +650,40 @@ impl Workspace {
         app_mut(cx).save_window(&self.profile, &record);
     }
 
+    /// Every terminal's text whose text is kept, in one transaction (sealed: `store::saved_text`).
+    /// Nothing when Restore terminal text after restart is off.
     fn save_scrollback(&mut self, cx: &mut App) {
         self.last_scrollback_save = Instant::now();
-        if self.discarded {
+        if self.discarded || !settings_in(&self.profile, cx).restore_terminal_text {
             return;
         }
-        let Some(store) = app(cx).store_of(&self.profile) else { return };
-        for pane in self.sessions.iter().map(|session| &session.pane) {
-            let text = pane.terminal.read(cx).scrollback_text(SCROLLBACK_LINES);
-            if let Err(err) = store.save_scrollback(pane.id, &text) {
-                tracing::warn!("scrollback save failed: {err:#}");
-            }
+        let texts: Vec<(i64, String)> = self
+            .sessions
+            .iter()
+            .filter(|session| !session.forget_text)
+            .map(|session| {
+                (session.pane.id, session.pane.terminal.read(cx).scrollback_text(SCROLLBACK_LINES))
+            })
+            .collect();
+        let Some(store) = app_mut(cx).store_of_mut(&self.profile) else { return };
+        if let Err(err) = store.save_scrollbacks(&texts) {
+            tracing::warn!("scrollback save failed: {err:#}");
         }
+    }
+
+    /// "Don't keep this terminal's text" in its row menu: from now on nothing of it is saved, and
+    /// what was is erased at once; chosen again, it is saved from the next minute on.
+    pub(crate) fn toggle_forget_text(&mut self, ix: usize, cx: &mut Context<Self>) {
+        let Some(session) = self.sessions.get_mut(ix) else { return };
+        session.forget_text = !session.forget_text;
+        let (id, forget) = (session.id, session.forget_text);
+        if forget
+            && let Some(store) = app(cx).store_of(&self.profile)
+            && let Err(err) = store.clear_scrollback(id)
+        {
+            tracing::warn!("erasing terminal {id}'s saved text failed: {err:#}");
+        }
+        self.mark_dirty(cx);
     }
 
     /// Quit the app (every window is saved on the way out).
@@ -810,10 +835,14 @@ impl Workspace {
     ) -> usize {
         let number = self.next_number;
         self.next_number += 1;
-        let record = record.unwrap_or_else(|| {
+        let mut record = record.unwrap_or_else(|| {
             let id = self.alloc_id(cx);
             SessionRecord::new(id, None, self.default_cwd(cx))
         });
+        // Text the person asked not to keep is never shown again, whatever the file still holds.
+        if record.forget_text || !settings_in(&self.profile, cx).restore_terminal_text {
+            record.scrollback = None;
+        }
         let (pane, new_host) = self.make_pane(&record, window, cx);
         self.sessions.push(Session {
             id: record.id,
@@ -835,6 +864,7 @@ impl Workspace {
             notes_base: None,
             repo_root: Default::default(),
             pinned: record.pinned,
+            forget_text: record.forget_text,
             extras: Default::default(),
             review: Default::default(),
         });

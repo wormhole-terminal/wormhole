@@ -89,6 +89,8 @@ pub(super) struct Session {
     pub repo_root: RepoRoot,
     /// Pinned to the top of its group in the sidebar (saved). Every member of a split carries it.
     pub pinned: bool,
+    /// Its text is never saved for a restart ("Don't keep this terminal's text", saved).
+    pub forget_text: bool,
     /// What the title row's extras know about it: its agent's model and context, its ports.
     pub extras: super::title_extras::SessionExtras,
     /// The comments written on its diffs and not pasted into its terminal yet.
@@ -173,6 +175,7 @@ impl Session {
                 .map(|task| TaskRecord { text: task.text.to_string(), done: task.done })
                 .collect(),
             pinned: self.pinned,
+            forget_text: self.forget_text,
             cwd: self.terminal().read(cx).cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
             shell: self.pane.shell.clone(),
             scrollback: None,
