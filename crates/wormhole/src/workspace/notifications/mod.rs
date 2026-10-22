@@ -20,7 +20,6 @@
 mod watch;
 
 use std::collections::{HashMap, HashSet};
-use std::time::Duration;
 use std::time::{Instant, SystemTime};
 
 use gpui_kit::*;
@@ -34,10 +33,10 @@ use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
 use crate::settings::{settings, settings_in};
+use crate::workspace::RightTab;
 use crate::workspace::ambient::{self, TabFacts};
 use crate::workspace::app::{AppState, app};
 use crate::workspace::window_lifecycle::open_tab;
-use crate::workspace::{RightTab, Workspace};
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).
@@ -501,25 +500,6 @@ pub(crate) fn respond(response: Response, cx: &mut App) {
 pub(crate) fn reply(tab: i64, text: &str, cx: &mut App) {
     let Some(owner) = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some()) else { return };
     AppState::with_workspace(&owner, cx, |ws, _, cx| ws.type_reply(tab, text, cx));
-}
-
-impl Workspace {
-    /// Paste `text` into a tab and press Return a moment later (the program reads the paste
-    /// first). Returns whether there was anything to send.
-    pub(crate) fn type_reply(&mut self, tab: i64, text: &str, cx: &mut Context<Self>) -> bool {
-        let text = text.trim();
-        let Some(terminal) = self.pane_terminal(tab) else { return false };
-        if text.is_empty() {
-            return false;
-        }
-        terminal.update(cx, |t, _| t.paste(text));
-        cx.spawn(async move |_, cx| {
-            cx.background_executor().timer(Duration::from_millis(60)).await;
-            terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-        })
-        .detach();
-        true
-    }
 }
 
 /// Whether macOS lets Wormhole notify, as last read.

@@ -136,6 +136,7 @@ mod view_tests;
 mod welcome;
 mod window_actions;
 mod window_bounds;
+mod window_control;
 mod window_lifecycle;
 mod windows;
 mod worktree;
