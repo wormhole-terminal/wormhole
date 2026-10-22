@@ -1,46 +1,26 @@
 //! State shared by every window: the database, project folders, menu bar,
-//! updater, the settings and Theme Studio windows, and the list of open
-//! windows with what happens as they open and close.
+//! updater, the settings and Theme Studio windows, and the list of open windows.
 //!
 //! Each window's [`Workspace`] owns only its own sessions. Anything that must
 //! exist once (the menu bar item, the hook socket, the updater) lives here and
-//! is driven by one app-level tick and two message tasks, so it works the same
-//! with one window or five.
-//!
-//! What the system says about how windows look is heard here too: its appearance (for Match
-//! system), through every window's appearance observer, and the accessibility display options
-//! (Reduce Transparency, Increase Contrast, Reduce Motion), through their change notification
-//! and again whenever a window comes to the front (macOS is not relied on to tell). The
-//! look reaches the settings store, which re-derives what it touches; Reduce Motion is GPUI's
-//! own flag, which its animations follow.
+//! is driven by one app-level tick and two message tasks (`app_launch`, `app_tick`), so it works
+//! the same with one window or five; windows open and close in `window_lifecycle`.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use gpui_kit::*;
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
-use wormhole_core::ipc;
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
 use wormhole_core::storage::paths::{DataRoot, ProfileId};
-use wormhole_core::storage::store::{Store, WindowRecord};
+use wormhole_core::storage::store::Store;
 use wormhole_core::theme::tokens::Appearance;
-use wormhole_core::view::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
-use crate::menubar::MenuCommand;
-use crate::platform::vibrancy;
-use crate::settings::SystemLook;
-use crate::settings::{ParkedSettings, SettingsStore};
-use crate::style;
-use crate::workspace::{
-    Layout, Workspace, app_menu, aux_window, chrome, control, menu_bar, notifications, onboarding, profiles,
-    project, settings_page, studio, update_restart, updates, window_bounds,
-};
-
-const TICK: Duration = Duration::from_millis(400);
-const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
+use crate::workspace::window_lifecycle::open_workspace_window;
+use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, studio, updates};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -118,12 +98,12 @@ pub(crate) struct AppState {
     pub(super) next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
     pub(super) applied_theme: Option<u64>,
-    ticks: u64,
+    pub(super) ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
-    look_override: LookOverride,
+    pub(super) look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
-    _display_options: Option<crate::platform::look::DisplayObserver>,
+    pub(super) _display_options: Option<crate::platform::look::DisplayObserver>,
 }
 
 /// Stand-ins for what the system says about how windows look; `None` follows the system.
@@ -205,7 +185,7 @@ impl AppState {
     }
 
     /// An agent's latest plan usage limits, kept across restarts.
-    fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
+    pub(super) fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
         wormhole_core::agents::usage::record(&mut self.usage, usage);
         if let Some(store) = &self.store
             && let Err(err) = store.set_meta(
@@ -263,141 +243,6 @@ impl AppState {
 }
 
 impl AppState {
-    /// Load what was saved, start the app-level tasks and open the windows
-    /// that were open last time (or one fresh window).
-    pub(crate) fn start(
-        hook_events: smol::channel::Receiver<ipc::Incoming>,
-        root: DataRoot,
-        profiles: ProfileList,
-        profiles_error: Option<wormhole_core::config::profile::ProfileError>,
-        cx: &mut App,
-    ) {
-        let paths = root.profile(profiles.active_id());
-        if let Some(err) = &profiles_error {
-            tracing::warn!("profiles.json was set aside and rebuilt: {err}");
-        }
-        upgrade_legacy_hooks(cx);
-        cx.background_spawn(async { crate::platform::default_app::upgrade_legacy_default() }).detach();
-        let profiles::ProfileData { store, tips, mut hub, usage, worktrees, last_panes, .. } =
-            profiles::ProfileData::open(&paths);
-        let saved = store
-            .as_ref()
-            .and_then(|s| {
-                s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
-            })
-            .unwrap_or_default();
-        let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
-        let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, store.as_ref());
-        let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
-        let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
-        hub.ids_start_at(next_id);
-        let (display_changed, display_options) = smol::channel::unbounded::<()>();
-        let display_observer = crate::platform::look::observe_display_options(move || {
-            let _ = display_changed.try_send(());
-        });
-        crate::workspace::open_in::OpenIn::install(cx);
-        cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
-        cx.set_global(AppState {
-            root,
-            profiles,
-            profiles_error: profiles_error.map(|err| err.to_string()),
-            parked: Default::default(),
-            store,
-            tips,
-            hub,
-            menu,
-            updates,
-            settings_window: None,
-            studio_window: None,
-            about_window: None,
-            licenses_window: None,
-            trust_window: None,
-            windows: Vec::new(),
-            front: 0,
-            quitting: false,
-            ending_hosts: false,
-            launch_hosts,
-            quit_prompt: None,
-            usage,
-            pr: Default::default(),
-            worktrees,
-            last_panes,
-            welcomes: Default::default(),
-            first_welcome: None,
-            adopted: HashMap::new(),
-            next_id,
-            next_window_id,
-            applied_theme: None,
-            ticks: 0,
-            look_override: LookOverride::default(),
-            _display_options: display_observer,
-        });
-        // Before the first frame, so windows don't open in the default colors (nor in the
-        // dark pick when Match system and a light system ask for the light one).
-        sync_system_look(cx);
-        crate::platform::scroller::ScrollerPrefs::install(cx);
-        apply_theme(cx);
-        cx.spawn(async move |cx| {
-            while display_options.recv().await.is_ok() {
-                cx.update(sync_system_look);
-            }
-        })
-        .detach();
-
-        // Every way of quitting (⌘Q, the menu bar, the Dock, logging out, the updater's relaunch)
-        // ends up here, before GPUI drops the windows and their terminals: the hosts are let go of
-        // first, so those drops leave their programs running.
-        cx.on_app_quit(|cx| {
-            crate::workspace::hosting::detach_all(cx);
-            save_all(cx);
-            ipc::remove_socket();
-            async {}
-        })
-        .detach();
-        cx.on_window_closed(window_closed).detach();
-        notifications::init(cx);
-        updates::init(cx);
-        crate::workspace::saved_text::init(cx);
-
-        cx.spawn(async move |cx| {
-            while let Ok(message) = hook_events.recv().await {
-                cx.update(|cx| dispatch_hook(message, cx));
-            }
-        })
-        .detach();
-        cx.spawn(async move |cx| {
-            while let Ok(command) = menu_commands.recv().await {
-                cx.update(|cx| handle_menu_command(command, cx));
-            }
-        })
-        .detach();
-        cx.spawn(async move |cx| {
-            loop {
-                cx.background_executor().timer(TICK).await;
-                cx.update(tick);
-            }
-        })
-        .detach();
-
-        if saved.is_empty() {
-            // With the terminal welcome on, the window's first terminal runs it and the run plays
-            // around the window; otherwise the intro window opens over a plain terminal.
-            let welcome = crate::workspace::welcome::first_launch_plan(cx);
-            app_mut(cx).first_welcome = welcome;
-            open_workspace_window(None, None, cx);
-            app_mut(cx).first_welcome = None;
-            match welcome {
-                Some(plan) => crate::workspace::welcome::play_first(plan, cx),
-                None => onboarding::start_if_first_launch(cx),
-            }
-        }
-        for window in saved {
-            open_workspace_window(Some(window), None, cx);
-        }
-        crate::workspace::hosting::adopt_orphans(cx);
-        app_menu::sync(cx);
-    }
-
     pub(crate) fn alloc_window_id(&mut self) -> i64 {
         let id = self.next_window_id;
         self.next_window_id += 1;
@@ -467,276 +312,4 @@ impl AppState {
         }
         roots
     }
-}
-
-/// Open a window showing `record` (a new, empty one without it), placed where
-/// it was saved, or stepped away from `source`, or centered.
-pub(crate) fn open_workspace_window(
-    record: Option<WindowRecord>,
-    source: Option<Bounds<Pixels>>,
-    cx: &mut App,
-) {
-    let profile = app(cx).active_profile().clone();
-    open_workspace_window_in(&profile, record, source, cx);
-}
-
-/// [`open_workspace_window`] for a window of `profile`.
-pub(crate) fn open_workspace_window_in(
-    profile: &ProfileId,
-    record: Option<WindowRecord>,
-    source: Option<Bounds<Pixels>>,
-    cx: &mut App,
-) {
-    let id = match &record {
-        Some(record) => record.id,
-        None => app_mut(cx).alloc_window_id(),
-    };
-    // No record: a window the person asked for with none open, so its columns are as they last
-    // left them, not `Panes::default()` (which the saved-layout path and the tests start from).
-    let record = record.unwrap_or_else(|| WindowRecord {
-        id,
-        layout: Layout::remembered(&app(cx).last_panes),
-        ..Default::default()
-    });
-    let displays: Vec<Bounds<Pixels>> = cx.displays().iter().map(|d| d.bounds()).collect();
-    let saved = record.bounds.as_deref().and_then(window_bounds::decode).filter(|saved| {
-        // A monitor may be gone since: never restore a window nobody can see.
-        displays.iter().any(|d| d.intersects(&saved.get_bounds()))
-    });
-    let bounds = match (saved, source) {
-        (Some(saved), _) => saved,
-        (None, Some(source)) => WindowBounds::Windowed(window_bounds::cascade(source, &displays)),
-        (None, None) => {
-            WindowBounds::Windowed(Bounds::centered(None, size(px(DEFAULT_SIZE.0), px(DEFAULT_SIZE.1)), cx))
-        }
-    };
-    let options = WindowOptions {
-        window_bounds: Some(bounds),
-        titlebar: Some(TitlebarOptions {
-            title: Some("Wormhole".into()),
-            appears_transparent: true,
-            traffic_light_position: Some(chrome::traffic_light_position(style::TITLE_ROW_H)),
-        }),
-        window_background: WindowBackgroundAppearance::Transparent,
-        window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),
-        // The title rows drag the window themselves (`chrome::TitleDrag`).
-        app_owns_titlebar_drag: true,
-        ..Default::default()
-    };
-    let owner = profile.clone();
-    match crate::background::open_window(options, cx, move |window, cx| {
-        cx.new(|cx| Workspace::new(record, owner, window, cx))
-    }) {
-        Ok((handle, workspace)) => {
-            // The system's appearance is every window's: any of them hears it change. GPUI also
-            // reports it once as the window opens. Deferred, as it arrives inside this window's
-            // update and may redraw the others.
-            let _ = handle.update(cx, |_, window, _| {
-                window.observe_window_appearance(|_, cx| cx.defer(sync_system_look)).detach();
-            });
-            let state = app_mut(cx);
-            state.windows.push(OpenWindow {
-                id,
-                handle,
-                workspace: workspace.downgrade(),
-                profile: profile.clone(),
-                hidden: false,
-            });
-            state.front = id;
-            crate::background::activate(cx);
-            let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
-        }
-        Err(err) => tracing::error!("opening a window failed: {err:#}"),
-    }
-}
-
-/// ⌘N (or the menu): a window like the one in front.
-pub(super) fn new_window_from_front(cx: &mut App) {
-    if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
-        && app(cx).windows.is_empty()
-    {
-        open_workspace_window(None, None, cx);
-    }
-}
-
-fn window_closed(cx: &mut App, id: WindowId) {
-    let state = app_mut(cx);
-    state.windows.retain(|w| w.handle.window_id() != id);
-    // Sessions end with their window, so with none left there is nothing to show. (The close
-    // button asked before the last visible window went, while another profile still had windows.)
-    if state.windows.is_empty() && !state.quitting {
-        cx.quit();
-    }
-}
-
-/// Everything that is worth keeping, for every window (scrollback included).
-pub(super) fn save_all(cx: &mut App) {
-    app_mut(cx).quitting = true;
-    let windows = app(cx).windows.clone();
-    for window in &windows {
-        AppState::with_workspace(window, cx, |ws, win, cx| ws.persist(win, cx));
-    }
-    app(cx).checkpoint_stores();
-}
-
-/// What the socket delivered: a hook's message, or a control request to answer (`control`).
-fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
-    let message = match incoming {
-        ipc::Incoming::Message(message) => message,
-        ipc::Incoming::Control { request, reply } => {
-            // The connection waits on its thread for this; a receiver that gave up is no error.
-            let _ = reply.send(control::handle(request, cx));
-            return;
-        }
-    };
-    match message {
-        // A request never comes this way: the server answers it (above) instead of forwarding it.
-        ipc::Message::Control(_) => {}
-        ipc::Message::Activate => {
-            crate::background::activate(cx);
-            match AppState::front_window(cx) {
-                Some(window) => {
-                    let _ = window
-                        .handle
-                        .update(cx, |_, window, cx| crate::background::activate_window(window, cx));
-                }
-                None => open_workspace_window(None, None, cx),
-            }
-        }
-        ipc::Message::Usage { usage } => {
-            app_mut(cx).record_usage(usage);
-            // Every window's Usage tab shows it.
-            cx.refresh_windows();
-        }
-        // The terminal's own: its model and context window, for its title row.
-        ipc::Message::Gauge { tab, gauge } => {
-            let Some(owner) = AppState::find_window(cx, |ws, _| ws.owns_terminal(&tab)) else { return };
-            AppState::with_workspace(&owner, cx, |ws, _, cx| ws.handle_gauge(&tab, gauge, cx));
-        }
-        ipc::Message::Hook { tab, agent, event, message } => {
-            let Some(owner) = AppState::find_window(cx, |ws, _| ws.owns_terminal(&tab)) else { return };
-            AppState::with_workspace(&owner, cx, |ws, window, cx| {
-                ws.handle_hook(&tab, agent, &event, message, window, cx)
-            });
-        }
-    }
-}
-
-/// A notification about the terminal `tab` (its id) was clicked (this runs from the platform's
-/// callback, outside any window's update): bring its window and the terminal forward.
-pub(super) fn open_tab(tab: i64, cx: &mut App) {
-    let Some(owner) = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some()) else { return };
-    AppState::with_workspace(&owner, cx, |ws, window, cx| {
-        crate::background::activate_window(window, cx);
-        ws.reveal_terminal(tab, window, cx);
-    });
-}
-
-fn handle_menu_command(command: MenuCommand, cx: &mut App) {
-    tracing::debug!(?command, "menu command");
-    menu_bar::run_command(command, cx);
-}
-
-/// Once per tick, whatever the number of windows.
-fn tick(cx: &mut App) {
-    // `kill` (SIGTERM): quit as ⌘Q does, without its question, so nothing unsaved is lost.
-    if wormhole_core::platform::quit_signal::take() {
-        tracing::info!("asked to quit (SIGTERM)");
-        cx.quit();
-        return;
-    }
-    app_mut(cx).ticks += 1;
-    let ticks = app(cx).ticks;
-    let mut moved = SettingsStore::poll(cx);
-    if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
-        let system = cx.global::<SettingsStore>().system();
-        moved |= cx.global_mut::<ParkedSettings>().follow(system);
-    }
-    if moved {
-        cx.refresh_windows();
-    }
-    apply_theme(cx);
-    notifications::tick(ticks, cx);
-    menu_bar::sync(cx);
-    app_menu::sync(cx);
-    updates::schedule_check(ticks, cx);
-    update_restart::tick(cx);
-    if ticks.is_multiple_of(5) {
-        project::prune_projects(cx);
-        if crate::fonts::poll_custom(cx) {
-            cx.refresh_windows();
-        }
-    }
-}
-
-/// Push the resolved theme to GPUI Kit (its theme is global, the settings and
-/// Studio windows use it too), and the theme's appearance to every window's material.
-pub(super) fn apply_theme(cx: &mut App) {
-    let store = cx.global::<SettingsStore>();
-    let revision = store.revision;
-    if app(cx).applied_theme == Some(revision) {
-        return;
-    }
-    let (tokens, fonts) = (store.tokens.clone(), store.fonts.clone());
-    crate::theme_bridge::apply(&tokens, &fonts, cx);
-    vibrancy::set_material_appearance(tokens.appearance);
-    app_mut(cx).applied_theme = Some(revision);
-    cx.refresh_windows();
-}
-
-/// Hand the settings store what the system says now about how windows look (or what devctl
-/// says in its place): the appearance Match system follows, Reduce Transparency and Increase
-/// Contrast; and set GPUI's Reduce Motion flag, which its animations hold still under.
-pub(super) fn sync_system_look(cx: &mut App) {
-    let known = cx.global::<SettingsStore>().system();
-    let stand_in = app(cx).look_override;
-    let look = SystemLook {
-        appearance: stand_in
-            .appearance
-            .or_else(crate::platform::look::system_appearance)
-            .unwrap_or(known.appearance),
-        reduce_transparency: stand_in
-            .reduce_transparency
-            .unwrap_or_else(crate::platform::look::reduce_transparency),
-        increase_contrast: stand_in
-            .increase_contrast
-            .unwrap_or_else(crate::platform::look::increase_contrast),
-    };
-    // GPUI Kit reads Reduce Motion once, at start, and stops following the system once the app
-    // has set the flag itself (devctl does); reading it here keeps both cases in step.
-    if let Some(still) = stand_in.reduce_motion.or_else(crate::platform::look::reduce_motion) {
-        cx.set_reduce_motion(still);
-    }
-    if SettingsStore::set_system(cx, look) {
-        apply_theme(cx);
-    }
-}
-
-#[cfg(feature = "devctl")]
-impl AppState {
-    /// devctl's `appearance`, `reduce-transparency`, `increase-contrast` and `reduce-motion`: say
-    /// this in place of the system (or follow it again), and apply it now.
-    pub(crate) fn override_look(cx: &mut App, change: impl FnOnce(&mut LookOverride)) -> SystemLook {
-        change(&mut app_mut(cx).look_override);
-        sync_system_look(cx);
-        cx.global::<SettingsStore>().system()
-    }
-}
-
-/// Agent hooks an earlier version installed under the app's old codename are replaced with
-/// today's, off the main thread: they keep working meanwhile (terminals still export the old
-/// variables), and an agent without any is left alone.
-fn upgrade_legacy_hooks(cx: &mut App) {
-    cx.background_spawn(async move {
-        let home = wormhole_core::agents::integrations::home();
-        for (agent, result) in wormhole_core::agents::integrations::upgrade_legacy(&home) {
-            match result {
-                Ok(()) => tracing::info!(?agent, "replaced the hooks an earlier version installed"),
-                Err(err) => {
-                    tracing::warn!(?agent, "couldn't replace the hooks an earlier version installed: {err}")
-                }
-            }
-        }
-    })
-    .detach();
 }

@@ -1,0 +1,134 @@
+//! Opening and closing the windows that show a [`Workspace`]: where a new one is placed, saving
+//! every window on the way out, and bringing a terminal's window forward.
+
+use gpui_kit::*;
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::storage::store::WindowRecord;
+use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+
+use crate::style;
+use crate::workspace::app::{AppState, OpenWindow, app, app_mut};
+use crate::workspace::app_tick::sync_system_look;
+use crate::workspace::{Layout, Workspace, chrome, window_bounds};
+
+const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
+
+/// Open a window showing `record` (a new, empty one without it), placed where
+/// it was saved, or stepped away from `source`, or centered.
+pub(crate) fn open_workspace_window(
+    record: Option<WindowRecord>,
+    source: Option<Bounds<Pixels>>,
+    cx: &mut App,
+) {
+    let profile = app(cx).active_profile().clone();
+    open_workspace_window_in(&profile, record, source, cx);
+}
+
+/// [`open_workspace_window`] for a window of `profile`.
+pub(crate) fn open_workspace_window_in(
+    profile: &ProfileId,
+    record: Option<WindowRecord>,
+    source: Option<Bounds<Pixels>>,
+    cx: &mut App,
+) {
+    let id = match &record {
+        Some(record) => record.id,
+        None => app_mut(cx).alloc_window_id(),
+    };
+    // No record: a window the person asked for with none open, so its columns are as they last
+    // left them, not `Panes::default()` (which the saved-layout path and the tests start from).
+    let record = record.unwrap_or_else(|| WindowRecord {
+        id,
+        layout: Layout::remembered(&app(cx).last_panes),
+        ..Default::default()
+    });
+    let displays: Vec<Bounds<Pixels>> = cx.displays().iter().map(|d| d.bounds()).collect();
+    let saved = record.bounds.as_deref().and_then(window_bounds::decode).filter(|saved| {
+        // A monitor may be gone since: never restore a window nobody can see.
+        displays.iter().any(|d| d.intersects(&saved.get_bounds()))
+    });
+    let bounds = match (saved, source) {
+        (Some(saved), _) => saved,
+        (None, Some(source)) => WindowBounds::Windowed(window_bounds::cascade(source, &displays)),
+        (None, None) => {
+            WindowBounds::Windowed(Bounds::centered(None, size(px(DEFAULT_SIZE.0), px(DEFAULT_SIZE.1)), cx))
+        }
+    };
+    let options = WindowOptions {
+        window_bounds: Some(bounds),
+        titlebar: Some(TitlebarOptions {
+            title: Some("Wormhole".into()),
+            appears_transparent: true,
+            traffic_light_position: Some(chrome::traffic_light_position(style::TITLE_ROW_H)),
+        }),
+        window_background: WindowBackgroundAppearance::Transparent,
+        window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),
+        // The title rows drag the window themselves (`chrome::TitleDrag`).
+        app_owns_titlebar_drag: true,
+        ..Default::default()
+    };
+    let owner = profile.clone();
+    match crate::background::open_window(options, cx, move |window, cx| {
+        cx.new(|cx| Workspace::new(record, owner, window, cx))
+    }) {
+        Ok((handle, workspace)) => {
+            // The system's appearance is every window's: any of them hears it change. GPUI also
+            // reports it once as the window opens. Deferred, as it arrives inside this window's
+            // update and may redraw the others.
+            let _ = handle.update(cx, |_, window, _| {
+                window.observe_window_appearance(|_, cx| cx.defer(sync_system_look)).detach();
+            });
+            let state = app_mut(cx);
+            state.windows.push(OpenWindow {
+                id,
+                handle,
+                workspace: workspace.downgrade(),
+                profile: profile.clone(),
+                hidden: false,
+            });
+            state.front = id;
+            crate::background::activate(cx);
+            let _ = handle.update(cx, |_, window, cx| crate::background::activate_window(window, cx));
+        }
+        Err(err) => tracing::error!("opening a window failed: {err:#}"),
+    }
+}
+
+/// ⌘N (or the menu): a window like the one in front.
+pub(super) fn new_window_from_front(cx: &mut App) {
+    if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
+        && app(cx).windows.is_empty()
+    {
+        open_workspace_window(None, None, cx);
+    }
+}
+
+pub(super) fn window_closed(cx: &mut App, id: WindowId) {
+    let state = app_mut(cx);
+    state.windows.retain(|w| w.handle.window_id() != id);
+    // Sessions end with their window, so with none left there is nothing to show. (The close
+    // button asked before the last visible window went, while another profile still had windows.)
+    if state.windows.is_empty() && !state.quitting {
+        cx.quit();
+    }
+}
+
+/// Everything that is worth keeping, for every window (scrollback included).
+pub(super) fn save_all(cx: &mut App) {
+    app_mut(cx).quitting = true;
+    let windows = app(cx).windows.clone();
+    for window in &windows {
+        AppState::with_workspace(window, cx, |ws, win, cx| ws.persist(win, cx));
+    }
+    app(cx).checkpoint_stores();
+}
+
+/// A notification about the terminal `tab` (its id) was clicked (this runs from the platform's
+/// callback, outside any window's update): bring its window and the terminal forward.
+pub(super) fn open_tab(tab: i64, cx: &mut App) {
+    let Some(owner) = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some()) else { return };
+    AppState::with_workspace(&owner, cx, |ws, window, cx| {
+        crate::background::activate_window(window, cx);
+        ws.reveal_terminal(tab, window, cx);
+    });
+}

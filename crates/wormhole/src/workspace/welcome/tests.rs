@@ -357,7 +357,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         cx.set_global(crate::workspace::app::AppState::for_test(100));
         crate::workspace::app_handlers::init(cx);
         app_mut(cx).first_welcome = Some(Plan { handover: Handover::Portal, first_run: true });
-        crate::workspace::app::open_workspace_window(None, None, cx);
+        crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
         app_mut(cx).first_welcome = None;
     });
     cx.run_until_parked();
@@ -475,7 +475,7 @@ fn the_example_band_goes_with_its_window(cx: &mut TestAppContext) {
         return;
     }
     let window = start(cx, 1);
-    cx.update(|cx| crate::workspace::app::open_workspace_window(None, None, cx));
+    cx.update(|cx| crate::workspace::window_lifecycle::open_workspace_window(None, None, cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, window, cx| ws.replay_welcome(Handover::Cursor, window, cx));
     let (tab, token) = welcome_terminal(cx);
@@ -496,7 +496,7 @@ fn the_example_band_goes_in_the_sidebar_of_the_welcomes_own_window(cx: &mut Test
         return;
     }
     let first = start(cx, 1);
-    cx.update(|cx| crate::workspace::app::open_workspace_window(None, None, cx));
+    cx.update(|cx| crate::workspace::window_lifecycle::open_workspace_window(None, None, cx));
     cx.run_until_parked();
     let second =
         cx.update(|cx| app(cx).windows.iter().find(|w| w.id != first.id).cloned()).expect("a second window");

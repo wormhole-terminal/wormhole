@@ -11,8 +11,9 @@ use wormhole_core::view::sidebar::WindowSidebar;
 use crate::settings::settings;
 use crate::terminal_view::Status;
 use crate::workspace::app::AppState;
-use crate::workspace::app::{app, app_mut, open_workspace_window_in};
+use crate::workspace::app::{app, app_mut};
 use crate::workspace::session::{self, Session};
+use crate::workspace::window_lifecycle::open_workspace_window_in;
 use crate::workspace::{Layout, Workspace, dialog, notifications, window_bounds};
 
 impl Layout {
@@ -335,7 +336,7 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
     // Before the first save: from here on no save records a host for any terminal, the ones on the
     // way out included, and nothing starts a new one (`quitting`).
     app_mut(cx).ending_hosts = true;
-    crate::workspace::app::save_all(cx);
+    crate::workspace::window_lifecycle::save_all(cx);
     let hosts_dir = wormhole_core::ipc::hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
     let ending = cx
         .background_executor()

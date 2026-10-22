@@ -36,7 +36,9 @@ mod actions;
 pub(crate) mod ambient;
 mod app;
 mod app_handlers;
+mod app_launch;
 mod app_menu;
+mod app_tick;
 mod aux_window;
 mod breadcrumb;
 mod chrome;
@@ -128,6 +130,7 @@ mod view_tests;
 mod welcome;
 mod window_actions;
 mod window_bounds;
+mod window_lifecycle;
 mod windows;
 mod worktree;
 
@@ -359,7 +362,7 @@ impl Workspace {
             if window.is_window_active() {
                 this.became_front(cx);
                 // macOS isn't relied on to say when Reduce Motion changes.
-                cx.defer(self::app::sync_system_look);
+                cx.defer(self::app_tick::sync_system_look);
             } else {
                 this.hints_blur(cx);
                 // A popover that is up has the key itself, which is why this window lost it.

@@ -7,10 +7,11 @@ use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
 use crate::terminal_view::Status;
-use crate::workspace::app::{app_mut, open_workspace_window_in};
+use crate::workspace::app::app_mut;
 use crate::workspace::dialog;
 use crate::workspace::session::Session;
 use crate::workspace::session::{close_group_detail, close_group_title};
+use crate::workspace::window_lifecycle::open_workspace_window_in;
 use crate::workspace::{Layout, Workspace};
 
 impl Workspace {

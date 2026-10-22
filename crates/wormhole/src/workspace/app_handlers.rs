@@ -25,10 +25,10 @@ use crate::workspace::actions::{
     ToggleCommandPalette, ToggleFullScreen, ToggleMinimap, ToggleStatusBar, ToggleTerminalTabs,
     ToggleThemeStudio, Zoom,
 };
-use crate::workspace::app::{self, AppState, app};
+use crate::workspace::app::{AppState, app};
 use crate::workspace::{
     about, ambient, app_menu, command_palette, focus, menu_bar, onboarding, settings_page, shortcut_sheet,
-    studio, updates,
+    studio, updates, window_lifecycle,
 };
 
 /// Bind the keys, let project keys go first, and handle the actions that aren't one window's.
@@ -42,7 +42,7 @@ pub(crate) fn init(cx: &mut App) {
     TerminalKeys::claim_first(claim_window_key, cx);
     // Global listeners run inside the update of the window the action came from, which is then
     // unavailable: whatever opens or acts on windows is deferred.
-    cx.on_action(|_: &NewWindow, cx| cx.defer(app::new_window_from_front));
+    cx.on_action(|_: &NewWindow, cx| cx.defer(window_lifecycle::new_window_from_front));
     cx.on_action(|_: &CheckForUpdates, cx| {
         cx.defer(|cx| {
             settings_page::open_settings(Some(settings_page::Section::Updates), cx);

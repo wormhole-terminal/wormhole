@@ -25,8 +25,9 @@ use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
 use crate::settings::settings;
-use crate::workspace::app::{AppState, OpenWindow, app, open_tab};
+use crate::workspace::app::{AppState, OpenWindow, app};
 use crate::workspace::overlay::{OverlayKind, OverlayView};
+use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::{Workspace, settings_page};
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 

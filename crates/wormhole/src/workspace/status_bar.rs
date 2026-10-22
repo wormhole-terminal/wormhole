@@ -24,7 +24,8 @@ use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
 use crate::terminal_view::Status;
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, open_tab};
+use crate::workspace::app::app;
+use crate::workspace::window_lifecycle::open_tab;
 
 /// One terminal (a sidebar row) as the bar counts it.
 #[derive(Clone)]

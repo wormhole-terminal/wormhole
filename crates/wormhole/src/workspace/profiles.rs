@@ -179,7 +179,7 @@ impl AppState {
         })
         .is_none()
         {
-            crate::workspace::app::open_workspace_window_in(&target, None, None, cx);
+            crate::workspace::window_lifecycle::open_workspace_window_in(&target, None, None, cx);
         }
     }
 
@@ -203,7 +203,7 @@ impl AppState {
         // one (nothing to type in, and closing the odd window would then quit).
         let shown = app(cx).active_profile().clone();
         if app(cx).windows_of(&shown).next().is_none() {
-            crate::workspace::app::open_workspace_window_in(&shown, None, None, cx);
+            crate::workspace::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
         }
         crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
@@ -374,8 +374,8 @@ impl AppState {
         state.applied_theme = None;
 
         Self::show_profile_windows(&from, target, cx);
-        crate::workspace::app::sync_system_look(cx);
-        crate::workspace::app::apply_theme(cx);
+        crate::workspace::app_tick::sync_system_look(cx);
+        crate::workspace::app_tick::apply_theme(cx);
         crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
@@ -404,10 +404,10 @@ impl AppState {
                 })
                 .unwrap_or_default();
             if saved.is_empty() {
-                crate::workspace::app::open_workspace_window_in(target, None, None, cx);
+                crate::workspace::window_lifecycle::open_workspace_window_in(target, None, None, cx);
             }
             for record in saved {
-                crate::workspace::app::open_workspace_window_in(target, Some(record), None, cx);
+                crate::workspace::window_lifecycle::open_workspace_window_in(target, Some(record), None, cx);
             }
             return;
         }

@@ -14,7 +14,8 @@ use wormhole_core::view::sidebar::command::ends_by_itself;
 use crate::terminal_view::Status;
 use crate::terminal_view::{Failure, ProgramNotice};
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, open_tab};
+use crate::workspace::app::app;
+use crate::workspace::window_lifecycle::open_tab;
 
 /// One terminal of one window, as read on this tick.
 #[derive(Clone, Debug)]

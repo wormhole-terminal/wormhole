@@ -35,7 +35,8 @@ use crate::platform::notifications::{
 };
 use crate::settings::{settings, settings_in};
 use crate::workspace::ambient::{self, TabFacts};
-use crate::workspace::app::{AppState, app, open_tab};
+use crate::workspace::app::{AppState, app};
+use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::{RightTab, Workspace};
 use watch::{Event, Watch};
 

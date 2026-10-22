@@ -16,7 +16,8 @@ use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
-use crate::workspace::app::{AppState, app, app_mut, open_tab};
+use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::{Workspace, actions, settings_page, updates};
 
 const RECENT_PROJECTS: usize = 8;
@@ -331,7 +332,7 @@ fn register_dock_actions(cx: &mut App) {
             if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
                 && app(cx).windows.is_empty()
             {
-                crate::workspace::app::open_workspace_window(None, None, cx);
+                crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
             }
         })
     });
