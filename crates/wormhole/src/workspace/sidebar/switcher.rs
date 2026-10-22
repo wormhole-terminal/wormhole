@@ -1,13 +1,13 @@
 //! The tab bar's group switcher and the popover it opens (RF-02 b): a search field ("Go to group or
 //! terminal…"), the groups drawn as the sidebar's folded cards (their tiles and count, the open one
-//! ringed, a pinned empty one saying "No terminals"), "In no group" with its count, New group and
+//! ringed, a pinned empty one saying "No terminals"), "Ungrouped" with its count, New group and
 //! "Show all groups in the sidebar", and the keys' hint. A click on a card goes to the group; typing
 //! lists the groups and terminals that match, and ↩ goes to the first.
 use gpui_kit::component::input::Input;
 use gpui_kit::component::popover::Popover;
 use wormhole_core::sidebar::Urgency;
 use wormhole_core::sidebar::spoken;
-use wormhole_core::sidebar::tabs::{Hit, IN_NO_GROUP, search};
+use wormhole_core::sidebar::tabs::{Hit, UNGROUPED, search};
 
 use super::super::settings_page::update_settings;
 use super::rows::{Frame, glyph_for};
@@ -74,7 +74,7 @@ struct Snapshot {
     open: bool,
     input: Option<Entity<InputState>>,
     cards: Vec<CardSnap>,
-    /// "In no group": its terminals' number, when there are some.
+    /// "Ungrouped": its terminals' number, when there are some.
     loose: Option<(usize, bool)>,
     /// The matches, while something is typed.
     hits: Option<Vec<HitSnap>>,
@@ -98,7 +98,7 @@ impl Workspace {
             .sets
             .get(current)
             .map(|set| (set.label.clone(), set.members.len()))
-            .unwrap_or_else(|| (IN_NO_GROUP.to_string(), 0));
+            .unwrap_or_else(|| (UNGROUPED.to_string(), 0));
         let trigger = style::group_switcher(
             "group-switcher",
             ui,
@@ -441,8 +441,8 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         let row = PopoverRow {
             note: Some(count.to_string().into()),
             current: *current,
-            spoken: spoken::switcher_card_label(IN_NO_GROUP, *count, 0, *current, 0, 0).into(),
-            ..PopoverRow::new(IN_NO_GROUP)
+            spoken: spoken::switcher_card_label(UNGROUPED, *count, 0, *current, 0, 0).into(),
+            ..PopoverRow::new(UNGROUPED)
         };
         content =
             content.child(popover_row("switch-loose", ui, row).on_click(go(Box::new(|ws, window, cx| {

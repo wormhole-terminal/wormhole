@@ -22,6 +22,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- In the tab bar (Settings → Show terminals in → Tabs), the terminals in no group are called
+  "Ungrouped" in the group switcher, and a group with a single terminal still shows its tab beside
+  the switcher. With one terminal and no groups there is still no bar.
 - A group's colour fills its card evenly now. Settings → Terminals & sidebar → Fade group colours
   brings back the fade, where the colour is strongest at the card's left edge and fades out across it.
 - A group's colour is stronger on its card (22 % of it, up from 12 %). Where the card's text would

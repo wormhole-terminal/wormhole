@@ -23,7 +23,7 @@ impl TerminalsIn {
 }
 
 /// What the terminals in no group are called as a set.
-pub const IN_NO_GROUP: &str = "In no group";
+pub const UNGROUPED: &str = "Ungrouped";
 
 /// One set of tabs.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,7 +36,7 @@ pub struct TabSet {
 }
 
 /// The tab sets of a listing: every group (an empty pinned one is somewhere to put a new
-/// terminal), then the terminals in no group as "In no group".
+/// terminal), then the terminals in no group as "Ungrouped".
 pub fn tab_sets(listing: &Listing) -> Vec<TabSet> {
     let mut sets: Vec<TabSet> = listing
         .bands
@@ -47,7 +47,7 @@ pub fn tab_sets(listing: &Listing) -> Vec<TabSet> {
     let loose: Vec<usize> =
         listing.order().iter().copied().filter(|&session| listing.band_of(session).is_none()).collect();
     if !loose.is_empty() {
-        sets.push(TabSet { band: None, label: IN_NO_GROUP.to_string(), members: loose });
+        sets.push(TabSet { band: None, label: UNGROUPED.to_string(), members: loose });
     }
     sets
 }
@@ -122,7 +122,7 @@ pub fn search(sets: &[TabSet], query: &str, name_of: impl Fn(usize) -> String) -
 #[cfg(test)]
 mod tests {
     use super::{
-        Hit, IN_NO_GROUP, TabSet, TerminalsIn, current_set, loudest_member, others_need_you, search,
+        Hit, TabSet, TerminalsIn, UNGROUPED, current_set, loudest_member, others_need_you, search,
         set_numbered, step_set, tab_sets,
     };
     use crate::sidebar::Urgency;
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn terminals_in_no_group_are_one_set() {
         let sets = tab_sets(&listing(3, &WindowSidebar::default()));
-        assert_eq!(shape(&sets), [(IN_NO_GROUP.to_string(), vec![0, 1, 2])]);
+        assert_eq!(shape(&sets), [(UNGROUPED.to_string(), vec![0, 1, 2])]);
         assert_eq!(current_set(&sets, 2), Some(0));
     }
 
@@ -165,7 +165,7 @@ mod tests {
             [
                 ("Group 1".to_string(), vec![0, 2]),
                 ("Group 2".to_string(), vec![]),
-                (IN_NO_GROUP.to_string(), vec![1])
+                (UNGROUPED.to_string(), vec![1])
             ]
         );
         assert!(sets[1].band.is_some(), "the pinned empty group has a band");
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn stepping_wraps_and_passes_over_empty_sets() {
-        let sets = sets_of(&[("A", &[0]), ("Docs", &[]), ("B", &[1, 2]), (IN_NO_GROUP, &[3])]);
+        let sets = sets_of(&[("A", &[0]), ("Docs", &[]), ("B", &[1, 2]), (UNGROUPED, &[3])]);
         assert_eq!(step_set(&sets, 0, true), Some(2), "Docs is empty");
         assert_eq!(step_set(&sets, 2, true), Some(3));
         assert_eq!(step_set(&sets, 3, true), Some(0), "wraps");
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn search_finds_sets_then_terminals_and_nothing_for_a_blank_query() {
-        let sets = sets_of(&[("Release", &[0, 1]), ("Review", &[2]), (IN_NO_GROUP, &[3])]);
+        let sets = sets_of(&[("Release", &[0, 1]), ("Review", &[2]), (UNGROUPED, &[3])]);
         let names = |ix: usize| ["cargo test", "release notes", "zsh", "Review queue"][ix].to_string();
         assert_eq!(search(&sets, "  ", names), []);
         assert_eq!(

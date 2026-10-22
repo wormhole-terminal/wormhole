@@ -1,7 +1,7 @@
 //! The terminals as tabs, instead of the sidebar (Settings → Show terminals in → Tabs), as RF-02 draws
 //! it: one 38 pt row with the traffic lights, the profile chip (while there are two profiles or
 //! more), the group switcher (`switcher`), that group's terminals as tabs and the +. The sets of tabs
-//! are the list's groups and the terminals in no group (core `sidebar::tabs`); ⌃⌥[ ⌃⌥] and ⌃⌥1–9
+//! are the list's groups and the ungrouped terminals (core `sidebar::tabs`); ⌃⌥[ ⌃⌥] and ⌃⌥1–9
 //! move between them in either layout.
 use std::collections::HashMap;
 
@@ -105,8 +105,9 @@ impl Workspace {
     }
 
     /// The tab bar, as macOS Terminal's: none while there is only one terminal and no group to
-    /// switch to. The group switcher shows once there is more than one set (a group beside another,
-    /// or beside terminals in no group), the tabs once the current set has more than one terminal.
+    /// switch to. The bar shows once there is more than one set (a group beside another, or beside
+    /// the ungrouped terminals), where the group switcher is, or the current set has more than one
+    /// terminal. Wherever it shows, the current set's terminals are its tabs, even when it is one.
     pub(in crate::workspace) fn render_tab_bar(
         &mut self,
         window: &mut Window,
@@ -117,8 +118,8 @@ impl Workspace {
         let view = self.set_view(&listing, cx);
         let current = view.current.unwrap_or(0);
         let switch = view.sets.len() > 1;
-        let tabbed = view.sets.get(current).is_some_and(|set| set.members.len() > 1);
-        if !switch && !tabbed {
+        let several = view.sets.get(current).is_some_and(|set| set.members.len() > 1);
+        if !switch && !several {
             return None;
         }
         let numbers: HashMap<usize, usize> = listing
@@ -143,7 +144,7 @@ impl Workspace {
             self.sidebar.tabs.scroll.scroll_to_item(at + usize::from(glass));
             self.sidebar.tabs.scrolled_to = active_id;
         }
-        if let Some(set) = view.sets.get(current).filter(|_| tabbed) {
+        if let Some(set) = view.sets.get(current) {
             // Each tab is a box of its own, so nothing is drawn between them.
             for (at, &ix) in set.members.iter().enumerate() {
                 tabs.push(self.tab(&frame, &infos, &numbers, (at, set.members.len()), ix, glass, window, cx));
