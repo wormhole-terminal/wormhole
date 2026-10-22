@@ -17,9 +17,9 @@
     "os_edge_sanctioned": {
       "wormhole": {
         "src/perf/allocations.rs": {
-          "tokens": [
-            "allow(unsafe_code)"
-          ],
+          "tokens": {
+            "allow(unsafe_code)": 1
+          },
           "why": "a counting global allocator for test and devctl builds: GlobalAlloc is an unsafe trait, not OS code"
         }
       }

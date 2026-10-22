@@ -16,8 +16,9 @@ crates/<crate>/src, tests included:
 
   file-size         files over 1,000 lines fail; files over 600 are only counted
   os-edge           OS conditions and OS crates (cfg(target_os, objc2, libc::, allow(unsafe_code), ...) outside
-                    the crate's OS-edge paths, except a token a file is sanctioned for (`os_edge_sanctioned`:
-                    code that matches a token without being OS code, each with its reason)
+                    the crate's OS-edge paths, except what a file is sanctioned for (`os_edge_sanctioned`:
+                    `allow(unsafe_code)` that isn't OS code, an exact count and a reason each; a higher
+                    count fails, a lower one or a gone file is stale)
   bucket-names      modules named text, utils, util, misc, helpers, helper, common
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
@@ -453,13 +454,43 @@ def rule_file_size(crate: Crate, cfg: dict, found: Findings) -> None:
             _add(found, src.rel, crate.name, "%s:1" % src.rel, src.lines)
 
 
-def sanctioned_tokens(cfg: dict, crate: str) -> Dict[str, Set[str]]:
-    """The `os_edge_sanctioned` entries of `crate`: file -> tokens, after checking each has a reason."""
-    out: Dict[str, Set[str]] = {}
+# The only token a file may be sanctioned for: `unsafe` has uses that aren't the OS's (a global
+# allocator); every other token (cfg(target_os, objc2, libc::, ...) is OS code by definition.
+SANCTIONABLE = {"allow(unsafe_code)"}
+
+
+def sanctioned_tokens(cfg: dict, crate: str) -> Dict[str, Dict[str, int]]:
+    """The `os_edge_sanctioned` entries of `crate`: file -> token -> exact count, after checking each
+    has a reason, names only a sanctionable token and gives a positive count."""
+    out: Dict[str, Dict[str, int]] = {}
     for rel, entry in cfg.get("os_edge_sanctioned", {}).get(crate, {}).items():
+        where = "os_edge_sanctioned: %s/%s" % (crate, rel)
         if not str(entry.get("why", "")).strip():
-            raise SystemExit("os_edge_sanctioned: %s/%s needs a `why`" % (crate, rel))
-        out[rel] = set(entry.get("tokens", []))
+            raise SystemExit("%s needs a `why`" % where)
+        tokens = entry.get("tokens", {})
+        if not isinstance(tokens, dict) or not tokens:
+            raise SystemExit("%s: `tokens` maps each token to its exact count" % where)
+        for token, n in tokens.items():
+            if token not in SANCTIONABLE:
+                raise SystemExit("%s: `%s` is OS code and can't be sanctioned (only %s)"
+                                 % (where, token, ", ".join(sorted(SANCTIONABLE))))
+            if not isinstance(n, int) or isinstance(n, bool) or n < 1:
+                raise SystemExit("%s: the count of `%s` must be a positive number" % (where, token))
+        out[rel] = dict(tokens)
+    return out
+
+
+def stale_sanctions(crate: Crate, cfg: dict) -> List[str]:
+    """Sanctions that allow more than the file has (or name a file that is gone): they would hide
+    the next one silently, so they must shrink with the code."""
+    out = []
+    for rel, tokens in sorted(sanctioned_tokens(cfg, crate.name).items()):
+        src = crate.files.get(rel)
+        hits = os_edge_hits(src) if src else {}
+        for token, n in sorted(tokens.items()):
+            now = len(hits.get(token, []))
+            if now < n:
+                out.append("%s/%s :: %s: %s" % (crate.name, rel, token, "gone" if now == 0 else "%d -> %d" % (n, now)))
     return out
 
 
@@ -470,7 +501,8 @@ def rule_os_edge(crate: Crate, cfg: dict, found: Findings) -> None:
         if under(rel, edge):
             continue
         for key, offsets in os_edge_hits(src).items():
-            if key in sanctioned.get(rel, ()):
+            # Exactly the sanctioned count is left out; one more and every site is reported.
+            if len(offsets) == sanctioned.get(rel, {}).get(key):
                 continue
             for off in offsets:
                 _add(found, "%s :: %s" % (src.rel, key), crate.name, src.at(off))
@@ -660,6 +692,7 @@ class Analysis:
         for crate in self.crates:
             for rule in RULES:
                 RULE_FUNCS[rule](crate, cfg, self.found[rule])
+        self.stale_sanctions = [line for crate in self.crates for line in stale_sanctions(crate, cfg)]
         warn, fail = cfg["size"]["warn"], cfg["size"]["fail"]
         self.over: Dict[str, Tuple[int, int]] = {}
         self.big: List[Tuple[int, str]] = []
@@ -709,10 +742,11 @@ class Verdict:
     def __init__(self) -> None:
         self.problems: List[str] = []  # lines for new or grown violations
         self.stale: List[Tuple[str, str, str]] = []  # (rule, key, what to do)
+        self.stale_sanctions: List[str] = []
 
     @property
     def ok(self) -> bool:
-        return not self.problems and not self.stale
+        return not self.problems and not self.stale and not self.stale_sanctions
 
 
 def describe(an: Analysis, rule: str, key: str, item: Item, have: int) -> str:
@@ -743,6 +777,7 @@ def compare(an: Analysis, allow: Dict[str, Dict[str, int]]) -> Verdict:
             now = found[key].count if key in found else 0
             if now < allowed[key]:
                 v.stale.append((rule, key, "gone" if now == 0 else "%d -> %d" % (allowed[key], now)))
+    v.stale_sanctions = list(an.stale_sanctions)
     return v
 
 
@@ -758,13 +793,17 @@ def cmd_check(args: argparse.Namespace) -> int:
               % os.path.relpath(args.config, args.root))
         for rule, key, what in v.stale:
             print("  %s: \"%s\": %s" % (rule, key, what))
+    if v.stale_sanctions:
+        print("stale os_edge_sanctioned counts in %s (lower them by hand):" % os.path.relpath(args.config, args.root))
+        for line in v.stale_sanctions:
+            print("  " + line)
     if v.ok:
         if not args.quiet:
             print("structure: ok (%d allowlisted entries across %d rules, %.1f s)" % (
                 sum(len(a) for a in allow.values()), len([r for r in RULES if allow[r]]), time.time() - started))
         return 0
-    print("structure: FAILED, %d new or grown violation(s), %d stale allowlist entr%s" % (
-        len(v.problems), len(v.stale), "y" if len(v.stale) == 1 else "ies"))
+    print("structure: FAILED, %d new or grown violation(s), %d stale allowlist entr%s, %d stale sanction(s)" % (
+        len(v.problems), len(v.stale), "y" if len(v.stale) == 1 else "ies", len(v.stale_sanctions)))
     return 1
 
 
@@ -1026,19 +1065,35 @@ def selftest() -> int:
         expect("os-edge outside only", sorted({k.split(" :: ")[0] for k in an.found["os-edge"]}),
                ["crates/app/src/os.rs", "crates/lib/src/lib.rs"])
         expect("os-edge reports a line", an.found["os-edge"]["crates/app/src/os.rs :: objc2"].locs, ["crates/app/src/os.rs:14"])
-        # a sanctioned token is left out for that file only; one without a reason is refused.
+        # a sanction leaves out exactly its count of `allow(unsafe_code)`, for that file only; more is
+        # reported in full, fewer (or a gone file) is stale, and other tokens or no reason are refused.
+        unsafe2 = "#[allow(unsafe_code)]\nfn h() {}\n#[allow(unsafe_code)]\nfn k() {}\n"
         cfg = _fixture_cfg()
-        cfg["os_edge_sanctioned"] = {"app": {"src/os.rs": {"tokens": ["allow(unsafe_code)"], "why": "an allocator"}}}
+        cfg["os_edge_sanctioned"] = {"app": {"src/os.rs": {"tokens": {"allow(unsafe_code)": 1}, "why": "an allocator"}}}
         an = make({"crates/app/src/main.rs": "mod os;\nmod other;\n", "crates/app/src/os.rs": os_file,
                    "crates/app/src/other.rs": "#[allow(unsafe_code)]\nfn h() {}\n"}, cfg)
         expect("os-edge sanctioned", sorted(k for k in an.found["os-edge"] if "unsafe" in k),
                ["crates/app/src/other.rs :: allow(unsafe_code)"])
-        cfg["os_edge_sanctioned"]["app"]["src/os.rs"]["why"] = " "
-        try:
-            make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": os_file}, cfg)
-            expect("os-edge sanctioned without a reason", "accepted", "refused")
-        except SystemExit:
-            pass
+        expect("os-edge sanctioned is not stale", an.stale_sanctions, [])
+        an = make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": unsafe2}, cfg)
+        expect("os-edge sanctioned and one more", an.found["os-edge"]["crates/app/src/os.rs :: allow(unsafe_code)"].count, 2)
+        an = make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": "fn h() {}\n"}, cfg)
+        expect("os-edge sanctioned and gone", an.stale_sanctions, ["app/src/os.rs :: allow(unsafe_code): gone"])
+        an = make({"crates/app/src/main.rs": "mod other;\n", "crates/app/src/other.rs": ""}, cfg)
+        expect("os-edge sanctioned file gone", an.stale_sanctions, ["app/src/os.rs :: allow(unsafe_code): gone"])
+        cfg3 = _fixture_cfg()
+        cfg3["os_edge_sanctioned"] = {"app": {"src/os.rs": {"tokens": {"allow(unsafe_code)": 2}, "why": "x"}}}
+        an = make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": "#[allow(unsafe_code)]\nfn h() {}\n"}, cfg3)
+        expect("os-edge sanctioned shrank", an.stale_sanctions, ["app/src/os.rs :: allow(unsafe_code): 2 -> 1"])
+        for bad, why in [({"objc2": 1}, "x"), ({"allow(unsafe_code)": 0}, "x"), (["allow(unsafe_code)"], "x"),
+                         ({"allow(unsafe_code)": 1}, " ")]:
+            cfg2 = _fixture_cfg()
+            cfg2["os_edge_sanctioned"] = {"app": {"src/os.rs": {"tokens": bad, "why": why}}}
+            try:
+                make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": os_file}, cfg2)
+                expect("os-edge sanction refused: %r %r" % (bad, why), "accepted", "refused")
+            except SystemExit:
+                pass
 
         # bucket names: files, mod.rs folders, inline modules.
         an = make({"crates/app/src/main.rs": "mod text;\nmod utils;\nmod ok;\nmod inl { mod helpers {} }\n",
