@@ -7,6 +7,7 @@
 //! batches, only when it changed. Every window saves only its own slice, so two
 //! windows never overwrite each other's sessions; `save_session` narrows that to one session.
 
+mod copies;
 mod records;
 mod schema;
 mod scrollback;
@@ -131,9 +132,11 @@ impl Store {
     /// in place, after a copy of it is kept as `wormhole.db.v<version>-<unix time>`; one too old
     /// to upgrade is moved aside as `wormhole.db.old-<unix time>`. `recovered_from` tells the
     /// caller, who should say so. Any other failure (locked, unreadable, newer schema, a failed
-    /// upgrade) is an error and leaves the file alone.
+    /// upgrade) is an error and leaves the file alone. Copies past keeping are deleted first (see
+    /// `copies`): each one holds the terminals' saved text as it was then.
     pub fn open_at(dir: &Path) -> Result<Self> {
         std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+        copies::prune(dir, SystemTime::now());
         let path = dir.join(DB_FILE);
         match Self::open_file(&path) {
             Err(err) if is_damaged(&err) || is_stale(&err) => {

@@ -47,6 +47,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - **Low** · no advisory · affects 0.1.0–1.2.0: clearing a terminal with ⌘K left the saved copy of its
   text on disk for up to a minute, so a secret you cleared right away could still come back after a
   restart or be read from the file. Clearing now erases the saved copy at once.
+- **Medium** · no advisory · affects 0.1.0–1.2.0: copies of the database that Wormhole keeps before an
+  upgrade or when it sets a damaged one aside were never deleted, and each held every terminal's
+  saved text as it was then. Wormhole now keeps the newest copy from before an upgrade for two weeks,
+  in case you need to go back, and deletes the others, and any copy older than two weeks, at launch.
 
 ## [1.2.0] - 2026-10-22
 
