@@ -11,5 +11,7 @@ mod process;
 mod spawn;
 
 pub use process::shell_name;
+#[cfg(test)]
+pub(crate) use process::welcome_command;
 pub use spawn::{SpawnOptions, attach_hosted, spawn, spawn_hosted};
 pub use wormhole_term::*;

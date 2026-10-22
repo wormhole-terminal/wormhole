@@ -8,7 +8,7 @@
 
 use std::io::{self, Write as _};
 use std::os::unix::process::CommandExt as _;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -56,14 +56,6 @@ pub fn parse_args(args: &[String]) -> Result<Args, String> {
         }
     }
     Ok(parsed)
-}
-
-/// What to run in a terminal for the welcome: the app's own binary as `welcome -- <program> <args…>`,
-/// which becomes `program` when the welcome ends.
-pub fn command(exe: &Path, program: String, args: Vec<String>) -> (String, Vec<String>) {
-    let mut words = vec!["welcome".to_string(), "--".to_string(), program];
-    words.extend(args);
-    (exe.to_string_lossy().into_owned(), words)
 }
 
 /// How to reach the app that started this terminal for the welcome.
@@ -279,7 +271,11 @@ mod tests {
 
     #[test]
     fn the_terminal_runs_the_welcome_with_the_shell_after_two_dashes() {
-        let (program, args) = command(Path::new("/Apps/Wormhole"), "/bin/zsh".to_string(), words(&["-l"]));
+        let (program, args) = crate::terminal::welcome_command(
+            std::path::Path::new("/Apps/Wormhole"),
+            "/bin/zsh".to_string(),
+            words(&["-l"]),
+        );
         assert_eq!(program, "/Apps/Wormhole");
         assert_eq!(args, words(&["welcome", "--", "/bin/zsh", "-l"]));
         // And the program reads exactly that back.

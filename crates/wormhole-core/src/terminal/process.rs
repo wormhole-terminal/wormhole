@@ -45,10 +45,18 @@ pub(super) fn shell(options: &SpawnOptions) -> Shell {
     // The first run's welcome starts first and becomes whatever would have run (WORMHOLE_SHELL's
     // `/bin/cat` in a test instance included).
     let (program, args) = match std::env::current_exe() {
-        Ok(exe) if options.welcome => crate::welcome::command(&exe, program, args),
+        Ok(exe) if options.welcome => welcome_command(&exe, program, args),
         _ => (program, args),
     };
     launch(program, args)
+}
+
+/// What to run in a terminal for the welcome: the app's own binary as `welcome -- <program> <args…>`,
+/// which becomes `program` when the welcome ends (`welcome::parse_args` reads it back).
+pub(crate) fn welcome_command(exe: &Path, program: String, args: Vec<String>) -> (String, Vec<String>) {
+    let mut words = vec!["welcome".to_string(), "--".to_string(), program];
+    words.extend(args);
+    (exe.to_string_lossy().into_owned(), words)
 }
 
 /// The program `options` ask for, the login shell without one.

@@ -52,7 +52,7 @@ pub use art::{
 };
 pub use gate::{Gate, Registry, TOKEN_VAR, new_token};
 pub use render::TAGLINE;
-pub use run::{Args, HELP, command, parse_args, run};
+pub use run::{Args, HELP, parse_args, run};
 
 #[cfg(test)]
 mod driving;
