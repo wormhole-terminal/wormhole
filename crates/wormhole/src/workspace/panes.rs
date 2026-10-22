@@ -74,7 +74,9 @@ impl Workspace {
             TerminalEvent::SummaryChanged => {}
             // Its row names the host it has now (none, after a fallback or a lost host).
             TerminalEvent::HostChanged => self.dirty = true,
-            // Not left for the next minute's save: what was cleared may have been a secret.
+            // Not left for the next minute's save: what was cleared may have been a secret. Only
+            // the copy on disk: a hosted terminal's session host keeps its own history and paints it
+            // again when the app attaches (clearing it there is the host's protocol to change).
             TerminalEvent::Cleared => {
                 if let Some(store) = app(cx).store_of(&self.profile)
                     && let Err(err) = store.clear_scrollback(id)

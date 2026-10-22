@@ -46,9 +46,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   printed. Deleted text is now overwritten and the journal emptied, and what earlier versions left
   behind is erased the first time this version opens the database. Backups made before the update
   (Time Machine, for example) still hold that text.
-- **Low** · no advisory · affects 0.1.0–1.2.0: clearing a terminal with ⌘K left the saved copy of its
-  text on disk for up to a minute, so a secret you cleared right away could still come back after a
-  restart or be read from the file. Clearing now erases the saved copy at once.
+- **Low** · no advisory · affects 0.1.0–1.2.0: clearing a terminal with ⌘K left the copy of its text
+  that Wormhole saves on disk for up to a minute, so a secret you cleared right away could still be
+  read from the file or come back after a restart. Clearing now erases that saved copy at once.
 - **Medium** · no advisory · affects 0.1.0–1.2.0: copies of the database that Wormhole keeps before an
   upgrade or when it sets a damaged one aside were never deleted, and each held every terminal's
   saved text as it was then. Wormhole now keeps the newest copy from before an upgrade for two weeks,
