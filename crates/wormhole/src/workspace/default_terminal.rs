@@ -7,6 +7,7 @@ use gpui_kit::*;
 use wormhole_core::default_terminal::{Opened, SCRIPT_TYPES, file_path};
 
 use super::app::AppState;
+use crate::platform::default_app;
 
 /// Hear what macOS asks to open, from the launch on: the requests wait in the channel until
 /// [`serve`] takes them, as a launch to open a file sends it before the windows are there.
@@ -64,17 +65,17 @@ fn open(opened: &Opened, cx: &mut App) {
 /// Whether Wormhole runs scripts and programs when they are opened. `None` when this build can't
 /// be the default: it isn't running from `Wormhole.app` (a `cargo run` build).
 pub(crate) fn is_default() -> Option<bool> {
-    let bundle = system::own_bundle()?;
+    let bundle = default_app::own_bundle()?;
     Some(SCRIPT_TYPES.iter().all(|kind| {
-        system::default_shell_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(&bundle))
+        default_app::runner_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(&bundle))
     }))
 }
 
 /// Make Wormhole the app that runs scripts and programs when they are opened.
 pub(crate) fn make_default() -> anyhow::Result<()> {
-    let bundle = system::own_bundle().ok_or_else(|| anyhow::anyhow!("not running from Wormhole.app"))?;
+    let bundle = default_app::own_bundle().ok_or_else(|| anyhow::anyhow!("not running from Wormhole.app"))?;
     for kind in SCRIPT_TYPES {
-        system::set_default_shell_for(kind, &bundle)?;
+        default_app::set_runner_for(kind, &bundle)?;
     }
     tracing::info!(bundle, "Wormhole is now the default terminal");
     Ok(())
@@ -88,78 +89,12 @@ const LEGACY_BUNDLE_ID: &str = "dev.hyperficial.andromeda";
 /// and a double-clicked `.command` would no longer open here.
 pub(crate) fn upgrade_legacy_default() {
     let held = SCRIPT_TYPES.iter().any(|kind| {
-        system::default_shell_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(LEGACY_BUNDLE_ID))
+        default_app::runner_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(LEGACY_BUNDLE_ID))
     });
-    if !held || system::own_bundle().is_none() {
+    if !held || default_app::own_bundle().is_none() {
         return;
     }
     if let Err(err) = make_default() {
         tracing::warn!("couldn't take over the default terminal from the earlier version: {err:#}");
-    }
-}
-
-#[cfg(target_os = "macos")]
-mod system {
-    use std::ptr::NonNull;
-
-    use objc2_core_foundation::{CFRetained, CFString};
-    use objc2_foundation::NSBundle;
-
-    /// `kLSRolesShell`: the app that runs a file, as Terminal runs a `.command`.
-    const ROLES_SHELL: u32 = 0x0000_0008;
-
-    pub(super) fn own_bundle() -> Option<String> {
-        NSBundle::mainBundle().bundleIdentifier().map(|id| id.to_string())
-    }
-
-    /// The bundle identifier of the app that runs files of `kind`.
-    #[allow(unsafe_code)] // Launch Services' C call; see the SAFETY note.
-    pub(super) fn default_shell_for(kind: &str) -> Option<String> {
-        #[link(name = "CoreServices", kind = "framework")]
-        unsafe extern "C" {
-            fn LSCopyDefaultRoleHandlerForContentType(
-                content_type: &CFString,
-                role: u32,
-            ) -> Option<NonNull<CFString>>;
-        }
-        let kind = CFString::from_str(kind);
-        // SAFETY: the content type is a valid CFString for the call; the handler it returns
-        // follows the Copy rule (owned by us), so `from_raw` takes that one reference over.
-        let handler =
-            unsafe { CFRetained::from_raw(LSCopyDefaultRoleHandlerForContentType(&kind, ROLES_SHELL)?) };
-        Some(handler.to_string())
-    }
-
-    /// Make the app with `bundle` the one that runs files of `kind`.
-    #[allow(unsafe_code)] // Launch Services' C call; see the SAFETY note.
-    pub(super) fn set_default_shell_for(kind: &str, bundle: &str) -> anyhow::Result<()> {
-        #[link(name = "CoreServices", kind = "framework")]
-        unsafe extern "C" {
-            fn LSSetDefaultRoleHandlerForContentType(
-                content_type: &CFString,
-                role: u32,
-                handler: &CFString,
-            ) -> i32;
-        }
-        let (kind_cf, bundle_cf) = (CFString::from_str(kind), CFString::from_str(bundle));
-        // SAFETY: both are valid CFStrings for the call, which only reads them.
-        let status = unsafe { LSSetDefaultRoleHandlerForContentType(&kind_cf, ROLES_SHELL, &bundle_cf) };
-        anyhow::ensure!(status == 0, "Launch Services refused {kind} (OSStatus {status})");
-        Ok(())
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-mod system {
-    pub(super) fn own_bundle() -> Option<String> {
-        None
-    }
-
-    pub(super) fn default_shell_for(_: &str) -> Option<String> {
-        None
-    }
-
-    pub(super) fn set_default_shell_for(_: &str, _: &str) -> anyhow::Result<()> {
-        anyhow::bail!("only macOS has a default terminal")
     }
 }

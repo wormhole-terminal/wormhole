@@ -30,6 +30,7 @@ pub mod a11y;
 mod anchor;
 pub mod auth;
 pub mod background_mode;
+pub mod default_app;
 pub mod dock;
 // Built on macOS too, though only used elsewhere, so it can't drift from `macos/` (`parity`).
 #[cfg_attr(target_os = "macos", allow(dead_code))]

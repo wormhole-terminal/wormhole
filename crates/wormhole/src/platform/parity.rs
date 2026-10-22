@@ -49,6 +49,9 @@ pub(super) fn signatures_match() {
     same! {
         a11y::keyboard_navigation: fn() -> bool;
         a11y::post: fn(&str, bool);
+        default_app::own_bundle: fn() -> Option<String>;
+        default_app::runner_for: fn(&str) -> Option<String>;
+        default_app::set_runner_for: fn(&str, &str) -> anyhow::Result<()>;
         dock::set_badge: fn(Option<&str>);
         dock::bounce: fn(&mut App);
         dock::is_active: fn() -> bool;

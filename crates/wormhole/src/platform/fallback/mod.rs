@@ -6,6 +6,7 @@
 pub mod a11y;
 #[cfg(not(test))]
 pub mod auth;
+pub mod default_app;
 pub mod dock;
 pub mod font_face;
 pub mod fonts;
