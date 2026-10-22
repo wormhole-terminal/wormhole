@@ -100,6 +100,7 @@ pub(crate) mod overlay;
 mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
+mod panel;
 pub(crate) mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
@@ -177,7 +178,7 @@ pub struct Workspace {
     features: &'static [self::feature::FeatureDef],
     /// The entity of each feature that has state, in the table's order (`None` where the entry has
     /// none), made with the window whether the feature is on or off.
-    feature_states: Vec<Option<self::feature::FeatureState>>,
+    feature_states: Vec<Option<self::feature_host::FeatureState>>,
     /// A feature's text field has the keyboard (`FeatureEvent::Editing`): the panel's content is the
     /// focused area, as for a note being written.
     feature_editing: bool,

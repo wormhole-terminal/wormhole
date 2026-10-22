@@ -11,7 +11,15 @@ use crate::actions::gpui_action;
 use crate::settings::store_in;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, Root, TabDef};
+use crate::window::feature::{FeatureDef, FeatureEvent, Root, TabDef};
+
+/// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
+/// make one is [`Workspace::listen`] (the subscription field is private to this module), so the
+/// subscription is the window's and no feature can forget it or keep the entity without it.
+pub(in crate::window) struct FeatureState {
+    pub entity: AnyEntity,
+    _events: Subscription,
+}
 
 impl Workspace {
     /// What the table says this window does for `id`; `None` for a feature that hasn't moved out of
@@ -41,7 +49,7 @@ impl Workspace {
         let events = cx.subscribe_in(entity, window, |this, _, event: &FeatureEvent, window, cx| {
             this.on_feature_event(event, window, cx);
         });
-        FeatureState::new(entity.clone().into(), events)
+        FeatureState { entity: entity.clone().into(), _events: events }
     }
 
     /// What the window does when a feature says something. Runs after the feature's own update has

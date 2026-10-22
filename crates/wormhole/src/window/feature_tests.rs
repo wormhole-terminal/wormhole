@@ -168,10 +168,10 @@ fn isolate(name: &str) -> bool {
 }
 
 /// The side door (`TabDef::window_side`) is Changes' until 5d and nobody else's: a second user would
-/// make the window-shaped hook the contract's habit again. Its entry is `git/changes/entry.rs`; the
-/// only other file that names it is `notes/mod.rs`, where the window's panel body and `show_tab` still
-/// live (the frame, not a feature). `Context<Workspace>` in a feature's other
-/// code is the same debt and is the 5g checker's to ban when each feature has its own state.
+/// make the window-shaped hook the contract's habit again. It asserts on where the door is *set*
+/// (`window_side: Some`), so the frame code that only reads it (`panel.rs`) is no exemption to hide
+/// behind. `Context<Workspace>` in a feature's other code is the same debt and is the 5g checker's to
+/// ban when each feature has its own state.
 #[test]
 fn only_changes_uses_the_side_door() {
     fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
@@ -180,7 +180,7 @@ fn only_changes_uses_the_side_door() {
             if path.is_dir() {
                 walk(&path, found);
             } else if path.extension().is_some_and(|ext| ext == "rs")
-                && std::fs::read_to_string(&path).expect("reads a source file").contains("window_side")
+                && std::fs::read_to_string(&path).expect("reads a source file").contains("window_side: Some")
             {
                 found.push(path.to_string_lossy().into_owned());
             }
@@ -191,7 +191,7 @@ fn only_changes_uses_the_side_door() {
     found.sort();
     let names: Vec<&str> =
         found.iter().filter_map(|path| path.split("src/window/features/").nth(1)).collect();
-    assert_eq!(names, ["git/changes/entry.rs", "notes/mod.rs"]);
+    assert_eq!(names, ["git/changes/entry.rs"]);
 }
 
 #[gpui_kit::test]

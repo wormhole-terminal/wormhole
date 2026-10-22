@@ -262,7 +262,7 @@ impl Render for Workspace {
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
-                        d.child(self.render_notes_panel(columns.panel, window, cx))
+                        d.child(self.render_panel(columns.panel, window, cx))
                     })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))

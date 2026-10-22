@@ -24,8 +24,8 @@
 //! so it cannot do everything through an entity of its own yet. Instead of bending the hooks above for
 //! it, [`TabDef::window_side`] ([`WindowSideTab`]) is the one place where a tab is given the window
 //! itself; the frame prefers it when it is set and nothing else uses it. It goes with the last feature
-//! whose state is still in the window (Changes, 5d), and a ratchet in `scripts/structure.json` keeps it
-//! out of every other file under `features/`.
+//! whose state is still in the window (Changes, 5d), and the test `only_changes_uses_the_side_door`
+//! (`feature_tests`) keeps `window_side: Some` out of every other file.
 
 #![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
 
@@ -38,6 +38,7 @@ use wormhole_core::storage::store::SessionRecord;
 
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
+use crate::window::feature_host::FeatureState;
 use crate::window::focus::{Activate, Walkable};
 use crate::window::sidebar::RowExtras;
 
@@ -79,21 +80,6 @@ pub(in crate::window) enum FeatureEvent {
     Editing(bool),
     /// Paste `text` into a terminal of this window.
     SendText { session: i64, text: SharedString },
-}
-
-/// A feature's entity and the window's hold on its events. Dropping it unsubscribes. A feature gets
-/// one only from [`Workspace::listen`], so the subscription is the window's and no feature can forget
-/// it or keep the entity without it.
-pub(in crate::window) struct FeatureState {
-    pub entity: AnyEntity,
-    _events: Subscription,
-}
-
-impl FeatureState {
-    /// The entity with the subscription the window made for it.
-    pub(super) fn new(entity: AnyEntity, events: Subscription) -> Self {
-        Self { entity, _events: events }
-    }
 }
 
 /// The hooks' shapes. Plain function pointers, never `dyn`: the frame calls them and a closure's box

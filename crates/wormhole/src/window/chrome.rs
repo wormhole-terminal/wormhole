@@ -257,7 +257,11 @@ impl Workspace {
 
     /// The right panel's title row: its icon tabs from the 16 pt inset, the Notes tab's stash
     /// button, and room for the panel toggle that floats over its right end.
-    pub(super) fn render_panel_tab_bar(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(in crate::window) fn render_panel_tab_bar(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         // The rule under the row is the terminal title row's, at the same height (outside the
         // 38 pt row, as there), so the two read as one line across the window.

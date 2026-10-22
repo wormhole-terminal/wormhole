@@ -102,7 +102,7 @@ impl Workspace {
         let width = motion.width;
         let column = match motion.edge {
             Edge::Sidebar => self.render_sidebar(width, window, cx),
-            Edge::Panel => self.render_notes_panel(width, window, cx).into_any_element(),
+            Edge::Panel => self.render_panel(width, window, cx).into_any_element(),
         };
         // The column keeps its width inside the clip, pinned to the window's edge, so its rows
         // don't reflow as it moves. It paints its own translucent surface, as at rest: the terminal

@@ -27,8 +27,7 @@ impl Workspace {
             self.folder_projects.clear();
             // The Project tab is gone with the feature; leave it showing nothing.
             if self.right_tab == TabId::Project {
-                self.right_tab = TabId::Changes;
-                self.feature_editing = false;
+                self.set_right_tab(TabId::Changes);
                 moved = true;
             }
             for session in &mut self.sessions {
