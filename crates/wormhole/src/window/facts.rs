@@ -39,6 +39,9 @@ pub(in crate::window) struct WindowFacts<'a> {
     /// were last used, and the window is in front). Only for facts made for drawing a frame
     /// ([`Workspace::frame_facts`]); `None` otherwise.
     pub panel_cursor: Option<(usize, bool)>,
+    /// Scrolls the panel's short tabs (a tab that is all there at once draws itself in a column
+    /// that scrolls with this); the window sets it back to the top when another tab is shown.
+    pub panel_scroll: &'a ScrollHandle,
     workspace: &'a Workspace,
 }
 
@@ -94,6 +97,7 @@ impl Workspace {
             tab: self.right_tab,
             panel_width: px(self.columns().panel),
             panel_cursor: None,
+            panel_scroll: &self.panel_scroll,
             workspace: self,
         }
     }

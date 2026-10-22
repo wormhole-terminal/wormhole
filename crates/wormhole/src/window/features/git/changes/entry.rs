@@ -56,6 +56,8 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         view: |_, _, _, _| gpui_kit::div().into_any_element(),
         walk: None,
         actions: None,
+        refresh_ticks: None,
+        conditional: false,
         window_side: Some(&SIDE),
     }],
     bind: None,
@@ -63,6 +65,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     close_stake: None,
     menu: None,
     tick: None,
+    profile: None,
     state: Some(StateDef {
         make: |window, cx| {
             let entity = cx.new(|_| ChangesPanel);

@@ -344,14 +344,7 @@ impl Workspace {
                     ),
                     // In the table.
                     TabId::Notes => return None,
-                    TabId::Usage => tab(
-                        IconName::Gauge,
-                        "Usage",
-                        ActionId::ShowUsage,
-                        None,
-                        spoken::panel_tab(PanelTab::Usage),
-                        id,
-                    ),
+                    TabId::Usage => return None,
                     // Whenever the terminal has a folder: its colour is set there, and its project made.
                     TabId::Project => tab(
                         IconName::Folder,

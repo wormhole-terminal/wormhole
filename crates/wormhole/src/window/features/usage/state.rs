@@ -6,12 +6,17 @@ use gpui_kit::*;
 use wormhole_core::agents::usage::{self, Usage};
 
 use crate::app_state::app;
+use crate::window::feature::FeatureEvent;
 
 /// The latest report of each agent that has reported, newest last.
 #[derive(Default)]
 pub(crate) struct UsageReports {
     all: Vec<Usage>,
 }
+
+// Every window holds this entity as a feature's state and repaints when it changes; it has nothing to
+// tell a window by event.
+impl EventEmitter<FeatureEvent> for UsageReports {}
 
 impl UsageReports {
     /// An agent's latest report replaces its last one, and is kept across restarts.
@@ -55,10 +60,9 @@ pub(crate) fn reports(cx: &App) -> &[Usage] {
     cx.try_global::<Shared>().map_or(&[], |shared| shared.0.read(cx).all.as_slice())
 }
 
-/// An agent reported (the hook socket's `Message::Usage`): kept, and every window shows it.
+/// An agent reported (the hook socket's `Message::Usage`): kept, and every window repaints.
 pub(crate) fn record(report: Usage, cx: &mut App) {
     shared(cx).update(cx, |reports, cx| reports.record(report, cx));
-    cx.refresh_windows();
 }
 
 /// The shown profile's data is in `AppState`: take this profile's reports. A hidden profile's windows

@@ -16,7 +16,7 @@
 //! rows or terminals take the whole set. A downcast clones a handle, which is a weak upgrade and an
 //! atomic, and that is not a price to pay per row.
 //!
-//! Only Changes is in the table so far. Features move in one at a time (notes next), and a hook is
+//! Only Changes, Notes and Usage are in the table so far. Features move in one at a time, and a hook is
 //! added when the first feature needs it, so a field below that nothing uses yet is the shape the
 //! design settled on, not a promise that each is used.
 //!
@@ -130,6 +130,10 @@ pub(in crate::window) struct FeatureDef {
     /// Once per window tick, for the state of every feature that has one, on or off: housekeeping that
     /// can't wait for an event (Notes throws away a note left empty that never had the keyboard).
     pub tick: Option<TickFn>,
+    /// The shown profile's data is in `AppState` (at launch, after a profile switch): the feature reads
+    /// its own app-wide data for it (Usage's reports). Per window state is the window's and doesn't
+    /// need this. Called from outside any window, so it gets only the app.
+    pub profile: Option<fn(&mut App)>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -163,6 +167,12 @@ pub(in crate::window) struct TabDef {
     pub walk: Option<WalkFns>,
     /// Buttons beside the tabs while it is on show (Notes' stash).
     pub actions: Option<TabActionsFn>,
+    /// Redraw the window every this many ticks (400 ms each) while the tab is on show, for a tab whose
+    /// words change with time and no event (Usage's "resets 34m").
+    pub refresh_ticks: Option<u64>,
+    /// The tab is offered only while something holds (Usage: an agent is on screen). The window
+    /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
+    pub conditional: bool,
     /// **Temporary, for Changes only, until 5d.** When set, the frame draws, shows, walks and presses
     /// the tab through this instead of `view`, `on_show` and `walk`. See the end of the module comment.
     pub window_side: Option<&'static WindowSideTab>,

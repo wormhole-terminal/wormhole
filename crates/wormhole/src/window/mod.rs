@@ -10,8 +10,7 @@
 //! - `panes/` the split on screen, its model (`splits`) and the pane drop; `title/` the title rows
 //!   (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's areas, the
 //!   stops, the Esc ladder and the ring.
-//! - `features/` the side panels' contents: a folder each for `notes`, `project` and `git`, and the
-//!   file `usage`.
+//! - `features/` the side panels' contents: a folder each for `notes`, `usage`, `project` and `git`.
 //! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
 //!   window and the welcome.
 //!
@@ -182,9 +181,9 @@ pub struct Workspace {
     /// A feature's text field has the keyboard (`FeatureEvent::Editing`): the panel's content is the
     /// focused area, as for a note being written.
     feature_editing: bool,
-    /// The tab that was open when Usage was opened: where the panel goes back to when no agent
-    /// is left to show usage for.
-    tab_before_usage: Option<TabId>,
+    /// The tab that was open when a conditional tab (Usage) was opened: where the panel goes back to
+    /// when the condition no longer holds (no agent is left to show usage for).
+    tab_before_conditional: Option<TabId>,
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
@@ -349,7 +348,7 @@ impl Workspace {
             features,
             feature_states,
             feature_editing: false,
-            tab_before_usage: None,
+            tab_before_conditional: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,
             branches: Vec::new(),

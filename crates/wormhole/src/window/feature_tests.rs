@@ -29,8 +29,7 @@ use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with
 
 /// Features core lists that have not moved into the app's table yet. Each phase 5 step takes one off
 /// this list when it adds the entry; the list ends empty.
-const NOT_YET: &[FeatureId] =
-    &[FeatureId::History, FeatureId::Usage, FeatureId::Project, FeatureId::Worktrees];
+const NOT_YET: &[FeatureId] = &[FeatureId::History, FeatureId::Project, FeatureId::Worktrees];
 
 #[test]
 fn every_feature_is_in_the_table_or_waiting_for_its_step() {
@@ -119,6 +118,8 @@ static STAND_IN: &[FeatureDef] = &[
                 marker(entity).update(cx, |marker, _| marker.count += 10);
                 on.then(|| gpui_kit::div().into_any_element())
             }),
+            refresh_ticks: None,
+            conditional: false,
             window_side: None,
         }],
         bind: Some(|_, _, root, _| root),
@@ -132,6 +133,7 @@ static STAND_IN: &[FeatureDef] = &[
         }),
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
         tick: None,
+        profile: None,
         state: Some(StateDef {
             make: |window, cx| {
                 let entity = cx.new(|_| Marker {
@@ -620,6 +622,8 @@ macro_rules! crowd_member {
                 },
                 walk: None,
                 actions: None,
+                refresh_ticks: None,
+                conditional: false,
                 window_side: None,
             }],
             bind: Some(|_, _, root, _| root),
@@ -627,6 +631,7 @@ macro_rules! crowd_member {
             close_stake: None,
             menu: None,
             tick: None,
+            profile: None,
             state: Some(StateDef {
                 make: |window, cx| {
                     let entity = cx.new(|_| Marker {

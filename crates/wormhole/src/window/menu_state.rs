@@ -82,12 +82,14 @@ impl Workspace {
         if !self.notes_visible() {
             state.off.push(ToggleRightPanel);
         }
-        state.checked.push(match self.right_tab {
-            TabId::Notes => ShowNotes,
-            TabId::Changes => ShowChanges,
-            TabId::History => ShowHistory,
-            TabId::Project => ShowProject,
-            TabId::Usage => ShowUsage,
+        // The tab on show is the checked one: the table says each of its tabs' action.
+        state.checked.extend(match self.tab_entry(self.right_tab) {
+            Some((_, entry)) => Some(entry.action),
+            None => match self.right_tab {
+                TabId::History => Some(ShowHistory),
+                TabId::Project => Some(ShowProject),
+                TabId::Changes | TabId::Notes | TabId::Usage => None,
+            },
         });
         if self.active_session().pinned {
             state.checked.push(PinTerminal);
@@ -99,9 +101,6 @@ impl Workspace {
         // The Project tab needs a folder, and the whole project-folder feature behind its flag.
         if self.active_folder(cx).is_none() || !crate::window::features::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
-        }
-        if !self.usage_tab_on(cx) {
-            state.hidden.push(ShowUsage);
         }
         if let Some(project) =
             self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))

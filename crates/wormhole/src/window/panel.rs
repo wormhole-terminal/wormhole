@@ -59,10 +59,8 @@ impl Workspace {
                         let content = self.render_project_tab(cx).into_any_element();
                         panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
                     }
-                    TabId::Usage => {
-                        let content = self.render_usage_tab(cx).into_any_element();
-                        panel_list::scroll_column("usage-scroll", &self.panel_scroll, ui, content, cx)
-                    }
+                    // In the table.
+                    TabId::Usage => div().into_any_element(),
                     // Changes is always in the table; a window made without it has nothing to show.
                     TabId::Changes => div().into_any_element(),
                 },
@@ -80,17 +78,30 @@ impl Workspace {
         self.right_tab = tab;
     }
 
+    /// Whether the tab on show wants the window redrawn on this tick (its words change with time).
+    pub(in crate::window) fn tab_refresh_due(&self) -> bool {
+        self.notes_visible()
+            && self
+                .tab_entry(self.right_tab)
+                .and_then(|(_, entry)| entry.refresh_ticks)
+                .is_some_and(|every| self.ticks.is_multiple_of(every))
+    }
+
     pub(crate) fn show_tab(&mut self, tab: TabId, cx: &mut Context<Self>) {
-        // The Notes tab is gone while its flag is off.
-        // A tab of a feature that is off is gone.
-        let features = self.facts(cx).features;
-        let tab = match self.tab_entry(tab) {
-            Some((at, _)) if !features.has(self.features[at].id) => TabId::Changes,
-            _ => tab,
+        // A tab of a feature that is off, or that is not offered now (Usage without an agent), is gone.
+        let tab = {
+            let facts = self.facts(cx);
+            match self.tab_entry(tab) {
+                Some((at, entry))
+                    if !facts.features.has(self.features[at].id) || !(entry.shown)(&facts, cx) =>
+                {
+                    TabId::Changes
+                }
+                _ => tab,
+            }
         };
-        let tab = if tab == TabId::Usage && !self.usage_tab_on(cx) { TabId::Changes } else { tab };
-        if tab == TabId::Usage && self.right_tab != TabId::Usage {
-            self.tab_before_usage = Some(self.right_tab);
+        if self.right_tab != tab && self.tab_entry(tab).is_some_and(|(_, entry)| entry.conditional) {
+            self.tab_before_conditional = Some(self.right_tab);
         }
         self.set_right_tab(tab);
         self.reveal_notes();

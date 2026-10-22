@@ -66,11 +66,8 @@ impl Workspace {
                 crate::notifications::dismiss(pane.id, cx);
             }
         }
-        // The Usage tab's times count down while it shows.
-        let usage_on_screen = self.notes_visible() && self.right_tab == TabId::Usage;
-        if changed
-            || (usage_on_screen && self.ticks.is_multiple_of(crate::window::features::usage::REDRAW_TICKS))
-        {
+        // A tab whose words change with time (Usage's "resets 34m") is redrawn on its own period.
+        if changed || self.tab_refresh_due() {
             cx.notify();
         }
         self.sync_close_dot(window, cx);

@@ -377,7 +377,6 @@
       "crates/wormhole/src/window/features/project/panel.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/project/trust.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/project/trust_window.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/usage.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/look_step.rs :: impl Workspace": 1,

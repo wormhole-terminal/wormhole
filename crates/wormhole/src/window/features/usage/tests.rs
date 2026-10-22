@@ -7,7 +7,8 @@ use std::rc::Rc;
 use gpui_kit::{TestAppContext, VisualTestContext};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::usage::{self, Usage, Window};
-use wormhole_core::config::TabId;
+use wormhole_core::config::{FeatureId, TabId};
+use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::storage::store::Store;
 
 use crate::app_state::{OpenWindow, app, app_mut};
@@ -164,15 +165,55 @@ fn each_profile_has_its_own_reports(cx: &mut TestAppContext) {
 
     // Another profile is shown: its database, which has none yet.
     with_database(cx, "home");
-    cx.update(super::profile_shown);
+    cx.update(crate::window::features::profile_shown);
     assert!(reports(cx).is_empty(), "the other profile's reports, which are none");
     report(cx, Usage { agent: AgentId::Codex, ..claude(5.0, 200) });
 
     // Back: the first profile's, as they were left, and the second's are kept for its return.
     with_database(cx, "work");
-    cx.update(super::profile_shown);
+    cx.update(crate::window::features::profile_shown);
     assert_eq!(reports(cx), work);
     with_database(cx, "home");
-    cx.update(super::profile_shown);
+    cx.update(crate::window::features::profile_shown);
     assert_eq!(reports(cx).iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Codex]);
+}
+
+#[gpui_kit::test]
+fn a_report_repaints_every_window_that_has_the_tab(cx: &mut TestAppContext) {
+    if isolate("a_report_repaints_every_window_that_has_the_tab") {
+        return;
+    }
+    let window = start(cx, 1);
+    let redraws = Rc::new(Cell::new(0u32));
+    let counted = redraws.clone();
+    cx.update(|cx| {
+        let workspace = window.workspace.upgrade().expect("the window is open");
+        cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
+    });
+    report(cx, claude(25.0, 100));
+    assert!(redraws.get() > 0, "the window is told, whichever tab it shows");
+}
+
+#[gpui_kit::test]
+fn the_entry_offers_the_tab_and_its_menu_line_while_an_agent_is_on_screen(cx: &mut TestAppContext) {
+    if isolate("the_entry_offers_the_tab_and_its_menu_line_while_an_agent_is_on_screen") {
+        return;
+    }
+    let window = start(cx, 1);
+    let asked = |cx: &mut TestAppContext| {
+        drive(cx, &window, |ws, _, cx| {
+            let at = ws.features.iter().position(|def| def.id == FeatureId::Usage).expect("in the table");
+            let (def, entity) = (&ws.features[at], ws.feature_entity(at).expect("made with the window"));
+            let (tab, facts) = (&def.tabs[0], ws.facts(cx));
+            let mut state = Default::default();
+            (def.menu.expect("has a menu hook"))(entity, &facts, &mut state, cx);
+            let words = (tab.spoken)(entity, &facts, cx);
+            ((tab.shown)(&facts, cx), state.hidden.contains(&ActionId::ShowUsage), words)
+        })
+    };
+    assert_eq!(asked(cx), (false, true, "Usage".to_string()), "no agent");
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Codex));
+    });
+    assert_eq!(asked(cx), (true, false, "Usage".to_string()), "an agent");
 }
