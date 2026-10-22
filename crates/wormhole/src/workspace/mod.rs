@@ -18,11 +18,15 @@ pub(crate) use self::app::app_mut;
 pub(crate) use self::app_handlers::init as init_actions;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app_menu::dump as menu_dump;
+#[cfg(feature = "devctl")]
+pub(crate) use self::command_palette::devctl_palette;
 pub(crate) use self::default_terminal::{listen as listen_for_opened, serve as serve_opened};
 #[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
+#[cfg(feature = "devctl")]
+pub(crate) use self::shortcut_sheet::devctl_sheet;
 #[cfg(feature = "devctl")]
 pub(crate) use self::updates::devctl_installed as devctl_update_installed;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};

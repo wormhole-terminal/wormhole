@@ -160,7 +160,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     snapshot.recent = cx.try_global::<Chosen>().map(|c| c.0.clone()).unwrap_or_default();
     let here = app(cx).windows.iter().find(|w| w.id == window_id).cloned();
     if let Some(here) = here {
-        let read = here.workspace.read_with(cx, |ws, cx| ws.palette_here(home.as_deref(), cx));
+        let read = here.workspace.read_with(cx, |ws, cx| palette_here(ws, home.as_deref(), cx));
         if let Ok((cwd, changes, project)) = read {
             (snapshot.cwd, snapshot.changes, snapshot.project) = (cwd, changes, project);
         }
@@ -177,47 +177,45 @@ fn folder_item(path: PathBuf, terminals: usize, home: Option<&Path>) -> FolderIt
     FolderItem { path, name, parent, terminals }
 }
 
-impl Workspace {
-    /// Where the current terminal is, how many files changed there, and its project's actions
-    /// once it is trusted.
-    fn palette_here(
-        &self,
-        home: Option<&Path>,
-        cx: &App,
-    ) -> (Option<String>, Option<usize>, Option<ProjectItem>) {
-        let session = self.active_session();
-        let terminal = session.terminal().read(cx);
-        let cwd = terminal.cwd.as_deref().map(|cwd| display_path(cwd, home));
-        let changes = session
-            .git
-            .status
-            .as_ref()
-            .filter(|_| session.git.cwd == terminal.cwd)
-            .map(|status| status.files.len())
-            .filter(|&n| n > 0);
-        let hub = &app(cx).hub;
-        let project = self.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions)).map(|project| {
-            let root = &project.folder.root;
-            let folder = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            ProjectItem {
-                name: format!("{folder}/{}", project.folder.dir_name()),
-                actions: project
-                    .actions()
-                    .iter()
-                    .map(|action| ProjectAction {
-                        id: action.id.clone(),
-                        title: action.title.clone(),
-                        command: match &action.kind {
-                            ActionKind::Run { command, .. } => Some(command.clone()),
-                            _ => None,
-                        },
-                        key: action.key_spec().map(|k| k.glyphs()),
-                    })
-                    .collect(),
-            }
-        });
-        (cwd, changes, project)
-    }
+/// Where the current terminal is, how many files changed there, and its project's actions
+/// once it is trusted.
+fn palette_here(
+    ws: &Workspace,
+    home: Option<&Path>,
+    cx: &App,
+) -> (Option<String>, Option<usize>, Option<ProjectItem>) {
+    let session = ws.active_session();
+    let terminal = session.terminal().read(cx);
+    let cwd = terminal.cwd.as_deref().map(|cwd| display_path(cwd, home));
+    let changes = session
+        .git
+        .status
+        .as_ref()
+        .filter(|_| session.git.cwd == terminal.cwd)
+        .map(|status| status.files.len())
+        .filter(|&n| n > 0);
+    let hub = &app(cx).hub;
+    let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions)).map(|project| {
+        let root = &project.folder.root;
+        let folder = root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        ProjectItem {
+            name: format!("{folder}/{}", project.folder.dir_name()),
+            actions: project
+                .actions()
+                .iter()
+                .map(|action| ProjectAction {
+                    id: action.id.clone(),
+                    title: action.title.clone(),
+                    command: match &action.kind {
+                        ActionKind::Run { command, .. } => Some(command.clone()),
+                        _ => None,
+                    },
+                    key: action.key_spec().map(|k| k.glyphs()),
+                })
+                .collect(),
+        }
+    });
+    (cwd, changes, project)
 }
 
 impl CommandPalette {
@@ -591,28 +589,31 @@ fn open_folder(path: PathBuf, cx: &mut App) {
     }
 }
 
+/// devctl `palette [query]` / `palette close`: open the palette over this window with `query`
+/// typed (a prefix picks the scope); to an open one, type it in place of what is there.
 #[cfg(feature = "devctl")]
-impl Workspace {
-    /// devctl `palette [query]` / `palette close`: open the palette over this window with `query`
-    /// typed (a prefix picks the scope); to an open one, type it in place of what is there.
-    pub(crate) fn devctl_palette(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
-        let arg = arg.trim();
-        if arg == "close" {
-            self.close_overlay(window, cx);
-            return;
-        }
-        if let Some(palette) = self.overlay_of::<CommandPalette>() {
-            palette.update(cx, |palette, cx| {
-                palette.scope = Scope::All;
-                palette.set_query(arg, window, cx);
-            });
-            return;
-        }
-        let Some(own) = app(cx).windows.iter().find(|w| w.id == self.window_id).cloned() else { return };
-        let query = arg.to_string();
-        // After this update: the palette reads every window, this one too.
-        cx.defer(move |cx| open_in(&own, &query, cx));
+pub(crate) fn devctl_palette(
+    ws: &mut Workspace,
+    arg: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    let arg = arg.trim();
+    if arg == "close" {
+        ws.close_overlay(window, cx);
+        return;
     }
+    if let Some(palette) = ws.overlay_of::<CommandPalette>() {
+        palette.update(cx, |palette, cx| {
+            palette.scope = Scope::All;
+            palette.set_query(arg, window, cx);
+        });
+        return;
+    }
+    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id).cloned() else { return };
+    let query = arg.to_string();
+    // After this update: the palette reads every window, this one too.
+    cx.defer(move |cx| open_in(&own, &query, cx));
 }
 
 #[cfg(all(test, feature = "devctl"))]

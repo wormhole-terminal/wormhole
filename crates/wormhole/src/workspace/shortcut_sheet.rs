@@ -71,7 +71,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
     let query = query.to_string();
     AppState::with_workspace(front, cx, move |ws, window, cx| {
         crate::background::activate_window(window, cx);
-        let project = ws.project_keys(cx);
+        let project = project_keys(ws, cx);
         let hidden = ws.menu_state(cx).hidden;
         let return_focus = ws.end_overlay(window, cx);
         let workspace = cx.weak_entity();
@@ -80,18 +80,15 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
     });
 }
 
-impl Workspace {
-    /// The current terminal's project keys, once it is trusted (an untrusted project shows
-    /// nothing here).
-    fn project_keys(&self, cx: &App) -> Option<ProjectKeys> {
-        let hub = &app(cx).hub;
-        let project = self.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions))?;
-        let actions: Vec<(String, KeySpec)> =
-            project.actions().iter().filter_map(|a| Some((a.title.clone(), a.key_spec()?))).collect();
-        let folder = project.folder.root.file_name()?.to_string_lossy().into_owned();
-        (!actions.is_empty())
-            .then(|| ProjectKeys { name: format!("{folder}/.wormhole/actions.json"), actions })
-    }
+/// The current terminal's project keys, once it is trusted (an untrusted project shows
+/// nothing here).
+fn project_keys(ws: &Workspace, cx: &App) -> Option<ProjectKeys> {
+    let hub = &app(cx).hub;
+    let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions))?;
+    let actions: Vec<(String, KeySpec)> =
+        project.actions().iter().filter_map(|a| Some((a.title.clone(), a.key_spec()?))).collect();
+    let folder = project.folder.root.file_name()?.to_string_lossy().into_owned();
+    (!actions.is_empty()).then(|| ProjectKeys { name: format!("{folder}/.wormhole/actions.json"), actions })
 }
 
 impl ShortcutSheet {
@@ -378,24 +375,22 @@ impl Render for ShortcutSheet {
     }
 }
 
+/// devctl `sheet [filter]` / `sheet close`: open the sheet over this window with `filter` typed;
+/// to an open one, type it in place of what is there.
 #[cfg(feature = "devctl")]
-impl Workspace {
-    /// devctl `sheet [filter]` / `sheet close`: open the sheet over this window with `filter` typed;
-    /// to an open one, type it in place of what is there.
-    pub(crate) fn devctl_sheet(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
-        let arg = arg.trim().to_string();
-        if arg == "close" {
-            self.close_overlay(window, cx);
-            return;
-        }
-        if let Some(sheet) = self.overlay_of::<ShortcutSheet>() {
-            sheet.update(cx, |sheet, cx| {
-                sheet.filter.update(cx, |filter, cx| filter.set_value(arg, window, cx));
-                cx.notify();
-            });
-            return;
-        }
-        let Some(own) = app(cx).windows.iter().find(|w| w.id == self.window_id).cloned() else { return };
-        cx.defer(move |cx| open_in(&own, &arg, cx));
+pub(crate) fn devctl_sheet(ws: &mut Workspace, arg: &str, window: &mut Window, cx: &mut Context<Workspace>) {
+    let arg = arg.trim().to_string();
+    if arg == "close" {
+        ws.close_overlay(window, cx);
+        return;
     }
+    if let Some(sheet) = ws.overlay_of::<ShortcutSheet>() {
+        sheet.update(cx, |sheet, cx| {
+            sheet.filter.update(cx, |filter, cx| filter.set_value(arg, window, cx));
+            cx.notify();
+        });
+        return;
+    }
+    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id).cloned() else { return };
+    cx.defer(move |cx| open_in(&own, &arg, cx));
 }

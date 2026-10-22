@@ -39,13 +39,13 @@ pub(super) fn menus(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// `palette [query]` / `palette close`: the command palette over this window, `query` typed.
 pub(super) fn palette(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_palette(arg, ctx.window, ctx.cx);
+    crate::workspace::devctl_palette(ctx.workspace, arg, ctx.window, ctx.cx);
     Ok(String::new())
 }
 
 /// `sheet [filter]` / `sheet close`: the keyboard-shortcuts sheet over this window, filtered.
 pub(super) fn sheet(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_sheet(arg, ctx.window, ctx.cx);
+    crate::workspace::devctl_sheet(ctx.workspace, arg, ctx.window, ctx.cx);
     Ok(String::new())
 }
 
