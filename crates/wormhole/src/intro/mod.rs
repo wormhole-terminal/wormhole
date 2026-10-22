@@ -12,7 +12,6 @@ use wormhole_core::intro::Style;
 use wormhole_core::intro::{Handover, Start, WindowMotion, page};
 
 use crate::platform::intro::{Frame, Overlay, Setup};
-use crate::workspace::AppState;
 
 /// The style the intro window plays, first launch and replay alike: the one whose ship docks on its
 /// logo.
@@ -104,17 +103,6 @@ pub(crate) fn play_with(window: &Window, style: Style, options: Options, cx: &mu
     let options = Options { lights: options.lights && style != Style::Glow, ..options };
     let run = start(window, style, options, colors(cx), cx);
     cx.default_global::<Playing>().0 = run;
-}
-
-/// Play `style` around the window in front (About's buttons, the keys): brought forward first, as
-/// About may be in front of it.
-pub(crate) fn play_in_front(style: Style, cx: &mut App) {
-    cx.defer(move |cx| {
-        AppState::with_front_workspace(cx, |_, window, cx| {
-            crate::background::activate_window(window, cx);
-            play(window, style, cx);
-        });
-    });
 }
 
 /// The theme's primary and info colours and its terminal magenta (FTL's violet), as the

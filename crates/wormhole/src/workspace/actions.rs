@@ -420,13 +420,13 @@ pub(crate) fn init(cx: &mut App) {
             });
         });
     });
-    cx.on_action(|_: &PlayIntroEmerge, cx| crate::intro::play_in_front(Style::Emerge, cx));
-    cx.on_action(|_: &PlayIntroVortex, cx| crate::intro::play_in_front(Style::Vortex, cx));
-    cx.on_action(|_: &PlayIntroCollapse, cx| crate::intro::play_in_front(Style::Collapse, cx));
-    cx.on_action(|_: &PlayIntroFtl, cx| crate::intro::play_in_front(Style::Ftl, cx));
-    cx.on_action(|_: &PlayIntroAurora, cx| crate::intro::play_in_front(Style::Aurora, cx));
-    cx.on_action(|_: &PlayIntroTentacles, cx| crate::intro::play_in_front(Style::Tentacles, cx));
-    cx.on_action(|_: &PlayIntroVoyage, cx| crate::intro::play_in_front(Style::Voyage, cx));
+    cx.on_action(|_: &PlayIntroEmerge, cx| play_intro_in_front(Style::Emerge, cx));
+    cx.on_action(|_: &PlayIntroVortex, cx| play_intro_in_front(Style::Vortex, cx));
+    cx.on_action(|_: &PlayIntroCollapse, cx| play_intro_in_front(Style::Collapse, cx));
+    cx.on_action(|_: &PlayIntroFtl, cx| play_intro_in_front(Style::Ftl, cx));
+    cx.on_action(|_: &PlayIntroAurora, cx| play_intro_in_front(Style::Aurora, cx));
+    cx.on_action(|_: &PlayIntroTentacles, cx| play_intro_in_front(Style::Tentacles, cx));
+    cx.on_action(|_: &PlayIntroVoyage, cx| play_intro_in_front(Style::Voyage, cx));
     cx.on_action(|_: &PlayWelcomeCursor, cx| super::welcome::replay_in_front(Handover::Cursor, cx));
     cx.on_action(|_: &PlayWelcomePortal, cx| super::welcome::replay_in_front(Handover::Portal, cx));
     cx.on_action(|_: &PlayWelcomeLogo, cx| super::welcome::replay_in_front(Handover::Logo, cx));
@@ -491,6 +491,17 @@ fn bind_jump_key(cx: &mut App) {
 
 /// Run `f` on the window in front (any of ours, not only a terminal window), once the update
 /// that dispatched the action is over.
+/// Play the intro `style` around the window in front (About's buttons, the keys): brought forward
+/// first, as About may be in front of it. Here, not in `intro`, which only knows what it draws.
+fn play_intro_in_front(style: Style, cx: &mut App) {
+    cx.defer(move |cx| {
+        AppState::with_front_workspace(cx, |_, window, cx| {
+            crate::background::activate_window(window, cx);
+            crate::intro::play(window, style, cx);
+        });
+    });
+}
+
 fn in_front_window(cx: &mut App, f: fn(&Window)) {
     if let Some(handle) = cx.active_window() {
         cx.defer(move |cx| {
