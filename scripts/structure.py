@@ -47,8 +47,8 @@ zero. What a text reader cannot see, said plainly:
     child module's bare name (`use sidebar::X;` in view/mod.rs, which only reaches its own tree) and
     `use` of a module through an alias. A module the crate root re-exports (`pub use view::sidebar;`, as
     a move leaves for one commit) is followed to where it is, and so is an item a module above
-    `module_depth` re-exports from one of its own modules (`pub use fonts::X;` in config/mod.rs makes
-    `crate::config::X` an edge to `config::fonts`); a re-export from elsewhere, a glob (`pub use x::*`)
+    `module_depth` re-exports from one of its own modules (`pub use font_slots::X;` in config/mod.rs makes
+    `crate::config::X` an edge to `config::font_slots`); a re-export from elsewhere, a glob (`pub use x::*`)
     or an alias (read under its original name) is not followed, and the cross-reexports rule reads
     `pub use crate::...` only.
 
@@ -685,8 +685,8 @@ def resolve(path: List[str], nodes: Set[str], aliases: Optional[Dict[str, List[s
             depth: int = 1, reexports: Optional[Dict[str, Dict[str, List[str]]]] = None) -> Optional[str]:
     """The deepest module of `nodes` a path names (`git` for `crate::git::DiffLine`), through the crate
     root's re-exported modules. With `reexports`, a name a module above `depth` re-exports from one of
-    its own modules is followed there (`crate::config::X` -> `config::fonts` when config's mod.rs says
-    `pub use fonts::X`), so a domain's re-exports don't hide which of its modules a file uses."""
+    its own modules is followed there (`crate::config::X` -> `config::font_slots` when config's mod.rs says
+    `pub use font_slots::X`), so a domain's re-exports don't hide which of its modules a file uses."""
     if aliases and path and path[0] not in nodes and path[0] in aliases:
         path = aliases[path[0]] + path[1:]
     for _ in range(4):  # a re-export of a re-export, not more
@@ -708,7 +708,7 @@ _PUB_USE = re.compile(r"pub\s*(?:\([^)]*\)\s*)?use\s+")
 
 def reexports(crate: Crate) -> Dict[str, Dict[str, List[str]]]:
     """module -> {name: the full path it re-exports} from `pub use` in the files of that module itself
-    (`pub use fonts::X;`, `pub use self::fonts::X;` or `pub use crate::config::fonts::X;` in config/mod.rs).
+    (`pub use font_slots::X;`, `pub use self::font_slots::X;` or `pub use crate::config::font_slots::X;` in config/mod.rs).
     Globs and test code are left out."""
     out: Dict[str, Dict[str, List[str]]] = {}
     for rel, src in crate.files.items():

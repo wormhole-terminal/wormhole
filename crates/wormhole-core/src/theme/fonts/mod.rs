@@ -1,5 +1,5 @@
 //! The three fonts (terminal, interface, code): their slots and size ranges, what they come to
-//! ([`ResolvedFonts`]; the settings resolve themselves into it, `config::fonts`), and the font lists
+//! ([`ResolvedFonts`]; the settings resolve themselves into it, `config::font_slots`), and the font lists
 //! the pickers show. `bundled` is the font that ships with the app, `custom` the user's font files.
 
 pub mod bundled;

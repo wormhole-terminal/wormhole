@@ -17,11 +17,11 @@
 pub mod clipboard;
 pub mod features;
 mod file;
-mod fonts;
+mod font_slots;
 pub mod profile;
 mod settings;
 pub mod settings_index;
-mod theme;
+mod theme_setting;
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -34,8 +34,10 @@ pub use self::settings::{
     APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
     Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
-use self::theme::{ThemeStamp, default_tokens, resolve_theme};
-pub use self::theme::{resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in};
+use self::theme_setting::{ThemeStamp, default_tokens, resolve_theme};
+pub use self::theme_setting::{
+    resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in,
+};
 use crate::storage::fsutil::{self, LinkPolicy};
 use crate::storage::jsonc;
 use crate::storage::jsonc::suggest::did_you_mean;
