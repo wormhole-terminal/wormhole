@@ -5,7 +5,7 @@ use std::ops::Range;
 use super::Located;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(in crate::tokens) enum Tok {
+pub(in crate::theme::tokens) enum Tok {
     Hex(String),
     Ident(String),
     Num(f32, bool),
@@ -16,9 +16,9 @@ pub(in crate::tokens) enum Tok {
 }
 
 /// A token and its byte range in the source.
-pub(in crate::tokens) type Spanned = (Tok, Range<usize>);
+pub(in crate::theme::tokens) type Spanned = (Tok, Range<usize>);
 
-pub(in crate::tokens) fn tokenize(src: &str) -> Result<Vec<Spanned>, Located> {
+pub(in crate::theme::tokens) fn tokenize(src: &str) -> Result<Vec<Spanned>, Located> {
     let mut out = Vec::new();
     let mut chars = src.char_indices().peekable();
     // The text from `start` while `f` holds, and the end of it.

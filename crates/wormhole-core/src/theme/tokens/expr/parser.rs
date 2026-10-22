@@ -10,7 +10,7 @@ use crate::color::Color;
 /// The built-in rules need 4. A repository's `.wormhole/theme.json` is applied
 /// without asking, and without a bound its nesting could overflow the stack while
 /// parsing, evaluating or dropping the tree, which aborts the whole app.
-pub(in crate::tokens) const MAX_EXPR_DEPTH: usize = 32;
+pub(in crate::theme::tokens) const MAX_EXPR_DEPTH: usize = 32;
 
 /// Expressions longer than this are shortened when quoted in an error.
 const QUOTE_LIMIT: usize = 120;
@@ -201,7 +201,7 @@ impl Parser {
 }
 
 /// Parses `src`, saying where it went wrong if it doesn't parse.
-pub(in crate::tokens) fn parse_located(src: &str) -> Result<Expr, Located> {
+pub(in crate::theme::tokens) fn parse_located(src: &str) -> Result<Expr, Located> {
     let mut p = Parser { toks: tokenize(src)?, pos: 0, open: 0, end: src.len() };
     let (e, _) = p.expr()?;
     if let Some(t) = p.peek() {
@@ -210,7 +210,7 @@ pub(in crate::tokens) fn parse_located(src: &str) -> Result<Expr, Located> {
     Ok(e)
 }
 
-pub(in crate::tokens) fn parse_expr(src: &str) -> Result<Expr, String> {
+pub(in crate::theme::tokens) fn parse_expr(src: &str) -> Result<Expr, String> {
     parse_located(src).map_err(|e| format!("in {:?}: {}", quoted(src), e.message))
 }
 

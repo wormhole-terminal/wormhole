@@ -21,6 +21,7 @@ mod head;
 mod lfs;
 mod log;
 pub mod pr;
+pub mod review;
 mod split;
 mod status;
 mod status_parse;

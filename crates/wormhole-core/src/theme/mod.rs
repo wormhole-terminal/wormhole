@@ -3,6 +3,13 @@
 //!
 //! All colors are packed as `0xRRGGBB`.
 
+pub mod catalog;
+pub mod folder_color;
+pub mod fonts;
+pub mod icon_theme;
+pub mod registry;
+pub mod tokens;
+
 use std::path::Path;
 use std::sync::LazyLock;
 

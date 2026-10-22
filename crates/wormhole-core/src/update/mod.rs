@@ -19,6 +19,7 @@ mod install;
 mod schedule;
 mod security;
 
+pub mod licenses;
 #[cfg(test)]
 mod test_support;
 #[cfg(test)]

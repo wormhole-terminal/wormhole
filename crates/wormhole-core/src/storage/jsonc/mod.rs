@@ -9,6 +9,7 @@
 //! [`set_member`] does that for one key.
 
 mod edit;
+pub(crate) mod suggest;
 
 use std::ops::Range;
 

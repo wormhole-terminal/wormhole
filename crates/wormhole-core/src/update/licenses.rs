@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 use anyhow::{Result, ensure};
 use serde::Deserialize;
 
-const BUNDLED: &str = include_str!("../assets/licenses.json");
+const BUNDLED: &str = include_str!("../../assets/licenses.json");
 
 #[derive(Debug, Default, Deserialize)]
 pub struct Licenses {
@@ -120,7 +120,7 @@ mod tests {
     fn bundled_list_matches_the_lockfile() {
         // A dependency upgrade without `scripts/gen-licenses.py` leaves an entry for a version
         // the app is no longer built from.
-        let lock: toml::Table = include_str!("../../../Cargo.lock").parse().expect("Cargo.lock parses");
+        let lock: toml::Table = include_str!("../../../../Cargo.lock").parse().expect("Cargo.lock parses");
         let locked: HashSet<(String, String)> = lock["package"]
             .as_array()
             .expect("packages")

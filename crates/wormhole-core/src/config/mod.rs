@@ -6,9 +6,13 @@
 //! in the app stay in memory until the file is fixed. Saving edits the file in
 //! place (see `file`), so comments and keys we don't know survive.
 
+pub mod clipboard;
+pub mod features;
 mod file;
 mod fonts;
+pub mod profile;
 mod settings;
+pub mod settings_index;
 mod theme;
 
 use std::path::{Path, PathBuf};

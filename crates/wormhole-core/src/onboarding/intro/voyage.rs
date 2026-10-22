@@ -313,7 +313,7 @@ mod tests {
     /// is where the canvas says only after the canvas is scaled to the body and centred in the box.
     #[test]
     fn the_logo_box_holds_the_icon_canvas_on_the_macos_grid() {
-        let script = include_str!("../../../../packaging/icon/make-iconset.swift");
+        let script = include_str!("../../../../../packaging/icon/make-iconset.swift");
         let inset = (ICON_CANVAS - 824.0) / 2.0;
         let body = format!("x: {inset} * s, y: {inset} * s, width: 824 * s, height: 824 * s");
         assert!(script.contains(&body), "make-iconset.swift no longer lays the artwork out as {body}");
@@ -386,7 +386,7 @@ mod tests {
     /// The icon's chevron layer is the source of the chevron: if it changes, the ship has to follow.
     #[test]
     fn the_icons_layer_draws_the_same_chevron() {
-        let layer = include_str!("../../../../packaging/icon/AppIcon.icon/Assets/chevron.svg");
+        let layer = include_str!("../../../../../packaging/icon/AppIcon.icon/Assets/chevron.svg");
         let attribute = |name: &str| -> &str {
             let from = layer.find(&format!("{name}=\"")).expect("an attribute") + name.len() + 2;
             &layer[from..from + layer[from..].find('"').expect("its end")]

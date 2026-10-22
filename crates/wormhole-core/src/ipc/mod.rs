@@ -19,6 +19,8 @@
 
 mod client;
 pub mod control;
+pub mod host_binary;
+pub mod hosts;
 mod instance;
 mod message;
 mod server;

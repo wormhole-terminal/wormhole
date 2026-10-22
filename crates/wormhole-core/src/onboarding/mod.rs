@@ -11,6 +11,9 @@
 //! Touch ID…" button. Navigation never yields either action; the tests drive every path to
 //! show it.
 
+pub mod intro;
+pub mod welcome;
+
 use std::path::{Path, PathBuf};
 
 use crate::agents::AgentId;

@@ -15,13 +15,13 @@ pub(super) use parser::{parse_expr, parse_located};
 /// A lexer or parser error and the byte range of the source it is about (an empty range
 /// at the end for an expression that stops too early).
 #[derive(Clone, Debug, PartialEq)]
-pub(in crate::tokens) struct Located {
-    pub(in crate::tokens) message: String,
-    pub(in crate::tokens) span: Range<usize>,
+pub(in crate::theme::tokens) struct Located {
+    pub(in crate::theme::tokens) message: String,
+    pub(in crate::theme::tokens) span: Range<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(in crate::tokens) enum Expr {
+pub(in crate::theme::tokens) enum Expr {
     Lit(Color),
     Ref(String),
     Alpha(Box<Expr>, f32),
@@ -36,7 +36,7 @@ pub(in crate::tokens) enum Expr {
 }
 
 impl Expr {
-    pub(in crate::tokens) fn refs<'a>(&'a self, out: &mut Vec<&'a str>) {
+    pub(in crate::theme::tokens) fn refs<'a>(&'a self, out: &mut Vec<&'a str>) {
         match self {
             Expr::Lit(_) => {}
             Expr::Ref(n) => out.push(n),

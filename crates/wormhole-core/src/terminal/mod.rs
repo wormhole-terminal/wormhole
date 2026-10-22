@@ -7,7 +7,10 @@
 //! - `spawn`: [`SpawnOptions`] and [`spawn`], which turn a tab's options into the
 //!   [`Launch`] and [`StartOptions`] that `Pty::start` takes.
 
+pub mod cli_tool;
+pub mod default_terminal;
 mod process;
+pub mod shells;
 mod spawn;
 
 pub use process::shell_name;

@@ -54,6 +54,7 @@
 
 mod catalog;
 mod check;
+pub(crate) mod color;
 mod contrast;
 #[cfg(test)]
 mod design_values;
