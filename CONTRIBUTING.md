@@ -40,6 +40,8 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
 
 - `crates/wormhole-core`: no GPUI. Terminal engine, git, config, storage, agent hooks, the keymap,
   layout rules. Put logic here whenever it doesn't need the UI, and test it here.
+- The terminal engine, `wormhole-vt`, comes from its own repository,
+  [wormhole-terminal/wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) (MIT).
 - `crates/wormhole`: the GPUI app. `workspace/` is one window, `style/` the design language,
   `terminal_view/` the terminal.
 - `tools/visual/`: scenarios for screenshot comparisons (`scripts/visual-check.sh`).
@@ -198,6 +200,6 @@ and takes the newer, and it shows Settings → Feature flags, which a release ot
 ## License
 
 By contributing you agree that your contribution is licensed under the GNU General Public License
-v3.0 or later, the license of the project.
-A contribution to the terminal engine (`crates/wormhole-vt`) is licensed under the MIT License, the
-engine's license.
+v3.0 or later, the license of the project. The terminal engine has a repository of its own,
+[wormhole-terminal/wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt), under the MIT License;
+changes to it go there.

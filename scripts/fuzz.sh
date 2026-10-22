@@ -1,9 +1,9 @@
 #!/bin/bash
-# Coverage-guided fuzzing of wormhole-vt and wormhole-wire (cargo fuzz, libFuzzer; nightly Rust). By hand:
-# it is not in scripts/check.sh and not in CI. The targets and what they check are in
-# crates/wormhole-vt/fuzz/README.md and crates/wormhole-wire/fuzz/README.md.
+# Coverage-guided fuzzing of wormhole-wire (cargo fuzz, libFuzzer; nightly Rust). By hand: it is not in
+# scripts/check.sh and not in CI. The targets and what they check are in crates/wormhole-wire/fuzz/README.md;
+# the terminal engine's fuzzing is in its own repository (wormhole-terminal/wormhole-vt).
 #
-#   scripts/fuzz.sh seeds                     # (re)make the starting corpus (.vtt cases and corpora; the wire samples)
+#   scripts/fuzz.sh seeds                     # (re)make the starting corpus (the wire samples)
 #   scripts/fuzz.sh run [target...] [-m MIN] [-j JOBS]
 #                                             # fuzz (default: every target, 10 minutes, 4 processes at a time)
 #   scripts/fuzz.sh repro <target> <file>     # run one saved input (fuzz/artifacts/<target>/crash-*)
@@ -17,18 +17,11 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 . scripts/lib.sh
 
-# Each target belongs to a crate whose fuzz folder holds it; `wire_*` are the wire protocol's.
-TARGETS=(parser split term graphics wire_frame wire_message)
-crate_of() { case "$1" in wire_*) echo wormhole-wire ;; *) echo wormhole-vt ;; esac; }
-fuzz_dir() { echo "crates/$(crate_of "$1")/fuzz"; }
-# Bound the work an input may cause: a hang or a huge allocation is a finding. A wire frame is up to
-# 64 KiB of data, so its inputs are longer than the engine's.
-libfuzzer_args() {
-  case "$(crate_of "$1")" in
-    wormhole-wire) echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-wire/fuzz/wire.dict" ;;
-    *) echo "-max_len=3000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-vt/fuzz/escape.dict" ;;
-  esac
-}
+TARGETS=(wire_frame wire_message)
+# Every target is the wire protocol's; the helpers keep the crate a parameter all the same.
+crate_of() { echo wormhole-wire; }
+# Bound the work an input may cause: a hang or a huge allocation is a finding. A frame is up to 64 KiB.
+libfuzzer_args() { echo "-max_len=70000 -timeout=10 -rss_limit_mb=2048 -dict=$ROOT/crates/wormhole-wire/fuzz/wire.dict"; }
 # Nightly builds with sanitizers get their own target dir, so they never invalidate the normal one.
 BASE_TARGET="${CARGO_TARGET_DIR:-$ROOT/target}"
 export CARGO_TARGET_DIR="$BASE_TARGET/fuzz-nightly"
@@ -39,7 +32,6 @@ rustup toolchain list | grep -q '^nightly' || die "no nightly toolchain. Install
 cmd="${1:-}"; [ $# -gt 0 ] && shift
 case "$cmd" in
   seeds)
-    CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-vt-bench --bin fuzz-seeds -- "$ROOT/crates/wormhole-vt/fuzz/corpus" || exit 1
     CARGO_TARGET_DIR="$BASE_TARGET" cargo run -q -p wormhole-wire --example seeds -- "$ROOT/crates/wormhole-wire/fuzz/corpus"
     ;;
   list) printf '%s\n' "${TARGETS[@]}" ;;

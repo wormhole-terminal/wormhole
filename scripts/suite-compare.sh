@@ -45,9 +45,10 @@
 #     --list            say which terminals are installed and running, and stop
 #     -h, --help
 #
-# The suites are fetched at the commits in tools/vt-compare/suites.pin into the cache
-# (tools/vt-compare/fetch-suites.sh), never into this repository. Wormhole needs --wormhole-bin to be a
-# release build with devctl; without it HEAD is built (several minutes).
+# tools/vt-compare is the terminal engine's (wormhole-terminal/wormhole-vt): a checkout of it next to
+# this one (../wormhole-vt), or VT_COMPARE=<its tools/vt-compare>. The suites are fetched at the commits
+# in its suites.pin into the cache (its fetch-suites.sh), never into either repository. Wormhole needs
+# --wormhole-bin to be a release build with devctl; without it HEAD is built (several minutes).
 #
 # Results in <out>: esctest/<terminal>.jsonl (+ .log, .log.trace), ucs-detect/<terminal>.yaml, runs.tsv
 # and meta.tsv (how each run went), and the tables: esctest.md, esctest-tests.md, ucs-detect.md, run.md.
@@ -66,7 +67,9 @@ set -euo pipefail
 # shellcheck source=terminal-apps.sh
 . "$(dirname "$0")/terminal-apps.sh"
 
-SUITES_DIR="$ROOT/tools/vt-compare/suites"
+VT_COMPARE="${VT_COMPARE:-$ROOT/../wormhole-vt/tools/vt-compare}"
+[ -d "$VT_COMPARE/suites" ] || die "no tools/vt-compare at $VT_COMPARE: clone wormhole-terminal/wormhole-vt next to this checkout, or set VT_COMPARE"
+SUITES_DIR="$VT_COMPARE/suites"
 max_load=4 only="" out="" cols=80 rows=25 font=Menlo font_size=13 wormhole_bin="" timeout_s=1800 list=0
 iterm2_args="-NoSyncDisableDECRQCRA NO"
 suites="esctest ucs-detect" esctest_include=".*" esctest_args="" ucs_args="" report_only=0 probe_only=0
@@ -114,7 +117,7 @@ fi
 
 # fetch-suites.sh fetches what is missing and prints where everything is.
 SUITES_PYTHON="" ESCTEST_DIR="" UCS_DETECT_DIR=""
-env_lines="$("$ROOT/tools/vt-compare/fetch-suites.sh" --env)"
+env_lines="$("$VT_COMPARE/fetch-suites.sh" --env)"
 while IFS='=' read -r key value; do
   case "$key" in
     ESCTEST_DIR) ESCTEST_DIR="$value" ;;
@@ -130,9 +133,9 @@ ghostty_version="$(installed ghostty 2>/dev/null || true)"
 if [ -n "$ghostty_version" ] && [ "$(printf '%s\n1.4.0\n' "${ghostty_version%%-*}" | sort -V | head -n1)" = 1.4.0 ]; then
   ghostty_args="--vt-xt-checksum-report=true"
 fi
-pin() { sed -n "s/^$1=//p" "$ROOT/tools/vt-compare/suites.pin" | head -n1; }
+pin() { sed -n "s/^$1=//p" "$VT_COMPARE/suites.pin" | head -n1; }
 
-[ -n "$out" ] || out="$ROOT/tools/vt-compare/results/$(date +%F)-$(machine_slug)/suites"
+[ -n "$out" ] || out="$VT_COMPARE/results/$(date +%F)-$(machine_slug)/suites"
 mkdir -p "$out/esctest" "$out/ucs-detect"
 out="$(cd "$out" && pwd -P)"
 

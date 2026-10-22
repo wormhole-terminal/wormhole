@@ -1,7 +1,0 @@
-date	2026-10-15T11:48:57Z
-machine	Mac17,8, Apple M5 Pro, macOS 27.0.1
-checkout	5e2f529c (with uncommitted changes)
-asked_for	80 x 25 cells, Menlo 13 pt (an app that can't be told from the command line has its own)
-load	4.01 3.53 3.48
-esctest_rev	2798f12149a19c3295e9b4853ab2da4b2eff1b2b
-ucs_detect_rev	50f011d991a28d76fbe12767360841196e49074f

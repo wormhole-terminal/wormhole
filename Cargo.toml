@@ -13,7 +13,9 @@ publish = false
 [workspace.dependencies]
 wormhole-core = { path = "crates/wormhole-core" }
 wormhole-term = { path = "crates/wormhole-term" }
-wormhole-vt = { path = "crates/wormhole-vt" }
+# The terminal engine, in a repository of its own (MIT): a pinned commit until it is on crates.io.
+# The private checkout builds against a local copy instead; see `[patch]` in its .cargo/config.toml.
+wormhole-vt = { git = "https://github.com/wormhole-terminal/wormhole-vt", rev = "4ae6ef4cebaba832d484fcf15f33814cdffc8a1b" }
 wormhole-wire = { path = "crates/wormhole-wire" }
 anyhow = "1"
 dirs = "7.0.0"
@@ -48,7 +50,7 @@ lto = "thin"
 # codegen-units stays at the default (16): with 1, the app crates' code generation ran on one core.
 
 # Release, with the symbols a profiler needs (function names and source lines): the code is the
-# same as the release build's. `scripts/profile-vt.sh` builds the engine's profiling example with it.
+# same as the release build's (`cargo build --profile profiling`).
 [profile.profiling]
 inherits = "release"
 debug = "line-tables-only"
