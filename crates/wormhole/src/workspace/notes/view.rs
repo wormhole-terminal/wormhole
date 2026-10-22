@@ -19,11 +19,14 @@ use super::{NOTE_ROWS_MIN, is_blank_note};
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
+use crate::workspace::Workspace;
 use crate::workspace::focus::{Activate, Walkable};
 use crate::workspace::items::with_item_keys;
+use crate::workspace::notes::TaskItem;
 use crate::workspace::panel_list::{CardPart, Rows};
 use crate::workspace::text::{note_body, note_title};
-use crate::workspace::{NOTE_PLACEHOLDER, TaskItem, Workspace};
+
+const NOTE_PLACEHOLDER: &str = "Write a note or a prompt draft…\n⌘↵ sends the paragraph under the cursor (or the selection); ⌘⇧↵ also submits.";
 
 /// The Notes band's + names its key, from the keymap (the band takes a `&'static str`).
 static NEW_NOTE_TOOLTIP: std::sync::LazyLock<String> =

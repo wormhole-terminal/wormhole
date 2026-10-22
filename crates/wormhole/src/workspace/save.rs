@@ -1,0 +1,80 @@
+//! Saving a window: its record (terminals, splits, layout) when something changed, and every
+//! terminal's text once a minute.
+
+use std::time::{Duration, Instant};
+
+use gpui_kit::*;
+use wormhole_core::storage::store::WindowRecord;
+
+use crate::settings::settings_in;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::{Layout, Workspace};
+
+/// How many lines of each terminal's scrollback are saved and restored. Fixed, whatever the
+/// `scrollback_lines` setting (that one is how much a running terminal keeps).
+pub(super) const SCROLLBACK_LINES: usize = 2000;
+pub(super) const SCROLLBACK_SAVE_INTERVAL: Duration = Duration::from_secs(60);
+
+impl Workspace {
+    pub(super) fn window_record(&self, cx: &App) -> WindowRecord {
+        // The groups keep only the terminals that are still here.
+        let mut view = self.sidebar.view.clone();
+        view.groups.retain_terminals(|id| self.sessions.iter().any(|session| session.id == id));
+        let layout = Layout::new(self.panes, self.right_tab, view);
+        WindowRecord {
+            id: self.window_id,
+            active: self.active,
+            layout: serde_json::to_string(&layout).ok(),
+            bounds: self.bounds.clone(),
+            sessions: self.sessions.iter().map(|s| s.record(cx)).collect(),
+            splits: self.split_records(),
+        }
+    }
+
+    pub(super) fn save(&mut self, cx: &mut App) {
+        self.dirty = false;
+        if self.discarded {
+            return;
+        }
+        let record = self.window_record(cx);
+        app_mut(cx).save_window(&self.profile, &record);
+    }
+
+    /// Every terminal's text whose text is kept, in one transaction (sealed: `store::saved_text`).
+    /// Nothing when Restore terminal text after restart is off.
+    pub(super) fn save_scrollback(&mut self, cx: &mut App) {
+        self.last_scrollback_save = Instant::now();
+        if self.discarded || !settings_in(&self.profile, cx).restore_terminal_text {
+            return;
+        }
+        let texts: Vec<(i64, String)> = self
+            .sessions
+            .iter()
+            .filter(|session| !session.forget_text)
+            .map(|session| {
+                (session.pane.id, session.pane.terminal.read(cx).scrollback_text(SCROLLBACK_LINES))
+            })
+            .collect();
+        let Some(store) = app_mut(cx).store_of_mut(&self.profile) else { return };
+        if let Err(err) = store.save_scrollbacks(&texts) {
+            tracing::warn!("scrollback save failed: {err:#}");
+        }
+    }
+
+    /// "Don't keep this terminal's text" in its row menu: from now on nothing of it is saved, and
+    /// what was is erased at once; chosen again, it is saved from the next minute on.
+    pub(crate) fn toggle_forget_text(&mut self, ix: usize, cx: &mut Context<Self>) {
+        let Some(session) = self.sessions.get_mut(ix) else { return };
+        session.forget_text = !session.forget_text;
+        let (id, forget) = (session.id, session.forget_text);
+        if forget
+            && let Some(store) = app(cx).store_of(&self.profile)
+            && let Err(err) = store.clear_scrollback(id)
+        {
+            tracing::warn!("erasing terminal {id}'s saved text failed: {err:#}");
+        }
+        // At once: a restart before the next save must not bring the choice back undone.
+        self.save(cx);
+        cx.notify();
+    }
+}

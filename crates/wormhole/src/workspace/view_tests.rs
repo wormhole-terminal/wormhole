@@ -23,10 +23,11 @@ use wormhole_core::view::sidebar::{Entry, SidebarNumbers, WindowSidebar};
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
 use crate::workspace::app::{AppState, OpenWindow, app};
+use crate::workspace::notes::TaskItem;
 use crate::workspace::picker::Picker;
 use crate::workspace::status_bar::StatusItem;
 use crate::workspace::window_lifecycle::open_workspace_window;
-use crate::workspace::{RightTab, TaskItem, Workspace, notifications};
+use crate::workspace::{RightTab, Workspace, notifications};
 
 const CHILD: &str = "WORMHOLE_VIEW_TEST_CHILD";
 

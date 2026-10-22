@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
-use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
+use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -11,8 +11,10 @@ pub(crate) use self::about::devctl_command as devctl_about;
 pub(crate) use self::actions::CheckForUpdates;
 #[cfg(feature = "devctl")]
 pub(crate) use self::actions::NewWindow;
+pub(crate) use self::app::AppState;
+#[cfg(any(test, feature = "devctl"))]
+pub(crate) use self::app::app;
 pub(crate) use self::app::app_mut;
-pub(crate) use self::app::{AppState, app};
 pub(crate) use self::app_handlers::init as init_actions;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app_menu::dump as menu_dump;
@@ -25,11 +27,10 @@ pub(crate) use self::project::devctl_trust_shot;
 pub(crate) use self::updates::devctl_installed as devctl_update_installed;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::platform::vibrancy;
-use crate::settings::{settings_in, ui_in};
+use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
-use wormhole_core::view::sidebar::WindowSidebar;
 
 mod about;
 mod actions;
@@ -97,6 +98,8 @@ pub(crate) mod quick_panel;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
+mod save;
+mod saved_layout;
 mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;
@@ -114,7 +117,9 @@ mod status_bar;
 mod studio;
 mod tasks;
 mod terminal_drag;
+mod terminals;
 mod text;
+mod tick;
 mod title_chips;
 mod title_extras;
 mod title_row;
@@ -134,85 +139,15 @@ mod window_lifecycle;
 mod windows;
 mod worktree;
 
-use self::git_panel::changes::GitPoll;
-use self::git_panel::{changes, diff_view, history, picker};
-use self::session::{Pane, Session};
+use self::git_panel::{diff_view, picker};
+use self::saved_layout::Layout;
+pub(crate) use self::saved_layout::RightTab;
+use self::session::Session;
 
-/// What the right panel shows.
-#[derive(Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RightTab {
-    #[default]
-    Changes,
-    History,
-    Notes,
-    Usage,
-    Project,
-}
-use crate::terminal_view::{Status, TerminalView};
-use wormhole_core::storage::store::{SessionRecord, WindowRecord};
+use crate::terminal_view::Status;
+use wormhole_core::storage::store::WindowRecord;
 
 use wormhole_core::view::layout::{Edge, Panes};
-/// A window's layout as saved with it.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(default)]
-struct Layout {
-    sidebar_width: f32,
-    notes_width: f32,
-    sidebar_open: bool,
-    notes_open: bool,
-    right_tab: RightTab,
-    /// The sidebar's grouping, filter and search, and its folded bands.
-    sidebar: WindowSidebar,
-}
-
-impl Default for Layout {
-    fn default() -> Self {
-        Self::new(Panes::default(), RightTab::default(), WindowSidebar::default())
-    }
-}
-
-impl Layout {
-    fn new(panes: Panes, right_tab: RightTab, sidebar: WindowSidebar) -> Self {
-        Self {
-            sidebar_width: panes.sidebar_width,
-            notes_width: panes.panel_width,
-            sidebar_open: panes.sidebar_open,
-            notes_open: panes.panel_wanted,
-            right_tab,
-            sidebar,
-        }
-    }
-
-    fn panes(&self) -> Panes {
-        Panes {
-            sidebar_open: self.sidebar_open,
-            sidebar_width: self.sidebar_width,
-            panel_wanted: self.notes_open,
-            panel_width: self.notes_width,
-        }
-        .restored()
-    }
-}
-/// How many lines of each terminal's scrollback are saved and restored. Fixed, whatever the
-/// `scrollback_lines` setting (that one is how much a running terminal keeps).
-const SCROLLBACK_LINES: usize = 2000;
-const SCROLLBACK_SAVE_INTERVAL: Duration = Duration::from_secs(60);
-const NOTE_PLACEHOLDER: &str = "Write a note or a prompt draft…\n⌘↵ sends the paragraph under the cursor (or the selection); ⌘⇧↵ also submits.";
-
-struct Note {
-    state: Entity<TextareaState>,
-    collapsed: bool,
-    /// "Show all" was clicked: the open note isn't cut at `NOTE_OPEN_MAX_LINES` (until folded).
-    show_all: bool,
-    _subscription: Subscription,
-}
-
-#[derive(Clone)]
-struct TaskItem {
-    text: SharedString,
-    done: bool,
-}
 
 pub struct Workspace {
     /// The window's terminals, one session each, in the order the sidebar's manual order keeps.
@@ -484,115 +419,6 @@ impl Workspace {
         this
     }
 
-    /// Apply settings that live outside GPUI's render tree.
-    fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = self::aux_window::wants_blur(settings_in(&self.profile, cx), true);
-        self.blur.set_enabled(blur);
-        // Without the blur the window stands on the panel's colour: the gaps round the terminal's
-        // surface and between a split's panes show the window, glass or not, and would otherwise
-        // show the desktop through it.
-        self.blur.set_backing((!blur).then(|| ui_in(&self.profile, cx).panel));
-    }
-
-    fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.ticks += 1;
-        self.sync_appearance(cx);
-        self.track_window(window, cx);
-        self.sync_diff(cx);
-        // Folders are also re-read when a terminal prints (see `TerminalView`); this
-        // is the backstop. Agent detection walks the process tree, so less often.
-        let refresh_agent = self.ticks % 5 == 1;
-        let window_active = window.is_window_active();
-        if window_active && !self.is_front(cx) {
-            self.became_front(cx);
-        }
-        let mut changed = false;
-        // Only the selected terminal and the panes shown with it are on screen.
-        let on_screen: Vec<bool> = (0..self.sessions.len()).map(|ix| self.on_screen(ix)).collect();
-        // A program's clipboard read is asked about only where the question can be seen.
-        let looking = self::focus::in_front(window);
-        for (session, is_active) in self.sessions.iter().zip(on_screen) {
-            let pane = &session.pane;
-            changed |= pane.terminal.update(cx, |terminal, _| {
-                // A split joined or left since the selection last changed.
-                terminal.set_on_screen(is_active);
-                terminal.set_in_front(is_active && looking);
-                let before = terminal.status();
-                let mut changed = terminal.tick(is_active, window_active);
-                if is_active && window_active {
-                    changed |= terminal.acknowledge();
-                }
-                if terminal.refresh_cwd() {
-                    changed = true;
-                    self.dirty = true;
-                }
-                if refresh_agent {
-                    changed |= terminal.refresh_agent();
-                }
-                changed || before != terminal.status()
-            });
-            if is_active && window_active {
-                self::notifications::dismiss(pane.id, cx);
-            }
-        }
-        // The Usage tab's times count down while it shows.
-        let usage_on_screen = self.notes_visible() && self.right_tab == RightTab::Usage;
-        if changed || (usage_on_screen && self.ticks.is_multiple_of(self::usage::REDRAW_TICKS)) {
-            cx.notify();
-        }
-        self.sync_close_dot(window, cx);
-        self.leave_missing_tab(cx);
-        if self.notes_visible()
-            && self.right_tab == RightTab::History
-            && (self.ticks.is_multiple_of(12) || self.history_unanswered(cx))
-            && !self.active_session().history.waits_for_retry()
-            && !self.history_absent(cx)
-        {
-            let ix = self.active;
-            self.refresh_history(ix, cx);
-        }
-        for ix in 0..self.sessions.len() {
-            if self.sessions[ix].git.waits_for_retry() {
-                continue;
-            }
-            let cwd = self.sessions[ix].terminal().read(cx).cwd.clone();
-            match self.sessions[ix].git.poll(cwd.as_deref(), self.ticks + ix as u64, ix == self.active) {
-                GitPoll::Refresh => self.refresh_git(ix, cx),
-                GitPoll::Probe => self.probe_repo(ix, cx),
-                GitPoll::Idle => {}
-            }
-        }
-        if self.ticks % 5 == 1 {
-            // A `git init` in the folder a session is already in changes its root without a `cd`.
-            for session in &self.sessions {
-                session.repo_root.forget();
-            }
-            self.refresh_projects(cx);
-        }
-        // The backstop for a new note that never got the focus it would be thrown away on
-        // losing (see `prune_blank_notes`).
-        self.prune_blank_notes(window, cx);
-        if self.ticks.is_multiple_of(3) {
-            self.sync_project_notes(window, cx);
-        }
-        if self.is_front(cx) {
-            self.remember_project(cx);
-        }
-        self.tick_extras(cx);
-        self.refresh_status_bar(cx);
-        self.crumb_tick(cx);
-        self.sidebar_tick(window_active, cx);
-        if self.dirty && !self.discarded {
-            self.save(cx);
-        }
-        if self.last_scrollback_save.elapsed() > SCROLLBACK_SAVE_INTERVAL {
-            self.save_scrollback(cx);
-        }
-
-        #[cfg(feature = "devctl")]
-        self.run_tick_hook(window, cx);
-    }
-
     // ---------------------------------------------------------------- agent hooks
 
     /// An agent's hook event for one of this window's terminals (`tab`: its id, what the hooks
@@ -623,427 +449,8 @@ impl Workspace {
         cx.notify();
     }
 
-    // ---------------------------------------------------------------- persistence
-
-    fn window_record(&self, cx: &App) -> WindowRecord {
-        // The groups keep only the terminals that are still here.
-        let mut view = self.sidebar.view.clone();
-        view.groups.retain_terminals(|id| self.sessions.iter().any(|session| session.id == id));
-        let layout = Layout::new(self.panes, self.right_tab, view);
-        WindowRecord {
-            id: self.window_id,
-            active: self.active,
-            layout: serde_json::to_string(&layout).ok(),
-            bounds: self.bounds.clone(),
-            sessions: self.sessions.iter().map(|s| s.record(cx)).collect(),
-            splits: self.split_records(),
-        }
-    }
-
-    fn save(&mut self, cx: &mut App) {
-        self.dirty = false;
-        if self.discarded {
-            return;
-        }
-        let record = self.window_record(cx);
-        app_mut(cx).save_window(&self.profile, &record);
-    }
-
-    /// Every terminal's text whose text is kept, in one transaction (sealed: `store::saved_text`).
-    /// Nothing when Restore terminal text after restart is off.
-    fn save_scrollback(&mut self, cx: &mut App) {
-        self.last_scrollback_save = Instant::now();
-        if self.discarded || !settings_in(&self.profile, cx).restore_terminal_text {
-            return;
-        }
-        let texts: Vec<(i64, String)> = self
-            .sessions
-            .iter()
-            .filter(|session| !session.forget_text)
-            .map(|session| {
-                (session.pane.id, session.pane.terminal.read(cx).scrollback_text(SCROLLBACK_LINES))
-            })
-            .collect();
-        let Some(store) = app_mut(cx).store_of_mut(&self.profile) else { return };
-        if let Err(err) = store.save_scrollbacks(&texts) {
-            tracing::warn!("scrollback save failed: {err:#}");
-        }
-    }
-
-    /// "Don't keep this terminal's text" in its row menu: from now on nothing of it is saved, and
-    /// what was is erased at once; chosen again, it is saved from the next minute on.
-    pub(crate) fn toggle_forget_text(&mut self, ix: usize, cx: &mut Context<Self>) {
-        let Some(session) = self.sessions.get_mut(ix) else { return };
-        session.forget_text = !session.forget_text;
-        let (id, forget) = (session.id, session.forget_text);
-        if forget
-            && let Some(store) = app(cx).store_of(&self.profile)
-            && let Err(err) = store.clear_scrollback(id)
-        {
-            tracing::warn!("erasing terminal {id}'s saved text failed: {err:#}");
-        }
-        // At once: a restart before the next save must not bring the choice back undone.
-        self.save(cx);
-        cx.notify();
-    }
-
-    /// Quit the app (every window is saved on the way out).
-    #[cfg(feature = "devctl")]
-    pub(crate) fn quit(&mut self, cx: &mut Context<Self>) {
-        cx.quit();
-    }
-
     fn mark_dirty(&mut self, cx: &mut Context<Self>) {
         self.dirty = true;
         cx.notify();
     }
-
-    #[cfg(feature = "devctl")]
-    pub(crate) fn debug_state(&self, cx: &App) -> String {
-        let mut out = format!(
-            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} groups={} folded={:?} listed={:?} numbered={:?}\n",
-            self.window_number(cx),
-            app(cx).windows.len(),
-            self.window_id,
-            self.close_dot,
-            self.closing_session_prompt,
-            self.profile,
-            self.panes.sidebar_width,
-            self.panes.panel_width,
-            self.window_width,
-            self.panes.sidebar_open,
-            self.panes.panel_wanted,
-            self.notes_visible(),
-            self.resizing.is_some(),
-            self.status_bar_drawn.is_some(),
-            self.sidebar.view.groups.iter().count(),
-            self.sidebar.view.folded,
-            self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
-            self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
-        );
-        for (ix, session) in self.sessions.iter().enumerate() {
-            let terminal = session.terminal().read(cx);
-            let marker = if ix == self.active {
-                "*"
-            } else if self.on_screen(ix) {
-                "+"
-            } else {
-                " "
-            };
-            out.push_str(&format!(
-                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?} {}\n",
-                ix + 1,
-                session.id,
-                terminal.status(),
-                terminal.agent,
-                // A program that reports its own status and is no agent, and a failed command's
-                // exit code (the row's cue).
-                terminal.program_name().map(|name| format!(" program={name:?}")).unwrap_or_default(),
-                terminal.failure().map(|failure| format!(" failed=exit {}", failure.code)).unwrap_or_default(),
-                session.name(cx),
-                terminal.cwd,
-                if session.pinned { " pinned" } else { "" },
-                session.split.map(|id| format!(" split={id}")).unwrap_or_default(),
-                terminal.foreground().map(|f| f.command.clone()),
-                session.pane.shell,
-                terminal.shell_name(),
-                terminal.host_label(),
-            ));
-            for task in &session.tasks {
-                out.push_str(&format!("    [{}] {}\n", if task.done { "x" } else { " " }, task.text));
-            }
-            for note in &session.notes {
-                out.push_str(&format!(
-                    "    note{}: {:?}\n",
-                    if note.collapsed { " (collapsed)" } else { "" },
-                    note.state.read(cx).value()
-                ));
-            }
-        }
-        for split in &self.splits {
-            out.push_str(&format!(
-                "split {} members={:?} panes={:?} focused={} zoomed={:?} layout={:?}\n",
-                split.id,
-                self.members(split.id).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
-                split.layout.panes(),
-                split.layout.focused(),
-                split.layout.zoomed(),
-                split.layout.preset(),
-            ));
-        }
-        out
-    }
-
-    // ---------------------------------------------------------------- sessions
-
-    pub(crate) fn new_session(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.new_session_with(None, window, cx);
-    }
-
-    /// A new terminal running the shell `shell` names (`None`: the default), where the current
-    /// one is, or in its group's folder if the group has one (it joins that group).
-    pub(crate) fn new_session_with(
-        &mut self,
-        shell: Option<String>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let cwd = self.start_cwd(self.active_group(), cx);
-        self.open_session(shell, cwd, window, cx);
-    }
-
-    /// A new terminal in `cwd` running `shell` (a profile's key; `None`: the default), selected.
-    pub(in crate::workspace) fn open_session(
-        &mut self,
-        shell: Option<String>,
-        cwd: Option<String>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> usize {
-        self.open_session_in(None, shell, cwd, window, cx)
-    }
-
-    /// [`Self::open_session`] in a group of its own choosing: `Some(Some(group))` joins that group,
-    /// `Some(None)` stands in no group, `None` beside the selected terminal, in its group if it
-    /// has one (⌘T), whereas ⇧⌘T opens one in no group.
-    pub(in crate::workspace) fn open_session_in(
-        &mut self,
-        group: Option<Option<u32>>,
-        shell: Option<String>,
-        cwd: Option<String>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> usize {
-        let mut record = SessionRecord::new(self.alloc_id(cx), None, cwd);
-        record.shell = shell;
-        let group = group.unwrap_or_else(|| self.active_group());
-        let id = record.id;
-        let ix = self.add_session(Some(record), window, cx);
-        if let Some(group) = group {
-            let ids = self.session_ids();
-            self.sidebar.view.place_in_group(&ids, id, group, None);
-        }
-        self.activate(ix, window, cx);
-        self.dirty = true;
-        ix
-    }
-
-    fn add_session(
-        &mut self,
-        record: Option<SessionRecord>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> usize {
-        let number = self.next_number;
-        self.next_number += 1;
-        let mut record = record.unwrap_or_else(|| {
-            let id = self.alloc_id(cx);
-            SessionRecord::new(id, None, self.default_cwd(cx))
-        });
-        // Text the person asked not to keep is never shown again, whatever the file still holds.
-        if record.forget_text || !settings_in(&self.profile, cx).restore_terminal_text {
-            record.scrollback = None;
-        }
-        let (pane, new_host) = self.make_pane(&record, window, cx);
-        self.sessions.push(Session {
-            id: record.id,
-            number,
-            custom_name: record.name,
-            pane,
-            split: record.split_id,
-            notes: Vec::new(),
-            notes_list: self::notes::NotesList::default(),
-            tasks: record.tasks.into_iter().map(|t| TaskItem { text: t.text.into(), done: t.done }).collect(),
-            tasks_collapsed: record.tasks_collapsed,
-            notes_collapsed: record.notes_collapsed,
-            task_edit: None,
-            git: changes::GitState::default(),
-            compare: None,
-            history: history::HistoryState::default(),
-            project: None,
-            notes_root: None,
-            notes_base: None,
-            repo_root: Default::default(),
-            pinned: record.pinned,
-            forget_text: record.forget_text,
-            extras: Default::default(),
-            review: Default::default(),
-        });
-        let ix = self.sessions.len() - 1;
-        for note in record.notes {
-            self.add_note(ix, Some(note.body), note.collapsed, window, cx);
-        }
-        if let Some(host) = new_host {
-            self.save_host_row(ix, &host, cx);
-        }
-        ix
-    }
-
-    fn alloc_id(&self, cx: &mut App) -> i64 {
-        app_mut(cx).alloc_id_in(&self.profile)
-    }
-
-    /// Where a new terminal starts: where the current one is.
-    fn default_cwd(&self, cx: &App) -> Option<String> {
-        self.sessions
-            .get(self.active)
-            .and_then(|s| s.terminal().read(cx).cwd.clone())
-            .map(|p| p.to_string_lossy().into_owned())
-            // Dev/test override for where the first session starts.
-            .or_else(|| std::env::var("WORMHOLE_START_DIR").ok())
-    }
-
-    /// Start the shell of a session's terminal, with the id the session has: the profile it was
-    /// opened with, else a trusted project's shell (its env applies too), else the default (core's
-    /// `shells::for_terminal`), in the folder and with the scrollback the record has. In a session
-    /// host when it should run in one (`start_for`): then the new host's id comes back too, for the
-    /// row that names it.
-    fn make_pane(
-        &mut self,
-        record: &SessionRecord,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> (Pane, Option<String>) {
-        // A terminal moved here from another window keeps running.
-        if let Some(terminal) = app_mut(cx).adopted.remove(&record.id) {
-            return (Pane::new(record.id, record.shell.clone(), terminal, window, cx), None);
-        }
-        let cwd = record.cwd.as_ref().map(PathBuf::from);
-        let (mut env, project_shell) = Self::project_spawn_options(cwd.as_deref(), cx);
-        // A worktree Wormhole made: its own ports, whatever the project says.
-        if let Some(made) = cwd.as_deref().and_then(|cwd| app(cx).worktrees.find(cwd)) {
-            env.extend(made.env().into_iter().map(|(name, value)| (name.to_string(), value)));
-        }
-        let shell = wormhole_core::terminal::shells::for_terminal(
-            record.shell.as_deref(),
-            project_shell.as_deref(),
-            settings_in(&self.profile, cx),
-        );
-        let mut options = self::project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
-        // After the project's environment is in: what a trusted project set is kept. The profile's
-        // own environment is the person's (not repository content), so it applies in an untrusted
-        // project as well.
-        if let Some(profile) = app(cx).profiles.get(&self.profile) {
-            options.apply_profile(profile);
-        }
-        // A welcome terminal: the shell starts through `Wormhole welcome`, and only this terminal's
-        // environment has the token that lets that program talk to the app as the welcome.
-        if let Some((_, token)) = self.pending_welcome.take_if(|(id, _)| *id == record.id) {
-            // (Not in the app's own tests: their binary is not Wormhole and would take `welcome` for
-            // a test name.)
-            options.welcome = !cfg!(test);
-            options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
-        }
-        let start = self.start_for(record, &options, cx);
-        let new_host = match &start {
-            crate::terminal_view::Start::Host { id, .. } => Some(id.clone()),
-            _ => None,
-        };
-        let terminal = cx.new(|cx| TerminalView::new(options, start, self.profile.clone(), window, cx));
-        let zoom = self.font_zoom;
-        terminal.update(cx, |terminal, cx| terminal.set_font_zoom(zoom, cx));
-        (Pane::new(record.id, record.shell.clone(), terminal, window, cx), new_host)
-    }
-
-    /// Select terminal `ix` and give it the keyboard. Selecting a row of a split shows the split
-    /// with that pane focused.
-    pub(crate) fn activate(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
-        if ix >= self.sessions.len() {
-            return;
-        }
-        self.select(ix, cx);
-        window.focus(&self.sessions[ix].terminal().focus_handle(cx), cx);
-        cx.notify();
-    }
-
-    /// Select terminal `ix` without moving the keyboard (it is already there, or goes there next):
-    /// what belongs to the terminal on screen starts fresh, its split shows with its pane focused,
-    /// and what is on screen counts as seen.
-    fn select(&mut self, ix: usize, cx: &mut Context<Self>) {
-        if self.active != ix {
-            self.focused_note = None;
-            // The diff and branch picker belong to the terminal they were opened from.
-            self.diff_view = None;
-            self.picker = None;
-            self.dirty = true;
-        }
-        self.active = ix;
-        let id = self.sessions[ix].id;
-        if let Some(split) = self.active_split_mut()
-            && split.layout.focused() != id
-        {
-            split.layout.focus(id);
-            self.dirty = true;
-        }
-        self.acknowledge_selected(cx);
-        // At once, not on the next tick: a terminal switched to shows its last screen and is fed
-        // from here on.
-        self.sync_host_visibility(cx);
-    }
-
-    /// Close terminal `ix`: its shell ends. In a split its pane goes and the others take its room;
-    /// one left alone becomes a plain row. The selection stays in the split when the closed one
-    /// was selected (the keyboard goes where the layout sends it: the next pane in reading order).
-    fn close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let len = self.sessions.len();
-        if ix >= len {
-            return;
-        }
-        let was_selected = ix == self.active;
-        // The member that takes the selection, by id: the split's next pane, else the one left
-        // alone when the split dissolves.
-        let split_id = self.sessions[ix].split;
-        let heir = split_id.and_then(|id| {
-            let split = self.splits.iter().find(|split| split.id == id)?;
-            let mut layout = split.layout.clone();
-            layout.close(self.sessions[ix].id);
-            Some(layout.focused())
-        });
-        self.leave_layout(ix);
-        let after = self::session::session_after_close(self.active, ix, len);
-        let closed = self.sessions.remove(ix);
-        self.sidebar.view.groups.leave(closed.id);
-        self::notifications::dismiss(closed.pane.id, cx);
-        self::welcome::forget(closed.id, cx);
-        self.end_welcome_demo(closed.id);
-        self.dirty = true;
-        // Selecting a session from `usize::MAX` is what resets what belongs to the session on
-        // screen (its diff, branch picker and focused note), so only a real change of session
-        // goes that way: closing a background session leaves the one you are in alone.
-        match after {
-            None => {
-                self.active = usize::MAX;
-                self.new_session(window, cx);
-            }
-            Some((next, true)) => {
-                let next = heir.filter(|_| was_selected).and_then(|id| self.find_session(id)).unwrap_or(next);
-                self.active = usize::MAX;
-                self.activate(next, window, cx);
-            }
-            Some((next, false)) => {
-                self.active = next;
-                cx.notify();
-            }
-        }
-    }
-
-    /// The selected terminal and the panes shown with it are in front of the user: a finished
-    /// agent in any of them turns idle, and its notification goes.
-    fn acknowledge_selected(&self, cx: &mut Context<Self>) {
-        for ix in self.on_screen_sessions() {
-            let pane = &self.sessions[ix].pane;
-            pane.terminal.update(cx, |t, _| t.acknowledge());
-            self::notifications::dismiss(pane.id, cx);
-        }
-    }
-
-    fn active_session(&self) -> &Session {
-        &self.sessions[self.active]
-    }
-
-    pub(crate) fn active_terminal(&self) -> Entity<TerminalView> {
-        self.active_session().terminal().clone()
-    }
-
-    // ---------------------------------------------------------------- notes
 }

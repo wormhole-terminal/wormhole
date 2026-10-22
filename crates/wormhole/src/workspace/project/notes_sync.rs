@@ -5,8 +5,9 @@ use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
 
 use super::project_folders_on;
+use crate::workspace::Workspace;
 use crate::workspace::app::{app, app_mut};
-use crate::workspace::{Note, TaskItem, Workspace};
+use crate::workspace::notes::{Note, TaskItem};
 
 impl Workspace {
     /// Two-way sync between each session's notes/tasks and its project's `notes.md`, as a three-way

@@ -9,13 +9,27 @@ use wormhole_core::view::reorder;
 
 use crate::workspace::items::{ItemKey, item_key};
 use crate::workspace::text::{chunks_blank, paragraph_at};
-use crate::workspace::{Note, RightTab, Workspace, panel_list};
+use crate::workspace::{RightTab, Workspace, panel_list};
 
 mod view;
 
 use crate::settings::ui_in;
 use view::wrapped_placeholder;
 pub(super) use view::{NotesList, NotesView};
+
+pub(in crate::workspace) struct Note {
+    pub(in crate::workspace) state: Entity<TextareaState>,
+    pub(in crate::workspace) collapsed: bool,
+    /// "Show all" was clicked: the open note isn't cut at `NOTE_OPEN_MAX_LINES` (until folded).
+    pub(in crate::workspace) show_all: bool,
+    _subscription: Subscription,
+}
+
+#[derive(Clone)]
+pub(in crate::workspace) struct TaskItem {
+    pub(in crate::workspace) text: SharedString,
+    pub(in crate::workspace) done: bool,
+}
 
 /// How tall a note's editor grows before it scrolls inside: every line shows while it's edited
 /// or after "Show all"; the panel cuts an open note at `NOTE_OPEN_MAX_LINES` otherwise.

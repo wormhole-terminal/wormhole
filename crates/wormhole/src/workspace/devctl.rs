@@ -6,6 +6,7 @@ use anyhow::{Result, bail};
 use gpui_kit::*;
 use wormhole_core::agents::{AgentId, integrations};
 
+use crate::workspace::app::app;
 use crate::workspace::{Workspace, folder_color};
 
 /// What runs at the end of every window tick in a devctl build: devctl's command reader, which
@@ -282,5 +283,89 @@ impl Workspace {
 
     pub(crate) fn devctl_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.open_path_menu(window, cx);
+    }
+}
+
+impl Workspace {
+    /// Quit the app (every window is saved on the way out).
+    #[cfg(feature = "devctl")]
+    pub(crate) fn quit(&mut self, cx: &mut Context<Self>) {
+        cx.quit();
+    }
+
+    #[cfg(feature = "devctl")]
+    pub(crate) fn debug_state(&self, cx: &App) -> String {
+        let mut out = format!(
+            "window {} of {} (id {}) close_dot={} closing_terminal_prompt={} profile={}\nlayout sidebar={} notes={} width={} sidebar_shown={} notes_wanted={} notes_visible={} resizing={} status_bar={} groups={} folded={:?} listed={:?} numbered={:?}\n",
+            self.window_number(cx),
+            app(cx).windows.len(),
+            self.window_id,
+            self.close_dot,
+            self.closing_session_prompt,
+            self.profile,
+            self.panes.sidebar_width,
+            self.panes.panel_width,
+            self.window_width,
+            self.panes.sidebar_open,
+            self.panes.panel_wanted,
+            self.notes_visible(),
+            self.resizing.is_some(),
+            self.status_bar_drawn.is_some(),
+            self.sidebar.view.groups.iter().count(),
+            self.sidebar.view.folded,
+            self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
+            self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
+        );
+        for (ix, session) in self.sessions.iter().enumerate() {
+            let terminal = session.terminal().read(cx);
+            let marker = if ix == self.active {
+                "*"
+            } else if self.on_screen(ix) {
+                "+"
+            } else {
+                " "
+            };
+            out.push_str(&format!(
+                "{marker}{} id={} {:?} agent={:?}{}{} name={:?} cwd={:?}{}{} command={:?} shell={:?} runs={:?} {}\n",
+                ix + 1,
+                session.id,
+                terminal.status(),
+                terminal.agent,
+                // A program that reports its own status and is no agent, and a failed command's
+                // exit code (the row's cue).
+                terminal.program_name().map(|name| format!(" program={name:?}")).unwrap_or_default(),
+                terminal.failure().map(|failure| format!(" failed=exit {}", failure.code)).unwrap_or_default(),
+                session.name(cx),
+                terminal.cwd,
+                if session.pinned { " pinned" } else { "" },
+                session.split.map(|id| format!(" split={id}")).unwrap_or_default(),
+                terminal.foreground().map(|f| f.command.clone()),
+                session.pane.shell,
+                terminal.shell_name(),
+                terminal.host_label(),
+            ));
+            for task in &session.tasks {
+                out.push_str(&format!("    [{}] {}\n", if task.done { "x" } else { " " }, task.text));
+            }
+            for note in &session.notes {
+                out.push_str(&format!(
+                    "    note{}: {:?}\n",
+                    if note.collapsed { " (collapsed)" } else { "" },
+                    note.state.read(cx).value()
+                ));
+            }
+        }
+        for split in &self.splits {
+            out.push_str(&format!(
+                "split {} members={:?} panes={:?} focused={} zoomed={:?} layout={:?}\n",
+                split.id,
+                self.members(split.id).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
+                split.layout.panes(),
+                split.layout.focused(),
+                split.layout.zoomed(),
+                split.layout.preset(),
+            ));
+        }
+        out
     }
 }

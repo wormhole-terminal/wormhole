@@ -13,7 +13,8 @@ use wormhole_core::view::sidebar::{SplitId, names};
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::workspace::app::app;
 use crate::workspace::git_panel::{changes, history};
-use crate::workspace::{Note, TaskItem, Workspace, notes, tasks};
+use crate::workspace::notes::{Note, TaskItem};
+use crate::workspace::{Workspace, notes, tasks};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {

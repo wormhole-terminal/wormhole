@@ -234,7 +234,9 @@ impl Workspace {
             .iter()
             .filter(|session| keeps_text && !session.forget_text)
             .map(|session| &session.pane)
-            .map(|pane| (pane.id, pane.terminal.read(cx).scrollback_text(crate::workspace::SCROLLBACK_LINES)))
+            .map(|pane| {
+                (pane.id, pane.terminal.read(cx).scrollback_text(crate::workspace::save::SCROLLBACK_LINES))
+            })
             .collect();
         let state = app_mut(cx);
         let Some(store) = state.store_of_mut(target) else {
