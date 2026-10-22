@@ -185,7 +185,8 @@ impl AppState {
     }
 
     /// The window in front goes to `target` ("Move this window to…"): where it stays visible, as
-    /// the odd window when Wormhole is not in `target`. Deferred callers only.
+    /// the odd window when Wormhole is not in `target`. The menu bar follows on the app's next
+    /// tick. Deferred callers only.
     pub(crate) fn move_front_window_to_profile(target: &ProfileId, cx: &mut App) -> Result<(), String> {
         if app(cx).profiles.get(target).is_none() {
             return Err(format!("no profile {target}"));
@@ -206,7 +207,6 @@ impl AppState {
         if app(cx).windows_of(&shown).next().is_none() {
             crate::workspace::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
         }
-        crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -279,7 +279,9 @@ impl AppState {
     /// out of sight with its terminals running, and the target's come back as they were (or are
     /// restored from its database the first time, or opened fresh when it had none). The two
     /// profiles trade places in the app's state, so everything that reads "the" settings, store or
-    /// project folders reads the target's from here on. Deferred callers only: windows are updated.
+    /// project folders reads the target's from here on. The menu bar follows on the app's next tick
+    /// (this is shared state and sits below the app root that builds the menus). Deferred callers
+    /// only: windows are updated.
     pub(crate) fn switch_profile(target: &ProfileId, cx: &mut App) -> Result<(), String> {
         let from = app(cx).active_profile().clone();
         if &from == target {
@@ -331,7 +333,6 @@ impl AppState {
         Self::show_profile_windows(&from, target, cx);
         crate::workspace::app_look::sync_system_look(cx);
         crate::workspace::app_look::apply_theme(cx);
-        crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
     }
