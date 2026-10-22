@@ -1,13 +1,66 @@
 //! The shell process behind a terminal: what it runs, with which environment, and
 //! the per-process queries (current folder) the UI polls.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
-use wormhole_term::{Launch, Shell};
+use wormhole_term::{Launch, Shell, types};
 
-use super::SpawnOptions;
 use crate::terminal::shells::{self, ShellCommand, program_name};
+
+/// How to start a tab's shell. It lives here because what runs and its environment are read from
+/// it here; `spawn` adds the part the engine is started with.
+#[derive(Clone, Debug, Default)]
+pub struct SpawnOptions {
+    pub cwd: Option<PathBuf>,
+    /// The tab this shell belongs to, as `WORMHOLE_TAB_ID`: what its agent hooks report.
+    pub tab_id: String,
+    /// Previous session text, replayed dimmed before the shell starts.
+    pub restore: Option<String>,
+    pub scrollback_lines: usize,
+    /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
+    /// (`allow_screen_checksum`); the engine ignores it otherwise.
+    pub allow_screen_checksum: bool,
+    /// Let the program act on the window (XTWINOPS: move, resize, minimise, …; DECCOLM changing the
+    /// width) (`allow_window_ops`); the engine ignores both otherwise.
+    pub allow_window_ops: bool,
+    /// Answer the program's request for the window title and icon name (XTWINOPS 20 and 21)
+    /// (`allow_title_report`); the engine ignores it otherwise.
+    pub allow_title_report: bool,
+    /// Extra environment, e.g. from a trusted project's `config.json`.
+    pub env: BTreeMap<String, String>,
+    /// The program to run instead of the login shell: the tab's profile, a trusted project's
+    /// shell or the default, decided by `shells::for_tab`.
+    pub shell: Option<crate::terminal::shells::ShellCommand>,
+    /// Start the program through `Wormhole welcome -- <program>`: the first-run welcome in this
+    /// terminal, which becomes the program when it ends. The app also puts the welcome's token in
+    /// `env` (`welcome::TOKEN_VAR`).
+    pub welcome: bool,
+    /// The theme's colors, which the engine answers a program's color queries (OSC 4, 10, 11, 12)
+    /// with from its first byte; without them it answers with xterm's until
+    /// [`Pty::set_default_colors`](wormhole_term::Pty::set_default_colors) is called, which a terminal that was never drawn has not yet.
+    pub colors: Option<Box<[types::Rgb; types::COLOR_COUNT]>>,
+    /// Whether the theme is light or dark, which the engine answers a program's `CSI ? 996 n`
+    /// with from its first byte; unanswered until [`Pty::set_color_scheme`](wormhole_term::Pty::set_color_scheme) says.
+    pub color_scheme: Option<types::ColorScheme>,
+}
+
+impl SpawnOptions {
+    /// Start this terminal as `profile`'s: its environment, git identity and agent logins
+    /// (`Profile::terminal_env`), `WORMHOLE_PROFILE`, and its start folder when no folder was asked
+    /// for. Call it after the project's environment is in: what the project already set (a trusted
+    /// project knows its own needs) is kept, and only what is missing is filled in from the profile.
+    /// The terminal's id, socket and binary are set at launch and can't be redirected by either.
+    pub fn apply_profile(&mut self, profile: &crate::config::profile::Profile) {
+        for (key, value) in profile.terminal_env() {
+            self.env.entry(key).or_insert(value);
+        }
+        self.env.insert(crate::config::profile::PROFILE_VAR.into(), profile.id.to_string());
+        if self.cwd.is_none() {
+            self.cwd = profile.start_folder();
+        }
+    }
+}
 
 /// The settings that make a process one instance of Wormhole: where it keeps its data, what it
 /// is told by devctl, whether it stays in the background, how it answers Touch ID and

@@ -14,7 +14,7 @@ mod process;
 pub mod shells;
 mod spawn;
 
-pub use process::shell_name;
 #[cfg(test)]
 pub(crate) use process::welcome_command;
-pub use spawn::{SpawnOptions, attach_hosted, spawn, spawn_hosted};
+pub use process::{SpawnOptions, shell_name};
+pub use spawn::{attach_hosted, spawn, spawn_hosted};
