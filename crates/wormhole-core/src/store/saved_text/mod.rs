@@ -22,14 +22,13 @@ pub(crate) mod platform;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use anyhow::{Context as _, Result};
 use rusqlite::Connection;
 use sha2::{Digest, Sha256};
 
 use self::cipher::Cipher;
-pub(super) use self::keys::DEV_KEY_FILE;
 use self::platform::Platform;
 use super::with_suffix;
 
@@ -48,12 +47,19 @@ const SCHEMA: &str = "
     );
 ";
 
+/// `meta` key: the random id the profile's key is kept under (`keys`).
+const ACCOUNT_KEY: &str = "saved_text_key_id";
+
 /// The sealing side of a profile's saved text: its key, asked for once per launch (the Keychain
-/// may ask the user), and what was last written for each terminal.
+/// may ask the user; `platform::System` keeps it for the whole process), and what was last written
+/// for each terminal.
 pub(super) struct Keeper {
     platform: Arc<dyn Platform>,
     dir: PathBuf,
-    cipher: OnceLock<Option<Cipher>>,
+    /// The id the key is kept under, read (or made) from the main database at open.
+    account: OnceLock<String>,
+    /// `None` until first asked; then the cipher, or `None` without a key.
+    cipher: Mutex<Option<Option<Arc<Cipher>>>>,
     /// Each terminal's text as last written or read, as a fingerprint: saving an unchanged text
     /// costs a hash, not a seal and a write.
     written: Mutex<HashMap<i64, u64>>,
@@ -61,24 +67,72 @@ pub(super) struct Keeper {
 
 impl Keeper {
     pub fn new(platform: Arc<dyn Platform>, dir: &Path) -> Self {
-        Self { platform, dir: dir.to_path_buf(), cipher: OnceLock::new(), written: Mutex::default() }
+        Self {
+            platform,
+            dir: dir.to_path_buf(),
+            account: OnceLock::new(),
+            cipher: Mutex::default(),
+            written: Mutex::default(),
+        }
     }
 
     pub fn platform(&self) -> &dyn Platform {
         self.platform.as_ref()
     }
 
+    /// Read the key's id from `meta`, making one the first time (a main-database write: run it in
+    /// the open's transaction or after the schema is in place).
+    pub fn load_account(&self, conn: &Connection) -> Result<()> {
+        if self.account.get().is_some() {
+            return Ok(());
+        }
+        let account = match super::read_meta(conn, ACCOUNT_KEY)? {
+            Some(account) => account,
+            None => {
+                let account = random_id()?;
+                conn.execute(
+                    "INSERT INTO meta (key, value) VALUES (?1, ?2)
+                     ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    [ACCOUNT_KEY, &account],
+                )?;
+                account
+            }
+        };
+        let _ = self.account.set(account);
+        Ok(())
+    }
+
     /// The cipher, once the key is at hand; `None` when it can't be (said once in the log).
-    fn cipher(&self) -> Option<&Cipher> {
-        self.cipher
-            .get_or_init(|| match self.platform.text_key(&self.dir).and_then(|key| Cipher::new(&key)) {
-                Ok(cipher) => Some(cipher),
-                Err(err) => {
-                    tracing::warn!("terminal text is not kept for a restart: {err:#}");
-                    None
+    fn cipher(&self) -> Option<Arc<Cipher>> {
+        let mut cipher = self.cipher.lock().unwrap_or_else(PoisonError::into_inner);
+        cipher
+            .get_or_insert_with(|| {
+                let made = self
+                    .account
+                    .get()
+                    .context("the saved text's key id isn't loaded")
+                    .and_then(|account| self.platform.text_key(&self.dir, account))
+                    .and_then(|key| Cipher::new(&key));
+                match made {
+                    Ok(cipher) => Some(Arc::new(cipher)),
+                    Err(err) => {
+                        tracing::warn!("terminal text is not kept for a restart: {err:#}");
+                        None
+                    }
                 }
             })
-            .as_ref()
+            .clone()
+    }
+
+    /// Throw the key away (after erasing every text): a copy of the old file anywhere (a snapshot,
+    /// a backup) can't be opened any more. The next save makes a new one.
+    pub fn forget_key(&self) {
+        *self.cipher.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        if let Some(account) = self.account.get()
+            && let Err(err) = self.platform.forget_key(&self.dir, account)
+        {
+            tracing::warn!("{err:#}");
+        }
     }
 
     /// `text` sealed for terminal `tab_id`, or `None` when there is no key.
@@ -112,20 +166,46 @@ impl Keeper {
         self.written().insert(tab_id, print);
     }
 
+    /// After a terminal was deleted or cleared: a fingerprint of a terminal whose id may come back
+    /// must not skip its next save.
     pub fn forget(&self, tab_id: i64) {
         self.written().remove(&tab_id);
     }
 
-    /// After terminals were deleted: the next save writes every text again rather than trust a
-    /// fingerprint of a terminal whose id may come back.
+    /// Every text erased: none is written any more.
     pub fn forget_all(&self) {
         self.written().clear();
     }
 
     fn written(&self) -> std::sync::MutexGuard<'_, HashMap<i64, u64>> {
         // Only fingerprints: one a panic left half-written costs a write, nothing else.
-        self.written.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+        self.written.lock().unwrap_or_else(PoisonError::into_inner)
     }
+}
+
+/// 128 random bits as hex: the key's id, which says nothing about the user or the profile.
+fn random_id() -> Result<String> {
+    use ring::rand::SecureRandom as _;
+    let mut bytes = [0u8; 16];
+    ring::rand::SystemRandom::new()
+        .fill(&mut bytes)
+        .map_err(|_| anyhow::anyhow!("the system has no random numbers"))?;
+    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// The key id kept in a profile's database at `db`, read without opening it as a store (the profile
+/// is being deleted): `None` when it has none.
+pub(super) fn account_in(db: &Path) -> Result<Option<String>> {
+    let conn = Connection::open_with_flags(db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    let has_meta: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type = 'table' AND name = 'meta'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_meta {
+        return Ok(None);
+    }
+    super::read_meta(&conn, ACCOUNT_KEY)
 }
 
 /// A 64-bit fingerprint of a text, kept in memory only to skip a save: a collision, one in 2^64,
@@ -138,19 +218,30 @@ pub(super) fn fingerprint(text: &str) -> u64 {
 }
 
 /// Attach the saved text's file in `dir` to `conn` (creating it owner-only), and keep it and its
-/// journal files out of backups. A file that isn't a database, or a damaged one, is deleted and
-/// started fresh: it held nothing a minute's save doesn't write again.
+/// journal files out of backups. Nothing that goes wrong with this file may cost the main database
+/// or saving: a file that can't be used (damaged, not a database, unwritable) is deleted and started
+/// once more, and when that fails too an empty database in memory stands in for it, so this launch
+/// keeps no text and everything else works. Errors from here never carry SQLite's codes out, so
+/// they can't pass for the main database being damaged.
 pub(super) fn attach(conn: &Connection, dir: &Path, platform: &dyn Platform) -> Result<()> {
+    if !platform::uses_dev_key() {
+        keys::remove_stray_dev_key(dir);
+    }
     let path = dir.join(FILE);
-    match attach_file(conn, &path) {
-        Err(err) if super::is_damaged(&err) => {
-            tracing::warn!("{err:#}; starting the saved terminal text again in {}", path.display());
-            // Detaching can fail when the attach itself did; either way the files go.
-            let _ = conn.execute_batch("DETACH DATABASE saved");
-            remove_files(&path)?;
-            attach_file(conn, &path).context("starting the saved terminal text again")?;
+    let first = attach_file(conn, &path);
+    let attached = first.or_else(|err| {
+        tracing::warn!("{err:#}; starting the saved terminal text again in {}", path.display());
+        detach(conn);
+        if let Err(err) = remove_files(&path) {
+            tracing::warn!("{err:#}");
         }
-        result => result?,
+        attach_file(conn, &path)
+    });
+    if let Err(err) = attached {
+        tracing::warn!("{err:#}; terminal text is not kept for a restart in this launch");
+        detach(conn);
+        attach_in_memory(conn).map_err(|err| anyhow::anyhow!("{err:#}"))?;
+        return Ok(());
     }
     for file in files(&path) {
         if file.exists()
@@ -162,7 +253,26 @@ pub(super) fn attach(conn: &Connection, dir: &Path, platform: &dyn Platform) -> 
     Ok(())
 }
 
+fn detach(conn: &Connection) {
+    // A probe that failed half-way leaves its transaction open, and nothing detaches under one.
+    if !conn.is_autocommit() {
+        let _ = conn.execute_batch("ROLLBACK");
+    }
+    // Fails when nothing is attached, which is fine.
+    let _ = conn.execute_batch("DETACH DATABASE saved");
+}
+
+fn attach_in_memory(conn: &Connection) -> Result<()> {
+    conn.execute_batch("ATTACH DATABASE ':memory:' AS saved")?;
+    conn.execute_batch(SCHEMA)?;
+    Ok(())
+}
+
 fn attach_file(conn: &Connection, path: &Path) -> Result<()> {
+    attach_file_raw(conn, path).map_err(|err| anyhow::anyhow!("{err:#}"))
+}
+
+fn attach_file_raw(conn: &Connection, path: &Path) -> Result<()> {
     // As the main database: owner-only before SQLite opens it, so its journal files follow.
     for (ix, file) in files(path).into_iter().enumerate() {
         let made = if ix == 0 {
@@ -184,7 +294,7 @@ fn attach_file(conn: &Connection, path: &Path) -> Result<()> {
     conn.pragma_update(Some(db), "secure_delete", true)?;
     let verdict: String = conn.query_row("PRAGMA saved.quick_check", [], |row| row.get(0))?;
     if verdict != "ok" {
-        return Err(super::Damaged(verdict).into());
+        anyhow::bail!("{} is damaged: {verdict}", path.display());
     }
     let version: i64 = conn.query_row("PRAGMA saved.user_version", [], |row| row.get(0))?;
     if version != LAYOUT_VERSION {
@@ -193,6 +303,9 @@ fn attach_file(conn: &Connection, path: &Path) -> Result<()> {
         conn.execute_batch(SCHEMA).context("creating the saved terminal text's table")?;
         conn.pragma_update(Some(SCHEMA_NAME), "user_version", LAYOUT_VERSION)?;
     }
+    // A file that opened read-only would fail at the first save, every minute: found out now.
+    conn.execute_batch("BEGIN IMMEDIATE; CREATE TABLE saved.probe (x); ROLLBACK;")
+        .with_context(|| format!("{} can't be written", path.display()))?;
     Ok(())
 }
 
@@ -213,14 +326,22 @@ fn remove_files(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Text of terminals the main database no longer has (a crash between the two deletes).
-pub(super) fn forget_orphans(conn: &Connection) -> Result<usize> {
-    Ok(conn.execute("DELETE FROM saved.scrollback WHERE tab_id NOT IN (SELECT id FROM main.tabs)", [])?)
+/// Text of terminals the main database no longer has (a crash between the two deletes). A failure
+/// is only logged: the rows go at a later open.
+pub(super) fn forget_orphans(conn: &Connection) {
+    if let Err(err) =
+        conn.execute("DELETE FROM saved.scrollback WHERE tab_id NOT IN (SELECT id FROM main.tabs)", [])
+    {
+        tracing::warn!("forgetting saved text of terminals that are gone: {err}");
+    }
 }
 
 /// What the step to schema 9 set aside from the main database's own `scrollback` table (in
-/// `temp.v9_text`, in memory) is sealed and moved into this file, inside the upgrade's transaction.
-/// Without a key it is dropped, never moved unsealed. Nothing to do when no step put it there.
+/// `temp.v9_text`, in memory) is sealed and written into this file while the upgrade's transaction is
+/// open. The two files commit one after the other (WAL makes no transaction atomic across files), so
+/// a crash in between can lose the moved text, never the main database's. Without a key, or when
+/// this file won't take it, the text is dropped and the upgrade goes on; it is never moved unsealed.
+/// Nothing to do when no step put it there.
 pub(super) fn take_moved(conn: &Connection, keeper: &Keeper) -> Result<()> {
     let set_aside: bool = conn.query_row(
         "SELECT COUNT(*) > 0 FROM temp.sqlite_master WHERE type = 'table' AND name = 'v9_text'",
@@ -230,12 +351,32 @@ pub(super) fn take_moved(conn: &Connection, keeper: &Keeper) -> Result<()> {
     if !set_aside {
         return Ok(());
     }
+    keeper.load_account(conn)?;
     let rows: Vec<(i64, String)> = conn
         .prepare("SELECT tab_id, text FROM temp.v9_text")?
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
+    conn.execute_batch("DROP TABLE temp.v9_text")?;
+    // A savepoint: a write this file refuses undoes only the move, not the upgrade.
+    conn.execute_batch("SAVEPOINT v9_move")?;
+    match move_rows(conn, keeper, &rows) {
+        Ok((moved, dropped)) => {
+            conn.execute_batch("RELEASE v9_move")?;
+            tracing::info!(
+                "sealed and moved the saved text of {moved} terminals to {FILE} ({dropped} without a key not kept)"
+            );
+        }
+        Err(err) => {
+            tracing::warn!("{err:#}; the terminals' saved text isn't kept");
+            conn.execute_batch("ROLLBACK TO v9_move; RELEASE v9_move")?;
+        }
+    }
+    Ok(())
+}
+
+fn move_rows(conn: &Connection, keeper: &Keeper, rows: &[(i64, String)]) -> Result<(usize, usize)> {
     let (mut moved, mut dropped) = (0, 0);
-    for (tab_id, text) in &rows {
+    for (tab_id, text) in rows {
         match keeper.seal(*tab_id, text)? {
             Some(sealed) => {
                 conn.execute(
@@ -248,11 +389,7 @@ pub(super) fn take_moved(conn: &Connection, keeper: &Keeper) -> Result<()> {
             None => dropped += 1,
         }
     }
-    conn.execute_batch("DROP TABLE temp.v9_text")?;
-    tracing::info!(
-        "sealed and moved the saved text of {moved} terminals to {FILE} ({dropped} without a key not kept)"
-    );
-    Ok(())
+    Ok((moved, dropped))
 }
 
 /// Take the terminals' text out of a copy of the main database (the one kept before an upgrade):

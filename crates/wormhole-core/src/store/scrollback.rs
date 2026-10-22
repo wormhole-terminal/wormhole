@@ -54,16 +54,38 @@ impl Store {
     }
 
     /// Erase every terminal's saved text (Restore terminal text after restart turned off): the rows
-    /// go with `secure_delete`, the file is rewritten without its free pages and its WAL emptied.
-    /// Returns how many terminals had text.
+    /// go with `secure_delete`, the file is rewritten without its free pages and its WAL emptied,
+    /// and the key is thrown away, so a copy of the file elsewhere (an APFS snapshot) can't be
+    /// opened either. Returns how many terminals had text.
     pub fn erase_saved_text(&self) -> Result<usize> {
         self.saved.forget_all();
         let removed = super::exec(&self.conn, "DELETE FROM saved.scrollback", [])?;
         if removed > 0 {
             self.conn.execute_batch("VACUUM saved").context("rewriting the saved text's file")?;
             self.checkpoint()?;
+            self.saved.forget_key();
         }
         Ok(removed)
+    }
+
+    /// Throw away the saved text's key of the profile in `paths` (it is being deleted; its files go
+    /// with its folder). Failures are logged.
+    pub fn forget_text_key_for(paths: &crate::profile::ProfilePaths) {
+        let dir = paths.dir();
+        let db = dir.join(super::DB_FILE);
+        if !db.exists() {
+            return;
+        }
+        match super::saved_text::account_in(&db) {
+            Ok(Some(account)) => {
+                use super::saved_text::platform::Platform as _;
+                if let Err(err) = super::saved_text::platform::System.forget_key(dir, &account) {
+                    tracing::warn!("{err:#}");
+                }
+            }
+            Ok(None) => {}
+            Err(err) => tracing::warn!("reading the saved text's key id of {}: {err:#}", dir.display()),
+        }
     }
 
     /// The text of a terminal's sealed record, as `load` gives it.

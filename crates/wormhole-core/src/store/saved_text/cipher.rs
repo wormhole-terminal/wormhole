@@ -2,9 +2,13 @@
 //! a random nonce per record and the terminal's id as associated data, so a record can't be read
 //! without the key, changed without being noticed, or passed off as another terminal's.
 //!
-//! A record is `[FORMAT][nonce: 12 bytes][ciphertext][tag: 16 bytes]`. Random 96-bit nonces are
-//! safe here: a profile writes one record per changed terminal a minute, nowhere near the 2^32
-//! records one key could seal before a repeat became a real risk.
+//! A record is `[FORMAT][nonce: 12 bytes][ciphertext][tag: 16 bytes]`; the format byte is in the
+//! associated data too. Random 96-bit nonces are safe here: a profile writes one record per changed
+//! terminal a minute, nowhere near the 2^32 records one key could seal before a repeat became a
+//! real risk.
+//!
+//! The raw key bytes are wiped when dropped; ring's expanded key inside [`Cipher`], and the copy the
+//! Keychain call makes (`CFData`), are not: both live only in this process's memory.
 
 use anyhow::{Result, anyhow, bail};
 use ring::aead::{Aad, CHACHA20_POLY1305, LessSafeKey, NONCE_LEN, Nonce, UnboundKey};
@@ -44,18 +48,21 @@ impl Cipher {
     pub fn seal(&self, tab_id: i64, text: &str) -> Result<Vec<u8>> {
         let mut nonce = [0u8; NONCE_LEN];
         self.random.fill(&mut nonce).map_err(|_| anyhow!("the system has no random numbers"))?;
-        let mut record = Vec::with_capacity(1 + NONCE_LEN + text.len() + CHACHA20_POLY1305.tag_len());
+        // One buffer, sized up front: the text is sealed where it lies, never copied again.
+        let head = 1 + NONCE_LEN;
+        let mut record = Vec::with_capacity(head + text.len() + CHACHA20_POLY1305.tag_len());
         record.push(FORMAT);
         record.extend_from_slice(&nonce);
-        let mut sealed = text.as_bytes().to_vec();
-        self.key
-            .seal_in_place_append_tag(
+        record.extend_from_slice(text.as_bytes());
+        let tag = self
+            .key
+            .seal_in_place_separate_tag(
                 Nonce::assume_unique_for_key(nonce),
                 Aad::from(aad(tab_id)),
-                &mut sealed,
+                &mut record[head..],
             )
             .map_err(|_| anyhow!("sealing the text failed"))?;
-        record.extend_from_slice(&sealed);
+        record.extend_from_slice(tag.as_ref());
         Ok(record)
     }
 
@@ -78,8 +85,9 @@ impl Cipher {
 }
 
 fn aad(tab_id: i64) -> Vec<u8> {
-    let mut aad = Vec::with_capacity(CONTEXT.len() + 8);
+    let mut aad = Vec::with_capacity(CONTEXT.len() + 1 + 8);
     aad.extend_from_slice(CONTEXT);
+    aad.push(FORMAT);
     aad.extend_from_slice(&tab_id.to_le_bytes());
     aad
 }

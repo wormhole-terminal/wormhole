@@ -107,10 +107,7 @@ impl Store {
         }
         forget_empty_splits(&tx, window.id)?;
         tx.commit()?;
-        if forgotten > 0 {
-            self.saved.forget_all();
-            self.checkpoint_after_delete();
-        }
+        self.forgotten(&forgotten);
         Ok(())
     }
 
@@ -122,11 +119,13 @@ impl Store {
     /// Forget a window and everything in it (the user closed it).
     pub fn delete_window(&mut self, id: i64) -> Result<()> {
         let tx = self.conn.transaction()?;
-        delete_sessions_except(&tx, id, &HashSet::new())?;
+        let forgotten = delete_sessions_except(&tx, id, &HashSet::new())?;
         exec(&tx, "DELETE FROM splits WHERE window_id = ?1", [id])?;
         exec(&tx, "DELETE FROM windows WHERE id = ?1", [id])?;
         tx.commit()?;
-        self.saved.forget_all();
+        for id in &forgotten {
+            self.saved.forget(*id);
+        }
         self.checkpoint_after_delete();
         Ok(())
     }
@@ -139,11 +138,19 @@ impl Store {
         let forgotten = delete_sessions_except(&tx, window_id, &keep.iter().copied().collect())?;
         forget_empty_splits(&tx, window_id)?;
         tx.commit()?;
-        if forgotten > 0 {
-            self.saved.forget_all();
+        self.forgotten(&forgotten);
+        Ok(())
+    }
+
+    /// After a committed delete of these sessions: their fingerprints go (an id may come back) and
+    /// their text leaves the disk.
+    fn forgotten(&self, ids: &[i64]) {
+        for id in ids {
+            self.saved.forget(*id);
+        }
+        if !ids.is_empty() {
             self.checkpoint_after_delete();
         }
-        Ok(())
     }
 
     /// Ids for new sessions, splits and windows must not collide with saved ones: one counter for
@@ -198,16 +205,16 @@ fn forget_empty_splits(conn: &Connection, window_id: i64) -> Result<()> {
     Ok(())
 }
 
-/// How many sessions were forgotten.
-fn delete_sessions_except(conn: &Connection, window_id: i64, keep: &HashSet<i64>) -> Result<usize> {
+/// The sessions that were forgotten.
+fn delete_sessions_except(conn: &Connection, window_id: i64, keep: &HashSet<i64>) -> Result<Vec<i64>> {
     let own: Vec<i64> = conn
         .prepare_cached("SELECT id FROM sessions WHERE window_id = ?")?
         .query_map([window_id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
-    let mut forgotten = 0;
+    let mut forgotten = Vec::new();
     for id in own.into_iter().filter(|id| !keep.contains(id)) {
         delete_session_rows(conn, id)?;
-        forgotten += 1;
+        forgotten.push(id);
     }
     Ok(forgotten)
 }

@@ -70,8 +70,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   can come back after a restart, was kept in the same file as your windows and notes, so Time Machine
   backed it up along with any secrets that were printed. The text now has a file of its own that
   backups skip, and the copy of the database Wormhole keeps before an upgrade no longer holds it.
-  Copies made by earlier versions keep their text until Wormhole deletes them, two weeks after they
-  were made, and backups made before the update still hold it.
+  Copies made by earlier versions keep their text until Wormhole deletes them, within two weeks, and
+  backups made before the update still hold it.
 - **High** · no advisory · affects 0.1.0–1.2.0: the text Wormhole saves from each terminal was
   stored as plain text, so any program running as you could copy the file and read whatever secrets
   had been printed (tokens shown by `env`, `cat .env` or `gh auth token`, for example). The text is

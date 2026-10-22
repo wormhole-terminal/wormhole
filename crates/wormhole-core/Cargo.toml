@@ -50,8 +50,12 @@ ureq = { version = "3.4", default-features = false, features = ["rustls-no-provi
 [target.'cfg(target_os = "macos")'.dependencies]
 # The saved text's key in the login Keychain (already in the tree through rustls' platform verifier).
 security-framework = "3"
+core-foundation = "0.10"
 
 [features]
+# The saved terminal text's key in a file beside it instead of the Keychain, as debug builds do:
+# for development builds in the release profile (`wormhole/devctl` turns it on). Never shipped.
+dev-key = []
 # `terminal::testing`: terminals without a PTY, for the app's render tests (its dev-dependencies
 # turn this on, so the shipped build never has it).
 test-support = ["wormhole-term/test-support"]

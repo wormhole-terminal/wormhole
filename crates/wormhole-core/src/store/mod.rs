@@ -67,7 +67,6 @@ fn is_wormhole_name(name: &std::ffi::OsStr) -> bool {
     const FOLDERS: [&str; 7] = ["logs", "profiles", "hosts", "bin", "fonts", "themes", "icon-themes"];
     FOLDERS.contains(&name)
         || name == "instance.lock"
-        || name == saved_text::DEV_KEY_FILE
         || name.ends_with(".json")
         || ["wormhole.db", saved_text::FILE, "andromeda.db", "andromeda-before-wormhole.db"]
             .iter()
@@ -255,16 +254,22 @@ impl Store {
             }
             // Not the terminals' text: that moves to a file of its own, out of backups. A copy that
             // can't be cleaned isn't kept.
-            if let Err(err) = saved_text::strip_copy(&copy) {
-                tracing::warn!("{err:#}; not keeping {}", copy.display());
-                for file in [copy.clone(), with_suffix(&copy, "-journal"), with_suffix(&copy, "-wal")] {
-                    let _ = std::fs::remove_file(file);
+            match saved_text::strip_copy(&copy) {
+                Ok(()) => tracing::info!(
+                    "kept a copy of the schema version {version} database in {}",
+                    copy.display()
+                ),
+                Err(err) => {
+                    tracing::warn!("{err:#}; not keeping {}", copy.display());
+                    for file in [copy.clone(), with_suffix(&copy, "-journal"), with_suffix(&copy, "-wal")] {
+                        let _ = std::fs::remove_file(file);
+                    }
                 }
             }
-            tracing::info!("kept a copy of the schema version {version} database in {}", copy.display());
         }
         schema::init(&mut conn, |tx| saved_text::take_moved(tx, &saved))?;
-        saved_text::forget_orphans(&conn)?;
+        saved.load_account(&conn)?;
+        saved_text::forget_orphans(&conn);
         let store = Self { conn, saved, recovered_from: None };
         store.scrub_leftovers()?;
         Ok(store)
