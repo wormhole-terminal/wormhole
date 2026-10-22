@@ -1,0 +1,125 @@
+{
+  "crate": "crates/wormhole-core",
+  "domains": [
+    {
+      "name": "platform",
+      "tier": 0,
+      "new": true,
+      "doc": [
+        "Core's edge to the operating system: the quit signal (`quit_signal`), the editors and apps a file",
+        "can be opened in (`open_in`) and how one opens a file at a line (`open_file`). Core's other OS code",
+        "moves here in time; the app's own edge is its `platform` module.",
+        "",
+        "The lowest tier: nothing here uses another domain of core."
+      ]
+    },
+    {
+      "name": "storage",
+      "tier": 0,
+      "new": true,
+      "doc": [
+        "Where Wormhole keeps its data and how it is read and written: the data folder's layout and the",
+        "profile id that names a folder in it (`paths`), files read with a cap and written atomically",
+        "(`fsutil`), JSONC files (`jsonc`) and the SQLite database (`store`).",
+        "",
+        "The lowest tier: nothing here uses another domain of core. The store never reads settings or",
+        "talks to the running app; what it saves comes to it as values."
+      ]
+    },
+    {
+      "name": "keys",
+      "tier": 0,
+      "new": true,
+      "doc": [
+        "Keys: a shortcut as text (`keyspec`), every action's keys, the menus and the shortcut sheet as one",
+        "table (`keymap`), and recording a shortcut in Settings (`shortcut_record`).",
+        "",
+        "The lowest tier: nothing here uses another domain of core."
+      ]
+    },
+    {"name": "theme", "tier": 1, "new": false},
+    {"name": "agents", "tier": 1, "new": false},
+    {"name": "update", "tier": 1, "new": false},
+    {
+      "name": "view",
+      "tier": 2,
+      "new": true,
+      "doc": [
+        "What the app's views show, as data and rules without GPUI: the sidebar's list (`sidebar`), the",
+        "columns, title row and status bar (`layout`), split panes (`panes`), where focus goes between",
+        "areas (`focus`), the command palette's matching (`search`), VoiceOver's words (`spoken`), the",
+        "panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'",
+        "caps and counts (`limits`) and the title row's extras (`title_extras`).",
+        "",
+        "It uses only `theme` below it: never settings, git, the store or the running app. What those know",
+        "comes to it as values."
+      ]
+    },
+    {"name": "project", "tier": 2, "new": false},
+    {"name": "config", "tier": 3, "new": false},
+    {"name": "git", "tier": 4, "new": false},
+    {"name": "notify", "tier": 4, "new": false},
+    {"name": "ipc", "tier": 5, "new": false},
+    {"name": "terminal", "tier": 6, "new": false},
+    {"name": "onboarding", "tier": 7, "new": false}
+  ],
+  "modules": [
+    {"old": "quit_signal", "new": "platform::quit_signal", "path": "platform/quit_signal.rs"},
+    {"old": "open_in", "new": "platform::open_in", "path": "platform/open_in.rs"},
+    {"old": "open_file", "new": "platform::open_file", "path": "platform/open_file.rs"},
+    {"old": "fsutil", "new": "storage::fsutil", "path": "storage/fsutil/mod.rs"},
+    {"old": "jsonc", "new": "storage::jsonc", "path": "storage/jsonc/mod.rs"},
+    {"old": "text", "new": "storage::jsonc::suggest", "path": "storage/jsonc/suggest.rs", "vis": "pub(crate)"},
+    {"old": "store", "new": "storage::store", "path": "storage/store/mod.rs"},
+    {"old": "paths", "new": "storage::paths", "path": "storage/paths.rs"},
+    {"old": "keymap", "new": "keys::keymap", "path": "keys/keymap/mod.rs"},
+    {"old": "keyspec", "new": "keys::keyspec", "path": "keys/keyspec.rs"},
+    {"old": "shortcut_record", "new": "keys::shortcut_record", "path": "keys/shortcut_record.rs"},
+    {"old": "theme", "new": "theme", "path": "theme/mod.rs"},
+    {"old": "tokens", "new": "theme::tokens", "path": "theme/tokens/mod.rs"},
+    {"old": "color", "new": "theme::tokens::color", "path": "theme/tokens/color.rs", "vis": "",
+     "vis_during_move": "pub(crate)"},
+    {"old": "theme_registry", "new": "theme::registry", "path": "theme/registry.rs"},
+    {"old": "theme_catalog", "new": "theme::catalog", "path": "theme/catalog.rs"},
+    {"old": "icon_theme", "new": "theme::icon_theme", "path": "theme/icon_theme/mod.rs"},
+    {"old": "folder_color", "new": "theme::folder_color", "path": "theme/folder_color.rs"},
+    {"old": "fonts", "new": "theme::fonts", "path": "theme/fonts/mod.rs"},
+    {"old": "agents", "new": "agents", "path": "agents/mod.rs"},
+    {"old": "usage", "new": "agents::usage", "path": "agents/usage/mod.rs"},
+    {"old": "update", "new": "update", "path": "update/mod.rs"},
+    {"old": "licenses", "new": "update::licenses", "path": "update/licenses.rs"},
+    {"old": "sidebar", "new": "view::sidebar", "path": "view/sidebar/mod.rs"},
+    {"old": "layout", "new": "view::layout", "path": "view/layout/mod.rs"},
+    {"old": "panes", "new": "view::panes", "path": "view/panes/mod.rs"},
+    {"old": "focus", "new": "view::focus", "path": "view/focus/mod.rs"},
+    {"old": "search", "new": "view::search", "path": "view/search.rs"},
+    {"old": "spoken", "new": "view::spoken", "path": "view/spoken.rs"},
+    {"old": "panel", "new": "view::panel", "path": "view/panel.rs"},
+    {"old": "reorder", "new": "view::reorder", "path": "view/reorder.rs"},
+    {"old": "elide", "new": "view::elide", "path": "view/elide.rs"},
+    {"old": "limits", "new": "view::limits", "path": "view/limits.rs"},
+    {"old": "title_extras", "new": "view::title_extras", "path": "view/title_extras.rs"},
+    {"old": "project", "new": "project", "path": "project/mod.rs"},
+    {"old": "config", "new": "config", "path": "config/mod.rs"},
+    {"old": "settings_index", "new": "config::settings_index", "path": "config/settings_index/mod.rs"},
+    {"old": "features", "new": "config::features", "path": "config/features.rs"},
+    {"old": "profile", "new": "config::profile", "path": "config/profile/mod.rs"},
+    {"old": "clipboard", "new": "config::clipboard", "path": "config/clipboard/mod.rs"},
+    {"old": "git", "new": "git", "path": "git/mod.rs"},
+    {"old": "review", "new": "git::review", "path": "git/review.rs"},
+    {"old": "notify", "new": "notify", "path": "notify/mod.rs"},
+    {"old": "ipc", "new": "ipc", "path": "ipc/mod.rs"},
+    {"old": "hosts", "new": "ipc::hosts", "path": "ipc/hosts/mod.rs"},
+    {"old": "host_binary", "new": "ipc::host_binary", "path": "ipc/host_binary.rs"},
+    {"old": "terminal", "new": "terminal", "path": "terminal/mod.rs"},
+    {"old": "shells", "new": "terminal::shells", "path": "terminal/shells/mod.rs"},
+    {"old": "cli_tool", "new": "terminal::cli_tool", "path": "terminal/cli_tool/mod.rs"},
+    {"old": "default_terminal", "new": "terminal::default_terminal", "path": "terminal/default_terminal.rs"},
+    {"old": "onboarding", "new": "onboarding", "path": "onboarding/mod.rs"},
+    {"old": "intro", "new": "onboarding::intro", "path": "onboarding/intro/mod.rs"},
+    {"old": "welcome", "new": "onboarding::welcome", "path": "onboarding/welcome/mod.rs"}
+  ],
+  "data": [
+    {"old": "themes/", "new": "theme/themes/"}
+  ]
+}
