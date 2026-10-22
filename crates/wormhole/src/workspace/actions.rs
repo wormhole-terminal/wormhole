@@ -489,8 +489,6 @@ fn bind_jump_key(cx: &mut App) {
     app_menu::rebuild(cx);
 }
 
-/// Run `f` on the window in front (any of ours, not only a terminal window), once the update
-/// that dispatched the action is over.
 /// Play the intro `style` around the window in front (About's buttons, the keys): brought forward
 /// first, as About may be in front of it. Here, not in `intro`, which only knows what it draws.
 fn play_intro_in_front(style: Style, cx: &mut App) {
@@ -502,6 +500,8 @@ fn play_intro_in_front(style: Style, cx: &mut App) {
     });
 }
 
+/// Run `f` on the window in front (any of ours, not only a terminal window), once the update
+/// that dispatched the action is over.
 fn in_front_window(cx: &mut App, f: fn(&Window)) {
     if let Some(handle) = cx.active_window() {
         cx.defer(move |cx| {

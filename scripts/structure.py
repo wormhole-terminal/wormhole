@@ -667,6 +667,9 @@ def rule_layers(crate: Crate, cfg: dict, found: Findings) -> None:
             _add(found, "%s: unplaced %s" % (crate.name, m), crate.name, root)
     for m in sorted(set(tier) - set(crate.tops)):
         _add(found, "%s: no module %s" % (crate.name, m), crate.name, root)
+    listed = [m for t in tiers for m in ([t] if isinstance(t, str) else t)]
+    for m in sorted({m for m in listed if listed.count(m) > 1}):
+        _add(found, "%s: twice %s" % (crate.name, m), crate.name, root)
     for (a, b), where in sorted(module_edges(crate, cfg.get("cycles_with_tests", False)).items()):
         if a in tier and b in tier and tier[a] < tier[b]:
             _add(found, "%s: %s -> %s" % (crate.name, a, b), crate.name, where)
@@ -792,6 +795,8 @@ def describe(an: Analysis, rule: str, key: str, item: Item, have: int) -> str:
             return "top-level module %s has no tier in `layers` (%s)" % (what[9:], allowed)
         if what.startswith("no module "):
             return "`layers` names %s, which the crate doesn't have (%s)" % (what[10:], allowed)
+        if what.startswith("twice "):
+            return "`layers` lists %s in two tiers (%s)" % (what[6:], allowed)
         return "%s uses %s, a higher layer (%s)" % (tuple(what.split(" -> ")) + (allowed,))
     if rule == "orphans":
         return "no `mod` declaration reaches this file"
@@ -1186,6 +1191,10 @@ def selftest() -> int:
         an = make({"crates/app/src/main.rs": "mod low;\n", "crates/app/src/low.rs": ""},
                   dict(_fixture_cfg(), layers={"app": ["low", "gone"]}))
         expect("layers name a missing module", keys(an, "layers"), ["app: no module gone"])
+        an = make({"crates/app/src/main.rs": "mod low;\nmod top;\n", "crates/app/src/low.rs": "",
+                   "crates/app/src/top.rs": ""},
+                  dict(_fixture_cfg(), layers={"app": ["low", ["top", "low"]]}))
+        expect("layers list a module once", keys(an, "layers"), ["app: twice low"])
         an = make({"crates/app/src/main.rs": "mod a;\nmod b;\n", "crates/app/src/a.rs": "#[cfg(test)]\nmod tests {\n"
                    "    use crate::b::X;\n}\n", "crates/app/src/b.rs": ""},
                   dict(_fixture_cfg(), layers={"app": ["a", "b"]}, cycles_with_tests=True))

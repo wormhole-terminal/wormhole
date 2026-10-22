@@ -51,6 +51,8 @@ impl ParkedSettings {
 
     /// Keep `store` for `profile`, which is not the one shown.
     pub fn park(&mut self, profile: ProfileId, store: SettingsStore) {
+        // `get` skips the shown profile, so a store parked under it would never be read.
+        debug_assert!(profile != self.shown, "the shown profile's store is the global, never parked");
         self.stores.insert(profile, store);
     }
 
