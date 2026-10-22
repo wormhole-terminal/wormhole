@@ -12,6 +12,7 @@
       "wormhole-term": [
         "src/pty/"
       ],
+      "wormhole-text": [],
       "wormhole-wire": []
     },
     "os_edge_sanctioned": {
@@ -128,6 +129,18 @@
           "io",
           "samples"
         ]
+      ],
+      "wormhole-text": [
+        [
+          "args",
+          "pseudo",
+          "generated"
+        ],
+        "key",
+        "language",
+        "catalog",
+        "active",
+        "keys"
       ]
     },
     "module_depth": {
