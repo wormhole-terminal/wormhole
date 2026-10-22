@@ -27,7 +27,7 @@ const OVERDRAW: f32 = 0.25;
 /// The viewport's height until the page has been drawn once.
 const VIEWPORT_H: f32 = 900.0;
 
-pub(in crate::workspace::studio) struct GalleryView {
+pub(in crate::studio) struct GalleryView {
     studio: WeakEntity<StudioWindow>,
     /// The token being edited and the part of the app shown: the window's, as of the last draw.
     pub(super) selected: Option<String>,
@@ -49,20 +49,20 @@ pub(in crate::workspace::studio) struct GalleryView {
     scroll_to: Option<(f32, u32)>,
     /// How often the view was drawn and how many specimens' pieces it built (the counting tests).
     #[cfg(test)]
-    pub(in crate::workspace::studio) counts: Counts,
+    pub(in crate::studio) counts: Counts,
     _subscriptions: Vec<Subscription>,
 }
 
 #[cfg(test)]
 #[derive(Clone, Debug, Default)]
-pub(in crate::workspace::studio) struct Counts {
-    pub(in crate::workspace::studio) renders: usize,
+pub(in crate::studio) struct Counts {
+    pub(in crate::studio) renders: usize,
     /// The pieces built (a cell, as the build is through `&self`).
-    pub(in crate::workspace::studio) pieces: std::cell::Cell<usize>,
+    pub(in crate::studio) pieces: std::cell::Cell<usize>,
 }
 
 impl GalleryView {
-    pub(in crate::workspace::studio) fn new(
+    pub(in crate::studio) fn new(
         studio: &Entity<StudioWindow>,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -187,14 +187,14 @@ impl GalleryView {
 
     /// devctl `studio-scroll <y>`: the page scrolled to `y` pixels from its top.
     #[cfg(feature = "devctl")]
-    pub(in crate::workspace::studio) fn devctl_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
+    pub(in crate::studio) fn devctl_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
         self.scroll_to = Some((y.max(0.0), 30));
         cx.notify();
     }
 
     /// One wheel tick of `dy` pixels (`studio-frames scroll`, and the tests').
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::workspace::studio) fn scroll_by(&mut self, dy: f32, cx: &mut Context<Self>) {
+    pub(in crate::studio) fn scroll_by(&mut self, dy: f32, cx: &mut Context<Self>) {
         let at = self.scroll.offset();
         self.scroll.set_offset(point(at.x, at.y - px(dy)));
         cx.notify();

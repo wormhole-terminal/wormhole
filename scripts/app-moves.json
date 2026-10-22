@@ -118,6 +118,30 @@
           "settings_window"
         ]
       }
+    },
+    "3": {
+      "doc": "The Theme Studio and About leave workspace/ (phase 4, series 3)",
+      "moves": [
+        {
+          "from": "workspace/studio",
+          "to": "studio"
+        },
+        {
+          "from": "workspace/about",
+          "to": "about"
+        }
+      ],
+      "reexports": {
+        "devctl_about": "about::devctl_command",
+        "studio_devctl": "studio::devctl"
+      },
+      "layers": {
+        "after": "workspace",
+        "insert": [
+          "about",
+          "studio"
+        ]
+      }
     }
   }
 }

@@ -360,7 +360,7 @@ mod tests {
     /// in the gallery, so selecting any token outlines all of its uses.
     #[test]
     fn every_use_is_marked_in_the_gallery() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/workspace/studio/gallery");
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/studio/gallery");
         let mut text = String::new();
         for entry in std::fs::read_dir(&dir).expect("the gallery's folder") {
             let path = entry.expect("an entry").path();
@@ -379,7 +379,7 @@ mod tests {
     /// area shows what the gallery shows there. Read from `SPECIMENS` and each specimen's file.
     #[test]
     fn each_use_is_drawn_in_its_areas_specimen() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/workspace/studio/gallery");
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/studio/gallery");
         let read = |name: &str| std::fs::read_to_string(dir.join(name)).expect("a gallery file");
         let index = read("mod.rs");
         let table = index.split("const SPECIMENS").nth(1).expect("SPECIMENS");

@@ -212,7 +212,7 @@ impl StudioWindow {
         let front = AppState::front_window(cx).ok_or(no_terminal)?;
         let root = front
             .workspace
-            .read_with(cx, |ws, _| ws.active_session().project.clone())
+            .read_with(cx, |ws, _| ws.active_project_root())
             .ok()
             .flatten()
             .ok_or("The terminal in front isn't in a project with a .wormhole folder.")?;

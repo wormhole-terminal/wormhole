@@ -249,7 +249,7 @@ fn the_gallery_shows_every_style_component() {
         files.iter().map(|f| std::fs::read_to_string(f).expect("read source")).collect()
     };
     let style = read_dir(src().join("style"));
-    let gallery = read_dir(src().join("workspace/studio/gallery"));
+    let gallery = read_dir(src().join("studio/gallery"));
     let missing: Vec<String> = public_fns(&style)
         .into_iter()
         .filter(|name| !EXEMPT.contains(&name.as_str()))

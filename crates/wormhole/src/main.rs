@@ -1,3 +1,4 @@
+mod about;
 mod active_profile;
 mod app;
 mod background;
@@ -18,6 +19,7 @@ mod settings;
 mod settings_window;
 mod shortcut_sheet;
 mod status_item;
+mod studio;
 mod style;
 mod terminal_view;
 mod theme_bridge;

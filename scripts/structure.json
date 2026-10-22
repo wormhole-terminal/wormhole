@@ -59,6 +59,8 @@
         ],
         "terminal_view",
         "workspace",
+        "about",
+        "studio",
         "settings_window",
         [
           "command_palette",

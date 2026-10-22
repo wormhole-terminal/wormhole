@@ -22,7 +22,7 @@ type Line = (&'static str, Vec<(Range<usize>, HighlightStyle)>);
 /// highlight query (about 25 ms for Rust), so doing it on every render made each step of
 /// a color drag in the Studio cost several frames; the sample never changes, only the
 /// styles its theme gives it, and those are cheap to look up again.
-pub(in crate::workspace::studio) struct CodeSample {
+pub(in crate::studio) struct CodeSample {
     highlighter: SyntaxHighlighter,
     lines: Vec<Line>,
     /// The syntax theme `lines` is styled for.
@@ -30,7 +30,7 @@ pub(in crate::workspace::studio) struct CodeSample {
 }
 
 impl CodeSample {
-    pub(in crate::workspace::studio) fn new(theme: &Arc<HighlightTheme>) -> Self {
+    pub(in crate::studio) fn new(theme: &Arc<HighlightTheme>) -> Self {
         tally("builds");
         let mut highlighter = SyntaxHighlighter::new(Language::from_str("rs").name());
         highlighter.update(None, &Rope::from(CODE_SAMPLE), None);

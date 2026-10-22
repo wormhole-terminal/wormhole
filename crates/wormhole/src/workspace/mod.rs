@@ -51,7 +51,6 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
-pub(crate) mod about;
 pub(crate) mod actions;
 pub(crate) mod ambient;
 pub(crate) mod app;
@@ -124,7 +123,6 @@ mod splits;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
-pub(crate) mod studio;
 mod tasks;
 mod terminal_drag;
 mod terminals;
@@ -149,6 +147,10 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::about;
+pub(crate) use crate::studio;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;

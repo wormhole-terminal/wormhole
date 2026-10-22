@@ -15,11 +15,11 @@ pub(crate) use licenses::open_licenses;
 /// The system About panel's proportions (Terminal's is 284 wide; the copyright line here is longer), and
 /// its icon.
 const SIZE: (f32, f32) = (340.0, 196.0);
-pub(super) const ICON: f32 = 64.0;
+pub(crate) const ICON: f32 = 64.0;
 
 /// `packaging/app.env` is where the app's identity lives; the bundle's Info.plist is filled from
 /// it too, so the copyright line here can't drift from the one Finder shows.
-const APP_ENV: &str = include_str!("../../../../../packaging/app.env");
+const APP_ENV: &str = include_str!("../../../../packaging/app.env");
 
 /// The value of `key` in a `KEY=value` file, without surrounding quotes.
 fn env_value<'a>(env: &'a str, key: &str) -> Option<&'a str> {
@@ -29,7 +29,7 @@ fn env_value<'a>(env: &'a str, key: &str) -> Option<&'a str> {
         .next()
 }
 
-pub(super) fn version_line() -> String {
+pub(crate) fn version_line() -> String {
     let version = env!("CARGO_PKG_VERSION");
     if cfg!(debug_assertions) {
         format!("Version {version} (debug build)")
@@ -39,7 +39,7 @@ pub(super) fn version_line() -> String {
 }
 
 /// The copyright line of the About window, as `packaging/app.env` has it.
-pub(super) fn copyright() -> String {
+pub(crate) fn copyright() -> String {
     env_value(APP_ENV, "COPYRIGHT").unwrap_or_default().to_string()
 }
 
