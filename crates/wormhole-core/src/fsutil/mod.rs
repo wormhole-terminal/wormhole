@@ -31,7 +31,8 @@ use std::path::{Path, PathBuf};
 pub enum LinkPolicy<'a> {
     /// The user's own files (`config.json`, `~/.claude/settings.json`): a symlinked file is a
     /// dotfiles setup, so writes go through the link and the link stays. A new file, and a folder
-    /// made for it, are owner-only (`0600`, `0700`); one that exists keeps its mode.
+    /// made for it, are owner-only (`0600`, `0700`; a program see `write_atomic_executable`); one
+    /// that exists keeps its mode.
     Follow,
     /// Files that come from a repository: the path, with all links resolved, must stay inside
     /// this root. Writes replace a symlinked final component instead of following it.
@@ -104,8 +105,10 @@ pub fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Re
     write_file(path, bytes, policy, false)
 }
 
-/// [`write_atomic`] for a script that is run: the new file is executable (as far as the umask
-/// allows), and a file it replaces keeps its mode and gains execute wherever it could be read. Made
+/// [`write_atomic`] for a script that is run: the new file is `0777` less the umask, whatever the
+/// policy, so a command installed for everyone (`/usr/local/bin/wh`) stays runnable by other
+/// accounts; one in Wormhole's data folder is kept private by its `0700` folder. A file it
+/// replaces keeps its mode and gains execute wherever it could be read. Made
 /// executable before the rename, so there is never a moment the name holds a script that can't run.
 pub fn write_atomic_executable(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> io::Result<()> {
     write_file(path, bytes, policy, true)
@@ -140,10 +143,10 @@ fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: boo
         // A new file of the user's or Wormhole's own (`Follow`: settings, profiles, the data
         // folder's files) is owner-only; one in a repository (`Within`) gets the usual
         // 0666 &! umask, as any tool there would make it.
+        // A program is `0777` less the umask either way (see `write_atomic_executable`).
         let mode = match (policy, executable) {
-            (LinkPolicy::Follow, true) => 0o700,
+            (_, true) => 0o777,
             (LinkPolicy::Follow, false) => private::PRIVATE_FILE,
-            (LinkPolicy::Within(_), true) => 0o777,
             (LinkPolicy::Within(_), false) => 0o666,
         };
         builder.permissions(fs::Permissions::from_mode(mode));

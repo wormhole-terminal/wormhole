@@ -13,8 +13,13 @@ fn not_private(dir: &Path, found: &mut Vec<(String, u32)>) {
         let path = entry.expect("entry").path();
         let meta = std::fs::symlink_metadata(&path).expect("stat");
         let mode = meta.permissions().mode() & 0o777;
-        let program = path.ends_with("bin/wh");
-        let expected = if meta.is_dir() || program { 0o700 } else { 0o600 };
+        // A program keeps the umask's mode (it may be installed for everyone elsewhere): in the
+        // data folder its `0700` folder is what keeps it private.
+        if path.ends_with("bin/wh") {
+            assert_eq!(mode & 0o700, 0o700, "the owner can run it");
+            continue;
+        }
+        let expected = if meta.is_dir() { 0o700 } else { 0o600 };
         if mode != expected {
             found.push((path.display().to_string(), mode));
         }
