@@ -17,11 +17,11 @@ use wormhole_core::theme::fonts::FontSlot;
 
 use super::open_in_editor;
 use crate::platform::apps;
+use crate::platform::default_app;
 use crate::select::Choice;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, TextRole};
-use crate::workspace::default_terminal;
 use crate::workspace::open_in::OpenIn;
 use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 use crate::workspace::settings_page::{SettingsWindow, ui};
@@ -83,7 +83,7 @@ pub(super) const SETTINGS: &[Setting] = &[
 
 /// Default terminal: makes Wormhole the app that runs opened scripts, or says that it is.
 fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let state = default_terminal::is_default();
+    let state = default_app::is_default();
     let (icon, label, tooltip) = match state {
         Some(true) => (
             IconName::Check,
@@ -101,7 +101,7 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
         .disabled(state != Some(false))
         .tooltip(tooltip)
         .on_click(cx.listener(|this, _, _, cx| {
-            if let Err(err) = default_terminal::make_default() {
+            if let Err(err) = default_app::make_default() {
                 tracing::warn!("making Wormhole the default terminal: {err:#}");
                 this.notice =
                     Some((Section::Terminal, format!("Couldn't make Wormhole the default: {err}").into()));

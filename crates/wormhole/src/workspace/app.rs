@@ -277,7 +277,7 @@ impl AppState {
             tracing::warn!("profiles.json was set aside and rebuilt: {err}");
         }
         upgrade_legacy_hooks(cx);
-        cx.background_spawn(async { crate::workspace::default_terminal::upgrade_legacy_default() }).detach();
+        cx.background_spawn(async { crate::platform::default_app::upgrade_legacy_default() }).detach();
         let profiles::ProfileData { store, tips, mut hub, usage, worktrees, last_panes, .. } =
             profiles::ProfileData::open(&paths);
         let saved = store

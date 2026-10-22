@@ -1,12 +1,12 @@
 //! Wormhole as the Mac's default terminal: Settings → Terminal makes it the app that runs a
 //! double-clicked `.command` or program (Launch Services, by content type), and the files and
 //! folders macOS asks it to open each get a new terminal in the window in front. Which types, and
-//! what a terminal does with each, are core's `default_terminal`.
+//! what a terminal does with each, are core's `default_terminal`; holding the role is
+//! `platform::default_app`.
 
 use gpui_kit::*;
-use wormhole_core::terminal::default_terminal::{Opened, SCRIPT_TYPES, file_path};
+use wormhole_core::terminal::default_terminal::{Opened, file_path};
 
-use crate::platform::default_app;
 use crate::workspace::app::AppState;
 
 /// Hear what macOS asks to open, from the launch on: the requests wait in the channel until
@@ -60,41 +60,4 @@ fn open(opened: &Opened, cx: &mut App) {
     }
     crate::background::activate(cx);
     tracing::info!(folder = %opened.folder().display(), script = opened.line().is_some(), "opened from the system");
-}
-
-/// Whether Wormhole runs scripts and programs when they are opened. `None` when this build can't
-/// be the default: it isn't running from `Wormhole.app` (a `cargo run` build).
-pub(crate) fn is_default() -> Option<bool> {
-    let bundle = default_app::own_bundle()?;
-    Some(SCRIPT_TYPES.iter().all(|kind| {
-        default_app::runner_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(&bundle))
-    }))
-}
-
-/// Make Wormhole the app that runs scripts and programs when they are opened.
-pub(crate) fn make_default() -> anyhow::Result<()> {
-    let bundle = default_app::own_bundle().ok_or_else(|| anyhow::anyhow!("not running from Wormhole.app"))?;
-    for kind in SCRIPT_TYPES {
-        default_app::set_runner_for(kind, &bundle)?;
-    }
-    tracing::info!(bundle, "Wormhole is now the default terminal");
-    Ok(())
-}
-
-/// The bundle identifier versions up to 0.2 ran under, before the rename.
-const LEGACY_BUNDLE_ID: &str = "dev.hyperficial.andromeda";
-
-/// When an earlier version was the default terminal, the renamed app takes the role over: macOS
-/// keeps the choice by bundle identifier, so it would otherwise still name the app that is gone,
-/// and a double-clicked `.command` would no longer open here.
-pub(crate) fn upgrade_legacy_default() {
-    let held = SCRIPT_TYPES.iter().any(|kind| {
-        default_app::runner_for(kind).is_some_and(|handler| handler.eq_ignore_ascii_case(LEGACY_BUNDLE_ID))
-    });
-    if !held || default_app::own_bundle().is_none() {
-        return;
-    }
-    if let Err(err) = make_default() {
-        tracing::warn!("couldn't take over the default terminal from the earlier version: {err:#}");
-    }
 }
