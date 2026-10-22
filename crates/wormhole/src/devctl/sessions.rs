@@ -317,7 +317,7 @@ pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// of that name and email, when an email is given) and print its id.
 pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
     use wormhole_core::config::profile::{NewProfile, StartFrom};
-    let state = crate::workspace::app_mut(ctx.cx);
+    let state = crate::workspace::app::app_mut(ctx.cx);
     let root = state.root.clone();
     let (name, email) = match arg.trim().rsplit_once(' ') {
         Some((name, email)) if email.contains('@') => (name.trim(), Some(email)),
@@ -338,7 +338,7 @@ pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `profiles`: one a line, `*` on the shown one.
 pub(super) fn profiles(ctx: &mut Ctx, _: &str) -> Result<String> {
-    let state = crate::workspace::app(ctx.cx);
+    let state = crate::workspace::app::app(ctx.cx);
     Ok(state
         .profiles
         .profiles()
