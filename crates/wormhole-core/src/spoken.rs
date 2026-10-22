@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use crate::layout::status_bar::{Entry, Summary};
 use crate::sidebar::text::count;
-use crate::terminal::BlockState;
+use wormhole_term::BlockState;
 
 /// A command block as VoiceOver announces it when ⌘↑ / ⌘↓ lands on it, and as the readout
 /// beside a hovered block is labelled: the command, how it went and how long it took. "cargo
