@@ -144,9 +144,10 @@ impl AppState {
             let _ = window.handle.update(cx, |_, win, _| win.remove_window());
         }
         let state = app_mut(cx);
-        // Its database closes before its folder goes.
+        // Its database closes before its folder goes, and its saved text's key with it.
         state.parked.remove(id);
         let root = state.root.clone();
+        Store::forget_text_key_for(&root.profile(id));
         state.profiles.delete(&root, id).map(|_| ()).map_err(|err| err.to_string())?;
         cx.refresh_windows();
         Ok(())
@@ -244,9 +245,13 @@ impl Workspace {
             return Ok(());
         }
         let record = self.window_record(cx);
+        // Only what the target profile keeps: nothing when its Restore is off, never a terminal whose
+        // text the person asked not to keep.
+        let keeps_text = settings_in(target, cx).restore_terminal_text;
         let scrollback: Vec<(i64, String)> = self
             .sessions
             .iter()
+            .filter(|session| keeps_text && !session.forget_text)
             .map(|session| &session.pane)
             .map(|pane| (pane.id, pane.terminal.read(cx).scrollback_text(super::SCROLLBACK_LINES)))
             .collect();
@@ -323,8 +328,17 @@ pub(super) struct ProfileSlot {
 }
 
 impl ProfileSlot {
+    /// A profile opened beside the shown one: with Restore terminal text after restart off, what its
+    /// store still holds of its terminals' text is erased now, not when Wormhole next switches to it.
     fn open(paths: &ProfilePaths) -> Self {
-        Self { data: ProfileData::open(paths), settings: SettingsStore::load_for(paths) }
+        let slot = Self { data: ProfileData::open(paths), settings: SettingsStore::load_for(paths) };
+        if !slot.settings.settings.restore_terminal_text
+            && let Some(store) = &slot.data.store
+            && let Err(err) = store.erase_saved_text()
+        {
+            tracing::warn!("erasing the saved terminal text of {}: {err:#}", paths.dir().display());
+        }
+        slot
     }
 }
 

@@ -683,7 +683,9 @@ impl Workspace {
         {
             tracing::warn!("erasing terminal {id}'s saved text failed: {err:#}");
         }
-        self.mark_dirty(cx);
+        // At once: a restart before the next save must not bring the choice back undone.
+        self.save(cx);
+        cx.notify();
     }
 
     /// Quit the app (every window is saved on the way out).

@@ -106,7 +106,7 @@ gpui-kit = { version = "0.7.0", features = ["test-support"] }
 
 [features]
 # Dev-only control hook (screenshots + scripted input) for automated checks.
-devctl = ["gpui-kit/test-support"]
+devctl = ["gpui-kit/test-support", "wormhole-core/dev-key"]
 # Inspect mode (⇧⌥⌘I) in release builds too; debug builds always have it.
 inspector = ["gpui-kit/inspector"]
 
