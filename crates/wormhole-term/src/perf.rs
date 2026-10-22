@@ -16,7 +16,8 @@ pub(crate) enum Side {
     /// A thread that parses output into the screen (a local terminal's PTY reader, a hosted
     /// terminal's client thread).
     Reader,
-    /// Everyone else: the UI's snapshot, input, selection, find.
+    /// Every other thread: mostly the UI (its snapshot, input, selection, find), but also the
+    /// threads that decode inline pictures, which take the lock to hand their pixels over.
     Ui,
 }
 
@@ -38,14 +39,12 @@ pub struct Counters {
     pub bytes: u64,
     /// The slices they were parsed in (16 KiB at most, one lock each).
     pub slices: u64,
-    /// Time inside the parser (under the lock).
+    /// Time inside the parser (under the lock): all of `Feed::feed`, so the engine's events,
+    /// replies and picture dispatch are in it, not only the state machine.
     pub parse_ns: u64,
     pub reader: LockUse,
     pub ui: LockUse,
 }
-
-/// Whether the counters exist in this build at all.
-pub const AVAILABLE: bool = cfg!(feature = "perf-counters");
 
 #[cfg(feature = "perf-counters")]
 mod counting {
@@ -230,3 +229,8 @@ impl Drop for Held {
         }
     }
 }
+
+/// The tests that count take turns: the counters are the whole process's, and [`start`] resets
+/// them.
+#[cfg(all(test, feature = "perf-counters"))]
+pub(crate) static COUNTING_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());

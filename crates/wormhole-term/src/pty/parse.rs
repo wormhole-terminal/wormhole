@@ -108,3 +108,38 @@ impl<S, F: Feed<S>> Sink<S, F> {
         self.proxy.wakeup();
     }
 }
+
+#[cfg(all(test, feature = "perf-counters"))]
+mod tests {
+    use std::sync::Arc;
+
+    use super::{Feed, Flow, Sink};
+    use crate::events::EventProxy;
+    use crate::perf::{self, COUNTING_TESTS};
+    use crate::pty::FairLock;
+
+    /// Counts the bytes it was fed.
+    struct Tally;
+
+    impl Feed<usize> for Tally {
+        fn feed(&mut self, screen: &mut usize, bytes: &[u8]) {
+            *screen += bytes.len();
+        }
+    }
+
+    /// Other tests' terminals may be reading meanwhile and add to the counters: lower bounds.
+    #[test]
+    fn a_profiled_sink_counts_its_bytes_slices_and_reader_locks() {
+        let _turn = COUNTING_TESTS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let screen = Arc::new(FairLock::new(0usize));
+        let (proxy, _events) = EventProxy::new();
+        let mut sink = Sink::new(screen.clone(), Tally, proxy);
+        let bytes = vec![b'x'; 40 * 1024];
+        perf::start();
+        sink.parse(&bytes, || Flow::Continue);
+        let counted = perf::stop();
+        assert_eq!(*screen.lock(), bytes.len());
+        assert!(counted.bytes >= bytes.len() as u64, "{counted:?}");
+        assert!(counted.slices >= 3 && counted.reader.locks >= 3, "three 16 KiB slices: {counted:?}");
+    }
+}

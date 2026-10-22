@@ -135,25 +135,25 @@ mod tests {
         eprintln!("a plain mutex: the waiter let {worst} holds go by");
     }
 
-    /// The one test that counts: the counters are the whole process's, so parallel tests can't
-    /// disturb it beyond adding to them.
+    /// The counters see each side take the lock, and nothing once stopped. Other tests' terminals
+    /// may be reading meanwhile and add to them, so the counts are lower bounds.
     #[cfg(feature = "perf-counters")]
     #[test]
     fn profiling_counts_each_sides_locks_and_stops_when_asked() {
-        use crate::perf::{self, Side};
+        use crate::perf::{self, COUNTING_TESTS, Side};
+        let _turn = COUNTING_TESTS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let lock = FairLock::new(0u32);
         perf::start();
         *lock.lock_as(Side::Reader) += 1;
         *lock.lock() += 1;
         perf::parsed(100, perf::clock());
         let counted = perf::stop();
-        // Other tests' terminals may be reading meanwhile: they add, never take away.
         assert!(counted.reader.locks >= 1 && counted.ui.locks >= 1, "{counted:?}");
         assert!(counted.bytes >= 100 && counted.slices >= 1, "{counted:?}");
-        // Stopped: nothing more is counted.
-        drop(lock.lock_as(Side::Reader));
-        perf::parsed(5, perf::clock());
-        assert_eq!(perf::read(), counted);
+        // Stopped: the clock is off, so a call site counts nothing, however much it parsed.
+        assert!(perf::clock().is_none());
+        perf::parsed(1 << 40, perf::clock());
+        assert!(perf::read().bytes < 1 << 40, "a stopped profile still counted");
     }
 
     #[test]
