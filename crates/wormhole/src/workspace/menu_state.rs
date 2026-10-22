@@ -40,7 +40,7 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     if !full_screen {
         state.off.push(ActionId::FullScreen);
     }
-    state.recent = app(cx).menu.recent().iter().map(|root| folder_name(root)).collect();
+    state.recent = app(cx).recent_projects.roots().iter().map(|root| folder_name(root)).collect();
     state.shells = shells::choices(settings).into_iter().map(|choice| choice.name).collect();
     let list = &app(cx).profiles;
     state.profiles = list.profiles().iter().map(|p| p.name.clone()).collect();

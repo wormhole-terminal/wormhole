@@ -1,7 +1,9 @@
 //! The status item, the Dock (badge and menu) and the global hotkey: keeps them in step with the
 //! settings and the terminals of every window, and carries out what the user picks.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(feature = "devctl")]
+use std::path::PathBuf;
 use std::time::Instant;
 
 use gpui_kit::*;
@@ -9,7 +11,6 @@ use wormhole_core::config::HotkeyAction;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
-use wormhole_core::storage::store::Store;
 
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
@@ -20,8 +21,6 @@ use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{actions, settings_page, updates};
-
-const RECENT_PROJECTS: usize = 8;
 
 /// A terminal in the Dock's menu.
 #[derive(Clone, PartialEq, Debug, gpui_kit::Action)]
@@ -42,8 +41,6 @@ pub(crate) struct MenuState {
     /// the recorder, the current hotkey's included.
     hotkey_paused: bool,
     pub hotkey_error: Option<String>,
-    /// Project roots, most recently used first.
-    recent: Vec<PathBuf>,
     /// The working animation while it runs (dropping it stops it).
     animation: Option<Task<()>>,
     /// The Dock menu as last given to GPUI, which keeps every action it is ever handed: so it
@@ -55,9 +52,8 @@ pub(crate) struct MenuState {
 
 impl MenuState {
     /// Menu clicks and hotkey presses arrive on the returned receiver.
-    pub fn new(store: Option<&Store>) -> (Self, smol::channel::Receiver<MenuCommand>) {
+    pub fn new() -> (Self, smol::channel::Receiver<MenuCommand>) {
         let (tx, rx) = smol::channel::unbounded();
-        let recent = Self::load_recent(store);
         let state = Self {
             tx,
             bar: None,
@@ -65,7 +61,6 @@ impl MenuState {
             applied_hotkey: None,
             hotkey_paused: false,
             hotkey_error: None,
-            recent,
             animation: None,
             dock_menu: None,
             dock_actions: false,
@@ -73,25 +68,10 @@ impl MenuState {
         (state, rx)
     }
 
-    /// A profile switch: its recent projects take the place of the shown one's (the previous ones
-    /// come back out in `recent`), and the hotkey is registered again as the new profile sets it.
-    /// The status item stays: whether it shows, and its icon, follow the settings every tick.
-    pub fn switch_profile(&mut self, recent: &mut Vec<PathBuf>) {
-        std::mem::swap(&mut self.recent, recent);
+    /// A profile switch: the hotkey is registered again as the new profile sets it. The status
+    /// item stays: whether it shows, and its icon, follow the settings every tick.
+    pub fn switch_profile(&mut self) {
         self.applied_hotkey = None;
-    }
-
-    /// The recent projects a store keeps, most recently used first.
-    pub fn load_recent(store: Option<&Store>) -> Vec<PathBuf> {
-        store
-            .and_then(|s| s.meta("recent_projects").ok().flatten())
-            .and_then(|json| serde_json::from_str(&json).ok())
-            .unwrap_or_default()
-    }
-
-    /// Project roots, most recently used first.
-    pub fn recent(&self) -> &[PathBuf] {
-        &self.recent
     }
 
     /// Hold the hotkey off while its field in Settings records, or put it back.
@@ -125,22 +105,6 @@ impl MenuState {
                 tracing::warn!("global hotkey: {err}");
                 self.hotkey_error = Some(err);
             }
-        }
-    }
-
-    /// `root` was just worked in: it leads the recent projects.
-    fn remember(&mut self, root: PathBuf, store: Option<&Store>) {
-        if self.recent.first() == Some(&root) {
-            return;
-        }
-        self.recent.retain(|p| p != &root);
-        self.recent.insert(0, root);
-        self.recent.truncate(RECENT_PROJECTS);
-        if let Some(store) = store
-            && let Err(err) =
-                store.set_meta("recent_projects", &serde_json::to_string(&self.recent).unwrap_or_default())
-        {
-            tracing::warn!("saving recent projects: {err:#}");
         }
     }
 }
@@ -231,7 +195,8 @@ fn snapshot(terminals: Vec<Terminal>, cx: &App) -> MenuSnapshot {
     let actions = project_actions(cx);
     let state = app(cx);
     let menu = &state.menu;
-    let recent_projects = menu.recent.iter().map(|root| (project_name(root), root.clone())).collect();
+    let recent_projects =
+        state.recent_projects.roots().iter().map(|root| (project_name(root), root.clone())).collect();
     // A hotkey held off while a new one is recorded shows as it would be (as background mode's,
     // which holds nothing, does).
     let registered = menu.hotkey.is_some() || (menu.hotkey_paused && menu.hotkey_error.is_none());
@@ -428,13 +393,6 @@ pub(super) fn open_folder(cx: &mut App) {
         });
     })
     .detach();
-}
-
-/// `root`, the project of the terminal in front, counts as recently used (Open Recent, the status
-/// item's menu).
-pub(super) fn remember_project(root: PathBuf, cx: &mut App) {
-    let AppState { menu, store, .. } = app_mut(cx);
-    menu.remember(root, store.as_ref());
 }
 
 /// devctl: the status item's menu as text, as it would be built now.

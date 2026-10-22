@@ -23,6 +23,7 @@ use crate::settings::ParkedSettings;
 use crate::workspace::app::{AppState, app_mut};
 use crate::workspace::app_look::{LookOverride, apply_theme, sync_system_look};
 use crate::workspace::app_tick::{dispatch_hook, handle_menu_command, tick};
+use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::workspace::{app_menu, menu_bar, notifications, onboarding, profiles, updates};
 
@@ -53,7 +54,8 @@ pub(crate) fn start(
         .unwrap_or_default();
     let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
     let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, store.as_ref());
-    let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
+    let recent_projects = RecentProjects::load(store.as_ref());
+    let (menu, menu_commands) = menu_bar::MenuState::new();
     let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
     hub.ids_start_at(next_id);
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
@@ -70,6 +72,7 @@ pub(crate) fn start(
         store,
         tips,
         hub,
+        recent_projects,
         menu,
         updates,
         settings_window: None,

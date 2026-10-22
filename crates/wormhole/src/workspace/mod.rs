@@ -110,6 +110,7 @@ mod profile_look_tests;
 mod profiles;
 mod project;
 pub(crate) mod quick_panel;
+mod recent_projects;
 #[cfg(test)]
 mod reported_tests;
 mod resize;

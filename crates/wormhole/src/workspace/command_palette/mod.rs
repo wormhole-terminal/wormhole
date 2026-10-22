@@ -152,7 +152,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
             }
         }
     }
-    for root in app(cx).menu.recent() {
+    for root in app(cx).recent_projects.roots() {
         if !folders.iter().any(|f| &f.path == root) {
             folders.push(folder_item(root.clone(), 0, home.as_deref()));
         }

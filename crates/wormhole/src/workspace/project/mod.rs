@@ -289,7 +289,7 @@ pub(crate) fn known_projects(cx: &App) -> Vec<PathBuf> {
     let mut roots: Vec<PathBuf> = Vec::new();
     let candidates = AppState::open_project_roots(cx)
         .into_iter()
-        .chain(state.menu.recent().iter().cloned())
+        .chain(state.recent_projects.roots().iter().cloned())
         .chain(state.hub.trust.list().into_iter().map(|p| p.root.clone()));
     for root in candidates {
         if !roots.contains(&root) && ProjectFolder::open(&root).is_some() {

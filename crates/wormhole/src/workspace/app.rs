@@ -19,6 +19,7 @@ use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
 use crate::workspace::app_look::LookOverride;
+use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, updates};
 
 /// A window showing a [`Workspace`].
@@ -47,6 +48,8 @@ pub(crate) struct AppState {
     pub tips: DismissedTips,
     /// `.wormhole/` project folders: preferences, trust and loaded files.
     pub hub: project::ProjectHub,
+    /// The projects worked in lately (Open Recent), most recent first.
+    pub recent_projects: RecentProjects,
     /// Menu bar item and global hotkey.
     pub menu: menu_bar::MenuState,
     pub updates: updates::Updates,
@@ -111,7 +114,7 @@ impl Global for AppState {}
 impl AppState {
     /// An app with no database and no windows, for tests that open a `Workspace` themselves.
     pub(super) fn for_test(next_id: i64) -> Self {
-        let (menu, _) = menu_bar::MenuState::new(None);
+        let (menu, _) = menu_bar::MenuState::new();
         Self {
             root: DataRoot::current(),
             profiles: ProfileList::default(),
@@ -120,6 +123,7 @@ impl AppState {
             store: None,
             tips: DismissedTips::default(),
             hub: project::ProjectHub::load(),
+            recent_projects: RecentProjects::default(),
             menu,
             updates: updates::Updates::new(None, None),
             settings_window: None,
@@ -185,6 +189,12 @@ impl AppState {
         {
             tracing::warn!("remembering the usage limits: {err:#}");
         }
+    }
+
+    /// `root`, the project of the terminal in front, counts as recently used (Open Recent, the status
+    /// item's menu).
+    pub(crate) fn remember_project(&mut self, root: PathBuf) {
+        self.recent_projects.remember(root, self.store.as_ref());
     }
 
     fn save_tips(&self) {

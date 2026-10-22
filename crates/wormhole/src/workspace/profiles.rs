@@ -9,7 +9,6 @@
 //! profile (`Workspace.profile`) and saves into that profile's database, shown or parked.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, ProfileList};
@@ -26,8 +25,9 @@ use wormhole_core::view::layout::RememberedPanes;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::workspace::app::{AppState, OpenWindow};
 use crate::workspace::app::{app, app_mut};
+use crate::workspace::project;
+use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{menu_bar, project};
 
 impl AppState {
     /// The profile Wormhole is in.
@@ -223,7 +223,7 @@ pub(super) struct ProfileData {
     pub store: Option<Store>,
     pub tips: DismissedTips,
     pub hub: project::ProjectHub,
-    pub recent: Vec<PathBuf>,
+    pub recent: RecentProjects,
     pub usage: Vec<wormhole_core::agents::usage::Usage>,
     pub worktrees: Worktrees,
     pub last_panes: RememberedPanes,
@@ -244,7 +244,7 @@ impl ProfileData {
             meta(worktree::STORE_KEY).map(|json| Worktrees::from_json(&json)).unwrap_or_default();
         worktrees.prune();
         let last_panes = RememberedPanes::parse(meta(REMEMBERED_PANES_KEY).as_deref());
-        let recent = menu_bar::MenuState::load_recent(store.as_ref());
+        let recent = RecentProjects::load(store.as_ref());
         Self {
             store,
             tips,
@@ -307,7 +307,7 @@ impl AppState {
         cx.global_mut::<ParkedSettings>().park(from.clone(), leaving_settings);
         let first_free = app(cx).next_id;
         let state = app_mut(cx);
-        let ProfileData { store, tips, mut hub, mut recent, usage, worktrees, last_panes } = data;
+        let ProfileData { store, tips, mut hub, recent, usage, worktrees, last_panes } = data;
         hub.ids_start_at(first_free);
         let leaving = ProfileData {
             store: std::mem::replace(&mut state.store, store),
@@ -316,10 +316,9 @@ impl AppState {
             usage: std::mem::replace(&mut state.usage, usage),
             worktrees: std::mem::replace(&mut state.worktrees, worktrees),
             last_panes: std::mem::replace(&mut state.last_panes, last_panes),
-            recent: Vec::new(),
+            recent: std::mem::replace(&mut state.recent_projects, recent),
         };
-        state.menu.switch_profile(&mut recent);
-        let leaving = ProfileData { recent, ..leaving };
+        state.menu.switch_profile();
         state.parked.insert(from.clone(), leaving);
         if let Err(err) = state.profiles.set_active(target) {
             return Err(err.to_string());

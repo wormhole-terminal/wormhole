@@ -270,7 +270,7 @@ impl Workspace {
         let first = self.sessions.first().map(|s| s.id);
         // A handful of `stat`s, once: the places don't change while the intro is up.
         let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
-        let places = onboarding::places(&home, app(cx).menu.recent(), |path| path.is_dir());
+        let places = onboarding::places(&home, app(cx).recent_projects.roots(), |path| path.is_dir());
         let scan = cx.spawn(async move |this, cx| {
             let home = integrations::home();
             let agents = cx.background_executor().spawn(async move { Agents::scan(&home) }).await;

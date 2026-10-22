@@ -124,6 +124,6 @@ impl Workspace {
     /// The selected session's project counts as recently used.
     fn remember_project(&self, cx: &mut App) {
         let Some(root) = self.active_session().project.clone() else { return };
-        crate::workspace::menu_bar::remember_project(root, cx);
+        crate::workspace::app_mut(cx).remember_project(root);
     }
 }

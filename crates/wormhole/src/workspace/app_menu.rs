@@ -44,7 +44,7 @@ pub(crate) fn sync(cx: &mut App) {
             return;
         }
     }
-    let recent = app(cx).menu.recent().to_vec();
+    let recent = app(cx).recent_projects.roots().to_vec();
     let shells: Vec<String> = shells::choices(settings(cx)).into_iter().map(|choice| choice.key).collect();
     let profiles: Vec<SharedString> =
         app(cx).profiles.profiles().iter().map(|p| p.id.to_string().into()).collect();
