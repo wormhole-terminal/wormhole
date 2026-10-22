@@ -1,8 +1,11 @@
 //! One language's catalog, loaded: the Fluent bundle and the table of every message without
 //! variables, formatted once.
 
+use std::collections::HashSet;
+
 use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource};
+use fluent_syntax::ast::Entry;
 use unic_langid::LanguageIdentifier;
 
 use crate::generated::ids::{IDS, TAKES_ARGS};
@@ -25,8 +28,9 @@ pub(crate) struct Loaded {
 impl Loaded {
     /// English: every message in `IDS` is there, or the generated files are stale.
     pub(crate) fn english(tag: &str, files: &[(&str, &str)]) -> Self {
-        let bundle = bundle(tag, files, None, false);
-        let loaded = Self::from_bundle(bundle, None, false);
+        let resources = parse(files);
+        let translated = defined(&resources);
+        let loaded = Self::build(tag, resources, translated, None, false);
         debug_assert!(
             loaded.translated.iter().all(|&t| t),
             "keys.rs lists a message the English files lack: run TEXT_BLESS=1 cargo test -p wormhole-text --test generated"
@@ -42,22 +46,30 @@ impl Loaded {
         english_files: &[(&str, &str)],
         english: &Loaded,
     ) -> Self {
-        // Which messages the translation has itself: asked of a bundle without English's added.
-        let own = bundle(tag, files, None, false);
-        let translated: Box<[bool]> = IDS.iter().map(|id| has(&own, id)).collect();
-        let full = bundle(tag, files, Some(english_files), false);
-        let mut loaded = Self::from_bundle(full, Some(english), false);
-        loaded.translated = translated;
-        loaded.fill_gaps(english);
-        loaded
+        let mut resources = parse(files);
+        // Which messages the translation has itself, read before English's files are added.
+        let translated = defined(&resources);
+        resources.extend(parse(english_files));
+        Self::build(tag, resources, translated, Some(english), false)
     }
 
     /// `en-XA`: English's files through the accent transform, every result padded and bracketed.
     pub(crate) fn pseudo(tag: &str, files: &[(&str, &str)], english: &Loaded) -> Self {
-        Self::from_bundle(bundle(tag, files, None, true), Some(english), true)
+        let resources = parse(files);
+        let translated = defined(&resources);
+        Self::build(tag, resources, translated, Some(english), true)
     }
 
-    fn from_bundle(bundle: Bundle, english: Option<&Loaded>, pseudo: bool) -> Self {
+    /// The bundle of `resources` and the table: a message the language has is rendered, one it lacks
+    /// takes English's text without being rendered here.
+    fn build(
+        tag: &str,
+        resources: Vec<FluentResource>,
+        translated: Box<[bool]>,
+        english: Option<&Loaded>,
+        pseudo: bool,
+    ) -> Self {
+        let bundle = bundle(tag, resources, pseudo);
         let table = IDS
             .iter()
             .enumerate()
@@ -65,24 +77,15 @@ impl Loaded {
                 if TAKES_ARGS[i] {
                     return Box::from("");
                 }
-                match render(&bundle, id, None) {
+                let own = if translated[i] { render(&bundle, id, None) } else { None };
+                match own {
                     Some(text) if pseudo => pseudo::decorate(&text).into(),
                     Some(text) => text.into(),
                     None => english.map_or_else(|| Box::from(*id), |e| e.table[i].clone()),
                 }
             })
             .collect();
-        let translated = IDS.iter().map(|id| has(&bundle, id)).collect();
         Self { bundle, table, translated, pseudo }
-    }
-
-    /// A translation's table holds English where the language has no message.
-    fn fill_gaps(&mut self, english: &Loaded) {
-        for (i, own) in self.translated.iter().enumerate() {
-            if !own {
-                self.table[i] = english.table[i].clone();
-            }
-        }
     }
 
     /// The text of the message at `index` that has no variables.
@@ -100,7 +103,34 @@ impl Loaded {
     }
 }
 
-fn bundle(tag: &str, files: &[(&str, &str)], behind: Option<&[(&str, &str)]>, pseudo: bool) -> Bundle {
+/// Each file parsed once. A file with a syntax error still gives its good entries; the tests
+/// reject the error.
+fn parse(files: &[(&str, &str)]) -> Vec<FluentResource> {
+    files
+        .iter()
+        .map(|(_, source)| {
+            FluentResource::try_new((*source).to_owned()).unwrap_or_else(|(resource, _)| resource)
+        })
+        .collect()
+}
+
+/// By index in `IDS`: whether the resources define the message or attribute.
+fn defined(resources: &[FluentResource]) -> Box<[bool]> {
+    let mut ids = HashSet::new();
+    for entry in resources.iter().flat_map(FluentResource::entries) {
+        if let Entry::Message(message) = entry {
+            if message.value.is_some() {
+                ids.insert(message.id.name.to_owned());
+            }
+            for attribute in &message.attributes {
+                ids.insert(format!("{}.{}", message.id.name, attribute.id.name));
+            }
+        }
+    }
+    IDS.iter().map(|id| ids.contains(*id)).collect()
+}
+
+fn bundle(tag: &str, resources: Vec<FluentResource>, pseudo: bool) -> Bundle {
     let language: LanguageIdentifier = tag.parse().unwrap_or_default();
     let mut bundle = FluentBundle::new_concurrent(vec![language]);
     // Only left-to-right languages ship: the isolation marks would land in every string with
@@ -109,23 +139,11 @@ fn bundle(tag: &str, files: &[(&str, &str)], behind: Option<&[(&str, &str)]>, ps
     if pseudo {
         bundle.set_transform(Some(pseudo::accent));
     }
-    for (_, source) in files.iter().chain(behind.into_iter().flatten()) {
-        // A file with a syntax error still gives its good entries; the tests reject the error.
-        let resource = FluentResource::try_new((*source).to_owned()).unwrap_or_else(|(resource, _)| resource);
+    for resource in resources {
         // An id defined twice keeps the first: the translation's, ahead of English's.
         let _ = bundle.add_resource(resource);
     }
     bundle
-}
-
-/// Whether the bundle has the message or attribute `id` (`name` or `name.attribute`).
-fn has(bundle: &Bundle, id: &str) -> bool {
-    match id.split_once('.') {
-        None => bundle.get_message(id).is_some_and(|m| m.value().is_some()),
-        Some((name, attribute)) => {
-            bundle.get_message(name).is_some_and(|m| m.get_attribute(attribute).is_some())
-        }
-    }
 }
 
 /// `id` (`name` or `name.attribute`) formatted, or `None` where the bundle lacks it.

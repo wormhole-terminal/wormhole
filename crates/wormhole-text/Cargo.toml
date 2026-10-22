@@ -18,12 +18,12 @@ test-support = []
 [dependencies]
 fluent-bundle.workspace = true
 fluent-langneg.workspace = true
+fluent-syntax.workspace = true
 unic-langid.workspace = true
 
 [dev-dependencies]
-fluent-syntax.workspace = true
 # The plural categories each language has, for the translation tests (already in the tree through fluent-bundle).
-intl_pluralrules = "7"
+intl_pluralrules.workspace = true
 # The tests use the crate's own test-support, as its users do.
 wormhole-text = { path = ".", features = ["test-support"] }
 

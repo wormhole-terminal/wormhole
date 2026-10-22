@@ -21,8 +21,11 @@ wormhole-wire = { path = "crates/wormhole-wire" }
 anyhow = "1"
 dirs = "7.0.0"
 fluent-bundle = "0.16"
+# Stays on 0.13: fluent-bundle 0.16 depends on it and on unic-langid. 0.14 moved to ICU4X types, so it
+# would be a second, incompatible copy of the locale types in the tree.
 fluent-langneg = "0.13"
 fluent-syntax = "0.12"
+intl_pluralrules = "7"
 libc = "0.2"
 plist = { version = "1.10.1", default-features = false }
 rusqlite = { version = "0.40.2", features = ["bundled"] }

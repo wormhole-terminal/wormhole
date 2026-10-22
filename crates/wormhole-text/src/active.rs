@@ -48,11 +48,12 @@ fn current_language() -> Language {
     if let Some(language) = OVERRIDE.with(std::cell::Cell::get) {
         return language;
     }
-    Language::from_index(ACTIVE.load(Ordering::Relaxed))
+    Language::from_index(ACTIVE.load(Ordering::Acquire))
 }
 
-/// What the language in use holds. `get()` only: a language that is not loaded (it always is, once
-/// set) shows English, and English loads here the first time it is needed, which is at startup.
+/// What the language in use holds. `get()` only: the index is stored after the catalog is loaded
+/// (`Release`/`Acquire`), so a language in use is always loaded. The English fallback is for the
+/// language never having been set.
 fn current() -> &'static Loaded {
     LOADED[current_language().index()].get().unwrap_or_else(|| load(Language::ENGLISH))
 }
@@ -62,7 +63,9 @@ fn current() -> &'static Loaded {
 /// windows.
 pub fn set_language(language: Language) {
     load(language);
-    ACTIVE.store(language.index() as u8, Ordering::Relaxed);
+    // Release pairs with the Acquire in `current_language`: a thread that sees the new index
+    // also sees the catalog `load` just filled in.
+    ACTIVE.store(language.index() as u8, Ordering::Release);
 }
 
 /// The language in use on this thread: the global one, or a test's `with_language`.
@@ -76,8 +79,9 @@ pub fn is_loaded(language: Language) -> bool {
 }
 
 /// The text of a message without variables in the language in use: an array index after one
-/// relaxed atomic read, no allocation and no lock. A language that lacks the message gets
-/// English's, filled in when the language was loaded.
+/// atomic read, no allocation and no lock. A language that lacks the message gets English's,
+/// filled in when the language was loaded. If no language was ever set, this loads English once
+/// (a safety net): the app sets the language at launch, so a frame never pays for it.
 pub fn text(key: Key) -> &'static str {
     current().plain(key.index())
 }
