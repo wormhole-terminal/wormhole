@@ -39,19 +39,15 @@ impl Blur {
             NSAutoresizingMaskOptions, NSBox, NSBoxType, NSTitlePosition, NSView, NSVisualEffectBlendingMode,
             NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindowOrderingMode,
         };
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
         let Some(mtm) = MainThreadMarker::new() else {
             return Self::default();
         };
-        let Ok(handle) = HasWindowHandle::window_handle(window) else {
+        let Some(view) = super::macos::appkit::ns_view(window) else {
             return Self::default();
         };
-        let RawWindowHandle::AppKit(handle) = handle.as_raw() else {
-            return Self::default();
-        };
-        // SAFETY: GPUI hands out its live NSView and we are on the main thread.
-        let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
+        let view: &NSView = &view;
+        // SAFETY: GPUI's view, on the main thread; AppKit only reads the hierarchy here.
         let Some(parent) = (unsafe { view.superview() }) else {
             return Self::default();
         };
@@ -264,12 +260,11 @@ pub fn set_material_appearance(appearance: Appearance) {
 
 #[cfg(target_os = "macos")]
 mod native {
+    use objc2::MainThreadMarker;
     use objc2::rc::Retained;
     use objc2::runtime::AnyClass;
-    use objc2::{MainThreadMarker, Message as _};
     use objc2_app_kit::{NSGlassEffectView, NSView, NSWindowOrderingMode};
     use objc2_foundation::{NSPoint, NSRect, NSSize};
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
     use super::{GlassRect, Window, material};
 
@@ -289,14 +284,10 @@ mod native {
             // system would abort, so ask the runtime first.
             AnyClass::get(c"NSGlassEffectView")?;
             let mtm = MainThreadMarker::new()?;
-            let RawWindowHandle::AppKit(handle) = HasWindowHandle::window_handle(window).ok()?.as_raw()
-            else {
-                return None;
-            };
+            let anchor = crate::platform::macos::appkit::ns_view(window)?;
             // SAFETY: see above.
-            let anchor: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
             let parent = unsafe { anchor.superview() }?;
-            Some(Self { mtm, parent, anchor: anchor.retain(), glass: Vec::new() })
+            Some(Self { mtm, parent, anchor, glass: Vec::new() })
         }
 
         pub(super) fn place(&mut self, rects: &[GlassRect]) {

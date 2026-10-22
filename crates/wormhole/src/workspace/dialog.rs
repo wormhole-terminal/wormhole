@@ -158,7 +158,7 @@ fn native_sheet(window: &Window, question: &CloseQuestion) -> Option<smol::chann
     use objc2_foundation::NSString;
 
     let mtm = MainThreadMarker::new()?;
-    let ns_window = crate::platform::window::ns_window(window)?;
+    let ns_window = crate::platform::macos::appkit::ns_window(window)?;
     let alert = NSAlert::new(mtm);
     alert.setAlertStyle(NSAlertStyle::Warning);
     alert.setMessageText(&NSString::from_str(&question.title));

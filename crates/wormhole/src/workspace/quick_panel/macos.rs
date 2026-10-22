@@ -4,23 +4,11 @@
 
 use std::ffi::c_void;
 
+use crate::platform::macos::appkit::ns_window;
 use gpui_kit::Window;
-use objc2::MainThreadMarker;
-use objc2_app_kit::{NSView, NSWindow, NSWindowButton};
+use objc2_app_kit::{NSWindow, NSWindowButton};
 use objc2_core_foundation::CGPoint;
 use objc2_foundation::NSRect;
-use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-
-/// The panel's `NSWindow`.
-#[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
-pub(super) fn ns_window(window: &Window) -> Option<objc2::rc::Retained<NSWindow>> {
-    MainThreadMarker::new()?;
-    let handle = HasWindowHandle::window_handle(window).ok()?;
-    let RawWindowHandle::AppKit(handle) = handle.as_raw() else { return None };
-    // SAFETY: GPUI hands out its live NSView and we are on the main thread.
-    let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
-    view.window()
-}
 
 /// No traffic lights on a panel: GPUI gives a pop-up window a (transparent) title bar.
 pub(super) fn prepare(window: &Window) {

@@ -226,7 +226,7 @@ impl QuickPanel {
         }
         self.height = height;
         #[cfg(target_os = "macos")]
-        if let Some(native) = super::macos::ns_window(window) {
+        if let Some(native) = crate::platform::macos::appkit::ns_window(window) {
             cx.spawn(async move |_, _| super::macos::set_height_keeping_top(&native, height)).detach();
         }
         #[cfg(not(target_os = "macos"))]

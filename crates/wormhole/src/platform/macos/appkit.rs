@@ -1,18 +1,18 @@
-//! Pieces of AppKit that more than one native feature needs: a GPUI window's view, SF Symbols,
-//! colours and key equivalents. The status item's menu (`menubar::appkit`) uses them too.
+//! Pieces of AppKit that more than one native feature needs: a GPUI window's view and window (the
+//! only place that casts GPUI's raw handle), SF Symbols, colours and key equivalents. The status item's menu (`menubar::appkit`) uses them too.
 
 use std::path::Path;
 
 use gpui_kit::{Pixels, Point, Window};
 use objc2::rc::Retained;
 use objc2::{MainThreadMarker, Message as _};
-use objc2_app_kit::{NSColor, NSEventModifierFlags, NSImage, NSView, NSWorkspace};
+use objc2_app_kit::{NSColor, NSEventModifierFlags, NSImage, NSView, NSWindow, NSWorkspace};
 use objc2_foundation::{NSCopying as _, NSFileManager, NSPoint, NSSize, NSString};
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
 use crate::menubar::model::KeyEquivalent;
 
-/// GPUI's view of `window`, which a menu pops up in. `None` off the main thread and for a window
+/// GPUI's view of `window`, which a menu pops up in and the blur sits behind. `None` off the main thread and for a window
 /// that isn't an AppKit one (a test window).
 #[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
 pub fn ns_view(window: &Window) -> Option<Retained<NSView>> {
@@ -24,6 +24,12 @@ pub fn ns_view(window: &Window) -> Option<Retained<NSView>> {
     // for this call only; `retain` takes the view's own count.
     let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
     Some(view.retain())
+}
+
+/// The `NSWindow` that holds GPUI's view of `window`. `None` where [`ns_view`] has none, and for a
+/// view that isn't in a window.
+pub fn ns_window(window: &Window) -> Option<Retained<NSWindow>> {
+    ns_view(window)?.window()
 }
 
 /// `at`, a point in the window as GPUI has it (logical pixels from the top left), in `view`'s own

@@ -146,15 +146,11 @@ mod platform {
     pub(super) fn wake_tree(window: &gpui_kit::Window) {
         use objc2::rc::Retained;
         use objc2::runtime::AnyObject;
-        use objc2_app_kit::NSView;
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-        let Ok(handle) = HasWindowHandle::window_handle(window) else { return };
-        let RawWindowHandle::AppKit(handle) = handle.as_raw() else { return };
-        // SAFETY: GPUI hands out its live view, and this runs on the main thread.
-        let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
         // GPUI's AccessKit adapter sits on the window's content view, which holds GPUI's.
-        let Some(content) = view.window().and_then(|window| window.contentView()) else { return };
+        let content =
+            crate::platform::macos::appkit::ns_window(window).and_then(|window| window.contentView());
+        let Some(content) = content else { return };
         // SAFETY: asking the content view for its accessibility children is what an assistive app
         // does first; the adapter answers it by switching the tree on.
         let _children: Option<Retained<AnyObject>> =

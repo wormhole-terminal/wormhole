@@ -132,8 +132,7 @@ mod pump {
 mod platform {
     use gpui_kit::Window;
     use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSNormalWindowLevel, NSView};
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSNormalWindowLevel};
 
     /// No Dock icon and no place in ⌘⇥: GPUI makes every app a regular one as it launches.
     pub fn accessory() {
@@ -146,16 +145,8 @@ mod platform {
     }
 
     /// Put `window` on screen behind every other window at the normal level, without the focus.
-    #[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
     pub fn order_back(window: &Window) {
-        if MainThreadMarker::new().is_none() {
-            return;
-        }
-        let Ok(handle) = HasWindowHandle::window_handle(window) else { return };
-        let RawWindowHandle::AppKit(handle) = handle.as_raw() else { return };
-        // SAFETY: GPUI hands out its live NSView and we are on the main thread.
-        let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
-        let Some(ns_window) = view.window() else { return };
+        let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) else { return };
         // A pop-up (the quick panel) floats over every app's windows at its own level.
         if ns_window.level() > NSNormalWindowLevel {
             ns_window.setLevel(NSNormalWindowLevel);

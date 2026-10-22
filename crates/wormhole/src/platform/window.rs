@@ -7,6 +7,9 @@ use std::sync::OnceLock;
 
 use gpui_kit::Window;
 
+#[cfg(target_os = "macos")]
+use super::macos::appkit::ns_window;
+
 /// From the first light's left edge to the last one's right edge, as AppKit lays them out. It is
 /// the same for every window, so it is measured once.
 pub fn span(window: &Window) -> Option<f32> {
@@ -51,21 +54,6 @@ pub fn opacity(window: &Window) -> Option<(f32, bool)> {
 
     let button = ns_window(window)?.standardWindowButton(NSWindowButton::CloseButton)?;
     Some((button.alphaValue() as f32, button.isHidden()))
-}
-
-#[cfg(target_os = "macos")]
-#[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
-pub(crate) fn ns_window(window: &Window) -> Option<objc2::rc::Retained<objc2_app_kit::NSWindow>> {
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::NSView;
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-
-    MainThreadMarker::new()?;
-    let handle = HasWindowHandle::window_handle(window).ok()?;
-    let RawWindowHandle::AppKit(handle) = handle.as_raw() else { return None };
-    // SAFETY: GPUI hands out its live NSView and we are on the main thread.
-    let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
-    view.window()
 }
 
 #[cfg(target_os = "macos")]

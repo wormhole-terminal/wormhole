@@ -150,7 +150,7 @@ fn start(
     /// About 60 frames a second: a whole screen of the shader each frame.
     const FRAME: Duration = Duration::from_millis(16);
 
-    let view = ns_view(window)?;
+    let view = crate::platform::macos::appkit::ns_view(window)?;
     let landing = Rc::new(Cell::new(None));
     let overlay =
         match metal::Overlay::new(&view, style, colors, !crate::background::on(), options, landing.clone()) {
@@ -204,22 +204,6 @@ fn start(
 #[cfg(not(target_os = "macos"))]
 fn start(_: &Window, _: Style, _: Options, _: [[f32; 4]; 3], _: &mut App) -> Option<Run> {
     None
-}
-
-#[cfg(target_os = "macos")]
-#[allow(unsafe_code)] // AppKit interop; see the SAFETY note below.
-fn ns_view(window: &Window) -> Option<objc2::rc::Retained<objc2_app_kit::NSView>> {
-    use objc2::MainThreadMarker;
-    use objc2::rc::Retained;
-    use objc2_app_kit::NSView;
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-
-    MainThreadMarker::new()?;
-    let handle = HasWindowHandle::window_handle(window).ok()?;
-    let RawWindowHandle::AppKit(handle) = handle.as_raw() else { return None };
-    // SAFETY: GPUI hands out its live NSView and we are on the main thread.
-    let view: &NSView = unsafe { handle.ns_view.cast::<NSView>().as_ref() };
-    Some(Retained::from(view))
 }
 
 #[cfg(feature = "devctl")]
