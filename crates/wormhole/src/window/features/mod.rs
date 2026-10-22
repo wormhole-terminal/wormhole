@@ -10,7 +10,7 @@
 pub(crate) mod git;
 pub(crate) mod notes;
 pub(crate) mod project;
-pub(in crate::window) mod usage;
+pub(crate) mod usage;
 
 use gpui_kit::App;
 

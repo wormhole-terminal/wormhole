@@ -16,3 +16,5 @@ mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;
 mod tick;
+#[cfg(test)]
+mod usage_tests;

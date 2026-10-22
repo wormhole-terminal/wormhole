@@ -13,6 +13,9 @@ use crate::settings::{UiColors, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::Workspace;
 
+#[cfg(test)]
+pub(crate) mod tests;
+
 /// From this share used on, a bar turns to the warning color, and at the limit to danger.
 const WARN_AT: f32 = 0.8;
 
@@ -28,6 +31,7 @@ impl Workspace {
             return style::panel_card(
                 ui,
                 div()
+                    .debug_selector(|| "usage-empty".into())
                     .flex()
                     .flex_col()
                     .gap_3()
@@ -82,6 +86,7 @@ fn agent_block(report: &Usage, now: i64, ui: UiColors) -> AnyElement {
         );
     let limits = report.plan_limits();
     div()
+        .debug_selector(|| format!("usage-card-{:?}", report.agent))
         .flex()
         .flex_col()
         .child(header)
