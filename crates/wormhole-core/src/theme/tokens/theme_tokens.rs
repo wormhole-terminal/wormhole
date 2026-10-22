@@ -53,8 +53,8 @@ impl ThemeTokens {
     }
 
     /// Set a node's final value (no re-derivation of dependents; edit a
-    /// [`ThemeFile`] and [`resolve`] for that, though [`Self::with_primary`]
-    /// keeps the value). Returns false, changing
+    /// [`ThemeFile`](super::ThemeFile) and [`resolve`](super::resolve) for that,
+    /// though [`Self::with_primary`] keeps the value). Returns false, changing
     /// nothing, for names that are not UI tokens, terminal colors or syntax
     /// keys (new syntax keys are accepted).
     pub fn set(&mut self, name: &str, color: Color) -> bool {

@@ -1,5 +1,5 @@
 //! Design tokens: every color, syntax style and metric the UI uses, derived
-//! from a terminal palette (see [`derive`]) and optionally customized by
+//! from a terminal palette (see [`derive()`]) and optionally customized by
 //! JSONC theme files (see [`parse_theme_file`] / [`resolve`]).
 //!
 //! # Model
