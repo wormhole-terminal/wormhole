@@ -15,10 +15,10 @@ use wormhole_core::view::sidebar::GroupColor;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::settings::SettingsStore;
+use crate::settings_window::registry::Setting;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 use crate::workspace::app::{AppState, app};
-use crate::workspace::settings_page::registry::Setting;
-use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("profile-name", draw_name),

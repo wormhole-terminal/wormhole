@@ -6,9 +6,9 @@ use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 use super::preview;
 use crate::settings::settings;
 use crate::settings::update_settings;
+use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 use crate::style;
-use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
-use crate::workspace::settings_page::{SettingsWindow, SidebarLook, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),

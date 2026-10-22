@@ -4,7 +4,7 @@
 use gpui_kit::assets::IconName;
 use wormhole_core::config::SizeUnits;
 
-use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::segmented(

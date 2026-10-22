@@ -7,9 +7,9 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
 
 use crate::settings::Settings;
+use crate::settings_window::recorder::RecorderRow;
+use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::workspace::app::app;
-use crate::workspace::settings_page::recorder::RecorderRow;
-use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),

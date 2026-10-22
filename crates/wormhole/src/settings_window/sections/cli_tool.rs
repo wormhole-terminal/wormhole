@@ -16,9 +16,9 @@ use gpui_kit::*;
 use wormhole_core::ipc::control::COMMAND_NAME;
 use wormhole_core::terminal::cli_tool::{self, Advice, Status, Targets};
 
+use crate::settings_window::registry::Setting;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::settings_page::registry::Setting;
-use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTING: Setting = Setting::custom("cli-tool", draw).describe(describe).below(below);
 

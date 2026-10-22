@@ -9,10 +9,10 @@ use wormhole_core::theme::fonts::{FontSlot, display_name};
 use super::open_button;
 use crate::fonts::LoadedFonts;
 use crate::settings::{SettingsStore, settings};
+use crate::settings_window::registry::{Setting, toggle};
+use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
-use crate::workspace::settings_page::registry::{Setting, toggle};
-use crate::workspace::settings_page::{SettingsWindow, open_folder, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("font-specimen", draw_specimen),

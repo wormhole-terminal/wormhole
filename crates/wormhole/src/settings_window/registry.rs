@@ -463,7 +463,7 @@ mod tests {
     use wormhole_core::config::settings_index::{self, SectionId};
 
     use super::{Control, controls, sections};
-    use crate::workspace::settings_page::Section;
+    use crate::settings_window::Section;
 
     fn every_setting() -> impl Iterator<Item = &'static super::Setting> {
         Section::ALL.into_iter().flat_map(|section| sections::controls(section).iter())

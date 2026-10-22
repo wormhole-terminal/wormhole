@@ -712,10 +712,7 @@ fn closing_settings_leaves_the_window_in_front_its_tick(cx: &mut TestAppContext)
     }
     let window = start(cx, 1);
     cx.update(|cx| {
-        crate::workspace::settings_page::open_settings(
-            Some(crate::workspace::settings_page::Section::Sessions),
-            cx,
-        )
+        crate::settings_window::open_settings(Some(crate::settings_window::Section::Sessions), cx)
     });
     cx.run_until_parked();
     let (settings_window, _) = cx.update(|cx| app(cx).settings_window.clone()).expect("Settings opened");

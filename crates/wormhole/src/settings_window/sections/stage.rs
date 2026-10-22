@@ -11,9 +11,9 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::theme::fonts::FontSlot;
 
 use crate::settings::{SettingsStore, UiColors};
+use crate::settings_window::SettingsWindow;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
-use crate::workspace::settings_page::SettingsWindow;
 
 /// The design's window at this scale: every size below is the real one times it, so the
 /// miniature keeps the window's proportions.

@@ -16,7 +16,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `workspace/app.rs`. It returns `None` for the window you are in, because
   that one is already being updated.
 - Opening extra windows (Settings, Studio) with `open_window`:
-  `workspace/settings_page/mod.rs`, `workspace/studio/mod.rs`; their shared
+  `settings_window/mod.rs`, `workspace/studio/mod.rs`; their shared
   window options and surfaces: `workspace/aux_window.rs`.
 - Settings and theme as a `Global` (`SettingsStore`), read with
   `settings(cx)` / `ui(cx)`: `settings/mod.rs`. Tokens become GPUI colors in
@@ -53,7 +53,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   header comment explains why a scrolling `div` isn't enough. The diff view
   uses `ListState` too: `workspace/git_panel/diff/`.
 - Fixed-height virtual list (`uniform_list` + `UniformListScrollHandle`,
-  `scroll_to_item`): `workspace/settings_page/font_picker.rs`, `select.rs`.
+  `scroll_to_item`): `settings_window/font_picker.rs`, `select.rs`.
 
 ## Input, focus, actions
 
@@ -61,7 +61,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   the key and mouse handlers it wires up: `terminal_view/render/mod.rs`.
   `window.focus(&h, cx)` and raw key and mouse input: `terminal_view/input.rs`.
 - A key context plus `on_action(cx.listener(…))` for window commands:
-  `workspace/layout.rs` (`"Workspace"`), `workspace/settings_page/mod.rs`
+  `workspace/layout.rs` (`"Workspace"`), `settings_window/mod.rs`
   (`"SettingsWindow"`), `workspace/studio/mod.rs` (`"StudioWindow"`).
 - Shortcuts handled from `on_key_down` (a project can rebind them, so they
   aren't static `KeyBinding`s): `workspace/shortcuts.rs`.
@@ -75,7 +75,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `InputEvent` (`Change`, `PressEnter`, `Focus`, `Blur`), and `Checkbox`:
   `workspace/tasks.rs`. Multi-line `TextareaState`: `workspace/notes.rs`.
 - `Switch` in a settings row: `style/setting.rs`; `ColorPicker`:
-  `workspace/settings_page/sections/appearance.rs`, `workspace/studio/token_editor.rs`.
+  `settings_window/sections/appearance.rs`, `workspace/studio/token_editor.rs`.
 - `DropdownMenu` and `Tooltip`: `workspace/sidebar.rs`; `Tooltip` on icon
   buttons: `style/controls.rs`.
 - Syntax highlighting (`SyntaxHighlighter`, `HighlightTheme`):
@@ -94,9 +94,9 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   (`finish_git_refresh`), `workspace/git_panel/diff/load.rs`,
   `workspace/git_panel/history.rs`.
 - A window-bound loop that stops when its view is gone (`spawn_in` +
-  `update_in` returning `Err`): `workspace/settings_page/mod.rs`.
+  `update_in` returning `Err`): `settings_window/mod.rs`.
 - A native file dialog (`cx.prompt_for_paths`) awaited in a task:
-  `workspace/settings_page/sections/mod.rs`.
+  `settings_window/sections/mod.rs`.
 
 ## Tests and checks
 

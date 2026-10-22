@@ -298,10 +298,14 @@
       "wormhole-term: screen -> marks": 1,
       "wormhole-term: text -> images": 1,
       "wormhole-term: text -> screen": 1,
+      "wormhole: settings_window -> workspace": 1,
+      "wormhole: status_item -> settings_window": 1,
       "wormhole: status_item -> workspace": 1,
+      "wormhole: workspace -> settings_window": 1,
       "wormhole: workspace -> status_item": 1
     },
     "layers": {
+      "wormhole: workspace -> settings_window": 1,
       "wormhole: workspace -> status_item": 1
     },
     "cross-reexports": {

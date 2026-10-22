@@ -19,6 +19,7 @@ use wormhole_core::view::sidebar::TerminalsIn;
 use crate::app::menus;
 use crate::menubar::MenuCommand;
 use crate::settings::{SettingsStore, settings, update_settings};
+use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::workspace::actions::{
     About, BringAllToFront, CheckForUpdates, GoToFinished, GoToWaiting, Hide, HideOthers, Licenses,
@@ -31,7 +32,7 @@ use crate::workspace::actions::{
 };
 use crate::workspace::app::{AppState, app};
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{about, ambient, focus, onboarding, settings_page, studio, updates, window_lifecycle};
+use crate::workspace::{about, ambient, focus, onboarding, studio, updates, window_lifecycle};
 use crate::{command_palette, shortcut_sheet, status_item};
 
 /// Bind the keys, let project keys go first, and handle the actions that aren't one window's.
@@ -48,13 +49,13 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &NewWindow, cx| cx.defer(window_lifecycle::new_window_from_front));
     cx.on_action(|_: &CheckForUpdates, cx| {
         cx.defer(|cx| {
-            settings_page::open_settings(Some(settings_page::Section::Updates), cx);
+            settings_window::open_settings(Some(settings_window::Section::Updates), cx);
             updates::check_for_updates(true, cx);
         });
     });
-    cx.on_action(|_: &NewProfile, cx| cx.defer(settings_page::open_new_profile_sheet));
+    cx.on_action(|_: &NewProfile, cx| cx.defer(settings_window::open_new_profile_sheet));
     cx.on_action(|_: &ManageProfiles, cx| {
-        cx.defer(|cx| settings_page::open_settings(Some(settings_page::Section::Profile), cx))
+        cx.defer(|cx| settings_window::open_settings(Some(settings_window::Section::Profile), cx))
     });
     cx.on_action(|switch: &SwitchProfile, cx| {
         let id = switch.0.to_string();
@@ -84,7 +85,7 @@ pub(crate) fn init(cx: &mut App) {
     });
     cx.on_action(|_: &About, cx| cx.defer(about::open_about));
     cx.on_action(|_: &Licenses, cx| cx.defer(about::open_licenses));
-    cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_page::open_settings(None, cx)));
+    cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_window::open_settings(None, cx)));
     // ⌘O: a terminal in the picked folder, in the window in front (the status item's too).
     cx.on_action(|_: &OpenFolder, cx| cx.defer(status_item::open_folder));
     // ⌥⌘J: the terminal that has waited longest, in any window.

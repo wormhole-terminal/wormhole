@@ -21,10 +21,11 @@ use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
+use crate::settings_window;
 use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::updates;
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{settings_page, updates};
 
 /// A terminal in the Dock's menu.
 #[derive(Clone, PartialEq, Debug, gpui_kit::Action)]
@@ -371,9 +372,9 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
                 }
             }
         }
-        MenuCommand::OpenSettings => settings_page::open_settings(None, cx),
+        MenuCommand::OpenSettings => settings_window::open_settings(None, cx),
         MenuCommand::CheckForUpdates => {
-            settings_page::open_settings(Some(settings_page::Section::Updates), cx);
+            settings_window::open_settings(Some(settings_window::Section::Updates), cx);
             updates::check_for_updates(true, cx);
         }
     }

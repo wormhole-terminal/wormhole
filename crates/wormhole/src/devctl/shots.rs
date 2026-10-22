@@ -54,11 +54,7 @@ pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// its result is appended to this window's results file when it is ready.
 pub(super) fn settings_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "settings")?;
-    crate::workspace::settings_devctl::shot(
-        ctx.dir.join(format!("{name}.png")),
-        ctx.out.to_path_buf(),
-        ctx.cx,
-    );
+    crate::settings_window::devctl::shot(ctx.dir.join(format!("{name}.png")), ctx.out.to_path_buf(), ctx.cx);
     Ok(String::new())
 }
 

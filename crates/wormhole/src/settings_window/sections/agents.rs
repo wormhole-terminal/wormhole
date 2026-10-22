@@ -18,10 +18,10 @@ use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::cli_tool;
 use crate::settings::UiColors;
+use crate::settings_window::registry::{Setting, toggle};
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::app::app;
-use crate::workspace::settings_page::registry::{Setting, toggle};
-use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-summary", draw_summary),

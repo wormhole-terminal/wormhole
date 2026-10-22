@@ -18,12 +18,12 @@ use super::reveal;
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
+use crate::settings_window::registry::Setting;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
 use crate::workspace::app::app;
 use crate::workspace::project;
 use crate::workspace::project::LoadedProject;
-use crate::workspace::settings_page::registry::Setting;
-use crate::workspace::settings_page::{SettingsWindow, ui};
 use crate::workspace::window_lifecycle::with_front_workspace;
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];

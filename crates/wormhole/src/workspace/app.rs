@@ -54,7 +54,7 @@ pub(crate) struct AppState {
     /// Menu bar item and global hotkey.
     pub menu: status_item::MenuState,
     pub updates: updates::Updates,
-    /// The settings window, while open, and its page: untyped (the page is `settings_page::SettingsWindow`,
+    /// The settings window, while open, and its page: untyped (the page is `settings_window::SettingsWindow`,
     /// which sits above the shared state and reads it back typed with `current_window`).
     pub settings_window: Option<(AnyWindowHandle, AnyEntity)>,
     /// The Theme Studio window, while open. Weak, so closing the window drops

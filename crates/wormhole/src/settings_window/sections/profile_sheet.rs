@@ -11,9 +11,9 @@ use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::SettingsStore;
+use crate::settings_window::{self, SettingsWindow, ui};
 use crate::style::{self, TextRole};
 use crate::workspace::app::{AppState, app};
-use crate::workspace::settings_page::{self, SettingsWindow, ui};
 
 const SHEET_W: f32 = 380.0;
 
@@ -181,10 +181,10 @@ fn switch_to(id: &ProfileId, cx: &mut App) {
 
 /// The sheet over the settings window, from anywhere (the File menu, the palette, the page).
 pub(crate) fn open_new_profile_sheet(cx: &mut App) {
-    settings_page::open_settings(Some(Section::Profile), cx);
+    settings_window::open_settings(Some(Section::Profile), cx);
     // After `open_settings`'s own deferred opening, so the window exists by then.
     cx.defer(|cx| {
-        let Some((handle, page)) = settings_page::current_window(cx) else { return };
+        let Some((handle, page)) = settings_window::current_window(cx) else { return };
         let _ = handle.update(cx, |_, window, cx| {
             page.update(cx, |page, cx| page.open_new_profile(window, cx));
             crate::background::activate_window(window, cx);

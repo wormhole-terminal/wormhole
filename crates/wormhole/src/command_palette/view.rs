@@ -15,9 +15,9 @@ use wormhole_core::view::search::Scope;
 use super::CommandPalette;
 use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
 use crate::settings::{UiColors, settings, ui};
+use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::overlay::scrim;
-use crate::workspace::settings_page;
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
 /// scrolls.
@@ -184,7 +184,7 @@ fn render_row(ix: usize, row: &Row, env: &RowEnv, cx: &mut App) -> AnyElement {
                     return div().into_any_element();
                 };
                 let mut parts =
-                    style::PaletteResult::new(icon(settings_page::section_icon(section)), entry.label);
+                    style::PaletteResult::new(icon(settings_window::section_icon(section)), entry.label);
                 parts.detail = Some(format!("Settings › {}", section.title()).into());
                 let value_color = if selected { ui.list_selected_muted } else { ui.muted };
                 parts.trailing.extend(setting_value(id, cx).map(|value| {

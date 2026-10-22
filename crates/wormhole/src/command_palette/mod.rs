@@ -25,11 +25,12 @@ use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
 use crate::settings::settings;
+use crate::settings_window;
+use crate::workspace::Workspace;
 use crate::workspace::app::{AppState, OpenWindow, app};
 use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{Workspace, settings_page};
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
 pub(crate) use rows::Recent;
@@ -446,7 +447,7 @@ impl CommandPalette {
                 let _ = self.workspace.update(cx, |ws, cx| ws.reveal_commit(root, commit, cx));
             }
             // The row itself, scrolled to and marked, not a search for its label.
-            Item::Setting(id) => cx.defer(move |cx| settings_page::reveal_row(id, cx)),
+            Item::Setting(id) => cx.defer(move |cx| settings_window::reveal_row(id, cx)),
             Item::Action(id) => {
                 if let Some(action) = crate::workspace::actions::gpui_action(id) {
                     window.dispatch_action(action, cx);

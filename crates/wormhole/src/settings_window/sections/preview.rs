@@ -10,9 +10,9 @@ use wormhole_core::view::sidebar::Density;
 
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
+use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
-use crate::workspace::settings_page::{SettingsWindow, SidebarLook, ui};
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 320.0;

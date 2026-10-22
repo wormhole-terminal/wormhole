@@ -27,9 +27,9 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::settings::{SettingsStore, UiColors};
+use crate::settings_window::sections::import_theme;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::settings_page::sections::import_theme;
-use crate::workspace::settings_page::{SettingsWindow, ui};
 use crate::workspace::studio;
 
 /// How many cards show before "Show all": two rows.

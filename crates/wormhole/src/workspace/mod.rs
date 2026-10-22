@@ -5,13 +5,15 @@
 //! `window_lifecycle`.
 //!
 //! Until phase 4's moves finish this folder also holds the surfaces that sit above the window (the
-//! Settings and Studio windows, the notifications, the updater, About); they leave, and the window
-//! then uses none of them. The app root, the palette, the sheet and the status item have left
-//! (`app`, `command_palette`, `shortcut_sheet`, `status_item`). The known exception, kept until
-//! phase 5, is the window using `notifications`: it calls `dismiss` and `sweep` (the window will
-//! emit seen and closed events instead) from `tick`, `terminals`, `panes`, `splits`, `windows` and
-//! this file's window-activation observer, `finished_commands` from `ambient`, and `permission_asks`
-//! from the welcome.
+//! Studio window, the notifications, the updater, About); they leave, and the window then uses none
+//! of them. The app root, the palette, the sheet, the status item and the Settings window have left
+//! (`app`, `command_palette`, `shortcut_sheet`, `status_item`, `settings_window`). The known
+//! exceptions, kept until phase 5, are the window using `notifications`: it calls `dismiss` and
+//! `sweep` (the window will emit seen and closed events instead) from `tick`, `terminals`, `panes`,
+//! `splits`, `windows` and this file's window-activation observer, `finished_commands` from
+//! `ambient`, and `permission_asks` from the welcome; and the welcome's agents step opening
+//! Settings (`onboarding`: `settings_window::open_settings`, which an action carrying the section
+//! will replace).
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -38,8 +40,6 @@ pub(crate) use self::app_look::override_look;
 pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
-#[cfg(feature = "devctl")]
-pub(crate) use self::settings_page::devctl as settings_devctl;
 #[cfg(feature = "devctl")]
 pub(crate) use self::studio::devctl as studio_devctl;
 #[cfg(feature = "devctl")]
@@ -149,9 +149,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
-
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::settings_window as settings_page;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;

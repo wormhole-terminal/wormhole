@@ -5,7 +5,7 @@
 //! palette's Settings scope. It also says whether a setting differs from its default, which
 //! project overrode it, and puts settings back to their defaults.
 //!
-//! A new setting is a row here plus its control in the app's `settings_page/registry.rs`; a
+//! A new setting is a row here plus its control in the app's `settings_window/registry.rs`; a
 //! test fails while a `config.json` key has neither a row nor a place in [`UNLISTED`].
 
 mod search;

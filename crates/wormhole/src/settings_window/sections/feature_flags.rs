@@ -9,9 +9,9 @@ use wormhole_core::config::features::FeatureFlag;
 
 use crate::settings::settings;
 use crate::settings::update_settings;
+use crate::settings_window::registry::Setting;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, SettingParts};
-use crate::workspace::settings_page::registry::Setting;
-use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("feature-flags", |w, cx| w.draw_feature_flags(cx))];
 

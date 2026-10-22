@@ -38,9 +38,10 @@ use wormhole_core::onboarding::{
 };
 
 use crate::settings::{UiColors, ui};
+use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::app::{AppState, app, app_mut};
-use crate::workspace::{Workspace, project, settings_page};
+use crate::workspace::{Workspace, project};
 
 pub(crate) use keys::init;
 pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};
@@ -475,7 +476,7 @@ impl Workspace {
                             style::link_button("no-agents-settings", ui, "Coding agents settings", false)
                                 .ml(px(-NOTE_LINK_INSET))
                                 .on_click(|_, _, cx| {
-                                    settings_page::open_settings(Some(settings_page::Section::Agents), cx)
+                                    settings_window::open_settings(Some(settings_window::Section::Agents), cx)
                                 }),
                         ),
                 )
