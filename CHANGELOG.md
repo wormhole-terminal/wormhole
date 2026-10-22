@@ -13,6 +13,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   folder shows when you rest on the group's name and in its menu; "Clear folder" takes it away, and
   a folder that has gone is skipped.
 
+### Changed
+
+- A group's colour fills its card evenly now. Settings → Terminals & sidebar → Fade group colours
+  brings back the fade, where the colour is strongest at the card's left edge and fades out across it.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added

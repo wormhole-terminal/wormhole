@@ -70,12 +70,18 @@ pub(in crate::workspace::settings_page) fn draw_sidebar_preview(
 struct Look {
     density: Density,
     cards: bool,
+    fade: bool,
     notes: bool,
 }
 
 impl Look {
     fn of(s: &Settings) -> Self {
-        Self { density: s.density, cards: s.show_groups_as_cards, notes: s.sidebar_notes }
+        Self {
+            density: s.density,
+            cards: s.show_groups_as_cards,
+            fade: s.fade_group_colors,
+            notes: s.sidebar_notes,
+        }
     }
 }
 
@@ -152,7 +158,7 @@ const SAMPLES: &[Card] = &[
 
 /// The sample list in `look`, with the sidebar's own cards, heads and rows.
 fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
-    let metrics = Metrics::of(look.density, look.cards);
+    let metrics = Metrics::of(look.density, look.cards).fading(look.fade);
     // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
         .flex()

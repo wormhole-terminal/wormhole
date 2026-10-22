@@ -5,8 +5,9 @@
 use crate::folder_color::{legible, swatch};
 use crate::tokens::{Color, ThemeTokens};
 
-/// How a group's colour washes its card: from `WASH_PEAK` of the colour at the card's left edge down
-/// to `WASH_FAR` at `WASH_SPAN` of its width, and `WASH_FAR` from there on.
+/// How a group's colour washes its card: `WASH_PEAK` of the colour all over it, or, with fading
+/// turned on (`fade_group_colors`), from `WASH_PEAK` at the card's left edge down to `WASH_FAR` at
+/// `WASH_SPAN` of its width, and `WASH_FAR` from there on.
 pub const WASH_PEAK: f32 = 0.12;
 pub const WASH_FAR: f32 = 0.03;
 pub const WASH_SPAN: f32 = 0.6;

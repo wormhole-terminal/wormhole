@@ -12,6 +12,9 @@ pub struct Metrics {
     pub density: Density,
     /// Groups are cards. Off, they run the sidebar's width.
     pub cards: bool,
+    /// A group's colour fades out across its card (Settings → Fade group colours); off, it fills
+    /// the card evenly.
+    pub fade_wash: bool,
     /// A terminal's row: its height, its status tile and the gap after it.
     pub row_h: f32,
     pub tile: f32,
@@ -59,6 +62,7 @@ impl Metrics {
         Self {
             density,
             cards,
+            fade_wash: false,
             row_h,
             tile,
             tile_gap,
@@ -78,6 +82,11 @@ impl Metrics {
             add: if dense { 20.0 } else { 24.0 },
             small_title: dense,
         }
+    }
+
+    /// The same measurements, with a group's colour fading across its card or not.
+    pub fn fading(self, fade_wash: bool) -> Self {
+        Self { fade_wash, ..self }
     }
 }
 
@@ -111,6 +120,13 @@ mod tests {
             (8.0, 4.0, 26.0, 6.0)
         );
         assert_eq!((dense.folded_tile, dense.empty_h, dense.header_h), (14.0, 24.0, 22.0));
+    }
+
+    #[test]
+    fn a_groups_colour_fills_the_card_evenly_unless_fading_is_asked_for() {
+        assert!(!Metrics::of(Density::Regular, true).fade_wash);
+        assert!(!Metrics::default().fade_wash);
+        assert!(Metrics::of(Density::Regular, true).fading(true).fade_wash);
     }
 
     #[test]

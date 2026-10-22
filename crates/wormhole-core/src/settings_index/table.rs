@@ -566,6 +566,13 @@ const SESSIONS: &[Group] = &[
                 &["show_groups_as_cards"],
             ),
             entry(
+                "fade-group-colors",
+                "Fade group colours",
+                "On: a group's colour fades out across its card; off, it fills the card evenly",
+                "fade gradient group colour color card wash",
+                &["fade_group_colors"],
+            ),
+            entry(
                 "sidebar-numbers",
                 "⌘1–⌘9 numbers",
                 "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",

@@ -227,6 +227,9 @@ pub struct Settings {
     pub density: Density,
     /// Groups are cards in the sidebar; off, a group is its head and rows, with no card round them.
     pub show_groups_as_cards: bool,
+    /// A group's colour washes its card from the left and fades out across it; off, the colour fills
+    /// the card evenly.
+    pub fade_group_colors: bool,
     /// What `density` replaced: one-line rows. Read from older files (see [`Settings::sanitized`]),
     /// never written.
     #[serde(skip_serializing)]
@@ -418,6 +421,7 @@ impl Default for Settings {
             liquid_glass: false,
             density: Density::default(),
             show_groups_as_cards: true,
+            fade_group_colors: false,
             compact_sidebar: false,
             option_as_meta: OptionAsMeta::Off,
             scrollback_lines: 10_000,
@@ -527,6 +531,7 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "blur",
     "density",
     "show_groups_as_cards",
+    "fade_group_colors",
     "option_as_meta",
     "scrollback_lines",
     "changes_tree",
@@ -934,6 +939,18 @@ mod tests {
         assert!(!unset.allow_window_ops, "programs can't move the window until asked");
         assert!(!unset.allow_title_report, "programs can't read the window title back until asked");
         assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
+    }
+
+    #[test]
+    fn group_colours_fill_the_card_evenly_until_fading_is_turned_on() {
+        let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+        assert!(!unset.fade_group_colors);
+        let on: Settings = jsonc::parse(r#"{ "fade_group_colors": true }"#).expect("valid jsonc");
+        assert!(on.fade_group_colors);
+        assert!(keys().contains(&"fade_group_colors".to_string()));
+        assert!(
+            PROJECT_SETTINGS.contains(&"fade_group_colors") && !APP_SETTINGS.contains(&"fade_group_colors")
+        );
     }
 
     #[test]

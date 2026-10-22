@@ -14,6 +14,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::custom("density", draw_density),
     toggle!("cards", show_groups_as_cards),
+    toggle!("fade-group-colors", fade_group_colors),
     Setting::segmented(
         "sidebar-numbers",
         &[Segment::text("Stay with the terminal"), Segment::text("Follow the list")],

@@ -271,6 +271,7 @@ impl Workspace {
                 card_margin: 0.0,
                 card_gap: CARD_GAP,
                 ..style::Metrics::of(settings_in(&self.profile, cx).density, true)
+                    .fading(settings_in(&self.profile, cx).fade_group_colors)
             },
             open: self.sidebar.tabs.switcher.is_some(),
             input,
