@@ -18,6 +18,7 @@ pub mod dock;
 pub mod fallback;
 pub mod font_face;
 pub mod hotkey;
+pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;

@@ -111,7 +111,7 @@ pub(crate) struct AppState {
     /// `increase-contrast`, `reduce-motion`).
     look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
-    _display_options: Option<vibrancy::DisplayObserver>,
+    _display_options: Option<crate::platform::look::DisplayObserver>,
 }
 
 /// Stand-ins for what the system says about how windows look; `None` follows the system.
@@ -278,7 +278,7 @@ impl AppState {
         let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
         hub.ids_start_at(next_id);
         let (display_changed, display_options) = smol::channel::unbounded::<()>();
-        let display_observer = vibrancy::observe_display_options(move || {
+        let display_observer = crate::platform::look::observe_display_options(move || {
             let _ = display_changed.try_send(());
         });
         super::open_in::OpenIn::install(cx);
@@ -676,13 +676,20 @@ pub(super) fn sync_system_look(cx: &mut App) {
     let known = cx.global::<SettingsStore>().system();
     let stand_in = app(cx).look_override;
     let look = SystemLook {
-        appearance: stand_in.appearance.or_else(vibrancy::system_appearance).unwrap_or(known.appearance),
-        reduce_transparency: stand_in.reduce_transparency.unwrap_or_else(vibrancy::reduce_transparency),
-        increase_contrast: stand_in.increase_contrast.unwrap_or_else(vibrancy::increase_contrast),
+        appearance: stand_in
+            .appearance
+            .or_else(crate::platform::look::system_appearance)
+            .unwrap_or(known.appearance),
+        reduce_transparency: stand_in
+            .reduce_transparency
+            .unwrap_or_else(crate::platform::look::reduce_transparency),
+        increase_contrast: stand_in
+            .increase_contrast
+            .unwrap_or_else(crate::platform::look::increase_contrast),
     };
     // GPUI Kit reads Reduce Motion once, at start, and stops following the system once the app
     // has set the flag itself (devctl does); reading it here keeps both cases in step.
-    if let Some(still) = stand_in.reduce_motion.or_else(vibrancy::reduce_motion) {
+    if let Some(still) = stand_in.reduce_motion.or_else(crate::platform::look::reduce_motion) {
         cx.set_reduce_motion(still);
     }
     if SettingsStore::set_system(cx, look) {

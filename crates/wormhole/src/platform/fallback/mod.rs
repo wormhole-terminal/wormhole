@@ -5,8 +5,14 @@
 pub mod dock;
 #[cfg(not(target_os = "macos"))]
 pub mod font_face;
+#[cfg(not(target_os = "macos"))]
+pub mod look;
 pub mod menu;
 pub mod popover;
+#[cfg(not(target_os = "macos"))]
+pub mod scroller;
+#[cfg(not(target_os = "macos"))]
+pub mod vibrancy;
 #[cfg(not(target_os = "macos"))]
 pub mod window;
 
