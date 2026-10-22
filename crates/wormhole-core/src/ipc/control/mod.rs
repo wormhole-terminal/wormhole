@@ -640,7 +640,7 @@ mod tests {
         assert_eq!((notice.title.as_str(), notice.body.as_str()), ("Deploy", "finished in 3s"));
         assert!(notice_text("\x07", "  ").is_none(), "nothing left to say");
         let long = notice_text("", &"a".repeat(1000)).expect("body");
-        assert!(long.body.ends_with('…') && long.body.chars().count() == crate::terminal::BODY_MAX_CHARS + 1);
+        assert!(long.body.ends_with('…') && long.body.chars().count() == wormhole_term::BODY_MAX_CHARS + 1);
     }
 
     #[test]

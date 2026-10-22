@@ -283,7 +283,7 @@ mod tests {
     };
     use super::{profile_chip, profile_choice};
     use crate::layout::status_bar::{Activity, Entry, Summary};
-    use crate::terminal::BlockState;
+    use wormhole_term::BlockState;
 
     #[test]
     fn the_open_icon_is_named_for_its_file() {
