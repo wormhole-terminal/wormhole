@@ -17,7 +17,7 @@ use super::picker::{Picker, PickerChip};
 use super::problem::{self, GitTab};
 use super::submodule_row::submodule_row;
 use crate::settings::UiColors;
-use crate::settings::{settings_in, ui_in};
+use crate::settings::{SettingsStore, settings_in, ui as ui_main, ui_in};
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::focus::Walkable;
@@ -563,7 +563,8 @@ impl ChangesView {
                 .into_any_element(),
             ChangeRow::Dir { group, path, label, depth, collapsed } => {
                 let (this, group, key) = (self.this.clone(), *group, path.clone());
-                let icon = crate::icons::folder(file_name(label), !collapsed, cx)
+                let (icons, tint) = (cx.global::<SettingsStore>().icons.as_deref(), ui_main(cx).muted);
+                let icon = crate::icons::folder(icons, file_name(label), !collapsed, tint)
                     .unwrap_or_else(|| style::icon(IconName::Folder).into_any_element());
                 style::folder_row(
                     SharedString::from(format!("dir-{}-{path}", group.tag())),

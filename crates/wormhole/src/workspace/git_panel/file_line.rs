@@ -10,7 +10,7 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use crate::settings::UiColors;
+use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, FileLines, TextRole};
 use wormhole_core::elide;
 use wormhole_core::git::{ChangeKind, FileChange};
@@ -50,7 +50,7 @@ pub(super) fn change_row(
     let fitted = fit(name, folder, lines, renamed_from, moved, selected, width, depth, window, cx);
     let shortened = fitted.name != name || fitted.folder != folder;
     let icon_color = if selected { ui.selected_muted } else { ui.muted };
-    let icon = crate::icons::file(name, icon_color, cx)
+    let icon = crate::icons::file(cx.global::<SettingsStore>().icons.as_deref(), name, icon_color)
         .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element());
     let row = style::file_row(
         SharedString::from(format!("change-{depth}-{}", file.path)),

@@ -6,8 +6,8 @@ mod licenses;
 use gpui_kit::*;
 
 use super::aux_window;
-use crate::icons::app_icon;
-use crate::settings::UiColors;
+use crate::icons::app_icon_for;
+use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
 
 pub(crate) use licenses::open_licenses;
@@ -102,7 +102,9 @@ impl Render for AboutWindow {
             .text_color(ui.text)
             // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
             .child(aux_window::drag_strip())
-            .child(img(app_icon(cx)).size(px(ICON)).flex_none())
+            .child(
+                img(app_icon_for(cx.global::<SettingsStore>().tokens.appearance)).size(px(ICON)).flex_none(),
+            )
             .child(div().mt_2().text_heading().font_weight(FontWeight::BOLD).child("Wormhole"))
             .child(div().mt_1().text_caption().text_color(ui.muted).child(version_line()))
             .children(

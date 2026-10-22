@@ -10,8 +10,6 @@ use gpui_kit::*;
 use wormhole_core::icon_theme::{self, IconSource, IconTheme, RenderMode};
 use wormhole_core::tokens::Appearance;
 
-use crate::settings::SettingsStore;
-
 /// Setting value that turns file icons off.
 pub const NONE: &str = "None";
 const SIZE: f32 = 14.0;
@@ -117,11 +115,6 @@ const APP_ICON_PNGS: [(&str, &[u8]); 2] = [
     (APP_ICON_DARK, include_bytes!("../../../packaging/icon/AppIcon-dark.png")),
 ];
 
-/// Path of the app icon for `img()`, in the look that goes with the theme's appearance.
-pub fn app_icon(cx: &App) -> &'static str {
-    app_icon_for(cx.global::<SettingsStore>().tokens.appearance)
-}
-
 /// Path of the app icon for `img()` on a theme of `appearance`.
 pub fn app_icon_for(appearance: Appearance) -> &'static str {
     match appearance {
@@ -210,16 +203,17 @@ pub fn resolve(name: &str, light: bool) -> Option<Arc<IconTheme>> {
     icon_theme::theme_named(&user_dir(), name, light)
 }
 
-/// A file's icon. Single-color icons are drawn in `tint` (muted text, or the
-/// on-selected colors on a selected row).
-pub fn file(path: &str, tint: Hsla, cx: &App) -> Option<AnyElement> {
-    let theme = cx.global::<SettingsStore>().icons.clone()?;
+/// A file's icon from `theme` (the settings store's `icons`; `None` when they are turned off).
+/// Single-color icons are drawn in `tint` (muted text, or the on-selected colors on a selected row).
+/// The caller hands both in: settings sits above the icons and holds the theme in force.
+pub fn file(theme: Option<&IconTheme>, path: &str, tint: Hsla) -> Option<AnyElement> {
+    let theme = theme?;
     theme.file_icon(path).map(|icon| element(icon, theme.render, tint))
 }
 
-pub fn folder(name: &str, expanded: bool, cx: &App) -> Option<AnyElement> {
-    let theme = cx.global::<SettingsStore>().icons.clone()?;
-    let tint = crate::settings::ui(cx).muted;
+/// A folder's icon from `theme`, open or closed, drawn as [`file`] draws.
+pub fn folder(theme: Option<&IconTheme>, name: &str, expanded: bool, tint: Hsla) -> Option<AnyElement> {
+    let theme = theme?;
     theme.directory_icon(name, expanded).map(|icon| element(icon, theme.render, tint))
 }
 

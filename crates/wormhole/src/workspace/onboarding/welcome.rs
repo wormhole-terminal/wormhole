@@ -11,8 +11,8 @@ use wormhole_core::welcome::TAGLINE;
 
 use super::Intro;
 use super::page::Entering;
-use crate::icons::app_icon;
-use crate::settings::UiColors;
+use crate::icons::app_icon_for;
+use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::aux_window;
@@ -40,7 +40,7 @@ impl Workspace {
             .flex()
             .flex_col()
             .items_center()
-            .child(logo(entrance.logo, app_icon(cx)))
+            .child(logo(entrance.logo, app_icon_for(cx.global::<SettingsStore>().tokens.appearance)))
             .child(
                 div()
                     .mt_6()
