@@ -80,6 +80,7 @@ pub(super) fn render(
                     let add: style::ClickHandler = Box::new(|_, _, _| {});
                     ("New terminal in group".into(), add)
                 }),
+                add: None,
                 on_toggle: Box::new(|_, _, _| {}),
                 spoken_edit: name.into(),
                 spoken_fold: name.into(),

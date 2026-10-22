@@ -13,6 +13,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   folder shows when you rest on the group's name and in its menu; "Clear folder" takes it away, and
   a folder that has gone is skipped. A group with a folder is pinned, so it stays when its last
   terminal closes, like a project; clearing the folder leaves it pinned.
+- A + shows on every group's head while the pointer is over it (not only on an empty, pinned
+  group): it opens a new terminal in the group.
 
 ### Changed
 

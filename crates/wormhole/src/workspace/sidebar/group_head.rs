@@ -1,4 +1,4 @@
-//! A group's head in the list: its tiles and dot while folded, its + while pinned and empty, its
+//! A group's head in the list: its tiles and dot while folded, its + (always while pinned and empty, else under the pointer), its
 //! drag, its drop, the popover its name opens (`group_popover`) and its context menu, which a
 //! right-click and ⌃↩ open: Rename… (in place, `rename`), a row of the nine colours as Finder's tags
 //! are in its context menu, Other colour…, its folder with Set folder… and Clear folder, and the
@@ -59,13 +59,17 @@ impl Workspace {
         // The popover's arrow points at the name, which the probe on it measures.
         let label_at = Anchor::default();
         let label_anchor = label_at.clone();
-        let empty = (band.pinned && band.members.is_empty()).then(|| {
-            let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
-            let add: ClickHandler = Box::new(move |_, window, cx| {
-                on_add.update(cx, |this, cx| this.new_session_in_group(group, window, cx)).ok();
-            });
-            (tooltip, add)
+        // The + is the same button for a pinned, empty group (always shown) and any other head
+        // (under the pointer): New terminal in group, which starts in the group's folder.
+        let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
+        let add: ClickHandler = Box::new(move |_, window, cx| {
+            on_add.update(cx, |this, cx| this.new_session_in_group(group, window, cx)).ok();
         });
+        let (empty, add) = if band.pinned && band.members.is_empty() {
+            (Some((tooltip, add)), None)
+        } else {
+            (None, Some((tooltip, add)))
+        };
         let folder = self.group_folder_label(group);
         let parts = GroupHead {
             metrics: frame.metrics,
@@ -78,6 +82,7 @@ impl Workspace {
             count: band.members.len(),
             alert,
             empty,
+            add,
             on_toggle: Box::new(move |_, _, cx| {
                 on_toggle.update(cx, |this, cx| this.toggle_group_band(group, cx)).ok();
             }),

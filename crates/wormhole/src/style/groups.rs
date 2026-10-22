@@ -10,7 +10,7 @@ use gpui_kit::component::{Icon, Selectable, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::buttons::icon_button;
+use super::buttons::{icon_button, row_actions};
 use super::controls::disclosure;
 use super::labels::count_badge;
 use super::metrics::Metrics;
@@ -34,8 +34,10 @@ pub struct GroupHead {
     pub count: usize,
     /// A terminal in it needs you (amber) or failed (danger): the dot after the tiles.
     pub alert: Option<Hsla>,
-    /// A pinned group with no terminal: its + (tooltip, what it does).
+    /// A pinned group with no terminal: its + (tooltip, what it does), always shown.
     pub empty: Option<(SharedString, ClickHandler)>,
+    /// The + of any other group (tooltip, what it does), shown while the pointer is over the head.
+    pub add: Option<(SharedString, ClickHandler)>,
     /// What the chevron does (fold or open); the head's own click does the same.
     pub on_toggle: ClickHandler,
     /// What VoiceOver says of the label (it opens the menu) and of the chevron (it folds).
@@ -84,6 +86,8 @@ const CHEVRON_BOX: f32 = 20.0;
 const PIN_SIZE: f32 = 12.0;
 /// The colour dot of a group without a card.
 const DOT: f32 = 8.0;
+/// The head's hover group, for the + that shows under the pointer.
+const HEAD_GROUP: &str = "group-head";
 
 /// See [`GroupHead`]. `id` names the head; add the drag, the drop and the context menu to it.
 #[track_caller]
@@ -99,6 +103,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         count,
         alert,
         empty,
+        add,
         on_toggle,
         spoken_edit,
         spoken_fold,
@@ -185,8 +190,27 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
             .child(disclosure(ui, folded))
             .into_any_element(),
     };
+    // At the end of the line, collapsed to no width at rest (`row_actions`), so the name keeps its
+    // place and only gives way, as a terminal's does for its ×, when the + shows.
+    let hover_add = add.filter(|_| !is_empty).map(|(tooltip, on_add)| {
+        row_actions(
+            (id.clone(), "hover-actions"),
+            HEAD_GROUP,
+            false,
+            vec![
+                icon_button((id.clone(), "hover-add"), ui, IconName::Plus, tooltip)
+                    .in_row()
+                    .on_click(move |event, window, cx| {
+                        cx.stop_propagation();
+                        on_add(event, window, cx);
+                    })
+                    .into_any_element(),
+            ],
+        )
+    });
     let head = div()
         .id(id)
+        .group(HEAD_GROUP)
         .relative()
         .flex()
         .items_center()
@@ -202,6 +226,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         .child(label)
         .child(div().flex_1())
         .children(tiles)
+        .children(hover_add)
         .child(trailing);
     if is_empty { head } else { head.on_click(move |event, window, cx| on_toggle(event, window, cx)) }
 }

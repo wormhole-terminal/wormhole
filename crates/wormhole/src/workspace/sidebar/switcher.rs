@@ -385,6 +385,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 });
                 (tooltip, add)
             }),
+            add: None,
             on_toggle: Box::new(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx)))),
             spoken_edit: card.label.clone(),
             spoken_fold: card.spoken.clone(),

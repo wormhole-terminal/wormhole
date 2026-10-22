@@ -206,6 +206,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         count: card.rows.len(),
                         alert: None,
                         empty: None,
+                        add: None,
                         on_toggle: Box::new(|_, _, _| {}),
                         spoken_edit: SharedString::default(),
                         spoken_fold: SharedString::default(),

@@ -182,6 +182,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             count: 3,
             alert: None,
             empty: None,
+            add: None,
             on_toggle: Box::new(|_, _, _| {}),
             spoken_edit: SharedString::default(),
             spoken_fold: SharedString::default(),
