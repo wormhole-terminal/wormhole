@@ -21,6 +21,7 @@ pub mod panel;
 pub mod popover;
 mod rows;
 pub mod scroller;
+pub mod sheet;
 pub mod sound;
 pub mod status_item;
 mod swatches;

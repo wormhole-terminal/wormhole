@@ -5,8 +5,8 @@
 //! opaque `surface.elevated` card: the Kit paints a dialog in its window background, which the
 //! bridge keeps clear so the app's own surfaces show over the blur, so a dialog of its own would
 //! show whatever is behind it. Opaque under Increase Contrast too, like every surface.
-//! The question before quitting with terminals in the background is an `NSAlert` of our own: GPUI's
-//! prompt has no checkbox.
+//! The question before quitting with terminals in the background is the platform's own sheet
+//! (`platform::sheet`): GPUI's prompt has no checkbox.
 
 use std::rc::Rc;
 
@@ -15,6 +15,7 @@ use gpui_kit::component::dialog::AlertDialog;
 use gpui_kit::prelude::*;
 use gpui_kit::{App, PromptButton, PromptLevel, SharedString, Window};
 
+use crate::platform::sheet;
 use crate::settings::ui;
 
 /// Open an alert dialog over `window`: `build` fills it in, as for the Kit's `open_alert_dialog`.
@@ -111,14 +112,6 @@ pub(crate) fn ask_with_cancel(
 /// The checkbox of the question before quitting: whether the terminals in session hosts stay.
 const KEEP_RUNNING: &str = "Keep terminals running in the background";
 
-/// `NSAlertFirstButtonReturn`: buttons answer 1000 + their place in the order they were added.
-#[cfg(target_os = "macos")]
-const FIRST_BUTTON: isize = 1000;
-
-/// What the quit sheet answered: `None` for Cancel (or the window going), else whether the box
-/// "Keep terminals running in the background" was ticked when Quit was pressed.
-type KeepAnswer = Option<bool>;
-
 /// Ask the question before quitting in a sheet with the box [`KEEP_RUNNING`], ticked every time
 /// (the choice isn't remembered: the next quit asks afresh). `on_confirm` runs for Quit with
 /// the box's state; `on_dismiss` whenever the question goes away, as for [`ask_before_closing`].
@@ -130,7 +123,13 @@ pub(crate) fn ask_keeping_terminals(
     on_confirm: impl FnOnce(bool, &mut Window, &mut App) + 'static,
     on_dismiss: impl FnOnce(&mut App) + 'static,
 ) {
-    let Some(answer) = native_sheet(window, &question) else {
+    let sheet = sheet::Question {
+        title: &question.title,
+        detail: &question.detail,
+        confirm: question.confirm,
+        checkbox: KEEP_RUNNING,
+    };
+    let Some(answer) = sheet::ask_with_checkbox(window, &sheet) else {
         ask_before_closing(window, cx, question, move |window, cx| on_confirm(true, window, cx), on_dismiss);
         return;
     };
@@ -146,44 +145,4 @@ pub(crate) fn ask_keeping_terminals(
             .ok();
         })
         .detach();
-}
-
-/// Show the sheet on `window`'s NSWindow; its answer arrives on the channel. `None`: no NSWindow
-/// to put it on (off macOS, or a window without one).
-#[cfg(target_os = "macos")]
-fn native_sheet(window: &Window, question: &CloseQuestion) -> Option<smol::channel::Receiver<KeepAnswer>> {
-    use block2::RcBlock;
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSAlert, NSAlertStyle, NSControlStateValueOn, NSModalResponse};
-    use objc2_foundation::NSString;
-
-    let mtm = MainThreadMarker::new()?;
-    let ns_window = crate::platform::macos::appkit::ns_window(window)?;
-    let alert = NSAlert::new(mtm);
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&NSString::from_str(&question.title));
-    alert.setInformativeText(&NSString::from_str(&question.detail));
-    // The closing button first, so Return presses it; Cancel after it, answering to Esc.
-    alert.addButtonWithTitle(&NSString::from_str(question.confirm));
-    alert.addButtonWithTitle(&NSString::from_str("Cancel")).setKeyEquivalent(&NSString::from_str("\u{1b}"));
-    alert.setShowsSuppressionButton(true);
-    if let Some(keep) = alert.suppressionButton() {
-        keep.setTitle(&NSString::from_str(KEEP_RUNNING));
-        keep.setState(NSControlStateValueOn);
-    }
-
-    let (tx, rx) = smol::channel::bounded(1);
-    let sheet = alert.clone();
-    let done = RcBlock::new(move |response: NSModalResponse| {
-        let keep = sheet.suppressionButton().is_none_or(|b| b.state() == NSControlStateValueOn);
-        tx.try_send((response == FIRST_BUTTON).then_some(keep)).ok();
-    });
-    // AppKit copies the block and keeps the alert until the sheet is answered.
-    alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
-    Some(rx)
-}
-
-#[cfg(not(target_os = "macos"))]
-fn native_sheet(_: &Window, _: &CloseQuestion) -> Option<smol::channel::Receiver<KeepAnswer>> {
-    None
 }

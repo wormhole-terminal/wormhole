@@ -53,6 +53,7 @@ pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;
 pub mod scroller;
+pub mod sheet;
 pub mod sound;
 pub mod spawn;
 pub mod status_item;
