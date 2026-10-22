@@ -3,7 +3,7 @@
 //! show that each rule fails when it should.
 //!
 //! Fixtures: `en.ftl` is their English; `ok/<tag>.ftl` must pass; `bad/<name>.<tag>.ftl` must fail,
-//! and its first line `# expect: <words>` is what the first complaint must contain.
+//! and its first line `# expect: <words>` is what some complaint must contain.
 
 // The coverage line is the point of one test: it is read with `--nocapture`.
 #![allow(clippy::print_stdout)]
@@ -80,7 +80,7 @@ fn the_good_fixtures_pass() {
 fn each_bad_fixture_fails_for_its_reason() {
     let english = fixture(&fixtures().join("en.ftl"));
     let paths = files_in("bad");
-    assert!(paths.len() >= 8, "one fixture per rule");
+    assert!(paths.len() >= 12, "one fixture per rule");
     for path in paths {
         let name = path.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
         let tag =

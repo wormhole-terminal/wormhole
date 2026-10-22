@@ -16,7 +16,7 @@ pub struct Language(u8);
 impl Language {
     /// The source language, always there and always the fallback.
     pub const ENGLISH: Language = Language(0);
-    /// English made unreadable on purpose (accented, a third longer, in `⟦ ⟧`). Never negotiated
+    /// English made unreadable on purpose (accented, 40% longer, in `⟦ ⟧`). Never negotiated
     /// from the system's list; devctl and the tests ask for it by name.
     pub const PSEUDO: Language = Language(LOCALES.len() as u8);
     /// The shipped languages and the pseudo-language.
@@ -30,6 +30,7 @@ impl Language {
         Language(index.min(Self::PSEUDO.0))
     }
 
+    /// Whether this is `en-XA`, the pseudo-language: not a language to offer a person, only to test with.
     pub const fn is_pseudo(self) -> bool {
         self.0 == Self::PSEUDO.0
     }

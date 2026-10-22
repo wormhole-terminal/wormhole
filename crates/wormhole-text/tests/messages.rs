@@ -39,16 +39,9 @@ fn a_variable_keeps_what_it_is_given_without_isolation_marks() {
     assert!(!shown.contains(['\u{2068}', '\u{2069}']));
 }
 
-/// The keys of every message without variables, found the way the generator found them.
+/// The keys of every message without variables, as the generator listed them.
 fn plain_keys() -> Vec<Key> {
-    let english = support::english();
-    english
-        .messages
-        .iter()
-        .enumerate()
-        .filter(|(_, item)| english.variables(&item.id).is_empty())
-        .map(|(index, _)| Key::new(u16::try_from(index).expect("fewer than 65,536 messages")))
-        .collect()
+    ALL.to_vec()
 }
 
 #[test]
@@ -94,4 +87,16 @@ fn the_override_is_this_threads_and_ends_with_the_closure() {
     let panicked = std::panic::catch_unwind(|| with_language(Language::PSEUDO, || panic!("a test failed")));
     assert!(panicked.is_err());
     assert_eq!(text(SETTINGS_SECTION_FONTS), "Fonts", "a panic inside does not leave the language set");
+}
+
+#[test]
+fn all_lists_every_key_once() {
+    let ids: std::collections::BTreeSet<&str> = ALL.iter().map(|key| key.id()).collect();
+    assert_eq!(ids.len(), ALL.len(), "a key is listed twice");
+    assert!(ids.contains("settings-theme-mode.keywords"));
+    assert!(ALL.iter().all(|key| !key.id().is_empty()));
+    // The generator's list is the catalog's messages without variables.
+    let english = support::english();
+    let plain = english.messages.iter().filter(|item| english.variables(&item.id).is_empty()).count();
+    assert_eq!(ALL.len(), plain);
 }

@@ -9,7 +9,7 @@ pub struct Key(u16);
 
 impl Key {
     #[doc(hidden)]
-    pub const fn new(index: u16) -> Self {
+    pub(crate) const fn new(index: u16) -> Self {
         Self(index)
     }
 

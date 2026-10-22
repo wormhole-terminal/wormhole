@@ -38,7 +38,8 @@ pub fn plural_categories(tag: &str) -> Result<BTreeSet<&'static str>, String> {
 
 /// What every catalog must be, English or a translation: it parses, defines nothing twice, calls no
 /// function (`NUMBER()` does not localise here and `DATETIME()` does not exist: numbers arrive
-/// formatted), has a default in every select and names only the plural categories its language has.
+/// formatted) and names only the plural categories its language has. A select without a default
+/// variant is a parse error, so it is reported as junk.
 fn well_formed(catalog: &Catalog, language: &str) -> Vec<String> {
     let mut problems = Vec::new();
     for junk in &catalog.junk {
@@ -56,10 +57,6 @@ fn well_formed(catalog: &Catalog, language: &str) -> Vec<String> {
             ));
         }
         for select in &item.selects {
-            if !select.has_default {
-                problems
-                    .push(format!("{language}: {}: a select has no default variant (`*[other]`)", item.id));
-            }
             if !select.is_plural() {
                 continue;
             }
@@ -141,6 +138,7 @@ pub fn english_problems(english: &Catalog) -> Vec<String> {
 pub fn translation_problems(english: &Catalog, language: &str, translation: &Catalog) -> Vec<String> {
     let mut problems = well_formed(translation, language);
     problems.extend(dangling(translation, Some(english), language));
+    problems.extend(plural_selects(english, language, translation));
     let source = english.by_id();
     for item in &translation.messages {
         let Some(original) = source.get(item.id.as_str()) else {
@@ -155,6 +153,22 @@ pub fn translation_problems(english: &Catalog, language: &str, translation: &Cat
             problems.push(format!(
                 "{language}: {}: English defines this term, and it is not translated",
                 term.id
+            ));
+        }
+    }
+    problems
+}
+
+/// A translation may select plurally only on a variable English counts: the generated function
+/// takes that one as a number, and a text argument never matches `[one]`.
+fn plural_selects(english: &Catalog, language: &str, translation: &Catalog) -> Vec<String> {
+    let mut problems = Vec::new();
+    for item in &translation.messages {
+        // An orphan is reported elsewhere; `counted` is false for it.
+        for var in item.counted.iter().filter(|var| !english.counted(&item.id, var)) {
+            problems.push(format!(
+                "{language}: {}: selects plurally on ${var}, which English does not count",
+                item.id
             ));
         }
     }

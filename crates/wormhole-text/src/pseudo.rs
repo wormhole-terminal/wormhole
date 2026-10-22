@@ -3,7 +3,7 @@
 //!
 //! Fluent's transform runs on the message's own text only, so `{ $count }` and the values handed in
 //! stay as they are; letters get accents. What follows the whole formatted message is the rest:
-//! padding to a third longer (German is often that, or more) and the `⟦ ⟧` brackets, whose closing
+//! padding to 40% longer (German is often that, or more) and the `⟦ ⟧` brackets, whose closing
 //! half is the first thing a truncating label loses.
 
 use std::borrow::Cow;

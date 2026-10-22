@@ -35,7 +35,6 @@ pub struct Item {
 pub struct Select {
     pub on_variable: Option<String>,
     pub keys: Vec<VariantKeyText>,
-    pub has_default: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -198,7 +197,7 @@ fn walk_expression(item: &mut Item, expression: &Expression<&str>) {
                 InlineExpression::VariableReference { id } => Some(id.name.to_owned()),
                 _ => None,
             };
-            let select = Select { on_variable, keys, has_default: variants.iter().any(|v| v.default) };
+            let select = Select { on_variable, keys };
             if let (Some(var), true) = (&select.on_variable, select.is_plural()) {
                 item.counted.insert(var.clone());
             }
