@@ -258,7 +258,7 @@ impl QuickPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = ui(cx);
-        let glyph = super::glyph_of(terminal);
+        let glyph = style::StatusGlyph::of(terminal);
         let detail_color = match terminal.state {
             State::NeedsYou => ui.attention_text,
             State::Done => ui.done_text,

@@ -3,6 +3,7 @@
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::notify::{State, Terminal};
 
 use super::motion::{ANIMATION_FPS, PULSE_RANGE, SPIN_PERIOD, STATUS_PULSE};
 use super::scale::{
@@ -35,6 +36,24 @@ pub enum StatusGlyph {
     Terminal { unread: bool },
     /// A bare shell at its prompt (nothing running): the terminal symbol, faint.
     Shell,
+}
+
+impl StatusGlyph {
+    /// A terminal's glyph in a list of every window's terminals (the quick panel, the command
+    /// palette): the state an agent or a program that reports gives, or a plain terminal's bell,
+    /// command or prompt.
+    pub fn of(terminal: &Terminal) -> Self {
+        match (terminal.state, terminal.source.told()) {
+            (State::NeedsYou, true) => StatusGlyph::NeedsYou,
+            (State::NeedsYou, false) => StatusGlyph::Bell,
+            (State::Working, true) => StatusGlyph::Working,
+            (State::Working, false) => StatusGlyph::Running,
+            (State::Done, _) => StatusGlyph::Done,
+            (State::Failed, _) => StatusGlyph::Failed,
+            (State::Idle, true) | (State::Exited, _) => StatusGlyph::Idle,
+            (State::Idle, false) => StatusGlyph::Shell,
+        }
+    }
 }
 
 /// `glyph` centered in the [`ITEM_LEAD_W`] lead slot. `id` keys its animation (a

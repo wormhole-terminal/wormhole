@@ -120,24 +120,6 @@ fn do_items(cx: &App) -> Vec<Do> {
     items
 }
 
-/// A terminal's status glyph in a list of every window's terminals (the quick panel, the command
-/// palette): the state an agent or a program that reports gives, or a plain terminal's bell,
-/// command or prompt.
-pub(crate) fn glyph_of(terminal: &Terminal) -> crate::style::StatusGlyph {
-    use crate::style::StatusGlyph;
-    use wormhole_core::notify::State;
-    match (terminal.state, terminal.source.told()) {
-        (State::NeedsYou, true) => StatusGlyph::NeedsYou,
-        (State::NeedsYou, false) => StatusGlyph::Bell,
-        (State::Working, true) => StatusGlyph::Working,
-        (State::Working, false) => StatusGlyph::Running,
-        (State::Done, _) => StatusGlyph::Done,
-        (State::Failed, _) => StatusGlyph::Failed,
-        (State::Idle, true) | (State::Exited, _) => StatusGlyph::Idle,
-        (State::Idle, false) => StatusGlyph::Shell,
-    }
-}
-
 /// Carry out a row (⏎ or a click), after closing the panel.
 fn run(row: &Row, cx: &mut App) {
     use crate::menubar::MenuCommand;
