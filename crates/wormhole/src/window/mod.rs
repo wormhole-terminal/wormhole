@@ -14,7 +14,8 @@
 //! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
 //!   window and the welcome.
 //!
-//! and by file: the session (`session`), the window's terminals (`terminals`), its tick (`tick`), its
+//! and by file: what a feature is to the window (`feature`, its facts in `facts`), the session
+//! (`session`), the window's terminals (`terminals`), its tick (`tick`), its
 //! saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`), what it
 //! answers from outside (`window_control`, `restart_facts`, `ambient`, `menu_state`), its actions and
 //! keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`, `glass`,
@@ -66,8 +67,12 @@ pub(crate) mod devctl;
 pub(crate) mod dialog;
 #[cfg(test)]
 mod drag_tests;
+mod facts;
 #[cfg(test)]
 mod failed_tests;
+mod feature;
+#[cfg(test)]
+mod feature_tests;
 pub(crate) mod features;
 pub(crate) mod focus;
 mod folder_color;
@@ -162,6 +167,9 @@ pub struct Workspace {
     /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
     sidebar: self::sidebar::SidebarState,
     right_tab: TabId,
+    /// The features the app has (`feature`), copied from the installed table when the window was
+    /// made so the frame never reads the global. A test installs its own before it opens one.
+    features: &'static [self::feature::FeatureDef],
     /// The tab that was open when Usage was opened: where the panel goes back to when no agent
     /// is left to show usage for.
     tab_before_usage: Option<TabId>,
@@ -327,6 +335,7 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             right_tab: TabId::default(),
+            features: self::feature::FeatureTable::installed(cx),
             tab_before_usage: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,

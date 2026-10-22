@@ -114,12 +114,23 @@ pub(crate) fn set_shared_state(cx: &mut App) {
 
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).
 pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenWindow {
+    start_with_table(cx, record, crate::window::features::TABLE)
+}
+
+/// [`start_with`] for an app whose feature table is `table`: what the window copies from the global
+/// the app installs at launch.
+pub(super) fn start_with_table(
+    cx: &mut TestAppContext,
+    record: WindowRecord,
+    table: &'static [crate::window::feature::FeatureDef],
+) -> OpenWindow {
     cx.update(|cx| {
         gpui_kit::init(cx);
         // The test platform delivers notifications only to an app with an identity.
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(SettingsStore::load());
         set_shared_state(cx);
+        crate::window::feature::FeatureTable::install(table, cx);
         // These tests were written for the numbers that follow the list; the ones that stay with the
         // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
         crate::settings::update_settings(cx, |settings| {

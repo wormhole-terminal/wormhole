@@ -16,7 +16,7 @@ use crate::terminal_view::Status;
 use crate::window::Workspace;
 
 /// What a terminal's row shows, gathered once per frame.
-pub(super) struct RowInfo {
+pub(in crate::window) struct RowInfo {
     pub(super) ix: usize,
     pub(super) id: i64,
     pub(super) name: SharedString,

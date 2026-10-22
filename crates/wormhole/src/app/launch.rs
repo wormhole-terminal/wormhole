@@ -44,6 +44,8 @@ pub(crate) fn start(
     if let Some(err) = &profiles_error {
         tracing::warn!("profiles.json was set aside and rebuilt: {err}");
     }
+    // Before any window: each copies the table when it is made.
+    crate::window::features::install(cx);
     upgrade_legacy_hooks(cx);
     cx.background_spawn(async { crate::platform::default_app::upgrade_legacy_default() }).detach();
     let data = profiles::ProfileData::open(&paths);

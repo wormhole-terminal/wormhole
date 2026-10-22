@@ -107,3 +107,20 @@ fn the_feature_mask_follows_the_flags_and_moves_its_revision_only_when_it_change
         assert_eq!(cx.global::<SettingsStore>().revisions.features, before + 1);
     });
 }
+
+#[gpui_kit::test]
+fn asking_whether_a_feature_is_on_allocates_nothing(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    use wormhole_core::config::FeatureId;
+    cx.update(|cx| {
+        cx.set_global(SettingsStore::for_test());
+        let before = thread_counts();
+        let mut on = 0;
+        for _ in 0..1000 {
+            let mask = super::features(cx);
+            on += FeatureId::ALL.iter().filter(|&&id| mask.has(id)).count();
+        }
+        assert!(on > 0);
+        assert_eq!(thread_counts().since(before).allocations, 0, "a read is a bit test");
+    });
+}
