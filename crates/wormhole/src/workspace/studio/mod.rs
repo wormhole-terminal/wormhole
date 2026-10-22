@@ -153,8 +153,9 @@ fn save_key(key: &KeySpec) -> Option<SaveAction> {
 /// that are not saved).
 pub(crate) fn toggle_studio(cx: &mut App) {
     if let Some((handle, studio)) = current_window(cx)
-        && let Ok(Ok(())) = handle
+        && handle
             .update(cx, |_, window, cx| studio.update(cx, |studio, cx| studio.request_close(window, cx)))
+            .is_ok()
     {
         return;
     }
@@ -164,10 +165,10 @@ pub(crate) fn toggle_studio(cx: &mut App) {
 /// The Studio window while it is open, and its view. The shared state keeps the view untyped
 /// (`aux_window::Slot`, as it does About's), so it doesn't name the Studio; `None` once the view is
 /// gone, as a weak handle that no longer upgrades.
-pub(crate) fn current_window(cx: &App) -> Option<(AnyWindowHandle, WeakEntity<StudioWindow>)> {
+fn current_window(cx: &App) -> Option<(AnyWindowHandle, Entity<StudioWindow>)> {
     let (handle, view) = app(cx).studio_window.clone()?;
     let studio = view.upgrade()?.downcast::<StudioWindow>().ok()?;
-    Some((handle, studio.downgrade()))
+    Some((handle, studio))
 }
 
 /// Open the Studio window, or bring it to the front.

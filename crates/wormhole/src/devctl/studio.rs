@@ -36,6 +36,6 @@ pub(super) fn frames(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let frames = words.next().and_then(|n| n.parse::<usize>().ok()).unwrap_or(40).max(1);
     let mode = words.next().unwrap_or_default();
-    crate::workspace::studio_devctl::devctl_studio_frames(frames, mode, ctx.dir.join("frames.txt"), ctx.cx)?;
+    crate::workspace::studio_devctl::frames(frames, mode, ctx.dir.join("frames.txt"), ctx.cx)?;
     Ok(String::new())
 }

@@ -1,3 +1,16 @@
+//! One window: a [`Workspace`] is the view of one window's terminals, with their splits and panes,
+//! the sidebar, the side panels (notes, changes, history, project), the title rows and the status
+//! bar, and it saves and restores itself. What must exist once, whatever the number of windows,
+//! is `AppState` (`app`), which the windows read and update; windows are opened and closed in
+//! `window_lifecycle`.
+//!
+//! Until phase 4's moves finish this folder also holds the surfaces that sit above the window (the
+//! app root, the palette, the sheet, the Settings and Studio windows, the status item); they
+//! leave, and the window then uses none of them. The known exception, kept until phase 5, is the
+//! window calling `notifications::dismiss` and `notifications::sweep` (the window will emit seen
+//! and closed events instead): `tick`, `terminals`, `panes`, `splits`, `windows`, the welcome and
+//! this file's window-activation observer.
+
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -8,6 +21,7 @@ use gpui_kit::*;
 
 #[cfg(feature = "devctl")]
 pub(crate) use self::about::devctl_command as devctl_about;
+#[cfg(feature = "devctl")]
 pub(crate) use self::actions::CheckForUpdates;
 #[cfg(feature = "devctl")]
 pub(crate) use self::actions::NewWindow;

@@ -1,5 +1,6 @@
 //! What the app does on its tick, once whatever the number of windows, and with what arrives
-//! between ticks: the hook socket's messages, the menu bar's commands, the theme and the system's look.
+//! between ticks: the hook socket's messages, the menu bar's commands, and the theme and the system's
+//! look (kept in `app_look`, which the tick drives).
 //!
 //! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
 //! root may call into it.

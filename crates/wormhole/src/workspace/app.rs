@@ -56,7 +56,7 @@ pub(crate) struct AppState {
     /// The settings window, while open.
     pub settings_window: Option<(AnyWindowHandle, Entity<settings_page::SettingsWindow>)>,
     /// The Theme Studio window, while open. Weak, so closing the window drops
-    /// the Studio (which clears its preview); `studio::current_window` reads it typed.
+    /// the Studio (which clears its preview); the Studio module reads it typed.
     pub studio_window: aux_window::Slot,
     /// The About and Licenses windows, while open.
     pub about_window: aux_window::Slot,

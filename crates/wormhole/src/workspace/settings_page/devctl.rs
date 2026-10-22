@@ -14,14 +14,14 @@ use wormhole_core::view::sidebar::Density;
 use super::{SettingsWindow, SidebarLook, open_settings, reveal_row, sections};
 use crate::workspace::app::app;
 
-pub(crate) fn devctl_settings_section(name: &str, cx: &mut App) {
+pub(crate) fn section(name: &str, cx: &mut App) {
     let section = Section::ALL.into_iter().find(|s| format!("{s:?}").eq_ignore_ascii_case(name));
     open_settings(section, cx);
 }
 
 /// devctl `settings-search <text>`: type into the settings search (empty clears it). The
 /// window opens first if it isn't (deferred: send this in the next batch then).
-pub(crate) fn devctl_settings_search(text: &str, cx: &mut App) {
+pub(crate) fn search(text: &str, cx: &mut App) {
     let text = text.to_string();
     with_page(cx, move |page, window, cx| {
         page.search.update(cx, |search, cx| search.set_value(text, window, cx));
@@ -31,7 +31,7 @@ pub(crate) fn devctl_settings_search(text: &str, cx: &mut App) {
 
 /// devctl `settings-record <id> [keys]`: start the recorder of row `id`, and press `keys`
 /// (GPUI's keystroke syntax, e.g. `cmd-space`) into it.
-pub(crate) fn devctl_settings_record(arg: &str, cx: &mut App) {
+pub(crate) fn record(arg: &str, cx: &mut App) {
     let (id, keys) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
     let Some(id) = super::sections::recorder_id(id) else { return };
     let keystroke = (!keys.trim().is_empty()).then(|| Keystroke::parse(keys.trim()).ok()).flatten();
@@ -45,13 +45,13 @@ pub(crate) fn devctl_settings_record(arg: &str, cx: &mut App) {
 
 /// devctl `settings-reveal <id>`: the settings window at that row, as the palette opens it
 /// (`reveal_row`). The window opens on the next tick: `settings-shot` in a later batch.
-pub(crate) fn devctl_settings_reveal(id: &str, cx: &mut App) {
+pub(crate) fn reveal(id: &str, cx: &mut App) {
     reveal_row(id, cx);
 }
 
 /// devctl `settings-preview <regular|compact|dense|off>`: what Terminals & sidebar previews
 /// beside the current look, as when the pointer is over that density.
-pub(crate) fn devctl_settings_preview(arg: &str, cx: &mut App) {
+pub(crate) fn preview(arg: &str, cx: &mut App) {
     let look = match arg.trim() {
         "regular" => Some(SidebarLook::Density(Density::Regular)),
         "compact" => Some(SidebarLook::Density(Density::Compact)),
@@ -66,12 +66,12 @@ pub(crate) fn devctl_settings_preview(arg: &str, cx: &mut App) {
 
 /// devctl `profile-sheet`: the "New profile" sheet over the settings window, as the File menu
 /// opens it (the window opens on the next tick: `settings-shot` in a later batch).
-pub(crate) fn devctl_profile_sheet(cx: &mut App) {
+pub(crate) fn profile_sheet(cx: &mut App) {
     sections::open_new_profile_sheet(cx);
 }
 
 /// devctl `settings-scroll <px>`: scroll the page down (negative: up).
-pub(crate) fn devctl_settings_scroll(by: f32, cx: &mut App) {
+pub(crate) fn scroll(by: f32, cx: &mut App) {
     with_page(cx, move |page, _, _| {
         let offset = page.content_scroll.offset();
         page.content_scroll.set_offset(point(offset.x, offset.y - px(by)));
@@ -79,12 +79,12 @@ pub(crate) fn devctl_settings_scroll(by: f32, cx: &mut App) {
 }
 
 /// devctl `settings-resize <w> <h>`: the settings window's size.
-pub(crate) fn devctl_settings_resize(w: f32, h: f32, cx: &mut App) {
+pub(crate) fn resize(w: f32, h: f32, cx: &mut App) {
     with_page(cx, move |_, window, _| window.resize(size(px(w), px(h))));
 }
 
 /// devctl `settings-reset-confirm`: press Advanced → "Reset to defaults…" (asks, resets nothing).
-pub(crate) fn devctl_settings_reset_confirm(cx: &mut App) {
+pub(crate) fn reset_confirm(cx: &mut App) {
     with_page(cx, |page, _, cx| {
         page.show_section(Section::Advanced, cx);
         page.confirm_reset = true;
@@ -93,7 +93,7 @@ pub(crate) fn devctl_settings_reset_confirm(cx: &mut App) {
 
 /// devctl `settings-cli-tool [install|uninstall]`: the Command line tool row on its page, read
 /// again, or with its Install / Uninstall pressed.
-pub(crate) fn devctl_settings_cli_tool(action: &str, cx: &mut App) {
+pub(crate) fn cli_tool(action: &str, cx: &mut App) {
     let action = action.trim().to_string();
     with_page(cx, move |page, _, cx| {
         page.show_section(Section::Agents, cx);
@@ -106,13 +106,13 @@ pub(crate) fn devctl_settings_cli_tool(action: &str, cx: &mut App) {
 }
 
 /// devctl `settings-select <id>`: open the select of the row `id` (scrollback, icon-theme).
-pub(crate) fn devctl_settings_select(id: &str, cx: &mut App) {
+pub(crate) fn select(id: &str, cx: &mut App) {
     let id = super::sections::select_id(id);
     with_page(cx, move |page, _, _| page.open_select = id);
 }
 
 /// devctl: pick a project in Settings → Project folders.
-pub(crate) fn devctl_settings_project(root: &str, cx: &mut App) {
+pub(crate) fn project(root: &str, cx: &mut App) {
     let root = PathBuf::from(root);
     with_page(cx, move |page, _, cx| {
         page.show_section(Section::Projects, cx);
@@ -121,7 +121,7 @@ pub(crate) fn devctl_settings_project(root: &str, cx: &mut App) {
 }
 
 /// devctl: open the project select's menu in Settings → Project folders.
-pub(crate) fn devctl_settings_project_menu(query: &str, cx: &mut App) {
+pub(crate) fn project_menu(query: &str, cx: &mut App) {
     let query = query.to_string();
     with_page(cx, move |page, window, cx| {
         page.show_section(Section::Projects, cx);
@@ -131,7 +131,7 @@ pub(crate) fn devctl_settings_project_menu(query: &str, cx: &mut App) {
 
 /// devctl: render the settings window to a PNG and append the result to
 /// `out`. Deferred: sections read app state that devctl is updating.
-pub(crate) fn devctl_settings_shot(path: PathBuf, out: PathBuf, cx: &mut App) {
+pub(crate) fn shot(path: PathBuf, out: PathBuf, cx: &mut App) {
     let window = app(cx).settings_window.clone();
     cx.defer(move |cx| {
         let result = window
@@ -161,7 +161,7 @@ pub(crate) fn devctl_settings_shot(path: PathBuf, out: PathBuf, cx: &mut App) {
 
 /// devctl: expand a font picker in the settings window, optionally searching
 /// (the window opens deferred, so the first call on a closed window only opens it).
-pub(crate) fn devctl_font_picker(arg: &str, cx: &mut App) {
+pub(crate) fn font_picker(arg: &str, cx: &mut App) {
     let (slot, query) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
     let Some(slot) = FontSlot::from_key(slot) else { return };
     let query = query.to_string();

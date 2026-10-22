@@ -1,9 +1,11 @@
-//! Opening and closing the windows that show a [`Workspace`]: where a new one is placed, saving
-//! every window on the way out, bringing a terminal's window forward, and a window moving to
-//! another profile.
+//! Opening and closing the windows that show a [`Workspace`]: where a new one is placed, running
+//! something on the front window or opening one when there is none, saving every window on the way
+//! out, bringing a terminal's window forward, and a window moving to another profile.
 //!
-//! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
-//! sheet, the Settings and Studio windows, the status item, the app root).
+//! Part of the window: it reads and updates the shared state (`app`, `app_look`) and must not use
+//! the surfaces above it (the command palette, the shortcut sheet, the Settings and Studio windows,
+//! the status item, the app root). The shared state never calls it back: whoever needs a window
+//! opened comes here.
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;

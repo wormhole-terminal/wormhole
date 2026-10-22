@@ -29,12 +29,18 @@ impl OverlayKind {
 /// The overlay's view, kept as an `AnyView` so the window draws it without naming the palette's or
 /// the sheet's type (they sit above the window); who needs the entity downcasts it ([`Workspace::overlay_of`]).
 pub(super) struct OverlayView {
-    pub kind: OverlayKind,
-    pub view: AnyView,
+    kind: OverlayKind,
+    view: AnyView,
+}
+
+impl OverlayView {
+    pub(super) fn new(kind: OverlayKind, view: impl Into<AnyView>) -> Self {
+        Self { kind, view: view.into() }
+    }
 }
 
 pub(super) struct Overlay {
-    pub view: OverlayView,
+    view: OverlayView,
     return_focus: ReturnFocus,
 }
 

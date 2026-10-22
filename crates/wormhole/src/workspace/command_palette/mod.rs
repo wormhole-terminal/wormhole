@@ -86,14 +86,14 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let cwd = ws.active_terminal().read(cx).cwd.clone();
         let palette =
             cx.new(|cx| CommandPalette::new(workspace, window_id, snapshot, cwd, &query, window, cx));
-        ws.show_overlay(OverlayView { kind: OverlayKind::Palette, view: palette.into() }, return_focus, cx);
+        ws.show_overlay(OverlayView::new(OverlayKind::Palette, palette), return_focus, cx);
     });
 }
 
 /// Everything the palette lists, read now: every window's terminals, their folders and the recent
 /// ones, the actions the window in front can do, its project's actions and where its terminal is.
 fn gather(window_id: i64, cx: &mut App) -> Snapshot {
-    let menu = crate::workspace::menu_state::state(cx);
+    let menu = crate::workspace::menu_state::front_window_state(cx);
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let key = cx.active_window().map(|w| w.window_id());
     let finished = crate::workspace::notifications::finished_commands(cx);

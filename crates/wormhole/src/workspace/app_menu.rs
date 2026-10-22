@@ -21,7 +21,7 @@ use crate::workspace::actions::{
     SwitchProfile, gpui_action,
 };
 use crate::workspace::app::app;
-use crate::workspace::menu_state::state;
+use crate::workspace::menu_state::front_window_state;
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);
@@ -37,7 +37,7 @@ impl Global for Built {}
 /// Put the menus up for the window in front, if they changed. Runs on every app tick and after
 /// a key ran an action; when nothing changed it only compares.
 pub(crate) fn sync(cx: &mut App) {
-    let state = state(cx);
+    let state = front_window_state(cx);
     if let Some(built) = cx.try_global::<Built>() {
         let names_only = built.state.differs_only_in_names(&state);
         if built.state == state || (names_only && built.at.elapsed() < NAMES_EVERY) {

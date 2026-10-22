@@ -22,9 +22,8 @@ pub(super) fn screen(ctx: &mut Ctx, _: &str) -> Result<String> {
 pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
     let focus = ctx.workspace.focus_detail(ctx.window, ctx.cx);
     // The Studio's sheets are native, so no shot shows them: its line says when one is up.
-    let studio = crate::workspace::studio_devctl::devctl_studio_state(ctx.cx)
-        .map(|line| format!("{line}\n"))
-        .unwrap_or_default();
+    let studio =
+        crate::workspace::studio_devctl::state(ctx.cx).map(|line| format!("{line}\n")).unwrap_or_default();
     // The front terminal's find, while its bar is open: the query and the bar's count.
     let find = ctx.workspace.active_terminal().read(ctx.cx).find_summary();
     let find = find.map(|line| format!("find {line}\n")).unwrap_or_default();
@@ -47,7 +46,7 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
 pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "studio")?;
     let path = ctx.dir.join(format!("{name}.png"));
-    crate::workspace::studio_devctl::devctl_studio_shot(&path, ctx.cx)?;
+    crate::workspace::studio_devctl::shot(&path, ctx.cx)?;
     Ok(format!("saved {}\n", path.display()))
 }
 
@@ -55,7 +54,7 @@ pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// its result is appended to this window's results file when it is ready.
 pub(super) fn settings_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "settings")?;
-    crate::workspace::settings_devctl::devctl_settings_shot(
+    crate::workspace::settings_devctl::shot(
         ctx.dir.join(format!("{name}.png")),
         ctx.out.to_path_buf(),
         ctx.cx,

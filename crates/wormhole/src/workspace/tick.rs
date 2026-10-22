@@ -1,8 +1,10 @@
 //! A window's tick (every 400 ms): what changes without an event to say so (folders, agents, git,
 //! projects, the window's look), and the saves that follow it.
 //!
-//! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
-//! sheet, the Settings and Studio windows, the status item, the app root).
+//! Part of the window: it may use the shared state (`app`) and the platform, and must not use the
+//! surfaces above it (the command palette, the shortcut sheet, the Settings and Studio windows, the
+//! status item, the app root). The one known exception is `notifications::dismiss` for a terminal
+//! the person has seen, listed with the others in `workspace/mod.rs`.
 
 use gpui_kit::*;
 

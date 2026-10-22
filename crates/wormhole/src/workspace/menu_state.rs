@@ -2,7 +2,9 @@
 //! the terminals ⌘1–9 and the project's actions. The menu bar (`app_menu`) puts it up and the
 //! command palette offers the same actions, so it is the window's to say, not the menu bar's.
 //!
-//! Part of the window: it must not use the menu bar (`app_menu`) or the palette, which read it.
+//! Part of the window: it reads the window's own state and the shared state (the profiles, the recent
+//! projects, the settings) and must not use the menu bar (`app_menu`), the status item or the palette,
+//! which read it.
 
 use std::path::Path;
 
@@ -18,7 +20,7 @@ use crate::workspace::app::{AppState, app};
 use crate::workspace::{RightTab, Workspace};
 
 /// What the menus show for the window in front (the command palette offers the same actions).
-pub(super) fn state(cx: &mut App) -> MenuState {
+pub(super) fn front_window_state(cx: &mut App) -> MenuState {
     let front = AppState::front_window(cx);
     let full_screen = front
         .as_ref()

@@ -76,7 +76,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let return_focus = ws.end_overlay(window, cx);
         let workspace = cx.weak_entity();
         let sheet = cx.new(|cx| ShortcutSheet::new(workspace, project, hidden, hotkey, &query, window, cx));
-        ws.show_overlay(OverlayView { kind: OverlayKind::Sheet, view: sheet.into() }, return_focus, cx);
+        ws.show_overlay(OverlayView::new(OverlayKind::Sheet, sheet), return_focus, cx);
     });
 }
 
