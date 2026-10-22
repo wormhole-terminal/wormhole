@@ -1,11 +1,13 @@
 //! Opening and closing the windows that show a [`Workspace`]: where a new one is placed, saving
-//! every window on the way out, and bringing a terminal's window forward.
+//! every window on the way out, bringing a terminal's window forward, and a window moving to
+//! another profile.
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 
+use crate::settings::settings_in;
 use crate::style;
 use crate::workspace::app::{AppState, OpenWindow, app, app_mut};
 use crate::workspace::app_tick::sync_system_look;
@@ -131,4 +133,51 @@ pub(super) fn open_tab(tab: i64, cx: &mut App) {
         crate::background::activate_window(window, cx);
         ws.reveal_terminal(tab, window, cx);
     });
+}
+
+impl Workspace {
+    /// This window and its terminals go to profile `target`: its record and its terminals'
+    /// scrollback are saved into that profile's database and removed from the old one. The
+    /// terminals themselves are untouched, so they keep the environment they started with.
+    pub(super) fn rehome(&mut self, target: &ProfileId, cx: &mut Context<Self>) -> Result<(), String> {
+        let from = self.profile.clone();
+        if &from == target {
+            return Ok(());
+        }
+        let record = self.window_record(cx);
+        // Only what the target profile keeps: nothing when its Restore is off, never a terminal whose
+        // text the person asked not to keep.
+        let keeps_text = settings_in(target, cx).restore_terminal_text;
+        let scrollback: Vec<(i64, String)> = self
+            .sessions
+            .iter()
+            .filter(|session| keeps_text && !session.forget_text)
+            .map(|session| &session.pane)
+            .map(|pane| {
+                (pane.id, pane.terminal.read(cx).scrollback_text(crate::workspace::save::SCROLLBACK_LINES))
+            })
+            .collect();
+        let state = app_mut(cx);
+        let Some(store) = state.store_of_mut(target) else {
+            return Err(format!("the database of profile {target} is not open"));
+        };
+        store.save_window(&record).map_err(|err| format!("saving the window in {target}: {err:#}"))?;
+        for (id, text) in &scrollback {
+            if let Err(err) = store.save_scrollback(*id, text) {
+                tracing::warn!("scrollback of {id} did not move to {target}: {err:#}");
+            }
+        }
+        state.forget_window(&from, self.window_id);
+        self.profile = target.clone();
+        // What it draws with follows: its terminals and an open diff read their window's profile.
+        for session in &self.sessions {
+            session.pane.terminal.update(cx, |terminal, cx| terminal.set_profile(target.clone(), cx));
+        }
+        if let Some(diff) = self.diff_view.as_mut() {
+            diff.set_profile(target.clone());
+        }
+        self.dirty = false;
+        cx.notify();
+        Ok(())
+    }
 }
