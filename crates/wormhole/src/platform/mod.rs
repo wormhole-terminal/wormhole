@@ -2,7 +2,7 @@
 //! neutral API, so a port to another system writes a sibling of `macos/` and nothing else
 //! changes. Each concern is a neutral file here (plain functions and types, no OS names: `window`,
 //! `vibrancy`, `look`, `dock`, `a11y`, `auth`, `hotkey`, `keys`, `sound`, `scroller`, `fonts`,
-//! `font_face`, `status_item`, `menu`, `popover`, `notifications`, `default_app`, `apps`, `sheet`,
+//! `font_face`, `locale`, `status_item`, `menu`, `popover`, `notifications`, `default_app`, `apps`, `sheet`,
 //! `panel`, `intro`, devctl's `inspect`) that calls `os::…`: `macos/` is AppKit's implementation
 //! (the only code in the app with `objc2`, `block2`, raw window handles and `unsafe` for the
 //! system), `fallback/` the portable one, GPUI's own call where GPUI has one and "not available"
@@ -44,6 +44,7 @@ pub mod hotkey;
 pub mod inspect;
 pub mod intro;
 pub mod keys;
+pub mod locale;
 pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;

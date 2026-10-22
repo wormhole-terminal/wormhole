@@ -72,6 +72,7 @@ pub(super) fn signatures_match() {
         fonts::register: fn(&Path, bool) -> anyhow::Result<()>;
         hotkey::on_registering_thread: fn() -> bool;
         keys::option_sides: fn() -> (bool, bool);
+        locale::preferred_languages: fn() -> Vec<String>;
         look::appearance: fn() -> Option<Appearance>;
         look::reduce_transparency: fn() -> bool;
         look::increase_contrast: fn() -> bool;
