@@ -7,16 +7,18 @@
 //! The system's Reduce Motion, Increase Contrast and Reduce Transparency are read and watched in
 //! `vibrancy` with the rest of what the system says about how windows look.
 
+use super::background_mode;
+use super::os::a11y as os;
+
 /// Say `text` through VoiceOver (when it runs; otherwise nothing happens). `interrupt` cuts into
 /// what it is saying (needs you); without it the announcement is queued (finished).
 pub fn announce(text: &str, interrupt: bool) {
     tracing::debug!(interrupt, "announce: {text}");
     #[cfg(feature = "devctl")]
     devctl::remember(text, interrupt);
-    // A test instance in background mode keeps them to devctl (`a11y said`).
-    #[cfg(all(target_os = "macos", not(test)))]
-    if !crate::background::on() {
-        platform::post(text, interrupt);
+    // A test instance in background mode keeps them to devctl (`a11y said`); tests never speak.
+    if !cfg!(test) && !background_mode::on() {
+        os::post(text, interrupt);
     }
 }
 
@@ -28,18 +30,8 @@ pub fn keyboard_navigation() -> bool {
     if let Some(on) = devctl::KEYBOARD_NAVIGATION.get() {
         return on;
     }
-    system_keyboard_navigation()
-}
-
-#[cfg(all(target_os = "macos", not(test)))]
-fn system_keyboard_navigation() -> bool {
-    platform::keyboard_navigation()
-}
-
-/// Off macOS, and in tests (which never ask the real system): buttons are not ⇥ stops.
-#[cfg(not(all(target_os = "macos", not(test))))]
-fn system_keyboard_navigation() -> bool {
-    false
+    // Tests never ask the real system: buttons are not ⇥ stops there.
+    !cfg!(test) && os::keyboard_navigation()
 }
 
 /// devctl's `keyboard-navigation`: say it is on or off, or (`None`) follow the system again.
@@ -58,10 +50,7 @@ pub fn recent() -> Vec<(String, bool)> {
 /// for it: GPUI builds the tree only once something has. It is there from the next frame on.
 #[cfg(feature = "devctl")]
 pub fn wake_tree(window: &gpui_kit::Window) {
-    #[cfg(target_os = "macos")]
-    platform::wake_tree(window);
-    #[cfg(not(target_os = "macos"))]
-    let _ = window;
+    os::wake_tree(window);
 }
 
 #[cfg(feature = "devctl")]
@@ -89,71 +78,5 @@ mod devctl {
 
     pub(super) fn recent() -> Vec<(String, bool)> {
         SAID.with_borrow(|said| said.iter().cloned().collect())
-    }
-}
-
-#[cfg(target_os = "macos")]
-mod platform {
-    #[cfg(not(test))]
-    pub(super) fn keyboard_navigation() -> bool {
-        let Some(mtm) = objc2::MainThreadMarker::new() else { return false };
-        objc2_app_kit::NSApplication::sharedApplication(mtm).isFullKeyboardAccessEnabled()
-    }
-
-    #[cfg(not(test))]
-    #[allow(unsafe_code)]
-    pub(super) fn post(text: &str, interrupt: bool) {
-        use objc2::MainThreadMarker;
-        use objc2::runtime::AnyObject;
-        use objc2_app_kit::{
-            NSAccessibilityAnnouncementKey, NSAccessibilityAnnouncementRequestedNotification,
-            NSAccessibilityPostNotificationWithUserInfo, NSAccessibilityPriorityKey,
-            NSAccessibilityPriorityLevel, NSApplication,
-        };
-        use objc2_foundation::{NSDictionary, NSNumber, NSString};
-
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let app = NSApplication::sharedApplication(mtm);
-        let level =
-            if interrupt { NSAccessibilityPriorityLevel::High } else { NSAccessibilityPriorityLevel::Medium };
-        let message = NSString::from_str(text);
-        let priority = NSNumber::new_isize(level.0);
-        let values: [&AnyObject; 2] = [&message, &priority];
-        // SAFETY: the keys and the notification name are immutable AppKit statics, set before
-        // main runs; the user info holds an NSString and an NSNumber, as AppKit documents for
-        // them; the element is the main window or the application object, on the main thread.
-        unsafe {
-            let keys = [NSAccessibilityAnnouncementKey, NSAccessibilityPriorityKey];
-            let info = NSDictionary::from_slices(&keys, &values);
-            // The main window speaks for the app when there is one, as AppKit's own examples do.
-            match app.mainWindow() {
-                Some(window) => NSAccessibilityPostNotificationWithUserInfo(
-                    &window,
-                    NSAccessibilityAnnouncementRequestedNotification,
-                    Some(&info),
-                ),
-                None => NSAccessibilityPostNotificationWithUserInfo(
-                    &app,
-                    NSAccessibilityAnnouncementRequestedNotification,
-                    Some(&info),
-                ),
-            }
-        }
-    }
-
-    #[cfg(feature = "devctl")]
-    #[allow(unsafe_code)]
-    pub(super) fn wake_tree(window: &gpui_kit::Window) {
-        use objc2::rc::Retained;
-        use objc2::runtime::AnyObject;
-
-        // GPUI's AccessKit adapter sits on the window's content view, which holds GPUI's.
-        let content =
-            crate::platform::macos::appkit::ns_window(window).and_then(|window| window.contentView());
-        let Some(content) = content else { return };
-        // SAFETY: asking the content view for its accessibility children is what an assistive app
-        // does first; the adapter answers it by switching the tree on.
-        let _children: Option<Retained<AnyObject>> =
-            unsafe { objc2::msg_send![&*content, accessibilityChildren] };
     }
 }

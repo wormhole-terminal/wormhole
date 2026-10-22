@@ -64,8 +64,7 @@ impl Hotkey {
     /// Registers `spec` (e.g. `"alt-space"`, `"cmd-`"`, `"ctrl-alt-t"`) system-wide.
     /// Must be called on the main thread. Fails if another app already owns the combination.
     pub fn register(spec: &str) -> Result<Self, String> {
-        #[cfg(target_os = "macos")]
-        if objc2::MainThreadMarker::new().is_none() {
+        if !super::os::hotkey::on_registering_thread() {
             return Err("global hotkeys must be registered on the main thread".into());
         }
         let (mods, code) = parse_spec(spec)?;

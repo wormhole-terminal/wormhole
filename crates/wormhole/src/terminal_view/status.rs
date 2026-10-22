@@ -368,7 +368,7 @@ impl TerminalView {
             (settings.bell_sound, settings.bell_visual)
         };
         if sound && !self.bell_glow {
-            system_beep();
+            crate::platform::sound::beep();
         }
         if !visual {
             return;
@@ -507,14 +507,6 @@ fn on_bell(status: Status, reported: bool, agent: bool, since_counted: Option<Du
 /// How long the visual bell's glow lasts. One step, without a fade, so Reduce Motion
 /// changes nothing about it.
 const BELL_GLOW: Duration = Duration::from_millis(150);
-
-/// The system's alert sound; never from a test instance in background mode.
-fn system_beep() {
-    #[cfg(target_os = "macos")]
-    if !crate::background::on() {
-        objc2_app_kit::NSBeep();
-    }
-}
 
 /// How often the program's title may rename a tab.
 pub(super) const TITLE_EVERY: Duration = Duration::from_millis(250);

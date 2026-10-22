@@ -18,6 +18,7 @@ pub mod dock;
 pub mod fallback;
 pub mod font_face;
 pub mod hotkey;
+pub mod keys;
 pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;
@@ -26,6 +27,7 @@ pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;
 pub mod scroller;
+pub mod sound;
 pub mod vibrancy;
 pub mod window;
 

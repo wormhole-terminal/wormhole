@@ -75,25 +75,6 @@ pub fn keystroke_spec(keystroke: &Keystroke) -> KeySpec {
     KeySpec::new(mods, &keystroke.key)
 }
 
-/// Which Option keys are held right now: (left, right). GPUI's modifiers say only that one is,
-/// and "Option as Meta" can be set per side, so this asks AppKit for the device-dependent
-/// flags of the key event being handled. Neither side (no AppKit, a synthetic key) leaves the
-/// choice to `OptionAsMeta::is_meta`.
-#[cfg(target_os = "macos")]
-fn option_sides() -> (bool, bool) {
-    use objc2_app_kit::NSEvent;
-    // NX_DEVICELALTKEYMASK and NX_DEVICERALTKEYMASK (IOKit's IOLLEvent.h).
-    const LEFT_OPTION: usize = 0x20;
-    const RIGHT_OPTION: usize = 0x40;
-    let flags = NSEvent::modifierFlags_class().0;
-    (flags & LEFT_OPTION != 0, flags & RIGHT_OPTION != 0)
-}
-
-#[cfg(not(target_os = "macos"))]
-fn option_sides() -> (bool, bool) {
-    (false, false)
-}
-
 /// The ⌘ shortcuts that belong to the terminal; the rest go to the app.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum TerminalCommand {
@@ -146,7 +127,7 @@ impl TerminalView {
 
         // Which Option key is down is only asked for when it matters.
         let option_as_meta = m.alt && {
-            let (left, right) = option_sides();
+            let (left, right) = crate::platform::keys::option_sides();
             settings_in(&self.profile, cx).option_as_meta.is_meta(left, right)
         };
         let Some(pty) = &self.pty else { return false };
