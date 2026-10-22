@@ -99,7 +99,7 @@ pub(super) fn is_idle(status: Status, command_running: bool, agent_in_front: boo
 
 /// How long the terminals have been idle, as seen from the tick.
 #[derive(Default)]
-pub(crate) struct IdleWatch {
+pub(super) struct IdleWatch {
     /// When the current stretch of looks that found everything idle began.
     since: Option<Instant>,
 }

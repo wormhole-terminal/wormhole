@@ -53,7 +53,7 @@ impl AppState {
     }
 
     /// The project folders (preferences, trust, notes sync) of `profile`.
-    pub(crate) fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
+    fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
         if profile == self.profiles.active_id() {
             Some(&mut self.hub)
         } else {
@@ -212,7 +212,7 @@ impl AppState {
     }
 
     /// The windows of `profile`, shown or not.
-    pub(crate) fn windows_of<'a>(&'a self, profile: &'a ProfileId) -> impl Iterator<Item = &'a OpenWindow> {
+    fn windows_of<'a>(&'a self, profile: &'a ProfileId) -> impl Iterator<Item = &'a OpenWindow> {
         self.windows.iter().filter(move |w| &w.profile == profile)
     }
 }
@@ -379,7 +379,7 @@ impl AppState {
 
 /// The first ids free in every profile's database: one counter serves them all, so a terminal
 /// or window id never repeats across profiles. `live` is the shown profile's open database.
-pub(crate) fn first_free_ids(root: &DataRoot, list: &ProfileList, live: Option<&Store>) -> (i64, i64) {
+pub(super) fn first_free_ids(root: &DataRoot, list: &ProfileList, live: Option<&Store>) -> (i64, i64) {
     let mut ids = live.and_then(|s| s.next_ids().ok()).unwrap_or((1, 1));
     for profile in list.profiles().iter().filter(|p| &p.id != list.active_id()) {
         let paths = root.profile(&profile.id);
