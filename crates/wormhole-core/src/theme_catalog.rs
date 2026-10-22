@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use crate::config::{Config, DEFAULT_THEME};
-use crate::theme_registry::{self, ThemeId, UserThemes};
+use crate::paths::DataRoot;
+use crate::theme_registry::{self, DEFAULT_THEME, ThemeId, UserThemes};
 use crate::tokens::{self, ThemeTokens};
 
 #[derive(Clone, Debug)]
@@ -40,7 +40,7 @@ impl ThemeEntry {
 
 /// Built-ins and the user's themes dir.
 pub fn catalog() -> Vec<ThemeEntry> {
-    catalog_in(&Config::themes_dir())
+    catalog_in(&themes_dir())
 }
 
 /// Built-ins, then the themes in `dir` sorted by name, each resolved with the
@@ -131,7 +131,7 @@ impl ThemeEntry {
 
 /// Cheap change detector for the themes dir: file names, sizes and mtimes.
 pub fn fingerprint() -> Vec<(PathBuf, u64, Option<SystemTime>)> {
-    fingerprint_in(&Config::themes_dir())
+    fingerprint_in(&themes_dir())
 }
 
 pub fn fingerprint_in(dir: &Path) -> Vec<(PathBuf, u64, Option<SystemTime>)> {
@@ -141,12 +141,17 @@ pub fn fingerprint_in(dir: &Path) -> Vec<(PathBuf, u64, Option<SystemTime>)> {
 /// A theme file: JSON token theme, or a Ghostty / iTerm2 / Alacritty palette.
 /// Resolved the way `config` resolves a theme given by path.
 pub fn load_path(path: &Path) -> Result<ThemeTokens, String> {
-    load_path_in(&Config::themes_dir(), path)
+    load_path_in(&themes_dir(), path)
 }
 
 /// [`load_path`] with the themes of a profile available to `extends`.
 pub fn load_path_in(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
-    crate::config::load_theme_path(dir, path)
+    theme_registry::load_theme_path(dir, path)
+}
+
+/// The Default profile's themes dir, as `Config::themes_dir` has it.
+fn themes_dir() -> PathBuf {
+    DataRoot::current().default_profile().themes_dir()
 }
 
 #[cfg(test)]
@@ -154,7 +159,7 @@ mod tests {
     use std::path::Path;
 
     use super::{catalog_in, fingerprint_in};
-    use crate::config::DEFAULT_THEME;
+    use crate::theme_registry::DEFAULT_THEME;
     use crate::tokens::{self, Appearance};
 
     const GHOSTTY: &str = "background = #fafafa\nforeground = #202020\npalette = 1=#cc0000\n";

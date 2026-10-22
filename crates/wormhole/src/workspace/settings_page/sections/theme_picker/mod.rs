@@ -424,8 +424,8 @@ mod tests {
         ParentElement as _, Pixels, Render, Styled as _, TestAppContext, TestSupportExt as _, Window,
         WindowOptions, div, px,
     };
-    use wormhole_core::config::DEFAULT_THEME;
     use wormhole_core::theme_catalog;
+    use wormhole_core::theme_registry::DEFAULT_THEME;
 
     use super::filter_placeholder;
 

@@ -22,6 +22,10 @@ use crate::fsutil::{self, LinkPolicy};
 use crate::theme;
 use crate::tokens::{self, ThemeFile, ThemeTokens};
 
+/// The dark and light themes a fresh config starts with: Wormhole's own, in the app icon's blue.
+pub const DEFAULT_THEME: &str = "Wormhole Dark";
+pub const DEFAULT_THEME_LIGHT: &str = "Wormhole Light";
+
 /// Which theme an entry is: where it lives, since two files may share a name.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ThemeId {
@@ -271,6 +275,18 @@ fn display_name(path: &Path, content: &Content) -> String {
 thread_local! {
     /// Theme files read and parsed on this thread (cache misses).
     static PARSES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// A theme file on disk: JSON token theme, or a Ghostty / iTerm2 / Alacritty
+/// palette. A JSON theme may extend the themes in `dir`.
+pub(crate) fn load_theme_path(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
+    let text = fsutil::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
+        .map_err(|e| e.to_string())?;
+    if path.extension().is_some_and(|e| e == "json") {
+        UserThemes::read(dir).resolve_file(&tokens::parse_theme_file(&text)?)
+    } else {
+        theme::parse_file(path, &text).map(|t| tokens::derive(&t))
+    }
 }
 
 #[cfg(test)]

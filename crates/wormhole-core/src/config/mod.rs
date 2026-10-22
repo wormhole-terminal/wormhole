@@ -19,10 +19,9 @@ use serde_json::{Map, Value};
 #[cfg(test)]
 pub(crate) use self::settings::keys;
 pub use self::settings::{
-    APP_SETTINGS, DEFAULT_THEME, DEFAULT_THEME_LIGHT, DockBadge, HotkeyAction, InFront, MenuBarIcon,
-    NotifySound, OptionAsMeta, PROJECT_SETTINGS, Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
+    APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
+    Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
-pub(crate) use self::theme::load_theme_path;
 use self::theme::{ThemeStamp, default_tokens, resolve_theme};
 pub use self::theme::{resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in};
 use crate::fsutil::{self, LinkPolicy};

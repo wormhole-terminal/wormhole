@@ -5,10 +5,10 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use super::{Config, DEFAULT_THEME, Settings, ThemeMode};
+use super::{Config, Settings, ThemeMode};
 use crate::fsutil::{self, LinkPolicy};
 use crate::theme;
-use crate::theme_registry::{self, ThemeSource, UserTheme, UserThemes};
+use crate::theme_registry::{self, DEFAULT_THEME, ThemeSource, UserTheme, UserThemes, load_theme_path};
 use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
 impl Config {
@@ -183,18 +183,6 @@ pub fn tokens_from_json_in(themes: &Path, text: &str) -> Result<ThemeTokens, Str
     resolve_theme_file_in(themes, &tokens::parse_theme_file(text)?)
 }
 
-/// A theme file on disk: JSON token theme, or a Ghostty / iTerm2 / Alacritty
-/// palette. A JSON theme may extend the themes in `dir`.
-pub(crate) fn load_theme_path(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
-    let text = fsutil::read_to_string_capped(path, tokens::MAX_THEME_BYTES as u64, LinkPolicy::Follow)
-        .map_err(|e| e.to_string())?;
-    if path.extension().is_some_and(|e| e == "json") {
-        UserThemes::read(dir).resolve_file(&tokens::parse_theme_file(&text)?)
-    } else {
-        theme::parse_file(path, &text).map(|t| tokens::derive(&t))
-    }
-}
-
 /// The default theme's tokens, what is shown when the chosen theme fails.
 pub(super) fn default_tokens() -> ThemeTokens {
     theme_registry::builtin_named(DEFAULT_THEME)
@@ -261,8 +249,8 @@ mod tests {
     use std::path::Path;
 
     use super::{import_into, resolve_theme, save_theme_in};
-    use crate::config::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
     use crate::theme_registry::UserThemes;
+    use crate::theme_registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
     use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
     fn write(dir: &Path, file: &str, text: &str) {

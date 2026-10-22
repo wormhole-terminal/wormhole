@@ -12,12 +12,9 @@ use crate::folder_color::FolderColor;
 use crate::fonts::{self, FontSlot};
 use crate::project::ProjectColorChoice;
 use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
+use crate::theme_registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
 use crate::tokens::Color;
 use crate::update::UpdateChannel;
-
-/// The dark and light themes a fresh config starts with: Wormhole's own, in the app icon's blue.
-pub const DEFAULT_THEME: &str = "Wormhole Dark";
-pub const DEFAULT_THEME_LIGHT: &str = "Wormhole Light";
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
 /// pick (`theme_light`), or whichever matches the system's appearance.
