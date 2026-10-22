@@ -12,6 +12,7 @@ pub mod dock;
 pub mod font_face;
 pub mod fonts;
 pub mod hotkey;
+pub mod intro;
 pub mod keys;
 pub mod look;
 pub mod notifications;

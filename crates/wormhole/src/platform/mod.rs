@@ -39,6 +39,7 @@ pub mod fallback;
 pub mod font_face;
 pub mod fonts;
 pub mod hotkey;
+pub mod intro;
 pub mod keys;
 pub mod look;
 #[cfg(target_os = "macos")]

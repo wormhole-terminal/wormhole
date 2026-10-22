@@ -4,20 +4,27 @@
 //! to compile here. Methods are compared with `S` standing for each side's own type. Functions that
 //! take `impl Fn` can't be a `fn` pointer: both are handed the same closure in code that never runs.
 
+use std::cell::Cell;
 use std::path::Path;
+use std::rc::Rc;
 
 use gpui_kit::{App, Hsla, Window};
+use wormhole_core::intro::WindowMotion;
 use wormhole_core::terminal::scrollbar::ScrollerStyle;
 use wormhole_core::tokens::Appearance;
 
 use super::font_face::Seg;
 use super::fonts::Traits;
+use super::intro::{Frame, Setup};
 use super::notifications::{Buttons, FromCenter, Notice};
 use super::vibrancy::GlassRect;
 use super::{fallback, macos};
 
 /// A glyph's outline, as both faces give it.
 type Outline = Option<Vec<Seg>>;
+
+/// Where the intro's page has its logo, shared with the overlay.
+type LogoSpot = Rc<Cell<Option<[f32; 3]>>>;
 
 /// The same `fn` type for both sides of a free function.
 macro_rules! same {
@@ -105,7 +112,15 @@ pub(super) fn signatures_match() {
         auth::can_evaluate: fn(bool) -> Result<(), super::auth::AuthError>;
         auth::authenticate: fn(&str, super::auth::Callback);
     }
+    #[cfg(feature = "devctl")]
+    same! {
+        intro::frames: fn(wormhole_core::intro::Style, usize, [[f32; 4]; 3], [[f32; 3]; 3], &Path) -> anyhow::Result<String>;
+        intro::dock_frames: fn(&Window, wormhole_core::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
+    }
     same_method! {
+        intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;
+        intro::Overlay::motion_at: fn(&S, f32) -> WindowMotion;
+        intro::Overlay::frame: fn(&S, &Frame);
         font_face::Face::named: fn(&str, bool, bool) -> Option<S>;
         font_face::Face::for_char: fn(&S, char) -> Option<S>;
         font_face::Face::glyph_of: fn(&S, char) -> Option<u16>;

@@ -1,4 +1,4 @@
-//! The intro's drawing on macOS: a borderless, click-through window over the whole screen the app
+//! AppKit's and Metal's side of `platform::intro`: a borderless, click-through window over the whole screen the app
 //! window is on, above the menu bar and the Dock, whose content is a `CAMetalLayer` that
 //! `shader/` draws into every frame. GPUI draws only inside a window and has no custom shaders,
 //! so space around the window needs a window of its own; the shader leaves the app window's own
@@ -11,6 +11,7 @@ use std::ptr::NonNull;
 use std::rc::Rc;
 
 use anyhow::{Context as _, Result, anyhow};
+use gpui_kit::Window;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
@@ -29,6 +30,14 @@ use objc2_quartz_core::{CALayer, CAMetalDrawable, CAMetalLayer, CATransform3D};
 use wormhole_core::intro::page;
 use wormhole_core::intro::voyage::{self, Landing, TRAIL_POINTS};
 use wormhole_core::intro::{Start, Style, WindowMotion, window_motion_from};
+
+use super::appkit::ns_view;
+use crate::platform::intro::{Frame, Setup};
+
+#[cfg(feature = "devctl")]
+mod pictures;
+#[cfg(feature = "devctl")]
+pub use pictures::{dock_frames, frames};
 
 /// The shader: one file per style on top of the shared pieces, in the order each needs the one before
 /// it (Metal has no `#include` for a library built from source), behind the moments core owns.
@@ -64,7 +73,7 @@ const RENDER_SCALE: f32 = 1.0;
 /// `Uniforms` in `shader/common.metal`, field for field (float2 fields 8-aligned, float4s 16-aligned).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct Uniforms {
+struct Uniforms {
     pub size: [f32; 2],
     pub center: [f32; 2],
     pub half_size: [f32; 2],
@@ -92,13 +101,7 @@ pub(crate) struct Uniforms {
 impl Uniforms {
     /// For a screen of `screen` points with a window at `origin` (from the screen's top left) of
     /// `size` points.
-    pub(crate) fn new(
-        screen: [f32; 2],
-        origin: [f32; 2],
-        size: [f32; 2],
-        scale: f32,
-        colors: [[f32; 4]; 3],
-    ) -> Self {
+    fn new(screen: [f32; 2], origin: [f32; 2], size: [f32; 2], scale: f32, colors: [[f32; 4]; 3]) -> Self {
         Self {
             size: screen,
             center: [origin[0] + size[0] / 2.0, origin[1] + size[1] / 2.0],
@@ -115,12 +118,12 @@ impl Uniforms {
     }
 
     #[cfg(any(test, feature = "devctl"))]
-    pub(crate) fn at(self, style: Style, t: f32, time: f32) -> Self {
+    fn at(self, style: Style, t: f32, time: f32) -> Self {
         self.at_from(style, t, time, Start::Shown)
     }
 
     /// [`Self::at`] for a window that is `start`ing shown or hidden.
-    pub(crate) fn at_from(mut self, style: Style, t: f32, time: f32, start: Start) -> Self {
+    fn at_from(mut self, style: Style, t: f32, time: f32, start: Start) -> Self {
         self.style = style.shader_id();
         self.t = t;
         self.time = time;
@@ -139,7 +142,7 @@ impl Uniforms {
     /// of `screen` points with the logo where `landing` says. Any other style has no ship, and neither
     /// has the Portal hand-over (`ship` false): its trail is moved off the screen, as the shader draws
     /// the trail whatever the ship's opacity.
-    pub(crate) fn with_ship(
+    fn with_ship(
         mut self,
         style: Style,
         ship: bool,
@@ -161,7 +164,7 @@ impl Uniforms {
 }
 
 /// The compiled shader and a queue to draw with: built once per intro (a few milliseconds).
-pub(crate) struct Renderer {
+struct Renderer {
     device: Retained<ProtocolObject<dyn MTLDevice>>,
     queue: Retained<ProtocolObject<dyn MTLCommandQueue>>,
     pipeline: Retained<ProtocolObject<dyn MTLRenderPipelineState>>,
@@ -169,7 +172,7 @@ pub(crate) struct Renderer {
 
 impl Renderer {
     #[allow(unsafe_code)] // Metal interop; see the SAFETY note below.
-    pub(crate) fn new() -> Result<Self> {
+    fn new() -> Result<Self> {
         let device = MTLCreateSystemDefaultDevice().context("no Metal device")?;
         let library = device
             .newLibraryWithSource_options_error(&NSString::from_str(&source()), None)
@@ -231,7 +234,7 @@ impl Renderer {
     #[cfg(any(test, feature = "devctl"))]
     /// One frame drawn off screen: `width` × `height` pixels, premultiplied RGBA, rows top first.
     #[allow(unsafe_code)] // Metal interop; see the SAFETY notes below.
-    pub(crate) fn render_pixels(
+    fn render_pixels(
         &self,
         width: usize,
         height: usize,
@@ -288,7 +291,7 @@ struct Saved {
 }
 
 /// The intro on screen around one window. Dropping it closes the overlay and puts the window back.
-pub(crate) struct Overlay {
+pub struct Overlay {
     renderer: Renderer,
     window: Retained<NSWindow>,
     parent: Retained<NSWindow>,
@@ -313,30 +316,18 @@ pub(crate) struct Overlay {
     landing: Rc<Cell<Option<[f32; 3]>>>,
 }
 
-/// One frame of the intro: where the run has got to, and what is asked of the window around it.
-pub(crate) struct Frame {
-    /// Progress across the run, 0 to 1, and the seconds since it began.
-    pub t: f32,
-    pub time: f32,
-    /// How opaque the traffic lights are while the overlay fades them away, or `None` to leave them be.
-    pub lights: Option<f32>,
-    /// After a skip: how the window was, and how far it has settled back to rest (0 to 1), the
-    /// overlay fading away with it.
-    pub settling: Option<(WindowMotion, f32)>,
-}
-
 impl Overlay {
-    /// Put an overlay over the screen of the window whose GPUI view is `view`: above everything,
-    /// or, when not `immersive` (test instances kept behind other apps), just above that window.
+    /// Put an overlay over the screen of `window`: above everything, or, when not `immersive` (test
+    /// instances kept behind other apps), just above that window. `None`: the window has no
+    /// native view to put it over.
+    pub fn new(window: &Window, setup: Setup, landing: Rc<Cell<Option<[f32; 3]>>>) -> Result<Option<Self>> {
+        let Some(view) = ns_view(window) else { return Ok(None) };
+        Self::over(&view, setup, landing).map(Some)
+    }
+
     #[allow(unsafe_code)] // AppKit interop; see the SAFETY notes below.
-    pub(crate) fn new(
-        view: &NSView,
-        style: Style,
-        colors: [[f32; 4]; 3],
-        immersive: bool,
-        options: crate::intro::Options,
-        landing: Rc<Cell<Option<[f32; 3]>>>,
-    ) -> Result<Self> {
+    fn over(view: &NSView, setup: Setup, landing: Rc<Cell<Option<[f32; 3]>>>) -> Result<Self> {
+        let Setup { style, colors, immersive, start, lights, ship } = setup;
         let mtm = MainThreadMarker::new().context("not on the main thread")?;
         let parent = view.window().context("the view has no window")?;
         let renderer = Renderer::new()?;
@@ -416,8 +407,6 @@ impl Overlay {
             unsafe { parent.addChildWindow_ordered(&window, NSWindowOrderingMode::Above) };
         }
         let uniforms = Uniforms::new(screen, origin, size, RENDER_SCALE, colors);
-        let (start, lights) = (options.start, options.lights);
-        let ship = options.handover.is_none_or(|handover| handover.ship());
         let overlay = Self {
             renderer,
             window,
@@ -440,12 +429,12 @@ impl Overlay {
     }
 
     /// How the window moves at `t`: what a skip settles it from.
-    pub(crate) fn motion_at(&self, t: f32) -> WindowMotion {
+    pub fn motion_at(&self, t: f32) -> WindowMotion {
         window_motion_from(self.style, t, self.start)
     }
 
     /// Draw `frame`.
-    pub(crate) fn frame(&self, frame: &Frame) {
+    pub fn frame(&self, frame: &Frame) {
         let mut motion = self.motion_at(frame.t);
         let mut opacity = 1.0;
         if let Some((from, settled)) = frame.settling {

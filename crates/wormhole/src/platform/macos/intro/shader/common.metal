@@ -5,7 +5,7 @@
 // output is premultiplied, and wherever the window is, the overlay stays see-through so the window
 // shows.
 //
-// Compiled at run time by `intro::metal`, which joins the files in the order each needs the one
+// Compiled at run time by `platform::macos::intro`, which joins the files in the order each needs the one
 // before (Metal has no #include for a library built from source) behind the moments core owns
 // (`wormhole_core::intro::shader_constants`: FTL_* and WORMHOLE_*).
 
