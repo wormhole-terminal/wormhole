@@ -19,6 +19,18 @@ use crate::workspace::actions::DEBUG;
 use crate::workspace::app::{AppState, app};
 use crate::workspace::{RightTab, Workspace};
 
+/// What the menus show changed outside a key or the tick (a profile switch, a window moved to
+/// another profile). The app root observes it and puts the menus up again at once.
+pub(crate) struct MenusChanged;
+
+impl Global for MenusChanged {}
+
+/// Say that what the menus show changed; the app root's observer syncs them when the update that
+/// called this is done, so it sees the finished state.
+pub(crate) fn menus_changed(cx: &mut App) {
+    cx.set_global(MenusChanged);
+}
+
 /// What the menus show for the window in front (the command palette offers the same actions).
 pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     let front = AppState::front_window(cx);

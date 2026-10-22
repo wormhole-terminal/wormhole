@@ -25,6 +25,7 @@ use crate::settings::ParkedSettings;
 use crate::status_item;
 use crate::workspace::app::{AppState, app_mut};
 use crate::workspace::app_look::{LookOverride, apply_theme, sync_system_look};
+use crate::workspace::menu_state::MenusChanged;
 use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::workspace::{notifications, onboarding, profiles, updates};
@@ -102,6 +103,8 @@ pub(crate) fn start(
         look_override: LookOverride::default(),
         _display_options: display_observer,
     });
+    // A profile switch changes what the menus show; they follow it at once, not on the next tick.
+    cx.observe_global::<MenusChanged>(menus::sync).detach();
     // Before the first frame, so windows don't open in the default colors (nor in the
     // dark pick when Match system and a light system ask for the light one).
     sync_system_look(cx);
