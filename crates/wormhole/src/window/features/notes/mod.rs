@@ -7,6 +7,7 @@ use gpui_kit::component::input::{InputEvent, TextareaState};
 use gpui_kit::*;
 use wormhole_core::view::reorder;
 
+use crate::settings::ui_in;
 use crate::window::features::notes::items::{ItemKey, item_key};
 use crate::window::features::notes::paragraphs::{chunks_blank, paragraph_at};
 use crate::window::{RightTab, Workspace, panel_list};
@@ -18,7 +19,6 @@ pub(in crate::window) mod paragraphs;
 pub(in crate::window) mod tasks;
 mod view;
 
-use crate::settings::ui_in;
 use view::wrapped_placeholder;
 pub(in crate::window) use view::{NotesList, NotesView};
 

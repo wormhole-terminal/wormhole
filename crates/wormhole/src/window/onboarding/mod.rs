@@ -23,6 +23,9 @@ mod keys;
 mod look_step;
 mod page;
 mod steps;
+#[cfg(test)]
+mod tests;
+pub(crate) mod welcome;
 mod welcome_page;
 
 use std::path::{Path, PathBuf};
@@ -539,10 +542,6 @@ impl Workspace {
 /// How far the note's link reaches left past its text column, so its words line up with the
 /// lines above (a link button has a small inset of its own).
 const NOTE_LINK_INSET: f32 = 4.0;
-
-#[cfg(test)]
-mod tests;
-pub(crate) mod welcome;
 
 #[cfg(test)]
 mod agent_scan_tests {
