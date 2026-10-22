@@ -24,6 +24,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use gpui_kit::*;
 use wormhole_core::keyspec::KeySpec;
 use wormhole_core::project::{
     Action, Feature, NotesBaseStore, NotesFile, ProjectFolder, ProjectPrefs, ProjectSnapshot, TrustRequest,
@@ -33,7 +34,7 @@ use wormhole_core::shells::ShellCommand;
 use wormhole_core::terminal::SpawnOptions;
 
 use super::app::{AppState, app, app_mut};
-use super::*;
+use crate::settings::settings;
 
 pub(super) use color::set_project_color;
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};

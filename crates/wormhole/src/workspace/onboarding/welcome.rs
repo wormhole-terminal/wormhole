@@ -2,13 +2,19 @@
 //! it, and the way in. It is what the window carries through the wormhole, so each part has its own
 //! moment to come in (`wormhole_core::intro::page`).
 
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
 use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::intro::page::Entrance;
+use wormhole_core::onboarding::Event;
 use wormhole_core::welcome::TAGLINE;
 
+use super::Intro;
 use super::page::Entering;
-use super::*;
 use crate::icons::app_icon;
+use crate::settings::UiColors;
+use crate::style::{self, TextRole};
+use crate::workspace::Workspace;
 use crate::workspace::aux_window;
 
 /// The page's width: the specimen is as wide as the sidebar's column, less the page's side padding.

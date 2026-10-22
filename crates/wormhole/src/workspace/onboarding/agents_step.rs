@@ -1,11 +1,21 @@
 //! The last step: the coding agents found with their Install buttons, the project's trust,
 //! the notifications switch, or the primer when no agent is on PATH.
 
-use crate::workspace::settings_page::update_settings;
-
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
+use wormhole_core::agents::integrations::State;
+use wormhole_core::agents::{AGENTS, Agent};
 use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::onboarding::Event;
 
-use super::*;
+use super::Intro;
+use crate::settings::{UiColors, settings};
+use crate::style::{self, Edges, TextRole};
+use crate::workspace::app::app;
+use crate::workspace::settings_page::update_settings;
+use crate::workspace::{Workspace, project};
 
 impl Workspace {
     /// Step 3: each agent on PATH with its own Install, the notifications switch, and the folder's

@@ -7,9 +7,13 @@
 //! ⇥ is a binding in the page's own key context, which wins over the Kit's at the window's root: GPUI
 //! runs bindings before a key listener sees the key, so a listener could only see focus already gone.
 
+use gpui_kit::*;
+use wormhole_core::intro::Start;
 use wormhole_core::intro::page::Entrance;
+use wormhole_core::onboarding::{Event, Step};
 
-use super::*;
+use super::FADE_OUT;
+use crate::workspace::{Workspace, actions};
 
 /// The most buttons the page is walked through when ⇥ looks for its stops.
 const STOPS_MAX: usize = 32;

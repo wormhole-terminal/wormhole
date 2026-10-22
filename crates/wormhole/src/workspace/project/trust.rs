@@ -3,10 +3,13 @@
 
 use std::path::Path;
 
+use gpui_kit::*;
 use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
 
-use super::*;
+use super::{ProjectHub, load_project, projects_changed};
 use crate::platform::auth;
+use crate::workspace::Workspace;
+use crate::workspace::app::{app, app_mut};
 
 impl ProjectHub {
     /// The answer to an approval dialog for `request` (`None`: it went away without one).
@@ -115,8 +118,8 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
-    use super::ProjectHub;
     use crate::platform::auth::AuthError;
+    use crate::workspace::project::ProjectHub;
     use wormhole_core::project::{ProjectFolder, TrustStatus};
 
     /// A fresh directory under the system temp dir, removed when dropped.

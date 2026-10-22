@@ -3,9 +3,13 @@
 //! key into the file (comments and layout stay, a locked or unreadable file is refused); this is
 //! the off-the-UI-thread call around it and what every window does next.
 
+use std::path::Path;
+
+use gpui_kit::*;
 use wormhole_core::project::{ProjectColorChoice, ProjectFolder};
 
-use super::*;
+use super::{project_folders_on, reload_projects};
+use crate::workspace::app::app_mut;
 
 /// What the hub's error says when writing the colour failed, so a later success can take it away
 /// without touching the other problems it may be showing.

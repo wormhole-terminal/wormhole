@@ -2,11 +2,16 @@
 //! matching action keys.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
+use gpui_kit::*;
 use wormhole_core::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
+use wormhole_core::store::SessionRecord;
 
-use super::*;
+use crate::terminal_view::TerminalView;
+use crate::workspace::Workspace;
+use crate::workspace::app::app;
 
 /// Longest action chain we follow (chains are validated for cycles, this is a backstop).
 const MAX_CHAIN_DEPTH: usize = 16;

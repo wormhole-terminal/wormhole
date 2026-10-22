@@ -2,9 +2,14 @@
 //! repository's root, else the folder itself, as its band names it), made off the UI thread by
 //! core's `project::init`, which refuses to touch anything that is already there.
 
+use std::path::{Path, PathBuf};
+
+use gpui_kit::*;
 use wormhole_core::project::{self as proj, ProjectError, ProjectFolder};
 
-use super::*;
+use super::{project_folders_on, reload_projects};
+use crate::workspace::Workspace;
+use crate::workspace::app::app_mut;
 
 impl Workspace {
     /// Make the project folder for the active terminal's folder, then have every window look for

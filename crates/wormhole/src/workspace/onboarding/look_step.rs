@@ -1,11 +1,17 @@
 //! The Look step: theme cards, the primary, the terminal font and ligatures, a sample.
 
-use crate::workspace::settings_page::update_settings;
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::fonts::{FontSlot, display_name};
+use wormhole_core::onboarding;
 use wormhole_core::tokens::{Appearance, ThemeTokens, builtins};
 
-use super::*;
+use crate::settings::{SettingsStore, UiColors};
+use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
+use crate::workspace::Workspace;
+use crate::workspace::settings_page::update_settings;
 
 /// The terminal font's face, so the size stepper beside it fits the row.
 const FONT_FACE_W: f32 = 132.0;

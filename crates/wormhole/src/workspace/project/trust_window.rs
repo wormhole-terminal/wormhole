@@ -4,15 +4,23 @@
 //! (`aux_window`): opaque, one at a time, closed with Esc or ⌘W; it follows the hub's copy of
 //! the project, so a `git pull` while it is open shows what would run now.
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::project::{TrustLine, TrustStatus};
 
 use super::super::aux_window;
-use super::super::*;
 use super::{LoadedProject, app, app_mut, approve_project};
 use crate::platform::auth;
+use crate::settings::{SettingsStore, ui};
+use crate::style::{self, Edges, TextRole};
+use crate::workspace::Workspace;
 
 const SIZE: (f32, f32) = (640.0, 480.0);
 const MIN: (f32, f32) = (480.0, 320.0);

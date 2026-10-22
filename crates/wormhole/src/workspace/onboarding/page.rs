@@ -2,9 +2,14 @@
 //! step's card, with the replay button in the corner. Each part comes in as the animation allows
 //! (`wormhole_core::intro::page`): fading in and rising into place.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::*;
 use wormhole_core::intro::page::Entrance;
+use wormhole_core::onboarding::Step;
 
-use super::*;
+use crate::settings::{UiColors, ui};
+use crate::style;
+use crate::workspace::Workspace;
 use crate::workspace::aux_window;
 
 /// How far a part rises as it comes in, points.

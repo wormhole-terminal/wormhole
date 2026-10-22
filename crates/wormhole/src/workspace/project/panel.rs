@@ -3,10 +3,17 @@
 //! prompts and the terminal layout, with two-line rows like the sidebar's; or, in a folder with
 //! no `.wormhole/`, the button that makes one.
 
+use std::path::Path;
+
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
 use gpui_kit::component::switch::Switch;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::limits::count_grouped;
 use wormhole_core::project::{ActionKind, Feature, TrustLine, TrustStatus, trust_applies};
@@ -15,10 +22,14 @@ use wormhole_core::spoken;
 
 use super::super::folder_color;
 use super::super::session::home_dir;
-use super::*;
+use super::LoadedProject;
 use crate::platform::auth;
+use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
+use crate::style::{self, TextRole};
 use crate::theme_bridge;
+use crate::workspace::Workspace;
+use crate::workspace::app::app;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
 /// and "View all N…", which opens them in their own window.

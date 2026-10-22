@@ -25,19 +25,25 @@ mod page;
 mod steps;
 mod welcome;
 
-pub(crate) use keys::init;
-pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};
-
+use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+use gpui_kit::assets::IconName;
+use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
-
 use wormhole_core::intro::Start;
 use wormhole_core::onboarding::{
     self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
 };
 
-use super::*;
+use super::app::{AppState, app, app_mut};
+use super::{Workspace, project, settings_page};
+use crate::settings::{UiColors, ui};
+use crate::style::{self, Edges, TextRole};
+
+pub(crate) use keys::init;
+pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};
 
 /// An agent on PATH, as the third step lists it.
 #[derive(Clone)]

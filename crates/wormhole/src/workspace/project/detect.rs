@@ -1,11 +1,18 @@
 //! Which project each session is in, keeping the hub's copy of those projects current, and the
 //! project settings, theme, env and shell that follow from it.
 
+use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 
+use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature};
 
-use super::*;
+use super::{BTreeMapEnv, LoadedProject, load_project, load_projects, project_folders_on};
+use crate::settings::SettingsStore;
+use crate::terminal_view::TerminalView;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::{RightTab, Workspace};
 
 impl Workspace {
     /// Find each session's project and bring the ones in use up to date. Redraws only when

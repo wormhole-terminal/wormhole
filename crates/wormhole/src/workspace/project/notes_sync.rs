@@ -1,9 +1,12 @@
 //! Two-way sync of each session's notes and tasks with its project's `notes.md` (the merge itself
 //! is in core: `wormhole_core::project::plan_sync`).
 
+use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
 
-use super::*;
+use super::project_folders_on;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::{Note, TaskItem, Workspace};
 
 impl Workspace {
     /// Two-way sync between each session's notes/tasks and its project's `notes.md`, as a three-way
