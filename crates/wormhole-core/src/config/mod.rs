@@ -7,20 +7,23 @@
 //! place (see `file`), so comments and keys we don't know survive.
 //!
 //! The domain also holds what is a setting in all but file: a profile, a whole set of settings
-//! (`profile`), the feature flags (`features`), the Settings window's table of every setting
-//! (`settings_index`) and what a program may do with the clipboard (`clipboard`). Tier 3: it uses
+//! (`profile`), the feature flags (`features`), the table of features and which are on
+//! (`feature_table`) with the names of the panel's tabs (`tab`), the Settings window's table of every
+//! setting (`settings_index`) and what a program may do with the clipboard (`clipboard`). Tier 3: it uses
 //! the tiers below for the values it stores and checks (`storage`, `theme`, `agents`, `update`,
 //! `view`, and `project` for a trusted project's overrides). `git`, `notify`, `ipc`, `terminal`
 //! and `onboarding` read settings; config never uses them, so a setting can't depend on what
 //! it configures.
 
 pub mod clipboard;
+pub mod feature_table;
 pub mod features;
 mod file;
 mod font_slots;
 pub mod profile;
 mod settings;
 pub mod settings_index;
+pub mod tab;
 mod theme_setting;
 
 use std::path::{Path, PathBuf};
@@ -28,12 +31,14 @@ use std::time::SystemTime;
 
 use serde_json::{Map, Value};
 
+pub use self::feature_table::{FEATURES, FeatureId, FeatureInfo, FeatureMask, Kind as FeatureKind};
 #[cfg(test)]
 pub(crate) use self::settings::keys;
 pub use self::settings::{
     APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta, PROJECT_SETTINGS,
     Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder,
 };
+pub use self::tab::TabId;
 use self::theme_setting::{ThemeStamp, default_tokens, resolve_theme};
 pub use self::theme_setting::{
     resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in,
