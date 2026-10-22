@@ -8,7 +8,21 @@ use wormhole_core::agents::{AgentId, integrations};
 
 use super::{Workspace, folder_color};
 
+/// What runs at the end of every window tick in a devctl build: devctl's command reader, which
+/// the app installs at startup (`crate::devctl::install`). devctl drives the window from above,
+/// so the window holds a hook rather than naming devctl.
+pub(crate) struct TickHook(pub(crate) fn(&mut Workspace, &mut Window, &mut Context<Workspace>));
+
+impl Global for TickHook {}
+
 impl Workspace {
+    /// Run the installed [`TickHook`], if there is one (the view tests install none).
+    pub(super) fn run_tick_hook(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(hook) = cx.try_global::<TickHook>().map(|hook| hook.0) {
+            hook(self, window, cx);
+        }
+    }
+
     /// How many of this window's terminals run in a session host, and how many in the app
     /// (`perf-profile` reports it: the two are read differently).
     pub(crate) fn devctl_hosting(&self, cx: &App) -> (usize, usize) {

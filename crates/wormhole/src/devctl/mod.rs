@@ -566,7 +566,12 @@ fn command(name: &str) -> Option<Command> {
     })
 }
 
-pub fn poll(workspace: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
+/// Read each window's command file at the end of its tick, from the app's start on.
+pub fn install(cx: &mut App) {
+    cx.set_global(crate::workspace::devctl::TickHook(poll));
+}
+
+fn poll(workspace: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
     let Some(dir) = std::env::var_os("WORMHOLE_DEVCTL").map(PathBuf::from) else {
         return;
     };

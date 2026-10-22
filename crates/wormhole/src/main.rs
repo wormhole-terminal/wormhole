@@ -90,6 +90,8 @@ fn main() {
         let (profiles, profiles_error) = wormhole_core::profile::ProfileList::load_or_recover(&root);
         active_profile::set(root.profile(profiles.active_id()));
         cx.set_global(settings::SettingsStore::load());
+        #[cfg(feature = "devctl")]
+        devctl::install(cx);
 
         // ⌘Q asks first while something runs; saving happens as the app goes away, whichever way
         // it quits. Deferred: the question opens in the front window, which may be the one

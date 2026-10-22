@@ -44,7 +44,7 @@ mod command_palette;
 pub(crate) mod control;
 mod default_terminal;
 #[cfg(feature = "devctl")]
-mod devctl;
+pub(crate) mod devctl;
 mod dialog;
 #[cfg(test)]
 mod drag_tests;
@@ -584,7 +584,7 @@ impl Workspace {
         }
 
         #[cfg(feature = "devctl")]
-        crate::devctl::poll(self, window, cx);
+        self.run_tick_hook(window, cx);
     }
 
     // ---------------------------------------------------------------- agent hooks
