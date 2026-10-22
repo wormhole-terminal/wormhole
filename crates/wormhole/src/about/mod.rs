@@ -8,7 +8,7 @@ use gpui_kit::*;
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
-use crate::workspace::aux_window;
+use crate::window::aux_window;
 
 pub(crate) use licenses::open_licenses;
 

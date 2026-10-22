@@ -8,7 +8,7 @@ use gpui_kit::*;
 use serde_json::Value;
 
 use super::Ctx;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// How long `a11y` waits for the tree to come up after waking it.
 const WAKE_TIMEOUT: Duration = Duration::from_millis(3000);
@@ -58,7 +58,7 @@ pub(super) fn window_front(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "system" => None,
         other => return Err(anyhow!("expected on|off|system, got {other:?}")),
     };
-    crate::workspace::set_front(front);
+    crate::window::set_front(front);
     ctx.cx.notify();
     Ok(String::new())
 }

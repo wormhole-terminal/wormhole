@@ -138,21 +138,21 @@ fn the_lint_sees_what_it_is_for() {
     let bad = "fn f(cx: &mut App, window: &Window) {\n    cx.activate(true);\n    window.activate_window();\n    \
                let _ = gpui_kit::open_window(o, cx, build);\n    let _ = open_window(o, cx, build);\n    \
                let _ = cx.open_window(o, build);\n}\n";
-    let lines: Vec<usize> = violations("workspace/x.rs", bad).into_iter().map(|(line, _)| line).collect();
+    let lines: Vec<usize> = violations("window/x.rs", bad).into_iter().map(|(line, _)| line).collect();
     assert_eq!(lines, [2, 3, 4, 5, 6]);
 
     let fine = "fn f(cx: &mut App, window: &Window) {\n    crate::background::activate(cx);\n    \
                 background::activate_window(window, cx);\n    \
                 let _ = crate::background::open_window(o, cx, build);\n    \
                 // cx.activate(true) in a comment\n    self.activate(1, window, cx);\n}\n";
-    assert!(violations("workspace/x.rs", fine).is_empty());
+    assert!(violations("window/x.rs", fine).is_empty());
 }
 
 #[test]
 fn background_rs_and_test_code_are_left_alone() {
     let call = "fn f(cx: &mut App) {\n    cx.activate(true);\n}\n";
     assert!(violations("background.rs", call).is_empty(), "the wrapper itself");
-    assert!(violations("workspace/view_tests.rs", call).is_empty(), "a tests file");
+    assert!(violations("window/view_tests.rs", call).is_empty(), "a tests file");
     assert!(violations("select/tests.rs", call).is_empty());
 
     let inline = format!(

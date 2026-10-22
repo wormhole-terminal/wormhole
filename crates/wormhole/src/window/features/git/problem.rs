@@ -12,7 +12,7 @@ use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::{self, ROW_H, TextRole};
 use crate::theme_bridge::token;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 use wormhole_core::git::GitError;
 
 /// The git tab a problem is drawn in, which its wording and its Retry are for.

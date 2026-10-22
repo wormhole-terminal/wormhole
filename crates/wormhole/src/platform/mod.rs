@@ -21,7 +21,7 @@
 //! menus and popovers recorded instead of shown, and the status item and the hotkey, which
 //! background mode keeps out of the menu bar and the keys while the app shows them as they would be.
 //!
-//! The platform is the lowest layer of the app: it must not use `settings`, `style`, `workspace`
+//! The platform is the lowest layer of the app: it must not use `settings`, `style`, `window`
 //! or any other feature. Where drawing needs the app's look (the GPUI-drawn menus and popovers),
 //! the app hands it over (`Drawn`); the intro's colours come with the call. It still names the
 //! status item's model and the menu key type from `menubar`, which are to move down into the

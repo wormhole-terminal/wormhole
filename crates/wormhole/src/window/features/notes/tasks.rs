@@ -14,10 +14,10 @@ use wormhole_core::view::spoken;
 
 use crate::settings::UiColors;
 use crate::style;
-use crate::workspace::features::notes::NotesView;
-use crate::workspace::features::notes::TaskItem;
-use crate::workspace::features::notes::items::{ItemKey, item_key, with_item_keys};
-use crate::workspace::{RightTab, Workspace};
+use crate::window::features::notes::NotesView;
+use crate::window::features::notes::TaskItem;
+use crate::window::features::notes::items::{ItemKey, item_key, with_item_keys};
+use crate::window::{RightTab, Workspace};
 
 /// The task being written or edited in place.
 pub(in crate::window) struct TaskEdit {

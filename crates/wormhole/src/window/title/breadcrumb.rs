@@ -2,7 +2,7 @@
 //! terminal is and what it does, as the folder (cut in its middle where it is long, with the
 //! hover card of `path_card` and the path menu of `path_menu`), the branch chip, and the terminal's tool and name with its live
 //! status. It is one keyboard stop. Open in… and the splits sit at the right end of the row
-//! (`workspace::title`).
+//! (`window::title`).
 //!
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
@@ -18,10 +18,10 @@ use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fi
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
-use crate::workspace::features::git::picker;
-use crate::workspace::title::path_card::Over;
-use crate::workspace::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
-use crate::workspace::{RightTab, Workspace};
+use crate::window::features::git::picker;
+use crate::window::title::path_card::Over;
+use crate::window::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use crate::window::{RightTab, Workspace};
 
 impl Workspace {
     /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
@@ -59,9 +59,9 @@ impl Workspace {
         let session = self.active_session();
         let terminal = session.terminal().read(cx);
         let folder = terminal.cwd.clone();
-        let shown = folder.as_deref().map(|cwd| {
-            wormhole_core::view::sidebar::display_path(cwd, crate::workspace::session::home_dir())
-        });
+        let shown = folder
+            .as_deref()
+            .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, crate::window::session::home_dir()));
         // The branch only while git's answer is about the folder the terminal is in now.
         let branch = session
             .git
@@ -115,7 +115,7 @@ impl Workspace {
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
-            Some(_) => (ROW_GAP + crate::workspace::title::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
+            Some(_) => (ROW_GAP + crate::window::title::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
             None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
         };
         // A crumb before the terminal brings a gap, the separator and a gap.
@@ -151,7 +151,7 @@ impl Workspace {
                 + CRUMB_GAP,
         };
         let fit = fit_row(self.title_row_width(window), &wants);
-        TitlePlan { app: crate::workspace::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
+        TitlePlan { app: crate::window::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
     }
 
     /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.

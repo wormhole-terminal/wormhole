@@ -13,7 +13,7 @@ use gpui_kit::*;
 use wormhole_core::view::sidebar::motion::{Drawn, plan_moves};
 
 use crate::style::motion::{EASE_OUT, MOTION_MOVE};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// A move longer than this is drawn from this far away, so a terminal sent across a long list
 /// still slides.

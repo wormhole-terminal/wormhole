@@ -6,9 +6,9 @@ use wormhole_core::storage::store::Store;
 use wormhole_core::view::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, WINDOW_MIN_WIDTH};
 
 use crate::app_state::{OpenWindow, app, app_mut};
-use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
-use crate::workspace::window_lifecycle::open_workspace_window;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::window_lifecycle::open_workspace_window;
+use crate::window::{RightTab, Workspace};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

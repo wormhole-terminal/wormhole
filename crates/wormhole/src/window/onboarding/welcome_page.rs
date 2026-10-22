@@ -14,8 +14,8 @@ use super::page::Entering;
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
-use crate::workspace::Workspace;
-use crate::workspace::aux_window;
+use crate::window::Workspace;
+use crate::window::aux_window;
 
 /// The page's width: the specimen is as wide as the sidebar's column, less the page's side padding.
 const WELCOME_W: f32 = 408.0;

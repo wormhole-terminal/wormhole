@@ -13,8 +13,8 @@ use gpui_kit::*;
 use wormhole_core::view::focus::list::{Item, Move, band_folds, type_ahead, walk};
 use wormhole_core::view::sidebar::Entry;
 
-use crate::workspace::Workspace;
-use crate::workspace::focus::{Activate, SidebarStop, activation, list_key};
+use crate::window::Workspace;
+use crate::window::focus::{Activate, SidebarStop, activation, list_key};
 
 /// The list as the keys walk it, top to bottom.
 struct Walk {

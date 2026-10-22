@@ -7,7 +7,7 @@ use gpui_kit::*;
 use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::token;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// Which overlay is open.
 #[derive(Clone, Copy, PartialEq, Eq)]

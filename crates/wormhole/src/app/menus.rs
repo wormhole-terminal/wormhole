@@ -21,7 +21,7 @@ use crate::actions::{
 };
 use crate::app_state::app;
 use crate::settings::settings;
-use crate::workspace::menu_state::{MenusChanged, front_window_state};
+use crate::window::menu_state::{MenusChanged, front_window_state};
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);

@@ -15,8 +15,8 @@ use wormhole_core::view::spoken::{self, PanelTab};
 use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
 use crate::style;
-use crate::workspace::focus::TitleButton;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::focus::TitleButton;
+use crate::window::{RightTab, Workspace};
 
 /// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
 /// call over the board's 20, which left the lights hanging right of everything below them). They
@@ -273,24 +273,21 @@ impl Workspace {
             .child(self.render_panel_tabs(window, cx))
             // The Notes tab's one action sits beside the panel toggle rather than
             // on a row of its own above the list.
-            .when(
-                self.right_tab == RightTab::Notes && crate::workspace::features::notes::notes_on(cx),
-                |d| {
-                    d.child(
-                        div().id("panel-actions").occlude().flex_none().child(
-                            style::icon_tab(
-                                "stash-prompt",
-                                ui,
-                                IconName::Inbox,
-                                keymap::with_key("Stash prompt into a new note", ActionId::StashPrompt),
-                                false,
-                                None,
-                            )
-                            .on_click(cx.listener(|this, _, window, cx| this.stash_prompt(window, cx))),
-                        ),
-                    )
-                },
-            );
+            .when(self.right_tab == RightTab::Notes && crate::window::features::notes::notes_on(cx), |d| {
+                d.child(
+                    div().id("panel-actions").occlude().flex_none().child(
+                        style::icon_tab(
+                            "stash-prompt",
+                            ui,
+                            IconName::Inbox,
+                            keymap::with_key("Stash prompt into a new note", ActionId::StashPrompt),
+                            false,
+                            None,
+                        )
+                        .on_click(cx.listener(|this, _, window, cx| this.stash_prompt(window, cx))),
+                    ),
+                )
+            });
         // No rule under it: the tab's list draws one while rows are scrolled up beneath it, as the
         // sidebar's does.
         div().flex_none().flex().flex_col().child(row).into_any_element()
@@ -307,7 +304,7 @@ impl Workspace {
         let notes = session
             .notes
             .iter()
-            .filter(|n| !crate::workspace::features::notes::is_blank_note(n.state.read(cx)))
+            .filter(|n| !crate::window::features::notes::is_blank_note(n.state.read(cx)))
             .count();
         let tabs = self.panel_tab_list(cx);
         let ring = self.ring(Area::PanelTabs, window);

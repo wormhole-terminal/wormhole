@@ -26,8 +26,8 @@ use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
 use crate::updates;
-use crate::workspace::window_lifecycle::open_tab;
-use crate::workspace::window_lifecycle::with_front_workspace;
+use crate::window::window_lifecycle::open_tab;
+use crate::window::window_lifecycle::with_front_workspace;
 
 /// A terminal in the Dock's menu.
 #[derive(Clone, PartialEq, Debug, gpui_kit::Action)]
@@ -148,7 +148,7 @@ pub(crate) fn sync(cx: &mut App) {
         cx.refresh_windows();
     }
     register_dock_actions(cx);
-    let terminals = crate::workspace::ambient::terminals(cx);
+    let terminals = crate::window::ambient::terminals(cx);
     sync_dock(&terminals, cx);
     if app(cx).menu.bar.is_none() {
         return;
@@ -305,7 +305,7 @@ fn register_dock_actions(cx: &mut App) {
             if with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
                 && app(cx).windows.is_empty()
             {
-                crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
+                crate::window::window_lifecycle::open_workspace_window(None, None, cx);
             }
         })
     });
@@ -329,7 +329,7 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
         }
     }
     if command == MenuCommand::Quit {
-        cx.defer(crate::workspace::windows::request_quit);
+        cx.defer(crate::window::windows::request_quit);
         return;
     }
     crate::background::activate(cx);
@@ -343,7 +343,7 @@ pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
         }
         MenuCommand::OpenFolder => open_folder(cx),
         MenuCommand::OpenTab(tab) => open_tab(tab, cx),
-        MenuCommand::JumpToWaiting => crate::workspace::ambient::jump_to_waiting(cx),
+        MenuCommand::JumpToWaiting => crate::window::ambient::jump_to_waiting(cx),
         MenuCommand::RunAction { root, id } => {
             // Actions run in the context of their project's terminal.
             let owner = AppState::find_window(cx, |ws, _| ws.session_for_project(&root).is_some());
@@ -405,7 +405,7 @@ pub(crate) fn open_folder(cx: &mut App) {
 /// devctl: the status item's menu as text, as it would be built now.
 #[cfg(feature = "devctl")]
 pub(crate) fn dump(cx: &App) -> String {
-    let snapshot = snapshot(crate::workspace::ambient::terminals(cx), cx);
+    let snapshot = snapshot(crate::window::ambient::terminals(cx), cx);
     let mut out = model::dump(&model::build(&snapshot, Instant::now()));
     out.push_str(&format!("installed={}\n", app(cx).menu.bar.is_some()));
     out
@@ -421,7 +421,7 @@ pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<V
 /// devctl: the Dock's badge, bounces and menu.
 #[cfg(feature = "devctl")]
 pub(crate) fn dock_dump(cx: &App) -> String {
-    let terminals = crate::workspace::ambient::terminals(cx);
+    let terminals = crate::window::ambient::terminals(cx);
     let dock = cx.try_global::<crate::platform::dock::DockState>();
     let mut out = format!(
         "dock badge={:?} bounces={}\n",

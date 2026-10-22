@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use gpui_kit::*;
 
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 impl Workspace {
     /// The modifier keys changed (from the root's `on_modifiers_changed`).

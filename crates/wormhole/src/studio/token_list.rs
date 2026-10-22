@@ -22,7 +22,7 @@ use super::token_rows::{Band, Chip, Inputs, ListRow, TokenRow, build};
 use super::{StudioWindow, color_chip, contrast, gallery, metric_chip, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::aux_window;
+use crate::window::aux_window;
 
 /// The token list's width.
 pub(super) const LIST_W: f32 = 300.0;

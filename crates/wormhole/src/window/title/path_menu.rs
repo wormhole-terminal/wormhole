@@ -14,7 +14,7 @@ use wormhole_core::view::layout::path_menu::{self, PathFolder};
 
 use crate::platform::{self, Icon, Item, Menu};
 use crate::terminal_view::Status;
-use crate::workspace::{Workspace, session};
+use crate::window::{Workspace, session};
 
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click

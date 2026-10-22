@@ -27,7 +27,7 @@ use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::workspace::onboarding::{offered_primaries, offered_themes};
+use crate::window::onboarding::{offered_primaries, offered_themes};
 use gpui_kit::App;
 
 /// Counts one request of a kind against its caller's budget, or says when to try again. It is the

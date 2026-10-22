@@ -17,7 +17,7 @@ use wormhole_core::terminal::SpawnOptions;
 use crate::app_state::{AppState, app, app_mut};
 use crate::terminal_view::Start;
 use crate::terminal_view::TerminalView;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
 fn host_binary() -> Option<&'static PathBuf> {
@@ -135,7 +135,7 @@ impl Workspace {
     /// hosting; `devctl-instance.sh stop` ends the instance's hosts.
     fn may_host(&self, options: &SpawnOptions, cx: &App) -> bool {
         !cfg!(test)
-            && crate::workspace::windows::persistent_terminals_on(cx)
+            && crate::window::windows::persistent_terminals_on(cx)
             && !options.welcome
             && !app(cx).quitting
     }

@@ -37,9 +37,9 @@ use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
 use crate::settings::{settings, settings_in};
-use crate::workspace::RightTab;
-use crate::workspace::ambient::{self, TabFacts};
-use crate::workspace::window_lifecycle::open_tab;
+use crate::window::RightTab;
+use crate::window::ambient::{self, TabFacts};
+use crate::window::window_lifecycle::open_tab;
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).
@@ -633,7 +633,7 @@ mod tests {
     };
     use crate::platform::notifications::ButtonKind;
     use crate::terminal_view::Failure;
-    use crate::workspace::ambient::TabFacts;
+    use crate::window::ambient::TabFacts;
 
     fn facts(state: State) -> TabFacts {
         TabFacts {

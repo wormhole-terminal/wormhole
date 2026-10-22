@@ -21,7 +21,7 @@ use wormhole_core::view::focus::list::{Key, TypeAhead};
 use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
 use crate::actions;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::{RightTab, Workspace};
 
 pub(super) use bars::TitleButton;
 pub(in crate::window) use menu::key_menu_origin;

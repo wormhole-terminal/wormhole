@@ -36,7 +36,7 @@ use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::Edges;
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
-use crate::workspace::aux_window;
+use crate::window::aux_window;
 use draft::{Themes, draft_for, group_of, is_metric, number, override_of, set_override};
 use gallery::{Area, GalleryView};
 use save::Notice;

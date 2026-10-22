@@ -32,8 +32,8 @@ use crate::settings::{SettingsStore, settings, update_settings};
 use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::updates;
-use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{ambient, focus, onboarding, window_lifecycle};
+use crate::window::window_lifecycle::with_front_workspace;
+use crate::window::{ambient, focus, onboarding, window_lifecycle};
 use crate::{about, studio};
 use crate::{command_palette, shortcut_sheet, status_item};
 
@@ -133,13 +133,13 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayIntroTentacles, cx| play_intro_in_front(Style::Tentacles, cx));
     cx.on_action(|_: &PlayIntroVoyage, cx| play_intro_in_front(Style::Voyage, cx));
     cx.on_action(|_: &PlayWelcomeCursor, cx| {
-        crate::workspace::onboarding::welcome::replay_in_front(Handover::Cursor, cx)
+        crate::window::onboarding::welcome::replay_in_front(Handover::Cursor, cx)
     });
     cx.on_action(|_: &PlayWelcomePortal, cx| {
-        crate::workspace::onboarding::welcome::replay_in_front(Handover::Portal, cx)
+        crate::window::onboarding::welcome::replay_in_front(Handover::Portal, cx)
     });
     cx.on_action(|_: &PlayWelcomeLogo, cx| {
-        crate::workspace::onboarding::welcome::replay_in_front(Handover::Logo, cx)
+        crate::window::onboarding::welcome::replay_in_front(Handover::Logo, cx)
     });
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();

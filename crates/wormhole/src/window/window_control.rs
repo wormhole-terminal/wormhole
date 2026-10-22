@@ -13,8 +13,8 @@ use wormhole_term::Notification;
 
 use crate::app_state::app;
 use crate::terminal_view::TerminalView;
-use crate::workspace::Workspace;
-use crate::workspace::ambient::state_of;
+use crate::window::Workspace;
+use crate::window::ambient::state_of;
 
 /// An agent's id as the hooks spell it (`claude`, `codex`).
 fn agent_id(agent: AgentId) -> Option<String> {

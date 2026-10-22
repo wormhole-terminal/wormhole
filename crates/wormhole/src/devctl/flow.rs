@@ -7,7 +7,7 @@ use anyhow::{Result, anyhow};
 use gpui_kit::*;
 
 use super::Ctx;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// How long `wait-idle` waits by default.
 const IDLE_TIMEOUT: Duration = Duration::from_millis(5000);

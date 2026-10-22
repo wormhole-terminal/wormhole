@@ -172,7 +172,7 @@ fn counts(cx: &mut TestAppContext) {
   `("session", session.id)`. Tuples of `&'static str` and
   `usize`/`u64`/`u32`/`EntityId`/`SharedString` convert into `ElementId`.
 - **A plain scrolling `div` for a long list.** Each wheel tick re-renders every
-  row. Virtualize it (`workspace/panel_list.rs` explains why).
+  row. Virtualize it (`window/panel_list.rs` explains why).
 - **Updating an entity that is already being updated.** This panics at runtime
   ("cannot update … while it is already being updated"), typically when touching
   another window's workspace from inside your own update. Use `cx.defer` or

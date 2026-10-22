@@ -27,9 +27,9 @@ use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
-use crate::workspace::Workspace;
-use crate::workspace::folder_color;
-use crate::workspace::session::home_dir;
+use crate::window::Workspace;
+use crate::window::folder_color;
+use crate::window::session::home_dir;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
 /// and "View all N…", which opens them in their own window.
@@ -594,7 +594,7 @@ mod tests {
     use wormhole_core::project::{self as proj, Feature, ProjectFolder, TrustStatus, TrustStore};
 
     use super::{feature_hint, trust_notice};
-    use crate::workspace::features::project::{LoadedProject, load_project};
+    use crate::window::features::project::{LoadedProject, load_project};
 
     /// A fresh directory under the system temp dir, removed when dropped.
     struct Scratch(PathBuf);

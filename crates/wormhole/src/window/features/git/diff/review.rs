@@ -22,7 +22,7 @@ use super::render::{LineAt, OnLine};
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::{Workspace, dialog};
+use crate::window::{Workspace, dialog};
 
 /// How tall the comment field grows, in lines.
 const FIELD_ROWS: (usize, usize) = (3, 10);

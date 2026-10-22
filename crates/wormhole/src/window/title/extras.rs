@@ -1,5 +1,5 @@
 //! The title row's extras, the data side: what each one knows about the
-//! terminal on screen, and when it is looked up. `workspace::title::chips` measures and draws them.
+//! terminal on screen, and when it is looked up. `window::title::chips` measures and draws them.
 //!
 //! - **Branch status** is git's own answer for the session, which the Changes tab already refreshes
 //!   every few seconds (`RepoStatus::dirty` and `upstream`): no process of its own.
@@ -27,7 +27,7 @@ use wormhole_term::listening_ports;
 
 use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);
@@ -175,7 +175,7 @@ impl Workspace {
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(in crate::window) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
         if !settings_in(&self.profile, cx).title_pull_request
-            || !crate::workspace::features::project::project_folders_on(cx)
+            || !crate::window::features::project::project_folders_on(cx)
         {
             return None;
         }

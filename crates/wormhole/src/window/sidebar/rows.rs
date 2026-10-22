@@ -23,10 +23,10 @@ use super::{BODY_REM, CAPTION_REM, two_line_tooltip};
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
-use crate::workspace::Workspace;
-use crate::workspace::focus::SidebarStop;
-use crate::workspace::session::home_dir;
-use crate::workspace::terminal_drag::DragOrigin;
+use crate::window::Workspace;
+use crate::window::focus::SidebarStop;
+use crate::window::session::home_dir;
+use crate::window::terminal_drag::DragOrigin;
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
@@ -81,7 +81,7 @@ impl Frame {
                 .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
-            show_notes: s.sidebar_notes && crate::workspace::features::notes::notes_on(cx),
+            show_notes: s.sidebar_notes && crate::window::features::notes::notes_on(cx),
             hints: ws.hints_showing(cx),
             code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,

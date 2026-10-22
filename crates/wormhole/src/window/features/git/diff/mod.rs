@@ -24,10 +24,10 @@ use gpui_kit::*;
 
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
-use crate::workspace::Workspace;
-use crate::workspace::features::git::changes::display_order;
-use crate::workspace::features::git::job::Job;
-use crate::workspace::features::git::open_file::{OpenFile, OpenTarget};
+use crate::window::Workspace;
+use crate::window::features::git::changes::display_order;
+use crate::window::features::git::job::Job;
+use crate::window::features::git::open_file::{OpenFile, OpenTarget};
 use load::{Ask, Stamp};
 use rows::{BuildKey, Row, RowStats};
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};
@@ -264,7 +264,7 @@ impl Workspace {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn show_changes(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(crate::workspace::RightTab::Changes, cx);
+        self.show_tab(crate::window::RightTab::Changes, cx);
     }
 
     #[cfg(feature = "devctl")]

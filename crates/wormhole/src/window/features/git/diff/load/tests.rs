@@ -4,10 +4,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use super::{Built, Check, Observed, Outcome, Stamp, Work, run};
-use crate::workspace::features::git::diff::rows::{BuildKey, build_rows};
-use crate::workspace::features::git::diff::{DiffView, Request};
-use crate::workspace::features::git::job::testing::ManualExecutor;
-use crate::workspace::features::git::job::{Job, Wanted};
+use crate::window::features::git::diff::rows::{BuildKey, build_rows};
+use crate::window::features::git::diff::{DiffView, Request};
+use crate::window::features::git::job::testing::ManualExecutor;
+use crate::window::features::git::job::{Job, Wanted};
 use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::{TouchPhase, point, px};
 use wormhole_core::git::{

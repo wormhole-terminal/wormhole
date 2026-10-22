@@ -16,8 +16,8 @@ use crate::settings::store_in;
 use crate::style;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
-use crate::workspace::Workspace;
-use crate::workspace::focus::SidebarStop;
+use crate::window::Workspace;
+use crate::window::focus::SidebarStop;
 
 impl Workspace {
     /// A group's head: the tiles of its terminals while folded, the dot while one needs you or
@@ -150,7 +150,7 @@ impl Workspace {
             |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
         );
         let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        self.open_group_menu(group, crate::workspace::focus::key_menu_origin(bounds), window, cx);
+        self.open_group_menu(group, crate::window::focus::key_menu_origin(bounds), window, cx);
     }
 
     /// Open group `group`'s menu at `at`, its head wearing the ring until the menu closes.

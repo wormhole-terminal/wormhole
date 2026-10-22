@@ -7,10 +7,10 @@ use gpui_kit::TestAppContext;
 use wormhole_core::view::panes::Axis;
 
 use crate::app_state::OpenWindow;
-use crate::workspace::view_tests::{drive, read, start, use_stable};
+use crate::window::view_tests::{drive, read, start, use_stable};
 
 fn isolate(name: &str) -> bool {
-    crate::workspace::view_tests::isolate_in(module_path!(), name)
+    crate::window::view_tests::isolate_in(module_path!(), name)
 }
 
 /// Each numbered terminal's id and ⌘ number.

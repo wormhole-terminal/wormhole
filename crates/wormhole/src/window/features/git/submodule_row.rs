@@ -10,7 +10,7 @@ use gpui_kit::*;
 use super::file_line::Placement;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 use wormhole_core::git::FileChange;
 
 /// A tooltip wraps at this width rather than running across the window.

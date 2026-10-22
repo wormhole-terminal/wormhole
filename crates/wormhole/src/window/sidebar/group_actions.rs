@@ -8,11 +8,11 @@ use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
 use crate::app_state::app_mut;
 use crate::terminal_view::Status;
-use crate::workspace::dialog;
-use crate::workspace::session::Session;
-use crate::workspace::session::{close_group_detail, close_group_title};
-use crate::workspace::window_lifecycle::open_workspace_window_in;
-use crate::workspace::{Layout, Workspace};
+use crate::window::dialog;
+use crate::window::session::Session;
+use crate::window::session::{close_group_detail, close_group_title};
+use crate::window::window_lifecycle::open_workspace_window_in;
+use crate::window::{Layout, Workspace};
 
 impl Workspace {
     /// Close group `group`: every terminal in it ends, and the group goes (a pinned one stays as a
@@ -56,7 +56,7 @@ impl Workspace {
             let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
                 let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
                 for worktree in removable.clone() {
-                    crate::workspace::features::git::worktree::remove_worktree(worktree, cx);
+                    crate::window::features::git::worktree::remove_worktree(worktree, cx);
                 }
             });
             ("Close and Remove Worktrees", on_also)

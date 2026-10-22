@@ -12,8 +12,8 @@ use crate::app_state::OpenWindow;
 use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::{Status, TerminalView};
-use crate::workspace::Workspace;
-use crate::workspace::view_tests::{drive, hook, isolate_in, read, start};
+use crate::window::Workspace;
+use crate::window::view_tests::{drive, hook, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

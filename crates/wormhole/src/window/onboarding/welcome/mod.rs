@@ -34,8 +34,8 @@ use crate::app_state::{AppState, app, app_mut};
 #[cfg(feature = "devctl")]
 use crate::notifications;
 use crate::settings::settings;
-use crate::workspace::Workspace;
-use crate::workspace::window_lifecycle::with_front_workspace;
+use crate::window::Workspace;
+use crate::window::window_lifecycle::with_front_workspace;
 
 pub(crate) use answers::handle;
 

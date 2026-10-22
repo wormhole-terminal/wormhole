@@ -20,7 +20,7 @@ use crate::settings::{UiColors, store_in, ui_in};
 use crate::style;
 use crate::style::{PopoverRow, popover_heading, popover_row, popover_rule};
 use crate::theme_bridge;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// Which list the open menu shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

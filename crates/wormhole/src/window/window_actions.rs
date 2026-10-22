@@ -19,7 +19,7 @@ use crate::actions::{
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
-use crate::workspace::{RightTab, Workspace, sidebar};
+use crate::window::{RightTab, Workspace, sidebar};
 
 /// The zoom (points over the Settings size) after one more step, kept within [`FONT_SIZES`].
 fn zoomed(base: f32, zoom: f32, step: f32) -> f32 {
@@ -149,7 +149,7 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Bigger, _, cx| this.zoom_font(Some(1.0), cx)))
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
-            .when(crate::workspace::features::notes::notes_on(cx), |root| {
+            .when(crate::window::features::notes::notes_on(cx), |root| {
                 root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
                     .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
                     .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))

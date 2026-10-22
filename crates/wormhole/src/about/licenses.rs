@@ -12,8 +12,8 @@ use super::ui;
 use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::aux_window;
-use crate::workspace::panel_list::Rows;
+use crate::window::aux_window;
+use crate::window::panel_list::Rows;
 
 const SIZE: (f32, f32) = (940.0, 660.0);
 const MIN_SIZE: (f32, f32) = (640.0, 420.0);

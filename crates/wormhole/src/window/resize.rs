@@ -10,7 +10,7 @@ use wormhole_core::view::layout::{Edge, Panes};
 
 use crate::settings::{UiColors, ui_in};
 use crate::style;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// A drag on a panel's edge, from the press to the release.
 pub(super) struct ResizeDrag {

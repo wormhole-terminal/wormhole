@@ -7,7 +7,7 @@ use gpui_kit::component::input::Input;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// A terminal being renamed: which, and its name field.
 pub(in crate::window) struct TerminalRename {

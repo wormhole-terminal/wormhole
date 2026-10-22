@@ -6,7 +6,7 @@
 //! is driven by one app-level tick and two message tasks (`app::launch`, `app::tick`), so it works
 //! the same with one window or five; windows open and close in `window_lifecycle`.
 //!
-//! One tier with the window (`workspace`): the shared state names the window's type and opens and
+//! One tier with the window (`window`): the shared state names the window's type and opens and
 //! closes windows through it, and a window reads the shared state, until phase 5 separates them.
 //! The one edge up, kept until then, is the field holding the status item's `MenuState`; the cycle
 //! entries in `scripts/structure.json` that name this module come from it and from that tie. The
@@ -31,8 +31,8 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use crate::app_state::look::LookOverride;
 use crate::app_state::recent_projects::RecentProjects;
 use crate::status_item;
-use crate::workspace::features::project;
-use crate::workspace::{Workspace, aux_window};
+use crate::window::features::project;
+use crate::window::{Workspace, aux_window};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -101,10 +101,10 @@ pub(crate) struct AppState {
     /// layout of its own starts (`open_workspace_window`). Kept in the store's `meta`.
     pub last_panes: RememberedPanes,
     /// The terminal welcomes running, and the doors to them (core's token rules).
-    pub welcomes: crate::workspace::onboarding::welcome::Welcomes,
+    pub welcomes: crate::window::onboarding::welcome::Welcomes,
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
     /// that window is being opened.
-    pub first_welcome: Option<crate::workspace::onboarding::welcome::Plan>,
+    pub first_welcome: Option<crate::window::onboarding::welcome::Plan>,
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,

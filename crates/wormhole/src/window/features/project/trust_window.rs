@@ -20,8 +20,8 @@ use crate::app_state::{app, app_mut};
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
-use crate::workspace::aux_window;
+use crate::window::Workspace;
+use crate::window::aux_window;
 
 const SIZE: (f32, f32) = (640.0, 480.0);
 const MIN: (f32, f32) = (480.0, 320.0);

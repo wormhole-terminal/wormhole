@@ -41,8 +41,8 @@ use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
 use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
-use crate::workspace::features::project;
+use crate::window::Workspace;
+use crate::window::features::project;
 
 pub(crate) use keys::init;
 pub(in crate::window) use look_step::{offered_primaries, offered_themes};
@@ -175,7 +175,7 @@ impl Workspace {
     pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
         // hand-over.
-        if crate::workspace::onboarding::welcome::enabled(cx) {
+        if crate::window::onboarding::welcome::enabled(cx) {
             self.replay_welcome(wormhole_core::onboarding::intro::Handover::Cursor, window, cx);
             return;
         }

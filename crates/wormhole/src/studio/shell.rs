@@ -10,7 +10,7 @@ use super::token_editor::EDITOR_W;
 use super::token_list::LIST_W;
 use super::{StudioWindow, ui};
 use crate::settings::settings;
-use crate::workspace::{aux_window, chrome};
+use crate::window::{aux_window, chrome};
 
 impl StudioWindow {
     /// The gallery's filter, which narrows the token list to the same part of the app.

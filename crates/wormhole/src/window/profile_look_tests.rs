@@ -8,8 +8,8 @@ use wormhole_core::storage::paths::ProfileId;
 
 use crate::app_state::{AppState, app};
 use crate::settings::{ParkedSettings, SettingsStore, settings, settings_in, store_in, ui, ui_in};
-use crate::workspace::Workspace;
-use crate::workspace::view_tests::{draw, isolate_in, read, start};
+use crate::window::Workspace;
+use crate::window::view_tests::{draw, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

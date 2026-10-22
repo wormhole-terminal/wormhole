@@ -7,7 +7,7 @@ use wormhole_core::view::sidebar::{Bracket, Drop, Landing, Part};
 
 use crate::app_state::OpenWindow;
 use crate::terminal_view::Status;
-use crate::workspace::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
+use crate::window::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

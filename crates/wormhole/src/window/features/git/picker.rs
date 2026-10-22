@@ -13,7 +13,7 @@ use super::history::HistoryState;
 use super::job::Ticket;
 use crate::select::{self, Choice, SearchSelect, SelectTrigger};
 use crate::settings::{UiColors, ui_in};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 use wormhole_core::git;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -237,8 +237,8 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{Picker, branches_wanted};
-    use crate::workspace::features::git::changes::GitState;
-    use crate::workspace::features::git::job::testing::ManualExecutor;
+    use crate::window::features::git::changes::GitState;
+    use crate::window::features::git::job::testing::ManualExecutor;
 
     const CWD: &str = "/work/repo";
 

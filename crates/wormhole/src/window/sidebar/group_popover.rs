@@ -14,7 +14,7 @@ use super::groups::group_colors;
 use crate::platform::popover::{Behavior, Colours, Custom, Field, Popover, Row};
 use crate::platform::{self, Item, Menu, Swatch};
 use crate::settings::store_in;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// What a group's popover and menu are made from, as it is when they open.
 pub(super) struct GroupFacts {

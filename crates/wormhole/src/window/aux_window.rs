@@ -13,7 +13,7 @@ use crate::settings::Settings;
 use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::hsla;
-use crate::workspace::chrome::TitleDrag as _;
+use crate::window::chrome::TitleDrag as _;
 
 /// Surface colors for a secondary window.
 #[derive(Clone, Copy)]
@@ -62,9 +62,7 @@ pub(crate) fn window_options(
         titlebar: Some(TitlebarOptions {
             title: Some(title.into()),
             appears_transparent: true,
-            traffic_light_position: Some(crate::workspace::chrome::traffic_light_position(
-                style::TITLE_ROW_H,
-            )),
+            traffic_light_position: Some(crate::window::chrome::traffic_light_position(style::TITLE_ROW_H)),
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(min),

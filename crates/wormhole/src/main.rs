@@ -30,9 +30,6 @@ mod updates;
 mod window;
 mod window_ops;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-use crate::window as workspace;
-
 use gpui_kit::*;
 use wormhole_core::ipc::Command;
 
@@ -109,9 +106,9 @@ fn main() {
         // ⌘Q asks first while something runs; saving happens as the app goes away, whichever way
         // it quits. Deferred: the question opens in the front window, which may be the one
         // dispatching the key.
-        cx.on_action(|_: &Quit, cx| cx.defer(workspace::request_quit));
+        cx.on_action(|_: &Quit, cx| cx.defer(window::request_quit));
         // The same, and the terminals the session hosts keep running end with it.
-        cx.on_action(|_: &QuitAndEndAll, cx| cx.defer(workspace::request_quit_ending_hosts));
+        cx.on_action(|_: &QuitAndEndAll, cx| cx.defer(window::request_quit_ending_hosts));
         #[cfg(any(feature = "inspector", debug_assertions))]
         inspector::init(cx);
         // The keys from the action table, before the menus (they show the bound keys).

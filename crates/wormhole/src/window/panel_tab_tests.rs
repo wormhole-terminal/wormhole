@@ -7,8 +7,8 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::keys::keymap::ActionId;
 
 use crate::settings::update_settings;
-use crate::workspace::RightTab;
-use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::RightTab;
+use crate::window::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

@@ -17,7 +17,7 @@ use wormhole_core::onboarding::{PlaceKind, STEPS};
 use super::Intro;
 use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 // The sheet's card size.
 const SHEET_W: f32 = 432.0;

@@ -22,7 +22,7 @@ use super::{Edit, StudioWindow, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
-use crate::workspace::aux_window;
+use crate::window::aux_window;
 
 /// The editor's width.
 pub(super) const EDITOR_W: f32 = 320.0;

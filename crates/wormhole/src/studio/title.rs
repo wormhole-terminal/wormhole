@@ -17,7 +17,7 @@ use wormhole_core::theme::tokens;
 use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::chrome::TitleDrag as _;
+use crate::window::chrome::TitleDrag as _;
 
 /// The name field while renaming.
 const NAME_FIELD_W: f32 = 200.0;

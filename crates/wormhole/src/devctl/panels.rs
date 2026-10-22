@@ -102,12 +102,12 @@ pub(super) fn trust_window(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// `trust-shot [name]`: a screenshot of that window.
 pub(super) fn trust_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "trust")?;
-    crate::workspace::features::project::devctl_trust_shot(name, ctx.dir, ctx.cx)
+    crate::window::features::project::devctl_trust_shot(name, ctx.dir, ctx.cx)
 }
 
 /// `panel-tab <changes|history|notes|usage|project>`: show that tab of the right panel.
 pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use crate::workspace::RightTab;
+    use crate::window::RightTab;
     let tab = match arg.trim() {
         "notes" => RightTab::Notes,
         "changes" => RightTab::Changes,
@@ -116,7 +116,7 @@ pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "usage" => RightTab::Usage,
         other => return Err(anyhow!("expected changes, history, notes, usage or project, got {other:?}")),
     };
-    if tab == RightTab::Notes && !crate::workspace::features::notes::notes_on(ctx.cx) {
+    if tab == RightTab::Notes && !crate::window::features::notes::notes_on(ctx.cx) {
         return Ok("notes and tasks are off (feature_flags.notes_and_tasks)".into());
     }
     ctx.workspace.show_tab(tab, ctx.cx);

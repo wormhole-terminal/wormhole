@@ -20,9 +20,9 @@ use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
-use crate::workspace::Workspace;
-use crate::workspace::features::project::{project_folders_on, set_project_color};
-use crate::workspace::title::Tint;
+use crate::window::Workspace;
+use crate::window::features::project::{project_folders_on, set_project_color};
+use crate::window::title::Tint;
 
 /// Where a folder's colour lives, and what it is now.
 #[derive(Clone, Debug)]

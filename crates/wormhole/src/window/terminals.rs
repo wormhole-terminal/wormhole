@@ -13,10 +13,10 @@ use wormhole_core::storage::store::SessionRecord;
 use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
-use crate::workspace::Workspace;
-use crate::workspace::features::git::{changes, history};
-use crate::workspace::features::notes::TaskItem;
-use crate::workspace::session::{Pane, Session};
+use crate::window::Workspace;
+use crate::window::features::git::{changes, history};
+use crate::window::features::notes::TaskItem;
+use crate::window::session::{Pane, Session};
 
 impl Workspace {
     pub(crate) fn new_session(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -95,7 +95,7 @@ impl Workspace {
             pane,
             split: record.split_id,
             notes: Vec::new(),
-            notes_list: crate::workspace::features::notes::NotesList::default(),
+            notes_list: crate::window::features::notes::NotesList::default(),
             tasks: record.tasks.into_iter().map(|t| TaskItem { text: t.text.into(), done: t.done }).collect(),
             tasks_collapsed: record.tasks_collapsed,
             notes_collapsed: record.notes_collapsed,
@@ -162,7 +162,7 @@ impl Workspace {
             project_shell.as_deref(),
             settings_in(&self.profile, cx),
         );
-        let mut options = crate::workspace::features::project::spawn_options(
+        let mut options = crate::window::features::project::spawn_options(
             record.id,
             cwd,
             record.scrollback.clone(),
@@ -249,11 +249,11 @@ impl Workspace {
             Some(layout.focused())
         });
         self.leave_layout(ix);
-        let after = crate::workspace::session::session_after_close(self.active, ix, len);
+        let after = crate::window::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         self.sidebar.view.groups.leave(closed.id);
         crate::notifications::dismiss(closed.pane.id, cx);
-        crate::workspace::onboarding::welcome::forget(closed.id, cx);
+        crate::window::onboarding::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on

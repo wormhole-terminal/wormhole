@@ -4,8 +4,8 @@ use gpui_kit::{OwnedMenuItem, TestAppContext};
 use wormhole_core::view::focus::Area;
 
 use crate::app_state::{OpenWindow, app, app_mut};
-use crate::workspace::RightTab;
-use crate::workspace::view_tests::{draw, drive, hook, isolate_in, press, read, start};
+use crate::window::RightTab;
+use crate::window::view_tests::{draw, drive, hook, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -208,7 +208,7 @@ fn the_menus_follow_a_change_the_shared_state_announces_at_once(cx: &mut TestApp
     // or key between.
     cx.update(|cx| {
         app_mut(cx).remember_project(std::path::PathBuf::from("/tmp/zebra-project"));
-        crate::workspace::menu_state::menus_changed(cx);
+        crate::window::menu_state::menus_changed(cx);
     });
     assert!(
         menu_names(cx).iter().any(|name| name.contains("zebra-project")),

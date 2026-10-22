@@ -10,7 +10,7 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::view::focus::Area;
 
 use crate::style;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// Whether `keystroke` is the row menu's key.
 pub(super) fn is_menu_key(keystroke: &Keystroke) -> bool {

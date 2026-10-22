@@ -16,7 +16,7 @@ use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::status_item;
 use crate::status_item::quick_panel;
-use crate::workspace::ambient::TabFacts;
+use crate::window::ambient::TabFacts;
 
 /// Run `f` after this update and append what it returns to this window's results.
 pub(super) fn later(ctx: &mut Ctx, f: impl FnOnce(&mut App) -> String + 'static) {
@@ -220,7 +220,7 @@ pub(super) fn quick_panel_text(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `jump`: ⌥⌘J, as the key does it.
 pub(super) fn jump(ctx: &mut Ctx, _: &str) -> Result<String> {
     later(ctx, |cx| {
-        crate::workspace::ambient::jump_to_waiting(cx);
+        crate::window::ambient::jump_to_waiting(cx);
         String::new()
     });
     Ok(String::new())

@@ -15,8 +15,8 @@ use wormhole_core::view::sidebar::Entry;
 use super::facts::RowInfo;
 use crate::platform::{self, Item, Menu};
 use crate::settings::settings_in;
-use crate::workspace::Workspace;
-use crate::workspace::focus::SidebarStop;
+use crate::window::Workspace;
+use crate::window::focus::SidebarStop;
 
 /// What a row's menu is made from, as it is when the menu opens.
 struct RowFacts {
@@ -72,7 +72,7 @@ impl Workspace {
             .iter()
             .position(|e| matches!(e, Entry::Row { session, .. } if infos[*session].id == id));
         let Some(row) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        self.open_row_menu(id, crate::workspace::focus::key_menu_origin(row), window, cx);
+        self.open_row_menu(id, crate::window::focus::key_menu_origin(row), window, cx);
     }
 
     /// Open terminal `id`'s menu at `at`, its row wearing the ring until the menu closes. Nothing

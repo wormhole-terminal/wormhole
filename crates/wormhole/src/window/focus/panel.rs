@@ -13,7 +13,7 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
 use super::{activation, list_key};
 use crate::settings::UiColors;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::{RightTab, Workspace};
 
 /// How an item is pressed: ↩ or Space.
 pub(in crate::window) use wormhole_core::view::focus::list::Press as Activate;

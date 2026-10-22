@@ -3,7 +3,7 @@
 //! core's keymap table (`actions`).
 use gpui_kit::*;
 
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 impl Workspace {
     /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the note being worked on
@@ -14,7 +14,7 @@ impl Workspace {
             window.focus(&terminal_focus, cx);
             return;
         }
-        if !crate::workspace::features::notes::notes_on(cx) {
+        if !crate::window::features::notes::notes_on(cx) {
             return;
         }
         let session = self.active_session();

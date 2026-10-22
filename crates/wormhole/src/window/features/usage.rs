@@ -11,7 +11,7 @@ use wormhole_core::agents::usage::{self, PlanLimit, Usage};
 use crate::app_state::app;
 use crate::settings::{UiColors, ui_in};
 use crate::style::{self, TextRole};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// From this share used on, a bar turns to the warning color, and at the limit to danger.
 const WARN_AT: f32 = 0.8;

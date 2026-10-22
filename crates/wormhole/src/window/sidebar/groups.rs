@@ -12,8 +12,8 @@ use wormhole_core::view::sidebar::{GroupColor, Item, Landing};
 
 use crate::settings::store_in;
 use crate::theme_bridge;
-use crate::workspace::Workspace;
-use crate::workspace::session::home_dir;
+use crate::window::Workspace;
+use crate::window::session::home_dir;
 
 /// The colours a group can wear, as the theme in force draws them.
 pub(in crate::window) fn group_colors(profile: &ProfileId, cx: &App) -> Vec<(GroupColor, Hsla)> {

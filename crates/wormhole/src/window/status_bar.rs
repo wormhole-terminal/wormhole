@@ -24,8 +24,8 @@ use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
 use crate::terminal_view::Status;
-use crate::workspace::Workspace;
-use crate::workspace::window_lifecycle::open_tab;
+use crate::window::Workspace;
+use crate::window::window_lifecycle::open_tab;
 
 /// One terminal (a sidebar row) as the bar counts it.
 #[derive(Clone)]
@@ -197,7 +197,7 @@ impl Workspace {
         // What runs in front (the agent, or the command), as the title row names it, not the shell.
         let program = session.pane.program(cx);
         let size = detail.size().then(|| rules::size(&program, cols, rows));
-        let state = crate::workspace::title::breadcrumb::crumb_words(terminal);
+        let state = crate::window::title::breadcrumb::crumb_words(terminal);
         let now = Instant::now();
         let attention = summary.attention().map(|ix| {
             let (entry, counted) = (&entries[ix], &counted[ix]);

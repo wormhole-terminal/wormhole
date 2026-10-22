@@ -22,9 +22,9 @@ use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
-use crate::workspace::features::project;
-use crate::workspace::features::project::LoadedProject;
-use crate::workspace::window_lifecycle::with_front_workspace;
+use crate::window::features::project;
+use crate::window::features::project::LoadedProject;
+use crate::window::window_lifecycle::with_front_workspace;
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];
 

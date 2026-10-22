@@ -33,8 +33,8 @@ use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
-use crate::workspace::aux_window;
-use crate::workspace::chrome::TitleDrag as _;
+use crate::window::aux_window;
+use crate::window::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
 

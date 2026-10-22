@@ -5,8 +5,8 @@ use gpui_kit::*;
 use wormhole_core::view::focus::list::Item;
 
 use super::HistoryRow;
-use crate::workspace::Workspace;
-use crate::workspace::focus::Walkable;
+use crate::window::Workspace;
+use crate::window::focus::Walkable;
 
 impl Workspace {
     /// The History rows the keys can be on: the commits, and the open one's files under it.

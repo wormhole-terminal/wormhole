@@ -52,7 +52,7 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
         }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
-            crate::workspace::onboarding::welcome::handle(token, op, from, budget, cx)
+            crate::window::onboarding::welcome::handle(token, op, from, budget, cx)
         }
     }
 }

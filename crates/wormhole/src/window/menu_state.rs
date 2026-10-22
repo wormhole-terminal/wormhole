@@ -17,7 +17,7 @@ use wormhole_core::terminal::shells;
 use crate::actions::DEBUG;
 use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::{RightTab, Workspace};
 
 /// What the menus show changed outside a key or the tick (a profile switch, a window moved to
 /// another profile). The app root observes it and puts the menus up again at once.
@@ -62,7 +62,7 @@ pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     state.window_profile = AppState::front_window(cx)
         .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
     state.debug = DEBUG;
-    state.persistent = crate::workspace::windows::persistent_terminals_on(cx);
+    state.persistent = crate::window::windows::persistent_terminals_on(cx);
     state
 }
 
@@ -96,13 +96,13 @@ impl Workspace {
             state.disabled.extend([RevealInFinder, CopyPath]);
         }
         // The Project tab needs a folder, and the whole project-folder feature behind its flag.
-        if self.active_folder(cx).is_none() || !crate::workspace::features::project::project_folders_on(cx) {
+        if self.active_folder(cx).is_none() || !crate::window::features::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
         }
         if !self.usage_tab_on(cx) {
             state.hidden.push(ShowUsage);
         }
-        if !crate::workspace::features::notes::notes_on(cx) {
+        if !crate::window::features::notes::notes_on(cx) {
             state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
         }
         if let Some(project) =

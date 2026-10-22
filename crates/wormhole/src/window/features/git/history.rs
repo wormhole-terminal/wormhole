@@ -17,8 +17,8 @@ use super::submodule_row::submodule_row;
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
-use crate::workspace::Workspace;
-use crate::workspace::panel_list::{CardPart, Rows};
+use crate::window::Workspace;
+use crate::window::panel_list::{CardPart, Rows};
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;
@@ -369,7 +369,7 @@ impl Workspace {
     ) {
         let Some(session) = self.sessions.iter_mut().find(|s| s.id == id) else { return };
         let fetch = session.history.open(root, commit, on_branch);
-        self.show_tab(crate::workspace::RightTab::History, cx);
+        self.show_tab(crate::window::RightTab::History, cx);
         cx.notify();
         if let Some((root, commit)) = fetch {
             self.fetch_commit_files(id, root, commit, cx);
@@ -414,7 +414,7 @@ impl Workspace {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_history(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(crate::workspace::RightTab::History, cx);
+        self.show_tab(crate::window::RightTab::History, cx);
     }
 
     #[cfg(feature = "devctl")]
@@ -451,8 +451,8 @@ impl Workspace {
     pub(crate) fn devctl_picker(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
         let (which, query) = arg.split_once(' ').unwrap_or((arg, ""));
         let (tab, picker) = match which {
-            "history" => (crate::workspace::RightTab::History, Picker::History),
-            _ => (crate::workspace::RightTab::Changes, Picker::Compare),
+            "history" => (crate::window::RightTab::History, Picker::History),
+            _ => (crate::window::RightTab::Changes, Picker::Compare),
         };
         self.show_tab(tab, cx);
         if self.picker != Some(picker) {

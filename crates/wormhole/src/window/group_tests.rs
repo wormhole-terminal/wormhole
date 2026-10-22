@@ -3,10 +3,10 @@
 //! its own (see `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 
-use crate::workspace::view_tests::{draw, drive, read, start};
+use crate::window::view_tests::{draw, drive, read, start};
 
 fn isolate(name: &str) -> bool {
-    crate::workspace::view_tests::isolate_in(module_path!(), name)
+    crate::window::view_tests::isolate_in(module_path!(), name)
 }
 
 fn group_names(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Vec<(String, bool, usize)> {

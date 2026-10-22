@@ -44,7 +44,7 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
   the ones below it (`lib.rs` lists the order; `scripts/structure.py` checks it).
 - The terminal engine, `wormhole-vt`, comes from its own repository,
   [wormhole-terminal/wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) (MIT).
-- `crates/wormhole`: the GPUI app. `workspace/` is one window, `style/` the design language,
+- `crates/wormhole`: the GPUI app. `window/` is one window, `style/` the design language,
   `terminal_view/` the terminal.
 - `tools/visual/`: scenarios for screenshot comparisons (`scripts/visual-check.sh`).
 - `tools/bench/`: terminal benchmarks (its own workspace).
@@ -110,7 +110,7 @@ Footer: value
   `style` or `revert`.
 - **Scope** is optional: lowercase `a-z`, `0-9` and `-`, several separated by commas without spaces
   (`fix(git,git-panel): …`). It is the part of the app, not a list to pick from; the common ones are
-  `terminal`, `sidebar`, `workspace`, `settings`, `studio`, `project`, `git`, `git-panel`, `update`,
+  `terminal`, `sidebar`, `window`, `settings`, `studio`, `project`, `git`, `git-panel`, `update`,
   `store`, `agents`, `onboarding`, `a11y`, `devctl`, `release`, `scripts` and `github`.
 - **Subject**: starts lowercase (a name such as Wormhole or an acronym such as GPUI keeps its capitals),
   no final period, and the whole header is at most 100 characters.

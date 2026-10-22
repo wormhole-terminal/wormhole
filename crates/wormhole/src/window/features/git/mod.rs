@@ -12,6 +12,6 @@ mod problem;
 mod submodule_row;
 pub(in crate::window) mod worktree;
 
-// The diff view's old paths, which `workspace` and the Theme Studio still use.
+// The diff view's old paths, which `window` and the Theme Studio still use.
 pub(crate) use diff as diff_view;
 pub(crate) use diff::render as diff_render;

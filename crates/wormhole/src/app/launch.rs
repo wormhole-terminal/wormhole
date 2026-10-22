@@ -25,8 +25,8 @@ use crate::app_state::profiles;
 use crate::app_state::{AppState, app_mut};
 use crate::settings::ParkedSettings;
 use crate::status_item;
-use crate::workspace::onboarding;
-use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
+use crate::window::onboarding;
+use crate::window::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::{notifications, updates};
 
 const TICK: Duration = Duration::from_millis(400);
@@ -54,13 +54,13 @@ pub(crate) fn start(
             s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
         })
         .unwrap_or_default();
-    let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, data.store.as_ref());
+    let launch_hosts = crate::window::hosting::scan_at_launch(&root, &profiles, data.store.as_ref());
     let (menu, menu_commands) = status_item::MenuState::new();
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
     let display_observer = crate::platform::look::observe_display_options(move || {
         let _ = display_changed.try_send(());
     });
-    crate::workspace::open_in::OpenIn::install(cx);
+    crate::window::open_in::OpenIn::install(cx);
     cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
     // The updater's state is a global of its own, so the shared state does not name it.
     cx.set_global(updates::Updates::new(Some(root.update_schedule_file()), data.store.as_ref()));
@@ -91,7 +91,7 @@ pub(crate) fn start(
     // ends up here, before GPUI drops the windows and their terminals: the hosts are let go of
     // first, so those drops leave their programs running.
     cx.on_app_quit(|cx| {
-        crate::workspace::hosting::detach_all(cx);
+        crate::window::hosting::detach_all(cx);
         save_all(cx);
         ipc::remove_socket();
         async {}
@@ -125,19 +125,19 @@ pub(crate) fn start(
     if saved.is_empty() {
         // With the terminal welcome on, the window's first terminal runs it and the run plays
         // around the window; otherwise the intro window opens over a plain terminal.
-        let welcome = crate::workspace::onboarding::welcome::first_launch_plan(cx);
+        let welcome = crate::window::onboarding::welcome::first_launch_plan(cx);
         app_mut(cx).first_welcome = welcome;
         open_workspace_window(None, None, cx);
         app_mut(cx).first_welcome = None;
         match welcome {
-            Some(plan) => crate::workspace::onboarding::welcome::play_first(plan, cx),
+            Some(plan) => crate::window::onboarding::welcome::play_first(plan, cx),
             None => onboarding::start_if_first_launch(cx),
         }
     }
     for window in saved {
         open_workspace_window(Some(window), None, cx);
     }
-    crate::workspace::hosting::adopt_orphans(cx);
+    crate::window::hosting::adopt_orphans(cx);
     menus::sync(cx);
 }
 /// Agent hooks an earlier version installed under the app's old codename are replaced with

@@ -23,9 +23,9 @@ use super::rows::{Frame, glyph_for, tile_for};
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style;
 use crate::style::TerminalTab;
-use crate::workspace::Workspace;
-use crate::workspace::chrome::traffic_light_position;
-use crate::workspace::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
+use crate::window::Workspace;
+use crate::window::chrome::traffic_light_position;
+use crate::window::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
 
 /// The gap between the tabs and the terminal's surface under them.
 const TAB_GAP: f32 = 8.0;
@@ -169,7 +169,7 @@ impl Workspace {
         let bar = div()
             .id("tab-bar")
             .absolute()
-            .top(px(crate::workspace::title::SURFACE_TOP))
+            .top(px(crate::window::title::SURFACE_TOP))
             .left_0()
             .right_0()
             .flex()

@@ -54,7 +54,7 @@ pub(super) struct HostState {
 /// for the same reason, and every new terminal would say it again.
 static FALLBACK_TOLD: AtomicBool = AtomicBool::new(false);
 
-/// The app is quitting and has let go of its hosts (`workspace::hosting::detach_all`). A start or
+/// The app is quitting and has let go of its hosts (`window::hosting::detach_all`). A start or
 /// attach still under way then finishes on its background thread with no view to take it, and its
 /// `Pty` would be dropped there, which closes the host: it lets go of the host instead.
 static APP_QUITTING: AtomicBool = AtomicBool::new(false);

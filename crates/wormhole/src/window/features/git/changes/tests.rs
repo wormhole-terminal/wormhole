@@ -6,7 +6,7 @@ use super::{
     ChangeRow, Folded, GitState, Group, Refreshed, StatusKey, build_rows, build_tree, collapse_key,
     display_order, untracked_apart,
 };
-use crate::workspace::features::git::job::testing::ManualExecutor;
+use crate::window::features::git::job::testing::ManualExecutor;
 use wormhole_core::git::discover::Sighting;
 use wormhole_core::git::{ChangeKind, FileChange, GitError, RepoStatus};
 

@@ -6,7 +6,7 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use crate::terminal_view::Status;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// A terminal of a window as a restart sees it.
 pub(crate) struct RestartFacts {

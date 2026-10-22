@@ -12,12 +12,12 @@ use wormhole_core::view::sidebar::{SplitId, names};
 
 use crate::app_state::app;
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
-use crate::workspace::Workspace;
-use crate::workspace::dialog::shortened;
-use crate::workspace::features::git::{changes, history};
-use crate::workspace::features::notes;
-use crate::workspace::features::notes::tasks;
-use crate::workspace::features::notes::{Note, TaskItem};
+use crate::window::Workspace;
+use crate::window::dialog::shortened;
+use crate::window::features::git::{changes, history};
+use crate::window::features::notes;
+use crate::window::features::notes::tasks;
+use crate::window::features::notes::{Note, TaskItem};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {
@@ -102,7 +102,7 @@ pub(super) struct Session {
     /// Its text is never saved for a restart ("Don't keep this terminal's text", saved).
     pub forget_text: bool,
     /// What the title row's extras know about it: its agent's model and context, its ports.
-    pub extras: crate::workspace::title::extras::SessionExtras,
+    pub extras: crate::window::title::extras::SessionExtras,
     /// The comments written on its diffs and not pasted into its terminal yet.
     pub review: wormhole_core::git::review::Review,
 }

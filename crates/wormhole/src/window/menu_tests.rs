@@ -7,7 +7,7 @@ use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
 use crate::app_state::OpenWindow;
 use crate::platform::record;
-use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -170,7 +170,7 @@ fn clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu(cx: &mut 
     let saved = cx
         .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.window_record(cx)))
         .expect("the window is open");
-    let layout: crate::workspace::Layout =
+    let layout: crate::window::Layout =
         serde_json::from_str(saved.layout.as_deref().expect("a layout")).expect("it reads back");
     assert_eq!(
         layout.sidebar.groups.get(group).and_then(|g| g.paint()),

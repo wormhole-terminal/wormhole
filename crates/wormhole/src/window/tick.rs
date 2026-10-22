@@ -4,19 +4,19 @@
 //! Part of the window: it may use the shared state (`app`) and the platform, and must not use the
 //! surfaces above it (the command palette, the shortcut sheet, the Settings and Studio windows, the
 //! status item, the app root). The one known exception is `notifications::dismiss` for a terminal
-//! the person has seen, listed with the others in `workspace/mod.rs`.
+//! the person has seen, listed with the others in `window/mod.rs`.
 
 use gpui_kit::*;
 
 use crate::settings::{settings_in, ui_in};
-use crate::workspace::features::git::changes::GitPoll;
-use crate::workspace::save::SCROLLBACK_SAVE_INTERVAL;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::features::git::changes::GitPoll;
+use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
+use crate::window::{RightTab, Workspace};
 
 impl Workspace {
     /// Apply settings that live outside GPUI's render tree.
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = crate::workspace::aux_window::wants_blur(settings_in(&self.profile, cx), true);
+        let blur = crate::window::aux_window::wants_blur(settings_in(&self.profile, cx), true);
         self.blur.set_enabled(blur);
         // Without the blur the window stands on the panel's colour: the gaps round the terminal's
         // surface and between a split's panes show the window, glass or not, and would otherwise
@@ -40,7 +40,7 @@ impl Workspace {
         // Only the selected terminal and the panes shown with it are on screen.
         let on_screen: Vec<bool> = (0..self.sessions.len()).map(|ix| self.on_screen(ix)).collect();
         // A program's clipboard read is asked about only where the question can be seen.
-        let looking = crate::workspace::focus::in_front(window);
+        let looking = crate::window::focus::in_front(window);
         for (session, is_active) in self.sessions.iter().zip(on_screen) {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {
@@ -68,7 +68,7 @@ impl Workspace {
         // The Usage tab's times count down while it shows.
         let usage_on_screen = self.notes_visible() && self.right_tab == RightTab::Usage;
         if changed
-            || (usage_on_screen && self.ticks.is_multiple_of(crate::workspace::features::usage::REDRAW_TICKS))
+            || (usage_on_screen && self.ticks.is_multiple_of(crate::window::features::usage::REDRAW_TICKS))
         {
             cx.notify();
         }

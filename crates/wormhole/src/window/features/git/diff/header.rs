@@ -14,7 +14,7 @@ use super::render::DiffColors;
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 use wormhole_core::git::{ChangeKind, Side};
 use wormhole_core::view::limits::count_grouped;
 

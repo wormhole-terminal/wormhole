@@ -102,7 +102,7 @@ DEFAULT_CONFIG = {
     # use, and why. A reason is required.
     "os_edge_sanctioned": {},
     # The inherent impls of these types belong in the home (a folder or file, relative to the crate).
-    "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/workspace/"]},
+    "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/window/"]},
     # Per crate, its top-level modules in tiers, lowest first; a tier is a module or a list of them.
     "layers": {},
     # Per crate, how many levels of modules the cycles and cross-reexports rules tell apart (default 1,
@@ -111,7 +111,7 @@ DEFAULT_CONFIG = {
     "bucket_names": ["text", "utils", "util", "misc", "helpers", "helper", "common"],
     "size": {"warn": 600, "fail": 1000},
     # Folders whose size the plan tracks (files and lines, listed by `counts`).
-    "track_dirs": ["crates/wormhole/src/workspace"],
+    "track_dirs": ["crates/wormhole/src/window"],
 }
 
 # ---------------------------------------------------------------------------------------------------
@@ -1229,7 +1229,7 @@ def _write_tree(root: str, files: Dict[str, str]) -> None:
 def _fixture_cfg() -> dict:
     cfg = json.loads(json.dumps(DEFAULT_CONFIG))
     cfg["os_edge"] = {"app": ["src/native/", "src/edge.rs"], "lib": []}
-    cfg["impl_outside"] = {"crate": "app", "types": ["Workspace", "Session"], "homes": ["src/workspace/"]}
+    cfg["impl_outside"] = {"crate": "app", "types": ["Workspace", "Session"], "homes": ["src/window/"]}
     cfg["size"] = {"warn": 5, "fail": 10}
     cfg["track_dirs"] = []
     return cfg
@@ -1462,10 +1462,10 @@ def selftest() -> int:
 
         # impl-outside: inherent impls only, generics and paths included, the home exempt.
         an = make({
-            "crates/app/src/main.rs": "mod workspace;\nmod other;\n",
-            "crates/app/src/workspace/mod.rs": "impl Workspace {}\nimpl Session {}\n",
+            "crates/app/src/main.rs": "mod window;\nmod other;\n",
+            "crates/app/src/window/mod.rs": "impl Workspace {}\nimpl Session {}\n",
             "crates/app/src/other.rs": "impl Workspace {}\nimpl<'a, T: Fn(u8) -> Vec<u8>> Workspace<'a> where T: Copy {}\n"
-                                       "impl Session {}\nimpl Render for Workspace {}\nimpl crate::workspace::Session {}\n"
+                                       "impl Session {}\nimpl Render for Workspace {}\nimpl crate::window::Session {}\n"
                                        "// impl Workspace {}\n",
             "crates/lib/src/lib.rs": "impl Workspace {}\n"})
         expect("impl-outside", {k: it.count for k, it in an.found["impl-outside"].items()},

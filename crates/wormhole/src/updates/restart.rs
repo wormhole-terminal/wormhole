@@ -12,9 +12,9 @@ use wormhole_core::agents::agent;
 use crate::app_state::app;
 use crate::terminal_view::Status;
 use crate::updates::{self, UpdatePhase, Updates};
-use crate::workspace::Workspace;
-use crate::workspace::dialog::{self, shortened};
-use crate::workspace::restart_facts::RestartFacts;
+use crate::window::Workspace;
+use crate::window::dialog::{self, shortened};
+use crate::window::restart_facts::RestartFacts;
 
 /// How long every terminal must stay idle, without a break, before the app restarts by itself. An
 /// agent is idle for a moment between its steps, so a single quiet look would restart under it.

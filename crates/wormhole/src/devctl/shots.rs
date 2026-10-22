@@ -6,7 +6,7 @@ use anyhow::Result;
 use gpui_kit::*;
 
 use super::Ctx;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 pub(super) fn shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "shot")?;

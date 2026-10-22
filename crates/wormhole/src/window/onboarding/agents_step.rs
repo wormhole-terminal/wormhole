@@ -15,8 +15,8 @@ use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
-use crate::workspace::features::project;
+use crate::window::Workspace;
+use crate::window::features::project;
 
 impl Workspace {
     /// Step 3: each agent on PATH with its own Install, the notifications switch, and the folder's
@@ -259,7 +259,7 @@ impl Workspace {
             ("Jot a note for this folder", &[ActionId::NewNote]),
             ("Hide the side panels", &[ActionId::ToggleSidebar, ActionId::ToggleRightPanel]),
         ];
-        let notes_on = crate::workspace::features::notes::notes_on(cx);
+        let notes_on = crate::window::features::notes::notes_on(cx);
         let command_done = settings(cx).notify_command_done;
         div()
             .flex()

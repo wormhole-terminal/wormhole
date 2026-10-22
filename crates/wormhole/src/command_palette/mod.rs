@@ -27,10 +27,10 @@ use wormhole_core::view::sidebar::display_path;
 use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::settings;
 use crate::settings_window;
-use crate::workspace::Workspace;
-use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView};
-use crate::workspace::window_lifecycle::open_tab;
-use crate::workspace::window_lifecycle::with_front_workspace;
+use crate::window::Workspace;
+use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView};
+use crate::window::window_lifecycle::open_tab;
+use crate::window::window_lifecycle::with_front_workspace;
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
 pub(crate) use rows::Recent;
@@ -98,12 +98,12 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
 /// Everything the palette lists, read now: every window's terminals, their folders and the recent
 /// ones, the actions the window in front can do, its project's actions and where its terminal is.
 fn gather(window_id: i64, cx: &mut App) -> Snapshot {
-    let menu = crate::workspace::menu_state::front_window_state(cx);
+    let menu = crate::window::menu_state::front_window_state(cx);
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let key = cx.active_window().map(|w| w.window_id());
     let finished = crate::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.
-    let default = crate::workspace::sidebar::shells::default_key(settings(cx)).to_string();
+    let default = crate::window::sidebar::shells::default_key(settings(cx)).to_string();
     let shells = wormhole_core::terminal::shells::choices(settings(cx))
         .into_iter()
         .filter(|c| c.key != default)
@@ -145,8 +145,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
         });
         let Ok((facts, numbers, session_folders)) = read else { continue };
         for facts in &facts {
-            let terminal =
-                crate::workspace::ambient::terminal(facts, finished.and_then(|f| f.get(&facts.tab)));
+            let terminal = crate::window::ambient::terminal(facts, finished.and_then(|f| f.get(&facts.tab)));
             let number = numbers.iter().find(|(session, _)| *session == facts.session).map(|(_, n)| *n);
             snapshot.terminals.push(TerminalItem { terminal, window_number: ix + 1, number });
         }
@@ -607,7 +606,7 @@ mod tests {
 
     use super::CommandPalette;
     use crate::app_state::OpenWindow;
-    use crate::workspace::view_tests::{draw, isolate_in, press, read, start};
+    use crate::window::view_tests::{draw, isolate_in, press, read, start};
 
     fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
         draw(cx, window);

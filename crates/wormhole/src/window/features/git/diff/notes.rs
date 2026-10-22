@@ -14,7 +14,7 @@ use super::render::DiffColors;
 use crate::settings::UiColors;
 use crate::settings::settings_in;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{self, Side};
 
@@ -191,7 +191,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{Note, notes};
-    use crate::workspace::features::git::diff::{DiffView, Request};
+    use crate::window::features::git::diff::{DiffView, Request};
     use wormhole_core::config::SizeUnits::{Binary, Decimal};
     use wormhole_core::git::{
         self, ChangeKind, DiffLimits, DiffSpec, FileChange, FileDiff, LfsChange, LfsPointer,

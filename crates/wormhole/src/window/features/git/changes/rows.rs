@@ -7,7 +7,7 @@ use wormhole_core::git::{ChangeKind, FileChange, RepoStatus};
 use wormhole_core::view::panel as rules;
 
 use crate::style;
-use crate::workspace::panel_list::CardPart;
+use crate::window::panel_list::CardPart;
 
 /// The block of the list a folder row sits in. Not an index: with only
 /// untracked files "Untracked" is the first block, and its folders keep their

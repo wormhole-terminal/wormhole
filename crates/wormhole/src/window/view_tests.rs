@@ -24,10 +24,10 @@ use crate::app_state::{AppState, OpenWindow, app};
 use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
-use crate::workspace::picker::Picker;
-use crate::workspace::status_bar::StatusItem;
-use crate::workspace::window_lifecycle::open_workspace_window;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::picker::Picker;
+use crate::window::status_bar::StatusItem;
+use crate::window::window_lifecycle::open_workspace_window;
+use crate::window::{RightTab, Workspace};
 
 const CHILD: &str = "WORMHOLE_VIEW_TEST_CHILD";
 
@@ -469,7 +469,7 @@ fn jump_goes_to_the_terminal_waiting_longest_then_the_next(cx: &mut TestAppConte
     std::thread::sleep(std::time::Duration::from_millis(5));
     hook(cx, &window, 2, "Notification", Some("second"));
     let jump = |cx: &mut TestAppContext| {
-        cx.update(crate::workspace::ambient::jump_to_waiting);
+        cx.update(crate::window::ambient::jump_to_waiting);
         cx.run_until_parked();
         read(cx, &window, |ws| ws.sessions[ws.active].id)
     };

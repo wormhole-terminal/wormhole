@@ -9,7 +9,7 @@ use wormhole_core::agents::Foreground;
 use wormhole_core::notify::{self, Change, Kind, Source, State};
 use wormhole_core::view::sidebar::command::ends_by_itself;
 
-use crate::workspace::ambient::TabFacts;
+use crate::window::ambient::TabFacts;
 
 /// A tab as it was last seen.
 #[derive(Debug)]
@@ -167,7 +167,7 @@ mod tests {
 
     use super::{Event, Watch};
     use crate::terminal_view::{Failure, ProgramNotice};
-    use crate::workspace::ambient::TabFacts;
+    use crate::window::ambient::TabFacts;
 
     fn tab(state: State, since: Instant) -> TabFacts {
         TabFacts {

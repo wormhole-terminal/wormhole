@@ -9,8 +9,8 @@ use wormhole_core::onboarding::intro::page::Entrance;
 
 use crate::settings::{UiColors, ui};
 use crate::style;
-use crate::workspace::Workspace;
-use crate::workspace::aux_window;
+use crate::window::Workspace;
+use crate::window::aux_window;
 
 /// How far a part rises as it comes in, points.
 const RISE: f32 = 16.0;

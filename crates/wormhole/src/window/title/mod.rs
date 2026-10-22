@@ -33,11 +33,11 @@ use crate::settings::{UiColors, store_in, ui_in};
 use crate::style::{self, Edges};
 use crate::terminal_view::Status;
 use crate::theme_bridge::token;
-use crate::workspace::Workspace;
-use crate::workspace::chrome::TitleDrag as _;
-use crate::workspace::folder_color;
-use crate::workspace::open_in::{self, OpenIn};
-use crate::workspace::title::extras::ExtraFacts;
+use crate::window::Workspace;
+use crate::window::chrome::TitleDrag as _;
+use crate::window::folder_color;
+use crate::window::open_in::{self, OpenIn};
+use crate::window::title::extras::ExtraFacts;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
 pub(super) struct Facts {
@@ -57,7 +57,7 @@ pub(super) struct Facts {
     pub(super) branch: Option<Option<String>>,
     /// For a terminal in a submodule, whose it is: "in terminal".
     pub(super) parent: Option<String>,
-    /// The extras beside it (`workspace::title::extras`): its status, the agent's model and context, the ports
+    /// The extras beside it (`window::title::extras`): its status, the agent's model and context, the ports
     /// and the pull request, each only if its setting is on and there is something to say.
     pub(super) extras: ExtraFacts,
 }
@@ -188,7 +188,7 @@ impl Workspace {
             return row.pl(px(left)).pr(px(right)).into_any_element();
         };
         row.with_animation(motion.id("slide-title"), motion.animation(), move |d, t| {
-            let (left, right) = inside(crate::workspace::chrome::sliding_title_pads(
+            let (left, right) = inside(crate::window::chrome::sliding_title_pads(
                 motion.edge,
                 (left, right),
                 motion.offset(t),

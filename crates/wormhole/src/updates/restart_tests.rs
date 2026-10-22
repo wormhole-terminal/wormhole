@@ -9,8 +9,8 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use crate::app_state::{OpenWindow, app};
 use crate::updates::restart::{request_restart, tick_at};
 use crate::updates::{UpdatePhase, Updates};
-use crate::workspace::view_tests::{hook, isolate_in, start};
-use crate::workspace::window_lifecycle::open_workspace_window;
+use crate::window::view_tests::{hook, isolate_in, start};
+use crate::window::window_lifecycle::open_workspace_window;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

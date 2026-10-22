@@ -17,7 +17,7 @@ use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
 use crate::settings::{UiColors, settings, ui};
 use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::overlay::scrim;
+use crate::window::overlay::scrim;
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
 /// scrolls.

@@ -24,7 +24,7 @@ use super::rows::Frame;
 use crate::style;
 use crate::style::{RowTone, SessionRow, StatusGlyph};
 use crate::terminal_view::Status;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// How often the redraw timer looks again while Reduce Motion holds the rows still (it may be turned
 /// off meanwhile).
@@ -76,7 +76,7 @@ impl Workspace {
     /// program not ended (a welcome that was killed would otherwise leave it up).
     fn demo_in_view(&self, cx: &App) -> Option<&Demo> {
         self.sidebar.demo.as_ref().filter(|demo| {
-            crate::workspace::onboarding::welcome::running(demo.tab, cx)
+            crate::window::onboarding::welcome::running(demo.tab, cx)
                 && self.sessions.iter().any(|session| {
                     session.id == demo.tab && session.terminal().read(cx).status() != Status::Exited
                 })

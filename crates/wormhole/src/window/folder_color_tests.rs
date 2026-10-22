@@ -12,10 +12,10 @@ use wormhole_core::theme::folder_color::FolderColor;
 use crate::app_state::OpenWindow;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
-use crate::workspace::features::project::set_feature_for;
-use crate::workspace::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
-use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
-use crate::workspace::{RightTab, Workspace};
+use crate::window::features::project::set_feature_for;
+use crate::window::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
+use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::{RightTab, Workspace};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

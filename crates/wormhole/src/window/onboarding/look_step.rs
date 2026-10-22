@@ -11,7 +11,7 @@ use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// The terminal font's face, so the size stepper beside it fits the row.
 const FONT_FACE_W: f32 = 132.0;

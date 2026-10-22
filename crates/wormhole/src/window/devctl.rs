@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::agents::{AgentId, integrations};
 
 use crate::app_state::app;
-use crate::workspace::{Workspace, folder_color};
+use crate::window::{Workspace, folder_color};
 
 /// What runs at the end of every window tick in a devctl build: devctl's command reader, which
 /// the app installs at startup (`crate::devctl::install`). devctl drives the window from above,
@@ -252,7 +252,7 @@ impl Workspace {
             None => "none".to_string(),
         };
         let apps: Vec<String> =
-            crate::workspace::open_in::OpenIn::apps(cx).into_iter().map(|app| app.bundle).collect();
+            crate::window::open_in::OpenIn::apps(cx).into_iter().map(|app| app.bundle).collect();
         let chip = plan.fit.chip.map_or("none".to_string(), |w| format!("{w:.0}"));
         format!(
             "title row: path={path} steps={steps} words={} chip={chip} folded={} name={:.0} tint={tint} indicator={:?}\n\
@@ -268,7 +268,7 @@ impl Workspace {
             apps.join(","),
             crate::settings::settings(cx).title_border,
             self.path_card.is_shown(),
-            crate::workspace::title::chips::describe(&plan),
+            crate::window::title::chips::describe(&plan),
         )
     }
 

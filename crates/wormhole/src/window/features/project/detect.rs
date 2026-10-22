@@ -12,7 +12,7 @@ use super::{BTreeMapEnv, LoadedProject, load_project, load_projects, project_fol
 use crate::app_state::{app, app_mut};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
-use crate::workspace::{RightTab, Workspace};
+use crate::window::{RightTab, Workspace};
 
 impl Workspace {
     /// Find each session's project and bring the ones in use up to date. Redraws only when

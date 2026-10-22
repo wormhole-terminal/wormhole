@@ -446,12 +446,9 @@ impl Mini {
                     )]))
                     .child(self.mono_line(&[]))
                     .child(
-                        self.mono_line(&step(
-                            "Read",
-                            " crates/wormhole/src/workspace/sidebar.rs (532 lines)",
-                        )),
+                        self.mono_line(&step("Read", " crates/wormhole/src/window/sidebar.rs (532 lines)")),
                     )
-                    .child(self.mono_line(&step("Update", " crates/wormhole/src/workspace/sidebar.rs")))
+                    .child(self.mono_line(&step("Update", " crates/wormhole/src/window/sidebar.rs")))
                     .child(
                         self.mono_line(&note(
                             "└ +18 −11 group_header: branch as a chip, badge right-aligned",

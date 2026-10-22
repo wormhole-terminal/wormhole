@@ -15,8 +15,8 @@ use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
 use crate::updates::restart;
-use crate::workspace::features::project;
-use crate::workspace::window_lifecycle::open_workspace_window;
+use crate::window::features::project;
+use crate::window::window_lifecycle::open_workspace_window;
 use crate::{notifications, updates};
 
 /// What the socket delivered: a hook's message, or a control request to answer (`control`).

@@ -102,7 +102,7 @@ pub(crate) mod windows;
 use self::saved_layout::Layout;
 pub(crate) use self::saved_layout::RightTab;
 use self::session::Session;
-use crate::workspace::features::git::{diff_view, picker};
+use crate::window::features::git::{diff_view, picker};
 
 use crate::terminal_view::Status;
 use wormhole_core::storage::store::WindowRecord;
@@ -113,7 +113,7 @@ pub struct Workspace {
     /// The window's terminals, one session each, in the order the sidebar's manual order keeps.
     sessions: Vec<Session>,
     /// The splits some of them are shown in (a split's members are adjacent in `sessions`).
-    splits: Vec<crate::workspace::panes::splits::Split>,
+    splits: Vec<crate::window::panes::splits::Split>,
     /// The root of the `.wormhole/` project that governs each folder a band names (the terminals'
     /// and the pinned ones), as of the last look (`refresh_projects`): the band, the title row and
     /// the Project tab ask it where a folder's colour lives without touching the disk. A folder in
@@ -164,7 +164,7 @@ pub struct Workspace {
     /// A drag on a panel's edge, while the button is down.
     resizing: Option<self::resize::ResizeDrag>,
     /// A drag on a divider between two panes, while the button is down.
-    pane_drag: Option<crate::workspace::panes::PaneDrag>,
+    pane_drag: Option<crate::window::panes::PaneDrag>,
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
     terminal_drag: Option<self::terminal_drag::TerminalDrag>,
@@ -185,7 +185,7 @@ pub struct Workspace {
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
     /// The path's hover card, a popover under the title row's folder.
-    path_card: crate::workspace::title::path_card::PathCard,
+    path_card: crate::window::title::path_card::PathCard,
     /// Where the title row's folder is drawn: the card and the path menu open under it.
     path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
@@ -213,9 +213,9 @@ pub struct Workspace {
     /// A "close this terminal?" question is on screen.
     closing_session_prompt: bool,
     /// The New Terminal in New Worktree dialog, while it is up.
-    worktree_ask: Option<crate::workspace::features::git::worktree::Asking>,
+    worktree_ask: Option<crate::window::features::git::worktree::Asking>,
     /// The comment dialog of a diff line, while it is up.
-    commenting: Option<crate::workspace::features::git::diff::Commenting>,
+    commenting: Option<crate::window::features::git::diff::Commenting>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,

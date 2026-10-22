@@ -24,7 +24,7 @@ use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::open_in::OpenIn;
+use crate::window::open_in::OpenIn;
 
 /// The scrollback sizes offered; a value set in config.json shows as it is.
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
@@ -257,7 +257,7 @@ fn choose_app(cx: &mut App) {
 /// config.json) is shown as written, with what happens instead.
 fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let settings = settings(cx);
-    let current = crate::workspace::sidebar::shells::default_key(settings).to_string();
+    let current = crate::window::sidebar::shells::default_key(settings).to_string();
     let choices = shells::choices(settings);
     let face = choices.iter().find(|c| c.key == current).map_or(current.clone(), |c| c.name.clone());
     let mut options: Vec<Choice<String>> = choices.iter().map(shell_choice).collect();

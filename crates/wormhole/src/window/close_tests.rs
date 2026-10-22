@@ -8,9 +8,9 @@ use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::app;
-use crate::workspace::features::notes::TaskItem;
-use crate::workspace::view_tests::{drive, hook, isolate_in, read, start};
-use crate::workspace::window_lifecycle::open_workspace_window;
+use crate::window::features::notes::TaskItem;
+use crate::window::view_tests::{drive, hook, isolate_in, read, start};
+use crate::window::window_lifecycle::open_workspace_window;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -130,7 +130,7 @@ fn closing_the_last_window_asks_before_quitting_while_an_agent_works(cx: &mut Te
     cx.update(|cx| {
         assert_eq!(app(cx).quit_prompt, Some(window_id), "the question is on screen");
         assert!(!app(cx).quitting);
-        crate::workspace::request_quit(cx);
+        crate::window::request_quit(cx);
         assert_eq!(app(cx).quit_prompt, Some(window_id), "one question at a time");
     });
 }

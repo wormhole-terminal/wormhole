@@ -16,7 +16,7 @@ use crate::app_state::look::sync_system_look;
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::settings::settings_in;
 use crate::style;
-use crate::workspace::{Layout, Workspace, chrome, window_bounds};
+use crate::window::{Layout, Workspace, chrome, window_bounds};
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
 
@@ -173,7 +173,7 @@ impl Workspace {
             .filter(|session| keeps_text && !session.forget_text)
             .map(|session| &session.pane)
             .map(|pane| {
-                (pane.id, pane.terminal.read(cx).scrollback_text(crate::workspace::save::SCROLLBACK_LINES))
+                (pane.id, pane.terminal.read(cx).scrollback_text(crate::window::save::SCROLLBACK_LINES))
             })
             .collect();
         let state = app_mut(cx);

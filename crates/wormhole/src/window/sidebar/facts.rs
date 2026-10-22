@@ -13,7 +13,7 @@ use wormhole_core::view::sidebar::command::{OutputFacts, ends_by_itself, has_new
 use super::rows;
 use crate::settings::settings_in;
 use crate::terminal_view::Status;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// What a terminal's row shows, gathered once per frame.
 pub(super) struct RowInfo {

@@ -26,8 +26,8 @@ use crate::app_state::recent_projects::RecentProjects;
 use crate::app_state::{AppState, OpenWindow};
 use crate::app_state::{app, app_mut};
 use crate::settings::{ParkedSettings, SettingsStore};
-use crate::workspace::features::project;
-use crate::workspace::window_lifecycle::with_front_workspace;
+use crate::window::features::project;
+use crate::window::window_lifecycle::with_front_workspace;
 
 impl AppState {
     /// The profile Wormhole is in.
@@ -180,7 +180,7 @@ impl AppState {
         })
         .is_none()
         {
-            crate::workspace::window_lifecycle::open_workspace_window_in(&target, None, None, cx);
+            crate::window::window_lifecycle::open_workspace_window_in(&target, None, None, cx);
         }
     }
 
@@ -204,9 +204,9 @@ impl AppState {
         // one (nothing to type in, and closing the odd window would then quit).
         let shown = app(cx).active_profile().clone();
         if app(cx).windows_of(&shown).next().is_none() {
-            crate::workspace::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
+            crate::window::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
         }
-        crate::workspace::menu_state::menus_changed(cx);
+        crate::window::menu_state::menus_changed(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -331,7 +331,7 @@ impl AppState {
         Self::show_profile_windows(&from, target, cx);
         crate::app_state::look::sync_system_look(cx);
         crate::app_state::look::apply_theme(cx);
-        crate::workspace::menu_state::menus_changed(cx);
+        crate::window::menu_state::menus_changed(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -359,10 +359,10 @@ impl AppState {
                 })
                 .unwrap_or_default();
             if saved.is_empty() {
-                crate::workspace::window_lifecycle::open_workspace_window_in(target, None, None, cx);
+                crate::window::window_lifecycle::open_workspace_window_in(target, None, None, cx);
             }
             for record in saved {
-                crate::workspace::window_lifecycle::open_workspace_window_in(target, Some(record), None, cx);
+                crate::window::window_lifecycle::open_workspace_window_in(target, Some(record), None, cx);
             }
             return;
         }

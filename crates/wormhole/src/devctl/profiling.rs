@@ -20,7 +20,7 @@ use wormhole_core::storage::fsutil::{LinkPolicy, write_atomic};
 use super::{Ctx, file_name};
 use crate::perf::allocations::thread_counts;
 use crate::perf::report::{Report, Sample, Terminals};
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 /// The longest a profile may run.
 const MAX_SECONDS: f64 = 600.0;

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use gpui_kit::*;
 
 use super::facts::row_times;
-use crate::workspace::Workspace;
+use crate::window::Workspace;
 
 impl Workspace {
     /// The repository a worktree belongs to, by its root; read from disk once per refresh.
