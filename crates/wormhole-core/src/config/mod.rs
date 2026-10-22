@@ -31,7 +31,7 @@ use std::time::SystemTime;
 
 use serde_json::{Map, Value};
 
-pub use self::feature_table::{FEATURES, FeatureId, FeatureInfo, FeatureMask, Kind as FeatureKind};
+pub use self::feature_table::{FEATURES, FeatureId, FeatureInfo, FeatureKind, FeatureMask};
 #[cfg(test)]
 pub(crate) use self::settings::keys;
 pub use self::settings::{

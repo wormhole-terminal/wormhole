@@ -88,7 +88,7 @@ impl FocusAreas {
     }
 
     /// The handle an area other than the terminal holds the focus with.
-    fn handle(&self, area: Area) -> Option<&FocusHandle> {
+    pub(in crate::window) fn handle(&self, area: Area) -> Option<&FocusHandle> {
         Some(match area {
             Area::TitleRow => &self.title_row,
             Area::Sidebar => &self.sidebar,
@@ -168,7 +168,7 @@ impl Workspace {
         if self.active_terminal().focus_handle(cx).is_focused(window) {
             return Some(Area::Terminal);
         }
-        if self.editing_note.is_some() {
+        if self.editing_note.is_some() || self.feature_editing {
             return Some(Area::PanelContent);
         }
         self.areas.holder(window)

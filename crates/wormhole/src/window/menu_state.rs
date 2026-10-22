@@ -112,6 +112,7 @@ impl Workspace {
             state.project_actions =
                 project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();
         }
+        self.feature_menus(&mut state, cx);
         let numbered = self.session_listing(cx).numbered();
         state.terminals = numbered.iter().map(|&ix| self.sessions[ix].name(cx).to_string()).collect();
         state.current_terminal = numbered.iter().position(|&ix| ix == self.active);

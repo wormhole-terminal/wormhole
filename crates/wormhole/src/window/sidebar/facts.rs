@@ -50,6 +50,65 @@ pub(in crate::window) struct RowInfo {
     pub(super) changes: Option<usize>,
     /// The repository the changes are of, so rows of one repository count them once.
     pub(super) repo: Option<PathBuf>,
+    /// What a feature puts on the row besides the counts above, through [`RowExtras`].
+    #[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
+    pub(super) extra: Option<RowExtra>,
+}
+
+/// What a feature puts on a terminal's row: a number the row draws (notes' "3 open", Changes'
+/// file count).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::window) struct RowExtra {
+    pub count: usize,
+}
+
+/// The rows as a feature may reach them: each row's id and its one slot for an extra, and nothing
+/// else (`RowInfo`'s other fields are the sidebar's). The batch is the window's, so a feature
+/// downcasts its entity once and loops here, never once per row.
+#[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
+pub(in crate::window) struct RowExtras<'a> {
+    rows: &'a mut [RowInfo],
+}
+
+#[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
+impl<'a> RowExtras<'a> {
+    pub(in crate::window) fn new(rows: &'a mut [RowInfo]) -> Self {
+        Self { rows }
+    }
+
+    /// Each row's terminal id and its slot.
+    pub(in crate::window) fn iter_mut(&mut self) -> impl Iterator<Item = (i64, &mut Option<RowExtra>)> {
+        self.rows.iter_mut().map(|row| (row.id, &mut row.extra))
+    }
+}
+
+#[cfg(test)]
+impl RowInfo {
+    /// An idle plain terminal's row, for the tests that need one (here and in `feature_tests`).
+    pub(in crate::window) fn test_row(id: i64) -> Self {
+        Self {
+            ix: 0,
+            id,
+            name: "t".into(),
+            agent: None,
+            source: Source::Plain,
+            state: RowState::Idle,
+            message: None,
+            since: Duration::from_secs(180),
+            cwd: Some(PathBuf::from("/w")),
+            worktree: None,
+            command: None,
+            running: None,
+            bell: false,
+            failure: None,
+            unread: false,
+            pinned: false,
+            open_items: 0,
+            changes: None,
+            repo: None,
+            extra: None,
+        }
+    }
 }
 
 /// A plain terminal's last failed command, as its row says it ("cargo build · exit 101").
@@ -138,6 +197,7 @@ impl Workspace {
                         let n = status.files.len();
                         (n > 0).then_some(n)
                     }),
+                    extra: None,
                 }
             })
             .collect()

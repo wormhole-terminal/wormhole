@@ -14,6 +14,9 @@ impl Workspace {
             window.focus(&terminal_focus, cx);
             return;
         }
+        if self.focus_feature(window, cx) {
+            return;
+        }
         if !crate::window::features::notes::notes_on(cx) {
             return;
         }

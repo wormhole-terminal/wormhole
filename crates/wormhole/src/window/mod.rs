@@ -75,6 +75,7 @@ mod facts;
 #[cfg(test)]
 mod failed_tests;
 mod feature;
+mod feature_host;
 #[cfg(test)]
 mod feature_tests;
 pub(crate) mod features;
@@ -174,6 +175,12 @@ pub struct Workspace {
     /// The features the app has (`feature`), copied from the installed table when the window was
     /// made so the frame never reads the global. A test installs its own before it opens one.
     features: &'static [self::feature::FeatureDef],
+    /// The entity of each feature that has state, in the table's order (`None` where the entry has
+    /// none), made with the window whether the feature is on or off.
+    feature_states: Vec<Option<self::feature::FeatureState>>,
+    /// A feature's text field has the keyboard (`FeatureEvent::Editing`): the panel's content is the
+    /// focused area, as for a note being written.
+    feature_editing: bool,
     /// The tab that was open when Usage was opened: where the panel goes back to when no agent
     /// is left to show usage for.
     tab_before_usage: Option<TabId>,
@@ -327,6 +334,9 @@ impl Workspace {
                 this.pick_folder_color(*color, cx);
             });
 
+        let features = self::feature::FeatureTable::installed(cx);
+        let feature_states = Self::make_feature_states(features, window, cx);
+
         let mut this = Self {
             sessions: Vec::new(),
             splits: Vec::new(),
@@ -339,7 +349,9 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             right_tab: TabId::default(),
-            features: self::feature::FeatureTable::installed(cx),
+            features,
+            feature_states,
+            feature_editing: false,
             tab_before_usage: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,

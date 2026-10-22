@@ -563,7 +563,6 @@ fn split_line_x(metrics: style::Metrics) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use std::time::Duration;
 
     use wormhole_core::agents::AgentId;
@@ -577,25 +576,10 @@ mod tests {
 
     fn info(agent: bool, state: RowState) -> RowInfo {
         RowInfo {
-            ix: 0,
-            id: 1,
-            name: "t".into(),
             agent: agent.then_some(AgentId::Claude),
             source: if agent { Source::Agent } else { Source::Plain },
             state,
-            message: None,
-            since: Duration::from_secs(180),
-            cwd: Some(PathBuf::from("/w")),
-            worktree: None,
-            command: None,
-            running: None,
-            bell: false,
-            failure: None,
-            unread: false,
-            pinned: false,
-            open_items: 0,
-            changes: None,
-            repo: None,
+            ..RowInfo::test_row(1)
         }
     }
 

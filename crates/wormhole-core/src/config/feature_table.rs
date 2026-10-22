@@ -31,7 +31,7 @@ pub enum FeatureId {
 
 /// Whether a person can do without a feature.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Kind {
+pub enum FeatureKind {
     /// Part of the app: always on.
     Always,
     /// Can be switched off. `default_on` is what it is until the person says otherwise.
@@ -47,7 +47,7 @@ pub struct FeatureInfo {
     pub key: &'static str,
     pub title: &'static str,
     pub description: &'static str,
-    pub kind: Kind,
+    pub kind: FeatureKind,
     /// While the feature is unfinished: the flag that gates it.
     pub gate: Option<FeatureFlag>,
     /// The panel tabs it brings, in the order the panel lists them.
@@ -61,7 +61,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "changes",
         title: "Changes",
         description: "The files changed in a terminal's repository, their diffs and review comments.",
-        kind: Kind::Always,
+        kind: FeatureKind::Always,
         gate: None,
         tabs: &[TabId::Changes],
     },
@@ -70,7 +70,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "history",
         title: "History",
         description: "The repository's commits, and the branch picker.",
-        kind: Kind::Optional { default_on: true },
+        kind: FeatureKind::Optional { default_on: true },
         gate: None,
         tabs: &[TabId::History],
     },
@@ -79,7 +79,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "notes",
         title: "Notes and tasks",
         description: "Notes and next steps for each terminal.",
-        kind: Kind::Optional { default_on: true },
+        kind: FeatureKind::Optional { default_on: true },
         gate: Some(FeatureFlag::NotesAndTasks),
         tabs: &[TabId::Notes],
     },
@@ -88,7 +88,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "usage",
         title: "Usage",
         description: "How much of their plan the coding agents in view have used.",
-        kind: Kind::Always,
+        kind: FeatureKind::Always,
         gate: None,
         tabs: &[TabId::Usage],
     },
@@ -97,7 +97,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "project",
         title: "Project folders",
         description: "The .wormhole project folder: trust, per-project settings, actions and colours.",
-        kind: Kind::Optional { default_on: true },
+        kind: FeatureKind::Optional { default_on: true },
         gate: Some(FeatureFlag::ProjectFolders),
         tabs: &[TabId::Project],
     },
@@ -106,7 +106,7 @@ pub const FEATURES: [FeatureInfo; 6] = [
         key: "worktrees",
         title: "Worktrees",
         description: "A terminal in a new worktree of its repository.",
-        kind: Kind::Always,
+        kind: FeatureKind::Always,
         gate: None,
         tabs: &[],
     },
@@ -140,6 +140,7 @@ impl FeatureId {
 pub struct FeatureMask(u16);
 
 impl FeatureMask {
+    /// Whether `id` is on. An always-on feature is set whatever the person's settings say.
     pub const fn has(self, id: FeatureId) -> bool {
         self.0 & (1 << id as u8) != 0
     }
@@ -156,8 +157,8 @@ impl FeatureMask {
         let mut bits = 0;
         for info in &FEATURES {
             let on = match info.kind {
-                Kind::Always => true,
-                Kind::Optional { default_on } => {
+                FeatureKind::Always => true,
+                FeatureKind::Optional { default_on } => {
                     default_on && info.gate.is_none_or(|flag| enabled_in(flag, &settings.feature_flags, mode))
                 }
             };
@@ -206,7 +207,7 @@ mod tests {
     fn a_gate_is_a_flag_of_an_optional_feature() {
         for info in &FEATURES {
             if info.gate.is_some() {
-                assert!(matches!(info.kind, Kind::Optional { .. }), "{} is always on", info.key);
+                assert!(matches!(info.kind, FeatureKind::Optional { .. }), "{} is always on", info.key);
             }
         }
     }
