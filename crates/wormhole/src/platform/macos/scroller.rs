@@ -10,7 +10,7 @@ use objc2::rc::Retained;
 use objc2::runtime::{NSObjectProtocol, ProtocolObject};
 use objc2_app_kit::{NSPreferredScrollerStyleDidChangeNotification, NSScroller, NSScrollerStyle};
 use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSUserDefaults, ns_string};
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
+use wormhole_term::scrollbar::ScrollerStyle;
 
 /// An observer of the style; dropping it stops the calls.
 pub struct StyleObserver {

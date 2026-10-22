@@ -9,7 +9,7 @@ use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::notify::Source;
-use wormhole_core::terminal::{Mark, Notification, PtyEvent, WindowOp};
+use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
 
 use super::TerminalView;
 use crate::settings::settings_in;

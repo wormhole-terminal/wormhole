@@ -271,7 +271,6 @@
     "cycles": {},
     "layers": {},
     "cross-reexports": {
-      "crates/wormhole-core/src/terminal/cli_tool/mod.rs :: crate::ipc::control": 1,
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
     "impl-outside": {}

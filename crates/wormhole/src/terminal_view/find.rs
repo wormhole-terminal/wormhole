@@ -9,10 +9,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::find::{FindOption, FindQuery, FindResults};
-use wormhole_core::terminal::types::Line;
 use wormhole_core::view::limits::count_grouped;
+use wormhole_term::ScreenSnapshot;
+use wormhole_term::find::{FindOption, FindQuery, FindResults};
+use wormhole_term::types::Line;
 
 use super::TerminalView;
 use super::find_bar::FindBar;
@@ -46,7 +46,7 @@ pub(super) struct Find {
 pub(super) struct FindStatus {
     pub count: SharedString,
     pub invalid: bool,
-    pub options: wormhole_core::terminal::find::FindOptions,
+    pub options: wormhole_term::find::FindOptions,
 }
 
 impl TerminalView {

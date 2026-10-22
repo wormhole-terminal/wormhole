@@ -144,16 +144,16 @@ mod recording {
     /// Start recording: frames' parts, every thread's allocations and the terminal layer's
     /// counters (reset).
     pub(crate) fn start() {
-        wormhole_core::terminal::perf::start();
+        wormhole_term::perf::start();
         allocations::set_counting(true);
         RECORDING.store(true, Ordering::Relaxed);
     }
 
     /// Stop recording, and the terminal layer's counters since [`start`].
-    pub(crate) fn stop() -> wormhole_core::terminal::perf::Counters {
+    pub(crate) fn stop() -> wormhole_term::perf::Counters {
         RECORDING.store(false, Ordering::Relaxed);
         allocations::set_counting(false);
-        wormhole_core::terminal::perf::stop()
+        wormhole_term::perf::stop()
     }
 
     /// Forget what was recorded since the last frame (frames drawn between the ones measured).

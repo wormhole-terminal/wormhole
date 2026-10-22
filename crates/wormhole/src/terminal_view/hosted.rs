@@ -9,8 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use gpui_kit::component::Sizable as _;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
-use wormhole_core::terminal::PtyEvents;
-use wormhole_core::terminal::{GridSize, Pty, SpawnOptions};
+use wormhole_core::terminal::SpawnOptions;
+use wormhole_term::PtyEvents;
+use wormhole_term::{GridSize, Pty};
 
 use super::TerminalView;
 use super::status::TerminalEvent;
@@ -108,7 +109,7 @@ impl TerminalView {
                     let options = options.clone();
                     async move {
                         let hosts_dir = wormhole_core::ipc::hosts::ensure_hosts_dir(&data_dir)?;
-                        let host = wormhole_core::terminal::client::HostCommand {
+                        let host = wormhole_term::client::HostCommand {
                             binary: &binary,
                             hosts_dir: &hosts_dir,
                             id: &id,
@@ -278,7 +279,7 @@ impl TerminalView {
         let id = self.host.id.clone()?;
         let options = self.host.options.clone()?;
         let hosts_dir = wormhole_core::ipc::hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
-        let socket = match wormhole_core::terminal::client::socket_of(&hosts_dir, &id) {
+        let socket = match wormhole_term::client::socket_of(&hosts_dir, &id) {
             Ok(socket) => socket,
             Err(err) => {
                 tracing::warn!(id, "no socket to attach to again: {err:#}");

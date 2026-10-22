@@ -7,7 +7,7 @@ use gpui_kit::{
     Font, FontId, FontStyle, FontWeight, Hsla, Pixels, ShapedLine, StrikethroughStyle, TextRun,
     WindowTextSystem, px,
 };
-use wormhole_core::terminal::types::{COLOR_COUNT, Colors};
+use wormhole_term::types::{COLOR_COUNT, Colors};
 
 use super::outline::Outlines;
 use super::rows::{Segment, Style};
@@ -142,8 +142,8 @@ pub(super) fn shape_blurred(
 #[cfg(test)]
 mod tests {
     use gpui_kit::{FontStyle, FontWeight, font};
-    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
     use wormhole_core::theme;
+    use wormhole_term::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
 
     use super::word_runs;
     use crate::palette::Palette;

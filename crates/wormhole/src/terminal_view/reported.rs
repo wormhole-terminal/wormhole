@@ -1,4 +1,4 @@
-//! What programs report about themselves (OSC 7501, `wormhole_core::terminal::program_status`) as
+//! What programs report about themselves (OSC 7501, `wormhole_term::program_status`) as
 //! the terminal's status.
 //!
 //! The terminal's PTY thread keeps the records and says when they changed
@@ -11,10 +11,10 @@
 
 #[cfg(test)]
 use gpui_kit::*;
-use wormhole_core::terminal::program_status::Summary as Reported;
-use wormhole_core::terminal::program_status::{Kind, State};
+use wormhole_term::program_status::Summary as Reported;
+use wormhole_term::program_status::{Kind, State};
 #[cfg(test)]
-use wormhole_core::terminal::{Mark, PtyEvent};
+use wormhole_term::{Mark, PtyEvent};
 
 use super::TerminalView;
 use super::status::Status;
@@ -109,7 +109,7 @@ impl TerminalView {
     /// Feed one OSC 7501 body to the terminal's records as the PTY thread would, and handle the
     /// event that tells the UI.
     pub(crate) fn report_for_test(&mut self, body: &str, cx: &mut Context<Self>) {
-        use wormhole_core::terminal::program_status::{Parsed, parse};
+        use wormhole_term::program_status::{Parsed, parse};
         if let (Some(Parsed::Report(report)), Some(pty)) = (parse(body.as_bytes(), 2), &self.pty) {
             pty.program_status().apply(report);
         }
@@ -119,7 +119,7 @@ impl TerminalView {
     /// A shell prompt began (OSC 133 `A`): the PTY thread drops what only the running program could
     /// say, the UI is told, and then the mark itself reaches the UI.
     pub(crate) fn prompt_for_test(&mut self, cx: &mut Context<Self>) {
-        use wormhole_core::terminal::PromptKind;
+        use wormhole_term::PromptKind;
         if let Some(pty) = &self.pty {
             pty.program_status().on_prompt();
         }
@@ -184,7 +184,7 @@ fn waiting_for(kind: Option<Kind>) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::terminal::program_status::{Kind, State, Summary};
+    use wormhole_term::program_status::{Kind, State, Summary};
 
     use super::super::Status;
     use super::{status_of, waiting_for};

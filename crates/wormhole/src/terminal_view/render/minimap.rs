@@ -3,7 +3,7 @@
 //! scrolling.
 
 use gpui_kit::*;
-use wormhole_core::terminal::minimap::{BLOCK_H, COLUMN_MAX, LINE_PITCH, MinimapGeometry, WIDTH};
+use wormhole_term::minimap::{BLOCK_H, COLUMN_MAX, LINE_PITCH, MinimapGeometry, WIDTH};
 
 use crate::settings::store_in;
 use crate::terminal_view::{PADDING_Y, TerminalView};

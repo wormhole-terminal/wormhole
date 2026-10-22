@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
 use wormhole_core::theme::tokens::Appearance;
+use wormhole_term::scrollbar::ScrollerStyle;
 
 use super::Ctx;
 use crate::platform::scroller::ScrollerPrefs;

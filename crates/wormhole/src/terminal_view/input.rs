@@ -5,11 +5,11 @@ use std::time::Instant;
 use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
-use wormhole_core::terminal::Pty;
-use wormhole_core::terminal::input::{file_drop, keys, mouse};
-use wormhole_core::terminal::types::LineSize;
-use wormhole_core::terminal::types::{Column, Line, Modes, Point as GridPoint, Scroll, SelectionType, Side};
-use wormhole_core::terminal::{Direction, KeySent};
+use wormhole_term::Pty;
+use wormhole_term::input::{file_drop, keys, mouse};
+use wormhole_term::types::LineSize;
+use wormhole_term::types::{Column, Line, Modes, Point as GridPoint, Scroll, SelectionType, Side};
+use wormhole_term::{Direction, KeySent};
 
 use super::status::TerminalEvent;
 use super::{Layout, TerminalView};
@@ -556,8 +556,8 @@ fn drag_scroll_lines(layout: &Layout, position: Point<Pixels>) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{Keystroke, point, px, size};
-    use wormhole_core::terminal::Direction;
-    use wormhole_core::terminal::types::{LineSize, Side};
+    use wormhole_term::Direction;
+    use wormhole_term::types::{LineSize, Side};
 
     use super::super::Layout;
     use super::{TerminalCommand, cell_at, drag_scroll_lines, keystroke_spec, platform_command};

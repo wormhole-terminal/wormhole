@@ -163,7 +163,7 @@ mod tests {
 
     use wormhole_core::agents::{AgentId, Foreground};
     use wormhole_core::notify::{Kind, Source, State};
-    use wormhole_core::terminal::Notification;
+    use wormhole_term::Notification;
 
     use super::{Event, Watch};
     use crate::terminal_view::{Failure, ProgramNotice};

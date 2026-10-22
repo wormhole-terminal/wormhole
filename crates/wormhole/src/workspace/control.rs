@@ -20,7 +20,7 @@ use wormhole_core::ipc::control::{
     Request, SEND_TEXT_MAX_BYTES, SendTarget, StatusInfo, Summary, TabInfo, Target, TerminalInfo,
     TerminalState, WindowInfo, notice_text, send_text_check, writes_off,
 };
-use wormhole_core::terminal::Notification;
+use wormhole_term::Notification;
 
 use super::ambient::state_of;
 use super::app::{AppState, OpenWindow, app};

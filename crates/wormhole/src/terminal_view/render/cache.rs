@@ -6,8 +6,8 @@
 //! "changes" but all except the new ones were built a frame ago, one line up.
 //! Only rows with new content are built (and shaped) again.
 
-use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::types::{Cell, Color, RowExtras};
+use wormhole_term::ScreenSnapshot;
+use wormhole_term::types::{Cell, Color, RowExtras};
 
 use super::rows::Marks;
 
@@ -161,9 +161,9 @@ fn row_hash(cells: &[Cell], extras: &RowExtras, marks: &Marks) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::terminal::ScreenSnapshot;
-    use wormhole_core::terminal::testing::TestTerm;
-    use wormhole_core::terminal::types::{Cell, Column, Line, Point, RowExtras, SelectionType, Side};
+    use wormhole_term::ScreenSnapshot;
+    use wormhole_term::testing::TestTerm;
+    use wormhole_term::types::{Cell, Column, Line, Point, RowExtras, SelectionType, Side};
 
     use super::super::rows::Marks;
     use super::{RowCache, SyncStats};

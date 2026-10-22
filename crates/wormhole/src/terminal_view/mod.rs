@@ -7,17 +7,18 @@ use std::time::{Duration, Instant};
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::types::Modes;
+use wormhole_term::types::Modes;
 
 use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::store_in;
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::notify::Source;
-use wormhole_core::terminal::input::app_selection::AppSelection;
-use wormhole_core::terminal::input::{keys, mouse};
-use wormhole_core::terminal::program_status::Summary as Reported;
-use wormhole_core::terminal::{GridSize, Pty, SpawnOptions, WindowGeometry};
+use wormhole_core::terminal::SpawnOptions;
+use wormhole_term::input::app_selection::AppSelection;
+use wormhole_term::input::{keys, mouse};
+use wormhole_term::program_status::Summary as Reported;
+use wormhole_term::{GridSize, Pty, WindowGeometry};
 
 mod blocks;
 mod failed;
@@ -195,7 +196,7 @@ pub struct TerminalView {
     /// Runs while `wants_blink`, then ends; `None` once it has.
     cursor_blink: Option<Task<()>>,
     /// The link under the pointer while ⌘ is held (see `links`).
-    hovered_link: Option<wormhole_core::terminal::Link>,
+    hovered_link: Option<wormhole_term::Link>,
     /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0).
     font_zoom: f32,
     /// Where the pointer holds the minimap's slider, over its top, while it's dragged.
@@ -361,7 +362,7 @@ impl TerminalView {
     }
 
     /// Hand the PTY's events to the terminal as they come.
-    fn listen(&mut self, events: wormhole_core::terminal::PtyEvents, cx: &mut Context<Self>) {
+    fn listen(&mut self, events: wormhole_term::PtyEvents, cx: &mut Context<Self>) {
         self._tasks.push(cx.spawn(async move |this, cx| {
             while let Some(event) = events.recv().await {
                 // Everything that's already queued goes into the same update.
@@ -489,7 +490,7 @@ impl TerminalView {
     /// Paste text the way a real terminal does (bracketed if the app asked).
     pub fn paste(&mut self, text: &str) {
         let Some(pty) = &self.pty else { return };
-        let bytes = wormhole_core::terminal::input::paste(text, pty.mode());
+        let bytes = wormhole_term::input::paste(text, pty.mode());
         self.write_input(bytes);
     }
 

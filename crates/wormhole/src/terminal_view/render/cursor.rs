@@ -5,8 +5,8 @@ use std::time::Duration;
 use gpui_kit::{
     Bounds, ContentMask, Context, Font, Hsla, Pixels, Point, ShapedLine, WindowTextSystem, point, px, size,
 };
-use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::types::{Color, CursorShape, NamedColor};
+use wormhole_term::ScreenSnapshot;
+use wormhole_term::types::{Color, CursorShape, NamedColor};
 
 use super::frame::Geometry;
 use super::rows::{self, Style};
@@ -159,8 +159,8 @@ pub(super) fn cursor_frame(
 #[cfg(test)]
 mod tests {
     use gpui_kit::{point, px};
-    use wormhole_core::terminal::types::CursorShape;
     use wormhole_core::theme;
+    use wormhole_term::types::CursorShape;
 
     use super::{cursor_rect, drawn, redraws_text, text_color};
     use crate::palette::Palette;

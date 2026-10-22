@@ -20,7 +20,7 @@
 use std::collections::HashMap;
 
 use gpui_kit::*;
-use wormhole_core::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
+use wormhole_term::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
 use crate::platform::window as os_window;
 

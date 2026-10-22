@@ -7,7 +7,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Selectable as _;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::find::{FindOption, FindOptions};
+use wormhole_term::find::{FindOption, FindOptions};
 
 use super::buttons::{icon, icon_button};
 use super::scale::{CONTROL_H, Edges, TextRole};

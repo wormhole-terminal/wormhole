@@ -3,8 +3,8 @@
 //! tests and the benchmark.
 
 use gpui_kit::{Bounds, Hsla, Path, Pixels, Point};
-use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::types::{Cell, LineSize};
+use wormhole_term::ScreenSnapshot;
+use wormhole_term::types::{Cell, LineSize};
 
 use super::blur::blurred_row;
 use super::cache::{RowCache, SyncStats};
@@ -206,8 +206,8 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{point, px};
-    use wormhole_core::terminal::testing::TestTerm;
     use wormhole_core::theme;
+    use wormhole_term::testing::TestTerm;
 
     use super::{FrameCache, FrameStats, Geometry};
     use crate::palette::Palette;

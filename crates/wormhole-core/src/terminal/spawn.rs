@@ -1,10 +1,12 @@
 //! Starting a tab's shell: what it runs and with which environment (`process`), handed to the
-//! terminal layer as a [`Launch`](super::Launch) with the options the engine is started with.
+//! terminal layer as a [`Launch`](wormhole_term::Launch) with the options the engine is started with.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use super::{GridSize, Pty, PtyEvents, StartOptions, process, types};
+use wormhole_term::{GridSize, Pty, PtyEvents, StartOptions, types};
+
+use super::process;
 
 /// How to start a tab's shell.
 #[derive(Clone, Debug, Default)]
@@ -83,7 +85,7 @@ pub fn spawn(size: GridSize, options: &SpawnOptions) -> anyhow::Result<(Pty, Pty
 /// (`options.restore`) is not replayed: a hosted terminal's history is the host's. Blocks for up
 /// to a few seconds while the host starts: never on the UI thread.
 pub fn spawn_hosted(
-    host: &super::client::HostCommand<'_>,
+    host: &wormhole_term::client::HostCommand<'_>,
     size: GridSize,
     options: &SpawnOptions,
 ) -> anyhow::Result<(Pty, PtyEvents)> {
@@ -122,7 +124,9 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::{SpawnOptions, spawn_program};
-    use crate::terminal::{GridSize, process};
+    use wormhole_term::GridSize;
+
+    use crate::terminal::process;
 
     const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 
@@ -201,8 +205,8 @@ mod profile_tests {
     use crate::agents::AgentId;
     use crate::config::profile::{AgentLogin, PROFILE_VAR, Profile};
     use crate::storage::paths::ProfileId;
-    use crate::terminal::GridSize;
     use crate::view::sidebar::GroupColor;
+    use wormhole_term::GridSize;
 
     const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 

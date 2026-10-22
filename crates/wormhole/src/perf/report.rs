@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use std::time::Duration;
 
 use serde::Serialize;
-use wormhole_core::terminal::perf::{Counters, LockUse};
+use wormhole_term::perf::{Counters, LockUse};
 
 use super::{Part, Parts};
 
@@ -271,7 +271,7 @@ fn round(value: f64) -> f64 {
 mod tests {
     use std::time::Duration;
 
-    use wormhole_core::terminal::perf::{Counters, LockUse};
+    use wormhole_term::perf::{Counters, LockUse};
 
     use super::{Report, Sample, Spread, Terminals, WARM_UP_FRAMES};
     use crate::perf::{Part, Parts};

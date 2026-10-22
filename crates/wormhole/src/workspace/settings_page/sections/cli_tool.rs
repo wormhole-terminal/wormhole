@@ -13,7 +13,8 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::cli_tool::{self, Advice, COMMAND_NAME, Status, Targets};
+use wormhole_core::ipc::control::COMMAND_NAME;
+use wormhole_core::terminal::cli_tool::{self, Advice, Status, Targets};
 
 use crate::style::{self, TextRole};
 use crate::workspace::settings_page::registry::Setting;

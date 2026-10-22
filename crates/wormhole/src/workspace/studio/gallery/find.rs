@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::find::FindOptions;
+use wormhole_term::find::FindOptions;
 
 use super::Env;
 use super::view::GalleryView;

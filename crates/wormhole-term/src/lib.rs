@@ -2,7 +2,7 @@
 //! to [`Pty`] and to [`types`] (`wormhole_vt::types`: cells, colors, positions, modes); nothing
 //! above it names the engine's internals. It knows neither the UI nor the rest of the app (its
 //! settings, its sockets, its database): the program, its folder and its environment come in as a
-//! [`Launch`], and the app's core reaches it as `wormhole_core::terminal`.
+//! [`Launch`]; the app uses it directly, and core's `terminal` starts its programs.
 //!
 //! The engine is Wormhole's own (`wormhole_vt`). The PTY layer is this crate's own too: it opens the
 //! pseudo-terminal, starts the program and runs the thread that reads it, which parses into the

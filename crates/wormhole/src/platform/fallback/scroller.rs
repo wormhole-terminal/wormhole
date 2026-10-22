@@ -3,7 +3,7 @@
 //! (a change shows from the next start).
 
 use gpui_kit::App;
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
+use wormhole_term::scrollbar::ScrollerStyle;
 
 /// Never made here: there is nothing to observe.
 pub struct StyleObserver;

@@ -6,7 +6,7 @@
 //! the pane, which is why a change of style re-lays out every window and nothing else does.
 
 use gpui_kit::{App, Global};
-use wormhole_core::terminal::scrollbar::{GUTTER_W, ScrollerStyle};
+use wormhole_term::scrollbar::{GUTTER_W, ScrollerStyle};
 
 use super::os::scroller as os;
 pub use super::os::scroller::StyleObserver;

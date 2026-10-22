@@ -10,8 +10,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use gpui_kit::{Bounds, Pixels, Point, RenderImage, Size, point, px, size};
-use wormhole_core::terminal::images::{Image, ImageStore, Tiles};
-use wormhole_core::terminal::types::{Extent, ImagePlacement};
+use wormhole_term::images::{Image, ImageStore, Tiles};
+use wormhole_term::types::{Extent, ImagePlacement};
 
 use super::frame::Geometry;
 use super::rows::ImageRun;
@@ -187,7 +187,7 @@ pub(super) fn placement_paints(
 
 /// The store's key of a placement's picture (its handle).
 fn placement_key(placement: &ImagePlacement) -> u32 {
-    wormhole_core::terminal::images::key_of(placement.image)
+    wormhole_term::images::key_of(placement.image)
 }
 
 /// Where one placement draws: the part of the picture it shows, sized by its extent over the
@@ -242,8 +242,8 @@ mod tests {
     use std::sync::Arc;
 
     use gpui_kit::{Bounds, point, px, size};
-    use wormhole_core::terminal::images::{Image, ImageStore, Tiles};
-    use wormhole_core::terminal::types::{Extent, ImageHandle, ImagePlacement, Line, SourceRect};
+    use wormhole_term::images::{Image, ImageStore, Tiles};
+    use wormhole_term::types::{Extent, ImageHandle, ImagePlacement, Line, SourceRect};
 
     use super::super::frame::Geometry;
     use super::super::rows::ImageRun;

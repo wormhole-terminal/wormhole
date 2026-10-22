@@ -1,5 +1,5 @@
 use gpui_kit::{Hsla, rgb};
-use wormhole_core::terminal::types::{COLOR_COUNT, Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
+use wormhole_term::types::{COLOR_COUNT, Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
 
 /// Terminal colors, resolved from the active theme. Comparable, so a settings
 /// change that leaves them alone can keep the same palette (and the terminal
@@ -180,9 +180,9 @@ pub fn to_rgb(color: Hsla) -> Rgb {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{Hsla, rgb};
-    use wormhole_core::terminal::types::{Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
     use wormhole_core::theme;
     use wormhole_core::theme::tokens::Color as TokenColor;
+    use wormhole_term::types::{Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
 
     use super::{Palette, to_rgb};
 

@@ -7,8 +7,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::terminal::percent_decode;
 use crate::terminal::shells::single_quote;
+use wormhole_term::percent_decode;
 
 /// The content types the default terminal is the shell for: Terminal's own scripts (`.command`,
 /// `.tool`) and a program without an extension. The plain `.sh` (`public.shell-script`) is left to

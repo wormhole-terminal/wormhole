@@ -12,7 +12,7 @@
 use std::time::Instant;
 
 use gpui_kit::{Font, SharedString, TextRun, font, point, px};
-use wormhole_core::terminal::testing::TestTerm;
+use wormhole_term::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
 use super::shaping::word_runs;

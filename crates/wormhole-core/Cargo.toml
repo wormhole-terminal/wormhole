@@ -10,7 +10,7 @@ publish.workspace = true
 [dependencies]
 # The value types the screen is read and driven in (the engine's boundary).
 wormhole-vt.workspace = true
-# The terminal layer (a program in a PTY and the screen it draws), which core re-exports as `terminal`.
+# The terminal layer (a program in a PTY and the screen it draws), whose programs `terminal` starts.
 wormhole-term.workspace = true
 # The session host's wire protocol, to end a host from the command line (`hosts::end_host`).
 wormhole-wire.workspace = true
@@ -56,11 +56,6 @@ core-foundation = "0.10"
 # The saved terminal text's key in a file beside it instead of the Keychain, as debug builds do:
 # for development builds in the release profile (`wormhole/devctl` turns it on). Never shipped.
 dev-key = []
-# `terminal::testing`: terminals without a PTY, for the app's render tests (its dev-dependencies
-# turn this on, so the shipped build never has it).
-test-support = ["wormhole-term/test-support"]
-# Counters of what reading output costs, for the app's devctl `perf-profile`.
-perf-counters = ["wormhole-term/perf-counters"]
 
 [lints]
 workspace = true

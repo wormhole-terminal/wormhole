@@ -25,7 +25,7 @@ use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
-pub use crate::ipc::control::COMMAND_NAME;
+use crate::ipc::control::COMMAND_NAME;
 use crate::storage::fsutil::{self, LinkPolicy};
 pub use path::{Advice, advice, login_path, login_shell_path, on_path, path_with_first};
 

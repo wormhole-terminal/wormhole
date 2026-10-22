@@ -7,9 +7,9 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::types::{Line, Scroll};
-use wormhole_core::terminal::{Block, BlockState, Direction, command_to_prompt, took_text};
 use wormhole_core::view::spoken;
+use wormhole_term::types::{Line, Scroll};
+use wormhole_term::{Block, BlockState, Direction, command_to_prompt, took_text};
 
 use super::{Layout, TerminalView};
 use crate::settings::{UiColors, store_in};
@@ -274,7 +274,7 @@ impl TerminalView {
                 BlockState::Prompt => "prompt".to_string(),
                 BlockState::Running { .. } => "running".to_string(),
                 BlockState::Finished { .. } => {
-                    wormhole_core::terminal::readout_text(block.state).unwrap_or_else(|| "nothing ran".into())
+                    wormhole_term::readout_text(block.state).unwrap_or_else(|| "nothing ran".into())
                 }
             };
             let output =
@@ -326,7 +326,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use gpui_kit::{point, px, size};
-    use wormhole_core::terminal::BlockState;
+    use wormhole_term::BlockState;
 
     use super::super::Layout;
     use super::{block_row, mark_color};

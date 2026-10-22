@@ -6,7 +6,7 @@
 use gpui_kit::{Entity, TestAppContext};
 use wormhole_core::agents::AgentId;
 use wormhole_core::config::InFront;
-use wormhole_core::terminal::{Mark, PtyEvent};
+use wormhole_term::{Mark, PtyEvent};
 
 use super::app::OpenWindow;
 use super::view_tests::{drive, hook, isolate_in, read, start};

@@ -81,7 +81,7 @@ impl Recording {
     }
 
     /// Stop, and what the terminal layer counted.
-    fn stop(mut self) -> wormhole_core::terminal::perf::Counters {
+    fn stop(mut self) -> wormhole_term::perf::Counters {
         self.stopped = true;
         let counters = crate::perf::stop();
         RECORDING.store(false, Ordering::Release);
@@ -110,7 +110,7 @@ async fn record(
         this.update(cx, |_, cx| cx.notify()).map_err(|_| anyhow!("the window closed"))?;
         let sample = cx.update(|window, cx| {
             crate::perf::begin_frame();
-            let waited = wormhole_core::terminal::perf::read().ui.wait_ns;
+            let waited = wormhole_term::perf::read().ui.wait_ns;
             let allocated = thread_counts();
             let start = Instant::now();
             let arena = window.draw(cx);
@@ -121,7 +121,7 @@ async fn record(
                 draw_ns: u64::try_from(draw.as_nanos()).unwrap_or(u64::MAX),
                 allocations: allocated.allocations,
                 alloc_bytes: allocated.bytes,
-                lock_wait_ns: wormhole_core::terminal::perf::read().ui.wait_ns.saturating_sub(waited),
+                lock_wait_ns: wormhole_term::perf::read().ui.wait_ns.saturating_sub(waited),
                 parts: crate::perf::take_frame(),
             }
         });

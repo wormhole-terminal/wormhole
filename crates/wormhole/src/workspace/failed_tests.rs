@@ -4,7 +4,7 @@
 
 use gpui_kit::{Entity, TestAppContext};
 use wormhole_core::notify::{Source, State};
-use wormhole_core::terminal::{Mark, PtyEvent};
+use wormhole_term::{Mark, PtyEvent};
 
 use super::ambient::TabFacts;
 use super::app::OpenWindow;

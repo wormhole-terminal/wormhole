@@ -8,8 +8,8 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use gpui_kit::{App, Bounds, Entity, Font, Pixels, Point, Size, Window, point, px, size};
-use wormhole_core::terminal::GridSize;
-use wormhole_core::terminal::images::Tiles;
+use wormhole_term::GridSize;
+use wormhole_term::images::Tiles;
 
 use super::cursor::{CursorPaint, cursor_frame};
 use super::frame::Geometry;

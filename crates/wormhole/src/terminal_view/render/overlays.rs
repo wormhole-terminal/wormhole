@@ -6,7 +6,7 @@ use gpui_kit::{
     Bounds, DispatchPhase, Div, Hsla, MouseMoveEvent, Pixels, Point, Styled, WeakEntity, Window, div, fill,
     point, px, size,
 };
-use wormhole_core::terminal::ScreenSnapshot;
+use wormhole_term::ScreenSnapshot;
 
 use crate::terminal_view::{PADDING_X, TerminalView, blocks};
 

@@ -13,8 +13,8 @@ use gpui_kit::*;
 use wormhole_core::config::clipboard::{
     ASK_TIMEOUT, Choice, ClipboardRead, ClipboardWrite, ReadGate, Request,
 };
-use wormhole_core::terminal::{BODY_MAX_CHARS, Reply, TextFormatter, clean};
 use wormhole_core::view::sidebar::names::command_name;
+use wormhole_term::{BODY_MAX_CHARS, Reply, TextFormatter, clean};
 
 use super::TerminalView;
 use crate::settings::settings_in;

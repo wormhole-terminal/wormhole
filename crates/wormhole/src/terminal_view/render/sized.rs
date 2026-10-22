@@ -27,7 +27,7 @@ use gpui_kit::{
     App, Bounds, ContentMask, Hsla, Pixels, Point, StrikethroughStyle, TransformationMatrix, Window, point,
     px, size,
 };
-use wormhole_core::terminal::types::LineSize;
+use wormhole_term::types::LineSize;
 
 use super::blink;
 use super::frame::Geometry;
@@ -324,7 +324,7 @@ pub(super) fn link_underline(
 #[cfg(test)]
 mod tests {
     use gpui_kit::px;
-    use wormhole_core::terminal::types::LineSize;
+    use wormhole_term::types::LineSize;
 
     use super::{RowBox, background_bounds, shape_metrics};
     use crate::terminal_view::render::frame::Geometry;

@@ -9365,6 +9365,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "wormhole-core",
+ "wormhole-term",
 ]
 
 [[package]]

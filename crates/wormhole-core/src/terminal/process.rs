@@ -4,7 +4,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Launch, Shell, SpawnOptions};
+use wormhole_term::{Launch, Shell};
+
+use super::SpawnOptions;
 use crate::terminal::shells::{self, ShellCommand, program_name};
 
 /// The settings that make a process one instance of Wormhole: where it keeps its data, what it

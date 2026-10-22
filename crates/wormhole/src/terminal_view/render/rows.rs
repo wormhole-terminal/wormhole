@@ -8,8 +8,8 @@
 //! `text` shapes once and reuses wherever it shows up again.
 
 use gpui_kit::Hsla;
-use wormhole_core::terminal::images::{Placeholder, placeholder_at};
-use wormhole_core::terminal::types::{Cell, Colors, Flags, LineSize, RowExtras};
+use wormhole_term::images::{Placeholder, placeholder_at};
+use wormhole_term::types::{Cell, Colors, Flags, LineSize, RowExtras};
 
 use crate::palette::Palette;
 
@@ -303,8 +303,8 @@ pub(super) fn build_row(
 #[cfg(test)]
 mod tests {
     use gpui_kit::Hsla;
-    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
     use wormhole_core::theme;
+    use wormhole_term::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
 
     use super::{BuiltRow, ImageRun, Marks, UnderlineKind, build_row};
     use crate::palette::Palette;
@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn a_sized_row_shows_half_its_cells() {
-        use wormhole_core::terminal::types::LineSize;
+        use wormhole_term::types::LineSize;
         let mut row = cells("abcdefgh");
         row[6].bg = Color::Named(NamedColor::Red);
         let marks = Marks { size: LineSize::DoubleWidth, ..Marks::default() };
@@ -539,8 +539,8 @@ mod tests {
 
     #[test]
     fn image_placeholders_become_runs_of_tiles_and_no_text() {
-        use wormhole_core::terminal::images::PLACEHOLDER;
-        use wormhole_core::terminal::types::Rgb;
+        use wormhole_term::images::PLACEHOLDER;
+        use wormhole_term::types::Rgb;
         // Row 1 of a placement of image 0x000005, tiles 0..3 at columns 1..4, then an unrelated
         // tile (another image) and text.
         let mut row = cells("a      b");

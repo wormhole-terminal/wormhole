@@ -12,7 +12,7 @@ use std::rc::Rc;
 use gpui_kit::component::scroll::{Scrollbar, ScrollbarMode};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
+use wormhole_term::scrollbar::ScrollerStyle;
 
 use crate::settings::UiColors;
 use crate::style::{self, Edges as _};

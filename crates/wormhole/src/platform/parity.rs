@@ -10,8 +10,8 @@ use std::rc::Rc;
 
 use gpui_kit::{App, Hsla, Window};
 use wormhole_core::onboarding::intro::WindowMotion;
-use wormhole_core::terminal::scrollbar::ScrollerStyle;
 use wormhole_core::theme::tokens::Appearance;
+use wormhole_term::scrollbar::ScrollerStyle;
 
 use super::font_face::Seg;
 use super::fonts::Traits;

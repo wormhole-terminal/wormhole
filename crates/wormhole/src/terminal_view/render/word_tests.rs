@@ -1,8 +1,8 @@
 //! The word cache's tests: what it shapes, when, and the glyphs it hands back.
 
 use gpui_kit::{FontId, GlyphId, point, px};
-use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
 use wormhole_core::theme;
+use wormhole_term::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
 
 use std::time::Instant;
 

@@ -59,9 +59,9 @@ use super::input::TerminalCommand;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
-use wormhole_core::terminal::Pty;
-use wormhole_core::terminal::types::MouseTracking;
 use wormhole_core::theme::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
+use wormhole_term::Pty;
+use wormhole_term::types::MouseTracking;
 
 use super::status::Status;
 use super::{
@@ -73,8 +73,8 @@ use crate::platform::scroller::ScrollerPrefs;
 use crate::settings::{settings_in, store_in};
 use crate::theme_bridge::token;
 use gpui_kit::component::input as text_input;
-use wormhole_core::terminal::ScreenSnapshot;
-use wormhole_core::terminal::types::NamedColor;
+use wormhole_term::ScreenSnapshot;
+use wormhole_term::types::NamedColor;
 
 /// Terminal grids painted since launch, for devctl's `paints` (frames actually drawn, which no
 /// program in the terminal can see).
@@ -86,7 +86,7 @@ pub(crate) static PAINTS: std::sync::atomic::AtomicU64 = std::sync::atomic::Atom
 pub(super) struct RenderState {
     frame: FrameCache<ShapeKey, Vec<Glyph>, ShapedLine>,
     words: WordCache<WordsKey>,
-    minimap: wormhole_core::terminal::minimap::MinimapSnapshot,
+    minimap: wormhole_term::minimap::MinimapSnapshot,
     /// Where the minimap was last drawn, for clicks on it.
     minimap_bounds: Bounds<Pixels>,
     /// Where the scrollbar was last drawn, if it was, for the pointer.
@@ -217,10 +217,10 @@ impl Render for TerminalView {
             // without blocks their menu items are greyed out.
             .when(has_blocks, |this| {
                 this.on_action(cx.listener(|this, _: &PreviousPrompt, _, cx| {
-                    this.jump_prompt(wormhole_core::terminal::Direction::Up, cx)
+                    this.jump_prompt(wormhole_term::Direction::Up, cx)
                 }))
                 .on_action(cx.listener(|this, _: &NextPrompt, _, cx| {
-                    this.jump_prompt(wormhole_core::terminal::Direction::Down, cx)
+                    this.jump_prompt(wormhole_term::Direction::Down, cx)
                 }))
                 .on_action(cx.listener(|this, _: &SelectOutput, _, cx| {
                     this.block_action(blocks::BlockAction::SelectOutput, cx)

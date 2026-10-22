@@ -14,6 +14,8 @@ path = "src/main.rs"
 
 [dependencies]
 wormhole-core.workspace = true
+# The terminal itself (a program in a PTY and the screen it draws); core only starts its programs.
+wormhole-term.workspace = true
 # Inline images: core's decoded pixels become GPUI's frames (its own image type; the crate is in
 # the graph through GPUI with these features).
 image = { version = "0.25", default-features = false, features = ["png"] }
@@ -96,9 +98,9 @@ objc2-app-kit = { version = "0.3", features = [
 ] }
 
 [dev-dependencies]
-# The render tests build terminals without a PTY (`terminal::testing`), which the shipped build
+# The render tests build terminals without a PTY (`wormhole_term::testing`), which the shipped build
 # never has: dev-dependency features are off in it.
-wormhole-core = { workspace = true, features = ["test-support"] }
+wormhole-term = { workspace = true, features = ["test-support"] }
 # The view tests drive real windows through GPUI's test platform, so a plain `cargo test` (what CI
 # and contributors run) needs these without the devctl feature. Dev-dependency features are
 # never active in the shipped binary.
@@ -106,7 +108,7 @@ gpui-kit = { version = "0.8.0", features = ["test-support"] }
 
 [features]
 # Dev-only control hook (screenshots + scripted input) for automated checks.
-devctl = ["gpui-kit/test-support", "wormhole-core/dev-key", "wormhole-core/perf-counters"]
+devctl = ["gpui-kit/test-support", "wormhole-core/dev-key", "wormhole-term/perf-counters"]
 # Inspect mode (⇧⌥⌘I) in release builds too; debug builds always have it.
 inspector = ["gpui-kit/inspector"]
 

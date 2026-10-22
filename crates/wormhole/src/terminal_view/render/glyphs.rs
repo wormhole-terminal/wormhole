@@ -6,8 +6,8 @@
 //! cell-sized shapes (geometry lives in `wormhole_core`) makes them join.
 
 use gpui_kit::*;
-use wormhole_core::terminal::glyphs::block_elements::block_element;
-use wormhole_core::terminal::glyphs::box_drawing::{BoxShape, CellBox, box_shapes_into};
+use wormhole_term::glyphs::block_elements::block_element;
+use wormhole_term::glyphs::box_drawing::{BoxShape, CellBox, box_shapes_into};
 
 /// Collects the shapes of one frame. Kept between frames so its buffers are reused.
 #[derive(Default)]

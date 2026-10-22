@@ -6,7 +6,7 @@
 use std::cell::Cell;
 
 use gpui_kit::{FontId, GlyphId, point, px};
-use wormhole_core::terminal::testing::TestTerm;
+use wormhole_term::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
 use super::rows::Segment;

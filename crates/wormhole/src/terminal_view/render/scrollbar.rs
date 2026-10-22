@@ -11,11 +11,11 @@ use std::time::Instant;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::scrollbar::{
+use wormhole_term::scrollbar::{
     EDGE, GUTTER_W, Hit, Next, ScrollbarGeometry, ScrollerStyle, THUMB_W, THUMB_WIDE_W, Visibility, ZONE_W,
     jumps,
 };
-use wormhole_core::terminal::types::Modes;
+use wormhole_term::types::Modes;
 
 use crate::platform::scroller::{self, ScrollerPrefs};
 use crate::settings::store_in;
@@ -207,12 +207,8 @@ impl ScrollbarState {
     }
 
     /// How the scrollbar looks now. The legacy style is always there.
-    fn reveal(
-        &self,
-        style: ScrollerStyle,
-        reduce_motion: bool,
-    ) -> wormhole_core::terminal::scrollbar::Reveal {
-        use wormhole_core::terminal::scrollbar::Reveal;
+    fn reveal(&self, style: ScrollerStyle, reduce_motion: bool) -> wormhole_term::scrollbar::Reveal {
+        use wormhole_term::scrollbar::Reveal;
         match style {
             ScrollerStyle::Legacy => Reveal { opacity: 1.0, next: Next::Nothing },
             ScrollerStyle::Overlay => self.visibility.reveal(Instant::now(), self.held(), reduce_motion),

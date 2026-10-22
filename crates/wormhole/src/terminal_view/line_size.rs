@@ -6,7 +6,7 @@
 //! and each draws the whole line's text at twice the size, cut to the row: the top half on the first
 //! row, the bottom half on the second.
 
-use wormhole_core::terminal::types::LineSize;
+use wormhole_term::types::LineSize;
 
 /// How many times wider a cell of a row of this size is drawn than a normal one.
 pub(super) fn width_scale(size: LineSize) -> f32 {
@@ -37,7 +37,7 @@ pub(super) fn height_scale(size: LineSize) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::terminal::types::LineSize;
+    use wormhole_term::types::LineSize;
 
     use super::{Half, half, height_scale, width_scale};
 
