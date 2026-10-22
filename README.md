@@ -130,15 +130,16 @@ cargo test --workspace --features devctl    # everything
 
 `crates/wormhole-core` holds everything that doesn't need the UI (git, config, storage, agent hooks)
 and is tested on its own, on top of `crates/wormhole-term` (a program in a PTY and the screen it
-draws) and the engine, `crates/wormhole-vt`; `crates/wormhole` is the GPUI app. Lints live in the
+draws) and the engine, [wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) (a repository
+of its own); `crates/wormhole` is the GPUI app. Lints live in the
 workspace `Cargo.toml`, and `crates/wormhole/tests/design_rules.rs` checks the design rules (spacing
 grid, corner radii, colors from design tokens). See `CONTRIBUTING.md`.
 
 ## License
 
 Wormhole is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
-The terminal engine, `crates/wormhole-vt`, is under the [MIT License](crates/wormhole-vt/LICENSE)
-so that other projects can use it.
+The terminal engine, [wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt), lives in a
+repository of its own under the MIT License, so that other projects can use it.
 Bundled third-party assets keep their own licenses: JetBrains Mono (SIL OFL 1.1), the built-in themes
 and icons (see the license files next to them), and the Rust dependencies listed in the app's
 About → Licenses window.

@@ -1,7 +1,8 @@
 # Fuzzing wormhole-wire
 
-Same setup as the engine's (`../../wormhole-vt/fuzz/README.md`): `cargo fuzz`, nightly, by hand, run through
-`scripts/fuzz.sh` (which knows both crates), not part of `scripts/check.sh` or CI, and its own workspace.
+The same setup as the terminal engine's fuzzing (in its repository, wormhole-terminal/wormhole-vt):
+`cargo fuzz`, nightly, by hand, run through `scripts/fuzz.sh`, not part of `scripts/check.sh` or CI, and its
+own workspace.
 
 ```sh
 scripts/fuzz.sh seeds                                   # the starting corpus: one input per sample message

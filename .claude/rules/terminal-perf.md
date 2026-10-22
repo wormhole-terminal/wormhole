@@ -1,7 +1,6 @@
 ---
 paths:
   - "crates/wormhole/src/terminal_view/render/**"
-  - "crates/wormhole-vt/src/**"
   - "crates/wormhole-term/src/pty/**"
   - "crates/wormhole-term/src/engine/**"
   - "crates/wormhole-term/src/snapshot.rs"
@@ -30,7 +29,7 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
 - **The engine's hot paths allocate nothing**: printing, scrolling, styles and links reuse the
   grid's pages and tables. `crates/wormhole-term/tests/pty_allocations.rs`
   (`reading_and_parsing_allocates_nothing`) pins the reader thread at zero allocations in floods,
-  and `vtbench` (`crates/wormhole-vt-bench`) shows allocations per MB for each corpus.
+  and `vtbench` (in the engine's repository, `../wormhole-vt`) shows allocations per MB for each corpus.
 - **The PTY reader re-reads an empty master for 50 µs after output** before it sleeps
   (`crates/wormhole-term/src/pty/reader.rs`): macOS hands the reader 1 KiB at a time, and an engine faster than the
   writer would otherwise sleep and be woken for every refill. Measure before changing it.
@@ -41,7 +40,7 @@ the app leads the other terminals overall in `scripts/terminal-compare.sh`. Keep
 After a change here, and after any GPUI update, run `scripts/perf.sh` on a Mac: it builds a
 release, measures draw time per frame and main-thread load under ttystorm's workloads, and fails
 against the baseline in `tools/bench/baselines/`. The engine alone: `vtbench`, and against other
-engines `tools/vt-compare` (`../repo-docs/docs/performance.md`). To look deeper: `sample <pid> 5`
+engines `tools/vt-compare`, both in `../wormhole-vt` (`../repo-docs/docs/performance.md`). To look deeper: `sample <pid> 5`
 on an isolated instance (see the `devctl` skill), devctl `frames <n>` (draw time, any window state) and `paints`
 (frames drawn on screen). `paints` means nothing while the window can't be seen (display asleep,
 covered): macOS throttles it to ~20 per second.

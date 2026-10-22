@@ -122,35 +122,23 @@ mod tests {
     use std::collections::BTreeSet;
     use std::path::Path;
 
+    use wormhole_vt::Terminal;
+    use wormhole_vt::passthrough::{Passthrough, PassthroughError};
+
     use super::{SEQUENCES, table};
 
-    /// The OSC numbers the engine acts on: the patterns that open an arm of `run_osc`
-    /// (`0 | 2 =>`, `10..=12 =>`, `99 => {`).
+    /// The OSC numbers the engine acts on: the ones it reads itself, which a host may not claim
+    /// for passthrough (asked of the engine, which lives in a repository of its own).
     fn engine_osc_numbers() -> BTreeSet<String> {
-        let source = include_str!("../../wormhole-vt/src/terminal/osc/dispatch.rs");
-        let run = source.split("fn run_osc(").nth(1).expect("run_osc");
-        let body = &run[..run.find("\n    }\n").expect("the end of run_osc")];
-        let mut numbers = BTreeSet::new();
-        for line in
-            body.lines().filter(|line| line.starts_with("            ") && !line.starts_with("             "))
-        {
-            let Some((pattern, _)) = line.trim().split_once(" =>") else { continue };
-            for alternative in pattern.split(" | ") {
-                match alternative.split_once("..=") {
-                    Some((from, to)) => {
-                        let (from, to): (u32, u32) =
-                            (from.parse().expect("a number"), to.parse().expect("a number"));
-                        numbers.extend((from..=to).map(|n| n.to_string()));
-                    }
-                    None => {
-                        if let Ok(n) = alternative.parse::<u32>() {
-                            numbers.insert(n.to_string());
-                        }
-                    }
-                }
-            }
-        }
-        numbers
+        (0..=99_999_u32)
+            .filter(|&n| {
+                matches!(
+                    Terminal::builder().passthrough(Passthrough::new().osc(n, 1)),
+                    Err(PassthroughError::ReservedOsc(_))
+                )
+            })
+            .map(|n| n.to_string())
+            .collect()
     }
 
     /// The OSC numbers the list names (`OSC 9;4` is OSC 9's).
