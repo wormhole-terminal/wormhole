@@ -102,6 +102,9 @@ impl Segment {
         let mut runs = Vec::new();
         let mut at = 0;
         for (len, style) in &self.runs {
+            if at >= bytes.end {
+                break;
+            }
             let (start, end) = (at.max(bytes.start), (at + len).min(bytes.end));
             at += len;
             if start < end {

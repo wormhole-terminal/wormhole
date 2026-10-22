@@ -68,6 +68,9 @@ impl WordKey {
         self.fonts.clear();
         let mut at = 0;
         for (len, style) in &segment.runs {
+            if at >= bytes.end {
+                break;
+            }
             let (start, end) = (at.max(bytes.start), (at + len).min(bytes.end));
             at += len;
             if start >= end {
@@ -92,8 +95,28 @@ const MAX_WORDS: usize = 16_384;
 /// what a frame can overshoot it by: a screen-wide word of new characters every row (a flood of
 /// random text, `ttystorm flood --kind colorflood`) took a whole budget for one or two rows. A
 /// ligature or contextual form across the edge of two parts isn't made; that takes a word longer
-/// than this, with one exactly there, and only changes how two characters look.
+/// than this, with one exactly there (see [`cut`]), and only changes how two characters look.
 pub(super) const MAX_SHAPED_CELLS: usize = 64;
+
+/// How far back from [`MAX_SHAPED_CELLS`] a cut may move to land next to a letter or digit.
+const CUT_SNAP: usize = 16;
+
+/// Where the first part of `text` ends when it has more than `chars` characters: the byte and how
+/// many characters come before it. Ligatures and contextual forms are mostly between punctuation
+/// (`=>`, `!=`, `-->`), so the cut moves back, by up to [`CUT_SNAP`] characters, to the first place
+/// with an ASCII letter or digit on one side; with none there it stays at `chars`. It depends on the
+/// text alone, so the same word is cut the same way and its parts are found in the cache again.
+fn cut(text: &str, chars: usize) -> Option<(usize, usize)> {
+    let (hard, mut after) = text.char_indices().nth(chars)?;
+    let mut at = (hard, chars);
+    for (byte, before) in text[..hard].char_indices().rev().take(CUT_SNAP.min(chars - 1)) {
+        if before.is_ascii_alphanumeric() || after.is_ascii_alphanumeric() {
+            return Some(at);
+        }
+        (after, at) = (before, (byte, at.1 - 1));
+    }
+    Some((hard, chars))
+}
 
 /// How long one frame of a terminal may spend shaping new words: half a frame at 120 Hz, which
 /// leaves the rest of the window and the GPU the other half.
@@ -254,7 +277,9 @@ impl<K: PartialEq> WordCache<K> {
 
     /// The glyphs of the word in `bytes` of the segment, `cell` cells in. A word whose characters
     /// each have a cell (`one_per_cell`) and that is longer than [`MAX_SHAPED_CELLS`] is shaped in
-    /// parts of that many cells, counted from its start.
+    /// parts of at most that many cells, cut where [`cut`] says, from its start. A word with
+    /// combining marks or joiners is still shaped whole, however long: a cut could split a
+    /// character from its mark.
     #[allow(clippy::too_many_arguments)]
     fn word(
         &mut self,
@@ -269,10 +294,10 @@ impl<K: PartialEq> WordCache<K> {
         if one_per_cell {
             let per_char = if segment.wide { 2 } else { 1 };
             let chars = (MAX_SHAPED_CELLS / per_char).max(1);
-            while let Some((split, _)) = segment.text[bytes.clone()].char_indices().nth(chars) {
+            while let Some((split, taken)) = cut(&segment.text[bytes.clone()], chars) {
                 let end = bytes.start + split;
                 self.part(segment, bytes.start..end, cell, true, cell_width, shape, out);
-                (bytes.start, cell) = (end, cell + chars * per_char);
+                (bytes.start, cell) = (end, cell + taken * per_char);
             }
         }
         self.part(segment, bytes, cell, one_per_cell, cell_width, shape, out);

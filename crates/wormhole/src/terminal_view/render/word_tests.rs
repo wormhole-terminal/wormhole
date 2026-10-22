@@ -29,14 +29,15 @@ fn segments(text: &str, red: &[usize], bold: &[usize]) -> Vec<Segment> {
     build_row(&cells, &RowExtras::default(), &palette, &Colors::default(), &Marks::default()).segments
 }
 
-/// One glyph per character, one cell apart.
+/// One glyph per character, one cell (or two, for wide ones) apart.
 fn fake_shape(segment: &Segment) -> Vec<Shaped> {
+    let advance = if segment.wide { 16.0 } else { 8.0 };
     segment
         .text
         .char_indices()
         .enumerate()
         .map(|(k, (index, c))| Shaped {
-            position: point(px(8.0 * k as f32), px(0.0)),
+            position: point(px(advance * k as f32), px(0.0)),
             index,
             font_id: FontId(0),
             id: GlyphId(c as u32),
@@ -109,7 +110,7 @@ fn past_the_budget_a_new_word_is_drawn_character_by_character_until_a_frame_shap
 fn a_word_longer_than_max_shaped_cells_is_shaped_in_parts_of_at_most_that_many_cells() {
     let mut cache = WordCache::default();
     cache.sync(0u8);
-    let text: String = (0..MAX_SHAPED_CELLS * 2 + 5).map(|k| char::from(b'!' + (k % 90) as u8)).collect();
+    let text = letters(MAX_SHAPED_CELLS * 2 + 5);
     let (asked, glyphs) = shaped_row(&mut cache, &row(&text), &RowExtras::default());
     let lengths: Vec<usize> = asked.iter().map(|part| part.chars().count()).collect();
     assert_eq!(lengths, [MAX_SHAPED_CELLS, MAX_SHAPED_CELLS, 5]);
@@ -136,9 +137,90 @@ fn past_the_budget_a_long_word_uses_the_parts_it_has_and_waits_for_the_rest() {
     shaped_row(&mut cache, &row(&format!("{first}ab")), &RowExtras::default());
     cache.start_frame(Some(Instant::now()));
     // The first part is known; the new rest is drawn character by character for now.
-    let (asked, _) = shaped_row(&mut cache, &row(&format!("{first}xy")), &RowExtras::default());
+    let (asked, by_char) = shaped_row(&mut cache, &row(&format!("{first}xy")), &RowExtras::default());
     assert_eq!(asked, ["x", "y"]);
     assert!(cache.take_deferred());
+    // The next frame with time shapes the rest once, and draws it the same.
+    cache.start_frame(None);
+    let (asked, whole) = shaped_row(&mut cache, &row(&format!("{first}xy")), &RowExtras::default());
+    assert_eq!(asked, ["xy"]);
+    assert!(!cache.take_deferred());
+    assert_eq!(whole, by_char);
+}
+
+/// `n` lowercase letters: a cut between two of them stays where it falls.
+fn letters(n: usize) -> String {
+    (0..n).map(|k| char::from(b'a' + (k % 26) as u8)).collect()
+}
+
+#[test]
+fn colors_and_fonts_follow_their_cells_across_a_part_edge() {
+    let mut cache = WordCache::default();
+    cache.sync(0u8);
+    let text = letters(70);
+    let mut cells = row(&text);
+    for cell in &mut cells[60..=68] {
+        cell.fg = Color::Named(NamedColor::Red);
+    }
+    cells[65].flags = Flags::BOLD;
+    let (asked, glyphs) = shaped_row(&mut cache, &cells, &RowExtras::default());
+    assert_eq!(asked, [&text[..MAX_SHAPED_CELLS], &text[MAX_SHAPED_CELLS..]]);
+    let palette = Palette::from_theme(&theme::builtin()[0]);
+    let want: Vec<(f32, u32, gpui_kit::Hsla)> = text
+        .chars()
+        .enumerate()
+        .map(|(k, c)| {
+            let color = if (60..=68).contains(&k) { palette.ansi[1] } else { palette.foreground };
+            (8.0 * k as f32, u32::from(c), color)
+        })
+        .collect();
+    assert_eq!(glyphs, want);
+    // The same text without the bold cell: the first part is found again, the second is another font.
+    let (asked, _) = shaped_row(&mut cache, &row(&text), &RowExtras::default());
+    assert_eq!(asked, [&text[MAX_SHAPED_CELLS..]]);
+}
+
+#[test]
+fn a_word_of_wide_characters_is_cut_in_parts_of_half_as_many_characters() {
+    let mut cache = WordCache::default();
+    cache.sync(0u8);
+    // Fullwidth letters: two cells each, and not among the characters that stand alone.
+    let text: String = (0..40).map(|k| char::from_u32(0xFF21 + k % 26).unwrap_or('Ａ')).collect();
+    let (asked, glyphs) = shaped_row(&mut cache, &row(&text), &RowExtras::default());
+    let lengths: Vec<usize> = asked.iter().map(|part| part.chars().count()).collect();
+    assert_eq!(lengths, [MAX_SHAPED_CELLS / 2, 40 - MAX_SHAPED_CELLS / 2]);
+    let at: Vec<f32> = glyphs.iter().map(|g| g.0).collect();
+    assert_eq!(at, (0..40).map(|k| 16.0 * k as f32).collect::<Vec<_>>());
+}
+
+#[test]
+fn a_long_word_between_characters_that_stand_alone_is_cut_from_its_own_start() {
+    let mut cache = WordCache::default();
+    cache.sync(0u8);
+    let middle = letters(70);
+    let text = format!("ｱ{middle}ｲ");
+    let (asked, glyphs) = shaped_row(&mut cache, &row(&text), &RowExtras::default());
+    assert_eq!(asked, ["ｱ", &middle[..MAX_SHAPED_CELLS], &middle[MAX_SHAPED_CELLS..], "ｲ"]);
+    let at: Vec<(f32, u32)> = glyphs.iter().map(|g| (g.0, g.1)).collect();
+    let want: Vec<(f32, u32)> =
+        text.chars().enumerate().map(|(k, c)| (8.0 * k as f32, u32::from(c))).collect();
+    assert_eq!(at, want);
+}
+
+#[test]
+fn a_cut_moves_back_to_a_letter_or_digit_when_one_is_near() {
+    let mut cache = WordCache::default();
+    cache.sync(0u8);
+    // A letter 9 characters before the cut: the part ends right after it.
+    let near = format!("{}a{}", "=".repeat(MAX_SHAPED_CELLS - 9), "=".repeat(30));
+    let (asked, _) = shaped_row(&mut cache, &row(&near), &RowExtras::default());
+    let lengths: Vec<usize> = asked.iter().map(|part| part.chars().count()).collect();
+    assert_eq!(lengths, [MAX_SHAPED_CELLS - 8, 30]);
+    // None near: cut where the limit falls.
+    let none = "-".repeat(MAX_SHAPED_CELLS + 30);
+    let (asked, _) = shaped_row(&mut cache, &row(&none), &RowExtras::default());
+    let lengths: Vec<usize> = asked.iter().map(|part| part.chars().count()).collect();
+    assert_eq!(lengths, [MAX_SHAPED_CELLS, 30]);
 }
 
 #[test]
@@ -187,7 +269,7 @@ fn shaped_row(
 fn row(text: &str) -> Vec<Cell> {
     let mut cells = Vec::new();
     for c in text.chars() {
-        if matches!(c, '日' | '本') {
+        if matches!(c, '日' | '本' | '\u{FF21}'..='\u{FF3A}') {
             cells.push(Cell { c, flags: Flags::WIDE_CHAR, ..Cell::default() });
             cells.push(Cell { c: ' ', flags: Flags::WIDE_CHAR_SPACER, ..Cell::default() });
         } else {

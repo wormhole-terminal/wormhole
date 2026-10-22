@@ -34,8 +34,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
-- Fast output of long colourful lines draws about twice as fast again: a line with a colour per
-  character is shaped as one piece of text, not one per character, and a very long word in parts.
+- Fast output of long lines with a colour per character (gradients, colour floods) draws several
+  times faster.
 
 ## [1.2.0] - 2026-10-22
 

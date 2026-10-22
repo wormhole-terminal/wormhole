@@ -161,6 +161,7 @@ mod tests {
                 flags: match col {
                     3 | 4 => Flags::BOLD,
                     5 => Flags::STRIKEOUT,
+                    6 => Flags::ITALIC,
                     _ => Flags::empty(),
                 },
                 ..Cell::default()
@@ -178,7 +179,12 @@ mod tests {
         let (normal, bold, upright) = (FontWeight::NORMAL, FontWeight::BOLD, FontStyle::Normal);
         assert_eq!(
             shape,
-            [(3, normal, upright, false), (2, bold, upright, false), (2, normal, upright, false)]
+            [
+                (3, normal, upright, false),
+                (2, bold, upright, false),
+                (1, normal, upright, false),
+                (1, normal, FontStyle::Italic, false),
+            ]
         );
     }
 }
