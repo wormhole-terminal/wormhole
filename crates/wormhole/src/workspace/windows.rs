@@ -289,7 +289,7 @@ impl Workspace {
     pub(crate) fn project_roots(&self, cx: &App) -> Vec<PathBuf> {
         // No project roots while the project-folder feature is off, so nothing that scans them
         // (the menu bar's project actions, pruning the hub) keeps a stale project alive.
-        if !crate::workspace::project::project_folders_on(cx) {
+        if !crate::workspace::features::project::project_folders_on(cx) {
             return Vec::new();
         }
         let sessions = self.sessions.iter().flat_map(|s| [s.project.clone(), s.notes_root.clone()]).flatten();

@@ -19,7 +19,7 @@ pub(super) fn render(
     let ui = env.ui;
     let tokens = env.tokens;
     let (code_family, code_size) = crate::fonts::code_font(cx);
-    let colors = crate::workspace::git_panel::diff_render::DiffColors::new(tokens);
+    let colors = crate::workspace::features::git::diff_render::DiffColors::new(tokens);
     let header = div()
         .flex()
         .items_center()
@@ -56,7 +56,8 @@ pub(super) fn render(
                 .child(style::segment("g-diff-split", ui, "Split", true))
                 .child(style::segment("g-diff-unified", ui, "Unified", false)),
         );
-    let rows = crate::workspace::git_panel::diff_render::sample(ui, colors, code_family, code_size.into());
+    let rows =
+        crate::workspace::features::git::diff_render::sample(ui, colors, code_family, code_size.into());
     env.mark(
         "diff",
         div()

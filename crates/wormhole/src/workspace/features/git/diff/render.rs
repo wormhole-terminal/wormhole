@@ -21,7 +21,7 @@ use crate::settings::{settings_in, store_in, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
-use crate::workspace::git_panel::open_file::OpenFile;
+use crate::workspace::features::git::open_file::OpenFile;
 use wormhole_core::git::review::LineSide;
 use wormhole_core::git::{LineKind, Side};
 use wormhole_core::theme::tokens::ThemeTokens;

@@ -42,7 +42,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   a `Popover`: `SelectTrigger` and the menu in `select.rs`.
 - Custom painting with `canvas(prepaint, paint)`: the terminal grid in
   `terminal_view/render/`. An empty `canvas` that only measures its bounds:
-  `workspace/git_panel/diff/render.rs`.
+  `workspace/features/git/diff/render.rs`.
 - Animation (`with_animation`, `Animation::new(…).repeat()`,
   `pulsating_between`): the status dot in `workspace/sidebar.rs`.
 
@@ -51,7 +51,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 - Variable-height virtual list (`list` + `ListState`, splicing only the rows
   that changed, keeping a focused row alive): `workspace/panel_list.rs`. Its
   header comment explains why a scrolling `div` isn't enough. The diff view
-  uses `ListState` too: `workspace/git_panel/diff/`.
+  uses `ListState` too: `workspace/features/git/diff/`.
 - Fixed-height virtual list (`uniform_list` + `UniformListScrollHandle`,
   `scroll_to_item`): `settings_window/font_picker.rs`, `select.rs`.
 
@@ -73,13 +73,13 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 
 - `InputState` + `Input`, with `cx.subscribe_in(&input, window, …)` on
   `InputEvent` (`Change`, `PressEnter`, `Focus`, `Blur`), and `Checkbox`:
-  `workspace/tasks.rs`. Multi-line `TextareaState`: `workspace/notes.rs`.
+  `workspace/features/notes/tasks.rs`. Multi-line `TextareaState`: `workspace/features/notes/`.
 - `Switch` in a settings row: `style/setting.rs`; `ColorPicker`:
   `settings_window/sections/appearance.rs`, `studio/token_editor.rs`.
 - `DropdownMenu` and `Tooltip`: `workspace/sidebar.rs`; `Tooltip` on icon
   buttons: `style/controls.rs`.
 - Syntax highlighting (`SyntaxHighlighter`, `HighlightTheme`):
-  `workspace/git_panel/diff/highlight.rs`.
+  `workspace/features/git/diff/highlight.rs`.
 - Every component in one place, with each theme applied: the Studio gallery
   in `studio/gallery/` (one specimen per file). A new shared
   component goes there too; `tests/design_rules.rs` checks it.
@@ -90,9 +90,9 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   field cancels the previous one): `cwd_check` in `terminal_view/mod.rs`.
 - Work off the main thread (`cx.background_executor().spawn`), then
   `this.update(cx, …)` with a ticket so a result that no longer matches the
-  request is dropped: `workspace/git_panel/changes.rs`
-  (`finish_git_refresh`), `workspace/git_panel/diff/load.rs`,
-  `workspace/git_panel/history.rs`.
+  request is dropped: `workspace/features/git/changes.rs`
+  (`finish_git_refresh`), `workspace/features/git/diff/load.rs`,
+  `workspace/features/git/history.rs`.
 - A window-bound loop that stops when its view is gone (`spawn_in` +
   `update_in` returning `Err`): `settings_window/mod.rs`.
 - A native file dialog (`cx.prompt_for_paths`) awaited in a task:

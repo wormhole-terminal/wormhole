@@ -20,11 +20,11 @@ use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
+use crate::workspace::features::notes::TaskItem;
+use crate::workspace::features::notes::items::with_item_keys;
+use crate::workspace::features::notes::paragraphs::{note_body, note_title};
 use crate::workspace::focus::{Activate, Walkable};
-use crate::workspace::items::with_item_keys;
-use crate::workspace::notes::TaskItem;
 use crate::workspace::panel_list::{CardPart, Rows};
-use crate::workspace::text::{note_body, note_title};
 
 const NOTE_PLACEHOLDER: &str = "Write a note or a prompt draft…\n⌘↵ sends the paragraph under the cursor (or the selection); ⌘⇧↵ also submits.";
 

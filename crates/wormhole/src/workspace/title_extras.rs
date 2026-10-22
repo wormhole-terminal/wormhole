@@ -175,7 +175,7 @@ impl Workspace {
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(super) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
         if !settings_in(&self.profile, cx).title_pull_request
-            || !crate::workspace::project::project_folders_on(cx)
+            || !crate::workspace::features::project::project_folders_on(cx)
         {
             return None;
         }

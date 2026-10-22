@@ -9,7 +9,7 @@
 use gpui_kit::*;
 
 use crate::settings::{settings_in, ui_in};
-use crate::workspace::git_panel::changes::GitPoll;
+use crate::workspace::features::git::changes::GitPoll;
 use crate::workspace::save::SCROLLBACK_SAVE_INTERVAL;
 use crate::workspace::{RightTab, Workspace};
 
@@ -67,7 +67,9 @@ impl Workspace {
         }
         // The Usage tab's times count down while it shows.
         let usage_on_screen = self.notes_visible() && self.right_tab == RightTab::Usage;
-        if changed || (usage_on_screen && self.ticks.is_multiple_of(crate::workspace::usage::REDRAW_TICKS)) {
+        if changed
+            || (usage_on_screen && self.ticks.is_multiple_of(crate::workspace::features::usage::REDRAW_TICKS))
+        {
             cx.notify();
         }
         self.sync_close_dot(window, cx);

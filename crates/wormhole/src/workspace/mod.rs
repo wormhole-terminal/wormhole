@@ -24,8 +24,6 @@ use gpui_kit::*;
 
 #[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
-#[cfg(feature = "devctl")]
-pub(crate) use self::project::devctl_trust_shot;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::app_state::app_mut;
 use crate::platform::vibrancy;
@@ -113,20 +111,10 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::workspace::features::git as git_panel;
-pub(in crate::workspace) use crate::workspace::features::git::worktree;
-pub(crate) use crate::workspace::features::notes;
-pub(in crate::workspace) use crate::workspace::features::notes::items;
-pub(in crate::workspace) use crate::workspace::features::notes::paragraphs as text;
-pub(in crate::workspace) use crate::workspace::features::notes::tasks;
-pub(crate) use crate::workspace::features::project;
-pub(in crate::workspace) use crate::workspace::features::usage;
-
-use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;
 pub(crate) use self::saved_layout::RightTab;
 use self::session::Session;
+use crate::workspace::features::git::{diff_view, picker};
 
 use crate::terminal_view::Status;
 use wormhole_core::storage::store::WindowRecord;
@@ -237,9 +225,9 @@ pub struct Workspace {
     /// A "close this terminal?" question is on screen.
     closing_session_prompt: bool,
     /// The New Terminal in New Worktree dialog, while it is up.
-    worktree_ask: Option<self::worktree::Asking>,
+    worktree_ask: Option<crate::workspace::features::git::worktree::Asking>,
     /// The comment dialog of a diff line, while it is up.
-    commenting: Option<self::git_panel::diff::Commenting>,
+    commenting: Option<crate::workspace::features::git::diff::Commenting>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,

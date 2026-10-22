@@ -18,7 +18,7 @@ use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fi
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
-use crate::workspace::git_panel::picker;
+use crate::workspace::features::git::picker;
 use crate::workspace::path_card::Over;
 use crate::workspace::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 use crate::workspace::{RightTab, Workspace};

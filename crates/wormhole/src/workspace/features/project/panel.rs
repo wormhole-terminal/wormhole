@@ -594,7 +594,7 @@ mod tests {
     use wormhole_core::project::{self as proj, Feature, ProjectFolder, TrustStatus, TrustStore};
 
     use super::{feature_hint, trust_notice};
-    use crate::workspace::project::{LoadedProject, load_project};
+    use crate::workspace::features::project::{LoadedProject, load_project};
 
     /// A fresh directory under the system temp dir, removed when dropped.
     struct Scratch(PathBuf);

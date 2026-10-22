@@ -119,7 +119,7 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use crate::platform::auth::AuthError;
-    use crate::workspace::project::ProjectHub;
+    use crate::workspace::features::project::ProjectHub;
     use wormhole_core::project::{ProjectFolder, TrustStatus};
 
     /// A fresh directory under the system temp dir, removed when dropped.

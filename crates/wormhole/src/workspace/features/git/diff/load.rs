@@ -21,8 +21,8 @@ use super::rows::{BuildKey, Row, RowStats, build_rows, syntax_fingerprint};
 use super::{DiffView, Request};
 use crate::settings::{settings_in, store_in};
 use crate::workspace::Workspace;
-use crate::workspace::git_panel::changes::display_order;
-use crate::workspace::git_panel::job::{Ticket, Wanted};
+use crate::workspace::features::git::changes::display_order;
+use crate::workspace::features::git::job::{Ticket, Wanted};
 use wormhole_core::git::{self, DiffLimits, FileChange, FileDiff, LineKind, RepoStatus, SubmoduleLog};
 use wormhole_core::theme::tokens::ThemeTokens;
 

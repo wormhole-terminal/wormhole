@@ -12,10 +12,12 @@ use wormhole_core::view::sidebar::{SplitId, names};
 
 use crate::app_state::app;
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
+use crate::workspace::Workspace;
 use crate::workspace::dialog::shortened;
-use crate::workspace::git_panel::{changes, history};
-use crate::workspace::notes::{Note, TaskItem};
-use crate::workspace::{Workspace, notes, tasks};
+use crate::workspace::features::git::{changes, history};
+use crate::workspace::features::notes;
+use crate::workspace::features::notes::tasks;
+use crate::workspace::features::notes::{Note, TaskItem};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {

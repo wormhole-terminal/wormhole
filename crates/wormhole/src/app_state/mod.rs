@@ -32,7 +32,8 @@ use crate::app_state::look::LookOverride;
 use crate::app_state::recent_projects::RecentProjects;
 use crate::status_item;
 use crate::updates;
-use crate::workspace::{Workspace, aux_window, project};
+use crate::workspace::features::project;
+use crate::workspace::{Workspace, aux_window};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]

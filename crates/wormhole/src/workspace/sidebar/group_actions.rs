@@ -61,7 +61,7 @@ impl Workspace {
             let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
                 let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
                 for worktree in removable.clone() {
-                    crate::workspace::worktree::remove_worktree(worktree, cx);
+                    crate::workspace::features::git::worktree::remove_worktree(worktree, cx);
                 }
             });
             ("Close and Remove Worktrees", on_also)

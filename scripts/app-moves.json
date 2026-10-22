@@ -263,7 +263,10 @@
           "from": "workspace/worktree.rs",
           "to": "workspace/features/git/worktree.rs"
         }
-      ]
+      ],
+      "reexports": {
+        "devctl_trust_shot": "workspace::features::project::devctl_trust_shot"
+      }
     }
   }
 }

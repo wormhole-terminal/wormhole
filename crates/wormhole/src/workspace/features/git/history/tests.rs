@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use super::{CommitFiles, FILES_KEPT, Fetched, HistoryKey, HistoryRow, HistoryState};
-use crate::workspace::git_panel::job::testing::ManualExecutor;
+use crate::workspace::features::git::job::testing::ManualExecutor;
 use wormhole_core::git::{ChangeKind, Commit, FileChange, GitError};
 
 fn commit(sha: &str) -> Commit {

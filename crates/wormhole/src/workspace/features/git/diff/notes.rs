@@ -191,7 +191,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{Note, notes};
-    use crate::workspace::git_panel::diff::{DiffView, Request};
+    use crate::workspace::features::git::diff::{DiffView, Request};
     use wormhole_core::config::SizeUnits::{Binary, Decimal};
     use wormhole_core::git::{
         self, ChangeKind, DiffLimits, DiffSpec, FileChange, FileDiff, LfsChange, LfsPointer,

@@ -81,7 +81,7 @@ impl Frame {
                 .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
-            show_notes: s.sidebar_notes && crate::workspace::notes::notes_on(cx),
+            show_notes: s.sidebar_notes && crate::workspace::features::notes::notes_on(cx),
             hints: ws.hints_showing(cx),
             code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,

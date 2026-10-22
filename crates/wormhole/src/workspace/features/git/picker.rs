@@ -237,8 +237,8 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{Picker, branches_wanted};
-    use crate::workspace::git_panel::changes::GitState;
-    use crate::workspace::git_panel::job::testing::ManualExecutor;
+    use crate::workspace::features::git::changes::GitState;
+    use crate::workspace::features::git::job::testing::ManualExecutor;
 
     const CWD: &str = "/work/repo";
 

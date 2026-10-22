@@ -14,8 +14,8 @@ use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
-use crate::workspace::git_panel::{changes, history};
-use crate::workspace::notes::TaskItem;
+use crate::workspace::features::git::{changes, history};
+use crate::workspace::features::notes::TaskItem;
 use crate::workspace::session::{Pane, Session};
 
 impl Workspace {
@@ -95,7 +95,7 @@ impl Workspace {
             pane,
             split: record.split_id,
             notes: Vec::new(),
-            notes_list: crate::workspace::notes::NotesList::default(),
+            notes_list: crate::workspace::features::notes::NotesList::default(),
             tasks: record.tasks.into_iter().map(|t| TaskItem { text: t.text.into(), done: t.done }).collect(),
             tasks_collapsed: record.tasks_collapsed,
             notes_collapsed: record.notes_collapsed,
@@ -162,8 +162,13 @@ impl Workspace {
             project_shell.as_deref(),
             settings_in(&self.profile, cx),
         );
-        let mut options =
-            crate::workspace::project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
+        let mut options = crate::workspace::features::project::spawn_options(
+            record.id,
+            cwd,
+            record.scrollback.clone(),
+            env,
+            shell,
+        );
         // After the project's environment is in: what a trusted project set is kept. The profile's
         // own environment is the person's (not repository content), so it applies in an untrusted
         // project as well.

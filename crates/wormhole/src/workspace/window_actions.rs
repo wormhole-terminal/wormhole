@@ -149,7 +149,7 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Bigger, _, cx| this.zoom_font(Some(1.0), cx)))
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
-            .when(crate::workspace::notes::notes_on(cx), |root| {
+            .when(crate::workspace::features::notes::notes_on(cx), |root| {
                 root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
                     .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
                     .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))

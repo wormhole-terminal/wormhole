@@ -14,9 +14,9 @@ use wormhole_core::view::spoken;
 
 use crate::settings::UiColors;
 use crate::style;
-use crate::workspace::items::{ItemKey, item_key, with_item_keys};
-use crate::workspace::notes::NotesView;
-use crate::workspace::notes::TaskItem;
+use crate::workspace::features::notes::NotesView;
+use crate::workspace::features::notes::TaskItem;
+use crate::workspace::features::notes::items::{ItemKey, item_key, with_item_keys};
 use crate::workspace::{RightTab, Workspace};
 
 /// The task being written or edited in place.

@@ -225,7 +225,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{BuildKey, Cell, Row, build_rows, expand_tabs, syntax_fingerprint};
-    use crate::workspace::git_panel::diff::highlight::Highlights;
+    use crate::workspace::features::git::diff::highlight::Highlights;
     use gpui_kit::component::highlighter::HighlightTheme;
     use wormhole_core::config::Settings;
     use wormhole_core::git::{DiffLine, FileDiff, Hunk, LineKind};

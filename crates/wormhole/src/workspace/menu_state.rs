@@ -96,13 +96,13 @@ impl Workspace {
             state.disabled.extend([RevealInFinder, CopyPath]);
         }
         // The Project tab needs a folder, and the whole project-folder feature behind its flag.
-        if self.active_folder(cx).is_none() || !crate::workspace::project::project_folders_on(cx) {
+        if self.active_folder(cx).is_none() || !crate::workspace::features::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
         }
         if !self.usage_tab_on(cx) {
             state.hidden.push(ShowUsage);
         }
-        if !crate::workspace::notes::notes_on(cx) {
+        if !crate::workspace::features::notes::notes_on(cx) {
             state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
         }
         if let Some(project) =

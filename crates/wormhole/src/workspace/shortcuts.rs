@@ -14,7 +14,7 @@ impl Workspace {
             window.focus(&terminal_focus, cx);
             return;
         }
-        if !crate::workspace::notes::notes_on(cx) {
+        if !crate::workspace::features::notes::notes_on(cx) {
             return;
         }
         let session = self.active_session();

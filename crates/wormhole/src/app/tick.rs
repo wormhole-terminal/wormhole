@@ -15,7 +15,7 @@ use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
 use crate::updates::restart;
-use crate::workspace::project;
+use crate::workspace::features::project;
 use crate::workspace::window_lifecycle::open_workspace_window;
 use crate::{notifications, updates};
 

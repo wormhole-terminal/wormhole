@@ -41,7 +41,8 @@ use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
 use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::{Workspace, project};
+use crate::workspace::Workspace;
+use crate::workspace::features::project;
 
 pub(crate) use keys::init;
 pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};

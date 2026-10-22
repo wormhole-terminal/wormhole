@@ -26,7 +26,7 @@ use crate::app_state::recent_projects::RecentProjects;
 use crate::app_state::{AppState, OpenWindow};
 use crate::app_state::{app, app_mut};
 use crate::settings::{ParkedSettings, SettingsStore};
-use crate::workspace::project;
+use crate::workspace::features::project;
 use crate::workspace::window_lifecycle::with_front_workspace;
 
 impl AppState {
