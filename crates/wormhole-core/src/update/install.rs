@@ -299,7 +299,13 @@ mod tests {
     fn fake_opener(dir: &Path) -> (PathBuf, PathBuf) {
         let marker = dir.join("opened");
         let opener = dir.join("open");
-        fs::write(&opener, format!("#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\n", marker.display())).unwrap();
+        // Written beside the marker and renamed onto it, so the marker never exists half-written:
+        // `wait_for` sees it only once the whole command line is in it.
+        let script = format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$@\" > '{m}.tmp' && /bin/mv '{m}.tmp' '{m}'\n",
+            m = marker.display()
+        );
+        fs::write(&opener, script).unwrap();
         fs::set_permissions(&opener, fs::Permissions::from_mode(0o755)).unwrap();
         (opener, marker)
     }
