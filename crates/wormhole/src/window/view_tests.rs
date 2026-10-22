@@ -105,11 +105,13 @@ pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
     start_with(cx, record)
 }
 
-/// The globals every window reads besides the settings: the shared state and the updater, both of
-/// which `app::launch` sets. A test that opens a window sets them here, so none can lack one.
+/// The globals every window reads besides the settings: the shared state, the updater and the feature
+/// table, all of which `app::launch` sets. A test that opens a window sets them here, so none can lack
+/// one and a test window has the features the app's has ([`start_with_table`] swaps the table).
 pub(crate) fn set_shared_state(cx: &mut App) {
     cx.set_global(AppState::for_test(100));
     cx.set_global(crate::updates::Updates::new(None, None));
+    crate::window::features::install(cx);
 }
 
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).

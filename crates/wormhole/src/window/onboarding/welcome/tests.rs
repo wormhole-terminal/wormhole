@@ -368,6 +368,8 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
     read(cx, &window, |ws| {
         assert_eq!(ws.sessions.len(), 1);
         assert_eq!(ws.sessions[0].id, tab, "the one terminal is the welcome");
+        // Opened before `start`, this window still has the app's features.
+        assert!(ws.feature_def(wormhole_core::config::FeatureId::Changes).is_some());
     });
     let facts = state_of(&ask(cx, Some(tab), &token, state()));
     assert!(facts.first_run);
