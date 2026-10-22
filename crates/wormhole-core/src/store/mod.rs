@@ -188,6 +188,22 @@ impl Store {
     pub fn meta(&self, key: &str) -> Result<Option<String>> {
         read_meta(&self.conn, key)
     }
+
+    /// Fold the WAL into the database and cut it to nothing. `secure_delete` zeroes what a delete
+    /// frees in the database's pages, but the WAL still holds the earlier copies of those pages
+    /// (and a WAL under `journal_size_limit` is never shortened): this is what makes deleted text
+    /// leave the disk. Called after terminals are forgotten or their text is cleared, and at quit;
+    /// never per frame.
+    pub fn checkpoint(&self) -> Result<()> {
+        let busy: i64 = self
+            .conn
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| row.get(0))
+            .context("checkpointing the database")?;
+        if busy != 0 {
+            tracing::warn!("the database checkpoint could not finish: another connection is reading");
+        }
+        Ok(())
+    }
 }
 
 fn is_stale(err: &anyhow::Error) -> bool {
@@ -253,6 +269,9 @@ fn configure(conn: &Connection) -> Result<()> {
     conn.busy_timeout(Duration::from_secs(5))?;
     // Scrollback makes the WAL grow in bursts; hand the space back after the checkpoint.
     conn.pragma_update(None, "journal_size_limit", 8 * 1024 * 1024)?;
+    // Deleted rows are overwritten with zeros, not left in free pages: a closed terminal's text
+    // (scrollback holds whatever was printed, tokens included) must not be readable from the file.
+    conn.pragma_update(None, "secure_delete", true)?;
     Ok(())
 }
 

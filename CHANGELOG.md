@@ -37,6 +37,14 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Fast output of long lines with a colour per character (gradients, colour floods) draws several
   times faster.
 
+### Security
+
+- **High** · no advisory · affects 0.1.0–1.2.0: the text of a closed terminal stayed on disk. Wormhole
+  saves each terminal's recent text so it can come back after a restart; when the terminal was
+  closed, the text was deleted from the database but its bytes stayed in the file's free space and
+  in its journal, where any program on your Mac could read them, along with whatever secrets were
+  printed. Deleted text is now overwritten and the journal emptied.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added

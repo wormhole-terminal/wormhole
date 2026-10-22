@@ -560,6 +560,7 @@ pub(super) fn save_all(cx: &mut App) {
     for window in &windows {
         AppState::with_workspace(window, cx, |ws, win, cx| ws.persist(win, cx));
     }
+    app(cx).checkpoint_stores();
 }
 
 /// What the socket delivered: a hook's message, or a control request to answer (`control`).

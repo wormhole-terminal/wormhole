@@ -88,6 +88,17 @@ impl AppState {
         }
     }
 
+    /// Every open profile's WAL folded in and cut to nothing (`Store::checkpoint`): at quit, so
+    /// text deleted since the last checkpoint doesn't wait in the WAL for the next launch.
+    pub(crate) fn checkpoint_stores(&self) {
+        let parked = self.parked.values().filter_map(|slot| slot.data.store.as_ref());
+        for store in self.store.iter().chain(parked) {
+            if let Err(err) = store.checkpoint() {
+                tracing::warn!("{err:#}");
+            }
+        }
+    }
+
     /// A window was closed on purpose: its sessions go with it, from its own profile's database.
     pub(crate) fn forget_window(&mut self, profile: &ProfileId, id: i64) {
         if let Some(store) = self.store_of_mut(profile)

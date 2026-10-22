@@ -1,5 +1,6 @@
 //! Tests of the store, by what they exercise. `use super::*` below gets the shared fixtures.
 
+mod erasure;
 mod migrations;
 mod recovery;
 mod rename;

@@ -95,7 +95,7 @@ impl Store {
         let tx = self.conn.transaction()?;
         write_window_row(&tx, window)?;
         let keep: HashSet<i64> = window.sessions.iter().map(|s| s.id).collect();
-        delete_sessions_except(&tx, window.id, &keep)?;
+        let forgotten = delete_sessions_except(&tx, window.id, &keep)?;
         for split in &window.splits {
             write_split(&tx, window.id, split)?;
         }
@@ -104,6 +104,9 @@ impl Store {
         }
         forget_empty_splits(&tx, window.id)?;
         tx.commit()?;
+        if forgotten > 0 {
+            self.checkpoint()?;
+        }
         Ok(())
     }
 
@@ -119,7 +122,7 @@ impl Store {
         exec(&tx, "DELETE FROM splits WHERE window_id = ?1", [id])?;
         exec(&tx, "DELETE FROM windows WHERE id = ?1", [id])?;
         tx.commit()?;
-        Ok(())
+        self.checkpoint()
     }
 
     /// Forget this window's sessions that are not in `keep` (closed sessions), with their notes,
@@ -127,9 +130,12 @@ impl Store {
     /// sessions are never touched.
     pub fn delete_sessions_except(&mut self, window_id: i64, keep: &[i64]) -> Result<()> {
         let tx = self.conn.transaction()?;
-        delete_sessions_except(&tx, window_id, &keep.iter().copied().collect())?;
+        let forgotten = delete_sessions_except(&tx, window_id, &keep.iter().copied().collect())?;
         forget_empty_splits(&tx, window_id)?;
         tx.commit()?;
+        if forgotten > 0 {
+            self.checkpoint()?;
+        }
         Ok(())
     }
 
@@ -185,13 +191,16 @@ fn forget_empty_splits(conn: &Connection, window_id: i64) -> Result<()> {
     Ok(())
 }
 
-fn delete_sessions_except(conn: &Connection, window_id: i64, keep: &HashSet<i64>) -> Result<()> {
+/// How many sessions were forgotten.
+fn delete_sessions_except(conn: &Connection, window_id: i64, keep: &HashSet<i64>) -> Result<usize> {
     let own: Vec<i64> = conn
         .prepare_cached("SELECT id FROM sessions WHERE window_id = ?")?
         .query_map([window_id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?;
+    let mut forgotten = 0;
     for id in own.into_iter().filter(|id| !keep.contains(id)) {
         delete_session_rows(conn, id)?;
+        forgotten += 1;
     }
-    Ok(())
+    Ok(forgotten)
 }
