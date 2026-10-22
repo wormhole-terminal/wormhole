@@ -231,11 +231,7 @@
       "wormhole-wire: history -> stream": 1,
       "wormhole-wire: stream -> header": 1,
       "wormhole: icons -> settings": 1,
-      "wormhole: palette -> theme_bridge": 1,
-      "wormhole: settings -> icons": 1,
-      "wormhole: settings -> palette": 1,
-      "wormhole: settings -> theme_bridge": 1,
-      "wormhole: theme_bridge -> settings": 1
+      "wormhole: settings -> icons": 1
     },
     "cross-reexports": {
       "crates/wormhole-core/src/agents/mod.rs :: crate::terminal": 1,

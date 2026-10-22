@@ -306,7 +306,10 @@ impl SettingsStore {
     /// until the tick caught up.
     fn publish(changed: Changed, cx: &mut App) {
         if changed.theme || changed.fonts {
-            theme_bridge::apply_store(cx);
+            let store = cx.global::<SettingsStore>();
+            let (tokens, fonts, highlight) =
+                (store.tokens.clone(), store.fonts.clone(), store.highlight.clone());
+            theme_bridge::apply_shared(&tokens, &fonts, &highlight, cx);
         }
     }
 

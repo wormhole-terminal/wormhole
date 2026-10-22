@@ -15,8 +15,6 @@ use gpui_kit::{App, Global, Hsla, px, transparent_black};
 use wormhole_core::fonts::{DEFAULT_UI_FONT_SIZE, ResolvedFonts};
 use wormhole_core::tokens::{Appearance, Color, ThemeTokens};
 
-use crate::settings::SettingsStore;
-
 pub fn hsla(color: Color) -> Hsla {
     gpui_kit::Rgba { r: color.r, g: color.g, b: color.b, a: color.a }.into()
 }
@@ -192,7 +190,7 @@ fn is_applied(
 
 /// Apply `tokens` and the resolved fonts to GPUI Kit's global theme, unless it already
 /// has them. The settings store does this itself whenever the theme or the fonts change
-/// ([`apply_store`]); this is for a caller that holds the values separately.
+/// ([`apply_shared`]); this is for a caller that holds the values separately.
 pub fn apply(tokens: &ThemeTokens, fonts: &ResolvedFonts, cx: &mut App) {
     if is_applied(tokens, None, fonts, cx) {
         return;
@@ -200,15 +198,19 @@ pub fn apply(tokens: &ThemeTokens, fonts: &ResolvedFonts, cx: &mut App) {
     apply_now(&Arc::new(tokens.clone()), fonts, &highlight_for(tokens), cx);
 }
 
-/// Apply the settings store's current theme and fonts (its syntax theme is reused, not
-/// built again).
-pub(crate) fn apply_store(cx: &mut App) {
-    let store = cx.global::<SettingsStore>();
-    let (tokens, fonts, highlight) = (store.tokens.clone(), store.fonts.clone(), store.highlight.clone());
-    if is_applied(&tokens, Some(&tokens), &fonts, cx) {
+/// Apply a theme and fonts whose syntax theme is already built (the settings store's, which
+/// passes its own: settings sits above this bridge and hands it the values), unless the Kit
+/// already has them. The shared tokens compare by pointer first.
+pub(crate) fn apply_shared(
+    tokens: &Arc<ThemeTokens>,
+    fonts: &ResolvedFonts,
+    highlight: &Arc<HighlightTheme>,
+    cx: &mut App,
+) {
+    if is_applied(tokens, Some(tokens), fonts, cx) {
         return;
     }
-    apply_now(&tokens, &fonts, &highlight, cx);
+    apply_now(tokens, fonts, highlight, cx);
 }
 
 fn apply_now(
@@ -322,61 +324,25 @@ mod tests {
     }
 }
 
-/// The Kit's theme after the store changes it, in a headless GPUI (needs `devctl`'s
-/// test support).
+/// Handing the Kit a theme, in a headless GPUI (needs `devctl`'s test support). That a settings
+/// change reaches the Kit is the store's to test (`settings::app_tests`).
 #[cfg(all(test, feature = "devctl"))]
 mod kit_tests {
     use gpui_kit::TestAppContext;
     use gpui_kit::component::Theme as KitTheme;
+    use wormhole_core::config::Config;
+    use wormhole_core::fonts::ResolvedFonts;
 
-    use super::{apply, apply_store, token};
-    use crate::settings::SettingsStore;
-
-    fn setup(cx: &mut gpui_kit::App) {
-        gpui_kit::init(cx);
-        cx.set_global(SettingsStore::for_test());
-        apply_store(cx);
-    }
-
-    #[gpui_kit::test]
-    fn a_theme_change_reaches_the_kit_before_any_tick(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            setup(cx);
-            let dark_primary = KitTheme::global(cx).colors.primary;
-
-            SettingsStore::update(cx, |s| s.theme = "GitHub Light".into());
-
-            let store = cx.global::<SettingsStore>();
-            let primary = token(&store.tokens, "primary");
-            assert_ne!(primary, dark_primary, "the two themes should differ");
-            assert_eq!(KitTheme::global(cx).colors.primary, primary);
-            // Both copies of the color, and the Base layer scrollbars and selection read.
-            assert_eq!(KitTheme::global(cx).tokens.primary.color, primary);
-            assert_eq!(gpui_kit::base::Theme::global(cx).tokens.colors.primary, primary);
-            assert!(!KitTheme::global(cx).is_dark());
-        });
-    }
-
-    #[gpui_kit::test]
-    fn the_syntax_theme_follows_too(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            setup(cx);
-            let highlight_before = KitTheme::global(cx).highlight_theme.clone();
-
-            SettingsStore::update(cx, |s| s.theme = "GitHub Light".into());
-
-            let store = cx.global::<SettingsStore>();
-            assert!(std::sync::Arc::ptr_eq(&KitTheme::global(cx).highlight_theme, &store.highlight));
-            assert!(!std::sync::Arc::ptr_eq(&highlight_before, &store.highlight));
-        });
-    }
+    use super::apply;
 
     #[gpui_kit::test]
     fn handing_the_kit_the_same_theme_again_does_nothing(cx: &mut TestAppContext) {
         cx.update(|cx| {
-            setup(cx);
-            let store = cx.global::<SettingsStore>();
-            let (tokens, fonts) = (store.tokens.clone(), store.fonts.clone());
+            gpui_kit::init(cx);
+            let config = Config::placeholder();
+            let (tokens, fonts) =
+                (config.tokens.clone(), ResolvedFonts::resolve(&config.settings, &config.tokens.metrics));
+            apply(&tokens, &fonts, cx);
             // Make a change a repeat would undo, to see whether it is redone.
             KitTheme::global_mut(cx).colors.primary = gpui_kit::red();
             apply(&tokens, &fonts, cx);
