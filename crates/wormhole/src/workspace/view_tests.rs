@@ -20,12 +20,12 @@ use wormhole_core::git::{ChangeKind, DiffSpec, FileChange};
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Entry, SidebarNumbers, WindowSidebar};
 
-use super::app::{AppState, OpenWindow, app, open_workspace_window};
-use super::picker::Picker;
-use super::status_bar::StatusItem;
-use super::{RightTab, TaskItem, Workspace, notifications};
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
+use crate::workspace::app::{AppState, OpenWindow, app, open_workspace_window};
+use crate::workspace::picker::Picker;
+use crate::workspace::status_bar::StatusItem;
+use crate::workspace::{RightTab, TaskItem, Workspace, notifications};
 
 const CHILD: &str = "WORMHOLE_VIEW_TEST_CHILD";
 
@@ -112,10 +112,10 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         cx.set_global(AppState::for_test(100));
         // These tests were written for the numbers that follow the list; the ones that stay with the
         // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
-        super::settings_page::update_settings(cx, |settings| {
+        crate::workspace::settings_page::update_settings(cx, |settings| {
             settings.sidebar_numbers = SidebarNumbers::List;
         });
-        super::actions::init(cx);
+        crate::workspace::actions::init(cx);
         notifications::init(cx);
         open_workspace_window(Some(record), None, cx);
     });
@@ -126,7 +126,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
 /// The numbers that stay with a terminal (the default).
 pub(super) fn use_stable(cx: &mut TestAppContext) {
     cx.update(|cx| {
-        super::settings_page::update_settings(cx, |settings| {
+        crate::workspace::settings_page::update_settings(cx, |settings| {
             settings.sidebar_numbers = SidebarNumbers::Terminal;
         });
     });
@@ -530,7 +530,7 @@ fn jump_goes_to_the_terminal_waiting_longest_then_the_next(cx: &mut TestAppConte
     std::thread::sleep(std::time::Duration::from_millis(5));
     hook(cx, &window, 2, "Notification", Some("second"));
     let jump = |cx: &mut TestAppContext| {
-        cx.update(super::ambient::jump_to_waiting);
+        cx.update(crate::workspace::ambient::jump_to_waiting);
         cx.run_until_parked();
         read(cx, &window, |ws| ws.sessions[ws.active].id)
     };
@@ -706,7 +706,7 @@ fn closing_the_last_window_asks_before_quitting_while_an_agent_works(cx: &mut Te
     cx.update(|cx| {
         assert_eq!(app(cx).quit_prompt, Some(window_id), "the question is on screen");
         assert!(!app(cx).quitting);
-        super::request_quit(cx);
+        crate::workspace::request_quit(cx);
         assert_eq!(app(cx).quit_prompt, Some(window_id), "one question at a time");
     });
 }
@@ -848,7 +848,12 @@ fn closing_settings_leaves_the_window_in_front_its_tick(cx: &mut TestAppContext)
         return;
     }
     let window = start(cx, 1);
-    cx.update(|cx| super::settings_page::open_settings(Some(super::settings_page::Section::Sessions), cx));
+    cx.update(|cx| {
+        crate::workspace::settings_page::open_settings(
+            Some(crate::workspace::settings_page::Section::Sessions),
+            cx,
+        )
+    });
     cx.run_until_parked();
     let (settings_window, _) = cx.update(|cx| app(cx).settings_window.clone()).expect("Settings opened");
     draw(cx, &window);

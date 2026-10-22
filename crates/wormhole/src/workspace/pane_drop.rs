@@ -15,10 +15,10 @@ use wormhole_core::view::panes::{
 };
 use wormhole_core::view::sidebar::SplitId;
 
-use super::Workspace;
-use super::terminal_drag::{DraggedTerminal, PaneHover};
 use crate::settings::ui_in;
 use crate::style;
+use crate::workspace::Workspace;
+use crate::workspace::terminal_drag::{DraggedTerminal, PaneHover};
 
 /// What a hint on a zone says a drop will do.
 fn hint_text(zone: Zone, moving: bool, target: &str) -> String {

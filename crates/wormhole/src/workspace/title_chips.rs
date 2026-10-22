@@ -17,13 +17,13 @@ use wormhole_core::git::pr::{Checks, PrState, PullRequest};
 use wormhole_core::view::layout::title_row::{Extra, Extras};
 use wormhole_core::view::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
 
-use super::breadcrumb::{CRUMB_GAP, Measure};
-use super::title_extras::ExtraFacts;
-use super::title_row::TitlePlan;
-use super::{RightTab, Workspace};
 use crate::select;
 use crate::settings::{UiColors, ui_in};
 use crate::style;
+use crate::workspace::breadcrumb::{CRUMB_GAP, Measure};
+use crate::workspace::title_extras::ExtraFacts;
+use crate::workspace::title_row::TitlePlan;
+use crate::workspace::{RightTab, Workspace};
 
 /// The gap in front of each chip at the right end of the row (`ml_2`).
 const CHIP_GAP: f32 = 8.0;

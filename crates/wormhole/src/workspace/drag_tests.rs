@@ -10,9 +10,9 @@ use gpui_kit::{
 use wormhole_core::view::panes::Zone;
 use wormhole_core::view::sidebar::Entry;
 
-use super::app::OpenWindow;
-use super::terminal_drag::{Over, PaneHover};
-use super::view_tests::{draw, drive, isolate_in, read, start};
+use crate::workspace::app::OpenWindow;
+use crate::workspace::terminal_drag::{Over, PaneHover};
+use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

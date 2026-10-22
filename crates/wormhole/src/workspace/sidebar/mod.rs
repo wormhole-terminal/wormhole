@@ -16,11 +16,11 @@ use wormhole_core::view::sidebar::hints::CmdHold;
 use wormhole_core::view::sidebar::order::FrozenNumbers;
 use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
-use super::Workspace;
-use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
-use super::terminal_drag::Over;
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, TextRole};
+use crate::workspace::Workspace;
+use crate::workspace::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
+use crate::workspace::terminal_drag::Over;
 
 mod demo;
 mod drag;
@@ -86,7 +86,7 @@ pub(super) struct SidebarState {
     /// The tab bar, while the terminals are in tabs.
     pub(super) tabs: tab_bar::TabBarState,
     /// The profile chip's menu being open, and the list it shows.
-    pub(super) profile_menu: Option<super::profile_chip::ProfilePage>,
+    pub(super) profile_menu: Option<crate::workspace::profile_chip::ProfilePage>,
 }
 
 impl SidebarState {
@@ -382,7 +382,12 @@ impl Workspace {
     fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
         let scroll = &self.sidebar.scroll;
         let scrollbar = Scrollbar::vertical(scroll).id("sidebar-scrollbar");
-        super::panel_list::scroll_edges(ui, super::panel_list::is_scrolled(scroll), scrollbar, cx)
+        crate::workspace::panel_list::scroll_edges(
+            ui,
+            crate::workspace::panel_list::is_scrolled(scroll),
+            scrollbar,
+            cx,
+        )
     }
 
     /// Fold the group called `label`, or open it; `false` if there is none.

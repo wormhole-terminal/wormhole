@@ -11,12 +11,12 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::update::{Release, Security, Severity, UpdateChannel};
 
-use super::super::super::updates::UpdatePhase;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::app::app;
 use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 use crate::workspace::settings_page::{SettingsWindow, ui};
+use crate::workspace::updates::UpdatePhase;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("version", |_, cx| {

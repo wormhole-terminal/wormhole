@@ -12,12 +12,12 @@ use std::path::Path;
 use gpui_kit::*;
 use wormhole_core::terminal::shells;
 
-use super::{Workspace, session};
 use crate::platform::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
 use crate::platform::{self};
 use crate::settings::store_in;
 use crate::style::motion::{PATH_CARD_CLOSE_DELAY, PATH_CARD_COPIED_FOR, PATH_CARD_OPEN_DELAY};
 use crate::terminal_view::Status;
+use crate::workspace::{Workspace, session};
 
 /// What the pointer is over: the folder in the title row, or the card under it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

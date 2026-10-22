@@ -15,13 +15,13 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
-use super::git_panel::picker;
-use super::path_card::Over;
-use super::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
-use super::{RightTab, Workspace};
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
+use crate::workspace::git_panel::picker;
+use crate::workspace::path_card::Over;
+use crate::workspace::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use crate::workspace::{RightTab, Workspace};
 
 impl Workspace {
     /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
@@ -59,9 +59,9 @@ impl Workspace {
         let session = self.active_session();
         let terminal = session.terminal().read(cx);
         let folder = terminal.cwd.clone();
-        let shown = folder
-            .as_deref()
-            .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, super::session::home_dir()));
+        let shown = folder.as_deref().map(|cwd| {
+            wormhole_core::view::sidebar::display_path(cwd, crate::workspace::session::home_dir())
+        });
         // The branch only while git's answer is about the folder the terminal is in now.
         let branch = session
             .git
@@ -115,7 +115,7 @@ impl Workspace {
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
-            Some(_) => (ROW_GAP + super::title_row::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
+            Some(_) => (ROW_GAP + crate::workspace::title_row::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
             None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
         };
         // A crumb before the terminal brings a gap, the separator and a gap.
@@ -151,7 +151,7 @@ impl Workspace {
                 + CRUMB_GAP,
         };
         let fit = fit_row(self.title_row_width(window), &wants);
-        TitlePlan { app: super::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
+        TitlePlan { app: crate::workspace::open_in::OpenIn::resolved(cx), facts, steps, fit, tint }
     }
 
     /// The selected terminal's breadcrumb: folder › branch › the terminal's tool and name.

@@ -20,8 +20,6 @@ use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::sidebar::display_path;
 use wormhole_core::view::spoken;
 
-use super::super::folder_color;
-use super::super::session::home_dir;
 use super::LoadedProject;
 use crate::platform::auth;
 use crate::settings::UiColors;
@@ -30,6 +28,8 @@ use crate::style::{self, TextRole};
 use crate::theme_bridge;
 use crate::workspace::Workspace;
 use crate::workspace::app::app;
+use crate::workspace::folder_color;
+use crate::workspace::session::home_dir;
 
 /// How many lines the trust notice shows in full; a longer list shows [`TRUST_LINES_SHOWN`]
 /// and "View all N…", which opens them in their own window.

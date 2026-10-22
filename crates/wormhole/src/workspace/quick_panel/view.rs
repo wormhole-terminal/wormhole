@@ -184,7 +184,7 @@ impl QuickPanel {
     fn open_tab(&self, tab: i64, cx: &mut App) {
         close(cx);
         cx.defer(move |cx| {
-            super::super::menu_bar::run_command(crate::menubar::MenuCommand::OpenTab(tab), cx)
+            crate::workspace::menu_bar::run_command(crate::menubar::MenuCommand::OpenTab(tab), cx)
         });
     }
 
@@ -213,7 +213,7 @@ impl QuickPanel {
             return;
         }
         // After this update: the terminal's window is updated, never inside the panel's.
-        cx.defer(move |cx| super::super::notifications::reply(tab, &text, cx));
+        cx.defer(move |cx| crate::workspace::notifications::reply(tab, &text, cx));
         let rows = self.rows(cx);
         let waiting: Vec<i64> = rows.iter().filter_map(Row::waiting).map(|t| t.tab).collect();
         let next = waiting.iter().skip_while(|&&t| t != tab).nth(1).or_else(|| waiting.first()).copied();

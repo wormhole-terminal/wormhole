@@ -30,13 +30,13 @@ use wormhole_core::notify::{
 };
 use wormhole_core::update::current_app_bundle;
 
-use super::ambient::{self, TabFacts};
-use super::app::{AppState, app, open_tab};
-use super::{RightTab, Workspace};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
 use crate::settings::{settings, settings_in};
+use crate::workspace::ambient::{self, TabFacts};
+use crate::workspace::app::{AppState, app, open_tab};
+use crate::workspace::{RightTab, Workspace};
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).

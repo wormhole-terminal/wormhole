@@ -15,9 +15,9 @@ mod view;
 use gpui_kit::*;
 use wormhole_core::notify::Terminal;
 
-use super::app::AppState;
 use crate::menubar::ActionItem;
 use crate::style;
+use crate::workspace::app::AppState;
 
 pub(crate) use rows::{Do, Row, rows};
 pub(crate) use view::QuickPanel;
@@ -106,7 +106,7 @@ fn pointer_display(cx: &App) -> Option<std::rc::Rc<dyn PlatformDisplay>> {
 
 /// Every terminal of every window, now.
 fn terminals_now(cx: &App) -> Vec<Terminal> {
-    super::ambient::terminals(cx)
+    crate::workspace::ambient::terminals(cx)
 }
 
 /// The Do section: a new terminal where the one in front is, Open Folder…, and the actions of
@@ -116,7 +116,7 @@ fn do_items(cx: &App) -> Vec<Do> {
         front.workspace.read_with(cx, |ws, cx| ws.active_terminal().read(cx).cwd.clone()).ok().flatten()
     });
     let mut items = vec![Do::NewTerminal { cwd }, Do::OpenFolder];
-    items.extend(super::menu_bar::project_actions(cx).into_iter().map(Do::Action));
+    items.extend(crate::workspace::menu_bar::project_actions(cx).into_iter().map(Do::Action));
     items
 }
 
@@ -151,5 +151,5 @@ fn run(row: &Row, cx: &mut App) {
         Row::Label { .. } | Row::Note(_) => return,
     };
     close(cx);
-    cx.defer(move |cx| super::menu_bar::run_command(command, cx));
+    cx.defer(move |cx| crate::workspace::menu_bar::run_command(command, cx));
 }

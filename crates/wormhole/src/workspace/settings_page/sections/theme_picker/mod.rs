@@ -26,9 +26,9 @@ use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::import_theme;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
+use crate::workspace::settings_page::sections::import_theme;
 use crate::workspace::settings_page::{SettingsWindow, ui};
 use crate::workspace::studio;
 

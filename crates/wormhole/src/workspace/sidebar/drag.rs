@@ -14,12 +14,12 @@ use wormhole_core::view::sidebar::{
 };
 use wormhole_core::view::sidebar::{Entry, Listing};
 
-use super::super::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over, TerminalDrag};
 use super::facts::RowInfo;
 use super::motion::ItemKey;
 use crate::settings::UiColors;
 use crate::style;
 use crate::workspace::Workspace;
+use crate::workspace::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over, TerminalDrag};
 
 /// Where a dragged thing would land, as a line on the list.
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -12,11 +12,11 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::{Edge, PanelToggle};
 use wormhole_core::view::spoken::{self, PanelTab};
 
-use super::app::app;
-use super::focus::TitleButton;
-use super::{RightTab, Workspace};
 use crate::settings::{store_in, ui_in};
 use crate::style;
+use crate::workspace::app::app;
+use crate::workspace::focus::TitleButton;
+use crate::workspace::{RightTab, Workspace};
 
 /// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
 /// call over the board's 20, which left the lights hanging right of everything below them). They
@@ -273,7 +273,7 @@ impl Workspace {
             .child(self.render_panel_tabs(window, cx))
             // The Notes tab's one action sits beside the panel toggle rather than
             // on a row of its own above the list.
-            .when(self.right_tab == RightTab::Notes && super::notes::notes_on(cx), |d| {
+            .when(self.right_tab == RightTab::Notes && crate::workspace::notes::notes_on(cx), |d| {
                 d.child(
                     div().id("panel-actions").occlude().flex_none().child(
                         style::icon_tab(
@@ -301,7 +301,11 @@ impl Workspace {
         let files = session.git.status.as_ref().map(|s| s.files.len());
         let changes = files.filter(|&n| n > 0);
         let open_steps = session.tasks.iter().filter(|t| !t.done).count();
-        let notes = session.notes.iter().filter(|n| !super::notes::is_blank_note(n.state.read(cx))).count();
+        let notes = session
+            .notes
+            .iter()
+            .filter(|n| !crate::workspace::notes::is_blank_note(n.state.read(cx)))
+            .count();
         let tabs = self.panel_tab_list(cx);
         let ring = self.ring(Area::PanelTabs, window);
         let tab = |id: &'static str,

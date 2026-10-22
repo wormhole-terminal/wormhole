@@ -25,9 +25,9 @@ use wormhole_core::view::title_extras::BranchStatus;
 use wormhole_term::Notification;
 use wormhole_term::listening_ports;
 
-use super::Workspace;
-use super::app::{app, app_mut};
 use crate::settings::settings_in;
+use crate::workspace::Workspace;
+use crate::workspace::app::{app, app_mut};
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);
@@ -174,7 +174,9 @@ impl Workspace {
 
     /// [`Self::pull_request_branch`] for any of the window's terminals.
     pub(super) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
-        if !settings_in(&self.profile, cx).title_pull_request || !super::project::project_folders_on(cx) {
+        if !settings_in(&self.profile, cx).title_pull_request
+            || !crate::workspace::project::project_folders_on(cx)
+        {
             return None;
         }
         let session = self.sessions.get(ix)?;

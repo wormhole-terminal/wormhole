@@ -22,11 +22,11 @@ use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
 use wormhole_core::project::Feature;
 
-use super::app::{AppState, app, app_mut};
-use super::{Workspace, dialog, project, session};
 use crate::settings::{settings, ui};
 use crate::style::{self, TextRole};
 use crate::terminal_view::Status;
+use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::{Workspace, dialog, project, session};
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to
 /// run in the terminal once it opens, and why the last Create was refused.

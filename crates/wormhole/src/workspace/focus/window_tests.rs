@@ -4,10 +4,10 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::view::focus::Area;
 
-use super::super::RightTab;
-use super::super::app::OpenWindow;
-use super::super::view_tests::{draw, drive, isolate_in, press, read, start};
 use super::SidebarStop;
+use crate::workspace::RightTab;
+use crate::workspace::app::OpenWindow;
+use crate::workspace::view_tests::{draw, drive, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {

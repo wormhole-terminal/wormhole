@@ -4,12 +4,12 @@
 
 use gpui_kit::*;
 
-use super::Workspace;
-use super::command_palette::CommandPalette;
-use super::shortcut_sheet::ShortcutSheet;
 use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::token;
+use crate::workspace::Workspace;
+use crate::workspace::command_palette::CommandPalette;
+use crate::workspace::shortcut_sheet::ShortcutSheet;
 
 /// Which overlay is open.
 pub(super) enum OverlayView {

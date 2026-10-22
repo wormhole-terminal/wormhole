@@ -18,9 +18,9 @@ use wormhole_core::update::{
     self, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
-use super::app::{app, app_mut};
-use super::update_restart::IdleWatch;
 use crate::settings::{SettingsStore, settings};
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::update_restart::IdleWatch;
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
 const SCHEDULE_KEY: &str = "update_schedule";

@@ -4,9 +4,9 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::Store;
 
-use super::app::OpenWindow;
-use super::app::{app, app_mut};
-use super::view_tests::{drive, isolate_in, start};
+use crate::workspace::app::OpenWindow;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::view_tests::{drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -56,9 +56,9 @@ fn turning_restore_off_erases_the_text_and_stops_saving(cx: &mut TestAppContext)
         return;
     }
     let window = with_saved_text(cx);
-    cx.update(super::saved_text::init);
+    cx.update(crate::workspace::saved_text::init);
     assert_eq!(saved(cx), [Some("SECRET-MARKER-7".to_string()), Some("two".to_string())], "on: kept");
-    cx.update(|cx| super::settings_page::update_settings(cx, |s| s.restore_terminal_text = false));
+    cx.update(|cx| crate::workspace::settings_page::update_settings(cx, |s| s.restore_terminal_text = false));
     cx.run_until_parked();
     assert_eq!(saved(cx), [None, None]);
     drive(cx, &window, |ws, _, cx| ws.save_scrollback(cx));
@@ -72,8 +72,8 @@ fn the_erase_runs_once_per_turn_off_not_on_every_settings_change(cx: &mut TestAp
         return;
     }
     let _window = with_saved_text(cx);
-    cx.update(super::saved_text::init);
-    cx.update(|cx| super::settings_page::update_settings(cx, |s| s.restore_terminal_text = false));
+    cx.update(crate::workspace::saved_text::init);
+    cx.update(|cx| crate::workspace::settings_page::update_settings(cx, |s| s.restore_terminal_text = false));
     cx.run_until_parked();
     assert_eq!(saved(cx), [None, None]);
     // Written behind the setting's back: only a new turn-off, a launch or a profile switch erases.
@@ -81,7 +81,7 @@ fn the_erase_runs_once_per_turn_off_not_on_every_settings_change(cx: &mut TestAp
         let store = app_mut(cx).store.as_mut().expect("store");
         assert_eq!(store.save_scrollbacks(&[(1, "late")]).expect("saves"), 1);
     });
-    cx.update(|cx| super::settings_page::update_settings(cx, |s| s.minimap = !s.minimap));
+    cx.update(|cx| crate::workspace::settings_page::update_settings(cx, |s| s.minimap = !s.minimap));
     cx.run_until_parked();
     assert_eq!(saved(cx)[0].as_deref(), Some("late"), "another setting changed: not erased again");
 }

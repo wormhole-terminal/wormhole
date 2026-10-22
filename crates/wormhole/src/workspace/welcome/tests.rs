@@ -13,13 +13,13 @@ use wormhole_core::ipc::control::{
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::view::sidebar::RowState;
 
-use super::super::notifications;
-use super::super::view_tests::{draw, drive, isolate_in, read, start};
-use super::super::{app, app_mut, control};
 use super::{Plan, handle};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
+use crate::workspace::notifications;
 use crate::workspace::settings_page::update_settings;
+use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
+use crate::workspace::{app, app_mut, control};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -354,10 +354,10 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         gpui_kit::init(cx);
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(crate::settings::SettingsStore::load());
-        cx.set_global(super::super::app::AppState::for_test(100));
-        super::super::actions::init(cx);
+        cx.set_global(crate::workspace::app::AppState::for_test(100));
+        crate::workspace::actions::init(cx);
         app_mut(cx).first_welcome = Some(Plan { handover: Handover::Portal, first_run: true });
-        super::super::app::open_workspace_window(None, None, cx);
+        crate::workspace::app::open_workspace_window(None, None, cx);
         app_mut(cx).first_welcome = None;
     });
     cx.run_until_parked();
@@ -375,7 +375,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
 // ------------------------------------------------------------------------- the example band
 
 /// The three states the band shows, as `state` would list them.
-fn band(cx: &mut TestAppContext, window: &super::super::app::OpenWindow) -> Option<Vec<RowState>> {
+fn band(cx: &mut TestAppContext, window: &crate::workspace::app::OpenWindow) -> Option<Vec<RowState>> {
     cx.update(|cx| {
         window
             .workspace
@@ -387,7 +387,7 @@ fn band(cx: &mut TestAppContext, window: &super::super::app::OpenWindow) -> Opti
 /// What a script, the saved window and the sidebar's list each say of the window's terminals.
 fn terminals_as_seen(
     cx: &mut TestAppContext,
-    window: &super::super::app::OpenWindow,
+    window: &crate::workspace::app::OpenWindow,
 ) -> (serde_json::Value, String, wormhole_core::view::sidebar::Listing, usize) {
     let (record, listing, sessions) = cx.update(|cx| {
         window
@@ -475,7 +475,7 @@ fn the_example_band_goes_with_its_window(cx: &mut TestAppContext) {
         return;
     }
     let window = start(cx, 1);
-    cx.update(|cx| super::super::app::open_workspace_window(None, None, cx));
+    cx.update(|cx| crate::workspace::app::open_workspace_window(None, None, cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, window, cx| ws.replay_welcome(Handover::Cursor, window, cx));
     let (tab, token) = welcome_terminal(cx);
@@ -496,7 +496,7 @@ fn the_example_band_goes_in_the_sidebar_of_the_welcomes_own_window(cx: &mut Test
         return;
     }
     let first = start(cx, 1);
-    cx.update(|cx| super::super::app::open_workspace_window(None, None, cx));
+    cx.update(|cx| crate::workspace::app::open_workspace_window(None, None, cx));
     cx.run_until_parked();
     let second =
         cx.update(|cx| app(cx).windows.iter().find(|w| w.id != first.id).cloned()).expect("a second window");

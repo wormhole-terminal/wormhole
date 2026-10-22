@@ -8,7 +8,6 @@ use gpui_kit::*;
 use wormhole_core::view::sidebar::{Entry, Listing};
 use wormhole_core::view::sidebar::{Urgency, spoken};
 
-use super::super::focus::SidebarStop;
 use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
@@ -18,6 +17,7 @@ use crate::style;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 use crate::workspace::Workspace;
+use crate::workspace::focus::SidebarStop;
 
 impl Workspace {
     /// A group's head: the tiles of its terminals while folded, the dot while one needs you or
@@ -150,7 +150,7 @@ impl Workspace {
             |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
         );
         let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        self.open_group_menu(group, super::super::focus::key_menu_origin(bounds), window, cx);
+        self.open_group_menu(group, crate::workspace::focus::key_menu_origin(bounds), window, cx);
     }
 
     /// Open group `group`'s menu at `at`, its head wearing the ring until the menu closes.

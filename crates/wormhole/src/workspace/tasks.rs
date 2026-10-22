@@ -12,11 +12,11 @@ use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::reorder;
 use wormhole_core::view::spoken;
 
-use super::items::{ItemKey, item_key, with_item_keys};
-use super::notes::NotesView;
-use super::{RightTab, TaskItem, Workspace};
 use crate::settings::UiColors;
 use crate::style;
+use crate::workspace::items::{ItemKey, item_key, with_item_keys};
+use crate::workspace::notes::NotesView;
+use crate::workspace::{RightTab, TaskItem, Workspace};
 
 /// The task being written or edited in place.
 pub(super) struct TaskEdit {

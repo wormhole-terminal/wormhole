@@ -23,17 +23,17 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::TerminalsIn;
 use wormhole_core::view::sidebar::order::shortcut_target;
 
-use super::app::{self, AppState, app};
-use super::settings_page::update_settings;
-use super::{
-    RightTab, Workspace, about, actions, ambient, app_menu, command_palette, focus, menu_bar, onboarding,
-    settings_page, shortcut_sheet, sidebar, studio, updates,
-};
 use crate::menubar::MenuCommand;
 use crate::settings::{SettingsStore, settings};
 use crate::terminal_view::{
     ClearBuffer, CopyCommand, CopyOutput, FONT_SIZES, NextPrompt, PreviousPrompt, RerunCommand, SelectOutput,
     TerminalKeys, keystroke_spec,
+};
+use crate::workspace::app::{self, AppState, app};
+use crate::workspace::settings_page::update_settings;
+use crate::workspace::{
+    RightTab, Workspace, about, actions, ambient, app_menu, command_palette, focus, menu_bar, onboarding,
+    settings_page, shortcut_sheet, sidebar, studio, updates,
 };
 
 actions!(
@@ -427,9 +427,13 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayIntroAurora, cx| play_intro_in_front(Style::Aurora, cx));
     cx.on_action(|_: &PlayIntroTentacles, cx| play_intro_in_front(Style::Tentacles, cx));
     cx.on_action(|_: &PlayIntroVoyage, cx| play_intro_in_front(Style::Voyage, cx));
-    cx.on_action(|_: &PlayWelcomeCursor, cx| super::welcome::replay_in_front(Handover::Cursor, cx));
-    cx.on_action(|_: &PlayWelcomePortal, cx| super::welcome::replay_in_front(Handover::Portal, cx));
-    cx.on_action(|_: &PlayWelcomeLogo, cx| super::welcome::replay_in_front(Handover::Logo, cx));
+    cx.on_action(|_: &PlayWelcomeCursor, cx| {
+        crate::workspace::welcome::replay_in_front(Handover::Cursor, cx)
+    });
+    cx.on_action(|_: &PlayWelcomePortal, cx| {
+        crate::workspace::welcome::replay_in_front(Handover::Portal, cx)
+    });
+    cx.on_action(|_: &PlayWelcomeLogo, cx| crate::workspace::welcome::replay_in_front(Handover::Logo, cx));
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();
         cx.defer(move |cx| menu_bar::run_command(MenuCommand::OpenProject(root), cx));
@@ -664,7 +668,7 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Bigger, _, cx| this.zoom_font(Some(1.0), cx)))
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
-            .when(super::notes::notes_on(cx), |root| {
+            .when(crate::workspace::notes::notes_on(cx), |root| {
                 root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
                     .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
                     .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))

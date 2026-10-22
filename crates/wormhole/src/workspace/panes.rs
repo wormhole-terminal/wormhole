@@ -16,18 +16,18 @@ use wormhole_core::view::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, P
 use wormhole_core::view::sidebar::SplitId;
 use wormhole_core::view::spoken;
 
-use super::app::app;
-use super::breadcrumb::terminal_tile;
-use super::session::Pane;
-use super::session::home_dir;
-use super::splits::Split;
-use super::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
-use super::{Workspace, notifications};
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::{self, Anchor, Item, Menu};
 use crate::settings::{settings_in, ui_in};
 use crate::style;
 use crate::terminal_view::TerminalEvent;
+use crate::workspace::app::app;
+use crate::workspace::breadcrumb::terminal_tile;
+use crate::workspace::session::Pane;
+use crate::workspace::session::home_dir;
+use crate::workspace::splits::Split;
+use crate::workspace::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
+use crate::workspace::{Workspace, notifications};
 
 /// A drag on a divider, from the press to the release.
 pub(super) struct PaneDrag {

@@ -30,11 +30,11 @@ use wormhole_core::onboarding::welcome::{self, DockCell, Registry};
 use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
 use wormhole_core::storage::store::SessionRecord;
 
-use super::Workspace;
-use super::app::{AppState, app, app_mut};
-#[cfg(feature = "devctl")]
-use super::notifications;
 use crate::settings::settings;
+use crate::workspace::Workspace;
+use crate::workspace::app::{AppState, app, app_mut};
+#[cfg(feature = "devctl")]
+use crate::workspace::notifications;
 
 pub(super) use answers::handle;
 

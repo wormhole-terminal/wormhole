@@ -4,9 +4,9 @@
 
 use gpui_kit::*;
 
-use super::Workspace;
 use crate::platform::vibrancy::GlassRect;
 use crate::settings::store_in;
+use crate::workspace::Workspace;
 
 /// How far a probe's glass is inset from its parent: left, top, right, bottom.
 #[derive(Clone, Copy)]

@@ -16,13 +16,13 @@ use wormhole_core::keys::keymap::menus::{self, Command, Item, MenuState};
 use wormhole_core::project::Feature;
 use wormhole_core::terminal::shells;
 
-use super::actions::{
+use crate::settings::settings;
+use crate::workspace::actions::{
     DEBUG, MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder,
     RunProjectAction, SwitchProfile, gpui_action,
 };
-use super::app::{AppState, app};
-use super::{RightTab, Workspace};
-use crate::settings::settings;
+use crate::workspace::app::{AppState, app};
+use crate::workspace::{RightTab, Workspace};
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);
@@ -97,7 +97,7 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     state.window_profile = AppState::front_window(cx)
         .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
     state.debug = DEBUG;
-    state.persistent = super::windows::persistent_terminals_on(cx);
+    state.persistent = crate::workspace::windows::persistent_terminals_on(cx);
     state
 }
 
@@ -131,13 +131,13 @@ impl Workspace {
             state.disabled.extend([RevealInFinder, CopyPath]);
         }
         // The Project tab needs a folder, and the whole project-folder feature behind its flag.
-        if self.active_folder(cx).is_none() || !super::project::project_folders_on(cx) {
+        if self.active_folder(cx).is_none() || !crate::workspace::project::project_folders_on(cx) {
             state.disabled.push(ShowProject);
         }
         if !self.usage_tab_on(cx) {
             state.hidden.push(ShowUsage);
         }
-        if !super::notes::notes_on(cx) {
+        if !crate::workspace::notes::notes_on(cx) {
             state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
         }
         if let Some(project) =

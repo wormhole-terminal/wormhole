@@ -3,7 +3,7 @@
 use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
 
-use super::Workspace;
+use crate::workspace::Workspace;
 
 /// A key an item's editor handles the same way for every kind of item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

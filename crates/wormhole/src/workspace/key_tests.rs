@@ -3,9 +3,9 @@
 use gpui_kit::{OwnedMenuItem, TestAppContext};
 use wormhole_core::view::focus::Area;
 
-use super::RightTab;
-use super::app::{OpenWindow, app};
-use super::view_tests::{draw, drive, hook, isolate_in, press, read, start};
+use crate::workspace::RightTab;
+use crate::workspace::app::{OpenWindow, app};
+use crate::workspace::view_tests::{draw, drive, hook, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -134,7 +134,7 @@ fn the_menus_follow_the_window_in_front(cx: &mut TestAppContext) {
             .collect::<Vec<_>>()
     };
     draw(cx, &window);
-    cx.update(super::app_menu::sync);
+    cx.update(crate::workspace::app_menu::sync);
     let titles: Vec<String> =
         cx.update(|cx| cx.get_menus()).unwrap_or_default().iter().map(|m| m.name.to_string()).collect();
     assert_eq!(&titles[..7], ["Wormhole", "Shell", "Edit", "View", "Terminal", "Window", "Help"]);
@@ -180,16 +180,22 @@ fn a_menu_item_that_cannot_act_is_not_available(cx: &mut TestAppContext) {
         cx.update(|cx| window.handle.update(cx, |_, win, cx| win.is_action_available(action, cx)))
             .expect("the window is open")
     };
-    assert!(!available(cx, &super::actions::ShowProject), "the shell hasn't said where it is yet");
-    assert!(available(cx, &super::actions::ShowChanges));
-    assert!(!available(cx, &super::actions::RevealInFinder), "the shell hasn't said where it is yet");
+    assert!(!available(cx, &crate::workspace::actions::ShowProject), "the shell hasn't said where it is yet");
+    assert!(available(cx, &crate::workspace::actions::ShowChanges));
+    assert!(
+        !available(cx, &crate::workspace::actions::RevealInFinder),
+        "the shell hasn't said where it is yet"
+    );
     drive(cx, &window, |ws, _, cx| {
         ws.active_terminal().update(cx, |t, _| t.cwd = Some(std::env::temp_dir()));
     });
     draw(cx, &window);
-    assert!(available(cx, &super::actions::RevealInFinder), "now it has a folder");
-    assert!(available(cx, &super::actions::CopyPath));
-    assert!(available(cx, &super::actions::ShowProject), "the Project tab needs a folder, not a project");
+    assert!(available(cx, &crate::workspace::actions::RevealInFinder), "now it has a folder");
+    assert!(available(cx, &crate::workspace::actions::CopyPath));
+    assert!(
+        available(cx, &crate::workspace::actions::ShowProject),
+        "the Project tab needs a folder, not a project"
+    );
 }
 
 #[gpui_kit::test]

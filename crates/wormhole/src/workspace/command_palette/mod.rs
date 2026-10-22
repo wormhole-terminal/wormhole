@@ -24,10 +24,10 @@ use wormhole_core::project::{ActionKind, Feature};
 use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
-use super::app::{AppState, OpenWindow, app, open_tab};
-use super::overlay::OverlayView;
-use super::{Workspace, settings_page};
 use crate::settings::settings;
+use crate::workspace::app::{AppState, OpenWindow, app, open_tab};
+use crate::workspace::overlay::OverlayView;
+use crate::workspace::{Workspace, settings_page};
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
 pub(crate) use rows::Recent;
@@ -91,12 +91,12 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
 /// Everything the palette lists, read now: every window's terminals, their folders and the recent
 /// ones, the actions the window in front can do, its project's actions and where its terminal is.
 fn gather(window_id: i64, cx: &mut App) -> Snapshot {
-    let menu = super::app_menu::state(cx);
+    let menu = crate::workspace::app_menu::state(cx);
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let key = cx.active_window().map(|w| w.window_id());
-    let finished = super::notifications::finished_commands(cx);
+    let finished = crate::workspace::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.
-    let default = super::shells::default_key(settings(cx)).to_string();
+    let default = crate::workspace::shells::default_key(settings(cx)).to_string();
     let shells = wormhole_core::terminal::shells::choices(settings(cx))
         .into_iter()
         .filter(|c| c.key != default)
@@ -138,7 +138,8 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
         });
         let Ok((facts, numbers, session_folders)) = read else { continue };
         for facts in &facts {
-            let terminal = super::ambient::terminal(facts, finished.and_then(|f| f.get(&facts.tab)));
+            let terminal =
+                crate::workspace::ambient::terminal(facts, finished.and_then(|f| f.get(&facts.tab)));
             let number = numbers.iter().find(|(session, _)| *session == facts.session).map(|(_, n)| *n);
             snapshot.terminals.push(TerminalItem { terminal, window_number: ix + 1, number });
         }
@@ -476,7 +477,7 @@ impl CommandPalette {
             // The row itself, scrolled to and marked, not a search for its label.
             Item::Setting(id) => cx.defer(move |cx| settings_page::reveal_row(id, cx)),
             Item::Action(id) => {
-                if let Some(action) = super::actions::gpui_action(id) {
+                if let Some(action) = crate::workspace::actions::gpui_action(id) {
                     window.dispatch_action(action, cx);
                 }
             }
@@ -489,9 +490,13 @@ impl CommandPalette {
             Item::Profile(command, id) => {
                 let id = SharedString::from(id);
                 let action: Box<dyn Action> = match command {
-                    ProfileCommand::Switch => Box::new(super::actions::SwitchProfile(id)),
-                    ProfileCommand::OpenWindowIn => Box::new(super::actions::OpenWindowInProfile(id)),
-                    ProfileCommand::MoveWindowTo => Box::new(super::actions::MoveWindowToProfile(id)),
+                    ProfileCommand::Switch => Box::new(crate::workspace::actions::SwitchProfile(id)),
+                    ProfileCommand::OpenWindowIn => {
+                        Box::new(crate::workspace::actions::OpenWindowInProfile(id))
+                    }
+                    ProfileCommand::MoveWindowTo => {
+                        Box::new(crate::workspace::actions::MoveWindowToProfile(id))
+                    }
                 };
                 window.dispatch_action(action, cx);
             }
@@ -638,8 +643,8 @@ impl Workspace {
 mod tests {
     use gpui_kit::{Focusable as _, TestAppContext};
 
-    use super::super::app::OpenWindow;
-    use super::super::view_tests::{draw, isolate_in, press, read, start};
+    use crate::workspace::app::OpenWindow;
+    use crate::workspace::view_tests::{draw, isolate_in, press, read, start};
 
     fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
         draw(cx, window);

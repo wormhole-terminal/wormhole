@@ -11,13 +11,13 @@ use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
 use wormhole_core::storage::store::Store;
 
-use super::app::{AppState, app, app_mut, open_tab};
-use super::{Workspace, actions, settings_page, updates};
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
+use crate::workspace::app::{AppState, app, app_mut, open_tab};
+use crate::workspace::{Workspace, actions, settings_page, updates};
 
 const RECENT_PROJECTS: usize = 8;
 
@@ -175,7 +175,7 @@ pub(super) fn sync(cx: &mut App) {
         cx.refresh_windows();
     }
     register_dock_actions(cx);
-    let terminals = super::ambient::terminals(cx);
+    let terminals = crate::workspace::ambient::terminals(cx);
     sync_dock(&terminals, cx);
     if app(cx).menu.bar.is_none() {
         return;
@@ -331,7 +331,7 @@ fn register_dock_actions(cx: &mut App) {
             if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
                 && app(cx).windows.is_empty()
             {
-                super::app::open_workspace_window(None, None, cx);
+                crate::workspace::app::open_workspace_window(None, None, cx);
             }
         })
     });
@@ -344,7 +344,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
         match settings(cx).hotkey_action {
             // Over whatever is in front, without bringing Wormhole forward.
             HotkeyAction::QuickPanel => {
-                super::quick_panel::toggle(cx);
+                crate::workspace::quick_panel::toggle(cx);
                 return;
             }
             HotkeyAction::ToggleApp if cx.active_window().is_some() => {
@@ -355,7 +355,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
         }
     }
     if command == MenuCommand::Quit {
-        cx.defer(super::windows::request_quit);
+        cx.defer(crate::workspace::windows::request_quit);
         return;
     }
     crate::background::activate(cx);
@@ -369,7 +369,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
         }
         MenuCommand::OpenFolder => open_folder(cx),
         MenuCommand::OpenTab(tab) => open_tab(tab, cx),
-        MenuCommand::JumpToWaiting => super::ambient::jump_to_waiting(cx),
+        MenuCommand::JumpToWaiting => crate::workspace::ambient::jump_to_waiting(cx),
         MenuCommand::RunAction { root, id } => {
             // Actions run in the context of their project's terminal.
             let owner = AppState::find_window(cx, |ws, _| ws.session_for_project(&root).is_some());
@@ -444,7 +444,7 @@ impl Workspace {
 /// devctl: the status item's menu as text, as it would be built now.
 #[cfg(feature = "devctl")]
 pub(crate) fn dump(cx: &App) -> String {
-    let snapshot = snapshot(super::ambient::terminals(cx), cx);
+    let snapshot = snapshot(crate::workspace::ambient::terminals(cx), cx);
     let mut out = model::dump(&model::build(&snapshot, Instant::now()));
     out.push_str(&format!("installed={}\n", app(cx).menu.bar.is_some()));
     out
@@ -460,7 +460,7 @@ pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<V
 /// devctl: the Dock's badge, bounces and menu.
 #[cfg(feature = "devctl")]
 pub(crate) fn dock_dump(cx: &App) -> String {
-    let terminals = super::ambient::terminals(cx);
+    let terminals = crate::workspace::ambient::terminals(cx);
     let dock = cx.try_global::<crate::platform::dock::DockState>();
     let mut out = format!(
         "dock badge={:?} bounces={}\n",

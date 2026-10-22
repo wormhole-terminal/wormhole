@@ -11,8 +11,8 @@
 use gpui_kit::*;
 use wormhole_core::view::layout::Edge;
 
-use super::Workspace;
 use crate::style::motion::{EASE_IN, EASE_OUT, MOTION_PANEL, MOTION_PANEL_EXIT};
+use crate::workspace::Workspace;
 
 /// A column on its way in or out.
 pub(super) struct Slide {

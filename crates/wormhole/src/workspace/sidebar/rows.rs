@@ -18,15 +18,15 @@ use wormhole_core::view::sidebar::hints::{keycap, keyshortcut};
 use wormhole_core::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};
 use wormhole_core::view::sidebar::text::{agent_detail, ago, clock, place_detail, took};
 
-use super::super::focus::SidebarStop;
-use super::super::terminal_drag::DragOrigin;
 use super::facts::RowInfo;
 use super::{BODY_REM, CAPTION_REM, two_line_tooltip};
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
 use crate::workspace::Workspace;
+use crate::workspace::focus::SidebarStop;
 use crate::workspace::session::home_dir;
+use crate::workspace::terminal_drag::DragOrigin;
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);

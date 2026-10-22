@@ -6,11 +6,11 @@ use gpui_kit::*;
 use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
-use super::super::app::{app_mut, open_workspace_window_in};
-use super::super::dialog;
-use super::super::session::{close_group_detail, close_group_title};
 use crate::terminal_view::Status;
+use crate::workspace::app::{app_mut, open_workspace_window_in};
+use crate::workspace::dialog;
 use crate::workspace::session::Session;
+use crate::workspace::session::{close_group_detail, close_group_title};
 use crate::workspace::{Layout, Workspace};
 
 impl Workspace {
@@ -60,7 +60,7 @@ impl Workspace {
             let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
                 let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
                 for worktree in removable.clone() {
-                    super::super::worktree::remove_worktree(worktree, cx);
+                    crate::workspace::worktree::remove_worktree(worktree, cx);
                 }
             });
             ("Close and Remove Worktrees", on_also)

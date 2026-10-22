@@ -29,15 +29,15 @@ use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
-use super::{
-    Layout, Workspace, app_menu, aux_window, chrome, control, menu_bar, notifications, onboarding, profiles,
-    project, settings_page, studio, update_restart, updates, window_bounds,
-};
 use crate::menubar::MenuCommand;
 use crate::platform::vibrancy;
 use crate::settings::SystemLook;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::style;
+use crate::workspace::{
+    Layout, Workspace, app_menu, aux_window, chrome, control, menu_bar, notifications, onboarding, profiles,
+    project, settings_page, studio, update_restart, updates, window_bounds,
+};
 
 const TICK: Duration = Duration::from_millis(400);
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);
@@ -107,10 +107,10 @@ pub(crate) struct AppState {
     /// layout of its own starts (`open_workspace_window`). Kept in the store's `meta`.
     pub last_panes: RememberedPanes,
     /// The terminal welcomes running, and the doors to them (core's token rules).
-    pub welcomes: super::welcome::Welcomes,
+    pub welcomes: crate::workspace::welcome::Welcomes,
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
     /// that window is being opened.
-    pub first_welcome: Option<super::welcome::Plan>,
+    pub first_welcome: Option<crate::workspace::welcome::Plan>,
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
@@ -277,7 +277,7 @@ impl AppState {
             tracing::warn!("profiles.json was set aside and rebuilt: {err}");
         }
         upgrade_legacy_hooks(cx);
-        cx.background_spawn(async { super::default_terminal::upgrade_legacy_default() }).detach();
+        cx.background_spawn(async { crate::workspace::default_terminal::upgrade_legacy_default() }).detach();
         let profiles::ProfileData { store, tips, mut hub, usage, worktrees, last_panes, .. } =
             profiles::ProfileData::open(&paths);
         let saved = store
@@ -287,7 +287,7 @@ impl AppState {
             })
             .unwrap_or_default();
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
-        let launch_hosts = super::hosting::scan_at_launch(&root, &profiles, store.as_ref());
+        let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, store.as_ref());
         let (menu, menu_commands) = menu_bar::MenuState::new(store.as_ref());
         let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
         hub.ids_start_at(next_id);
@@ -295,7 +295,7 @@ impl AppState {
         let display_observer = crate::platform::look::observe_display_options(move || {
             let _ = display_changed.try_send(());
         });
-        super::open_in::OpenIn::install(cx);
+        crate::workspace::open_in::OpenIn::install(cx);
         cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
         cx.set_global(AppState {
             root,
@@ -348,7 +348,7 @@ impl AppState {
         // ends up here, before GPUI drops the windows and their terminals: the hosts are let go of
         // first, so those drops leave their programs running.
         cx.on_app_quit(|cx| {
-            super::hosting::detach_all(cx);
+            crate::workspace::hosting::detach_all(cx);
             save_all(cx);
             ipc::remove_socket();
             async {}
@@ -357,7 +357,7 @@ impl AppState {
         cx.on_window_closed(window_closed).detach();
         notifications::init(cx);
         updates::init(cx);
-        super::saved_text::init(cx);
+        crate::workspace::saved_text::init(cx);
 
         cx.spawn(async move |cx| {
             while let Ok(message) = hook_events.recv().await {
@@ -382,19 +382,19 @@ impl AppState {
         if saved.is_empty() {
             // With the terminal welcome on, the window's first terminal runs it and the run plays
             // around the window; otherwise the intro window opens over a plain terminal.
-            let welcome = super::welcome::first_launch_plan(cx);
+            let welcome = crate::workspace::welcome::first_launch_plan(cx);
             app_mut(cx).first_welcome = welcome;
             open_workspace_window(None, None, cx);
             app_mut(cx).first_welcome = None;
             match welcome {
-                Some(plan) => super::welcome::play_first(plan, cx),
+                Some(plan) => crate::workspace::welcome::play_first(plan, cx),
                 None => onboarding::start_if_first_launch(cx),
             }
         }
         for window in saved {
             open_workspace_window(Some(window), None, cx);
         }
-        super::hosting::adopt_orphans(cx);
+        crate::workspace::hosting::adopt_orphans(cx);
         app_menu::sync(cx);
     }
 

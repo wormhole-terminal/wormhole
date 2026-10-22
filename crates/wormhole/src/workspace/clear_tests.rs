@@ -3,9 +3,9 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::Store;
 
-use super::app::{app, app_mut};
-use super::view_tests::{drive, isolate_in, start};
 use crate::terminal_view::TerminalEvent;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::view_tests::{drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

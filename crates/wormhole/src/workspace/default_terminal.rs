@@ -6,8 +6,8 @@
 use gpui_kit::*;
 use wormhole_core::terminal::default_terminal::{Opened, SCRIPT_TYPES, file_path};
 
-use super::app::AppState;
 use crate::platform::default_app;
+use crate::workspace::app::AppState;
 
 /// Hear what macOS asks to open, from the launch on: the requests wait in the channel until
 /// [`serve`] takes them, as a launch to open a file sends it before the windows are there.

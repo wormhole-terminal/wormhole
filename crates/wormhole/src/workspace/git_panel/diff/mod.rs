@@ -22,12 +22,12 @@ use std::sync::Arc;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::changes::display_order;
-use super::job::Job;
-use super::open_file::{OpenFile, OpenTarget};
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::workspace::Workspace;
+use crate::workspace::git_panel::changes::display_order;
+use crate::workspace::git_panel::job::Job;
+use crate::workspace::git_panel::open_file::{OpenFile, OpenTarget};
 use load::{Ask, Stamp};
 use rows::{BuildKey, Row, RowStats};
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};

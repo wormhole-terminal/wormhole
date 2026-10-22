@@ -12,11 +12,11 @@ use wormhole_core::config::settings_index;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::search::Scope;
 
-use super::super::overlay::scrim;
 use super::CommandPalette;
 use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
 use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
+use crate::workspace::overlay::scrim;
 use crate::workspace::settings_page;
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
@@ -139,7 +139,7 @@ fn render_row(ix: usize, row: &Row, env: &RowEnv, cx: &mut App) -> AnyElement {
         match item {
             Item::Terminal(tab) => {
                 let Some(terminal) = snapshot.terminal(*tab) else { return div().into_any_element() };
-                let glyph = super::super::quick_panel::glyph_of(&terminal.terminal);
+                let glyph = crate::workspace::quick_panel::glyph_of(&terminal.terminal);
                 let mut parts = style::PaletteResult::new(
                     style::status_glyph(("palette-glyph", *tab as u64), ui, glyph, cx),
                     terminal.terminal.name.clone(),

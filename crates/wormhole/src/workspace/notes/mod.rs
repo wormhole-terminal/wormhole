@@ -7,9 +7,9 @@ use gpui_kit::component::input::{InputEvent, TextareaState};
 use gpui_kit::*;
 use wormhole_core::view::reorder;
 
-use super::items::{ItemKey, item_key};
-use super::text::{chunks_blank, paragraph_at};
-use super::{Note, RightTab, Workspace, panel_list};
+use crate::workspace::items::{ItemKey, item_key};
+use crate::workspace::text::{chunks_blank, paragraph_at};
+use crate::workspace::{Note, RightTab, Workspace, panel_list};
 
 mod view;
 

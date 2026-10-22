@@ -5,9 +5,9 @@ use wormhole_core::storage::store::{SessionRecord, SplitRecord, WindowRecord};
 use wormhole_core::view::panes::{Axis, DropError, Preset, TabPanes, Zone};
 use wormhole_core::view::sidebar::{Bracket, Drop, Landing, Part};
 
-use super::app::OpenWindow;
-use super::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
 use crate::terminal_view::Status;
+use crate::workspace::app::OpenWindow;
+use crate::workspace::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

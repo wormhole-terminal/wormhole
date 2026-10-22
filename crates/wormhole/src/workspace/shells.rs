@@ -6,10 +6,10 @@
 use gpui_kit::*;
 use wormhole_core::terminal::shells::{self, ShellChoice};
 
-use super::Workspace;
 use crate::platform::{self, Item, Menu};
 use crate::settings::Settings;
 use crate::settings::settings;
+use crate::workspace::Workspace;
 
 /// The menu's heading.
 const MENU_TITLE: &str = "New terminal with";

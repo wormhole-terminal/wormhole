@@ -4,8 +4,8 @@ use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::{TestAppContext, TextRun, font, px, rems, size};
 use wormhole_core::view::layout::{PANEL_MIN, SIDEBAR_DEFAULT, TERMINAL_MIN};
 
-use super::app::OpenWindow;
-use super::view_tests::{draw, drive, isolate_in, start};
+use crate::workspace::app::OpenWindow;
+use crate::workspace::view_tests::{draw, drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

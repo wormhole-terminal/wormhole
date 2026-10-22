@@ -19,17 +19,17 @@ use wormhole_core::project::ProjectColor;
 use wormhole_core::view::layout::title_row::{PathStep, RowFit};
 use wormhole_core::view::panes::Axis;
 
-use super::Workspace;
-use super::chrome::TitleDrag as _;
-use super::folder_color;
-use super::open_in::{self, OpenIn};
-use super::title_extras::ExtraFacts;
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::{self, Anchor, Icon, Item, Menu};
 use crate::settings::{UiColors, store_in, ui_in};
 use crate::style::{self, Edges};
 use crate::terminal_view::Status;
 use crate::theme_bridge::token;
+use crate::workspace::Workspace;
+use crate::workspace::chrome::TitleDrag as _;
+use crate::workspace::folder_color;
+use crate::workspace::open_in::{self, OpenIn};
+use crate::workspace::title_extras::ExtraFacts;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
 pub(super) struct Facts {
@@ -180,8 +180,11 @@ impl Workspace {
             return row.pl(px(left)).pr(px(right)).into_any_element();
         };
         row.with_animation(motion.id("slide-title"), motion.animation(), move |d, t| {
-            let (left, right) =
-                inside(super::chrome::sliding_title_pads(motion.edge, (left, right), motion.offset(t)));
+            let (left, right) = inside(crate::workspace::chrome::sliding_title_pads(
+                motion.edge,
+                (left, right),
+                motion.offset(t),
+            ));
             d.pl(px(left)).pr(px(right))
         })
         .into_any_element()

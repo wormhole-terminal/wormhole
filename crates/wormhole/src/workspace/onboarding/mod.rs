@@ -37,10 +37,10 @@ use wormhole_core::onboarding::{
     self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
 };
 
-use super::app::{AppState, app, app_mut};
-use super::{Workspace, project, settings_page};
 use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
+use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::{Workspace, project, settings_page};
 
 pub(crate) use keys::init;
 pub(in crate::workspace) use look_step::{offered_primaries, offered_themes};
@@ -173,7 +173,7 @@ impl Workspace {
     pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
         // hand-over.
-        if super::welcome::enabled(cx) {
+        if crate::workspace::welcome::enabled(cx) {
             self.replay_welcome(wormhole_core::onboarding::intro::Handover::Cursor, window, cx);
             return;
         }

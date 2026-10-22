@@ -6,25 +6,25 @@ use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+#[cfg(feature = "devctl")]
+pub(crate) use self::about::devctl_command as devctl_about;
+#[cfg(feature = "devctl")]
+pub(crate) use self::actions::NewWindow;
+pub(crate) use self::actions::{CheckForUpdates, init as init_actions};
+pub(crate) use self::app::app_mut;
+pub(crate) use self::app::{AppState, app};
+#[cfg(feature = "devctl")]
+pub(crate) use self::app_menu::dump as menu_dump;
+pub(crate) use self::default_terminal::{listen as listen_for_opened, serve as serve_opened};
+#[cfg(feature = "devctl")]
+pub(crate) use self::focus::set_front;
+#[cfg(feature = "devctl")]
+pub(crate) use self::project::devctl_trust_shot;
+#[cfg(feature = "devctl")]
+pub(crate) use self::updates::devctl_installed as devctl_update_installed;
+pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
 use crate::platform::vibrancy;
 use crate::settings::{settings_in, ui_in};
-#[cfg(feature = "devctl")]
-pub(crate) use about::devctl_command as devctl_about;
-#[cfg(feature = "devctl")]
-pub(crate) use actions::NewWindow;
-pub(crate) use actions::{CheckForUpdates, init as init_actions};
-pub(crate) use app::app_mut;
-pub(crate) use app::{AppState, app};
-#[cfg(feature = "devctl")]
-pub(crate) use app_menu::dump as menu_dump;
-pub(crate) use default_terminal::{listen as listen_for_opened, serve as serve_opened};
-#[cfg(feature = "devctl")]
-pub(crate) use focus::set_front;
-#[cfg(feature = "devctl")]
-pub(crate) use project::devctl_trust_shot;
-#[cfg(feature = "devctl")]
-pub(crate) use updates::devctl_installed as devctl_update_installed;
-pub(crate) use windows::{request_quit, request_quit_ending_hosts};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
@@ -128,9 +128,9 @@ mod window_bounds;
 mod windows;
 mod worktree;
 
-use git_panel::changes::GitPoll;
-use git_panel::{changes, diff_view, history, picker};
-use session::{Pane, Session};
+use self::git_panel::changes::GitPoll;
+use self::git_panel::{changes, diff_view, history, picker};
+use self::session::{Pane, Session};
 
 /// What the right panel shows.
 #[derive(Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
@@ -212,7 +212,7 @@ pub struct Workspace {
     /// The window's terminals, one session each, in the order the sidebar's manual order keeps.
     sessions: Vec<Session>,
     /// The splits some of them are shown in (a split's members are adjacent in `sessions`).
-    splits: Vec<splits::Split>,
+    splits: Vec<self::splits::Split>,
     /// The root of the `.wormhole/` project that governs each folder a band names (the terminals'
     /// and the pinned ones), as of the last look (`refresh_projects`): the band, the title row and
     /// the Project tab ask it where a folder's colour lives without touching the disk. A folder in
@@ -237,7 +237,7 @@ pub struct Workspace {
     /// Inspector's panel, which GPUI lays out in the same window (`layout::column_probe`).
     beside: f32,
     /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
-    sidebar: sidebar::SidebarState,
+    sidebar: self::sidebar::SidebarState,
     right_tab: RightTab,
     /// The tab that was open when Usage was opened: where the panel goes back to when no agent
     /// is left to show usage for.
@@ -261,12 +261,12 @@ pub struct Workspace {
     /// Folders collapsed in the Changes tree view.
     collapsed_dirs: std::collections::HashSet<String>,
     /// A drag on a panel's edge, while the button is down.
-    resizing: Option<resize::ResizeDrag>,
+    resizing: Option<self::resize::ResizeDrag>,
     /// A drag on a divider between two panes, while the button is down.
-    pane_drag: Option<panes::PaneDrag>,
+    pane_drag: Option<self::panes::PaneDrag>,
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
-    terminal_drag: Option<terminal_drag::TerminalDrag>,
+    terminal_drag: Option<self::terminal_drag::TerminalDrag>,
     /// The group being dragged by its head, while it is.
     group_drag: Option<u32>,
     /// The divider the pointer has rested on (its line shows), and the timer that sets it.
@@ -278,17 +278,17 @@ pub struct Workspace {
     resize_hot: Option<Edge>,
     resize_hover: Option<Task<()>>,
     /// The status bar as last drawn (`None` while it is off), to notice when it is stale.
-    status_bar_drawn: Option<status_bar::StatusBar>,
+    status_bar_drawn: Option<self::status_bar::StatusBar>,
     /// The breadcrumb's status words as last drawn ("working · 4m"), to notice the minute.
     crumb_drawn: std::cell::RefCell<Option<String>>,
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
     /// The path's hover card, a popover under the title row's folder.
-    path_card: path_card::PathCard,
+    path_card: self::path_card::PathCard,
     /// Where the title row's folder is drawn: the card and the path menu open under it.
     path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
-    status_others: Vec<(i64, Vec<status_bar::Counted>)>,
+    status_others: Vec<(i64, Vec<self::status_bar::Counted>)>,
     /// Index into the active session's notes that ⌘↵ / Stash act on.
     focused_note: Option<usize>,
     /// The note whose text has the keyboard right now (drawn as the active item).
@@ -298,11 +298,11 @@ pub struct Workspace {
     glass: std::rc::Rc<vibrancy::Glass>,
     /// Where the window was last seen, as saved.
     bounds: Option<String>,
-    bounds_watch: window_bounds::BoundsWatch,
+    bounds_watch: self::window_bounds::BoundsWatch,
     /// The window title last set (the session's name).
     title: SharedString,
     /// What F6 moves the keyboard to besides the terminal.
-    areas: focus::FocusAreas,
+    areas: self::focus::FocusAreas,
     /// Points over the terminal font size in Settings, for this window (⌘+ / ⌘-; not saved).
     font_zoom: f32,
     /// A "close this window?" question is on screen.
@@ -312,21 +312,21 @@ pub struct Workspace {
     /// A "close this terminal?" question is on screen.
     closing_session_prompt: bool,
     /// The New Terminal in New Worktree dialog, while it is up.
-    worktree_ask: Option<worktree::Asking>,
+    worktree_ask: Option<self::worktree::Asking>,
     /// The comment dialog of a diff line, while it is up.
-    commenting: Option<git_panel::diff::Commenting>,
+    commenting: Option<self::git_panel::diff::Commenting>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
     /// The first-run sheet while it is open, and what it leaves behind.
-    first_run: onboarding::FirstRun,
+    first_run: self::onboarding::FirstRun,
     /// The terminal about to be made for a welcome (its session id and token): its shell is started
     /// through `Wormhole welcome` with the token in its environment (`make_pane`).
     pending_welcome: Option<(i64, String)>,
     /// The command palette or the shortcut sheet, while one is open over the window.
-    overlay: Option<overlay::Overlay>,
+    overlay: Option<self::overlay::Overlay>,
     /// The sidebar or the right panel sliding in or out.
-    slide: Option<slide::Slide>,
+    slide: Option<self::slide::Slide>,
     last_scrollback_save: Instant,
     /// While the window opens: the saved terminals on screen, which attach to their hosts with a
     /// repaint at once (the rest attach headless).
@@ -342,7 +342,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let blur_wanted = aux_window::wants_blur(settings_in(&profile, cx), true);
+        let blur_wanted = self::aux_window::wants_blur(settings_in(&profile, cx), true);
         let tick = cx.spawn_in(window, async move |this, cx| {
             loop {
                 cx.background_executor().timer(Duration::from_millis(400)).await;
@@ -356,7 +356,7 @@ impl Workspace {
             if window.is_window_active() {
                 this.became_front(cx);
                 // macOS isn't relied on to say when Reduce Motion changes.
-                cx.defer(app::sync_system_look);
+                cx.defer(self::app::sync_system_look);
             } else {
                 this.hints_blur(cx);
                 // A popover that is up has the key itself, which is why this window lost it.
@@ -375,7 +375,7 @@ impl Workspace {
 
         let saved: Option<Layout> = record.layout.as_deref().and_then(|json| serde_json::from_str(json).ok());
         let mut layout = saved.unwrap_or_default();
-        let sidebar = sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
+        let sidebar = self::sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
 
         let picker_search = cx.new(|cx| InputState::new(window, cx).placeholder("Search branches"));
         let picker_subscription =
@@ -437,7 +437,7 @@ impl Workspace {
             bounds: record.bounds,
             bounds_watch: Default::default(),
             title: SharedString::default(),
-            areas: focus::FocusAreas::new(cx),
+            areas: self::focus::FocusAreas::new(cx),
             font_zoom: 0.0,
             closing_prompt: false,
             close_dot: false,
@@ -480,7 +480,7 @@ impl Workspace {
 
     /// Apply settings that live outside GPUI's render tree.
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = aux_window::wants_blur(settings_in(&self.profile, cx), true);
+        let blur = self::aux_window::wants_blur(settings_in(&self.profile, cx), true);
         self.blur.set_enabled(blur);
         // Without the blur the window stands on the panel's colour: the gaps round the terminal's
         // surface and between a split's panes show the window, glass or not, and would otherwise
@@ -504,7 +504,7 @@ impl Workspace {
         // Only the selected terminal and the panes shown with it are on screen.
         let on_screen: Vec<bool> = (0..self.sessions.len()).map(|ix| self.on_screen(ix)).collect();
         // A program's clipboard read is asked about only where the question can be seen.
-        let looking = focus::in_front(window);
+        let looking = self::focus::in_front(window);
         for (session, is_active) in self.sessions.iter().zip(on_screen) {
             let pane = &session.pane;
             changed |= pane.terminal.update(cx, |terminal, _| {
@@ -526,12 +526,12 @@ impl Workspace {
                 changed || before != terminal.status()
             });
             if is_active && window_active {
-                notifications::dismiss(pane.id, cx);
+                self::notifications::dismiss(pane.id, cx);
             }
         }
         // The Usage tab's times count down while it shows.
         let usage_on_screen = self.notes_visible() && self.right_tab == RightTab::Usage;
-        if changed || (usage_on_screen && self.ticks.is_multiple_of(usage::REDRAW_TICKS)) {
+        if changed || (usage_on_screen && self.ticks.is_multiple_of(self::usage::REDRAW_TICKS)) {
             cx.notify();
         }
         self.sync_close_dot(window, cx);
@@ -612,7 +612,7 @@ impl Workspace {
         }
         if status != before {
             // At once rather than on the next tick; after this update, so this window can be read.
-            cx.defer(notifications::sweep);
+            cx.defer(self::notifications::sweep);
         }
         cx.notify();
     }
@@ -846,7 +846,7 @@ impl Workspace {
             pane,
             split: record.split_id,
             notes: Vec::new(),
-            notes_list: notes::NotesList::default(),
+            notes_list: self::notes::NotesList::default(),
             tasks: record.tasks.into_iter().map(|t| TaskItem { text: t.text.into(), done: t.done }).collect(),
             tasks_collapsed: record.tasks_collapsed,
             notes_collapsed: record.notes_collapsed,
@@ -913,7 +913,7 @@ impl Workspace {
             project_shell.as_deref(),
             settings_in(&self.profile, cx),
         );
-        let mut options = project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
+        let mut options = self::project::spawn_options(record.id, cwd, record.scrollback.clone(), env, shell);
         // After the project's environment is in: what a trusted project set is kept. The profile's
         // own environment is the person's (not repository content), so it applies in an untrusted
         // project as well.
@@ -994,11 +994,11 @@ impl Workspace {
             Some(layout.focused())
         });
         self.leave_layout(ix);
-        let after = session::session_after_close(self.active, ix, len);
+        let after = self::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         self.sidebar.view.groups.leave(closed.id);
-        notifications::dismiss(closed.pane.id, cx);
-        welcome::forget(closed.id, cx);
+        self::notifications::dismiss(closed.pane.id, cx);
+        self::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
@@ -1027,7 +1027,7 @@ impl Workspace {
         for ix in self.on_screen_sessions() {
             let pane = &self.sessions[ix].pane;
             pane.terminal.update(cx, |t, _| t.acknowledge());
-            notifications::dismiss(pane.id, cx);
+            self::notifications::dismiss(pane.id, cx);
         }
     }
 

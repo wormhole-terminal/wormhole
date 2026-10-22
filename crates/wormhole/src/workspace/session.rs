@@ -10,10 +10,10 @@ use wormhole_core::storage::store::{NoteRecord, SessionRecord, TaskRecord};
 use wormhole_core::view::panes::PaneId;
 use wormhole_core::view::sidebar::{SplitId, names};
 
-use super::app::app;
-use super::git_panel::{changes, history};
-use super::{Note, TaskItem, Workspace, notes, tasks};
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
+use crate::workspace::app::app;
+use crate::workspace::git_panel::{changes, history};
+use crate::workspace::{Note, TaskItem, Workspace, notes, tasks};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {
@@ -98,7 +98,7 @@ pub(super) struct Session {
     /// Its text is never saved for a restart ("Don't keep this terminal's text", saved).
     pub forget_text: bool,
     /// What the title row's extras know about it: its agent's model and context, its ports.
-    pub extras: super::title_extras::SessionExtras,
+    pub extras: crate::workspace::title_extras::SessionExtras,
     /// The comments written on its diffs and not pasted into its terminal yet.
     pub review: wormhole_core::git::review::Review,
 }

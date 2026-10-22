@@ -19,12 +19,12 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::view::spoken;
 
-use super::Workspace;
-use super::app::{app, open_tab};
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
 use crate::terminal_view::Status;
+use crate::workspace::Workspace;
+use crate::workspace::app::{app, open_tab};
 
 /// One terminal (a sidebar row) as the bar counts it.
 #[derive(Clone)]
@@ -196,7 +196,7 @@ impl Workspace {
         // What runs in front (the agent, or the command), as the title row names it, not the shell.
         let program = session.pane.program(cx);
         let size = detail.size().then(|| rules::size(&program, cols, rows));
-        let state = super::breadcrumb::crumb_words(terminal);
+        let state = crate::workspace::breadcrumb::crumb_words(terminal);
         let now = Instant::now();
         let attention = summary.attention().map(|ix| {
             let (entry, counted) = (&entries[ix], &counted[ix]);

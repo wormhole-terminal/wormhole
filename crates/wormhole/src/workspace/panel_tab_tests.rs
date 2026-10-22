@@ -6,9 +6,9 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::keys::keymap::ActionId;
 
-use super::RightTab;
-use super::settings_page::update_settings;
-use super::view_tests::{draw, drive, isolate_in, read, start};
+use crate::workspace::RightTab;
+use crate::workspace::settings_page::update_settings;
+use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

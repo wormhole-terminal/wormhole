@@ -9,13 +9,13 @@ use wormhole_core::project::{
 };
 use wormhole_core::theme::folder_color::FolderColor;
 
-use super::app::OpenWindow;
-use super::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
-use super::project::set_feature_for;
-use super::view_tests::{draw, drive, isolate_in, read, start};
-use super::{RightTab, Workspace};
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
+use crate::workspace::app::OpenWindow;
+use crate::workspace::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
+use crate::workspace::project::set_feature_for;
+use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
+use crate::workspace::{RightTab, Workspace};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -107,7 +107,7 @@ fn a_projects_config_holds_its_folders_colour_and_the_persons_own_is_ignored(cx:
 
     // An old colour of the person's for this folder (from before it was a project) is ignored...
     cx.update(|cx| {
-        super::settings_page::update_settings(cx, |settings| {
+        crate::workspace::settings_page::update_settings(cx, |settings| {
             settings.set_folder_color(&tinted, Some(FolderColor::Blue));
         });
     });
@@ -167,7 +167,7 @@ fn with_the_project_folder_flag_off_nothing_is_written_into_the_repository(cx: &
 
     // Off, with no `refresh_projects` since: the window still lists the project.
     cx.update(|cx| {
-        super::settings_page::update_settings(cx, |settings| {
+        crate::workspace::settings_page::update_settings(cx, |settings| {
             settings.feature_flags.insert("project_folders".into(), false);
         });
     });
@@ -263,7 +263,7 @@ fn a_locked_colour_is_shown_and_cannot_be_picked(cx: &mut TestAppContext) {
     });
     cx.run_until_parked();
     assert_eq!(config_of(&locked), text, "the file's lock holds whatever the menu thought");
-    let error = cx.update(|cx| super::app(cx).hub.error.clone());
+    let error = cx.update(|cx| crate::workspace::app(cx).hub.error.clone());
     assert!(error.is_some_and(|e| e.contains("locks its colour")), "and says so in the Project tab");
 }
 
@@ -303,7 +303,7 @@ fn a_config_that_does_not_load_is_not_rewritten(cx: &mut TestAppContext) {
     cx.run_until_parked();
     drop(stale);
     assert_eq!(config_of(&broken), "[1]", "not an object: refused");
-    let error = cx.update(|cx| super::app(cx).hub.error.clone());
+    let error = cx.update(|cx| crate::workspace::app(cx).hub.error.clone());
     assert!(error.is_some_and(|e| e.starts_with("Couldn't change the project's colour")));
 }
 
@@ -365,7 +365,7 @@ fn picking_a_colour_does_not_send_a_trusted_project_back_for_approval(cx: &mut T
     )
     .expect("write");
     let status = |cx: &mut TestAppContext| {
-        cx.update(|cx| super::app(cx).hub.projects.get(&trusted).map(|project| project.status))
+        cx.update(|cx| crate::workspace::app(cx).hub.projects.get(&trusted).map(|project| project.status))
     };
     drive(cx, &window, |ws, _, cx| go(ws, &trusted, cx));
     assert_eq!(status(cx), Some(TrustStatus::Untrusted));
@@ -375,7 +375,7 @@ fn picking_a_colour_does_not_send_a_trusted_project_back_for_approval(cx: &mut T
     // Approved as the Touch ID answer would (no prompt in a test).
     cx.update(|cx| {
         let project = ProjectFolder::open(&trusted).expect("a project");
-        super::app_mut(cx).hub.trust.trust(&project);
+        crate::workspace::app_mut(cx).hub.trust.trust(&project);
     });
     drive(cx, &window, |ws, _, cx| ws.refresh_projects(cx));
     assert_eq!(status(cx), Some(TrustStatus::Trusted));
@@ -419,7 +419,7 @@ fn the_project_tab_is_there_for_any_folder_and_makes_the_project(cx: &mut TestAp
     let config = std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config");
     drive(cx, &window, |ws, _, cx| ws.create_project_folder(cx));
     assert_eq!(std::fs::read_to_string(bare.join(".wormhole/config.json")).expect("config"), config);
-    let error = cx.update(|cx| super::app(cx).hub.error.is_some());
+    let error = cx.update(|cx| crate::workspace::app(cx).hub.error.is_some());
     assert!(!error, "it is a project all the same");
 }
 
@@ -450,10 +450,11 @@ fn an_older_approval_is_upgraded_on_load_and_survives_a_colour(cx: &mut TestAppC
         format!(r#"{{ {key:?}: {{ "fingerprint": "{OLD}", "trusted_at": 1700000000 }} }}"#),
     )
     .expect("write");
-    cx.update(|cx| super::app_mut(cx).hub.trust = TrustStore::load(&data).expect("loads"));
+    cx.update(|cx| crate::workspace::app_mut(cx).hub.trust = TrustStore::load(&data).expect("loads"));
 
-    let status =
-        |cx: &mut TestAppContext| cx.update(|cx| super::app(cx).hub.projects.get(&project).map(|p| p.status));
+    let status = |cx: &mut TestAppContext| {
+        cx.update(|cx| crate::workspace::app(cx).hub.projects.get(&project).map(|p| p.status))
+    };
     drive(cx, &window, |ws, _, cx| go(ws, &project, cx));
     assert_eq!(status(cx), Some(TrustStatus::Trusted), "not asked to approve it again");
     let saved: serde_json::Value =

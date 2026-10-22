@@ -15,14 +15,14 @@ use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::{self as rules, StepRow};
 use wormhole_core::view::spoken;
 
-use super::super::focus::{Activate, Walkable};
-use super::super::items::with_item_keys;
-use super::super::panel_list::{CardPart, Rows};
-use super::super::text::{note_body, note_title};
 use super::{NOTE_ROWS_MIN, is_blank_note};
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
+use crate::workspace::focus::{Activate, Walkable};
+use crate::workspace::items::with_item_keys;
+use crate::workspace::panel_list::{CardPart, Rows};
+use crate::workspace::text::{note_body, note_title};
 use crate::workspace::{NOTE_PLACEHOLDER, TaskItem, Workspace};
 
 /// The Notes band's + names its key, from the keymap (the band takes a `&'static str`).

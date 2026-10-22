@@ -33,8 +33,8 @@ use wormhole_core::project::{
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::terminal::shells::ShellCommand;
 
-use super::app::{AppState, app, app_mut};
 use crate::settings::settings;
+use crate::workspace::app::{AppState, app, app_mut};
 
 pub(super) use color::set_project_color;
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};

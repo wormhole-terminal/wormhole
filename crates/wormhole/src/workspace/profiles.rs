@@ -23,10 +23,10 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::REMEMBERED_PANES_KEY;
 use wormhole_core::view::layout::RememberedPanes;
 
-use super::app::{AppState, OpenWindow};
-use super::app::{app, app_mut};
-use super::{Workspace, menu_bar, project};
 use crate::settings::{ParkedSettings, SettingsStore, settings_in};
+use crate::workspace::app::{AppState, OpenWindow};
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::{Workspace, menu_bar, project};
 
 impl AppState {
     /// The profile Wormhole is in.
@@ -179,7 +179,7 @@ impl AppState {
         })
         .is_none()
         {
-            super::app::open_workspace_window_in(&target, None, None, cx);
+            crate::workspace::app::open_workspace_window_in(&target, None, None, cx);
         }
     }
 
@@ -203,9 +203,9 @@ impl AppState {
         // one (nothing to type in, and closing the odd window would then quit).
         let shown = app(cx).active_profile().clone();
         if app(cx).windows_of(&shown).next().is_none() {
-            super::app::open_workspace_window_in(&shown, None, None, cx);
+            crate::workspace::app::open_workspace_window_in(&shown, None, None, cx);
         }
-        super::app_menu::sync(cx);
+        crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -234,7 +234,7 @@ impl Workspace {
             .iter()
             .filter(|session| keeps_text && !session.forget_text)
             .map(|session| &session.pane)
-            .map(|pane| (pane.id, pane.terminal.read(cx).scrollback_text(super::SCROLLBACK_LINES)))
+            .map(|pane| (pane.id, pane.terminal.read(cx).scrollback_text(crate::workspace::SCROLLBACK_LINES)))
             .collect();
         let state = app_mut(cx);
         let Some(store) = state.store_of_mut(target) else {
@@ -374,9 +374,9 @@ impl AppState {
         state.applied_theme = None;
 
         Self::show_profile_windows(&from, target, cx);
-        super::app::sync_system_look(cx);
-        super::app::apply_theme(cx);
-        super::app_menu::sync(cx);
+        crate::workspace::app::sync_system_look(cx);
+        crate::workspace::app::apply_theme(cx);
+        crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -404,10 +404,10 @@ impl AppState {
                 })
                 .unwrap_or_default();
             if saved.is_empty() {
-                super::app::open_workspace_window_in(target, None, None, cx);
+                crate::workspace::app::open_workspace_window_in(target, None, None, cx);
             }
             for record in saved {
-                super::app::open_workspace_window_in(target, Some(record), None, cx);
+                crate::workspace::app::open_workspace_window_in(target, Some(record), None, cx);
             }
             return;
         }

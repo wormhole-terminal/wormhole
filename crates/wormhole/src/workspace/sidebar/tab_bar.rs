@@ -18,14 +18,14 @@ use wormhole_core::view::sidebar::tabs::{
 };
 use wormhole_core::view::sidebar::{Entry, Listing};
 
-use super::super::chrome::traffic_light_position;
-use super::super::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
 use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for, tile_for};
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style;
 use crate::style::TerminalTab;
 use crate::workspace::Workspace;
+use crate::workspace::chrome::traffic_light_position;
+use crate::workspace::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
 
 /// The gap between the tabs and the terminal's surface under them.
 const TAB_GAP: f32 = 8.0;
@@ -169,7 +169,7 @@ impl Workspace {
         let bar = div()
             .id("tab-bar")
             .absolute()
-            .top(px(super::super::title_row::SURFACE_TOP))
+            .top(px(crate::workspace::title_row::SURFACE_TOP))
             .left_0()
             .right_0()
             .flex()

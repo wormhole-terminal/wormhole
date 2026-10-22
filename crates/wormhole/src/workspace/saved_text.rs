@@ -7,8 +7,8 @@
 use gpui_kit::{App, Global};
 use wormhole_core::storage::paths::ProfileId;
 
-use super::app::app;
 use crate::settings::{SettingsStore, settings};
+use crate::workspace::app::app;
 
 /// The shown profile and its setting, as last seen: the settings global changes on every settings
 /// poll, and only a change of these two means anything here.

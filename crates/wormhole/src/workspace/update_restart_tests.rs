@@ -6,10 +6,10 @@ use std::time::{Duration, Instant};
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
-use super::app::{OpenWindow, app, app_mut, open_workspace_window};
-use super::update_restart::{request_restart, tick_at};
-use super::updates::UpdatePhase;
-use super::view_tests::{hook, isolate_in, start};
+use crate::workspace::app::{OpenWindow, app, app_mut, open_workspace_window};
+use crate::workspace::update_restart::{request_restart, tick_at};
+use crate::workspace::updates::UpdatePhase;
+use crate::workspace::view_tests::{hook, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

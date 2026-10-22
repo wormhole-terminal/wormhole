@@ -8,12 +8,12 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::RememberedPanes;
 use wormhole_core::view::sidebar::WindowSidebar;
 
-use super::app::AppState;
-use super::app::{app, app_mut, open_workspace_window_in};
-use super::session::{self, Session};
-use super::{Layout, Workspace, dialog, notifications, window_bounds};
 use crate::settings::settings;
 use crate::terminal_view::Status;
+use crate::workspace::app::AppState;
+use crate::workspace::app::{app, app_mut, open_workspace_window_in};
+use crate::workspace::session::{self, Session};
+use crate::workspace::{Layout, Workspace, dialog, notifications, window_bounds};
 
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a
@@ -281,7 +281,7 @@ impl Workspace {
     pub(super) fn project_roots(&self, cx: &App) -> Vec<PathBuf> {
         // No project roots while the project-folder feature is off, so nothing that scans them
         // (the menu bar's project actions, pruning the hub) keeps a stale project alive.
-        if !super::project::project_folders_on(cx) {
+        if !crate::workspace::project::project_folders_on(cx) {
             return Vec::new();
         }
         let sessions = self.sessions.iter().flat_map(|s| [s.project.clone(), s.notes_root.clone()]).flatten();
@@ -335,7 +335,7 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
     // Before the first save: from here on no save records a host for any terminal, the ones on the
     // way out included, and nothing starts a new one (`quitting`).
     app_mut(cx).ending_hosts = true;
-    super::app::save_all(cx);
+    crate::workspace::app::save_all(cx);
     let hosts_dir = wormhole_core::ipc::hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
     let ending = cx
         .background_executor()

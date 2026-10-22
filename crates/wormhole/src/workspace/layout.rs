@@ -4,11 +4,11 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::layout::{Columns, Edge, Panes};
 
-use super::app::app_mut;
-use super::resize::edge_rule;
-use super::{RightTab, Workspace, panes};
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::style;
+use crate::workspace::app::app_mut;
+use crate::workspace::resize::edge_rule;
+use crate::workspace::{RightTab, Workspace, panes};
 
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
@@ -249,8 +249,12 @@ impl Render for Workspace {
                                 surface
                                     .min_h_0()
                                     // Terminals as tabs: their bar lies between the title row and the surface.
-                                    .mt(px(super::title_row::SURFACE_TOP
-                                        + if tabs_shown { super::sidebar::TAB_ROW_H } else { 0.0 }))
+                                    .mt(px(crate::workspace::title_row::SURFACE_TOP
+                                        + if tabs_shown {
+                                            crate::workspace::sidebar::TAB_ROW_H
+                                        } else {
+                                            0.0
+                                        }))
                                     .mx(gap)
                                     .mb(gap)
                                     .when(!(split && gaps), |d| d.rounded(ui.radius_lg).overflow_hidden()),

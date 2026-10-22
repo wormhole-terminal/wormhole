@@ -20,7 +20,7 @@ use gpui_kit::*;
 use wormhole_core::view::focus::list::{Key, TypeAhead};
 use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
-use super::{RightTab, Workspace, actions};
+use crate::workspace::{RightTab, Workspace, actions};
 
 pub(super) use bars::TitleButton;
 pub(in crate::workspace) use menu::key_menu_origin;

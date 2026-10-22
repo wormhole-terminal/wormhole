@@ -3,13 +3,16 @@
 //! its own (see `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 
-use super::view_tests::{draw, drive, read, start};
+use crate::workspace::view_tests::{draw, drive, read, start};
 
 fn isolate(name: &str) -> bool {
-    super::view_tests::isolate_in(module_path!(), name)
+    crate::workspace::view_tests::isolate_in(module_path!(), name)
 }
 
-fn group_names(cx: &mut TestAppContext, window: &super::app::OpenWindow) -> Vec<(String, bool, usize)> {
+fn group_names(
+    cx: &mut TestAppContext,
+    window: &crate::workspace::app::OpenWindow,
+) -> Vec<(String, bool, usize)> {
     read(cx, window, |ws| {
         ws.sidebar.view.groups.iter().map(|g| (g.name.clone(), g.pinned, g.members.len())).collect()
     })
@@ -97,7 +100,7 @@ fn a_group_moves_with_its_terminals_and_their_split_to_a_window_of_its_own(cx: &
     });
     drive(cx, &window, |ws, window, cx| ws.move_group_to_window(group, window, cx));
     cx.run_until_parked();
-    let windows = cx.update(|cx| super::app::app(cx).windows.len());
+    let windows = cx.update(|cx| crate::workspace::app::app(cx).windows.len());
     assert_eq!(windows, 2, "a window of its own");
     let here: Vec<i64> = read(cx, &window, |ws| ws.sessions.iter().map(|s| s.id).collect());
     assert_eq!(here, [1, 4], "the group's terminal and its split's other member left");

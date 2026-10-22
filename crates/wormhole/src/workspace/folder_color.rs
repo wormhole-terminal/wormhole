@@ -16,13 +16,13 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::folder_color::FolderColor;
 use wormhole_core::theme::tokens::{Color, ThemeTokens};
 
-use super::Workspace;
-use super::app::app;
-use super::project::{project_folders_on, set_project_color};
-use super::settings_page::update_settings;
-use super::title_row::Tint;
 use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
+use crate::workspace::Workspace;
+use crate::workspace::app::app;
+use crate::workspace::project::{project_folders_on, set_project_color};
+use crate::workspace::settings_page::update_settings;
+use crate::workspace::title_row::Tint;
 
 /// Where a folder's colour lives, and what it is now.
 #[derive(Clone, Debug)]

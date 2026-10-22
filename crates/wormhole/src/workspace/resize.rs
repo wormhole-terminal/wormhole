@@ -8,9 +8,9 @@ use gpui_kit::*;
 use wormhole_core::view::layout::Resize;
 use wormhole_core::view::layout::{Edge, Panes};
 
-use super::Workspace;
 use crate::settings::{UiColors, ui_in};
 use crate::style;
+use crate::workspace::Workspace;
 
 /// A drag on a panel's edge, from the press to the release.
 pub(super) struct ResizeDrag {

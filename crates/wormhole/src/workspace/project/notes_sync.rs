@@ -14,7 +14,7 @@ impl Workspace {
     pub(in crate::workspace) fn sync_project_notes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // It runs more often than `refresh_projects`, so the `notes_root`s may not be cleared yet
         // when the project-folder flag goes off: check the flag itself before touching notes.md.
-        if !project_folders_on(cx) || !super::super::notes::notes_on(cx) {
+        if !project_folders_on(cx) || !crate::workspace::notes::notes_on(cx) {
             return;
         }
         for ix in 0..self.sessions.len() {

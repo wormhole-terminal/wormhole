@@ -12,9 +12,9 @@ use std::path::Path;
 use gpui_kit::*;
 use wormhole_core::view::layout::path_menu::{self, PathFolder};
 
-use super::{Workspace, session};
 use crate::platform::{self, Icon, Item, Menu};
 use crate::terminal_view::Status;
+use crate::workspace::{Workspace, session};
 
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click

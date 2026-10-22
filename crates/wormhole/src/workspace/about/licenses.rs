@@ -7,13 +7,13 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::update::licenses::Licenses;
 
-use super::super::panel_list::Rows;
 use super::ui;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 #[cfg(feature = "devctl")]
 use crate::workspace::app::app;
 use crate::workspace::aux_window;
+use crate::workspace::panel_list::Rows;
 
 const SIZE: (f32, f32) = (940.0, 660.0);
 const MIN_SIZE: (f32, f32) = (640.0, 420.0);

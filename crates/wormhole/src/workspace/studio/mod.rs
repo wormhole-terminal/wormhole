@@ -30,13 +30,13 @@ use gpui_kit::*;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::theme::tokens::{Color, ThemeFile, ThemeTokens};
 
-use super::app::{AppState, app, app_mut};
-use super::aux_window;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::Edges;
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
+use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::aux_window;
 use draft::{Themes, draft_for, group_of, is_metric, number, override_of, set_override};
 use gallery::{Area, GalleryView};
 use save::Notice;

@@ -6,9 +6,9 @@ use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
 
-use super::super::recorder::RecorderRow;
 use crate::settings::Settings;
 use crate::workspace::app::app;
+use crate::workspace::settings_page::recorder::RecorderRow;
 use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[

@@ -32,9 +32,9 @@ use gpui_kit::*;
 use wormhole_core::theme::tokens::TOKEN_USES;
 use wormhole_core::theme::tokens::{self, ThemeTokens};
 
-use super::t;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
+use crate::workspace::studio::t;
 
 pub(super) use view::GalleryView;
 

@@ -7,12 +7,12 @@
 use gpui_kit::*;
 use wormhole_core::theme::tokens::{Color, OPAQUE};
 
-use super::app::AppState;
-use super::app::app_mut;
 use crate::settings::Settings;
 use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::hsla;
+use crate::workspace::app::AppState;
+use crate::workspace::app::app_mut;
 use crate::workspace::chrome::TitleDrag as _;
 
 /// Surface colors for a secondary window.
@@ -62,7 +62,9 @@ pub(crate) fn window_options(
         titlebar: Some(TitlebarOptions {
             title: Some(title.into()),
             appears_transparent: true,
-            traffic_light_position: Some(super::chrome::traffic_light_position(style::TITLE_ROW_H)),
+            traffic_light_position: Some(crate::workspace::chrome::traffic_light_position(
+                style::TITLE_ROW_H,
+            )),
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(min),

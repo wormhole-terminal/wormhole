@@ -22,11 +22,11 @@ use wormhole_core::ipc::control::{
 };
 use wormhole_term::Notification;
 
-use super::ambient::state_of;
-use super::app::{AppState, OpenWindow, app};
-use super::{Workspace, notifications};
 use crate::settings::settings;
 use crate::terminal_view::TerminalView;
+use crate::workspace::ambient::state_of;
+use crate::workspace::app::{AppState, OpenWindow, app};
+use crate::workspace::{Workspace, notifications};
 
 /// Each caller's budgets, app-wide (a tab's requests count the same whichever window they reach).
 #[derive(Default)]
@@ -56,7 +56,7 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
             new_terminal(folder, command, worktree, window, from, cx)
         }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
-        Action::Welcome { token, op } => super::welcome::handle(token, op, from, cx),
+        Action::Welcome { token, op } => crate::workspace::welcome::handle(token, op, from, cx),
     }
 }
 
