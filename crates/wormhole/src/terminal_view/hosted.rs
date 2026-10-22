@@ -8,10 +8,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use gpui_kit::component::Sizable as _;
 use gpui_kit::component::button::{Button, ButtonVariants};
-
-use super::*;
-use crate::style::{self, BannerKind};
+use gpui_kit::*;
 use wormhole_core::terminal::PtyEvents;
+use wormhole_core::terminal::{GridSize, Pty, SpawnOptions};
+
+use super::TerminalView;
+use super::status::TerminalEvent;
+use crate::settings::store_in;
+use crate::style::{self, BannerKind};
 
 /// How a terminal's program starts.
 #[derive(Clone, Debug)]

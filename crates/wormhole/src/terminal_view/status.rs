@@ -2,7 +2,17 @@
 //! its agent's hooks and what programs report about themselves (`reported`), what the rest of
 //! the app shows about it, and when it redraws.
 
-use super::*;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
+
+use gpui_kit::*;
+use wormhole_core::agents::integrations::{self, Signal};
+use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::notify::Source;
+use wormhole_core::terminal::{Mark, Notification, PtyEvent, WindowOp};
+
+use super::TerminalView;
+use crate::settings::settings_in;
 
 /// A terminal's status (idle, busy, done, failed, needs you, exited), from its output, its
 /// agent's hooks and what its programs report.

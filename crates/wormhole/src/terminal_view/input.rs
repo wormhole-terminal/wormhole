@@ -1,11 +1,19 @@
 //! Keyboard, mouse and scroll input for the terminal.
 
+use std::time::Instant;
+
+use gpui_kit::*;
 use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::keyspec::{KeyMods, KeySpec};
+use wormhole_core::terminal::Pty;
+use wormhole_core::terminal::input::{file_drop, keys, mouse};
 use wormhole_core::terminal::types::LineSize;
+use wormhole_core::terminal::types::{Column, Line, Modes, Point as GridPoint, Scroll, SelectionType, Side};
 use wormhole_core::terminal::{Direction, KeySent};
 
-use super::*;
+use super::status::TerminalEvent;
+use super::{Layout, TerminalView};
+use crate::settings::settings_in;
 
 /// What the app may take from a keystroke before any terminal sees it: `true` when it did
 /// (a project action's key ran).

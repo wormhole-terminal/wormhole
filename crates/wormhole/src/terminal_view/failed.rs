@@ -5,10 +5,12 @@
 //! or not anyone was looking when it ended; the status `Failed` is only for the failure nobody
 //! saw, and clears when the terminal is opened, like `Done`.
 
+use std::time::{Duration, Instant};
+
 use wormhole_core::notify::{self, Source};
 use wormhole_core::sidebar::names::command_name;
 
-use super::*;
+use super::TerminalView;
 
 /// A command that ended with a failing exit code (see [`notify::failed_exit`]).
 #[derive(Clone, Debug, PartialEq, Eq)]

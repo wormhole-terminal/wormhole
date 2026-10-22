@@ -7,23 +7,17 @@ use std::time::{Duration, Instant};
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::terminal::types::{
-    Column, Line, Modes, MouseTracking, Point as GridPoint, Scroll, SelectionType, Side,
-};
+use wormhole_core::terminal::types::Modes;
 
 use wormhole_core::profile::ProfileId;
 
-use crate::settings::{settings_in, store_in};
-use crate::theme_bridge::token;
-use wormhole_core::agents::integrations::{self, Signal};
+use crate::settings::store_in;
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::notify::Source;
 use wormhole_core::terminal::input::app_selection::AppSelection;
-use wormhole_core::terminal::input::{file_drop, keys, mouse};
+use wormhole_core::terminal::input::{keys, mouse};
 use wormhole_core::terminal::program_status::Summary as Reported;
-use wormhole_core::terminal::{
-    GridSize, Mark, Notification, Pty, PtyEvent, SpawnOptions, WindowGeometry, WindowOp,
-};
+use wormhole_core::terminal::{GridSize, Pty, SpawnOptions, WindowGeometry};
 
 mod blocks;
 mod failed;

@@ -183,18 +183,7 @@
     },
     "orphans": {},
     "glob-imports": {
-      "crates/wormhole-core/src/profile/model.rs": 2,
-      "crates/wormhole/src/terminal_view/failed.rs": 1,
-      "crates/wormhole/src/terminal_view/find.rs": 1,
-      "crates/wormhole/src/terminal_view/find_bar.rs": 1,
-      "crates/wormhole/src/terminal_view/hosted.rs": 1,
-      "crates/wormhole/src/terminal_view/input.rs": 1,
-      "crates/wormhole/src/terminal_view/pane_bar.rs": 1,
-      "crates/wormhole/src/terminal_view/render/minimap.rs": 1,
-      "crates/wormhole/src/terminal_view/render/mod.rs": 1,
-      "crates/wormhole/src/terminal_view/render/scrollbar.rs": 1,
-      "crates/wormhole/src/terminal_view/reported.rs": 1,
-      "crates/wormhole/src/terminal_view/status.rs": 1
+      "crates/wormhole-core/src/profile/model.rs": 2
     },
     "cycles": {
       "wormhole-core: agents -> terminal": 1,

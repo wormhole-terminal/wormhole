@@ -6,14 +6,17 @@
 //! redrawn screen never shows a stale highlight.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use gpui_kit::*;
 use wormhole_core::limits::count_grouped;
 use wormhole_core::terminal::ScreenSnapshot;
 use wormhole_core::terminal::find::{FindOption, FindQuery, FindResults};
 use wormhole_core::terminal::types::Line;
 
+use super::TerminalView;
 use super::find_bar::FindBar;
-use super::*;
+use super::status::TerminalEvent;
 
 /// How often a terminal that keeps printing is searched again while its find bar is open.
 const RESEARCH_EVERY: Duration = Duration::from_millis(200);

@@ -7,11 +7,15 @@
 //! the question (a choice, the timeout, the terminal closing) lets the slot go, with the text or
 //! with nothing. The bar itself is drawn in `render/pane_bar.rs`.
 
+use std::time::{Duration, Instant};
+
+use gpui_kit::*;
 use wormhole_core::clipboard::{ASK_TIMEOUT, Choice, ClipboardRead, ClipboardWrite, ReadGate, Request};
 use wormhole_core::sidebar::names::command_name;
 use wormhole_core::terminal::{BODY_MAX_CHARS, Reply, TextFormatter, clean};
 
-use super::*;
+use super::TerminalView;
+use crate::settings::settings_in;
 use crate::style::BannerKind;
 
 /// How long a notice stays.

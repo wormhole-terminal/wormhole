@@ -9,13 +9,18 @@
 
 use std::time::Instant;
 
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::terminal::scrollbar::{
     EDGE, GUTTER_W, Hit, Next, ScrollbarGeometry, ScrollerStyle, THUMB_W, THUMB_WIDE_W, Visibility, ZONE_W,
     jumps,
 };
+use wormhole_core::terminal::types::Modes;
 
-use super::*;
 use crate::platform::scroller::{self, ScrollerPrefs};
+use crate::settings::store_in;
+use crate::terminal_view::{PADDING_Y, TerminalView};
+use crate::theme_bridge::token;
 
 /// What the scrollbar keeps in the view.
 #[derive(Default)]

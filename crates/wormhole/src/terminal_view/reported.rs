@@ -9,8 +9,15 @@
 //! only the coding agents: one that is none (`brew`, a deploy script) is a `Source::Program` and
 //! shows in the row, the bar and the notifications like an agent does, under its own name.
 
-use super::*;
+#[cfg(test)]
+use gpui_kit::*;
+use wormhole_core::terminal::program_status::Summary as Reported;
 use wormhole_core::terminal::program_status::{Kind, State};
+#[cfg(test)]
+use wormhole_core::terminal::{Mark, PtyEvent};
+
+use super::TerminalView;
+use super::status::Status;
 
 impl TerminalView {
     /// Whether the status is told, not guessed: an agent's hooks or a program's own reports say

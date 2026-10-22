@@ -5,8 +5,9 @@
 use std::rc::Rc;
 
 use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::*;
 
-use super::*;
+use super::TerminalView;
 use crate::style;
 
 pub struct FindBar {

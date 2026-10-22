@@ -2,9 +2,12 @@
 //! reads the lines and says where things go; this paints them and turns clicks and drags into
 //! scrolling.
 
+use gpui_kit::*;
 use wormhole_core::terminal::minimap::{BLOCK_H, COLUMN_MAX, LINE_PITCH, MinimapGeometry, WIDTH};
 
-use super::*;
+use crate::settings::store_in;
+use crate::terminal_view::{PADDING_Y, TerminalView};
+use crate::theme_bridge::token;
 
 /// Room the minimap takes from the grid.
 pub(in crate::terminal_view) const MINIMAP_W: f32 = WIDTH;

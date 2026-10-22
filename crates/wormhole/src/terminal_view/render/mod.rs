@@ -56,9 +56,22 @@ use self::shaping::{ShapeKey, WordsKey};
 use self::words::{Glyph, WordCache};
 use super::blocks;
 use super::input::TerminalCommand;
-use super::*;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
+use wormhole_core::profile::ProfileId;
+use wormhole_core::terminal::Pty;
+use wormhole_core::terminal::types::MouseTracking;
+
+use super::status::Status;
+use super::{
+    ClearBuffer, CopyCommand, CopyOutput, MIN_WIDTH, NextPrompt, PADDING_X, PADDING_Y, PreviousPrompt,
+    RerunCommand, SelectOutput, TerminalView,
+};
 use crate::perf;
 use crate::platform::scroller::ScrollerPrefs;
+use crate::settings::{settings_in, store_in};
+use crate::theme_bridge::token;
 use gpui_kit::component::input as text_input;
 use wormhole_core::terminal::ScreenSnapshot;
 use wormhole_core::terminal::types::NamedColor;
