@@ -11,7 +11,7 @@
 mod completion;
 mod contrast;
 #[cfg(feature = "devctl")]
-mod devctl;
+pub(crate) mod devctl;
 mod draft;
 mod gallery;
 mod save;

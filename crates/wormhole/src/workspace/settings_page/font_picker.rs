@@ -13,22 +13,14 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-#[cfg(feature = "devctl")]
-use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::theme::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_name, grouped_font_choices};
 
-#[cfg(feature = "devctl")]
-use super::open_settings;
 use super::{SettingsWindow, ui};
 use crate::fonts::{FontCatalog, LoadedFonts};
 use crate::select::{self, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-#[cfg(feature = "devctl")]
-use crate::workspace::Workspace;
-#[cfg(feature = "devctl")]
-use crate::workspace::app::app;
 
 const LIST_HEIGHT: f32 = 264.0;
 const ENTRY_HEIGHT: f32 = 32.0;
@@ -412,25 +404,4 @@ fn entry_row(
             d.child(div().flex_none().text_caption().text_color(ui.faint).child("monospace"))
         })
         .into_any_element()
-}
-
-#[cfg(feature = "devctl")]
-impl Workspace {
-    /// devctl: expand a font picker in the settings window, optionally searching
-    /// (the window opens deferred, so the first call on a closed window only opens it).
-    pub(crate) fn devctl_font_picker(&mut self, arg: &str, cx: &mut Context<Self>) {
-        let (slot, query) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
-        let Some(slot) = FontSlot::from_key(slot) else { return };
-        let query = query.to_string();
-        open_settings(Some(Section::Fonts), cx);
-        let Some((handle, page)) = app(cx).settings_window.clone() else { return };
-        let _ = handle.update(cx, |_, window, cx| {
-            page.update(cx, |page, cx| {
-                if page.font_picker.open != Some(slot) {
-                    page.toggle_font_picker(slot, window, cx);
-                }
-                page.font_picker.search.update(cx, |input, cx| input.set_value(query, window, cx));
-            })
-        });
-    }
 }

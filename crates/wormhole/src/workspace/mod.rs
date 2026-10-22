@@ -26,7 +26,11 @@ pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
 #[cfg(feature = "devctl")]
+pub(crate) use self::settings_page::devctl as settings_devctl;
+#[cfg(feature = "devctl")]
 pub(crate) use self::shortcut_sheet::devctl_sheet;
+#[cfg(feature = "devctl")]
+pub(crate) use self::studio::devctl as studio_devctl;
 #[cfg(feature = "devctl")]
 pub(crate) use self::updates::devctl_installed as devctl_update_installed;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};

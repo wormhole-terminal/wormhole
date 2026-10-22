@@ -13,12 +13,12 @@ use crate::settings::SettingsStore;
 use crate::workspace::AppState;
 
 pub(super) fn open(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_section("", ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_section("", ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn section(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_section(arg.trim(), ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_section(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
@@ -32,27 +32,27 @@ pub(super) fn update_installed(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn project(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_project(arg.trim(), ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_project(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn project_menu(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_project_menu(arg.trim(), ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_project_menu(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_search(arg.trim(), ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_search(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn preview(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_preview(arg, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_preview(arg, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn record(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_record(arg, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_record(arg, ctx.cx);
     Ok(String::new())
 }
 
@@ -62,19 +62,19 @@ pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     if wormhole_core::config::settings_index::entry(id).is_none() {
         return Err(anyhow!("no setting {id:?}"));
     }
-    ctx.workspace.devctl_settings_reveal(id, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_reveal(id, ctx.cx);
     Ok(String::new())
 }
 
 /// `profile-sheet`: the "New profile" sheet over the settings window.
 pub(super) fn profile_sheet(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.devctl_profile_sheet(ctx.cx);
+    crate::workspace::settings_devctl::devctl_profile_sheet(ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let by: f32 = arg.trim().parse().map_err(|_| anyhow!("expected <px>"))?;
-    ctx.workspace.devctl_settings_scroll(by, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_scroll(by, ctx.cx);
     Ok(String::new())
 }
 
@@ -83,27 +83,27 @@ pub(super) fn resize(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (Some(w), Some(h)) = (dims.next(), dims.next()) else {
         return Err(anyhow!("expected <w> <h>"));
     };
-    ctx.workspace.devctl_settings_resize(w, h, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_resize(w, h, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn select(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_select(arg.trim(), ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_select(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn reset_confirm(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_reset_confirm(ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_reset_confirm(ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn cli_tool(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_settings_cli_tool(arg, ctx.cx);
+    crate::workspace::settings_devctl::devctl_settings_cli_tool(arg, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn font_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_font_picker(arg, ctx.cx);
+    crate::workspace::settings_devctl::devctl_font_picker(arg, ctx.cx);
     Ok(String::new())
 }
 

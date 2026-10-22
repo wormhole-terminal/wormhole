@@ -2,7 +2,7 @@
 //! groups), a section's page on the right. Opens with ⌘,. Typing in the search shows the
 //! settings it finds as live rows; Esc clears the search, then closes the window.
 
-mod devctl;
+pub(crate) mod devctl;
 mod font_picker;
 mod nav;
 mod preview_column;

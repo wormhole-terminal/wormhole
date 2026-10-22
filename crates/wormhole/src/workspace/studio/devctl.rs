@@ -6,17 +6,11 @@ use gpui_kit::*;
 use super::draft::Show;
 use super::gallery::Area;
 use super::title::SaveAction;
-use super::{StudioWindow, WINDOW_MIN, toggle_studio};
-use crate::workspace::Workspace;
+use super::{StudioWindow, WINDOW_MIN};
 use crate::workspace::app::app;
 
-impl Workspace {
-    /// ⌥⌘, (Wormhole → Theme Studio): open the Studio window, or close it if it is open.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn toggle_studio(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        toggle_studio(cx);
-    }
-}
+/// ⌥⌘, (Wormhole → Theme Studio), as devctl's `studio` presses it.
+pub(crate) use super::toggle_studio;
 
 #[cfg(feature = "devctl")]
 /// What happens to the gallery before each frame `studio-frames` draws.
@@ -48,92 +42,78 @@ impl FrameMode {
     }
 }
 
-impl Workspace {
-    /// Run `f` on the open Studio (devctl drives it from a window's tick).
-    pub(crate) fn with_studio(
-        &self,
-        cx: &mut App,
-        f: impl FnOnce(&mut StudioWindow, &mut Window, &mut Context<StudioWindow>),
-    ) -> anyhow::Result<()> {
-        with_studio(cx, f)
-    }
-
-    /// devctl `studio-frames`: draw the Studio window `frames` times and append the timings to
-    /// `out`, each frame after what `mode` says happened to the gallery.
-    pub(crate) fn devctl_studio_frames(
-        &self,
-        frames: usize,
-        mode: &str,
-        out: std::path::PathBuf,
-        cx: &mut Context<Self>,
-    ) -> anyhow::Result<()> {
-        let (handle, studio) =
-            app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
-        let mode = FrameMode::parse(mode);
-        // Outside the tick's update: drawing renders (and so borrows) the windows.
-        cx.spawn(async move |_, cx| {
-            let mut times = Vec::with_capacity(frames);
-            for _ in 0..frames {
-                let Some(elapsed) = cx.update(|cx| {
-                    let studio = studio.upgrade()?;
-                    handle
-                        .update(cx, |_, window, cx| {
-                            let gallery = studio.read(cx).gallery.clone();
-                            match mode {
-                                FrameMode::Rest => {}
-                                FrameMode::Tick => gallery.update(cx, |_, cx| cx.notify()),
-                                FrameMode::Scroll => {
-                                    gallery.update(cx, |gallery, cx| gallery.scroll_by(40.0, cx))
-                                }
+#[cfg(feature = "devctl")]
+/// devctl `studio-frames`: draw the Studio window `frames` times and append the timings to
+/// `out`, each frame after what `mode` says happened to the gallery.
+pub(crate) fn devctl_studio_frames(
+    frames: usize,
+    mode: &str,
+    out: std::path::PathBuf,
+    cx: &mut App,
+) -> anyhow::Result<()> {
+    let (handle, studio) =
+        app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
+    let mode = FrameMode::parse(mode);
+    // Outside the tick's update: drawing renders (and so borrows) the windows.
+    cx.spawn(async move |cx| {
+        let mut times = Vec::with_capacity(frames);
+        for _ in 0..frames {
+            let Some(elapsed) = cx.update(|cx| {
+                let studio = studio.upgrade()?;
+                handle
+                    .update(cx, |_, window, cx| {
+                        let gallery = studio.read(cx).gallery.clone();
+                        match mode {
+                            FrameMode::Rest => {}
+                            FrameMode::Tick => gallery.update(cx, |_, cx| cx.notify()),
+                            FrameMode::Scroll => {
+                                gallery.update(cx, |gallery, cx| gallery.scroll_by(40.0, cx))
                             }
-                            let start = std::time::Instant::now();
-                            let arena = window.draw(cx);
-                            arena.clear(cx);
-                            start.elapsed()
-                        })
-                        .ok()
-                }) else {
-                    return;
-                };
-                times.push(elapsed.as_secs_f64() * 1000.0);
-                cx.background_executor().timer(std::time::Duration::from_millis(2)).await;
-            }
-            // The first frames warm caches (shaped text, icons); report the rest.
-            let steady = &times[times.len().min(3)..];
-            let avg = steady.iter().sum::<f64>() / steady.len().max(1) as f64;
-            let max = steady.iter().cloned().fold(0.0, f64::max);
-            let line = format!(
-                "studio-frames {} n={} avg={avg:.2}ms max={max:.2}ms first={:.2}ms\n",
-                mode.name(),
-                times.len(),
-                times[0]
-            );
-            if let Ok(mut file) = std::fs::OpenOptions::new().append(true).create(true).open(out) {
-                use std::io::Write as _;
-                let _ = file.write_all(line.as_bytes());
-            }
-        })
-        .detach();
-        Ok(())
-    }
-
-    /// devctl: render the Studio window to a PNG.
-    pub(crate) fn devctl_studio_shot(&self, path: &std::path::Path, cx: &mut App) -> anyhow::Result<()> {
-        devctl_studio_shot(path, cx)
-    }
-
-    /// devctl `state`: the Studio's line while it is open: whether it has edits, and whether a
-    /// sheet (which no shot shows) is waiting for an answer.
-    pub(crate) fn devctl_studio_state(&self, cx: &App) -> Option<String> {
-        let (_, studio) = app(cx).studio_window.clone()?;
-        let studio = studio.upgrade()?;
-        let studio = studio.read(cx);
-        Some(format!("studio dirty={} asking={}", studio.dirty, studio.asking))
-    }
+                        }
+                        let start = std::time::Instant::now();
+                        let arena = window.draw(cx);
+                        arena.clear(cx);
+                        start.elapsed()
+                    })
+                    .ok()
+            }) else {
+                return;
+            };
+            times.push(elapsed.as_secs_f64() * 1000.0);
+            cx.background_executor().timer(std::time::Duration::from_millis(2)).await;
+        }
+        // The first frames warm caches (shaped text, icons); report the rest.
+        let steady = &times[times.len().min(3)..];
+        let avg = steady.iter().sum::<f64>() / steady.len().max(1) as f64;
+        let max = steady.iter().cloned().fold(0.0, f64::max);
+        let line = format!(
+            "studio-frames {} n={} avg={avg:.2}ms max={max:.2}ms first={:.2}ms\n",
+            mode.name(),
+            times.len(),
+            times[0]
+        );
+        if let Ok(mut file) = std::fs::OpenOptions::new().append(true).create(true).open(out) {
+            use std::io::Write as _;
+            let _ = file.write_all(line.as_bytes());
+        }
+    })
+    .detach();
+    Ok(())
 }
 
 #[cfg(feature = "devctl")]
-fn with_studio(
+/// devctl `state`: the Studio's line while it is open: whether it has edits, and whether a
+/// sheet (which no shot shows) is waiting for an answer.
+pub(crate) fn devctl_studio_state(cx: &App) -> Option<String> {
+    let (_, studio) = app(cx).studio_window.clone()?;
+    let studio = studio.upgrade()?;
+    let studio = studio.read(cx);
+    Some(format!("studio dirty={} asking={}", studio.dirty, studio.asking))
+}
+
+/// Run `f` on the open Studio (devctl drives it from a window's tick).
+#[cfg(feature = "devctl")]
+pub(crate) fn with_studio(
     cx: &mut App,
     f: impl FnOnce(&mut StudioWindow, &mut Window, &mut Context<StudioWindow>),
 ) -> anyhow::Result<()> {
@@ -143,8 +123,9 @@ fn with_studio(
     handle.update(cx, |_, window, cx| studio.update(cx, |s, cx| f(s, window, cx)))
 }
 
+/// devctl: render the Studio window to a PNG.
 #[cfg(feature = "devctl")]
-fn devctl_studio_shot(path: &std::path::Path, cx: &mut App) -> anyhow::Result<()> {
+pub(crate) fn devctl_studio_shot(path: &std::path::Path, cx: &mut App) -> anyhow::Result<()> {
     let (handle, _) =
         app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
     // Draw first: a window behind others may not have redrawn since its last change.
