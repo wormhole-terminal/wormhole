@@ -7,11 +7,13 @@ use std::rc::Rc;
 use gpui_kit::{TestAppContext, VisualTestContext};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::usage::{self, Usage, Window};
+use wormhole_core::config::profile::{NewProfile, StartFrom};
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::Store;
 
-use crate::app_state::{OpenWindow, app, app_mut};
+use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
@@ -158,24 +160,39 @@ fn each_profile_has_its_own_reports(cx: &mut TestAppContext) {
         return;
     }
     let _window = start(cx, 1);
-    with_database(cx, "work");
-    report(cx, claude(25.0, 100));
-    let work = reports(cx);
-    assert_eq!(work.len(), 1);
-
-    // Another profile is shown: its database, which has none yet.
     with_database(cx, "home");
-    cx.update(crate::window::features::profile_shown);
+    report(cx, claude(25.0, 100));
+    let home = reports(cx);
+    assert_eq!(home.len(), 1);
+
+    // Another profile is shown, through the switch the app itself does.
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            AppState::create_profile(new, cx)
+        })
+        .expect("makes the profile");
+    // The switch re-reads the custom fonts, which the app has loaded by now.
+    cx.update(|cx| cx.set_global(crate::fonts::LoadedFonts::default()));
+    cx.update(|cx| AppState::switch_profile(&work, cx)).expect("switches");
+    cx.run_until_parked();
     assert!(reports(cx).is_empty(), "the other profile's reports, which are none");
     report(cx, Usage { agent: AgentId::Codex, ..claude(5.0, 200) });
-
-    // Back: the first profile's, as they were left, and the second's are kept for its return.
-    with_database(cx, "work");
-    cx.update(crate::window::features::profile_shown);
-    assert_eq!(reports(cx), work);
-    with_database(cx, "home");
-    cx.update(crate::window::features::profile_shown);
     assert_eq!(reports(cx).iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Codex]);
+
+    // Back: the first profile's, as they were left, in memory and in its database; the other's report
+    // went to the other's database only.
+    cx.update(|cx| AppState::switch_profile(&ProfileId::default_profile(), cx)).expect("switches back");
+    cx.run_until_parked();
+    assert_eq!(reports(cx), home);
+    assert_eq!(remembered(cx), home);
+    let in_work = cx.update(|cx| {
+        let store = app(cx).store_of(&work).expect("Work's database is parked");
+        let json = store.meta(usage::STORE_KEY).ok().flatten();
+        json.map(|json| usage::from_json(&json)).unwrap_or_default()
+    });
+    assert_eq!(in_work.iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Codex]);
 }
 
 #[gpui_kit::test]

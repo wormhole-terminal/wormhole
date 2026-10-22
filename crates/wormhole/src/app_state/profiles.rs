@@ -207,7 +207,6 @@ impl AppState {
             crate::window::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
         }
         crate::window::menu_state::menus_changed(cx);
-        crate::window::features::profile_shown(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -317,6 +316,9 @@ impl AppState {
         }
         state.applied_theme = None;
 
+        // The features that keep app-wide data per profile take the target's, before any of its windows
+        // is drawn or a report is recorded.
+        crate::window::features::profile_shown(cx);
         Self::show_profile_windows(&from, target, cx);
         crate::app_state::look::sync_system_look(cx);
         crate::app_state::look::apply_theme(cx);
