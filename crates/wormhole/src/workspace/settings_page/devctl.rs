@@ -11,7 +11,7 @@ use wormhole_core::config::settings_index::{Query, SectionId as Section};
 use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
-use super::{SettingsWindow, SidebarLook, open_settings, reveal_row, sections};
+use super::{SettingsWindow, SidebarLook, current_window, open_settings, reveal_row, sections};
 use crate::workspace::app::app;
 
 pub(crate) fn section(name: &str, cx: &mut App) {
@@ -166,7 +166,7 @@ pub(crate) fn font_picker(arg: &str, cx: &mut App) {
     let Some(slot) = FontSlot::from_key(slot) else { return };
     let query = query.to_string();
     open_settings(Some(Section::Fonts), cx);
-    let Some((handle, page)) = app(cx).settings_window.clone() else { return };
+    let Some((handle, page)) = current_window(cx) else { return };
     let _ = handle.update(cx, |_, window, cx| {
         page.update(cx, |page, cx| {
             if page.font_picker.open != Some(slot) {
@@ -182,7 +182,7 @@ fn with_page(
     cx: &mut App,
     f: impl FnOnce(&mut SettingsWindow, &mut Window, &mut Context<SettingsWindow>) + 'static,
 ) {
-    let Some((handle, page)) = app(cx).settings_window.clone() else {
+    let Some((handle, page)) = current_window(cx) else {
         open_settings(None, cx);
         return;
     };

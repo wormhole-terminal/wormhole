@@ -184,7 +184,7 @@ pub(crate) fn open_new_profile_sheet(cx: &mut App) {
     settings_page::open_settings(Some(Section::Profile), cx);
     // After `open_settings`'s own deferred opening, so the window exists by then.
     cx.defer(|cx| {
-        let Some((handle, page)) = app(cx).settings_window.clone() else { return };
+        let Some((handle, page)) = settings_page::current_window(cx) else { return };
         let _ = handle.update(cx, |_, window, cx| {
             page.update(cx, |page, cx| page.open_new_profile(window, cx));
             crate::background::activate_window(window, cx);

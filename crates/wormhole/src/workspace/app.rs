@@ -21,7 +21,7 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use crate::status_item;
 use crate::workspace::app_look::LookOverride;
 use crate::workspace::recent_projects::RecentProjects;
-use crate::workspace::{Workspace, aux_window, profiles, project, settings_page, updates};
+use crate::workspace::{Workspace, aux_window, profiles, project, updates};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -54,8 +54,9 @@ pub(crate) struct AppState {
     /// Menu bar item and global hotkey.
     pub menu: status_item::MenuState,
     pub updates: updates::Updates,
-    /// The settings window, while open.
-    pub settings_window: Option<(AnyWindowHandle, Entity<settings_page::SettingsWindow>)>,
+    /// The settings window, while open, and its page: untyped (the page is `settings_page::SettingsWindow`,
+    /// which sits above the shared state and reads it back typed with `current_window`).
+    pub settings_window: Option<(AnyWindowHandle, AnyEntity)>,
     /// The Theme Studio window, while open. Weak, so closing the window drops
     /// the Studio (which clears its preview); the Studio module reads it typed.
     pub studio_window: aux_window::Slot,

@@ -150,9 +150,16 @@ pub(crate) struct SettingsWindow {
     _refresh: Task<()>,
 }
 
+/// The settings window while it is open, and its page. The shared state keeps the page untyped, so it
+/// doesn't name this window, which sits above it.
+fn current_window(cx: &App) -> Option<(AnyWindowHandle, Entity<SettingsWindow>)> {
+    let (handle, page) = app(cx).settings_window.clone()?;
+    Some((handle, page.downcast::<SettingsWindow>().ok()?))
+}
+
 /// Bring up the settings window (showing `section`), or focus it if it is open.
 pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
-    if let Some((handle, page)) = app(cx).settings_window.clone() {
+    if let Some((handle, page)) = current_window(cx) {
         let shown = handle.update(cx, |_, window, cx| {
             page.update(cx, |page, cx| {
                 if let Some(section) = section {
@@ -180,7 +187,7 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
             cx.new(|cx| SettingsWindow::new(section, window, cx))
         });
         match opened {
-            Ok(opened) => app_mut(cx).settings_window = Some(opened),
+            Ok((handle, page)) => app_mut(cx).settings_window = Some((handle, page.into())),
             Err(err) => tracing::error!("opening the settings window failed: {err:#}"),
         }
     });
@@ -221,7 +228,7 @@ pub(crate) fn reveal_row(id: &str, cx: &mut App) {
     open_settings(Some(section), cx);
     // After `open_settings`'s own deferred opening, so the window exists by then.
     cx.defer(move |cx| {
-        let Some((handle, page)) = app(cx).settings_window.clone() else { return };
+        let Some((handle, page)) = current_window(cx) else { return };
         let shown = handle.update(cx, |_, window, cx| {
             page.update(cx, |page, cx| {
                 page.clear_search(window, cx);
