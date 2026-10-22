@@ -450,8 +450,13 @@ def move(plan: Plan) -> int:
     for m in plan.moves:
         attrs, vis = removed[id(m)]
         is_test = "test" in attrs
+        # A module that goes deeper into the folder it was in keeps who could name it: a private one is
+        # `pub(in crate::<that folder>)` where its new parent is a child of it, not `pub(crate)`.
+        inside = bool(m.old_parent) and m.new.startswith(m.old_parent + "::")
         if m.is_rename:
             keep_vis = vis
+        elif inside and not is_test and vis == "":
+            keep_vis = "" if m.new_parent == m.old_parent else "pub(in crate::%s) " % m.old_parent
         elif m.new_parent and not is_test:
             keep_vis = "pub(crate) "
         elif not is_test:
@@ -461,7 +466,10 @@ def move(plan: Plan) -> int:
         new_decls.setdefault(plan.root_file(m.new_parent), []).append("%smod %s;\n" % (attrs + keep_vis, m.new_leaf))
         if not is_test:
             alias = "" if m.new_leaf == m.old_leaf else " as %s" % m.old_leaf
-            keyword = "pub(crate) use" if m.old_parent else "use"
+            if inside and vis == "":
+                keyword = keep_vis + "use"
+            else:
+                keyword = "pub(crate) use" if m.old_parent else "use"
             shims.setdefault(plan.old_parent_file(m), []).append(
                 "%s%s crate::%s%s;\n" % (attrs, keyword, m.new, alias))
     for name, parent in sorted(plan.parents.items(), key=lambda p: len(p[0])):
@@ -703,7 +711,7 @@ def file_paths(text: str, plan: Plan) -> str:
 
 def drop_shims(text: str, leaves: Dict[str, Move]) -> str:
     """The shim block, and the `pub(crate) use <moved>::...;` lines that re-export a moved thing."""
-    text = re.sub(r"\n%s[^\n]*\n(?:(?:[ \t]*#\[[^\n]*\]\n)*(?:pub\(crate\) )?use crate::[^\n]*;\n)*" %
+    text = re.sub(r"\n%s[^\n]*\n(?:(?:[ \t]*#\[[^\n]*\]\n)*(?:pub(?:\([^)]*\))? )?use crate::[^\n]*;\n)*" %
                   re.escape(SHIM_MARK), "\n", text)
     moved = "|".join(re.escape(leaf) for leaf in leaves)
     return re.sub(r"(?m)^(?:[ \t]*#\[[^\n]*\]\n)*pub\(crate\) use (?:self::)?(?:%s)::[^;]*;\n" % moved, "", text)
