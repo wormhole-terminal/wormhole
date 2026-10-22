@@ -21,6 +21,10 @@
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
+# Then the structure (scripts/structure.py, about a second, nothing built) for every scope but `none`: a
+# count the restructuring brings to zero (OS code and objc2 outside the OS edge, `use super::*`,
+# cycles between modules, files over 1,000 lines, ...) may not grow, and scripts/structure.json
+# (the allowlist) may only shrink, so a fixed violation must leave it in the same change.
 # The terminal engine (wormhole-vt) has a repository of its own, with its own checks: the outside
 # suites, the public API listing and mutation testing run there.
 # Output is quiet (test names only when they fail), so an agent reads results, not progress.
@@ -119,7 +123,13 @@ grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py
 grep -Eqx '(scripts/worktree\.sh|crates/[^/]+/Cargo\.toml)' <<<"$changed" && history+=("scripts/worktree.sh --selftest")
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
 grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
-steps=("${history[@]}" "${steps[@]+"${steps[@]}"}")
+# The structure check reads the sources as text, so it comes before the first compile too.
+structure=()
+if [ "$scope" != none ]; then
+  structure+=("python3 scripts/structure.py check")
+  grep -qx 'scripts/structure.py' <<<"$changed" && structure+=("python3 scripts/structure.py selftest")
+fi
+steps=("${history[@]}" "${structure[@]+"${structure[@]}"}" "${steps[@]+"${steps[@]}"}")
 
 n=$(grep -c . <<<"$changed")
 log "scope: $scope ($n changed file(s) since ${base:0:10}${why:+; widest: $why})"

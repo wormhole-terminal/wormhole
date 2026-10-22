@@ -1,8 +1,8 @@
 name: CI
 
-# Pull requests get format, macOS (clippy, every test), licenses and history (commit rules,
-# changelog); a push to main gets the macOS job again. Nothing builds on Linux here: the app is
-# macOS-only (cloud sessions build on Linux themselves). Push and pull request runs are skipped while
+# Pull requests get format, macOS (the structure checker, clippy, every test), licenses and history
+# (commit rules, changelog); a push to main gets the macOS jobs again. Nothing builds on Linux here: the
+# app is macOS-only (cloud sessions build on Linux themselves). Push and pull request runs are skipped while
 # the repository is private, where macOS minutes cost money; a run started by hand (Actions → CI → Run workflow, or
 # `gh workflow run CI`) always goes. Run `scripts/check.sh` before pushing all the same.
 on:
@@ -56,6 +56,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Reads the sources as text, in a second, before anything builds: the counts the restructuring
+      # brings to zero may not grow, and the allowlist may only shrink (scripts/structure.py). Here and
+      # not in the history job, because this job also runs on a push to main.
+      - name: Structure (module rules, OS edge, file sizes)
+        run: |
+          python3 scripts/structure.py selftest
+          python3 scripts/structure.py check
       - name: Rust (the version in rust-toolchain.toml)
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
