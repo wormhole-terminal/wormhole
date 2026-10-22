@@ -13,9 +13,9 @@ use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
 
 use super::{CardLook, card_height};
 use crate::settings::UiColors;
+use crate::settings::update_settings;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
-use crate::workspace::settings_page::update_settings;
 
 // The preview is a drawing at its own small scale, not a control: its rules and bars do not
 // follow the app's metrics (the card shows the previewed theme's colors).

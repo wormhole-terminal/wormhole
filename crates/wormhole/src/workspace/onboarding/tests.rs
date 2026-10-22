@@ -10,8 +10,8 @@ use wormhole_core::onboarding::Step;
 use wormhole_core::config::features::FeatureFlag;
 
 use super::FADE_OUT;
+use crate::settings::update_settings;
 use crate::workspace::app::OpenWindow;
-use crate::workspace::settings_page::update_settings;
 use crate::workspace::view_tests::{draw, drive, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).

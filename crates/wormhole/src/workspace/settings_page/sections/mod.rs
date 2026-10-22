@@ -10,9 +10,10 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
 use crate::select::{Choice, SearchSelect, SelectTrigger};
+use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
 use crate::workspace::settings_page::registry::Setting;
-use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 mod advanced;
 mod agents;

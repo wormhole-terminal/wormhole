@@ -19,9 +19,10 @@ use wormhole_core::theme::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_nam
 
 #[cfg(feature = "devctl")]
 use super::open_settings;
-use super::{SettingsWindow, ui, update_settings};
+use super::{SettingsWindow, ui};
 use crate::fonts::{FontCatalog, LoadedFonts};
 use crate::select::{self, SelectTrigger};
+use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 #[cfg(feature = "devctl")]

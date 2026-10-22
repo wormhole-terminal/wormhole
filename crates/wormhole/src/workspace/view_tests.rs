@@ -112,7 +112,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         cx.set_global(AppState::for_test(100));
         // These tests were written for the numbers that follow the list; the ones that stay with the
         // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
-        crate::workspace::settings_page::update_settings(cx, |settings| {
+        crate::settings::update_settings(cx, |settings| {
             settings.sidebar_numbers = SidebarNumbers::List;
         });
         crate::workspace::actions::init(cx);
@@ -126,7 +126,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
 /// The numbers that stay with a terminal (the default).
 pub(super) fn use_stable(cx: &mut TestAppContext) {
     cx.update(|cx| {
-        crate::workspace::settings_page::update_settings(cx, |settings| {
+        crate::settings::update_settings(cx, |settings| {
             settings.sidebar_numbers = SidebarNumbers::Terminal;
         });
     });

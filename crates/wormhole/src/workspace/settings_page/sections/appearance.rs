@@ -16,11 +16,12 @@ use wormhole_core::theme::tokens::Translucency;
 
 use super::{open_button, stage};
 use crate::select::Choice;
+use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges};
 use crate::theme_bridge;
 use crate::workspace::settings_page::registry::{ProjectSource, Segment, Setting, toggle};
-use crate::workspace::settings_page::{SettingsWindow, open_folder, ui, update_settings};
+use crate::workspace::settings_page::{SettingsWindow, open_folder, ui};
 
 const MODES: &[Segment] = &[
     Segment::icon(IconName::Moon, "Dark"),

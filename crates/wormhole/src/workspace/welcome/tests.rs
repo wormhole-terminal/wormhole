@@ -16,8 +16,8 @@ use wormhole_core::view::sidebar::RowState;
 use super::{Plan, handle};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
+use crate::settings::update_settings;
 use crate::workspace::notifications;
-use crate::workspace::settings_page::update_settings;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 use crate::workspace::{app, app_mut, control};
 

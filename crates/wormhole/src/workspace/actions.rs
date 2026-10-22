@@ -24,13 +24,13 @@ use wormhole_core::view::sidebar::TerminalsIn;
 use wormhole_core::view::sidebar::order::shortcut_target;
 
 use crate::menubar::MenuCommand;
+use crate::settings::update_settings;
 use crate::settings::{SettingsStore, settings};
 use crate::terminal_view::{
     ClearBuffer, CopyCommand, CopyOutput, FONT_SIZES, NextPrompt, PreviousPrompt, RerunCommand, SelectOutput,
     TerminalKeys, keystroke_spec,
 };
 use crate::workspace::app::{self, AppState, app};
-use crate::workspace::settings_page::update_settings;
 use crate::workspace::{
     RightTab, Workspace, about, actions, ambient, app_menu, command_palette, focus, menu_bar, onboarding,
     settings_page, shortcut_sheet, sidebar, studio, updates,

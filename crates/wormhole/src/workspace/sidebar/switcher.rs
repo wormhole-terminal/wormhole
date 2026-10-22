@@ -18,11 +18,11 @@ use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for};
 use super::tab_bar::SetView;
 use crate::select;
+use crate::settings::update_settings;
 use crate::settings::{UiColors, settings_in};
 use crate::style::{self, Edges, TextRole};
 use crate::style::{GroupHead, GroupSwitch, PopoverRow, TileFace, popover_row, popover_rule};
 use crate::workspace::Workspace;
-use crate::workspace::settings_page::update_settings;
 
 /// What a card or row does once the popover has closed.
 type Then = Box<dyn Fn(&mut Workspace, &mut Window, &mut Context<Workspace>)>;

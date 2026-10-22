@@ -7,9 +7,9 @@ use wormhole_core::config::profile::{NewProfile, StartFrom};
 use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::{ParkedSettings, SettingsStore, settings, settings_in, store_in, ui, ui_in};
+use crate::workspace::Workspace;
 use crate::workspace::app::{AppState, app};
 use crate::workspace::view_tests::{draw, isolate_in, read, start};
-use crate::workspace::{Workspace, settings_page};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -32,7 +32,7 @@ fn an_odd_window_reads_its_profiles_theme_and_fonts(cx: &mut TestAppContext) {
         .expect("makes the profile");
     cx.update(|cx| {
         // The shown profile: dark, one terminal font. Work: light, another.
-        settings_page::update_settings(cx, |s| {
+        crate::settings::update_settings(cx, |s| {
             s.theme_mode = ThemeMode::Dark;
             s.font_family = "Menlo".into();
         });

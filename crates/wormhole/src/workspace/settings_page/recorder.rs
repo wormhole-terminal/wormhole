@@ -18,7 +18,8 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
 
-use super::{SettingsWindow, registry, ui, update_settings};
+use super::{SettingsWindow, registry, ui};
+use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
 use crate::style::{self, TextRole};
 use crate::workspace::app::app_mut;

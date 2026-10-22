@@ -107,7 +107,7 @@ fn a_projects_config_holds_its_folders_colour_and_the_persons_own_is_ignored(cx:
 
     // An old colour of the person's for this folder (from before it was a project) is ignored...
     cx.update(|cx| {
-        crate::workspace::settings_page::update_settings(cx, |settings| {
+        crate::settings::update_settings(cx, |settings| {
             settings.set_folder_color(&tinted, Some(FolderColor::Blue));
         });
     });
@@ -167,7 +167,7 @@ fn with_the_project_folder_flag_off_nothing_is_written_into_the_repository(cx: &
 
     // Off, with no `refresh_projects` since: the window still lists the project.
     cx.update(|cx| {
-        crate::workspace::settings_page::update_settings(cx, |settings| {
+        crate::settings::update_settings(cx, |settings| {
             settings.feature_flags.insert("project_folders".into(), false);
         });
     });

@@ -6,8 +6,8 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::keys::keymap::ActionId;
 
+use crate::settings::update_settings;
 use crate::workspace::RightTab;
-use crate::workspace::settings_page::update_settings;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {

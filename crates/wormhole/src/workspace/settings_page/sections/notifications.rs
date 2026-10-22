@@ -11,11 +11,12 @@ use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 
 use crate::platform::notifications::Permission;
+use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
 use crate::style::{self, SettingParts, SettingState};
 use crate::workspace::notifications;
 use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
-use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 /// The command-finished threshold's steps, in seconds.
 const AFTER: [u32; 5] = [5, 10, 30, 60, 300];

@@ -25,7 +25,7 @@ use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
 use crate::platform::vibrancy::Blur;
-use crate::settings::{Settings, SettingsStore};
+use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
@@ -737,12 +737,6 @@ impl SettingsWindow {
             )
             .into_any_element()
     }
-}
-
-/// Update settings and notify every view (they re-read the global).
-pub(crate) fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
-    SettingsStore::update(cx, f);
-    cx.refresh_windows();
 }
 
 /// Show one of our folders in the Finder (the icon themes, the fonts),

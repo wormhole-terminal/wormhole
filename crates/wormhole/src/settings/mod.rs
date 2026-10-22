@@ -526,6 +526,12 @@ pub fn settings(cx: &App) -> &Settings {
     &cx.global::<SettingsStore>().settings
 }
 
+/// Update settings and notify every view (they re-read the global).
+pub fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
+    SettingsStore::update(cx, f);
+    cx.refresh_windows();
+}
+
 /// The main window's colours. The settings, Studio and About windows define a `ui` of their own
 /// with [`window_ui`], which shadows this one for everything their modules draw (each of their
 /// files imports it).

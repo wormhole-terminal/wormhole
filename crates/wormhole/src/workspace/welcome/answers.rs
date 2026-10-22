@@ -24,11 +24,11 @@ use wormhole_core::theme::fonts::FontSlot;
 use super::{Play, Run, remember_first_run};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
+use crate::settings::update_settings;
 use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::control::{budget, find};
 use crate::workspace::notifications;
 use crate::workspace::onboarding::{offered_primaries, offered_themes};
-use crate::workspace::settings_page::update_settings;
 use gpui_kit::App;
 
 /// Answer a welcome request. `from` is the tab it says it comes from.

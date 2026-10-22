@@ -20,7 +20,8 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::config::settings_index::{self, Entry, Hit, Query, Values};
 
-use super::{FrontWindow, SettingsWindow, section_icon, sections, ui, update_settings};
+use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
+use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
 

@@ -7,11 +7,11 @@ use wormhole_core::onboarding;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens, builtins};
 
+use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
 use crate::workspace::Workspace;
-use crate::workspace::settings_page::update_settings;
 
 /// The terminal font's face, so the size stepper beside it fits the row.
 const FONT_FACE_W: f32 = 132.0;
