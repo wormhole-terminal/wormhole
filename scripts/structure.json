@@ -53,8 +53,8 @@
   },
   "allowlist": {
     "file-size": {
-      "crates/wormhole-core/src/config/settings.rs": 1433,
-      "crates/wormhole/src/workspace/mod.rs": 1011,
+      "crates/wormhole-core/src/config/settings.rs": 1440,
+      "crates/wormhole/src/workspace/mod.rs": 1043,
       "crates/wormhole/src/workspace/view_tests.rs": 1048
     },
     "os-edge": {
@@ -126,8 +126,16 @@
       "crates/wormhole-core/src/project/tests.rs :: std::os::unix": 4,
       "crates/wormhole-core/src/quit_signal.rs :: allow(unsafe_code)": 2,
       "crates/wormhole-core/src/quit_signal.rs :: libc::": 10,
+      "crates/wormhole-core/src/store/saved_text/keys.rs :: cfg(target_os": 9,
+      "crates/wormhole-core/src/store/saved_text/platform.rs :: allow(unsafe_code)": 2,
+      "crates/wormhole-core/src/store/saved_text/platform.rs :: cfg(target_os": 4,
+      "crates/wormhole-core/src/store/saved_text/platform.rs :: libc::": 4,
+      "crates/wormhole-core/src/store/saved_text/platform.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/store/tests/copies.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/store/tests/private.rs :: std::os::unix": 1,
+      "crates/wormhole-core/src/store/tests/saved_text.rs :: cfg(target_os": 1,
+      "crates/wormhole-core/src/store/tests/saved_text.rs :: std::os::unix": 1,
+      "crates/wormhole-core/src/store/tests/sealed.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/update/install.rs :: std::os::unix": 3,
       "crates/wormhole-core/src/update/mod.rs :: cfg!(target_os": 1,
       "crates/wormhole-core/src/update/test_support.rs :: std::os::unix": 2,
