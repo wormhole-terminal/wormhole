@@ -101,7 +101,7 @@ impl Workspace {
 
     /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).
     #[cfg(feature = "devctl")]
-    pub(crate) fn overlay_of<T: 'static>(&self) -> Option<Entity<T>> {
+    pub(super) fn overlay_of<T: 'static>(&self) -> Option<Entity<T>> {
         self.overlay.as_ref()?.view.view.clone().downcast::<T>().ok()
     }
 
