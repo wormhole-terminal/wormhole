@@ -6,4 +6,5 @@ pub mod colour;
 pub mod menu;
 pub mod popover;
 mod rows;
+pub mod status_item;
 mod swatches;

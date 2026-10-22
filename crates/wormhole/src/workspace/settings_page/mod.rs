@@ -20,9 +20,9 @@ use wormhole_core::sidebar::Density;
 
 use super::aux_window;
 use super::*;
+use crate::platform::vibrancy::Blur;
 use crate::settings::{Settings, SettingsStore};
 use crate::theme_bridge;
-use crate::vibrancy::Blur;
 use crate::workspace::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};

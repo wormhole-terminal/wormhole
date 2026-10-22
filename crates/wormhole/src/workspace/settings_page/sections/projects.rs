@@ -299,7 +299,7 @@ impl SettingsWindow {
                     ),
             );
         }
-        if !*self.projects.can_approve.get_or_init(crate::auth::available) {
+        if !*self.projects.can_approve.get_or_init(crate::platform::auth::available) {
             trusted = trusted.child(div().pb_2().child(style::banner(
                 ui,
                 style::BannerKind::Warning,

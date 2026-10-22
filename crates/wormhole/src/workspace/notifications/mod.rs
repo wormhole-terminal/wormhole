@@ -233,7 +233,7 @@ pub(crate) fn tick(ticks: u64, cx: &mut App) {
 /// from inside a window's update (that window can't be read then): defer it.
 pub(crate) fn sweep(cx: &mut App) {
     let tabs = ambient::all_tabs(cx);
-    let app_active = crate::dock::app_is_active(cx);
+    let app_active = crate::platform::dock::app_is_active(cx);
     let after = settings(cx).notify_command_after;
     let events = notifier(cx).watch.observe(&tabs, app_active, after, SystemTime::now());
     if events.is_empty() {
@@ -265,7 +265,7 @@ pub(crate) fn sweep(cx: &mut App) {
         .map(|(tab, name, kind, words)| Said { tab: *tab, name, kind: *kind, question: words.as_deref() })
         .collect();
     for spoken in notifier(cx).announcer.announce(Instant::now(), &said) {
-        crate::a11y::announce(&spoken.text, spoken.priority == Priority::High);
+        crate::platform::a11y::announce(&spoken.text, spoken.priority == Priority::High);
     }
 }
 
@@ -336,7 +336,7 @@ fn announce(happened: Happened, app_active: bool, settings: &Settings, cx: &mut 
         return;
     }
     if notify::bounces(kind, app_active, settings.dock_bounce) {
-        crate::dock::bounce(cx);
+        crate::platform::dock::bounce(cx);
     }
     if kind == Kind::Bell
         && !notifier(cx).bells.get_or_insert_with(bell_rate).allow(facts.session, Instant::now())
@@ -669,7 +669,7 @@ pub(crate) fn logged(cx: &App) -> Vec<Notice> {
 /// what they decided (nothing is posted unless `post` is set).
 #[cfg(feature = "devctl")]
 pub(crate) fn simulate(kind: Kind, facts: &TabFacts, post_it: bool, cx: &mut App) -> String {
-    let app_active = crate::dock::app_is_active(cx);
+    let app_active = crate::platform::dock::app_is_active(cx);
     let settings = settings(cx).clone();
     let seen = Seen { looking: facts.looking(app_active), app_active };
     let delivery = notify::delivery(kind, seen, &settings);

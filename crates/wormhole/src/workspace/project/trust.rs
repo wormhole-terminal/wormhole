@@ -6,7 +6,7 @@ use std::path::Path;
 use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
 
 use super::*;
-use crate::auth;
+use crate::platform::auth;
 
 impl ProjectHub {
     /// The answer to an approval dialog for `request` (`None`: it went away without one).
@@ -116,7 +116,7 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use super::ProjectHub;
-    use crate::auth::AuthError;
+    use crate::platform::auth::AuthError;
     use wormhole_core::project::{ProjectFolder, TrustStatus};
 
     /// A fresh directory under the system temp dir, removed when dropped.

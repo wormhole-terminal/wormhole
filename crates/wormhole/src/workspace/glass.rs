@@ -3,7 +3,7 @@
 //! where they are.
 
 use super::*;
-use crate::vibrancy::GlassRect;
+use crate::platform::vibrancy::GlassRect;
 
 /// How far a probe's glass is inset from its parent: left, top, right, bottom.
 #[derive(Clone, Copy)]
@@ -59,7 +59,7 @@ impl Workspace {
     /// [`Self::glass_probe`] for a window's glass held apart from its workspace (a pile's cards
     /// ask for theirs while they animate).
     pub(in crate::workspace) fn glass_probe_on(
-        glass: &std::rc::Rc<crate::vibrancy::Glass>,
+        glass: &std::rc::Rc<crate::platform::vibrancy::Glass>,
         key: u64,
         inset: Insets,
         radius: f32,

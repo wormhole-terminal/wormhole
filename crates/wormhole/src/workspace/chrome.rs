@@ -83,7 +83,7 @@ pub(crate) fn traffic_light_position(row: f32) -> Point<Pixels> {
 /// Where the traffic lights end in this window, from the left edge: for whatever has to clear
 /// the real lights (the Studio's title, the sidebar's collapse button).
 pub(crate) fn lights_end(window: &Window) -> f32 {
-    LIGHTS_X + crate::traffic_lights::span(window).unwrap_or(ASSUMED_LIGHTS_SPAN)
+    LIGHTS_X + crate::platform::window::span(window).unwrap_or(ASSUMED_LIGHTS_SPAN)
 }
 
 /// Where the sidebar's collapse button starts, after lights that end at `lights_end`.

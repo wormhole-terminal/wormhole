@@ -12,7 +12,7 @@ use wormhole_core::project::{TrustLine, TrustStatus};
 use super::super::aux_window;
 use super::super::*;
 use super::{LoadedProject, app, app_mut, approve_project};
-use crate::auth;
+use crate::platform::auth;
 
 const SIZE: (f32, f32) = (640.0, 480.0);
 const MIN: (f32, f32) = (480.0, 320.0);

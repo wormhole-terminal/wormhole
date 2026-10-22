@@ -1,12 +1,8 @@
-mod a11y;
 mod active_profile;
-mod auth;
 mod background;
 #[cfg(feature = "devctl")]
 mod devctl;
-mod dock;
 mod fonts;
-mod hotkey;
 mod icons;
 #[cfg(any(feature = "inspector", debug_assertions))]
 mod inspector;
@@ -16,14 +12,11 @@ mod menubar;
 mod palette;
 mod perf;
 mod platform;
-mod scroller;
 mod select;
 mod settings;
 mod style;
 mod terminal_view;
 mod theme_bridge;
-mod traffic_lights;
-mod vibrancy;
 mod window_ops;
 mod workspace;
 

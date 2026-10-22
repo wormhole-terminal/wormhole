@@ -16,7 +16,7 @@ use wormhole_core::spoken;
 use super::super::folder_color;
 use super::super::session::home_dir;
 use super::*;
-use crate::auth;
+use crate::platform::auth;
 use crate::settings::{store_in, ui_in};
 use crate::theme_bridge;
 

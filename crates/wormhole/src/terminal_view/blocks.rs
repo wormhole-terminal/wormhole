@@ -114,7 +114,10 @@ impl TerminalView {
                 let block = pty.block_at(line);
                 self.blocks.cursor = block.as_ref().map(|block| block.id);
                 if let Some(block) = block {
-                    crate::a11y::announce(&spoken::command_block(&block.command, block.state), false);
+                    crate::platform::a11y::announce(
+                        &spoken::command_block(&block.command, block.state),
+                        false,
+                    );
                 }
             }
             None if direction == Direction::Down => {
@@ -201,7 +204,7 @@ impl TerminalView {
                     }
                     Err(refusal) => {
                         let text = format!("Not put at the prompt: {}", refusal.reason());
-                        crate::a11y::announce(&text, false);
+                        crate::platform::a11y::announce(&text, false);
                         self.say_in_bar(BannerKind::Warning, text, cx);
                     }
                 }

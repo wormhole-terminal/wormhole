@@ -30,9 +30,9 @@ use wormhole_core::tokens::{self, Color, METRIC_TOKENS, ThemeFile, ThemeTokens, 
 
 use super::aux_window;
 use super::*;
+use crate::platform::vibrancy::Blur;
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
-use crate::vibrancy::Blur;
 use draft::{ANSI_NAMES, Themes, draft_for, group_of, is_metric, number, override_of, set_override};
 use gallery::{Area, GalleryView};
 use save::Notice;

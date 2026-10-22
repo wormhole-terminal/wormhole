@@ -207,7 +207,7 @@ impl Workspace {
             return 0;
         }
         match area {
-            Area::TitleRow if crate::a11y::keyboard_navigation() => self.title_buttons(cx).len(),
+            Area::TitleRow if crate::platform::a11y::keyboard_navigation() => self.title_buttons(cx).len(),
             Area::TitleRow => 0,
             Area::PanelContent => self.panel_lists(cx).len().max(1),
             _ => 1,

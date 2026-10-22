@@ -10,14 +10,21 @@
 //! AppKit's are meant to move here one by one, each as a neutral file beside `menu.rs` and an
 //! implementation in `macos/`.
 
+pub mod a11y;
 mod anchor;
+pub mod auth;
+pub mod dock;
 pub mod fallback;
+pub mod hotkey;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;
 pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;
+pub mod scroller;
+pub mod vibrancy;
+pub mod window;
 
 use gpui_kit::*;
 

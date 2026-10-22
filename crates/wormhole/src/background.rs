@@ -39,7 +39,7 @@ pub fn comes_forward(background: bool, app_active: bool) -> bool {
 }
 
 fn may_come_forward(cx: &App) -> bool {
-    comes_forward(on(), crate::dock::app_is_active(cx))
+    comes_forward(on(), crate::platform::dock::app_is_active(cx))
 }
 
 /// Bring Wormhole to the front (`cx.activate(true)`), unless background mode keeps it behind.

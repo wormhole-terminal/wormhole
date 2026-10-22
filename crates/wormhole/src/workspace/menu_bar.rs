@@ -11,9 +11,9 @@ use wormhole_core::store::Store;
 
 use super::app::{AppState, app, app_mut, open_tab};
 use super::*;
-use crate::hotkey::Hotkey;
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuBar, MenuCommand, MenuSnapshot, StatusColors};
+use crate::platform::hotkey::Hotkey;
 
 const RECENT_PROJECTS: usize = 8;
 
@@ -295,7 +295,7 @@ fn animate_icon(animate: bool, cx: &mut App) {
 fn sync_dock(terminals: &[Terminal], cx: &mut App) {
     let counts = Counts::of(terminals);
     let badge = notify::dock_badge(settings(cx).dock_badge, counts.needs_you, counts.results());
-    crate::dock::set_badge(badge, cx);
+    crate::platform::dock::set_badge(badge, cx);
     let menu = model::dock_menu(terminals, Instant::now());
     if app(cx).menu.dock_menu.as_ref() == Some(&menu) {
         return;
@@ -474,7 +474,7 @@ pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<V
 #[cfg(feature = "devctl")]
 pub(crate) fn dock_dump(cx: &App) -> String {
     let terminals = super::ambient::terminals(cx);
-    let dock = cx.try_global::<crate::dock::DockState>();
+    let dock = cx.try_global::<crate::platform::dock::DockState>();
     let mut out = format!(
         "dock badge={:?} bounces={}\n",
         dock.and_then(|d| d.badge.clone()),

@@ -179,12 +179,12 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
 fn draw_liquid_glass(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let on = settings(cx).liquid_glass;
     style::toggle("liquid-glass", on, |on, _, cx| update_settings(cx, |s| s.liquid_glass = on))
-        .disabled(!crate::vibrancy::glass_available())
+        .disabled(!crate::platform::vibrancy::glass_available())
         .into_any_element()
 }
 
 fn liquid_glass_hint(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
-    let text = if !crate::vibrancy::glass_available() {
+    let text = if !crate::platform::vibrancy::glass_available() {
         "Liquid Glass needs macOS 26 or later."
     } else if cx.global::<SettingsStore>().system().opaque() {
         "Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays \

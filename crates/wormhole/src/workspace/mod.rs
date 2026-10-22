@@ -8,9 +8,9 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use crate::platform::vibrancy;
 use crate::settings::{SettingsStore, UiColors, settings, settings_in, store_in, ui, ui_in};
 use crate::style::{self, Edges, TextRole};
-use crate::vibrancy;
 #[cfg(feature = "devctl")]
 pub(crate) use about::devctl_command as devctl_about;
 #[cfg(feature = "devctl")]

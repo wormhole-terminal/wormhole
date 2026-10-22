@@ -7,20 +7,15 @@
 
 pub mod model;
 
-#[cfg(target_os = "macos")]
-mod appkit;
-#[cfg(target_os = "macos")]
-mod icon;
-
 use std::path::PathBuf;
 
 use wormhole_core::config::MenuBarIcon;
 use wormhole_core::notify::Terminal;
 
 #[cfg(target_os = "macos")]
-pub use appkit::MenuBar;
+pub use crate::platform::macos::status_item::MenuBar;
 #[cfg(all(target_os = "macos", feature = "devctl"))]
-pub use appkit::save_icons;
+pub use crate::platform::macos::status_item::save_icons;
 
 /// Off macOS there is no status item; the stub keeps the app crate type-checkable (and its
 /// tests runnable) on Linux CI and in cloud sessions.

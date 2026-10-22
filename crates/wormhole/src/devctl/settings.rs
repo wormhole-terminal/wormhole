@@ -8,7 +8,7 @@ use wormhole_core::terminal::scrollbar::ScrollerStyle;
 use wormhole_core::tokens::Appearance;
 
 use super::Ctx;
-use crate::scroller::ScrollerPrefs;
+use crate::platform::scroller::ScrollerPrefs;
 use crate::settings::SettingsStore;
 use crate::workspace::AppState;
 

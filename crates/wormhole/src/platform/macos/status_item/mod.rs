@@ -2,6 +2,8 @@
 //! type-to-select, Spaces, full screen and the bar's light and dark come for free. The rows'
 //! glyphs are palette SF Symbols in the theme's status colours, not the system's.
 
+mod icon;
+
 use smol::channel::Sender;
 use std::cell::{Cell, RefCell};
 use std::time::Instant;
@@ -16,8 +18,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSDictionary, NSMutableAttributedString, NSRange, NSString};
 
-use super::model::{self, Entry, Glyph, ItemModel, StatusIcon};
-use super::{MenuCommand, MenuSnapshot, StatusColors};
+use crate::menubar::model::{self, Entry, Glyph, ItemModel, StatusIcon};
+use crate::menubar::{MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::macos::appkit::{modifier_mask, ns_color, symbol};
 use target::MenuTarget;
 use wormhole_core::notify::ItemState;
@@ -195,7 +197,7 @@ impl MenuBar {
         let (icon, frame, colors) = &next;
         if let Some(button) = self.item.button(self.mtm) {
             let filled = icon.state == ItemState::Working;
-            let image = super::icon::image(filled, *frame, icon.mark, *colors, &icon.tooltip);
+            let image = icon::image(filled, *frame, icon.mark, *colors, &icon.tooltip);
             button.setImage(Some(&image));
             let title = icon.count.clone().unwrap_or_default();
             button.setTitle(&NSString::from_str(&title));
@@ -222,7 +224,7 @@ pub fn save_icons(
     prefix: &str,
     colors: StatusColors,
 ) -> anyhow::Result<Vec<std::path::PathBuf>> {
-    super::icon::save_all(dir, prefix, colors)
+    icon::save_all(dir, prefix, colors)
 }
 
 impl Drop for MenuBar {

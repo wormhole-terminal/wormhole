@@ -15,7 +15,7 @@ use wormhole_core::terminal::scrollbar::{
 };
 
 use super::*;
-use crate::scroller::{self, ScrollerPrefs};
+use crate::platform::scroller::{self, ScrollerPrefs};
 
 /// What the scrollbar keeps in the view.
 #[derive(Default)]

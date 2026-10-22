@@ -216,7 +216,7 @@ impl Workspace {
 
     /// The page is the intro window's: put it up, with the keyboard.
     fn show_page(&mut self, intro: Intro, window: &mut Window, cx: &mut Context<Self>) {
-        crate::traffic_lights::set_shown(window, false);
+        crate::platform::window::set_shown(window, false);
         window.focus(&intro.focus, cx);
         self.first_run.intro = Some(intro);
         cx.notify();
@@ -332,7 +332,7 @@ impl Workspace {
         self.skip_welcomes(cx);
         self.first_run.intro = None;
         self.first_run.swap = None;
-        crate::traffic_lights::set_shown(window, true);
+        crate::platform::window::set_shown(window, true);
         crate::intro::skip(cx);
         window.focus(&self.active_terminal().focus_handle(cx), cx);
         cx.notify();
@@ -383,7 +383,7 @@ impl Workspace {
     ) {
         self.first_run.swap = None;
         let Some(intro) = self.first_run.intro.take() else { return };
-        crate::traffic_lights::set_shown(window, true);
+        crate::platform::window::set_shown(window, true);
         crate::intro::skip(cx);
         if intro.first_run {
             if let Some(store) = &app(cx).store

@@ -53,7 +53,7 @@ pub(super) const SETTINGS: &[Setting] = &[
 
 /// A global hotkey needs a modifier (or an F-key) and a key the system can register.
 fn hotkey_accepts(spec: &KeySpec) -> bool {
-    crate::hotkey::parse_spec(&spec.to_string()).is_ok()
+    crate::platform::hotkey::parse_spec(&spec.to_string()).is_ok()
 }
 
 /// The jump key works inside the app: a modifier that isn't Shift alone (that types a capital).
@@ -64,7 +64,7 @@ fn jump_accepts(spec: &KeySpec) -> bool {
 /// Why the hotkey set now doesn't work: macOS, the app or the shell has the keys (set by hand in
 /// config.json; the recorder refuses them), or it didn't register.
 fn hotkey_problem(s: &Settings, cx: &App) -> Option<String> {
-    crate::hotkey::system_conflict(&s.hotkey).or_else(|| app(cx).menu.hotkey_error.clone())
+    crate::platform::hotkey::system_conflict(&s.hotkey).or_else(|| app(cx).menu.hotkey_error.clone())
 }
 
 #[cfg(test)]

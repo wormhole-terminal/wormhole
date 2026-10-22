@@ -18,12 +18,12 @@ const WAKE_POLL: Duration = Duration::from_millis(50);
 /// the announcements made lately (`!` before one that interrupts).
 pub(super) fn a11y(ctx: &mut Ctx, arg: &str) -> Result<String> {
     match arg.trim() {
-        "said" => Ok(crate::a11y::recent()
+        "said" => Ok(crate::platform::a11y::recent()
             .into_iter()
             .map(|(text, interrupt)| format!("said {}{text}\n", if interrupt { "! " } else { "" }))
             .collect()),
         "" => {
-            crate::a11y::wake_tree(ctx.window);
+            crate::platform::a11y::wake_tree(ctx.window);
             ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx).await));
             Ok(String::new())
         }
@@ -39,12 +39,12 @@ pub(super) fn keyboard_navigation(_: &mut Ctx, arg: &str) -> Result<String> {
         "off" => Some(false),
         "system" => None,
         "" => {
-            let on = crate::a11y::keyboard_navigation();
+            let on = crate::platform::a11y::keyboard_navigation();
             return Ok(format!("keyboard-navigation {}\n", if on { "on" } else { "off" }));
         }
         other => return Err(anyhow!("expected on|off|system, got {other:?}")),
     };
-    crate::a11y::set_keyboard_navigation(on);
+    crate::platform::a11y::set_keyboard_navigation(on);
     Ok(String::new())
 }
 

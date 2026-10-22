@@ -459,7 +459,7 @@ impl Overlay {
         self.move_window(motion);
         self.layer.setOpacity(opacity);
         if let (true, Some(lights)) = (self.lights, frame.lights) {
-            crate::traffic_lights::set_opacity(&self.parent, lights);
+            crate::platform::window::set_opacity(&self.parent, lights);
         }
         let mut uniforms = self.uniforms.at_from(self.style, frame.t, frame.time, self.start);
         // The shader leaves the window's rectangle clear as far as the window shows.

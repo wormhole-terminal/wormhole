@@ -22,8 +22,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
-use super::model::Mark;
-use super::{Rgba, StatusColors};
+use crate::menubar::model::Mark;
+use crate::menubar::{Rgba, StatusColors};
 
 /// The canvas, the same in every state: the box is centred in it and the badge lives in the
 /// reserved room on the right, so nothing moves as the status changes. Its height is the glyph's,

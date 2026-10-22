@@ -58,7 +58,7 @@ use super::blocks;
 use super::input::TerminalCommand;
 use super::*;
 use crate::perf;
-use crate::scroller::ScrollerPrefs;
+use crate::platform::scroller::ScrollerPrefs;
 use gpui_kit::component::input as text_input;
 use wormhole_core::terminal::ScreenSnapshot;
 use wormhole_core::terminal::types::NamedColor;

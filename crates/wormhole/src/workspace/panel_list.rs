@@ -27,7 +27,7 @@ const OVERDRAW: f32 = 300.0;
 /// covers instead of fading it, and the row cut off at the edge already says there is more. Lay it
 /// over the list, beside it rather than in it: a child of the scrolled content moves with it.
 pub(super) fn scroll_edges(ui: UiColors, scrolled: bool, scrollbar: Scrollbar, cx: &App) -> AnyElement {
-    let mode = match crate::scroller::ScrollerPrefs::style(cx) {
+    let mode = match crate::platform::scroller::ScrollerPrefs::style(cx) {
         ScrollerStyle::Overlay => ScrollbarMode::Scrolling,
         ScrollerStyle::Legacy => ScrollbarMode::Always,
     };

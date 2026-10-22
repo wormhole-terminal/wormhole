@@ -115,7 +115,7 @@ impl TerminalView {
                     this.update(cx, |this, cx| this.settle_ask(id, Choice::Deny, cx)).ok();
                 });
                 let program = self.program_label();
-                crate::a11y::announce(&format!("{program} wants to read the clipboard"), true);
+                crate::platform::a11y::announce(&format!("{program} wants to read the clipboard"), true);
                 self.bar.ask = Some(Ask { id, format, reply, program, _timeout: timeout });
                 cx.notify();
             }
