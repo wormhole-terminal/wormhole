@@ -31,6 +31,7 @@ impl RecentProjects {
         Self { roots }
     }
 
+    /// The project roots, most recently used first.
     pub(crate) fn roots(&self) -> &[PathBuf] {
         &self.roots
     }

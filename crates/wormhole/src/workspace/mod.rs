@@ -7,9 +7,10 @@
 //! Until phase 4's moves finish this folder also holds the surfaces that sit above the window (the
 //! app root, the palette, the sheet, the Settings and Studio windows, the status item); they
 //! leave, and the window then uses none of them. The known exception, kept until phase 5, is the
-//! window calling `notifications::dismiss` and `notifications::sweep` (the window will emit seen
-//! and closed events instead): `tick`, `terminals`, `panes`, `splits`, `windows`, the welcome and
-//! this file's window-activation observer.
+//! window using `notifications`: it calls `dismiss` and `sweep` (the window will emit seen and
+//! closed events instead) from `tick`, `terminals`, `panes`, `splits`, `windows` and this file's
+//! window-activation observer, `finished_commands` from `ambient`, and `permission_asks` from the
+//! welcome.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
