@@ -16,7 +16,8 @@ thread_local! {
     static COUNTS: Cell<Counts> = const { Cell::new(Counts { allocations: 0, bytes: 0 }) };
 }
 
-/// A thread's allocations (and reallocations) so far, and the bytes they asked for.
+/// A thread's allocations (and reallocations) so far, and the bytes they asked for: a new block's
+/// size, and what a reallocation grew by (a shrink adds none).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Counts {
     pub allocations: u64,
@@ -79,7 +80,7 @@ unsafe impl GlobalAlloc for Counting {
     }
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        note(new_size);
+        note(new_size.saturating_sub(layout.size()));
         // SAFETY: as for `alloc` and `dealloc`.
         unsafe { System.realloc(ptr, layout, new_size) }
     }

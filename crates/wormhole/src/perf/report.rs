@@ -102,7 +102,8 @@ impl From<LockUse> for Lock {
     }
 }
 
-/// What reading output cost, every terminal of the process together.
+/// What reading output cost, every terminal of the process together, over the whole profile (the
+/// warm-up frames' time included: the readers don't draw frames).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct Reader {
     pub bytes: u64,
@@ -116,21 +117,39 @@ pub(crate) struct Reader {
     pub lock: Lock,
 }
 
+/// The window's terminals, by where their programs run. A hosted terminal's program is read and
+/// parsed by its session host, another process this profile doesn't see; the app parses the
+/// host's stream again into its replica, which is what `reader` counts. Two profiles compare only
+/// when these match.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+pub(crate) struct Terminals {
+    pub hosted: usize,
+    pub local: usize,
+}
+
 /// Everything `perf-profile` writes.
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct Report {
     pub format: &'static str,
     pub format_version: u32,
     pub seconds: f64,
+    pub terminals: Terminals,
     pub frames: Frames,
     pub reader: Reader,
-    /// The terminals' locks as every other thread took them (the UI's snapshot, input, find).
+    /// The terminals' locks as every other thread took them (the UI's snapshot, input, find; the
+    /// threads that decode pictures).
     pub ui_lock: Lock,
 }
 
 impl Report {
-    /// The report of `samples` drawn in `elapsed`, with the terminal layer's `counters`.
-    pub(crate) fn new(samples: &[Sample], elapsed: Duration, counters: Counters) -> Report {
+    /// The report of `samples` drawn in `elapsed`, with the terminal layer's `counters`, for a
+    /// window with these `terminals`.
+    pub(crate) fn new(
+        samples: &[Sample],
+        elapsed: Duration,
+        counters: Counters,
+        terminals: Terminals,
+    ) -> Report {
         let seconds = elapsed.as_secs_f64();
         let frames = &samples[samples.len().min(WARM_UP_FRAMES)..];
         let drew: Vec<&Sample> = frames.iter().filter(|s| s.parts.terminals > 0).collect();
@@ -141,6 +160,7 @@ impl Report {
             format: FORMAT,
             format_version: FORMAT_VERSION,
             seconds: round(seconds),
+            terminals,
             frames: Frames {
                 count: frames.len(),
                 terminal_frames: drew.len(),
@@ -178,23 +198,28 @@ impl Report {
     pub(crate) fn summary(&self) -> String {
         let f = &self.frames;
         let mut out = format!(
-            "perf-profile {:.1} s: {} frames ({:.1}/s), {} drew the terminal\n",
-            self.seconds, f.count, f.per_second, f.terminal_frames
+            "perf-profile {:.1} s: {} frames ({:.1}/s), {} drew the terminal; {} hosted and {} local terminals\n",
+            self.seconds,
+            f.count,
+            f.per_second,
+            f.terminal_frames,
+            self.terminals.hosted,
+            self.terminals.local
         );
         let _ = writeln!(out, "{:<22}{:>10}{:>10}{:>10}{:>10}", "per frame", "avg", "p50", "p95", "max");
         let mut row = |name: &str, s: &Spread| {
             let _ = writeln!(out, "{name:<22}{:>10.3}{:>10.3}{:>10.3}{:>10.3}", s.avg, s.p50, s.p95, s.max);
         };
         row("draw ms", &f.draw_ms);
-        for (name, spread) in &f.parts_ms {
-            row(&format!("  {name} ms"), spread);
+        for ((name, spread), part) in f.parts_ms.iter().zip(Part::ALL) {
+            row(&format!("{}{name} ms", nested(part)), spread);
         }
         row("  lock wait ms", &f.lock_wait_ms);
         row("rows built", &f.rows_built);
         row("words shaped", &f.words_shaped);
         row("allocations", &f.allocations);
-        for (name, spread) in &f.parts_allocations {
-            row(&format!("  {name}"), spread);
+        for ((name, spread), part) in f.parts_allocations.iter().zip(Part::ALL) {
+            row(&format!("{}{name}", nested(part)), spread);
         }
         row("allocated KiB", &f.alloc_kib);
         let r = &self.reader;
@@ -223,6 +248,11 @@ fn as_map<S: serde::Serializer>(pairs: &[(&'static str, Spread)], serializer: S)
     serializer.collect_map(pairs.iter().map(|(name, spread)| (*name, spread)))
 }
 
+/// The indent of a part's line in the summary: one step under the frame, one more per level.
+fn nested(part: Part) -> String {
+    "  ".repeat(part.depth() + 1)
+}
+
 fn ms(nanos: u64) -> f64 {
     round(nanos as f64 / 1e6)
 }
@@ -243,7 +273,7 @@ mod tests {
 
     use wormhole_core::terminal::perf::{Counters, LockUse};
 
-    use super::{Report, Sample, Spread, WARM_UP_FRAMES};
+    use super::{Report, Sample, Spread, Terminals, WARM_UP_FRAMES};
     use crate::perf::{Part, Parts};
 
     fn frame(draw_ms: u64, terminal: bool) -> Sample {
@@ -269,7 +299,7 @@ mod tests {
     fn the_warm_up_frames_are_left_out_and_the_terminals_parts_count_only_where_it_drew() {
         let mut samples: Vec<Sample> = (0..WARM_UP_FRAMES).map(|_| frame(100, true)).collect();
         samples.extend([frame(2, true), frame(4, false), frame(2, true), frame(4, false)]);
-        let report = Report::new(&samples, Duration::from_secs(1), Counters::default());
+        let report = Report::new(&samples, Duration::from_secs(1), Counters::default(), Terminals::default());
         let frames = &report.frames;
         assert_eq!((frames.count, frames.terminal_frames), (4, 2));
         assert_eq!(frames.per_second, samples.len() as f64, "every frame drawn counts for the rate");
@@ -298,7 +328,7 @@ mod tests {
             },
             ui: LockUse { locks: 600, wait_ns: 1_500_000, ..LockUse::default() },
         };
-        let report = Report::new(&[], Duration::from_secs(2), counters);
+        let report = Report::new(&[], Duration::from_secs(2), counters, Terminals::default());
         assert_eq!(report.reader.mb_per_s, 25.0);
         assert_eq!(report.reader.parse_mb_per_s, 200.0);
         assert_eq!(report.reader.parse_busy_pct, 12.5);
@@ -307,22 +337,33 @@ mod tests {
     }
 
     #[test]
-    fn the_json_names_the_format_and_the_summary_names_every_part() {
-        let report = Report::new(&[frame(2, true); 6], Duration::from_secs(1), Counters::default());
+    fn the_json_names_the_format_and_the_terminals_and_the_summary_nests_every_part() {
+        let report = Report::new(
+            &[frame(2, true); 6],
+            Duration::from_secs(1),
+            Counters::default(),
+            Terminals { hosted: 1, local: 0 },
+        );
         let json = serde_json::to_value(&report).expect("serializes");
         assert_eq!(json["format"], "wormhole-perf-profile");
         assert_eq!(json["frames"]["draw_ms"]["avg"], 2.0);
         assert_eq!(json["frames"]["parts_ms"]["paint"]["avg"], 0.5);
         let summary = report.summary();
         for part in Part::ALL {
-            assert!(summary.contains(&format!("  {} ms", part.name())), "{summary}");
+            assert!(summary.contains(&format!("{} ms", part.name())), "{summary}");
         }
+        assert!(summary.contains("\n      shape ms"), "shaping sits under rows, under prepare: {summary}");
+        assert_eq!(
+            (json["terminals"]["hosted"].as_u64(), json["terminals"]["local"].as_u64()),
+            (Some(1), Some(0))
+        );
+        assert!(summary.contains("1 hosted and 0 local terminals"), "{summary}");
         assert!(summary.starts_with("perf-profile 1.0 s: 3 frames"), "{summary}");
     }
 
     #[test]
     fn nothing_drawn_and_nothing_read_is_a_report_of_zeros_not_a_division_by_zero() {
-        let report = Report::new(&[], Duration::ZERO, Counters::default());
+        let report = Report::new(&[], Duration::ZERO, Counters::default(), Terminals::default());
         assert_eq!(report.frames.per_second, 0.0);
         assert_eq!(report.reader.parse_mb_per_s, 0.0);
         assert!(report.summary().contains("0 frames"));

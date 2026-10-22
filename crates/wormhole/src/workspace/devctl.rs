@@ -9,6 +9,13 @@ use wormhole_core::agents::{AgentId, integrations};
 use super::{Workspace, folder_color};
 
 impl Workspace {
+    /// How many of this window's terminals run in a session host, and how many in the app
+    /// (`perf-profile` reports it: the two are read differently).
+    pub(crate) fn devctl_hosting(&self, cx: &App) -> (usize, usize) {
+        let hosted = self.sessions.iter().filter(|session| session.is_hosted(cx)).count();
+        (hosted, self.sessions.len() - hosted)
+    }
+
     /// Git work this window still waits for: a status or history refresh in flight, or a session
     /// whose status was read for another folder than the one it is in now (the next tick asks
     /// again). A diff being read has no flag here; `wait-idle` waits for the picture instead.

@@ -49,6 +49,16 @@ impl Part {
             Part::Paint => "paint",
         }
     }
+
+    /// How deep the part sits in the frame: 0 for `Prepare` and `Paint`, 1 for what `Prepare`
+    /// holds, 2 for what `Rows` holds.
+    pub(crate) fn depth(self) -> usize {
+        match self {
+            Part::Prepare | Part::Paint => 0,
+            Part::Snapshot | Part::Rows | Part::Images => 1,
+            Part::Shape | Part::Blur => 2,
+        }
+    }
 }
 
 /// What the renderer counts besides time.
@@ -154,6 +164,38 @@ mod recording {
     /// What the frame just drawn recorded.
     pub(crate) fn take_frame() -> Parts {
         FRAME.with_borrow_mut(std::mem::take)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{Count, Part, begin_frame, count, span, start, stop, take_frame};
+
+        /// One test: `start` and `stop` switch the process-wide flag.
+        #[test]
+        fn a_recorded_span_lands_in_the_frame_and_nothing_is_recorded_once_stopped() {
+            start();
+            begin_frame();
+            let prepare = span();
+            assert!(prepare.0.is_some(), "recording: a span takes the time");
+            std::hint::black_box(vec![0u8; 64]);
+            prepare.end(Part::Prepare);
+            count(Count::RowsBuilt, 3);
+            let frame = take_frame();
+            assert_eq!(frame.terminals, 1, "a prepare is a terminal drawn");
+            assert!(frame.nanos[Part::Prepare as usize] > 0);
+            assert!(frame.allocations[Part::Prepare as usize] >= 1);
+            assert_eq!(frame.rows_built, 3);
+
+            span().end(Part::Paint);
+            begin_frame();
+            assert_eq!(take_frame(), Default::default(), "a new frame starts empty");
+
+            stop();
+            assert!(span().0.is_none(), "stopped: a span is empty");
+            span().end(Part::Prepare);
+            count(Count::WordsShaped, 5);
+            assert_eq!(take_frame(), Default::default());
+        }
     }
 }
 

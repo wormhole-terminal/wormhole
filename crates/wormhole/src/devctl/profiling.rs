@@ -1,13 +1,16 @@
 //! `perf-profile <seconds> [name]`: what this window's frames and every terminal's reading cost
 //! over a period (`crate::perf`; `repo-docs/docs/performance.md`, "Profiling").
 //!
-//! It draws the window again and again for the period, as `frames` does (forced draws measure the
-//! same whether or not the window can be seen), and records each draw: its time, the UI thread's
-//! allocations, the terminal's parts. The terminal layer counts the readers and the lock meanwhile.
+//! It draws the window again and again for the period, as `frames` does (forced draws, so a window
+//! that can't be seen is still measured, not throttled; what else the app does meanwhile still
+//! depends on it), and records each draw: its time, the UI thread's allocations, the terminal's
+//! parts. The terminal layer counts the readers and the lock meanwhile. One profile records at a
+//! time, whichever window asked: the counters are the process's.
 //! The report goes to `<dir>/<name>.json` and `<dir>/<name>.txt` (name `perf-profile` by default),
 //! and its table to the results file once the period is over: the rest of the batch waits for it.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context as _, Result, anyhow};
@@ -16,7 +19,7 @@ use wormhole_core::fsutil::{LinkPolicy, write_atomic};
 
 use super::{Ctx, file_name};
 use crate::perf::allocations::thread_counts;
-use crate::perf::report::{Report, Sample};
+use crate::perf::report::{Report, Sample, Terminals};
 use crate::workspace::Workspace;
 
 /// The longest a profile may run.
@@ -34,14 +37,21 @@ pub(super) fn perf_profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
         return Err(anyhow!("record between 0.1 and {MAX_SECONDS} seconds, not {seconds}"));
     }
     let name = file_name(words.next().unwrap_or(""), "perf-profile")?.to_string();
+    if let Some(extra) = words.next() {
+        return Err(anyhow!("expected [seconds] [name], and then nothing, not {extra:?}"));
+    }
     let dir = ctx.dir.to_path_buf();
     let period = Duration::from_secs_f64(seconds);
+    let (hosted, local) = ctx.workspace.devctl_hosting(ctx.cx);
+    let terminals = Terminals { hosted, local };
     ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| {
-        crate::perf::start();
+        let Some(recording) = Recording::start() else {
+            return "perf-profile failed: another window is recording one\n".into();
+        };
         let recorded = record(this, cx, period).await;
-        let counters = crate::perf::stop();
+        let counters = recording.stop();
         match recorded.and_then(|(samples, elapsed)| {
-            let report = Report::new(&samples, elapsed, counters);
+            let report = Report::new(&samples, elapsed, counters, terminals);
             write(&report, &dir, &name)?;
             Ok(report.summary())
         }) {
@@ -50,6 +60,42 @@ pub(super) fn perf_profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
     }));
     Ok(String::new())
+}
+
+/// Set while a profile records.
+static RECORDING: AtomicBool = AtomicBool::new(false);
+
+/// A profile recording: only one at a time (a second window's would reset the counters under the
+/// first), and counting stops when it is dropped, also when its task is (the window closed).
+struct Recording {
+    stopped: bool,
+}
+
+impl Recording {
+    fn start() -> Option<Recording> {
+        if RECORDING.swap(true, Ordering::AcqRel) {
+            return None;
+        }
+        crate::perf::start();
+        Some(Recording { stopped: false })
+    }
+
+    /// Stop, and what the terminal layer counted.
+    fn stop(mut self) -> wormhole_core::terminal::perf::Counters {
+        self.stopped = true;
+        let counters = crate::perf::stop();
+        RECORDING.store(false, Ordering::Release);
+        counters
+    }
+}
+
+impl Drop for Recording {
+    fn drop(&mut self) {
+        if !self.stopped {
+            crate::perf::stop();
+            RECORDING.store(false, Ordering::Release);
+        }
+    }
 }
 
 /// Draw the window for `period`, one [`Sample`] a draw; and how long that took in all.
