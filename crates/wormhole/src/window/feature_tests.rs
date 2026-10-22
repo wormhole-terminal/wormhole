@@ -479,3 +479,60 @@ fn the_show_changes_key_is_bound_by_the_window_from_the_table(cx: &mut TestAppCo
     cx.run_until_parked();
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
 }
+
+#[gpui_kit::test]
+fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
+    if isolate("showing_a_tab_runs_the_features_on_show_hook") {
+        return;
+    }
+    let window = start(cx, 1);
+    draw(cx, &window);
+    // A folder to ask git about: the refresh only starts for a terminal that reports one.
+    let folder = std::env::temp_dir();
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(folder));
+        ws.show_tab(TabId::History, cx);
+    });
+    drive(cx, &window, |ws, _, cx| {
+        assert!(!ws.sessions[0].git.loading(), "History's refresh is not git's");
+        // `show_tab` → the table's `on_show` for Changes → `refresh_git`: a refresh is under way.
+        ws.show_tab(TabId::Changes, cx);
+        assert_eq!(ws.right_tab, TabId::Changes);
+        assert!(ws.sessions[0].git.loading(), "showing Changes asked git through the table");
+    });
+}
+
+/// Allocations the second draw of a one-terminal window on Changes (three changed files) may make.
+/// Measured: 3,697 (1.8 MB), the same on every run; the budget is that and about a fifth more, for a
+/// dependency that allocates a little differently. It guards the window's own frame, which the table's
+/// loops (tab bar, bindings, panel body) are part of: a lookup, clone or `Vec` per feature per frame
+/// shows as a few dozen and a per-row one as hundreds. A deliberate rise raises it here, with the
+/// measured number.
+const WINDOW_FRAME_ALLOCATIONS: u64 = 4_400;
+
+#[gpui_kit::test]
+fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::{set_counting, thread_counts};
+    if isolate("a_window_frame_on_changes_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(three_changes());
+        ws.sync_changes_list(cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+    // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
+    draw(cx, &window);
+    set_counting(true);
+    let before = thread_counts();
+    draw(cx, &window);
+    let drawn = thread_counts().since(before);
+    set_counting(false);
+    eprintln!("window frame on Changes: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= WINDOW_FRAME_ALLOCATIONS,
+        "a window frame on Changes made {} allocations (budget {WINDOW_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
+}
