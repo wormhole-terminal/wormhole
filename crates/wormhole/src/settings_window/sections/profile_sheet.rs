@@ -17,7 +17,7 @@ use crate::workspace::settings_page::{self, SettingsWindow, ui};
 
 const SHEET_W: f32 = 380.0;
 
-pub(in crate::workspace::settings_page) struct NewProfileSheet {
+pub(in crate::settings_window) struct NewProfileSheet {
     name: Entity<InputState>,
     /// What it can start from, the profile Wormhole is in first chosen.
     options: Vec<(SharedString, StartFrom)>,
@@ -79,7 +79,7 @@ impl SettingsWindow {
     }
 
     /// The sheet over the window, with a scrim that keeps the page behind it still.
-    pub(in crate::workspace::settings_page) fn render_new_profile(
+    pub(in crate::settings_window) fn render_new_profile(
         &self,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {

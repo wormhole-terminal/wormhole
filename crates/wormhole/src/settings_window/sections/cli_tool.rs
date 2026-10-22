@@ -68,7 +68,7 @@ impl SettingsWindow {
     /// Read where the tool stands, and, when it is installed, whether its folder is on a new
     /// terminal's `PATH`. That asks the login shell, which reads the person's startup files: in the
     /// background, and not again until a button changes something.
-    pub(in crate::workspace::settings_page) fn load_cli_tool(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::settings_window) fn load_cli_tool(&mut self, cx: &mut Context<Self>) {
         self.cli_tool.status = current_status();
         self.cli_tool.task = None;
         let Status::Installed { path, .. } = &self.cli_tool.status else {
@@ -90,7 +90,7 @@ impl SettingsWindow {
         cx.notify();
     }
 
-    pub(in crate::workspace::settings_page) fn install_cli_tool(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::settings_window) fn install_cli_tool(&mut self, cx: &mut Context<Self>) {
         self.cli_tool.problem = match cli_tool::install(&Targets::from_env(), &binary()) {
             Ok(done) => {
                 tracing::info!(path = %done.path.display(), changed = done.changed, "installed the command line tool");
@@ -106,7 +106,7 @@ impl SettingsWindow {
         self.load_cli_tool(cx);
     }
 
-    pub(in crate::workspace::settings_page) fn uninstall_cli_tool(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::settings_window) fn uninstall_cli_tool(&mut self, cx: &mut Context<Self>) {
         self.cli_tool.problem = match cli_tool::uninstall(&Targets::from_env()) {
             Ok(removed) => {
                 tracing::info!(removed = removed.len(), "removed the command line tool");

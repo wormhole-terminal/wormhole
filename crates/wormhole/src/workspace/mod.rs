@@ -116,7 +116,6 @@ mod resize;
 mod save;
 mod saved_layout;
 pub(crate) mod session;
-pub(crate) mod settings_page;
 pub(crate) mod shells;
 mod shortcuts;
 mod sidebar;
@@ -150,6 +149,9 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::settings_window as settings_page;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;

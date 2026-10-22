@@ -190,7 +190,7 @@ impl SettingsWindow {
     }
 
     /// Re-list the projects the picker offers, keeping the selection.
-    pub(in crate::workspace::settings_page) fn refresh_known_projects(
+    pub(in crate::settings_window) fn refresh_known_projects(
         &mut self,
         _window: &mut Window,
         cx: &mut Context<Self>,

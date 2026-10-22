@@ -67,7 +67,7 @@ const CURSOR_OPACITY: f32 = 0.8;
 const CONTEXT_USED: f32 = 0.62;
 
 /// Appearance → the window over the desktop: theme, primary and opacity as they are now.
-pub(in crate::workspace::settings_page) fn draw_stage(
+pub(in crate::settings_window) fn draw_stage(
     _: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {

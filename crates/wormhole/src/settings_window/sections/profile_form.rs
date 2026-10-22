@@ -21,7 +21,7 @@ pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] =
     [(AgentId::Claude, "Claude", "~/.claude-work"), (AgentId::Codex, "Codex", "~/.codex-work")];
 
 /// The fields of the page, made for one profile and made again when Wormhole is in another.
-pub(in crate::workspace::settings_page) struct ProfileForm {
+pub(in crate::settings_window) struct ProfileForm {
     pub id: ProfileId,
     pub name: Entity<InputState>,
     pub avatar: Entity<InputState>,
@@ -116,7 +116,7 @@ fn on_env(
 }
 
 impl ProfileForm {
-    pub(in crate::workspace::settings_page) fn new(
+    pub(in crate::settings_window) fn new(
         profile: &Profile,
         window: &mut Window,
         cx: &mut Context<SettingsWindow>,
@@ -178,7 +178,7 @@ const ENV_ROWS: (usize, usize) = (2, 6);
 
 impl SettingsWindow {
     /// Make the fields for the profile Wormhole is in, when they are for another.
-    pub(in crate::workspace::settings_page) fn sync_profile_form(
+    pub(in crate::settings_window) fn sync_profile_form(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -193,7 +193,7 @@ impl SettingsWindow {
     }
 
     /// Write what the fields hold into the profile, when it differs from what it has.
-    pub(in crate::workspace::settings_page) fn commit_profile(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::settings_window) fn commit_profile(&mut self, cx: &mut Context<Self>) {
         let Some(form) = self.profile_form.as_ref() else { return };
         let (id, typed) = (form.id.clone(), form.typed(cx));
         let outcome = Typed::parse_env(&typed.env).and_then(|env| {
@@ -212,7 +212,7 @@ impl SettingsWindow {
     }
 
     /// An edit that doesn't come from a text field: a swatch, the folder list.
-    pub(in crate::workspace::settings_page) fn edit_profile(
+    pub(in crate::settings_window) fn edit_profile(
         &mut self,
         change: impl FnOnce(&mut Profile),
         cx: &mut Context<Self>,
@@ -239,7 +239,7 @@ impl SettingsWindow {
         cx.notify();
     }
 
-    pub(in crate::workspace::settings_page) fn set_profile_color(
+    pub(in crate::settings_window) fn set_profile_color(
         &mut self,
         color: GroupColor,
         cx: &mut Context<Self>,
@@ -249,7 +249,7 @@ impl SettingsWindow {
 
     /// A folder picked for a field (`Pick::Start`, `Pick::Login`) or for the list that opens in
     /// the profile (`Pick::Folder`), as `~/…` when it is under the home folder.
-    pub(in crate::workspace::settings_page) fn pick_profile_folder(
+    pub(in crate::settings_window) fn pick_profile_folder(
         &mut self,
         pick: Pick,
         window: &mut Window,
@@ -303,7 +303,7 @@ impl SettingsWindow {
 
 /// What a folder picked in the page is for.
 #[derive(Clone, Copy)]
-pub(in crate::workspace::settings_page) enum Pick {
+pub(in crate::settings_window) enum Pick {
     Start,
     Folder,
     /// The login folder of this entry of [`LOGIN_AGENTS`].

@@ -59,6 +59,7 @@
         ],
         "terminal_view",
         "workspace",
+        "settings_window",
         [
           "command_palette",
           "shortcut_sheet",

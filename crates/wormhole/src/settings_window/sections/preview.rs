@@ -19,7 +19,7 @@ const SIDEBAR_W: f32 = 320.0;
 
 /// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
 /// with the option under the pointer.
-pub(in crate::workspace::settings_page) fn draw_sidebar_preview(
+pub(in crate::settings_window) fn draw_sidebar_preview(
     window: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {

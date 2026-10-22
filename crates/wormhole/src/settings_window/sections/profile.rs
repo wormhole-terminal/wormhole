@@ -289,7 +289,7 @@ fn delete_question(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) ->
 
 impl ProfileForm {
     /// What the page says above its rows when an edit was refused.
-    pub(in crate::workspace::settings_page) fn problem(&self) -> Option<SharedString> {
+    pub(in crate::settings_window) fn problem(&self) -> Option<SharedString> {
         self.error.clone()
     }
 }

@@ -100,6 +100,24 @@
           "why": "`actions` was only named by the `actions!` macro; the import is unused from the new place"
         }
       ]
+    },
+    "2": {
+      "doc": "The Settings window leaves workspace/ (phase 4, series 2)",
+      "moves": [
+        {
+          "from": "workspace/settings_page",
+          "to": "settings_window"
+        }
+      ],
+      "reexports": {
+        "settings_devctl": "settings_window::devctl"
+      },
+      "layers": {
+        "after": "workspace",
+        "insert": [
+          "settings_window"
+        ]
+      }
     }
   }
 }

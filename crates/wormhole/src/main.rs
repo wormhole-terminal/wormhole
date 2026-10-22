@@ -15,6 +15,7 @@ mod perf;
 mod platform;
 mod select;
 mod settings;
+mod settings_window;
 mod shortcut_sheet;
 mod status_item;
 mod style;

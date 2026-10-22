@@ -62,7 +62,7 @@ const SPECIMEN: [&str; 4] = [
 /// One specimen, Terminal | Code | Interface, in the theme's terminal colors at the slot's
 /// size (the terminal's line height too); a font under the pointer in an open picker shows
 /// in it.
-pub(in crate::workspace::settings_page) fn draw_specimen(
+pub(in crate::settings_window) fn draw_specimen(
     window: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {

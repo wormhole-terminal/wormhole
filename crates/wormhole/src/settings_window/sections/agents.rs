@@ -132,7 +132,7 @@ impl AgentsSnapshot {
 impl SettingsWindow {
     /// Read the agents again in the background; what is shown stays until the new list
     /// arrives.
-    pub(in crate::workspace::settings_page) fn load_agents(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::settings_window) fn load_agents(&mut self, cx: &mut Context<Self>) {
         let profiles = app(cx).profiles.profiles().to_vec();
         self.agents_task = Some(cx.spawn(async move |this, cx| {
             let snapshot = cx
