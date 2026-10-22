@@ -16,11 +16,12 @@ use gpui_kit::*;
 use wormhole_core::project::{TrustLine, TrustStatus};
 
 use super::super::aux_window;
-use super::{LoadedProject, app, app_mut, approve_project};
+use super::{LoadedProject, approve_project};
 use crate::platform::auth;
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
+use crate::workspace::app::{app, app_mut};
 
 const SIZE: (f32, f32) = (640.0, 480.0);
 const MIN: (f32, f32) = (480.0, 320.0);

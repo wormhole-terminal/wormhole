@@ -62,7 +62,7 @@ pub(crate) enum SidebarLook {
 
 /// The settings window's colours: an opaque window keeps the theme's own text colours, a
 /// translucent one the main window's. It shadows `settings::ui` for everything drawn in this
-/// window, which reaches it through `use super::*`.
+/// window, whose files import it.
 fn ui(cx: &App) -> UiColors {
     crate::settings::window_ui(cx, settings(cx).settings_translucent)
 }

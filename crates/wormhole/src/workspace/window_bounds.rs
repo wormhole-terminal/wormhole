@@ -3,7 +3,7 @@ use gpui_kit::*;
 use serde::{Deserialize, Serialize};
 
 /// Smaller than the windows' minimum size means the record is garbage.
-use super::{WINDOW_MIN_HEIGHT as MIN_HEIGHT, WINDOW_MIN_WIDTH as MIN_WIDTH};
+use wormhole_core::layout::{WINDOW_MIN_HEIGHT as MIN_HEIGHT, WINDOW_MIN_WIDTH as MIN_WIDTH};
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]

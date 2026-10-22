@@ -12,7 +12,7 @@ use super::ui;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 #[cfg(feature = "devctl")]
-use crate::workspace::app;
+use crate::workspace::app::app;
 use crate::workspace::aux_window;
 
 const SIZE: (f32, f32) = (940.0, 660.0);

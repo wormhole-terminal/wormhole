@@ -23,11 +23,11 @@ use wormhole_core::ipc::control::{
 use super::{Play, Run, remember_first_run};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
+use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::control::{budget, find};
 use crate::workspace::notifications;
 use crate::workspace::onboarding::{offered_primaries, offered_themes};
 use crate::workspace::settings_page::update_settings;
-use crate::workspace::{AppState, app, app_mut};
 use gpui_kit::App;
 
 /// Answer a welcome request. `from` is the tab it says it comes from.

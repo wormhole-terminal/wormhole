@@ -44,7 +44,7 @@ pub(super) fn copyright() -> String {
 }
 
 /// About's and Licenses' colours: opaque windows, with the theme's own text colours. It shadows
-/// `settings::ui` for both (Licenses reaches it through `use super::*`).
+/// `settings::ui` for both (Licenses imports it).
 fn ui(cx: &App) -> UiColors {
     crate::settings::window_ui(cx, false)
 }

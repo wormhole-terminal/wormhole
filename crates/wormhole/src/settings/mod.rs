@@ -524,8 +524,8 @@ pub fn settings(cx: &App) -> &Settings {
 }
 
 /// The main window's colours. The settings, Studio and About windows define a `ui` of their own
-/// with [`window_ui`], which shadows this one for everything their modules draw (they reach it
-/// through `use super::*`).
+/// with [`window_ui`], which shadows this one for everything their modules draw (each of their
+/// files imports it).
 pub fn ui(cx: &App) -> UiColors {
     cx.global::<SettingsStore>().ui
 }

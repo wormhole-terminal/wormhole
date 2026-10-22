@@ -146,7 +146,7 @@ pub(crate) enum RightTab {
 use crate::terminal_view::{Status, TerminalView};
 use wormhole_core::store::{SessionRecord, WindowRecord};
 
-use wormhole_core::layout::{Edge, Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+use wormhole_core::layout::{Edge, Panes};
 /// A window's layout as saved with it.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default)]

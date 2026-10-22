@@ -55,7 +55,7 @@ const FIRST_TOKEN: &str = "primary";
 
 /// The Studio's colours: an opaque window keeps the theme's own text colours, a translucent one
 /// the main window's. It shadows `settings::ui` for everything drawn in this window (the
-/// gallery included), which reaches it through `use super::*`.
+/// gallery included), whose files import it.
 fn ui(cx: &App) -> UiColors {
     crate::settings::window_ui(cx, settings(cx).studio_translucent)
 }
