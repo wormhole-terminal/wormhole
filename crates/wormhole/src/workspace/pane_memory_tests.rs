@@ -2,8 +2,8 @@
 //! the columns as they were last left, app-wide (see `view_tests` for how each test runs in a
 //! child process with scratch data).
 use gpui_kit::{TestAppContext, px, size};
-use wormhole_core::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, WINDOW_MIN_WIDTH};
-use wormhole_core::store::Store;
+use wormhole_core::storage::store::Store;
+use wormhole_core::view::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, WINDOW_MIN_WIDTH};
 
 use super::app::{OpenWindow, app, app_mut, open_workspace_window};
 use super::view_tests::{draw, drive, isolate_in, read, start};

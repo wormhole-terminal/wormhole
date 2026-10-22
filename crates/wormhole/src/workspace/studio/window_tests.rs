@@ -6,7 +6,7 @@
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Context, Entity, TestAppContext, Window, WindowOptions, hsla,
 };
-use wormhole_core::tokens::{ThemeFile, ThemeTokens, contrast_issues, resolve};
+use wormhole_core::theme::tokens::{ThemeFile, ThemeTokens, contrast_issues, resolve};
 
 use super::draft::Themes;
 use super::save::Notice;

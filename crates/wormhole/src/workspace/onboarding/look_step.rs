@@ -3,9 +3,9 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::fonts::{FontSlot, display_name};
 use wormhole_core::onboarding;
-use wormhole_core::tokens::{Appearance, ThemeTokens, builtins};
+use wormhole_core::theme::fonts::{FontSlot, display_name};
+use wormhole_core::theme::tokens::{Appearance, ThemeTokens, builtins};
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
@@ -203,9 +203,9 @@ pub(in crate::workspace) fn offered_themes(current: &str) -> Vec<&'static ThemeT
 /// terminal colours that differ from it, each with its place in the terminal's 16.
 pub(in crate::workspace) fn offered_primaries(
     base: &ThemeTokens,
-) -> (Option<wormhole_core::tokens::Color>, Vec<(usize, wormhole_core::tokens::Color)>) {
+) -> (Option<wormhole_core::theme::tokens::Color>, Vec<(usize, wormhole_core::theme::tokens::Color)>) {
     let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
-    let mut colors: Vec<(usize, wormhole_core::tokens::Color)> = Vec::new();
+    let mut colors: Vec<(usize, wormhole_core::theme::tokens::Color)> = Vec::new();
     for ix in PRIMARY_ANSI {
         let color = base.terminal.ansi[ix].with_alpha(1.0);
         if Some(color.to_hex()) != theme_primary.map(|c| c.to_hex())

@@ -11,7 +11,7 @@
 //! (a system without one, or a window without a native view), `Overlay::new` answers `None` and
 //! the intro doesn't play.
 
-use wormhole_core::intro::{Start, Style, WindowMotion};
+use wormhole_core::onboarding::intro::{Start, Style, WindowMotion};
 
 pub use super::os::intro::Overlay;
 
@@ -48,8 +48,8 @@ pub mod pictures {
 
     use anyhow::Result;
     use gpui_kit::Window;
-    use wormhole_core::intro::Style;
-    use wormhole_core::intro::voyage::Landing;
+    use wormhole_core::onboarding::intro::Style;
+    use wormhole_core::onboarding::intro::voyage::Landing;
 
     use super::super::os::intro as os;
 

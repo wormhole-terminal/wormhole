@@ -12,7 +12,7 @@ use objc2_app_kit::{
     NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification,
 };
 use objc2_foundation::{NSArray, NSNotification, NSOperationQueue};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 /// An observer of the display options; dropping it stops the calls.
 pub struct DisplayObserver {

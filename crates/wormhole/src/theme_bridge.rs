@@ -12,8 +12,8 @@ use std::sync::Arc;
 use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::component::{Theme as KitTheme, ThemeColor, ThemeMode};
 use gpui_kit::{App, Global, Hsla, px, transparent_black};
-use wormhole_core::fonts::{DEFAULT_UI_FONT_SIZE, ResolvedFonts};
-use wormhole_core::tokens::{Appearance, Color, ThemeTokens};
+use wormhole_core::theme::fonts::{DEFAULT_UI_FONT_SIZE, ResolvedFonts};
+use wormhole_core::theme::tokens::{Appearance, Color, ThemeTokens};
 
 pub fn hsla(color: Color) -> Hsla {
     gpui_kit::Rgba { r: color.r, g: color.g, b: color.b, a: color.a }.into()
@@ -298,7 +298,7 @@ pub fn highlight_theme(tokens: &ThemeTokens) -> Option<Arc<HighlightTheme>> {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::tokens::UI_TOKENS;
+    use wormhole_core::theme::tokens::UI_TOKENS;
 
     use super::{KIT_COLORS, Source};
 

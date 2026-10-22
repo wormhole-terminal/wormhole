@@ -8,8 +8,8 @@
 //! runs bindings before a key listener sees the key, so a listener could only see focus already gone.
 
 use gpui_kit::*;
-use wormhole_core::intro::Start;
-use wormhole_core::intro::page::Entrance;
+use wormhole_core::onboarding::intro::Start;
+use wormhole_core::onboarding::intro::page::Entrance;
 use wormhole_core::onboarding::{Event, Step};
 
 use super::FADE_OUT;
@@ -50,7 +50,7 @@ impl Workspace {
         if progress.start == Start::Shown && progress.seconds < FADE_OUT.as_secs_f32() {
             return Entrance::DONE;
         }
-        wormhole_core::intro::page::entrance(progress.style, progress.seconds)
+        wormhole_core::onboarding::intro::page::entrance(progress.style, progress.seconds)
     }
 
     /// Keys while the intro window is open.

@@ -9,10 +9,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::limits::count_grouped;
 use wormhole_core::terminal::ScreenSnapshot;
 use wormhole_core::terminal::find::{FindOption, FindQuery, FindResults};
 use wormhole_core::terminal::types::Line;
+use wormhole_core::view::limits::count_grouped;
 
 use super::TerminalView;
 use super::find_bar::FindBar;

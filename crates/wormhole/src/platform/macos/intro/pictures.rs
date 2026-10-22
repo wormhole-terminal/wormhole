@@ -5,8 +5,8 @@ use std::path::Path;
 
 use anyhow::{Context as _, Result};
 use gpui_kit::Window;
-use wormhole_core::intro::voyage::{self, Landing};
-use wormhole_core::intro::{Style, window_motion};
+use wormhole_core::onboarding::intro::voyage::{self, Landing};
+use wormhole_core::onboarding::intro::{Style, window_motion};
 
 use super::{Renderer, Uniforms};
 

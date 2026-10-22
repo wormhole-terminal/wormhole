@@ -5,8 +5,8 @@
 //! actions. Resting on the name shows the folder.
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::sidebar::{Entry, Listing};
-use wormhole_core::sidebar::{Urgency, spoken};
+use wormhole_core::view::sidebar::{Entry, Listing};
+use wormhole_core::view::sidebar::{Urgency, spoken};
 
 use super::super::focus::SidebarStop;
 use super::facts::RowInfo;
@@ -106,7 +106,7 @@ impl Workspace {
         let mut label = spoken::band_label(
             &band.label,
             band.pinned,
-            color.map(wormhole_core::sidebar::GroupPaint::label),
+            color.map(wormhole_core::view::sidebar::GroupPaint::label),
             folder.as_deref(),
             band.members.len(),
             alerts,
@@ -115,7 +115,7 @@ impl Workspace {
             of,
         );
         if alerts > 0 && folded {
-            label = format!("{label}, {}", wormhole_core::spoken::terminals_need_you(alerts));
+            label = format!("{label}, {}", wormhole_core::view::spoken::terminals_need_you(alerts));
         }
         let (keyed, ring) = self.sidebar_keyed(&SidebarStop::Group(group), window);
         let menu_open = self.sidebar.menu_group == Some(group);
@@ -211,7 +211,7 @@ impl Workspace {
 #[cfg(test)]
 mod tests {
     use gpui_kit::{WeakEntity, hsla};
-    use wormhole_core::sidebar::{GroupColor, GroupPaint};
+    use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
     use super::super::group_popover::{GroupFacts, group_menu};
 

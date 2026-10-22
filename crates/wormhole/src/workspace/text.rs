@@ -1,7 +1,7 @@
 //! Text rules for notes that need no UI: which paragraph ⌘↵ sends, a note's title, and when a
 //! note counts as empty.
 
-use wormhole_core::store;
+use wormhole_core::storage::store;
 
 /// Whether text handed over in `chunks` is only whitespace. Editors keep their text in a rope,
 /// whose chunks can be read where it is, instead of copying the whole text into a `String`

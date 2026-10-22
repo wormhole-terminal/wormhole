@@ -15,7 +15,7 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BandKind, BandParts, Section};
-use wormhole_core::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::ThemeTokens;
 
 use super::draft::Show;
 use super::token_rows::{Band, Chip, Inputs, ListRow, TokenRow, build};

@@ -13,7 +13,7 @@
 //! group for VoiceOver. A search result for a preview names where it went instead of drawing it.
 
 use gpui_kit::*;
-use wormhole_core::settings_index::{self, SectionId as Section};
+use wormhole_core::config::settings_index::{self, SectionId as Section};
 
 use super::{PAGE_TOP, SettingsWindow, nav, sections, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};

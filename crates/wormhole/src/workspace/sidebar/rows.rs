@@ -12,11 +12,11 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::sidebar::RowState;
-use wormhole_core::sidebar::SplitMarks;
-use wormhole_core::sidebar::hints::{keycap, keyshortcut};
-use wormhole_core::sidebar::spoken::{self, RowSpeech, SplitSpeech};
-use wormhole_core::sidebar::text::{agent_detail, ago, clock, place_detail, took};
+use wormhole_core::view::sidebar::RowState;
+use wormhole_core::view::sidebar::SplitMarks;
+use wormhole_core::view::sidebar::hints::{keycap, keyshortcut};
+use wormhole_core::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};
+use wormhole_core::view::sidebar::text::{agent_detail, ago, clock, place_detail, took};
 
 use super::super::focus::SidebarStop;
 use super::super::terminal_drag::DragOrigin;
@@ -330,7 +330,7 @@ impl Workspace {
             let second = SharedString::from(
                 info.cwd
                     .as_deref()
-                    .map(|f| wormhole_core::sidebar::display_path(f, home_dir()))
+                    .map(|f| wormhole_core::view::sidebar::display_path(f, home_dir()))
                     .unwrap_or_default(),
             );
             div()
@@ -380,8 +380,10 @@ impl Workspace {
             || mono
                 && detail.as_deref().is_some_and(|d| d.chars().count() as f32 * MONO_CHAR_W > detail_room);
         let tooltip = (cut_name || cut_detail).then(|| {
-            let where_ =
-                info.cwd.as_deref().map(|folder| wormhole_core::sidebar::display_path(folder, home_dir()));
+            let where_ = info
+                .cwd
+                .as_deref()
+                .map(|folder| wormhole_core::view::sidebar::display_path(folder, home_dir()));
             let second = [where_, detail.clone()].into_iter().flatten().collect::<Vec<_>>().join(" · ");
             (info.name.clone(), SharedString::from(second))
         });
@@ -565,7 +567,7 @@ mod tests {
     use std::time::Duration;
 
     use wormhole_core::agents::AgentId;
-    use wormhole_core::sidebar::RowState;
+    use wormhole_core::view::sidebar::RowState;
 
     use wormhole_core::notify::Source;
 

@@ -49,7 +49,7 @@ pub(super) fn render(
 /// A profile's avatar at the sizes the app draws it, and the edge a window in another profile wears.
 fn profile_marks(env: &Env) -> Div {
     let ui = env.ui;
-    let colors = wormhole_core::sidebar::GroupColor::ALL
+    let colors = wormhole_core::view::sidebar::GroupColor::ALL
         .map(|color| (color, theme_bridge::hsla(color.color(env.tokens))));
     div()
         .flex()

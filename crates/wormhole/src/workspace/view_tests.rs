@@ -17,8 +17,8 @@ use gpui_kit::{
 use wormhole_core::agents::AgentId;
 use wormhole_core::config::InFront;
 use wormhole_core::git::{ChangeKind, DiffSpec, FileChange};
-use wormhole_core::sidebar::{Entry, SidebarNumbers, WindowSidebar};
-use wormhole_core::store::{SessionRecord, WindowRecord};
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
+use wormhole_core::view::sidebar::{Entry, SidebarNumbers, WindowSidebar};
 
 use super::app::{AppState, OpenWindow, app, open_workspace_window};
 use super::picker::Picker;
@@ -954,7 +954,7 @@ fn the_panels_edge_follows_the_workspaces_column_beside_the_inspector(cx: &mut T
     let mut drawn = gpui_kit::VisualTestContext::from_window(window.handle, cx);
     let mut handle_x =
         || f32::from(drawn.debug_bounds("panel-resize").expect("the handle is drawn").origin.x);
-    let at_edge = 1800.0 - wormhole_core::layout::PANEL_DEFAULT - crate::style::RESIZE_HANDLE_W / 2.0;
+    let at_edge = 1800.0 - wormhole_core::view::layout::PANEL_DEFAULT - crate::style::RESIZE_HANDLE_W / 2.0;
     assert_eq!((column(cx), handle_x()), (1800.0, at_edge));
 
     with_window(cx, &window, |window, cx| window.toggle_inspector(cx));

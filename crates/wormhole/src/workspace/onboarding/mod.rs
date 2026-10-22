@@ -32,7 +32,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
-use wormhole_core::intro::Start;
+use wormhole_core::onboarding::intro::Start;
 use wormhole_core::onboarding::{
     self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
 };
@@ -174,7 +174,7 @@ impl Workspace {
         // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
         // hand-over.
         if super::welcome::enabled(cx) {
-            self.replay_welcome(wormhole_core::intro::Handover::Cursor, window, cx);
+            self.replay_welcome(wormhole_core::onboarding::intro::Handover::Cursor, window, cx);
             return;
         }
         if self.first_run.is_open() {

@@ -4,9 +4,9 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use super::*;
-use crate::fsutil::{self, LinkPolicy};
-use crate::paths::DataRoot;
-use crate::profile::{NewProfile, ProfileList, StartFrom};
+use crate::config::profile::{NewProfile, ProfileList, StartFrom};
+use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::paths::DataRoot;
 
 /// Every folder and file under `dir` with a mode other than expected: `(path, mode)`.
 fn not_private(dir: &Path, found: &mut Vec<(String, u32)>) {

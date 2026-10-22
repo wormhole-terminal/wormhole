@@ -44,7 +44,7 @@ pub const ANIMATION_FPS: f32 = 30.0;
 /// text is cut off; icon buttons always do.
 pub const TOOLTIP_DELAY: Duration = Duration::from_millis(500);
 /// Holding ⌘ alone this long shows the ⌘1–9 hints, so a quick ⌘C never flashes them.
-pub const HINT_HOLD: Duration = wormhole_core::sidebar::hints::HOLD_DELAY;
+pub const HINT_HOLD: Duration = wormhole_core::view::sidebar::hints::HOLD_DELAY;
 /// The pointer rests on a resize handle this long before its line shows.
 pub const RESIZE_HANDLE_HOVER_DELAY: Duration = Duration::from_millis(150);
 

@@ -7,8 +7,8 @@
 //! only ever drawn as a fill; nothing about it is executed, fetched or trusted, which is why it
 //! (and the lock below) stay out of the trust fingerprint.
 
-use crate::folder_color::FolderColor;
-use crate::tokens::{Color, ThemeTokens};
+use crate::theme::folder_color::FolderColor;
+use crate::theme::tokens::{Color, ThemeTokens};
 
 /// `config.json`'s key for the project's colour.
 pub(super) const KEY: &str = "project_color";
@@ -164,7 +164,7 @@ fn shown(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{BAR_TINT_SHARE, ProjectColor, TINT_PEAK, TINT_STOPS};
-    use crate::tokens::Color;
+    use crate::theme::tokens::Color;
 
     fn parse(value: &str) -> Result<ProjectColor, String> {
         ProjectColor::parse(value)
@@ -210,8 +210,8 @@ mod tests {
     }
 
     use super::{PAINT_KEYS, ProjectColorChoice};
-    use crate::folder_color::FolderColor;
-    use crate::tokens::builtins;
+    use crate::theme::folder_color::FolderColor;
+    use crate::theme::tokens::builtins;
 
     /// `project_color` takes the app's own eight names, exactly as written, and a hex as before.
     #[test]

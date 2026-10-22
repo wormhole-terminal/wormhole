@@ -9,7 +9,7 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::Foreground;
 use wormhole_core::notify::{self, Source, State};
-use wormhole_core::sidebar::command::ends_by_itself;
+use wormhole_core::view::sidebar::command::ends_by_itself;
 
 use super::Workspace;
 use super::app::{app, open_tab};

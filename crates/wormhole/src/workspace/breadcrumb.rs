@@ -13,7 +13,7 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
+use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fit_row, path_steps};
 
 use super::git_panel::picker;
 use super::path_card::Over;
@@ -33,7 +33,7 @@ impl Workspace {
     ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         // The strip is one keyboard stop; its ring round the breadcrumb.
-        let ring = self.ring(wormhole_core::focus::Area::Tabs, window);
+        let ring = self.ring(wormhole_core::view::focus::Area::Tabs, window);
         let crumb = div()
             .relative()
             .min_w_0()
@@ -51,7 +51,7 @@ impl Workspace {
             .max_w_full()
             .overflow_hidden()
             .child(crumb);
-        self.area_container(wormhole_core::focus::Area::Tabs, strip, cx).into_any_element()
+        self.area_container(wormhole_core::view::focus::Area::Tabs, strip, cx).into_any_element()
     }
 
     /// What the title row says about the active terminal, as of now.
@@ -61,7 +61,7 @@ impl Workspace {
         let folder = terminal.cwd.clone();
         let shown = folder
             .as_deref()
-            .map(|cwd| wormhole_core::sidebar::display_path(cwd, super::session::home_dir()));
+            .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, super::session::home_dir()));
         // The branch only while git's answer is about the folder the terminal is in now.
         let branch = session
             .git
@@ -412,7 +412,7 @@ impl Workspace {
 /// What the breadcrumb says after a terminal's name: how it is doing, working time in whole
 /// minutes ("working · <1m", "working · 4m"), or nothing while it is idle.
 pub(super) fn crumb_words(terminal: &TerminalView) -> Option<String> {
-    let took = || wormhole_core::layout::status_bar::elapsed(terminal.status_since().elapsed());
+    let took = || wormhole_core::view::layout::status_bar::elapsed(terminal.status_since().elapsed());
     match terminal.status() {
         Status::Busy => Some(format!("working · {}", took())),
         Status::Attention => Some("needs you".to_string()),

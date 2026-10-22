@@ -9,8 +9,8 @@
 
 use std::time::{Duration, Instant};
 
-use crate::layout::status_bar::{Entry, Summary};
-use crate::sidebar::text::count;
+use crate::view::layout::status_bar::{Entry, Summary};
+use crate::view::sidebar::text::count;
 use wormhole_term::BlockState;
 
 /// A command block as VoiceOver announces it when ⌘↑ / ⌘↓ lands on it, and as the readout
@@ -204,8 +204,8 @@ pub fn status_attention(summary: &Summary, entries: &[Entry], now: Instant) -> O
 }
 
 /// One of the numbers after the button: "2 terminals working", "1 terminal finished".
-pub fn status_counted(counted: &crate::layout::status_bar::Counted) -> String {
-    use crate::layout::status_bar::Activity;
+pub fn status_counted(counted: &crate::view::layout::status_bar::Counted) -> String {
+    use crate::view::layout::status_bar::Activity;
     let n = counted.count;
     match counted.activity {
         Activity::Working => format!("{} working", count(n, "terminal", "terminals")),
@@ -282,7 +282,7 @@ mod tests {
         status_working,
     };
     use super::{profile_chip, profile_choice};
-    use crate::layout::status_bar::{Activity, Entry, Summary};
+    use crate::view::layout::status_bar::{Activity, Entry, Summary};
     use wormhole_term::BlockState;
 
     #[test]

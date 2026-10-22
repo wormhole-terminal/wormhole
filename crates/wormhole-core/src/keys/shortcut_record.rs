@@ -3,8 +3,8 @@
 //! or the shell), so the field can say so instead of taking them. Who has a key is the key
 //! table's answer (`keymap::uses`).
 
-use crate::keymap::{self, ActionId, KeyUse};
-use crate::keyspec::{KeyMods, KeySpec};
+use crate::keys::keymap::{self, ActionId, KeyUse};
+use crate::keys::keyspec::{KeyMods, KeySpec};
 
 /// What a key press while recording does.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -55,7 +55,7 @@ pub fn conflict(spec: &KeySpec, own: Option<ActionId>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{Recorded, conflict, record};
-    use crate::keyspec::{KeyMods, KeySpec};
+    use crate::keys::keyspec::{KeyMods, KeySpec};
 
     fn mods(cmd: bool, ctrl: bool, alt: bool, shift: bool) -> KeyMods {
         KeyMods { cmd, ctrl, alt, shift }
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn the_app_macos_and_shell_keys_are_taken() {
-        use crate::keymap::ActionId;
+        use crate::keys::keymap::ActionId;
         let spec = |s: &str| s.parse::<KeySpec>().expect("spec");
         assert_eq!(conflict(&spec("cmd-space"), None).as_deref(), Some("macOS uses ⌘Space for Spotlight"));
         assert_eq!(

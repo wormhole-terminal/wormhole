@@ -1,7 +1,7 @@
 //! Clearing a terminal (⌘K) erases its saved text from its profile's database at once (see
 //! `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
-use wormhole_core::store::Store;
+use wormhole_core::storage::store::Store;
 
 use super::app::{app, app_mut};
 use super::view_tests::{drive, isolate_in, start};

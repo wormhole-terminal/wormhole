@@ -9,7 +9,7 @@ use super::expr::{Expr, parse_expr};
 use super::resolve::READABLE_MARGIN;
 use super::rules::{default_rule, default_rules};
 use super::theme_tokens::ThemeTokens;
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 /// One text-on-background pair of [`CONTRAST_PAIRS`], measured.
 #[derive(Clone, Debug, PartialEq)]
@@ -247,8 +247,8 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::contrast_issues;
-    use crate::tokens::test_support::builtin;
-    use crate::tokens::{ThemeFile, ThemeTokens, resolve};
+    use crate::theme::tokens::test_support::builtin;
+    use crate::theme::tokens::{ThemeFile, ThemeTokens, resolve};
 
     fn draft(base: &str, ui: &[(&str, &str)]) -> ThemeFile {
         let ui: BTreeMap<String, String> = ui.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn the_terminal_palette_is_not_fixed_from_the_interface() {
         let file = ThemeFile {
-            terminal: crate::tokens::TerminalFile {
+            terminal: crate::theme::tokens::TerminalFile {
                 foreground: Some("#303030".into()),
                 background: Some("#202020".into()),
                 ..Default::default()

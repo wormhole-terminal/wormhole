@@ -14,7 +14,7 @@ use gpui_kit::*;
 use super::highlight::Highlights;
 use wormhole_core::config::Settings;
 use wormhole_core::git::{self, DiffLine, FileDiff, LineKind, SplitRow};
-use wormhole_core::tokens::{Appearance, ThemeTokens};
+use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
 
 pub(crate) struct RenderedLine {
     pub kind: LineKind,
@@ -229,7 +229,7 @@ mod tests {
     use gpui_kit::component::highlighter::HighlightTheme;
     use wormhole_core::config::Settings;
     use wormhole_core::git::{DiffLine, FileDiff, Hunk, LineKind};
-    use wormhole_core::tokens::{self, Color};
+    use wormhole_core::theme::tokens::{self, Color};
 
     fn line(kind: LineKind, old: Option<u32>, new: Option<u32>, text: &str) -> DiffLine {
         DiffLine { kind, old, new, text: text.into(), no_newline: false }

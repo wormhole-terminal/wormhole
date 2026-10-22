@@ -4,10 +4,10 @@
 use std::path::{Path, PathBuf};
 
 use gpui_kit::TestAppContext;
-use wormhole_core::folder_color::FolderColor;
 use wormhole_core::project::{
     Feature, ProjectColor, ProjectColorChoice, ProjectFolder, TrustStatus, TrustStore,
 };
+use wormhole_core::theme::folder_color::FolderColor;
 
 use super::app::OpenWindow;
 use super::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
@@ -442,7 +442,7 @@ fn an_older_approval_is_upgraded_on_load_and_survives_a_colour(cx: &mut TestAppC
         "// Wormhole project\n{\n  \"font_size\": 13,\n  \"env\": { \"A\": \"1\" },\n  \"shell\": \"/bin/zsh\",\n  \"project_color\": \"#2bb3a3\"\n}\n",
     )
     .expect("write");
-    let data = wormhole_core::paths::data_dir();
+    let data = wormhole_core::storage::paths::data_dir();
     let file = data.join(TrustStore::FILE_NAME);
     let key = project.to_string_lossy().into_owned();
     std::fs::write(

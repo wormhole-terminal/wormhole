@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::agents::AgentId;
-use crate::paths::ProfileId;
-use crate::sidebar::GroupColor;
+use crate::storage::paths::ProfileId;
+use crate::view::sidebar::GroupColor;
 
 /// What a terminal's environment says about its profile (`WORMHOLE_PROFILE=<id>`): for scripts and
 /// prompts. Hooks do not use it; they report a terminal id, and the app knows whose terminal that is.
@@ -319,7 +319,7 @@ mod color_key {
     use serde::{Deserialize, Deserializer, Serializer};
 
     use super::default_color;
-    use crate::sidebar::GroupColor;
+    use crate::view::sidebar::GroupColor;
 
     pub fn serialize<S: Serializer>(color: &GroupColor, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(color.key())

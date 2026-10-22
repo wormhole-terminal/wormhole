@@ -319,7 +319,7 @@ impl Listing {
 #[cfg(test)]
 mod tests {
     use super::{Card, Entry, ListInput, Listing, WindowSidebar};
-    use crate::sidebar::{SidebarNumbers, Splits};
+    use crate::view::sidebar::{SidebarNumbers, Splits};
 
     fn build(n: usize, pinned: &[bool], sidebar: &WindowSidebar) -> Listing {
         let ids: Vec<i64> = (1..=n as i64).collect();

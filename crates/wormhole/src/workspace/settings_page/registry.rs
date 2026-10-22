@@ -1,5 +1,5 @@
 //! The settings' controls. What every setting is called, what it says, the words that find it
-//! and the `config.json` keys it writes are data in core (`wormhole_core::settings_index`,
+//! and the `config.json` keys it writes are data in core (`wormhole_core::config::settings_index`,
 //! one table for the pages, the search and the command palette); this module gives each of its
 //! rows a [`Control`] (how it is drawn, how it reads and writes the [`Settings`]) and draws a
 //! page from the two: one renderer for every row (`style::setting`), with its changed, project
@@ -17,8 +17,8 @@ use std::sync::OnceLock;
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::settings_index::SectionId as Section;
-use wormhole_core::settings_index::{self, Entry, Hit, Query, Values};
+use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::config::settings_index::{self, Entry, Hit, Query, Values};
 
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui, update_settings};
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
@@ -459,7 +459,7 @@ mod tests {
     use std::collections::HashSet;
 
     use wormhole_core::config::Settings;
-    use wormhole_core::settings_index::{self, SectionId};
+    use wormhole_core::config::settings_index::{self, SectionId};
 
     use super::{Control, controls, sections};
     use crate::workspace::settings_page::Section;

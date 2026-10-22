@@ -16,7 +16,7 @@ use crate::settings::{settings_in, ui_in};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
 use wormhole_core::git::{ChangeKind, Side};
-use wormhole_core::limits::count_grouped;
+use wormhole_core::view::limits::count_grouped;
 
 /// The card's header beside a split view; a narrow one is a title row tall.
 const HEADER_H: f32 = 44.0;

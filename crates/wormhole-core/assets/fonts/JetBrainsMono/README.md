@@ -1,7 +1,7 @@
 # JetBrains Mono
 
 The default terminal and code font, compiled into the app
-(`wormhole_core::fonts::bundled`).
+(`wormhole_core::theme::fonts::bundled`).
 
 - Version 2.304, from the official release
   <https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304>

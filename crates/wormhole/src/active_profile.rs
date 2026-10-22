@@ -4,7 +4,7 @@
 
 use std::sync::RwLock;
 
-use wormhole_core::paths::{DataRoot, ProfilePaths};
+use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
 
 static ACTIVE: RwLock<Option<ProfilePaths>> = RwLock::new(None);
 

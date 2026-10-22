@@ -89,7 +89,7 @@ pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// Whether the project-folder feature flag is on in this instance.
 fn project_folders_on(ctx: &Ctx) -> bool {
-    use wormhole_core::features::FeatureFlag;
+    use wormhole_core::config::features::FeatureFlag;
     crate::settings::settings(ctx.cx).feature_enabled(FeatureFlag::ProjectFolders)
 }
 

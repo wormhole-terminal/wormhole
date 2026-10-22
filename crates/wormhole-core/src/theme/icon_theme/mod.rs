@@ -17,7 +17,7 @@ use serde::Deserialize;
 
 use self::format::{FamilyContent, PairContent, ThemeContent};
 pub use self::load::{discover, load_family};
-use crate::jsonc;
+use crate::storage::jsonc;
 
 mod builtin;
 mod format;

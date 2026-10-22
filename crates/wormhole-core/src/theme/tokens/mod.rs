@@ -54,7 +54,7 @@
 
 mod catalog;
 mod check;
-pub(crate) mod color;
+mod color;
 mod contrast;
 #[cfg(test)]
 mod design_values;
@@ -99,8 +99,8 @@ pub use self::theme_tokens::ThemeTokens;
 pub use self::translucent::{BLUR_OFF_MIN_OPACITY, OPAQUE, Translucency, TranslucentColors};
 pub use self::uses::{Area, TOKEN_USES, TokenUse, followers, refers_to, used_in, uses_of};
 pub use self::variants::{MAX_VARIANTS, Variant, variant_name, variants};
-pub use crate::color::Color;
 use crate::theme;
+pub use crate::theme::tokens::color::Color;
 
 /// Derive every token from a terminal palette alone.
 pub fn derive(primitives: &theme::Theme) -> ThemeTokens {

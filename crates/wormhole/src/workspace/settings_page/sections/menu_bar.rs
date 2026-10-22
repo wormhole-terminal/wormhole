@@ -3,8 +3,8 @@
 
 use gpui_kit::*;
 use wormhole_core::config::{HotkeyAction, MenuBarIcon};
-use wormhole_core::keymap::ActionId;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::keys::keyspec::KeySpec;
 
 use super::super::recorder::RecorderRow;
 use crate::settings::Settings;
@@ -72,7 +72,7 @@ fn hotkey_problem(s: &Settings, cx: &App) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::keyspec::KeySpec;
+    use wormhole_core::keys::keyspec::KeySpec;
 
     use super::{hotkey_accepts, jump_accepts};
 

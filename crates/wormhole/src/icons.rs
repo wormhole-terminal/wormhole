@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
-use wormhole_core::icon_theme::{self, IconSource, IconTheme, RenderMode};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::icon_theme::{self, IconSource, IconTheme, RenderMode};
+use wormhole_core::theme::tokens::Appearance;
 
 /// Setting value that turns file icons off.
 pub const NONE: &str = "None";
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn only_none_and_the_bundled_theme_need_no_disk() {
         assert!(is_bundled(NONE));
-        assert!(is_bundled(&wormhole_core::icon_theme::builtin_family().name));
+        assert!(is_bundled(&wormhole_core::theme::icon_theme::builtin_family().name));
         assert!(!is_bundled("Some Zed Pack"));
     }
 

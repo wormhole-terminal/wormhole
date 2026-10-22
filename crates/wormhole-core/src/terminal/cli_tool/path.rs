@@ -8,7 +8,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use super::{LOGIN_PATH_VAR, Targets};
-use crate::shells;
+use crate::terminal::shells;
 
 /// `PATH` for a terminal whose environment says `base`, with `dir` first. Unchanged when `dir`
 /// can't be one entry of it (it has a `:` in it), and never ending in a bare `:`, which a shell

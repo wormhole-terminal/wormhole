@@ -17,7 +17,7 @@
 //! names. Nothing here writes to a repository, and the git identity only reaches a terminal as
 //! environment variables.
 //!
-//! Where each profile's files live and the id that names its folder are in [`crate::paths`]
+//! Where each profile's files live and the id that names its folder are in [`crate::storage::paths`]
 //! (`DataRoot`, `ProfilePaths`, `ProfileId`): the store needs them too.
 
 mod copy;

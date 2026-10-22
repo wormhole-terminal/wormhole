@@ -1,6 +1,6 @@
 //! Split panes on screen: the selected terminal's split drawn as its terminals side by
 //! side or stacked, each with a header once split and the dividers over their shared edges. The
-//! tree, its geometry and the presets are core's (`wormhole_core::panes`); the model of who is in
+//! tree, its geometry and the presets are core's (`wormhole_core::view::panes`); the model of who is in
 //! which split is `splits.rs`. This draws the tree, runs the zoom, the divider drag, the pane menu
 //! and the keys between panes, and keeps the selection in step with the keyboard: the keyboard
 //! coming into a pane selects its row. A terminal that is in no split draws as it always did
@@ -10,11 +10,11 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId, Preset, TabPanes};
-use wormhole_core::sidebar::SplitId;
-use wormhole_core::spoken;
-use wormhole_core::store::SessionRecord;
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::storage::store::SessionRecord;
+use wormhole_core::view::panes::{Axis, Direction, DividerId, Node, PANE_MIN_W, PaneId, Preset, TabPanes};
+use wormhole_core::view::sidebar::SplitId;
+use wormhole_core::view::spoken;
 
 use super::app::app;
 use super::breadcrumb::terminal_tile;
@@ -442,7 +442,7 @@ impl Workspace {
         let (status, told, agent, folder) = {
             let terminal = pane.terminal.read(cx);
             // Cut from the front, as the sidebar's rows do: the end tells two folders apart.
-            let folder = wormhole_core::sidebar::text::place_detail(
+            let folder = wormhole_core::view::sidebar::text::place_detail(
                 terminal.cwd.as_deref(),
                 home_dir(),
                 PANE_PATH_MAX,

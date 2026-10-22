@@ -12,7 +12,7 @@ use super::resolve::{FlagOverrides, NO_RULES, Resolver, build};
 use super::rules::replaced_by;
 use super::theme_tokens::ThemeTokens;
 use super::variants::variants;
-use crate::text::did_you_mean;
+use crate::storage::jsonc::suggest::did_you_mean;
 use crate::theme;
 
 /// Longest `extends` chain accepted; deeper is almost surely a mistake.
@@ -166,8 +166,8 @@ pub fn resolve(file: &ThemeFile, lookup: &dyn Fn(&str) -> Option<ThemeFile>) -> 
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::tokens::test_support::{builtin, on_small_stack, resolve_str};
-    use crate::tokens::{
+    use crate::theme::tokens::test_support::{builtin, on_small_stack, resolve_str};
+    use crate::theme::tokens::{
         Appearance, Color, MAX_SYNTAX_KEYS, MAX_THEME_BYTES, Metrics, ThemeFile, default_rule,
         parse_theme_file, resolve,
     };
@@ -339,7 +339,7 @@ mod tests {
         assert!(e.contains("more than 1024 syntax keys"), "{e}");
         assert_eq!(
             resolve_str(&keys(MAX_SYNTAX_KEYS)).map(|t| t.syntax.len()).ok(),
-            Some(MAX_SYNTAX_KEYS + crate::tokens::syntax_keys().count())
+            Some(MAX_SYNTAX_KEYS + crate::theme::tokens::syntax_keys().count())
         );
     }
 

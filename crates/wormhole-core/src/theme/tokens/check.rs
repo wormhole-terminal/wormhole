@@ -6,7 +6,7 @@ use std::ops::Range;
 
 use super::catalog::{UI_TOKENS, syntax_keys};
 use super::expr::{Tok, parse_located, tokenize};
-use crate::text::closest;
+use crate::storage::jsonc::suggest::closest;
 
 /// The terminal colors an expression can name, without their `terminal.` prefix.
 const TERMINAL_KEYS: [&str; 6] =

@@ -146,8 +146,8 @@ fn notes_and_tasks_keep_the_order_they_were_put_in() {
     first.notes = ["a", "b"].map(|b| NoteRecord { body: b.into(), collapsed: false }).into();
     store.save_window(&window(1, vec![first.clone()])).expect("saves");
     // Reordered by hand (drag and drop), then saved again.
-    crate::reorder::move_item(&mut first.tasks, 2, 0);
-    crate::reorder::move_item(&mut first.notes, 0, 1);
+    crate::view::reorder::move_item(&mut first.tasks, 2, 0);
+    crate::view::reorder::move_item(&mut first.notes, 0, 1);
     store.save_window(&window(1, vec![first])).expect("saves");
 
     let loaded = store.load().expect("loads");
@@ -212,7 +212,7 @@ fn a_pin_is_saved_and_unpinning_is_saved_too() {
 
 #[test]
 fn each_window_keeps_its_own_groups_and_order() {
-    use crate::sidebar::WindowSidebar;
+    use crate::view::sidebar::WindowSidebar;
     let dir = temp_dir("sidebar-state");
     let mut store = Store::open_at(&dir).expect("opens");
     let mut first = WindowSidebar::default();

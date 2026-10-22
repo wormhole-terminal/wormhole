@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context as _, Result, anyhow};
 use gpui_kit::*;
-use wormhole_core::fsutil::{LinkPolicy, write_atomic};
+use wormhole_core::storage::fsutil::{LinkPolicy, write_atomic};
 
 use super::{Ctx, file_name};
 use crate::perf::allocations::thread_counts;

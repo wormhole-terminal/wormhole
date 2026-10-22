@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, point, px, size};
 use wormhole_core::agents::AgentId;
-use wormhole_core::layout::title_row::{Extra, PathShown};
-use wormhole_core::usage::Gauge;
+use wormhole_core::agents::usage::Gauge;
+use wormhole_core::view::layout::title_row::{Extra, PathShown};
 
 use super::view_tests::{draw, drive, isolate_in, start};
 use crate::platform::record;

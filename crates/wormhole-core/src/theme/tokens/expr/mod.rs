@@ -7,7 +7,7 @@ mod parser;
 use std::fmt;
 use std::ops::Range;
 
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 pub(super) use lexer::{Tok, tokenize};
 pub(super) use parser::{parse_expr, parse_located};

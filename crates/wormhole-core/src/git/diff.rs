@@ -6,7 +6,7 @@ use anyhow::Result;
 
 use super::lfs::{self, LfsChange};
 use super::{ChangeKind, DiffSpec, EMPTY_TREE, FileChange, GitCmd, GitError, MAX_TEXT_BYTES, Side, sides};
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LineKind {

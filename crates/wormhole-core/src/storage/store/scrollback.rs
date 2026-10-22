@@ -70,7 +70,7 @@ impl Store {
 
     /// Throw away the saved text's key of the profile in `paths` (it is being deleted; its files go
     /// with its folder). Failures are logged.
-    pub fn forget_text_key_for(paths: &crate::paths::ProfilePaths) {
+    pub fn forget_text_key_for(paths: &crate::storage::paths::ProfilePaths) {
         let dir = paths.dir();
         let db = dir.join(super::DB_FILE);
         if !db.exists() {

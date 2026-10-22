@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::keyspec::{KeyMods, KeySpec};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::terminal::Pty;
 use wormhole_core::terminal::input::{file_drop, keys, mouse};
 use wormhole_core::terminal::types::LineSize;
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     fn the_terminal_gives_up_f6() {
         let yields = |keys: &str| {
-            wormhole_core::keymap::terminal_yields(&keystroke_spec(
+            wormhole_core::keys::keymap::terminal_yields(&keystroke_spec(
                 &Keystroke::parse(keys).expect("keystroke"),
             ))
         };

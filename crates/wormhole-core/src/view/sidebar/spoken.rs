@@ -227,7 +227,7 @@ mod tests {
         Place, RowSpeech, SplitSpeech, band_label, edit_label, fold_label, new_in_group_label, row_label,
         row_label_in_split, spoken_clock, switcher_card_label, switcher_label, tab_label,
     };
-    use crate::sidebar::{Bracket, RowState, SplitMarks};
+    use crate::view::sidebar::{Bracket, RowState, SplitMarks};
     use std::time::Duration;
 
     fn place(selected: bool, position: usize, number: Option<usize>) -> Place {

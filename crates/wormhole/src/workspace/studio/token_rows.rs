@@ -4,7 +4,7 @@
 
 use std::collections::BTreeSet;
 
-use wormhole_core::tokens::{self, Color, ThemeFile, ThemeTokens};
+use wormhole_core::theme::tokens::{self, Color, ThemeFile, ThemeTokens};
 
 use super::draft::{Show, group_size, in_area, is_metric, number, override_of, visible};
 use crate::theme_bridge::MISSING_TOKEN;
@@ -144,7 +144,7 @@ pub(super) fn build(inputs: &Inputs) -> Built {
 mod tests {
     use std::collections::BTreeSet;
 
-    use wormhole_core::tokens::{Area, ThemeFile, ThemeTokens, builtin_tokens, resolve};
+    use wormhole_core::theme::tokens::{Area, ThemeFile, ThemeTokens, builtin_tokens, resolve};
 
     use super::super::draft::{Show, draft_for, groups, set_override};
     use super::{Built, Inputs, ListRow, build};

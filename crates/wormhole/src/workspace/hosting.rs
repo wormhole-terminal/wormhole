@@ -7,11 +7,11 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use gpui_kit::*;
-use wormhole_core::hosts::{self, HostMeta, LaunchHosts, Restore};
-use wormhole_core::paths::DataRoot;
-use wormhole_core::profile::ProfileList;
-use wormhole_core::store::SessionRecord;
-use wormhole_core::store::Store;
+use wormhole_core::config::profile::ProfileList;
+use wormhole_core::ipc::hosts::{self, HostMeta, LaunchHosts, Restore};
+use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::storage::store::SessionRecord;
+use wormhole_core::storage::store::Store;
 use wormhole_core::terminal::SpawnOptions;
 
 use super::Workspace;
@@ -22,13 +22,13 @@ use crate::terminal_view::TerminalView;
 /// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
 fn host_binary() -> Option<&'static PathBuf> {
     static BINARY: OnceLock<Option<PathBuf>> = OnceLock::new();
-    BINARY.get_or_init(wormhole_core::host_binary::host_binary).as_ref()
+    BINARY.get_or_init(wormhole_core::ipc::host_binary::host_binary).as_ref()
 }
 
 /// The hosts this data folder has at launch, matched against what every profile's database names:
 /// one scan, before any window opens. `live` is the shown profile's open database.
 pub(super) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Option<&Store>) -> LaunchHosts {
-    let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::paths::data_dir())) {
+    let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::storage::paths::data_dir())) {
         Ok(scan) => scan.live,
         Err(err) => {
             tracing::warn!("couldn't look for running session hosts: {err}");
@@ -117,7 +117,11 @@ impl Workspace {
         }
         let Some(binary) = host_binary() else { return Start::Local };
         match hosts::new_host_id() {
-            Ok(id) => Start::Host { binary: binary.clone(), data_dir: wormhole_core::paths::data_dir(), id },
+            Ok(id) => Start::Host {
+                binary: binary.clone(),
+                data_dir: wormhole_core::storage::paths::data_dir(),
+                id,
+            },
             Err(err) => {
                 tracing::warn!("no id for a session host, the terminal runs in the app: {err}");
                 Start::Local

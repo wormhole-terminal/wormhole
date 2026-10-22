@@ -9,10 +9,10 @@ use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::sidebar::Urgency;
-use wormhole_core::sidebar::spoken;
-use wormhole_core::sidebar::tabs::{Hit, UNGROUPED, search};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::view::sidebar::Urgency;
+use wormhole_core::view::sidebar::spoken;
+use wormhole_core::view::sidebar::tabs::{Hit, UNGROUPED, search};
 
 use super::super::settings_page::update_settings;
 use super::facts::RowInfo;
@@ -252,7 +252,7 @@ impl Workspace {
                     Hit::Set(at) => HitSnap {
                         hit,
                         label: view.sets[at].label.clone().into(),
-                        note: wormhole_core::sidebar::text::count(
+                        note: wormhole_core::view::sidebar::text::count(
                             view.sets[at].members.len(),
                             "terminal",
                             "terminals",
@@ -485,7 +485,9 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 let this = this.clone();
                 move |_, window, cx| {
                     this.update(cx, |ws, cx| ws.finish_switcher(window, cx)).ok();
-                    update_settings(cx, |s| s.terminals_in = wormhole_core::sidebar::TerminalsIn::Sidebar);
+                    update_settings(cx, |s| {
+                        s.terminals_in = wormhole_core::view::sidebar::TerminalsIn::Sidebar
+                    });
                 }
             }),
         )

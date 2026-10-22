@@ -1,6 +1,6 @@
 //! One changed file as the Changes and History lists draw it: a
 //! `style::file_row` whose name and folder are shortened to fit the panel, measured with the
-//! interface font, the way `wormhole_core::elide` cuts them (the name in the middle, keeping
+//! interface font, the way `wormhole_core::view::elide` cuts them (the name in the middle, keeping
 //! its extension; the folder at the front, keeping the folders nearest the file). Hovering a
 //! row that had to be shortened shows the whole path.
 
@@ -12,8 +12,8 @@ use gpui_kit::*;
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, FileLines, TextRole};
-use wormhole_core::elide;
 use wormhole_core::git::{ChangeKind, FileChange};
+use wormhole_core::view::elide;
 
 /// What a file row is drawn from besides the file.
 pub(super) struct Placement {

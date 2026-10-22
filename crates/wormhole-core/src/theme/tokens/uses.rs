@@ -659,7 +659,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use super::{Area, TOKEN_USES, followers, refers_to, used_in, uses_of};
-    use crate::tokens::{Appearance, METRIC_TOKENS, UI_TOKENS};
+    use crate::theme::tokens::{Appearance, METRIC_TOKENS, UI_TOKENS};
 
     fn is_token(name: &str) -> bool {
         UI_TOKENS.iter().chain(METRIC_TOKENS).any(|t| t.name == name)

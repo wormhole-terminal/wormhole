@@ -10,7 +10,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::{Event, Place, Step};
 use wormhole_core::onboarding::{PlaceKind, STEPS};
 

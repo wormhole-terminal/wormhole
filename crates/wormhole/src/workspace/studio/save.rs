@@ -9,9 +9,9 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use style::BannerKind;
-use wormhole_core::fsutil::{self, LinkPolicy};
 use wormhole_core::project::{Feature, ProjectFolder, TrustStatus};
-use wormhole_core::tokens::ThemeFile;
+use wormhole_core::storage::fsutil::{self, LinkPolicy};
+use wormhole_core::theme::tokens::ThemeFile;
 
 use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
 use super::{StudioWindow, ui};
@@ -319,12 +319,12 @@ impl StudioWindow {
 }
 
 /// The app's store, where there is one (not in a headless test).
-fn store(cx: &App) -> Option<&wormhole_core::store::Store> {
+fn store(cx: &App) -> Option<&wormhole_core::storage::store::Store> {
     cx.try_global::<AppState>()?.store.as_ref()
 }
 
 /// A path with the home folder as `~`.
 fn display_path(path: &Path) -> String {
     let home = std::env::var_os("HOME").map(PathBuf::from);
-    wormhole_core::sidebar::display_path(path, home.as_deref())
+    wormhole_core::view::sidebar::display_path(path, home.as_deref())
 }

@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use wormhole_core::open_file::Launch;
+use wormhole_core::platform::open_file::Launch;
 
 pub fn app_path(_: &str) -> Option<PathBuf> {
     None

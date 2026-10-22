@@ -8,16 +8,16 @@
 //! its changes and the agent's context are the title row's, so the bar doesn't repeat them. What it
 //! says, which terminal is
 //! the longest waiting and how much fits the window's width, is core's
-//! (`wormhole_core::layout::status_bar`).
+//! (`wormhole_core::view::layout::status_bar`).
 use std::time::Instant;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::focus::Area;
-use wormhole_core::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
-use wormhole_core::spoken;
+use wormhole_core::view::focus::Area;
+use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
+use wormhole_core::view::spoken;
 
 use super::Workspace;
 use super::app::{app, open_tab};
@@ -303,8 +303,10 @@ impl Workspace {
                 .when_some(label.clone(), |d, label| d.aria_label(label))
                 .when(keyed(item), |d| d.aria_active_descendant())
         };
-        let jump =
-            settings_in(&self.profile, cx).jump_waiting_key.parse::<wormhole_core::keyspec::KeySpec>().ok();
+        let jump = settings_in(&self.profile, cx)
+            .jump_waiting_key
+            .parse::<wormhole_core::keys::keyspec::KeySpec>()
+            .ok();
         // The longest waiting first: its tile, its name, how long it has waited. One click goes there.
         let attention = bar.attention.clone().map(|a| {
             let tab = a.tab;

@@ -6,7 +6,7 @@ use std::path::{Component, Path, PathBuf};
 use anyhow::Result;
 
 use super::{GitCmd, GitError};
-use crate::fsutil::{LinkPolicy, read_capped};
+use crate::storage::fsutil::{LinkPolicy, read_capped};
 
 /// A worktree's `.git` file is one line.
 pub(super) const POINTER_CAP: u64 = 4096;

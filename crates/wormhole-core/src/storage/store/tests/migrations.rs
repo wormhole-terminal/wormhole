@@ -4,8 +4,8 @@
 
 use super::schema_snapshot::dump;
 use super::*;
-use crate::store::schema::{self, SCHEMA};
-use crate::store::steps;
+use crate::storage::store::schema::{self, SCHEMA};
+use crate::storage::store::steps;
 
 /// The layout of schema version 6, the first one databases are upgraded from, frozen as it
 /// shipped. Never edit it: the databases out there have it.

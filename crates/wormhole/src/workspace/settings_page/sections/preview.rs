@@ -6,7 +6,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
-use wormhole_core::sidebar::Density;
+use wormhole_core::view::sidebar::Density;
 
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
@@ -198,7 +198,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
     for (cx_ix, card) in SAMPLES.iter().enumerate() {
         let mut lines: Vec<AnyElement> = Vec::new();
         let tokens = &cx.global::<SettingsStore>().tokens;
-        let blue = wormhole_core::sidebar::GroupColor::Blue;
+        let blue = wormhole_core::view::sidebar::GroupColor::Blue;
         // The head's dot is the colour itself; the card is washed with it moved for the text.
         let mark = card.group.map(|_| theme_bridge::hsla(blue.color(tokens)));
         let wash = card.group.map(|_| theme_bridge::hsla(blue.wash(tokens)));

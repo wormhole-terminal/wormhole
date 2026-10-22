@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use wormhole_core::git::{ChangeKind, FileChange, RepoStatus};
-use wormhole_core::panel as rules;
+use wormhole_core::view::panel as rules;
 
 use crate::style;
 use crate::workspace::panel_list::CardPart;

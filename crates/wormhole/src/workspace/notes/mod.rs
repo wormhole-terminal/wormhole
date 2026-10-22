@@ -5,7 +5,7 @@ use std::time::Duration;
 use gpui_kit::component::input::Position;
 use gpui_kit::component::input::{InputEvent, TextareaState};
 use gpui_kit::*;
-use wormhole_core::reorder;
+use wormhole_core::view::reorder;
 
 use super::items::{ItemKey, item_key};
 use super::text::{chunks_blank, paragraph_at};
@@ -26,7 +26,7 @@ const NOTE_ROWS_MIN: usize = 3;
 /// Whether notes and tasks are on: the `notes_and_tasks` feature flag. Off, no tab, key, count or
 /// sync shows or reacts, while what was written stays in the database for when it is on again.
 pub(crate) fn notes_on(cx: &App) -> bool {
-    crate::settings::settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::NotesAndTasks)
+    crate::settings::settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::NotesAndTasks)
 }
 
 impl Workspace {

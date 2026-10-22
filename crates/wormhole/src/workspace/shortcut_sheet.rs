@@ -8,9 +8,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::sheet::{self, Filtered, Hit, Keys, Row};
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keymap::sheet::{self, Filtered, Hit, Keys, Row};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::Feature;
 
 use super::Workspace;
@@ -98,7 +98,7 @@ impl ShortcutSheet {
     fn new(
         workspace: WeakEntity<Workspace>,
         project: Option<ProjectKeys>,
-        hidden: Vec<wormhole_core::keymap::ActionId>,
+        hidden: Vec<wormhole_core::keys::keymap::ActionId>,
         hotkey: Option<String>,
         query: &str,
         window: &mut Window,

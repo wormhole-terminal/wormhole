@@ -3,10 +3,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::layout::RememberedPanes;
-use wormhole_core::paths::ProfileId;
-use wormhole_core::sidebar::WindowSidebar;
-use wormhole_core::store::{SessionRecord, WindowRecord};
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
+use wormhole_core::view::layout::RememberedPanes;
+use wormhole_core::view::sidebar::WindowSidebar;
 
 use super::app::AppState;
 use super::app::{app, app_mut, open_workspace_window_in};
@@ -316,7 +316,7 @@ pub(crate) fn request_quit_ending_hosts(cx: &mut App) {
 /// Whether the persistent-terminals feature is on (its flag, see core `features`): the menu item
 /// that ends the hosts' terminals shows only then.
 pub(crate) fn persistent_terminals_on(cx: &App) -> bool {
-    settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::PersistentTerminals)
+    settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::PersistentTerminals)
 }
 
 /// How long one session host gets to end when the app quits and takes them along: its shell's
@@ -336,10 +336,10 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
     // way out included, and nothing starts a new one (`quitting`).
     app_mut(cx).ending_hosts = true;
     super::app::save_all(cx);
-    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::paths::data_dir());
+    let hosts_dir = wormhole_core::ipc::hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
     let ending = cx
         .background_executor()
-        .spawn(async move { wormhole_core::hosts::end_all_live(&hosts_dir, END_HOSTS_WAIT) });
+        .spawn(async move { wormhole_core::ipc::hosts::end_all_live(&hosts_dir, END_HOSTS_WAIT) });
     cx.spawn(async move |cx| {
         for (id, result) in ending.await {
             match result {

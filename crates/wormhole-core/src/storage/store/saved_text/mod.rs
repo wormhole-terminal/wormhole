@@ -276,9 +276,9 @@ fn attach_file_raw(conn: &Connection, path: &Path) -> Result<()> {
     // As the main database: owner-only before SQLite opens it, so its journal files follow.
     for (ix, file) in files(path).into_iter().enumerate() {
         let made = if ix == 0 {
-            crate::fsutil::create_private_file(&file)
+            crate::storage::fsutil::create_private_file(&file)
         } else {
-            crate::fsutil::make_private(&file)
+            crate::storage::fsutil::make_private(&file)
         };
         if let Err(err) = made {
             tracing::warn!("couldn't make {} owner-only: {err}", file.display());

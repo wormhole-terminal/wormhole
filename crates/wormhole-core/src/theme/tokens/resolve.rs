@@ -10,8 +10,8 @@ use super::high_contrast::high_contrast_rules;
 use super::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
 use super::rules::{dark_yellow_warning, default_rules, rule_flags};
 use super::theme_tokens::{Recipe, ThemeTokens};
-use crate::color::Color;
-use crate::text::did_you_mean;
+use crate::storage::jsonc::suggest::did_you_mean;
+use crate::theme::tokens::color::Color;
 
 /// Longest chain of references (`a` refers to `b`, which refers to `c`, ...)
 /// a theme may build; the built-in rules stay under 16. Each link is a level
@@ -251,8 +251,8 @@ pub(super) fn build_variant(
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::tokens::test_support::{hex, no_lookup, resolve_str};
-    use crate::tokens::{Color, ThemeFile, resolve};
+    use crate::theme::tokens::test_support::{hex, no_lookup, resolve_str};
+    use crate::theme::tokens::{Color, ThemeFile, resolve};
 
     #[test]
     fn expression_evaluation() {

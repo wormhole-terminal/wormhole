@@ -8,8 +8,8 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::{Settings, ThemeMode};
-use wormhole_core::theme_catalog::ThemeEntry;
-use wormhole_core::tokens::{Appearance, ThemeTokens};
+use wormhole_core::theme::catalog::ThemeEntry;
+use wormhole_core::theme::tokens::{Appearance, ThemeTokens};
 
 use super::{CardLook, card_height};
 use crate::settings::UiColors;

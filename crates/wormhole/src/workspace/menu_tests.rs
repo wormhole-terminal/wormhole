@@ -3,7 +3,7 @@
 //! records the menu it was asked to open (`platform::record`, what devctl's `menu` prints): the
 //! tests right-click, read the recorded model and choose an item as a click would.
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, px, size};
-use wormhole_core::sidebar::{GroupColor, GroupPaint};
+use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
 use super::app::OpenWindow;
 use super::view_tests::{draw, drive, isolate_in, read, start};

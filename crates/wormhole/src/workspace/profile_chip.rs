@@ -8,9 +8,9 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::paths::ProfileId;
-use wormhole_core::spoken;
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::spoken;
 
 use super::Workspace;
 use super::actions::SwitchProfile;

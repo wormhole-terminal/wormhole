@@ -275,7 +275,7 @@ mod tests {
                 text.trim_end().strip_suffix("\n}").unwrap_or("")
             )
         );
-        let parsed: Value = crate::jsonc::parse(&added).expect("reads");
+        let parsed: Value = crate::storage::jsonc::parse(&added).expect("reads");
         assert_eq!(parsed["env"], json!({"project_color": "x"}), "the nested one is untouched");
         assert_eq!(parsed["list"], json!([{"project_color": 2}]));
         assert_eq!(parsed["project_color"], json!("teal"));
@@ -283,9 +283,12 @@ mod tests {
         assert_eq!(unset(&added), text);
         // Replacing changes the top-level one only.
         let replaced = set(&added, json!("red"));
-        assert_eq!(crate::jsonc::parse::<Value>(&replaced).expect("reads")["project_color"], json!("red"));
         assert_eq!(
-            crate::jsonc::parse::<Value>(&replaced).expect("reads")["env"],
+            crate::storage::jsonc::parse::<Value>(&replaced).expect("reads")["project_color"],
+            json!("red")
+        );
+        assert_eq!(
+            crate::storage::jsonc::parse::<Value>(&replaced).expect("reads")["env"],
             json!({"project_color": "x"})
         );
     }
@@ -431,7 +434,7 @@ mod tests {
                 // (A trailing comma needs a member to follow.)
                 let tail = if picked.is_empty() { last.trim_start_matches(',') } else { last };
                 let text = format!("{open}{}{tail}{close}", picked.join(between));
-                let before: Value = crate::jsonc::parse(&text).expect("a valid document");
+                let before: Value = crate::storage::jsonc::parse(&text).expect("a valid document");
                 let comments = text.matches("// ").count() - text.matches("// not a comment").count();
                 for value in [Some(json!("teal")), Some(json!(false)), None] {
                     let after = set_member(&text, "project_color", value.as_ref())
@@ -446,7 +449,7 @@ mod tests {
                         }
                     }
                     assert_eq!(
-                        crate::jsonc::parse::<Value>(&after).expect("reads"),
+                        crate::storage::jsonc::parse::<Value>(&after).expect("reads"),
                         want,
                         "{text:?} -> {after:?}"
                     );

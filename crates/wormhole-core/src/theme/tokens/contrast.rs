@@ -2,7 +2,7 @@
 //! readable, and which of them a theme falls short on.
 
 use super::theme_tokens::ThemeTokens;
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 /// A text-on-background pair checked by [`ThemeTokens::contrast_warnings`].
 /// Translucent backgrounds are composited over `underlay` (itself composited
@@ -130,7 +130,7 @@ impl ThemeTokens {
 
 #[cfg(test)]
 mod tests {
-    use crate::tokens::test_support::resolve_str;
+    use crate::theme::tokens::test_support::resolve_str;
 
     #[test]
     fn contrast_warnings_report_bad_pairs() {

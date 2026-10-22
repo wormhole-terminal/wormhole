@@ -4,7 +4,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::fonts::{FontSlot, display_name};
+use wormhole_core::theme::fonts::{FontSlot, display_name};
 
 use super::open_button;
 use crate::fonts::LoadedFonts;

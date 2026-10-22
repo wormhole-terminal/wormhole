@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use gpui_kit::*;
-use wormhole_core::panes::PaneId;
-use wormhole_core::sidebar::{SplitId, names};
-use wormhole_core::store::{NoteRecord, SessionRecord, TaskRecord};
+use wormhole_core::storage::store::{NoteRecord, SessionRecord, TaskRecord};
+use wormhole_core::view::panes::PaneId;
+use wormhole_core::view::sidebar::{SplitId, names};
 
 use super::app::app;
 use super::git_panel::{changes, history};
@@ -100,7 +100,7 @@ pub(super) struct Session {
     /// What the title row's extras know about it: its agent's model and context, its ports.
     pub extras: super::title_extras::SessionExtras,
     /// The comments written on its diffs and not pasted into its terminal yet.
-    pub review: wormhole_core::review::Review,
+    pub review: wormhole_core::git::review::Review,
 }
 
 impl Session {
@@ -194,7 +194,11 @@ impl Session {
     /// being ended on the way out (core `hosts::persisted_host`).
     fn persisted_host(&self, cx: &App) -> Option<String> {
         let terminal = self.terminal().read(cx);
-        wormhole_core::hosts::persisted_host(terminal.host_id(), terminal.host_lost(), app(cx).ending_hosts)
+        wormhole_core::ipc::hosts::persisted_host(
+            terminal.host_id(),
+            terminal.host_lost(),
+            app(cx).ending_hosts,
+        )
     }
 
     /// Its program runs in a session host: quitting leaves it running (unless the question before

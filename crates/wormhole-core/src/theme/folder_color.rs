@@ -4,7 +4,7 @@
 //! colours and a theme file never has to know about it. What is stored is the name
 //! (`Settings::folder_colors`, by the folder's path).
 
-use crate::tokens::{Color, ThemeTokens};
+use crate::theme::tokens::{Color, ThemeTokens};
 
 /// The colours a folder can wear, in the order they are offered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -129,7 +129,7 @@ fn palette_character(tokens: &ThemeTokens) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::{CHROMA_MIN, FolderColor, MARK_CONTRAST};
-    use crate::tokens::{Color, builtins};
+    use crate::theme::tokens::{Color, builtins};
 
     /// The distance between two hues on the wheel, in degrees.
     fn apart(a: f32, b: f32) -> f32 {

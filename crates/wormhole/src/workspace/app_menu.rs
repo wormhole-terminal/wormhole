@@ -11,10 +11,10 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
-use wormhole_core::keymap::ActionId;
-use wormhole_core::keymap::menus::{self, Command, Item, MenuState};
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::keys::keymap::menus::{self, Command, Item, MenuState};
 use wormhole_core::project::Feature;
-use wormhole_core::shells;
+use wormhole_core::terminal::shells;
 
 use super::actions::{
     DEBUG, MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder,
@@ -83,7 +83,7 @@ pub(super) fn state(cx: &mut App) -> MenuState {
     if !settings.minimap {
         state.off.push(ActionId::ToggleMinimap);
     }
-    if settings.terminals_in == wormhole_core::sidebar::TerminalsIn::Sidebar {
+    if settings.terminals_in == wormhole_core::view::sidebar::TerminalsIn::Sidebar {
         state.off.push(ActionId::ToggleTerminalTabs);
     }
     if !full_screen {

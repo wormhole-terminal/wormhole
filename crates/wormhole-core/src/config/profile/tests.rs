@@ -3,9 +3,9 @@ use std::path::Path;
 use super::{AgentLogin, NewProfile, Profile, ProfileError, ProfileList, StartFrom, login_env_var};
 use crate::agents::AgentId;
 use crate::config::Config;
-use crate::paths::{DEFAULT_ID, DataRoot, ProfileId};
-use crate::sidebar::GroupColor;
-use crate::store::Store;
+use crate::storage::paths::{DEFAULT_ID, DataRoot, ProfileId};
+use crate::storage::store::Store;
+use crate::view::sidebar::GroupColor;
 
 fn root() -> (tempfile::TempDir, DataRoot) {
     let dir = tempfile::tempdir().expect("temp dir");

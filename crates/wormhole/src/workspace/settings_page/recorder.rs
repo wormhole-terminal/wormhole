@@ -14,9 +14,9 @@
 
 use gpui_kit::*;
 use style::RecorderState;
-use wormhole_core::keymap::ActionId;
-use wormhole_core::keyspec::{KeyMods, KeySpec};
-use wormhole_core::shortcut_record::{self, Recorded};
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
+use wormhole_core::keys::shortcut_record::{self, Recorded};
 
 use super::{SettingsWindow, registry, ui, update_settings};
 use crate::settings::{Settings, settings};
@@ -178,7 +178,7 @@ impl SettingsWindow {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::keyspec::{KeyMods, KeySpec};
+    use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 
     use super::{Recording, caps, pauses_hotkey};
 

@@ -46,7 +46,7 @@ pub(super) fn spawn(listener: UnixListener, tx: smol::channel::Sender<Incoming>)
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
 fn serve(mut stream: UnixStream, tx: &smol::channel::Sender<Incoming>) {
-    if !crate::fsutil::peer_is_this_user(&stream) {
+    if !crate::storage::fsutil::peer_is_this_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
         return;
     }

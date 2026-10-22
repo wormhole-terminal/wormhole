@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 
 use gpui_kit::*;
-use wormhole_core::sidebar::{Item, SplitId, WindowSidebar, group_key};
-use wormhole_core::store::{SplitRecord, WindowRecord};
+use wormhole_core::storage::store::{SplitRecord, WindowRecord};
+use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
 use super::super::app::{app_mut, open_workspace_window_in};
 use super::super::dialog;

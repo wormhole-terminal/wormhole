@@ -3,10 +3,10 @@
 //! its 2 pt line lights up, while dragging it is solid and a
 //! readout beside the pointer says the width and why it stopped. A double-click puts the
 //! default width back, Esc puts back where the drag began. The rules are core's
-//! (`wormhole_core::layout`).
+//! (`wormhole_core::view::layout`).
 use gpui_kit::*;
-use wormhole_core::layout::Resize;
-use wormhole_core::layout::{Edge, Panes};
+use wormhole_core::view::layout::Resize;
+use wormhole_core::view::layout::{Edge, Panes};
 
 use super::Workspace;
 use crate::settings::{UiColors, ui_in};

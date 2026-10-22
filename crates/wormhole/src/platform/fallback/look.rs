@@ -1,7 +1,7 @@
 //! `platform::look` with nothing to ask: no appearance known (the theme's own stands), no
 //! display options on, nothing to watch.
 
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 /// Never made here: there is nothing to observe.
 pub struct DisplayObserver;

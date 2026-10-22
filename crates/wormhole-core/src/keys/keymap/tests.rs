@@ -4,7 +4,7 @@ use super::{
     ActionId, KeyUse, Scope, Stage, action_for, entries, entry, glyphs, list_action, terminal_action,
 };
 use super::{studio_action, terminal_yields, uses, with_key};
-use crate::keyspec::KeySpec;
+use crate::keys::keyspec::KeySpec;
 
 fn spec(glyphs: &str) -> KeySpec {
     KeySpec::from_glyphs(glyphs).unwrap_or_else(|| panic!("{glyphs} parses"))

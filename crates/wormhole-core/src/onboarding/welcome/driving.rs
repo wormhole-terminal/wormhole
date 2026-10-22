@@ -11,8 +11,8 @@ use super::fixtures;
 use super::flow::Step;
 use super::model::Welcome;
 use super::render::Size;
-use crate::intro::Handover;
 use crate::ipc::control::WelcomeOp;
+use crate::onboarding::intro::Handover;
 
 fn set_notify(
     needs_you: Option<bool>,

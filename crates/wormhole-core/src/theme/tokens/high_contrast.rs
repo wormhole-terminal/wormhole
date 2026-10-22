@@ -141,11 +141,13 @@ mod tests {
 
     use super::{HIGH_CONTRAST_RING, high_contrast_rule, high_contrast_rules};
     use crate::theme;
-    use crate::tokens::expr::parse_expr;
-    use crate::tokens::resolve::MAX_REF_DEPTH;
-    use crate::tokens::rules::{default_rule, default_rules};
-    use crate::tokens::test_support::{builtin, chain_len, hex, ratio, resolve_str};
-    use crate::tokens::{Appearance, ThemeTokens, builds_on_this_thread, builtin_tokens, builtins, derive};
+    use crate::theme::tokens::expr::parse_expr;
+    use crate::theme::tokens::resolve::MAX_REF_DEPTH;
+    use crate::theme::tokens::rules::{default_rule, default_rules};
+    use crate::theme::tokens::test_support::{builtin, chain_len, hex, ratio, resolve_str};
+    use crate::theme::tokens::{
+        Appearance, ThemeTokens, builds_on_this_thread, builtin_tokens, builtins, derive,
+    };
 
     /// Within `tolerance` steps per 8-bit channel: the expected values were computed in another tool.
     fn near(t: &ThemeTokens, name: &str, want: &str, tolerance: u8) {

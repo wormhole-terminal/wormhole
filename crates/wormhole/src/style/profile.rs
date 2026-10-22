@@ -18,7 +18,7 @@ use crate::settings::UiColors;
 pub fn profile_avatar(ui: UiColors, color: Hsla, letter: char, size: f32) -> Div {
     let fill = crate::theme_bridge::color(color);
     let ink = crate::theme_bridge::color(ui.background);
-    let ink = if wormhole_core::tokens::Color::contrast_ratio(ink, fill) >= LETTER_CONTRAST {
+    let ink = if wormhole_core::theme::tokens::Color::contrast_ratio(ink, fill) >= LETTER_CONTRAST {
         ui.background
     } else {
         crate::theme_bridge::hsla(fill.text_on())

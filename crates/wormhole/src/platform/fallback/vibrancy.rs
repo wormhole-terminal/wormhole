@@ -2,7 +2,7 @@
 //! surfaces, so the blur is a switch that changes nothing and there is no glass.
 
 use gpui_kit::{Hsla, Window};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use crate::platform::vibrancy::GlassRect;
 

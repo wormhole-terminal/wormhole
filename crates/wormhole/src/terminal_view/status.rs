@@ -441,7 +441,9 @@ impl TerminalView {
                     }
                 }
             }
-            PtyEvent::Title(title) => self.set_title(wormhole_core::sidebar::names::title_name(&title), cx),
+            PtyEvent::Title(title) => {
+                self.set_title(wormhole_core::view::sidebar::names::title_name(&title), cx)
+            }
             PtyEvent::ResetTitle => self.set_title(None, cx),
             // The shell said where it is: no need to wait for the output to settle, and a program
             // in the foreground (a nested shell) may be the one saying.

@@ -1,5 +1,5 @@
 //! The terminal list on the left. Core
-//! (`wormhole_core::sidebar`) decides what is listed, in what order, with which ⌘ numbers
+//! (`wormhole_core::view::sidebar`) decides what is listed, in what order, with which ⌘ numbers
 //! and in which words; this gathers each terminal's facts, draws the groups and rows, and
 //! wires up the ⌘-hold hints (`hints`), the row and group menus (`row_menu`, `groups`) and drag
 //! and drop (`drag`).
@@ -11,10 +11,10 @@ use std::path::PathBuf;
 use gpui_kit::component::scroll::Scrollbar;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::sidebar::NUMBERED;
-use wormhole_core::sidebar::hints::CmdHold;
-use wormhole_core::sidebar::order::FrozenNumbers;
-use wormhole_core::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
+use wormhole_core::view::sidebar::NUMBERED;
+use wormhole_core::view::sidebar::hints::CmdHold;
+use wormhole_core::view::sidebar::order::FrozenNumbers;
+use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
 use super::Workspace;
 use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
@@ -369,7 +369,7 @@ impl Workspace {
                             .children(items);
                         let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
                         // It holds the keyboard for the sidebar.
-                        self.area_container(wormhole_core::focus::Area::Sidebar, list, cx)
+                        self.area_container(wormhole_core::view::focus::Area::Sidebar, list, cx)
                     })
                     // Beside the list, not in it: a child of the scrolled list would move with its rows.
                     .child(self.list_edges(ui, cx)),
@@ -442,7 +442,7 @@ impl Workspace {
                     None
                 } else {
                     Some(
-                        wormhole_core::sidebar::GroupColor::from_key(color)
+                        wormhole_core::view::sidebar::GroupColor::from_key(color)
                             .ok_or_else(|| format!("no colour {color:?}"))?,
                     )
                 };

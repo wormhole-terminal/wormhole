@@ -14,10 +14,10 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 
 use super::{Submodule, commit_id};
-use crate::fsutil::{LinkPolicy, read_capped};
 use crate::git::head::{POINTER_CAP, normalize, pointed_dir};
 use crate::git::log::parse_record;
 use crate::git::{Commit, FileChange, GitCmd, GitError, RepoStatus};
+use crate::storage::fsutil::{LinkPolicy, read_capped};
 
 /// The most commits listed on each side; more are counted ("and 340 more").
 pub const COMMITS_SHOWN: usize = 200;

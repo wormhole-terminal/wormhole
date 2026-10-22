@@ -10,7 +10,7 @@ use std::rc::Rc;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::InputState;
 use gpui_kit::*;
-use wormhole_core::tokens::{TokenUse, uses_of};
+use wormhole_core::theme::tokens::{TokenUse, uses_of};
 
 use super::layout::{Columns, Measures, Piece, columns, extents, meeting};
 use super::syntax::CodeSample;

@@ -14,7 +14,7 @@ use std::sync::{Mutex, Once};
 use global_hotkey::hotkey::HotKey;
 pub use global_hotkey::hotkey::{Code, Modifiers};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
-use wormhole_core::keyspec::{KeySpec, KeySpecError};
+use wormhole_core::keys::keyspec::{KeySpec, KeySpecError};
 
 type Callback = Box<dyn Fn() + Send + Sync + 'static>;
 
@@ -178,7 +178,7 @@ pub fn parse_spec(spec: &str) -> Result<(Modifiers, Code), String> {
 pub fn system_conflict(spec: &str) -> Option<String> {
     parse_spec(spec).ok()?;
     let spec: KeySpec = spec.parse().ok()?;
-    wormhole_core::shortcut_record::conflict(&spec, None)
+    wormhole_core::keys::shortcut_record::conflict(&spec, None)
 }
 
 #[cfg(test)]

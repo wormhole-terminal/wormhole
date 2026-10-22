@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use gpui_kit::TestAppContext;
-use wormhole_core::store::{SessionRecord, WindowRecord};
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use super::app::{OpenWindow, app, app_mut, open_workspace_window};
 use super::update_restart::{request_restart, tick_at};

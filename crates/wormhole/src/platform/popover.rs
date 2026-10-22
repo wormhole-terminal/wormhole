@@ -18,7 +18,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::menu::{Callback, Item, Swatches};
 
@@ -276,7 +276,7 @@ mod tests {
     use std::time::Duration;
 
     use gpui_kit::hsla;
-    use wormhole_core::tokens::Appearance;
+    use wormhole_core::theme::tokens::Appearance;
 
     use super::{Behavior, Button, Colours, Custom, Field, Glyph, Popover, Row, hex};
     use crate::platform::menu::{Item, Swatch, Swatches};

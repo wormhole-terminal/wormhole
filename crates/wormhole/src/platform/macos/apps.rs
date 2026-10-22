@@ -12,7 +12,7 @@ use objc2_app_kit::{
     NSGraphicsContext, NSWorkspace,
 };
 use objc2_foundation::{NSBundle, NSDictionary, NSPoint, NSRect, NSSize, NSString};
-use wormhole_core::open_file::Launch;
+use wormhole_core::platform::open_file::Launch;
 
 pub fn app_path(bundle: &str) -> Option<PathBuf> {
     let url =
@@ -116,7 +116,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::command;
-    use wormhole_core::open_file::Launch;
+    use wormhole_core::platform::open_file::Launch;
 
     fn cmd(bundle: &str, launch: Launch) -> std::process::Command {
         command(bundle, launch).expect("macOS launches with open")

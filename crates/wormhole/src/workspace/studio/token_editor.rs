@@ -12,10 +12,10 @@ use gpui_kit::component::input::Input;
 use gpui_kit::component::slider::Slider;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::tokens::{
+use wormhole_core::theme::tokens::{
     ExprError, check_expression, contrast_issues, default_rule, followers, refers_to, uses_of,
 };
-use wormhole_core::tokens::{METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
+use wormhole_core::theme::tokens::{METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
 
 use super::draft::{self, is_metric, number, override_of, set_override};
 use super::{Edit, StudioWindow, tokens_of, ui};

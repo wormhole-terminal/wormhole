@@ -372,10 +372,10 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::{Appearance, SYNTAX_RULES, UI_TOKENS, default_rule, default_rules};
-    use crate::tokens::expr::parse_expr;
-    use crate::tokens::resolve::MAX_REF_DEPTH;
-    use crate::tokens::test_support::{builtin, chain_len, ratio, resolve_str};
-    use crate::tokens::{Color, Metrics, builtin_tokens, syntax_keys};
+    use crate::theme::tokens::expr::parse_expr;
+    use crate::theme::tokens::resolve::MAX_REF_DEPTH;
+    use crate::theme::tokens::test_support::{builtin, chain_len, ratio, resolve_str};
+    use crate::theme::tokens::{Color, Metrics, builtin_tokens, syntax_keys};
 
     #[test]
     fn every_rule_parses_for_both_appearances() {

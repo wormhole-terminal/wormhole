@@ -268,7 +268,7 @@ pub fn group_drop(input: &DropInput, band: usize, target: Target) -> Option<Land
 #[cfg(test)]
 mod tests {
     use super::{Drop, DropInput, Landing, Target, group_drop, terminal_drop};
-    use crate::sidebar::{Card, Item, ListInput, Listing, Part, SidebarNumbers, Splits, WindowSidebar};
+    use crate::view::sidebar::{Card, Item, ListInput, Listing, Part, SidebarNumbers, Splits, WindowSidebar};
 
     struct World {
         ids: Vec<i64>,

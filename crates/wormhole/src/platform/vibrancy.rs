@@ -16,7 +16,7 @@
 //! `set_background_appearance` is the way a port would add it.
 
 use gpui_kit::Window;
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::os::vibrancy as os;
 

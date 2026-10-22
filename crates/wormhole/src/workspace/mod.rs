@@ -27,8 +27,8 @@ pub(crate) use updates::devctl_installed as devctl_update_installed;
 pub(crate) use windows::{request_quit, request_quit_ending_hosts};
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
-use wormhole_core::paths::ProfileId;
-use wormhole_core::sidebar::WindowSidebar;
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::sidebar::WindowSidebar;
 
 mod about;
 mod actions;
@@ -144,9 +144,9 @@ pub(crate) enum RightTab {
     Project,
 }
 use crate::terminal_view::{Status, TerminalView};
-use wormhole_core::store::{SessionRecord, WindowRecord};
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
-use wormhole_core::layout::{Edge, Panes};
+use wormhole_core::view::layout::{Edge, Panes};
 /// A window's layout as saved with it.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default)]
@@ -270,7 +270,7 @@ pub struct Workspace {
     /// The group being dragged by its head, while it is.
     group_drag: Option<u32>,
     /// The divider the pointer has rested on (its line shows), and the timer that sets it.
-    divider_hot: Option<wormhole_core::panes::DividerId>,
+    divider_hot: Option<wormhole_core::view::panes::DividerId>,
     divider_hover: Option<Task<()>>,
     /// The area the selected split's panes share, as of the last frame (`panes::pane_probe`).
     pane_area: Bounds<Pixels>,
@@ -458,7 +458,7 @@ impl Workspace {
         };
         this.right_tab = layout.right_tab;
         let saved: Vec<(i64, Option<i64>)> = record.sessions.iter().map(|s| (s.id, s.split_id)).collect();
-        this.shown_at_launch = wormhole_core::hosts::shown_at_launch(record.active, &saved);
+        this.shown_at_launch = wormhole_core::ipc::hosts::shown_at_launch(record.active, &saved);
         for session in record.sessions {
             this.add_session(Some(session), window, cx);
         }
@@ -908,7 +908,7 @@ impl Workspace {
         if let Some(made) = cwd.as_deref().and_then(|cwd| app(cx).worktrees.find(cwd)) {
             env.extend(made.env().into_iter().map(|(name, value)| (name.to_string(), value)));
         }
-        let shell = wormhole_core::shells::for_terminal(
+        let shell = wormhole_core::terminal::shells::for_terminal(
             record.shell.as_deref(),
             project_shell.as_deref(),
             settings_in(&self.profile, cx),
@@ -926,7 +926,7 @@ impl Workspace {
             // (Not in the app's own tests: their binary is not Wormhole and would take `welcome` for
             // a test name.)
             options.welcome = !cfg!(test);
-            options.env.insert(wormhole_core::welcome::TOKEN_VAR.to_string(), token);
+            options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
         }
         let start = self.start_for(record, &options, cx);
         let new_host = match &start {

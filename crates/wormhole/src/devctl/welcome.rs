@@ -2,8 +2,8 @@
 //! and send the program's requests by hand to see them refused or answered.
 
 use anyhow::{Result, anyhow};
-use wormhole_core::intro::{Handover, Start};
 use wormhole_core::ipc::control::{Action, Request, WelcomeOp};
+use wormhole_core::onboarding::intro::{Handover, Start};
 
 use super::Ctx;
 use super::ambient::later;

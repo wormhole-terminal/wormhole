@@ -4,7 +4,7 @@
 //! what a terminal does with each, are core's `default_terminal`.
 
 use gpui_kit::*;
-use wormhole_core::default_terminal::{Opened, SCRIPT_TYPES, file_path};
+use wormhole_core::terminal::default_terminal::{Opened, SCRIPT_TYPES, file_path};
 
 use super::app::AppState;
 use crate::platform::default_app;

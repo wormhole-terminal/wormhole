@@ -12,7 +12,7 @@ use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::tokens;
+use wormhole_core::theme::tokens;
 
 use super::{StudioWindow, ui};
 use crate::settings::{SettingsStore, UiColors};

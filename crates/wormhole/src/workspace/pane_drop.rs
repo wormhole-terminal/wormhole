@@ -10,8 +10,10 @@
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::panes::{DropError, PaneId, Rect, TabPanes, Zone, drop_target, hint_rect, preview_rect};
-use wormhole_core::sidebar::SplitId;
+use wormhole_core::view::panes::{
+    DropError, PaneId, Rect, TabPanes, Zone, drop_target, hint_rect, preview_rect,
+};
+use wormhole_core::view::sidebar::SplitId;
 
 use super::Workspace;
 use super::terminal_drag::{DraggedTerminal, PaneHover};

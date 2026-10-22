@@ -20,12 +20,12 @@ pub enum Message {
     /// A second launch asks the running instance to come to the front.
     Activate,
     /// An agent's plan usage limits, from its status line (`Wormhole statusline`).
-    Usage { usage: crate::usage::Usage },
+    Usage { usage: crate::agents::usage::Usage },
     /// What an agent's status line says about one terminal, the model and its context window
     /// (`Wormhole statusline`, from inside the terminal: `tab` is `WORMHOLE_TAB_ID`). A new
     /// message: an older app that doesn't know it skips the line, and keeps the usage that
     /// travels beside it.
-    Gauge { tab: String, gauge: crate::usage::Gauge },
+    Gauge { tab: String, gauge: crate::agents::usage::Gauge },
     /// A control request (`Wormhole list`, `send-text`, …), answered on the same connection.
     Control(super::control::Request),
 }
@@ -77,9 +77,12 @@ mod tests {
             (Message::Activate, r#"{"kind":"activate"}"#),
             (
                 Message::Usage {
-                    usage: crate::usage::Usage {
+                    usage: crate::agents::usage::Usage {
                         agent: AgentId::Claude,
-                        five_hour: Some(crate::usage::Window { used: 25.5, resets_at: 1_800_002_040 }),
+                        five_hour: Some(crate::agents::usage::Window {
+                            used: 25.5,
+                            resets_at: 1_800_002_040,
+                        }),
                         seven_day: None,
                         limits: Vec::new(),
                         response_tokens: None,
@@ -91,7 +94,7 @@ mod tests {
             (
                 Message::Gauge {
                     tab: "7".into(),
-                    gauge: crate::usage::Gauge {
+                    gauge: crate::agents::usage::Gauge {
                         agent: AgentId::Claude,
                         model: Some("Opus 4.5".into()),
                         context: Some(41.5),

@@ -28,7 +28,7 @@ pub struct SpawnOptions {
     pub env: BTreeMap<String, String>,
     /// The program to run instead of the login shell: the tab's profile, a trusted project's
     /// shell or the default, decided by `shells::for_tab`.
-    pub shell: Option<crate::shells::ShellCommand>,
+    pub shell: Option<crate::terminal::shells::ShellCommand>,
     /// Start the program through `Wormhole welcome -- <program>`: the first-run welcome in this
     /// terminal, which becomes the program when it ends. The app also puts the welcome's token in
     /// `env` (`welcome::TOKEN_VAR`).
@@ -48,11 +48,11 @@ impl SpawnOptions {
     /// for. Call it after the project's environment is in: what the project already set (a trusted
     /// project knows its own needs) is kept, and only what is missing is filled in from the profile.
     /// The terminal's id, socket and binary are set at launch and can't be redirected by either.
-    pub fn apply_profile(&mut self, profile: &crate::profile::Profile) {
+    pub fn apply_profile(&mut self, profile: &crate::config::profile::Profile) {
         for (key, value) in profile.terminal_env() {
             self.env.entry(key).or_insert(value);
         }
-        self.env.insert(crate::profile::PROFILE_VAR.into(), profile.id.to_string());
+        self.env.insert(crate::config::profile::PROFILE_VAR.into(), profile.id.to_string());
         if self.cwd.is_none() {
             self.cwd = profile.start_folder();
         }
@@ -199,10 +199,10 @@ mod tests {
 mod profile_tests {
     use super::{SpawnOptions, spawn_program};
     use crate::agents::AgentId;
-    use crate::paths::ProfileId;
-    use crate::profile::{AgentLogin, PROFILE_VAR, Profile};
-    use crate::sidebar::GroupColor;
+    use crate::config::profile::{AgentLogin, PROFILE_VAR, Profile};
+    use crate::storage::paths::ProfileId;
     use crate::terminal::GridSize;
+    use crate::view::sidebar::GroupColor;
 
     const SIZE: GridSize = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
 

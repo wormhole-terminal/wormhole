@@ -6,8 +6,8 @@
 use std::path::PathBuf;
 
 use gpui_kit::*;
-use wormhole_core::settings_index::{Query, SectionId as Section};
-use wormhole_core::sidebar::Density;
+use wormhole_core::config::settings_index::{Query, SectionId as Section};
+use wormhole_core::view::sidebar::Density;
 
 use super::{SettingsWindow, SidebarLook, open_settings, reveal_row, sections};
 use crate::workspace::Workspace;

@@ -17,7 +17,7 @@ use std::sync::LazyLock;
 pub use quote::{quote, quote_all, single_quote};
 
 use crate::config::{Settings, ShellProfile};
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 /// The key of the login shell.
 pub const LOGIN: &str = "";

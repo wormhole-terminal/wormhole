@@ -140,7 +140,7 @@ pub(super) fn marks(
 mod tests {
     use super::{Bracket, SplitMarks, Splits, gather_splits, normalised, pinned_with_splits};
     use super::{marks as marks_of, split_of};
-    use crate::sidebar::{ListInput, Listing, SidebarNumbers, WindowSidebar};
+    use crate::view::sidebar::{ListInput, Listing, SidebarNumbers, WindowSidebar};
 
     struct Case<'a> {
         pinned: Vec<bool>,

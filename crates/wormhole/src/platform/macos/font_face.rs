@@ -7,7 +7,7 @@ use std::ptr::{self, NonNull};
 use objc2_core_foundation::{CFData, CFRange, CFRetained, CFString, CGAffineTransform};
 use objc2_core_graphics::{CGPath, CGPathElement, CGPathElementType};
 use objc2_core_text::{CTFont, CTFontManagerCreateFontDescriptorFromData, CTFontSymbolicTraits};
-use wormhole_core::fonts::bundled;
+use wormhole_core::theme::fonts::bundled;
 
 use crate::platform::font_face::Seg;
 

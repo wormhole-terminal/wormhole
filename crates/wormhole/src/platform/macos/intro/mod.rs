@@ -28,9 +28,9 @@ use objc2_metal::{
     MTLStoreAction, MTLTexture,
 };
 use objc2_quartz_core::{CALayer, CAMetalDrawable, CAMetalLayer, CATransform3D};
-use wormhole_core::intro::page;
-use wormhole_core::intro::voyage::{self, Landing, TRAIL_POINTS};
-use wormhole_core::intro::{Start, Style, WindowMotion, window_motion_from};
+use wormhole_core::onboarding::intro::page;
+use wormhole_core::onboarding::intro::voyage::{self, Landing, TRAIL_POINTS};
+use wormhole_core::onboarding::intro::{Start, Style, WindowMotion, window_motion_from};
 
 use super::appkit::ns_view;
 use crate::platform::intro::{Frame, Setup};
@@ -57,7 +57,9 @@ fn source() -> String {
         include_str!("shader/glow.metal"),
         include_str!("shader/entry.metal"),
     ];
-    FILES.iter().fold(wormhole_core::intro::shader_constants(), |source, file| source + "\n" + file)
+    FILES
+        .iter()
+        .fold(wormhole_core::onboarding::intro::shader_constants(), |source, file| source + "\n" + file)
 }
 
 const PIXEL_FORMAT: MTLPixelFormat = MTLPixelFormat::BGRA8Unorm;
@@ -131,8 +133,8 @@ impl Uniforms {
         let motion = window_motion_from(style, t, start);
         self.win_scale = motion.scale;
         self.win_alpha = motion.alpha;
-        self.speed = wormhole_core::intro::speed(style, t);
-        self.travel = wormhole_core::intro::travel(style, t);
+        self.speed = wormhole_core::onboarding::intro::speed(style, t);
+        self.travel = wormhole_core::onboarding::intro::travel(style, t);
         let run = style.run();
         self.run = [run.seconds, run.lift, run.bloom, run.arms];
         self.mist = run.mist;
@@ -538,7 +540,7 @@ fn scale_about_centre(size: objc2_core_foundation::CGSize, s: f64) -> CATransfor
 #[cfg(test)]
 mod tests {
     use super::{Landing, Renderer, Uniforms};
-    use wormhole_core::intro::Style;
+    use wormhole_core::onboarding::intro::Style;
 
     /// The shader compiles at run time, so a mistake in it would only show as an intro that
     /// never plays: compile it, and draw a frame of each style.
@@ -574,7 +576,7 @@ mod tests {
     /// it is not. The comet trail goes with it.
     #[test]
     fn a_voyage_without_a_ship_draws_none_where_it_docks() {
-        use wormhole_core::intro::voyage;
+        use wormhole_core::onboarding::intro::voyage;
 
         let renderer = Renderer::new().expect("the intro shader compiles");
         let colors = [[0.4, 0.5, 1.0, 1.0], [0.7, 0.4, 1.0, 1.0], [0.7, 0.4, 0.9, 1.0]];

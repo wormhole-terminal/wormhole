@@ -18,7 +18,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use super::{Incoming, Message, server, socket_path};
-use crate::paths::{INSTANCE_LOCK_FILE, data_dir};
+use crate::storage::paths::{INSTANCE_LOCK_FILE, data_dir};
 
 /// Held while this process is the running instance (closing the file unlocks).
 #[derive(Debug)]
@@ -49,12 +49,12 @@ pub fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
 }
 
 pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::io::Result<Instance> {
-    crate::fsutil::create_dir_all_private(dir)?;
+    crate::storage::fsutil::create_dir_all_private(dir)?;
     let file = File::options()
         .create(true)
         .write(true)
         .truncate(false)
-        .mode(crate::fsutil::PRIVATE_FILE)
+        .mode(crate::storage::fsutil::PRIVATE_FILE)
         .open(dir.join(INSTANCE_LOCK_FILE))?;
     match file.try_lock() {
         Ok(()) => {}

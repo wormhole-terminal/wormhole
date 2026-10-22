@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use gpui_kit::*;
-use wormhole_core::layout::path_menu::{self, PathFolder};
+use wormhole_core::view::layout::path_menu::{self, PathFolder};
 
 use super::{Workspace, session};
 use crate::platform::{self, Icon, Item, Menu};
@@ -23,7 +23,7 @@ impl Workspace {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
-        let shown = wormhole_core::sidebar::display_path(&folder, session::home_dir());
+        let shown = wormhole_core::view::sidebar::display_path(&folder, session::home_dir());
         let menu = path_menu(&folder, &shown, &platform::boot_volume_name(), exited, &cx.weak_entity());
         platform::show_menu(menu, self.path_anchor.below(), window, cx);
     }

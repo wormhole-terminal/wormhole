@@ -7,9 +7,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use crate::paths::DataRoot;
-use crate::theme_registry::{self, DEFAULT_THEME, ThemeId, UserThemes};
-use crate::tokens::{self, ThemeTokens};
+use crate::storage::paths::DataRoot;
+use crate::theme::registry::{self, DEFAULT_THEME, ThemeId, UserThemes};
+use crate::theme::tokens::{self, ThemeTokens};
 
 #[derive(Clone, Debug)]
 pub struct ThemeEntry {
@@ -135,7 +135,7 @@ pub fn fingerprint() -> Vec<(PathBuf, u64, Option<SystemTime>)> {
 }
 
 pub fn fingerprint_in(dir: &Path) -> Vec<(PathBuf, u64, Option<SystemTime>)> {
-    theme_registry::fingerprint(dir)
+    registry::fingerprint(dir)
 }
 
 /// A theme file: JSON token theme, or a Ghostty / iTerm2 / Alacritty palette.
@@ -146,7 +146,7 @@ pub fn load_path(path: &Path) -> Result<ThemeTokens, String> {
 
 /// [`load_path`] with the themes of a profile available to `extends`.
 pub fn load_path_in(dir: &Path, path: &Path) -> Result<ThemeTokens, String> {
-    theme_registry::load_theme_path(dir, path)
+    registry::load_theme_path(dir, path)
 }
 
 /// The Default profile's themes dir, as `Config::themes_dir` has it.
@@ -159,8 +159,8 @@ mod tests {
     use std::path::Path;
 
     use super::{catalog_in, fingerprint_in};
-    use crate::theme_registry::DEFAULT_THEME;
-    use crate::tokens::{self, Appearance};
+    use crate::theme::registry::DEFAULT_THEME;
+    use crate::theme::tokens::{self, Appearance};
 
     const GHOSTTY: &str = "background = #fafafa\nforeground = #202020\npalette = 1=#cc0000\n";
 

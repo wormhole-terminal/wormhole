@@ -9,11 +9,11 @@ use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
 use gpui_kit::*;
-use wormhole_core::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::OptionAsMeta;
-use wormhole_core::fonts::FontSlot;
-use wormhole_core::settings_index::SectionId as Section;
-use wormhole_core::shells::{self, ShellChoice, ShellKind};
+use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
+use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::terminal::shells::{self, ShellChoice, ShellKind};
+use wormhole_core::theme::fonts::FontSlot;
 
 use super::open_in_editor;
 use crate::platform::apps;
@@ -114,7 +114,7 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
 fn describe_font(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let store = cx.global::<SettingsStore>();
     let s = &store.settings;
-    let family = wormhole_core::fonts::display_name(store.fonts.family(FontSlot::Terminal));
+    let family = wormhole_core::theme::fonts::display_name(store.fonts.family(FontSlot::Terminal));
     Some(
         format!(
             "{family} {:.0} pt · line height {:.2} · ligatures {}",
@@ -133,7 +133,7 @@ fn describe_worktree_base(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) 
         return None;
     }
     let home = std::env::var_os("HOME").map(PathBuf::from);
-    let shown = wormhole_core::sidebar::display_path(Path::new(&base), home.as_deref());
+    let shown = wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref());
     Some(
         format!("Under {shown}, in a folder named after the repository (worktree_base in config.json)")
             .into(),
@@ -225,7 +225,7 @@ fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
 }
 
 /// An app's icon in the select, `style::GLYPH` square: its own, or its monogram.
-fn open_in_icon(ui: UiColors, cx: &App, app: &wormhole_core::open_in::Installed) -> AnyElement {
+fn open_in_icon(ui: UiColors, cx: &App, app: &wormhole_core::platform::open_in::Installed) -> AnyElement {
     match OpenIn::icon(cx, &app.bundle) {
         Some(image) => img(image).size(px(style::TITLE_GLYPH)).flex_none().into_any_element(),
         None => style::agent_logo(None, app.monogram.clone(), style::TITLE_GLYPH, ui.muted),

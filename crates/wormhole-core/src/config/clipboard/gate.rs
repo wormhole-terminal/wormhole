@@ -83,7 +83,7 @@ impl ReadGate {
 #[cfg(test)]
 mod tests {
     use super::{Choice, ReadGate, Request};
-    use crate::clipboard::ClipboardRead::{Allow, Ask, Deny};
+    use crate::config::clipboard::ClipboardRead::{Allow, Ask, Deny};
 
     #[test]
     fn allow_answers_and_deny_refuses_without_asking() {

@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use super::{PlanLimit, Usage};
 use crate::agents::AgentId;
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 const TRANSCRIPT_TAIL: u64 = 1 << 20;
 

@@ -7,9 +7,9 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::spoken;
 use wormhole_core::terminal::types::{Line, Scroll};
 use wormhole_core::terminal::{Block, BlockState, Direction, command_to_prompt, took_text};
+use wormhole_core::view::spoken;
 
 use super::{Layout, TerminalView};
 use crate::settings::{UiColors, store_in};
@@ -334,8 +334,11 @@ mod tests {
 
     #[test]
     fn the_gutter_mark_takes_the_status_color_and_nothing_where_nothing_ran() {
-        let tokens = wormhole_core::tokens::builtin_tokens();
-        let ui = UiColors::new(&tokens[0], wormhole_core::tokens::Translucency { opacity: 1.0, blur: false });
+        let tokens = wormhole_core::theme::tokens::builtin_tokens();
+        let ui = UiColors::new(
+            &tokens[0],
+            wormhole_core::theme::tokens::Translucency { opacity: 1.0, blur: false },
+        );
         let finished = |code, took| BlockState::Finished { code, took };
         assert_eq!(mark_color(finished(Some(0), Some(Duration::from_secs(1))), ui), Some(ui.success));
         assert_eq!(mark_color(finished(Some(2), None), ui), Some(ui.danger));

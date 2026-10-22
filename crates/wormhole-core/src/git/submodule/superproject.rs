@@ -7,9 +7,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::fsutil::{LinkPolicy, read_capped};
 use crate::git::find_root;
 use crate::git::head::{POINTER_CAP, normalize, pointed_dir};
+use crate::storage::fsutil::{LinkPolicy, read_capped};
 
 /// The repository that has the submodule whose top is `root`.
 #[derive(Clone, Debug, PartialEq, Eq)]

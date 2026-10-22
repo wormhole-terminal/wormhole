@@ -29,8 +29,8 @@ mod windows;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::tokens::TOKEN_USES;
-use wormhole_core::tokens::{self, ThemeTokens};
+use wormhole_core::theme::tokens::TOKEN_USES;
+use wormhole_core::theme::tokens::{self, ThemeTokens};
 
 use super::t;
 use crate::settings::UiColors;
@@ -352,7 +352,7 @@ fn framed(content: AnyElement) -> Div {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::tokens::{self, TOKEN_USES};
+    use wormhole_core::theme::tokens::{self, TOKEN_USES};
 
     use super::Area;
 

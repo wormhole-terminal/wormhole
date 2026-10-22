@@ -22,9 +22,9 @@ use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::token;
 use crate::workspace::Workspace;
 use crate::workspace::git_panel::open_file::OpenFile;
+use wormhole_core::git::review::LineSide;
 use wormhole_core::git::{LineKind, Side};
-use wormhole_core::review::LineSide;
-use wormhole_core::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::ThemeTokens;
 
 /// How far the card sits in from the terminal's column, left, right and below.
 pub(super) const CARD_INSET: f32 = 16.0;

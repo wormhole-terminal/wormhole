@@ -5,7 +5,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap;
+use wormhole_core::keys::keymap;
 
 use crate::settings::store_in;
 use crate::style::{Edges, TextRole};

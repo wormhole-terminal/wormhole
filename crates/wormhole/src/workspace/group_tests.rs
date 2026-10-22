@@ -93,7 +93,7 @@ fn a_group_moves_with_its_terminals_and_their_split_to_a_window_of_its_own(cx: &
     // 2 is in a split with 3, which is in no group: the split goes along.
     drive(cx, &window, |ws, window, cx| {
         let three = ws.find_session(3).expect("a row");
-        ws.join_split(three, 2, wormhole_core::panes::Zone::Right, window, cx).expect("room");
+        ws.join_split(three, 2, wormhole_core::view::panes::Zone::Right, window, cx).expect("room");
     });
     drive(cx, &window, |ws, window, cx| ws.move_group_to_window(group, window, cx));
     cx.run_until_parked();

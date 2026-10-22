@@ -7,8 +7,8 @@ use super::catalog::UI_TOKENS;
 use super::expr::Expr;
 use super::model::{Appearance, Metrics, SyntaxStyle, TerminalColors};
 use super::resolve::{FlagOverrides, build_variant};
-use crate::color::Color;
 use crate::theme;
+use crate::theme::tokens::color::Color;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ThemeTokens {
@@ -115,8 +115,8 @@ impl ThemeTokens {
 
 #[cfg(test)]
 mod tests {
-    use crate::tokens::test_support::{builtin, hex, ratio, resolve_str, snapshot};
-    use crate::tokens::{UI_TOKENS, builtin_tokens};
+    use crate::theme::tokens::test_support::{builtin, hex, ratio, resolve_str, snapshot};
+    use crate::theme::tokens::{UI_TOKENS, builtin_tokens};
 
     #[test]
     fn with_primary_rederives_what_follows_the_primary() {

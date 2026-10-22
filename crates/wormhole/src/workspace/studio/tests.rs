@@ -1,5 +1,5 @@
 //! The close guard's decision and the window's keys, without a window.
-use wormhole_core::keyspec::{KeyMods, KeySpec};
+use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 
 use super::title::SaveAction;
 use super::{Closing, closing, save_key};

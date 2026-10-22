@@ -11,8 +11,8 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use super::{Kind, NOTIFY_BURST, NOTIFY_BURST_WINDOW};
-use crate::elide::ELLIPSIS;
-use crate::spoken::{terminals_failed, terminals_finished, terminals_need_you};
+use crate::view::elide::ELLIPSIS;
+use crate::view::spoken::{terminals_failed, terminals_finished, terminals_need_you};
 
 /// How many characters of an agent's question are read out. A permission prompt can quote a whole
 /// command; past a sentence or so the listener has what they need to go and answer it.

@@ -12,7 +12,7 @@ use super::{
     ChangeKind, EMPTY_TREE, FileChange, GitCmd, GitError, RepoStatus, Upstream, has_head, repo_root,
     superproject,
 };
-use crate::title_extras::BranchStatus;
+use crate::view::title_extras::BranchStatus;
 
 /// How much of the picture a status call fills in.
 #[derive(Clone, Copy, PartialEq, Eq)]

@@ -16,12 +16,12 @@ use gpui_kit::component::WindowExt as _;
 use gpui_kit::component::input;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::intro::{Handover, Style};
-use wormhole_core::keymap::{self, ActionId, Scope, Stage};
-use wormhole_core::keyspec::KeySpec;
-use wormhole_core::paths::ProfileId;
-use wormhole_core::sidebar::TerminalsIn;
-use wormhole_core::sidebar::order::shortcut_target;
+use wormhole_core::keys::keymap::{self, ActionId, Scope, Stage};
+use wormhole_core::keys::keyspec::KeySpec;
+use wormhole_core::onboarding::intro::{Handover, Style};
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::sidebar::TerminalsIn;
+use wormhole_core::view::sidebar::order::shortcut_target;
 
 use super::app::{self, AppState, app};
 use super::settings_page::update_settings;
@@ -545,7 +545,7 @@ impl Workspace {
     /// The window's own actions, on its root element. An action that can't do anything for the
     /// terminal in front isn't handled at all, which is what greys its menu item out.
     pub(super) fn with_actions(&self, root: Div, cx: &mut Context<Self>) -> Div {
-        use wormhole_core::panes::{Axis, Direction, Preset};
+        use wormhole_core::view::panes::{Axis, Direction, Preset};
         let has_folder = self.active_terminal().read(cx).cwd.is_some();
         // A worktree needs a repository: the terminal's folder has a git status.
         let has_repo = self.active_session().git.status.is_some();
@@ -717,7 +717,7 @@ impl Workspace {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::keymap::{ActionId, Scope, Stage, entries};
+    use wormhole_core::keys::keymap::{ActionId, Scope, Stage, entries};
 
     use super::{bindings, gpui_action, zoomed};
 
@@ -781,7 +781,7 @@ mod tests {
             ("Quit Wormhole", ActionId::Quit),
         ] {
             let shown = found.iter().find(|(t, _)| t == title).and_then(|(_, key)| key.clone());
-            let bound = wormhole_core::keymap::key(id).and_then(KeyEquivalent::from_spec);
+            let bound = wormhole_core::keys::keymap::key(id).and_then(KeyEquivalent::from_spec);
             assert_eq!(shown, bound, "{title}");
         }
     }

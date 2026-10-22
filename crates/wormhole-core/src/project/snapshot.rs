@@ -17,7 +17,7 @@ use super::{
     MAX_PROMPT_BYTES, PROMPTS_DIR, ProjectConfig, ProjectError, ProjectFolder, ProjectWarning, Prompt,
     THEME_FILE, TrustStatus, check_relative, config_from_value, parse_json, parse_layout, prompts,
 };
-use crate::fsutil::FileStamp;
+use crate::storage::fsutil::FileStamp;
 
 /// A loaded project folder. Cheap to query: nothing here touches the disk after [`Self::load`].
 #[derive(Debug)]

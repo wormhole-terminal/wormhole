@@ -74,7 +74,7 @@ impl RememberedPanes {
 #[cfg(test)]
 mod tests {
     use super::RememberedPanes;
-    use crate::layout::{PANEL_MAX, PANEL_MIN, Panes, SIDEBAR_MAX};
+    use crate::view::layout::{PANEL_MAX, PANEL_MIN, Panes, SIDEBAR_MAX};
 
     #[test]
     fn nothing_remembered_is_the_sidebar_open_and_the_panel_closed() {

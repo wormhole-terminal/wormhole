@@ -1,5 +1,5 @@
 //! The wormhole intro: an effect over the whole screen around a window the first time Wormhole
-//! opens, and again from About. The styles and their timing are `wormhole_core::intro`; the overlay
+//! opens, and again from About. The styles and their timing are `wormhole_core::onboarding::intro`; the overlay
 //! window and the shader are the platform's (`platform::intro`). One plays at a time: a new one
 //! replaces the one playing.
 
@@ -8,8 +8,8 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
-use wormhole_core::intro::Style;
-use wormhole_core::intro::{Handover, Start, WindowMotion, page};
+use wormhole_core::onboarding::intro::Style;
+use wormhole_core::onboarding::intro::{Handover, Start, WindowMotion, page};
 
 use crate::platform::intro::{Frame, Overlay, Setup};
 
@@ -192,7 +192,7 @@ pub(crate) mod devctl {
 
     use anyhow::{Context as _, Result};
     use gpui_kit::{App, Window};
-    use wormhole_core::intro::Style;
+    use wormhole_core::onboarding::intro::Style;
 
     use crate::platform::intro::pictures;
 
@@ -226,7 +226,7 @@ pub(crate) mod devctl {
     /// the ship on its way in, docked, at the touchdown, and dissolving into what is under it.
     pub(crate) fn dock_frames(
         window: &Window,
-        landing: wormhole_core::intro::voyage::Landing,
+        landing: wormhole_core::onboarding::intro::voyage::Landing,
         dir: &Path,
         name: &str,
         cx: &mut App,

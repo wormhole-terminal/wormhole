@@ -8,7 +8,7 @@
 use std::time::{Duration, Instant};
 
 use wormhole_core::notify::{self, Source};
-use wormhole_core::sidebar::names::command_name;
+use wormhole_core::view::sidebar::names::command_name;
 
 use super::TerminalView;
 

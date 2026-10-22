@@ -22,12 +22,12 @@ use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::focus::Walkable;
 use crate::workspace::panel_list::Rows;
-use wormhole_core::focus::list::Item;
 use wormhole_core::git::discover::{self, Absent, Sighting};
 use wormhole_core::git::{self, FileChange, GitError, RepoStatus};
-use wormhole_core::limits::count_grouped;
-use wormhole_core::panel as rules;
-use wormhole_core::spoken;
+use wormhole_core::view::focus::list::Item;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::panel as rules;
+use wormhole_core::view::spoken;
 
 mod rows;
 
@@ -62,7 +62,7 @@ pub struct GitState {
     /// The branch list the open picker waits for (see `picker.rs`).
     pub(super) branches: Job<(Picker, PathBuf)>,
     /// Sections the user folded (`true`) or unfolded; the others follow the size rule
-    /// (`wormhole_core::panel::section_folded`).
+    /// (`wormhole_core::view::panel::section_folded`).
     folds: HashMap<Group, bool>,
     list: ChangesList,
 }

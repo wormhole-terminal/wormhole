@@ -46,7 +46,7 @@ impl Palette {
     }
 
     /// Take the colors the terminal draws that are design tokens (find's matches) from `tokens`.
-    pub fn with_tokens(mut self, tokens: &wormhole_core::tokens::ThemeTokens) -> Self {
+    pub fn with_tokens(mut self, tokens: &wormhole_core::theme::tokens::ThemeTokens) -> Self {
         let token = |name| crate::theme_bridge::token(tokens, name);
         self.find_match = token("find.match");
         self.find_current = token("find.match.current");
@@ -182,7 +182,7 @@ mod tests {
     use gpui_kit::{Hsla, rgb};
     use wormhole_core::terminal::types::{Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
     use wormhole_core::theme;
-    use wormhole_core::tokens::Color as TokenColor;
+    use wormhole_core::theme::tokens::Color as TokenColor;
 
     use super::{Palette, to_rgb};
 

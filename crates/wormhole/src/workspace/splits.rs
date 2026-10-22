@@ -9,11 +9,11 @@
 //! pane is a new session. Drawing a split is `panes.rs`.
 
 use gpui_kit::*;
-use wormhole_core::panes::{
+use wormhole_core::storage::store::{SessionRecord, SplitRecord};
+use wormhole_core::view::panes::{
     Axis, DropError, Leave, PANE_MIN_H, PANE_MIN_W, PaneId, Preset, Room, TabPanes, Zone,
 };
-use wormhole_core::sidebar::SplitId;
-use wormhole_core::store::{SessionRecord, SplitRecord};
+use wormhole_core::view::sidebar::SplitId;
 
 use super::{Workspace, notifications};
 use crate::style;

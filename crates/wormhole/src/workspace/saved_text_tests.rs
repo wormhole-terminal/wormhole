@@ -2,7 +2,7 @@
 //! it stays in the profile's store (see `view_tests` for how each test runs in a child process with
 //! scratch data; the store's key is the development build's key file there, never the Keychain).
 use gpui_kit::TestAppContext;
-use wormhole_core::store::Store;
+use wormhole_core::storage::store::Store;
 
 use super::app::OpenWindow;
 use super::app::{app, app_mut};

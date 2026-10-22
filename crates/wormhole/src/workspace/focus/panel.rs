@@ -8,15 +8,15 @@
 //! walks them.
 
 use gpui_kit::*;
-use wormhole_core::focus::Area;
-use wormhole_core::focus::list::{Item, Move, band_folds, walk};
+use wormhole_core::view::focus::Area;
+use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
 use super::{activation, list_key};
 use crate::settings::UiColors;
 use crate::workspace::{RightTab, Workspace};
 
 /// How an item is pressed: ↩ or Space.
-pub(in crate::workspace) use wormhole_core::focus::list::Press as Activate;
+pub(in crate::workspace) use wormhole_core::view::focus::list::Press as Activate;
 
 /// One row of a panel list as the keys walk it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

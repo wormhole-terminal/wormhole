@@ -9,8 +9,8 @@ use super::keys::Key;
 use super::model::{Effect, End, Welcome};
 use crate::agents::AgentId;
 use crate::config::NotifySound;
-use crate::intro::Handover;
 use crate::ipc::control::{PermissionFact, WelcomeOp};
+use crate::onboarding::intro::Handover;
 
 const NOW: Duration = Duration::ZERO;
 

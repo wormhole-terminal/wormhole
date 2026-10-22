@@ -20,9 +20,9 @@ use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::*;
-use wormhole_core::fonts::FontSlot;
-use wormhole_core::settings_index::{self, Query};
-use wormhole_core::sidebar::Density;
+use wormhole_core::config::settings_index::{self, Query};
+use wormhole_core::theme::fonts::FontSlot;
+use wormhole_core::view::sidebar::Density;
 
 use super::app::{AppState, app, app_mut};
 use super::aux_window;
@@ -36,7 +36,7 @@ use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
 
 pub(crate) use sections::open_new_profile_sheet;
-pub(crate) use wormhole_core::settings_index::SectionId as Section;
+pub(crate) use wormhole_core::config::settings_index::SectionId as Section;
 
 /// Where a page's title row starts: under the traffic lights, which the nav runs beneath like
 /// System Settings.
@@ -750,7 +750,7 @@ pub(crate) fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
 // GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
 // test that clicks this needs a stand-in first.
 fn open_folder(dir: &Path, cx: &App) {
-    match wormhole_core::fsutil::create_dir_all_private(dir) {
+    match wormhole_core::storage::fsutil::create_dir_all_private(dir) {
         Ok(()) => cx.open_with_system(dir),
         Err(err) => tracing::warn!("opening {}: {err}", dir.display()),
     }

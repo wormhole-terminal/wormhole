@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::model::{Appearance, Metrics};
-use crate::jsonc;
+use crate::storage::jsonc;
 
 /// Terminal overrides. Keys: `foreground`, `background`, `cursor`,
 /// `cursor_text`, `selection_background`, `selection_foreground`, and `ansi`
@@ -463,8 +463,8 @@ pub fn parse_theme_file(text: &str) -> Result<ThemeFile, String> {
 #[cfg(test)]
 mod tests {
     use super::{MetricsFile, SyntaxOverride, parse_theme_file};
-    use crate::tokens::test_support::{no_lookup, resolve_str};
-    use crate::tokens::{Appearance, METRIC_TOKENS, Metrics, resolve};
+    use crate::theme::tokens::test_support::{no_lookup, resolve_str};
+    use crate::theme::tokens::{Appearance, METRIC_TOKENS, Metrics, resolve};
 
     const EXAMPLE: &str = r##"{
       "name": "My Night",

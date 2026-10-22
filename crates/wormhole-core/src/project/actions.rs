@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use super::trust::TrustLine;
 use super::{ProjectWarning, check_relative};
-use crate::keymap;
-use crate::keyspec::KeySpec;
+use crate::keys::keymap;
+use crate::keys::keyspec::KeySpec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Action {
@@ -16,7 +16,7 @@ pub struct Action {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    /// Key binding, e.g. `"cmd-shift-r"` (see [`crate::keyspec`]); checked at load.
+    /// Key binding, e.g. `"cmd-shift-r"` (see [`crate::keys::keyspec`]); checked at load.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
     #[serde(flatten)]

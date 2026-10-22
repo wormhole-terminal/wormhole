@@ -20,8 +20,8 @@ use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::panel_list::{CardPart, Rows};
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
-use wormhole_core::limits::count_grouped;
-use wormhole_core::panel::age;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::panel::age;
 
 /// What a history refresh is for: the folder, and the branch whose log is shown.
 type HistoryKey = (PathBuf, Option<String>);
@@ -554,7 +554,7 @@ const PRESENT_CHECKED: usize = 2000;
 /// commit deleted, or one removed since, is not).
 fn present_files(root: &Path, files: &[FileChange]) -> HashSet<String> {
     (files.iter().take(PRESENT_CHECKED))
-        .filter(|file| wormhole_core::fsutil::resolve_within(root, &file.path).is_ok())
+        .filter(|file| wormhole_core::storage::fsutil::resolve_within(root, &file.path).is_ok())
         .map(|file| file.path.clone())
         .collect()
 }

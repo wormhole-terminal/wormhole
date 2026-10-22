@@ -62,8 +62,8 @@ pub(super) fn new_group(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `folder-color [path] <name|#rrggbb|none>`: colour the folder (the active terminal's without a path;
 /// `~/` is the home folder) or take its colour away, as the band's menu does. Prints which.
 pub(super) fn folder_color(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::folder_color::FolderColor;
     use wormhole_core::project::ProjectColorChoice;
+    use wormhole_core::theme::folder_color::FolderColor;
     let (path, name) = match arg.trim().rsplit_once(char::is_whitespace) {
         Some((path, name)) => (Some(path.trim()), name),
         None => (None, arg.trim()),

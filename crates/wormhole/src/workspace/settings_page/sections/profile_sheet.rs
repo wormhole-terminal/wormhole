@@ -6,9 +6,9 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::*;
-use wormhole_core::paths::ProfileId;
-use wormhole_core::profile::{NewProfile, StartFrom, first_letter};
-use wormhole_core::settings_index::SectionId as Section;
+use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
+use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::SettingsStore;
 use crate::style::{self, TextRole};

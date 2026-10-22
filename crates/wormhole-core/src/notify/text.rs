@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use super::{Kind, State};
-use crate::sidebar::text::{ago, clock, took};
+use crate::view::sidebar::text::{ago, clock, took};
 
 /// The facts a notification is written from.
 #[derive(Clone, Copy, Debug, Default)]

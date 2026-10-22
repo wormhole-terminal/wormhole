@@ -10,9 +10,9 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
+use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
-use wormhole_core::settings_index::SectionId as Section;
 
 use super::reveal;
 use crate::select;

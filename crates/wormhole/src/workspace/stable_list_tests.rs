@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use gpui_kit::TestAppContext;
-use wormhole_core::panes::Axis;
+use wormhole_core::view::panes::Axis;
 
 use super::app::OpenWindow;
 use super::view_tests::{drive, read, start, use_stable};

@@ -1,6 +1,6 @@
 // --- Voyage --------------------------------------------------------------------------------------
 
-// The wormhole run with a ship flown through it (`wormhole_core::intro::voyage`): the `>` of the
+// The wormhole run with a ship flown through it (`wormhole_core::onboarding::intro::voyage`): the `>` of the
 // app icon's `>_`, turned to point up as a `^`, big in front of the camera. It rises into the
 // funnel, takes the jump, swoops across the window when the portal opens and docks on the logo, where
 // the icon's own chevron is; the tentacles bloom from there. Core flies the ship (`u.ship`, `u.ship_fx`

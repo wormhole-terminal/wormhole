@@ -12,16 +12,16 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use gpui_kit::*;
+use wormhole_core::config::profile::{NewProfile, ProfileList};
 use wormhole_core::git::worktree;
 use wormhole_core::git::worktree::Worktrees;
-use wormhole_core::layout::REMEMBERED_PANES_KEY;
-use wormhole_core::layout::RememberedPanes;
 use wormhole_core::onboarding::DISMISSED_TIPS_KEY;
 use wormhole_core::onboarding::DismissedTips;
-use wormhole_core::paths::{DataRoot, ProfileId, ProfilePaths};
-use wormhole_core::profile::{NewProfile, ProfileList};
-use wormhole_core::store::Store;
-use wormhole_core::store::{SessionRecord, WindowRecord};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
+use wormhole_core::storage::store::Store;
+use wormhole_core::storage::store::{SessionRecord, WindowRecord};
+use wormhole_core::view::layout::REMEMBERED_PANES_KEY;
+use wormhole_core::view::layout::RememberedPanes;
 
 use super::app::{AppState, OpenWindow};
 use super::app::{app, app_mut};
@@ -268,7 +268,7 @@ pub(super) struct ProfileData {
     pub tips: DismissedTips,
     pub hub: project::ProjectHub,
     pub recent: Vec<PathBuf>,
-    pub usage: Vec<wormhole_core::usage::Usage>,
+    pub usage: Vec<wormhole_core::agents::usage::Usage>,
     pub worktrees: Worktrees,
     pub last_panes: RememberedPanes,
 }
@@ -280,8 +280,8 @@ impl ProfileData {
             Store::open_for(paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
         let meta = |key: &str| store.as_ref().and_then(|s| s.meta(key).ok().flatten());
         let tips = DismissedTips::parse(meta(DISMISSED_TIPS_KEY).as_deref());
-        let usage = meta(wormhole_core::usage::STORE_KEY)
-            .map(|json| wormhole_core::usage::from_json(&json))
+        let usage = meta(wormhole_core::agents::usage::STORE_KEY)
+            .map(|json| wormhole_core::agents::usage::from_json(&json))
             .unwrap_or_default();
         // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
         let mut worktrees =
@@ -442,8 +442,8 @@ pub(super) fn first_free_ids(root: &DataRoot, list: &ProfileList, live: Option<&
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::profile::{NewProfile, StartFrom};
-    use wormhole_core::store::{SessionRecord, WindowRecord};
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
+    use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
     use super::{DataRoot, ProfileList, Store, first_free_ids};
 

@@ -32,8 +32,9 @@ impl Do {
         match self {
             Do::NewTerminal { cwd } => {
                 let home = std::env::var_os("HOME").map(PathBuf::from);
-                cwd.as_deref()
-                    .map(|cwd| format!("in {}", wormhole_core::sidebar::display_path(cwd, home.as_deref())))
+                cwd.as_deref().map(|cwd| {
+                    format!("in {}", wormhole_core::view::sidebar::display_path(cwd, home.as_deref()))
+                })
             }
             Do::OpenFolder => None,
             Do::Action(action) => Some(format!("action · {}", action.project)),

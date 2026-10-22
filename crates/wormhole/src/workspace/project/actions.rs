@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use gpui_kit::*;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
-use wormhole_core::store::SessionRecord;
+use wormhole_core::storage::store::SessionRecord;
 
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
@@ -223,7 +223,7 @@ fn key_matches(spec: &KeySpec, keystroke: &Keystroke) -> bool {
 mod tests {
     use super::key_matches;
     use gpui_kit::Keystroke;
-    use wormhole_core::keyspec::KeySpec;
+    use wormhole_core::keys::keyspec::KeySpec;
 
     fn spec(text: &str) -> KeySpec {
         text.parse().expect("valid spec")

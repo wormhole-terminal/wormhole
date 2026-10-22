@@ -27,8 +27,8 @@ use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::{SliderEvent, SliderState};
 use gpui_kit::*;
-use wormhole_core::keyspec::KeySpec;
-use wormhole_core::tokens::{Color, ThemeFile, ThemeTokens};
+use wormhole_core::keys::keyspec::KeySpec;
+use wormhole_core::theme::tokens::{Color, ThemeFile, ThemeTokens};
 
 use super::app::{AppState, app, app_mut};
 use super::aux_window;
@@ -141,7 +141,7 @@ fn closing(dirty: bool, asking: bool, quitting: bool) -> Closing {
 /// The save `key` runs, read from the key table's Theme Studio rows (⌘S Save theme, ⇧⌘S Save
 /// Copy), which the shortcut sheet lists from the same place.
 fn save_key(key: &KeySpec) -> Option<SaveAction> {
-    use wormhole_core::keymap::{ActionId, studio_action};
+    use wormhole_core::keys::keymap::{ActionId, studio_action};
     match studio_action(key)? {
         ActionId::SaveTheme => Some(SaveAction::Save),
         ActionId::SaveThemeCopy => Some(SaveAction::SaveCopy),

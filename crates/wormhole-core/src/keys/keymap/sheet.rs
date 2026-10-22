@@ -5,7 +5,7 @@
 use std::ops;
 
 use super::{ActionId, Stage, entry};
-use crate::keyspec::KeySpec;
+use crate::keys::keyspec::KeySpec;
 
 /// How a row's keys are written.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

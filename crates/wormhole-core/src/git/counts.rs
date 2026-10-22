@@ -13,7 +13,7 @@ use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
 use super::{ChangeKind, FileChange, MAX_TEXT_BYTES};
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 /// A file modified more recently than this is counted again next time even if it looks the
 /// same: a writer may be in the middle of it, and two writes within one timestamp tick and of

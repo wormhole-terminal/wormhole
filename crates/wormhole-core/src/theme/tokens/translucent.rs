@@ -12,7 +12,7 @@
 use super::model::Appearance;
 use super::resolve::READABLE_MARGIN;
 use super::theme_tokens::ThemeTokens;
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 /// At or above this opacity a window counts as opaque, as the blur does.
 pub const OPAQUE: f32 = 0.999;
@@ -165,8 +165,8 @@ fn toward(color: Color, bg: Color, ratio: f32, way: Way) -> Color {
 mod tests {
     use super::{MATERIAL_DARK, MATERIAL_LIGHT, Translucency};
     use crate::theme;
-    use crate::tokens::test_support::{builtin, hex};
-    use crate::tokens::{Appearance, Color, builtin_tokens, builtins, derive};
+    use crate::theme::tokens::test_support::{builtin, hex};
+    use crate::theme::tokens::{Appearance, Color, builtin_tokens, builtins, derive};
 
     /// Equal within one step per 8-bit channel: the expected values were computed in another tool.
     fn near(got: Color, want: &str, what: &str) {

@@ -112,7 +112,7 @@ fn to_key(bytes: &[u8], what: &str) -> Result<Key> {
 
 /// The real data folder (the one without `WORMHOLE_DATA_DIR`).
 fn real_data_dir() -> Option<PathBuf> {
-    dirs::data_dir().map(|base| base.join(crate::paths::data_dir_name()))
+    dirs::data_dir().map(|base| base.join(crate::storage::paths::data_dir_name()))
 }
 
 /// Whether `dir` is the real data folder or inside it.
@@ -129,12 +129,16 @@ pub(super) fn dev_key_file(dir: &Path) -> Result<Key> {
         bail!("a development build keeps no terminal text in the real data folder (set WORMHOLE_DATA_DIR)");
     }
     let path = dir.join(DEV_KEY_FILE);
-    match crate::fsutil::read_capped(&path, 64, crate::fsutil::LinkPolicy::Follow) {
+    match crate::storage::fsutil::read_capped(&path, 64, crate::storage::fsutil::LinkPolicy::Follow) {
         Ok(found) => to_key(zeroize::Zeroizing::new(found).as_slice(), &path.display().to_string()),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
             let key = new_key()?;
-            crate::fsutil::write_atomic(&path, key.as_ref(), crate::fsutil::LinkPolicy::Follow)
-                .with_context(|| format!("writing {}", path.display()))?;
+            crate::storage::fsutil::write_atomic(
+                &path,
+                key.as_ref(),
+                crate::storage::fsutil::LinkPolicy::Follow,
+            )
+            .with_context(|| format!("writing {}", path.display()))?;
             Ok(key)
         }
         Err(err) => Err(err).with_context(|| format!("reading {}", path.display())),

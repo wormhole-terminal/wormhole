@@ -2,7 +2,7 @@
 //! (RF-10, RF-40): one place for the numbers, so a row, a group's head and the settings preview
 //! draw the same.
 
-use wormhole_core::sidebar::Density;
+use wormhole_core::view::sidebar::Density;
 
 use super::scale::{TILE, TILE_DENSE_FOLD, TILE_MINI, TILE_SMALL};
 
@@ -118,7 +118,7 @@ impl Default for Metrics {
 #[cfg(test)]
 mod tests {
     use super::Metrics;
-    use wormhole_core::sidebar::Density;
+    use wormhole_core::view::sidebar::Density;
 
     #[test]
     fn rows_and_cards_are_what_the_board_measures() {

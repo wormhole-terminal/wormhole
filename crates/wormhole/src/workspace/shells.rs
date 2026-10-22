@@ -4,7 +4,7 @@
 //! palette's "New terminal: fish" entries go through the same method.
 
 use gpui_kit::*;
-use wormhole_core::shells::{self, ShellChoice};
+use wormhole_core::terminal::shells::{self, ShellChoice};
 
 use super::Workspace;
 use crate::platform::{self, Item, Menu};
@@ -71,7 +71,7 @@ fn shell_menu(choices: &[ShellChoice], default: &str, workspace: &WeakEntity<Wor
 mod tests {
     use super::shell_menu;
     use gpui_kit::WeakEntity;
-    use wormhole_core::shells::{ShellChoice, ShellKind};
+    use wormhole_core::terminal::shells::{ShellChoice, ShellKind};
 
     fn choice(key: &str, name: &str) -> ShellChoice {
         ShellChoice { key: key.into(), name: name.into(), command_line: name.into(), kind: ShellKind::System }

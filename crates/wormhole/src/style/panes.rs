@@ -4,7 +4,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::panes::{Axis, Zone};
+use wormhole_core::view::panes::{Axis, Zone};
 
 use super::buttons::icon;
 use super::scale::{

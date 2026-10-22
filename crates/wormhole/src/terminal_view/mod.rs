@@ -9,7 +9,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::terminal::types::Modes;
 
-use wormhole_core::paths::ProfileId;
+use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::store_in;
 use wormhole_core::agents::{AgentId, Foreground};
@@ -53,9 +53,9 @@ actions!(
 const PADDING_X: f32 = crate::style::TERMINAL_PAD;
 const PADDING_Y: f32 = crate::style::TERMINAL_PAD;
 /// Narrowest the terminal column may get (padding included); the layout rules in core own it.
-pub const MIN_WIDTH: f32 = wormhole_core::layout::TERMINAL_MIN;
+pub const MIN_WIDTH: f32 = wormhole_core::view::layout::TERMINAL_MIN;
 /// The font sizes a terminal draws at: what Settings allows, the window's ⌘+ / ⌘- included.
-pub use wormhole_core::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
+pub use wormhole_core::theme::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
 /// Geometry of the last painted frame, shared with mouse handlers.
 #[derive(Clone, Copy, Default)]
 struct Layout {
@@ -204,7 +204,7 @@ pub struct TerminalView {
     scrollbar: render::ScrollbarState,
     /// The cell the start animation's ship docks on while the terminal welcome plays around this
     /// terminal: reported every frame, in window points, so a resize is followed (`set_dock`).
-    dock: Option<wormhole_core::welcome::DockCell>,
+    dock: Option<wormhole_core::onboarding::welcome::DockCell>,
     /// Find in scrollback.
     find: find::Find,
     /// Command blocks: the hovered one, and where ⌘↑ / ⌘↓ last landed.
@@ -462,7 +462,11 @@ impl TerminalView {
     /// The start animation's ship docks on this cell of the terminal's grid (the welcome program
     /// draws its mark there), or on none. The cell's place in the window is reported as the grid is
     /// laid out, so the ship follows a window that is resized or a font that changes.
-    pub fn set_dock(&mut self, dock: Option<wormhole_core::welcome::DockCell>, cx: &mut Context<Self>) {
+    pub fn set_dock(
+        &mut self,
+        dock: Option<wormhole_core::onboarding::welcome::DockCell>,
+        cx: &mut Context<Self>,
+    ) {
         if self.dock != dock {
             self.dock = dock;
             cx.notify();
@@ -471,7 +475,7 @@ impl TerminalView {
 
     /// Where the ship docks, from the last frame drawn (devctl's `welcome-dock` draws it there).
     #[cfg(feature = "devctl")]
-    pub fn dock_landing(&self) -> Option<wormhole_core::intro::voyage::Landing> {
+    pub fn dock_landing(&self) -> Option<wormhole_core::onboarding::intro::voyage::Landing> {
         let layout = self.layout.get();
         self.dock.map(|dock| render::dock_landing(layout.origin, layout.cell, dock))
     }

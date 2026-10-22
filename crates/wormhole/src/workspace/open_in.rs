@@ -12,8 +12,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use gpui_kit::*;
-use wormhole_core::open_file::Launch;
-use wormhole_core::open_in::{self, EDITORS, Installed, Resolved};
+use wormhole_core::platform::open_file::Launch;
+use wormhole_core::platform::open_in::{self, EDITORS, Installed, Resolved};
 
 use crate::platform::apps;
 use crate::settings::settings;

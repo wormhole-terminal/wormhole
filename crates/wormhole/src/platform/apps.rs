@@ -7,7 +7,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use wormhole_core::open_file::Launch;
+use wormhole_core::platform::open_file::Launch;
 
 use super::os::apps as os;
 use super::spawn::spawn_detached;

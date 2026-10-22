@@ -4,8 +4,8 @@
 //! or item the keys are on.
 
 use gpui_kit::*;
-use wormhole_core::focus::list::Key;
-use wormhole_core::focus::{Area, Stop};
+use wormhole_core::view::focus::list::Key;
+use wormhole_core::view::focus::{Area, Stop};
 
 use super::{activation, list_key};
 use crate::workspace::session::step_wrapping;

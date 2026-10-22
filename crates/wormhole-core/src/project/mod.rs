@@ -22,7 +22,7 @@ use std::path::{Component, Path, PathBuf};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 pub use actions::{Action, ActionKind, ChainStep, Target};
 pub use color::{ProjectColor, ProjectColorChoice, TINT_PEAK, TINT_STOPS};
@@ -501,7 +501,7 @@ fn read_state_file(path: &Path) -> Result<Option<String>, ProjectError> {
 
 fn parse_json<T: DeserializeOwned>(path: &Path, text: &str) -> Result<T, ProjectError> {
     // If stripping fails (e.g. an unterminated comment), serde reports the error in the raw text.
-    let stripped = crate::jsonc::strip(text).unwrap_or_else(|_| text.to_string());
+    let stripped = crate::storage::jsonc::strip(text).unwrap_or_else(|_| text.to_string());
     serde_json::from_str(&stripped).map_err(|e| ProjectError::from_json(path, e))
 }
 
@@ -517,7 +517,7 @@ fn set_aside(path: &Path) {
     }
 }
 
-/// Replace `path` atomically (see [`crate::fsutil::write_atomic`]: a uniquely named temp file, so
+/// Replace `path` atomically (see [`crate::storage::fsutil::write_atomic`]: a uniquely named temp file, so
 /// nothing planted in a repository can redirect the write).
 fn write_atomic(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>) -> Result<(), ProjectError> {
     fsutil::write_atomic(path, bytes, policy).map_err(|e| ProjectError::io(path, e))

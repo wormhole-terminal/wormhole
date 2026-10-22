@@ -13,8 +13,8 @@ use super::color::{KEY, LOCK_KEY};
 use super::{
     CONFIG_FILE, LinkPolicy, MAX_JSON_BYTES, ProjectColorChoice, ProjectError, ProjectFolder, write_atomic,
 };
-use crate::folder_color::FolderColor;
-use crate::jsonc;
+use crate::storage::jsonc;
+use crate::theme::folder_color::FolderColor;
 
 impl ProjectFolder {
     /// Write `"project_color": "<name>"` into `config.json`, or (`None`) take the key out, and
@@ -61,8 +61,8 @@ mod tests {
 
     use super::super::tests::project;
     use super::super::{CONFIG_FILE, ProjectColorChoice, ProjectFolder, init};
-    use crate::folder_color::FolderColor;
-    use crate::fsutil::FileStamp;
+    use crate::storage::fsutil::FileStamp;
+    use crate::theme::folder_color::FolderColor;
 
     fn config_of(project: &ProjectFolder) -> String {
         fs::read_to_string(project.path(CONFIG_FILE)).expect("config.json")

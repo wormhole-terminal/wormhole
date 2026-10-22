@@ -244,7 +244,7 @@ fn hand_over(shell: &[String]) -> i32 {
     let Some((program, args)) = shell.split_first() else { return 1 };
     let err = start(program, args);
     let _ = writeln!(io::stderr(), "Wormhole: couldn't start {program}: {err}");
-    let fallback = crate::shells::login_shell();
+    let fallback = crate::terminal::shells::login_shell();
     let err = start(&fallback, &["-l".to_string()]);
     let _ = writeln!(io::stderr(), "Wormhole: couldn't start {fallback}: {err}");
     1

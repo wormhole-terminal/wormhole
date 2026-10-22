@@ -2,7 +2,7 @@
 //! commit's files, ↩ / Space on a file opening its diff with the list keeping the keyboard.
 
 use gpui_kit::*;
-use wormhole_core::focus::list::Item;
+use wormhole_core::view::focus::list::Item;
 
 use super::HistoryRow;
 use crate::workspace::Workspace;

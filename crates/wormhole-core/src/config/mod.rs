@@ -28,11 +28,11 @@ pub use self::settings::{
 };
 use self::theme::{ThemeStamp, default_tokens, resolve_theme};
 pub use self::theme::{resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in};
-use crate::fsutil::{self, LinkPolicy};
-use crate::jsonc;
-use crate::paths::{DataRoot, ProfilePaths};
-use crate::text::did_you_mean;
-use crate::tokens::{Appearance, ThemeTokens};
+use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::jsonc;
+use crate::storage::jsonc::suggest::did_you_mean;
+use crate::storage::paths::{DataRoot, ProfilePaths};
+use crate::theme::tokens::{Appearance, ThemeTokens};
 
 /// Largest `config.json` read; real ones are about 1 KiB.
 const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
@@ -296,7 +296,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{Config, Settings, ThemeMode};
-    use crate::tokens::Appearance;
+    use crate::theme::tokens::Appearance;
 
     /// A temp dir with `config.json` holding `text`.
     fn config_file(text: &str) -> (tempfile::TempDir, PathBuf) {
@@ -428,7 +428,7 @@ mod tests {
         let path = dir.path().join("sub").join("config.json");
         let config = Config::load_from(path.clone(), themes_dir(&path));
         assert_eq!(config.settings, Settings::default());
-        let saved: Settings = crate::jsonc::parse(&read(&path)).expect("parses");
+        let saved: Settings = crate::storage::jsonc::parse(&read(&path)).expect("parses");
         assert_eq!(saved, Settings::default());
     }
 
@@ -455,10 +455,10 @@ mod tests {
         let mine = themes.join("mine.json");
         std::fs::write(&mine, r##"{"name": "Mine", "extends": "Nord", "ui": {"primary": "#ff0000"}}"##)
             .expect("write theme");
-        let _ = crate::tokens::builtins();
+        let _ = crate::theme::tokens::builtins();
         let mut config = Config::load_from(path.clone(), themes.clone());
         assert_eq!(config.tokens.name, "Mine");
-        let builds = crate::tokens::builds_on_this_thread;
+        let builds = crate::theme::tokens::builds_on_this_thread;
         let before = builds();
         config.update(|s| s.diff_wrap = true);
         config.update(|s| s.font_size = 15.0);

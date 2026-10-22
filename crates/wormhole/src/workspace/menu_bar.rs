@@ -6,10 +6,10 @@ use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::config::HotkeyAction;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
-use wormhole_core::store::Store;
+use wormhole_core::storage::store::Store;
 
 use super::app::{AppState, app, app_mut, open_tab};
 use super::{Workspace, actions, settings_page, updates};

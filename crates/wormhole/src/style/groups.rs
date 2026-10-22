@@ -11,7 +11,7 @@ use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::sidebar::Density;
+use wormhole_core::view::sidebar::Density;
 
 use super::buttons::{icon_button, row_actions};
 use super::controls::disclosure;

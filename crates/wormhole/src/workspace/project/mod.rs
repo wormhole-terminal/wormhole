@@ -25,13 +25,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gpui_kit::*;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{
     Action, Feature, NotesBaseStore, NotesFile, ProjectFolder, ProjectPrefs, ProjectSnapshot, TrustRequest,
     TrustStatus, TrustStore,
 };
-use wormhole_core::shells::ShellCommand;
 use wormhole_core::terminal::SpawnOptions;
+use wormhole_core::terminal::shells::ShellCommand;
 
 use super::app::{AppState, app, app_mut};
 use crate::settings::settings;
@@ -47,7 +47,7 @@ pub(crate) use trust_window::open_trust_window;
 /// already cleared the window's projects: a settings change doesn't run that refresh, so for up to
 /// a tick after the flag goes off the old projects are still there.
 pub(crate) fn project_folders_on(cx: &App) -> bool {
-    settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::ProjectFolders)
+    settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::ProjectFolders)
 }
 
 pub(crate) struct ProjectHub {
@@ -89,7 +89,7 @@ pub(crate) struct LoadedProject {
 impl ProjectHub {
     #[cfg(test)]
     pub fn load() -> Self {
-        Self::load_from(&wormhole_core::paths::data_dir())
+        Self::load_from(&wormhole_core::storage::paths::data_dir())
     }
 
     pub(crate) fn load_from(dir: &Path) -> Self {

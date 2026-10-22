@@ -1,9 +1,9 @@
 //! The three font settings by slot (terminal, interface, code), and the fonts they come to with a
-//! theme's metrics. What a slot is, its size range and the bundled font are `crate::fonts`; the
+//! theme's metrics. What a slot is, its size range and the bundled font are `crate::theme::fonts`; the
 //! values chosen are settings, so reading and writing them is here.
 
-use crate::fonts::{DEFAULT_UI_FONT_SIZE, FontSlot, ResolvedFonts, SYSTEM_FONT};
-use crate::tokens::Metrics;
+use crate::theme::fonts::{DEFAULT_UI_FONT_SIZE, FontSlot, ResolvedFonts, SYSTEM_FONT};
+use crate::theme::tokens::Metrics;
 
 use super::Settings;
 
@@ -69,8 +69,8 @@ impl Settings {
 
 #[cfg(test)]
 mod tests {
-    use crate::fonts::{FontSlot, SYSTEM_FONT, bundled};
-    use crate::tokens::Metrics;
+    use crate::theme::fonts::{FontSlot, SYSTEM_FONT, bundled};
+    use crate::theme::tokens::Metrics;
 
     use super::Settings;
 

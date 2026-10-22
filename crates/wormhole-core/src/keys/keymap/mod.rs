@@ -20,7 +20,7 @@ mod tests;
 use std::fmt;
 use std::sync::LazyLock;
 
-use crate::keyspec::{KeyMods, KeySpec};
+use crate::keys::keyspec::{KeyMods, KeySpec};
 
 /// Everything the app can be asked to do by a key or a menu.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

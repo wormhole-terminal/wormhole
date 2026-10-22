@@ -65,7 +65,7 @@ pub fn speed(seconds: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::intro::{Start, Style, travel, window_motion as motion, window_motion_from};
+    use crate::onboarding::intro::{Start, Style, travel, window_motion as motion, window_motion_from};
 
     fn t(seconds: f32) -> f32 {
         seconds / SECONDS

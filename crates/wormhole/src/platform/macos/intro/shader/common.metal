@@ -1,4 +1,4 @@
-// The wormhole intro (wormhole_core::intro): one full-screen triangle over an overlay that covers
+// The wormhole intro (wormhole_core::onboarding::intro): one full-screen triangle over an overlay that covers
 // the whole screen, and a fragment shader per style, each in its own file. The screen sinks into
 // deep space, a procedural starfield bends around the wormhole the way gravitational lensing bends
 // it, and space lets go of the window again. Everything is in points, centred on the window; the
@@ -7,7 +7,7 @@
 //
 // Compiled at run time by `platform::macos::intro`, which joins the files in the order each needs the one
 // before (Metal has no #include for a library built from source) behind the moments core owns
-// (`wormhole_core::intro::shader_constants`: FTL_* and WORMHOLE_*).
+// (`wormhole_core::onboarding::intro::shader_constants`: FTL_* and WORMHOLE_*).
 
 #include <metal_stdlib>
 using namespace metal;

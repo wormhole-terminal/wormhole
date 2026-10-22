@@ -15,7 +15,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 /// Where the log files are (Help → Show Logs in Finder opens it).
 pub fn dir() -> std::path::PathBuf {
-    wormhole_core::paths::data_dir().join("logs")
+    wormhole_core::storage::paths::data_dir().join("logs")
 }
 
 /// Install the global subscriber. Keep the guard alive for the whole run so
@@ -27,7 +27,7 @@ pub fn init() -> Option<WorkerGuard> {
     let dir = dir();
     // The appender prunes old files on start and complains if the folder is missing. Owner-only:
     // the appender makes its files with the umask's mode, so the folder is what keeps them private.
-    if wormhole_core::fsutil::ensure_private_dir(&dir).is_err() {
+    if wormhole_core::storage::fsutil::ensure_private_dir(&dir).is_err() {
         let _ = std::fs::create_dir_all(&dir);
     }
     let appender = Builder::new()
@@ -67,10 +67,10 @@ pub fn install_panic_hook() {
         tracing::error!("{report}");
         let path = dir().join(LAST_PANIC);
         // Nothing to do if this fails: the default hook below still prints it.
-        let _ = wormhole_core::fsutil::write_atomic(
+        let _ = wormhole_core::storage::fsutil::write_atomic(
             &path,
             report.as_bytes(),
-            wormhole_core::fsutil::LinkPolicy::Follow,
+            wormhole_core::storage::fsutil::LinkPolicy::Follow,
         );
         default(info);
     }));

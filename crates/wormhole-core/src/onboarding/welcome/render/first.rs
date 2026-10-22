@@ -8,8 +8,8 @@ use super::{
     ACCENT, BACK, DIM, ESC_SKIP, Hint, MARK, Page, ROW_EVERY, TAGLINE, TITLE, TYPE_NAME, TYPE_TEXT, UP_DOWN,
     VALUE_AT, window_start,
 };
-use crate::intro::Handover;
-use crate::keymap::{self, ActionId};
+use crate::keys::keymap::{self, ActionId};
+use crate::onboarding::intro::Handover;
 
 impl Page {
     /// The mark, the name and what it is, then the sidebar's three lines and the way on.

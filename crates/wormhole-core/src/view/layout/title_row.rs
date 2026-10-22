@@ -5,7 +5,7 @@
 //! its right end. Nothing here measures text: the app measures with GPUI's text system and hands
 //! the widths in (or a `measure` callback), so the rules are testable without fonts.
 
-use crate::elide;
+use crate::view::elide;
 
 /// Which text of the path is being measured: the folders before the last one (regular weight) or
 /// the last folder, which is the one that says where the terminal is (medium).

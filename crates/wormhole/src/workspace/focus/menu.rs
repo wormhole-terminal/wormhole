@@ -6,8 +6,8 @@
 //! terminal behind it.
 
 use gpui_kit::*;
-use wormhole_core::focus::Area;
-use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::view::focus::Area;
 
 use crate::style;
 use crate::workspace::Workspace;

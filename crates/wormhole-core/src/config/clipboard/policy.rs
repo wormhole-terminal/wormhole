@@ -40,7 +40,7 @@ impl ClipboardWrite {
 mod tests {
     use super::{ClipboardRead, ClipboardWrite};
     use crate::config::{APP_SETTINGS, PROJECT_SETTINGS, Settings};
-    use crate::jsonc;
+    use crate::storage::jsonc;
 
     #[test]
     fn reading_asks_and_writing_is_allowed_until_the_person_says_otherwise() {

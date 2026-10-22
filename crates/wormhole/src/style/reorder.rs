@@ -23,7 +23,7 @@ pub struct Reorder {
     /// Drawn on the item that follows the pointer.
     pub label: SharedString,
     /// Called on drop with the dragged item's index and the one it moves to (see
-    /// `wormhole_core::reorder::move_item`).
+    /// `wormhole_core::view::reorder::move_item`).
     pub on_move: MoveHandler,
     /// This item is the one being dragged ([`Reorder::dragging`]): it stays in its place,
     /// dimmed to `DRAG_LIFT_OPACITY`.
@@ -105,7 +105,7 @@ pub(super) fn draggable(
 /// where a dragged sibling would land.
 #[track_caller]
 fn drop_target(id: ElementId, ui: UiColors, reorder: Reorder) -> Stateful<Div> {
-    use wormhole_core::reorder::{DropEdge, drop_edge};
+    use wormhole_core::view::reorder::{DropEdge, drop_edge};
     let Reorder { list, ix, on_move, .. } = reorder;
     let over = list.clone();
     div()

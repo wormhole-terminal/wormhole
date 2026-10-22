@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use wormhole_core::tokens::{METRIC_TOKENS, ThemeTokens, Translucency, builtins};
+use wormhole_core::theme::tokens::{METRIC_TOKENS, ThemeTokens, Translucency, builtins};
 
 fn golden_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/tokens")

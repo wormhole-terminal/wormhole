@@ -91,7 +91,7 @@ fn setup_command(repo: &Path, cx: &mut App) -> Option<String> {
 
 /// A path with the home folder as `~`.
 fn shown(path: &Path) -> String {
-    wormhole_core::sidebar::display_path(path, session::home_dir())
+    wormhole_core::view::sidebar::display_path(path, session::home_dir())
 }
 
 /// `message` in a dialog of its own, with nothing to do but close it.

@@ -32,14 +32,22 @@ impl UpdateSchedule {
     /// `legacy`, the JSON a version before profiles kept in the database, when the file isn't there
     /// yet. A file that doesn't read starts a fresh schedule, which only checks again sooner.
     pub fn load_shared(path: &std::path::Path, legacy: impl FnOnce() -> Option<String>) -> Self {
-        let text =
-            crate::fsutil::read_to_string_capped(path, 64 * 1024, crate::fsutil::LinkPolicy::Follow).ok();
+        let text = crate::storage::fsutil::read_to_string_capped(
+            path,
+            64 * 1024,
+            crate::storage::fsutil::LinkPolicy::Follow,
+        )
+        .ok();
         text.or_else(legacy).and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
     }
 
     pub fn save_shared(&self, path: &std::path::Path) -> std::io::Result<()> {
         let json = serde_json::to_string(self).map_err(std::io::Error::other)?;
-        crate::fsutil::write_atomic(path, json.as_bytes(), crate::fsutil::LinkPolicy::Follow)
+        crate::storage::fsutil::write_atomic(
+            path,
+            json.as_bytes(),
+            crate::storage::fsutil::LinkPolicy::Follow,
+        )
     }
 
     /// Whether to check right after launch.

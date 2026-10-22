@@ -7,8 +7,8 @@
 use gpui_kit::{
     Bounds, Modifiers, MouseButton, Pixels, Point, TestAppContext, VisualTestContext, point, px, size,
 };
-use wormhole_core::panes::Zone;
-use wormhole_core::sidebar::Entry;
+use wormhole_core::view::panes::Zone;
+use wormhole_core::view::sidebar::Entry;
 
 use super::app::OpenWindow;
 use super::terminal_drag::{Over, PaneHover};

@@ -213,7 +213,7 @@ pub fn command_finished(command: &str, took: Duration, after_secs: u32, told: bo
     !told
         && !command.trim().is_empty()
         && took >= Duration::from_secs(after_secs.into())
-        && crate::sidebar::command::ends_by_itself(command)
+        && crate::view::sidebar::command::ends_by_itself(command)
 }
 
 /// Whether a command that ended with a non-zero exit code is worth a "failed" notice: the same
@@ -243,7 +243,7 @@ pub fn dock_badge(mode: DockBadge, needs_you: usize, done: usize) -> Option<Stri
         DockBadge::NeedsYou => needs_you,
         DockBadge::NeedsYouDone => needs_you + done,
     };
-    (n > 0).then(|| crate::limits::count_label(n))
+    (n > 0).then(|| crate::view::limits::count_label(n))
 }
 
 /// One informational bounce when a terminal starts needing you while Wormhole isn't the active

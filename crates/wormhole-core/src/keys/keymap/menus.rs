@@ -5,7 +5,7 @@
 //! would leave dangling.
 
 use super::{ActionId, Stage, entry};
-use crate::keyspec::KeySpec;
+use crate::keys::keyspec::KeySpec;
 
 /// What a menu item does.
 #[derive(Debug, Clone, PartialEq, Eq)]

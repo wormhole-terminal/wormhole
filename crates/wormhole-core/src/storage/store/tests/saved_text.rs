@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use super::erasure::on_disk;
 use super::migrations::empty_v6_database;
 use super::*;
-use crate::store::saved_text::platform::Platform;
+use crate::storage::store::saved_text::platform::Platform;
 use rusqlite::Connection;
 
 const MARKER: &str = "SECRET-MARKER-9";
@@ -115,8 +115,8 @@ fn the_file_and_its_journal_are_kept_out_of_backups() {
 fn the_real_file_carries_the_backup_exclusion() {
     let dir = temp_dir("saved-xattr");
     let _store = Store::open_at(&dir).expect("opens");
-    assert!(crate::store::saved_text::platform::is_excluded_from_backup(&dir.join("scrollback.db")));
-    assert!(!crate::store::saved_text::platform::is_excluded_from_backup(&dir.join("wormhole.db")));
+    assert!(crate::storage::store::saved_text::platform::is_excluded_from_backup(&dir.join("scrollback.db")));
+    assert!(!crate::storage::store::saved_text::platform::is_excluded_from_backup(&dir.join("wormhole.db")));
 }
 
 #[test]
@@ -277,7 +277,7 @@ fn the_key_is_kept_under_a_random_id_and_thrown_away_on_erase() {
 fn a_deleted_profiles_key_goes_with_it() {
     let base = tempfile::tempdir().expect("temp dir");
     let data = base.path().join("Wormhole");
-    let paths = crate::paths::DataRoot::new(&data).default_profile();
+    let paths = crate::storage::paths::DataRoot::new(&data).default_profile();
     layout_with_text(&mut Store::open_for(&paths).expect("opens"));
     assert!(data.join("scrollback-key.dev-only").is_file());
     Store::forget_text_key_for(&paths);

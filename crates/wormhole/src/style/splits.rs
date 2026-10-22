@@ -9,7 +9,7 @@ use gpui_kit::*;
 use super::buttons::icon;
 use crate::settings::UiColors;
 use gpui_kit::assets::IconName;
-use wormhole_core::sidebar::Bracket;
+use wormhole_core::view::sidebar::Bracket;
 
 /// The chain mark on a member of a split whose other members are elsewhere in the list (another
 /// folder's band between them), at the right of its first line.

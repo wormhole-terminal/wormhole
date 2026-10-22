@@ -225,9 +225,14 @@ fn every_installed_event_means_something() {
                 // This event carries usage only: it must not turn a finished terminal busy.
                 assert_eq!(signal(spec.agent, event), None);
                 let input = serde_json::json!({"llm_response":{"usageMetadata":{"totalTokenCount":42}}});
-                let usage =
-                    crate::usage::from_hook(spec.agent, event, &input, std::path::Path::new("/unused"), 0)
-                        .expect("the installed telemetry hook has a consumer");
+                let usage = crate::agents::usage::from_hook(
+                    spec.agent,
+                    event,
+                    &input,
+                    std::path::Path::new("/unused"),
+                    0,
+                )
+                .expect("the installed telemetry hook has a consumer");
                 assert_eq!(usage.response_tokens, Some(42));
             } else {
                 assert!(signal(spec.agent, event).is_some(), "{:?} {event}", spec.agent);

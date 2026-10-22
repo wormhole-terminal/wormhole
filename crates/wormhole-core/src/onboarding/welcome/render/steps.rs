@@ -7,7 +7,7 @@ use super::super::model::{Item, NotifyRow, Welcome};
 use super::{ACCENT, ATTENTION, BACK, DIM, ESC_SKIP, GOOD, Hint, Page, TITLE, Target, UP_DOWN, window_start};
 use crate::config::NotifySound;
 use crate::ipc::control::{COMMAND_NAME, HooksFact, NotifyFacts, PermissionFact};
-use crate::keymap::{self, ActionId};
+use crate::keys::keymap::{self, ActionId};
 
 /// What the person is told when no coding agent is on PATH.
 const PRIMER: &str = "No coding agent found on PATH. Install Claude Code, Codex or another and Wormhole \

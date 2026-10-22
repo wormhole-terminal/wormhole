@@ -10,8 +10,8 @@ use serde::Deserialize;
 
 use super::format::FamilyContent;
 use super::{IconSource, IconThemeFamily, build_family, builtin_family, pick_theme};
-use crate::fsutil::{self, LinkPolicy};
-use crate::jsonc;
+use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::jsonc;
 
 /// Load a theme family from its JSON file, or from a folder containing one
 /// (`<folder>/*.json`, or a Zed extension's `<folder>/icon_themes/*.json`).

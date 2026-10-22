@@ -14,12 +14,12 @@ use std::time::Duration;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::NotifySound;
-use wormhole_core::fonts::FontSlot;
-use wormhole_core::intro::Handover;
 use wormhole_core::ipc::control::{
     AgentFact, ErrorCode, HooksFact, Limited, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, Reply,
     Target, ThemeFact, WelcomeOp, WelcomeState,
 };
+use wormhole_core::onboarding::intro::Handover;
+use wormhole_core::theme::fonts::FontSlot;
 
 use super::{Play, Run, remember_first_run};
 use crate::platform::notifications::Permission;
@@ -127,7 +127,7 @@ fn look_facts(cx: &App) -> LookFacts {
         .into_iter()
         .map(|theme| ThemeFact {
             name: theme.name.clone(),
-            light: theme.appearance == wormhole_core::tokens::Appearance::Light,
+            light: theme.appearance == wormhole_core::theme::tokens::Appearance::Light,
         })
         .collect();
     let (theme_primary, others) = offered_primaries(store.base_tokens());

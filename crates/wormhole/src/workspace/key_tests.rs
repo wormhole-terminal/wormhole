@@ -1,7 +1,7 @@
 //! The keys, F6 and the menus in a real window (GPUI's test platform; see `view_tests` for
 //! how each test runs in a child process with scratch data).
 use gpui_kit::{OwnedMenuItem, TestAppContext};
-use wormhole_core::focus::Area;
+use wormhole_core::view::focus::Area;
 
 use super::RightTab;
 use super::app::{OpenWindow, app};

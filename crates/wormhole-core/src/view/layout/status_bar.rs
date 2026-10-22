@@ -5,8 +5,8 @@
 
 use std::time::{Duration, Instant};
 
-use crate::limits::{STATUS_BAR_SIZE_MIN, STATUS_BAR_WORDS_MIN};
-use crate::sidebar::text::UNDER_A_MINUTE;
+use crate::view::limits::{STATUS_BAR_SIZE_MIN, STATUS_BAR_WORDS_MIN};
+use crate::view::sidebar::text::UNDER_A_MINUTE;
 
 /// The bar's height. The panes above it end there while it is shown.
 pub const STATUS_BAR_H: f32 = 28.0;

@@ -16,7 +16,7 @@ use std::f32::consts::PI;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::{self, AgentId, TileColor};
-use wormhole_core::sidebar::Urgency;
+use wormhole_core::view::sidebar::Urgency;
 
 use super::motion::{ANIMATION_FPS, TILE_BREATHE, TILE_BREATHE_LEAST, TILE_ORBIT};
 use super::scale::{TILE, TILE_MINI, TextRole};

@@ -5,13 +5,13 @@ use gpui_kit::TestAppContext;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::config::NotifySound;
-use wormhole_core::features::FeatureFlag;
-use wormhole_core::intro::Handover;
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::control::{
     Action, AgentFact, AgentsFacts, ErrorCode, HooksFact, PermissionFact, Reply, Request, WelcomeOp,
     WelcomeState,
 };
-use wormhole_core::sidebar::RowState;
+use wormhole_core::onboarding::intro::Handover;
+use wormhole_core::view::sidebar::RowState;
 
 use super::super::notifications;
 use super::super::view_tests::{draw, drive, isolate_in, read, start};
@@ -388,7 +388,7 @@ fn band(cx: &mut TestAppContext, window: &super::super::app::OpenWindow) -> Opti
 fn terminals_as_seen(
     cx: &mut TestAppContext,
     window: &super::super::app::OpenWindow,
-) -> (serde_json::Value, String, wormhole_core::sidebar::Listing, usize) {
+) -> (serde_json::Value, String, wormhole_core::view::sidebar::Listing, usize) {
     let (record, listing, sessions) = cx.update(|cx| {
         window
             .workspace

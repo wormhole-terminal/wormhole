@@ -17,8 +17,8 @@
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
-use wormhole_core::sidebar::RowState;
-use wormhole_core::welcome::demo as example;
+use wormhole_core::onboarding::welcome::demo as example;
+use wormhole_core::view::sidebar::RowState;
 
 use super::rows::Frame;
 use crate::style;

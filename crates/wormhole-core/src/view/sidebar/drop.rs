@@ -110,7 +110,7 @@ fn outside_bracket(list: &[usize], ids: &[Option<SplitId>], slot: usize) -> usiz
 #[cfg(test)]
 mod tests {
     use super::{Part, RowDrop, resolve_row_drop};
-    use crate::sidebar::order::move_in_block;
+    use crate::view::sidebar::order::move_in_block;
 
     /// 0 and 4 and 7 are alone; 1, 2, 3 are one split; 5 and 6 another.
     const IDS: [Option<i64>; 8] = [None, Some(10), Some(10), Some(10), None, Some(20), Some(20), None];

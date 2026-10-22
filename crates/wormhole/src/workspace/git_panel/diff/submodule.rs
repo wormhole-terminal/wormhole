@@ -11,8 +11,8 @@ use crate::settings::UiColors;
 use crate::style::{self, TextRole};
 use crate::workspace::Workspace;
 use wormhole_core::git::{COMMITS_SHOWN, Commit, Range, SubmoduleLog, short};
-use wormhole_core::limits::count_grouped;
-use wormhole_core::panel::age;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::panel::age;
 
 /// The room round the card's notes.
 const NOTE_PAD: f32 = 16.0;

@@ -55,7 +55,7 @@ pub(super) struct Prepare {
     pub focused: bool,
     pub draws_cursor: bool,
     pub reduce_motion: bool,
-    pub dock: Option<wormhole_core::welcome::DockCell>,
+    pub dock: Option<wormhole_core::onboarding::welcome::DockCell>,
     pub layout: Rc<Cell<Layout>>,
     pub state: Rc<RefCell<RenderState>>,
     pub entity: Entity<TerminalView>,
@@ -266,14 +266,19 @@ impl Prepare {
 pub(in crate::terminal_view) fn dock_landing(
     origin: Point<Pixels>,
     cell: Size<Pixels>,
-    dock: wormhole_core::welcome::DockCell,
-) -> wormhole_core::intro::voyage::Landing {
+    dock: wormhole_core::onboarding::welcome::DockCell,
+) -> wormhole_core::onboarding::intro::voyage::Landing {
     let chevron = [f32::from(origin.x + cell.width * dock.col), f32::from(origin.y + cell.height * dock.row)];
-    wormhole_core::intro::voyage::Landing::on_chevron(chevron, f32::from(cell.height) * dock.rows)
+    wormhole_core::onboarding::intro::voyage::Landing::on_chevron(chevron, f32::from(cell.height) * dock.rows)
 }
 
 /// Tell the start animation where its ship docks (`dock_landing`), every frame the grid is laid out.
-fn report_dock(cx: &App, origin: Point<Pixels>, cell: Size<Pixels>, dock: wormhole_core::welcome::DockCell) {
+fn report_dock(
+    cx: &App,
+    origin: Point<Pixels>,
+    cell: Size<Pixels>,
+    dock: wormhole_core::onboarding::welcome::DockCell,
+) {
     let landing = dock_landing(origin, cell, dock);
     crate::intro::set_landing(cx, [landing.centre[0], landing.centre[1], landing.size]);
 }

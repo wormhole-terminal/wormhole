@@ -10,7 +10,7 @@ use std::hash::{Hash, Hasher};
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::sidebar::motion::{Drawn, plan_moves};
+use wormhole_core::view::sidebar::motion::{Drawn, plan_moves};
 
 use crate::style::motion::{EASE_OUT, MOTION_MOVE};
 use crate::workspace::Workspace;

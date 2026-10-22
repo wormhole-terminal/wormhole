@@ -52,9 +52,11 @@ fn a_colour_change_keeps_a_trusted_project_trusted() {
     }
     // The same through the app's own edit.
     fs::write(p.path(CONFIG_FILE), COLOUR_CONFIG).expect("write");
-    for color in
-        [Some(crate::folder_color::FolderColor::Red), Some(crate::folder_color::FolderColor::Blue), None]
-    {
+    for color in [
+        Some(crate::theme::folder_color::FolderColor::Red),
+        Some(crate::theme::folder_color::FolderColor::Blue),
+        None,
+    ] {
         p.set_project_color(color).expect("edited");
         assert_eq!(store.status(&p), TrustStatus::Trusted, "{color:?}");
     }
@@ -138,7 +140,7 @@ fn a_colour_change_approves_nothing() {
     let (_tmp, p) = project(&[(CONFIG_FILE, COLOUR_CONFIG), (ACTIONS_FILE, ACTIONS)]);
     let mut store = TrustStore::load(data.path()).expect("load");
     assert_eq!(store.status(&p), TrustStatus::Untrusted);
-    p.set_project_color(Some(crate::folder_color::FolderColor::Teal)).expect("edited");
+    p.set_project_color(Some(crate::theme::folder_color::FolderColor::Teal)).expect("edited");
     p.set_project_color(None).expect("edited");
     assert_eq!(store.status(&p), TrustStatus::Untrusted, "never asked, still not trusted");
     assert!(!store.allows(&p, Feature::Actions) && !store.allows(&p, Feature::Settings));
@@ -146,7 +148,7 @@ fn a_colour_change_approves_nothing() {
     store.trust(&p);
     fs::write(p.path(CONFIG_FILE), COLOUR_CONFIG.replace("/bin/zsh", "/bin/evil")).expect("write");
     assert_eq!(store.status(&p), TrustStatus::Changed);
-    p.set_project_color(Some(crate::folder_color::FolderColor::Pink)).expect("edited");
+    p.set_project_color(Some(crate::theme::folder_color::FolderColor::Pink)).expect("edited");
     assert_eq!(store.status(&p), TrustStatus::Changed, "a colour doesn't undo what changed");
     // Putting the approved content back (whatever the colour) is trusted again.
     fs::write(p.path(CONFIG_FILE), COLOUR_CONFIG.replace("#2bb3a3", "#ffffff")).expect("write");
@@ -220,7 +222,7 @@ fn an_approval_from_before_still_holds_and_is_rewritten() {
     store.save().expect("saved");
 
     // Now the colour can change, and the approval is still there after a restart.
-    p.set_project_color(Some(crate::folder_color::FolderColor::Teal)).expect("edited");
+    p.set_project_color(Some(crate::theme::folder_color::FolderColor::Teal)).expect("edited");
     assert_eq!(TrustStore::load(data.path()).expect("load").status(&p), TrustStatus::Trusted);
     assert_eq!(store.status(&p), TrustStatus::Trusted);
 }

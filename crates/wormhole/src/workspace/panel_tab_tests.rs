@@ -3,8 +3,8 @@
 
 use gpui_kit::TestAppContext;
 use wormhole_core::agents::AgentId;
-use wormhole_core::features::FeatureFlag;
-use wormhole_core::keymap::ActionId;
+use wormhole_core::config::features::FeatureFlag;
+use wormhole_core::keys::keymap::ActionId;
 
 use super::RightTab;
 use super::settings_page::update_settings;

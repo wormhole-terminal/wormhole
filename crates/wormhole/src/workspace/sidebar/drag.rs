@@ -8,9 +8,11 @@
 //! arrangement it lands, or which split it joins; this reads the pointer and draws the line.
 //! A drag inside a bracket reorders the sidebar only, never the layout.
 use gpui_kit::*;
-use wormhole_core::panes::{DropError, Zone};
-use wormhole_core::sidebar::{Card, Drop, DropInput, Item, Landing, Part, Target, group_drop, terminal_drop};
-use wormhole_core::sidebar::{Entry, Listing};
+use wormhole_core::view::panes::{DropError, Zone};
+use wormhole_core::view::sidebar::{
+    Card, Drop, DropInput, Item, Landing, Part, Target, group_drop, terminal_drop,
+};
+use wormhole_core::view::sidebar::{Entry, Listing};
 
 use super::super::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over, TerminalDrag};
 use super::facts::RowInfo;
@@ -327,9 +329,10 @@ impl Workspace {
             Landing::Top { before: Some(Item::Terminal(id)) } => {
                 Some(DropMark::Above { key: row_key(id), inside })
             }
-            Landing::Top { before: Some(Item::Group(group)) } => {
-                Some(DropMark::Above { key: ItemKey::Band(wormhole_core::sidebar::group_key(group)), inside })
-            }
+            Landing::Top { before: Some(Item::Group(group)) } => Some(DropMark::Above {
+                key: ItemKey::Band(wormhole_core::view::sidebar::group_key(group)),
+                inside,
+            }),
             Landing::Top { before: None } => {
                 Some(DropMark::Below { key: last_key(listing.entries.last()?), inside })
             }

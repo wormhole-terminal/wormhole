@@ -24,7 +24,7 @@ use crate::workspace::Workspace;
 use crate::workspace::git_panel::changes::display_order;
 use crate::workspace::git_panel::job::{Ticket, Wanted};
 use wormhole_core::git::{self, DiffLimits, FileChange, FileDiff, LineKind, RepoStatus, SubmoduleLog};
-use wormhole_core::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::ThemeTokens;
 
 /// What a request fetches.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

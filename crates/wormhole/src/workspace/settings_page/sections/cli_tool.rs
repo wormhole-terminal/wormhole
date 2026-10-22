@@ -1,7 +1,7 @@
 //! Coding agents → Command line → Command line tool: the `wh` command for terminals that aren't
 //! Wormhole's own (those have it already). Install writes a small script into `/usr/local/bin` or
 //! `~/.local/bin`, Uninstall takes it out again, and a folder that isn't on the login shell's `PATH`
-//! comes with the line to add. All of it is `wormhole_core::cli_tool`; this draws the row and calls it.
+//! comes with the line to add. All of it is `wormhole_core::terminal::cli_tool`; this draws the row and calls it.
 //!
 //! The script is written only by the Install (or Update) button, never by opening the page.
 
@@ -13,7 +13,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::cli_tool::{self, Advice, COMMAND_NAME, Status, Targets};
+use wormhole_core::terminal::cli_tool::{self, Advice, COMMAND_NAME, Status, Targets};
 
 use crate::style::{self, TextRole};
 use crate::workspace::settings_page::registry::Setting;
@@ -60,7 +60,7 @@ fn current_status() -> Status {
 
 /// `path` as a person says it (`~/.local/bin/wh`).
 fn shown(path: &Path) -> String {
-    wormhole_core::sidebar::display_path(path, crate::workspace::session::home_dir())
+    wormhole_core::view::sidebar::display_path(path, crate::workspace::session::home_dir())
 }
 
 impl SettingsWindow {
@@ -129,8 +129,11 @@ fn path_note(dir: &Path) -> PathNote {
     if cli_tool::on_path(dir, &path) {
         return PathNote::On(said.into());
     }
-    let advice =
-        cli_tool::advice(dir, &wormhole_core::shells::login_shell(), crate::workspace::session::home_dir());
+    let advice = cli_tool::advice(
+        dir,
+        &wormhole_core::terminal::shells::login_shell(),
+        crate::workspace::session::home_dir(),
+    );
     PathNote::Off(said.into(), advice)
 }
 

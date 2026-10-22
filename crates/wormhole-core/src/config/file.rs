@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 use super::settings::Settings;
-use crate::jsonc;
+use crate::storage::jsonc;
 
 /// A new file: every setting, in declaration order.
 pub(super) fn fresh_text(settings: &Settings) -> Result<String, String> {
@@ -142,7 +142,7 @@ fn indent_of(text: &str, value_start: usize) -> String {
 mod tests {
     use super::{fresh_text, rewritten_text, updated_text};
     use crate::config::Settings;
-    use crate::jsonc;
+    use crate::storage::jsonc;
 
     fn changed(f: impl FnOnce(&mut Settings)) -> Settings {
         let mut s = Settings::default();

@@ -5,7 +5,7 @@
 //! so a window asked to be translucent gets the opaque surfaces and no blur too.
 
 use gpui_kit::*;
-use wormhole_core::tokens::{Color, OPAQUE};
+use wormhole_core::theme::tokens::{Color, OPAQUE};
 
 use super::app::AppState;
 use super::app::app_mut;

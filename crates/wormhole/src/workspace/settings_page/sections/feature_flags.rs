@@ -5,7 +5,7 @@
 //! window at once.
 
 use gpui_kit::*;
-use wormhole_core::features::FeatureFlag;
+use wormhole_core::config::features::FeatureFlag;
 
 use crate::settings::settings;
 use crate::style::{self, Edges, SettingParts};

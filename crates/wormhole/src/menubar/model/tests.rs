@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use wormhole_core::config::MenuBarIcon;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{ItemState, Source, State, Terminal};
 
 use super::{

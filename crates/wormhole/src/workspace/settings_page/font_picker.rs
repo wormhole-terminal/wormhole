@@ -13,9 +13,9 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_name, grouped_font_choices};
 #[cfg(feature = "devctl")]
-use wormhole_core::settings_index::SectionId as Section;
+use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::theme::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_name, grouped_font_choices};
 
 #[cfg(feature = "devctl")]
 use super::open_settings;

@@ -15,7 +15,7 @@ use gpui_kit::component::dialog::{Cancel, Confirm, DialogFooter};
 use gpui_kit::component::input::{InputEvent, Textarea, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::review::{LineSide, ReviewComment};
+use wormhole_core::git::review::{LineSide, ReviewComment};
 
 use super::DiffView;
 use super::render::{LineAt, OnLine};

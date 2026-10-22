@@ -13,8 +13,8 @@ use std::time::Duration;
 use super::flow::{Action, Event, Flow, Step};
 use super::keys::Key;
 use crate::config::NotifySound;
-use crate::intro::Handover;
 use crate::ipc::control::{AgentsFacts, LookFacts, NotifyFacts, PermissionFact, WelcomeOp, WelcomeState};
+use crate::onboarding::intro::Handover;
 
 /// What the program does about a key.
 #[derive(Clone, Debug, PartialEq)]

@@ -125,8 +125,8 @@ mod tests {
         Hit, TabSet, TerminalsIn, UNGROUPED, current_set, loudest_member, others_need_you, search,
         set_numbered, step_set, tab_sets,
     };
-    use crate::sidebar::Urgency;
-    use crate::sidebar::{ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
+    use crate::view::sidebar::Urgency;
+    use crate::view::sidebar::{ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
     fn listing(n: usize, sidebar: &WindowSidebar) -> Listing {
         let ids: Vec<i64> = (1..=n as i64).collect();

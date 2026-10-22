@@ -7,8 +7,8 @@
 //! (checked when the group has none), the same folder lines, and the same actions.
 
 use gpui_kit::*;
-use wormhole_core::sidebar::{GroupColor, GroupPaint};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
+use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
 use super::groups::group_colors;
 use crate::platform::popover::{Behavior, Colours, Custom, Field, Popover, Row};

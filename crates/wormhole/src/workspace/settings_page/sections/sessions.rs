@@ -1,7 +1,7 @@
 //! Terminals & sidebar: the live preview, the density, the ⌘ hints, and what each row shows.
 
 use gpui_kit::*;
-use wormhole_core::sidebar::{Density, SidebarNumbers, TerminalsIn};
+use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 use super::preview;
 use crate::settings::settings;

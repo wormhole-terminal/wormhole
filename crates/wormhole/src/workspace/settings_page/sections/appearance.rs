@@ -10,9 +10,9 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
 use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
+use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::config::{ThemeMode, TitleBorder};
-use wormhole_core::settings_index::{self, SectionId as Section};
-use wormhole_core::tokens::Translucency;
+use wormhole_core::theme::tokens::Translucency;
 
 use super::{open_button, stage};
 use crate::select::Choice;
@@ -100,7 +100,7 @@ fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> O
     let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
     let chosen = store.settings.primary();
     // The theme's own colors, without the one its primary already is.
-    let mut colors: Vec<wormhole_core::tokens::Color> = Vec::new();
+    let mut colors: Vec<wormhole_core::theme::tokens::Color> = Vec::new();
     for ix in [2, 5, 1, 3, 6, 4] {
         let color = base.terminal.ansi[ix].with_alpha(1.0);
         if Some(color.to_hex()) != theme_primary.map(|c| c.to_hex())

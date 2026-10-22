@@ -31,7 +31,7 @@ fn main() {
         Command::Hook(rest) => return wormhole_core::ipc::run_cli(rest),
         Command::StatusLine => return wormhole_core::ipc::run_status_line_cli(),
         // The first-run welcome, a program in the first terminal: it talks to the app that started it.
-        Command::Welcome(rest) => std::process::exit(wormhole_core::welcome::run(rest)),
+        Command::Welcome(rest) => std::process::exit(wormhole_core::onboarding::welcome::run(rest)),
         // `Wormhole list`, `send-text`, …: a round trip to the running app.
         Command::Control(rest) => std::process::exit(wormhole_core::ipc::run_control_cli(rest)),
         // Most likely a command a newer build installed into an agent's settings: a launch would
@@ -47,7 +47,7 @@ fn main() {
     }
     // Before anything opens a file in the data folder: a version from before the rename kept it
     // under the old codename.
-    let migrated = wormhole_core::store::migrate_legacy_data();
+    let migrated = wormhole_core::storage::store::migrate_legacy_data();
     let _log_guard = logging::init();
     logging::install_panic_hook();
     match migrated {
@@ -58,7 +58,7 @@ fn main() {
     // Files an earlier version (or the log appender) made with the umask's modes become
     // owner-only; on a thread of its own so a large folder doesn't hold up the launch.
     let _ = std::thread::Builder::new().name("private-data".into()).spawn(|| {
-        wormhole_core::store::make_data_dir_private(&wormhole_core::paths::data_dir());
+        wormhole_core::storage::store::make_data_dir_private(&wormhole_core::storage::paths::data_dir());
     });
     let Some(hook_events) = wormhole_core::ipc::start_server() else {
         tracing::info!(
@@ -68,12 +68,12 @@ fn main() {
     };
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting");
     // Only the instance that runs: a second launch above has handed over and returned.
-    if let Err(err) = wormhole_core::quit_signal::catch_sigterm() {
+    if let Err(err) = wormhole_core::platform::quit_signal::catch_sigterm() {
         tracing::warn!("SIGTERM will end the app without saving: {err}");
     }
     // The `wh` command for the terminals this app starts, pointing at the binary that runs now.
     // Before any window opens a terminal.
-    wormhole_core::cli_tool::keep_current_at_launch();
+    wormhole_core::terminal::cli_tool::keep_current_at_launch();
 
     let application = gpui_kit::application().with_assets(icons::Assets);
     // From the launch on: a launch to open a file sends it before the windows are up.
@@ -86,8 +86,8 @@ fn main() {
         fonts::init(cx);
         // The profile Wormhole was left in: its files are the ones read from here on. With only
         // Default (no `profiles.json`) these are the data folder's own, where they have always been.
-        let root = wormhole_core::paths::DataRoot::current();
-        let (profiles, profiles_error) = wormhole_core::profile::ProfileList::load_or_recover(&root);
+        let root = wormhole_core::storage::paths::DataRoot::current();
+        let (profiles, profiles_error) = wormhole_core::config::profile::ProfileList::load_or_recover(&root);
         active_profile::set(root.profile(profiles.active_id()));
         cx.set_global(settings::SettingsStore::load());
         #[cfg(feature = "devctl")]

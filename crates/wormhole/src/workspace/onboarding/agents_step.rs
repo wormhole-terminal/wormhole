@@ -7,7 +7,7 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::agents::integrations::State;
 use wormhole_core::agents::{AGENTS, Agent};
-use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::Event;
 
 use super::Intro;

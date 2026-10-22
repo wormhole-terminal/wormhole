@@ -8,8 +8,8 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::tokens::ThemeTokens;
-use wormhole_core::tokens::{ContrastCheck, ContrastIssue};
+use wormhole_core::theme::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::{ContrastCheck, ContrastIssue};
 
 use super::token_editor::section;
 use super::{Edit, StudioWindow};

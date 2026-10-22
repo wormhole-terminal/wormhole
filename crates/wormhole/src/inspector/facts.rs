@@ -5,7 +5,7 @@
 use std::cell::RefCell;
 
 use gpui_kit::*;
-use wormhole_core::tokens::UI_TOKENS;
+use wormhole_core::theme::tokens::UI_TOKENS;
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::theme_bridge::token;
@@ -191,8 +191,8 @@ mod tests {
 
     /// A theme's interface colors, for the radius names.
     fn ui() -> UiColors {
-        let tokens = wormhole_core::tokens::builtin_tokens();
-        UiColors::new(&tokens[0], wormhole_core::tokens::Translucency { opacity: 1.0, blur: true })
+        let tokens = wormhole_core::theme::tokens::builtin_tokens();
+        UiColors::new(&tokens[0], wormhole_core::theme::tokens::Translucency { opacity: 1.0, blur: true })
     }
 
     fn rem_len(steps: f32) -> Option<DefiniteLength> {

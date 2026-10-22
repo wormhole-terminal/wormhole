@@ -30,8 +30,8 @@ use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::{App, Global, SharedString};
 use wormhole_core::config::Config;
 pub use wormhole_core::config::Settings;
-use wormhole_core::fonts::ResolvedFonts;
-use wormhole_core::tokens::{Appearance, Color, ThemeTokens, Translucency};
+use wormhole_core::theme::fonts::ResolvedFonts;
+use wormhole_core::theme::tokens::{Appearance, Color, ThemeTokens, Translucency};
 
 use crate::palette::Palette;
 use crate::theme_bridge;
@@ -143,7 +143,7 @@ pub struct SettingsStore {
     /// Terminal, interface and code fonts after the theme and fallbacks.
     pub fonts: ResolvedFonts,
     /// File icons (`None` when turned off).
-    pub icons: Option<Arc<wormhole_core::icon_theme::IconTheme>>,
+    pub icons: Option<Arc<wormhole_core::theme::icon_theme::IconTheme>>,
     /// Bumped on every change, whatever it touched.
     pub revision: u64,
     pub revisions: Revisions,
@@ -163,7 +163,7 @@ impl SettingsStore {
         Self::load_for(&crate::active_profile::paths())
     }
 
-    pub fn load_for(paths: &wormhole_core::paths::ProfilePaths) -> Self {
+    pub fn load_for(paths: &wormhole_core::storage::paths::ProfilePaths) -> Self {
         Self::new(Config::load_for(paths))
     }
 
@@ -544,7 +544,7 @@ mod tests {
     use std::sync::Arc;
 
     use wormhole_core::config::{Config, Settings, ThemeMode};
-    use wormhole_core::tokens::{Appearance, Translucency};
+    use wormhole_core::theme::tokens::{Appearance, Translucency};
 
     use super::{OPAQUE_LOOK, SettingsStore, SystemLook, TALLY, UiColors};
 
@@ -837,7 +837,7 @@ mod tests {
         let mut store = store();
         let palette = store.palette.clone();
         reset_tally();
-        let other = wormhole_core::tokens::builtin_tokens()
+        let other = wormhole_core::theme::tokens::builtin_tokens()
             .into_iter()
             .find(|t| t.name != store.tokens.name)
             .expect("more than one built-in theme");
@@ -861,7 +861,7 @@ mod tests {
 
         // A different draft is a different theme; dropping the preview goes back.
         let mut draft = store.tokens.as_ref().clone();
-        assert!(draft.set("primary", wormhole_core::tokens::Color::rgba(1.0, 0.0, 0.0, 1.0)));
+        assert!(draft.set("primary", wormhole_core::theme::tokens::Color::rgba(1.0, 0.0, 0.0, 1.0)));
         store.preview = Some(Arc::new(draft));
         store.derive();
         assert_eq!(store.revisions.theme, theme + 1);

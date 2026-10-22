@@ -10,7 +10,7 @@
 use std::path::Path;
 
 use gpui_kit::*;
-use wormhole_core::shells;
+use wormhole_core::terminal::shells;
 
 use super::{Workspace, session};
 use crate::platform::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
@@ -116,7 +116,7 @@ impl Workspace {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
-        let shown = wormhole_core::sidebar::display_path(&folder, session::home_dir());
+        let shown = wormhole_core::view::sidebar::display_path(&folder, session::home_dir());
         let appearance = store_in(&self.profile, cx).tokens.appearance;
         self.path_card.opened += 1;
         let which = self.path_card.opened;
@@ -151,7 +151,7 @@ fn path_popover(
     folder: &Path,
     shown: &str,
     exited: bool,
-    appearance: wormhole_core::tokens::Appearance,
+    appearance: wormhole_core::theme::tokens::Appearance,
     this: &WeakEntity<Workspace>,
     which: u64,
 ) -> Popover {
@@ -197,7 +197,7 @@ mod tests {
     use std::path::Path;
 
     use gpui_kit::WeakEntity;
-    use wormhole_core::tokens::Appearance;
+    use wormhole_core::theme::tokens::Appearance;
 
     use super::{insert_text, path_popover};
 

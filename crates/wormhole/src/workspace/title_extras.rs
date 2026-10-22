@@ -18,12 +18,12 @@
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
+use wormhole_core::agents::usage::Gauge;
 use wormhole_core::git::RepoStatus;
 use wormhole_core::git::pr::{self, Branch, PullRequest, Settled};
 use wormhole_core::terminal::Notification;
 use wormhole_core::terminal::listening_ports;
-use wormhole_core::title_extras::BranchStatus;
-use wormhole_core::usage::Gauge;
+use wormhole_core::view::title_extras::BranchStatus;
 
 use super::Workspace;
 use super::app::{app, app_mut};

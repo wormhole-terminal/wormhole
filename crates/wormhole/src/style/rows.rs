@@ -18,7 +18,7 @@ use super::scale::{
 };
 use crate::settings::UiColors;
 use wormhole_core::git::ChangeKind;
-use wormhole_core::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
+use wormhole_core::view::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
 
 /// A square row that runs from edge to edge: [`ROW_H`] tall, inset 16 on both sides (the right
 /// panel's rows, which sit in cards, are inset [`CARD_INSET`] and rounded instead),
@@ -541,7 +541,7 @@ pub enum FileLines {
 /// file shows where it came from before the new name, and one moved to another folder a mark.
 /// Each tree level steps in by [`INDENT`].
 /// The caller shortens a long name in the middle and a long folder at the front
-/// (`wormhole_core::elide`); what still doesn't fit is cut at the end.
+/// (`wormhole_core::view::elide`); what still doesn't fit is cut at the end.
 pub struct FileRow {
     /// From `crate::icons::file`, or `style::icon(IconName::File)`.
     pub icon: AnyElement,
@@ -735,7 +735,7 @@ pub struct CommitRow {
     /// The short hash, drawn in `code_font`.
     pub sha: SharedString,
     pub author: SharedString,
-    /// How long ago, as `wormhole_core::panel::age` says it.
+    /// How long ago, as `wormhole_core::view::panel::age` says it.
     pub age: SharedString,
     pub code_font: SharedString,
     /// Opened to show its files: the selected tint, its subject in the tint's text color.

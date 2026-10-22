@@ -2,7 +2,7 @@
 //! program); ⇥ / ⇧⇥ from stop to stop; arrow keys inside an area, which keeps one focused item
 //! (roving focus: its cursor); Esc back to the terminal, one layer at a time; and the ring that
 //! shows where the keys go. The order, the skipping of hidden areas, the Esc ladder and how a list
-//! is walked are core's (`wormhole_core::focus`).
+//! is walked are core's (`wormhole_core::view::focus`).
 //!
 //! An area's focus handle sits on its container (the terminal list, the tab strip, the panel's
 //! tabs and list, the status bar), so the item the keys are on is the container's active
@@ -17,8 +17,8 @@ mod panel;
 mod window_tests;
 
 use gpui_kit::*;
-use wormhole_core::focus::list::{Key, TypeAhead};
-use wormhole_core::focus::{self, Area, EscState, Escape, Stop};
+use wormhole_core::view::focus::list::{Key, TypeAhead};
+use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
 use super::{RightTab, Workspace, actions};
 
@@ -425,7 +425,7 @@ fn tab_name(tab: RightTab) -> &'static str {
 #[cfg(test)]
 mod tests {
     use gpui_kit::Keystroke;
-    use wormhole_core::focus::list::Key;
+    use wormhole_core::view::focus::list::Key;
 
     use super::{Activate, activation, list_key};
 

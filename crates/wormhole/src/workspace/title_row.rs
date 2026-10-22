@@ -13,11 +13,11 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::layout::title_row::{PathStep, RowFit};
-use wormhole_core::open_in::{Installed, Resolved};
-use wormhole_core::panes::Axis;
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::platform::open_in::{Installed, Resolved};
 use wormhole_core::project::ProjectColor;
+use wormhole_core::view::layout::title_row::{PathStep, RowFit};
+use wormhole_core::view::panes::Axis;
 
 use super::Workspace;
 use super::chrome::TitleDrag as _;
@@ -359,7 +359,7 @@ mod menu_model_tests {
     use std::path::Path;
 
     use gpui_kit::WeakEntity;
-    use wormhole_core::open_in::Installed;
+    use wormhole_core::platform::open_in::Installed;
 
     use super::actions_menu;
 

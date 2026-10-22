@@ -13,7 +13,7 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use gpui_kit::*;
-use wormhole_core::store::Store;
+use wormhole_core::storage::store::Store;
 use wormhole_core::update::{
     self, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };

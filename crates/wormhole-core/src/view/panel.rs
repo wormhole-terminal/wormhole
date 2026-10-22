@@ -2,7 +2,7 @@
 //! section starts folded and what it says then, how much of an open note shows, and how old a
 //! commit reads. The app draws what these decide.
 
-use crate::limits::{DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES, count_grouped};
+use crate::view::limits::{DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES, count_grouped};
 
 /// One line of the Next steps list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -120,7 +120,7 @@ pub fn age(seconds: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::{StepRow, age, folded_note, note_cap, section_folded, steps, untracked_apart};
-    use crate::limits::{DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES};
+    use crate::view::limits::{DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES};
     use StepRow::{Done, Draft, Step};
 
     #[test]

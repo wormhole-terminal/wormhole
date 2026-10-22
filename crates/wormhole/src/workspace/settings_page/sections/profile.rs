@@ -9,9 +9,9 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputState, Textarea};
 use gpui_kit::*;
-use wormhole_core::profile::Profile;
-use wormhole_core::settings_index::SectionId as Section;
-use wormhole_core::sidebar::GroupColor;
+use wormhole_core::config::profile::Profile;
+use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::view::sidebar::GroupColor;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::settings::SettingsStore;
@@ -69,7 +69,7 @@ fn draw_name(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEl
         .value()
         .chars()
         .next()
-        .unwrap_or_else(|| wormhole_core::profile::first_letter(&form.name.read(cx).value()));
+        .unwrap_or_else(|| wormhole_core::config::profile::first_letter(&form.name.read(cx).value()));
     div()
         .flex()
         .flex_col()

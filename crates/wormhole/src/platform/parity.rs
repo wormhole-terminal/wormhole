@@ -9,9 +9,9 @@ use std::path::Path;
 use std::rc::Rc;
 
 use gpui_kit::{App, Hsla, Window};
-use wormhole_core::intro::WindowMotion;
+use wormhole_core::onboarding::intro::WindowMotion;
 use wormhole_core::terminal::scrollbar::ScrollerStyle;
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::font_face::Seg;
 use super::fonts::Traits;
@@ -62,7 +62,7 @@ pub(super) fn signatures_match() {
         apps::app_path: fn(&str) -> Option<std::path::PathBuf>;
         apps::bundle_of: fn(&Path) -> Option<String>;
         apps::icon_png: fn(&str, usize) -> Option<Vec<u8>>;
-        apps::command: fn(&str, wormhole_core::open_file::Launch) -> Option<std::process::Command>;
+        apps::command: fn(&str, wormhole_core::platform::open_file::Launch) -> Option<std::process::Command>;
         apps::text_editor_command: fn(&Path) -> Option<std::process::Command>;
         dock::set_badge: fn(Option<&str>);
         dock::bounce: fn(&mut App);
@@ -118,8 +118,8 @@ pub(super) fn signatures_match() {
     }
     #[cfg(feature = "devctl")]
     same! {
-        intro::frames: fn(wormhole_core::intro::Style, usize, [[f32; 4]; 3], [[f32; 3]; 3], &Path) -> anyhow::Result<String>;
-        intro::dock_frames: fn(&Window, wormhole_core::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
+        intro::frames: fn(wormhole_core::onboarding::intro::Style, usize, [[f32; 4]; 3], [[f32; 3]; 3], &Path) -> anyhow::Result<String>;
+        intro::dock_frames: fn(&Window, wormhole_core::onboarding::intro::voyage::Landing, [[f32; 4]; 3], &Path, &str) -> anyhow::Result<String>;
     }
     same_method! {
         intro::Overlay::new: fn(&Window, Setup, LogoSpot) -> anyhow::Result<Option<S>>;

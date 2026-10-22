@@ -13,9 +13,9 @@ use super::keys::Key;
 use super::model::Welcome;
 use super::render::{LINE_PAUSE, ROW_EVERY, Size, TYPE_NAME, TYPE_TEXT, Target, render};
 use crate::config::NotifySound;
-use crate::intro::Handover;
 use crate::ipc::control::{COMMAND_NAME, PermissionFact};
-use crate::keymap::{self, ActionId};
+use crate::keys::keymap::{self, ActionId};
+use crate::onboarding::intro::Handover;
 
 const END: Duration = Duration::MAX;
 const NOW: Duration = Duration::ZERO;

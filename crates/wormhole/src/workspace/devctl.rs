@@ -54,7 +54,7 @@ impl Workspace {
         let layout = match self.active_split() {
             Some(split) => &split.layout,
             None => {
-                single = wormhole_core::panes::TabPanes::single(self.active_session().id);
+                single = wormhole_core::view::panes::TabPanes::single(self.active_session().id);
                 &single
             }
         };
@@ -138,7 +138,7 @@ impl Workspace {
     /// devctl `rows`: the sidebar's list as drawn, one a line: groups and terminals with what the
     /// rows show of their splits.
     pub(crate) fn devctl_rows(&self, cx: &App) -> String {
-        use wormhole_core::sidebar::{Bracket, Entry};
+        use wormhole_core::view::sidebar::{Bracket, Entry};
         let listing = self.session_listing(cx);
         let mut out = String::new();
         for entry in &listing.entries {
@@ -231,7 +231,7 @@ impl Workspace {
 
     /// `title`: what the title row draws, as text.
     pub(crate) fn devctl_title(&self, window: &Window, cx: &mut Context<Self>) -> String {
-        use wormhole_core::layout::title_row::PathShown;
+        use wormhole_core::view::layout::title_row::PathShown;
         let plan = self.title_plan(window, cx);
         let (path, steps) = match plan.fit.path {
             PathShown::None => ("none".to_string(), 0),

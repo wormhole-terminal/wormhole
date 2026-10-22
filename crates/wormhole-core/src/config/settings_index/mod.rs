@@ -139,22 +139,22 @@ impl SectionId {
         self.is_visible_in(settings, settings.flag_mode())
     }
 
-    /// [`Self::is_visible`] for a given [`FlagMode`](crate::features::FlagMode), so the tests,
+    /// [`Self::is_visible`] for a given [`FlagMode`](crate::config::features::FlagMode), so the tests,
     /// which are always dev builds, can check what a release shows too.
-    pub fn is_visible_in(self, settings: &Settings, mode: crate::features::FlagMode) -> bool {
+    pub fn is_visible_in(self, settings: &Settings, mode: crate::config::features::FlagMode) -> bool {
         match self {
             SectionId::FeatureFlags => mode.shows_switches(),
             _ => self
                 .feature_flag()
-                .is_none_or(|flag| crate::features::enabled_in(flag, &settings.feature_flags, mode)),
+                .is_none_or(|flag| crate::config::features::enabled_in(flag, &settings.feature_flags, mode)),
         }
     }
 
     /// The feature flag whose section this is, if any: such a section shows only while the flag is
     /// on. Lets the preview notice name the flag without hard-coding it per section.
-    pub fn feature_flag(self) -> Option<crate::features::FeatureFlag> {
+    pub fn feature_flag(self) -> Option<crate::config::features::FeatureFlag> {
         match self {
-            SectionId::Projects => Some(crate::features::FeatureFlag::ProjectFolders),
+            SectionId::Projects => Some(crate::config::features::FeatureFlag::ProjectFolders),
             _ => None,
         }
     }
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
-        use crate::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
+        use crate::config::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
         let preview = [SectionId::Projects, SectionId::FeatureFlags];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.

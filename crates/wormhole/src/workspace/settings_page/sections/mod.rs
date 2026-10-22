@@ -7,7 +7,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
 use gpui_kit::*;
-use wormhole_core::settings_index::SectionId as Section;
+use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::registry::Setting;
 use super::{SettingsWindow, ui, update_settings};

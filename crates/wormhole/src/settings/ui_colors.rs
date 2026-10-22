@@ -1,7 +1,7 @@
 //! The interface colors and shape the shared components draw from.
 
 use gpui_kit::{Hsla, Pixels, px};
-use wormhole_core::tokens::{ThemeTokens, Translucency};
+use wormhole_core::theme::tokens::{ThemeTokens, Translucency};
 
 use crate::theme_bridge::{hsla, token};
 
@@ -315,7 +315,7 @@ impl UiColors {
 mod tests {
     use std::collections::BTreeSet;
 
-    use wormhole_core::tokens::UI_TOKENS;
+    use wormhole_core::theme::tokens::UI_TOKENS;
 
     use super::{COLORS, SURFACES};
 

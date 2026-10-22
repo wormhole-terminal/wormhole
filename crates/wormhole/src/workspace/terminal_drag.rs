@@ -7,8 +7,8 @@
 
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::*;
-use wormhole_core::panes::{PaneId, Zone};
-use wormhole_core::sidebar::Part;
+use wormhole_core::view::panes::{PaneId, Zone};
+use wormhole_core::view::sidebar::Part;
 
 use crate::settings::ui;
 use crate::style;

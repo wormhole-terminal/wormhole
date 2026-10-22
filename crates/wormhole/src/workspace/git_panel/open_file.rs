@@ -1,6 +1,6 @@
 //! The small icon that opens a file of the git panel in the editor Open in… uses: on a Changes or
 //! History row and on a diff line while the pointer is over it, and in the diff's header. A click
-//! asks that app to open the file (at the line, where the app can: `wormhole_core::open_file`);
+//! asks that app to open the file (at the line, where the app can: `wormhole_core::platform::open_file`);
 //! for Finder it reveals the file.
 //!
 //! As for Open in… itself, the person asks an app they chose to open a file, so nothing from the
@@ -18,10 +18,10 @@ use gpui_kit::*;
 use crate::settings::UiColors;
 use crate::style::{self, IconButton};
 use crate::workspace::open_in::OpenIn;
-use wormhole_core::fsutil;
-use wormhole_core::open_file;
-use wormhole_core::open_in::Installed;
-use wormhole_core::spoken;
+use wormhole_core::platform::open_file;
+use wormhole_core::platform::open_in::Installed;
+use wormhole_core::storage::fsutil;
+use wormhole_core::view::spoken;
 
 /// The repository, and the app a click opens its files in: worked out once per frame of a list,
 /// not per row.

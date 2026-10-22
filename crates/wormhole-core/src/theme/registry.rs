@@ -18,9 +18,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::SystemTime;
 
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 use crate::theme;
-use crate::tokens::{self, ThemeFile, ThemeTokens};
+use crate::theme::tokens::{self, ThemeFile, ThemeTokens};
 
 /// The dark and light themes a fresh config starts with: Wormhole's own, in the app icon's blue.
 pub const DEFAULT_THEME: &str = "Wormhole Dark";

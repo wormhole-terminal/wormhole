@@ -71,7 +71,7 @@ pub fn run_cli(args: &[String]) {
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs() as i64);
     if let Some(usage) =
-        crate::usage::from_hook(invocation.agent, &invocation.event, &payload, &codex_home, now)
+        crate::agents::usage::from_hook(invocation.agent, &invocation.event, &payload, &codex_home, now)
     {
         send(&socket, &Message::Usage { usage });
     }
@@ -95,9 +95,10 @@ pub fn run_status_line_cli() {
 /// What a status line's JSON tells the app: the plan usage (the account's), then the gauge (this
 /// terminal's, so only with the tab the status line runs in).
 fn status_line_messages(input: &Value, tab: Option<String>, now: i64) -> Vec<Message> {
-    let usage = crate::usage::Usage::from_claude_status(input, now).map(|usage| Message::Usage { usage });
+    let usage =
+        crate::agents::usage::Usage::from_claude_status(input, now).map(|usage| Message::Usage { usage });
     let gauge = tab
-        .zip(crate::usage::Gauge::from_claude_status(input))
+        .zip(crate::agents::usage::Gauge::from_claude_status(input))
         .map(|(tab, gauge)| Message::Gauge { tab, gauge });
     usage.into_iter().chain(gauge).collect()
 }

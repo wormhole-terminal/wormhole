@@ -7,7 +7,7 @@
 //! (bright black for the tile, bright white for the prompt) so the theme colours it.
 
 use super::ansi::{Grid, Style, color};
-use crate::intro::Handover;
+use crate::onboarding::intro::Handover;
 
 /// The page's left margin, in cells, and the blank rows above everything.
 pub const MARGIN: usize = 2;

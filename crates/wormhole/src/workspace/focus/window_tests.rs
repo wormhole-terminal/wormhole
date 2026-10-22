@@ -2,7 +2,7 @@
 //! a child process with scratch data): ⇥ between stops, the arrows, ↩ and Space inside the
 //! sidebar and the panel, Esc back to the terminal.
 use gpui_kit::TestAppContext;
-use wormhole_core::focus::Area;
+use wormhole_core::view::focus::Area;
 
 use super::super::RightTab;
 use super::super::app::OpenWindow;

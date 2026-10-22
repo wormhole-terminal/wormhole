@@ -99,7 +99,7 @@ pub fn display_path(path: &Path, home: Option<&Path>) -> String {
 #[cfg(test)]
 mod tests {
     use super::{agent_detail, ago, clock, display_path, path_tail, place_detail, took};
-    use crate::sidebar::RowState;
+    use crate::view::sidebar::RowState;
     use std::path::Path;
     use std::time::Duration;
 

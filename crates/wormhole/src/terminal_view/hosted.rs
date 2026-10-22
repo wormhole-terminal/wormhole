@@ -107,7 +107,7 @@ impl TerminalView {
                 let task = cx.background_spawn({
                     let options = options.clone();
                     async move {
-                        let hosts_dir = wormhole_core::hosts::ensure_hosts_dir(&data_dir)?;
+                        let hosts_dir = wormhole_core::ipc::hosts::ensure_hosts_dir(&data_dir)?;
                         let host = wormhole_core::terminal::client::HostCommand {
                             binary: &binary,
                             hosts_dir: &hosts_dir,
@@ -277,7 +277,7 @@ impl TerminalView {
         }
         let id = self.host.id.clone()?;
         let options = self.host.options.clone()?;
-        let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::paths::data_dir());
+        let hosts_dir = wormhole_core::ipc::hosts::hosts_dir(&wormhole_core::storage::paths::data_dir());
         let socket = match wormhole_core::terminal::client::socket_of(&hosts_dir, &id) {
             Ok(socket) => socket,
             Err(err) => {

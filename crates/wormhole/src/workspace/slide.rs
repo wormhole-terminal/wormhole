@@ -9,7 +9,7 @@
 //! sliding column, which paints its own translucent surface over the blur, as it does at rest. The
 //! traffic lights and the collapse button never move. Under Reduce Motion both are cuts.
 use gpui_kit::*;
-use wormhole_core::layout::Edge;
+use wormhole_core::view::layout::Edge;
 
 use super::Workspace;
 use crate::style::motion::{EASE_IN, EASE_OUT, MOTION_PANEL, MOTION_PANEL_EXIT};

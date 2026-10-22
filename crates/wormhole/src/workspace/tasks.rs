@@ -8,9 +8,9 @@ use gpui_kit::component::input::Position;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::limits::count_grouped;
-use wormhole_core::reorder;
-use wormhole_core::spoken;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::reorder;
+use wormhole_core::view::spoken;
 
 use super::items::{ItemKey, item_key, with_item_keys};
 use super::notes::NotesView;

@@ -1,11 +1,11 @@
 //! The intro window's page: a layer over the whole window, opaque, holding the welcome page or a
 //! step's card, with the replay button in the corner. Each part comes in as the animation allows
-//! (`wormhole_core::intro::page`): fading in and rising into place.
+//! (`wormhole_core::onboarding::intro::page`): fading in and rising into place.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
-use wormhole_core::intro::page::Entrance;
 use wormhole_core::onboarding::Step;
+use wormhole_core::onboarding::intro::page::Entrance;
 
 use crate::settings::{UiColors, ui};
 use crate::style;

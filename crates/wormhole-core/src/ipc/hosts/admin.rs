@@ -96,7 +96,7 @@ fn ask_kill(meta: &HostMeta, wait: Duration) -> Result<(), String> {
     stream.set_write_timeout(Some(left())).map_err(|e| e.to_string())?;
     stream.set_read_timeout(Some(left())).map_err(|e| e.to_string())?;
     // The socket may sit in a folder others can write to; only our own host gets a word from us.
-    if !crate::fsutil::peer_is_this_user(&stream) {
+    if !crate::storage::fsutil::peer_is_this_user(&stream) {
         return Err("the socket's owner is not this user".into());
     }
     let mut writer = FrameWriter::new(&stream);
@@ -165,7 +165,8 @@ fn signal_term(pid: u32) -> io::Result<()> {
 /// file proves nothing, and a signal must not go to whatever reused the number. (To *talk* to a
 /// host the meta and `Welcome` identify it; this guards the signal fallback.)
 pub fn is_host_process(pid: u32) -> bool {
-    process_path(pid).and_then(|path| path.file_name().map(|n| n == crate::host_binary::HOST_BINARY_NAME))
+    process_path(pid)
+        .and_then(|path| path.file_name().map(|n| n == crate::ipc::host_binary::HOST_BINARY_NAME))
         == Some(true)
 }
 

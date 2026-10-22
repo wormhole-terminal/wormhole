@@ -1,7 +1,7 @@
 //! What tasks and notes share as items of the Notes tab: the keys their editors handle
 //! and the pieces of their rows. Both are drawn with `style::item_row`.
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::keys::keymap::{self, ActionId};
 
 use super::Workspace;
 

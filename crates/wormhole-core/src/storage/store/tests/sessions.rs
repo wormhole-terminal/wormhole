@@ -195,7 +195,7 @@ fn a_new_hosted_session_is_on_disk_as_soon_as_save_session_host_returns() {
 /// with a live host attach, the rest replay their text, and a live host no row names is an orphan.
 #[test]
 fn restoring_with_live_and_missing_hosts_attaches_replays_and_finds_orphans() {
-    use crate::hosts::{HostMeta, LaunchHosts, Restore};
+    use crate::ipc::hosts::{HostMeta, LaunchHosts, Restore};
     let host = |id: &str, started_at: u64| HostMeta {
         id: id.into(),
         pid: 100,

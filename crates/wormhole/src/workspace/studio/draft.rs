@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use wormhole_core::config::Config;
-use wormhole_core::tokens::{
+use wormhole_core::theme::tokens::{
     Appearance, Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, default_rule,
     syntax_keys, used_in,
 };
@@ -370,7 +370,7 @@ pub(super) fn visible<'a>(
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use wormhole_core::tokens::{
+    use wormhole_core::theme::tokens::{
         Area, METRIC_TOKENS, SyntaxOverride, ThemeFile, ThemeTokens, UI_TOKENS, builtin_tokens,
         parse_theme_file, resolve,
     };

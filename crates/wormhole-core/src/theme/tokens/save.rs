@@ -9,7 +9,7 @@ use super::model::{Metrics, auto_appearance};
 use super::resolve::{NO_RULES, Resolver};
 use super::rules::{dark_yellow_warning, default_rules, rule_flags};
 use super::theme_tokens::ThemeTokens;
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 impl ThemeTokens {
     /// A theme file that reproduces `self`. With `base`, it `extends` the base
@@ -207,10 +207,10 @@ mod tests {
     use std::collections::{BTreeMap, BTreeSet};
 
     use super::topo_order;
-    use crate::tokens::expr::{Expr, parse_expr};
-    use crate::tokens::rules::default_rules;
-    use crate::tokens::test_support::{builtin, hex, no_lookup, resolve_str, snapshot};
-    use crate::tokens::{
+    use crate::theme::tokens::expr::{Expr, parse_expr};
+    use crate::theme::tokens::rules::default_rules;
+    use crate::theme::tokens::test_support::{builtin, hex, no_lookup, resolve_str, snapshot};
+    use crate::theme::tokens::{
         Appearance, MetricsFile, SyntaxOverride, ThemeFile, builtin_tokens, parse_theme_file, resolve,
     };
 
@@ -371,7 +371,7 @@ mod tests {
         }
         let chain: BTreeMap<String, Expr> =
             (0..100_000).map(|i| (format!("n{i:06}"), Expr::Ref(format!("n{:06}", i + 1)))).collect();
-        let order = crate::tokens::test_support::on_small_stack(move || topo_order(&chain));
+        let order = crate::theme::tokens::test_support::on_small_stack(move || topo_order(&chain));
         assert_eq!(order.len(), 100_000);
         assert_eq!(order[0], "n099999");
     }

@@ -9,12 +9,14 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::sidebar::Urgency;
-use wormhole_core::sidebar::hints::keycap;
-use wormhole_core::sidebar::spoken;
-use wormhole_core::sidebar::tabs::{TabSet, current_set, others_need_you, set_numbered, step_set, tab_sets};
-use wormhole_core::sidebar::{Entry, Listing};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::view::sidebar::Urgency;
+use wormhole_core::view::sidebar::hints::keycap;
+use wormhole_core::view::sidebar::spoken;
+use wormhole_core::view::sidebar::tabs::{
+    TabSet, current_set, others_need_you, set_numbered, step_set, tab_sets,
+};
+use wormhole_core::view::sidebar::{Entry, Listing};
 
 use super::super::chrome::traffic_light_position;
 use super::super::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
@@ -90,7 +92,7 @@ impl Workspace {
     /// out), and centre the traffic lights on the row they sit in.
     pub(in crate::workspace) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
         self.sidebar.tabs.on =
-            settings_in(&self.profile, cx).terminals_in == wormhole_core::sidebar::TerminalsIn::Tabs;
+            settings_in(&self.profile, cx).terminals_in == wormhole_core::view::sidebar::TerminalsIn::Tabs;
         let row = style::TITLE_ROW_H;
         if self.sidebar.tabs.lights_row != Some(row) {
             self.sidebar.tabs.lights_row = Some(row);

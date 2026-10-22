@@ -7,10 +7,10 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::focus::Area;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::layout::{Edge, PanelToggle};
-use wormhole_core::spoken::{self, PanelTab};
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::view::focus::Area;
+use wormhole_core::view::layout::{Edge, PanelToggle};
+use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::app::app;
 use super::focus::TitleButton;
@@ -106,7 +106,7 @@ fn collapse_slot(lights_end: f32) -> f32 {
 impl Workspace {
     /// The profile this window is in and its colour, when that is not the profile Wormhole is in
     /// (the odd window), as the theme draws it.
-    pub(super) fn odd_profile(&self, cx: &App) -> Option<(wormhole_core::profile::Profile, Hsla)> {
+    pub(super) fn odd_profile(&self, cx: &App) -> Option<(wormhole_core::config::profile::Profile, Hsla)> {
         let state = app(cx);
         if &self.profile == state.active_profile() {
             return None;
@@ -412,7 +412,7 @@ mod tests {
         collapse_x, sliding_title_pads,
     };
     use crate::style;
-    use wormhole_core::layout::Edge;
+    use wormhole_core::view::layout::Edge;
 
     /// With the assumed lights the collapse button's glyph is at x 82–98 and
     /// the title row of a hidden sidebar's window starts after the button.

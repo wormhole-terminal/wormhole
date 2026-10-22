@@ -1,11 +1,11 @@
 //! The Licenses window: every crate Wormhole is built from on the left (searchable), the
-//! selected one's license on the right. The data is `wormhole_core::licenses`.
+//! selected one's license on the right. The data is `wormhole_core::update::licenses`.
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::licenses::Licenses;
+use wormhole_core::update::licenses::Licenses;
 
 use super::super::panel_list::Rows;
 use super::ui;

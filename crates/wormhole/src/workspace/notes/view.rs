@@ -9,11 +9,11 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::input::{InputState, Textarea, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::focus::list::Item;
-use wormhole_core::keymap::{self, ActionId};
-use wormhole_core::limits::count_grouped;
-use wormhole_core::panel::{self as rules, StepRow};
-use wormhole_core::spoken;
+use wormhole_core::keys::keymap::{self, ActionId};
+use wormhole_core::view::focus::list::Item;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::panel::{self as rules, StepRow};
+use wormhole_core::view::spoken;
 
 use super::super::focus::{Activate, Walkable};
 use super::super::items::with_item_keys;
@@ -313,7 +313,7 @@ fn wrapped_note(text: &str, panel_w: f32, window: &mut Window, cx: &App) -> Vec<
 /// a placeholder one line per newline and never wraps it, so a line longer than the panel's text
 /// column was cut at its edge. It breaks where the editor would wrap typed text.
 pub(super) fn wrapped_placeholder(panel_w: f32, window: &mut Window, cx: &App) -> SharedString {
-    let panel_w = panel_w.max(wormhole_core::layout::PANEL_MIN);
+    let panel_w = panel_w.max(wormhole_core::view::layout::PANEL_MIN);
     let lines = wrapped_note(NOTE_PLACEHOLDER, panel_w - EDITOR_RIGHT_MARGIN, window, cx);
     lines.iter().map(|line| line.trim_end()).collect::<Vec<_>>().join("\n").into()
 }

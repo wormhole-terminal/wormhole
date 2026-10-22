@@ -219,7 +219,7 @@ impl WindowSidebar {
 #[cfg(test)]
 mod tests {
     use super::Item::{Group, Terminal};
-    use crate::sidebar::WindowSidebar;
+    use crate::view::sidebar::WindowSidebar;
 
     const IDS: [i64; 5] = [1, 2, 3, 4, 5];
 

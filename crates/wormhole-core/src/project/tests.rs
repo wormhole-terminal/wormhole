@@ -1,6 +1,6 @@
 //! Tests of the folder loaders and their safety rules, and helpers the other project tests share.
 use super::*;
-use crate::folder_color::FolderColor;
+use crate::theme::folder_color::FolderColor;
 use serde_json::json;
 use std::cell::Cell;
 use std::fs;

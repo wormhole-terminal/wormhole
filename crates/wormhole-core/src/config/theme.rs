@@ -1,15 +1,15 @@
 //! Themes as settings see them: resolving `settings.theme` (a user theme's
 //! or a built-in's name, or a path) to tokens, importing and saving theme
-//! files. Finding themes is `theme_registry`'s job.
+//! files. Finding themes is `theme::registry`'s job.
 
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use super::{Config, Settings, ThemeMode};
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 use crate::theme;
-use crate::theme_registry::{self, DEFAULT_THEME, ThemeSource, UserTheme, UserThemes, load_theme_path};
-use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
+use crate::theme::registry::{self, DEFAULT_THEME, ThemeSource, UserTheme, UserThemes, load_theme_path};
+use crate::theme::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
 impl Config {
     /// Themes in the themes dir (JSON token themes and imported terminal
@@ -185,9 +185,7 @@ pub fn tokens_from_json_in(themes: &Path, text: &str) -> Result<ThemeTokens, Str
 
 /// The default theme's tokens, what is shown when the chosen theme fails.
 pub(super) fn default_tokens() -> ThemeTokens {
-    theme_registry::builtin_named(DEFAULT_THEME)
-        .cloned()
-        .unwrap_or_else(|| tokens::derive(&theme::builtins()[0]))
+    registry::builtin_named(DEFAULT_THEME).cloned().unwrap_or_else(|| tokens::derive(&theme::builtins()[0]))
 }
 
 /// `settings.theme` resolved against the themes in `dir`: a user theme's name,
@@ -201,7 +199,7 @@ pub(super) fn resolve_theme(dir: &Path, name: &str) -> (ThemeTokens, Option<Stri
             Err(err) => (default_tokens(), Some(labelled(name, err))),
         };
     }
-    if let Some(tokens) = theme_registry::builtin_named(name) {
+    if let Some(tokens) = registry::builtin_named(name) {
         return (tokens.clone(), None);
     }
     let path = PathBuf::from(expand_home(name));
@@ -226,14 +224,14 @@ fn labelled(name: &str, err: String) -> String {
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct ThemeStamp {
     name: String,
-    files: theme_registry::Fingerprint,
+    files: registry::Fingerprint,
     file: Option<(u64, Option<SystemTime>)>,
 }
 
 impl ThemeStamp {
     pub(super) fn of(dir: &Path, name: &str) -> Self {
         let file = std::fs::metadata(expand_home(name)).ok().map(|m| (m.len(), m.modified().ok()));
-        Self { name: name.to_string(), files: theme_registry::fingerprint(dir), file }
+        Self { name: name.to_string(), files: registry::fingerprint(dir), file }
     }
 }
 
@@ -249,9 +247,9 @@ mod tests {
     use std::path::Path;
 
     use super::{import_into, resolve_theme, save_theme_in};
-    use crate::theme_registry::UserThemes;
-    use crate::theme_registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
-    use crate::tokens::{self, Appearance, ThemeFile, ThemeTokens};
+    use crate::theme::registry::UserThemes;
+    use crate::theme::registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
+    use crate::theme::tokens::{self, Appearance, ThemeFile, ThemeTokens};
 
     fn write(dir: &Path, file: &str, text: &str) {
         std::fs::write(dir.join(file), text).expect("write theme");

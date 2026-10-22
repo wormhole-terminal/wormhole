@@ -11,8 +11,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use wormhole_core::theme_catalog::{self, ThemeEntry};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::catalog::{self, ThemeEntry};
+use wormhole_core::theme::tokens::Appearance;
 
 mod card;
 
@@ -80,7 +80,7 @@ impl ThemePicker {
 
 /// How many cards there are, as "Show all" counts them: a family of versions is one.
 fn card_count(cx: &mut App) -> usize {
-    theme_catalog::cards(&entries(cx)).len()
+    catalog::cards(&entries(cx)).len()
 }
 
 /// The filter's placeholder: how many themes there are to filter.
@@ -193,7 +193,7 @@ impl CardSet {
         cx: &mut Context<T>,
     ) {
         if !self.catalog.as_ref().is_some_and(|catalog| Rc::ptr_eq(catalog, entries)) {
-            self.members = theme_catalog::cards(entries).into_iter().map(Rc::from).collect();
+            self.members = catalog::cards(entries).into_iter().map(Rc::from).collect();
             self.looks = self.members.iter().map(|members| picks.look(entries, members)).collect();
             self.cards = self
                 .members
@@ -254,10 +254,10 @@ struct PreviewCache {
 impl Global for PreviewCache {}
 
 fn entries(cx: &mut App) -> Rc<Vec<ThemeEntry>> {
-    let fingerprint = theme_catalog::fingerprint_in(&crate::active_profile::paths().themes_dir());
+    let fingerprint = catalog::fingerprint_in(&crate::active_profile::paths().themes_dir());
     let cache = cx.default_global::<PreviewCache>();
     if cache.fingerprint.as_ref() != Some(&fingerprint) {
-        cache.entries = Rc::new(theme_catalog::catalog_in(&crate::active_profile::paths().themes_dir()));
+        cache.entries = Rc::new(catalog::catalog_in(&crate::active_profile::paths().themes_dir()));
         cache.fingerprint = Some(fingerprint);
     }
     cache.entries.clone()
@@ -388,7 +388,9 @@ impl SettingsWindow {
                     .label("Theme Studio")
                     .child(style::keycap(
                         ui,
-                        wormhole_core::keymap::glyphs(wormhole_core::keymap::ActionId::ThemeStudio),
+                        wormhole_core::keys::keymap::glyphs(
+                            wormhole_core::keys::keymap::ActionId::ThemeStudio,
+                        ),
                     ))
                     .on_click(cx.listener(|_, _, _, cx| studio::open_studio(cx))),
             );
@@ -424,8 +426,8 @@ mod tests {
         ParentElement as _, Pixels, Render, Styled as _, TestAppContext, TestSupportExt as _, Window,
         WindowOptions, div, px,
     };
-    use wormhole_core::theme_catalog;
-    use wormhole_core::theme_registry::DEFAULT_THEME;
+    use wormhole_core::theme::catalog;
+    use wormhole_core::theme::registry::DEFAULT_THEME;
 
     use super::filter_placeholder;
 
@@ -442,7 +444,7 @@ mod tests {
 
     /// Draws the cards as the picker does, from a set it keeps.
     struct Host {
-        entries: Rc<Vec<wormhole_core::theme_catalog::ThemeEntry>>,
+        entries: Rc<Vec<wormhole_core::theme::catalog::ThemeEntry>>,
         set: CardSet,
         selected: String,
     }
@@ -471,7 +473,7 @@ mod tests {
             gpui_kit::init(cx);
             cx.set_global(SettingsStore::for_test());
             // The built-in themes only: nothing is read from the user's themes folder.
-            let entries = Rc::new(theme_catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
+            let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
             let selected = entries[0].value.clone();
             gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| {
                 cx.new(|_| Host { entries, set: CardSet::default(), selected })
@@ -530,8 +532,8 @@ mod tests {
         let card = cx.update(|cx| {
             gpui_kit::init(cx);
             cx.set_global(SettingsStore::for_test());
-            let entries = Rc::new(theme_catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
-            let members: Rc<[usize]> = theme_catalog::cards(&entries)
+            let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
+            let members: Rc<[usize]> = catalog::cards(&entries)
                 .into_iter()
                 .find(|card| entries[card[0]].card_label() == "Soltari")
                 .expect("Soltari is a family")
@@ -588,7 +590,7 @@ mod tests {
         let card = cx.update(|cx| {
             gpui_kit::init(cx);
             cx.set_global(SettingsStore::for_test());
-            let entries = Rc::new(theme_catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
+            let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
             let ui = ui(cx);
             let look = super::CardLook { active: true, dark_pick: true, ..super::CardLook::default() };
             cx.new(|_| ThemeCard { catalog: entries, card: 0, members: Rc::from(vec![0]), look, ui })

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::{Launch, Shell, SpawnOptions};
-use crate::shells::{self, ShellCommand, program_name};
+use crate::terminal::shells::{self, ShellCommand, program_name};
 
 /// The settings that make a process one instance of Wormhole: where it keeps its data, what it
 /// is told by devctl, whether it stays in the background, how it answers Touch ID and
@@ -26,8 +26,8 @@ pub(super) const INSTANCE_VARS: [&str; 14] = [
     "WORMHOLE_GIT_BIN",
     "WORMHOLE_GH_BIN",
     "WORMHOLE_UPDATE_URL",
-    crate::cli_tool::DIR_VAR,
-    crate::cli_tool::LOGIN_PATH_VAR,
+    crate::terminal::cli_tool::DIR_VAR,
+    crate::terminal::cli_tool::LOGIN_PATH_VAR,
 ];
 
 /// What a tab runs. WORMHOLE_SHELL replaces everything (e.g. `/bin/cat` for safe automated UI
@@ -112,7 +112,7 @@ pub fn shell_name(options: &SpawnOptions) -> String {
 
 /// How to run `shell`: folder and environment.
 pub(super) fn launch_options(options: &SpawnOptions, shell: Shell) -> Launch {
-    launch_options_with(options, shell, crate::cli_tool::terminal_dir().as_deref())
+    launch_options_with(options, shell, crate::terminal::cli_tool::terminal_dir().as_deref())
 }
 
 /// [`launch_options`] with the folder of the `wh` command given: put first on the shell's `PATH` so the
@@ -141,7 +141,7 @@ fn launch_options_with(options: &SpawnOptions, shell: Shell, command_dir: Option
     if let Some(dir) = command_dir {
         let base = env.get("PATH").cloned().or_else(|| std::env::var("PATH").ok()).unwrap_or_default();
         let base = if base.is_empty() { FALLBACK_PATH.to_string() } else { base };
-        env.insert("PATH".into(), crate::cli_tool::path_with_first(dir, &base));
+        env.insert("PATH".into(), crate::terminal::cli_tool::path_with_first(dir, &base));
     }
     // After the project's: what the hooks need to reach this tab can't be
     // redirected by a project's `config.json`.
@@ -257,7 +257,7 @@ mod name_tests {
     fn a_terminal_starts_without_the_command_when_its_script_is_not_there() {
         let blocked = tempfile::tempdir().expect("temp dir");
         std::fs::write(blocked.path().join("bin"), "a file where the folder should be").expect("file");
-        let failed = crate::cli_tool::keep_current_in(
+        let failed = crate::terminal::cli_tool::keep_current_in(
             &blocked.path().join("bin"),
             std::path::Path::new("/opt/Wormhole"),
         );

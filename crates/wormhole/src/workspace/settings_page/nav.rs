@@ -12,8 +12,8 @@ use gpui_kit::component::input::Input;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::NavMark;
-use wormhole_core::settings_index::Query;
-use wormhole_core::settings_index::{self, SectionId as Section};
+use wormhole_core::config::settings_index::Query;
+use wormhole_core::config::settings_index::{self, SectionId as Section};
 
 use super::{SettingsWindow, ui};
 use crate::settings::{SettingsStore, UiColors, settings};

@@ -33,7 +33,7 @@ use std::sync::OnceLock;
 
 use sha2::{Digest, Sha256};
 
-use crate::paths::data_dir;
+use crate::storage::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use control::run as run_control_cli;

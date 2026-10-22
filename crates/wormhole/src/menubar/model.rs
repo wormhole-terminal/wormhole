@@ -6,7 +6,7 @@
 use std::time::Instant;
 
 use wormhole_core::config::MenuBarIcon;
-use wormhole_core::keyspec::KeySpec;
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, ItemState, State, Terminal};
 
 use super::{ActionItem, MenuCommand, MenuSnapshot};
@@ -243,7 +243,7 @@ fn open_folder() -> ItemModel {
 /// A path with the home folder as `~`.
 fn display_path(path: &std::path::Path) -> String {
     let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
-    wormhole_core::sidebar::display_path(path, home.as_deref())
+    wormhole_core::view::sidebar::display_path(path, home.as_deref())
 }
 
 /// The menu, with each row's time as of `now` (the menu is built as it opens).
@@ -349,7 +349,7 @@ pub fn dock_menu(terminals: &[Terminal], now: Instant) -> Vec<DockEntry> {
         for &ix in list.iter().take(MAX_SESSIONS / 2) {
             let terminal = &terminals[ix];
             let waited = now.saturating_duration_since(terminal.since);
-            let time = wormhole_core::sidebar::text::took(waited).unwrap_or_else(|| "now".into());
+            let time = wormhole_core::view::sidebar::text::took(waited).unwrap_or_else(|| "now".into());
             entries.push(DockEntry::Terminal {
                 label: format!("{}   {time}", terminal.name),
                 tab: terminal.tab,

@@ -8,9 +8,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::input::Input;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::keymap::ActionId;
-use wormhole_core::search::Scope;
-use wormhole_core::settings_index;
+use wormhole_core::config::settings_index;
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::view::search::Scope;
 
 use super::super::overlay::scrim;
 use super::CommandPalette;
@@ -102,7 +102,7 @@ fn value_text(key: &str, value: &serde_json::Value) -> Option<String> {
             Some(format!("{} %", (n.as_f64()? * 100.0).round() as i64))
         }
         serde_json::Value::Number(n) => match n.as_u64() {
-            Some(whole) => Some(wormhole_core::limits::count_grouped(whole as usize)),
+            Some(whole) => Some(wormhole_core::view::limits::count_grouped(whole as usize)),
             // A fraction as the page writes it: the line height's 1.2, a size's 13.5.
             None => Some(format!("{}", (n.as_f64()? * 100.0).round() / 100.0)),
         },

@@ -6,9 +6,9 @@ use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::*;
 use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
-use wormhole_core::folder_color::FolderColor;
-use wormhole_core::sidebar::Bracket;
-use wormhole_core::sidebar::GroupColor;
+use wormhole_core::theme::folder_color::FolderColor;
+use wormhole_core::view::sidebar::Bracket;
+use wormhole_core::view::sidebar::GroupColor;
 
 use super::Env;
 use super::view::GalleryView;

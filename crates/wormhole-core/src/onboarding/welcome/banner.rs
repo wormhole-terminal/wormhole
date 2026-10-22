@@ -5,7 +5,7 @@
 
 use super::ansi::{Style, color, text_width};
 use super::art::{MARGIN, MARK_CELL};
-use crate::keymap::{self, ActionId};
+use crate::keys::keymap::{self, ActionId};
 
 /// The keys the banner names, with what they do.
 const HINTS: [(ActionId, &str); 3] = [

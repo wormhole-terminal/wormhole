@@ -19,15 +19,15 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use gpui_kit::*;
+use wormhole_core::config::profile::ProfileList;
 use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
 use wormhole_core::ipc;
-use wormhole_core::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
-use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
-use wormhole_core::paths::{DataRoot, ProfileId};
-use wormhole_core::profile::ProfileList;
-use wormhole_core::store::{Store, WindowRecord};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::storage::paths::{DataRoot, ProfileId};
+use wormhole_core::storage::store::{Store, WindowRecord};
+use wormhole_core::theme::tokens::Appearance;
+use wormhole_core::view::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
 use super::{
     Layout, Workspace, app_menu, aux_window, chrome, control, menu_bar, notifications, onboarding, profiles,
@@ -93,11 +93,11 @@ pub(crate) struct AppState {
     pub ending_hosts: bool,
     /// The session hosts found at launch, until the terminals that name them have attached and the
     /// orphans have been adopted (`hosting`).
-    pub launch_hosts: wormhole_core::hosts::LaunchHosts,
+    pub launch_hosts: wormhole_core::ipc::hosts::LaunchHosts,
     /// The window showing the question before quitting, while it is up.
     pub quit_prompt: Option<i64>,
     /// The coding agents' plan usage limits, one report per agent (the Usage tab).
-    pub usage: Vec<wormhole_core::usage::Usage>,
+    pub usage: Vec<wormhole_core::agents::usage::Usage>,
     /// What `gh` said about each branch's pull request, asked rarely (the title row's PR link).
     pub pr: wormhole_core::git::pr::PrCache,
     /// The git worktrees Wormhole made (Shell → New Terminal in New Worktree), kept across
@@ -205,11 +205,13 @@ impl AppState {
     }
 
     /// An agent's latest plan usage limits, kept across restarts.
-    fn record_usage(&mut self, usage: wormhole_core::usage::Usage) {
-        wormhole_core::usage::record(&mut self.usage, usage);
+    fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
+        wormhole_core::agents::usage::record(&mut self.usage, usage);
         if let Some(store) = &self.store
-            && let Err(err) =
-                store.set_meta(wormhole_core::usage::STORE_KEY, &wormhole_core::usage::to_json(&self.usage))
+            && let Err(err) = store.set_meta(
+                wormhole_core::agents::usage::STORE_KEY,
+                &wormhole_core::agents::usage::to_json(&self.usage),
+            )
         {
             tracing::warn!("remembering the usage limits: {err:#}");
         }
@@ -267,7 +269,7 @@ impl AppState {
         hook_events: smol::channel::Receiver<ipc::Incoming>,
         root: DataRoot,
         profiles: ProfileList,
-        profiles_error: Option<wormhole_core::profile::ProfileError>,
+        profiles_error: Option<wormhole_core::config::profile::ProfileError>,
         cx: &mut App,
     ) {
         let paths = root.profile(profiles.active_id());
@@ -638,7 +640,7 @@ fn handle_menu_command(command: MenuCommand, cx: &mut App) {
 /// Once per tick, whatever the number of windows.
 fn tick(cx: &mut App) {
     // `kill` (SIGTERM): quit as ⌘Q does, without its question, so nothing unsaved is lost.
-    if wormhole_core::quit_signal::take() {
+    if wormhole_core::platform::quit_signal::take() {
         tracing::info!("asked to quit (SIGTERM)");
         cx.quit();
         return;

@@ -9,7 +9,7 @@ use std::ops::Range;
 
 use gpui_kit::component::input::{Escape, IndentInline, MoveDown, MoveUp};
 use gpui_kit::*;
-use wormhole_core::tokens::{Completion, completions};
+use wormhole_core::theme::tokens::{Completion, completions};
 
 use super::StudioWindow;
 use super::draft::{group_of, is_metric};

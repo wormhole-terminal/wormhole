@@ -1,7 +1,7 @@
 //! The rows of the action table, in order. Each key is written as people read it.
 
 use super::{ActionId, Entry, Scope, Stage};
-use crate::keyspec::{KeyMods, KeySpec};
+use crate::keys::keyspec::{KeyMods, KeySpec};
 
 const fn mods(ctrl: bool, alt: bool, shift: bool, cmd: bool) -> KeyMods {
     KeyMods { cmd, ctrl, alt, shift }

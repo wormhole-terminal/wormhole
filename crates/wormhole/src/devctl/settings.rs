@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::{Result, anyhow};
 
 use wormhole_core::terminal::scrollbar::ScrollerStyle;
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::Ctx;
 use crate::platform::scroller::ScrollerPrefs;
@@ -59,7 +59,7 @@ pub(super) fn record(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `settings-reveal <id>`: the settings window at that row, as the palette opens it.
 pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = arg.trim();
-    if wormhole_core::settings_index::entry(id).is_none() {
+    if wormhole_core::config::settings_index::entry(id).is_none() {
         return Err(anyhow!("no setting {id:?}"));
     }
     ctx.workspace.devctl_settings_reveal(id, ctx.cx);
@@ -113,7 +113,7 @@ pub(super) fn set(_: &mut Ctx, arg: &str) -> Result<String> {
     let path: PathBuf = SettingsStore::config_path();
     let text = std::fs::read_to_string(&path).unwrap_or_default();
     let mut config: serde_json::Map<String, serde_json::Value> =
-        wormhole_core::jsonc::parse(&text).unwrap_or_default();
+        wormhole_core::storage::jsonc::parse(&text).unwrap_or_default();
     let value = serde_json::from_str(value.trim())
         .unwrap_or_else(|_| serde_json::Value::String(value.trim().to_string()));
     config.insert(key.trim().to_string(), value);

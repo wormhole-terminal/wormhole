@@ -11,7 +11,7 @@ use std::path::Path;
 
 use wormhole_term::hosted::meta::Meta;
 
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 use super::is_valid_host_id;
 

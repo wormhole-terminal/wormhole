@@ -26,7 +26,7 @@ use super::color::PAINT_KEYS;
 use super::features::root_key;
 use super::snapshot::ProjectSnapshot;
 use super::{Feature, ProjectError, ProjectFolder, parse_json, read_state_file, set_aside, write_atomic};
-use crate::fsutil::LinkPolicy;
+use crate::storage::fsutil::LinkPolicy;
 
 /// Bumping this invalidates every stored approval (they show as `Changed` once), e.g. when the
 /// set of inputs changes, unless the old one is still understood (see [`LEGACY_VERSION`]). v2 added

@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use super::lexer::{Spanned, Tok, describe, tokenize};
 use super::{Expr, Located};
-use crate::color::Color;
+use crate::theme::tokens::color::Color;
 
 /// How deep an expression may nest: calls, parentheses and `/` alphas alike.
 /// The built-in rules need 4. A repository's `.wormhole/theme.json` is applied
@@ -225,7 +225,7 @@ fn quoted(src: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{Expr, parse_expr};
-    use crate::tokens::test_support::{hex, on_small_stack};
+    use crate::theme::tokens::test_support::{hex, on_small_stack};
 
     #[test]
     fn expression_parsing() {

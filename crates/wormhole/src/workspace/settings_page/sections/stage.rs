@@ -8,7 +8,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::fonts::FontSlot;
+use wormhole_core::theme::fonts::FontSlot;
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};

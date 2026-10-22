@@ -2,8 +2,8 @@
 //! Pink Purple Cyan Orange. Like a folder's colour (`FolderColor`) they are names, and what each
 //! looks like comes from the theme; the stored word is the lower-case name.
 
-use crate::folder_color::{legible, swatch};
-use crate::tokens::{Color, ThemeTokens};
+use crate::theme::folder_color::{legible, swatch};
+use crate::theme::tokens::{Color, ThemeTokens};
 
 /// How a group's colour washes its card: `WASH_PEAK` of the colour all over it, or, with fading
 /// turned on (`fade_group_colors`), from `WASH_PEAK` at the card's left edge down to `WASH_FAR` at
@@ -237,7 +237,7 @@ mod tests {
     /// still reads on its wash: the extremes are the cases that would not.
     #[test]
     fn a_colour_of_ones_own_is_seen_and_its_wash_reads_in_every_theme() {
-        use crate::tokens::{Color, builtins};
+        use crate::theme::tokens::{Color, builtins};
         let extremes = [[0, 0, 0], [255, 255, 255], [128, 128, 128], [255, 255, 0], [0, 0, 255], [255, 0, 0]];
         for tokens in builtins() {
             let get = |name: &str| tokens.get(name).expect(name);
@@ -256,7 +256,7 @@ mod tests {
         }
     }
 
-    use crate::tokens::{Color, builtins};
+    use crate::theme::tokens::{Color, builtins};
 
     #[test]
     fn a_colour_is_written_by_its_lower_case_name() {

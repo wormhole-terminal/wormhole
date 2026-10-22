@@ -31,8 +31,8 @@ use crate::workspace::Workspace;
 use load::{Ask, Stamp};
 use rows::{BuildKey, Row, RowStats};
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};
-use wormhole_core::limits;
-use wormhole_core::paths::ProfileId;
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::limits;
 
 pub(super) use load::Observed;
 pub(in crate::workspace) use review::Commenting;

@@ -14,11 +14,11 @@ use gpui_kit::component::switch::Switch;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::folder_color::FolderColor;
-use wormhole_core::limits::count_grouped;
 use wormhole_core::project::{ActionKind, Feature, TrustLine, TrustStatus, trust_applies};
-use wormhole_core::sidebar::display_path;
-use wormhole_core::spoken;
+use wormhole_core::theme::folder_color::FolderColor;
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::sidebar::display_path;
+use wormhole_core::view::spoken;
 
 use super::super::folder_color;
 use super::super::session::home_dir;

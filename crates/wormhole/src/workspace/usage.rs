@@ -1,12 +1,12 @@
 //! The right panel's Usage tab: each coding agent's plan usage limits, as its status line last
-//! reported them (`wormhole_core::usage`), plus Gemini’s latest model-response tokens.
+//! reported them (`wormhole_core::agents::usage`), plus Gemini’s latest model-response tokens.
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents;
-use wormhole_core::usage::{self, PlanLimit, Usage};
+use wormhole_core::agents::usage::{self, PlanLimit, Usage};
 
 use super::Workspace;
 use super::app::app;

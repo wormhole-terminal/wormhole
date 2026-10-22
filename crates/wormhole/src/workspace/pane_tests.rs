@@ -1,9 +1,9 @@
 //! Terminals and the splits they are shown in, in a real window (GPUI's test platform; see
 //! `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::{Focusable as _, TestAppContext, VisualTestContext};
-use wormhole_core::panes::{Axis, DropError, Preset, TabPanes, Zone};
-use wormhole_core::sidebar::{Bracket, Drop, Landing, Part};
-use wormhole_core::store::{SessionRecord, SplitRecord, WindowRecord};
+use wormhole_core::storage::store::{SessionRecord, SplitRecord, WindowRecord};
+use wormhole_core::view::panes::{Axis, DropError, Preset, TabPanes, Zone};
+use wormhole_core::view::sidebar::{Bracket, Drop, Landing, Part};
 
 use super::app::OpenWindow;
 use super::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
@@ -39,7 +39,7 @@ fn selected(cx: &mut TestAppContext, window: &OpenWindow) -> i64 {
 }
 
 /// The sidebar's list as it is built now.
-fn listing(cx: &mut TestAppContext, window: &OpenWindow) -> wormhole_core::sidebar::Listing {
+fn listing(cx: &mut TestAppContext, window: &OpenWindow) -> wormhole_core::view::sidebar::Listing {
     cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.session_listing(cx))).expect("open")
 }
 

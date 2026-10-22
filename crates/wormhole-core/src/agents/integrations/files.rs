@@ -5,7 +5,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 /// Suffix of the copy kept next to a config file before we change it.
 pub(crate) const BACKUP_SUFFIX: &str = "wormhole-backup";
@@ -35,7 +35,7 @@ pub fn read_json(path: &Path) -> Result<Value, String> {
         return Ok(json!({}));
     }
     let value: Value = serde_json::from_str(&text).map_err(|err| {
-        if crate::jsonc::parse::<Value>(&text).is_ok() {
+        if crate::storage::jsonc::parse::<Value>(&text).is_ok() {
             format!("{} contains comments; add the hooks by hand to keep them", display(path))
         } else {
             format!("{} is not valid JSON: {err}", display(path))

@@ -23,7 +23,7 @@ pub const FACES: [&[u8]; 4] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fonts::custom::parse_font;
+    use crate::theme::fonts::custom::parse_font;
 
     #[test]
     fn every_face_is_monospace_jetbrains_mono() {

@@ -8,8 +8,8 @@ use gpui_kit::*;
 
 use crate::settings::UiColors;
 
-pub use wormhole_core::layout::status_bar::STATUS_BAR_H;
-pub use wormhole_core::limits::{
+pub use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
+pub use wormhole_core::view::limits::{
     COUNT_BADGE_MAX, DIFF_SPLIT_MIN, DONE_FOLD_ABOVE, FOLD_ABOVE, NOTE_OPEN_MAX_LINES, STATUS_BAR_SIZE_MIN,
     STATUS_BAR_WORDS_MIN, count_label,
 };

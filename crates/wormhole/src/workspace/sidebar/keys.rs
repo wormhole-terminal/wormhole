@@ -10,8 +10,8 @@
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::focus::list::{Item, Move, band_folds, type_ahead, walk};
-use wormhole_core::sidebar::Entry;
+use wormhole_core::view::focus::list::{Item, Move, band_folds, type_ahead, walk};
+use wormhole_core::view::sidebar::Entry;
 
 use super::super::focus::{Activate, SidebarStop, activation, list_key};
 use crate::workspace::Workspace;
@@ -72,7 +72,7 @@ impl Workspace {
     /// shows.
     pub(super) fn sidebar_keyed(&self, stop: &SidebarStop, window: &Window) -> (bool, bool) {
         let keyed = self.areas.sidebar_at.as_ref() == Some(stop);
-        (keyed, keyed && self.ring(wormhole_core::focus::Area::Sidebar, window))
+        (keyed, keyed && self.ring(wormhole_core::view::focus::Area::Sidebar, window))
     }
 
     pub(in crate::workspace) fn sidebar_key(
@@ -98,7 +98,7 @@ impl Workspace {
                     self.activate(ix, window, cx);
                     // Space shows it while the keys keep browsing.
                     if press == Activate::Space {
-                        self.refocus(wormhole_core::focus::Area::Sidebar, window, cx);
+                        self.refocus(wormhole_core::view::focus::Area::Sidebar, window, cx);
                     }
                 }
                 None if band_folds(press) => self.sidebar_fold(&list, at, cx),

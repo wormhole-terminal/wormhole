@@ -9,8 +9,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use gpui_kit::*;
-use wormhole_core::panes::{TabPanes, Zone};
-use wormhole_core::sidebar::Entry;
+use wormhole_core::view::panes::{TabPanes, Zone};
+use wormhole_core::view::sidebar::Entry;
 
 use super::super::focus::SidebarStop;
 use super::facts::RowInfo;
@@ -216,7 +216,7 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
         })
         .item(Item::new("Split right").on_select(on(|ws, ix, window, cx| {
             ws.activate(ix, window, cx);
-            ws.split_pane(wormhole_core::panes::Axis::Row, window, cx);
+            ws.split_pane(wormhole_core::view::panes::Axis::Row, window, cx);
         })))
         .item(
             Item::new("Close terminal")

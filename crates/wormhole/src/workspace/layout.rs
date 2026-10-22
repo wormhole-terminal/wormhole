@@ -2,7 +2,7 @@
 //! `chrome`, the resize handles in `resize`.
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::layout::{Columns, Edge, Panes};
+use wormhole_core::view::layout::{Columns, Edge, Panes};
 
 use super::app::app_mut;
 use super::resize::edge_rule;

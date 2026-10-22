@@ -7,7 +7,7 @@ use std::time::Duration;
 use gpui_kit::TestAppContext;
 use wormhole_core::onboarding::Step;
 
-use wormhole_core::features::FeatureFlag;
+use wormhole_core::config::features::FeatureFlag;
 
 use super::FADE_OUT;
 use crate::workspace::app::OpenWindow;

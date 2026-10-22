@@ -6,15 +6,15 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::clipboard::{ClipboardRead, ClipboardWrite};
-use crate::features::{self, FeatureFlag, FlagMode};
-use crate::folder_color::FolderColor;
-use crate::fonts::{self, FontSlot};
+use crate::config::clipboard::{ClipboardRead, ClipboardWrite};
+use crate::config::features::{self, FeatureFlag, FlagMode};
 use crate::project::ProjectColorChoice;
-use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
-use crate::theme_registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
-use crate::tokens::Color;
+use crate::theme::folder_color::FolderColor;
+use crate::theme::fonts::{self, FontSlot};
+use crate::theme::registry::{DEFAULT_THEME, DEFAULT_THEME_LIGHT};
+use crate::theme::tokens::Color;
 use crate::update::UpdateChannel;
+use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
 /// Which theme a window shows: always the dark pick (`theme`), always the light
 /// pick (`theme_light`), or whichever matches the system's appearance.
@@ -263,7 +263,7 @@ pub struct Settings {
     /// Check for and download updates automatically.
     pub auto_update: bool,
     /// Which builds to update to: releases, or also every build of main (see [`UpdateChannel`]).
-    /// Unstable also shows the feature-flag switches (see [`crate::features`]).
+    /// Unstable also shows the feature-flag switches (see [`crate::config::features`]).
     pub update_channel: UpdateChannel,
 
     // Windows
@@ -399,7 +399,7 @@ pub struct Settings {
     /// after the repository), or, empty, beside the repository in `<name>-worktrees`.
     pub worktree_base: String,
 
-    /// Features still behind a flag (see [`crate::features`]). The key is a [`FeatureFlag`]'s
+    /// Features still behind a flag (see [`crate::config::features`]). The key is a [`FeatureFlag`]'s
     /// `key`, the value whether it is on. Only a development build or the Unstable channel reads
     /// this; otherwise a release uses each flag's release default. A key this build doesn't know
     /// stays in the file.
@@ -502,7 +502,7 @@ impl Settings {
     /// Whether the feature behind `flag` is on in this build: a development build reads
     /// `feature_flags` (a flag with no entry defaults on), a release on the Unstable channel reads
     /// it too (no entry: the release default), any other release uses the flag's release default
-    /// (see [`crate::features`]).
+    /// (see [`crate::config::features`]).
     pub fn feature_enabled(&self, flag: FeatureFlag) -> bool {
         features::enabled_in(flag, &self.feature_flags, self.flag_mode())
     }
@@ -836,11 +836,11 @@ mod tests {
         APP_SETTINGS, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
         PROJECT_SETTINGS, Settings, ShellProfile, SizeUnits, ThemeMode, TitleBorder, keys,
     };
-    use crate::folder_color::FolderColor;
-    use crate::fonts;
-    use crate::jsonc;
-    use crate::sidebar::{Density, SidebarNumbers, TerminalsIn};
-    use crate::tokens::Color;
+    use crate::storage::jsonc;
+    use crate::theme::folder_color::FolderColor;
+    use crate::theme::fonts;
+    use crate::theme::tokens::Color;
+    use crate::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
     use std::path::Path;
 
     #[test]

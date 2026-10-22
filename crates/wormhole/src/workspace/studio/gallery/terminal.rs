@@ -1,7 +1,7 @@
 //! The 16 ANSI colors, text, selection and cursor.
 
 use gpui_kit::*;
-use wormhole_core::tokens::ThemeTokens;
+use wormhole_core::theme::tokens::ThemeTokens;
 
 use super::Env;
 use super::view::GalleryView;

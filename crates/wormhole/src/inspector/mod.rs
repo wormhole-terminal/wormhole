@@ -31,7 +31,7 @@ use gpui_kit::component::{ActiveTheme as _, Sizable};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use wormhole_core::keymap::{self, ActionId};
+use wormhole_core::keys::keymap::{self, ActionId};
 
 use crate::settings::{SettingsStore, ui};
 use crate::style::{self, Edges as _, TextRole};

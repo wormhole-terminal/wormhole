@@ -7,7 +7,7 @@
 
 use super::menus::MenuState;
 use super::{ActionId, Entry, Stage, entries, entry};
-use crate::keyspec::KeySpec;
+use crate::keys::keyspec::KeySpec;
 
 /// The groups of the Actions scope (Terminal, View, the project's own, App).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -157,8 +157,8 @@ pub fn label_of(id: ActionId, state: &MenuState) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{Section, actions, label_of, section, suggested};
-    use crate::keymap::ActionId;
-    use crate::keymap::menus::MenuState;
+    use crate::keys::keymap::ActionId;
+    use crate::keys::keymap::menus::MenuState;
 
     fn labels(state: &MenuState) -> Vec<String> {
         actions(state).into_iter().map(|a| a.label).collect()

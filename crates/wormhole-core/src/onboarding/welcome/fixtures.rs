@@ -3,11 +3,11 @@
 use super::model::Welcome;
 use crate::agents::AgentId;
 use crate::config::NotifySound;
-use crate::intro::Handover;
 use crate::ipc::control::{
     AgentFact, AgentsFacts, HooksFact, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, ThemeFact,
     WelcomeState,
 };
+use crate::onboarding::intro::Handover;
 
 pub fn look() -> LookFacts {
     let theme = |name: &str, light: bool| ThemeFact { name: name.into(), light };

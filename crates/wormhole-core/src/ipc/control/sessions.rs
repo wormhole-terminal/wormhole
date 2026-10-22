@@ -12,7 +12,7 @@ use serde::Serialize;
 
 use super::Reply;
 use super::cli::{print, print_err};
-use crate::hosts::{self, ForgetError, HostMeta, Scan, StaleReason};
+use crate::ipc::hosts::{self, ForgetError, HostMeta, Scan, StaleReason};
 
 /// How long one host gets to take `Kill` and hang up: its shell's hangup grace (3 s) and a margin.
 /// Past it the host is taken to be stuck, and the signal takes over.
@@ -86,7 +86,7 @@ pub fn run(args: &[String]) -> i32 {
             return 2;
         }
     };
-    let hosts_dir = hosts::hosts_dir(&crate::paths::data_dir());
+    let hosts_dir = hosts::hosts_dir(&crate::storage::paths::data_dir());
     let (code, out, err) = execute(&command, &hosts_dir, END_WAIT);
     print(&out);
     print_err(&err);
@@ -296,7 +296,7 @@ fn utc(secs: u64) -> String {
 /// there to ask, so the hosts' own files answer. `None` when there is nothing to add (no live host,
 /// or a question only the app can answer), and the caller says "Wormhole isn't running" as before.
 pub(super) fn offline(action: &super::Action, json: bool) -> Option<String> {
-    let hosts_dir = hosts::hosts_dir(&crate::paths::data_dir());
+    let hosts_dir = hosts::hosts_dir(&crate::storage::paths::data_dir());
     offline_in(action, json, &hosts_dir)
 }
 

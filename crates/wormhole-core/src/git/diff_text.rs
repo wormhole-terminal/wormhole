@@ -4,7 +4,7 @@
 
 use super::{DIFF_MEASURE_BYTES, LfsChange, LfsPointer};
 use crate::config::SizeUnits;
-use crate::limits::count_grouped;
+use crate::view::limits::count_grouped;
 
 /// A size in `units`, at most one decimal and none from 100 up, whole bytes below a unit:
 /// decimal the way Finder writes it ("48.2 KB", "12.4 MB", "100 MB"), binary the way git and

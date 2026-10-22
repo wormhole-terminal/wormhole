@@ -4,7 +4,7 @@
 //! Reduce Motion is what GPUI's animations follow. Tests never ask the real system: there,
 //! nothing is known and nothing is watched.
 
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::os::look as os;
 pub use super::os::look::DisplayObserver;

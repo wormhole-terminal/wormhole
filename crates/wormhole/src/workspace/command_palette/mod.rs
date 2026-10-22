@@ -19,10 +19,10 @@ use std::time::Duration;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::git;
-use wormhole_core::keymap::palette as palette_actions;
+use wormhole_core::keys::keymap::palette as palette_actions;
 use wormhole_core::project::{ActionKind, Feature};
-use wormhole_core::search::{self, Scope};
-use wormhole_core::sidebar::display_path;
+use wormhole_core::view::search::{self, Scope};
+use wormhole_core::view::sidebar::display_path;
 
 use super::app::{AppState, OpenWindow, app, open_tab};
 use super::overlay::OverlayView;
@@ -97,11 +97,13 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     let finished = super::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.
     let default = super::shells::default_key(settings(cx)).to_string();
-    let shells =
-        wormhole_core::shells::choices(settings(cx)).into_iter().filter(|c| c.key != default).collect();
+    let shells = wormhole_core::terminal::shells::choices(settings(cx))
+        .into_iter()
+        .filter(|c| c.key != default)
+        .collect();
     // The settings sections this build hides (a Preview section whose flag is off): the palette
     // leaves their rows out, as the settings window's own nav and search do.
-    let hidden_sections = wormhole_core::settings_index::SectionId::ALL
+    let hidden_sections = wormhole_core::config::settings_index::SectionId::ALL
         .into_iter()
         .filter(|section| !section.is_visible(settings(cx)))
         .collect();
@@ -449,7 +451,7 @@ impl CommandPalette {
     }
 
     fn copy_key(&self, id: &'static str, cx: &mut Context<Self>) {
-        let Some((_, _, entry)) = wormhole_core::settings_index::entry(id) else { return };
+        let Some((_, _, entry)) = wormhole_core::config::settings_index::entry(id) else { return };
         if let Some(key) = entry.keys.first() {
             cx.write_to_clipboard(ClipboardItem::new_string((*key).to_string()));
         }
@@ -679,7 +681,7 @@ mod tests {
             .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.palette().map(|p| p.read(cx).scope)))
             .ok()
             .flatten();
-        assert_eq!(scope, Some(wormhole_core::search::Scope::Terminals));
+        assert_eq!(scope, Some(wormhole_core::view::search::Scope::Terminals));
         key(cx, &window, "escape");
         assert!(read(cx, &window, |ws| ws.palette_open()), "the first Esc leaves the scope");
         key(cx, &window, "escape");

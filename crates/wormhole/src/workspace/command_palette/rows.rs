@@ -6,13 +6,13 @@ use std::ops::Range;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use wormhole_core::config::settings_index::{self, Query, SectionId};
 use wormhole_core::git::Commit;
-use wormhole_core::keymap::ActionId;
-use wormhole_core::keymap::palette::{self as actions, Action, Section as ActionSection};
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::keys::keymap::palette::{self as actions, Action, Section as ActionSection};
 use wormhole_core::notify::{self, State, Terminal};
-use wormhole_core::search::{self, Candidate, Group, Ranked, Scope};
-use wormhole_core::settings_index::{self, Query, SectionId};
-use wormhole_core::shells::ShellChoice;
+use wormhole_core::terminal::shells::ShellChoice;
+use wormhole_core::view::search::{self, Candidate, Group, Ranked, Scope};
 
 /// A terminal of any window, as the palette lists it.
 #[derive(Clone, Debug)]
@@ -556,13 +556,13 @@ mod tests {
     use std::path::PathBuf;
     use std::time::{Duration, Instant};
 
-    use wormhole_core::keymap::ActionId;
-    use wormhole_core::keymap::menus::MenuState;
-    use wormhole_core::keymap::palette;
+    use wormhole_core::keys::keymap::ActionId;
+    use wormhole_core::keys::keymap::menus::MenuState;
+    use wormhole_core::keys::keymap::palette;
     use wormhole_core::notify::{Source, State, Terminal};
-    use wormhole_core::search::Scope;
+    use wormhole_core::view::search::Scope;
 
-    use wormhole_core::shells::ShellChoice;
+    use wormhole_core::terminal::shells::ShellChoice;
 
     use super::{
         FolderItem, Item, Recent, Row, Snapshot, TerminalItem, question, result_count, rows, terminal_detail,
@@ -652,7 +652,7 @@ mod tests {
             key: key.into(),
             name: name.into(),
             command_line: command_line.into(),
-            kind: wormhole_core::shells::ShellKind::Profile,
+            kind: wormhole_core::terminal::shells::ShellKind::Profile,
         }
     }
 
@@ -725,7 +725,7 @@ mod tests {
     /// keeps the pages' order, as the settings window's own search does.
     #[test]
     fn the_unscoped_settings_group_puts_the_best_match_first() {
-        use wormhole_core::settings_index::{Query, search};
+        use wormhole_core::config::settings_index::{Query, search};
         let snapshot = snapshot();
         let settings = |scope: Scope| -> Vec<&'static str> {
             rows(&snapshot, scope, "font")

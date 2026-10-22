@@ -34,7 +34,7 @@ pub(super) fn new_shell(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn shells(ctx: &mut Ctx, _: &str) -> Result<String> {
     let settings = crate::settings::settings(ctx.cx);
     let default = settings.default_shell.trim();
-    Ok(wormhole_core::shells::choices(settings)
+    Ok(wormhole_core::terminal::shells::choices(settings)
         .iter()
         .map(|choice| {
             let key = if choice.key.is_empty() { "-" } else { choice.key.as_str() };
@@ -106,7 +106,7 @@ fn row_arg(ctx: &Ctx, n: &str) -> Result<usize> {
 /// the terminal `pane` (its id; made if it stands alone), on that side of its pane, as a row
 /// dropped on a pane's edge does. It leaves the split it was in.
 pub(super) fn split_join(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::panes::Zone;
+    use wormhole_core::view::panes::Zone;
     let mut parts = arg.split_whitespace();
     let (Some(row), Some(pane), Some(zone), None) = (parts.next(), parts.next(), parts.next(), parts.next())
     else {
@@ -142,7 +142,7 @@ pub(super) fn split_leave(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// of the second row's (`row`: it joins its split), its top quarter (`before`) or its bottom
 /// quarter (`after`), as a drag in the sidebar would. Prints what it did.
 pub(super) fn row_drop(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::sidebar::{Drop, Landing, Part};
+    use wormhole_core::view::sidebar::{Drop, Landing, Part};
     let mut parts = arg.split_whitespace();
     let (Some(from), Some(onto), Some(part), None) = (parts.next(), parts.next(), parts.next(), parts.next())
     else {
@@ -180,7 +180,7 @@ pub(super) fn row_drop(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `pane-split <right|down>`: split the focused pane of the selected terminal (⌘D / ⇧⌘D).
 pub(super) fn pane_split(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::panes::Axis;
+    use wormhole_core::view::panes::Axis;
     let axis = match arg.trim() {
         "right" => Axis::Row,
         "down" => Axis::Column,
@@ -204,7 +204,7 @@ pub(super) fn pane_zoom(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// `pane-focus <id|left|right|up|down>`.
 pub(super) fn pane_focus(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::panes::Direction;
+    use wormhole_core::view::panes::Direction;
     let direction = match arg.trim() {
         "left" => Some(Direction::Left),
         "right" => Some(Direction::Right),
@@ -224,7 +224,7 @@ pub(super) fn pane_focus(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `layout <columns|rows|grid|single>`: View → Layout on the selected terminal's split.
 pub(super) fn layout(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::panes::Preset;
+    use wormhole_core::view::panes::Preset;
     let preset = match arg.trim() {
         "columns" => Preset::TwoColumns,
         "rows" => Preset::TwoRows,
@@ -275,7 +275,7 @@ pub(super) fn front(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// `profile <id>`: switch Wormhole to that profile, after this batch (the windows are updating now).
 pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let id = wormhole_core::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
         if let Err(err) = crate::workspace::AppState::switch_profile(&id, cx) {
             tracing::warn!("devctl profile: {err}");
@@ -286,14 +286,14 @@ pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `profile-open <id>`: a new window in that profile (the odd window when Wormhole is in another).
 pub(super) fn profile_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let id = wormhole_core::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| crate::workspace::AppState::open_window_in_profile(&id, cx));
     Ok(String::new())
 }
 
 /// `profile-move <id>`: the window in front goes to that profile.
 pub(super) fn profile_move(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let id = wormhole_core::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
         if let Err(err) = crate::workspace::AppState::move_front_window_to_profile(&id, cx) {
             tracing::warn!("devctl profile-move: {err}");
@@ -304,7 +304,7 @@ pub(super) fn profile_move(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `profile-delete <id>`: delete a profile, as Settings does after its question.
 pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let id = wormhole_core::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
         if let Err(err) = crate::workspace::AppState::delete_profile(&id, cx) {
             tracing::warn!("devctl profile-delete: {err}");
@@ -316,7 +316,7 @@ pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `profile-new <name> [git-email]`: make a profile with Wormhole's defaults (with a git identity
 /// of that name and email, when an email is given) and print its id.
 pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use wormhole_core::profile::{NewProfile, StartFrom};
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
     let state = crate::workspace::app_mut(ctx.cx);
     let root = state.root.clone();
     let (name, email) = match arg.trim().rsplit_once(' ') {
@@ -329,7 +329,7 @@ pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
         let (identity_name, email) = (name.to_string(), email.to_string());
         state
             .profiles
-            .edit(&id, |p| p.git = wormhole_core::profile::GitIdentity { name: identity_name, email })
+            .edit(&id, |p| p.git = wormhole_core::config::profile::GitIdentity { name: identity_name, email })
             .and_then(|()| state.profiles.save(&root))
             .map_err(|err| anyhow!("{err}"))?;
     }

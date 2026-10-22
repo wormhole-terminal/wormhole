@@ -127,8 +127,8 @@ pub fn drop_target(rects: &[(PaneId, Rect)], point: (f32, f32)) -> Option<(PaneI
 #[cfg(test)]
 mod tests {
     use super::{EDGE_BAND_MAX, Zone, band_rect, drop_target, edge_band, hint_rect, preview_rect, zone_at};
-    use crate::panes::geometry::Rect;
-    use crate::panes::{Axis, PANE_MIN_H, PANE_MIN_W};
+    use crate::view::panes::geometry::Rect;
+    use crate::view::panes::{Axis, PANE_MIN_H, PANE_MIN_W};
 
     const PANE: Rect = Rect { x: 100.0, y: 50.0, w: 400.0, h: 300.0 };
 

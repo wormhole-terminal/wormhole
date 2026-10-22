@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use super::{FileChange, FileDiff, GitCmd, LineKind};
-use crate::fsutil::{self, LinkPolicy};
+use crate::storage::fsutil::{self, LinkPolicy};
 
 /// What a Git LFS pointer file says: the object stored in the file's place.
 #[derive(Clone, Debug, PartialEq, Eq)]

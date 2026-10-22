@@ -270,8 +270,8 @@ pub fn popover_key(key: &str) -> Result<Vec<Callback>, String> {
 /// open, the colour panel that was asked for last.
 pub fn popover_colour(which: &str) -> Result<Vec<Callback>, String> {
     let which = which.trim();
-    let hex = which.starts_with('#').then(|| wormhole_core::tokens::Color::from_hex(which));
-    let colour = |color: wormhole_core::tokens::Color| -> Hsla {
+    let hex = which.starts_with('#').then(|| wormhole_core::theme::tokens::Color::from_hex(which));
+    let colour = |color: wormhole_core::theme::tokens::Color| -> Hsla {
         gpui_kit::Rgba { r: color.r, g: color.g, b: color.b, a: 1.0 }.into()
     };
     if let Some(popover) = open_popover() {

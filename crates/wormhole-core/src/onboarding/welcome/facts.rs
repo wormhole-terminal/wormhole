@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 
 use crate::agents::integrations::{self, State};
 use crate::agents::{self, AGENTS};
-use crate::intro::Handover;
 use crate::ipc::control::{AgentFact, AgentsFacts, HooksFact, LookFacts, WelcomeState};
+use crate::onboarding::intro::Handover;
 
 /// The agents on PATH, each with the state of its hooks under `home`, and how many others are
 /// recognised. A few hundred `stat`s and a few small reads, so off the UI thread.
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn the_hand_over_is_written_as_the_enum_was() {
         for handover in Handover::ALL {
-            let state = crate::welcome::fixtures::state(handover);
+            let state = crate::onboarding::welcome::fixtures::state(handover);
             let json = serde_json::to_value(&state).expect("serializes");
             assert_eq!(json["handover"], serde_json::to_value(handover).expect("serializes"));
             let back: WelcomeState = serde_json::from_value(json).expect("parses");

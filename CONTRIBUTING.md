@@ -39,7 +39,9 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
 ## Layout
 
 - `crates/wormhole-core`: no GPUI. Terminal engine, git, config, storage, agent hooks, the keymap,
-  layout rules. Put logic here whenever it doesn't need the UI, and test it here.
+  layout rules. Put logic here whenever it doesn't need the UI, and test it here. Its modules are
+  grouped by domain (`storage`, `keys`, `theme`, `view`, `config`, `ipc`, …), and a domain uses only
+  the ones below it (`lib.rs` lists the order; `scripts/structure.py` checks it).
 - The terminal engine, `wormhole-vt`, comes from its own repository,
   [wormhole-terminal/wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) (MIT).
 - `crates/wormhole`: the GPUI app. `workspace/` is one window, `style/` the design language,
@@ -53,7 +55,7 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
 - Rust 2024, `rustfmt.toml` (width 110). No `unwrap()` outside tests; `unsafe` only in the few FFI
   functions that carry `#[allow(unsafe_code)]` and a SAFETY note. `anyhow` for errors, `tracing` for
   logs (never `println!`).
-- Files: every read or write of a user or project file goes through `wormhole_core::fsutil`
+- Files: every read or write of a user or project file goes through `wormhole_core::storage::fsutil`
   (atomic writes, size-capped reads, no following links out of a repository). Content from a cloned
   repository is hostile input.
 - Git is read-only and always goes through `wormhole_core::git` (`GitCmd`), which hardens every call.

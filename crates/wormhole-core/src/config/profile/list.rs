@@ -7,9 +7,9 @@ use serde_json::Value;
 
 use super::copy::copy_settings;
 use super::model::{Profile, ProfileError, first_letter};
-use crate::fsutil::{self, LinkPolicy};
-use crate::paths::{DataRoot, ProfileId};
-use crate::sidebar::GroupColor;
+use crate::storage::fsutil::{self, LinkPolicy};
+use crate::storage::paths::{DataRoot, ProfileId};
+use crate::view::sidebar::GroupColor;
 
 /// Largest `profiles.json` read; a few dozen profiles are a few KiB.
 const MAX_FILE: u64 = 512 * 1024;
@@ -71,7 +71,7 @@ impl ProfileList {
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Self::default()),
             Err(err) => return Err(ProfileError::io(&path, err)),
         };
-        let form: FileForm = crate::jsonc::parse(&text)
+        let form: FileForm = crate::storage::jsonc::parse(&text)
             .map_err(|message| ProfileError::Parse { path: path.clone(), message })?;
         let mut list = Self { active: ProfileId::default_profile(), profiles: Vec::new() };
         for value in form.profiles {

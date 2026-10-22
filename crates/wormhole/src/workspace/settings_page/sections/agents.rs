@@ -13,8 +13,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
-use wormhole_core::profile::Profile;
-use wormhole_core::settings_index::SectionId as Section;
+use wormhole_core::config::profile::Profile;
+use wormhole_core::config::settings_index::SectionId as Section;
 
 use super::cli_tool;
 use crate::settings::UiColors;

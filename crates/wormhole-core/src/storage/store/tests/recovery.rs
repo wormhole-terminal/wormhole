@@ -62,7 +62,7 @@ fn a_healthy_database_is_opened_as_it_is() {
 
 #[test]
 fn moving_a_database_aside_takes_its_wal_and_shm_along_and_never_overwrites() {
-    use crate::store::move_aside;
+    use crate::storage::store::move_aside;
     let dir = temp_dir("move-aside");
     std::fs::create_dir_all(&dir).expect("dir");
     let db = dir.join("wormhole.db");

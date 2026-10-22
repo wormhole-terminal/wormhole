@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::color::Color;
 use crate::theme;
+use crate::theme::tokens::color::Color;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -181,8 +181,8 @@ impl Metrics {
 #[cfg(test)]
 mod tests {
     use super::TerminalColors;
-    use crate::color::Color;
     use crate::theme;
+    use crate::theme::tokens::color::Color;
 
     #[test]
     fn get_finds_exactly_what_named_lists() {

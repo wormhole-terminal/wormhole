@@ -7,8 +7,8 @@
 use std::path::Path;
 
 use gpui_kit::*;
-use wormhole_core::paths::ProfileId;
-use wormhole_core::sidebar::{GroupColor, Item, Landing};
+use wormhole_core::storage::paths::ProfileId;
+use wormhole_core::view::sidebar::{GroupColor, Item, Landing};
 
 use crate::settings::store_in;
 use crate::theme_bridge;
@@ -145,14 +145,14 @@ impl Workspace {
     /// The group's folder as the list shows it (`~/Projects/app`), if it has one.
     pub(in crate::workspace) fn group_folder_label(&self, group: u32) -> Option<String> {
         let folder = self.sidebar.view.groups.get(group)?.folder.as_deref()?;
-        Some(wormhole_core::sidebar::display_path(Path::new(folder), home_dir()))
+        Some(wormhole_core::view::sidebar::display_path(Path::new(folder), home_dir()))
     }
 
     /// The group's folder as its head's second line reads: `group_folder_label` cut from the front to
     /// fit, as a row's place is.
     pub(in crate::workspace) fn group_folder_line(&self, group: u32) -> Option<String> {
         let folder = self.sidebar.view.groups.get(group)?.folder.as_deref()?;
-        wormhole_core::sidebar::text::place_detail(
+        wormhole_core::view::sidebar::text::place_detail(
             Some(Path::new(folder)),
             home_dir(),
             super::rows::PLACE_CHARS,

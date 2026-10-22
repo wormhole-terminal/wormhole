@@ -12,10 +12,10 @@ use gpui_kit::component::Selectable;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::*;
+use wormhole_core::agents::usage::Gauge;
 use wormhole_core::git::pr::{Checks, PrState, PullRequest};
-use wormhole_core::layout::title_row::{Extra, Extras};
-use wormhole_core::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
-use wormhole_core::usage::Gauge;
+use wormhole_core::view::layout::title_row::{Extra, Extras};
+use wormhole_core::view::title_extras::{more_ports_words, port_label, port_url, port_words, ports_shown};
 
 use super::breadcrumb::{CRUMB_GAP, Measure};
 use super::title_extras::ExtraFacts;

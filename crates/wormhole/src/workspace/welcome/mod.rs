@@ -24,11 +24,11 @@ use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::agents::integrations;
-use wormhole_core::intro::{Handover, Start};
 use wormhole_core::ipc::control::AgentsFacts;
+use wormhole_core::onboarding::intro::{Handover, Start};
+use wormhole_core::onboarding::welcome::{self, DockCell, Registry};
 use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
-use wormhole_core::store::SessionRecord;
-use wormhole_core::welcome::{self, DockCell, Registry};
+use wormhole_core::storage::store::SessionRecord;
 
 use super::Workspace;
 use super::app::{AppState, app, app_mut};
@@ -102,7 +102,7 @@ pub(super) fn first_launch_plan(cx: &App) -> Option<Plan> {
 
 /// Whether the terminal welcome is on (the feature flag).
 pub(crate) fn enabled(cx: &App) -> bool {
-    settings(cx).feature_enabled(wormhole_core::features::FeatureFlag::TerminalWelcome)
+    settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::TerminalWelcome)
 }
 
 /// The first launch's welcome has its terminal; play the animation around the window that was just
@@ -190,7 +190,11 @@ impl Workspace {
                 Some(rows) => rows
                     .iter()
                     .map(|row| {
-                        format!("{}={}", row.name, wormhole_core::sidebar::spoken::state_word(row.state))
+                        format!(
+                            "{}={}",
+                            row.name,
+                            wormhole_core::view::sidebar::spoken::state_word(row.state)
+                        )
                     })
                     .collect::<Vec<_>>()
                     .join(","),

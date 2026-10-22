@@ -371,7 +371,8 @@ impl Render for QuickPanel {
         let rows = self.rows(cx);
         self.fit(&rows, window, cx);
         let selected = self.selected_ix(&rows);
-        let hotkey = settings(cx).hotkey.parse::<wormhole_core::keyspec::KeySpec>().ok().map(|k| k.glyphs());
+        let hotkey =
+            settings(cx).hotkey.parse::<wormhole_core::keys::keyspec::KeySpec>().ok().map(|k| k.glyphs());
         let list: Vec<AnyElement> = rows
             .iter()
             .enumerate()

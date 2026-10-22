@@ -11,7 +11,7 @@ use objc2_app_kit::{
     NSWindowOrderingMode,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::appkit::ns_view;
 use crate::platform::vibrancy::GlassRect;
@@ -143,7 +143,7 @@ mod material {
     use objc2_app_kit::{
         NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSView,
     };
-    use wormhole_core::tokens::Appearance;
+    use wormhole_core::theme::tokens::Appearance;
 
     thread_local! {
         /// Every window's effect view (AppKit lives on the main thread), forgotten as windows close.

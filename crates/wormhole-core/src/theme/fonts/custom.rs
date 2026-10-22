@@ -13,7 +13,7 @@ use skrifa::raw::{FileRef, ReadError, TableProvider};
 use skrifa::string::StringId;
 use skrifa::{FontRef, MetadataProvider};
 
-use crate::paths::data_dir;
+use crate::storage::paths::data_dir;
 
 /// TrueType, OpenType (TrueType or CFF outlines) and collections of either.
 pub const EXTENSIONS: [&str; 4] = ["ttf", "otf", "ttc", "otc"];
@@ -243,7 +243,7 @@ pub fn changes(old: &Fingerprint, new: &Fingerprint) -> (Vec<PathBuf>, Vec<PathB
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fonts::bundled;
+    use crate::theme::fonts::bundled;
 
     /// A fresh, empty folder under the temp dir for one test.
     fn temp_dir(name: &str) -> PathBuf {

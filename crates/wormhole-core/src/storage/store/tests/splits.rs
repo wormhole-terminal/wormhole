@@ -1,7 +1,7 @@
 //! A terminal is a session, and a split groups several of a window's sessions under one layout.
 
 use super::*;
-use crate::store::SplitRecord;
+use crate::storage::store::SplitRecord;
 
 /// A session of one terminal, as the app keeps them: no tabs.
 fn terminal(id: i64, cwd: &str, split_id: Option<i64>) -> SessionRecord {

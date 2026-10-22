@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use anyhow::Result;
 use gpui_kit::Window;
-use wormhole_core::intro::WindowMotion;
+use wormhole_core::onboarding::intro::WindowMotion;
 
 use crate::platform::intro::{Frame, Setup};
 
@@ -30,7 +30,7 @@ impl Overlay {
 
 #[cfg(feature = "devctl")]
 pub fn frames(
-    _: wormhole_core::intro::Style,
+    _: wormhole_core::onboarding::intro::Style,
     _: usize,
     _: [[f32; 4]; 3],
     _: [[f32; 3]; 3],
@@ -42,7 +42,7 @@ pub fn frames(
 #[cfg(feature = "devctl")]
 pub fn dock_frames(
     _: &Window,
-    _: wormhole_core::intro::voyage::Landing,
+    _: wormhole_core::onboarding::intro::voyage::Landing,
     _: [[f32; 4]; 3],
     _: &std::path::Path,
     _: &str,

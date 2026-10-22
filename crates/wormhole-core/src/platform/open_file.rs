@@ -22,7 +22,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::open_in::FINDER;
+use crate::platform::open_in::FINDER;
 
 /// How to open a file, before it is turned into a process.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -128,7 +128,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{Launch, encode_path, launch, opens_at_line, tooltip};
-    use crate::open_in::{EDITORS, FINDER};
+    use crate::platform::open_in::{EDITORS, FINDER};
 
     const FILE: &str = "/Users/me/code/app/src/main.rs";
 

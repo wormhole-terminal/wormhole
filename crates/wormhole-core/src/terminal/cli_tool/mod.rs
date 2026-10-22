@@ -25,8 +25,8 @@ use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::fsutil::{self, LinkPolicy};
 pub use crate::ipc::control::COMMAND_NAME;
+use crate::storage::fsutil::{self, LinkPolicy};
 pub use path::{Advice, advice, login_path, login_shell_path, on_path, path_with_first};
 
 /// The line that makes a file this module's. Not derived from the command's name: a file that
@@ -150,7 +150,7 @@ fn put(path: &Path, script: &str) -> Result<bool, Error> {
 
 /// The folder Wormhole's own terminals get: `<data dir>/bin`.
 pub fn private_dir() -> PathBuf {
-    crate::paths::data_dir().join("bin")
+    crate::storage::paths::data_dir().join("bin")
 }
 
 /// Make the copy in [`private_dir`] the script for `binary` (the running app), rewriting it only

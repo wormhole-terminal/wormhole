@@ -88,8 +88,8 @@ fn fold(shared: &ThemeFile, all: &[ThemeVariant], v: &ThemeVariant, family: &str
 #[cfg(test)]
 mod tests {
     use super::{MAX_VARIANTS, variants};
-    use crate::tokens::test_support::no_lookup;
-    use crate::tokens::{Appearance, parse_theme_file, resolve};
+    use crate::theme::tokens::test_support::no_lookup;
+    use crate::theme::tokens::{Appearance, parse_theme_file, resolve};
 
     const FAMILY: &str = r##"{
       "name": "Soltari",

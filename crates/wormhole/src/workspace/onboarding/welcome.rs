@@ -1,13 +1,13 @@
 //! The welcome page: the app's mark and name, what it is for, a few lines of the real sidebar to show
 //! it, and the way in. It is what the window carries through the wormhole, so each part has its own
-//! moment to come in (`wormhole_core::intro::page`).
+//! moment to come in (`wormhole_core::onboarding::intro::page`).
 
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use style::{RowTone, SessionRow, StatusGlyph};
-use wormhole_core::intro::page::Entrance;
 use wormhole_core::onboarding::Event;
-use wormhole_core::welcome::TAGLINE;
+use wormhole_core::onboarding::intro::page::Entrance;
+use wormhole_core::onboarding::welcome::TAGLINE;
 
 use super::Intro;
 use super::page::Entering;

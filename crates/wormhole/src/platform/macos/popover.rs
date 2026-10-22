@@ -27,7 +27,7 @@ use objc2_app_kit::{
     NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView, NSViewController,
 };
 use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize, NSString};
-use wormhole_core::tokens::Appearance;
+use wormhole_core::theme::tokens::Appearance;
 
 use super::{appkit, rows, swatches};
 use crate::platform::menu::Callback;

@@ -88,7 +88,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::{LaunchHosts, Restore, persisted_host, shown_at_launch};
-    use crate::hosts::HostMeta;
+    use crate::ipc::hosts::HostMeta;
 
     fn meta(id: &str, started_at: u64) -> HostMeta {
         HostMeta {
