@@ -160,7 +160,7 @@ impl Workspace {
 pub(in crate::workspace) fn reveal_in_finder(path: &Path) {
     let mut open = std::process::Command::new("open");
     open.arg("-R").arg(path);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(open) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(open) {
         tracing::warn!("revealing {}: {err}", path.display());
     }
 }

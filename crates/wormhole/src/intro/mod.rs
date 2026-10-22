@@ -3,7 +3,7 @@
 //! shader are [`metal`]. One plays at a time: a new one replaces the one playing.
 
 #[cfg(target_os = "macos")]
-mod metal;
+use crate::platform::macos::intro as metal;
 
 use std::cell::Cell;
 use std::rc::Rc;

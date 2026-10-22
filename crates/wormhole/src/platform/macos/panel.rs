@@ -4,14 +4,14 @@
 
 use std::ffi::c_void;
 
-use crate::platform::macos::appkit::ns_window;
+use super::appkit::ns_window;
 use gpui_kit::Window;
 use objc2_app_kit::{NSWindow, NSWindowButton};
 use objc2_core_foundation::CGPoint;
 use objc2_foundation::NSRect;
 
 /// No traffic lights on a panel: GPUI gives a pop-up window a (transparent) title bar.
-pub(super) fn prepare(window: &Window) {
+pub(crate) fn prepare(window: &Window) {
     let Some(ns_window) = ns_window(window) else { return };
     for button in [NSWindowButton::CloseButton, NSWindowButton::MiniaturizeButton, NSWindowButton::ZoomButton]
     {
@@ -24,7 +24,7 @@ pub(super) fn prepare(window: &Window) {
 /// Make the panel `height` tall, keeping its top edge where it is. Call it outside any update
 /// of the panel's window (from a task, as GPUI's own `resize` does): AppKit tells the view about
 /// its new size at once, and GPUI only hears that while the window isn't being updated.
-pub(super) fn set_height_keeping_top(ns_window: &NSWindow, height: f32) {
+pub(crate) fn set_height_keeping_top(ns_window: &NSWindow, height: f32) {
     let frame = ns_window.frame();
     let content = ns_window.contentRectForFrameRect(frame);
     let chrome = frame.size.height - content.size.height;
@@ -38,7 +38,7 @@ pub(super) fn set_height_keeping_top(ns_window: &NSWindow, height: f32) {
 
 /// The Core Graphics id of the display the pointer is on.
 #[allow(unsafe_code)] // Core Graphics C calls; see the SAFETY note below.
-pub(super) fn pointer_display_id() -> Option<u64> {
+pub(crate) fn pointer_display_id() -> Option<u64> {
     #[link(name = "CoreGraphics", kind = "framework")]
     unsafe extern "C" {
         fn CGEventCreate(source: *const c_void) -> *mut c_void;

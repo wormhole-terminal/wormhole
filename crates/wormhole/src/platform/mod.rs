@@ -51,6 +51,7 @@ pub mod popover;
 pub mod record;
 pub mod scroller;
 pub mod sound;
+pub mod spawn;
 pub mod status_item;
 pub mod vibrancy;
 pub mod window;

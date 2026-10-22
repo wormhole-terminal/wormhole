@@ -11,7 +11,7 @@ use std::thread::{Builder, JoinHandle};
 
 /// Start `cmd` and let it run on its own; a small thread waits for it so it never becomes a
 /// zombie. Failing to start it is the caller's to report.
-pub(super) fn spawn_detached(cmd: Command) -> io::Result<()> {
+pub fn spawn_detached(cmd: Command) -> io::Result<()> {
     spawn_reaped(cmd).map(drop)
 }
 

@@ -207,7 +207,7 @@ fn open_url(url: &str) {
     // Loaders only accept http(s) URLs; `open` hands them to the default browser.
     let mut cmd = std::process::Command::new("open");
     cmd.arg(url);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("opening {url}: {err}");
     }
 }

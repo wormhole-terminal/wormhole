@@ -100,7 +100,7 @@ pub(crate) fn open(bundle: &str, folder: &Path) {
     let mut cmd = std::process::Command::new("open");
     // A folder is always absolute here, so it can't be read as an option.
     cmd.arg("-b").arg(bundle).arg(folder);
-    if let Err(err) = super::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("opening {} in {bundle}: {err}", folder.display());
     }
 }

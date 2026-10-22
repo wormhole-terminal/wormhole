@@ -449,7 +449,7 @@ fn login_row(
 fn reveal_file(path: &Path) {
     let mut cmd = std::process::Command::new("open");
     cmd.arg("-R").arg(path);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("revealing {}: {err}", path.display());
     }
 }

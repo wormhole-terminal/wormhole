@@ -18,7 +18,7 @@
 //! agent moving on) takes it down.
 
 #[cfg(target_os = "macos")]
-mod center;
+use crate::platform::macos::notifications as center;
 mod watch;
 
 use std::collections::{HashMap, HashSet};
@@ -33,8 +33,8 @@ use wormhole_core::update::current_app_bundle;
 
 use super::ambient::{self, TabFacts};
 use super::app::{AppState, app, open_tab};
-use super::spawn::spawn_detached;
 use super::*;
+use crate::platform::spawn::spawn_detached;
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).

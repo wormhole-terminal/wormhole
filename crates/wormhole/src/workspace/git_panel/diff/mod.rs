@@ -252,7 +252,7 @@ impl Workspace {
         let Some(path) = self.diff_view.as_ref().and_then(DiffView::on_disk) else { return };
         let mut open = std::process::Command::new("open");
         open.arg("-R").arg(&path);
-        if let Err(err) = crate::workspace::spawn::spawn_detached(open) {
+        if let Err(err) = crate::platform::spawn::spawn_detached(open) {
             tracing::warn!("revealing {}: {err}", path.display());
         }
     }

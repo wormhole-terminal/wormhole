@@ -25,7 +25,9 @@ use objc2_user_notifications::{
 };
 use smol::channel::Sender;
 
-use super::{Category, FromCenter, Notice, OPEN, Permission, REPLY, SHOW_CHANGES, actions};
+use crate::workspace::notifications::{
+    Category, FromCenter, Notice, OPEN, Permission, REPLY, SHOW_CHANGES, actions,
+};
 use delegate::Delegate;
 use wormhole_core::notify::Level;
 
@@ -37,7 +39,7 @@ const FINISHED: &str = "wormhole.finished";
 /// provisioning profile by `scripts/bundle.sh`).
 const TIME_SENSITIVE: &str = "com.apple.developer.usernotifications.time-sensitive";
 
-pub(super) struct Center {
+pub(crate) struct Center {
     center: Retained<UNUserNotificationCenter>,
     /// The center's `delegate` is weak: this keeps ours alive.
     _delegate: Retained<Delegate>,
@@ -48,7 +50,7 @@ pub(super) struct Center {
 
 impl Center {
     /// The center, with our delegate and categories; `None` outside an app bundle.
-    pub(super) fn open(tx: Sender<FromCenter>) -> Option<Self> {
+    pub(crate) fn open(tx: Sender<FromCenter>) -> Option<Self> {
         if NSBundle::mainBundle().bundleIdentifier().is_none() {
             tracing::debug!("notifications: no bundle identifier, using osascript");
             return None;
@@ -63,7 +65,7 @@ impl Center {
         Some(Self { center, _delegate: delegate, tx, asked: Cell::new(false) })
     }
 
-    pub(super) fn post(&self, notice: &Notice) {
+    pub(crate) fn post(&self, notice: &Notice) {
         if !self.asked.get() {
             self.ask();
         }
@@ -101,14 +103,14 @@ impl Center {
         self.center.addNotificationRequest_withCompletionHandler(&request, Some(&done));
     }
 
-    pub(super) fn remove(&self, id: &str) {
+    pub(crate) fn remove(&self, id: &str) {
         let ids = NSArray::from_retained_slice(&[NSString::from_str(id)]);
         self.center.removePendingNotificationRequestsWithIdentifiers(&ids);
         self.center.removeDeliveredNotificationsWithIdentifiers(&ids);
     }
 
     /// Ask for permission (macOS prompts only while it hasn't been decided), then read it again.
-    pub(super) fn ask(&self) {
+    pub(crate) fn ask(&self) {
         self.asked.set(true);
         let tx = self.tx.clone();
         let center = self.center.clone();
@@ -125,7 +127,7 @@ impl Center {
     }
 
     /// Read the permission; the answer arrives on the channel.
-    pub(super) fn refresh_permission(&self) {
+    pub(crate) fn refresh_permission(&self) {
         read_permission(&self.center, self.tx.clone());
     }
 }
@@ -200,7 +202,7 @@ fn categories() -> Retained<NSSet<UNNotificationCategory>> {
 /// Developer ID build with the provisioning profile has it; everything else delivers "needs you"
 /// at Active.
 #[allow(unsafe_code)]
-pub(super) fn entitled_to_time_sensitive() -> bool {
+pub(crate) fn entitled_to_time_sensitive() -> bool {
     #[link(name = "Security", kind = "framework")]
     unsafe extern "C" {
         fn SecTaskCreateFromSelf(allocator: *const c_void) -> *mut c_void;
@@ -251,7 +253,7 @@ mod delegate {
     };
     use smol::channel::Sender;
 
-    use super::super::{FromCenter, Response};
+    use crate::workspace::notifications::{FromCenter, Response};
 
     pub(super) struct Ivars {
         tx: Sender<FromCenter>,
@@ -304,7 +306,7 @@ mod delegate {
     );
 
     impl Delegate {
-        pub(super) fn new(tx: Sender<FromCenter>) -> Retained<Self> {
+        pub(crate) fn new(tx: Sender<FromCenter>) -> Retained<Self> {
             let this = Self::alloc().set_ivars(Ivars { tx });
             // SAFETY: `-[NSObject init]` is the designated initializer of the superclass.
             unsafe { msg_send![super(this), init] }

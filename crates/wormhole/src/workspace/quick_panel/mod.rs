@@ -10,7 +10,7 @@
 //! when it loses the keyboard (a click elsewhere) or on Esc.
 
 #[cfg(target_os = "macos")]
-mod macos;
+use crate::platform::macos::panel as macos;
 mod rows;
 mod view;
 

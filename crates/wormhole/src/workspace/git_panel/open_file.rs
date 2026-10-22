@@ -130,7 +130,7 @@ pub(crate) fn open(bundle: &str, root: &Path, relative: &str, line: Option<u32>)
     };
     let Some(launch) = open_file::launch(bundle, &path, line) else { return };
     let cmd = command(bundle, launch);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("opening {} in {bundle}: {err}", path.display());
     }
 }

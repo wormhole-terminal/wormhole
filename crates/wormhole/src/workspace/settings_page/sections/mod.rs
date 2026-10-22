@@ -169,7 +169,7 @@ fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn()
 pub(super) fn open_in_editor(path: &Path) {
     let mut cmd = std::process::Command::new("open");
     cmd.arg("-t").arg(path);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("opening {}: {err}", path.display());
     }
 }
@@ -178,7 +178,7 @@ pub(super) fn open_in_editor(path: &Path) {
 fn reveal(path: &Path) {
     let mut cmd = std::process::Command::new("open");
     cmd.arg(path);
-    if let Err(err) = crate::workspace::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
         tracing::warn!("opening {}: {err}", path.display());
     }
 }

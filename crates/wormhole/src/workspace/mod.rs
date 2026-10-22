@@ -109,7 +109,6 @@ mod shortcut_sheet;
 mod shortcuts;
 mod sidebar;
 mod slide;
-mod spawn;
 mod splits;
 #[cfg(test)]
 mod stable_list_tests;

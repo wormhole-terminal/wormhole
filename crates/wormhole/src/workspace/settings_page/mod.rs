@@ -743,7 +743,7 @@ fn open_folder(dir: &Path) {
     let opened = wormhole_core::fsutil::create_dir_all_private(dir).and_then(|()| {
         let mut cmd = std::process::Command::new("open");
         cmd.arg(dir);
-        crate::workspace::spawn::spawn_detached(cmd)
+        crate::platform::spawn::spawn_detached(cmd)
     });
     if let Err(err) = opened {
         tracing::warn!("opening {}: {err}", dir.display());
