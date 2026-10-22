@@ -122,7 +122,8 @@ fn feed_config() -> Option<UpdaterConfig> {
     Some(config)
 }
 
-/// Follows the `update_channel` setting: once `app::launch` has set the `Updates` global, and whenever settings change.
+/// Follows the `update_channel` setting: once `app::launch` has set the `Updates` global, and
+/// whenever settings change.
 pub(crate) fn init(cx: &mut App) {
     let channel = settings(cx).update_channel;
     cx.global_mut::<Updates>().channel = channel;

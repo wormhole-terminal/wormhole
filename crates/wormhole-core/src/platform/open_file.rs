@@ -1,6 +1,7 @@
 //! Opening one file in the app the Open in… setting names, at a line where that app can: the
 //! rules (which app takes which mechanism, how a path is written into a URL) as pure functions,
-//! so they are tested here. The app turns a [`Launch`] into a process (`window::open_in`).
+//! so they are tested here. The app turns a [`Launch`] into a process (`platform::apps`, called from
+//! `window::open_in`).
 //!
 //! Only mechanisms the editors document themselves are used; for every other app the file is
 //! simply opened and the line is dropped:

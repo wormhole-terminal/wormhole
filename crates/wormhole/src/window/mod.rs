@@ -10,16 +10,20 @@
 //! - `panes/` the split on screen, its model (`splits`) and the pane drop; `title/` the title rows
 //!   (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's areas, the
 //!   stops, the Esc ladder and the ring.
-//! - `features/` the side panels' contents, each in a folder (`notes`, `usage`, `project`, `git`).
+//! - `features/` the side panels' contents: a folder each for `notes`, `project` and `git`, and the
+//!   file `usage`.
 //! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
 //!   window and the welcome.
 //!
 //! and by file: what a feature is to the window (`feature`, its facts in `facts`), the session
-//! (`session`), the window's terminals (`terminals`), its tick (`tick`), its
-//! saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`), what it
-//! answers from outside (`window_control`, `restart_facts`, `ambient`, `menu_state`), its actions and
-//! keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`, `glass`,
-//! `status_bar`, `panel_list`) and what opens over it (`overlay`, `dialog`).
+//! (`session`), the window's terminals (`terminals`) and their drag (`terminal_drag`), its tick
+//! (`tick`), its saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`,
+//! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
+//! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
+//! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
+//! `glass`, `status_bar`, `panel_list`, `folder_color`), the windows it opens beside itself
+//! (`aux_window`), the apps it opens a folder in (`open_in`) and what opens over it (`overlay`,
+//! `dialog`).
 //!
 //! Everything that sits above the window has left this folder (`app`, `command_palette`,
 //! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,

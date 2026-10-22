@@ -33,7 +33,7 @@ pub(super) fn new_shell(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// tab-separated, and `default` after the one a plain + opens.
 pub(super) fn shells(ctx: &mut Ctx, _: &str) -> Result<String> {
     let settings = crate::settings::settings(ctx.cx);
-    let default = settings.default_shell.trim();
+    let default = wormhole_core::terminal::shells::default_key(settings);
     Ok(wormhole_core::terminal::shells::choices(settings)
         .iter()
         .map(|choice| {
