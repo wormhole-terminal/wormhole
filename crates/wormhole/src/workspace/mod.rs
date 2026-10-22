@@ -110,7 +110,7 @@ mod reported_tests;
 mod resize;
 mod save;
 mod saved_layout;
-pub(crate) mod session;
+mod session;
 pub(crate) mod shells;
 mod shortcuts;
 mod sidebar;
