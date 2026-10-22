@@ -7,6 +7,9 @@
 //! and again whenever a window comes to the front (macOS is not relied on to tell). The
 //! look reaches the settings store, which re-derives what it touches; Reduce Motion is GPUI's
 //! own flag, which its animations follow (`app_tick::sync_system_look`).
+//!
+//! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
+//! root may call into it.
 
 use std::collections::HashMap;
 use std::time::Duration;

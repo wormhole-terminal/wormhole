@@ -1,6 +1,8 @@
 //! What a window does when asked from outside it: the control protocol's requests about its
 //! terminals (`control`: list, status, notify, send-text, new-terminal), and a notification's
 //! Reply typed into a terminal.
+//!
+//! Part of the window: it must not use `control` or `notifications`, which call it from above.
 
 use std::time::Duration;
 

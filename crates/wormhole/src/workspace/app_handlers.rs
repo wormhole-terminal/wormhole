@@ -5,6 +5,9 @@
 //! key is claimed there, first of all (projects keep priority, and `validate_key` keeps them
 //! off the app's keys), and the app keys a terminal would send to its program (F6) are left to
 //! the bindings.
+//!
+//! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
+//! root may call into it.
 
 use gpui_kit::component::WindowExt as _;
 use gpui_kit::*;

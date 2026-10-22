@@ -1,6 +1,8 @@
 //! Whole-window tests of asking before closing: a terminal, a window, the last window (which
 //! quits), and the close button's dot that says a question would come. The harness is
 //! `view_tests`'.
+//!
+//! Tests only: they drive the window through the harness and must not touch the person's data.
 
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};

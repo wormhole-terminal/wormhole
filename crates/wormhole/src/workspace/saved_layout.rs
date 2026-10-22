@@ -1,5 +1,7 @@
 //! A window's layout as it is saved with the window: the side columns, the right panel's tab and
 //! the sidebar's view.
+//!
+//! Plain data that is serialized: it must not use GPUI, the shared state or any view.
 
 use wormhole_core::view::layout::Panes;
 use wormhole_core::view::sidebar::WindowSidebar;

@@ -1,5 +1,8 @@
 //! What the app does on its tick, once whatever the number of windows, and with what arrives
 //! between ticks: the hook socket's messages, the menu bar's commands, the theme and the system's look.
+//!
+//! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
+//! root may call into it.
 
 use gpui_kit::*;
 use wormhole_core::ipc;

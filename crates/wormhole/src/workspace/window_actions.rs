@@ -1,5 +1,8 @@
 //! A window's own actions: its terminals, panes and panels, handled on its `Workspace`'s root
 //! (so the focus must be inside it).
+//!
+//! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
+//! sheet, the Settings and Studio windows, the status item, the app root).
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;

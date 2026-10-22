@@ -1,5 +1,7 @@
 //! Saving a window: its record (terminals, splits, layout) when something changed, and every
 //! terminal's text once a minute.
+//!
+//! Part of the window: it uses the shared state's stores and the settings, nothing above the window.
 
 use std::time::{Duration, Instant};
 

@@ -1,5 +1,8 @@
 //! A window's terminals: opening one (its shell, folder and saved text), selecting and closing it,
 //! and finding them by folder, project or ⌘-number for the palette and the menu bar.
+//!
+//! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
+//! sheet, the Settings and Studio windows, the status item, the app root); they call these.
 
 use std::path::{Path, PathBuf};
 

@@ -1,6 +1,9 @@
 //! Opening and closing the windows that show a [`Workspace`]: where a new one is placed, saving
 //! every window on the way out, bringing a terminal's window forward, and a window moving to
 //! another profile.
+//!
+//! Part of the window: it must not use the surfaces above it (the command palette, the shortcut
+//! sheet, the Settings and Studio windows, the status item, the app root).
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;

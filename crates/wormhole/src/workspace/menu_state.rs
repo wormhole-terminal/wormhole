@@ -1,6 +1,8 @@
 //! What the menus show for the window in front: which items are off, checked, disabled or hidden,
 //! the terminals ⌘1–9 and the project's actions. The menu bar (`app_menu`) puts it up and the
 //! command palette offers the same actions, so it is the window's to say, not the menu bar's.
+//!
+//! Part of the window: it must not use the menu bar (`app_menu`) or the palette, which read it.
 
 use std::path::Path;
 
