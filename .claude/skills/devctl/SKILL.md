@@ -15,6 +15,8 @@ it cannot run in a Linux container. The command list and syntax are the header o
 
 - Never touch a Wormhole you did not start. The user may have the real app or `scripts/dev.sh` running.
   Stop only your own process, by the PID you captured. No `pkill`, `killall` or name matching.
+  `scripts/dev.sh` has no devctl unless the user starts it with `--devctl`; even then its control
+  folder is theirs: never write to it. Your way in is `scripts/devctl-instance.sh`.
 - Never point the instance at the user's data dir, repos or shell. Use a scratch dir and a throwaway repo.
 - Do not delete with globs (`rm *`). Give every artifact a unique name instead of cleaning up.
 - Do not trigger the Touch ID prompt (`WORMHOLE_AUTH=allow|deny|cancel` answers it in devctl builds).

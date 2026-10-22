@@ -3,8 +3,11 @@
 # swaps to the new binary when the build succeeds. When it fails, the last good instance keeps
 # running and the compiler errors are printed (plus a notification) until a build succeeds.
 #
-#   scripts/dev.sh              # debug build (with devctl), restart on change
+#   scripts/dev.sh              # debug build, restart on change
 #   scripts/dev.sh --release    # optimized build
+#   scripts/dev.sh --devctl     # with devctl: any of your processes can then read the instance's
+#                               # screens and type into its terminals (your real shell), so only
+#                               # when you need it; agents use scripts/devctl-instance.sh instead
 #
 # Keys (when run in a terminal): Enter = rebuild and restart now, q = quit.
 #
@@ -12,23 +15,28 @@
 # runs next to the real Wormhole without touching its state. It is only ever stopped by PID.
 #   WORMHOLE_DATA_DIR       default ~/Library/Application Support/Wormhole-dev
 #   WORMHOLE_SHELL          default: your login shell
-#   WORMHOLE_DEV_FEATURES   cargo features, default "devctl" ("" for none)
+#   WORMHOLE_DEV_FEATURES   cargo features, default none (--devctl adds devctl)
 #   WORMHOLE_DEV_NOTIFY=0   no macOS notification when a build breaks or is fixed
-# Other WORMHOLE_* variables (START_DIR, AGENT_HOME, LOG, DEVCTL) pass through.
+# Other WORMHOLE_* variables (START_DIR, AGENT_HOME, LOG; DEVCTL with devctl) pass through.
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 
 cargo_args=(build)
 profile=debug
+with_devctl=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --release) cargo_args+=(--release); profile=release ;;
-    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    --devctl) with_devctl=1 ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
   shift
 done
-features="${WORMHOLE_DEV_FEATURES-devctl}"
+features="${WORMHOLE_DEV_FEATURES-}"
+if [ "$with_devctl" = 1 ] && [[ " ${features//,/ } " != *" devctl "* ]]; then
+  features="${features:+$features,}devctl"
+fi
 # The app and its session host: the host sits beside the app's copy, where the app looks for it.
 set_app_build_args "$features"
 cargo_args+=("${APP_BUILD_ARGS[@]}")
@@ -61,7 +69,15 @@ bin="$run/bin/$APP_BINARY-Dev"   # the process name, so ⌘Tab and the menu tell
 mkdir -p "$run/bin"
 if [[ " ${features//,/ } " == *" devctl "* ]]; then
   export WORMHOLE_DEVCTL="${WORMHOLE_DEVCTL:-$run/ctl}"
-  mkdir -p "$WORMHOLE_DEVCTL"
+  # Owner-only, which keeps other users out; your own processes can still use it, hence the warning.
+  if ! { mkdir -p "$(dirname "$WORMHOLE_DEVCTL")" && { [ -d "$WORMHOLE_DEVCTL" ] || mkdir -m 700 "$WORMHOLE_DEVCTL"; } \
+    && chmod 700 "$WORMHOLE_DEVCTL"; }; then
+    die "cannot create $WORMHOLE_DEVCTL"
+  fi
+  warn "devctl is on: any of your processes can read this instance's screens and type into it ($WORMHOLE_DEVCTL)"
+else
+  # A build without devctl has no command file; one named in the environment isn't ours.
+  unset WORMHOLE_DEVCTL
 fi
 # Set when this runs inside a Wormhole tab; they belong to that instance, not ours.
 unset WORMHOLE_SOCKET WORMHOLE_TAB_ID WORMHOLE_BIN
@@ -160,7 +176,8 @@ report_failure() {
 stop_app() {
   alive "$app_pid" || { app_pid=""; return 0; }
   log "stopping dev instance (pid $app_pid)"
-  # Graceful first (saves terminals and scrollback), then SIGTERM, then SIGKILL; only ever our PID.
+  # Graceful first with devctl (saves terminals and scrollback), then SIGTERM, then SIGKILL; only
+  # ever our PID. Without devctl SIGTERM is the first step, and up to a minute of saved text is lost.
   if [ -n "${WORMHOLE_DEVCTL:-}" ]; then
     printf 'quit\n' > "$WORMHOLE_DEVCTL/cmd"
     for _ in $(seq 50); do alive "$app_pid" || break; sleep 0.1; done
