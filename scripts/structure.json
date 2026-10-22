@@ -108,7 +108,8 @@
           "review",
           "search",
           "sidebar",
-          "spoken"
+          "spoken",
+          "title_extras"
         ],
         "project",
         [
@@ -131,7 +132,6 @@
           "cli_tool",
           "open_file",
           "store",
-          "title_extras",
           "welcome"
         ],
         "terminal",

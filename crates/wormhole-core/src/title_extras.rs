@@ -3,7 +3,6 @@
 //! listens on, and the words of each for a tooltip and for VoiceOver. The agent's model and
 //! context are `usage::Gauge`, the branch's pull request `git::pr`; the app draws all four.
 
-use crate::git::{RepoStatus, Upstream};
 use crate::sidebar::text::count;
 
 /// What the branch chip's neighbours say: a dot while the tree has uncommitted changes, and how far
@@ -22,17 +21,6 @@ pub struct BranchStatus {
 }
 
 impl BranchStatus {
-    /// What `status` (the Changes tab's, so no git is run for this) says about the branch, if
-    /// there is anything to say.
-    pub fn of(status: &RepoStatus) -> Option<Self> {
-        let (ahead, behind, upstream) = match &status.upstream {
-            Some(Upstream { name, ahead, behind }) => (*ahead, *behind, Some(name.clone())),
-            None => (0, 0, None),
-        };
-        let this = Self { dirty: status.dirty, ahead, behind, upstream };
-        (this.dirty || ahead > 0 || behind > 0).then_some(this)
-    }
-
     /// "Uncommitted changes, 2 commits ahead of origin/main, 1 commit behind origin/main".
     pub fn words(&self) -> String {
         let against = self.upstream.as_deref().map(|name| format!(" {name}")).unwrap_or_default();
@@ -83,35 +71,14 @@ pub fn more_ports_words(more: &[u16]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{BranchStatus, PORTS_SHOWN, more_ports_words, port_label, port_url, port_words, ports_shown};
-    use crate::git::{RepoStatus, Upstream};
-
-    fn status(dirty: bool, upstream: Option<(u32, u32)>) -> RepoStatus {
-        RepoStatus {
-            root: "/repo".into(),
-            branch: Some("main".into()),
-            files: Vec::new(),
-            base_rev: "HEAD".into(),
-            compare: None,
-            compare_missing: None,
-            dirty,
-            upstream: upstream.map(|(ahead, behind)| Upstream { name: "origin/main".into(), ahead, behind }),
-            superproject: None,
-        }
-    }
-
-    #[test]
-    fn only_departures_have_a_status() {
-        assert_eq!(BranchStatus::of(&status(false, None)), None);
-        assert_eq!(BranchStatus::of(&status(false, Some((0, 0)))), None, "level with its upstream");
-        let dirty = BranchStatus::of(&status(true, None)).expect("dirty");
-        assert_eq!((dirty.dirty, dirty.ahead, dirty.behind), (true, 0, 0));
-        let both = BranchStatus::of(&status(false, Some((2, 1)))).expect("ahead and behind");
-        assert_eq!((both.dirty, both.ahead, both.behind), (false, 2, 1));
-    }
 
     #[test]
     fn the_words_say_what_the_dot_and_the_arrows_mean() {
-        let words = |dirty, upstream| BranchStatus::of(&status(dirty, upstream)).expect("status").words();
+        let words = |dirty, upstream: Option<(u32, u32)>| {
+            let (ahead, behind) = upstream.unwrap_or_default();
+            let upstream = upstream.map(|_| "origin/main".to_string());
+            BranchStatus { dirty, ahead, behind, upstream }.words()
+        };
         assert_eq!(words(true, None), "Uncommitted changes");
         assert_eq!(words(false, Some((2, 0))), "2 commits ahead of origin/main");
         assert_eq!(words(false, Some((0, 1))), "1 commit behind origin/main");

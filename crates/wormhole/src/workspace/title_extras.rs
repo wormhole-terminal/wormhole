@@ -18,6 +18,7 @@
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
+use wormhole_core::git::RepoStatus;
 use wormhole_core::git::pr::{self, Branch, PullRequest, Settled};
 use wormhole_core::terminal::Notification;
 use wormhole_core::terminal::listening_ports;
@@ -68,7 +69,7 @@ impl Workspace {
         // Git's answer only while it is about the folder the terminal is in now.
         let status = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
         ExtraFacts {
-            branch: status.filter(|_| settings.title_branch_status).and_then(BranchStatus::of),
+            branch: status.filter(|_| settings.title_branch_status).and_then(RepoStatus::branch_status),
             gauge: self.agent_gauge(cx).filter(|_| settings.title_agent_gauge).cloned(),
             ports: if settings.title_ports { session.extras.ports.clone() } else { Vec::new() },
             pull_request: self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned()),

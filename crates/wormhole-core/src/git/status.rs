@@ -9,8 +9,10 @@ use super::counts::count_untracked_lines;
 use super::lfs::mark_lfs;
 use super::status_parse::{parse_numstat, parse_porcelain, parse_raw};
 use super::{
-    ChangeKind, EMPTY_TREE, FileChange, GitCmd, GitError, RepoStatus, has_head, repo_root, superproject,
+    ChangeKind, EMPTY_TREE, FileChange, GitCmd, GitError, RepoStatus, Upstream, has_head, repo_root,
+    superproject,
 };
+use crate::title_extras::BranchStatus;
 
 /// How much of the picture a status call fills in.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -142,6 +144,19 @@ fn apply_counts(files: &mut [FileChange], counts: &[(String, Option<u32>, Option
             file.added = added;
             file.removed = removed;
         }
+    }
+}
+
+impl RepoStatus {
+    /// What this status (the Changes tab's, so no git is run for it) says about the branch for the
+    /// title row, if there is anything to say.
+    pub fn branch_status(&self) -> Option<BranchStatus> {
+        let (ahead, behind, upstream) = match &self.upstream {
+            Some(Upstream { name, ahead, behind }) => (*ahead, *behind, Some(name.clone())),
+            None => (0, 0, None),
+        };
+        let this = BranchStatus { dirty: self.dirty, ahead, behind, upstream };
+        (this.dirty || ahead > 0 || behind > 0).then_some(this)
     }
 }
 
@@ -377,5 +392,30 @@ mod tests {
             assert!(summary.files.iter().all(|f| f.added.is_none() && f.removed.is_none()));
             assert!(full.files.iter().any(|f| f.added.is_some()));
         }
+    }
+
+    fn summary(dirty: bool, upstream: Option<(u32, u32)>) -> RepoStatus {
+        RepoStatus {
+            root: "/repo".into(),
+            branch: Some("main".into()),
+            files: Vec::new(),
+            base_rev: "HEAD".into(),
+            compare: None,
+            compare_missing: None,
+            dirty,
+            upstream: upstream.map(|(ahead, behind)| Upstream { name: "origin/main".into(), ahead, behind }),
+            superproject: None,
+        }
+    }
+
+    #[test]
+    fn only_departures_have_a_branch_status() {
+        assert_eq!(summary(false, None).branch_status(), None);
+        assert_eq!(summary(false, Some((0, 0))).branch_status(), None, "level with its upstream");
+        let dirty = summary(true, None).branch_status().expect("dirty");
+        assert_eq!((dirty.dirty, dirty.ahead, dirty.behind), (true, 0, 0));
+        let both = summary(false, Some((2, 1))).branch_status().expect("ahead and behind");
+        assert_eq!((both.dirty, both.ahead, both.behind), (false, 2, 1));
+        assert_eq!(both.upstream.as_deref(), Some("origin/main"));
     }
 }
