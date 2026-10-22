@@ -1,14 +1,18 @@
 //! The quick panel's view: the search row, the rows, Reply in place, and the footer's key hints.
 
+use std::time::Duration;
 use std::time::Instant;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::*;
 use wormhole_core::notify::{self, State, Terminal};
 
-use super::super::*;
 use super::rows::{Do, Row};
 use super::{close, do_items, run, terminals_now};
 use crate::platform::panel;
+use crate::settings::{settings, ui};
+use crate::style::{self, Edges, TextRole};
 
 /// The tallest the panel gets before its list scrolls.
 const MAX_H: f32 = 560.0;

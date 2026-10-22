@@ -3,8 +3,14 @@
 //! nobody edits it), and the list kept in step with the session.
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::input::{InputState, Textarea, TextareaState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::focus::list::Item;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::limits::count_grouped;
 use wormhole_core::panel::{self as rules, StepRow};
 use wormhole_core::spoken;
@@ -13,8 +19,11 @@ use super::super::focus::{Activate, Walkable};
 use super::super::items::with_item_keys;
 use super::super::panel_list::{CardPart, Rows};
 use super::super::text::{note_body, note_title};
-use super::*;
+use super::{NOTE_ROWS_MIN, is_blank_note};
+use crate::settings::UiColors;
 use crate::settings::ui_in;
+use crate::style::{self, TextRole};
+use crate::workspace::{NOTE_PLACEHOLDER, TaskItem, Workspace};
 
 /// The Notes band's + names its key, from the keymap (the band takes a `&'static str`).
 static NEW_NOTE_TOOLTIP: std::sync::LazyLock<String> =

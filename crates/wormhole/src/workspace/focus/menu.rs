@@ -5,7 +5,12 @@
 //! rows have no menu yet (the panel's) still takes the key, so it never reaches the
 //! terminal behind it.
 
-use super::*;
+use gpui_kit::*;
+use wormhole_core::focus::Area;
+use wormhole_core::keymap::{self, ActionId};
+
+use crate::style;
+use crate::workspace::Workspace;
 
 /// Whether `keystroke` is the row menu's key.
 pub(super) fn is_menu_key(keystroke: &Keystroke) -> bool {

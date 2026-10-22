@@ -20,8 +20,10 @@
 mod watch;
 
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 use std::time::{Instant, SystemTime};
 
+use gpui_kit::*;
 use wormhole_core::config::Settings;
 use wormhole_core::notify::{
     self, About, Announcer, Bursts, Grouped, Kind, Level, Priority, Said, Seen, Text, Throttle,
@@ -30,10 +32,11 @@ use wormhole_core::update::current_app_bundle;
 
 use super::ambient::{self, TabFacts};
 use super::app::{AppState, app, open_tab};
-use super::*;
+use super::{RightTab, Workspace};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
+use crate::settings::settings;
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).

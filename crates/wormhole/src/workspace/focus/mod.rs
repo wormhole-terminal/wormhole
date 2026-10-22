@@ -16,10 +16,11 @@ mod panel;
 #[cfg(test)]
 mod window_tests;
 
+use gpui_kit::*;
 use wormhole_core::focus::list::{Key, TypeAhead};
 use wormhole_core::focus::{self, Area, EscState, Escape, Stop};
 
-use super::*;
+use super::{RightTab, Workspace, actions};
 
 pub(super) use bars::TitleButton;
 pub(in crate::workspace) use menu::key_menu_origin;

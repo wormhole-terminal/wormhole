@@ -3,8 +3,13 @@
 //! wrapping; tabs open as the keys reach them (automatic activation); ↩ / Space press the button
 //! or item the keys are on.
 
-use super::session::step_wrapping;
-use super::*;
+use gpui_kit::*;
+use wormhole_core::focus::list::Key;
+use wormhole_core::focus::{Area, Stop};
+
+use super::{activation, list_key};
+use crate::workspace::session::step_wrapping;
+use crate::workspace::{RightTab, Workspace};
 
 /// The title row's buttons, in the focus order (region 1). The traffic lights are the system's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -112,7 +117,7 @@ impl Workspace {
     pub(in crate::workspace) fn panel_tab_list(&self, cx: &App) -> Vec<RightTab> {
         let mut tabs = vec![RightTab::Changes, RightTab::History];
         // Notes is behind its flag; when it's off Usage simply follows History.
-        if super::notes::notes_on(cx) {
+        if crate::workspace::notes::notes_on(cx) {
             tabs.push(RightTab::Notes);
         }
         if self.usage_tab_on(cx) {
@@ -121,7 +126,7 @@ impl Workspace {
         // The Project tab belongs to the project-folder feature, so it's gone while that flag is
         // off (see `features`). It comes last so that the other tabs keep their place, and their
         // keys, whether it is there or not.
-        let project_folders = super::project::project_folders_on(cx);
+        let project_folders = crate::workspace::project::project_folders_on(cx);
         if project_folders && (self.active_folder(cx).is_some() || self.right_tab == RightTab::Project) {
             tabs.push(RightTab::Project);
         }

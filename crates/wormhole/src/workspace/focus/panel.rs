@@ -7,9 +7,13 @@
 //! read-only. Each tab says which of its rows the keys can be on and what pressing one does; this
 //! walks them.
 
+use gpui_kit::*;
+use wormhole_core::focus::Area;
 use wormhole_core::focus::list::{Item, Move, band_folds, walk};
 
-use super::*;
+use super::{activation, list_key};
+use crate::settings::UiColors;
+use crate::workspace::{RightTab, Workspace};
 
 /// How an item is pressed: ↩ or Space.
 pub(in crate::workspace) use wormhole_core::focus::list::Press as Activate;

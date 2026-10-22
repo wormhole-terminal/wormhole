@@ -12,11 +12,13 @@
 mod rows;
 mod view;
 
+use gpui_kit::*;
 use wormhole_core::notify::Terminal;
 
 use super::app::AppState;
-use super::*;
 use crate::menubar::ActionItem;
+use crate::style;
+
 pub(crate) use rows::{Do, Row, rows};
 pub(crate) use view::QuickPanel;
 

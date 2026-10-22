@@ -22,15 +22,21 @@ mod answers;
 
 use std::time::Instant;
 
+use gpui_kit::*;
 use wormhole_core::agents::integrations;
 use wormhole_core::intro::{Handover, Start};
 use wormhole_core::ipc::control::AgentsFacts;
 use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
+use wormhole_core::store::SessionRecord;
 use wormhole_core::welcome::{self, DockCell, Registry};
 
-pub(super) use answers::handle;
+use super::Workspace;
+use super::app::{AppState, app, app_mut};
+#[cfg(feature = "devctl")]
+use super::notifications;
+use crate::settings::settings;
 
-use super::*;
+pub(super) use answers::handle;
 
 /// What a welcome is to be.
 #[derive(Clone, Copy, Debug)]

@@ -1,11 +1,15 @@
 //! The Notes tab: the Next steps and Notes bands over one virtual list per
 //! session, the notes themselves, and sending their text to the terminal.
+use std::time::Duration;
+
 use gpui_kit::component::input::Position;
+use gpui_kit::component::input::{InputEvent, TextareaState};
+use gpui_kit::*;
 use wormhole_core::reorder;
 
 use super::items::{ItemKey, item_key};
 use super::text::{chunks_blank, paragraph_at};
-use super::*;
+use super::{Note, RightTab, Workspace, panel_list};
 
 mod view;
 
