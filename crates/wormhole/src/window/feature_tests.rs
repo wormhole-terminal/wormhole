@@ -333,8 +333,8 @@ fn the_window_tells_a_feature_which_terminal_it_chose_and_asks_it_to_take_the_ke
 }
 
 #[gpui_kit::test]
-fn a_window_made_with_no_table_has_no_features(cx: &mut TestAppContext) {
-    if isolate("a_window_made_with_no_table_has_no_features") {
+fn a_window_has_the_features_of_the_table_it_was_made_with(cx: &mut TestAppContext) {
+    if isolate("a_window_has_the_features_of_the_table_it_was_made_with") {
         return;
     }
     let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, TABLE);
@@ -342,6 +342,23 @@ fn a_window_made_with_no_table_has_no_features(cx: &mut TestAppContext) {
     for id in FeatureId::ALL {
         assert_eq!(read(cx, &window, |ws| ws.feature_def(id).is_some()), TABLE.iter().any(|d| d.id == id));
     }
+}
+
+#[gpui_kit::test]
+fn a_window_made_with_an_empty_table_has_no_features(cx: &mut TestAppContext) {
+    if isolate("a_window_made_with_an_empty_table_has_no_features") {
+        return;
+    }
+    let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, &[]);
+    draw(cx, &window);
+    for id in FeatureId::ALL {
+        assert!(read(cx, &window, |ws| ws.feature_def(id).is_none()), "{id:?}");
+    }
+    assert_eq!(read(cx, &window, |ws| ws.feature_states.len()), 0);
+    assert!(read(cx, &window, |ws| ws.tab_entry(TabId::Changes).is_none()));
+    // The panel still draws, with the tabs the window offers on its own and no Changes.
+    let tabs = drive(cx, &window, |ws, _, cx| ws.panel_tab_list(cx));
+    assert!(!tabs.contains(&TabId::Changes), "{tabs:?}");
 }
 
 fn change(path: &str) -> FileChange {
