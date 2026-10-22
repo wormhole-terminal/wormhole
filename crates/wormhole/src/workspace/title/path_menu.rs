@@ -19,7 +19,7 @@ use crate::workspace::{Workspace, session};
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click
     /// on it, or ⌃↩ with the keys on the strip). Nothing for a terminal whose folder isn't known.
-    pub(super) fn open_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn open_path_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;

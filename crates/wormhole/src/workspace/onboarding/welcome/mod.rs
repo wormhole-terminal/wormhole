@@ -132,13 +132,13 @@ pub(crate) fn replay_in_front(handover: Handover, cx: &mut App) {
 }
 
 /// Whether the welcome in `tab` is still running (its token still opens the door).
-pub(super) fn running(tab: i64, cx: &App) -> bool {
+pub(in crate::workspace) fn running(tab: i64, cx: &App) -> bool {
     app(cx).welcomes.gates.running(tab)
 }
 
 /// A welcome terminal is gone (closed, or its window): its token opens nothing, and a first run that
 /// was closed unfinished counts as skipped, so the next launch doesn't start it all over.
-pub(super) fn forget(tab: i64, cx: &mut App) {
+pub(in crate::workspace) fn forget(tab: i64, cx: &mut App) {
     let state = app_mut(cx);
     let first_run =
         state.welcomes.run(tab).is_some_and(|run| run.first_run && state.welcomes.gates.running(tab));
@@ -218,7 +218,12 @@ impl Workspace {
 
 impl Workspace {
     /// The first terminal of a window opened for the first launch: the welcome, not a plain shell.
-    pub(super) fn open_first_welcome(&mut self, plan: Plan, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn open_first_welcome(
+        &mut self,
+        plan: Plan,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let play = if crate::background::on() { Play::Never } else { Play::Pending };
         self.open_welcome_session(plan, play, window, cx);
     }

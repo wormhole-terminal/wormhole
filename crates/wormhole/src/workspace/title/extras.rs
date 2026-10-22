@@ -34,7 +34,7 @@ const PORTS_EVERY: Duration = Duration::from_secs(5);
 
 /// What the extras remember about one session.
 #[derive(Default)]
-pub(super) struct SessionExtras {
+pub(in crate::workspace) struct SessionExtras {
     /// The model and context window its agent last reported.
     gauge: Option<Gauge>,
     /// The ports its programs listen on as of the last look, lowest first.
@@ -47,22 +47,22 @@ pub(super) struct SessionExtras {
 #[cfg(test)]
 impl SessionExtras {
     /// Ports as a look at the shell's process tree would have found them.
-    pub(super) fn found_ports(&mut self, ports: Vec<u16>) {
+    pub(in crate::workspace) fn found_ports(&mut self, ports: Vec<u16>) {
         self.ports = ports;
     }
 }
 
 /// What the extras say about the terminal on screen, for one frame.
-pub(super) struct ExtraFacts {
-    pub(super) branch: Option<BranchStatus>,
-    pub(super) gauge: Option<Gauge>,
-    pub(super) ports: Vec<u16>,
-    pub(super) pull_request: Option<PullRequest>,
+pub(in crate::workspace) struct ExtraFacts {
+    pub(in crate::workspace) branch: Option<BranchStatus>,
+    pub(in crate::workspace) gauge: Option<Gauge>,
+    pub(in crate::workspace) ports: Vec<u16>,
+    pub(in crate::workspace) pull_request: Option<PullRequest>,
 }
 
 impl Workspace {
     /// What the extras show for the active terminal, with every switched-off one left out.
-    pub(super) fn extra_facts(&self, cx: &App) -> ExtraFacts {
+    pub(in crate::workspace) fn extra_facts(&self, cx: &App) -> ExtraFacts {
         let settings = settings_in(&self.profile, cx);
         let session = self.active_session();
         let terminal = session.terminal().read(cx);
@@ -78,7 +78,7 @@ impl Workspace {
 
     /// The model and context window the active terminal's agent last reported. Only the agent
     /// that reported it: another one in the same terminal has not (yet).
-    pub(super) fn agent_gauge<'a>(&'a self, cx: &'a App) -> Option<&'a Gauge> {
+    pub(in crate::workspace) fn agent_gauge<'a>(&'a self, cx: &'a App) -> Option<&'a Gauge> {
         let session = self.active_session();
         let agent = session.terminal().read(cx).agent;
         session.extras.gauge.as_ref().filter(|gauge| agent == Some(gauge.agent))
@@ -99,7 +99,7 @@ impl Workspace {
 
     /// On the tick: forget a report whose agent has gone, and look up what is due for the terminal
     /// on screen.
-    pub(super) fn tick_extras(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn tick_extras(&mut self, cx: &mut Context<Self>) {
         self.forget_gone_gauges(cx);
         self.poll_ports(cx);
         self.poll_pull_request(cx);
@@ -173,7 +173,7 @@ impl Workspace {
     }
 
     /// [`Self::pull_request_branch`] for any of the window's terminals.
-    pub(super) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
+    pub(in crate::workspace) fn session_pr_branch(&self, ix: usize, cx: &App) -> Option<Branch> {
         if !settings_in(&self.profile, cx).title_pull_request
             || !crate::workspace::features::project::project_folders_on(cx)
         {

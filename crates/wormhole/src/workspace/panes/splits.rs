@@ -21,14 +21,14 @@ use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
 
 /// A split: its id (one counter with the sessions') and the layout its members share.
-pub(super) struct Split {
+pub(in crate::workspace) struct Split {
     pub id: SplitId,
     pub layout: TabPanes,
 }
 
 impl Split {
     /// Whether pane `id` is on screen while the split is: every pane is, or the zoomed one alone.
-    pub(super) fn shows(&self, id: PaneId) -> bool {
+    pub(in crate::workspace) fn shows(&self, id: PaneId) -> bool {
         self.layout.zoomed().is_none_or(|zoomed| zoomed == id)
     }
 }
@@ -41,7 +41,12 @@ impl Workspace {
     }
 
     /// A notification about terminal `id` was clicked: bring it forward, with its split.
-    pub(super) fn reveal_terminal(&mut self, id: i64, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn reveal_terminal(
+        &mut self,
+        id: i64,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(ix) = self.find_session(id) {
             self.activate(ix, window, cx);
         }
@@ -54,39 +59,39 @@ impl Workspace {
     }
 
     /// The split session `ix` is in.
-    pub(super) fn split_of(&self, ix: usize) -> Option<&Split> {
+    pub(in crate::workspace) fn split_of(&self, ix: usize) -> Option<&Split> {
         let id = self.sessions.get(ix)?.split?;
         self.splits.iter().find(|split| split.id == id)
     }
 
     /// The selected terminal's split: what is on screen beside it.
-    pub(super) fn active_split(&self) -> Option<&Split> {
+    pub(in crate::workspace) fn active_split(&self) -> Option<&Split> {
         self.split_of(self.active)
     }
 
-    pub(super) fn split_mut(&mut self, id: SplitId) -> Option<&mut Split> {
+    pub(in crate::workspace) fn split_mut(&mut self, id: SplitId) -> Option<&mut Split> {
         self.splits.iter_mut().find(|split| split.id == id)
     }
 
     /// The selected terminal's split, to change it.
-    pub(super) fn active_split_mut(&mut self) -> Option<&mut Split> {
+    pub(in crate::workspace) fn active_split_mut(&mut self) -> Option<&mut Split> {
         let id = self.sessions.get(self.active)?.split?;
         self.split_mut(id)
     }
 
     /// Each session's split, in the window's order, for the sidebar's list.
-    pub(super) fn split_ids(&self) -> Vec<Option<SplitId>> {
+    pub(in crate::workspace) fn split_ids(&self) -> Vec<Option<SplitId>> {
         self.sessions.iter().map(|session| session.split).collect()
     }
 
     /// The sessions in split `id`, in the window's order.
-    pub(super) fn members(&self, id: SplitId) -> Vec<usize> {
+    pub(in crate::workspace) fn members(&self, id: SplitId) -> Vec<usize> {
         (0..self.sessions.len()).filter(|&ix| self.sessions[ix].split == Some(id)).collect()
     }
 
     /// Whether the terminal of session `ix` is in front of the user: the selected one, or another
     /// pane of its split that isn't hidden by a zoom. Those are the ones that count as seen.
-    pub(super) fn on_screen(&self, ix: usize) -> bool {
+    pub(in crate::workspace) fn on_screen(&self, ix: usize) -> bool {
         if ix == self.active {
             return true;
         }
@@ -95,12 +100,12 @@ impl Workspace {
     }
 
     /// The sessions on screen, in the window's order.
-    pub(super) fn on_screen_sessions(&self) -> Vec<usize> {
+    pub(in crate::workspace) fn on_screen_sessions(&self) -> Vec<usize> {
         (0..self.sessions.len()).filter(|&ix| self.on_screen(ix)).collect()
     }
 
     /// The splits as the store keeps them.
-    pub(super) fn split_records(&self) -> Vec<SplitRecord> {
+    pub(in crate::workspace) fn split_records(&self) -> Vec<SplitRecord> {
         self.splits
             .iter()
             .map(|split| SplitRecord { id: split.id, layout: Some(split.layout.to_json()) })
@@ -110,7 +115,7 @@ impl Workspace {
     /// The splits a window was saved with, once its sessions are all here: the sessions that name
     /// one are its members, laid out as saved and fitted to who is there (core
     /// `TabPanes::restored`). One member alone is no split; a name no record has still groups.
-    pub(super) fn restore_splits(&mut self, records: &[SplitRecord]) {
+    pub(in crate::workspace) fn restore_splits(&mut self, records: &[SplitRecord]) {
         let mut ids: Vec<SplitId> = Vec::new();
         for session in &self.sessions {
             if let Some(id) = session.split
@@ -133,7 +138,7 @@ impl Workspace {
     }
 
     /// Whether the split `ix` is in, or `ix` itself, is pinned: pinning one member pins them all.
-    pub(super) fn split_pinned(&self, ix: usize) -> bool {
+    pub(in crate::workspace) fn split_pinned(&self, ix: usize) -> bool {
         match self.sessions.get(ix).and_then(|session| session.split) {
             Some(id) => self.members(id).into_iter().any(|member| self.sessions[member].pinned),
             None => self.sessions.get(ix).is_some_and(|session| session.pinned),
@@ -144,18 +149,18 @@ impl Workspace {
 
     /// The area the selected split's panes share, below the title rows, as of the last frame
     /// (`pane_probe`): zero before the first.
-    pub(super) fn pane_area_size(&self) -> (f32, f32) {
+    pub(in crate::workspace) fn pane_area_size(&self) -> (f32, f32) {
         (f32::from(self.pane_area.size.width), f32::from(self.pane_area.size.height))
     }
 
     /// The least height a pane needs: the grid's minimum under its header.
-    pub(super) fn pane_min_h(&self) -> f32 {
+    pub(in crate::workspace) fn pane_min_h(&self) -> f32 {
         // The taller header, so a pane fits whichever way the gaps setting goes.
         PANE_MIN_H + style::pane_header_h(true).max(style::PANE_HEADER_H)
     }
 
     /// What a drop or a join works with: the panes' area and the least a pane may be in it.
-    pub(super) fn pane_room(&self) -> Room {
+    pub(in crate::workspace) fn pane_room(&self) -> Room {
         let (width, height) = self.pane_area_size();
         Room { width, height, min_w: PANE_MIN_W, min_h: self.pane_min_h() }
     }
@@ -163,7 +168,7 @@ impl Workspace {
     /// Whether the focused pane has the room for a split along `axis`: both halves at least the
     /// minimum (core `PANE_MIN_W` × `PANE_MIN_H`), each under a header. Before the first frame
     /// nothing is known, and the split is allowed.
-    pub(super) fn can_split(&self, axis: Axis) -> bool {
+    pub(in crate::workspace) fn can_split(&self, axis: Axis) -> bool {
         let (w, h) = self.pane_area_size();
         if w <= 0.0 || h <= 0.0 {
             return true;
@@ -187,7 +192,7 @@ impl Workspace {
     }
 
     /// Whether the area has room for `preset`'s slots, each pane at least the minimum.
-    pub(super) fn can_layout(&self, preset: Preset) -> bool {
+    pub(in crate::workspace) fn can_layout(&self, preset: Preset) -> bool {
         let (w, h) = self.pane_area_size();
         if w <= 0.0 || h <= 0.0 {
             return true;
@@ -206,7 +211,7 @@ impl Workspace {
     /// Take session `ix` out of its split's layout, without touching what is selected: the panes
     /// beside it take its room. A split left with one member is gone and that terminal stands
     /// alone. `None`, nothing changed, when it is in no split.
-    pub(super) fn leave_layout(&mut self, ix: usize) -> Option<Leave> {
+    pub(in crate::workspace) fn leave_layout(&mut self, ix: usize) -> Option<Leave> {
         let id = self.sessions.get(ix)?.id;
         let split_id = self.sessions[ix].split?;
         let left = self.split_mut(split_id).and_then(|split| split.layout.leave(id));
@@ -394,7 +399,7 @@ impl Workspace {
         }
     }
 
-    pub(super) fn split_with(&self, id: SplitId) -> Option<&Split> {
+    pub(in crate::workspace) fn split_with(&self, id: SplitId) -> Option<&Split> {
         self.splits.iter().find(|split| split.id == id)
     }
 }

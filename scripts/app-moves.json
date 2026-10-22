@@ -267,6 +267,63 @@
       "reexports": {
         "devctl_trust_shot": "workspace::features::project::devctl_trust_shot"
       }
+    },
+    "5b": {
+      "doc": "The window's title rows, panes, sidebar extras and welcome get their folders (phase 4, series 5, second run)",
+      "moves": [
+        {
+          "from": "workspace/title_row.rs",
+          "to": "workspace/title/mod.rs"
+        },
+        {
+          "from": "workspace/breadcrumb.rs",
+          "to": "workspace/title/breadcrumb.rs"
+        },
+        {
+          "from": "workspace/title_chips.rs",
+          "to": "workspace/title/chips.rs"
+        },
+        {
+          "from": "workspace/title_extras.rs",
+          "to": "workspace/title/extras.rs"
+        },
+        {
+          "from": "workspace/path_card.rs",
+          "to": "workspace/title/path_card.rs"
+        },
+        {
+          "from": "workspace/path_menu.rs",
+          "to": "workspace/title/path_menu.rs"
+        },
+        {
+          "from": "workspace/title_tests.rs",
+          "to": "workspace/title/title_tests.rs"
+        },
+        {
+          "from": "workspace/panes.rs",
+          "to": "workspace/panes/mod.rs"
+        },
+        {
+          "from": "workspace/splits.rs",
+          "to": "workspace/panes/splits.rs"
+        },
+        {
+          "from": "workspace/pane_drop.rs",
+          "to": "workspace/panes/drop.rs"
+        },
+        {
+          "from": "workspace/shells.rs",
+          "to": "workspace/sidebar/shells.rs"
+        },
+        {
+          "from": "workspace/profile_chip.rs",
+          "to": "workspace/sidebar/profile_chip.rs"
+        },
+        {
+          "from": "workspace/welcome",
+          "to": "workspace/onboarding/welcome"
+        }
+      ]
     }
   }
 }

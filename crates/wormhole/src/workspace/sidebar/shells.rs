@@ -22,7 +22,7 @@ pub(crate) fn default_key(settings: &Settings) -> &str {
 impl Workspace {
     /// `button` (a +) with the shells' menu under a right-click: every shell by name, the default
     /// (what a left click opens) checked.
-    pub(super) fn with_shell_menu(
+    pub(in crate::workspace) fn with_shell_menu(
         &self,
         id: &'static str,
         button: impl IntoElement,

@@ -542,6 +542,7 @@ const NOTE_LINK_INSET: f32 = 4.0;
 
 #[cfg(test)]
 mod tests;
+pub(crate) mod welcome;
 
 #[cfg(test)]
 mod agent_scan_tests {

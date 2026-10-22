@@ -42,7 +42,7 @@ fn at(zone: Div, rect: Rect) -> Div {
 impl Workspace {
     /// The panes on screen as rectangles in the panes' area: the selected split's, or the
     /// selected terminal alone filling it.
-    pub(super) fn drop_rects(&self) -> Vec<(PaneId, Rect)> {
+    pub(in crate::workspace) fn drop_rects(&self) -> Vec<(PaneId, Rect)> {
         let (w, h) = self.pane_area_size();
         match self.active_split() {
             Some(split) => split.layout.shown(w, h),
@@ -57,7 +57,7 @@ impl Workspace {
     }
 
     /// Whether terminal `dragged` could be dropped on `zone` of pane `target`, with the room there is.
-    pub(super) fn can_drop_on_pane(&self, dragged: i64, target: PaneId, zone: Zone) -> bool {
+    pub(in crate::workspace) fn can_drop_on_pane(&self, dragged: i64, target: PaneId, zone: Zone) -> bool {
         let room = self.pane_room();
         match self.active_split() {
             Some(split) if split.layout.contains(dragged) => {
@@ -155,7 +155,7 @@ impl Workspace {
 
     /// The overlay over the panes while a terminal is dragged (and nothing otherwise): the
     /// surface's size, as for the panes.
-    pub(super) fn render_drop_overlay(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(in crate::workspace) fn render_drop_overlay(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let drag = self.terminal_drag.as_ref().filter(|_| cx.has_active_drag())?;
         let ui = ui_in(&self.profile, cx);
         let mut zones: Vec<AnyElement> = Vec::new();

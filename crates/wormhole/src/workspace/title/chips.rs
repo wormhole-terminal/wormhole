@@ -33,7 +33,7 @@ const MORE_PORTS_W: f32 = 168.0;
 impl Workspace {
     /// How wide each extra is with the gap in front of it (what `fit_row` weighs), and how wide
     /// the ports are with a chip fewer each time (`RowWants::ports_narrower`).
-    pub(super) fn extras_wanted(facts: &ExtraFacts, measure: &Measure) -> (Extras, Vec<f32>) {
+    pub(in crate::workspace) fn extras_wanted(facts: &ExtraFacts, measure: &Measure) -> (Extras, Vec<f32>) {
         let text = |text: &str| measure.caption_medium(text);
         let chip = |icon: bool, text: f32| {
             2.0 * style::EXTRA_PAD + text + if icon { style::EXTRA_ICON + style::EXTRA_GAP } else { 0.0 }
@@ -88,7 +88,7 @@ impl Workspace {
 
     /// The branch's status after its chip: a dot while the tree has uncommitted changes, and the
     /// commits ahead and behind. A click shows the Changes tab, where what changed is.
-    pub(super) fn render_branch_status(
+    pub(in crate::workspace) fn render_branch_status(
         &self,
         plan: &TitlePlan,
         cx: &mut Context<Self>,
@@ -111,7 +111,11 @@ impl Workspace {
     }
 
     /// The model and context, the ports and the pull request, the ones the row had room for.
-    pub(super) fn render_title_extras(&self, plan: &TitlePlan, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(in crate::workspace) fn render_title_extras(
+        &self,
+        plan: &TitlePlan,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         let ui = ui_in(&self.profile, cx);
         let (facts, extras) = (&plan.facts.extras, &plan.fit.extras);
         let mut chips: Vec<AnyElement> = Vec::new();
@@ -240,7 +244,7 @@ fn gauge_chip(gauge: &Gauge, ui: UiColors) -> AnyElement {
 /// How a pull request is drawn, in the title row and on its folder's band: its icon in the colour
 /// of how it stands (a draft's muted), and while it is open its checks: a green check once they
 /// pass, a red cross when one fails, a dashed circle while they run.
-pub(super) fn pr_look(pr: &PullRequest, ui: UiColors) -> style::PrLook {
+pub(in crate::workspace) fn pr_look(pr: &PullRequest, ui: UiColors) -> style::PrLook {
     let (icon, color) = match pr.state {
         PrState::Open if pr.draft => (IconName::GitPullRequestDraft, ui.muted),
         PrState::Open => (IconName::GitPullRequest, ui.success_text),
@@ -309,7 +313,7 @@ impl RenderOnce for MoreTrigger {
 
 /// What a plan's extras are, for devctl's `title`: what is drawn and what the row gave up.
 #[cfg(feature = "devctl")]
-pub(super) fn describe(plan: &TitlePlan) -> String {
+pub(in crate::workspace) fn describe(plan: &TitlePlan) -> String {
     let (facts, fit) = (&plan.facts.extras, &plan.fit.extras);
     let one = |extra: Extra, text: Option<String>| match text {
         None => "none".to_string(),

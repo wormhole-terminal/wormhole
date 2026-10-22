@@ -24,7 +24,7 @@ use crate::workspace::Workspace;
 
 /// Which list the open menu shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum ProfilePage {
+pub(in crate::workspace) enum ProfilePage {
     Main,
     /// "Open a window in…": the profiles to pick from.
     OpenIn,
@@ -50,12 +50,12 @@ struct Choice {
 
 impl Workspace {
     /// Whether the chip is drawn: two or more profiles.
-    pub(super) fn profile_chip_shown(&self, cx: &App) -> bool {
+    pub(in crate::workspace) fn profile_chip_shown(&self, cx: &App) -> bool {
         app(cx).profiles.profiles().len() >= 2
     }
 
     /// The chip with its menu, or nothing while there is one profile.
-    pub(super) fn render_profile_chip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(in crate::workspace) fn render_profile_chip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         if !self.profile_chip_shown(cx) {
             return None;
         }

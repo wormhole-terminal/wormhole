@@ -25,7 +25,7 @@ use crate::workspace::{RightTab, Workspace};
 
 impl Workspace {
     /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
-    pub(super) fn render_title_strip(
+    pub(in crate::workspace) fn render_title_strip(
         &self,
         plan: &TitlePlan,
         window: &Window,
@@ -93,7 +93,7 @@ impl Workspace {
     }
 
     /// Measures the row and asks core what it keeps: the whole of `fit_row`'s input.
-    pub(super) fn plan_title(
+    pub(in crate::workspace) fn plan_title(
         &self,
         tint: Option<Tint>,
         window: &Window,
@@ -340,7 +340,7 @@ impl Workspace {
 
 /// The breadcrumb's spacing (`gap_2`, `px_2`), and the least of a cut text worth showing (about
 /// three letters and the ellipsis).
-pub(super) const CRUMB_GAP: f32 = 8.0;
+pub(in crate::workspace) const CRUMB_GAP: f32 = 8.0;
 /// The room the crumb's clip leaves round the terminal's tile, for its shadow.
 const SHADOW_ROOM: f32 = 4.0;
 const CRUMB_PAD: f32 = 8.0;
@@ -354,7 +354,7 @@ const CHIP_H: f32 = 20.0;
 const PATH_LAST_MAX: f32 = 240.0;
 
 /// How wide the breadcrumb's texts are in the interface font, in their type roles.
-pub(super) struct Measure<'a> {
+pub(in crate::workspace) struct Measure<'a> {
     window: &'a Window,
     family: SharedString,
 }
@@ -387,7 +387,7 @@ impl<'a> Measure<'a> {
         self.width(text, 0.75, FontWeight::NORMAL)
     }
 
-    pub(super) fn caption_medium(&self, text: &str) -> f32 {
+    pub(in crate::workspace) fn caption_medium(&self, text: &str) -> f32 {
         self.width(text, 0.75, FontWeight::MEDIUM)
     }
 }
@@ -396,7 +396,7 @@ impl Workspace {
     /// On the tick: the breadcrumb's "working · 4m" moves on by itself once a minute, with nothing
     /// else to redraw the window (an agent thinking quietly); redraw when it would read
     /// differently.
-    pub(super) fn crumb_tick(&self, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn crumb_tick(&self, cx: &mut Context<Self>) {
         // The status bar's tick redraws its own copy.
         if settings_in(&self.profile, cx).status_bar {
             return;
@@ -411,7 +411,7 @@ impl Workspace {
 
 /// What the breadcrumb says after a terminal's name: how it is doing, working time in whole
 /// minutes ("working · <1m", "working · 4m"), or nothing while it is idle.
-pub(super) fn crumb_words(terminal: &TerminalView) -> Option<String> {
+pub(in crate::workspace) fn crumb_words(terminal: &TerminalView) -> Option<String> {
     let took = || wormhole_core::view::layout::status_bar::elapsed(terminal.status_since().elapsed());
     match terminal.status() {
         Status::Busy => Some(format!("working · {}", took())),
@@ -449,7 +449,7 @@ fn indicator_glyph(told: bool, status: Status) -> Option<style::StatusGlyph> {
 
 /// A terminal's status tile in a 28 pt row (the title row, a split's pane headers): the tool's own
 /// icon with the live status its sidebar row shows, so one terminal looks the same everywhere.
-pub(super) fn terminal_tile(
+pub(in crate::workspace) fn terminal_tile(
     id: impl Into<ElementId>,
     agent: Option<AgentId>,
     told: bool,

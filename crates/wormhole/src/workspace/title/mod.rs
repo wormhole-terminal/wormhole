@@ -6,6 +6,14 @@
 //! border width under it. An empty stretch of it is the window's title bar: dragging moves the
 //! window and a double-click does what the system setting says (zoom, or minimize).
 
+pub(in crate::workspace) mod breadcrumb;
+pub(in crate::workspace) mod chips;
+pub(in crate::workspace) mod extras;
+pub(in crate::workspace) mod path_card;
+pub(in crate::workspace) mod path_menu;
+#[cfg(test)]
+mod title_tests;
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

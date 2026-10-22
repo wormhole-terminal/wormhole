@@ -6,6 +6,9 @@
 //! coming into a pane selects its row. A terminal that is in no split draws as it always did
 //! (`layout.rs`): no headers, the terminal under the floating title bar.
 
+pub(in crate::workspace) mod drop;
+pub(in crate::workspace) mod splits;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;

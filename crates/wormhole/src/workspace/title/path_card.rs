@@ -21,13 +21,13 @@ use crate::workspace::{Workspace, session};
 
 /// What the pointer is over: the folder in the title row, or the card under it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Over {
+pub(in crate::workspace) enum Over {
     Path,
     Card,
 }
 
 #[derive(Default)]
-pub(super) struct PathCard {
+pub(in crate::workspace) struct PathCard {
     /// The popover is up (or being opened).
     shown: bool,
     over_path: bool,
@@ -43,19 +43,19 @@ pub(super) struct PathCard {
 impl PathCard {
     /// Whether the card is on screen (devctl's `title`, and the tests).
     #[cfg(any(test, feature = "devctl"))]
-    pub(super) fn is_shown(&self) -> bool {
+    pub(in crate::workspace) fn is_shown(&self) -> bool {
         self.shown
     }
 
     /// Whether a popover is up: it is a window of its own, and the title row's window is no longer
     /// the key one for it.
-    pub(super) fn is_open_popover(&self) -> bool {
+    pub(in crate::workspace) fn is_open_popover(&self) -> bool {
         self.open.is_some()
     }
 
     /// Back to nothing, the popover closed: the window lost the front, the terminal changed under
     /// the pointer, or the folder was clicked.
-    pub(super) fn reset(&mut self, cx: &mut App) {
+    pub(in crate::workspace) fn reset(&mut self, cx: &mut App) {
         if let Some((_, handle)) = &self.open {
             handle.close(cx);
         }
@@ -67,7 +67,7 @@ impl PathCard {
 impl Workspace {
     /// The pointer came onto or left the folder or the card: open after a moment on either, close a
     /// moment after both are left (so crossing the gap between them doesn't close it).
-    pub(super) fn hover_path(
+    pub(in crate::workspace) fn hover_path(
         &mut self,
         over: Over,
         hovered: bool,
@@ -102,7 +102,7 @@ impl Workspace {
     }
 
     /// Esc: close the card if it is open. Whether there was one.
-    pub(super) fn close_path_card(&mut self, cx: &mut Context<Self>) -> bool {
+    pub(in crate::workspace) fn close_path_card(&mut self, cx: &mut Context<Self>) -> bool {
         if !self.path_card.shown {
             return false;
         }
@@ -112,7 +112,7 @@ impl Workspace {
     }
 
     /// Open the card under the folder (the timer's, devctl's).
-    pub(super) fn open_path_card(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn open_path_card(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let terminal = self.active_terminal().read(cx);
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
@@ -128,7 +128,7 @@ impl Workspace {
     }
 
     /// Copy path: the plain absolute path, unquoted, on the clipboard; VoiceOver says so.
-    pub(super) fn copy_path(folder: &Path, cx: &mut App) {
+    pub(in crate::workspace) fn copy_path(folder: &Path, cx: &mut App) {
         cx.write_to_clipboard(ClipboardItem::new_string(folder.to_string_lossy().into_owned()));
         crate::platform::a11y::announce("Path copied", false);
     }
@@ -136,7 +136,12 @@ impl Workspace {
     /// Insert into terminal: the folder's absolute path, in single quotes, typed at the focused
     /// terminal as a paste (bracketed when the program asked for it), without a Return. The
     /// popover closes and the terminal has the keyboard.
-    pub(super) fn insert_path(&mut self, folder: &Path, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn insert_path(
+        &mut self,
+        folder: &Path,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let text = insert_text(folder);
         let terminal = self.active_terminal();
         terminal.update(cx, |terminal, _| terminal.paste(&text));
@@ -188,7 +193,7 @@ fn path_popover(
 }
 
 /// What Insert into terminal types: the path in single quotes, so spaces and `$` survive.
-pub(super) fn insert_text(folder: &Path) -> String {
+pub(in crate::workspace) fn insert_text(folder: &Path) -> String {
     shells::single_quote(&folder.to_string_lossy())
 }
 

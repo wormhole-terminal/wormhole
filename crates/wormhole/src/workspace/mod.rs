@@ -34,7 +34,6 @@ use wormhole_core::storage::paths::ProfileId;
 
 pub(crate) mod ambient;
 pub(crate) mod aux_window;
-mod breadcrumb;
 pub(crate) mod chrome;
 #[cfg(test)]
 mod clear_tests;
@@ -65,7 +64,6 @@ mod menu_tests;
 pub(crate) mod onboarding;
 pub(crate) mod open_in;
 pub(crate) mod overlay;
-mod pane_drop;
 #[cfg(test)]
 mod pane_memory_tests;
 #[cfg(test)]
@@ -74,9 +72,6 @@ pub(crate) mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
-mod path_card;
-mod path_menu;
-mod profile_chip;
 #[cfg(test)]
 mod profile_look_tests;
 #[cfg(test)]
@@ -86,30 +81,36 @@ pub(crate) mod restart_facts;
 mod save;
 mod saved_layout;
 mod session;
-pub(crate) mod shells;
 mod shortcuts;
 pub(crate) mod sidebar;
 mod slide;
-mod splits;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
 mod terminal_drag;
 mod terminals;
 mod tick;
-mod title_chips;
-mod title_extras;
-mod title_row;
-#[cfg(test)]
-mod title_tests;
+mod title;
 #[cfg(test)]
 pub(crate) mod view_tests;
-pub(crate) mod welcome;
 mod window_actions;
 mod window_bounds;
 mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::workspace::onboarding::welcome;
+pub(in crate::workspace) use crate::workspace::panes::drop as pane_drop;
+pub(in crate::workspace) use crate::workspace::panes::splits;
+pub(in crate::workspace) use crate::workspace::sidebar::profile_chip;
+pub(crate) use crate::workspace::sidebar::shells;
+use crate::workspace::title as title_row;
+pub(in crate::workspace) use crate::workspace::title::breadcrumb;
+pub(in crate::workspace) use crate::workspace::title::chips as title_chips;
+pub(in crate::workspace) use crate::workspace::title::extras as title_extras;
+pub(in crate::workspace) use crate::workspace::title::path_card;
+pub(in crate::workspace) use crate::workspace::title::path_menu;
 
 use self::saved_layout::Layout;
 pub(crate) use self::saved_layout::RightTab;
