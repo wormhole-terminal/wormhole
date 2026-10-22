@@ -28,6 +28,7 @@
 
 pub mod a11y;
 mod anchor;
+pub mod apps;
 pub mod auth;
 pub mod background_mode;
 pub mod default_app;

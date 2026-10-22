@@ -3,6 +3,7 @@
 
 pub mod a11y;
 pub mod appkit;
+pub mod apps;
 #[cfg(not(test))]
 pub mod auth;
 pub mod colour;

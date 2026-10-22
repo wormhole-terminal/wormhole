@@ -9,8 +9,9 @@ use wormhole_core::shells::{self, ShellChoice, ShellKind};
 use gpui_kit::component::Disableable as _;
 
 use super::*;
+use crate::platform::apps;
 use crate::workspace::default_terminal;
-use crate::workspace::open_in::{self, OpenIn};
+use crate::workspace::open_in::OpenIn;
 
 /// The scrollback sizes offered; a value set in config.json shows as it is.
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
@@ -230,7 +231,9 @@ fn choose_app(cx: &mut App) {
     });
     cx.spawn(async move |cx| {
         let Ok(Ok(Some(paths))) = paths.await else { return };
-        let Some(bundle) = paths.first().and_then(|path| open_in::bundle_of(path)) else { return };
+        let Some(bundle) = paths.first().and_then(|path| apps::bundle_of(path)) else {
+            return;
+        };
         cx.update(|cx| update_settings(cx, |s| s.open_in = bundle));
     })
     .detach();

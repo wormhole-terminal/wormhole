@@ -52,6 +52,11 @@ pub(super) fn signatures_match() {
         default_app::own_bundle: fn() -> Option<String>;
         default_app::runner_for: fn(&str) -> Option<String>;
         default_app::set_runner_for: fn(&str, &str) -> anyhow::Result<()>;
+        apps::app_path: fn(&str) -> Option<std::path::PathBuf>;
+        apps::bundle_of: fn(&Path) -> Option<String>;
+        apps::icon_png: fn(&str, usize) -> Option<Vec<u8>>;
+        apps::command: fn(&str, wormhole_core::open_file::Launch) -> Option<std::process::Command>;
+        apps::text_editor_command: fn(&Path) -> Option<std::process::Command>;
         dock::set_badge: fn(Option<&str>);
         dock::bounce: fn(&mut App);
         dock::is_active: fn() -> bool;

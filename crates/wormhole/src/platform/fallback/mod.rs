@@ -4,6 +4,7 @@
 //! which isn't a target yet; compiled everywhere, and `parity` keeps it to `macos/`'s functions.
 
 pub mod a11y;
+pub mod apps;
 #[cfg(not(test))]
 pub mod auth;
 pub mod default_app;

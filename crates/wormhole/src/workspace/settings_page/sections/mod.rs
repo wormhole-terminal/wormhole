@@ -167,9 +167,7 @@ fn open_button(id: &'static str, icon: IconName, label: &'static str, open: fn()
 
 /// Open a file in the text editor (config.json).
 pub(super) fn open_in_editor(path: &Path) {
-    let mut cmd = std::process::Command::new("open");
-    cmd.arg("-t").arg(path);
-    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::apps::open_in_text_editor(path) {
         tracing::warn!("opening {}: {err}", path.display());
     }
 }

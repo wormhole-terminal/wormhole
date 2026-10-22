@@ -17,9 +17,9 @@ use gpui_kit::*;
 
 use crate::settings::UiColors;
 use crate::style::{self, IconButton};
-use crate::workspace::open_in::{self, OpenIn};
+use crate::workspace::open_in::OpenIn;
 use wormhole_core::fsutil;
-use wormhole_core::open_file::{self, Launch};
+use wormhole_core::open_file;
 use wormhole_core::open_in::Installed;
 use wormhole_core::spoken;
 
@@ -129,95 +129,14 @@ pub(crate) fn open(bundle: &str, root: &Path, relative: &str, line: Option<u32>)
         }
     };
     let Some(launch) = open_file::launch(bundle, &path, line) else { return };
-    let cmd = command(bundle, launch);
-    if let Err(err) = crate::platform::spawn::spawn_detached(cmd) {
+    if let Err(err) = crate::platform::apps::launch(bundle, launch) {
         tracing::warn!("opening {} in {bundle}: {err}", path.display());
-    }
-}
-
-/// The process for a [`Launch`]: `open` aimed at the app, or the command line the app brings.
-fn command(bundle: &str, launch: Launch) -> std::process::Command {
-    let open = || std::process::Command::new("open");
-    let in_app = |what: &dyn AsRef<std::ffi::OsStr>| {
-        let mut cmd = open();
-        cmd.arg("-b").arg(bundle).arg(what.as_ref());
-        cmd
-    };
-    match launch {
-        Launch::Open { path } => in_app(&path),
-        Launch::Url { url } => in_app(&url),
-        Launch::Reveal { path } => {
-            let mut cmd = open();
-            cmd.arg("-R").arg(path);
-            cmd
-        }
-        Launch::Args { args } => {
-            let mut cmd = open();
-            cmd.arg("-n").arg("-b").arg(bundle).arg("--args").args(args);
-            cmd
-        }
-        Launch::Bundled { relative, arg } => {
-            match open_in::app_path(bundle).map(|app| app.join(relative)).filter(|exe| exe.is_file()) {
-                Some(exe) => {
-                    let mut cmd = std::process::Command::new(exe);
-                    cmd.arg(arg);
-                    cmd
-                }
-                // The app doesn't have it (an older version): the file, without the line.
-                None => {
-                    let path = arg.rsplit_once(':').map_or(arg.as_str(), |(path, _)| path).to_string();
-                    in_app(&path)
-                }
-            }
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use super::{command, open};
-    use wormhole_core::open_file::Launch;
-
-    fn words(cmd: &std::process::Command) -> Vec<String> {
-        std::iter::once(cmd.get_program())
-            .chain(cmd.get_args())
-            .map(|word| word.to_string_lossy().into_owned())
-            .collect()
-    }
-
-    #[test]
-    fn each_launch_is_aimed_at_the_chosen_app() {
-        let path = PathBuf::from("/repo/a.rs");
-        assert_eq!(
-            words(&command("dev.zed.Zed", Launch::Open { path: path.clone() })),
-            ["open", "-b", "dev.zed.Zed", "/repo/a.rs"]
-        );
-        assert_eq!(
-            words(&command("com.microsoft.VSCode", Launch::Url { url: "vscode://file/repo/a.rs:3".into() })),
-            ["open", "-b", "com.microsoft.VSCode", "vscode://file/repo/a.rs:3"]
-        );
-        assert_eq!(
-            words(&command("com.apple.finder", Launch::Reveal { path })),
-            ["open", "-R", "/repo/a.rs"]
-        );
-        let args = ["--line", "3", "/repo/a.rs"].map(String::from).into();
-        assert_eq!(
-            words(&command("com.jetbrains.PhpStorm", Launch::Args { args })),
-            ["open", "-n", "-b", "com.jetbrains.PhpStorm", "--args", "--line", "3", "/repo/a.rs"]
-        );
-    }
-
-    #[test]
-    fn an_app_without_its_command_line_gets_the_file_without_the_line() {
-        // No such app is installed (or this isn't a Mac): the bundled command line is not found.
-        let launch = Launch::Bundled { relative: "Contents/MacOS/cli", arg: "/repo/a.rs:3".into() };
-        assert_eq!(
-            words(&command("com.example.NotInstalled", launch)),
-            ["open", "-b", "com.example.NotInstalled", "/repo/a.rs"]
-        );
-    }
+    use super::open;
 
     #[test]
     fn a_path_that_leads_out_of_the_repository_starts_nothing() {
