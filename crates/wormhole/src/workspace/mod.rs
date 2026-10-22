@@ -53,6 +53,8 @@ mod breadcrumb;
 mod chrome;
 #[cfg(test)]
 mod clear_tests;
+#[cfg(test)]
+mod close_tests;
 mod command_palette;
 pub(crate) mod control;
 mod default_terminal;

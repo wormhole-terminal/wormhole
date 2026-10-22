@@ -133,8 +133,7 @@
   },
   "allowlist": {
     "file-size": {
-      "crates/wormhole-core/src/config/settings.rs": 1437,
-      "crates/wormhole/src/workspace/view_tests.rs": 1055
+      "crates/wormhole-core/src/config/settings.rs": 1437
     },
     "os-edge": {
       "crates/wormhole-core/src/agents/integrations/status_line.rs :: std::os::unix": 1,
