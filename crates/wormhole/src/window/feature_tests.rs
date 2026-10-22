@@ -517,16 +517,16 @@ fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
 }
 
 /// Allocations the second draw of a one-terminal window on Changes (three changed files) may make.
-/// Measured: 3,697 (1.8 MB), the same on every run; the budget is that and about a fifth more, for a
-/// dependency that allocates a little differently. It guards the window's own frame, which the table's
-/// loops (tab bar, bindings, panel body) are part of: a lookup, clone or `Vec` per feature per frame
-/// shows as a few dozen and a per-row one as hundreds. A deliberate rise raises it here, with the
-/// measured number.
-const WINDOW_FRAME_ALLOCATIONS: u64 = 4_400;
+/// Measured: 3,697 allocations (1.8 MB), the same on every run: the count is exact. The budget is that
+/// plus about a hundredth. It guards the window's own frame, which the table's loops (tab bar, bindings, panel
+/// body) are part of: a lookup, clone or `Vec` per feature per frame shows as a few dozen and a
+/// per-row one as hundreds. Any rise must be explained in the change that makes it, and then raised
+/// here with the new measurement.
+const WINDOW_FRAME_ALLOCATIONS: u64 = 3_735;
 
 #[gpui_kit::test]
 fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
-    use crate::perf::allocations::{set_counting, thread_counts};
+    use crate::perf::allocations::thread_counts;
     if isolate("a_window_frame_on_changes_stays_within_its_allocation_budget") {
         return;
     }
@@ -538,15 +538,117 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
     // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
     draw(cx, &window);
-    set_counting(true);
     let before = thread_counts();
     draw(cx, &window);
     let drawn = thread_counts().since(before);
-    set_counting(false);
     eprintln!("window frame on Changes: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
     assert!(
         drawn.allocations <= WINDOW_FRAME_ALLOCATIONS,
         "a window frame on Changes made {} allocations (budget {WINDOW_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
+}
+
+/// `n` changed files, in folders of ten, so a per-row cost scales with `n`.
+fn many_changes(n: usize) -> RepoStatus {
+    let mut status = three_changes();
+    status.files = (0..n).map(|ix| change(&format!("src/dir{}/file{ix}.rs", ix / 10))).collect();
+    status
+}
+
+/// A feature of the same shape as the stand-in above in another slot, for the crowd the table's loops
+/// are measured over (tab bar, bindings, panel body). Its tab shows, counts and says its words.
+macro_rules! crowd_member {
+    ($id:expr, $tab:expr, $action:expr) => {
+        FeatureDef {
+            id: $id,
+            tabs: &[TabDef {
+                id: $tab,
+                icon: IconName::PanelRight,
+                label: "Crowd",
+                action: $action,
+                on_show: None,
+                shown: |facts, _| facts.active().is_some(),
+                count: Some(|entity, facts, cx| {
+                    Some(marker(entity).read(cx).count as usize + facts.on_screen().count())
+                }),
+                spoken: |_, facts, _| format!("{:?} tab", facts.tab),
+                view: |_, facts, _, _| -> AnyElement {
+                    gpui_kit::div().w(gpui_kit::px(f32::from(facts.panel_width))).into_any_element()
+                },
+                walk: None,
+                actions: None,
+                window_side: None,
+            }],
+            bind: Some(|_, _, root, _| root),
+            row_extras: None,
+            close_stake: None,
+            menu: None,
+            state: Some(StateDef {
+                make: |window, cx| {
+                    let entity = cx.new(|_| Marker {
+                        count: 1,
+                        selected: Vec::new(),
+                        focused_for: Vec::new(),
+                        asked: Vec::new(),
+                        revealed: Default::default(),
+                    });
+                    Workspace::listen(&entity, window, cx)
+                },
+                selected: None,
+                focus_in: None,
+                record: |_, _, _, _| {},
+                opened: |_, _, _, _| {},
+                closed: |_, _, _| {},
+                left: |_, _, _| {},
+            }),
+        }
+    };
+}
+
+/// Changes and three stand-ins: what the loops are measured over.
+static CROWD: &[FeatureDef] = &[
+    changes::DEF,
+    crowd_member!(FeatureId::History, TabId::History, ActionId::ShowHistory),
+    crowd_member!(FeatureId::Usage, TabId::Usage, ActionId::ShowUsage),
+    crowd_member!(FeatureId::Project, TabId::Project, ActionId::ShowProject),
+];
+
+/// Allocations the table's loops make in one frame, for 50 changed files and three stand-in features:
+/// `bind_features`, the tab bar (`render_panel_tabs`, in `render_panel`) and the panel body. Measured:
+/// 122 (26 KB), exact on every run; the budget is that plus about a hundredth. Run with 50 files and
+/// four features so that a cost per row (fifty times) or per feature (four times) shows at once; a
+/// change that adds either must say why, and raise this with the new measurement.
+const TABLE_LOOP_ALLOCATIONS: u64 = 124;
+
+#[gpui_kit::test]
+fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    if isolate("the_tables_loops_stay_within_their_allocation_budget") {
+        return;
+    }
+    let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, CROWD);
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(many_changes(50));
+        ws.sync_changes_list(cx);
+    });
+    draw(cx, &window);
+    let drawn = drive(cx, &window, |ws, window, cx| {
+        let width = ws.columns().panel;
+        // The first pass builds what is kept; the second is the frame.
+        for _ in 0..2 {
+            let _ = ws.bind_features(gpui_kit::div(), cx);
+            let _ = ws.render_panel(width, window, cx).into_any_element();
+        }
+        let before = thread_counts();
+        let _ = ws.bind_features(gpui_kit::div(), cx);
+        let _ = ws.render_panel(width, window, cx).into_any_element();
+        thread_counts().since(before)
+    });
+    eprintln!("table loops, 50 files, 4 features: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= TABLE_LOOP_ALLOCATIONS,
+        "the table's loops made {} allocations (budget {TABLE_LOOP_ALLOCATIONS})",
         drawn.allocations
     );
 }
