@@ -365,7 +365,9 @@ fn picking_a_colour_does_not_send_a_trusted_project_back_for_approval(cx: &mut T
     )
     .expect("write");
     let status = |cx: &mut TestAppContext| {
-        cx.update(|cx| crate::workspace::app::app(cx).hub.projects.get(&trusted).map(|project| project.status))
+        cx.update(|cx| {
+            crate::workspace::app::app(cx).hub.projects.get(&trusted).map(|project| project.status)
+        })
     };
     drive(cx, &window, |ws, _, cx| go(ws, &trusted, cx));
     assert_eq!(status(cx), Some(TrustStatus::Untrusted));

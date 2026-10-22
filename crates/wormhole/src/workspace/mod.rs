@@ -29,8 +29,6 @@ pub(crate) use self::actions::CheckForUpdates;
 pub(crate) use self::actions::NewWindow;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app::AppState;
-#[cfg(any(test, feature = "devctl"))]
-pub(crate) use self::app::app;
 pub(crate) use self::app::app_mut;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app_look::override_look;

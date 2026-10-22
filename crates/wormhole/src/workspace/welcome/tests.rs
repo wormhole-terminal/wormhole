@@ -18,9 +18,9 @@ use crate::app::control;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
+use crate::workspace::app::{app, app_mut};
 use crate::workspace::notifications;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
-use crate::workspace::app::{app, app_mut};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
