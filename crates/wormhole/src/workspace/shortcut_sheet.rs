@@ -17,7 +17,7 @@ use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
 use crate::workspace::app::{AppState, OpenWindow, app};
-use crate::workspace::overlay::{OverlayKind, OverlayView, scrim};
+use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView, scrim};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.
 const TOP: f32 = 56.0;
@@ -52,6 +52,10 @@ pub(crate) struct ShortcutSheet {
     _subscriptions: Vec<Subscription>,
 }
 
+impl OverlayContent for ShortcutSheet {
+    const KIND: OverlayKind = OverlayKind::Sheet;
+}
+
 /// ⌥⌘/ (and Help → Keyboard Shortcuts, and the palette): open the sheet over the window in front,
 /// or close it there. Runs outside any window's update.
 pub(crate) fn toggle(cx: &mut App) {
@@ -76,7 +80,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let return_focus = ws.end_overlay(window, cx);
         let workspace = cx.weak_entity();
         let sheet = cx.new(|cx| ShortcutSheet::new(workspace, project, hidden, hotkey, &query, window, cx));
-        ws.show_overlay(OverlayView::new(OverlayKind::Sheet, sheet), return_focus, cx);
+        ws.show_overlay(OverlayView::new(sheet), return_focus, cx);
     });
 }
 

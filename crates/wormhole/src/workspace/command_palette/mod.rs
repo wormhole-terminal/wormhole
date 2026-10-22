@@ -26,7 +26,7 @@ use wormhole_core::view::sidebar::display_path;
 
 use crate::settings::settings;
 use crate::workspace::app::{AppState, OpenWindow, app};
-use crate::workspace::overlay::{OverlayKind, OverlayView};
+use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{Workspace, settings_page};
@@ -48,6 +48,10 @@ pub(crate) struct CommandPalette {
     _subscriptions: Vec<Subscription>,
     _refresh: Task<()>,
     _commits: Option<Task<()>>,
+}
+
+impl OverlayContent for CommandPalette {
+    const KIND: OverlayKind = OverlayKind::Palette;
 }
 
 /// Results laid out above and below the list's view, so scrolling doesn't pop them in.
@@ -86,7 +90,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
         let cwd = ws.active_terminal().read(cx).cwd.clone();
         let palette =
             cx.new(|cx| CommandPalette::new(workspace, window_id, snapshot, cwd, &query, window, cx));
-        ws.show_overlay(OverlayView::new(OverlayKind::Palette, palette), return_focus, cx);
+        ws.show_overlay(OverlayView::new(palette), return_focus, cx);
     });
 }
 

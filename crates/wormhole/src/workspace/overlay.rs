@@ -33,9 +33,16 @@ pub(super) struct OverlayView {
     view: AnyView,
 }
 
+/// A view that can be put over the window. Its kind is part of the type, so a caller cannot hand
+/// over a view under another view's kind.
+pub(super) trait OverlayContent: Render {
+    const KIND: OverlayKind;
+}
+
 impl OverlayView {
-    pub(super) fn new(kind: OverlayKind, view: impl Into<AnyView>) -> Self {
-        Self { kind, view: view.into() }
+    /// The overlay for `view`, of the kind its type says.
+    pub(super) fn new<V: OverlayContent>(view: Entity<V>) -> Self {
+        Self { kind: V::KIND, view: view.into() }
     }
 }
 
