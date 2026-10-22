@@ -1,163 +1,99 @@
 # Wormhole
 
-A native macOS terminal built for working with AI coding agents like
-Claude Code, Codex, Gemini CLI and many more. Written in Rust on [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui) (Zed's UI framework)
-and GPUI Kit, with its own terminal engine.
+Wormhole is a macOS terminal for working with coding agents such as Claude Code,
+Codex and Gemini CLI. A sidebar keeps your terminals and agent status visible;
+each terminal has its own notes, task list and Git panel.
 
-**[Download Wormhole](https://getwormhole.app)** (macOS 14 or later, Apple Silicon and Intel). It updates itself.
+[Download Wormhole](https://getwormhole.app) for macOS 14 or later, on Apple
+Silicon or Intel.
 
 ## Features
 
-- **Terminals sidebar** – every terminal (one shell, one row) is named after the agent's
-  title or folder, with live status: working,
-  finished, or waiting for you. Rows show
-  the status dot, the logo of the agent running there, git branch, changed
-  files and open notes (each can be switched off in Settings → Terminals & sidebar).
-  Group terminals the way a browser groups its tabs: name and colour a group, fold it, drag
-  terminals in and out, and keep groups and loose terminals in your own order; ⌘1…9 count the
-  terminals you can see, top to bottom. A folder can be given a color in the Project tab, which
-  tints its terminals' title row (and can create the folder's `.wormhole/`).
-- **Splits and windows** – there are no tabs: every terminal is a row of the sidebar. ⌘D and
-  ⇧⌘D split the one you are in (the agent beside a dev server, say); each pane is a terminal of
-  its own, with its own notes, tasks and status, and the rows of a split are joined in the list.
-  Open as many windows as you like,
-  each with its own terminals; everything comes back after a restart, windows in
-  place. Closing the last window quits (saved); closing another one ends its
-  terminals, and asks first when notes, tasks or a working agent would be lost.
-- **Shells** – zsh, bash, fish, nu or any program as a profile (a command with its
-  arguments, in `config.json`). Pick the default in Settings → Terminal; open a
-  terminal with another from a right-click on the +, the Shell menu or the command
-  palette. A terminal remembers its shell across a restart.
-- **Command blocks** – with shell integration (OSC 133) every command is a block:
-  a green or red mark in the gutter, ⌘↑ / ⌘↓ between prompts, the exit code and
-  time on hover, and Select / Copy Output, Copy Command and Put Command at Prompt from the Edit
-  menu.
-- **Inline images** – kitty's graphics protocol, iTerm2's inline images and
-  Sixel show pictures in the grid that scroll and reflow with the text (`icat`,
-  `imgcat`, `chafa`, file managers' previews).
-- **Many coding agents** – Claude Code, Codex CLI, Gemini CLI, GitHub Copilot
-  CLI, Cursor Agent, OpenCode, Aider, Amp, Goose, Qwen Code, Crush, Droid,
-  Auggie, Kiro and Cline are recognised from the terminal's foreground process.
-  For Claude Code, Codex, Gemini, Copilot, OpenCode, Goose, Qwen Code and Droid
-  the status is exact once their status hooks are installed (Settings → Coding
-  agents); the others are tracked from their output.
-- **Notes & next steps per terminal** – collapsible notes and a task list. Stash
-  the prompt you were typing (⌘⇧S), answer the agent, then send it back
-  (⌘↵ / ⌘⇧↵).
-- **Git panel** – Changes (list or tree, compare with any branch), History,
-  and a syntax-highlighted diff view (unified or split, wrap or scroll).
-- **Made for macOS** – translucent window with native blur, Finder-style
-  title bar, resizable and collapsible side panels.
-- **Design tokens & Theme Studio** – every color in the app is a named token
-  derived from the theme (57 of them, with guaranteed contrast). The Theme
-  Studio (⌥⌘,) shows every component in every state and lets you edit any
-  token live, then save a JSON theme. 14 built-ins plus Ghostty / iTerm2 /
-  Alacritty import.
-- **Project folders** – an optional, committed `.wormhole/` can carry project
-  settings, a theme, actions (with shortcuts), prompts, a terminal layout and
-  shared `notes.md`. Every part can be switched off per user; anything that
-  runs commands needs your approval with Touch ID. A terminal's Project tab makes the folder
-  for you (Create project folder).
-- **Menu bar & global hotkey** – agent status of every terminal in the menu bar
-  (with a count when something needs you), quick actions and recent projects;
-  an optional system-wide shortcut shows or hides Wormhole.
-- **File icon themes** – colored file and folder icons in Changes and History;
-  Zed icon themes (JSON) work as-is.
-- **Updates** – signed builds update themselves (checked in the background,
-  verified with a minisign signature and Apple's code signature).
-- **Customizable** – a searchable settings window (⌘,) for your primary
-  color, opacity, blur and more; `config.json` applies live.
-- **Fonts** – JetBrains Mono ships with the app and is the default terminal
-  and code font; the interface uses the system font. Separate terminal,
-  interface and code fonts, picked from the bundled font, your own font files
-  (drop `.ttf` / `.otf` / `.ttc` into the fonts folder, no install needed) or
-  the fonts installed on your Mac; monospace fonts first for terminal and
-  code.
-- **Everything restores** – terminals, folders, notes, tasks, layout and
-  scrollback survive restarts.
+- **Terminal sidebar.** Name, reorder and group terminals. See which agent is
+  running, whether it needs your attention, and the current Git branch.
+- **Splits and windows.** Split terminals horizontally or vertically and work
+  across multiple windows. Window layouts, folders, notes, tasks and saved
+  scrollback are restored when you reopen the app.
+- **Agent integrations.** Install status hooks in Settings → Coding agents to
+  let supported agents report when they are working, finished or waiting for
+  input. Without hooks, status is estimated from terminal activity.
+- **Notes and tasks.** Keep notes beside each terminal, stash a prompt while you
+  answer an agent, and send a note or selection back to the terminal.
+- **Git changes and history.** Browse changed files, compare branches and read
+  syntax-highlighted diffs in unified or split view.
+- **Command blocks.** With shell integration, jump between prompts, inspect exit
+  codes and timings, and copy a command or its output.
+- **Inline images.** Display images through the kitty graphics protocol, iTerm2
+  inline images or Sixel.
+- **Shells and appearance.** Configure shell profiles, fonts and themes. Import
+  Ghostty, iTerm2 or Alacritty themes, or edit colors in Theme Studio.
+- **Menu bar and hotkey.** Check agent status from the menu bar and show or hide
+  Wormhole with a global shortcut.
 
-## Build & run
+The Usage panel shows Claude Code and Codex plan limits when their integrations
+provide them. Gemini CLI reports tokens for its latest model response. Enable
+or update integrations in Settings → Coding agents, then restart the agent.
+Usage information depends on the agent version and account type; unavailable
+limits are omitted.
 
-Requires macOS 14 (Sonoma) or later. Building needs Rust (stable) and the Xcode command line tools.
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| ⌘T | New terminal |
+| ⌘O | Open a folder in a new terminal |
+| ⌘D / ⇧⌘D | Split right / down |
+| ⌘1…9 | Select a terminal |
+| ⌘N | New window |
+| ⌘W | Close the selected terminal |
+| ⌥⌘S | Stash the current prompt in a note |
+| ⌘↵ / ⇧⌘↵ | Send note text / send and submit |
+| ⇧⌘P | Open the command palette |
+| ⌘, | Open Settings |
+
+Open Help → Keyboard Shortcuts (⌥⌘/) for the full list.
+
+## Build and develop
+
+Building requires macOS 14 or later, Rust and the Xcode command line tools.
+The Rust version is pinned in `rust-toolchain.toml`.
+
+From this repository:
 
 ```sh
 cargo run --release
-scripts/dev.sh        # dev loop: rebuilds on change, keeps the last good build running
 ```
 
-## Shortcuts
+For development:
 
-macOS's own keys first; every menu shows its key, and Help → Keyboard Shortcuts
-(⌥⌘/) will list them all. The table is `wormhole_core::keymap`.
+```sh
+scripts/dev.sh            # rebuild on changes
+scripts/check.sh          # run checks for the changed files
+cargo test -p wormhole-core
+```
 
-| Keys | Action |
-|---|---|
-| ⌘N / ⇧⌘W | New / close window |
-| ⌘T (⇧⌘N) | New terminal |
-| ⌘O | Open a folder in a new terminal |
-| ⌘W | Close the selected terminal (its pane, in a split) |
-| ⌘D / ⇧⌘D | Split right / down: a new terminal beside this one |
-| ⌥⌘← → ↑ ↓ | Move the keyboard to the pane beside this one |
-| ⌃⌘↑ / ⌃⌘↓ (⇧⌘[ / ⇧⌘]) , ⌘1…9 | Previous / next terminal, terminal by its ⌘ keycap |
-| ⌘R, double-click | Rename terminal |
-| ⌃⌘S / ⌥⌘I | Show or hide the sidebar / right panel |
-| ⌃⌘1…5 | Changes / History / Notes / Usage / Project |
-| ⇧⌘E | Move focus between terminal and notes |
-| F6 / ⇧F6 | Move focus to the next / previous area, from the terminal too |
-| ⌥⌘N / ⌥⌘S | New note / stash the prompt typed in the terminal into a note |
-| ⌘↵ / ⌘⇧↵ | Send note paragraph (or selection) / send and submit |
-| ⌘+ / ⌘- / ⌘0 | Terminal text bigger / smaller / back to the size in Settings |
-| ⌘/ | Show or hide the status bar |
-| ⌥⌘, / ⌘, | Theme Studio / Settings |
-| Esc | Close the diff view (or the Settings / Theme Studio window) |
+Wormhole is written in Rust with [GPUI](https://github.com/zed-industries/zed/tree/main/crates/gpui)
+and GPUI Kit. The app lives in `crates/wormhole`; configuration, storage, Git and
+agent integrations live in `crates/wormhole-core`. The terminal engine,
+[wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt), is maintained in
+a separate repository.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build checks, tests and contribution
+conventions.
 
 ## Feedback
 
-Found a bug or missing something? [Open an issue](https://github.com/wormhole-terminal/wormhole/issues/new/choose).
-Questions, ideas and show-and-tell go to [Discussions](https://github.com/wormhole-terminal/wormhole/discussions).
-Security problems go through [a private report](https://github.com/wormhole-terminal/wormhole/security/advisories/new)
-instead (see `SECURITY.md`).
+[Report a bug](https://github.com/wormhole-terminal/wormhole/issues/new/choose)
+or use [Discussions](https://github.com/wormhole-terminal/wormhole/discussions)
+for questions and ideas. Report security vulnerabilities privately through
+[GitHub security advisories](https://github.com/wormhole-terminal/wormhole/security/advisories/new);
+see [SECURITY.md](SECURITY.md).
 
-What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
-
-## Development
-
-```sh
-scripts/check.sh                            # the gate, scoped to what changed: fmt, clippy, tests, build
-cargo test -p wormhole-core                 # fast: the UI-independent core only
-cargo test --workspace --features devctl    # everything
-```
-
-`crates/wormhole-core` holds everything that doesn't need the UI (git, config, storage, agent hooks)
-and is tested on its own, on top of `crates/wormhole-term` (a program in a PTY and the screen it
-draws) and the engine, [wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) (a repository
-of its own); `crates/wormhole` is the GPUI app. Lints live in the
-workspace `Cargo.toml`, and `crates/wormhole/tests/design_rules.rs` checks the design rules (spacing
-grid, corner radii, colors from design tokens). See `CONTRIBUTING.md`.
+Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-Wormhole is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
-The terminal engine, [wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt), lives in a
-repository of its own under the MIT License, so that other projects can use it.
-Bundled third-party assets keep their own licenses: JetBrains Mono (SIL OFL 1.1), the built-in themes
-and icons (see the license files next to them), and the Rust dependencies listed in the app's
-About → Licenses window.
-
-### Coding-agent usage
-
-The right panel’s Usage tab shows Claude Code plan limits and Codex plan-limit windows when their
-integrations report them. Gemini CLI reports the token count of its latest model response; this is
-not a subscription quota or a running total. Enable or update the integrations in Settings → Coding
-agents, then restart the agent. Codex may ask you to review its hooks with `/hooks`.
-
-Claude needs a supported subscription and Claude Code 2.1.80 or later. Codex reads only the last
-1 MiB of the transcript supplied by its existing hooks, within `CODEX_HOME` (normally `~/.codex`).
-This is best-effort: if that version does not include rate-limit records there, or uses an API key,
-no quota is shown. Gemini’s `AfterModel` hook supplies `usageMetadata.totalTokenCount`. No credentials
-are read and no separate account requests are made. Missing limits are omitted; an expired report
-says “Awaiting update” until a fresh report arrives.
-
-Format references: [Codex hooks](https://developers.openai.com/codex/hooks),
-[Codex rate-limit protocol](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/protocol.rs),
-and [Gemini model hooks](https://geminicli.com/docs/hooks/reference/#aftermodel).
+Wormhole is free software under the [GNU GPL v3.0 or later](LICENSE).
+[wormhole-vt](https://github.com/wormhole-terminal/wormhole-vt) is MIT-licensed.
+Bundled fonts, themes, icons and dependencies retain their own licenses; see
+About → Licenses in the app.
