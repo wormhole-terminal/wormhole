@@ -218,12 +218,7 @@
     },
     "orphans": {},
     "glob-imports": {},
-    "cycles": {
-      "wormhole-wire: header -> history": 1,
-      "wormhole-wire: header -> stream": 1,
-      "wormhole-wire: history -> stream": 1,
-      "wormhole-wire: stream -> header": 1
-    },
+    "cycles": {},
     "layers": {},
     "cross-reexports": {
       "crates/wormhole-core/src/cli_tool/mod.rs :: crate::ipc": 1,

@@ -14,11 +14,6 @@ use crate::error::{EncodeError, WireError};
 use crate::header::MAX_DATA;
 use crate::types::{Size, wire_enum};
 
-/// Bytes before the data in an `Out` payload.
-pub const OUT_PREFIX: usize = 8;
-/// Bytes before the data in a `Repaint` payload.
-pub const REPAINT_PREFIX: usize = 16;
-
 /// Output the program wrote: `bytes` are stream bytes `offset..offset + bytes.len()`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Out<'a> {

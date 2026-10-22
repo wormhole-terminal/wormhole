@@ -38,17 +38,14 @@ pub use decoder::Decoder;
 pub use error::{EncodeError, WireError};
 pub use event::{Event, EventKind, MAX_BACKLOG, Mark, MarkKind, ProgressState};
 pub use header::{
-    CHANNEL_CONNECTION, CHANNEL_LOCAL, HEADER_LEN, Header, MAX_CONTROL, MAX_DATA, MAX_PAYLOAD, flags,
-    max_payload, ty,
+    CHANNEL_CONNECTION, CHANNEL_LOCAL, HEADER_LEN, Header, MAX_CONTROL, MAX_DATA, MAX_PAYLOAD, OUT_PREFIX,
+    PAGE_PREFIX, REPAINT_PREFIX, flags, max_payload, ty,
 };
 pub use history::{
-    FindDirection, FindMatch, FindResults, FindStart, MAX_MATCHES_PER_FRAME, PAGE_PREFIX, Page, PageGet,
-    find_flags,
+    FindDirection, FindMatch, FindResults, FindStart, MAX_MATCHES_PER_FRAME, Page, PageGet, find_flags,
 };
 pub use message::{Frame, Message, encode};
-pub use stream::{
-    OUT_PREFIX, OrderError, Out, REPAINT_PREFIX, Repaint, RepaintKind, ResizeApplied, StreamOrder,
-};
+pub use stream::{OrderError, Out, Repaint, RepaintKind, ResizeApplied, StreamOrder};
 pub use types::{
     AppVersion, ColorScheme, Counters, DetachReason, ExitInfo, Features, HostState, List, Rgb, Role, Size,
     StreamMode,

@@ -9,8 +9,6 @@ use crate::error::{EncodeError, WireError};
 use crate::stream::check_data;
 use crate::types::{List, wire_enum};
 
-/// Bytes before the data in a `Page` payload.
-pub const PAGE_PREFIX: usize = 16;
 /// The most matches one `FindResults` frame carries; more come in further frames (`more`).
 pub const MAX_MATCHES_PER_FRAME: usize = 2048;
 

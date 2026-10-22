@@ -19,6 +19,12 @@ pub const MAX_PAYLOAD: usize = 1 << 20;
 pub const MAX_DATA: usize = 64 * 1024;
 /// The largest payload of a small control message, and of anything before the handshake is done.
 pub const MAX_CONTROL: usize = 64 * 1024;
+/// Bytes before the data in an `Out` payload (`stream`).
+pub const OUT_PREFIX: usize = 8;
+/// Bytes before the data in a `Repaint` payload (`stream`).
+pub const REPAINT_PREFIX: usize = 16;
+/// Bytes before the data in a `Page` payload (`history`).
+pub const PAGE_PREFIX: usize = 16;
 
 /// Channel 0 is the connection itself (keep-alive between relays); 1 is the only terminal a local
 /// socket carries; an SSH relay hands out the rest.
@@ -139,9 +145,9 @@ pub fn max_payload(t: u8) -> Option<usize> {
         }
         // The data frames: a fixed prefix and then at most one chunk.
         ty::INPUT => MAX_DATA,
-        ty::OUT => crate::stream::OUT_PREFIX + MAX_DATA,
-        ty::REPAINT => crate::stream::REPAINT_PREFIX + MAX_DATA,
-        ty::PAGE => crate::history::PAGE_PREFIX + MAX_DATA,
+        ty::OUT => OUT_PREFIX + MAX_DATA,
+        ty::REPAINT => REPAINT_PREFIX + MAX_DATA,
+        ty::PAGE => PAGE_PREFIX + MAX_DATA,
         _ => return None,
     })
 }
