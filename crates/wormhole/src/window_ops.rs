@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use gpui_kit::*;
 use wormhole_core::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
-use crate::platform::window as platform;
+use crate::platform::window as os_window;
 
 /// The pane the operation is about: its cell and its size in cells.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -116,7 +116,7 @@ pub fn geometry(window: &Window, cx: &App, pane: PaneSize) -> Option<WindowGeome
         screen_height: f32::from(usable.size.height).round() as u32,
         max_cols,
         max_rows,
-        iconified: platform::is_minimised(window),
+        iconified: os_window::is_minimised(window),
     })
 }
 
@@ -129,12 +129,12 @@ pub fn apply(op: WindowOp, pane: PaneSize, window: &mut Window, cx: &mut App) ->
             done.minimised = Some(true);
         }
         WindowOp::Deiconify => {
-            platform::deminiaturize(window);
+            os_window::deminiaturize(window);
             done.minimised = Some(false);
         }
         // A test instance stays behind the user's windows: `background` decides what raising does.
         WindowOp::Raise => crate::background::activate_window(window, cx),
-        WindowOp::Lower => platform::order_back(window),
+        WindowOp::Lower => os_window::order_back(window),
         WindowOp::Move { x, y } => move_to(window, cx, x, y),
         WindowOp::ResizeCells { rows, cols } => {
             if !window.is_fullscreen() {
@@ -153,7 +153,7 @@ pub fn apply(op: WindowOp, pane: PaneSize, window: &mut Window, cx: &mut App) ->
                 Fullscreen::Toggle => !on,
             };
             if want != on {
-                platform::allow_fullscreen(window);
+                os_window::allow_fullscreen(window);
                 window.toggle_fullscreen();
                 done.size = SizeGoal::Forget;
             }
@@ -176,7 +176,7 @@ fn move_to(window: &mut Window, cx: &App, x: i32, y: i32) {
     };
     let x = place(x, full.origin.x, usable.origin.x, usable.size.width, bounds.size.width);
     let y = place(y, full.origin.y, usable.origin.y, usable.size.height, bounds.size.height);
-    platform::set_top_left(window, cx, x, y);
+    os_window::set_top_left(window, cx, x, y);
 }
 
 /// Resize the window so that the pane's text area is `rows` by `cols`.
@@ -215,7 +215,7 @@ fn fit_on_screen(window: &Window, cx: &App, width: f32, height: f32) {
     let x = place(at.x, usable.origin.x, full.right(), width);
     let y = place(at.y, usable.origin.y, full.bottom(), height);
     if (x, y) != (f32::from(at.x), f32::from(at.y)) {
-        platform::set_top_left(window, cx, x, y);
+        os_window::set_top_left(window, cx, x, y);
     }
 }
 

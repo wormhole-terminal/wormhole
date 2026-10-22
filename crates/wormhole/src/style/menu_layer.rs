@@ -1,7 +1,9 @@
 //! A [`Menu`] as GPUI Kit's `PopupMenu`, drawn over the window by a layer the workspace renders:
 //! for platforms without a native menu, and for a window with no native view to pop one up in.
 //! The platform reaches it through `platform::Drawn` ([`install`]): it draws in the app's look,
-//! which sits above the platform.
+//! which sits above the platform. A layer, not a design component: its functions are crate-wide
+//! rather than `pub` because the Studio gallery shows components, not the machinery that opens
+//! menus; its row helpers are `#[track_caller]` like every element builder in `style/`.
 //! Keys are not shown here; the Kit's popup shows an action's key, and a menu item carries none.
 
 use std::collections::HashMap;
@@ -47,14 +49,14 @@ pub(crate) fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
     layer
 }
 
-/// Open `menu` at `at`; the menu has the keyboard until it closes, then the focus goes back to
-/// where it was unless the chosen item put it somewhere else.
 /// Hand the platform the menus and popovers drawn here (`platform::Drawn`), for the windows it
 /// can't show its own in. Once, as the app starts.
 pub(crate) fn install(cx: &mut App) {
     cx.set_global(crate::platform::Drawn { menu: show, popover: super::popover_layer::show });
 }
 
+/// Open `menu` at `at`; the menu has the keyboard until it closes, then the focus goes back to
+/// where it was unless the chosen item put it somewhere else.
 pub(crate) fn show(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
     let layer = layer(window, cx);
     let previous = window.focused(cx);

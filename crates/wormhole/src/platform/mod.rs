@@ -4,14 +4,22 @@
 //! `vibrancy`, `look`, `dock`, `a11y`, `auth`, `hotkey`, `keys`, `sound`, `scroller`, `fonts`,
 //! `font_face`, `status_item`, `menu`, `popover`) that calls `os::…`: `macos/` is AppKit's
 //! implementation (the only code in the app with `objc2`, `block2`, raw window handles and
-//! `unsafe` for the system), `fallback/` the portable one, GPUI's own call where GPUI has one and
-//! "not available" where it hasn't (built only off macOS; not a target yet). `macos::appkit` holds
-//! the one cast from a GPUI window to its `NSView` and `NSWindow`.
+//! `unsafe` for the system, except the feature-owned OS parts below), `fallback/` the portable one,
+//! GPUI's own call where GPUI has one and "not available" where it hasn't (used only off macOS,
+//! not a target yet; compiled on macOS too, so it can't drift from `macos/`, which a test pins).
+//! `macos::appkit` holds the one cast from a GPUI window to its `NSView` and `NSWindow`.
 //!
-//! Test and background-mode runs are decided inside these functions (`background_mode`, `cfg!(test)`),
-//! so no feature checks them. What a feature owns keeps its own OS part for now (the quick panel's
-//! window, the notification centre, the dialogs, the intro's Metal), calling `macos::appkit` for
-//! the window.
+//! Test and background-mode runs are decided inside these functions (`background_mode`,
+//! `cfg!(test)`) for every platform call with no app-visible result (the Dock, VoiceOver, the bell,
+//! menus and popovers recorded instead of shown), so no feature checks them for those. Where
+//! background mode shapes what the app shows, the app still decides it: the status item and the
+//! hotkey in `workspace/menu_bar.rs` (to fold in later).
+//!
+//! What a feature owns keeps its own OS part for now, calling `macos::appkit` for the window:
+//! `intro/metal.rs` (the Metal intro, macOS-only, which also calls `macos::window` for the
+//! lights directly), `workspace/notifications/center.rs`, `workspace/default_terminal.rs`,
+//! `workspace/open_in.rs`, `workspace/dialog.rs`, `workspace/quick_panel/macos.rs` and
+//! `devctl/menus.rs`.
 //!
 //! The platform is the lowest layer of the app: it must not use `settings`, `style`, `workspace`
 //! or any other feature. Where drawing needs the app's look (the GPUI-drawn menus and popovers),
@@ -83,7 +91,11 @@ pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut Ap
     };
     match cx.try_global::<Drawn>().copied() {
         Some(drawn) => (drawn.menu)(menu, at, window, cx),
-        None => tracing::warn!("no drawn menus handed over: the menu can't open"),
+        None => {
+            // A programming error (`style::menu_layer::install` not called): loud in development.
+            debug_assert!(false, "no drawn menus handed over");
+            tracing::warn!("no drawn menus handed over: the menu can't open");
+        }
     }
 }
 
@@ -103,6 +115,7 @@ pub fn show_popover(popover: Popover, anchor: Bounds<Pixels>, window: &mut Windo
     match cx.try_global::<Drawn>().copied() {
         Some(drawn) => (drawn.popover)(popover, anchor, window, cx),
         None => {
+            debug_assert!(false, "no drawn popovers handed over");
             tracing::warn!("no drawn popovers handed over: the popover can't open");
             Handle::new(|_| {})
         }

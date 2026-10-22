@@ -276,7 +276,7 @@ impl Render for Workspace {
             .children(self.resize_readout(cx))
             .child(self.render_focus_holders(cx))
             .children(self.render_overlay())
-            // GPUI's own menu, where a native one can't open (`platform::fallback`).
+            // GPUI's own menu and popover, where a native one can't open (`style::menu_layer`).
             .child(crate::style::menu_layer::layer(window, cx))
             .child(crate::style::popover_layer::layer(window, cx))
             .children(self.render_intro(window, cx))
