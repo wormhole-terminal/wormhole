@@ -27,8 +27,11 @@ mod style;
 mod terminal_view;
 mod theme_bridge;
 mod updates;
+mod window;
 mod window_ops;
-mod workspace;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+use crate::window as workspace;
 
 use gpui_kit::*;
 use wormhole_core::ipc::Command;

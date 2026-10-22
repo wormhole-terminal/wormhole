@@ -324,6 +324,15 @@
           "to": "workspace/onboarding/welcome"
         }
       ]
+    },
+    "6": {
+      "doc": "The last rename of phase 4: workspace/ becomes window/",
+      "moves": [
+        {
+          "from": "workspace",
+          "to": "window"
+        }
+      ]
     }
   }
 }
