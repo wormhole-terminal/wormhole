@@ -593,6 +593,59 @@ fn a_window_frame_on_notes_stays_within_its_allocation_budget(cx: &mut TestAppCo
     );
 }
 
+/// Allocations the third draw of a one-terminal window on Usage (an agent on screen, three agents'
+/// reports) may make. Measured: 22,883 allocations (17 MB), the same on every run and the same before Usage joined the table. The budget is that
+/// plus about a hundredth; the tab adds a card per report and a bar per limit, so a cost per report
+/// or per limit per frame shows at once.
+const USAGE_FRAME_ALLOCATIONS: u64 = 23_112;
+
+#[gpui_kit::test]
+fn a_window_frame_on_usage_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    use wormhole_core::agents::AgentId;
+    use wormhole_core::agents::usage::{PlanLimit, Usage, Window};
+    if isolate("a_window_frame_on_usage_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    let far = 4_000_000_000;
+    let report = |agent, limits: Vec<PlanLimit>, five_hour, response_tokens| Usage {
+        agent,
+        five_hour,
+        seven_day: five_hour,
+        limits,
+        response_tokens,
+        updated: 100,
+    };
+    let limit = |label: &str, used| PlanLimit { label: label.into(), used, resets_at: Some(far) };
+    cx.update(|cx| {
+        use crate::window::features::usage::record;
+        record(report(AgentId::Claude, Vec::new(), Some(Window { used: 85.0, resets_at: far }), None), cx);
+        record(
+            report(AgentId::Codex, vec![limit("5-hour limit", 30.0), limit("Weekly", 100.0)], None, None),
+            cx,
+        );
+        record(report(AgentId::Gemini, Vec::new(), None, Some(1234)), cx);
+    });
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+        ws.show_tab(TabId::Usage, cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Usage);
+    // The first draws build what a window keeps; the third is a frame.
+    draw(cx, &window);
+    draw(cx, &window);
+    let before = thread_counts();
+    draw(cx, &window);
+    let drawn = thread_counts().since(before);
+    eprintln!("window frame on Usage: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= USAGE_FRAME_ALLOCATIONS,
+        "a window frame on Usage made {} allocations (budget {USAGE_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
+}
+
 /// `n` changed files, in folders of ten, so a per-row cost scales with `n`.
 fn many_changes(n: usize) -> RepoStatus {
     let mut status = three_changes();
