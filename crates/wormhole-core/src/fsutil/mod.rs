@@ -1,4 +1,5 @@
-//! Filesystem primitives for everything that reads or writes user and project files.
+//! Filesystem primitives for everything that reads or writes user and project files, and the
+//! owner check for Unix sockets (`private::peer_is_this_user`).
 //!
 //! Two problems recur across the code base and are solved once here:
 //!
