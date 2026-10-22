@@ -5,7 +5,7 @@
 //! whether macOS's Keyboard navigation is on, which makes buttons ⇥ stops.
 //!
 //! The system's Reduce Motion, Increase Contrast and Reduce Transparency are read and watched in
-//! `vibrancy` with the rest of what the system says about how windows look.
+//! `look` with the rest of what the system says about how windows look.
 
 use super::background_mode;
 use super::os::a11y as os;

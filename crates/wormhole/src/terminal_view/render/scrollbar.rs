@@ -1,7 +1,7 @@
 //! The scrollbar along the pane's right edge, drawn here rather than by AppKit: a native view
 //! over the Metal layer would cover GPUI's popovers and menus. Core's `terminal::scrollbar` says
 //! where the thumb is, what a click on the track does and when the overlay style shows or fades;
-//! this paints it and forwards the pointer. The system's style comes from `scroller`.
+//! this paints it and forwards the pointer. The system's style comes from `platform::scroller`.
 //!
 //! A frame costs a handful of multiplications from numbers the grid's snapshot already holds.
 //! The fade asks for frames only while it is fading, and a timer wakes the view when the idle

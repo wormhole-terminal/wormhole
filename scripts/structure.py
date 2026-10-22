@@ -71,7 +71,7 @@ RULE_HELP = {
 DEFAULT_CONFIG = {
     # Paths are relative to a crate's folder; a folder ends with a slash, anything else is one file.
     "os_edge": {
-        "wormhole": ["src/native/"],
+        "wormhole": ["src/platform/"],
         "wormhole-core": [],
         "wormhole-host": ["src/sys.rs", "src/peer.rs"],
         "wormhole-term": ["src/pty/"],

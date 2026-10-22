@@ -1,5 +1,6 @@
 //! Pieces of AppKit that more than one native feature needs: a GPUI window's view and window (the
-//! only place that casts GPUI's raw handle), SF Symbols, colours and key equivalents. The status item's menu (`menubar::appkit`) uses them too.
+//! only place that casts GPUI's raw handle), SF Symbols, colours and key equivalents. The status
+//! item (`macos::status_item`) uses them too.
 
 use std::path::Path;
 

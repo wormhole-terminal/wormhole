@@ -13,7 +13,7 @@ use super::*;
 
 /// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
 /// call over the board's 20, which left the lights hanging right of everything below them). They
-/// are assumed to be three 12 pt ones 8 apart (x 12 to 64); later macOS versions draw them larger, so the span is measured (`traffic_lights`)
+/// are assumed to be three 12 pt ones 8 apart (x 12 to 64); later macOS versions draw them larger, so the span is measured (`platform::window`)
 /// by whatever has to clear the real lights.
 const LIGHTS_X: f32 = 12.0;
 const ASSUMED_LIGHTS_SPAN: f32 = 52.0;
