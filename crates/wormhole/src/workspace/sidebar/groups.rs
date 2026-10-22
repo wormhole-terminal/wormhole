@@ -1,8 +1,9 @@
 //! The person's own groups in the list, as the window changes them: folding, putting terminals
 //! in and out of groups (a row's menu, a drop on a group's head or beside one of its rows), making
-//! and taking apart groups, their colour and pin. Core keeps the groups and their order
-//! (`sidebar::WindowSidebar`, saved with the window); `group_head` draws them and has their menu,
-//! `rename` renames them in place and `group_actions` closes and moves them.
+//! and taking apart groups, their colour, pin and the folder their new terminals start in. Core
+//! keeps the groups and their order (`sidebar::WindowSidebar`, saved with the window); `group_head`
+//! draws them and has their menu, `rename` renames them in place and `group_actions` closes and
+//! moves them.
 use wormhole_core::sidebar::{GroupColor, Item, Landing};
 
 use super::*;
@@ -35,14 +36,22 @@ impl Workspace {
         }
     }
 
-    /// A new terminal in group `group` (its + or its menu), where the selected terminal is.
+    /// Where a new terminal in `group` (`None`: in no group) starts: the group's folder if it has
+    /// one that is still a directory, else where the selected terminal is. A split's new pane and
+    /// a terminal in no group never ask, so they keep starting beside the selected one.
+    pub(in crate::workspace) fn start_cwd(&self, group: Option<u32>, cx: &App) -> Option<String> {
+        group.and_then(|group| self.sidebar.view.groups.start_folder(group)).or_else(|| self.default_cwd(cx))
+    }
+
+    /// A new terminal in group `group` (its + or its menu), in the group's folder if it has one,
+    /// else where the selected terminal is.
     pub(in crate::workspace) fn new_session_in_group(
         &mut self,
         group: u32,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let cwd = self.default_cwd(cx);
+        let cwd = self.start_cwd(Some(group), cx);
         self.open_session_in(Some(Some(group)), None, cwd, window, cx);
         self.mark_dirty(cx);
     }
@@ -124,6 +133,39 @@ impl Workspace {
         let rgba = Rgba::from(color);
         let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
         self.sidebar.view.groups.set_custom_color(group, [byte(rgba.r), byte(rgba.g), byte(rgba.b)]);
+        self.mark_dirty(cx);
+    }
+
+    /// The group's folder as the list shows it (`~/Projects/app`), if it has one.
+    pub(in crate::workspace) fn group_folder_label(&self, group: u32) -> Option<String> {
+        let folder = self.sidebar.view.groups.get(group)?.folder.as_deref()?;
+        Some(wormhole_core::sidebar::display_path(Path::new(folder), home_dir()))
+    }
+
+    /// "Set folder…": ask for a folder, and new terminals in group `group` start there.
+    pub(in crate::workspace) fn choose_group_folder(&mut self, group: u32, cx: &mut Context<Self>) {
+        let paths = cx.prompt_for_paths(PathPromptOptions {
+            files: false,
+            directories: true,
+            multiple: false,
+            prompt: Some("Choose".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let Ok(Ok(Some(paths))) = paths.await else { return };
+            let Some(folder) = paths.into_iter().next() else { return };
+            this.update(cx, |ws, cx| ws.set_group_folder(group, Some(&folder.to_string_lossy()), cx)).ok();
+        })
+        .detach();
+    }
+
+    /// Set the folder new terminals in group `group` start in, or take it away (`None`).
+    pub(in crate::workspace) fn set_group_folder(
+        &mut self,
+        group: u32,
+        folder: Option<&str>,
+        cx: &mut Context<Self>,
+    ) {
+        self.sidebar.view.groups.set_folder(group, folder);
         self.mark_dirty(cx);
     }
 

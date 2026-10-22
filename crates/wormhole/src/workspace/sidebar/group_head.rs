@@ -1,7 +1,8 @@
 //! A group's head in the list: its tiles and dot while folded, its + while pinned and empty, its
 //! drag, its drop, the popover its name opens (`group_popover`) and its context menu, which a
 //! right-click and ⌃↩ open: Rename… (in place, `rename`), a row of the nine colours as Finder's tags
-//! are in its context menu, Other colour…, and the actions.
+//! are in its context menu, Other colour…, its folder with Set folder… and Clear folder, and the
+//! actions. Resting on the name shows the folder.
 use wormhole_core::sidebar::{Urgency, spoken};
 
 use super::super::focus::SidebarStop;
@@ -65,9 +66,11 @@ impl Workspace {
             });
             (tooltip, add)
         });
+        let folder = self.group_folder_label(group);
         let parts = GroupHead {
             metrics: frame.metrics,
             name: band.label.clone().into(),
+            tooltip: folder.clone().map(Into::into),
             color: hsla,
             folded,
             pinned: band.pinned,
@@ -92,6 +95,7 @@ impl Workspace {
             &band.label,
             band.pinned,
             color.map(wormhole_core::sidebar::GroupPaint::label),
+            folder.as_deref(),
             band.members.len(),
             alerts,
             !folded,
@@ -199,13 +203,14 @@ mod tests {
 
     use super::super::group_popover::{GroupFacts, group_menu};
 
-    fn facts(color: Option<GroupColor>, pinned: bool) -> GroupFacts {
+    fn facts(color: Option<GroupColor>, pinned: bool, folder: Option<&str>) -> GroupFacts {
         GroupFacts {
             group: 1,
             paint: color.map(GroupPaint::Named),
             custom: None,
             shown: None,
             pinned,
+            folder: folder.map(str::to_string),
             colors: vec![
                 (GroupColor::Grey, hsla(0.0, 0.0, 0.5, 1.0)),
                 (GroupColor::Blue, hsla(0.6, 0.8, 0.5, 1.0)),
@@ -216,12 +221,14 @@ mod tests {
     #[test]
     fn the_menu_has_the_rename_the_colour_row_and_the_actions_and_pinned_reads_unpin() {
         assert_eq!(
-            group_menu(facts(Some(GroupColor::Blue), true), &WeakEntity::new_invalid()).outline(),
+            group_menu(facts(Some(GroupColor::Blue), true, None), &WeakEntity::new_invalid()).outline(),
             [
                 "- Rename…",
                 "---",
                 "~ Grey | Blue [x]",
                 "- Other colour…",
+                "---",
+                "- Set folder…",
                 "---",
                 "- New terminal in group",
                 "- Ungroup",
@@ -233,8 +240,21 @@ mod tests {
     }
 
     #[test]
+    fn a_group_with_a_folder_shows_it_greyed_out_above_set_and_clear() {
+        let outline =
+            group_menu(facts(None, false, Some("~/Projects/foo")), &WeakEntity::new_invalid()).outline();
+        assert_eq!(
+            outline[3..9],
+            ["- Other colour…", "---", "- ~/Projects/foo [off]", "- Set folder…", "- Clear folder", "---"],
+            "{outline:?}"
+        );
+        let none = group_menu(facts(None, false, None), &WeakEntity::new_invalid()).outline();
+        assert!(none.iter().all(|line| !line.contains("Clear folder")), "{none:?}");
+    }
+
+    #[test]
     fn a_group_without_a_colour_rings_none_and_unpinned_reads_pin() {
-        let outline = group_menu(facts(None, false), &WeakEntity::new_invalid()).outline();
+        let outline = group_menu(facts(None, false, None), &WeakEntity::new_invalid()).outline();
         assert_eq!(outline[2], "~ Grey | Blue");
         assert_eq!(outline[3], "- Other colour…");
         assert!(outline.contains(&"- Pin group".to_string()));

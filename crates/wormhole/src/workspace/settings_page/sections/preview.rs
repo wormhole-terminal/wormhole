@@ -192,6 +192,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                     style::GroupHead {
                         metrics,
                         name: title.into(),
+                        tooltip: None,
                         color: wash,
                         folded: false,
                         pinned: false,

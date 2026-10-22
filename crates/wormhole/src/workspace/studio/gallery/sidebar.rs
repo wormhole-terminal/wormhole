@@ -69,6 +69,7 @@ pub(super) fn render(
             style::GroupHead {
                 metrics,
                 name: name.into(),
+                tooltip: None,
                 color,
                 folded,
                 pinned,

@@ -106,12 +106,15 @@
 //!   group-new <name> <row>…   a new group of the terminals in those rows (as `state` numbers them);
 //!                   prints its id
 //!   sidebar-fold <group>   fold or open the group with this name
-//!   group <name> <rename|pin|ungroup|close|move|color:<name|none>>   what the group's menu does:
-//!                   make its name a field on its head (`text <new name>` then `key enter` types and
-//!                   keeps it, `key escape` drops it), pin or unpin, take apart, close (asks if an
-//!                   agent works in it), move to a window of its own, or colour it (grey, blue, red,
-//!                   yellow, green, pink, purple, cyan or orange). A click on the group's name
-//!                   (`click <x> <y>`) opens its popover (`popover`), a right-click its menu (`menu`)
+//!   group <name> <rename|pin|ungroup|close|move|color:<name|none>|folder:<path|none>>   what the group's
+//!                   menu does: make its name a field on its head (`text <new name>` then `key enter`
+//!                   types and keeps it, `key escape` drops it), pin or unpin, take apart, close (asks
+//!                   if an agent works in it), move to a window of its own, colour it (grey, blue, red,
+//!                   yellow, green, pink, purple, cyan or orange), or set the folder its new terminals
+//!                   start in (an absolute path without spaces, `~/` the home folder; `none` clears it,
+//!                   as Set folder… and Clear folder do; `rows` shows it as `folder=…`). A click on the
+//!                   group's name (`click <x> <y>`) opens its popover (`popover`), a right-click its
+//!                   menu (`menu`)
 //!   to-group <row> <name|none>   put the terminal in that row in the group, or take it out of its group
 //!   rename-edit <row>   the terminal's name becomes a field, as Rename… in its menu makes it
 //!   pin <n>         pin the n-th terminal (as `state` numbers them) to the top of its group, or unpin it

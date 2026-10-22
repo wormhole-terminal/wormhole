@@ -133,8 +133,15 @@ impl Workspace {
                         .get(band.group)
                         .and_then(|group| group.paint())
                         .map_or(String::new(), |color| format!(" colour={}", color.key()));
+                    let folder = self
+                        .sidebar
+                        .view
+                        .groups
+                        .get(band.group)
+                        .and_then(|group| group.folder.as_deref())
+                        .map_or(String::new(), |folder| format!(" folder={folder}"));
                     out.push_str(&format!(
-                        "group {:?} id={} {position}/{of}{folded}{pinned}{colored} terminals={}\n",
+                        "group {:?} id={} {position}/{of}{folded}{pinned}{colored}{folder} terminals={}\n",
                         band.label,
                         band.group,
                         band.members.len()

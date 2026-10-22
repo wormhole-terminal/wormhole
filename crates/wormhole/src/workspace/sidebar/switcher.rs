@@ -363,6 +363,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         let parts = GroupHead {
             metrics,
             name: card.label.clone(),
+            tooltip: None,
             color: card.color,
             folded: true,
             pinned: card.pinned,

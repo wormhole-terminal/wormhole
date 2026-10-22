@@ -118,7 +118,7 @@ fn paint(cx: &mut TestAppContext, window: &OpenWindow, group: u32) -> Option<Gro
 }
 
 /// A click on a group's name opens its popover: the name in a field that has the keyboard, the
-/// colours and the actions. A dot or a colour of one's own changes the group's colour live (and a
+/// colours, the folder lines and the actions. A dot or a colour of one's own changes the group's colour live (and a
 /// custom one is saved with the window), Return keeps a typed name, Esc drops it, and an action
 /// does what its menu item does. A right-click on the name opens the native menu instead.
 #[gpui_kit::test]
@@ -148,6 +148,8 @@ fn clicking_a_groups_name_opens_its_popover_and_a_right_click_its_menu(cx: &mut 
     assert_eq!(
         &outline[3..],
         [
+            "---",
+            "- Set folder…",
             "---",
             "- New terminal in group",
             "- Ungroup",

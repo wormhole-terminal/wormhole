@@ -1,8 +1,10 @@
 //! The groups a person makes in the terminal list: a name, a colour and the terminals in it, the
 //! way a browser groups its tabs. A group isn't worked out from where its terminals are: it holds
 //! whichever terminals were put in it, from any folder, and a terminal in no group stands in the
-//! list on its own. A group goes with its last terminal unless it is pinned. A window keeps its
-//! own groups, saved with it.
+//! list on its own. A group goes with its last terminal unless it is pinned, and may have a folder
+//! its new terminals start in. A window keeps its own groups, saved with it.
+
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +30,10 @@ pub struct TermGroup {
     /// a group like any other, which the person may rename, recolour or take apart.
     #[serde(skip_serializing_if = "is_false")]
     pub recovered: bool,
+    /// Where a new terminal in the group starts, once the person has set one (never chosen for
+    /// them). Saved with the group in the window's layout, so a layout from before it loads with none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub folder: Option<String>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -93,6 +99,7 @@ impl Groups {
             members: members.to_vec(),
             pinned: false,
             recovered: false,
+            folder: None,
         });
         id
     }
@@ -171,6 +178,22 @@ impl Groups {
         if let Some(group) = self.get_mut(id) {
             group.color = GroupPaint::Custom(rgb).key();
         }
+    }
+
+    /// Set the folder new terminals in group `id` start in, or take it away (`None`, or a blank
+    /// path).
+    pub fn set_folder(&mut self, id: u32, folder: Option<&str>) {
+        let folder = folder.map(str::trim).filter(|folder| !folder.is_empty());
+        if let Some(group) = self.get_mut(id) {
+            group.folder = folder.map(str::to_string);
+        }
+    }
+
+    /// Where a new terminal in group `id` starts: its folder, when it has one and that is still a
+    /// directory. `None` otherwise, and the terminal starts where it would have without a folder.
+    pub fn start_folder(&self, id: u32) -> Option<String> {
+        let folder = self.get(id)?.folder.as_deref()?;
+        Path::new(folder).is_dir().then(|| folder.to_string())
     }
 
     /// Pin group `id`, or let it go again.
@@ -325,6 +348,56 @@ mod tests {
         let json = serde_json::to_string(&groups).unwrap_or_default();
         let back: Groups = serde_json::from_str(&json).unwrap_or_default();
         assert_eq!(back.iter().filter(|g| g.recovered).count(), 1, "{json}");
+    }
+
+    #[test]
+    fn a_folder_is_only_there_once_set_and_cleared_by_none_or_a_blank_path() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        assert_eq!(groups.get(a).and_then(|g| g.folder.clone()), None, "no folder until the person sets one");
+        groups.set_folder(a, Some("  /tmp/work  "));
+        assert_eq!(groups.get(a).and_then(|g| g.folder.as_deref()), Some("/tmp/work"));
+        groups.set_folder(a, Some("   "));
+        assert_eq!(groups.get(a).and_then(|g| g.folder.clone()), None);
+        groups.set_folder(a, Some("/tmp/work"));
+        groups.set_folder(a, None);
+        assert_eq!(groups.get(a).and_then(|g| g.folder.clone()), None);
+        groups.set_folder(99, Some("/tmp"));
+        assert_eq!(groups.iter().count(), 1, "no such group, nothing made");
+    }
+
+    #[test]
+    fn a_folder_that_is_gone_or_is_a_file_is_not_a_start_folder() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let file = dir.path().join("a-file");
+        std::fs::write(&file, "x").expect("write");
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        assert_eq!(groups.start_folder(a), None, "none set");
+        let path = dir.path().to_string_lossy().into_owned();
+        groups.set_folder(a, Some(&path));
+        assert_eq!(groups.start_folder(a), Some(path));
+        groups.set_folder(a, Some(&file.to_string_lossy()));
+        assert_eq!(groups.start_folder(a), None, "a file");
+        groups.set_folder(a, Some(&dir.path().join("gone").to_string_lossy()));
+        assert_eq!(groups.start_folder(a), None, "missing");
+        assert_eq!(groups.start_folder(99), None, "no such group");
+    }
+
+    #[test]
+    fn the_folder_round_trips_and_groups_without_one_save_as_before() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        let plain = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(!plain.contains("folder"), "{plain}");
+        groups.set_folder(a, Some("/tmp/work"));
+        let json = serde_json::to_string(&groups).unwrap_or_default();
+        assert!(json.contains(r#""folder":"/tmp/work""#), "{json}");
+        assert_eq!(serde_json::from_str::<Groups>(&json).ok(), Some(groups));
+        // Saved before groups had a folder.
+        let old: Groups = serde_json::from_str(r#"[{"id":2,"name":"Docs","color":"blue","members":[1]}]"#)
+            .unwrap_or_default();
+        assert_eq!(old.get(2).map(|g| g.folder.clone()), Some(None));
     }
 
     #[test]

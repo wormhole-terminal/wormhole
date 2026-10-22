@@ -408,8 +408,8 @@ impl Workspace {
         group
     }
 
-    /// devctl `group <name> <rename|pin|ungroup|close|move|color:<colour>|none>`: what the group's
-    /// menu does. `rename` makes its name a field.
+    /// devctl `group <name> <rename|pin|ungroup|close|move|color:<colour>|none|folder:<path>|none>`: what
+    /// the group's menu does. `rename` makes its name a field.
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_group(
         &mut self,
@@ -432,6 +432,11 @@ impl Workspace {
             "ungroup" => self.ungroup(group, cx),
             "close" => self.close_group(group, window, cx),
             "move" => self.move_group_to_window(group, window, cx),
+            folder if folder.starts_with("folder:") => {
+                // The picker can't be driven, so the path comes with the command.
+                let folder = folder.trim_start_matches("folder:");
+                self.set_group_folder(group, (folder != "none").then_some(folder), cx);
+            }
             color => {
                 let color =
                     color.strip_prefix("color:").ok_or_else(|| format!("unknown action {action:?}"))?;

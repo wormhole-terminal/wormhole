@@ -20,7 +20,12 @@ pub(super) fn fold(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn group(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (name, action) =
         arg.trim().rsplit_once(char::is_whitespace).ok_or_else(|| anyhow!("expected <name> <action>"))?;
-    ctx.workspace.devctl_group(name.trim(), action.trim(), ctx.window, ctx.cx).map_err(|e| anyhow!(e))?;
+    // `folder:~/x` names the home folder like `new-shell`'s directory does.
+    let action = match action.trim().strip_prefix("folder:") {
+        Some(path) => format!("folder:{}", expand_home(path)),
+        None => action.trim().to_string(),
+    };
+    ctx.workspace.devctl_group(name.trim(), &action, ctx.window, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(String::new())
 }
 

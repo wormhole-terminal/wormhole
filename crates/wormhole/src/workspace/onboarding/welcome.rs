@@ -174,6 +174,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
         style::GroupHead {
             metrics,
             name: "api-server".into(),
+            tooltip: None,
             color: None,
             folded: false,
             pinned: false,

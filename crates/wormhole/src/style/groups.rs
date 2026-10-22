@@ -5,6 +5,7 @@
 //! "No terminals" and a + instead. The label opens the group's menu, the chevron folds it.
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -21,6 +22,8 @@ use crate::settings::UiColors;
 pub struct GroupHead {
     pub metrics: Metrics,
     pub name: SharedString,
+    /// Shown when the pointer rests on the label: the group's folder, if it has one.
+    pub tooltip: Option<SharedString>,
     /// The group's colour: the dot before the name where the group has no card.
     pub color: Option<Hsla>,
     pub folded: bool,
@@ -88,6 +91,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
     let GroupHead {
         metrics,
         name,
+        tooltip,
         color,
         folded,
         pinned,
@@ -137,6 +141,9 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
                     .text_color(ui.faint)
                     .child(Icon::new(IconName::Pin).with_size(px(PIN_SIZE))),
             )
+        })
+        .when_some(tooltip, |d, tooltip| {
+            d.tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
         });
     let tiles = folded.then(|| {
         div()

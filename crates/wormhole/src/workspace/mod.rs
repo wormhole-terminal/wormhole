@@ -753,14 +753,14 @@ impl Workspace {
     }
 
     /// A new terminal running the shell `shell` names (`None`: the default), where the current
-    /// one is.
+    /// one is, or in its group's folder if the group has one (it joins that group).
     pub(crate) fn new_session_with(
         &mut self,
         shell: Option<String>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let cwd = self.default_cwd(cx);
+        let cwd = self.start_cwd(self.active_group(), cx);
         self.open_session(shell, cwd, window, cx);
     }
 

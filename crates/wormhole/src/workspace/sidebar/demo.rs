@@ -100,6 +100,7 @@ impl Workspace {
             style::GroupHead {
                 metrics,
                 name: example::BAND.into(),
+                tooltip: None,
                 color: None,
                 folded: false,
                 pinned: false,

@@ -101,12 +101,15 @@ pub fn row_label_in_split(name: &str, speech: RowSpeech, place: Place, split: Op
 
 /// A group's head: "Release 1.2, coloured blue, pinned, 3 terminals, expanded, 1 of 4". The colour is said
 /// because the card's wash is all the eyes get of it; a folded group says how many of its
-/// terminals need you or failed, since only the dot on its head tells the eyes.
+/// terminals need you or failed, since only the dot on its head tells the eyes. A group with a
+/// folder says it after the count (`folder` is how the sidebar shows it, `~/Projects/app`), since
+/// its tooltip is all the eyes get of it.
 #[allow(clippy::too_many_arguments)]
 pub fn band_label(
     label: &str,
     pinned: bool,
     color: Option<&str>,
+    folder: Option<&str>,
     terminals: usize,
     alerts: usize,
     expanded: bool,
@@ -123,6 +126,7 @@ pub fn band_label(
     } else {
         count(terminals, "terminal", "terminals")
     });
+    parts.extend(folder.map(|folder| format!("folder {folder}")));
     if !expanded && alerts > 0 {
         parts.push(format!("{alerts} need attention"));
     }
@@ -338,19 +342,27 @@ mod tests {
     #[test]
     fn a_group_reads_its_colour_pin_count_and_place() {
         assert_eq!(
-            band_label("Release 1.2", false, Some("Blue"), 3, 0, true, 1, 4),
+            band_label("Release 1.2", false, Some("Blue"), None, 3, 0, true, 1, 4),
             "Release 1.2, coloured blue, 3 terminals, expanded, 1 of 4"
         );
         assert_eq!(
-            band_label("Review", true, Some("Pink"), 1, 0, false, 2, 4),
+            band_label("Review", true, Some("Pink"), None, 1, 0, false, 2, 4),
             "Review, coloured pink, pinned, 1 terminal, collapsed, 2 of 4"
+        );
+    }
+
+    #[test]
+    fn a_group_with_a_folder_says_it_after_the_count() {
+        assert_eq!(
+            band_label("Release 1.2", false, None, Some("~/Projects/app"), 3, 0, true, 1, 4),
+            "Release 1.2, 3 terminals, folder ~/Projects/app, expanded, 1 of 4"
         );
     }
 
     #[test]
     fn a_pinned_group_says_so_with_no_terminal_in_it() {
         assert_eq!(
-            band_label("Docs", true, None, 0, 0, true, 3, 4),
+            band_label("Docs", true, None, None, 0, 0, true, 3, 4),
             "Docs, pinned, no terminals, expanded, 3 of 4"
         );
     }
@@ -358,11 +370,11 @@ mod tests {
     #[test]
     fn a_folded_group_says_what_its_dot_says() {
         assert_eq!(
-            band_label("Experiments", false, None, 3, 1, false, 2, 3),
+            band_label("Experiments", false, None, None, 3, 1, false, 2, 3),
             "Experiments, 3 terminals, 1 need attention, collapsed, 2 of 3"
         );
         assert_eq!(
-            band_label("Experiments", false, None, 3, 1, true, 2, 3),
+            band_label("Experiments", false, None, None, 3, 1, true, 2, 3),
             "Experiments, 3 terminals, expanded, 2 of 3",
             "open, its rows say it"
         );

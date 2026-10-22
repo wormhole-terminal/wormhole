@@ -6,6 +6,13 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Added
+
+- A group can have a folder: "Set folder…" in its menu or the popover its name opens picks one, and
+  new terminals in the group (its + and ⌘T while one of its terminals is selected) start there. The
+  folder shows when you rest on the group's name and in its menu; "Clear folder" takes it away, and
+  a folder that has gone is skipped.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added

@@ -1,8 +1,9 @@
 //! A group's popover and context menu, from one description of the group (`GroupFacts`). The name
 //! on its head opens the popover: the name in a field that has the keyboard at once, the nine
 //! colours (the current one ringed) and a last dot that opens the system's Colours window for a
-//! colour of one's own, then the actions. The right-click menu is Rename… (in place, `rename`),
-//! the same dots, Other colour…, and the same actions.
+//! colour of one's own, then the group's folder (shown greyed out, with Set folder… and, when there
+//! is one, Clear folder) and the actions. The right-click menu is Rename… (in place, `rename`),
+//! the same dots, Other colour…, the same folder lines, and the same actions.
 
 use wormhole_core::sidebar::{GroupColor, GroupPaint};
 use wormhole_core::tokens::Appearance;
@@ -22,6 +23,8 @@ pub(super) struct GroupFacts {
     /// What it wears now, where the Colours window starts.
     pub(super) shown: Option<Hsla>,
     pub(super) pinned: bool,
+    /// The group's folder as the list shows it (`~/Projects/app`), if it has one.
+    pub(super) folder: Option<String>,
     /// Every named colour on offer, with how the theme draws it.
     pub(super) colors: Vec<(GroupColor, Hsla)>,
 }
@@ -40,6 +43,7 @@ impl Workspace {
             },
             shown: paint.map(|paint| crate::theme_bridge::hsla(paint.color(tokens))),
             pinned: found.is_some_and(|g| g.pinned),
+            folder: self.group_folder_label(group),
             colors: group_colors(&self.profile, cx),
         }
     }
@@ -79,6 +83,22 @@ fn follow(group: u32, this: &WeakEntity<Workspace>) -> native::ColourChange {
 
 /// The grey the Colours window starts at for a group with no colour.
 const START: Hsla = Hsla { h: 0.0, s: 0.0, l: 0.5, a: 1.0 };
+
+/// The group's folder, which both the popover and the menu list above the actions: an info line
+/// (greyed out, it is not a choice) when there is one, then what changes it.
+fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Workspace>) -> Vec<Item> {
+    let set = Item::new("Set folder…")
+        .on_select(native::run_on(this, move |ws, _, cx| ws.choose_group_folder(group, cx)));
+    match folder {
+        Some(folder) => vec![
+            Item::new(folder).enabled(false),
+            set,
+            Item::new("Clear folder")
+                .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_folder(group, None, cx))),
+        ],
+        None => vec![set],
+    }
+}
 
 /// The actions both the popover and the menu end with, in their order.
 fn actions(group: u32, pinned: bool, this: &WeakEntity<Workspace>) -> Vec<Item> {
@@ -136,6 +156,8 @@ pub(super) fn group_popover(
             }),
         }))
         .row(Row::Separator)
+        .row(Row::Actions(folder_items(group, facts.folder.as_deref(), this)))
+        .row(Row::Separator)
         .row(Row::Actions(actions(group, facts.pinned, this)))
         // The keyboard goes back to the terminal, unless an action put it somewhere else.
         .on_close(move |window, cx| {
@@ -167,5 +189,6 @@ pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Men
                     .on_select(move |window, cx| native::pick_colour(start, on_change.clone(), window, cx)),
             )
             .separator();
-    actions(group, facts.pinned, this).into_iter().fold(menu, Menu::item)
+    let menu = folder_items(group, facts.folder.as_deref(), this).into_iter().fold(menu, Menu::item);
+    actions(group, facts.pinned, this).into_iter().fold(menu.separator(), Menu::item)
 }
