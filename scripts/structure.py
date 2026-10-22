@@ -16,7 +16,8 @@ crates/<crate>/src, tests included:
 
   file-size         files over 1,000 lines fail; files over 600 are only counted
   os-edge           OS conditions and OS crates (cfg(target_os, objc2, libc::, allow(unsafe_code), ...) outside
-                    the crate's OS-edge paths
+                    the crate's OS-edge paths, except a token a file is sanctioned for (`os_edge_sanctioned`:
+                    code that matches a token without being OS code, each with its reason)
   bucket-names      modules named text, utils, util, misc, helpers, helper, common
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
@@ -77,6 +78,9 @@ DEFAULT_CONFIG = {
         "wormhole-term": ["src/pty/"],
         "wormhole-wire": [],
     },
+    # Per crate, files that use an OS-edge token for something that isn't OS code: the tokens they may
+    # use, and why. A reason is required.
+    "os_edge_sanctioned": {},
     # The inherent impls of these types belong in the home (a folder or file, relative to the crate).
     "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/workspace/"]},
     "bucket_names": ["text", "utils", "util", "misc", "helpers", "helper", "common"],
@@ -449,12 +453,25 @@ def rule_file_size(crate: Crate, cfg: dict, found: Findings) -> None:
             _add(found, src.rel, crate.name, "%s:1" % src.rel, src.lines)
 
 
+def sanctioned_tokens(cfg: dict, crate: str) -> Dict[str, Set[str]]:
+    """The `os_edge_sanctioned` entries of `crate`: file -> tokens, after checking each has a reason."""
+    out: Dict[str, Set[str]] = {}
+    for rel, entry in cfg.get("os_edge_sanctioned", {}).get(crate, {}).items():
+        if not str(entry.get("why", "")).strip():
+            raise SystemExit("os_edge_sanctioned: %s/%s needs a `why`" % (crate, rel))
+        out[rel] = set(entry.get("tokens", []))
+    return out
+
+
 def rule_os_edge(crate: Crate, cfg: dict, found: Findings) -> None:
     edge = cfg["os_edge"].get(crate.name, [])
+    sanctioned = sanctioned_tokens(cfg, crate.name)
     for rel, src in crate.files.items():
         if under(rel, edge):
             continue
         for key, offsets in os_edge_hits(src).items():
+            if key in sanctioned.get(rel, ()):
+                continue
             for off in offsets:
                 _add(found, "%s :: %s" % (src.rel, key), crate.name, src.at(off))
 
@@ -1009,6 +1026,19 @@ def selftest() -> int:
         expect("os-edge outside only", sorted({k.split(" :: ")[0] for k in an.found["os-edge"]}),
                ["crates/app/src/os.rs", "crates/lib/src/lib.rs"])
         expect("os-edge reports a line", an.found["os-edge"]["crates/app/src/os.rs :: objc2"].locs, ["crates/app/src/os.rs:14"])
+        # a sanctioned token is left out for that file only; one without a reason is refused.
+        cfg = _fixture_cfg()
+        cfg["os_edge_sanctioned"] = {"app": {"src/os.rs": {"tokens": ["allow(unsafe_code)"], "why": "an allocator"}}}
+        an = make({"crates/app/src/main.rs": "mod os;\nmod other;\n", "crates/app/src/os.rs": os_file,
+                   "crates/app/src/other.rs": "#[allow(unsafe_code)]\nfn h() {}\n"}, cfg)
+        expect("os-edge sanctioned", sorted(k for k in an.found["os-edge"] if "unsafe" in k),
+               ["crates/app/src/other.rs :: allow(unsafe_code)"])
+        cfg["os_edge_sanctioned"]["app"]["src/os.rs"]["why"] = " "
+        try:
+            make({"crates/app/src/main.rs": "mod os;\n", "crates/app/src/os.rs": os_file}, cfg)
+            expect("os-edge sanctioned without a reason", "accepted", "refused")
+        except SystemExit:
+            pass
 
         # bucket names: files, mod.rs folders, inline modules.
         an = make({"crates/app/src/main.rs": "mod text;\nmod utils;\nmod ok;\nmod inl { mod helpers {} }\n",

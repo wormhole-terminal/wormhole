@@ -14,6 +14,16 @@
       ],
       "wormhole-wire": []
     },
+    "os_edge_sanctioned": {
+      "wormhole": {
+        "src/perf/allocations.rs": {
+          "tokens": [
+            "allow(unsafe_code)"
+          ],
+          "why": "a counting global allocator for test and devctl builds: GlobalAlloc is an unsafe trait, not OS code"
+        }
+      }
+    },
     "impl_outside": {
       "crate": "wormhole",
       "types": [
@@ -44,7 +54,7 @@
   "allowlist": {
     "file-size": {
       "crates/wormhole-core/src/config/settings.rs": 1433,
-      "crates/wormhole/src/workspace/mod.rs": 1018,
+      "crates/wormhole/src/workspace/mod.rs": 1017,
       "crates/wormhole/src/workspace/view_tests.rs": 1048
     },
     "os-edge": {
@@ -161,35 +171,8 @@
       "crates/wormhole-term/src/procinfo.rs :: allow(unsafe_code)": 2,
       "crates/wormhole-term/src/procinfo.rs :: cfg(target_os": 3,
       "crates/wormhole-term/src/procinfo.rs :: libc::": 6,
-      "crates/wormhole/src/devctl/menus.rs :: cfg(target_os": 8,
-      "crates/wormhole/src/devctl/menus.rs :: objc2": 2,
-      "crates/wormhole/src/intro/metal.rs :: allow(unsafe_code)": 4,
-      "crates/wormhole/src/intro/metal.rs :: objc2": 10,
-      "crates/wormhole/src/intro/mod.rs :: cfg(target_os": 8,
-      "crates/wormhole/src/intro/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
-      "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1,
-      "crates/wormhole/src/perf/allocations.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole/src/workspace/default_terminal.rs :: allow(unsafe_code)": 2,
-      "crates/wormhole/src/workspace/default_terminal.rs :: cfg(target_os": 2,
-      "crates/wormhole/src/workspace/default_terminal.rs :: objc2": 2,
-      "crates/wormhole/src/workspace/dialog.rs :: block2": 1,
-      "crates/wormhole/src/workspace/dialog.rs :: cfg(target_os": 3,
-      "crates/wormhole/src/workspace/dialog.rs :: objc2": 3,
-      "crates/wormhole/src/workspace/notifications/center.rs :: allow(unsafe_code)": 4,
-      "crates/wormhole/src/workspace/notifications/center.rs :: block2": 3,
-      "crates/wormhole/src/workspace/notifications/center.rs :: objc2": 10,
-      "crates/wormhole/src/workspace/notifications/mod.rs :: cfg!(target_os": 1,
-      "crates/wormhole/src/workspace/notifications/mod.rs :: cfg(target_os": 11,
-      "crates/wormhole/src/workspace/notifications/mod.rs :: cfg_attr(": 2,
-      "crates/wormhole/src/workspace/open_in.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole/src/workspace/open_in.rs :: cfg(target_os": 2,
-      "crates/wormhole/src/workspace/open_in.rs :: objc2": 4,
-      "crates/wormhole/src/workspace/quick_panel/macos.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole/src/workspace/quick_panel/macos.rs :: objc2": 3,
-      "crates/wormhole/src/workspace/quick_panel/mod.rs :: cfg(target_os": 2,
-      "crates/wormhole/src/workspace/quick_panel/view.rs :: cfg(target_os": 3,
-      "crates/wormhole/src/workspace/spawn.rs :: cfg(target_os": 6
+      "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
     },
     "bucket-names": {
       "crates/wormhole-core/src/notify/text.rs": 1,
