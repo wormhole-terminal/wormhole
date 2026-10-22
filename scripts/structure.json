@@ -37,7 +37,6 @@
     "layers": {
       "wormhole": [
         [
-          "logging",
           "menubar",
           "perf"
         ],
@@ -60,6 +59,12 @@
         ],
         "terminal_view",
         "workspace",
+        [
+          "command_palette",
+          "shortcut_sheet",
+          "status_item"
+        ],
+        "app",
         "devctl"
       ],
       "wormhole-core": [

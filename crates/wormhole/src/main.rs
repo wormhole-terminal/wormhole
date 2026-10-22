@@ -1,5 +1,7 @@
 mod active_profile;
+mod app;
 mod background;
+mod command_palette;
 #[cfg(feature = "devctl")]
 mod devctl;
 mod fonts;
@@ -7,18 +9,22 @@ mod icons;
 #[cfg(any(feature = "inspector", debug_assertions))]
 mod inspector;
 mod intro;
-mod logging;
 mod menubar;
 mod palette;
 mod perf;
 mod platform;
 mod select;
 mod settings;
+mod shortcut_sheet;
+mod status_item;
 mod style;
 mod terminal_view;
 mod theme_bridge;
 mod window_ops;
 mod workspace;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+use crate::app::logging;
 
 use gpui_kit::*;
 use wormhole_core::ipc::Command;

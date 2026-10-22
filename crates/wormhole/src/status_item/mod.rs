@@ -1,6 +1,8 @@
 //! The status item, the Dock (badge and menu) and the global hotkey: keeps them in step with the
 //! settings and the terminals of every window, and carries out what the user picks.
 
+pub(crate) mod quick_panel;
+
 use std::path::Path;
 #[cfg(feature = "devctl")]
 use std::path::PathBuf;
@@ -20,7 +22,7 @@ use crate::settings::{settings, ui};
 use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{actions, settings_page, updates};
+use crate::workspace::{settings_page, updates};
 
 /// A terminal in the Dock's menu.
 #[derive(Clone, PartialEq, Debug, gpui_kit::Action)]

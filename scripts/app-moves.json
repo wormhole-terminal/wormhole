@@ -1,0 +1,105 @@
+{
+  "crate": "crates/wormhole",
+  "series": {
+    "1": {
+      "doc": "The app root and the surfaces above the window leave workspace/ (phase 4, series 1)",
+      "parents": {
+        "app": {
+          "doc": [
+            "The app root: what starts the app and steers it from above its windows. It launches (`launch`),",
+            "runs the app's tick and what arrives between ticks (`tick`), binds the app-wide actions and",
+            "handles them (`handlers`), builds the menu bar (`menus`), answers the control socket (`control`),",
+            "takes the files macOS hands over (`default_terminal`), keeps a terminal's saved text (`saved_text`)",
+            "and logs (`logging`).",
+            "",
+            "The top of the order: it may use every surface, and nothing below it may call into it."
+          ]
+        }
+      },
+      "moves": [
+        {
+          "from": "workspace/app_launch.rs",
+          "to": "app/launch.rs"
+        },
+        {
+          "from": "workspace/app_tick.rs",
+          "to": "app/tick.rs"
+        },
+        {
+          "from": "workspace/app_handlers.rs",
+          "to": "app/handlers.rs"
+        },
+        {
+          "from": "workspace/app_menu.rs",
+          "to": "app/menus.rs"
+        },
+        {
+          "from": "workspace/control.rs",
+          "to": "app/control/mod.rs"
+        },
+        {
+          "from": "workspace/default_terminal.rs",
+          "to": "app/default_terminal.rs"
+        },
+        {
+          "from": "workspace/saved_text.rs",
+          "to": "app/saved_text.rs"
+        },
+        {
+          "from": "workspace/saved_text_tests.rs",
+          "to": "app/saved_text_tests.rs"
+        },
+        {
+          "from": "logging.rs",
+          "to": "app/logging.rs"
+        },
+        {
+          "from": "workspace/command_palette",
+          "to": "command_palette"
+        },
+        {
+          "from": "workspace/shortcut_sheet.rs",
+          "to": "shortcut_sheet.rs"
+        },
+        {
+          "from": "workspace/menu_bar.rs",
+          "to": "status_item/mod.rs"
+        },
+        {
+          "from": "workspace/quick_panel",
+          "to": "status_item/quick_panel"
+        }
+      ],
+      "reexports": {
+        "init_actions": "app::handlers::init",
+        "menu_dump": "app::menus::dump",
+        "listen_for_opened": "app::default_terminal::listen",
+        "serve_opened": "app::default_terminal::serve",
+        "devctl_palette": "command_palette::devctl_palette",
+        "devctl_sheet": "shortcut_sheet::devctl_sheet"
+      },
+      "layers": {
+        "remove": [
+          "logging"
+        ],
+        "after": "workspace",
+        "insert": [
+          [
+            "command_palette",
+            "shortcut_sheet",
+            "status_item"
+          ],
+          "app"
+        ]
+      },
+      "fixups": [
+        {
+          "file": "status_item/mod.rs",
+          "old": "use crate::workspace::{actions, settings_page, updates};",
+          "new": "use crate::workspace::{settings_page, updates};",
+          "why": "`actions` was only named by the `actions!` macro; the import is unused from the new place"
+        }
+      ]
+    }
+  }
+}

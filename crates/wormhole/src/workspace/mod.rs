@@ -62,11 +62,7 @@ pub(crate) mod about;
 pub(crate) mod actions;
 pub(crate) mod ambient;
 pub(crate) mod app;
-mod app_handlers;
-pub(crate) mod app_launch;
 pub(crate) mod app_look;
-mod app_menu;
-mod app_tick;
 mod aux_window;
 mod breadcrumb;
 mod chrome;
@@ -74,9 +70,6 @@ mod chrome;
 mod clear_tests;
 #[cfg(test)]
 mod close_tests;
-mod command_palette;
-pub(crate) mod control;
-mod default_terminal;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
 mod dialog;
@@ -97,7 +90,6 @@ mod items;
 #[cfg(test)]
 mod key_tests;
 mod layout;
-pub(crate) mod menu_bar;
 pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
@@ -124,20 +116,15 @@ mod profile_chip;
 mod profile_look_tests;
 pub(crate) mod profiles;
 pub(crate) mod project;
-pub(crate) mod quick_panel;
 pub(crate) mod recent_projects;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
 mod save;
 mod saved_layout;
-mod saved_text;
-#[cfg(test)]
-mod saved_text_tests;
 mod session;
 pub(crate) mod settings_page;
 pub(crate) mod shells;
-mod shortcut_sheet;
 mod shortcuts;
 mod sidebar;
 mod slide;
@@ -170,6 +157,19 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::app::control;
+pub(crate) use crate::app::default_terminal;
+pub(crate) use crate::app::handlers as app_handlers;
+pub(crate) use crate::app::launch as app_launch;
+pub(crate) use crate::app::menus as app_menu;
+pub(crate) use crate::app::saved_text;
+pub(crate) use crate::app::tick as app_tick;
+pub(crate) use crate::command_palette;
+pub(crate) use crate::shortcut_sheet;
+pub(crate) use crate::status_item as menu_bar;
+pub(crate) use crate::status_item::quick_panel;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;
