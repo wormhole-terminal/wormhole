@@ -6,6 +6,7 @@ mod migrations;
 mod private;
 mod recovery;
 mod rename;
+mod saved_text;
 mod schema;
 mod schema_snapshot;
 mod scrollback;

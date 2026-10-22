@@ -159,7 +159,7 @@ fn migrated(name: &str) -> Store {
     let dir = temp_dir(name);
     v6_fixture(&dir);
     let store = Store::open_at(&dir).expect("upgrades");
-    assert_eq!(version(&store.conn), 8);
+    assert_eq!(version(&store.conn), 9);
     assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
     store
 }
@@ -376,15 +376,9 @@ fn scrollback_follows_its_pane_to_the_pane_s_new_id() {
     // The terminal that has the text is the one the session says: the cwd comes with it.
     assert_eq!(session_of(&windows, 41).cwd.as_deref(), Some("/d/moved"));
 
-    let broken: Vec<i64> = store
-        .conn
-        .prepare("PRAGMA foreign_key_check")
-        .expect("prepares")
-        .query_map([], |row| row.get(1))
-        .expect("queries")
-        .collect::<rusqlite::Result<_>>()
-        .expect("rows");
-    assert!(broken.is_empty(), "scrollback rows without a pane: {broken:?}");
+    let broken =
+        count(&store, "SELECT COUNT(*) FROM saved.scrollback WHERE tab_id NOT IN (SELECT id FROM tabs)");
+    assert_eq!(broken, 0, "scrollback rows without a pane");
 }
 
 #[test]

@@ -62,6 +62,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   read by other accounts on the Mac wherever the folder wasn't already protected by macOS, for
   example when it was moved or copied elsewhere. Wormhole now makes the folder and everything in it
   readable by you alone, and fixes an existing folder at launch.
+- **Medium** · no advisory · affects 0.1.0–1.2.0: the text Wormhole saves from each terminal, so it
+  can come back after a restart, was kept in the same file as your windows and notes, so Time Machine
+  backed it up along with any secrets that were printed. The text now has a file of its own that
+  backups skip, and the copy of the database Wormhole keeps before an upgrade no longer holds it.
+  Copies made by earlier versions keep their text until Wormhole deletes them, two weeks after they
+  were made, and backups made before the update still hold it.
 
 ## [1.2.0] - 2026-10-22
 

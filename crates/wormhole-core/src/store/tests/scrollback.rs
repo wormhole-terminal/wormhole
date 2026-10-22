@@ -39,14 +39,14 @@ fn scrollbacks_of_unknown_terminals_are_skipped_and_a_batch_is_all_or_nothing() 
     store
         .conn
         .execute_batch(
-            "CREATE TRIGGER fail_third BEFORE INSERT ON scrollback WHEN NEW.tab_id = 3
+            "CREATE TRIGGER saved.fail_third BEFORE INSERT ON scrollback WHEN NEW.tab_id = 3
              BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
         )
         .expect("trigger");
     let items = [(1, "a".to_string()), (2, "b".to_string()), (3, "c".to_string())];
     assert!(store.save_scrollbacks(&items).is_err());
     assert_eq!(count(&store, "SELECT COUNT(*) FROM scrollback"), 0);
-    store.conn.execute_batch("DROP TRIGGER fail_third").expect("drop");
+    store.conn.execute_batch("DROP TRIGGER saved.fail_third").expect("drop");
     assert_eq!(store.save_scrollbacks(&items).expect("saves"), 3);
 }
 

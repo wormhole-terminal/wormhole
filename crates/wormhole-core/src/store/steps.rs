@@ -158,3 +158,12 @@ pub(super) const V7_EVERY_TERMINAL_A_SESSION: &str = r#"
 /// 12-character id (random, so a recovered database can't hand one host to the wrong terminal);
 /// NULL, as every existing row gets it, is a terminal in the app's own process.
 pub(super) const V8_TERMINAL_HOST: &str = "ALTER TABLE tabs ADD COLUMN host_id TEXT;";
+
+/// Version 8 to 9: the terminals' saved text leaves the main database for a file of its own
+/// (`saved_text`, attached as `saved`). The rows are set aside in a temporary table, which lives in
+/// memory (`temp_store`), and `saved_text::take_moved` writes them into the other file within the
+/// same transaction; the table is dropped, and `secure_delete` overwrites its pages.
+pub(super) const V9_TEXT_IN_ITS_OWN_FILE: &str = "
+    CREATE TEMP TABLE v9_text AS SELECT tab_id, text FROM main.scrollback;
+    DROP TABLE main.scrollback;
+";

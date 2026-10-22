@@ -4,9 +4,9 @@ use super::*;
 
 const MARKER: &str = "SECRET-MARKER-1";
 
-/// Whether `needle` is anywhere in the raw bytes of the database or its WAL.
-fn on_disk(dir: &std::path::Path, needle: &str) -> Vec<String> {
-    ["wormhole.db", "wormhole.db-wal"]
+/// Which of the databases and their WALs hold `needle` anywhere in their raw bytes.
+pub(super) fn on_disk(dir: &std::path::Path, needle: &str) -> Vec<String> {
+    ["wormhole.db", "wormhole.db-wal", "scrollback.db", "scrollback.db-wal"]
         .into_iter()
         .filter(|name| {
             std::fs::read(dir.join(name))

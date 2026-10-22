@@ -108,7 +108,7 @@ fn a_version_6_database_is_upgraded_to_exactly_the_fresh_layout() {
     drop(v6_database(&dir));
     let store = Store::open_at(&dir).expect("opens");
     assert!(store.recovered_from().is_none(), "upgraded, not moved aside");
-    assert_eq!(version(&store.conn), 8);
+    assert_eq!(version(&store.conn), 9);
     let fresh_dir = temp_dir("migrate-fresh");
     let fresh = Store::open_at(&fresh_dir).expect("opens");
     assert_eq!(dump(&store.conn), dump(&fresh.conn));
@@ -135,7 +135,10 @@ fn a_version_6_database_is_upgraded_to_exactly_the_fresh_layout() {
     assert_eq!(version(&copy), 6);
     let kept = |sql: &str| -> String { copy.query_row(sql, [], |r| r.get(0)).expect("kept") };
     assert_eq!(kept("SELECT name FROM sessions"), "kept");
-    assert_eq!(kept("SELECT text FROM scrollback"), "output");
+    // Everything but the terminals' text, which has moved to a file of its own.
+    assert_eq!(kept("SELECT COUNT(*) || '' FROM scrollback"), "0");
+    let copy_bytes = std::fs::read(dir.join(copies[0])).expect("reads the copy");
+    assert!(!copy_bytes.windows(6).any(|w| w == b"output"), "the copy keeps no text in free pages");
     assert_eq!(kept("SELECT body FROM notes"), "a note");
     assert_eq!(kept("SELECT text FROM tasks"), "a task");
     assert!(!columns(&copy, "sessions").contains(&"split_id".to_string()), "as it was");

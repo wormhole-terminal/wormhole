@@ -1,5 +1,5 @@
-//! Terminal scrollback, one per terminal (a `tabs` row, which has its session's id), kept apart from
-//! the rest of the row so saving a window never touches it.
+//! Terminal scrollback, one per terminal (a `tabs` row, which has its session's id), kept in a file
+//! of its own (`saved_text`) so saving a window never touches it.
 
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension};
@@ -37,7 +37,7 @@ impl Store {
     /// (`secure_delete`, then a checkpoint) rather than leave it until the next minute's save
     /// overwrites it. The next save stores what the terminal shows from then on.
     pub fn clear_scrollback(&self, tab_id: i64) -> Result<()> {
-        let removed = super::exec(&self.conn, "DELETE FROM scrollback WHERE tab_id = ?1", [tab_id])?;
+        let removed = super::exec(&self.conn, "DELETE FROM saved.scrollback WHERE tab_id = ?1", [tab_id])?;
         if removed > 0 {
             self.checkpoint_after_delete();
         }
@@ -49,18 +49,18 @@ impl Store {
 fn write_scrollback(conn: &Connection, tab_id: i64, text: &str) -> Result<bool> {
     let hash = content_hash(text);
     let stored: Option<Option<i64>> = conn
-        .prepare_cached("SELECT hash FROM scrollback WHERE tab_id = ?")?
+        .prepare_cached("SELECT hash FROM saved.scrollback WHERE tab_id = ?")?
         .query_row([tab_id], |row| row.get(0))
         .optional()?;
     if stored == Some(Some(hash)) {
         return Ok(false);
     }
-    // `WHERE EXISTS` is the pane check (the foreign key would make a missing pane an error) and
-    // also what lets SQLite parse an upsert on an INSERT ... SELECT.
+    // `WHERE EXISTS` is the pane check (no foreign key reaches across files) and also what lets
+    // SQLite parse an upsert on an INSERT ... SELECT.
     let changed = conn
         .prepare_cached(
-            "INSERT INTO scrollback (tab_id, hash, text)
-             SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM tabs WHERE id = ?1)
+            "INSERT INTO saved.scrollback (tab_id, hash, text)
+             SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM main.tabs WHERE id = ?1)
              ON CONFLICT(tab_id) DO UPDATE SET hash = excluded.hash, text = excluded.text",
         )?
         .execute((tab_id, hash, text))?;

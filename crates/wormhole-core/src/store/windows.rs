@@ -36,7 +36,7 @@ impl Store {
         // The terminal is the row with the session's id (the only one, since schema 7).
         let mut terminal = conn.prepare_cached(
             "SELECT t.cwd, t.shell, s.text, t.host_id
-             FROM tabs t LEFT JOIN scrollback s ON s.tab_id = t.id
+             FROM main.tabs t LEFT JOIN saved.scrollback s ON s.tab_id = t.id
              WHERE t.session_id = ?1 ORDER BY t.id = ?1 DESC, t.position LIMIT 1",
         )?;
         let mut notes =

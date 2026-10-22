@@ -19,7 +19,8 @@ const FIRST_MIGRATABLE: i64 = 6;
 
 /// `MIGRATIONS[i]` takes a database from version `FIRST_MIGRATABLE + i` to the next one. All the
 /// steps a database needs run in one transaction, so a failing step leaves it as it was.
-const MIGRATIONS: &[&str] = &[steps::V7_EVERY_TERMINAL_A_SESSION, steps::V8_TERMINAL_HOST];
+const MIGRATIONS: &[&str] =
+    &[steps::V7_EVERY_TERMINAL_A_SESSION, steps::V8_TERMINAL_HOST, steps::V9_TEXT_IN_ITS_OWN_FILE];
 
 /// The schema version this build creates and reads.
 const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
@@ -32,14 +33,11 @@ const VERSION: i64 = FIRST_MIGRATABLE + MIGRATIONS.len() as i64;
 /// working folder and the shell, has that id too: `session_id` and `tab_id` repeat it, `position`
 /// is 0 and `layout` NULL. Those three and `sessions.active_tab` are what a session had when it had
 /// tabs and panes (schema 6); nothing reads them now, and a later step drops them.
-/// `scrollback.tab_id` names the terminal's row. `tabs.host_id` names the session host that runs the
-/// terminal (`hosts`), NULL for a terminal in the app's own process.
+/// `tabs.host_id` names the session host that runs the terminal (`hosts`), NULL for a terminal in
+/// the app's own process.
 ///
-/// Scrollback has a table of its own: SQLite rewrites whole records, and updating a `tabs` row
-/// to change its cwd would have to read (and maybe rewrite) the scrollback's overflow
-/// chain too, 4 to 50 ms per window save with 20 terminals of scrollback against 0.5 ms without.
-/// `hash` comes before `text` on purpose: a column's bytes are reached by walking the record, so
-/// reading the hash after a 300 KB text would walk the whole overflow chain.
+/// A terminal's saved text is not here but in a file of its own (`saved_text`), keyed by the
+/// terminal's id: never in a `tabs` row, which a window save rewrites.
 pub(super) const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS windows (
         id INTEGER PRIMARY KEY,
@@ -73,11 +71,6 @@ pub(super) const SCHEMA: &str = "
         shell TEXT,
         layout TEXT,
         host_id TEXT
-    );
-    CREATE TABLE IF NOT EXISTS scrollback (
-        tab_id INTEGER PRIMARY KEY REFERENCES tabs(id) ON DELETE CASCADE,
-        hash INTEGER,
-        text TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS notes (
         session_id INTEGER NOT NULL,
@@ -123,13 +116,25 @@ pub(super) fn upgrade_from(conn: &Connection) -> Result<Option<i64>> {
 }
 
 /// Create the tables in a new database; check the version of an existing one and upgrade it.
-pub(super) fn init(conn: &mut Connection) -> Result<()> {
-    init_with(conn, SCHEMA, MIGRATIONS)
+/// `after_steps` runs inside the upgrade's transaction, after the steps (only when some ran), for
+/// what SQL can't do alone (`saved_text::take_moved`).
+pub(super) fn init(conn: &mut Connection, after_steps: impl FnOnce(&Connection) -> Result<()>) -> Result<()> {
+    init_with_then(conn, SCHEMA, MIGRATIONS, after_steps)
 }
 
 /// [`init`] with the layout and the steps as arguments, so tests can upgrade through steps of
 /// their own.
+#[cfg(test)]
 pub(super) fn init_with(conn: &mut Connection, schema: &str, migrations: &[&str]) -> Result<()> {
+    init_with_then(conn, schema, migrations, |_| Ok(()))
+}
+
+fn init_with_then(
+    conn: &mut Connection,
+    schema: &str,
+    migrations: &[&str],
+    after_steps: impl FnOnce(&Connection) -> Result<()>,
+) -> Result<()> {
     let latest = FIRST_MIGRATABLE + migrations.len() as i64;
     if user_version(conn)? != latest {
         // Immediate: take the write lock up front, and look again under it (another process may
@@ -151,6 +156,7 @@ pub(super) fn init_with(conn: &mut Connection, schema: &str, migrations: &[&str]
                     tx.execute_batch(step)
                         .with_context(|| format!("upgrading the database from schema version {from}"))?;
                 }
+                after_steps(&tx)?;
                 tracing::info!("upgraded the database from schema version {version} to {latest}");
             }
             tx.pragma_update(None, "user_version", latest)?;

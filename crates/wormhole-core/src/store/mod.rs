@@ -3,12 +3,13 @@
 //! A window owns sessions, a session is one terminal, and a split groups several of a window's
 //! sessions under one layout (see `schema`). Rows are upserted
 //! by a stable id and only written when they differ from what is stored. The
-//! (large) scrollback lives in a table of its own and is saved separately, in
+//! (large) scrollback lives in a file of its own (`saved_text`) and is saved separately, in
 //! batches, only when it changed. Every window saves only its own slice, so two
 //! windows never overwrite each other's sessions; `save_session` narrows that to one session.
 
 mod copies;
 mod records;
+mod saved_text;
 mod schema;
 mod scrollback;
 mod sessions;
@@ -19,12 +20,15 @@ mod windows;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context as _, Result};
 use rusqlite::{Connection, OptionalExtension};
 
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
+
+use saved_text::platform::{self, Platform};
 
 /// `WORMHOLE_DATA_DIR` overrides the location (used for isolated test runs).
 pub fn data_dir() -> PathBuf {
@@ -64,7 +68,7 @@ fn is_wormhole_name(name: &std::ffi::OsStr) -> bool {
     FOLDERS.contains(&name)
         || name == "instance.lock"
         || name.ends_with(".json")
-        || ["wormhole.db", "andromeda.db", "andromeda-before-wormhole.db"]
+        || ["wormhole.db", saved_text::FILE, "andromeda.db", "andromeda-before-wormhole.db"]
             .iter()
             .any(|db| name.starts_with(db))
 }
@@ -176,6 +180,11 @@ impl Store {
     /// upgrade) is an error and leaves the file alone. Copies past keeping are deleted first (see
     /// `copies`): each one holds the terminals' saved text as it was then.
     pub fn open_at(dir: &Path) -> Result<Self> {
+        Self::open_in(dir, Arc::new(platform::System))
+    }
+
+    /// [`open_at`](Self::open_at) with the operating system's part played by `platform`.
+    fn open_in(dir: &Path, platform: Arc<dyn Platform>) -> Result<Self> {
         if let Err(err) = crate::fsutil::ensure_private_dir(dir) {
             // A data folder that is a link (to another disk, a synced folder) still works; it just
             // isn't made private here.
@@ -184,7 +193,7 @@ impl Store {
         }
         copies::prune(dir, SystemTime::now());
         let path = dir.join(DB_FILE);
-        match Self::open_file(&path) {
+        match Self::open_file(&path, platform.as_ref()) {
             Err(err) if is_damaged(&err) || is_stale(&err) => {
                 let label = if is_stale(&err) { "old" } else { "corrupt" };
                 let aside = move_aside(&path, label).with_context(|| format!("{err:#}"))?;
@@ -193,7 +202,8 @@ impl Store {
                     path.display(),
                     aside.display()
                 );
-                let mut store = Self::open_file(&path).context("creating a new database")?;
+                let mut store =
+                    Self::open_file(&path, platform.as_ref()).context("creating a new database")?;
                 store.recovered_from = Some(aside);
                 Ok(store)
             }
@@ -206,7 +216,7 @@ impl Store {
         self.recovered_from.as_deref()
     }
 
-    fn open_file(path: &Path) -> Result<Self> {
+    fn open_file(path: &Path, platform: &dyn Platform) -> Result<Self> {
         // Made owner-only before SQLite opens it, which then gives the `-wal` and `-shm` it creates
         // the same mode; ones an earlier version made are tightened.
         // A failure here is only logged: a mode that can't be set must never cost the saved data.
@@ -227,19 +237,31 @@ impl Store {
         if verdict != "ok" {
             return Err(Damaged(verdict).into());
         }
+        // Before the upgrade, which moves the text there (an attach can't happen in a transaction).
+        let dir = path.parent().unwrap_or(Path::new("."));
+        saved_text::attach(&conn, dir, platform)?;
         if let Some(version) = schema::upgrade_from(&conn)? {
             // If an upgrade loses something it shouldn't, the windows and terminals as they were
             // are still in this copy.
             let copy = aside_path(path, &format!("v{version}"));
-            conn.execute("VACUUM INTO ?1", [copy.to_string_lossy()])
+            conn.execute("VACUUM main INTO ?1", [copy.to_string_lossy()])
                 .with_context(|| format!("keeping a copy of the database in {}", copy.display()))?;
             // SQLite makes the copy with its default mode, readable by everyone.
             if let Err(err) = crate::fsutil::make_private(&copy) {
                 tracing::warn!("couldn't make {} owner-only: {err}", copy.display());
             }
+            // Not the terminals' text: that moves to a file of its own, out of backups. A copy that
+            // can't be cleaned isn't kept.
+            if let Err(err) = saved_text::strip_copy(&copy) {
+                tracing::warn!("{err:#}; not keeping {}", copy.display());
+                for file in [copy.clone(), with_suffix(&copy, "-journal"), with_suffix(&copy, "-wal")] {
+                    let _ = std::fs::remove_file(file);
+                }
+            }
             tracing::info!("kept a copy of the schema version {version} database in {}", copy.display());
         }
-        schema::init(&mut conn)?;
+        schema::init(&mut conn, saved_text::take_moved)?;
+        saved_text::forget_orphans(&conn)?;
         let store = Self { conn, recovered_from: None };
         store.scrub_leftovers()?;
         Ok(store)
@@ -361,6 +383,9 @@ fn configure(conn: &Connection) -> Result<()> {
     // Deleted rows are overwritten with zeros, not left in free pages: a closed terminal's text
     // (scrollback holds whatever was printed, tokens included) must not be readable from the file.
     conn.pragma_update(None, "secure_delete", true)?;
+    // What a `VACUUM` and the upgrade's temporary tables hold (the terminals' text among it) stays
+    // in memory, never in a temporary file.
+    conn.pragma_update(None, "temp_store", "MEMORY")?;
     Ok(())
 }
 

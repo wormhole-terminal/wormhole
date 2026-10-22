@@ -108,8 +108,13 @@ pub(super) fn write_session(
     Ok(())
 }
 
-/// Forget a session with everything that belongs to it (scrollback goes with its tabs).
+/// Forget a session with everything that belongs to it, its saved text in the other file too.
 pub(super) fn delete_session_rows(conn: &Connection, id: i64) -> Result<()> {
+    exec(
+        conn,
+        "DELETE FROM saved.scrollback WHERE tab_id IN (SELECT id FROM main.tabs WHERE session_id = ?1)",
+        [id],
+    )?;
     exec(conn, "DELETE FROM notes WHERE session_id = ?1", [id])?;
     exec(conn, "DELETE FROM tasks WHERE session_id = ?1", [id])?;
     exec(conn, "DELETE FROM tabs WHERE session_id = ?1", [id])?;
@@ -135,6 +140,12 @@ fn existing_or_next_position(conn: &Connection, window_id: i64, session_id: i64)
 /// The session's terminal: one `tabs` row with the session's id. Any other row the session has
 /// (from before it was one terminal) is deleted, its scrollback with it.
 fn write_terminal(conn: &Connection, session: &SessionRecord) -> Result<()> {
+    exec(
+        conn,
+        "DELETE FROM saved.scrollback
+         WHERE tab_id IN (SELECT id FROM main.tabs WHERE session_id = ?1 AND id <> ?1)",
+        [session.id],
+    )?;
     exec(conn, "DELETE FROM tabs WHERE session_id = ?1 AND id <> ?1", [session.id])?;
     exec(
         conn,

@@ -43,7 +43,7 @@ fn opening_applies_the_connection_settings_and_indexes() {
     assert_eq!(pragma("foreign_keys"), 1);
     assert_eq!(pragma("busy_timeout"), 5000);
     assert_eq!(pragma("journal_size_limit"), 8 * 1024 * 1024);
-    assert_eq!(pragma("user_version"), 8);
+    assert_eq!(pragma("user_version"), 9);
     let mode: String = store.conn.query_row("PRAGMA journal_mode", [], |r| r.get(0)).expect("mode");
     assert_eq!(mode, "wal");
     for index in ["sessions_window", "splits_window", "tabs_session", "notes_session", "tasks_session"] {
@@ -73,7 +73,7 @@ fn a_database_from_before_migrations_is_moved_aside_not_upgraded() {
         }
         let mut store = Store::open_at(&dir).expect("starts fresh");
         assert!(store.load().expect("loads").is_empty(), "{name}");
-        assert_eq!(count(&store, "PRAGMA user_version"), 8, "{name}");
+        assert_eq!(count(&store, "PRAGMA user_version"), 9, "{name}");
         let aside = store.recovered_from().expect("says where the old one went").to_path_buf();
         assert!(aside.file_name().expect("name").to_string_lossy().starts_with("wormhole.db.old-"));
         let old = Connection::open(&aside).expect("opens the old file");
