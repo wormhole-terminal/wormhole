@@ -1,7 +1,7 @@
 //! The portable side of each platform concern, for a system that isn't macOS: GPUI's own call
 //! where GPUI has one (the Dock's bounce is `request_attention`, the scroller style
-//! `should_auto_hide_scrollbars`), and "not available" where it hasn't. Built only off macOS,
-//! which isn't a target yet: kept to the same functions as `macos/` by hand.
+//! `should_auto_hide_scrollbars`), and "not available" where it hasn't. Used only off macOS,
+//! which isn't a target yet; compiled everywhere, and `parity` keeps it to `macos/`'s functions.
 
 pub mod a11y;
 #[cfg(not(test))]

@@ -31,7 +31,8 @@ mod anchor;
 pub mod auth;
 pub mod background_mode;
 pub mod dock;
-#[cfg(not(target_os = "macos"))]
+// Built on macOS too, though only used elsewhere, so it can't drift from `macos/` (`parity`).
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub mod fallback;
 pub mod font_face;
 pub mod fonts;
@@ -41,6 +42,10 @@ pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;
+// Type-checked in every macOS build; only a test calls it.
+#[cfg(target_os = "macos")]
+#[cfg_attr(not(test), allow(dead_code))]
+mod parity;
 pub mod popover;
 #[cfg(any(test, feature = "devctl"))]
 pub mod record;
