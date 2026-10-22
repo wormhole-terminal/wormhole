@@ -52,6 +52,20 @@ fn raw_output_echoes_what_is_typed_and_input_is_acknowledged() {
 }
 
 #[test]
+fn the_host_answers_a_programs_scheme_query_with_the_scheme_the_app_set() {
+    let host = Host::start();
+    let (mut client, _) = host.spawn("/bin/cat", &[]);
+    client.send(&Message::SetColorScheme(wire::ColorScheme::Light));
+    // cat prints the query, the host's engine answers it into the PTY, and the terminal's echo
+    // shows the answer (as `^[[?997;2n`, or the bytes themselves without ECHOCTL).
+    client.input(b"\x1b[?996n\r");
+    client.ever(
+        "the light scheme's report",
+        |g| matches!(g, Got::Out(_, bytes) if bytes.windows(8).any(|w| w == b"[?997;2n")),
+    );
+}
+
+#[test]
 fn an_attach_after_a_detach_repaints_the_screen_the_first_client_had() {
     let host = Host::start();
     let (mut first, _) = host.spawn("/bin/cat", &[]);

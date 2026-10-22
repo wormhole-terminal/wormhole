@@ -30,6 +30,7 @@ pub trait Program {
     fn finished(&self) -> bool;
     fn close(&mut self, grace: Duration);
     fn set_colors(&mut self, colors: &wire::Colors<'_>);
+    fn set_color_scheme(&mut self, scheme: wire::ColorScheme);
     fn set_options(&mut self, options: &wire::Options);
     fn set_controller(&self, attached: bool);
     fn clipboard_reply(&self, ticket: u32, data: &[u8]);
@@ -104,6 +105,9 @@ impl Program for HostedTerminal {
     }
     fn set_colors(&mut self, colors: &wire::Colors<'_>) {
         HostedTerminal::set_colors(self, colors);
+    }
+    fn set_color_scheme(&mut self, scheme: wire::ColorScheme) {
+        HostedTerminal::set_color_scheme(self, scheme);
     }
     fn set_options(&mut self, options: &wire::Options) {
         HostedTerminal::set_options(self, options);

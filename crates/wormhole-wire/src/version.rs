@@ -13,7 +13,7 @@ use crate::types::AppVersion;
 /// The protocol major this build speaks.
 pub const PROTO_MAJOR: u16 = 1;
 /// The minor of that major: bumped when a message, tag or kind is added.
-pub const PROTO_MINOR: u16 = 0;
+pub const PROTO_MINOR: u16 = 1;
 /// How many majors back a client keeps a codec for (the doc's "last two majors").
 pub const MAJORS_BACK: u16 = 1;
 

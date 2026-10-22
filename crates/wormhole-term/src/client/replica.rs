@@ -4,7 +4,7 @@
 use wormhole_wire as wire;
 
 use crate::screen::Screen;
-use crate::types::{COLOR_COUNT, NamedColor, Rgb};
+use crate::types::{COLOR_COUNT, ColorScheme, NamedColor, Rgb};
 use crate::{GridSize, StartOptions};
 
 /// What the replica is made with, again on every repaint.
@@ -51,6 +51,16 @@ pub(crate) fn wire_size(size: GridSize) -> wire::Size {
         rows: size.rows,
         cell_w: sixteenths(size.cell_width),
         cell_h: sixteenths(size.cell_height),
+    }
+}
+
+/// Light or dark as the wire says it; `None` for a scheme of a newer engine the wire has no value
+/// for yet.
+pub(crate) fn wire_scheme(scheme: ColorScheme) -> Option<wire::ColorScheme> {
+    match scheme {
+        ColorScheme::Dark => Some(wire::ColorScheme::Dark),
+        ColorScheme::Light => Some(wire::ColorScheme::Light),
+        _ => None,
     }
 }
 

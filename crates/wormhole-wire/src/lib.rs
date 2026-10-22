@@ -50,5 +50,6 @@ pub use stream::{
     OUT_PREFIX, OrderError, Out, REPAINT_PREFIX, Repaint, RepaintKind, ResizeApplied, StreamOrder,
 };
 pub use types::{
-    AppVersion, Counters, DetachReason, ExitInfo, Features, HostState, List, Rgb, Role, Size, StreamMode,
+    AppVersion, ColorScheme, Counters, DetachReason, ExitInfo, Features, HostState, List, Rgb, Role, Size,
+    StreamMode,
 };

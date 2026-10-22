@@ -159,6 +159,15 @@ wire_enum! {
 }
 
 wire_enum! {
+    /// Whether the app's theme is light or dark (`SetColorScheme`): the host's engine answers
+    /// `CSI ? 996 n` with it and tells the programs that asked for mode 2031.
+    ColorScheme: u8 {
+        Dark = 1,
+        Light = 2,
+    }
+}
+
+wire_enum! {
     /// Whether the host is still running the terminal's program (`Welcome.state`).
     HostState: u8 {
         Running = 0,

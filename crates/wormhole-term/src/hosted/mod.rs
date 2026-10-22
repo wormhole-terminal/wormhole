@@ -37,7 +37,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
-use wormhole_vt::{COLOR_COUNT, NamedColor, Rgb};
+use wormhole_vt::{COLOR_COUNT, ColorScheme, NamedColor, Rgb};
 use wormhole_wire as wire;
 
 use self::tap::{Core, HostedFeed};
@@ -299,6 +299,21 @@ impl HostedTerminal {
         let mut screen = self.screen.lock();
         let palette = palette_with(screen.term.default_colors(), colors);
         screen.set_default_colors(&palette);
+    }
+
+    /// Whether the app's theme is light or dark, for the programs that ask (`CSI ? 996 n`) and the
+    /// ones that asked to hear of changes (mode 2031): they are told now. A value of a newer app
+    /// is ignored.
+    pub fn set_color_scheme(&self, scheme: wire::ColorScheme) {
+        let scheme = match scheme {
+            wire::ColorScheme::Dark => ColorScheme::Dark,
+            wire::ColorScheme::Light => ColorScheme::Light,
+            wire::ColorScheme::Unknown(_) => return,
+        };
+        let replies = self.screen.lock().set_color_scheme(scheme);
+        if !replies.is_empty() && !self.finished() && !self.closed {
+            self.shared.reply(replies);
+        }
     }
 
     pub fn set_options(&self, options: &wire::Options) {
