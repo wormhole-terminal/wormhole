@@ -30,8 +30,14 @@ pub struct Metrics {
     pub card_pad: f32,
     pub card_radius: f32,
     pub card_gap: f32,
-    /// A group's head: its height, and the tiles it keeps while folded (and their gap).
+    /// A group with a folder shows it under its name (Settings → Show group folders); in Dense it
+    /// follows the name on the same line instead.
+    pub group_folders: bool,
+    /// A group's head: its height (and with a second line for its folder, `head_two_line_h`, the
+    /// same as `head_h` in Dense, where the folder shares the name's line), and the tiles it
+    /// keeps while folded (and their gap).
     pub head_h: f32,
+    pub head_two_line_h: f32,
     pub folded_tile: f32,
     pub folded_gap: f32,
     /// A pinned group with nothing in it, one line.
@@ -73,7 +79,14 @@ impl Metrics {
             card_pad,
             card_radius: if dense { 8.0 } else { 12.0 },
             card_gap: if dense { 4.0 } else { 8.0 },
+            group_folders: true,
             head_h: if dense { 26.0 } else { 36.0 },
+            // The name's line and the caption's, with the head's padding above and below.
+            head_two_line_h: match density {
+                Density::Regular => 44.0,
+                Density::Compact => 40.0,
+                Density::Dense => 26.0,
+            },
             folded_tile: if dense { TILE_DENSE_FOLD } else { TILE_MINI },
             folded_gap: 4.0,
             empty_h: if dense { 24.0 } else { 32.0 },
@@ -82,6 +95,11 @@ impl Metrics {
             add: if dense { 20.0 } else { 24.0 },
             small_title: dense,
         }
+    }
+
+    /// The same measurements, with groups showing their folder or not.
+    pub fn with_group_folders(self, group_folders: bool) -> Self {
+        Self { group_folders, ..self }
     }
 
     /// The same measurements, with a group's colour fading across its card or not.
@@ -127,6 +145,20 @@ mod tests {
         assert!(!Metrics::of(Density::Regular, true).fade_wash);
         assert!(!Metrics::default().fade_wash);
         assert!(Metrics::of(Density::Regular, true).fading(true).fade_wash);
+    }
+
+    #[test]
+    fn a_head_with_a_folder_line_is_taller_except_in_dense_where_the_folder_shares_the_line() {
+        for density in [Density::Regular, Density::Compact] {
+            let m = Metrics::of(density, true);
+            assert!(m.group_folders, "shown until turned off");
+            assert!(m.head_two_line_h > m.head_h, "{density:?}");
+        }
+        assert_eq!(Metrics::of(Density::Regular, true).head_two_line_h, 44.0);
+        assert_eq!(Metrics::of(Density::Compact, true).head_two_line_h, 40.0);
+        let dense = Metrics::of(Density::Dense, true);
+        assert_eq!(dense.head_two_line_h, dense.head_h);
+        assert!(!Metrics::default().with_group_folders(false).group_folders);
     }
 
     #[test]

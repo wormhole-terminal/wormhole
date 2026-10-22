@@ -62,7 +62,8 @@ pub(super) fn render(
                 pinned: bool,
                 tiles: Vec<AnyElement>,
                 alert: Option<Hsla>,
-                empty: bool| {
+                empty: bool,
+                folder: Option<&'static str>| {
         style::group_head(
             id,
             ui,
@@ -70,6 +71,7 @@ pub(super) fn render(
                 metrics,
                 name: name.into(),
                 tooltip: None,
+                folder: folder.map(SharedString::from),
                 color,
                 folded,
                 pinned,
@@ -110,7 +112,10 @@ pub(super) fn render(
     };
     let anatomy = || {
         column(ui)
-            .child(caption(ui, "A group's card · folded · pinned and empty · a terminal in no group"))
+            .child(caption(
+                ui,
+                "A group's card · folded · pinned and empty · with a folder · a terminal in no group",
+            ))
             .child(
                 env.mark(
                     "sidebar.card",
@@ -120,7 +125,17 @@ pub(super) fn render(
                         Some(blue),
                         env.mark(
                             "sidebar.band",
-                            head("g-head-open", "Release 1.2", Some(blue), false, false, vec![], None, false),
+                            head(
+                                "g-head-open",
+                                "Release 1.2",
+                                Some(blue),
+                                false,
+                                false,
+                                vec![],
+                                None,
+                                false,
+                                None,
+                            ),
                         )
                         .into_any_element(),
                     ),
@@ -166,6 +181,7 @@ pub(super) fn render(
                     ],
                     Some(ui.agent_attention),
                     false,
+                    None,
                 )
                 .into_any_element(),
             ))
@@ -182,6 +198,25 @@ pub(super) fn render(
                     vec![],
                     None,
                     true,
+                    None,
+                )
+                .into_any_element(),
+            ))
+            // A group with a folder: its path under the name (after it in Dense).
+            .child(card(
+                true,
+                true,
+                Some(blue),
+                head(
+                    "g-head-folder",
+                    "Release 1.2",
+                    Some(blue),
+                    false,
+                    false,
+                    vec![],
+                    None,
+                    false,
+                    Some("~/Projects/wormhole"),
                 )
                 .into_any_element(),
             ))
@@ -271,7 +306,7 @@ pub(super) fn render(
                     true,
                     true,
                     Some(hsla),
-                    head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false)
+                    head(id, color.label(), Some(hsla), false, ix % 3 == 0, vec![], None, false, None)
                         .into_any_element(),
                 )
             }))

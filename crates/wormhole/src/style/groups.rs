@@ -2,13 +2,16 @@
 //! dot of the group's colour before it where there is no card to wash), the pin after it, and the
 //! chevron at the right in a 20 box. Folded, the head also keeps its terminals' tiles, their count
 //! and a dot while one needs you or failed; a pinned group with nothing in it is one line with
-//! "No terminals" and a + instead. The label opens the group's menu, the chevron folds it.
+//! "No terminals" and a + instead, and any other head shows a + while the pointer is over it. A
+//! group with a folder shows it under the name in the caption role (after the name in Dense), when
+//! `Metrics::group_folders` is on. The label opens the group's menu, the chevron folds it.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::sidebar::Density;
 
 use super::buttons::{icon_button, row_actions};
 use super::controls::disclosure;
@@ -24,6 +27,9 @@ pub struct GroupHead {
     pub name: SharedString,
     /// Shown when the pointer rests on the label: the group's folder, if it has one.
     pub tooltip: Option<SharedString>,
+    /// The group's folder as its line reads (`~/Projects/app`, cut from the front to fit); shown
+    /// under the name when `metrics.group_folders` is on, after it in Dense.
+    pub folder: Option<SharedString>,
     /// The group's colour: the dot before the name where the group has no card.
     pub color: Option<Hsla>,
     pub folded: bool,
@@ -96,6 +102,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         metrics,
         name,
         tooltip,
+        folder,
         color,
         folded,
         pinned,
@@ -114,6 +121,32 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
     let id: ElementId = id.into();
     let is_empty = empty.is_some();
     let editing = name_edit.is_some();
+    let folder = folder.filter(|_| metrics.group_folders);
+    let dense = metrics.density == Density::Dense;
+    let two_lines = folder.is_some() && !dense;
+    // Secondary text, as a row's second line; it gives way before the name does.
+    let folder_line =
+        |line: SharedString| div().min_w_0().truncate().text_caption().text_color(ui.muted).child(line);
+    let name_line = div()
+        .flex()
+        .items_center()
+        .gap_1()
+        .min_w_0()
+        // The field takes the line, as a terminal's does in its row.
+        .when(editing, |d| d.flex_1())
+        .map(|d| match name_edit {
+            Some(edit) => d.child(div().min_w_0().flex_1().child(edit)),
+            None => d.child(div().min_w_0().truncate().text_label().text_color(ui.text).child(name)),
+        })
+        .when_some(folder.clone().filter(|_| dense), |d, line| d.child(folder_line(line)))
+        .when(pinned, |d| {
+            d.child(
+                div()
+                    .flex_none()
+                    .text_color(ui.faint)
+                    .child(Icon::new(IconName::Pin).with_size(px(PIN_SIZE))),
+            )
+        });
     let label = div()
         .id((id.clone(), "label"))
         .debug_selector(|| "group-label".to_string())
@@ -135,17 +168,17 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
                 on_label(event, window, cx);
             })
         })
-        .map(|d| match name_edit {
-            Some(edit) => d.child(div().min_w_0().flex_1().child(edit)),
-            None => d.child(div().min_w_0().truncate().text_label().text_color(ui.text).child(name)),
-        })
-        .when(pinned, |d| {
-            d.child(
-                div()
-                    .flex_none()
-                    .text_color(ui.faint)
-                    .child(Icon::new(IconName::Pin).with_size(px(PIN_SIZE))),
-            )
+        .child(if two_lines {
+            div()
+                .flex()
+                .flex_col()
+                .min_w_0()
+                .when(editing, |d| d.flex_1())
+                .child(name_line)
+                .children(folder.map(folder_line))
+                .into_any_element()
+        } else {
+            name_line.into_any_element()
         })
         .when_some(tooltip, |d, tooltip| {
             d.tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
@@ -208,6 +241,12 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
             ],
         )
     });
+    // A folder's line makes the head taller, an empty pinned group's too.
+    let height = match (two_lines, is_empty) {
+        (true, _) => metrics.head_two_line_h,
+        (false, true) => metrics.empty_h,
+        (false, false) => metrics.head_h,
+    };
     let head = div()
         .id(id)
         .group(HEAD_GROUP)
@@ -216,7 +255,7 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
         .items_center()
         .gap_2()
         .w_full()
-        .h(px(if is_empty { metrics.empty_h } else { metrics.head_h }))
+        .h(px(height))
         .px(px(metrics.row_px))
         .rounded(px(metrics.row_radius))
         .cursor_pointer()

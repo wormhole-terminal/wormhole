@@ -75,6 +75,7 @@ impl Workspace {
             metrics: frame.metrics,
             name: band.label.clone().into(),
             tooltip: folder.clone().map(Into::into),
+            folder: self.group_folder_line(group).map(Into::into),
             color: hsla,
             folded,
             pinned: band.pinned,

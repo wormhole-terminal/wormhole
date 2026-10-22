@@ -175,6 +175,7 @@ fn specimen(ui: UiColors, panel: Hsla, cx: &App) -> Div {
             metrics,
             name: "api-server".into(),
             tooltip: None,
+            folder: None,
             color: None,
             folded: false,
             pinned: false,

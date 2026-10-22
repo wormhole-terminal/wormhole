@@ -573,6 +573,13 @@ const SESSIONS: &[Group] = &[
                 &["fade_group_colors"],
             ),
             entry(
+                "show-group-folders",
+                "Show group folders",
+                "The folder a group's new terminals start in, under its name",
+                "group folder path directory name head show hide",
+                &["show_group_folders"],
+            ),
+            entry(
                 "sidebar-numbers",
                 "⌘1–⌘9 numbers",
                 "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",

@@ -142,6 +142,17 @@ impl Workspace {
         Some(wormhole_core::sidebar::display_path(Path::new(folder), home_dir()))
     }
 
+    /// The group's folder as its head's second line reads: `group_folder_label` cut from the front to
+    /// fit, as a row's place is.
+    pub(in crate::workspace) fn group_folder_line(&self, group: u32) -> Option<String> {
+        let folder = self.sidebar.view.groups.get(group)?.folder.as_deref()?;
+        wormhole_core::sidebar::text::place_detail(
+            Some(Path::new(folder)),
+            home_dir(),
+            super::rows::PLACE_CHARS,
+        )
+    }
+
     /// "Set folder…": ask for a folder, and new terminals in group `group` start there.
     pub(in crate::workspace) fn choose_group_folder(&mut self, group: u32, cx: &mut Context<Self>) {
         let paths = cx.prompt_for_paths(PathPromptOptions {

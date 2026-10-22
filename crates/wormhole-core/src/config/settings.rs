@@ -230,6 +230,8 @@ pub struct Settings {
     /// A group's colour washes its card from the left and fades out across it; off, the colour fills
     /// the card evenly.
     pub fade_group_colors: bool,
+    /// A group with a folder shows it under its name on its head.
+    pub show_group_folders: bool,
     /// What `density` replaced: one-line rows. Read from older files (see [`Settings::sanitized`]),
     /// never written.
     #[serde(skip_serializing)]
@@ -422,6 +424,7 @@ impl Default for Settings {
             density: Density::default(),
             show_groups_as_cards: true,
             fade_group_colors: false,
+            show_group_folders: true,
             compact_sidebar: false,
             option_as_meta: OptionAsMeta::Off,
             scrollback_lines: 10_000,
@@ -532,6 +535,7 @@ pub const PROJECT_SETTINGS: &[&str] = &[
     "density",
     "show_groups_as_cards",
     "fade_group_colors",
+    "show_group_folders",
     "option_as_meta",
     "scrollback_lines",
     "changes_tree",
@@ -950,6 +954,18 @@ mod tests {
         assert!(keys().contains(&"fade_group_colors".to_string()));
         assert!(
             PROJECT_SETTINGS.contains(&"fade_group_colors") && !APP_SETTINGS.contains(&"fade_group_colors")
+        );
+    }
+
+    #[test]
+    fn a_groups_folder_shows_under_its_name_until_turned_off() {
+        let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+        assert!(unset.show_group_folders);
+        let off: Settings = jsonc::parse(r#"{ "show_group_folders": false }"#).expect("valid jsonc");
+        assert!(!off.show_group_folders);
+        assert!(keys().contains(&"show_group_folders".to_string()));
+        assert!(
+            PROJECT_SETTINGS.contains(&"show_group_folders") && !APP_SETTINGS.contains(&"show_group_folders")
         );
     }
 

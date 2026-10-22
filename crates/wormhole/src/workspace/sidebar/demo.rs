@@ -101,6 +101,7 @@ impl Workspace {
                 metrics,
                 name: example::BAND.into(),
                 tooltip: None,
+                folder: None,
                 color: None,
                 folded: false,
                 pinned: false,

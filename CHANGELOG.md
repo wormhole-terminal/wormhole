@@ -15,6 +15,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   terminal closes, like a project; clearing the folder leaves it pinned.
 - A + shows on every group's head while the pointer is over it (not only on an empty, pinned
   group): it opens a new terminal in the group.
+- A group with a folder shows it under its name on its head (`~/Projects/app`, cut from the front when
+  long; after the name in Dense). Settings → Terminals & sidebar → Show group folders turns it off.
 
 ### Changed
 

@@ -65,7 +65,9 @@ impl Frame {
         let s = settings_in(&ws.profile, cx);
         Self {
             ui: ui_in(&ws.profile, cx),
-            metrics: Metrics::of(s.density, s.show_groups_as_cards).fading(s.fade_group_colors),
+            metrics: Metrics::of(s.density, s.show_groups_as_cards)
+                .fading(s.fade_group_colors)
+                .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
             show_notes: s.sidebar_notes && super::notes::notes_on(cx),

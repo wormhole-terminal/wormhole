@@ -71,6 +71,7 @@ struct Look {
     density: Density,
     cards: bool,
     fade: bool,
+    folders: bool,
     notes: bool,
 }
 
@@ -80,6 +81,7 @@ impl Look {
             density: s.density,
             cards: s.show_groups_as_cards,
             fade: s.fade_group_colors,
+            folders: s.show_group_folders,
             notes: s.sidebar_notes,
         }
     }
@@ -99,12 +101,15 @@ struct Sample {
 /// A card of the sample list: a group's head and its rows, or a terminal in no group.
 struct Card {
     group: Option<&'static str>,
+    /// The group's folder, as its head shows it.
+    folder: Option<&'static str>,
     rows: &'static [Sample],
 }
 
 const SAMPLES: &[Card] = &[
     Card {
         group: None,
+        folder: None,
         rows: &[Sample {
             name: "scratch",
             glyph: StatusGlyph::Idle,
@@ -116,6 +121,7 @@ const SAMPLES: &[Card] = &[
     },
     Card {
         group: Some("Release 1.2"),
+        folder: Some("~/Projects/wormhole"),
         rows: &[
             Sample {
                 name: "Sidebar cards",
@@ -145,6 +151,7 @@ const SAMPLES: &[Card] = &[
     },
     Card {
         group: None,
+        folder: None,
         rows: &[Sample {
             name: "zsh",
             glyph: StatusGlyph::Idle,
@@ -158,7 +165,7 @@ const SAMPLES: &[Card] = &[
 
 /// The sample list in `look`, with the sidebar's own cards, heads and rows.
 fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
-    let metrics = Metrics::of(look.density, look.cards).fading(look.fade);
+    let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
     // The sidebar's own header: its title and the + (drawn, not working).
     let header = div()
         .flex()
@@ -199,6 +206,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
                         metrics,
                         name: title.into(),
                         tooltip: None,
+                        folder: card.folder.map(SharedString::from),
                         color: wash,
                         folded: false,
                         pinned: false,

@@ -272,6 +272,7 @@ impl Workspace {
                 card_gap: CARD_GAP,
                 ..style::Metrics::of(settings_in(&self.profile, cx).density, true)
                     .fading(settings_in(&self.profile, cx).fade_group_colors)
+                    .with_group_folders(settings_in(&self.profile, cx).show_group_folders)
             },
             open: self.sidebar.tabs.switcher.is_some(),
             input,
@@ -365,6 +366,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             metrics,
             name: card.label.clone(),
             tooltip: None,
+            folder: None,
             color: card.color,
             folded: true,
             pinned: card.pinned,
