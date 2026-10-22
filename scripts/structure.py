@@ -22,7 +22,8 @@ crates/<crate>/src, tests included:
   bucket-names      modules named text, utils, util, misc, helpers, helper, common
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
-  cycles            strongly connected groups of modules (an edge: a file of A names `crate::B`); a module is
+  cycles            strongly connected groups of modules (an edge: a file of A names `crate::B`, or B through
+                    `super::`/`self::`); a module is
                     a top-level one, or for a crate in `module_depth` (`{"wormhole-core": 2}`) the module
                     that many levels down (`view::sidebar`), and a module's own parent or children don't
                     count as an edge (a domain and the modules in it are one tree)
@@ -40,9 +41,16 @@ zero. What a text reader cannot see, said plainly:
   - `use super::*` hides the edges behind it from the cycle rule, which is why that rule exists;
   - cfg: every `#[cfg(...)] mod x;` counts as declared, whatever the target; a cfg condition is read
     as words, not evaluated;
-  - paths: only `crate::B` (also in `crate::{B::x, C}` and `crate::B::{x, y}` groups) is an edge, not
-    `super::super::B`, not `use` of a module through an alias. A module the crate root re-exports
-    (`pub use view::sidebar;`, as a move leaves for one commit) is followed to where it is.
+  - paths: `crate::B`, `super::B` (any number of `super`s) and `self::B` are edges, also in groups
+    (`crate::{B::x, C}`, `super::B::{x, y}`); `super` and `self` start from the file's module (a/b.rs
+    and a/b/mod.rs are both `a::b`, an inline `mod x { }` adds `x`). Not seen: a path that starts with a
+    child module's bare name (`use sidebar::X;` in view/mod.rs, which only reaches its own tree) and
+    `use` of a module through an alias. A module the crate root re-exports (`pub use view::sidebar;`, as
+    a move leaves for one commit) is followed to where it is, and so is an item a module above
+    `module_depth` re-exports from one of its own modules (`pub use fonts::X;` in config/mod.rs makes
+    `crate::config::X` an edge to `config::fonts`); a re-export from elsewhere, a glob (`pub use x::*`)
+    or an alias (read under its original name) is not followed, and the cross-reexports rule reads
+    `pub use crate::...` only.
 
 The allowlist keys are stable text: `path`, `path :: token`, `path :: crate::B`, `crate: a, b, c` (a
 cycle), each with a count. Python 3.9, standard library only.
@@ -53,6 +61,7 @@ import argparse
 import bisect
 import contextlib
 import io
+import itertools
 import json
 import os
 import re
@@ -672,16 +681,59 @@ def depth_of(crate: Crate, cfg: dict) -> int:
     return int(cfg.get("module_depth", {}).get(crate.name, 1))
 
 
-def resolve(path: List[str], nodes: Set[str], aliases: Optional[Dict[str, List[str]]] = None) -> Optional[str]:
+def resolve(path: List[str], nodes: Set[str], aliases: Optional[Dict[str, List[str]]] = None,
+            depth: int = 1, reexports: Optional[Dict[str, Dict[str, List[str]]]] = None) -> Optional[str]:
     """The deepest module of `nodes` a path names (`git` for `crate::git::DiffLine`), through the crate
-    root's re-exported modules."""
+    root's re-exported modules. With `reexports`, a name a module above `depth` re-exports from one of
+    its own modules is followed there (`crate::config::X` -> `config::fonts` when config's mod.rs says
+    `pub use fonts::X`), so a domain's re-exports don't hide which of its modules a file uses."""
     if aliases and path and path[0] not in nodes and path[0] in aliases:
         path = aliases[path[0]] + path[1:]
-    for k in range(len(path), 0, -1):
-        name = "::".join(path[:k])
-        if name in nodes:
+    for _ in range(4):  # a re-export of a re-export, not more
+        for k in range(len(path), 0, -1):
+            name = "::".join(path[:k])
+            if name in nodes:
+                break
+        else:
+            return None
+        target = (reexports or {}).get(name, {}).get(path[k]) if k < depth and k < len(path) else None
+        if target is None or len(target) <= k or target[:k] != path[:k]:
             return name
-    return None
+        path = target + path[k + 1:]
+    return name
+
+
+_PUB_USE = re.compile(r"pub\s*(?:\([^)]*\)\s*)?use\s+")
+
+
+def reexports(crate: Crate) -> Dict[str, Dict[str, List[str]]]:
+    """module -> {name: the full path it re-exports} from `pub use` in the files of that module itself
+    (`pub use fonts::X;`, `pub use self::fonts::X;` or `pub use crate::config::fonts::X;` in config/mod.rs).
+    Globs and test code are left out."""
+    out: Dict[str, Dict[str, List[str]]] = {}
+    for rel, src in crate.files.items():
+        if crate.top_of(rel) is None or crate.is_test_file(rel):
+            continue
+        here = list(crate.modpath.get(rel, ()))
+        regions = crate.test_regions(rel) + [(it.start, it.end) for it in crate.mods.get(rel, []) if it.inline]
+        for m in scan(_PUB_USE, src.clean):
+            if any(x <= m.start() < y for x, y in regions):
+                continue
+            end = src.clean.find(";", m.end())
+            for path in use_paths(src.clean[m.end():end if end >= 0 else len(src.clean)], 16):
+                if path[0] == "crate":
+                    full = path[1:]
+                elif path[0] in ("self", "super"):
+                    n = len(path) - len(list(itertools.dropwhile(lambda s: s == "super", path)))
+                    rest = path[1:] if path[0] == "self" else path[n:]
+                    if n > len(here):
+                        continue
+                    full = here[:len(here) - n] + rest
+                else:
+                    full = here + path
+                if len(full) > len(here) and full[-1] not in ("self", "super", "crate"):
+                    out.setdefault("::".join(here), {})[full[-1]] = full
+    return out
 
 
 def related(a: str, b: str) -> bool:
@@ -690,25 +742,51 @@ def related(a: str, b: str) -> bool:
 
 
 def module_edges(crate: Crate, with_tests: bool = False, depth: int = 1) -> Dict[Tuple[str, str], str]:
-    """(A, B) -> where a file of module A first names crate::B, modules at `depth`. Test code is left
-    out unless asked for: a use in a test can't make the build go in circles, and it moves with the
-    test."""
+    """(A, B) -> where a file of module A first names B (`crate::B`, `super::B`, `self::B`), modules at
+    `depth`. Test code is left out unless asked for: a use in a test can't make the build go in
+    circles, and it moves with the test."""
     edges: Dict[Tuple[str, str], str] = {}
     nodes = set(crate.nodes(depth))
     aliases = crate.root_aliases()
+    reex = reexports(crate) if depth > 1 else {}
     for rel, src in crate.files.items():
         a = crate.node_of(rel, depth)
         if a is None or (not with_tests and crate.is_test_file(rel)):
             continue
         regions = [] if with_tests else crate.test_regions(rel)
+
+        def add(path: List[str], at: int) -> None:
+            b = resolve(path, nodes, aliases, depth, reex)
+            if b is not None and not related(a, b) and (a, b) not in edges:
+                edges[(a, b)] = src.at(at)
+
         for m in scan(_CRATE_REF, src.clean):
             if regions and any(x <= m.start() < y for x, y in regions):
                 continue
             for path in crate_paths(src.clean, m, depth + 1):
-                b = resolve(path, nodes, aliases)
-                if b is not None and not related(a, b) and (a, b) not in edges:
-                    edges[(a, b)] = src.at(m.start())
+                add(path, m.start())
+        for m in scan(_RELATIVE_REF, src.clean):
+            if src.clean[m.start() - 1:m.start()] == ":" or (regions and any(x <= m.start() < y for x, y in regions)):
+                continue
+            base = scope_at(crate, rel, m.start())
+            n = len(re.findall(r"\bsuper\b", src.clean[m.start():m.start(1)]))
+            if n > len(base):
+                continue
+            base = base[:len(base) - n]
+            for path in crate_paths(src.clean, m, depth + 1):
+                add(base + path, m.start())
     return edges
+
+
+# `super::x`, `super::super::x` and `self::x`; one inside a longer path (`a::self`) is skipped where it's read.
+_RELATIVE_REF = re.compile(r"(?:(?:super\s*::\s*)+|self\s*::\s*)(\{|\w+)")
+
+
+def scope_at(crate: Crate, rel: str, offset: int) -> List[str]:
+    """The module path at an offset of a file: the file's module (`a::b` for a/b.rs and a/b/mod.rs alike)
+    and the inline `mod x { ... }` blocks around the offset, which `super` and `self` start from."""
+    inner = [it for it in crate.mods.get(rel, []) if it.inline and it.start < offset < it.end]
+    return list(crate.modpath.get(rel, ())) + [it.name for it in sorted(inner, key=lambda it: it.start)]
 
 
 def sccs(nodes: List[str], edges: Iterable[Tuple[str, str]]) -> List[List[str]]:
@@ -1324,6 +1402,35 @@ def selftest() -> int:
         edges = module_edges(an.crates[0], False, 2)
         expect("shims: followed", (("theme::tokens", "view::sidebar") in edges, ("theme::tokens", "theme::tokens") in edges),
                (True, False))
+        # super:: and self:: paths resolve from the file's module (a/b.rs and a/b/mod.rs are both a::b,
+        # an inline `mod x {}` adds x), and a domain's re-export of its own module's item is followed.
+        rel = {
+            "crates/lib/src/lib.rs": "pub mod view;\npub mod theme;\n",
+            "crates/lib/src/view/mod.rs": "mod sidebar;\nmod layout;\nmod panel;\npub use self::sidebar::S;\n"
+                                          "pub use layout::{L, M as N};\npub use crate::theme::T;\n",
+            "crates/lib/src/view/sidebar.rs": "use super::layout::X;\n",
+            "crates/lib/src/view/layout.rs": "fn f() { super::sidebar::g(); }\nmod inner { use super::super::panel::P; }\n"
+                                             "#[cfg(test)]\nmod tests { use super::super::super::theme::Q; }\n",
+            "crates/lib/src/view/panel/mod.rs": "use self::super::super::super::super::Nope;\nuse a::self::b;\n",
+            "crates/lib/src/theme/mod.rs": "pub mod tokens;\nuse crate::view::S;\nuse super::view::L;\n",
+            "crates/lib/src/theme/tokens.rs": "use super::super::view::T;\n",
+        }
+        an = make(rel, dict(_fixture_cfg(), module_depth={"lib": 2}))
+        edges = sorted(module_edges(an.crates[0], False, 2))
+        expect("relative: edges", edges, [
+            ("theme", "view::layout"), ("theme", "view::sidebar"), ("theme::tokens", "view"),
+            ("view", "theme"), ("view::layout", "view::panel"), ("view::layout", "view::sidebar"), ("view::sidebar", "view::layout")])
+        expect("relative: a sibling cycle through super", keys(an, "cycles"), [
+            "lib: view::layout -> view::sidebar", "lib: view::sidebar -> view::layout"])
+        expect("relative: scope of an inline module", scope_at(an.crates[0], "src/view/layout.rs",
+                                                              rel["crates/lib/src/view/layout.rs"].index("use super")),
+               ["view", "layout", "inner"])
+        expect("relative: re-exports", reexports(an.crates[0]).get("view"), {
+            "S": ["view", "sidebar", "S"], "L": ["view", "layout", "L"], "M": ["view", "layout", "M"],
+            "T": ["theme", "T"]})
+        an = make(rel, _fixture_cfg())
+        expect("relative: at depth 1 only paths out of a top-level module count",
+               sorted(module_edges(an.crates[0], False, 1)), [("theme", "view"), ("view", "theme")])
         expect("use paths", use_paths("a::{b::{c, d}, e as f, self}, g", 3), [["a", "b", "c"], ["a", "b", "d"], ["a", "e"], ["a", "self"]])
 
         # layers: up a tier fails, within a tier and down are fine; every module needs a tier; test edges
