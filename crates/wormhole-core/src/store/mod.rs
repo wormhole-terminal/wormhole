@@ -67,6 +67,7 @@ fn is_wormhole_name(name: &std::ffi::OsStr) -> bool {
     const FOLDERS: [&str; 7] = ["logs", "profiles", "hosts", "bin", "fonts", "themes", "icon-themes"];
     FOLDERS.contains(&name)
         || name == "instance.lock"
+        || name == saved_text::DEV_KEY_FILE
         || name.ends_with(".json")
         || ["wormhole.db", saved_text::FILE, "andromeda.db", "andromeda-before-wormhole.db"]
             .iter()
@@ -130,6 +131,8 @@ fn data_dir_name() -> &'static str {
 
 pub struct Store {
     conn: Connection,
+    /// The saved text's key and what was last written of it.
+    saved: saved_text::Keeper,
     /// Where a damaged or outdated database was moved to when this one had to be started fresh.
     recovered_from: Option<PathBuf>,
 }
@@ -193,7 +196,7 @@ impl Store {
         }
         copies::prune(dir, SystemTime::now());
         let path = dir.join(DB_FILE);
-        match Self::open_file(&path, platform.as_ref()) {
+        match Self::open_file(&path, &platform) {
             Err(err) if is_damaged(&err) || is_stale(&err) => {
                 let label = if is_stale(&err) { "old" } else { "corrupt" };
                 let aside = move_aside(&path, label).with_context(|| format!("{err:#}"))?;
@@ -202,8 +205,7 @@ impl Store {
                     path.display(),
                     aside.display()
                 );
-                let mut store =
-                    Self::open_file(&path, platform.as_ref()).context("creating a new database")?;
+                let mut store = Self::open_file(&path, &platform).context("creating a new database")?;
                 store.recovered_from = Some(aside);
                 Ok(store)
             }
@@ -216,7 +218,7 @@ impl Store {
         self.recovered_from.as_deref()
     }
 
-    fn open_file(path: &Path, platform: &dyn Platform) -> Result<Self> {
+    fn open_file(path: &Path, platform: &Arc<dyn Platform>) -> Result<Self> {
         // Made owner-only before SQLite opens it, which then gives the `-wal` and `-shm` it creates
         // the same mode; ones an earlier version made are tightened.
         // A failure here is only logged: a mode that can't be set must never cost the saved data.
@@ -239,7 +241,8 @@ impl Store {
         }
         // Before the upgrade, which moves the text there (an attach can't happen in a transaction).
         let dir = path.parent().unwrap_or(Path::new("."));
-        saved_text::attach(&conn, dir, platform)?;
+        let saved = saved_text::Keeper::new(platform.clone(), dir);
+        saved_text::attach(&conn, dir, saved.platform())?;
         if let Some(version) = schema::upgrade_from(&conn)? {
             // If an upgrade loses something it shouldn't, the windows and terminals as they were
             // are still in this copy.
@@ -260,9 +263,9 @@ impl Store {
             }
             tracing::info!("kept a copy of the schema version {version} database in {}", copy.display());
         }
-        schema::init(&mut conn, saved_text::take_moved)?;
+        schema::init(&mut conn, |tx| saved_text::take_moved(tx, &saved))?;
         saved_text::forget_orphans(&conn)?;
-        let store = Self { conn, recovered_from: None };
+        let store = Self { conn, saved, recovered_from: None };
         store.scrub_leftovers()?;
         Ok(store)
     }

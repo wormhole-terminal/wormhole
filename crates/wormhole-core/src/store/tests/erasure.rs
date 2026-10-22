@@ -6,14 +6,31 @@ const MARKER: &str = "SECRET-MARKER-1";
 
 /// Which of the databases and their WALs hold `needle` anywhere in their raw bytes.
 pub(super) fn on_disk(dir: &std::path::Path, needle: &str) -> Vec<String> {
+    bytes_on_disk(dir, needle.as_bytes())
+}
+
+pub(super) fn bytes_on_disk(dir: &std::path::Path, needle: &[u8]) -> Vec<String> {
     ["wormhole.db", "wormhole.db-wal", "scrollback.db", "scrollback.db-wal"]
         .into_iter()
         .filter(|name| {
-            std::fs::read(dir.join(name))
-                .is_ok_and(|bytes| bytes.windows(needle.len()).any(|w| w == needle.as_bytes()))
+            std::fs::read(dir.join(name)).is_ok_and(|bytes| bytes.windows(needle.len()).any(|w| w == needle))
         })
         .map(String::from)
         .collect()
+}
+
+/// A terminal's sealed record as stored.
+pub(super) fn sealed_record(store: &Store, tab_id: i64) -> Vec<u8> {
+    store
+        .conn
+        .query_row("SELECT sealed FROM saved.scrollback WHERE tab_id = ?1", [tab_id], |row| row.get(0))
+        .expect("a record")
+}
+
+/// A stretch of a terminal's sealed record to look for in the files: the text itself is never there
+/// in the clear, but erasing must take the record off the disk all the same.
+fn needle(store: &Store, tab_id: i64) -> Vec<u8> {
+    sealed_record(store, tab_id)[100..164].to_vec()
 }
 
 /// Enough lines that the text spills into overflow pages, as real scrollback does.
@@ -29,12 +46,16 @@ fn a_closed_terminals_text_is_found_in_neither_the_database_nor_the_wal() {
     store.save_scrollbacks(&[(1, scrollback_with_marker()), (2, "other text".into())]).expect("saves");
     // Once into the database file itself, then a newer copy into the WAL.
     store.checkpoint().expect("checkpoint");
+    let first = needle(&store, 1);
     store.save_scrollbacks(&[(1, format!("{}more\n", scrollback_with_marker()))]).expect("saves");
-    assert!(!on_disk(&dir, MARKER).is_empty(), "the test sees the text while the terminal is open");
+    let second = needle(&store, 1);
+    assert!(!bytes_on_disk(&dir, &first).is_empty(), "the test sees the record in the file");
+    assert!(!bytes_on_disk(&dir, &second).is_empty(), "and its newer copy in the WAL");
 
     // Terminal 1 is closed: its window is saved without it.
     store.save_window(&window(1, vec![session(2, "/b")])).expect("saves");
-    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert_eq!(bytes_on_disk(&dir, &first), Vec::<String>::new());
+    assert_eq!(bytes_on_disk(&dir, &second), Vec::<String>::new());
     assert_eq!(store.load().expect("loads")[0].sessions[0].scrollback.as_deref(), Some("other text"));
 }
 
@@ -46,8 +67,10 @@ fn a_closed_windows_text_is_erased_too() {
     store.save_window(&window(2, vec![session(2, "/b")])).expect("saves");
     store.save_scrollbacks(&[(2, scrollback_with_marker())]).expect("saves");
     store.checkpoint().expect("checkpoint");
+    let record = needle(&store, 2);
+    assert!(!bytes_on_disk(&dir, &record).is_empty());
     store.delete_window(2).expect("deletes");
-    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert_eq!(bytes_on_disk(&dir, &record), Vec::<String>::new());
 }
 
 #[test]
@@ -64,9 +87,11 @@ fn clearing_a_terminal_erases_its_saved_text_at_once() {
     store.save_window(&window(1, vec![session(1, "/a"), session(2, "/b")])).expect("saves");
     store.save_scrollbacks(&[(1, scrollback_with_marker()), (2, "other text".into())]).expect("saves");
     store.checkpoint().expect("checkpoint");
+    let record = needle(&store, 1);
+    assert!(!bytes_on_disk(&dir, &record).is_empty());
 
     store.clear_scrollback(1).expect("clears");
-    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert_eq!(bytes_on_disk(&dir, &record), Vec::<String>::new());
     let loaded = store.load().expect("loads");
     assert_eq!(loaded[0].sessions[0].scrollback, None, "nothing comes back after a restart");
     assert_eq!(loaded[0].sessions[1].scrollback.as_deref(), Some("other text"), "only that terminal's");

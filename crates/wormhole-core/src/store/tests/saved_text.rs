@@ -1,7 +1,8 @@
-//! The terminals' saved text in its own file: moved there from the main database, out of backups,
-//! started again when damaged.
+//! The terminals' saved text in its own file: moved there from the main database, sealed, out of
+//! backups, started again when damaged.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::erasure::on_disk;
@@ -11,13 +12,32 @@ use crate::store::saved_text::platform::Platform;
 
 const MARKER: &str = "SECRET-MARKER-9";
 
-/// The operating system, played by the test: it remembers what it was asked to keep out of backups.
+/// The operating system, played by the test (never the real Keychain): a fixed key, or none, as a
+/// Keychain that is locked or was denied gives; and what it was asked to keep out of backups.
 #[derive(Default)]
 pub(super) struct FakePlatform {
+    /// `None`: no key to be had.
+    pub key: Option<[u8; 32]>,
+    pub key_asked: AtomicUsize,
     pub excluded: Mutex<Vec<PathBuf>>,
 }
 
+impl FakePlatform {
+    pub fn with_key(byte: u8) -> Arc<Self> {
+        Arc::new(Self { key: Some([byte; 32]), ..Self::default() })
+    }
+
+    pub fn without_key() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+}
+
 impl Platform for FakePlatform {
+    fn text_key(&self, _: &Path) -> anyhow::Result<zeroize::Zeroizing<[u8; 32]>> {
+        self.key_asked.fetch_add(1, Ordering::Relaxed);
+        self.key.map(zeroize::Zeroizing::new).ok_or_else(|| anyhow::anyhow!("the Keychain said no"))
+    }
+
     fn exclude_from_backup(&self, path: &Path) -> anyhow::Result<()> {
         self.excluded.lock().expect("lock").push(path.to_path_buf());
         Ok(())
@@ -50,9 +70,9 @@ fn an_upgrade_moves_the_text_to_its_own_file_and_erases_it_from_the_main_one() {
     let store = Store::open_at(&dir).expect("upgrades");
     let windows = store.load().expect("loads");
     assert_eq!(windows[0].sessions[0].scrollback.as_deref(), Some(text_with_marker().as_str()));
-    let main: Vec<String> =
-        on_disk(&dir, MARKER).into_iter().filter(|name| name.starts_with("wormhole.db")).collect();
-    assert!(main.is_empty(), "still in {main:?}");
+    // Sealed in its own file, and gone from the main one.
+    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert!(std::fs::metadata(dir.join("scrollback.db")).expect("the file").len() > 4 * 4096);
     // Nor in the copy kept from before the upgrade.
     for entry in std::fs::read_dir(&dir).expect("lists") {
         let path = entry.expect("entry").path();
@@ -68,7 +88,7 @@ fn an_upgrade_moves_the_text_to_its_own_file_and_erases_it_from_the_main_one() {
 #[test]
 fn the_file_and_its_journal_are_kept_out_of_backups() {
     let dir = temp_dir("saved-excluded");
-    let platform = Arc::new(FakePlatform::default());
+    let platform = FakePlatform::with_key(1);
     let mut store = Store::open_in(&dir, platform.clone()).expect("opens");
     store.save_window(&window(1, vec![session(1, "/a")])).expect("saves");
     store.save_scrollbacks(&[(1, "text")]).expect("saves");
@@ -123,4 +143,16 @@ fn text_of_a_terminal_the_main_database_lost_is_forgotten_at_open() {
     }
     let store = Store::open_at(&dir).expect("opens");
     assert_eq!(count(&store, "SELECT COUNT(*) FROM saved.scrollback"), 1);
+}
+
+#[test]
+fn without_a_key_an_upgrade_drops_the_text_rather_than_move_it_unsealed() {
+    let dir = temp_dir("saved-moves-no-key");
+    old_database_with_text(&dir);
+    let store = Store::open_in(&dir, FakePlatform::without_key()).expect("upgrades");
+    let windows = store.load().expect("loads");
+    assert_eq!(windows[0].sessions[0].cwd.as_deref(), Some("/a"), "the terminal is kept");
+    assert_eq!(windows[0].sessions[0].scrollback, None);
+    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert_eq!(count(&store, "SELECT COUNT(*) FROM saved.scrollback"), 0);
 }

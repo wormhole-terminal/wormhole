@@ -35,7 +35,7 @@ impl Store {
             conn.prepare_cached("SELECT id, layout FROM splits WHERE window_id = ? ORDER BY id")?;
         // The terminal is the row with the session's id (the only one, since schema 7).
         let mut terminal = conn.prepare_cached(
-            "SELECT t.cwd, t.shell, s.text, t.host_id
+            "SELECT t.cwd, t.shell, s.sealed, t.host_id, t.id
              FROM main.tabs t LEFT JOIN saved.scrollback s ON s.tab_id = t.id
              WHERE t.session_id = ?1 ORDER BY t.id = ?1 DESC, t.position LIMIT 1",
         )?;
@@ -59,13 +59,15 @@ impl Store {
                 .collect::<rusqlite::Result<Vec<_>>>()?;
             for session in &mut window.sessions {
                 let found = terminal
-                    .query_map([session.id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
+                    .query_map([session.id], |row| {
+                        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+                    })?
                     .next()
                     .transpose()?;
-                if let Some((cwd, shell, scrollback, host_id)) = found {
+                if let Some((cwd, shell, sealed, host_id, tab_id)) = found {
                     session.cwd = cwd;
                     session.shell = shell;
-                    session.scrollback = scrollback;
+                    session.scrollback = self.open_scrollback(tab_id, sealed);
                     session.host_id = host_id;
                 }
                 // Blank ones saved by an older version are left behind.
@@ -105,6 +107,7 @@ impl Store {
         forget_empty_splits(&tx, window.id)?;
         tx.commit()?;
         if forgotten > 0 {
+            self.saved.forget_all();
             self.checkpoint_after_delete();
         }
         Ok(())
@@ -122,6 +125,7 @@ impl Store {
         exec(&tx, "DELETE FROM splits WHERE window_id = ?1", [id])?;
         exec(&tx, "DELETE FROM windows WHERE id = ?1", [id])?;
         tx.commit()?;
+        self.saved.forget_all();
         self.checkpoint_after_delete();
         Ok(())
     }
@@ -135,6 +139,7 @@ impl Store {
         forget_empty_splits(&tx, window_id)?;
         tx.commit()?;
         if forgotten > 0 {
+            self.saved.forget_all();
             self.checkpoint_after_delete();
         }
         Ok(())

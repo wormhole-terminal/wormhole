@@ -68,6 +68,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   backups skip, and the copy of the database Wormhole keeps before an upgrade no longer holds it.
   Copies made by earlier versions keep their text until Wormhole deletes them, two weeks after they
   were made, and backups made before the update still hold it.
+- **High** · no advisory · affects 0.1.0–1.2.0: the text Wormhole saves from each terminal was
+  stored as plain text, so any program running as you could copy the file and read whatever secrets
+  had been printed (tokens shown by `env`, `cat .env` or `gh auth token`, for example). The text is
+  now encrypted with a key Wormhole keeps in your login Keychain, so a copy of the file is useless
+  without it. If the Keychain can't be used or you deny access, the text isn't kept at all rather
+  than saved unencrypted.
 
 ## [1.2.0] - 2026-10-22
 

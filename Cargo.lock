@@ -9190,8 +9190,10 @@ dependencies = [
  "minisign",
  "minisign-verify",
  "plist",
+ "ring",
  "rusqlite",
  "rustls",
+ "security-framework",
  "semver",
  "serde",
  "serde_json",
@@ -9207,6 +9209,7 @@ dependencies = [
  "wormhole-term",
  "wormhole-vt",
  "wormhole-wire",
+ "zeroize",
 ]
 
 [[package]]

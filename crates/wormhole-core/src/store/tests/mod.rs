@@ -10,6 +10,7 @@ mod saved_text;
 mod schema;
 mod schema_snapshot;
 mod scrollback;
+mod sealed;
 mod sessions;
 mod splits;
 mod upgrade_v7;

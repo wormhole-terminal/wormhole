@@ -6,17 +6,28 @@ use std::path::Path;
 
 use anyhow::Result;
 
+use super::cipher::Key;
+use super::keys;
+
 /// The operating system's part in keeping the saved text.
 pub trait Platform: Send + Sync {
+    /// The key the text of the profile in `dir` is sealed with, made and kept on first use (see
+    /// `keys`). An error (no Keychain, access denied, a locked Keychain) means the text isn't kept:
+    /// it is never written unsealed.
+    fn text_key(&self, dir: &Path) -> Result<Key>;
     /// Keep `path` out of backups (Time Machine). A failure is only worth a warning: the file is
     /// still the user's alone.
     fn exclude_from_backup(&self, path: &Path) -> Result<()>;
 }
 
-/// The real thing.
+/// The real thing: the Keychain in a release build, a key file in a development build.
 pub struct System;
 
 impl Platform for System {
+    fn text_key(&self, dir: &Path) -> Result<Key> {
+        if cfg!(debug_assertions) { keys::dev_key_file(dir) } else { keys::keychain(dir) }
+    }
+
     fn exclude_from_backup(&self, path: &Path) -> Result<()> {
         exclude_from_backup(path)
     }
