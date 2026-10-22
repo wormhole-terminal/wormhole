@@ -44,6 +44,8 @@ mod app_menu;
 mod aux_window;
 mod breadcrumb;
 mod chrome;
+#[cfg(test)]
+mod clear_tests;
 mod command_palette;
 pub(crate) mod control;
 mod default_terminal;
