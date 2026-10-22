@@ -135,7 +135,7 @@ pub(crate) fn init(cx: &mut App) {
     if route == Route::Gpui {
         // GPUI keeps one response handler for the whole app (GPUI Component installs its own in
         // `gpui_kit::init`); this replaces it, which is harmless while nothing posts a Component
-        // notification with system delivery. The bundled app uses its own delegate (`center`).
+        // notification with system delivery. The bundled app uses its own delegate (`platform::notifications::Center`).
         cx.on_system_notification_response(|response, cx| {
             let action = response.action_id.map(|id| id.to_string());
             respond(Response { id: response.tag.to_string(), action, reply: None }, cx);

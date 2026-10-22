@@ -2,29 +2,30 @@
 //! neutral API, so a port to another system writes a sibling of `macos/` and nothing else
 //! changes. Each concern is a neutral file here (plain functions and types, no OS names: `window`,
 //! `vibrancy`, `look`, `dock`, `a11y`, `auth`, `hotkey`, `keys`, `sound`, `scroller`, `fonts`,
-//! `font_face`, `status_item`, `menu`, `popover`) that calls `os::…`: `macos/` is AppKit's
-//! implementation (the only code in the app with `objc2`, `block2`, raw window handles and
-//! `unsafe` for the system, except the feature-owned OS parts below), `fallback/` the portable one,
-//! GPUI's own call where GPUI has one and "not available" where it hasn't (used only off macOS,
-//! not a target yet; compiled on macOS too, so it can't drift from `macos/`, which a test pins).
-//! `macos::appkit` holds the one cast from a GPUI window to its `NSView` and `NSWindow`.
+//! `font_face`, `status_item`, `menu`, `popover`, `notifications`, `default_app`, `apps`, `sheet`,
+//! `panel`, `intro`, devctl's `inspect`) that calls `os::…`: `macos/` is AppKit's implementation
+//! (the only code in the app with `objc2`, `block2`, raw window handles and `unsafe` for the
+//! system), `fallback/` the portable one, GPUI's own call where GPUI has one and "not available"
+//! where it hasn't (used only off macOS, not a target yet; compiled on macOS too, so it can't drift
+//! from `macos/`, which a test pins). `macos::appkit` holds the one cast from a GPUI window to its
+//! `NSView` and `NSWindow`. `spawn` starts the helper programs nobody waits for.
+//!
+//! What a feature owns is split: the OS part is here (the notification centre, Launch Services'
+//! default app, apps by bundle identifier and `open -b`/`-t`, the quit sheet, the quick panel's
+//! window, the intro's Metal overlay), the logic stays with the feature, which asks "is it
+//! there?" through the answer (`None`, an error) rather than through an OS condition. Revealing a
+//! file, opening a folder or a URL go through GPUI (`reveal_path`, `open_with_system`, `open_url`).
 //!
 //! Test and background-mode runs are decided inside these functions (`background_mode`,
-//! `cfg!(test)`) for every platform call with no app-visible result (the Dock, VoiceOver, the bell,
-//! menus and popovers recorded instead of shown), so no feature checks them for those. Where
-//! background mode shapes what the app shows, the app still decides it: the status item and the
-//! hotkey in `workspace/menu_bar.rs` (to fold in later).
-//!
-//! What a feature owns keeps its own OS part for now, calling `macos::appkit` for the window:
-//! `intro/metal.rs` (the Metal intro, macOS-only, which also calls `macos::window` for the
-//! lights directly), `workspace/notifications/center.rs`, `workspace/default_terminal.rs`,
-//! `workspace/open_in.rs`, `workspace/dialog.rs`, `workspace/quick_panel/macos.rs` and
-//! `devctl/menus.rs`.
+//! `cfg!(test)`), so no feature checks them for a platform call: the Dock, VoiceOver, the bell,
+//! menus and popovers recorded instead of shown, and the status item and the hotkey, which
+//! background mode keeps out of the menu bar and the keys while the app shows them as they would be.
 //!
 //! The platform is the lowest layer of the app: it must not use `settings`, `style`, `workspace`
 //! or any other feature. Where drawing needs the app's look (the GPUI-drawn menus and popovers),
-//! the app hands it over (`Drawn`). It still names the status item's model and the menu key type
-//! from `menubar`, which are to move down into the neutral menu model.
+//! the app hands it over (`Drawn`); the intro's colours come with the call. It still names the
+//! status item's model and the menu key type from `menubar`, which are to move down into the
+//! neutral menu model.
 
 pub mod a11y;
 mod anchor;
