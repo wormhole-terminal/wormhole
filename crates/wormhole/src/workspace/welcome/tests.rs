@@ -81,7 +81,7 @@ fn a_replay_opens_a_welcome_terminal_and_only_its_token_opens_the_door(cx: &mut 
     // The right terminal with its token: the facts.
     let reply = ask(cx, Some(tab), &token, state());
     let facts = state_of(&reply);
-    assert_eq!(facts.handover, Handover::Logo);
+    assert_eq!(facts.handover, Handover::Logo.key());
     assert!(!facts.first_run, "a replay");
     assert!(!facts.look.themes.is_empty());
     assert!(facts.notify.is_some(), "and what reaches the person");
@@ -113,7 +113,7 @@ fn help_welcome_is_the_terminal_welcome_while_its_flag_is_on(cx: &mut TestAppCon
         assert!(!ws.first_run.is_open(), "and no intro window opens");
     });
     let (tab, token) = welcome_terminal(cx);
-    assert_eq!(state_of(&ask(cx, Some(tab), &token, state())).handover, Handover::Cursor);
+    assert_eq!(state_of(&ask(cx, Some(tab), &token, state())).handover, Handover::Cursor.key());
 
     // Off: the intro window, no new terminal.
     cx.update(|cx| {
@@ -369,7 +369,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
     });
     let facts = state_of(&ask(cx, Some(tab), &token, state()));
     assert!(facts.first_run);
-    assert_eq!(facts.handover, Handover::Portal);
+    assert_eq!(facts.handover, Handover::Portal.key());
 }
 
 // ------------------------------------------------------------------------- the example band

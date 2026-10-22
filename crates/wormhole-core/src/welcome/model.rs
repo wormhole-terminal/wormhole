@@ -109,8 +109,9 @@ impl Welcome {
         self.live
     }
 
+    /// The hand-over the app named; one this program doesn't know plays as the default.
     pub fn handover(&self) -> Handover {
-        self.facts.handover
+        Handover::parse(&self.facts.handover).unwrap_or_default()
     }
 
     /// A replay of the welcome: the welcome page alone.
@@ -215,7 +216,7 @@ impl Welcome {
     /// (the next state corrects them if the app didn't take them).
     pub fn update(&mut self, mut facts: WelcomeState, stale: bool) {
         // The handover and first-run flag are the app's word for the whole run: fixed at the start.
-        facts.handover = self.facts.handover;
+        facts.handover = self.facts.handover.clone();
         facts.first_run = self.facts.first_run;
         if stale {
             let LookFacts { themes, primaries, .. } =

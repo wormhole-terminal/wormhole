@@ -40,7 +40,7 @@ pub fn tour_state(home: &Path) -> WelcomeState {
     WelcomeState {
         wait_ms: 0,
         reduce_motion: false,
-        handover: Handover::default(),
+        handover: Handover::default().key().into(),
         first_run: true,
         look: LookFacts {
             themes: Vec::new(),
@@ -102,5 +102,19 @@ mod tests {
         assert!(state.first_run && state.wait_ms == 0 && !state.reduce_motion);
         assert!(state.look.themes.is_empty() && state.notify.is_none());
         assert!(state.agents.is_some());
+        assert_eq!(state.handover, "cursor");
+    }
+
+    /// The state carries the hand-over as its key, which is how serde wrote the enum before: the JSON
+    /// between the app and the program is the same, field for field.
+    #[test]
+    fn the_hand_over_is_written_as_the_enum_was() {
+        for handover in Handover::ALL {
+            let state = crate::welcome::fixtures::state(handover);
+            let json = serde_json::to_value(&state).expect("serializes");
+            assert_eq!(json["handover"], serde_json::to_value(handover).expect("serializes"));
+            let back: WelcomeState = serde_json::from_value(json).expect("parses");
+            assert_eq!(Handover::parse(&back.handover), Some(handover));
+        }
     }
 }

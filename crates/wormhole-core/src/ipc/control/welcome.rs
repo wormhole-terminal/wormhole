@@ -35,7 +35,6 @@ use serde::{Deserialize, Serialize};
 use super::{Error, ErrorCode};
 use crate::agents::AgentId;
 use crate::config::NotifySound;
-use crate::intro::Handover;
 
 /// The longest theme name or colour a request may carry.
 pub const FIELD_MAX_BYTES: usize = 4096;
@@ -126,7 +125,10 @@ pub struct WelcomeState {
     /// plays (a replay without one, a window that was not shown) or under Reduce Motion.
     pub wait_ms: u64,
     pub reduce_motion: bool,
-    pub handover: Handover,
+    /// The hand-over the animation plays, by its key (`intro::Handover::key`: "cursor", "portal",
+    /// "logo"), which is also how the enum is written in JSON; the program reads it back with
+    /// `Handover::parse`.
+    pub handover: String,
     /// The first run, which finishing is remembered of, or a replay.
     pub first_run: bool,
     pub look: LookFacts,

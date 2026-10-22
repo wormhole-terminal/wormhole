@@ -15,6 +15,7 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::NotifySound;
 use wormhole_core::fonts::FontSlot;
+use wormhole_core::intro::Handover;
 use wormhole_core::ipc::control::{
     AgentFact, ErrorCode, HooksFact, Limited, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, Reply,
     Target, ThemeFact, WelcomeOp, WelcomeState,
@@ -76,7 +77,7 @@ fn state(tab: i64, cx: &mut App) -> WelcomeState {
     WelcomeState {
         wait_ms: wait(run, reduce_motion, cx).as_millis() as u64,
         reduce_motion,
-        handover: run.handover,
+        handover: run.handover.key().into(),
         first_run: run.first_run,
         look,
         notify: Some(notify),
@@ -91,7 +92,7 @@ fn empty_state(tab: i64) -> WelcomeState {
     WelcomeState {
         wait_ms: 0,
         reduce_motion: false,
-        handover: Default::default(),
+        handover: Handover::default().key().into(),
         first_run: false,
         look: LookFacts {
             themes: Vec::new(),

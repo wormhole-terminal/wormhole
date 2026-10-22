@@ -68,7 +68,7 @@ pub fn state(handover: Handover) -> WelcomeState {
     WelcomeState {
         wait_ms: 0,
         reduce_motion: false,
-        handover,
+        handover: handover.key().into(),
         first_run: true,
         look: look(),
         notify: Some(notify()),
