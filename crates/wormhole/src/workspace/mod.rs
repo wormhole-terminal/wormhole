@@ -8,11 +8,12 @@ use gpui_kit::*;
 
 #[cfg(feature = "devctl")]
 pub(crate) use self::about::devctl_command as devctl_about;
+pub(crate) use self::actions::CheckForUpdates;
 #[cfg(feature = "devctl")]
 pub(crate) use self::actions::NewWindow;
-pub(crate) use self::actions::{CheckForUpdates, init as init_actions};
 pub(crate) use self::app::app_mut;
 pub(crate) use self::app::{AppState, app};
+pub(crate) use self::app_handlers::init as init_actions;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app_menu::dump as menu_dump;
 pub(crate) use self::default_terminal::{listen as listen_for_opened, serve as serve_opened};
@@ -34,6 +35,7 @@ mod about;
 mod actions;
 pub(crate) mod ambient;
 mod app;
+mod app_handlers;
 mod app_menu;
 mod aux_window;
 mod breadcrumb;
@@ -124,6 +126,7 @@ mod usage;
 #[cfg(test)]
 mod view_tests;
 mod welcome;
+mod window_actions;
 mod window_bounds;
 mod windows;
 mod worktree;

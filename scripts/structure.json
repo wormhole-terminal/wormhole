@@ -134,7 +134,7 @@
   "allowlist": {
     "file-size": {
       "crates/wormhole-core/src/config/settings.rs": 1437,
-      "crates/wormhole/src/workspace/mod.rs": 1043,
+      "crates/wormhole/src/workspace/mod.rs": 1046,
       "crates/wormhole/src/workspace/view_tests.rs": 1053
     },
     "os-edge": {

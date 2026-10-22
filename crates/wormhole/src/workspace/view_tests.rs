@@ -115,7 +115,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         crate::settings::update_settings(cx, |settings| {
             settings.sidebar_numbers = SidebarNumbers::List;
         });
-        crate::workspace::actions::init(cx);
+        crate::workspace::app_handlers::init(cx);
         notifications::init(cx);
         open_workspace_window(Some(record), None, cx);
     });
