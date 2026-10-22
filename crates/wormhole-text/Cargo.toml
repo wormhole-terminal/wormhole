@@ -1,0 +1,31 @@
+[package]
+name = "wormhole-text"
+description = "The words of Wormhole's interface: Fluent catalogs per language, typed keys generated from the English files, one precomputed table per language. No GPUI and no app state, so core and the app both use it."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+doctest = false
+
+[features]
+# `with_language`, a per-thread language for tests that must not share the global one. `cfg(test)` reaches only
+# this crate's own unit tests, so the crates that test their wording turn the feature on in their dev-dependencies.
+test-support = []
+
+[dependencies]
+fluent-bundle.workspace = true
+fluent-langneg.workspace = true
+unic-langid.workspace = true
+
+[dev-dependencies]
+fluent-syntax.workspace = true
+# The plural categories each language has, for the translation tests (already in the tree through fluent-bundle).
+intl_pluralrules = "7"
+# The tests use the crate's own test-support, as its users do.
+wormhole-text = { path = ".", features = ["test-support"] }
+
+[lints]
+workspace = true

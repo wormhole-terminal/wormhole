@@ -16,9 +16,13 @@ wormhole-term = { path = "crates/wormhole-term" }
 # The terminal engine, in a repository of its own (MIT): a pinned commit until it is on crates.io.
 # The private checkout builds against a local copy instead; see `[patch]` in its .cargo/config.toml.
 wormhole-vt = { git = "https://github.com/wormhole-terminal/wormhole-vt", rev = "4ae6ef4cebaba832d484fcf15f33814cdffc8a1b" }
+wormhole-text = { path = "crates/wormhole-text" }
 wormhole-wire = { path = "crates/wormhole-wire" }
 anyhow = "1"
 dirs = "7.0.0"
+fluent-bundle = "0.16"
+fluent-langneg = "0.13"
+fluent-syntax = "0.12"
 libc = "0.2"
 plist = { version = "1.10.1", default-features = false }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
@@ -28,6 +32,7 @@ sha2 = "0.11"
 smol = "2"
 toml = "1.1.6"
 tracing = "0.1"
+unic-langid = "0.9"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
