@@ -2,7 +2,8 @@
 //! columns, title row and status bar (`layout`), split panes (`panes`), where focus goes between
 //! areas (`focus`), the command palette's matching (`search`), VoiceOver's words (`spoken`), the
 //! panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'
-//! caps and counts (`limits`) and the title row's extras (`title_extras`).
+//! caps and counts (`limits`), the notes and next steps of a terminal (`notes`) and the title row's
+//! extras (`title_extras`).
 //!
 //! It uses only `theme` below it: never settings, git, the store or the running app. What those know
 //! comes to it as values.
@@ -11,6 +12,7 @@ pub mod elide;
 pub mod focus;
 pub mod layout;
 pub mod limits;
+pub mod notes;
 pub mod panel;
 pub mod panes;
 pub mod reorder;

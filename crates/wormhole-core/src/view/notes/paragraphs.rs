@@ -1,19 +1,17 @@
-//! Text rules for notes that need no UI: which paragraph ⌘↵ sends, a note's title, and when a
-//! note counts as empty.
-
-use wormhole_core::storage::store;
+//! Text rules for notes: which paragraph ⌘↵ sends, a note's title and body, and when a note counts as
+//! empty.
 
 /// Whether text handed over in `chunks` is only whitespace. Editors keep their text in a rope,
 /// whose chunks can be read where it is, instead of copying the whole text into a `String`
-/// first. A character is never split between chunks, so this agrees with `store::is_blank`.
-pub(in crate::window) fn chunks_blank<'a>(mut chunks: impl Iterator<Item = &'a str>) -> bool {
-    chunks.all(store::is_blank)
+/// first. A character is never split between chunks, so this agrees with `trim().is_empty()` of the whole text.
+pub fn chunks_blank<'a>(mut chunks: impl Iterator<Item = &'a str>) -> bool {
+    chunks.all(|chunk| chunk.trim().is_empty())
 }
 
 /// The paragraph (the lines around the cursor, up to the nearest blank lines) containing byte
 /// offset `cursor`. On a blank line itself there is none: sending then must send nothing, not
 /// the paragraphs on either side.
-pub(in crate::window) fn paragraph_at(text: &str, cursor: usize) -> String {
+pub fn paragraph_at(text: &str, cursor: usize) -> String {
     let mut cursor = cursor.min(text.len());
     while !text.is_char_boundary(cursor) {
         cursor -= 1;
@@ -47,7 +45,7 @@ pub(in crate::window) fn paragraph_at(text: &str, cursor: usize) -> String {
 }
 
 /// A title from the note's first non-empty line.
-pub(in crate::window) fn note_title(text: &str) -> Option<String> {
+pub fn note_title(text: &str) -> Option<String> {
     let line = text.lines().map(str::trim).find(|l| !l.is_empty())?;
     Some(line.trim_start_matches(['#', '-', '*', '>', ' ']).to_string())
 }
@@ -55,7 +53,7 @@ pub(in crate::window) fn note_title(text: &str) -> Option<String> {
 /// What an open note shows under its title: the text after the line the title
 /// comes from, without the blank lines around it. `None` for a note that is its title alone,
 /// which then shows its one line once.
-pub(in crate::window) fn note_body(text: &str) -> Option<&str> {
+pub fn note_body(text: &str) -> Option<&str> {
     let mut rest = text;
     // Past the title line (the first with something on it) and the line break after it.
     loop {
@@ -76,9 +74,32 @@ pub(in crate::window) fn note_body(text: &str) -> Option<&str> {
     (!body.trim().is_empty()).then_some(body)
 }
 
+/// For each merged note, the existing note (index into `existing`) that shows it from now on: one
+/// with exactly that text if there is one, else the next unused one in order (an edited note),
+/// else none (a new note). Positions alone would hand a note's editor to its neighbour whenever a
+/// note is added or removed above it.
+pub fn note_slots(existing: &[String], merged: &[String]) -> Vec<Option<usize>> {
+    let mut used = vec![false; existing.len()];
+    let mut slots: Vec<Option<usize>> = merged
+        .iter()
+        .map(|text| {
+            let found = (0..existing.len()).find(|&i| !used[i] && existing[i] == text.trim());
+            if let Some(i) = found {
+                used[i] = true;
+            }
+            found
+        })
+        .collect();
+    let mut free = (0..existing.len()).filter(|&i| !used[i]).collect::<Vec<_>>().into_iter();
+    for slot in slots.iter_mut().filter(|slot| slot.is_none()) {
+        *slot = free.next();
+    }
+    slots
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{chunks_blank, note_body, note_title, paragraph_at};
+    use super::{chunks_blank, note_body, note_slots, note_title, paragraph_at};
 
     #[test]
     fn a_single_paragraph_is_sent_whole_from_anywhere_in_it() {
@@ -166,5 +187,22 @@ mod tests {
         assert_eq!(note_body("\nbuy milk\n\n  \n"), None);
         assert_eq!(note_body(""), None);
         assert_eq!(note_body("\n\n"), None);
+    }
+
+    fn texts(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn notes_keep_their_editors_by_text() {
+        let existing = texts(&["a", "b", "c"]);
+        // An external insert above: every note keeps its own editor.
+        assert_eq!(note_slots(&existing, &texts(&["new", "a", "b", "c"])), [None, Some(0), Some(1), Some(2)]);
+        // A removal and a reorder.
+        assert_eq!(note_slots(&existing, &texts(&["c", "a"])), [Some(2), Some(0)]);
+        // An edited note takes the editor that is left over.
+        assert_eq!(note_slots(&existing, &texts(&["a", "b, edited", "c"])), [Some(0), Some(1), Some(2)]);
+        // Duplicates are matched one to one.
+        assert_eq!(note_slots(&texts(&["x", "x"]), &texts(&["x", "x", "x"])), [Some(0), Some(1), None]);
     }
 }
