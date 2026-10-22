@@ -59,7 +59,7 @@ fn is_wormhole_name(name: &std::ffi::OsStr) -> bool {
     let Some(name) = name.to_str() else { return false };
     const FOLDERS: [&str; 7] = ["logs", "profiles", "hosts", "bin", "fonts", "themes", "icon-themes"];
     FOLDERS.contains(&name)
-        || name == "instance.lock"
+        || name == crate::paths::INSTANCE_LOCK_FILE
         || name.ends_with(".json")
         || ["wormhole.db", saved_text::FILE, "andromeda.db", "andromeda-before-wormhole.db"]
             .iter()
@@ -90,7 +90,7 @@ fn migrate_legacy_data_in(base: &Path) -> Result<Option<PathBuf>> {
     }
     // An earlier version still running holds its instance lock there: leave its folder alone and
     // move it at a launch when that one has quit.
-    if crate::ipc::is_locked_instance_dir(&old) {
+    if crate::paths::in_use(&old) {
         anyhow::bail!("{} is in use by an earlier version that is still running", old.display());
     }
     // One rename on the same disk: the folder is either all here or all there.

@@ -35,7 +35,6 @@ use crate::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
 pub use control::run as run_control_cli;
-pub(crate) use instance::is_locked_instance_dir;
 pub use instance::{Instance, InstanceLock, acquire, start_server};
 pub use message::Message;
 

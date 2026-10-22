@@ -3,6 +3,7 @@
 //! list) are `profile`'s; this is only the layout on disk, which the store needs too.
 
 use std::fmt;
+use std::fs::{File, TryLockError};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -90,6 +91,17 @@ pub fn data_dir() -> PathBuf {
 /// The data folder's name in Application Support.
 pub(crate) fn data_dir_name() -> &'static str {
     "Wormhole"
+}
+
+/// The single-instance lock's file at the top of a data folder: the running instance holds a lock
+/// on it (`ipc::instance`).
+pub(crate) const INSTANCE_LOCK_FILE: &str = "instance.lock";
+
+/// Whether an instance runs with `dir` as its data folder (it holds the lock there). Taking the
+/// lock to find out lets it go again at once.
+pub(crate) fn in_use(dir: &Path) -> bool {
+    File::open(dir.join(INSTANCE_LOCK_FILE))
+        .is_ok_and(|file| matches!(file.try_lock(), Err(TryLockError::WouldBlock)))
 }
 
 /// The data folder as a whole. Its own files are shared by every profile; a profile's files are in

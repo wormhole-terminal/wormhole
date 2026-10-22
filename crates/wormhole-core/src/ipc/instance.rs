@@ -18,15 +18,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use super::{Incoming, Message, server, socket_path};
-use crate::paths::data_dir;
-
-const LOCK_FILE: &str = "instance.lock";
-
-/// Whether an instance runs with `dir` as its data folder (it holds the lock there). Taking the
-/// lock to find out lets it go again at once.
-pub(crate) fn is_locked_instance_dir(dir: &Path) -> bool {
-    File::open(dir.join(LOCK_FILE)).is_ok_and(|file| matches!(file.try_lock(), Err(TryLockError::WouldBlock)))
-}
+use crate::paths::{INSTANCE_LOCK_FILE, data_dir};
 
 /// Held while this process is the running instance (closing the file unlocks).
 #[derive(Debug)]
@@ -63,7 +55,7 @@ pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::
         .write(true)
         .truncate(false)
         .mode(crate::fsutil::PRIVATE_FILE)
-        .open(dir.join(LOCK_FILE))?;
+        .open(dir.join(INSTANCE_LOCK_FILE))?;
     match file.try_lock() {
         Ok(()) => {}
         Err(TryLockError::WouldBlock) => {
