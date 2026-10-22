@@ -169,6 +169,29 @@ fn the_menus_follow_the_window_in_front(cx: &mut TestAppContext) {
     assert_eq!(window_menu[first..first + 2], names[..], "in the sidebar's order: {window_menu:?}");
 }
 
+/// Every item's name in the menu bar, submenus included (Open Recent is one).
+fn menu_names(cx: &mut TestAppContext) -> Vec<String> {
+    fn walk(items: &[OwnedMenuItem], out: &mut Vec<String>) {
+        for item in items {
+            match item {
+                OwnedMenuItem::Action { name, .. } => out.push(name.to_string()),
+                OwnedMenuItem::Submenu(menu) => {
+                    out.push(menu.name.to_string());
+                    walk(&menu.items, out);
+                }
+                _ => {}
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for menu in cx.update(|cx| cx.get_menus()).unwrap_or_default() {
+        walk(&menu.items, &mut out);
+    }
+    out
+}
+
+// This registers `follow_changes` itself, so it shows the observer works, not that the launch
+// registers it (`app/launch.rs`): a launch that forgot the call would still pass.
 #[gpui_kit::test]
 fn the_menus_follow_a_change_the_shared_state_announces_at_once(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "the_menus_follow_a_change_the_shared_state_announces_at_once") {
@@ -180,7 +203,7 @@ fn the_menus_follow_a_change_the_shared_state_announces_at_once(cx: &mut TestApp
         crate::app::menus::follow_changes(cx);
         crate::app::menus::sync(cx);
     });
-    assert!(!cx.update(|cx| crate::app::menus::dump(cx)).contains("zebra-project"));
+    assert!(!menu_names(cx).iter().any(|name| name.contains("zebra-project")));
     // What a profile switch does at its end: change what the menus show and say so, with no tick
     // or key between.
     cx.update(|cx| {
@@ -188,7 +211,7 @@ fn the_menus_follow_a_change_the_shared_state_announces_at_once(cx: &mut TestApp
         crate::workspace::menu_state::menus_changed(cx);
     });
     assert!(
-        cx.update(|cx| crate::app::menus::dump(cx)).contains("zebra-project"),
+        menu_names(cx).iter().any(|name| name.contains("zebra-project")),
         "the menus were put up again when the update ended, not on the next tick"
     );
 }
