@@ -14,10 +14,11 @@ use wormhole_core::view::spoken;
 
 use crate::settings::UiColors;
 use crate::style;
+use crate::window::Workspace;
 use crate::window::features::notes::NotesView;
 use crate::window::features::notes::TaskItem;
 use crate::window::features::notes::items::{ItemKey, item_key, with_item_keys};
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 /// The task being written or edited in place.
 pub(in crate::window) struct TaskEdit {
@@ -123,7 +124,7 @@ impl Workspace {
         session.tasks_collapsed = false;
         self.panes.panel_wanted = true;
         self.remember_panes(cx);
-        self.right_tab = RightTab::Notes;
+        self.right_tab = TabId::Notes;
         cx.notify();
         // The editor's row only exists once the list has been rebuilt.
         cx.defer_in(window, move |_, window, cx| {

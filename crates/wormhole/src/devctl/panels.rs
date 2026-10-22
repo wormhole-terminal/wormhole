@@ -106,16 +106,12 @@ pub(super) fn trust_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `panel-tab <changes|history|notes|usage|project>`: show that tab of the right panel.
 pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    use crate::window::RightTab;
-    let tab = match arg.trim() {
-        "notes" => RightTab::Notes,
-        "changes" => RightTab::Changes,
-        "history" => RightTab::History,
-        "project" => RightTab::Project,
-        "usage" => RightTab::Usage,
-        other => return Err(anyhow!("expected changes, history, notes, usage or project, got {other:?}")),
+    use wormhole_core::config::TabId;
+    let arg = arg.trim();
+    let Some(tab) = TabId::from_key(arg) else {
+        return Err(anyhow!("expected changes, history, notes, usage or project, got {arg:?}"));
     };
-    if tab == RightTab::Notes && !crate::window::features::notes::notes_on(ctx.cx) {
+    if tab == TabId::Notes && !crate::window::features::notes::notes_on(ctx.cx) {
         return Ok("notes and tasks are off (feature_flags.notes_and_tasks)".into());
     }
     ctx.workspace.show_tab(tab, ctx.cx);

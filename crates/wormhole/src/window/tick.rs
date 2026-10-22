@@ -9,9 +9,10 @@
 use gpui_kit::*;
 
 use crate::settings::{settings_in, ui_in};
+use crate::window::Workspace;
 use crate::window::features::git::changes::GitPoll;
 use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 impl Workspace {
     /// Apply settings that live outside GPUI's render tree.
@@ -66,7 +67,7 @@ impl Workspace {
             }
         }
         // The Usage tab's times count down while it shows.
-        let usage_on_screen = self.notes_visible() && self.right_tab == RightTab::Usage;
+        let usage_on_screen = self.notes_visible() && self.right_tab == TabId::Usage;
         if changed
             || (usage_on_screen && self.ticks.is_multiple_of(crate::window::features::usage::REDRAW_TICKS))
         {
@@ -75,7 +76,7 @@ impl Workspace {
         self.sync_close_dot(window, cx);
         self.leave_missing_tab(cx);
         if self.notes_visible()
-            && self.right_tab == RightTab::History
+            && self.right_tab == TabId::History
             && (self.ticks.is_multiple_of(12) || self.history_unanswered(cx))
             && !self.active_session().history.waits_for_retry()
             && !self.history_absent(cx)

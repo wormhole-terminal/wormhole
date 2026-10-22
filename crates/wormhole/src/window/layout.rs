@@ -7,9 +7,10 @@ use wormhole_core::view::layout::{Columns, Edge, Panes};
 use crate::app_state::app_mut;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::style;
+use crate::window::Workspace;
 use crate::window::panes;
 use crate::window::resize::edge_rule;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
@@ -143,11 +144,11 @@ impl Render for Workspace {
         if notes_visible {
             // The panel's long lists are virtualized; bring their rows up to date first.
             match self.right_tab {
-                RightTab::Changes => self.sync_changes_list(cx),
-                RightTab::History => self.sync_history_list(),
-                RightTab::Notes => self.sync_notes_list(cx),
-                RightTab::Project => self.sync_folder_picker(window, cx),
-                RightTab::Usage => {}
+                TabId::Changes => self.sync_changes_list(cx),
+                TabId::History => self.sync_history_list(),
+                TabId::Notes => self.sync_notes_list(cx),
+                TabId::Project => self.sync_folder_picker(window, cx),
+                TabId::Usage => {}
             }
         }
         let ui = ui_in(&self.profile, cx);

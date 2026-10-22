@@ -6,9 +6,10 @@ use wormhole_core::storage::store::Store;
 use wormhole_core::view::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, WINDOW_MIN_WIDTH};
 
 use crate::app_state::{OpenWindow, app, app_mut};
+use crate::window::Workspace;
 use crate::window::view_tests::{draw, drive, isolate_in, read, start};
 use crate::window::window_lifecycle::open_workspace_window;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -46,7 +47,7 @@ fn a_window_without_a_layout_starts_as_the_columns_were_last_left(cx: &mut TestA
     let first = start(cx, 1);
     // Close the sidebar, open the panel on another tab.
     drive(cx, &first, |ws, _, cx| ws.toggle_sidebar(cx));
-    drive(cx, &first, |ws, _, cx| ws.show_tab(RightTab::Changes, cx));
+    drive(cx, &first, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
     let blank = open_blank_window(cx);
     let started = panes(cx, &blank);
     assert!(!started.sidebar_open && started.panel_wanted, "{started:?}");

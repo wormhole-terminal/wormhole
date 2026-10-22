@@ -12,7 +12,8 @@ use super::{BTreeMapEnv, LoadedProject, load_project, load_projects, project_fol
 use crate::app_state::{app, app_mut};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
-use crate::window::{RightTab, Workspace};
+use crate::window::Workspace;
+use wormhole_core::config::TabId;
 
 impl Workspace {
     /// Find each session's project and bring the ones in use up to date. Redraws only when
@@ -25,8 +26,8 @@ impl Workspace {
             let mut moved = !self.folder_projects.is_empty();
             self.folder_projects.clear();
             // The Project tab is gone with the feature; leave it showing nothing.
-            if self.right_tab == RightTab::Project {
-                self.right_tab = RightTab::Changes;
+            if self.right_tab == TabId::Project {
+                self.right_tab = TabId::Changes;
                 moved = true;
             }
             for session in &mut self.sessions {
@@ -168,6 +169,6 @@ impl Workspace {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_project_tab(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(RightTab::Project, cx);
+        self.show_tab(TabId::Project, cx);
     }
 }

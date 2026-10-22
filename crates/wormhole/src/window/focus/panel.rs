@@ -13,7 +13,8 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
 use super::{activation, list_key};
 use crate::settings::UiColors;
-use crate::window::{RightTab, Workspace};
+use crate::window::Workspace;
+use wormhole_core::config::TabId;
 
 /// How an item is pressed: ↩ or Space.
 pub(in crate::window) use wormhole_core::view::focus::list::Press as Activate;
@@ -32,10 +33,10 @@ impl Workspace {
     /// The rows of the tab on show that the keys can be on.
     fn panel_walkable(&self) -> Vec<Walkable> {
         match self.right_tab {
-            RightTab::Notes => self.notes_walkable(),
-            RightTab::Changes => self.changes_walkable(),
-            RightTab::History => self.history_walkable(),
-            RightTab::Project | RightTab::Usage => Vec::new(),
+            TabId::Notes => self.notes_walkable(),
+            TabId::Changes => self.changes_walkable(),
+            TabId::History => self.history_walkable(),
+            TabId::Project | TabId::Usage => Vec::new(),
         }
     }
 
@@ -134,10 +135,10 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let keeps = match self.right_tab {
-            RightTab::Notes if !following => self.notes_press(row, press, window, cx),
-            RightTab::Changes => self.changes_press(row, following, cx),
-            RightTab::History => self.history_press(row, following, cx),
-            RightTab::Notes | RightTab::Project | RightTab::Usage => true,
+            TabId::Notes if !following => self.notes_press(row, press, window, cx),
+            TabId::Changes => self.changes_press(row, following, cx),
+            TabId::History => self.history_press(row, following, cx),
+            TabId::Notes | TabId::Project | TabId::Usage => true,
         };
         if keeps {
             self.refocus(Area::PanelContent, window, cx);
@@ -147,20 +148,20 @@ impl Workspace {
     /// Fold or open the row at `row` (a section, a folder, a commit's files, the done steps).
     fn panel_fold(&mut self, row: usize, cx: &mut Context<Self>) {
         match self.right_tab {
-            RightTab::Notes => self.notes_fold(row, cx),
-            RightTab::Changes => self.changes_fold(row, cx),
-            RightTab::History => self.history_fold(row, cx),
-            RightTab::Project | RightTab::Usage => {}
+            TabId::Notes => self.notes_fold(row, cx),
+            TabId::Changes => self.changes_fold(row, cx),
+            TabId::History => self.history_fold(row, cx),
+            TabId::Project | TabId::Usage => {}
         }
     }
 
     /// Scroll the tab's list to show row `row`.
     fn panel_reveal(&self, row: usize) {
         match self.right_tab {
-            RightTab::Notes => self.notes_reveal(row),
-            RightTab::Changes => self.changes_reveal(row),
-            RightTab::History => self.history_reveal(row),
-            RightTab::Project | RightTab::Usage => {}
+            TabId::Notes => self.notes_reveal(row),
+            TabId::Changes => self.changes_reveal(row),
+            TabId::History => self.history_reveal(row),
+            TabId::Project | TabId::Usage => {}
         }
     }
 
@@ -178,11 +179,11 @@ impl Workspace {
     /// the tab, whose active descendant is the row the keys are on.
     pub(in crate::window) fn panel_content(&self, content: AnyElement, cx: &mut Context<Self>) -> AnyElement {
         let name = match self.right_tab {
-            RightTab::Notes => "Notes",
-            RightTab::Changes => "Changes",
-            RightTab::History => "History",
-            RightTab::Project => "Project",
-            RightTab::Usage => "Usage",
+            TabId::Notes => "Notes",
+            TabId::Changes => "Changes",
+            TabId::History => "History",
+            TabId::Project => "Project",
+            TabId::Usage => "Usage",
         };
         let list = div()
             .id("panel-content")

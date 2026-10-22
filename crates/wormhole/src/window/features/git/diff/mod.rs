@@ -264,7 +264,7 @@ impl Workspace {
 
     #[cfg(feature = "devctl")]
     pub(crate) fn show_changes(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(crate::window::RightTab::Changes, cx);
+        self.show_tab(wormhole_core::config::TabId::Changes, cx);
     }
 
     #[cfg(feature = "devctl")]

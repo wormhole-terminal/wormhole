@@ -8,8 +8,9 @@ use wormhole_core::view::focus::list::Key;
 use wormhole_core::view::focus::{Area, Stop};
 
 use super::{activation, list_key};
+use crate::window::Workspace;
 use crate::window::session::step_wrapping;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 /// The title row's buttons, in the focus order (region 1). The traffic lights are the system's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -106,7 +107,7 @@ impl Workspace {
             .tab_before_usage
             .take()
             .filter(|tab| *tab != self.right_tab && self.panel_tab_list(cx).contains(tab))
-            .unwrap_or(RightTab::Changes);
+            .unwrap_or(TabId::Changes);
         self.show_tab(back, cx);
     }
 
@@ -114,21 +115,21 @@ impl Workspace {
     /// folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
     /// one, where the project folder is made. It stays while it is the tab on show, so a terminal
     /// whose folder isn't known for a moment doesn't pull it out from under the person.
-    pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<RightTab> {
-        let mut tabs = vec![RightTab::Changes, RightTab::History];
+    pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
+        let mut tabs = vec![TabId::Changes, TabId::History];
         // Notes is behind its flag; when it's off Usage simply follows History.
         if crate::window::features::notes::notes_on(cx) {
-            tabs.push(RightTab::Notes);
+            tabs.push(TabId::Notes);
         }
         if self.usage_tab_on(cx) {
-            tabs.push(RightTab::Usage);
+            tabs.push(TabId::Usage);
         }
         // The Project tab belongs to the project-folder feature, so it's gone while that flag is
         // off (see `features`). It comes last so that the other tabs keep their place, and their
         // keys, whether it is there or not.
         let project_folders = crate::window::features::project::project_folders_on(cx);
-        if project_folders && (self.active_folder(cx).is_some() || self.right_tab == RightTab::Project) {
-            tabs.push(RightTab::Project);
+        if project_folders && (self.active_folder(cx).is_some() || self.right_tab == TabId::Project) {
+            tabs.push(TabId::Project);
         }
         tabs
     }

@@ -17,7 +17,8 @@ use wormhole_core::terminal::shells;
 use crate::actions::DEBUG;
 use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::window::{RightTab, Workspace};
+use crate::window::Workspace;
+use wormhole_core::config::TabId;
 
 /// What the menus show changed outside a key or the tick (a profile switch, a window moved to
 /// another profile). The app root observes it and puts the menus up again at once.
@@ -82,11 +83,11 @@ impl Workspace {
             state.off.push(ToggleRightPanel);
         }
         state.checked.push(match self.right_tab {
-            RightTab::Notes => ShowNotes,
-            RightTab::Changes => ShowChanges,
-            RightTab::History => ShowHistory,
-            RightTab::Project => ShowProject,
-            RightTab::Usage => ShowUsage,
+            TabId::Notes => ShowNotes,
+            TabId::Changes => ShowChanges,
+            TabId::History => ShowHistory,
+            TabId::Project => ShowProject,
+            TabId::Usage => ShowUsage,
         });
         if self.active_session().pinned {
             state.checked.push(PinTerminal);

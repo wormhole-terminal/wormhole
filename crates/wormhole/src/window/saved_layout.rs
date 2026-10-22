@@ -3,20 +3,9 @@
 //!
 //! Plain data that is serialized: it must not use GPUI, the shared state or any view.
 
+use wormhole_core::config::TabId;
 use wormhole_core::view::layout::Panes;
 use wormhole_core::view::sidebar::WindowSidebar;
-
-/// What the right panel shows.
-#[derive(Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum RightTab {
-    #[default]
-    Changes,
-    History,
-    Notes,
-    Usage,
-    Project,
-}
 
 /// A window's layout as saved with it.
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -26,19 +15,19 @@ pub(super) struct Layout {
     pub(super) notes_width: f32,
     pub(super) sidebar_open: bool,
     pub(super) notes_open: bool,
-    pub(super) right_tab: RightTab,
+    pub(super) right_tab: TabId,
     /// The sidebar's grouping, filter and search, and its folded bands.
     pub(super) sidebar: WindowSidebar,
 }
 
 impl Default for Layout {
     fn default() -> Self {
-        Self::new(Panes::default(), RightTab::default(), WindowSidebar::default())
+        Self::new(Panes::default(), TabId::default(), WindowSidebar::default())
     }
 }
 
 impl Layout {
-    pub(super) fn new(panes: Panes, right_tab: RightTab, sidebar: WindowSidebar) -> Self {
+    pub(super) fn new(panes: Panes, right_tab: TabId, sidebar: WindowSidebar) -> Self {
         Self {
             sidebar_width: panes.sidebar_width,
             notes_width: panes.panel_width,
@@ -57,5 +46,37 @@ impl Layout {
             panel_width: self.notes_width,
         }
         .restored()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A window's layout as 1.2.0 saved it (before the tabs were `TabId`s).
+    fn saved_by_1_2_0(tab: &str) -> String {
+        format!(
+            r#"{{"sidebar_width":264.0,"notes_width":312.0,"sidebar_open":true,"notes_open":false,"right_tab":"{tab}"}}"#
+        )
+    }
+
+    #[test]
+    fn a_layout_saved_by_1_2_0_opens_on_its_tab_and_writes_it_back_the_same() {
+        for tab in TabId::ALL {
+            let layout: Layout = serde_json::from_str(&saved_by_1_2_0(tab.key())).unwrap();
+            assert_eq!(layout.right_tab, tab);
+            assert_eq!(layout.sidebar_width, 264.0);
+            assert!(!layout.notes_open);
+            let written = serde_json::to_value(&layout).unwrap();
+            assert_eq!(written["right_tab"], tab.key(), "1.2.0 reads what this writes");
+        }
+    }
+
+    #[test]
+    fn a_tab_of_a_newer_build_opens_changes_and_keeps_the_rest_of_the_layout() {
+        let layout: Layout = serde_json::from_str(&saved_by_1_2_0("terminal-log")).unwrap();
+        assert_eq!(layout.right_tab, TabId::Changes);
+        assert_eq!((layout.sidebar_width, layout.notes_width), (264.0, 312.0));
+        assert!(layout.sidebar_open && !layout.notes_open);
     }
 }

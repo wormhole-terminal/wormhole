@@ -10,7 +10,8 @@ use wormhole_core::view::reorder;
 use crate::settings::ui_in;
 use crate::window::features::notes::items::{ItemKey, item_key};
 use crate::window::features::notes::paragraphs::{chunks_blank, paragraph_at};
-use crate::window::{RightTab, Workspace, panel_list};
+use crate::window::{Workspace, panel_list};
+use wormhole_core::config::TabId;
 
 pub(in crate::window) mod items;
 #[cfg(test)]
@@ -103,7 +104,7 @@ impl Workspace {
     /// note added or focused next is on screen. (With Changes, History or Project showing, or
     /// the section folded, there is nothing to type into.)
     pub(in crate::window) fn reveal_notes_tab(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(RightTab::Notes, cx);
+        self.show_tab(TabId::Notes, cx);
         self.sessions[self.active].notes_collapsed = false;
     }
 
@@ -278,10 +279,10 @@ impl Workspace {
     #[cfg(feature = "devctl")]
     pub(crate) fn devctl_panel_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
         let list = match self.right_tab {
-            RightTab::Changes => self.devctl_changes_list(),
-            RightTab::History => self.devctl_history_list(),
-            RightTab::Notes => self.devctl_notes_list(),
-            RightTab::Project | RightTab::Usage => return,
+            TabId::Changes => self.devctl_changes_list(),
+            TabId::History => self.devctl_history_list(),
+            TabId::Notes => self.devctl_notes_list(),
+            TabId::Project | TabId::Usage => return,
         };
         list.scroll_by(px(y));
         cx.notify();
@@ -405,11 +406,8 @@ impl Workspace {
         let ui = ui_in(&self.profile, cx);
         // The tab actually on screen: if the chosen one isn't in the tab list any more (the
         // Project tab vanished with its feature flag), show Notes until the next refresh resets it.
-        let tab = if self.panel_tab_list(cx).contains(&self.right_tab) {
-            self.right_tab
-        } else {
-            RightTab::Changes
-        };
+        let tab =
+            if self.panel_tab_list(cx).contains(&self.right_tab) { self.right_tab } else { TabId::Changes };
         div()
             .relative()
             .flex()
@@ -423,35 +421,35 @@ impl Workspace {
             .child(div().flex().flex_col().flex_1().min_h_0().child(match tab {
                 // Virtualized lists fill the panel and scroll themselves; the list area holds the
                 // keyboard for them.
-                RightTab::Changes => {
+                TabId::Changes => {
                     let list = self.render_changes_tab(window, cx);
                     self.panel_content(list, cx)
                 }
-                RightTab::History => {
+                TabId::History => {
                     let list = self.render_history_tab(window, cx);
                     self.panel_content(list, cx)
                 }
-                RightTab::Notes => {
+                TabId::Notes => {
                     let list = self.render_notes_tab(window, cx);
                     self.panel_content(list, cx)
                 }
                 // Short tabs, all there at once: a plain scrolling column.
-                RightTab::Project => {
+                TabId::Project => {
                     let content = self.render_project_tab(cx).into_any_element();
                     panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
                 }
-                RightTab::Usage => {
+                TabId::Usage => {
                     let content = self.render_usage_tab(cx).into_any_element();
                     panel_list::scroll_column("usage-scroll", &self.panel_scroll, ui, content, cx)
                 }
             }))
     }
 
-    pub(crate) fn show_tab(&mut self, tab: RightTab, cx: &mut Context<Self>) {
+    pub(crate) fn show_tab(&mut self, tab: TabId, cx: &mut Context<Self>) {
         // The Notes tab is gone while its flag is off.
-        let tab = if tab == RightTab::Notes && !notes_on(cx) { RightTab::Changes } else { tab };
-        let tab = if tab == RightTab::Usage && !self.usage_tab_on(cx) { RightTab::Changes } else { tab };
-        if tab == RightTab::Usage && self.right_tab != RightTab::Usage {
+        let tab = if tab == TabId::Notes && !notes_on(cx) { TabId::Changes } else { tab };
+        let tab = if tab == TabId::Usage && !self.usage_tab_on(cx) { TabId::Changes } else { tab };
+        if tab == TabId::Usage && self.right_tab != TabId::Usage {
             self.tab_before_usage = Some(self.right_tab);
         }
         if tab != self.right_tab {
@@ -463,10 +461,10 @@ impl Workspace {
         self.picker = None;
         let ix = self.active;
         match tab {
-            RightTab::Changes => self.refresh_git(ix, cx),
-            RightTab::History => self.refresh_history(ix, cx),
-            RightTab::Project => self.refresh_projects(cx),
-            RightTab::Notes | RightTab::Usage => {}
+            TabId::Changes => self.refresh_git(ix, cx),
+            TabId::History => self.refresh_history(ix, cx),
+            TabId::Project => self.refresh_projects(cx),
+            TabId::Notes | TabId::Usage => {}
         }
         self.mark_dirty(cx);
     }

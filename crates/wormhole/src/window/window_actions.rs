@@ -19,7 +19,8 @@ use crate::actions::{
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
-use crate::window::{RightTab, Workspace, sidebar};
+use crate::window::{Workspace, sidebar};
+use wormhole_core::config::TabId;
 
 /// The zoom (points over the Settings size) after one more step, kept within [`FONT_SIZES`].
 fn zoomed(base: f32, zoom: f32, step: f32) -> f32 {
@@ -128,16 +129,14 @@ impl Workspace {
             }))
             .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| this.toggle_sidebar(cx)))
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
-            .on_action(cx.listener(|this, _: &ShowChanges, _, cx| this.show_tab(RightTab::Changes, cx)))
-            .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(RightTab::History, cx)))
+            .on_action(cx.listener(|this, _: &ShowChanges, _, cx| this.show_tab(TabId::Changes, cx)))
+            .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(TabId::History, cx)))
             .when(self.usage_tab_on(cx), |root| {
-                root.on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(RightTab::Usage, cx)))
+                root.on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(TabId::Usage, cx)))
             })
             // Any terminal whose folder is known has the tab, with a project or not.
             .when(has_folder, |root| {
-                root.on_action(
-                    cx.listener(|this, _: &ShowProject, _, cx| this.show_tab(RightTab::Project, cx)),
-                )
+                root.on_action(cx.listener(|this, _: &ShowProject, _, cx| this.show_tab(TabId::Project, cx)))
             })
             .on_action(
                 cx.listener(|this, _: &FocusTerminalOrPanel, window, cx| this.toggle_focus(window, cx)),
@@ -150,7 +149,7 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
             .when(crate::window::features::notes::notes_on(cx), |root| {
-                root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(RightTab::Notes, cx)))
+                root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(TabId::Notes, cx)))
                     .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
                     .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))
             })

@@ -21,7 +21,8 @@ use wormhole_core::view::focus::list::{Key, TypeAhead};
 use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
 use crate::actions;
-use crate::window::{RightTab, Workspace};
+use crate::window::Workspace;
+use wormhole_core::config::TabId;
 
 pub(super) use bars::TitleButton;
 pub(in crate::window) use menu::key_menu_origin;
@@ -62,7 +63,7 @@ pub(super) struct FocusAreas {
     pub(super) title: usize,
     pub(super) sidebar_at: Option<SidebarStop>,
     /// The panel row the keys are on: its tab and its place among that tab's rows.
-    pub(super) panel_at: Option<(RightTab, usize)>,
+    pub(super) panel_at: Option<(TabId, usize)>,
     /// The status bar's item the keys are on.
     pub(super) status: usize,
     /// Letters typed in the sidebar to jump to a name.
@@ -415,13 +416,13 @@ impl Workspace {
 }
 
 #[cfg(feature = "devctl")]
-fn tab_name(tab: RightTab) -> &'static str {
+fn tab_name(tab: TabId) -> &'static str {
     match tab {
-        RightTab::Notes => "notes",
-        RightTab::Changes => "changes",
-        RightTab::History => "history",
-        RightTab::Project => "project",
-        RightTab::Usage => "usage",
+        TabId::Notes => "notes",
+        TabId::Changes => "changes",
+        TabId::History => "history",
+        TabId::Project => "project",
+        TabId::Usage => "usage",
     }
 }
 

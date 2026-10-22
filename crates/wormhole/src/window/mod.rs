@@ -122,9 +122,9 @@ pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
 use self::saved_layout::Layout;
-pub(crate) use self::saved_layout::RightTab;
 use self::session::Session;
 use crate::window::features::git::{diff_view, picker};
+use wormhole_core::config::TabId;
 
 use crate::terminal_view::Status;
 use wormhole_core::storage::store::WindowRecord;
@@ -161,10 +161,10 @@ pub struct Workspace {
     beside: f32,
     /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
     sidebar: self::sidebar::SidebarState,
-    right_tab: RightTab,
+    right_tab: TabId,
     /// The tab that was open when Usage was opened: where the panel goes back to when no agent
     /// is left to show usage for.
-    tab_before_usage: Option<RightTab>,
+    tab_before_usage: Option<TabId>,
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
@@ -326,7 +326,7 @@ impl Workspace {
             window_width: f32::MAX,
             beside: 0.0,
             sidebar,
-            right_tab: RightTab::default(),
+            right_tab: TabId::default(),
             tab_before_usage: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,

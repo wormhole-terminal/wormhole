@@ -24,10 +24,11 @@ use crate::app_state::{AppState, OpenWindow, app};
 use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
+use crate::window::Workspace;
 use crate::window::picker::Picker;
 use crate::window::status_bar::StatusItem;
 use crate::window::window_lifecycle::open_workspace_window;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 const CHILD: &str = "WORMHOLE_VIEW_TEST_CHILD";
 
@@ -282,7 +283,7 @@ fn cmd_e_shows_the_notes_tab_before_focusing_a_note(cx: &mut TestAppContext) {
     let window = start(cx, 1);
     drive(cx, &window, |ws, window, cx| {
         ws.add_note(0, Some("remember this".into()), false, window, cx);
-        ws.show_tab(RightTab::Changes, cx);
+        ws.show_tab(TabId::Changes, cx);
         ws.sessions[0].notes_collapsed = true;
         ws.focus_terminal(window, cx);
         assert!(ws.active_terminal().focus_handle(cx).is_focused(window), "the terminal has the keyboard");
@@ -290,7 +291,7 @@ fn cmd_e_shows_the_notes_tab_before_focusing_a_note(cx: &mut TestAppContext) {
 
     drive(cx, &window, |ws, window, cx| ws.toggle_focus(window, cx));
     drive(cx, &window, |ws, window, cx| {
-        assert!(ws.right_tab == RightTab::Notes, "the panel switched to the Notes tab");
+        assert!(ws.right_tab == TabId::Notes, "the panel switched to the Notes tab");
         assert!(!ws.sessions[0].notes_collapsed, "and unfolded the section");
         assert_eq!(ws.focused_note, Some(0));
         let focus = ws.sessions[0].notes[0].state.read(cx).focus_handle(cx);
@@ -306,12 +307,12 @@ fn a_new_note_and_a_clicked_note_are_shown_and_focused(cx: &mut TestAppContext) 
     let window = start(cx, 1);
     // ⌥⌘N with History showing and the Notes section folded away.
     drive(cx, &window, |ws, _, cx| {
-        ws.show_tab(RightTab::History, cx);
+        ws.show_tab(TabId::History, cx);
         ws.sessions[0].notes_collapsed = true;
     });
     drive(cx, &window, |ws, window, cx| ws.new_note(Some("first".into()), window, cx));
     drive(cx, &window, |ws, window, cx| {
-        assert!(ws.right_tab == RightTab::Notes);
+        assert!(ws.right_tab == TabId::Notes);
         assert!(!ws.sessions[0].notes_collapsed);
         assert_eq!((ws.sessions[0].notes.len(), ws.focused_note), (1, Some(0)));
         assert!(ws.sessions[0].notes[0].state.read(cx).focus_handle(cx).is_focused(window));

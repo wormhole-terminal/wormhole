@@ -4,8 +4,8 @@ use gpui_kit::{OwnedMenuItem, TestAppContext};
 use wormhole_core::view::focus::Area;
 
 use crate::app_state::{OpenWindow, app, app_mut};
-use crate::window::RightTab;
 use crate::window::view_tests::{draw, drive, hook, isolate_in, press, read, start};
+use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -51,9 +51,9 @@ fn the_shortcut_keys_reach_their_actions(cx: &mut TestAppContext) {
     assert_eq!(terminals(cx), (3, 1), "⌘2: the second terminal");
 
     key(cx, &window, "ctrl-cmd-2");
-    read(cx, &window, |ws| assert!(ws.right_tab == RightTab::History, "⌃⌘2: History"));
+    read(cx, &window, |ws| assert!(ws.right_tab == TabId::History, "⌃⌘2: History"));
     key(cx, &window, "ctrl-cmd-3");
-    read(cx, &window, |ws| assert!(ws.right_tab == RightTab::Notes, "⌃⌘3: Notes"));
+    read(cx, &window, |ws| assert!(ws.right_tab == TabId::Notes, "⌃⌘3: Notes"));
     // Usage is there while an agent is.
     drive(cx, &window, |ws, _, cx| {
         ws.sessions[ws.active]
@@ -67,9 +67,9 @@ fn the_shortcut_keys_reach_their_actions(cx: &mut TestAppContext) {
             .update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude));
     });
     key(cx, &window, "ctrl-cmd-4");
-    read(cx, &window, |ws| assert!(ws.right_tab == RightTab::Usage, "⌃⌘4: Usage"));
+    read(cx, &window, |ws| assert!(ws.right_tab == TabId::Usage, "⌃⌘4: Usage"));
     key(cx, &window, "ctrl-cmd-1");
-    read(cx, &window, |ws| assert!(ws.right_tab == RightTab::Changes, "⌃⌘1: Changes"));
+    read(cx, &window, |ws| assert!(ws.right_tab == TabId::Changes, "⌃⌘1: Changes"));
 
     let sidebar = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.panes.sidebar_open);
     let before = sidebar(cx);

@@ -15,8 +15,9 @@ use wormhole_core::view::spoken::{self, PanelTab};
 use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
 use crate::style;
+use crate::window::Workspace;
 use crate::window::focus::TitleButton;
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 /// The traffic lights start 12 pt in, on the line the sidebar's "Terminals" starts on (the user's
 /// call over the board's 20, which left the lights hanging right of everything below them). They
@@ -273,7 +274,7 @@ impl Workspace {
             .child(self.render_panel_tabs(window, cx))
             // The Notes tab's one action sits beside the panel toggle rather than
             // on a row of its own above the list.
-            .when(self.right_tab == RightTab::Notes && crate::window::features::notes::notes_on(cx), |d| {
+            .when(self.right_tab == TabId::Notes && crate::window::features::notes::notes_on(cx), |d| {
                 d.child(
                     div().id("panel-actions").occlude().flex_none().child(
                         style::icon_tab(
@@ -313,14 +314,14 @@ impl Workspace {
                    label: &str,
                    key: ActionId,
                    count: Option<usize>,
-                   tab: RightTab| {
+                   tab: TabId| {
             let active = self.right_tab == tab;
             let spoken = spoken::panel_tab(match tab {
-                RightTab::Notes => PanelTab::Notes { open_steps, notes },
-                RightTab::Changes => PanelTab::Changes { files },
-                RightTab::History => PanelTab::History,
-                RightTab::Project => PanelTab::Project,
-                RightTab::Usage => PanelTab::Usage,
+                TabId::Notes => PanelTab::Notes { open_steps, notes },
+                TabId::Changes => PanelTab::Changes { files },
+                TabId::History => PanelTab::History,
+                TabId::Project => PanelTab::Project,
+                TabId::Usage => PanelTab::Usage,
             });
             style::icon_tab(id, ui, icon, keymap::with_key(label, key), active, count)
                 .relative()
@@ -351,7 +352,7 @@ impl Workspace {
                 "Changes",
                 ActionId::ShowChanges,
                 changes,
-                RightTab::Changes,
+                TabId::Changes,
             ))
             .child(tab(
                 "tab-history",
@@ -359,38 +360,31 @@ impl Workspace {
                 "History",
                 ActionId::ShowHistory,
                 None,
-                RightTab::History,
+                TabId::History,
             ))
-            .when(tabs.contains(&RightTab::Notes), |d| {
+            .when(tabs.contains(&TabId::Notes), |d| {
                 d.child(tab(
                     "tab-notes",
                     IconName::FileText,
                     "Notes",
                     ActionId::ShowNotes,
                     None,
-                    RightTab::Notes,
+                    TabId::Notes,
                 ))
             })
-            .when(tabs.contains(&RightTab::Usage), |d| {
-                d.child(tab(
-                    "tab-usage",
-                    IconName::Gauge,
-                    "Usage",
-                    ActionId::ShowUsage,
-                    None,
-                    RightTab::Usage,
-                ))
+            .when(tabs.contains(&TabId::Usage), |d| {
+                d.child(tab("tab-usage", IconName::Gauge, "Usage", ActionId::ShowUsage, None, TabId::Usage))
             })
             // Whenever the terminal has a folder: its colour is set there, and its project made.
             // Last, so the tabs before it never shift when it comes and goes.
-            .when(tabs.contains(&RightTab::Project), |d| {
+            .when(tabs.contains(&TabId::Project), |d| {
                 d.child(tab(
                     "tab-project",
                     IconName::Folder,
                     "Project",
                     ActionId::ShowProject,
                     None,
-                    RightTab::Project,
+                    TabId::Project,
                 ))
             });
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()

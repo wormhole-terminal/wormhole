@@ -6,8 +6,8 @@ use wormhole_core::view::focus::Area;
 
 use super::SidebarStop;
 use crate::app_state::OpenWindow;
-use crate::window::RightTab;
 use crate::window::view_tests::{draw, drive, isolate_in, press, read, start};
+use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
@@ -104,7 +104,7 @@ fn the_next_steps_are_walked_and_ticked_from_the_keyboard(cx: &mut TestAppContex
     drive(cx, &window, |ws, _, cx| {
         ws.add_task("Fix the flaky login test".into(), cx);
         ws.add_task("Update README".into(), cx);
-        ws.show_tab(RightTab::Notes, cx);
+        ws.show_tab(TabId::Notes, cx);
     });
     assert!(read(cx, &window, |ws| ws.notes_visible()), "the panel is on screen");
     let done = |cx: &mut TestAppContext| {
@@ -136,7 +136,7 @@ fn on_a_section_band_only_space_folds_it(cx: &mut TestAppContext) {
     let window = start(cx, 1);
     drive(cx, &window, |ws, _, cx| {
         ws.add_task("Fix the flaky login test".into(), cx);
-        ws.show_tab(RightTab::Notes, cx);
+        ws.show_tab(TabId::Notes, cx);
     });
     let folded = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.active_session().tasks_collapsed);
 
@@ -204,7 +204,7 @@ fn ctrl_return_opens_the_rows_menu_from_the_keyboard(cx: &mut TestAppContext) {
     assert_eq!(area(cx, &window), Some(Area::Sidebar), "the list keeps the keys; the menu is the system's");
     assert!(crate::platform::record::close().is_some(), "and it can be dismissed");
 
-    drive(cx, &window, |ws, _, cx| ws.show_tab(RightTab::Notes, cx));
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Notes, cx));
     f6_to(cx, &window, Area::PanelContent);
     key(cx, &window, "ctrl-enter");
     assert!(crate::platform::record::open().is_none(), "the panel's rows have no menu yet");

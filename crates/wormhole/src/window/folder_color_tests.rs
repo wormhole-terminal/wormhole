@@ -12,10 +12,11 @@ use wormhole_core::theme::folder_color::FolderColor;
 use crate::app_state::OpenWindow;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
+use crate::window::Workspace;
 use crate::window::features::project::set_feature_for;
 use crate::window::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start};
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -175,7 +176,7 @@ fn with_the_project_folder_flag_off_nothing_is_written_into_the_repository(cx: &
     let tinted_row = drive(cx, &window, |ws, window, cx| tint(ws, window, cx));
     assert_eq!(tinted_row, None, "the project's teal is gone from the title row");
     let tabs = cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.panel_tab_list(cx))).expect("open");
-    assert!(!tabs.contains(&RightTab::Project));
+    assert!(!tabs.contains(&TabId::Project));
 
     drive(cx, &window, |_, _, cx| set_folder_color(&opened, &tinted, Some(FolderColor::Red), cx));
     assert_eq!(config_of(&tinted), r#"{ "project_color": "teal" }"#, "the repository is untouched");
@@ -403,11 +404,11 @@ fn the_project_tab_is_there_for_any_folder_and_makes_the_project(cx: &mut TestAp
     let tabs = |cx: &mut TestAppContext| {
         cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.panel_tab_list(cx))).expect("open")
     };
-    assert!(!tabs(cx).contains(&RightTab::Project), "no folder yet: the shell hasn't said where it is");
+    assert!(!tabs(cx).contains(&TabId::Project), "no folder yet: the shell hasn't said where it is");
 
     let bare = folder("bare", None);
     drive(cx, &window, |ws, _, cx| go(ws, &bare, cx));
-    assert!(tabs(cx).contains(&RightTab::Project), "a folder is enough, with no .wormhole/");
+    assert!(tabs(cx).contains(&TabId::Project), "a folder is enough, with no .wormhole/");
     assert!(read(cx, &window, |ws| ws.active_session().project.clone().is_none()));
 
     drive(cx, &window, |ws, _, cx| ws.create_project_folder(cx));

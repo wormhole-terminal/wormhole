@@ -18,10 +18,11 @@ use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fi
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
+use crate::window::Workspace;
 use crate::window::features::git::picker;
 use crate::window::title::path_card::Over;
 use crate::window::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
-use crate::window::{RightTab, Workspace};
+use wormhole_core::config::TabId;
 
 impl Workspace {
     /// The terminal's title row content: its breadcrumb, the row's keyboard stop with its ring.
@@ -252,7 +253,7 @@ impl Workspace {
                         .when(text, |d| d.child(div().min_w_0().truncate().child(name.to_string()))),
                 )
                 .on_click(cx.listener(|this, _, window, cx| {
-                    this.show_tab(RightTab::Changes, cx);
+                    this.show_tab(TabId::Changes, cx);
                     this.toggle_picker(picker::Picker::Compare, window, cx);
                 }))
         });

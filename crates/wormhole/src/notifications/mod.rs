@@ -37,10 +37,10 @@ use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
 use crate::settings::{settings, settings_in};
-use crate::window::RightTab;
 use crate::window::ambient::{self, TabFacts};
 use crate::window::window_lifecycle::open_tab;
 use watch::{Event, Watch};
+use wormhole_core::config::TabId;
 
 /// The actions a notification can carry (`Notice::category` picks which).
 pub(crate) const OPEN: &str = "open";
@@ -488,7 +488,7 @@ pub(crate) fn respond(response: Response, cx: &mut App) {
             crate::background::activate(cx);
             open_tab(tab, cx);
             if let Some(owner) = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some()) {
-                AppState::with_workspace(&owner, cx, |ws, _, cx| ws.show_tab(RightTab::Changes, cx));
+                AppState::with_workspace(&owner, cx, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
             }
         }
         _ => {
