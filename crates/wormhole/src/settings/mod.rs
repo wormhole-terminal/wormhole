@@ -163,7 +163,7 @@ impl SettingsStore {
         Self::load_for(&crate::active_profile::paths())
     }
 
-    pub fn load_for(paths: &wormhole_core::profile::ProfilePaths) -> Self {
+    pub fn load_for(paths: &wormhole_core::paths::ProfilePaths) -> Self {
         Self::new(Config::load_for(paths))
     }
 

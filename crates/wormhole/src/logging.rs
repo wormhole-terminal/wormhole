@@ -15,7 +15,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 /// Where the log files are (Help → Show Logs in Finder opens it).
 pub fn dir() -> std::path::PathBuf {
-    wormhole_core::profile::data_dir().join("logs")
+    wormhole_core::paths::data_dir().join("logs")
 }
 
 /// Install the global subscriber. Keep the guard alive for the whole run so

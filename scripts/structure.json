@@ -69,6 +69,7 @@
           "fsutil",
           "jsonc",
           "limits",
+          "paths",
           "text"
         ],
         [

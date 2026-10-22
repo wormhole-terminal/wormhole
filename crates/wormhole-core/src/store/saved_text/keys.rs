@@ -112,7 +112,7 @@ fn to_key(bytes: &[u8], what: &str) -> Result<Key> {
 
 /// The real data folder (the one without `WORMHOLE_DATA_DIR`).
 fn real_data_dir() -> Option<PathBuf> {
-    dirs::data_dir().map(|base| base.join(crate::profile::data_dir_name()))
+    dirs::data_dir().map(|base| base.join(crate::paths::data_dir_name()))
 }
 
 /// Whether `dir` is the real data folder or inside it.

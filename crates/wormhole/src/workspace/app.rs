@@ -24,7 +24,8 @@ use wormhole_core::ipc;
 use wormhole_core::layout::{Panes, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 use wormhole_core::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
-use wormhole_core::profile::{DataRoot, ProfileId, ProfileList};
+use wormhole_core::paths::{DataRoot, ProfileId};
+use wormhole_core::profile::ProfileList;
 use wormhole_core::store::{Store, WindowRecord};
 use wormhole_core::tokens::Appearance;
 

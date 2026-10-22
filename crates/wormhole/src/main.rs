@@ -58,7 +58,7 @@ fn main() {
     // Files an earlier version (or the log appender) made with the umask's modes become
     // owner-only; on a thread of its own so a large folder doesn't hold up the launch.
     let _ = std::thread::Builder::new().name("private-data".into()).spawn(|| {
-        wormhole_core::store::make_data_dir_private(&wormhole_core::profile::data_dir());
+        wormhole_core::store::make_data_dir_private(&wormhole_core::paths::data_dir());
     });
     let Some(hook_events) = wormhole_core::ipc::start_server() else {
         tracing::info!(
@@ -86,7 +86,7 @@ fn main() {
         fonts::init(cx);
         // The profile Wormhole was left in: its files are the ones read from here on. With only
         // Default (no `profiles.json`) these are the data folder's own, where they have always been.
-        let root = wormhole_core::profile::DataRoot::current();
+        let root = wormhole_core::paths::DataRoot::current();
         let (profiles, profiles_error) = wormhole_core::profile::ProfileList::load_or_recover(&root);
         active_profile::set(root.profile(profiles.active_id()));
         cx.set_global(settings::SettingsStore::load());

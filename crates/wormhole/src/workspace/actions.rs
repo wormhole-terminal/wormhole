@@ -19,7 +19,7 @@ use gpui_kit::*;
 use wormhole_core::intro::{Handover, Style};
 use wormhole_core::keymap::{self, ActionId, Scope, Stage};
 use wormhole_core::keyspec::KeySpec;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::sidebar::TerminalsIn;
 use wormhole_core::sidebar::order::shortcut_target;
 

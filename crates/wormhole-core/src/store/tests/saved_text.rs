@@ -277,7 +277,7 @@ fn the_key_is_kept_under_a_random_id_and_thrown_away_on_erase() {
 fn a_deleted_profiles_key_goes_with_it() {
     let base = tempfile::tempdir().expect("temp dir");
     let data = base.path().join("Wormhole");
-    let paths = crate::profile::DataRoot::new(&data).default_profile();
+    let paths = crate::paths::DataRoot::new(&data).default_profile();
     layout_with_text(&mut Store::open_for(&paths).expect("opens"));
     assert!(data.join("scrollback-key.dev-only").is_file());
     Store::forget_text_key_for(&paths);

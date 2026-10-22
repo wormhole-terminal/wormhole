@@ -6,7 +6,8 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::*;
-use wormhole_core::profile::{NewProfile, ProfileId, StartFrom, first_letter};
+use wormhole_core::paths::ProfileId;
+use wormhole_core::profile::{NewProfile, StartFrom, first_letter};
 use wormhole_core::settings_index::SectionId as Section;
 
 use crate::settings::SettingsStore;

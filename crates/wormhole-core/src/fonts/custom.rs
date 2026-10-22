@@ -13,7 +13,7 @@ use skrifa::raw::{FileRef, ReadError, TableProvider};
 use skrifa::string::StringId;
 use skrifa::{FontRef, MetadataProvider};
 
-use crate::profile::data_dir;
+use crate::paths::data_dir;
 
 /// TrueType, OpenType (TrueType or CFF outlines) and collections of either.
 pub const EXTENSIONS: [&str; 4] = ["ttf", "otf", "ttc", "otc"];

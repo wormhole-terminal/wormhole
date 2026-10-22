@@ -3,7 +3,8 @@
 //! how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 use wormhole_core::config::ThemeMode;
-use wormhole_core::profile::{NewProfile, ProfileId, StartFrom};
+use wormhole_core::paths::ProfileId;
+use wormhole_core::profile::{NewProfile, StartFrom};
 
 use super::app::{AppState, app};
 use super::view_tests::{draw, isolate_in, read, start};

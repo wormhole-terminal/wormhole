@@ -15,7 +15,7 @@ use gpui_kit::{App, FontFeatures, Global, Pixels, SharedString, px};
 use wormhole_core::fonts::FontSlot;
 use wormhole_core::fonts::bundled;
 use wormhole_core::fonts::custom::{self, FontFile, Scan};
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 
 use crate::platform::fonts::{classify, register};
 use crate::settings::SettingsStore;

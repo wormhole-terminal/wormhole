@@ -9,7 +9,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::terminal::types::Modes;
 
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 
 use crate::settings::store_in;
 use wormhole_core::agents::{AgentId, Foreground};

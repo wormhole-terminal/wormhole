@@ -1,8 +1,82 @@
-//! Where the files are: the shared ones at the top of the data folder, each profile's below it.
+//! Where the files are: the data folder, the shared files at its top and each profile's below it,
+//! and the profile id that names a profile's folder there. Profiles themselves (what one has, the
+//! list) are `profile`'s; this is only the layout on disk, which the store needs too.
 
+use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::model::ProfileId;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+/// The Default profile's id. It always exists and keeps the data folder's own files.
+pub const DEFAULT_ID: &str = "default";
+
+const MAX_ID: usize = 32;
+
+/// A profile's id: the folder name under `profiles/`, so only what is safe as one (lower-case
+/// letters, digits and dashes, 1 to 32 characters, no dash at either end). Whatever the file says,
+/// an id can't lead a path out of the data folder.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ProfileId(String);
+
+impl ProfileId {
+    pub fn default_profile() -> Self {
+        Self(DEFAULT_ID.into())
+    }
+
+    pub fn parse(text: &str) -> Result<Self, InvalidProfileId> {
+        let ok = !text.is_empty()
+            && text.len() <= MAX_ID
+            && !text.starts_with('-')
+            && !text.ends_with('-')
+            && text.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+        if ok { Ok(Self(text.into())) } else { Err(InvalidProfileId(text.into())) }
+    }
+
+    /// `p<seconds>`, an id that is valid by construction: the last resort when a profile's name
+    /// gives no free one.
+    pub(crate) fn from_clock(secs: u64) -> Self {
+        Self(format!("p{secs}"))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn is_default(&self) -> bool {
+        self.0 == DEFAULT_ID
+    }
+}
+
+impl fmt::Display for ProfileId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl Serialize for ProfileId {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for ProfileId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        Self::parse(&text).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Why a text isn't a profile id; it says so to the person who typed it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidProfileId(String);
+
+impl fmt::Display for InvalidProfileId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"{}\" is not a profile id", self.0)
+    }
+}
+
+impl std::error::Error for InvalidProfileId {}
 
 /// The running app's data folder: `Wormhole` in Application Support, or the folder
 /// `WORMHOLE_DATA_DIR` names (used for isolated test runs).

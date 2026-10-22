@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::notify::Source;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::sidebar::RowState;
 use wormhole_core::sidebar::command::{OutputFacts, ends_by_itself, has_new_output};
 

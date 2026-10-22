@@ -5,7 +5,7 @@
 //! erased as it opens (`profiles::open_beside`).
 
 use gpui_kit::{App, Global};
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 
 use super::app::app;
 use crate::settings::{SettingsStore, settings};

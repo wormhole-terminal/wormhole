@@ -18,7 +18,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use super::{Incoming, Message, server, socket_path};
-use crate::profile::data_dir;
+use crate::paths::data_dir;
 
 const LOCK_FILE: &str = "instance.lock";
 

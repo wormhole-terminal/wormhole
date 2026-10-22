@@ -28,7 +28,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
 
-use crate::profile::{data_dir, data_dir_name};
+use crate::paths::{data_dir, data_dir_name};
 use saved_text::platform::{self, Platform};
 
 /// Make Wormhole's files and folders in its data folder owner-only (folders `0700`, files `0600`),
@@ -151,12 +151,12 @@ impl Store {
 
     /// A profile's database (Default's is the data folder's own, so this is [`open`](Self::open)
     /// for it).
-    pub fn open_for(paths: &crate::profile::ProfilePaths) -> Result<Self> {
+    pub fn open_for(paths: &crate::paths::ProfilePaths) -> Result<Self> {
         Self::open_at(paths.dir())
     }
 
     /// Whether the profile has a database yet (a new one has none until it is first opened).
-    pub fn exists_for(paths: &crate::profile::ProfilePaths) -> bool {
+    pub fn exists_for(paths: &crate::paths::ProfilePaths) -> bool {
         paths.dir().join(DB_FILE).exists()
     }
 

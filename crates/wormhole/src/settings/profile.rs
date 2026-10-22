@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use gpui_kit::{App, Global};
 use wormhole_core::config::Settings;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 
 use super::{SettingsStore, UiColors};
 

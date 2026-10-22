@@ -18,7 +18,8 @@ use wormhole_core::layout::REMEMBERED_PANES_KEY;
 use wormhole_core::layout::RememberedPanes;
 use wormhole_core::onboarding::DISMISSED_TIPS_KEY;
 use wormhole_core::onboarding::DismissedTips;
-use wormhole_core::profile::{DataRoot, NewProfile, ProfileId, ProfileList, ProfilePaths};
+use wormhole_core::paths::{DataRoot, ProfileId, ProfilePaths};
+use wormhole_core::profile::{NewProfile, ProfileList};
 use wormhole_core::store::Store;
 use wormhole_core::store::{SessionRecord, WindowRecord};
 

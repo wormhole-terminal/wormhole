@@ -86,7 +86,7 @@ pub fn run(args: &[String]) -> i32 {
             return 2;
         }
     };
-    let hosts_dir = hosts::hosts_dir(&crate::profile::data_dir());
+    let hosts_dir = hosts::hosts_dir(&crate::paths::data_dir());
     let (code, out, err) = execute(&command, &hosts_dir, END_WAIT);
     print(&out);
     print_err(&err);
@@ -296,7 +296,7 @@ fn utc(secs: u64) -> String {
 /// there to ask, so the hosts' own files answer. `None` when there is nothing to add (no live host,
 /// or a question only the app can answer), and the caller says "Wormhole isn't running" as before.
 pub(super) fn offline(action: &super::Action, json: bool) -> Option<String> {
-    let hosts_dir = hosts::hosts_dir(&crate::profile::data_dir());
+    let hosts_dir = hosts::hosts_dir(&crate::paths::data_dir());
     offline_in(action, json, &hosts_dir)
 }
 

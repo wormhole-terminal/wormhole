@@ -27,7 +27,7 @@ use self::theme::{ThemeStamp, default_tokens, resolve_theme};
 pub use self::theme::{resolve_theme_file, resolve_theme_file_in, tokens_from_json, tokens_from_json_in};
 use crate::fsutil::{self, LinkPolicy};
 use crate::jsonc;
-use crate::profile::{DataRoot, ProfilePaths};
+use crate::paths::{DataRoot, ProfilePaths};
 use crate::text::did_you_mean;
 use crate::tokens::{Appearance, ThemeTokens};
 

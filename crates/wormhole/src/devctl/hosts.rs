@@ -39,6 +39,6 @@ pub(super) fn quit_keep(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 fn run(args: &[&str]) -> Result<String> {
     let args: Vec<String> = args.iter().map(ToString::to_string).collect();
-    let (code, out, err) = sessions::run_in(&args, &hosts_dir(&wormhole_core::profile::data_dir()));
+    let (code, out, err) = sessions::run_in(&args, &hosts_dir(&wormhole_core::paths::data_dir()));
     if code == 0 { Ok(out) } else { Err(anyhow!("{}", err.trim())) }
 }

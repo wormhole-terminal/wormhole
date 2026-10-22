@@ -59,7 +59,7 @@ use super::input::TerminalCommand;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::terminal::Pty;
 use wormhole_core::terminal::types::MouseTracking;
 

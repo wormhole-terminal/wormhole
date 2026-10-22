@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::copy::copy_settings;
-use super::model::{Profile, ProfileError, ProfileId, first_letter};
-use super::paths::DataRoot;
+use super::model::{Profile, ProfileError, first_letter};
 use crate::fsutil::{self, LinkPolicy};
+use crate::paths::{DataRoot, ProfileId};
 use crate::sidebar::GroupColor;
 
 /// Largest `profiles.json` read; a few dozen profiles are a few KiB.
@@ -324,7 +324,7 @@ impl ProfileList {
         free(base).or_else(|| (2..1000).find_map(|n| free(&format!("{base}-{n}")))).unwrap_or_else(|| {
             // A thousand profiles of one name: the clock is as unique as anything.
             let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
-            ProfileId(format!("p{}", now.as_secs()))
+            ProfileId::from_clock(now.as_secs())
         })
     }
 }

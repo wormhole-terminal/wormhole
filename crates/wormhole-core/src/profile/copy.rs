@@ -10,8 +10,8 @@ use std::io;
 use std::os::unix::fs::symlink;
 use std::path::Path;
 
-use super::paths::ProfilePaths;
 use crate::fsutil::{self, LinkPolicy};
+use crate::paths::ProfilePaths;
 
 /// Largest single file copied; a font family is a few MiB.
 const MAX_FILE: u64 = 64 * 1024 * 1024;

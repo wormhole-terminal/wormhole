@@ -4,19 +4,16 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::agents::AgentId;
+use crate::paths::ProfileId;
 use crate::sidebar::GroupColor;
-
-/// The Default profile's id. It always exists and keeps the data folder's own files.
-pub const DEFAULT_ID: &str = "default";
 
 /// What a terminal's environment says about its profile (`WORMHOLE_PROFILE=<id>`): for scripts and
 /// prompts. Hooks do not use it; they report a terminal id, and the app knows whose terminal that is.
 pub const PROFILE_VAR: &str = "WORMHOLE_PROFILE";
 
-const MAX_ID: usize = 32;
 const MAX_NAME: usize = 40;
 const MAX_ENV: usize = 64;
 const MAX_VALUE: usize = 4096;
@@ -66,58 +63,6 @@ impl fmt::Display for ProfileError {
 }
 
 impl std::error::Error for ProfileError {}
-
-/// A profile's id: the folder name under `profiles/`, so only what is safe as one (lower-case
-/// letters, digits and dashes, 1 to 32 characters, no dash at either end). Whatever the file says,
-/// an id can't lead a path out of the data folder.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ProfileId(pub(super) String);
-
-impl ProfileId {
-    pub fn default_profile() -> Self {
-        Self(DEFAULT_ID.into())
-    }
-
-    pub fn parse(text: &str) -> Result<Self, ProfileError> {
-        let ok = !text.is_empty()
-            && text.len() <= MAX_ID
-            && !text.starts_with('-')
-            && !text.ends_with('-')
-            && text.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
-        if ok {
-            Ok(Self(text.into()))
-        } else {
-            Err(ProfileError::invalid(format!("\"{text}\" is not a profile id")))
-        }
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    pub fn is_default(&self) -> bool {
-        self.0 == DEFAULT_ID
-    }
-}
-
-impl fmt::Display for ProfileId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl Serialize for ProfileId {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for ProfileId {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let text = String::deserialize(deserializer)?;
-        Self::parse(&text).map_err(serde::de::Error::custom)
-    }
-}
 
 /// The name and email git records in a terminal's commits. Set only in that terminal's
 /// environment; Wormhole never writes them to a repository or to git's config.

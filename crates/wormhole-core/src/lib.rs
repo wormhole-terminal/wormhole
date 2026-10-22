@@ -35,6 +35,7 @@ pub mod open_file;
 pub mod open_in;
 pub mod panel;
 pub mod panes;
+pub mod paths;
 pub mod profile;
 pub mod project;
 pub mod quit_signal;

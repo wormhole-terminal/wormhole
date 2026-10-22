@@ -199,7 +199,8 @@ mod tests {
 mod profile_tests {
     use super::{SpawnOptions, spawn_program};
     use crate::agents::AgentId;
-    use crate::profile::{AgentLogin, PROFILE_VAR, Profile, ProfileId};
+    use crate::paths::ProfileId;
+    use crate::profile::{AgentLogin, PROFILE_VAR, Profile};
     use crate::sidebar::GroupColor;
     use crate::terminal::GridSize;
 

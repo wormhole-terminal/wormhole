@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use gpui_kit::*;
 use wormhole_core::layout::RememberedPanes;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::sidebar::WindowSidebar;
 use wormhole_core::store::{SessionRecord, WindowRecord};
 
@@ -336,7 +336,7 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
     // way out included, and nothing starts a new one (`quitting`).
     app_mut(cx).ending_hosts = true;
     super::app::save_all(cx);
-    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::profile::data_dir());
+    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::paths::data_dir());
     let ending = cx
         .background_executor()
         .spawn(async move { wormhole_core::hosts::end_all_live(&hosts_dir, END_HOSTS_WAIT) });

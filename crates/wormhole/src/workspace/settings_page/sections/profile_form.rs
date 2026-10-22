@@ -9,7 +9,8 @@ use std::path::Path;
 use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
-use wormhole_core::profile::{AgentLogin, GitIdentity, Profile, ProfileId, first_letter};
+use wormhole_core::paths::ProfileId;
+use wormhole_core::profile::{AgentLogin, GitIdentity, Profile, first_letter};
 use wormhole_core::sidebar::GroupColor;
 
 use crate::workspace::app::{app, app_mut};

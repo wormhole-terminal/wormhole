@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use gpui_kit::*;
 use wormhole_core::folder_color::FolderColor;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::project::{Feature, ProjectColor, ProjectColorChoice};
 use wormhole_core::tokens::{Color, ThemeTokens};
 

@@ -277,7 +277,7 @@ impl TerminalView {
         }
         let id = self.host.id.clone()?;
         let options = self.host.options.clone()?;
-        let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::profile::data_dir());
+        let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::paths::data_dir());
         let socket = match wormhole_core::terminal::client::socket_of(&hosts_dir, &id) {
             Ok(socket) => socket,
             Err(err) => {

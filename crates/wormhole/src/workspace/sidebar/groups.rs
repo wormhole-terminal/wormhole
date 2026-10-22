@@ -7,7 +7,7 @@
 use std::path::Path;
 
 use gpui_kit::*;
-use wormhole_core::profile::ProfileId;
+use wormhole_core::paths::ProfileId;
 use wormhole_core::sidebar::{GroupColor, Item, Landing};
 
 use crate::settings::store_in;
