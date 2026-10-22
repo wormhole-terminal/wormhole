@@ -1,6 +1,6 @@
 //! The Dock icon: its badge (how many terminals need you), one informational bounce when a
 //! terminal starts needing you while Wormhole is in the background, and whether Wormhole is
-//! the active app at all. The Dock's menu goes through GPUI (`workspace::menu_bar`).
+//! the active app at all. The Dock's menu goes through GPUI (`status_item`).
 //!
 //! Tests never touch the real Dock: they read what would have been applied from [`DockState`],
 //! and neither does a test instance in background mode (devctl's `dock` reads it there).

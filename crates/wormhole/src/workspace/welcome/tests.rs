@@ -14,12 +14,13 @@ use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::view::sidebar::RowState;
 
 use super::{Plan, handle};
+use crate::app::control;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
 use crate::workspace::notifications;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
-use crate::workspace::{app, app_mut, control};
+use crate::workspace::{app, app_mut};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -355,7 +356,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(crate::settings::SettingsStore::load());
         cx.set_global(crate::workspace::app::AppState::for_test(100));
-        crate::workspace::app_handlers::init(cx);
+        crate::app::handlers::init(cx);
         app_mut(cx).first_welcome = Some(Plan { handover: Handover::Portal, first_run: true });
         crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
         app_mut(cx).first_welcome = None;

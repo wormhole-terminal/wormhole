@@ -22,11 +22,11 @@ use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::{Play, Run, remember_first_run};
+use crate::app::control::{budget, find};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
 use crate::workspace::app::{AppState, app, app_mut};
-use crate::workspace::control::{budget, find};
 use crate::workspace::notifications;
 use crate::workspace::onboarding::{offered_primaries, offered_themes};
 use gpui_kit::App;

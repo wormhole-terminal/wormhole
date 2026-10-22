@@ -6,7 +6,7 @@
 //! off the app's keys), and the app keys a terminal would send to its program (F6) are left to
 //! the bindings.
 //!
-//! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
+//! Part of the app root (`app/`): it may use every surface, and nothing below the app
 //! root may call into it.
 
 use gpui_kit::component::WindowExt as _;
@@ -16,6 +16,7 @@ use wormhole_core::onboarding::intro::{Handover, Style};
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::TerminalsIn;
 
+use crate::app::menus;
 use crate::menubar::MenuCommand;
 use crate::settings::{SettingsStore, settings, update_settings};
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
@@ -30,10 +31,8 @@ use crate::workspace::actions::{
 };
 use crate::workspace::app::{AppState, app};
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{
-    about, ambient, app_menu, command_palette, focus, menu_bar, onboarding, settings_page, shortcut_sheet,
-    studio, updates, window_lifecycle,
-};
+use crate::workspace::{about, ambient, focus, onboarding, settings_page, studio, updates, window_lifecycle};
+use crate::{command_palette, shortcut_sheet, status_item};
 
 /// Bind the keys, let project keys go first, and handle the actions that aren't one window's.
 /// Before the menus are set: they read the bindings for their key equivalents.
@@ -87,7 +86,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &Licenses, cx| cx.defer(about::open_licenses));
     cx.on_action(|_: &OpenSettings, cx| cx.defer(|cx| settings_page::open_settings(None, cx)));
     // ⌘O: a terminal in the picked folder, in the window in front (the status item's too).
-    cx.on_action(|_: &OpenFolder, cx| cx.defer(menu_bar::open_folder));
+    cx.on_action(|_: &OpenFolder, cx| cx.defer(status_item::open_folder));
     // ⌥⌘J: the terminal that has waited longest, in any window.
     cx.on_action(|_: &GoToWaiting, cx| cx.defer(ambient::jump_to_waiting));
     // ⇧⌥⌘J: the terminal that finished last, then the one before it, in any window.
@@ -114,7 +113,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &Minimize, cx| in_front_window(cx, Window::minimize_window));
     cx.on_action(|_: &Zoom, cx| in_front_window(cx, Window::zoom_window));
     cx.on_action(|_: &ToggleFullScreen, cx| in_front_window(cx, Window::toggle_fullscreen));
-    cx.on_action(|_: &ShowLogs, cx| cx.open_with_system(&crate::logging::dir()));
+    cx.on_action(|_: &ShowLogs, cx| cx.open_with_system(&crate::app::logging::dir()));
     cx.on_action(|_: &ShowIntro, cx| {
         cx.defer(|cx| {
             with_front_workspace(cx, |ws, window, cx| {
@@ -139,13 +138,13 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayWelcomeLogo, cx| crate::workspace::welcome::replay_in_front(Handover::Logo, cx));
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();
-        cx.defer(move |cx| menu_bar::run_command(MenuCommand::OpenProject(root), cx));
+        cx.defer(move |cx| status_item::run_command(MenuCommand::OpenProject(root), cx));
     });
     // A key that ran an action may have flipped a label or moved a check mark: bring the menus
     // up to date now rather than on the next tick (typing runs no action, so it costs nothing).
     cx.observe_keystrokes(|event, _, cx| {
         if event.action.is_some() {
-            cx.defer(app_menu::sync);
+            cx.defer(menus::sync);
         }
     })
     .detach();
@@ -193,7 +192,7 @@ fn bind_jump_key(cx: &mut App) {
     }
     cx.bind_keys(bindings);
     cx.set_global(JumpKey(spec));
-    app_menu::rebuild(cx);
+    menus::rebuild(cx);
 }
 
 /// Play the intro `style` around the window in front (About's buttons, the keys): brought forward

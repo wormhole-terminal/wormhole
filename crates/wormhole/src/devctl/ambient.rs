@@ -13,8 +13,10 @@ use wormhole_core::notify::Kind;
 
 use super::{Ctx, append, file_name, nth};
 use crate::platform::notifications::Permission;
+use crate::status_item;
+use crate::status_item::quick_panel;
 use crate::workspace::ambient::TabFacts;
-use crate::workspace::{menu_bar, notifications, quick_panel};
+use crate::workspace::notifications;
 
 /// Run `f` after this update and append what it returns to this window's results.
 pub(super) fn later(ctx: &mut Ctx, f: impl FnOnce(&mut App) -> String + 'static) {
@@ -27,7 +29,7 @@ pub(super) fn later(ctx: &mut Ctx, f: impl FnOnce(&mut App) -> String + 'static)
 
 /// `menubar`: the status item's icon and menu as they would be built now.
 pub(super) fn menubar(ctx: &mut Ctx, _: &str) -> Result<String> {
-    later(ctx, |cx| menu_bar::dump(cx));
+    later(ctx, |cx| status_item::dump(cx));
     Ok(String::new())
 }
 
@@ -36,7 +38,7 @@ pub(super) fn menubar(ctx: &mut Ctx, _: &str) -> Result<String> {
 pub(super) fn menubar_icons(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let prefix = file_name(arg, "status-item")?.to_string();
     let dir = ctx.dir.to_path_buf();
-    later(ctx, move |cx| match menu_bar::save_icons(&dir, &prefix, cx) {
+    later(ctx, move |cx| match status_item::save_icons(&dir, &prefix, cx) {
         Ok(paths) => paths.iter().map(|p| format!("saved {}\n", p.display())).collect(),
         Err(err) => format!("menubar-icons failed: {err:#}\n"),
     });
@@ -45,7 +47,7 @@ pub(super) fn menubar_icons(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `dock`: the Dock's badge, how often it bounced, and its menu.
 pub(super) fn dock(ctx: &mut Ctx, _: &str) -> Result<String> {
-    later(ctx, |cx| menu_bar::dock_dump(cx));
+    later(ctx, |cx| status_item::dock_dump(cx));
     Ok(String::new())
 }
 

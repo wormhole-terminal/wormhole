@@ -1,7 +1,7 @@
 //! The menu bar: core's `keymap::menus` filled in for the window in front and handed to
 //! AppKit, built again whenever what it shows changes (a label that flips, the checked layout,
 //! the terminals ⌘1–9, recent folders, the project's actions). The key equivalents come from
-//! the bindings (`app_handlers::init`), so menus show them natively; AppKit asks before showing an
+//! the bindings (`app::handlers::init`), so menus show them natively; AppKit asks before showing an
 //! item whether anything in front handles it, and greys it out if not.
 //!
 //! GPUI keeps the actions of every menu bar it was given for the life of the app, so the menus

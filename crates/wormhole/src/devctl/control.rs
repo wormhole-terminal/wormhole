@@ -8,7 +8,7 @@ use wormhole_core::ipc::control::{Parsed, Request, help, parse};
 
 use super::Ctx;
 use super::ambient::later;
-use crate::workspace::control;
+use crate::app::control;
 
 pub(super) fn control(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = split_words(arg);

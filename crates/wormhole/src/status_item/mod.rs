@@ -313,7 +313,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
         match settings(cx).hotkey_action {
             // Over whatever is in front, without bringing Wormhole forward.
             HotkeyAction::QuickPanel => {
-                crate::workspace::quick_panel::toggle(cx);
+                crate::status_item::quick_panel::toggle(cx);
                 return;
             }
             HotkeyAction::ToggleApp if cx.active_window().is_some() => {

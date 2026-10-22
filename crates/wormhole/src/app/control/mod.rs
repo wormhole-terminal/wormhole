@@ -2,7 +2,7 @@
 //! `Wormhole list`, `status`, `notify`, `send-text` and `new-terminal` do here (and the first-run
 //! welcome's requests go on to `welcome`).
 //!
-//! Requests come from the socket thread through `AppState`'s message task (`app_tick::dispatch_hook`),
+//! Requests come from the socket thread through `AppState`'s message task (`app::tick::dispatch_hook`),
 //! outside any window's update, so every window can be read and the one a request is about updated
 //! through `AppState::with_workspace`. The rules (who may do what, the caps, the budgets) are
 //! core's; this module finds the windows and terminals a request names and carries out what

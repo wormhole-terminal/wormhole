@@ -296,9 +296,21 @@
       "wormhole-term: screen -> engine": 1,
       "wormhole-term: screen -> marks": 1,
       "wormhole-term: text -> images": 1,
-      "wormhole-term: text -> screen": 1
+      "wormhole-term: text -> screen": 1,
+      "wormhole: app -> command_palette": 1,
+      "wormhole: app -> shortcut_sheet": 1,
+      "wormhole: app -> status_item": 1,
+      "wormhole: app -> workspace": 1,
+      "wormhole: command_palette -> workspace": 1,
+      "wormhole: shortcut_sheet -> workspace": 1,
+      "wormhole: status_item -> workspace": 1,
+      "wormhole: workspace -> app": 1,
+      "wormhole: workspace -> status_item": 1
     },
-    "layers": {},
+    "layers": {
+      "wormhole: workspace -> app": 1,
+      "wormhole: workspace -> status_item": 1
+    },
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },

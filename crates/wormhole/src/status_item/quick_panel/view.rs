@@ -183,9 +183,7 @@ impl QuickPanel {
 
     fn open_tab(&self, tab: i64, cx: &mut App) {
         close(cx);
-        cx.defer(move |cx| {
-            crate::workspace::menu_bar::run_command(crate::menubar::MenuCommand::OpenTab(tab), cx)
-        });
+        cx.defer(move |cx| crate::status_item::run_command(crate::menubar::MenuCommand::OpenTab(tab), cx));
     }
 
     /// ⌘⏎ on a waiting row: Reply in place.

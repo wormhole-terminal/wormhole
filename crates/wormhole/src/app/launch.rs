@@ -8,7 +8,7 @@
 //! look reaches the settings store, which re-derives what it touches; Reduce Motion is GPUI's
 //! own flag, which its animations follow (`app_look::sync_system_look`).
 //!
-//! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
+//! Part of the app root (`app/`): it may use every surface, and nothing below the app
 //! root may call into it.
 
 use std::collections::HashMap;
@@ -19,13 +19,15 @@ use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc;
 use wormhole_core::storage::paths::DataRoot;
 
+use crate::app::menus;
+use crate::app::tick::{dispatch_hook, handle_menu_command, tick};
 use crate::settings::ParkedSettings;
+use crate::status_item;
 use crate::workspace::app::{AppState, app_mut};
 use crate::workspace::app_look::{LookOverride, apply_theme, sync_system_look};
-use crate::workspace::app_tick::{dispatch_hook, handle_menu_command, tick};
 use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
-use crate::workspace::{app_menu, menu_bar, notifications, onboarding, profiles, updates};
+use crate::workspace::{notifications, onboarding, profiles, updates};
 
 const TICK: Duration = Duration::from_millis(400);
 
@@ -55,7 +57,7 @@ pub(crate) fn start(
     let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
     let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, store.as_ref());
     let recent_projects = RecentProjects::load(store.as_ref());
-    let (menu, menu_commands) = menu_bar::MenuState::new();
+    let (menu, menu_commands) = status_item::MenuState::new();
     let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
     hub.ids_start_at(next_id);
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
@@ -125,7 +127,7 @@ pub(crate) fn start(
     cx.on_window_closed(window_closed).detach();
     notifications::init(cx);
     updates::init(cx);
-    crate::workspace::saved_text::init(cx);
+    crate::app::saved_text::init(cx);
 
     cx.spawn(async move |cx| {
         while let Ok(message) = hook_events.recv().await {
@@ -163,7 +165,7 @@ pub(crate) fn start(
         open_workspace_window(Some(window), None, cx);
     }
     crate::workspace::hosting::adopt_orphans(cx);
-    app_menu::sync(cx);
+    menus::sync(cx);
 }
 /// Agent hooks an earlier version installed under the app's old codename are replaced with
 /// today's, off the main thread: they keep working meanwhile (terminals still export the old

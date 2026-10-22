@@ -5,8 +5,9 @@
 //! `window_lifecycle`.
 //!
 //! Until phase 4's moves finish this folder also holds the surfaces that sit above the window (the
-//! app root, the palette, the sheet, the Settings and Studio windows, the status item); they
-//! leave, and the window then uses none of them. The known exception, kept until phase 5, is the
+//! Settings and Studio windows, the notifications, the updater, About); they leave, and the window
+//! then uses none of them. The app root, the palette, the sheet and the status item have left
+//! (`app`, `command_palette`, `shortcut_sheet`, `status_item`). The known exception, kept until phase 5, is the
 //! window using `notifications`: it calls `dismiss` and `sweep` (the window will emit seen and
 //! closed events instead) from `tick`, `terminals`, `panes`, `splits`, `windows` and this file's
 //! window-activation observer, `finished_commands` from `ambient`, and `permission_asks` from the
@@ -31,22 +32,14 @@ pub(crate) use self::app::AppState;
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use self::app::app;
 pub(crate) use self::app::app_mut;
-pub(crate) use self::app_handlers::init as init_actions;
 #[cfg(feature = "devctl")]
 pub(crate) use self::app_look::override_look;
-#[cfg(feature = "devctl")]
-pub(crate) use self::app_menu::dump as menu_dump;
-#[cfg(feature = "devctl")]
-pub(crate) use self::command_palette::devctl_palette;
-pub(crate) use self::default_terminal::{listen as listen_for_opened, serve as serve_opened};
 #[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
 #[cfg(feature = "devctl")]
 pub(crate) use self::settings_page::devctl as settings_devctl;
-#[cfg(feature = "devctl")]
-pub(crate) use self::shortcut_sheet::devctl_sheet;
 #[cfg(feature = "devctl")]
 pub(crate) use self::studio::devctl as studio_devctl;
 #[cfg(feature = "devctl")]
@@ -157,19 +150,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
-
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::app::control;
-pub(crate) use crate::app::default_terminal;
-pub(crate) use crate::app::handlers as app_handlers;
-pub(crate) use crate::app::launch as app_launch;
-pub(crate) use crate::app::menus as app_menu;
-pub(crate) use crate::app::saved_text;
-pub(crate) use crate::app::tick as app_tick;
-pub(crate) use crate::command_palette;
-pub(crate) use crate::shortcut_sheet;
-pub(crate) use crate::status_item as menu_bar;
-pub(crate) use crate::status_item::quick_panel;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;

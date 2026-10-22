@@ -7,7 +7,7 @@ use wormhole_core::onboarding::intro::{Handover, Start};
 
 use super::Ctx;
 use super::ambient::later;
-use crate::workspace::control;
+use crate::app::control;
 
 /// `welcome <cursor|portal|logo> [hidden]`: the window leaves into the wormhole and comes back with a
 /// new terminal running the welcome, the ship (or not) landing as that hand-over has it. With `hidden`

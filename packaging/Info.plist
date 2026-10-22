@@ -42,7 +42,7 @@
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
 	<!--
-	What Wormhole opens (each in a new terminal; workspace/default_terminal.rs): scripts and
+	What Wormhole opens (each in a new terminal; app/default_terminal.rs): scripts and
 	programs, which it runs once Settings → Terminal makes it the default terminal, and folders,
 	from Open With or the Dock icon. Alternate: never the default until the person asks.
 	-->

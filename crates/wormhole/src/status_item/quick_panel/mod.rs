@@ -116,7 +116,7 @@ fn do_items(cx: &App) -> Vec<Do> {
         front.workspace.read_with(cx, |ws, cx| ws.active_terminal().read(cx).cwd.clone()).ok().flatten()
     });
     let mut items = vec![Do::NewTerminal { cwd }, Do::OpenFolder];
-    items.extend(crate::workspace::menu_bar::project_actions(cx).into_iter().map(Do::Action));
+    items.extend(crate::status_item::project_actions(cx).into_iter().map(Do::Action));
     items
 }
 
@@ -133,5 +133,5 @@ fn run(row: &Row, cx: &mut App) {
         Row::Label { .. } | Row::Note(_) => return,
     };
     close(cx);
-    cx.defer(move |cx| crate::workspace::menu_bar::run_command(command, cx));
+    cx.defer(move |cx| crate::status_item::run_command(command, cx));
 }

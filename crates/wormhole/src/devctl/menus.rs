@@ -34,18 +34,18 @@ pub(super) fn available(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn menus(ctx: &mut Ctx, _: &str) -> Result<String> {
-    Ok(inspect::menu_bar().unwrap_or_else(|| crate::workspace::menu_dump(ctx.cx)))
+    Ok(inspect::menu_bar().unwrap_or_else(|| crate::app::menus::dump(ctx.cx)))
 }
 
 /// `palette [query]` / `palette close`: the command palette over this window, `query` typed.
 pub(super) fn palette(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::workspace::devctl_palette(ctx.workspace, arg, ctx.window, ctx.cx);
+    crate::command_palette::devctl_palette(ctx.workspace, arg, ctx.window, ctx.cx);
     Ok(String::new())
 }
 
 /// `sheet [filter]` / `sheet close`: the keyboard-shortcuts sheet over this window, filtered.
 pub(super) fn sheet(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::workspace::devctl_sheet(ctx.workspace, arg, ctx.window, ctx.cx);
+    crate::shortcut_sheet::devctl_sheet(ctx.workspace, arg, ctx.window, ctx.cx);
     Ok(String::new())
 }
 

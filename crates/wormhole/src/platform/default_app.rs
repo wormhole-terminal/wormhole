@@ -1,6 +1,6 @@
 //! Which app the system runs a kind of file with (as Terminal runs a `.command`), and making
 //! Wormhole that app for the kinds core's `default_terminal` names. What a terminal does with a
-//! file it is asked to open is the app's (`workspace::default_terminal`).
+//! file it is asked to open is the app's (`app::default_terminal`).
 
 use wormhole_core::terminal::default_terminal::SCRIPT_TYPES;
 

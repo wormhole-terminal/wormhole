@@ -3,7 +3,7 @@
 //!
 //! Each window's [`Workspace`] owns only its own sessions. Anything that must
 //! exist once (the menu bar item, the hook socket, the updater) lives here and
-//! is driven by one app-level tick and two message tasks (`app_launch`, `app_tick`), so it works
+//! is driven by one app-level tick and two message tasks (`app::launch`, `app::tick`), so it works
 //! the same with one window or five; windows open and close in `window_lifecycle`.
 
 use std::collections::HashMap;
@@ -18,9 +18,10 @@ use wormhole_core::storage::store::Store;
 use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
+use crate::status_item;
 use crate::workspace::app_look::LookOverride;
 use crate::workspace::recent_projects::RecentProjects;
-use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, updates};
+use crate::workspace::{Workspace, aux_window, profiles, project, settings_page, updates};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -51,7 +52,7 @@ pub(crate) struct AppState {
     /// The projects worked in lately (Open Recent), most recent first.
     pub recent_projects: RecentProjects,
     /// Menu bar item and global hotkey.
-    pub menu: menu_bar::MenuState,
+    pub menu: status_item::MenuState,
     pub updates: updates::Updates,
     /// The settings window, while open.
     pub settings_window: Option<(AnyWindowHandle, Entity<settings_page::SettingsWindow>)>,
@@ -114,7 +115,7 @@ impl Global for AppState {}
 impl AppState {
     /// An app with no database and no windows, for tests that open a `Workspace` themselves.
     pub(super) fn for_test(next_id: i64) -> Self {
-        let (menu, _) = menu_bar::MenuState::new();
+        let (menu, _) = status_item::MenuState::new();
         Self {
             root: DataRoot::current(),
             profiles: ProfileList::default(),

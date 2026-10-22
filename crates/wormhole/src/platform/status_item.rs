@@ -1,6 +1,6 @@
 //! The status item ("menu extra") as the system draws it: one per window, whose icon says whether
 //! a terminal needs you and whose menu lists the terminals by status. What it shows is the app's
-//! (`menubar::model`, `workspace::menu_bar`); this is only the drawing. Everything here runs on
+//! (`menubar::model`, `status_item`); this is only the drawing. Everything here runs on
 //! the main thread.
 
 use smol::channel::Sender;

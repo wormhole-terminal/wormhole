@@ -134,7 +134,7 @@ fn the_menus_follow_the_window_in_front(cx: &mut TestAppContext) {
             .collect::<Vec<_>>()
     };
     draw(cx, &window);
-    cx.update(crate::workspace::app_menu::sync);
+    cx.update(crate::app::menus::sync);
     let titles: Vec<String> =
         cx.update(|cx| cx.get_menus()).unwrap_or_default().iter().map(|m| m.name.to_string()).collect();
     assert_eq!(&titles[..7], ["Wormhole", "Shell", "Edit", "View", "Terminal", "Window", "Help"]);

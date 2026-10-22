@@ -23,9 +23,6 @@ mod theme_bridge;
 mod window_ops;
 mod workspace;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-use crate::app::logging;
-
 use gpui_kit::*;
 use wormhole_core::ipc::Command;
 
@@ -54,8 +51,8 @@ fn main() {
     // Before anything opens a file in the data folder: a version from before the rename kept it
     // under the old codename.
     let migrated = wormhole_core::storage::store::migrate_legacy_data();
-    let _log_guard = logging::init();
-    logging::install_panic_hook();
+    let _log_guard = app::logging::init();
+    app::logging::install_panic_hook();
     match migrated {
         Ok(Some(dir)) => tracing::info!(dir = %dir.display(), "moved the data of an earlier version here"),
         Ok(None) => {}
@@ -83,7 +80,7 @@ fn main() {
 
     let application = gpui_kit::application().with_assets(icons::Assets);
     // From the launch on: a launch to open a file sends it before the windows are up.
-    let opened = workspace::listen_for_opened(&application);
+    let opened = app::default_terminal::listen(&application);
     application.run(move |cx| {
         // Before anything opens: a test instance in background mode never shows a Dock icon.
         background::start(cx);
@@ -108,10 +105,10 @@ fn main() {
         #[cfg(any(feature = "inspector", debug_assertions))]
         inspector::init(cx);
         // The keys from the action table, before the menus (they show the bound keys).
-        workspace::init_actions(cx);
+        app::handlers::init(cx);
 
-        workspace::app_launch::start(hook_events, root, profiles, profiles_error, cx);
-        workspace::serve_opened(opened, cx);
+        app::launch::start(hook_events, root, profiles, profiles_error, cx);
+        app::default_terminal::serve(opened, cx);
         background::activate(cx);
     });
 }

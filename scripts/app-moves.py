@@ -324,6 +324,8 @@ def rewrite(plan: Plan) -> int:
     leaf_renames = {m.old_leaf: m.new_leaf for m in list(moved.values()) + list(top.values())
                     if m.old_leaf != m.new_leaf}
     by_leaf = {m.old_leaf: m for m in moved.values()}
+    # Names that only the moved modules were called by, so a backticked one in a comment is the module.
+    prose = {leaf: m.new for leaf, m in by_leaf.items() if leaf.startswith("app_")}
 
     full = re.compile(r"(?<![\w$])crate::workspace::(%s)\b" % alt)
     reexp = re.compile(r"(?<![\w$])crate::workspace::(%s)\b" % "|".join(plan.reexports))
@@ -354,9 +356,14 @@ def rewrite(plan: Plan) -> int:
             out = drop_root_shims(out, plan)
             out = re.sub(r"(?<![\w:])workspace::(%s)\b" % "|".join(plan.reexports),
                          lambda m: plan.reexports[m.group(1)], out)
+            out = re.sub(r"(?<![\w:])workspace::(%s)\b" % alt, lambda m: by_leaf[m.group(1)].new, out)
             out = re.sub(r"(?<![\w:])(%s)::" % "|".join(top_leaves(top)), lambda m: top_new(top, m.group(1)) + "::", out)
         out = re.sub(r"(?<![\w$])crate::(%s)::" % "|".join(top_leaves(top)),
                      lambda m: "crate::" + top_new(top, m.group(1)) + "::", out) if top else out
+        # Prose: `workspace::default_terminal` and the renamed modules in backticks (`app_tick::x`).
+        out = re.sub(r"(?<![\w:])workspace::(%s)\b" % alt, lambda m: by_leaf[m.group(1)].new, out)
+        out = re.sub(r"`(%s)(?=::|`)" % "|".join(sorted(prose, key=len, reverse=True)),
+                     lambda m: "`" + prose[m.group(1)], out)
         for old_leaf in sorted(rebound):
             out = re.sub(r"(?<![\w:])%s(\s*::)" % re.escape(old_leaf), leaf_renames[old_leaf] + r"\1", out)
         out = file_paths(out, plan)
