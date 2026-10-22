@@ -51,7 +51,7 @@ fn a_closed_windows_text_is_erased_too() {
 }
 
 #[test]
-fn deleted_rows_are_overwritten() {
+fn secure_delete_is_on() {
     let dir = temp_dir("secure-delete");
     let store = Store::open_at(&dir).expect("opens");
     assert_eq!(count(&store, "PRAGMA secure_delete"), 1);
@@ -75,4 +75,30 @@ fn clearing_a_terminal_erases_its_saved_text_at_once() {
     assert_eq!(store.load().expect("loads")[0].sessions[0].scrollback.as_deref(), Some("$ "));
     // A terminal with nothing saved is no error.
     store.clear_scrollback(99).expect("clears nothing");
+}
+
+#[test]
+fn text_an_older_version_deleted_is_erased_at_the_first_open() {
+    let dir = temp_dir("erase-older");
+    std::fs::create_dir_all(&dir).expect("dir");
+    // A database as 1.2.0 left it: rows deleted without `secure_delete`, a WAL never truncated.
+    {
+        let conn = rusqlite::Connection::open(dir.join("wormhole.db")).expect("opens");
+        conn.pragma_update(None, "journal_mode", "WAL").expect("wal");
+        conn.pragma_update(None, "secure_delete", false).expect("off");
+        conn.execute_batch("CREATE TABLE old_text (text TEXT)").expect("table");
+        // More free pages than creating today's tables takes back, so some keep the text.
+        for _ in 0..40 {
+            conn.execute("INSERT INTO old_text VALUES (?1)", [scrollback_with_marker()]).expect("inserts");
+        }
+        conn.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(())).expect("checkpoint");
+        conn.execute("DELETE FROM old_text", []).expect("deletes");
+        conn.execute_batch("DROP TABLE old_text").expect("drops");
+        // Left without a clean close, as a crash would: the WAL keeps its frames.
+        std::mem::forget(conn);
+    }
+    assert!(!on_disk(&dir, MARKER).is_empty(), "the old database still holds the text");
+    let store = Store::open_at(&dir).expect("opens");
+    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    assert_eq!(store.meta("scrubbed").expect("reads").as_deref(), Some("1"), "only once");
 }

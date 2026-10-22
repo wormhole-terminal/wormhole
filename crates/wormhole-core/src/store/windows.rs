@@ -105,7 +105,7 @@ impl Store {
         forget_empty_splits(&tx, window.id)?;
         tx.commit()?;
         if forgotten > 0 {
-            self.checkpoint()?;
+            self.checkpoint_after_delete();
         }
         Ok(())
     }
@@ -122,7 +122,8 @@ impl Store {
         exec(&tx, "DELETE FROM splits WHERE window_id = ?1", [id])?;
         exec(&tx, "DELETE FROM windows WHERE id = ?1", [id])?;
         tx.commit()?;
-        self.checkpoint()
+        self.checkpoint_after_delete();
+        Ok(())
     }
 
     /// Forget this window's sessions that are not in `keep` (closed sessions), with their notes,
@@ -134,7 +135,7 @@ impl Store {
         forget_empty_splits(&tx, window_id)?;
         tx.commit()?;
         if forgotten > 0 {
-            self.checkpoint()?;
+            self.checkpoint_after_delete();
         }
         Ok(())
     }

@@ -107,6 +107,12 @@ pub struct Store {
 }
 
 const DB_FILE: &str = "wormhole.db";
+/// `meta` key: the database was rewritten once without the free pages older versions left.
+const SCRUBBED_KEY: &str = "scrubbed";
+/// How long a statement waits for another connection's lock.
+const BUSY_WAIT: Duration = Duration::from_secs(5);
+/// How long a checkpoint waits for one.
+const CHECKPOINT_WAIT: Duration = Duration::from_millis(200);
 
 /// `PRAGMA quick_check` found something wrong; the message is its first complaint.
 #[derive(Debug)]
@@ -179,13 +185,16 @@ impl Store {
     fn open_file(path: &Path) -> Result<Self> {
         // Made owner-only before SQLite opens it, which then gives the `-wal` and `-shm` it creates
         // the same mode; ones an earlier version made are tightened.
+        // A failure here is only logged: a mode that can't be set must never cost the saved data.
         for file in [path.to_path_buf(), with_suffix(path, "-wal"), with_suffix(path, "-shm")] {
             let made = if file == path {
                 crate::fsutil::create_private_file(&file)
             } else {
                 crate::fsutil::make_private(&file)
             };
-            made.with_context(|| format!("making {} owner-only", file.display()))?;
+            if let Err(err) = made {
+                tracing::warn!("couldn't make {} owner-only: {err}", file.display());
+            }
         }
         let mut conn = Connection::open(path)?;
         configure(&conn)?;
@@ -201,12 +210,26 @@ impl Store {
             conn.execute("VACUUM INTO ?1", [copy.to_string_lossy()])
                 .with_context(|| format!("keeping a copy of the database in {}", copy.display()))?;
             // SQLite makes the copy with its default mode, readable by everyone.
-            crate::fsutil::make_private(&copy)
-                .with_context(|| format!("making {} owner-only", copy.display()))?;
+            if let Err(err) = crate::fsutil::make_private(&copy) {
+                tracing::warn!("couldn't make {} owner-only: {err}", copy.display());
+            }
             tracing::info!("kept a copy of the schema version {version} database in {}", copy.display());
         }
         schema::init(&mut conn)?;
-        Ok(Self { conn, recovered_from: None })
+        let store = Self { conn, recovered_from: None };
+        store.scrub_leftovers()?;
+        Ok(store)
+    }
+
+    /// Text deleted before `secure_delete` was on (by 1.2.0 and earlier) still sits in free pages,
+    /// and a WAL left by a crash or a kill holds old copies of pages: once per database a `VACUUM`
+    /// rewrites the file without its free pages, and every open folds in and empties the WAL.
+    fn scrub_leftovers(&self) -> Result<()> {
+        if read_meta(&self.conn, SCRUBBED_KEY)?.is_none() {
+            self.conn.execute_batch("VACUUM").context("rewriting the database without its free pages")?;
+            self.set_meta(SCRUBBED_KEY, "1")?;
+        }
+        self.checkpoint()
     }
 
     pub fn set_meta(&self, key: &str, value: &str) -> Result<()> {
@@ -227,14 +250,24 @@ impl Store {
     /// leave the disk. Called after terminals are forgotten or their text is cleared, and at quit;
     /// never per frame.
     pub fn checkpoint(&self) -> Result<()> {
-        let busy: i64 = self
-            .conn
-            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| row.get(0))
-            .context("checkpointing the database")?;
+        // A reader from outside (a backup tool, `sqlite3`) must not hold the UI up for the usual
+        // 5 s: a checkpoint that can't finish now is tried again at the next one.
+        self.conn.busy_timeout(CHECKPOINT_WAIT)?;
+        let result = self.conn.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |row| row.get::<_, i64>(0));
+        self.conn.busy_timeout(BUSY_WAIT)?;
+        let busy = result.context("checkpointing the database")?;
         if busy != 0 {
             tracing::warn!("the database checkpoint could not finish: another connection is reading");
         }
         Ok(())
+    }
+
+    /// [`checkpoint`](Self::checkpoint) after a delete that is already committed: a failure is
+    /// logged, not returned, since what the caller asked for was done.
+    fn checkpoint_after_delete(&self) {
+        if let Err(err) = self.checkpoint() {
+            tracing::warn!("{err:#}");
+        }
     }
 }
 
@@ -298,7 +331,7 @@ fn configure(conn: &Connection) -> Result<()> {
     conn.pragma_update(None, "synchronous", "NORMAL")?;
     conn.pragma_update(None, "foreign_keys", true)?;
     // A second connection (a writer thread, another tool) waits for the lock instead of failing.
-    conn.busy_timeout(Duration::from_secs(5))?;
+    conn.busy_timeout(BUSY_WAIT)?;
     // Scrollback makes the WAL grow in bursts; hand the space back after the checkpoint.
     conn.pragma_update(None, "journal_size_limit", 8 * 1024 * 1024)?;
     // Deleted rows are overwritten with zeros, not left in free pages: a closed terminal's text

@@ -39,7 +39,7 @@ impl Store {
     pub fn clear_scrollback(&self, tab_id: i64) -> Result<()> {
         let removed = super::exec(&self.conn, "DELETE FROM scrollback WHERE tab_id = ?1", [tab_id])?;
         if removed > 0 {
-            self.checkpoint()?;
+            self.checkpoint_after_delete();
         }
         Ok(())
     }
