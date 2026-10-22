@@ -6,6 +6,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-22
+
 ### Added
 
 - Submodules get their own rows in Changes and History, with a folder-and-git icon and what changed
@@ -540,7 +542,8 @@ agents.
     the background and verified with a minisign signature and Apple's
     code signature.
 
-[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/wormhole-terminal/wormhole/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/wormhole-terminal/wormhole/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.2...v1.0.0
 [0.4.2]: https://github.com/wormhole-terminal/wormhole/compare/v0.4.1...v0.4.2
