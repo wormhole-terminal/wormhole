@@ -17,7 +17,7 @@ wormhole-core.workspace = true
 # Inline images: core's decoded pixels become GPUI's frames (its own image type; the crate is in
 # the graph through GPUI with these features).
 image = { version = "0.25", default-features = false, features = ["png"] }
-gpui-kit = { version = "0.7.0", features = [
+gpui-kit = { version = "0.8.0", features = [
     # Syntax highlighting in the diff view.
     "tree-sitter-rust", "tree-sitter-typescript", "tree-sitter-tsx", "tree-sitter-javascript",
     "tree-sitter-python", "tree-sitter-go", "tree-sitter-bash", "tree-sitter-toml",
@@ -102,7 +102,7 @@ wormhole-core = { workspace = true, features = ["test-support"] }
 # The view tests drive real windows through GPUI's test platform, so a plain `cargo test` (what CI
 # and contributors run) needs these without the devctl feature. Dev-dependency features are
 # never active in the shipped binary.
-gpui-kit = { version = "0.7.0", features = ["test-support"] }
+gpui-kit = { version = "0.8.0", features = ["test-support"] }
 
 [features]
 # Dev-only control hook (screenshots + scripted input) for automated checks.

@@ -35,6 +35,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   stop reading on that much of a bright or dark colour, the card gets the colour a shade nearer the
   card's own lightness, so names, second lines and the amber of a terminal that needs you stay clear
   in every theme.
+- Lists and panels bounce a little at their ends when you scroll past them with a trackpad, as in
+  other Mac apps.
 
 ### Fixed
 
