@@ -1,6 +1,6 @@
 //! No glyph outlines off macOS.
 
-use super::Seg;
+use crate::platform::font_face::Seg;
 
 pub(crate) struct Face;
 

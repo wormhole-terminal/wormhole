@@ -15,6 +15,7 @@ mod anchor;
 pub mod auth;
 pub mod dock;
 pub mod fallback;
+pub mod font_face;
 pub mod hotkey;
 #[cfg(target_os = "macos")]
 pub mod macos;

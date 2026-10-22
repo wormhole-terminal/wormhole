@@ -32,9 +32,7 @@ use gpui_kit::{
     size,
 };
 
-mod face;
-
-use face::{Face, Seg};
+use crate::platform::font_face::{Face, Seg};
 
 /// How many sprites are kept; past that the map starts over, as the word cache does.
 const MAX_SPRITES: usize = 4096;

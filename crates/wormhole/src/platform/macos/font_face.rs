@@ -9,7 +9,7 @@ use objc2_core_graphics::{CGPath, CGPathElement, CGPathElementType};
 use objc2_core_text::{CTFont, CTFontManagerCreateFontDescriptorFromData, CTFontSymbolicTraits};
 use wormhole_core::fonts::bundled;
 
-use super::Seg;
+use crate::platform::font_face::Seg;
 
 /// A face's size when it is made: its outlines are asked for at the size they are drawn at.
 const BASE_SIZE: f64 = 12.0;

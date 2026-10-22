@@ -3,6 +3,7 @@
 
 pub mod appkit;
 pub mod colour;
+pub mod font_face;
 pub mod menu;
 pub mod popover;
 mod rows;

@@ -2,15 +2,10 @@
 //! for another face that has a character, and for a glyph's outline. CoreText has it on macOS;
 //! everywhere else there is no face, and double-width rows keep their unstretched glyphs.
 
-#[cfg(target_os = "macos")]
-mod coretext;
 #[cfg(not(target_os = "macos"))]
-mod none;
-
+pub(crate) use super::fallback::font_face::Face;
 #[cfg(target_os = "macos")]
-pub(crate) use coretext::Face;
-#[cfg(not(target_os = "macos"))]
-pub(crate) use none::Face;
+pub(crate) use super::macos::font_face::Face;
 
 /// One piece of an outline, in device pixels from the glyph's origin, y down.
 #[derive(Clone, Copy, Debug, PartialEq)]
