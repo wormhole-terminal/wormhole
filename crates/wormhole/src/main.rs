@@ -104,7 +104,7 @@ fn main() {
         // The keys from the action table, before the menus (they show the bound keys).
         workspace::init_actions(cx);
 
-        workspace::AppState::start(hook_events, root, profiles, profiles_error, cx);
+        workspace::app_launch::start(hook_events, root, profiles, profiles_error, cx);
         workspace::serve_opened(opened, cx);
         background::activate(cx);
     });

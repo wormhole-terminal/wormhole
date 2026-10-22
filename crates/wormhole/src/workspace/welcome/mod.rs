@@ -35,6 +35,7 @@ use crate::workspace::Workspace;
 use crate::workspace::app::{AppState, app, app_mut};
 #[cfg(feature = "devctl")]
 use crate::workspace::notifications;
+use crate::workspace::window_lifecycle::with_front_workspace;
 
 pub(super) use answers::handle;
 
@@ -123,7 +124,7 @@ pub(super) fn play_first(plan: Plan, cx: &mut App) {
 /// run and gets a new terminal that runs the welcome with `handover`.
 pub(crate) fn replay_in_front(handover: Handover, cx: &mut App) {
     cx.defer(move |cx| {
-        AppState::with_front_workspace(cx, |ws, window, cx| {
+        with_front_workspace(cx, |ws, window, cx| {
             crate::background::activate_window(window, cx);
             ws.replay_welcome(handover, window, cx);
         });

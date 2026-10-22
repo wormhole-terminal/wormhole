@@ -19,7 +19,6 @@ use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
 use crate::workspace::app_look::LookOverride;
-use crate::workspace::window_lifecycle::open_workspace_window;
 use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, updates};
 
 /// A window showing a [`Workspace`].
@@ -277,20 +276,6 @@ impl AppState {
             .update(cx, |_, win, cx| window.workspace.update(cx, |ws, cx| f(ws, win, cx)).ok())
             .ok()
             .flatten()
-    }
-
-    /// Run `f` on the front window's workspace, opening a window if there is none.
-    pub(crate) fn with_front_workspace<R>(
-        cx: &mut App,
-        f: impl FnOnce(&mut Workspace, &mut Window, &mut Context<Workspace>) -> R,
-    ) -> Option<R> {
-        match Self::front_window(cx) {
-            Some(window) => Self::with_workspace(&window, cx, f),
-            None => {
-                open_workspace_window(None, None, cx);
-                None
-            }
-        }
     }
 
     /// Projects with a session open in any window.

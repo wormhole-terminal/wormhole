@@ -29,6 +29,7 @@ use crate::workspace::actions::{
     ToggleThemeStudio, Zoom,
 };
 use crate::workspace::app::{AppState, app};
+use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{
     about, ambient, app_menu, command_palette, focus, menu_bar, onboarding, settings_page, shortcut_sheet,
     studio, updates, window_lifecycle,
@@ -116,7 +117,7 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &ShowLogs, cx| cx.open_with_system(&crate::logging::dir()));
     cx.on_action(|_: &ShowIntro, cx| {
         cx.defer(|cx| {
-            AppState::with_front_workspace(cx, |ws, window, cx| {
+            with_front_workspace(cx, |ws, window, cx| {
                 crate::background::activate_window(window, cx);
                 ws.show_intro(window, cx);
             });
@@ -199,7 +200,7 @@ fn bind_jump_key(cx: &mut App) {
 /// first, as About may be in front of it. Here, not in `intro`, which only knows what it draws.
 fn play_intro_in_front(style: Style, cx: &mut App) {
     cx.defer(move |cx| {
-        AppState::with_front_workspace(cx, |_, window, cx| {
+        with_front_workspace(cx, |_, window, cx| {
             crate::background::activate_window(window, cx);
             crate::intro::play(window, style, cx);
         });

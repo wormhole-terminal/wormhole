@@ -11,6 +11,7 @@ pub(crate) use self::about::devctl_command as devctl_about;
 pub(crate) use self::actions::CheckForUpdates;
 #[cfg(feature = "devctl")]
 pub(crate) use self::actions::NewWindow;
+#[cfg(feature = "devctl")]
 pub(crate) use self::app::AppState;
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use self::app::app;
@@ -47,7 +48,7 @@ mod actions;
 pub(crate) mod ambient;
 mod app;
 mod app_handlers;
-mod app_launch;
+pub(crate) mod app_launch;
 mod app_look;
 mod app_menu;
 mod app_tick;

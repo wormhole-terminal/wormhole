@@ -99,9 +99,23 @@ pub(crate) fn open_workspace_window_in(
     }
 }
 
+/// Run `f` on the front window's workspace, opening a window if there is none.
+pub(crate) fn with_front_workspace<R>(
+    cx: &mut App,
+    f: impl FnOnce(&mut Workspace, &mut Window, &mut Context<Workspace>) -> R,
+) -> Option<R> {
+    match AppState::front_window(cx) {
+        Some(window) => AppState::with_workspace(&window, cx, f),
+        None => {
+            open_workspace_window(None, None, cx);
+            None
+        }
+    }
+}
+
 /// ⌘N (or the menu): a window like the one in front.
 pub(super) fn new_window_from_front(cx: &mut App) {
-    if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
+    if with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
         && app(cx).windows.is_empty()
     {
         open_workspace_window(None, None, cx);

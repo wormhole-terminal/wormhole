@@ -18,6 +18,7 @@ use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::window_lifecycle::open_tab;
+use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{actions, settings_page, updates};
 
 const RECENT_PROJECTS: usize = 8;
@@ -329,7 +330,7 @@ fn register_dock_actions(cx: &mut App) {
     cx.on_action(|_: &DockNewWindow, cx| {
         cx.defer(|cx| {
             crate::background::activate(cx);
-            if AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
+            if with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
                 && app(cx).windows.is_empty()
             {
                 crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
@@ -366,7 +367,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
     match command {
         MenuCommand::ShowApp | MenuCommand::Hotkey | MenuCommand::Quit => {}
         MenuCommand::NewSession => {
-            AppState::with_front_workspace(cx, |ws, window, cx| ws.new_session(window, cx));
+            with_front_workspace(cx, |ws, window, cx| ws.new_session(window, cx));
         }
         MenuCommand::OpenFolder => open_folder(cx),
         MenuCommand::OpenTab(tab) => open_tab(tab, cx),
@@ -395,7 +396,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
                     });
                 }
                 None => {
-                    AppState::with_front_workspace(cx, |ws, window, cx| {
+                    with_front_workspace(cx, |ws, window, cx| {
                         ws.spawn_session(None, Some(root), window, cx);
                     });
                 }
@@ -421,7 +422,7 @@ pub(super) fn open_folder(cx: &mut App) {
         let Ok(Ok(Some(paths))) = paths.await else { return };
         let Some(folder) = paths.into_iter().next() else { return };
         cx.update(|cx| {
-            AppState::with_front_workspace(cx, |ws, window, cx| {
+            with_front_workspace(cx, |ws, window, cx| {
                 ws.spawn_session(None, Some(folder), window, cx);
             });
         });

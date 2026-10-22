@@ -26,6 +26,7 @@ use wormhole_core::view::layout::RememberedPanes;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::workspace::app::{AppState, OpenWindow};
 use crate::workspace::app::{app, app_mut};
+use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{menu_bar, project};
 
 impl AppState {
@@ -173,7 +174,7 @@ impl AppState {
         Self::ensure_open(target, cx);
         let target = target.clone();
         // A start folder of its own (the profile's), not the window in front's.
-        if AppState::with_front_workspace(cx, |ws, window, cx| {
+        if with_front_workspace(cx, |ws, window, cx| {
             let cwd = (ws.profile == target).then(|| ws.default_cwd(cx)).flatten();
             ws.new_window_in_profile(cwd, target.clone(), window, cx);
         })

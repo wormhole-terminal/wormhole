@@ -28,6 +28,7 @@ use crate::settings::settings;
 use crate::workspace::app::{AppState, OpenWindow, app};
 use crate::workspace::overlay::{OverlayKind, OverlayView};
 use crate::workspace::window_lifecycle::open_tab;
+use crate::workspace::window_lifecycle::with_front_workspace;
 use crate::workspace::{Workspace, settings_page};
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
 
@@ -520,11 +521,11 @@ impl CommandPalette {
                     }),
             };
             let cwd = cwd.map(|path| path.to_string_lossy().into_owned());
-            AppState::with_front_workspace(cx, |ws, window, cx| ws.new_window_in(cwd, window, cx));
+            with_front_workspace(cx, |ws, window, cx| ws.new_window_in(cwd, window, cx));
             // The window opens on the next turn and is then the one in front.
             if let Some((Some(root), commit)) = commit {
                 cx.defer(move |cx| {
-                    AppState::with_front_workspace(cx, |ws, _, cx| ws.reveal_commit(root, commit, cx));
+                    with_front_workspace(cx, |ws, _, cx| ws.reveal_commit(root, commit, cx));
                 });
             }
         });
@@ -582,9 +583,7 @@ fn open_folder(path: PathBuf, cx: &mut App) {
             });
         }
         None => {
-            AppState::with_front_workspace(cx, |ws, window, cx| {
-                ws.spawn_session(None, Some(path), window, cx)
-            });
+            with_front_workspace(cx, |ws, window, cx| ws.spawn_session(None, Some(path), window, cx));
         }
     }
 }
