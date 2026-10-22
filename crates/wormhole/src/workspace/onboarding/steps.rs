@@ -69,7 +69,7 @@ impl Workspace {
                 "Ready when you are",
                 "Wormhole didn't find a coding agent on this Mac. Nothing here depends on one.".into(),
             ),
-            // The welcome page is the intro window's own (`welcome.rs`), not a card.
+            // The welcome page is the intro window's own (`welcome_page.rs`), not a card.
             Step::Welcome => ("Welcome to Wormhole", SharedString::default()),
         };
         let counter = match step {

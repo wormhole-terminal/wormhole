@@ -23,7 +23,7 @@ mod keys;
 mod look_step;
 mod page;
 mod steps;
-mod welcome;
+mod welcome_page;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
