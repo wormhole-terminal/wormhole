@@ -32,7 +32,8 @@ use crate::workspace::actions::{
 };
 use crate::workspace::app::{AppState, app};
 use crate::workspace::window_lifecycle::with_front_workspace;
-use crate::workspace::{about, ambient, focus, onboarding, studio, updates, window_lifecycle};
+use crate::workspace::{ambient, focus, onboarding, updates, window_lifecycle};
+use crate::{about, studio};
 use crate::{command_palette, shortcut_sheet, status_item};
 
 /// Bind the keys, let project keys go first, and handle the actions that aren't one window's.

@@ -6,10 +6,10 @@ use wormhole_core::theme::tokens::ThemeTokens;
 use super::Env;
 use super::view::GalleryView;
 use crate::settings::{UiColors, settings};
+use crate::studio::draft::ANSI_NAMES;
+use crate::studio::ui;
 use crate::style::{Edges, TextRole};
 use crate::theme_bridge::hsla;
-use crate::workspace::studio::draft::ANSI_NAMES;
-use crate::workspace::studio::ui;
 
 /// A palette slot's square in the strip above the sample.
 const SLOT: f32 = 16.0;

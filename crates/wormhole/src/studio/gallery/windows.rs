@@ -9,8 +9,8 @@ use gpui_kit::*;
 
 use super::Env;
 use super::view::GalleryView;
+use crate::about;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::about;
 
 /// The About window's width: its content is drawn on a card that wide.
 const ABOUT_W: f32 = 340.0;

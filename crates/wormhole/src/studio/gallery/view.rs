@@ -16,10 +16,10 @@ use super::layout::{Columns, Measures, Piece, columns, extents, meeting};
 use super::syntax::CodeSample;
 use super::{Area, Env, SPECIMENS, TWO_COLUMNS_MIN_W, section};
 use crate::settings::{SettingsStore, UiColors};
+use crate::studio::token_editor::EDITOR_W;
+use crate::studio::token_list::LIST_W;
+use crate::studio::{StudioWindow, t, tokens_of, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::studio::token_editor::EDITOR_W;
-use crate::workspace::studio::token_list::LIST_W;
-use crate::workspace::studio::{StudioWindow, t, tokens_of, ui};
 
 /// How far above and below the viewport pieces are built, in viewports: a wheel tick or two
 /// doesn't show a placeholder.

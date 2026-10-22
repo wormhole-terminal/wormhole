@@ -5,7 +5,7 @@ use anyhow::Result;
 use super::Ctx;
 
 pub(super) fn toggle(ctx: &mut Ctx, _: &str) -> Result<String> {
-    crate::workspace::studio_devctl::toggle_studio(ctx.cx);
+    crate::studio::devctl::toggle_studio(ctx.cx);
     Ok(String::new())
 }
 
@@ -15,7 +15,7 @@ pub(super) fn toggle(ctx: &mut Ctx, _: &str) -> Result<String> {
 pub(super) fn with(ctx: &mut Ctx, command: &str, arg: &str) -> Result<String> {
     let arg = arg.trim().to_string();
     let command = command.to_string();
-    crate::workspace::studio_devctl::with_studio(ctx.cx, |studio, window, cx| match command.as_str() {
+    crate::studio::devctl::with_studio(ctx.cx, |studio, window, cx| match command.as_str() {
         "studio-select" => studio.devctl_select(&arg, window, cx),
         "studio-type" => studio.devctl_type(&arg, window, cx),
         "studio-scroll" => studio.devctl_scroll(arg.parse().unwrap_or(0.0), cx),
@@ -36,6 +36,6 @@ pub(super) fn frames(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let frames = words.next().and_then(|n| n.parse::<usize>().ok()).unwrap_or(40).max(1);
     let mode = words.next().unwrap_or_default();
-    crate::workspace::studio_devctl::frames(frames, mode, ctx.dir.join("frames.txt"), ctx.cx)?;
+    crate::studio::devctl::frames(frames, mode, ctx.dir.join("frames.txt"), ctx.cx)?;
     Ok(String::new())
 }

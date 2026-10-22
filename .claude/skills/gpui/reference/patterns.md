@@ -16,7 +16,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `workspace/app.rs`. It returns `None` for the window you are in, because
   that one is already being updated.
 - Opening extra windows (Settings, Studio) with `open_window`:
-  `settings_window/mod.rs`, `workspace/studio/mod.rs`; their shared
+  `settings_window/mod.rs`, `studio/mod.rs`; their shared
   window options and surfaces: `workspace/aux_window.rs`.
 - Settings and theme as a `Global` (`SettingsStore`), read with
   `settings(cx)` / `ui(cx)`: `settings/mod.rs`. Tokens become GPUI colors in
@@ -62,7 +62,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `window.focus(&h, cx)` and raw key and mouse input: `terminal_view/input.rs`.
 - A key context plus `on_action(cx.listener(…))` for window commands:
   `workspace/layout.rs` (`"Workspace"`), `settings_window/mod.rs`
-  (`"SettingsWindow"`), `workspace/studio/mod.rs` (`"StudioWindow"`).
+  (`"SettingsWindow"`), `studio/mod.rs` (`"StudioWindow"`).
 - Shortcuts handled from `on_key_down` (a project can rebind them, so they
   aren't static `KeyBinding`s): `workspace/shortcuts.rs`.
 - Drag and drop: `on_drag` / `drag_over` / `on_drop` in `style/reorder.rs`
@@ -75,13 +75,13 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `InputEvent` (`Change`, `PressEnter`, `Focus`, `Blur`), and `Checkbox`:
   `workspace/tasks.rs`. Multi-line `TextareaState`: `workspace/notes.rs`.
 - `Switch` in a settings row: `style/setting.rs`; `ColorPicker`:
-  `settings_window/sections/appearance.rs`, `workspace/studio/token_editor.rs`.
+  `settings_window/sections/appearance.rs`, `studio/token_editor.rs`.
 - `DropdownMenu` and `Tooltip`: `workspace/sidebar.rs`; `Tooltip` on icon
   buttons: `style/controls.rs`.
 - Syntax highlighting (`SyntaxHighlighter`, `HighlightTheme`):
   `workspace/git_panel/diff/highlight.rs`.
 - Every component in one place, with each theme applied: the Studio gallery
-  in `workspace/studio/gallery/` (one specimen per file). A new shared
+  in `studio/gallery/` (one specimen per file). A new shared
   component goes there too; `tests/design_rules.rs` checks it.
 
 ## Async
@@ -105,7 +105,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 - Headless GPUI tests (`#[gpui_kit::test]` with `TestAppContext`;
   `gpui_kit::init` and `SettingsStore::for_test()` first, then
   `gpui_kit::open_window`): `select/window_tests.rs`,
-  `settings/app_tests.rs`, `workspace/studio/window_tests.rs`. The app
+  `settings/app_tests.rs`, `studio/window_tests.rs`. The app
   crate's dev-dependency turns on `gpui-kit/test-support`, so plain
   `cargo test` builds them.
 - A whole `Workspace` window in a test, isolated in a child process with a

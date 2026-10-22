@@ -15,7 +15,7 @@ use crate::platform::inspect;
 pub(super) fn about(ctx: &mut Ctx, cmd: &str, arg: &str) -> Result<String> {
     // A shot's name; empty leaves the window's own.
     let arg = if cmd.ends_with("-shot") { super::file_name(arg, "")? } else { arg };
-    Ok(crate::workspace::devctl_about(cmd, arg, ctx.dir, ctx.cx)?.unwrap_or_default())
+    Ok(crate::about::devctl_command(cmd, arg, ctx.dir, ctx.cx)?.unwrap_or_default())
 }
 
 /// `action <name>`: dispatch a registered action by name (`workspace::ToggleSidebar`) through this

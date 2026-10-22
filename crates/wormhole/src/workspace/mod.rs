@@ -24,8 +24,6 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 #[cfg(feature = "devctl")]
-pub(crate) use self::about::devctl_command as devctl_about;
-#[cfg(feature = "devctl")]
 pub(crate) use self::actions::CheckForUpdates;
 #[cfg(feature = "devctl")]
 pub(crate) use self::actions::NewWindow;
@@ -40,8 +38,6 @@ pub(crate) use self::app_look::override_look;
 pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
-#[cfg(feature = "devctl")]
-pub(crate) use self::studio::devctl as studio_devctl;
 #[cfg(feature = "devctl")]
 pub(crate) use self::updates::devctl_installed as devctl_update_installed;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
@@ -147,10 +143,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
-
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::about;
-pub(crate) use crate::studio;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;

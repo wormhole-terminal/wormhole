@@ -5,8 +5,8 @@ use gpui_kit::*;
 use super::Env;
 use super::view::GalleryView;
 use crate::settings::UiColors;
+use crate::studio::ui;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::studio::ui;
 
 pub(super) fn render(
     studio: &GalleryView,
