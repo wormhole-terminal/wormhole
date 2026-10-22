@@ -40,7 +40,7 @@ impl Workspace {
                         self.panel_content(content, cx)
                     }
                     (None, Some(entity)) => {
-                        let content = (entry.view)(entity, &self.facts(cx), window, cx);
+                        let content = (entry.view)(entity, &self.frame_facts(window, cx), window, cx);
                         if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
                     }
                     (None, None) => div().into_any_element(),
@@ -52,10 +52,8 @@ impl Workspace {
                         let list = self.render_history_tab(window, cx);
                         self.panel_content(list, cx)
                     }
-                    TabId::Notes => {
-                        let list = self.render_notes_tab(window, cx);
-                        self.panel_content(list, cx)
-                    }
+                    // Notes is in the table.
+                    TabId::Notes => div().into_any_element(),
                     // Short tabs, all there at once: a plain scrolling column.
                     TabId::Project => {
                         let content = self.render_project_tab(cx).into_any_element();
@@ -84,10 +82,11 @@ impl Workspace {
 
     pub(crate) fn show_tab(&mut self, tab: TabId, cx: &mut Context<Self>) {
         // The Notes tab is gone while its flag is off.
-        let tab = if tab == TabId::Notes && !crate::window::features::notes::notes_on(cx) {
-            TabId::Changes
-        } else {
-            tab
+        // A tab of a feature that is off is gone.
+        let features = self.facts(cx).features;
+        let tab = match self.tab_entry(tab) {
+            Some((at, _)) if !features.has(self.features[at].id) => TabId::Changes,
+            _ => tab,
         };
         let tab = if tab == TabId::Usage && !self.usage_tab_on(cx) { TabId::Changes } else { tab };
         if tab == TabId::Usage && self.right_tab != TabId::Usage {

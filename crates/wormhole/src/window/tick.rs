@@ -102,9 +102,9 @@ impl Workspace {
             }
             self.refresh_projects(cx);
         }
-        // The backstop for a new note that never got the focus it would be thrown away on
-        // losing (see `prune_blank_notes`).
-        self.prune_blank_notes(window, cx);
+        // The features' housekeeping (Notes: the backstop for a new note that never got the focus it
+        // would be thrown away on losing).
+        self.tick_features(window, cx);
         if self.ticks.is_multiple_of(3) {
             self.sync_project_notes(window, cx);
         }

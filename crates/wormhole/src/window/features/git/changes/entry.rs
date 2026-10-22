@@ -62,6 +62,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     row_extras: None,
     close_stake: None,
     menu: None,
+    tick: None,
     state: Some(StateDef {
         make: |window, cx| {
             let entity = cx.new(|_| ChangesPanel);

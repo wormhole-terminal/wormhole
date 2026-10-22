@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use gpui_kit::*;
-use wormhole_core::storage::store::{NoteRecord, SessionRecord, TaskRecord};
+use wormhole_core::storage::store::SessionRecord;
 use wormhole_core::view::panes::PaneId;
 use wormhole_core::view::sidebar::{SplitId, names};
 
@@ -14,10 +14,8 @@ use crate::app_state::app;
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::window::Workspace;
 use crate::window::dialog::shortened;
+use crate::window::feature::Stake;
 use crate::window::features::git::{changes, history};
-use crate::window::features::notes;
-use crate::window::features::notes::tasks;
-use crate::window::features::notes::{Note, TaskItem};
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {
@@ -75,15 +73,6 @@ pub(super) struct Session {
     pub pane: Pane,
     /// The split it is shown in with other terminals (the window's `splits`), if any.
     pub split: Option<SplitId>,
-    pub notes: Vec<Note>,
-    /// The Notes tab's virtual list (bands, tasks and notes) and its folded done steps.
-    pub notes_list: notes::NotesList,
-    pub tasks: Vec<TaskItem>,
-    pub tasks_collapsed: bool,
-    /// The Notes section is folded up; the notes themselves are kept.
-    pub notes_collapsed: bool,
-    /// The task being written or edited in place, if any (see `tasks.rs`).
-    pub task_edit: Option<tasks::TaskEdit>,
     pub git: changes::GitState,
     /// Branch the Changes tab compares against (None = HEAD).
     pub compare: Option<String>,
@@ -127,15 +116,6 @@ impl Session {
         if name.is_empty() { format!("Terminal {}", self.number).into() } else { name }
     }
 
-    /// Notes with something in them plus tasks not done yet.
-    pub(super) fn open_items(&self, cx: &App) -> usize {
-        if !notes::notes_on(cx) {
-            return 0;
-        }
-        let notes = self.notes.iter().filter(|note| !notes::is_blank_note(note.state.read(cx))).count();
-        notes + self.tasks.iter().filter(|t| !t.done).count()
-    }
-
     /// Who a question about closing it names as at stake: the agent by its short name, else the
     /// program that reports its own status ("brew is still working").
     pub(super) fn told_name(&self, cx: &App) -> Option<String> {
@@ -164,26 +144,15 @@ impl Session {
         close_needs_confirmation(self.status(cx), self.command_running(cx))
     }
 
+    /// The window's part of the saved record; the features add theirs (`Workspace::session_record`).
     pub(super) fn record(&self, cx: &App) -> SessionRecord {
         SessionRecord {
             id: self.id,
             name: self.custom_name.clone(),
-            tasks_collapsed: self.tasks_collapsed,
-            notes_collapsed: self.notes_collapsed,
-            notes: self
-                .notes
-                .iter()
-                .map(|note| NoteRecord {
-                    // From the rope: `value()` would copy the text into a `SharedString` first.
-                    body: note.state.read(cx).text().to_string(),
-                    collapsed: note.collapsed,
-                })
-                .collect(),
-            tasks: self
-                .tasks
-                .iter()
-                .map(|task| TaskRecord { text: task.text.to_string(), done: task.done })
-                .collect(),
+            tasks_collapsed: false,
+            notes_collapsed: false,
+            notes: Vec::new(),
+            tasks: Vec::new(),
             pinned: self.pinned,
             forget_text: self.forget_text,
             cwd: self.terminal().read(cx).cwd.as_ref().map(|p| p.to_string_lossy().into_owned()),
@@ -239,7 +208,7 @@ fn close_needs_confirmation(status: Status, command_running: bool) -> bool {
 /// other programs that end with it (`programs`, without the agent's own).
 pub(super) fn close_session_detail(
     agent: Option<&str>,
-    open_items: usize,
+    stakes: &[Stake],
     status: Status,
     command_running: bool,
     programs: &[String],
@@ -264,9 +233,7 @@ pub(super) fn close_session_detail(
         (false, 0 | 1) => "Closing ends the process.".to_string(),
         (false, _) => "Closing ends them.".to_string(),
     });
-    if open_items > 0 {
-        sentences.push("Its notes and tasks are discarded.".to_string());
-    }
+    sentences.extend(stakes.iter().map(|stake| format!("Its {}", stake.sentence)));
     sentences.join(" ")
 }
 
@@ -310,15 +277,15 @@ pub(super) fn close_window_detail(
     terminals: usize,
     running: &[(Status, bool)],
     programs: &[String],
-    open_items: usize,
+    stakes: &[Stake],
 ) -> String {
     let mut detail = match terminals {
         1 => "The terminal in this window will end.".to_string(),
         n => format!("The {n} terminals in this window will end."),
     };
     detail.push_str(&still_running(running, programs));
-    if open_items > 0 {
-        detail.push_str(" Their notes and tasks are discarded.");
+    for stake in stakes {
+        detail.push_str(&format!(" Their {}", stake.sentence));
     }
     detail
 }
@@ -333,15 +300,15 @@ pub(super) fn close_group_detail(
     terminals: usize,
     running: &[(Status, bool)],
     programs: &[String],
-    open_items: usize,
+    stakes: &[Stake],
 ) -> String {
     let mut detail = match terminals {
         1 => "The terminal in this group will end.".to_string(),
         n => format!("The {n} terminals in this group will end."),
     };
     detail.push_str(&still_running(running, programs));
-    if open_items > 0 {
-        detail.push_str(" Their notes and tasks are discarded.");
+    for stake in stakes {
+        detail.push_str(&format!(" Their {}", stake.sentence));
     }
     detail
 }
@@ -513,6 +480,7 @@ mod tests {
         step_wrapping,
     };
     use crate::terminal_view::Status;
+    use crate::window::feature::Stake;
 
     #[test]
     fn closing_sessions_keeps_the_selection_sensible() {
@@ -610,6 +578,14 @@ mod tests {
         );
     }
 
+    /// What the notes feature says is at stake when `open` items would be discarded.
+    fn stakes(open: usize) -> Vec<Stake> {
+        wormhole_core::view::notes::stake::discarded(open)
+            .map(|sentence| Stake { count: open, sentence: sentence.to_string() })
+            .into_iter()
+            .collect()
+    }
+
     fn names(programs: &[&str]) -> Vec<String> {
         programs.iter().map(|p| p.to_string()).collect()
     }
@@ -617,21 +593,21 @@ mod tests {
     #[test]
     fn closing_a_window_names_what_is_still_running() {
         assert_eq!(
-            close_window_detail(3, &[(Status::Busy, false), (Status::Attention, false)], &[], 0),
+            close_window_detail(3, &[(Status::Busy, false), (Status::Attention, false)], &[], &[]),
             "The 3 terminals in this window will end. An agent is waiting for an answer."
         );
         assert_eq!(
-            close_window_detail(1, &[(Status::Busy, true)], &names(&["claude", "npm run dev"]), 2),
+            close_window_detail(1, &[(Status::Busy, true)], &names(&["claude", "npm run dev"]), &stakes(2)),
             "The terminal in this window will end. An agent is still working. Still running: claude, npm \
              run dev. Their notes and tasks are discarded."
         );
         assert_eq!(
-            close_window_detail(2, &[(Status::Idle, true)], &names(&["cargo watch"]), 0),
+            close_window_detail(2, &[(Status::Idle, true)], &names(&["cargo watch"]), &[]),
             "The 2 terminals in this window will end. Still running: cargo watch."
         );
         // A command whose name isn't known yet is still mentioned.
         assert_eq!(
-            close_window_detail(2, &[(Status::Idle, true)], &[], 0),
+            close_window_detail(2, &[(Status::Idle, true)], &[], &[]),
             "The 2 terminals in this window will end. A command is still running."
         );
     }
@@ -726,29 +702,29 @@ mod tests {
         assert_eq!(close_session_title("api"), "Close \u{201c}api\u{201d}?");
         // The agent by name, then what closing does.
         assert_eq!(
-            close_session_detail(Some("Claude"), 0, Status::Busy, true, &[]),
+            close_session_detail(Some("Claude"), &[], Status::Busy, true, &[]),
             "Claude is still working. Closing ends the process."
         );
-        assert_eq!(close_session_detail(None, 0, Status::Idle, false, &[]), "Its shell ends.");
+        assert_eq!(close_session_detail(None, &[], Status::Idle, false, &[]), "Its shell ends.");
         assert_eq!(
-            close_session_detail(None, 3, Status::Idle, false, &[]),
+            close_session_detail(None, &stakes(3), Status::Idle, false, &[]),
             "Its shell ends. Its notes and tasks are discarded."
         );
         assert_eq!(
-            close_session_detail(None, 0, Status::Idle, true, &[]),
+            close_session_detail(None, &[], Status::Idle, true, &[]),
             "A command is still running. Closing ends the process."
         );
         assert_eq!(
-            close_session_detail(None, 0, Status::Idle, true, &names(&["npm run dev"])),
+            close_session_detail(None, &[], Status::Idle, true, &names(&["npm run dev"])),
             "Still running: npm run dev. Closing ends the process."
         );
         // The agent's other programs end with it.
         assert_eq!(
-            close_session_detail(Some("Claude"), 0, Status::Busy, true, &names(&["cargo watch"])),
+            close_session_detail(Some("Claude"), &[], Status::Busy, true, &names(&["cargo watch"])),
             "Claude is still working. Still running: cargo watch. Closing ends them."
         );
         assert_eq!(
-            close_session_detail(Some("Codex"), 2, Status::Attention, false, &[]),
+            close_session_detail(Some("Codex"), &stakes(2), Status::Attention, false, &[]),
             "Codex is waiting for an answer. Closing ends the process. Its notes and tasks are discarded."
         );
     }

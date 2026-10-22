@@ -127,7 +127,7 @@ impl Workspace {
         }
         self.closing_prompt = true;
         cx.notify();
-        let open_items = self.sessions.iter().map(|s| s.open_items(cx)).sum();
+        let stakes = self.close_stakes(&self.session_ids(), cx);
         let programs: Vec<String> = self
             .sessions
             .iter()
@@ -136,7 +136,7 @@ impl Workspace {
             .collect();
         let question = dialog::CloseQuestion {
             title: "Close this window?".into(),
-            detail: session::close_window_detail(self.sessions.len(), &running, &programs, open_items).into(),
+            detail: session::close_window_detail(self.sessions.len(), &running, &programs, &stakes).into(),
             confirm: "Close Window",
         };
         let (confirm, dismiss) = (cx.weak_entity(), cx.weak_entity());
@@ -195,7 +195,7 @@ impl Workspace {
             title: session::close_session_title(&session.name(cx)).into(),
             detail: session::close_session_detail(
                 agent.as_deref(),
-                session.open_items(cx),
+                &self.close_stakes(&[id], cx),
                 status,
                 command,
                 &programs,

@@ -129,8 +129,8 @@ impl Workspace {
         match tab {
             TabId::Changes => false,
             TabId::History => true,
-            // Notes is behind its flag; when it's off Usage simply follows History.
-            TabId::Notes => crate::window::features::notes::notes_on(cx),
+            // In the table.
+            TabId::Notes => false,
             TabId::Usage => self.usage_tab_on(cx),
             // The Project tab belongs to the project-folder feature, so it's gone while that flag is
             // off (see `features`).

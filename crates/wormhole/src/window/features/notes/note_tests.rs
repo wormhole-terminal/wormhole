@@ -5,6 +5,7 @@ use gpui_kit::{TestAppContext, TextRun, font, px, rems, size};
 use wormhole_core::view::layout::{PANEL_MIN, SIDEBAR_DEFAULT, TERMINAL_MIN};
 
 use crate::app_state::OpenWindow;
+use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{draw, drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
@@ -23,7 +24,7 @@ fn resize(cx: &mut TestAppContext, window: &OpenWindow, width: f32) {
 /// The first note's hint as its editor draws it: one entry per line, each with its width.
 fn hint(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<(String, f32)> {
     drive(cx, window, |ws, window, cx| {
-        let hint = ws.sessions[0].notes[0].state.read(cx).presentation().placeholder().to_string();
+        let hint = notes::note(ws, 0, 0, cx).0.read(cx).presentation().placeholder().to_string();
         let family = cx.theme().font_family.clone();
         let size = rems(0.875).to_pixels(window.rem_size());
         hint.split('\n')
@@ -48,7 +49,7 @@ fn an_empty_notes_hint_fits_the_narrowest_panel(cx: &mut TestAppContext) {
     resize(cx, &window, NARROWEST_PANEL_WINDOW);
     drive(cx, &window, |ws, window, cx| {
         assert_eq!(ws.columns().panel, PANEL_MIN);
-        ws.new_note(None, window, cx);
+        notes::new_note(ws, 0, None, window, cx);
     });
     draw(cx, &window);
     // Where the editor's text starts, the panel's inset, and the margin the editor keeps.
@@ -70,12 +71,12 @@ fn a_notes_hint_follows_the_panel_when_the_note_is_taken_up(cx: &mut TestAppCont
     let window = start(cx, 1);
     resize(cx, &window, NARROWEST_PANEL_WINDOW);
     drive(cx, &window, |ws, window, cx| {
-        ws.add_note(0, Some("kept".into()), false, window, cx);
+        notes::add_note(ws, 0, "kept", false, window, cx);
     });
     let narrow = hint(cx, &window);
 
     resize(cx, &window, 1600.0);
-    drive(cx, &window, |ws, window, cx| ws.show_note(0, false, window, cx));
+    drive(cx, &window, |ws, window, cx| notes::show_note(ws, 0, 0, false, window, cx));
     // The editor says it has the keyboard when a frame finds it so.
     draw(cx, &window);
     cx.run_until_parked();

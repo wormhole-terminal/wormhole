@@ -8,7 +8,7 @@ use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::app;
-use crate::window::features::notes::TaskItem;
+use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{drive, hook, isolate_in, read, start};
 use crate::window::window_lifecycle::open_workspace_window;
 
@@ -22,9 +22,7 @@ fn closing_a_session_asks_only_while_an_agent_is_running(cx: &mut TestAppContext
         return;
     }
     let window = start(cx, 2);
-    drive(cx, &window, |ws, _, _| {
-        ws.sessions[0].tasks.push(TaskItem { text: "ship it".into(), done: false });
-    });
+    drive(cx, &window, |ws, _, cx| notes::add_task(ws, 0, "ship it", cx));
     // A task not done is not a reason to ask: the first session goes at once.
     drive(cx, &window, |ws, window, cx| ws.request_close_session(0, window, cx));
     read(cx, &window, |ws| {
@@ -94,7 +92,7 @@ fn closing_a_window_asks_only_while_an_agent_or_a_command_runs(cx: &mut TestAppC
     });
     cx.run_until_parked();
     // Notes and tasks alone don't ask: the window may go.
-    drive(cx, &first, |ws, _, _| ws.sessions[0].tasks.push(TaskItem { text: "ship it".into(), done: false }));
+    drive(cx, &first, |ws, _, cx| notes::add_task(ws, 0, "ship it", cx));
     let quiet = drive(cx, &first, |ws, window, cx| ws.should_close(window, cx));
     assert!(quiet, "nothing running: it closes without a question");
 

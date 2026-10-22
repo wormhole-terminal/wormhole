@@ -259,7 +259,7 @@ impl Workspace {
             ("Jot a note for this folder", &[ActionId::NewNote]),
             ("Hide the side panels", &[ActionId::ToggleSidebar, ActionId::ToggleRightPanel]),
         ];
-        let notes_on = crate::window::features::notes::notes_on(cx);
+        let notes_on = crate::settings::features(cx).has(wormhole_core::config::FeatureId::Notes);
         let command_done = settings(cx).notify_command_done;
         div()
             .flex()

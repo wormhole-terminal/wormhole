@@ -36,8 +36,8 @@ impl Workspace {
         let running: Vec<(Status, bool)> =
             asking.iter().map(|s| (s.status(cx), s.command_running(cx))).collect();
         let programs: Vec<String> = asking.iter().flat_map(|s| s.running_programs(false, cx)).collect();
-        let open_items: usize = sessions.iter().map(|s| s.open_items(cx)).sum();
-        let mut detail = close_group_detail(sessions.len(), &running, &programs, open_items);
+        let stakes = self.close_stakes(&members, cx);
+        let mut detail = close_group_detail(sessions.len(), &running, &programs, &stakes);
         if !worktrees.is_empty() {
             detail.push(' ');
             detail.push_str(&worktrees.note());
@@ -110,7 +110,7 @@ impl Workspace {
         if moved.is_empty() {
             return;
         }
-        let records: Vec<_> = moved.iter().map(|&ix| self.sessions[ix].record(cx)).collect();
+        let records: Vec<_> = moved.iter().map(|&ix| self.session_record(ix, cx)).collect();
         let terminals: Vec<_> =
             moved.iter().map(|&ix| (self.sessions[ix].id, self.sessions[ix].terminal().clone())).collect();
         let split_ids: HashSet<SplitId> = moved.iter().filter_map(|&ix| self.sessions[ix].split).collect();
@@ -133,7 +133,8 @@ impl Workspace {
         let mut gone: Vec<usize> = moved;
         gone.sort_unstable_by(|a, b| b.cmp(a));
         for ix in gone {
-            self.sessions.remove(ix);
+            let left = self.sessions.remove(ix);
+            self.features_left(left.id, cx);
         }
         self.splits.retain(|split| !split_ids.contains(&split.id));
         self.sidebar.view.groups.remove(group);

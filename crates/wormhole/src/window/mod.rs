@@ -232,10 +232,6 @@ pub struct Workspace {
     path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
     status_others: Vec<(i64, Vec<self::status_bar::Counted>)>,
-    /// Index into the active session's notes that ⌘↵ / Stash act on.
-    focused_note: Option<usize>,
-    /// The note whose text has the keyboard right now (drawn as the active item).
-    editing_note: Option<EntityId>,
     blur: vibrancy::Blur,
     /// Liquid Glass behind the sidebar or the tab bar (macOS 26).
     glass: std::rc::Rc<vibrancy::Glass>,
@@ -379,8 +375,6 @@ impl Workspace {
             path_card: Default::default(),
             path_anchor: Default::default(),
             status_others: Vec::new(),
-            focused_note: None,
-            editing_note: None,
             blur: vibrancy::Blur::install(window, blur_wanted),
             glass: std::rc::Rc::new(vibrancy::Glass::install(window)),
             bounds: record.bounds,

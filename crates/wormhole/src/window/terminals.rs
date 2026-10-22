@@ -15,7 +15,6 @@ use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 use crate::window::features::git::{changes, history};
-use crate::window::features::notes::TaskItem;
 use crate::window::session::{Pane, Session};
 
 impl Workspace {
@@ -91,15 +90,9 @@ impl Workspace {
         self.sessions.push(Session {
             id: record.id,
             number,
-            custom_name: record.name,
+            custom_name: record.name.clone(),
             pane,
             split: record.split_id,
-            notes: Vec::new(),
-            notes_list: crate::window::features::notes::NotesList::default(),
-            tasks: record.tasks.into_iter().map(|t| TaskItem { text: t.text.into(), done: t.done }).collect(),
-            tasks_collapsed: record.tasks_collapsed,
-            notes_collapsed: record.notes_collapsed,
-            task_edit: None,
             git: changes::GitState::default(),
             compare: None,
             history: history::HistoryState::default(),
@@ -113,9 +106,7 @@ impl Workspace {
             review: Default::default(),
         });
         let ix = self.sessions.len() - 1;
-        for note in record.notes {
-            self.add_note(ix, Some(note.body), note.collapsed, window, cx);
-        }
+        self.features_opened(&record, window, cx);
         if let Some(host) = new_host {
             self.save_host_row(ix, &host, cx);
         }
@@ -210,7 +201,6 @@ impl Workspace {
     /// and what is on screen counts as seen.
     pub(super) fn select(&mut self, ix: usize, cx: &mut Context<Self>) {
         if self.active != ix {
-            self.focused_note = None;
             // A feature's field belonged to the terminal it was opened for.
             self.feature_editing = false;
             self.features_selected(self.sessions[ix].id, cx);
@@ -255,12 +245,13 @@ impl Workspace {
         let after = crate::window::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         self.sidebar.view.groups.leave(closed.id);
+        self.features_closed(closed.id, cx);
         crate::notifications::dismiss(closed.pane.id, cx);
         crate::window::onboarding::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
-        // screen (its diff, branch picker and focused note), so only a real change of session
+        // screen (its diff and branch picker), so only a real change of session
         // goes that way: closing a background session leaves the one you are in alone.
         match after {
             None => {

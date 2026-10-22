@@ -8,10 +8,12 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::store::{NoteRecord, SessionRecord, TaskRecord};
 use wormhole_core::view::focus::Area;
 
+use super::testing as notes;
 use crate::app_state::{OpenWindow, app};
 use crate::settings::update_settings;
 use crate::window::Workspace;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, start};
+use crate::window::view_tests::read;
+use crate::window::view_tests::{draw, drive, isolate_in, press, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -65,12 +67,13 @@ fn open(ws: &mut Workspace, record: SessionRecord, window: &mut Window, cx: &mut
 
 /// The notes and tasks the terminal's row counts and the close question names.
 fn open_items(ws: &Workspace, id: i64, cx: &App) -> usize {
-    ws.sessions[ws.find_session(id).expect("a terminal")].open_items(cx)
+    // Off, nothing is at stake: the close question asks only the features that are on.
+    ws.close_stakes(&[id], cx).first().map_or(0, |stake| stake.count)
 }
 
 /// The note ⌘↵ and the stash act on, in the selected terminal.
-fn focused_note(ws: &Workspace) -> Option<usize> {
-    ws.focused_note
+fn focused_note(ws: &Workspace, cx: &App) -> Option<usize> {
+    notes::focused_note(ws, cx)
 }
 
 fn set_flag(cx: &mut TestAppContext, on: bool) {
@@ -189,12 +192,12 @@ fn choosing_another_terminal_lets_go_of_the_focused_note(cx: &mut TestAppContext
         return;
     }
     let window = start(cx, 2);
-    drive(cx, &window, |ws, window, cx| ws.new_note(Some("first".into()), window, cx));
-    assert_eq!(read(cx, &window, focused_note), Some(0));
+    drive(cx, &window, |ws, window, cx| notes::new_note(ws, ws.active, Some("first"), window, cx));
+    assert_eq!(read_cx(cx, &window, focused_note), Some(0));
     drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
-    assert_eq!(read(cx, &window, focused_note), None, "the other terminal starts fresh");
+    assert_eq!(read_cx(cx, &window, focused_note), None, "the other terminal starts fresh");
     drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
-    assert_eq!(read(cx, &window, focused_note), None, "and so does coming back");
+    assert_eq!(read_cx(cx, &window, focused_note), None, "and so does coming back");
 }
 
 #[gpui_kit::test]
@@ -246,7 +249,7 @@ fn the_notes_list_is_walked_by_the_keys_and_a_note_is_folded_or_written_in(cx: &
     // Return on the next note writes in it: the keys go to its editor and it is the focused note.
     key(cx, &window, "down");
     key(cx, &window, "enter");
-    assert_eq!(read(cx, &window, focused_note), Some(1));
+    assert_eq!(read_cx(cx, &window, focused_note), Some(1));
     assert_eq!(area(cx), Some(Area::PanelContent), "the editor holds the keys, in the panel");
 }
 
@@ -261,7 +264,7 @@ fn cmd_shift_e_with_no_note_starts_one_and_with_notes_goes_to_the_one_worked_on(
             ws.focus_terminal(window, cx);
             ws.toggle_focus(window, cx);
         });
-        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 1, cx).notes.len(), focused_note(ws)))
+        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 1, cx).notes.len(), focused_note(ws, cx)))
     };
     // An empty note is thrown away when it loses the keyboard, so the first press makes one and the
     // next, with the terminal focused again, finds none and makes another.
@@ -278,9 +281,92 @@ fn cmd_shift_e_with_no_note_starts_one_and_with_notes_goes_to_the_one_worked_on(
             ws.focus_terminal(window, cx);
             ws.toggle_focus(window, cx);
         });
-        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 11, cx).notes.len(), focused_note(ws)))
+        drive(cx, &window, |ws, _, cx| (ws.right_tab, saved(ws, 11, cx).notes.len(), focused_note(ws, cx)))
     };
     assert_eq!(toggle_in_11(cx), (TabId::Notes, 2, Some(0)), "the first note when none was worked on");
-    drive(cx, &window, |ws, _, _| ws.focused_note = Some(1));
+    drive(cx, &window, |ws, _, cx| notes::set_focused_note(ws, Some(1), cx));
     assert_eq!(toggle_in_11(cx), (TabId::Notes, 2, Some(1)), "back into the note that was worked on");
+}
+
+#[gpui_kit::test]
+fn the_notes_keep_an_entry_for_exactly_the_terminals_of_the_window(cx: &mut TestAppContext) {
+    if isolate("the_notes_keep_an_entry_for_exactly_the_terminals_of_the_window") {
+        return;
+    }
+    let window = start(cx, 2);
+    let ids = |cx: &mut TestAppContext, window: &OpenWindow| {
+        read_cx(cx, window, |ws, cx| {
+            let mut ours: Vec<i64> = ws.sessions.iter().map(|s| s.id).collect();
+            ours.sort_unstable();
+            (notes::kept_ids(ws, cx), ours)
+        })
+    };
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!(kept, ours, "made with the window's terminals");
+
+    drive(cx, &window, |ws, window, cx| {
+        open(ws, record_with(11, &[("a", false)], &[("n", false)], (false, false)), window, cx);
+    });
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 3), "added with a new terminal");
+
+    drive(cx, &window, |ws, window, cx| {
+        let ix = ws.find_session(11).expect("a row");
+        ws.close_session(ix, window, cx);
+    });
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 2), "dropped with a closed terminal");
+
+    let group = drive(cx, &window, |ws, _, cx| ws.group_terminals(&[2], cx));
+    drive(cx, &window, |ws, window, cx| ws.move_group_to_window(group, window, cx));
+    cx.run_until_parked();
+    let (kept, ours) = ids(cx, &window);
+    assert_eq!((kept.clone(), kept.len()), (ours, 1), "and with a terminal that moved away");
+}
+
+#[gpui_kit::test]
+fn a_terminals_row_counts_what_is_open_and_the_close_question_says_it_is_discarded(cx: &mut TestAppContext) {
+    use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
+    if isolate("a_terminals_row_counts_what_is_open_and_the_close_question_says_it_is_discarded") {
+        return;
+    }
+    let window = start(cx, 1);
+    let record =
+        record_with(11, &[("a", false), ("b", true)], &[("text", false), (" ", false)], (false, false));
+    let (extras, stake) = drive(cx, &window, |ws, window, cx| {
+        open(ws, record, window, cx);
+        let mut rows = vec![RowInfo::test_row(1), RowInfo::test_row(11)];
+        ws.feature_row_extras(&mut rows, cx);
+        let extras: Vec<_> = RowExtras::new(&mut rows).iter_mut().map(|(id, slot)| (id, *slot)).collect();
+        (extras, ws.close_stakes(&[1, 11], cx))
+    });
+    assert_eq!(extras, [(1, None), (11, Some(RowExtra { count: 2 }))], "an open task and a note with text");
+    assert_eq!(stake.len(), 1);
+    assert_eq!((stake[0].count, stake[0].sentence.as_str()), (2, "notes and tasks are discarded."));
+    // Off, the row and the question say nothing.
+    set_flag(cx, false);
+    let (extras, stake) = drive(cx, &window, |ws, _, cx| {
+        let mut rows = vec![RowInfo::test_row(11)];
+        ws.feature_row_extras(&mut rows, cx);
+        (
+            RowExtras::new(&mut rows).iter_mut().next().and_then(|(_, slot)| *slot),
+            ws.close_stakes(&[11], cx).len(),
+        )
+    });
+    assert_eq!((extras, stake), (None, 0));
+}
+
+#[gpui_kit::test]
+fn the_tick_throws_away_a_note_left_empty_that_never_had_the_keyboard(cx: &mut TestAppContext) {
+    if isolate("the_tick_throws_away_a_note_left_empty_that_never_had_the_keyboard") {
+        return;
+    }
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| {
+        notes::add_note(ws, 0, "", false, window, cx);
+        notes::add_note(ws, 0, "kept", false, window, cx);
+        assert_eq!(notes::note_count(ws, 0, cx), 2);
+        ws.tick_features(window, cx);
+        assert_eq!(notes::note_count(ws, 0, cx), 1, "the empty one is gone");
+    });
 }

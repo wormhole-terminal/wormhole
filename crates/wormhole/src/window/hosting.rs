@@ -146,7 +146,7 @@ impl Workspace {
         if self.discarded {
             return;
         }
-        let record = self.sessions[ix].record(cx);
+        let record = self.session_record(ix, cx);
         app_mut(cx).save_session_host(&self.profile, self.window_id, &record, host);
     }
 

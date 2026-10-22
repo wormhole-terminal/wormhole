@@ -78,8 +78,9 @@ pub(in crate::window) enum FeatureEvent {
     /// the panel shows another tab, a feature is gone or another terminal is selected, because a field
     /// that loses the keyboard that way says nothing; so send `ShowTab` before `Editing(true)`.
     Editing(bool),
-    /// Paste `text` into a terminal of this window.
-    SendText { session: i64, text: SharedString },
+    /// Paste `text` into a terminal of this window and give it the keyboard; with `submit`, press
+    /// Enter after it.
+    SendText { session: i64, text: SharedString, submit: bool },
 }
 
 /// The hooks' shapes. Plain function pointers, never `dyn`: the frame calls them and a closure's box
@@ -92,7 +93,9 @@ pub(in crate::window) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> O
 pub(in crate::window) type TabActionsFn =
     fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> Option<AnyElement>;
 pub(in crate::window) type OnShowFn = fn(&AnyEntity, session: i64, &mut App);
-pub(in crate::window) type FocusInFn = fn(&AnyEntity, session: i64, &mut Window, &mut App) -> bool;
+pub(in crate::window) type FocusInFn =
+    fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut Window, &mut App) -> bool;
+pub(in crate::window) type TickFn = fn(&AnyEntity, &mut Window, &mut App);
 pub(in crate::window) type PressFn =
     fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
 
@@ -119,10 +122,14 @@ pub(in crate::window) struct FeatureDef {
     /// What closing these terminals would lose (notes' open items, a worktree's changes), for the
     /// whole set being closed (a group, a window).
     pub close_stake: Option<CloseStakeFn>,
-    /// Menu, palette and sheet state: actions hidden or disabled right now (Usage without an agent).
-    /// Called whether the feature is on or off (the facts carry the mask) until the keymap's rows are
-    /// tagged with their feature (5a).
+    /// Menu, palette and sheet state: actions disabled or hidden right now (Usage without an agent).
+    /// Called whether the feature is on or off (the facts carry the mask). What an off feature hides
+    /// is not this hook's: the keymap's rows are tagged with their feature, and the window hides the
+    /// tagged ones of every feature that is off.
     pub menu: Option<MenuFn>,
+    /// Once per window tick, for the state of every feature that has one, on or off: housekeeping that
+    /// can't wait for an event (Notes throws away a note left empty that never had the keyboard).
+    pub tick: Option<TickFn>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -220,6 +227,7 @@ pub(in crate::window) struct StateDef {
     /// A terminal was selected: clear what the feature kept for the one before (Notes' focused note).
     pub selected: Option<fn(&AnyEntity, session: i64, &mut App)>,
     /// ⇧⌘E and the like: put the keys in the feature's field for this terminal; whether it took them.
+    /// It gets the facts, for the panel's width a new field is made for.
     pub focus_in: Option<FocusInFn>,
     /// Writes the feature's part of a terminal's saved record.
     pub record: fn(&AnyEntity, session: i64, &mut SessionRecord, &App),

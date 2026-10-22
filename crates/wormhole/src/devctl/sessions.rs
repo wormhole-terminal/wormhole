@@ -5,6 +5,7 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use super::{Ctx, nth};
+use crate::window::features::notes::devctl as notes;
 
 /// A new terminal, where the selected one is or in the folder given (`~/` is the home folder).
 pub(super) fn new(ctx: &mut Ctx, arg: &str) -> Result<String> {
@@ -256,12 +257,12 @@ fn pane_id(ctx: &Ctx, arg: &str) -> Result<i64> {
 }
 
 pub(super) fn note(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.set_first_note(arg.to_string(), ctx.window, ctx.cx);
+    notes::set_first_note(ctx.workspace, arg.to_string(), ctx.window, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn task(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.add_task(arg.to_string(), ctx.cx);
+    notes::add_task(ctx.workspace, arg, ctx.cx);
     Ok(String::new())
 }
 
@@ -376,13 +377,13 @@ pub(super) fn toggle_panel(ctx: &mut Ctx, _: &str) -> Result<String> {
 }
 
 pub(super) fn stash(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.stash_prompt(ctx.window, ctx.cx);
+    notes::stash_prompt(ctx.workspace, ctx.window, ctx.cx);
     Ok(String::new())
 }
 
 /// Send the focused note to the terminal, pressing Enter after it when `submit`.
 pub(super) fn send(ctx: &mut Ctx, _: &str, submit: bool) -> Result<String> {
-    ctx.workspace.send_focused_note(submit, ctx.window, ctx.cx);
+    notes::send_focused_note(ctx.workspace, submit, ctx.cx);
     Ok(String::new())
 }
 

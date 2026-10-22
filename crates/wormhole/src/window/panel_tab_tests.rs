@@ -7,7 +7,8 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::keys::keymap::ActionId;
 
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::features::notes::testing as notes;
+use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
 use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {
@@ -45,9 +46,10 @@ fn notes_and_their_actions_are_gone_while_the_flag_is_off(cx: &mut TestAppContex
     for id in [ActionId::ShowNotes, ActionId::NewNote, ActionId::StashPrompt] {
         assert!(hidden.contains(&id), "{id:?} is hidden");
     }
-    let before = read(cx, &window, |ws| ws.active_session().notes.len());
-    drive(cx, &window, |ws, window, cx| ws.new_note(None, window, cx));
-    assert_eq!(read(cx, &window, |ws| ws.active_session().notes.len()), before, "no note is made");
+    let count = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| notes::note_count(ws, ws.active, cx));
+    let before = count(cx);
+    drive(cx, &window, |ws, window, cx| notes::new_note(ws, ws.active, None, window, cx));
+    assert_eq!(count(cx), before, "no note is made");
 
     set_notes_flag(cx, true);
     let (listed, tab, hidden) = state(cx);

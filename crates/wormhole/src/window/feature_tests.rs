@@ -22,6 +22,7 @@ use crate::window::Workspace;
 use crate::window::feature::{FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
 use crate::window::features::TABLE;
 use crate::window::features::git::changes;
+use crate::window::features::notes::testing as notes;
 use crate::window::focus::{Activate, Walkable};
 use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
@@ -29,7 +30,7 @@ use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with
 /// Features core lists that have not moved into the app's table yet. Each phase 5 step takes one off
 /// this list when it adds the entry; the list ends empty.
 const NOT_YET: &[FeatureId] =
-    &[FeatureId::History, FeatureId::Notes, FeatureId::Usage, FeatureId::Project, FeatureId::Worktrees];
+    &[FeatureId::History, FeatureId::Usage, FeatureId::Project, FeatureId::Worktrees];
 
 #[test]
 fn every_feature_is_in_the_table_or_waiting_for_its_step() {
@@ -130,6 +131,7 @@ static STAND_IN: &[FeatureDef] = &[
             Some(Stake { count: sessions.len(), sentence: format!("{} stand-ins", sessions.len()) })
         }),
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
+        tick: None,
         state: Some(StateDef {
             make: |window, cx| {
                 let entity = cx.new(|_| Marker {
@@ -142,16 +144,19 @@ static STAND_IN: &[FeatureDef] = &[
                 Workspace::listen(&entity, window, cx)
             },
             selected: Some(|entity, session, cx| marker(entity).update(cx, |m, _| m.selected.push(session))),
-            focus_in: Some(|entity, session, _, cx| {
+            focus_in: Some(|entity, _, session, _, cx| {
                 marker(entity).update(cx, |m, _| m.focused_for.push(session));
                 true
             }),
             record: |entity, session, record, cx| {
                 record.name = Some(format!("{session}/{}", marker(entity).read(cx).count));
             },
+            // The window calls it for every terminal it opens; a record the stand-in didn't write has
+            // nothing for it.
             opened: |entity, record, _, cx| {
-                let count = record.name.as_deref().map_or(0, str::len) as i64;
-                marker(entity).update(cx, |m, _| m.count = count);
+                if let Some(name) = &record.name {
+                    marker(entity).update(cx, |m, _| m.count = name.len() as i64);
+                }
             },
             closed: |entity, session, cx| {
                 marker(entity).update(cx, |m, _| m.selected.retain(|&s| s != session));
@@ -319,8 +324,8 @@ fn a_feature_tells_the_window_by_events(cx: &mut TestAppContext) {
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
 
     // A text for a terminal that is not there is dropped; for one that is, pasted. Neither panics.
-    emit(cx, FeatureEvent::SendText { session: 999, text: "nobody".into() });
-    emit(cx, FeatureEvent::SendText { session: 1, text: "hello".into() });
+    emit(cx, FeatureEvent::SendText { session: 999, text: "nobody".into(), submit: false });
+    emit(cx, FeatureEvent::SendText { session: 1, text: "hello".into(), submit: true });
     emit(cx, FeatureEvent::FocusTerminal);
 }
 
@@ -549,6 +554,43 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
     );
 }
 
+/// Allocations the second draw of a one-terminal window on Notes (three next steps, three notes) may
+/// make. Measured: 5,788 allocations (3.1 MB), the same on every run. Like the Changes budget it is that plus
+/// about a hundredth; the notes tab adds its rows, the shared copy the closures hold and the list's
+/// own, so a cost per note or per step per frame shows at once.
+const NOTES_FRAME_ALLOCATIONS: u64 = 5_846;
+
+#[gpui_kit::test]
+fn a_window_frame_on_notes_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    if isolate("a_window_frame_on_notes_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    drive(cx, &window, |ws, window, cx| {
+        for text in ["Fix the flaky login test", "Update the README", "Tag the release"] {
+            notes::add_task(ws, 0, text, cx);
+        }
+        for text in ["First note\nwith a second line", "Second note", "Third note"] {
+            notes::add_note(ws, 0, text, false, window, cx);
+        }
+        ws.show_tab(TabId::Notes, cx);
+    });
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Notes);
+    // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
+    draw(cx, &window);
+    draw(cx, &window);
+    let before = thread_counts();
+    draw(cx, &window);
+    let drawn = thread_counts().since(before);
+    eprintln!("window frame on Notes: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= NOTES_FRAME_ALLOCATIONS,
+        "a window frame on Notes made {} allocations (budget {NOTES_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
+}
+
 /// `n` changed files, in folders of ten, so a per-row cost scales with `n`.
 fn many_changes(n: usize) -> RepoStatus {
     let mut status = three_changes();
@@ -584,6 +626,7 @@ macro_rules! crowd_member {
             row_extras: None,
             close_stake: None,
             menu: None,
+            tick: None,
             state: Some(StateDef {
                 make: |window, cx| {
                     let entity = cx.new(|_| Marker {

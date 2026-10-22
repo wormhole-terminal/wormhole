@@ -6,7 +6,8 @@ use wormhole_core::view::focus::Area;
 
 use super::SidebarStop;
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, start};
+use crate::window::features::notes::testing as notes;
+use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start};
 use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
@@ -102,13 +103,15 @@ fn the_next_steps_are_walked_and_ticked_from_the_keyboard(cx: &mut TestAppContex
     }
     let window = start(cx, 1);
     drive(cx, &window, |ws, _, cx| {
-        ws.add_task("Fix the flaky login test".into(), cx);
-        ws.add_task("Update README".into(), cx);
+        notes::add_task(ws, 0, "Fix the flaky login test", cx);
+        notes::add_task(ws, 0, "Update README", cx);
         ws.show_tab(TabId::Notes, cx);
     });
     assert!(read(cx, &window, |ws| ws.notes_visible()), "the panel is on screen");
     let done = |cx: &mut TestAppContext| {
-        read(cx, &window, |ws| ws.active_session().tasks.iter().map(|t| t.done).collect::<Vec<_>>())
+        read_cx(cx, &window, |ws, cx| {
+            notes::tasks(ws, ws.active, cx).into_iter().map(|(_, done)| done).collect::<Vec<_>>()
+        })
     };
 
     f6_to(cx, &window, Area::PanelContent);
@@ -120,9 +123,9 @@ fn the_next_steps_are_walked_and_ticked_from_the_keyboard(cx: &mut TestAppContex
     // ← on a step goes to its band; ← again folds the section.
     key(cx, &window, "left");
     key(cx, &window, "left");
-    assert!(read(cx, &window, |ws| ws.active_session().tasks_collapsed), "← folded Next steps");
+    assert!(read_cx(cx, &window, |ws, cx| notes::tasks_collapsed(ws, ws.active, cx)), "← folded Next steps");
     key(cx, &window, "right");
-    assert!(read(cx, &window, |ws| !ws.active_session().tasks_collapsed), "→ opened it");
+    assert!(read_cx(cx, &window, |ws, cx| !notes::tasks_collapsed(ws, ws.active, cx)), "→ opened it");
     key(cx, &window, "escape");
     assert_eq!(area(cx, &window), Some(Area::Terminal));
 }
@@ -135,10 +138,11 @@ fn on_a_section_band_only_space_folds_it(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     drive(cx, &window, |ws, _, cx| {
-        ws.add_task("Fix the flaky login test".into(), cx);
+        notes::add_task(ws, 0, "Fix the flaky login test", cx);
         ws.show_tab(TabId::Notes, cx);
     });
-    let folded = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.active_session().tasks_collapsed);
+    let folded =
+        |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| notes::tasks_collapsed(ws, ws.active, cx));
 
     // The keys start on the Next steps band.
     f6_to(cx, &window, Area::PanelContent);

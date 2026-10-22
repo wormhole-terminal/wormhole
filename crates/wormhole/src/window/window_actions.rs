@@ -11,11 +11,10 @@ use wormhole_core::view::sidebar::order::shortcut_target;
 use crate::actions::{
     ActualSize, Bigger, CloseTerminal, CloseWindow, CopyPath, Find, FindNext, FindPrevious, FocusNextArea,
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
-    GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewNote,
-    NewSession, NewTerminalInWorktree, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal,
-    PinTerminal, PreviousGroup, PreviousTerminal, RevealInFinder, RunProjectAction, ShowHistory, ShowNotes,
-    ShowProject, ShowUsage, Smaller, SplitDown, SplitRight, StashPrompt, ToggleRightPanel, ToggleSidebar,
-    UseSelectionForFind, ZoomPane,
+    GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewSession,
+    NewTerminalInWorktree, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal,
+    PreviousGroup, PreviousTerminal, RevealInFinder, RunProjectAction, ShowHistory, ShowProject, ShowUsage,
+    Smaller, SplitDown, SplitRight, ToggleRightPanel, ToggleSidebar, UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
@@ -148,11 +147,6 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Bigger, _, cx| this.zoom_font(Some(1.0), cx)))
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
-            .when(crate::window::features::notes::notes_on(cx), |root| {
-                root.on_action(cx.listener(|this, _: &ShowNotes, _, cx| this.show_tab(TabId::Notes, cx)))
-                    .on_action(cx.listener(|this, _: &NewNote, window, cx| this.new_note(None, window, cx)))
-                    .on_action(cx.listener(|this, _: &StashPrompt, window, cx| this.stash_prompt(window, cx)))
-            })
             // Find works on the terminal in front, so not while a diff covers it.
             .when(self.diff_view.is_none(), |root| {
                 root.on_action(cx.listener(|this, _: &Find, window, cx| {

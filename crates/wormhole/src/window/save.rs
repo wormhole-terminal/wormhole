@@ -28,7 +28,7 @@ impl Workspace {
             active: self.active,
             layout: serde_json::to_string(&layout).ok(),
             bounds: self.bounds.clone(),
-            sessions: self.sessions.iter().map(|s| s.record(cx)).collect(),
+            sessions: (0..self.sessions.len()).map(|ix| self.session_record(ix, cx)).collect(),
             splits: self.split_records(),
         }
     }

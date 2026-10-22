@@ -394,7 +394,7 @@ impl Workspace {
             let programs = session.running_programs(matches!(status, Status::Busy | Status::Attention), cx);
             session::close_session_detail(
                 agent.as_deref(),
-                session.open_items(cx),
+                &self.close_stakes(&[id], cx),
                 status,
                 command,
                 &programs,

@@ -3,6 +3,7 @@
 use anyhow::{Result, anyhow};
 
 use super::{Ctx, nth};
+use crate::window::features::notes::devctl as notes;
 
 pub(super) fn changes(ctx: &mut Ctx, _: &str) -> Result<String> {
     ctx.workspace.show_changes(ctx.cx);
@@ -111,8 +112,11 @@ pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let Some(tab) = TabId::from_key(arg) else {
         return Err(anyhow!("expected changes, history, notes, usage or project, got {arg:?}"));
     };
-    if tab == TabId::Notes && !crate::window::features::notes::notes_on(ctx.cx) {
-        return Ok("notes and tasks are off (feature_flags.notes_and_tasks)".into());
+    // A tab of a feature that is off can't be shown: say which switch to turn.
+    if let Some(feature) = wormhole_core::config::FeatureId::of_tab(tab)
+        && !crate::settings::features(ctx.cx).has(feature)
+    {
+        return Ok(format!("{} is off (feature_flags)", feature.info().title.to_lowercase()));
     }
     ctx.workspace.show_tab(tab, ctx.cx);
     Ok(String::new())
@@ -122,25 +126,25 @@ pub(super) fn panel_tab(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn task_seed(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut args = arg.split_whitespace().filter_map(|a| a.parse::<usize>().ok());
     let (open, done) = (args.next().unwrap_or(38), args.next().unwrap_or(12));
-    ctx.workspace.devctl_seed_tasks(open, done, ctx.cx);
+    notes::seed_tasks(ctx.workspace, open, done, ctx.cx);
     Ok(String::new())
 }
 
 /// `task-done <n>`: tick (or untick) the n-th next step.
 pub(super) fn task_done(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_toggle_task(nth(arg), ctx.cx);
+    notes::toggle_task(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())
 }
 
 /// `note-add <text>`: a note at the end of the list, open.
 pub(super) fn note_add(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_add_note(arg.to_string(), ctx.window, ctx.cx);
+    notes::add_note(ctx.workspace, arg.to_string(), ctx.window, ctx.cx);
     Ok(String::new())
 }
 
 /// `note-toggle <n>`: fold or unfold the n-th note.
 pub(super) fn note_toggle(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_toggle_note(nth(arg), ctx.cx);
+    notes::toggle_note(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())
 }
 
@@ -148,7 +152,7 @@ pub(super) fn note_toggle(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn note_seed(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut args = arg.split_whitespace().filter_map(|a| a.parse::<usize>().ok());
     let (count, lines) = (args.next().unwrap_or(50), args.next().unwrap_or(12));
-    ctx.workspace.devctl_seed_notes(count, lines, ctx.window, ctx.cx);
+    notes::seed_notes(ctx.workspace, count, lines, ctx.window, ctx.cx);
     Ok(String::new())
 }
 

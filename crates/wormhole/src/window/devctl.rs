@@ -17,6 +17,22 @@ pub(crate) struct TickHook(pub(crate) fn(&mut Workspace, &mut Window, &mut Conte
 impl Global for TickHook {}
 
 impl Workspace {
+    /// `scroll-panel`: the shown tab's list scrolled by `y` points.
+    pub(crate) fn devctl_panel_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
+        use wormhole_core::config::TabId;
+        let list = match self.right_tab {
+            TabId::Changes => self.devctl_changes_list(),
+            TabId::History => self.devctl_history_list(),
+            TabId::Notes => match crate::window::features::notes::devctl::list(self, cx) {
+                Some(list) => list,
+                None => return,
+            },
+            TabId::Project | TabId::Usage => return,
+        };
+        list.scroll_by(px(y));
+        cx.notify();
+    }
+
     /// Run the installed [`TickHook`], if there is one (the view tests install none).
     pub(super) fn run_tick_hook(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(hook) = cx.try_global::<TickHook>().map(|hook| hook.0) {
@@ -344,14 +360,16 @@ impl Workspace {
                 terminal.shell_name(),
                 terminal.host_label(),
             ));
-            for task in &session.tasks {
+            // The features' parts of the saved record say what the terminal holds.
+            let saved = self.session_record(ix, cx);
+            for task in &saved.tasks {
                 out.push_str(&format!("    [{}] {}\n", if task.done { "x" } else { " " }, task.text));
             }
-            for note in &session.notes {
+            for note in &saved.notes {
                 out.push_str(&format!(
                     "    note{}: {:?}\n",
                     if note.collapsed { " (collapsed)" } else { "" },
-                    note.state.read(cx).value()
+                    note.body
                 ));
             }
         }

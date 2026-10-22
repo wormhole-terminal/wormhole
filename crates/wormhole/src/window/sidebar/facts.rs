@@ -44,14 +44,12 @@ pub(in crate::window) struct RowInfo {
     /// The command is done and left output you haven't seen ("new output").
     pub(super) unread: bool,
     pub(super) pinned: bool,
-    /// Notes with something in them and tasks not done.
-    pub(super) open_items: usize,
     /// The changed files the row counts.
     pub(super) changes: Option<usize>,
     /// The repository the changes are of, so rows of one repository count them once.
     pub(super) repo: Option<PathBuf>,
-    /// What a feature puts on the row besides the counts above, through [`RowExtras`].
-    #[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
+    /// What a feature puts on the row besides the count above, through [`RowExtras`]: the notes and
+    /// tasks still open, today.
     pub(super) extra: Option<RowExtra>,
 }
 
@@ -65,12 +63,10 @@ pub(in crate::window) struct RowExtra {
 /// The rows as a feature may reach them: each row's id and its one slot for an extra, and nothing
 /// else (`RowInfo`'s other fields are the sidebar's). The batch is the window's, so a feature
 /// downcasts its entity once and loops here, never once per row.
-#[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
 pub(in crate::window) struct RowExtras<'a> {
     rows: &'a mut [RowInfo],
 }
 
-#[cfg_attr(not(test), expect(dead_code, reason = "no feature puts a mark on a row yet"))]
 impl<'a> RowExtras<'a> {
     pub(in crate::window) fn new(rows: &'a mut [RowInfo]) -> Self {
         Self { rows }
@@ -103,7 +99,6 @@ impl RowInfo {
             failure: None,
             unread: false,
             pinned: false,
-            open_items: 0,
             changes: None,
             repo: None,
             extra: None,
@@ -148,7 +143,8 @@ impl Workspace {
     /// Every terminal's row facts, in the window's (manual) order.
     pub(super) fn row_infos(&self, cx: &App) -> Vec<RowInfo> {
         let now = SystemTime::now();
-        self.sessions
+        let mut rows: Vec<RowInfo> = self
+            .sessions
             .iter()
             .enumerate()
             .map(|(ix, session)| {
@@ -192,7 +188,6 @@ impl Workspace {
                         unseen: matches!(status, Status::Busy | Status::Done),
                     }),
                     pinned: self.split_pinned(ix),
-                    open_items: session.open_items(cx),
                     changes: git.and_then(|status| {
                         let n = status.files.len();
                         (n > 0).then_some(n)
@@ -200,7 +195,9 @@ impl Workspace {
                     extra: None,
                 }
             })
-            .collect()
+            .collect();
+        self.feature_row_extras(&mut rows, cx);
+        rows
     }
 }
 

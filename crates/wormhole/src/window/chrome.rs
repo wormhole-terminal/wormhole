@@ -255,14 +255,13 @@ impl Workspace {
         column.max(crate::terminal_view::MIN_WIDTH)
     }
 
-    /// The right panel's title row: its icon tabs from the 16 pt inset, the Notes tab's stash
-    /// button, and room for the panel toggle that floats over its right end.
+    /// The right panel's title row: its icon tabs from the 16 pt inset, the buttons the tab on show
+    /// brings (Notes' stash), and room for the panel toggle that floats over its right end.
     pub(in crate::window) fn render_panel_tab_bar(
         &self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
         // The rule under the row is the terminal title row's, at the same height (outside the
         // 38 pt row, as there), so the two read as one line across the window.
         let row = div()
@@ -276,25 +275,9 @@ impl Workspace {
             .pr(px(PANEL_TOGGLE_SLOT))
             .title_drag()
             .child(self.render_panel_tabs(window, cx))
-            // A tab of the table brings its own buttons.
-            .children(self.table_tab_actions(window, cx))
-            // The Notes tab's one action sits beside the panel toggle rather than
-            // on a row of its own above the list.
-            .when(self.right_tab == TabId::Notes && crate::window::features::notes::notes_on(cx), |d| {
-                d.child(
-                    div().id("panel-actions").occlude().flex_none().child(
-                        style::icon_tab(
-                            "stash-prompt",
-                            ui,
-                            IconName::Inbox,
-                            keymap::with_key("Stash prompt into a new note", ActionId::StashPrompt),
-                            false,
-                            None,
-                        )
-                        .on_click(cx.listener(|this, _, window, cx| this.stash_prompt(window, cx))),
-                    ),
-                )
-            });
+            // A tab of the table brings its own buttons, beside the panel toggle rather than on a row
+            // of its own above the list.
+            .children(self.table_tab_actions(window, cx));
         // No rule under it: the tab's list draws one while rows are scrolled up beneath it, as the
         // sidebar's does.
         div().flex_none().flex().flex_col().child(row).into_any_element()
@@ -311,13 +294,6 @@ impl Workspace {
     /// keyboard stop whose ← → switch tabs at once.
     fn render_panel_tabs(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let session = self.active_session();
-        let open_steps = session.tasks.iter().filter(|t| !t.done).count();
-        let notes = session
-            .notes
-            .iter()
-            .filter(|n| !crate::window::features::notes::is_blank_note(n.state.read(cx)))
-            .count();
         let tabs = self.panel_tab_list(cx);
         let facts = self.facts(cx);
         let ring = self.ring(Area::PanelTabs, window);
@@ -366,14 +342,8 @@ impl Workspace {
                         spoken::panel_tab(PanelTab::History),
                         id,
                     ),
-                    TabId::Notes => tab(
-                        IconName::FileText,
-                        "Notes",
-                        ActionId::ShowNotes,
-                        None,
-                        spoken::panel_tab(PanelTab::Notes { open_steps, notes }),
-                        id,
-                    ),
+                    // In the table.
+                    TabId::Notes => return None,
                     TabId::Usage => tab(
                         IconName::Gauge,
                         "Usage",

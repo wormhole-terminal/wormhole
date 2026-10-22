@@ -41,10 +41,8 @@ mod switcher;
 mod tab_bar;
 mod tick;
 
-#[cfg(test)]
-pub(in crate::window) use facts::RowExtra;
 use facts::row_times;
-pub(in crate::window) use facts::{RowExtras, RowInfo};
+pub(in crate::window) use facts::{RowExtra, RowExtras, RowInfo};
 use motion::{ItemKey, ListMotion};
 pub(super) use row_menu::reveal_in_finder;
 pub(super) use tab_bar::TAB_ROW_H;

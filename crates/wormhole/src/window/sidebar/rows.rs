@@ -81,7 +81,7 @@ impl Frame {
                 .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
-            show_notes: s.sidebar_notes && crate::window::features::notes::notes_on(cx),
+            show_notes: s.sidebar_notes,
             hints: ws.hints_showing(cx),
             code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,
@@ -281,7 +281,7 @@ impl Workspace {
         let tile = tile_for(info, frame, selected, frame.metrics.tile, cx);
         // Row details: the notes and tasks still open, the row's own changed files.
         let quiet = if selected { ui.selected_muted } else { ui.muted };
-        let notes = (frame.show_notes && info.open_items > 0).then(|| {
+        let notes = info.extra.filter(|_| frame.show_notes).map(|extra| {
             div()
                 .flex()
                 .items_center()
@@ -290,7 +290,7 @@ impl Workspace {
                 .tabular_nums()
                 .text_color(quiet)
                 .child(Icon::new(IconName::StickyNote).xsmall())
-                .child(info.open_items.to_string())
+                .child(extra.count.to_string())
         });
         let changes = info
             .changes
@@ -353,7 +353,7 @@ impl Workspace {
 
         // Tooltip only when something is cut off: the name, or the second line.
         // Only what is drawn: the ±N is left out when the row above counts the same changes.
-        let details = (frame.show_notes && info.open_items > 0) as u8
+        let details = (frame.show_notes && info.extra.is_some()) as u8
             + (frame.show_changes && !place.changes_above && info.changes.is_some()) as u8;
         let right = if hint.is_some() { KEYCAP_TRAIL_W } else { 0.0 }
             + f32::from(details) * DETAIL_W

@@ -35,6 +35,10 @@ pub(in crate::window) struct WindowFacts<'a> {
     pub tab: TabId,
     /// The panel's width.
     pub panel_width: Pixels,
+    /// The row of the shown tab the keys are on, and whether its ring shows (the keys, not a click,
+    /// were last used, and the window is in front). Only for facts made for drawing a frame
+    /// ([`Workspace::frame_facts`]); `None` otherwise.
+    pub panel_cursor: Option<(usize, bool)>,
     workspace: &'a Workspace,
 }
 
@@ -89,7 +93,20 @@ impl Workspace {
             features: crate::settings::store_in(&self.profile, cx).features(),
             tab: self.right_tab,
             panel_width: px(self.columns().panel),
+            panel_cursor: None,
             workspace: self,
         }
+    }
+
+    /// [`Self::facts`] for drawing a frame: with the row the keys are on in the shown tab, which
+    /// needs the window to say whether the ring shows.
+    pub(in crate::window) fn frame_facts<'a>(&'a self, window: &Window, cx: &App) -> WindowFacts<'a> {
+        let mut facts = self.facts(cx);
+        facts.panel_cursor = self
+            .areas
+            .panel_at
+            .filter(|&(tab, _)| tab == self.right_tab)
+            .map(|(_, row)| (row, self.ring(wormhole_core::view::focus::Area::PanelContent, window)));
+        facts
     }
 }

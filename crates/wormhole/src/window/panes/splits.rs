@@ -308,6 +308,7 @@ impl Workspace {
     /// Forget a session that was made for a split that did not happen.
     fn drop_session(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = self.sessions.remove(ix);
+        self.features_closed(session.id, cx);
         notifications::dismiss(session.id, cx);
     }
 

@@ -1,6 +1,6 @@
 //! How the Notes tab draws: its rows, the bands with their pinned copy, an open note's text
 //! under its title (the lines after the one the title is, cut at `NOTE_OPEN_MAX_LINES` while
-//! nobody edits it), and the list kept in step with the session.
+//! nobody edits it), and the panel's body and stash button for the table.
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
@@ -10,21 +10,21 @@ use gpui_kit::component::input::{InputState, Textarea, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
-use wormhole_core::view::focus::list::Item;
 use wormhole_core::view::limits::count_grouped;
-use wormhole_core::view::panel::{self as rules, StepRow};
+use wormhole_core::view::notes::paragraphs::{note_body, note_title};
+use wormhole_core::view::notes::rows::NotesRow;
+use wormhole_core::view::notes::tasks::{Edit, Tasks};
+use wormhole_core::view::panel::{self as rules};
 use wormhole_core::view::spoken;
 
-use super::{NOTE_ROWS_MIN, is_blank_note};
+use super::def::typed;
+use super::items::with_item_keys;
+use super::list::part;
+use super::{NOTE_ROWS_MIN, Notes};
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
-use crate::window::Workspace;
-use crate::window::features::notes::TaskItem;
-use crate::window::features::notes::items::with_item_keys;
-use crate::window::features::notes::paragraphs::{note_body, note_title};
-use crate::window::focus::{Activate, Walkable};
-use crate::window::panel_list::{CardPart, Rows};
+use crate::window::facts::WindowFacts;
 
 const NOTE_PLACEHOLDER: &str = "Write a note or a prompt draft…\n⌘↵ sends the paragraph under the cursor (or the selection); ⌘⇧↵ also submits.";
 
@@ -32,83 +32,31 @@ const NOTE_PLACEHOLDER: &str = "Write a note or a prompt draft…\n⌘↵ sends 
 static NEW_NOTE_TOOLTIP: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| keymap::with_key("New note", ActionId::NewNote));
 
-/// One line of the Notes tab (tasks and notes share one virtual list).
-#[derive(Clone, PartialEq)]
-pub(in crate::window) enum NotesRow {
-    TasksBand,
-    /// `text` is only here so that a different task in the same slot re-measures.
-    Task {
-        ix: usize,
-        text: SharedString,
-        editing: bool,
-    },
-    /// A new task being written, in the place it will go.
-    TaskDraft,
-    /// "N done": the done steps, folded after the open ones; `open` shows them below it.
-    DoneFold {
-        count: usize,
-        open: bool,
-    },
-    NotesBand,
-    /// `id` (the note's editor) tells notes apart when they change places.
-    Note {
-        ix: usize,
-        id: EntityId,
-        collapsed: bool,
-    },
-    /// Bottom padding, so the last row can scroll clear of the panel edge.
-    Spacer,
-}
-
-impl NotesRow {
-    /// Next steps and Notes are a card each; the spacer under the last is outside them.
-    fn part(&self) -> CardPart {
-        match self {
-            Self::TasksBand | Self::NotesBand => CardPart::Head,
-            Self::Spacer => CardPart::Outside,
-            _ => CardPart::Body,
-        }
-    }
-}
-
-/// The Notes tab of one session: its rows, and whether its folded done steps are shown.
-#[derive(Default)]
-pub(in crate::window) struct NotesList {
-    rows: Rows<NotesRow>,
-    pub(super) done_open: bool,
-}
-
 /// What the Notes list's rows draw from, captured for the render callback.
 /// Rows only describe the layout; data is read here, for the rows in view.
-pub(in crate::window) struct NotesView {
-    pub(in crate::window) tasks: Vec<TaskItem>,
-    pub(in crate::window) tasks_collapsed: bool,
-    pub(in crate::window) notes_collapsed: bool,
-    /// The task being edited: its index, whether it's a new one, and its editor.
-    pub(in crate::window) task_edit: Option<(usize, bool, Entity<InputState>)>,
-    pub(in crate::window) notes: Vec<Entity<TextareaState>>,
+pub(super) struct NotesView {
+    pub(super) session: i64,
+    pub(super) tasks: Tasks,
+    pub(super) notes_collapsed: bool,
+    /// The task being edited: where, whether it's a new one, and its editor.
+    pub(super) task_edit: Option<(Edit, Entity<InputState>)>,
+    pub(super) notes: Vec<Entity<TextareaState>>,
     /// Per note, whether "Show all" lifted its line cap.
-    pub(in crate::window) show_all: Vec<bool>,
+    pub(super) show_all: Vec<bool>,
     /// Notes with something in them (the band's count).
-    pub(in crate::window) filled_notes: usize,
+    pub(super) filled_notes: usize,
     /// The note whose text has the keyboard.
-    pub(in crate::window) editing: Option<EntityId>,
+    pub(super) editing: Option<EntityId>,
     /// Drag-and-drop keys of this window's task and note lists.
-    pub(in crate::window) task_list: SharedString,
-    pub(in crate::window) note_list: SharedString,
+    pub(super) task_list: SharedString,
+    pub(super) note_list: SharedString,
     /// The panel's width, which an open note's text wraps in.
-    pub(in crate::window) width: f32,
-    pub(in crate::window) this: WeakEntity<Workspace>,
+    pub(super) width: f32,
+    pub(super) this: WeakEntity<Notes>,
 }
 
 impl NotesView {
-    pub(super) fn render_row(
-        &self,
-        row: &NotesRow,
-        ui: UiColors,
-        window: &mut Window,
-        cx: &App,
-    ) -> AnyElement {
+    fn render_row(&self, row: &NotesRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
         match row {
             NotesRow::TasksBand => self.render_tasks_band(ui),
             NotesRow::Task { ix, .. } => self.render_task(Some(*ix), ui, cx),
@@ -121,7 +69,8 @@ impl NotesView {
     }
 
     fn render_notes_band(&self, ui: UiColors) -> AnyElement {
-        let (toggle, add) = (self.this.clone(), self.this.clone());
+        let width = self.width;
+        let (toggle, add, session) = (self.this.clone(), self.this.clone(), self.session);
         style::section_card(
             "notes-band",
             ui,
@@ -135,11 +84,11 @@ impl NotesView {
                 add: Some((
                     NEW_NOTE_TOOLTIP.as_str(),
                     Box::new(move |_, window, cx| {
-                        add.update(cx, |this, cx| this.new_note(None, window, cx)).ok();
+                        add.update(cx, |this, cx| this.new_note(session, None, width, window, cx)).ok();
                     }),
                 )),
                 on_toggle: Some(Box::new(move |_, _, cx| {
-                    toggle.update(cx, |this, cx| this.toggle_notes_section(cx)).ok();
+                    toggle.update(cx, |this, cx| this.toggle_notes_section(session, cx)).ok();
                 })),
                 drop_target: false,
                 sticky: false,
@@ -167,6 +116,7 @@ impl NotesView {
         // (and so before it can say it has the focus).
         let focused = state.read(cx).focus_handle(cx).is_focused(window);
         let editing = (self.editing == Some(state.entity_id()) || focused) && !collapsed;
+        let session = self.session;
         let (toggle, open, send, delete, keys, moved, show) = (
             self.this.clone(),
             self.this.clone(),
@@ -185,7 +135,7 @@ impl NotesView {
             .cursor_pointer()
             .child(style::disclosure(ui, collapsed))
             .on_click(move |_, _, cx| {
-                toggle.update(cx, |this, cx| this.toggle_note(ix, cx)).ok();
+                toggle.update(cx, |this, cx| this.toggle_note(session, ix, cx)).ok();
             });
         // While the editor is open the whole text is in it, the title's line too: the title
         // quiets down so it doesn't read as duplicated content. Clicking it goes to the text, as
@@ -195,19 +145,19 @@ impl NotesView {
             .truncate()
             .cursor_text()
             .on_click(move |_, window, cx| {
-                open.update(cx, |this, cx| this.open_note(ix, window, cx)).ok();
+                open.update(cx, |this, cx| this.open_note(session, ix, window, cx)).ok();
             });
         let sent = state.clone();
         let actions = vec![
             style::item_action(("note-send", ix), ui, IconName::ArrowUpRight, "Send to terminal", {
-                move |_, window, cx| {
+                move |_, _, cx| {
                     // Read at click time: rows don't carry the text.
                     let text = sent.read(cx).value().to_string();
-                    send.update(cx, |this, cx| this.send_text(text, false, window, cx)).ok();
+                    send.update(cx, |this, cx| this.send_text(session, text, false, cx)).ok();
                 }
             }),
             style::item_action(("note-delete", ix), ui, IconName::X, "Delete", move |_, _, cx| {
-                delete.update(cx, |this, cx| this.delete_note(ix, cx)).ok();
+                delete.update(cx, |this, cx| this.delete_note(session, ix, cx)).ok();
             }),
         ];
         let body = if collapsed {
@@ -224,7 +174,8 @@ impl NotesView {
                 .when_some(hint_rows, |editor, rows| editor.h(rems(NOTE_LINE_REMS * rows as f32)));
             Some(
                 with_item_keys(editor, move |event, window, cx| {
-                    keys.update(cx, |this, cx| this.note_key(&keyed, event, window, cx)).unwrap_or(false)
+                    keys.update(cx, |this, cx| this.note_key(session, &keyed, event, window, cx))
+                        .unwrap_or(false)
                 })
                 .into_any_element(),
             )
@@ -244,10 +195,10 @@ impl NotesView {
                     ui,
                     window,
                     move |_, window, cx| {
-                        opened.update(cx, |this, cx| this.open_note(ix, window, cx)).ok();
+                        opened.update(cx, |this, cx| this.open_note(session, ix, window, cx)).ok();
                     },
                     move |_, _, cx| {
-                        show.update(cx, |this, cx| this.show_all_of_note(ix, cx)).ok();
+                        show.update(cx, |this, cx| this.show_all_of_note(session, ix, cx)).ok();
                     },
                 )
             })
@@ -258,7 +209,7 @@ impl NotesView {
             ix,
             label: title,
             on_move: Rc::new(move |from, to, _, cx| {
-                moved.update(cx, |this, cx| this.move_note(from, to, cx)).ok();
+                moved.update(cx, |this, cx| this.move_note(session, from, to, cx)).ok();
             }),
         };
         style::item_row(
@@ -388,160 +339,99 @@ fn note_preview(
         .into_any_element()
 }
 
-impl Workspace {
-    /// Refresh the list's rows from the session's tasks and notes. Cheap when
-    /// nothing changed, so it runs on every render (every scroll tick).
-    pub(in crate::window) fn sync_notes_list(&mut self, cx: &App) {
-        let session = &mut self.sessions[self.active];
-        // The Next steps band right under the tab bar, sharing its rule.
-        let mut rows = vec![NotesRow::TasksBand];
-        let edit = session.task_edit.as_ref().map(|edit| (edit.ix, edit.new));
-        let draft = edit.filter(|(_, new)| *new).map(|(ix, _)| ix.min(session.tasks.len()));
-        let tasks = session.tasks.len() + usize::from(draft.is_some());
-        if !style::Section::of(tasks, session.tasks_collapsed).is_collapsed() {
-            let done: Vec<bool> = session.tasks.iter().map(|task| task.done).collect();
-            rows.extend(rules::steps(&done, draft, session.notes_list.done_open).into_iter().map(|row| {
-                match row {
-                    StepRow::Step(ix) => NotesRow::Task {
-                        ix,
-                        text: session.tasks[ix].text.clone(),
-                        editing: edit == Some((ix, false)),
-                    },
-                    StepRow::Draft => NotesRow::TaskDraft,
-                    StepRow::Done(count) => NotesRow::DoneFold { count, open: session.notes_list.done_open },
-                }
-            }));
-        }
-        rows.push(NotesRow::NotesBand);
-        if !style::Section::of(session.notes.len(), session.notes_collapsed).is_collapsed() {
-            rows.extend(session.notes.iter().enumerate().map(|(ix, n)| NotesRow::Note {
-                ix,
-                id: n.state.entity_id(),
-                collapsed: n.collapsed,
-            }));
-        }
-        rows.push(NotesRow::Spacer);
-        let notes = &session.notes;
-        let editor = session.task_edit.as_ref().map(|edit| edit.input.read(cx).focus_handle(cx));
-        session.notes_list.rows.set_with(rows, |row| match row {
-            NotesRow::Note { ix, .. } => notes.get(*ix).map(|n| n.state.read(cx).focus_handle(cx)),
-            NotesRow::TaskDraft | NotesRow::Task { editing: true, .. } => editor.clone(),
-            _ => None,
-        });
+// ---------------------------------------------------------------- the table's hooks
+
+/// The tab's words for VoiceOver: how many steps are open and notes written.
+pub(super) fn spoken_tab(entity: &AnyEntity, facts: &WindowFacts<'_>, cx: &App) -> String {
+    let notes = typed(entity);
+    let (open_steps, notes) = facts
+        .active()
+        .and_then(|active| notes.read(cx).of.get(&active.id))
+        .map_or((0, 0), |of| (of.tasks.open(), of.filled));
+    spoken::panel_tab(spoken::PanelTab::Notes { open_steps, notes })
+}
+
+/// The tab's body: the virtual list of the terminal on screen, in a column that fills the panel so
+/// the list gets a bounded height. The window gives it the area that holds the keyboard for it.
+pub(super) fn tab(entity: &AnyEntity, facts: &WindowFacts<'_>, _: &mut Window, cx: &mut App) -> AnyElement {
+    let notes = typed(entity);
+    let Some(active) = facts.active() else { return div().into_any_element() };
+    let session = active.id;
+    let width = f32::from(facts.panel_width);
+    let ui = ui_in(facts.profile, cx);
+    // Rows are rebuilt for this frame's data; the entity is not notified, this draw is the redraw.
+    notes.update(cx, |notes, cx| {
+        notes.panel = width;
+        notes.sync_list(session, cx);
+    });
+    let this = notes.read(cx);
+    let Some(of) = this.of.get(&session) else { return div().into_any_element() };
+    let view = Rc::new(NotesView {
+        session,
+        tasks: of.tasks.clone(),
+        notes_collapsed: of.notes_collapsed,
+        task_edit: of.edit.as_ref().map(|edit| (edit.edit, edit.input.clone())),
+        notes: of.notes.iter().map(|n| n.state.clone()).collect(),
+        show_all: of.notes.iter().map(|n| n.show_all).collect(),
+        filled_notes: of.filled,
+        editing: this.editing,
+        task_list: format!("tasks-{}", notes.entity_id()).into(),
+        note_list: format!("notes-{}", notes.entity_id()).into(),
+        width,
+        this: notes.downgrade(),
+    });
+    let rows = &of.list.rows;
+    let ring = facts.panel_cursor.map(|(row, shown)| (row, shown.then_some(ui)));
+    let profile = facts.profile.clone();
+    div()
+        .relative()
+        .flex()
+        .flex_col()
+        .flex_1()
+        .min_h_0()
+        .child(rows.with_edges(
+            rows.element_carded(ring, ui, part, move |row, window, cx| {
+                view.render_row(row, ui_in(&profile, cx), window, cx)
+            }),
+            ui,
+            "notes-scrollbar",
+            cx,
+        ))
+        .into_any_element()
+}
+
+/// The Notes tab's one action, beside the panel toggle rather than on a row of its own above the list.
+pub(super) fn stash_button(
+    entity: &AnyEntity,
+    facts: &WindowFacts<'_>,
+    _: &mut Window,
+    cx: &mut App,
+) -> Option<AnyElement> {
+    if !super::on(cx) {
+        return None;
     }
-
-    // ------------------------------------------------------------ keys
-
-    /// The Notes rows the keys can be on: the two bands (⇥ stops), each next step, the done steps'
-    /// fold and each note. A step being written is its editor's.
-    pub(in crate::window) fn notes_walkable(&self) -> Vec<Walkable> {
-        let session = self.active_session();
-        let rows = session.notes_list.rows.items();
-        (rows.iter().enumerate())
-            .filter_map(|(row, line)| {
-                let (level, fold, band) = match line {
-                    NotesRow::TasksBand => {
-                        (0, (!session.tasks.is_empty()).then_some(!session.tasks_collapsed), true)
-                    }
-                    NotesRow::NotesBand => {
-                        (0, (!session.notes.is_empty()).then_some(!session.notes_collapsed), true)
-                    }
-                    NotesRow::DoneFold { open, .. } => (1, Some(*open), false),
-                    NotesRow::Task { .. } | NotesRow::Note { .. } => (1, None, false),
-                    NotesRow::TaskDraft | NotesRow::Spacer => return None,
-                };
-                Some(Walkable { row, item: Item { level, fold }, band })
-            })
-            .collect()
-    }
-
-    /// → / ← on a band folds or opens its section, on "N done" the done steps.
-    pub(in crate::window) fn notes_fold(&mut self, row: usize, cx: &mut Context<Self>) {
-        match self.active_session().notes_list.rows.items().get(row) {
-            Some(NotesRow::TasksBand) => {
-                let session = &mut self.sessions[self.active];
-                session.tasks_collapsed = !session.tasks_collapsed;
-                self.mark_dirty(cx);
-            }
-            Some(NotesRow::NotesBand) => self.toggle_notes_section(cx),
-            Some(NotesRow::DoneFold { .. }) => self.toggle_done_steps(cx),
-            _ => {}
-        }
-    }
-
-    /// Space ticks a next step or folds a note; ↩ writes in it. A band or "N done" folds either
-    /// way. Whether the list keeps the keyboard (not when an editor takes it).
-    pub(in crate::window) fn notes_press(
-        &mut self,
-        row: usize,
-        press: Activate,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        match (self.active_session().notes_list.rows.items().get(row).cloned(), press) {
-            (Some(NotesRow::Task { ix, .. }), Activate::Space) => self.toggle_task(ix, cx),
-            (Some(NotesRow::Task { ix, .. }), Activate::Return) => {
-                self.edit_task(ix, false, window, cx);
-                return false;
-            }
-            (Some(NotesRow::Note { ix, .. }), Activate::Space) => self.toggle_note(ix, cx),
-            (Some(NotesRow::Note { ix, .. }), Activate::Return) => {
-                self.show_note(ix, true, window, cx);
-                return false;
-            }
-            (Some(_), _) => self.notes_fold(row, cx),
-            (None, _) => {}
-        }
-        true
-    }
-
-    pub(in crate::window) fn notes_reveal(&self, row: usize) {
-        self.active_session().notes_list.rows.reveal(row);
-    }
-
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_notes_list(&self) -> ListState {
-        self.active_session().notes_list.rows.state()
-    }
-
-    pub(in crate::window) fn render_notes_tab(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
-        let session = self.active_session();
-        let view = Rc::new(NotesView {
-            tasks: session.tasks.clone(),
-            tasks_collapsed: session.tasks_collapsed,
-            notes_collapsed: session.notes_collapsed,
-            task_edit: session.task_edit.as_ref().map(|edit| (edit.ix, edit.new, edit.input.clone())),
-            notes: session.notes.iter().map(|n| n.state.clone()).collect(),
-            show_all: session.notes.iter().map(|n| n.show_all).collect(),
-            filled_notes: session.notes.iter().filter(|n| !is_blank_note(n.state.read(cx))).count(),
-            editing: self.editing_note,
-            task_list: self.reorder_list("tasks", cx),
-            note_list: self.reorder_list("notes", cx),
-            width: self.columns().panel,
-            this: cx.weak_entity(),
-        });
-        let rows = &session.notes_list.rows;
-        let in_list = view;
-        let ui = ui_in(&self.profile, cx);
-        let profile = self.profile.clone();
-        // A column that fills the panel, so the list gets a bounded height.
+    let active = facts.active()?;
+    let ui = ui_in(facts.profile, cx);
+    let (notes, session, terminal, width) =
+        (typed(entity), active.id, active.terminal.clone(), f32::from(facts.panel_width));
+    Some(
         div()
-            .relative()
-            .flex()
-            .flex_col()
-            .flex_1()
-            .min_h_0()
-            .child(rows.with_edges(
-                rows.element_carded(
-                    self.panel_ring(window, ui),
+            .id("panel-actions")
+            .occlude()
+            .flex_none()
+            .child(
+                style::icon_tab(
+                    "stash-prompt",
                     ui,
-                    NotesRow::part,
-                    move |row, window, cx| in_list.render_row(row, ui_in(&profile, cx), window, cx),
-                ),
-                ui,
-                "notes-scrollbar",
-                cx,
-            ))
-            .into_any_element()
-    }
+                    IconName::Inbox,
+                    keymap::with_key("Stash prompt into a new note", ActionId::StashPrompt),
+                    false,
+                    None,
+                )
+                .on_click(move |_, window, cx| {
+                    notes.update(cx, |notes, cx| notes.stash_prompt(session, &terminal, width, window, cx));
+                }),
+            )
+            .into_any_element(),
+    )
 }

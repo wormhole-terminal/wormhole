@@ -163,7 +163,8 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let Some(body) = self.enabled_prompt(id, cx) else { return };
-        self.send_text(body, submit, window, cx);
+        let session = self.active_session().id;
+        self.send_to_terminal(session, body.trim(), submit, window, cx);
     }
 
     pub(in crate::window) fn prompt_to_note(
@@ -173,7 +174,10 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let Some(body) = self.enabled_prompt(id, cx) else { return };
-        self.new_note(Some(body), window, cx);
+        // The second place project reaches into notes (the first is `notes_sync`): a prompt as a note.
+        let Some(notes) = self.feature::<crate::window::features::notes::Notes>() else { return };
+        let (session, panel) = (self.active_session().id, self.columns().panel);
+        notes.update(cx, |notes, cx| notes.new_note(session, Some(body), panel, window, cx));
     }
 
     /// The text of the active project's prompt `id`, if the user has Prompts switched on for it

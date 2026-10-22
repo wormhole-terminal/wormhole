@@ -6,29 +6,15 @@ use gpui_kit::*;
 use crate::window::Workspace;
 
 impl Workspace {
-    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the note being worked on
-    /// (a new one if there is none).
+    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the feature that takes the keys
+    /// (Notes: the note being worked on, a new one if there is none).
     pub(super) fn toggle_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let terminal_focus = self.active_terminal().focus_handle(cx);
         if !terminal_focus.is_focused(window) {
             window.focus(&terminal_focus, cx);
             return;
         }
-        if self.focus_feature(window, cx) {
-            return;
-        }
-        if !crate::window::features::notes::notes_on(cx) {
-            return;
-        }
-        let session = self.active_session();
-        let target = self
-            .focused_note
-            .filter(|&ix| ix < session.notes.len())
-            .or_else(|| (!session.notes.is_empty()).then_some(0));
-        match target {
-            Some(ix) => self.show_note(ix, false, window, cx),
-            None => self.new_note(None, window, cx),
-        }
+        self.focus_feature(window, cx);
     }
 
     /// The next (`1`) or previous (`-1`) terminal the sidebar shows, top to bottom, wrapping

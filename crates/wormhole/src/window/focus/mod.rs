@@ -162,13 +162,13 @@ pub(in crate::window) fn activation(keystroke: &Keystroke) -> Option<Activate> {
 }
 
 impl Workspace {
-    /// The area that has the keyboard, if any: the terminal, a note being written (the panel's
-    /// content), or an area the keys moved to.
+    /// The area that has the keyboard, if any: the terminal, a feature's field being written in (the
+    /// panel's content), or an area the keys moved to.
     pub(crate) fn focus_area(&self, window: &Window, cx: &App) -> Option<Area> {
         if self.active_terminal().focus_handle(cx).is_focused(window) {
             return Some(Area::Terminal);
         }
-        if self.editing_note.is_some() || self.feature_editing {
+        if self.feature_editing {
             return Some(Area::PanelContent);
         }
         self.areas.holder(window)

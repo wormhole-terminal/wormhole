@@ -25,6 +25,7 @@ use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
+use crate::window::features::notes::testing as notes;
 use crate::window::picker::Picker;
 use crate::window::status_bar::StatusItem;
 use crate::window::window_lifecycle::open_workspace_window;
@@ -172,6 +173,15 @@ pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
         .expect("the window is open");
 }
 
+/// [`read`] with the app too, for what lives in an entity beside the workspace.
+pub(crate) fn read_cx<R>(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    f: impl FnOnce(&Workspace, &App) -> R,
+) -> R {
+    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| f(ws, cx))).expect("the window is open")
+}
+
 pub(crate) fn read<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOnce(&Workspace) -> R) -> R {
     cx.update(|cx| window.workspace.read_with(cx, |ws, _| f(ws))).expect("the window is open")
 }
@@ -203,11 +213,11 @@ fn open_session_panels(ws: &mut Workspace, cx: &mut Context<Workspace>) {
     let spec = DiffSpec { old: "HEAD".into(), new: None };
     ws.open_diff(PathBuf::from("/nonexistent"), some_change(), spec, Rc::default(), None, cx);
     ws.picker = Some(Picker::Compare);
-    ws.focused_note = Some(2);
+    notes::set_focused_note(ws, Some(2), cx);
 }
 
-fn has_session_panels(ws: &Workspace) -> bool {
-    ws.diff_view.is_some() || ws.picker.is_some() || ws.focused_note.is_some()
+fn has_session_panels(ws: &Workspace, cx: &App) -> bool {
+    ws.diff_view.is_some() || ws.picker.is_some() || notes::focused_note(ws, cx).is_some()
 }
 
 /// A view test reaches nothing of the person running it: its home (where its terminals start and
@@ -254,11 +264,11 @@ fn closing_the_only_session_starts_the_new_one_clean(cx: &mut TestAppContext) {
     read(cx, &window, |ws| assert!(ws.diff_view.is_some() && ws.picker.is_some()));
 
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
-    read(cx, &window, |ws| {
+    read_cx(cx, &window, |ws, cx| {
         assert_eq!(ws.sessions.len(), 1);
         assert_ne!(ws.sessions[0].id, 1, "a new session took its place");
         assert_eq!(ws.active, 0);
-        assert!(!has_session_panels(ws), "the closed session's diff, picker and note focus are gone");
+        assert!(!has_session_panels(ws, cx), "the closed session's diff, picker and note focus are gone");
     });
 }
 
@@ -273,19 +283,19 @@ fn closing_another_session_leaves_the_one_you_are_in_alone(cx: &mut TestAppConte
 
     // A session above it: the selection moves up with its session.
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
-    read(cx, &window, |ws| {
+    read_cx(cx, &window, |ws, cx| {
         assert_eq!((ws.sessions.len(), ws.active, ws.sessions[ws.active].id), (2, 0, 2));
-        assert!(ws.diff_view.is_some() && ws.picker.is_some() && ws.focused_note == Some(2));
+        assert!(ws.diff_view.is_some() && ws.picker.is_some() && notes::focused_note(ws, cx) == Some(2));
     });
     // One below it.
     drive(cx, &window, |ws, window, cx| ws.close_session(1, window, cx));
-    read(cx, &window, |ws| {
+    read_cx(cx, &window, |ws, cx| {
         assert_eq!((ws.sessions.len(), ws.active, ws.sessions[ws.active].id), (1, 0, 2));
-        assert!(ws.diff_view.is_some() && ws.picker.is_some() && ws.focused_note == Some(2));
+        assert!(ws.diff_view.is_some() && ws.picker.is_some() && notes::focused_note(ws, cx) == Some(2));
     });
     // The selected one itself: whatever came next starts fresh.
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
-    read(cx, &window, |ws| assert!(!has_session_panels(ws)));
+    read_cx(cx, &window, |ws, cx| assert!(!has_session_panels(ws, cx)));
 }
 
 #[gpui_kit::test]
@@ -295,9 +305,9 @@ fn cmd_e_shows_the_notes_tab_before_focusing_a_note(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     drive(cx, &window, |ws, window, cx| {
-        ws.add_note(0, Some("remember this".into()), false, window, cx);
+        notes::add_note(ws, 0, "remember this", false, window, cx);
         ws.show_tab(TabId::Changes, cx);
-        ws.sessions[0].notes_collapsed = true;
+        notes::set_notes_collapsed(ws, 0, true, cx);
         ws.focus_terminal(window, cx);
         assert!(ws.active_terminal().focus_handle(cx).is_focused(window), "the terminal has the keyboard");
     });
@@ -305,9 +315,9 @@ fn cmd_e_shows_the_notes_tab_before_focusing_a_note(cx: &mut TestAppContext) {
     drive(cx, &window, |ws, window, cx| ws.toggle_focus(window, cx));
     drive(cx, &window, |ws, window, cx| {
         assert!(ws.right_tab == TabId::Notes, "the panel switched to the Notes tab");
-        assert!(!ws.sessions[0].notes_collapsed, "and unfolded the section");
-        assert_eq!(ws.focused_note, Some(0));
-        let focus = ws.sessions[0].notes[0].state.read(cx).focus_handle(cx);
+        assert!(!notes::notes_collapsed(ws, 0, cx), "and unfolded the section");
+        assert_eq!(notes::focused_note(ws, cx), Some(0));
+        let focus = notes::note(ws, 0, 0, cx).0.read(cx).focus_handle(cx);
         assert!(focus.is_focused(window), "the note has the keyboard");
     });
 }
@@ -321,26 +331,26 @@ fn a_new_note_and_a_clicked_note_are_shown_and_focused(cx: &mut TestAppContext) 
     // ⌥⌘N with History showing and the Notes section folded away.
     drive(cx, &window, |ws, _, cx| {
         ws.show_tab(TabId::History, cx);
-        ws.sessions[0].notes_collapsed = true;
+        notes::set_notes_collapsed(ws, 0, true, cx);
     });
-    drive(cx, &window, |ws, window, cx| ws.new_note(Some("first".into()), window, cx));
+    drive(cx, &window, |ws, window, cx| notes::new_note(ws, 0, Some("first"), window, cx));
     drive(cx, &window, |ws, window, cx| {
         assert!(ws.right_tab == TabId::Notes);
-        assert!(!ws.sessions[0].notes_collapsed);
-        assert_eq!((ws.sessions[0].notes.len(), ws.focused_note), (1, Some(0)));
-        assert!(ws.sessions[0].notes[0].state.read(cx).focus_handle(cx).is_focused(window));
+        assert!(!notes::notes_collapsed(ws, 0, cx));
+        assert_eq!((notes::note_count(ws, 0, cx), notes::focused_note(ws, cx)), (1, Some(0)));
+        assert!(notes::note(ws, 0, 0, cx).0.read(cx).focus_handle(cx).is_focused(window));
     });
 
     // Clicking the title of a folded note unfolds it and puts the cursor at the end.
     drive(cx, &window, |ws, window, cx| {
-        ws.sessions[0].notes[0].collapsed = true;
+        notes::set_note_collapsed(ws, 0, 0, true, cx);
         ws.focus_terminal(window, cx);
-        ws.open_note(0, window, cx);
+        notes::open_note(ws, 0, 0, window, cx);
     });
     drive(cx, &window, |ws, window, cx| {
-        let note = &ws.sessions[0].notes[0];
-        assert!(!note.collapsed);
-        let state = note.state.read(cx);
+        let (note, collapsed) = notes::note(ws, 0, 0, cx);
+        assert!(!collapsed);
+        let state = note.read(cx);
         assert!(state.focus_handle(cx).is_focused(window));
         assert_eq!(state.cursor(), "first".len(), "at the end of the text");
     });
@@ -809,7 +819,9 @@ fn a_devctl_scroll_turns_the_wheel_over_a_point(cx: &mut TestAppContext) {
     poll(cx);
     draw(cx, &window);
     let top = |cx: &mut TestAppContext| {
-        let top = read(cx, &window, |ws| ws.devctl_notes_list().logical_scroll_top());
+        let top = read_cx(cx, &window, |ws, cx| {
+            crate::window::features::notes::devctl::list(ws, cx).expect("the notes list").logical_scroll_top()
+        });
         (top.item_ix, f32::from(top.offset_in_item))
     };
     assert_eq!(top(cx), (0, 0.0));

@@ -146,7 +146,7 @@ impl Render for Workspace {
             match self.right_tab {
                 TabId::Changes => self.sync_changes_list(cx),
                 TabId::History => self.sync_history_list(),
-                TabId::Notes => self.sync_notes_list(cx),
+                TabId::Notes => {}
                 TabId::Project => self.sync_folder_picker(window, cx),
                 TabId::Usage => {}
             }

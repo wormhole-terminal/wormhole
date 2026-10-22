@@ -103,9 +103,6 @@ impl Workspace {
         if !self.usage_tab_on(cx) {
             state.hidden.push(ShowUsage);
         }
-        if !crate::window::features::notes::notes_on(cx) {
-            state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
-        }
         if let Some(project) =
             self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))
         {

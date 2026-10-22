@@ -65,10 +65,9 @@ impl Workspace {
             None => {}
         }
         match self.right_tab {
-            TabId::Notes => self.notes_walkable(),
             TabId::History => self.history_walkable(),
-            // Changes is walked through the table; Project and Usage have no list.
-            TabId::Changes | TabId::Project | TabId::Usage => Vec::new(),
+            // Changes and Notes are walked through the table; Project and Usage have no list.
+            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => Vec::new(),
         }
     }
 
@@ -173,7 +172,6 @@ impl Workspace {
             }
             Some(Walker::Side(side)) => (side.press)(self, session, row, press, following, window, cx),
             None => match self.right_tab {
-                TabId::Notes if !following => self.notes_press(row, press, window, cx),
                 TabId::History => self.history_press(row, following, cx),
                 TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => true,
             },
@@ -192,9 +190,8 @@ impl Workspace {
             None => {}
         }
         match self.right_tab {
-            TabId::Notes => self.notes_fold(row, cx),
             TabId::History => self.history_fold(row, cx),
-            TabId::Changes | TabId::Project | TabId::Usage => {}
+            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => {}
         }
     }
 
@@ -206,9 +203,8 @@ impl Workspace {
             None => {}
         }
         match self.right_tab {
-            TabId::Notes => self.notes_reveal(row),
             TabId::History => self.history_reveal(row),
-            TabId::Changes | TabId::Project | TabId::Usage => {}
+            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => {}
         }
     }
 
