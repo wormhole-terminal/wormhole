@@ -59,6 +59,8 @@ done
 [ "$(uname -s)" = Darwin ] || die "profiling needs macOS and a display"
 need cargo; need git; need python3
 [[ "$seconds" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "--seconds takes a number, not $seconds"
+# perf-profile's own range, checked before anything is built.
+awk -v s="$seconds" 'BEGIN { exit !(s >= 0.1 && s <= 600) }' || die "--seconds is 0.1 to 600, not $seconds"
 [ "$save_baseline" = 0 ] || [ -z "$only" ] || die "--save-baseline needs a full run (no --only)"
 loads="$ALL_LOADS"
 if [ -n "$only" ]; then
@@ -74,6 +76,20 @@ perf_scratch wormhole-profile
 result="$base_dir/$stamp.json"
 perf_builds "$bin"
 
+# wait_profile <name> <seconds>: until the report is written; stops with the instance's own words
+# when the command failed (its results file) or the instance is gone.
+wait_profile() {
+  local name="$1" seconds="$2" failed
+  for _ in $(seq $((seconds * 5))); do
+    [ -f "$ctl/$name.json" ] && return 0
+    failed="$(grep -h -e '^perf-profile failed:' -e '^unknown command: perf-profile' "$ctl/out.txt" 2>/dev/null || true)"
+    [ -z "$failed" ] || die "$name: $failed"
+    kill -0 "$pid" 2>/dev/null || die "$name: the instance (pid $pid) exited (see $dir/app.log)"
+    sleep 0.2
+  done
+  die "$name: no report after ${seconds}s (the instance's results: $(cat "$ctl/out.txt" 2>/dev/null))"
+}
+
 # profile_load <name> <ttystorm arguments>: the load in an instance, `perf-profile` once it settled.
 profile_load() {
   local name="$1" args="$2"
@@ -81,7 +97,7 @@ profile_load() {
   start_workload "$name" "$args"
   sleep "$SETTLE_SECONDS"
   send "$ctl" "perf-profile $seconds $name"
-  wait_for $((${seconds%.*} + 120)) "the $name profile" test -f "$ctl/$name.json"
+  wait_profile "$name" $((${seconds%.*} + 120))
   cat "$ctl/$name.txt"
   echo
   stop_workload "$dir"

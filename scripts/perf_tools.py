@@ -229,11 +229,16 @@ def report(result_path, base_path, limits):
 # ---------------------------------------------------------------- perf-profile (scripts/profile-app.sh)
 
 # How far a number may move before the table calls it worse (or better), by kind:
-#   ms     times: worse above base * factor + margin (ms), as perf.sh's draw times (wall clock, noisy)
+#   draw   the window's draw time, average and p95: perf.sh's tolerance (x1.3 + 0.5 ms; wall clock, noisy)
+#   ms     the parts' times: x1.3 + 0.05 ms (they are a fraction of a millisecond each)
+#   us     a lock's wait per time taken, in microseconds: x1.3 + 1 us
 #   count  allocations, rows, words: counted, not timed, so tighter, but they follow the load's phase
 #   rate   higher is better (frames and MB per second): worse below base * floor
+#   max    a single sample (a frame's or a lock's worst): shown with its change, never judged
 PROFILE_TOLERANCES = {
+    "draw": (1.3, 0.5),
     "ms": (1.3, 0.05),
+    "us": (1.3, 1.0),
     "count": (1.1, 2.0),
     "rate": (0.75, 0.0),
 }
@@ -246,9 +251,9 @@ def profile_metrics(report):
     f = report["frames"]
     out = [
         ("frames per second", f["per_second"], "rate"),
-        ("draw ms avg", f["draw_ms"]["avg"], "ms"),
-        ("draw ms p95", f["draw_ms"]["p95"], "ms"),
-        ("draw ms max", f["draw_ms"]["max"], "ms"),
+        ("draw ms avg", f["draw_ms"]["avg"], "draw"),
+        ("draw ms p95", f["draw_ms"]["p95"], "draw"),
+        ("draw ms max", f["draw_ms"]["max"], "max"),
     ]
     out += [(f"  {p} ms avg", f["parts_ms"][p]["avg"], "ms") for p in PARTS if p in f["parts_ms"]]
     out += [
@@ -264,16 +269,29 @@ def profile_metrics(report):
     out += [
         ("reader MB/s", r["mb_per_s"], "rate"),
         ("parser MB/s", r["parse_mb_per_s"], "rate"),
-        ("reader lock wait ms", r["lock"]["wait_ms"], "ms"),
-        ("reader lock hold max ms", r["lock"]["hold_max_ms"], "ms"),
-        ("ui lock wait ms", report["ui_lock"]["wait_ms"], "ms"),
-        ("ui lock wait max ms", report["ui_lock"]["wait_max_ms"], "ms"),
+        ("reader lock wait us/lock", per_lock_us(r["lock"]), "us"),
+        ("reader lock hold max ms", r["lock"]["hold_max_ms"], "max"),
+        ("ui lock wait us/lock", per_lock_us(report["ui_lock"]), "us"),
+        ("ui lock wait max ms", report["ui_lock"]["wait_max_ms"], "max"),
     ]
     return out
 
 
+def per_lock_us(lock):
+    """A lock's average wait each time it was taken, in microseconds (a total grows with the load)."""
+    return 1000.0 * lock["wait_ms"] / lock["locks"] if lock.get("locks") else 0.0
+
+
+def terminals_of(report):
+    """(hosted, local) of a report; (None, None) from a report made before it said."""
+    t = report.get("terminals") or {}
+    return t.get("hosted"), t.get("local")
+
+
 def judge(now, base, kind):
     """'worse', 'better' or '' for `now` against `base`, by PROFILE_TOLERANCES[kind]."""
+    if kind == "max":
+        return ""
     factor, margin = PROFILE_TOLERANCES[kind]
     if kind == "rate":
         if base > 0 and now < base * factor:
@@ -295,15 +313,21 @@ def change(now, base):
 
 
 def profile_compare(result, base):
-    """The table's lines and the list of what got worse."""
+    """The table's lines and the list of what got worse. A load whose terminals ran elsewhere than
+    the baseline's (hosted in a session host or local) is shown but not judged: a hosted
+    terminal's output is parsed twice, once in its host, which no profile sees."""
     lines, worse = [], []
     for name, report in result["workloads"].items():
         b = ((base or {}).get("workloads") or {}).get(name)
         bm = dict((n, v) for n, v, _ in profile_metrics(b)) if b else {}
         lines.append(f"{name:<28}{'baseline':>12}{'now':>12}{'change':>9}")
+        comparable = not b or terminals_of(report) == terminals_of(b)
+        if not comparable:
+            (h, l), (bh, bl) = terminals_of(report), terminals_of(b)
+            lines.append(f"NOT COMPARABLE: {h} hosted and {l} local terminals, the baseline {bh} and {bl}")
         for metric, value, kind in profile_metrics(report):
             if metric in bm:
-                verdict = judge(value, bm[metric], kind)
+                verdict = judge(value, bm[metric], kind) if comparable else ""
                 if verdict == "worse":
                     worse.append(f"{name}: {metric.strip()} {bm[metric]:g} -> {value:g}")
                 lines.append(f"{metric:<28}{bm[metric]:>12.3f}{value:>12.3f}{change(value, bm[metric]):>9}  {verdict}")
@@ -327,7 +351,7 @@ def profile_compare_main(result_path, base_path):
 # ---------------------------------------------------------------- selftest
 
 
-def sample_profile(draw=2.0, allocations=100.0, mbps=50.0):
+def sample_profile(draw=2.0, allocations=100.0, mbps=50.0, hosted=0):
     spread = lambda v: {"avg": v, "p50": v, "p95": v, "max": v}  # noqa: E731
     return {
         "frames": {
@@ -341,8 +365,10 @@ def sample_profile(draw=2.0, allocations=100.0, mbps=50.0):
             "parts_allocations": {p: spread(5.0) for p in PARTS},
             "alloc_kib": spread(20.0),
         },
-        "reader": {"mb_per_s": mbps, "parse_mb_per_s": 400.0, "lock": {"wait_ms": 1.0, "hold_max_ms": 0.2}},
-        "ui_lock": {"wait_ms": 0.5, "wait_max_ms": 0.01},
+        "terminals": {"hosted": hosted, "local": 1 - hosted},
+        "reader": {"mb_per_s": mbps, "parse_mb_per_s": 400.0,
+                   "lock": {"locks": 1000, "wait_ms": 1.0, "hold_max_ms": 0.2}},
+        "ui_lock": {"locks": 100, "wait_ms": 0.5, "wait_max_ms": 0.01},
     }
 
 
@@ -354,6 +380,10 @@ def selftest():
             failures.append(name)
 
     test("a time within the factor and the margin is neither worse nor better", judge(1.25, 1.0, "ms") == "")
+    test("a draw within perf.sh's half millisecond is not worse", judge(2.0, 1.2, "draw") == "")
+    test("a single sample's maximum is never judged", judge(100.0, 1.0, "max") == "")
+    test("a lock's wait is compared per time it was taken",
+         per_lock_us({"wait_ms": 2.0, "locks": 1000}) == 2.0 and per_lock_us({"wait_ms": 1.0, "locks": 0}) == 0.0)
     test("a time above the factor and the margin is worse", judge(1.4, 1.0, "ms") == "worse")
     test("a time well below the baseline is better", judge(0.5, 1.0, "ms") == "better")
     test("a tiny time's wobble stays inside the margin", judge(0.04, 0.0, "ms") == "")
@@ -376,6 +406,10 @@ def selftest():
     lines, worse = profile_compare(same, None)
     test("without a baseline every number is shown and nothing is worse",
          worse == [] and any(l.startswith("draw ms avg") and l.split()[-2:] == ["-", "2.000"] for l in lines))
+    hosted = {"workloads": {"matrix": sample_profile(draw=9.0, hosted=1)}}
+    lines, worse = profile_compare(hosted, same)
+    test("a load whose terminals ran elsewhere than the baseline's is not comparable and not judged",
+         worse == [] and any(l.startswith("NOT COMPARABLE") for l in lines))
     _, worse = profile_compare(same, {"workloads": {}})
     test("a workload the baseline lacks is shown, not judged", worse == [])
 
