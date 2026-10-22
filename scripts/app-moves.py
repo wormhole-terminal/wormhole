@@ -464,7 +464,7 @@ def move(plan: Plan) -> int:
         else:
             keep_vis = vis
         new_decls.setdefault(plan.root_file(m.new_parent), []).append("%smod %s;\n" % (attrs + keep_vis, m.new_leaf))
-        if not is_test:
+        if not is_test and m.old != m.new:  # a file that became its folder's mod.rs keeps its path
             alias = "" if m.new_leaf == m.old_leaf else " as %s" % m.old_leaf
             if inside and vis == "":
                 keyword = keep_vis + "use"
