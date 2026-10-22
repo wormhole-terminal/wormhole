@@ -10,6 +10,8 @@ pub mod dock;
 #[cfg(not(target_os = "macos"))]
 pub mod font_face;
 #[cfg(not(target_os = "macos"))]
+pub mod fonts;
+#[cfg(not(target_os = "macos"))]
 pub mod hotkey;
 #[cfg(not(target_os = "macos"))]
 pub mod keys;
@@ -21,6 +23,8 @@ pub mod popover;
 pub mod scroller;
 #[cfg(not(target_os = "macos"))]
 pub mod sound;
+#[cfg(not(target_os = "macos"))]
+pub mod status_item;
 #[cfg(not(target_os = "macos"))]
 pub mod vibrancy;
 #[cfg(not(target_os = "macos"))]

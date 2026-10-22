@@ -1,9 +1,9 @@
-//! The macOS status item ("menu extra"): one for every window, whose icon says whether a
-//! terminal needs you and whose menu lists the terminals by status.
+//! The status item ("menu extra"): one for every window, whose icon says whether a terminal
+//! needs you and whose menu lists the terminals by status.
 //!
-//! The snapshot → layout mapping is pure (`model`) and tested; `appkit` renders it into an
-//! `NSStatusItem` + `NSMenu` (`icon` draws the status item's own glyph). Everything here must run
-//! on the main thread.
+//! The snapshot → layout mapping is pure (`model`) and tested; `platform::status_item` draws it
+//! (on macOS an `NSStatusItem` + `NSMenu`, whose own glyph `platform/macos/status_item/icon.rs`
+//! draws). Everything here must run on the main thread.
 
 pub mod model;
 
@@ -11,27 +11,6 @@ use std::path::PathBuf;
 
 use wormhole_core::config::MenuBarIcon;
 use wormhole_core::notify::Terminal;
-
-#[cfg(target_os = "macos")]
-pub use crate::platform::macos::status_item::MenuBar;
-#[cfg(all(target_os = "macos", feature = "devctl"))]
-pub use crate::platform::macos::status_item::save_icons;
-
-/// Off macOS there is no status item; the stub keeps the app crate type-checkable (and its
-/// tests runnable) on Linux CI and in cloud sessions.
-#[cfg(not(target_os = "macos"))]
-pub struct MenuBar;
-
-#[cfg(not(target_os = "macos"))]
-impl MenuBar {
-    pub fn install(_tx: smol::channel::Sender<MenuCommand>) -> Option<Self> {
-        None
-    }
-
-    pub fn update(&mut self, _snapshot: &MenuSnapshot) {}
-
-    pub fn show_frame(&mut self, _frame: Option<usize>) {}
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActionItem {

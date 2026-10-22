@@ -17,6 +17,7 @@ pub mod background_mode;
 pub mod dock;
 pub mod fallback;
 pub mod font_face;
+pub mod fonts;
 pub mod hotkey;
 pub mod keys;
 pub mod look;
@@ -28,6 +29,7 @@ pub mod popover;
 pub mod record;
 pub mod scroller;
 pub mod sound;
+pub mod status_item;
 pub mod vibrancy;
 pub mod window;
 

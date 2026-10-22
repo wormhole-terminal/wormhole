@@ -12,8 +12,9 @@ use wormhole_core::store::Store;
 use super::app::{AppState, app, app_mut, open_tab};
 use super::*;
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
-use crate::menubar::{ActionItem, MenuBar, MenuCommand, MenuSnapshot, StatusColors};
+use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
+use crate::platform::status_item::MenuBar;
 
 const RECENT_PROJECTS: usize = 8;
 
@@ -458,16 +459,8 @@ pub(crate) fn dump(cx: &App) -> String {
 /// devctl: the status item's icon in each state, drawn to TIFFs in `dir` with the theme's colours.
 #[cfg(feature = "devctl")]
 pub(crate) fn save_icons(dir: &Path, prefix: &str, cx: &App) -> anyhow::Result<Vec<PathBuf>> {
-    #[cfg(target_os = "macos")]
-    {
-        let colors = snapshot(Vec::new(), cx).colors;
-        crate::menubar::save_icons(dir, prefix, colors)
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = (dir, prefix, cx);
-        anyhow::bail!("no status item off macOS")
-    }
+    let colors = snapshot(Vec::new(), cx).colors;
+    crate::platform::status_item::save_icons(dir, prefix, colors)
 }
 
 /// devctl: the Dock's badge, bounces and menu.

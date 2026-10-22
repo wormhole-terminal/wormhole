@@ -8,6 +8,7 @@ pub mod auth;
 pub mod colour;
 pub mod dock;
 pub mod font_face;
+pub mod fonts;
 pub mod hotkey;
 pub mod keys;
 pub mod look;
