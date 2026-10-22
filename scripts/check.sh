@@ -123,6 +123,7 @@ grep -qx 'CHANGELOG.md' <<<"$changed" && history+=("python3 scripts/changelog.py
 grep -Eqx '(scripts/worktree\.sh|crates/[^/]+/Cargo\.toml)' <<<"$changed" && history+=("scripts/worktree.sh --selftest")
 grep -qx 'scripts/changelog.py' <<<"$changed" && history+=("python3 scripts/changelog.py selftest")
 grep -qx 'scripts/commits.py' <<<"$changed" && history+=("python3 scripts/commits.py selftest")
+grep -qx 'scripts/perf_tools.py' <<<"$changed" && history+=("python3 -I scripts/perf_tools.py selftest")
 # The structure check reads the sources as text, so it comes before the first compile too.
 structure=()
 if [ "$scope" != none ]; then

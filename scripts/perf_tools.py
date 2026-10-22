@@ -13,6 +13,11 @@
       0 when the main display is awake, 1 when it sleeps (macOS)
   perf_tools.py report <result.json> [<baseline.json>] [--limits <draw_f> <draw_ms> <busy_f> <busy_pts> <mbps_f>]
       the table; exit 1 when something regressed against the baseline
+  perf_tools.py profile-compare <result.json> [<baseline.json>]
+      scripts/profile-app.sh's table: each workload's devctl `perf-profile` numbers against the
+      baseline's, with the change; exit 1 when one is worse than PROFILE_TOLERANCES allow
+  perf_tools.py selftest
+      the built-in tests of the parsing and comparing above (no files, no machine)
 """
 
 import ctypes
@@ -221,6 +226,166 @@ def report(result_path, base_path, limits):
     return 0
 
 
+# ---------------------------------------------------------------- perf-profile (scripts/profile-app.sh)
+
+# How far a number may move before the table calls it worse (or better), by kind:
+#   ms     times: worse above base * factor + margin (ms), as perf.sh's draw times (wall clock, noisy)
+#   count  allocations, rows, words: counted, not timed, so tighter, but they follow the load's phase
+#   rate   higher is better (frames and MB per second): worse below base * floor
+PROFILE_TOLERANCES = {
+    "ms": (1.3, 0.05),
+    "count": (1.1, 2.0),
+    "rate": (0.75, 0.0),
+}
+
+PARTS = ("prepare", "snapshot", "rows", "shape", "blur", "images", "paint")
+
+
+def profile_metrics(report):
+    """The numbers of one `perf-profile` report that are compared: [(name, value, kind)]."""
+    f = report["frames"]
+    out = [
+        ("frames per second", f["per_second"], "rate"),
+        ("draw ms avg", f["draw_ms"]["avg"], "ms"),
+        ("draw ms p95", f["draw_ms"]["p95"], "ms"),
+        ("draw ms max", f["draw_ms"]["max"], "ms"),
+    ]
+    out += [(f"  {p} ms avg", f["parts_ms"][p]["avg"], "ms") for p in PARTS if p in f["parts_ms"]]
+    out += [
+        ("  lock wait ms avg", f["lock_wait_ms"]["avg"], "ms"),
+        ("rows built avg", f["rows_built"]["avg"], "count"),
+        ("words shaped avg", f["words_shaped"]["avg"], "count"),
+        ("allocations avg", f["allocations"]["avg"], "count"),
+        ("allocations p95", f["allocations"]["p95"], "count"),
+    ]
+    out += [(f"  {p} allocations avg", f["parts_allocations"][p]["avg"], "count") for p in PARTS if p in f["parts_allocations"]]
+    out.append(("allocated KiB avg", f["alloc_kib"]["avg"], "count"))
+    r = report["reader"]
+    out += [
+        ("reader MB/s", r["mb_per_s"], "rate"),
+        ("parser MB/s", r["parse_mb_per_s"], "rate"),
+        ("reader lock wait ms", r["lock"]["wait_ms"], "ms"),
+        ("reader lock hold max ms", r["lock"]["hold_max_ms"], "ms"),
+        ("ui lock wait ms", report["ui_lock"]["wait_ms"], "ms"),
+        ("ui lock wait max ms", report["ui_lock"]["wait_max_ms"], "ms"),
+    ]
+    return out
+
+
+def judge(now, base, kind):
+    """'worse', 'better' or '' for `now` against `base`, by PROFILE_TOLERANCES[kind]."""
+    factor, margin = PROFILE_TOLERANCES[kind]
+    if kind == "rate":
+        if base > 0 and now < base * factor:
+            return "worse"
+        if now > 0 and base < now * factor:
+            return "better"
+        return ""
+    if now > base * factor + margin:
+        return "worse"
+    if base > now * factor + margin:
+        return "better"
+    return ""
+
+
+def change(now, base):
+    if base == 0:
+        return "" if now == 0 else "new"
+    return f"{100.0 * (now - base) / base:+.0f}%"
+
+
+def profile_compare(result, base):
+    """The table's lines and the list of what got worse."""
+    lines, worse = [], []
+    for name, report in result["workloads"].items():
+        b = ((base or {}).get("workloads") or {}).get(name)
+        bm = dict((n, v) for n, v, _ in profile_metrics(b)) if b else {}
+        lines.append(f"{name:<28}{'baseline':>12}{'now':>12}{'change':>9}")
+        for metric, value, kind in profile_metrics(report):
+            if metric in bm:
+                verdict = judge(value, bm[metric], kind)
+                if verdict == "worse":
+                    worse.append(f"{name}: {metric.strip()} {bm[metric]:g} -> {value:g}")
+                lines.append(f"{metric:<28}{bm[metric]:>12.3f}{value:>12.3f}{change(value, bm[metric]):>9}  {verdict}")
+            else:
+                lines.append(f"{metric:<28}{'-':>12}{value:>12.3f}")
+        lines.append("")
+    return lines, worse
+
+
+def profile_compare_main(result_path, base_path):
+    result = json.load(open(result_path))
+    base = json.load(open(base_path)) if base_path else None
+    lines, worse = profile_compare(result, base)
+    print("\n".join(lines).rstrip())
+    if worse:
+        print("\nWORSE than the tolerances:\n  " + "\n  ".join(worse))
+        return 1
+    return 0
+
+
+# ---------------------------------------------------------------- selftest
+
+
+def sample_profile(draw=2.0, allocations=100.0, mbps=50.0):
+    spread = lambda v: {"avg": v, "p50": v, "p95": v, "max": v}  # noqa: E731
+    return {
+        "frames": {
+            "per_second": 200.0,
+            "draw_ms": spread(draw),
+            "parts_ms": {p: spread(0.1) for p in PARTS},
+            "lock_wait_ms": spread(0.0),
+            "rows_built": spread(10.0),
+            "words_shaped": spread(1.0),
+            "allocations": spread(allocations),
+            "parts_allocations": {p: spread(5.0) for p in PARTS},
+            "alloc_kib": spread(20.0),
+        },
+        "reader": {"mb_per_s": mbps, "parse_mb_per_s": 400.0, "lock": {"wait_ms": 1.0, "hold_max_ms": 0.2}},
+        "ui_lock": {"wait_ms": 0.5, "wait_max_ms": 0.01},
+    }
+
+
+def selftest():
+    failures = []
+
+    def test(name, condition):
+        if not condition:
+            failures.append(name)
+
+    test("a time within the factor and the margin is neither worse nor better", judge(1.25, 1.0, "ms") == "")
+    test("a time above the factor and the margin is worse", judge(1.4, 1.0, "ms") == "worse")
+    test("a time well below the baseline is better", judge(0.5, 1.0, "ms") == "better")
+    test("a tiny time's wobble stays inside the margin", judge(0.04, 0.0, "ms") == "")
+    test("a rate below the floor is worse", judge(30.0, 50.0, "rate") == "worse")
+    test("a higher rate is never worse", judge(80.0, 50.0, "rate") == "better")
+    test("allocations ten percent and two over are worse", judge(113.0, 100.0, "count") == "worse")
+    test("the change is a signed percentage", change(1.5, 1.0) == "+50%" and change(0.5, 1.0) == "-50%")
+    test("a number that was zero is new", change(3.0, 0.0) == "new" and change(0.0, 0.0) == "")
+
+    same = {"workloads": {"matrix": sample_profile()}}
+    lines, worse = profile_compare(same, same)
+    test("a run compared with itself has nothing worse", worse == [])
+    test("the table has a line per metric and a header", any(l.startswith("matrix") for l in lines)
+         and any(l.startswith("draw ms avg") for l in lines))
+    slower = {"workloads": {"matrix": sample_profile(draw=4.0, allocations=200.0, mbps=20.0)}}
+    _, worse = profile_compare(slower, same)
+    test("slower draws, more allocations and a slower reader are each named",
+         any("draw ms avg" in w for w in worse) and any("allocations avg" in w for w in worse)
+         and any("reader MB/s" in w for w in worse))
+    lines, worse = profile_compare(same, None)
+    test("without a baseline every number is shown and nothing is worse",
+         worse == [] and any(l.startswith("draw ms avg") and l.split()[-2:] == ["-", "2.000"] for l in lines))
+    _, worse = profile_compare(same, {"workloads": {}})
+    test("a workload the baseline lacks is shown, not judged", worse == [])
+
+    if failures:
+        print("selftest FAILED:\n  " + "\n  ".join(failures))
+        return 1
+    print("selftest ok")
+    return 0
+
+
 def main(argv):
     if len(argv) < 2:
         raise SystemExit(__doc__)
@@ -243,6 +408,10 @@ def main(argv):
             limits = tuple(float(x) for x in args[i + 1 : i + 6])
             args = args[:i]
         return report(args[0], args[1] if len(args) > 1 else None, limits)
+    elif cmd == "profile-compare":
+        return profile_compare_main(argv[2], argv[3] if len(argv) > 3 else None)
+    elif cmd == "selftest":
+        return selftest()
     else:
         raise SystemExit(__doc__)
     return 0
