@@ -13,7 +13,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, StateDef, TabDef, WindowSideTab};
+use crate::window::feature::{FeatureDef, FeatureEvent, StateDef, TabDef, WindowSideTab};
 
 /// The Changes tab's entity: nothing yet. It exists so that the tab is made with the window like
 /// any feature's, and says what it will say to the window ([`FeatureEvent`]).
@@ -65,8 +65,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     state: Some(StateDef {
         make: |window, cx| {
             let entity = cx.new(|_| ChangesPanel);
-            let _events = Workspace::listen(&entity, window, cx);
-            FeatureState { entity: entity.into(), _events }
+            Workspace::listen(&entity, window, cx)
         },
         selected: None,
         focus_in: None,

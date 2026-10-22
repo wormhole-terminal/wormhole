@@ -468,6 +468,8 @@ impl Workspace {
         }
         if tab != self.right_tab {
             self.panel_scroll.set_offset(Point::default());
+            // A feature's field only has the keys while its tab is on show.
+            self.feature_editing = false;
         }
         self.right_tab = tab;
         self.reveal_notes();

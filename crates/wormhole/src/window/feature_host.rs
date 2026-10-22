@@ -31,16 +31,17 @@ impl Workspace {
         features.iter().map(|def| def.state.as_ref().map(|state| (state.make)(window, cx))).collect()
     }
 
-    /// Subscribes the window to a feature's entity, for its [`FeatureEvent`]s. A feature's `make`
-    /// calls this on the entity it creates, and keeps the subscription in its [`FeatureState`].
+    /// Subscribes the window to a feature's entity, for its [`FeatureEvent`]s, and gives back the
+    /// entity with that subscription. A feature's `make` ends with it.
     pub(in crate::window) fn listen<T: EventEmitter<FeatureEvent>>(
         entity: &Entity<T>,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Subscription {
-        cx.subscribe_in(entity, window, |this, _, event: &FeatureEvent, window, cx| {
+    ) -> FeatureState {
+        let events = cx.subscribe_in(entity, window, |this, _, event: &FeatureEvent, window, cx| {
             this.on_feature_event(event, window, cx);
-        })
+        });
+        FeatureState::new(entity.clone().into(), events)
     }
 
     /// What the window does when a feature says something. Runs after the feature's own update has
@@ -88,7 +89,6 @@ impl Workspace {
     /// offered tab's action shows the tab, then each feature's `bind` adds the rest.
     pub(in crate::window) fn bind_features(&self, mut root: Root, cx: &mut Context<Self>) -> Root {
         let facts = self.facts(cx);
-        let this = cx.weak_entity();
         for (at, def) in self.features.iter().enumerate() {
             if !facts.features.has(def.id) {
                 continue;
@@ -97,10 +97,11 @@ impl Workspace {
                 let Some(action) = gpui_action(tab.action).filter(|_| (tab.shown)(&facts, cx)) else {
                     continue;
                 };
-                let (this, id) = (this.clone(), tab.id);
-                root = root.on_boxed_action(&*action, move |_, _, cx| {
-                    this.update(cx, |this, cx| this.show_tab(id, cx)).ok();
-                });
+                let id = tab.id;
+                root = root.on_boxed_action(
+                    &*action,
+                    cx.listener(move |this, _: &dyn Action, _, cx| this.show_tab(id, cx)),
+                );
             }
             if let (Some(bind), Some(entity)) = (def.bind, self.feature_entity(at)) {
                 root = bind(entity, &facts, root, cx);

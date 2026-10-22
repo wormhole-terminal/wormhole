@@ -211,6 +211,8 @@ impl Workspace {
     pub(super) fn select(&mut self, ix: usize, cx: &mut Context<Self>) {
         if self.active != ix {
             self.focused_note = None;
+            // A feature's field belonged to the terminal it was opened for.
+            self.feature_editing = false;
             self.features_selected(self.sessions[ix].id, cx);
             // The diff and branch picker belong to the terminal they were opened from.
             self.diff_view = None;

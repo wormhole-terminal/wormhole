@@ -19,7 +19,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::actions::ShowChanges;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, Stake, StateDef, TabDef, WalkFns};
+use crate::window::feature::{FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
 use crate::window::features::TABLE;
 use crate::window::features::git::changes;
 use crate::window::focus::{Activate, Walkable};
@@ -139,8 +139,7 @@ static STAND_IN: &[FeatureDef] = &[
                     asked: Vec::new(),
                     revealed: Default::default(),
                 });
-                let _events = Workspace::listen(&entity, window, cx);
-                FeatureState { entity: entity.into(), _events }
+                Workspace::listen(&entity, window, cx)
             },
             selected: Some(|entity, session, cx| marker(entity).update(cx, |m, _| m.selected.push(session))),
             focus_in: Some(|entity, session, _, cx| {
@@ -296,6 +295,21 @@ fn a_feature_tells_the_window_by_events(cx: &mut TestAppContext) {
     emit(cx, FeatureEvent::Editing(false));
     assert!(!read(cx, &window, |ws| ws.feature_editing));
     assert_eq!(area(cx), Some(Area::PanelTabs));
+
+    // A field that is left behind does not keep the panel's content as the focused area: another tab,
+    // or another terminal, ends it. The same tab does not.
+    emit(cx, FeatureEvent::ShowTab(TabId::Changes));
+    emit(cx, FeatureEvent::Editing(true));
+    emit(cx, FeatureEvent::ShowTab(TabId::Changes));
+    assert!(read(cx, &window, |ws| ws.feature_editing), "the tab did not change");
+    emit(cx, FeatureEvent::ShowTab(TabId::History));
+    assert!(!read(cx, &window, |ws| ws.feature_editing), "the tab went away");
+    drive(cx, &window, |ws, window, cx| {
+        ws.new_session(window, cx);
+    });
+    emit(cx, FeatureEvent::Editing(true));
+    drive(cx, &window, |ws, window, cx| ws.activate(0, window, cx));
+    assert!(!read(cx, &window, |ws| ws.feature_editing), "another terminal was selected");
 
     drive(cx, &window, |ws, _, _| ws.dirty = false);
     emit(cx, FeatureEvent::Dirty);

@@ -73,16 +73,27 @@ pub(in crate::window) enum FeatureEvent {
     /// Something to save changed: the window's record is stale.
     Dirty,
     /// A text field of the feature has the keyboard (`true`) or let go of it. While one has it the
-    /// panel's content is the focused area, as for a note being written.
+    /// panel's content is the focused area, as for a note being written. The window also ends it when
+    /// the panel shows another tab, a feature is gone or another terminal is selected, because a field
+    /// that loses the keyboard that way says nothing; so send `ShowTab` before `Editing(true)`.
     Editing(bool),
     /// Paste `text` into a terminal of this window.
     SendText { session: i64, text: SharedString },
 }
 
-/// A feature's entity and the window's hold on its events. Dropping it unsubscribes.
+/// A feature's entity and the window's hold on its events. Dropping it unsubscribes. A feature gets
+/// one only from [`Workspace::listen`], so the subscription is the window's and no feature can forget
+/// it or keep the entity without it.
 pub(in crate::window) struct FeatureState {
     pub entity: AnyEntity,
-    pub _events: Subscription,
+    _events: Subscription,
+}
+
+impl FeatureState {
+    /// The entity with the subscription the window made for it.
+    pub(super) fn new(entity: AnyEntity, events: Subscription) -> Self {
+        Self { entity, _events: events }
+    }
 }
 
 /// The hooks' shapes. Plain function pointers, never `dyn`: the frame calls them and a closure's box
@@ -216,9 +227,9 @@ pub(in crate::window) struct Stake {
 /// A feature's per-window state and how it follows the window's terminals. `SessionRecord` stays the
 /// interchange format, so none of this changes what is saved.
 pub(in crate::window) struct StateDef {
-    /// Makes the entity with the window, whether the feature is on or off, and subscribes the window
-    /// to its events ([`Workspace::listen`]). No handle to the `Workspace` is given to a feature:
-    /// that would be a way to take its lease twice.
+    /// Makes the entity with the window, whether the feature is on or off, and returns what
+    /// [`Workspace::listen`] makes of it: the entity and the window's subscription to its events. No
+    /// handle to the `Workspace` is given to a feature: that would be a way to take its lease twice.
     pub make: fn(&mut Window, &mut Context<Workspace>) -> FeatureState,
     /// A terminal was selected: clear what the feature kept for the one before (Notes' focused note).
     pub selected: Option<fn(&AnyEntity, session: i64, &mut App)>,
