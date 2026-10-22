@@ -119,7 +119,7 @@ fn registers(spec: &str, paused: bool) -> bool {
 
 /// Called every tick: cheap, since the menu is only built as it opens and the icon, the badge
 /// and the Dock menu are only touched when they change.
-pub(super) fn sync(cx: &mut App) {
+pub(crate) fn sync(cx: &mut App) {
     let (enabled, spec) = {
         let s = settings(cx);
         (s.menu_bar, s.hotkey.trim().to_string())
@@ -163,7 +163,7 @@ fn rgba(color: Hsla) -> crate::menubar::Rgba {
 
 /// The actions of the projects that have a terminal open, in terminal order (the menu's
 /// Projects submenu, the quick panel's Do section).
-pub(super) fn project_actions(cx: &App) -> Vec<ActionItem> {
+pub(crate) fn project_actions(cx: &App) -> Vec<ActionItem> {
     let state = app(cx);
     let mut roots = Vec::new();
     for window in state.windows.iter().filter(|w| !w.hidden) {
@@ -308,7 +308,7 @@ fn register_dock_actions(cx: &mut App) {
 }
 
 /// Carry out a menu bar / hotkey command, in whichever window it belongs to.
-pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
+pub(crate) fn run_command(command: MenuCommand, cx: &mut App) {
     if command == MenuCommand::Hotkey {
         match settings(cx).hotkey_action {
             // Over whatever is in front, without bringing Wormhole forward.
@@ -378,7 +378,7 @@ pub(super) fn run_command(command: MenuCommand, cx: &mut App) {
 }
 
 /// Open Folder…: pick a folder and open a new terminal there, in the window in front.
-pub(super) fn open_folder(cx: &mut App) {
+pub(crate) fn open_folder(cx: &mut App) {
     let paths = cx.prompt_for_paths(PathPromptOptions {
         files: false,
         directories: true,

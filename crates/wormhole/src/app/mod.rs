@@ -12,7 +12,7 @@ pub(crate) mod handlers;
 pub(crate) mod launch;
 pub(crate) mod logging;
 pub(crate) mod menus;
-pub(crate) mod saved_text;
+mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;
-pub(crate) mod tick;
+mod tick;

@@ -43,7 +43,7 @@ pub(crate) struct AppState {
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
-    pub(crate) parked: profiles::Parked,
+    pub(super) parked: profiles::Parked,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -97,19 +97,81 @@ pub(crate) struct AppState {
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
-    pub(crate) next_id: i64,
-    pub(crate) next_window_id: i64,
+    pub(super) next_id: i64,
+    next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
-    pub(crate) applied_theme: Option<u64>,
-    pub(crate) ticks: u64,
+    pub(super) applied_theme: Option<u64>,
+    ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
-    pub(crate) look_override: LookOverride,
+    pub(super) look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
-    pub(crate) _display_options: Option<crate::platform::look::DisplayObserver>,
+    _display_options: Option<crate::platform::look::DisplayObserver>,
 }
 
 impl Global for AppState {}
+
+impl AppState {
+    /// The state at launch: the shown profile's data, the profiles, the menu bar item and the session
+    /// hosts found. The id counters start past every profile's database, so an id never repeats
+    /// across profiles, and the project hub's ids start there too.
+    pub(crate) fn new(
+        root: DataRoot,
+        profiles: ProfileList,
+        profiles_error: Option<String>,
+        data: profiles::ProfileData,
+        launch_hosts: wormhole_core::ipc::hosts::LaunchHosts,
+        menu: status_item::MenuState,
+        display_options: Option<crate::platform::look::DisplayObserver>,
+    ) -> Self {
+        let profiles::ProfileData { store, tips, mut hub, recent, usage, worktrees, last_panes } = data;
+        let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
+        hub.ids_start_at(next_id);
+        let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
+        Self {
+            root,
+            profiles,
+            profiles_error,
+            parked: Default::default(),
+            store,
+            tips,
+            hub,
+            recent_projects: recent,
+            menu,
+            updates,
+            settings_window: None,
+            studio_window: None,
+            about_window: None,
+            licenses_window: None,
+            trust_window: None,
+            windows: Vec::new(),
+            front: 0,
+            quitting: false,
+            ending_hosts: false,
+            launch_hosts,
+            quit_prompt: None,
+            usage,
+            pr: Default::default(),
+            worktrees,
+            last_panes,
+            welcomes: Default::default(),
+            first_welcome: None,
+            adopted: HashMap::new(),
+            next_id,
+            next_window_id,
+            applied_theme: None,
+            ticks: 0,
+            look_override: LookOverride::default(),
+            _display_options: display_options,
+        }
+    }
+
+    /// Count one app tick (400 ms) and say which one it is.
+    pub(crate) fn advance_tick(&mut self) -> u64 {
+        self.ticks += 1;
+        self.ticks
+    }
+}
 
 #[cfg(test)]
 impl AppState {

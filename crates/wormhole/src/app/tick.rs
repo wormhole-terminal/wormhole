@@ -12,7 +12,7 @@ use crate::app::{control, menus};
 use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
-use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::app::{AppState, app_mut};
 use crate::workspace::app_look::apply_theme;
 use crate::workspace::window_lifecycle::open_workspace_window;
 use crate::workspace::{notifications, project, update_restart, updates};
@@ -73,8 +73,7 @@ pub(super) fn tick(cx: &mut App) {
         cx.quit();
         return;
     }
-    app_mut(cx).ticks += 1;
-    let ticks = app(cx).ticks;
+    let ticks = app_mut(cx).advance_tick();
     let mut moved = SettingsStore::poll(cx);
     if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
         let system = cx.global::<SettingsStore>().system();

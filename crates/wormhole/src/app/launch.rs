@@ -11,7 +11,6 @@
 //! Part of the app root (`app/`): it may use every surface, and nothing below the app
 //! root may call into it.
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 use gpui_kit::*;
@@ -24,9 +23,8 @@ use crate::app::tick::{dispatch_hook, handle_menu_command, tick};
 use crate::settings::ParkedSettings;
 use crate::status_item;
 use crate::workspace::app::{AppState, app_mut};
-use crate::workspace::app_look::{LookOverride, apply_theme, sync_system_look};
+use crate::workspace::app_look::{apply_theme, sync_system_look};
 use crate::workspace::menu_state::MenusChanged;
-use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::workspace::{notifications, onboarding, profiles, updates};
 
@@ -47,62 +45,31 @@ pub(crate) fn start(
     }
     upgrade_legacy_hooks(cx);
     cx.background_spawn(async { crate::platform::default_app::upgrade_legacy_default() }).detach();
-    let profiles::ProfileData { store, tips, mut hub, usage, worktrees, last_panes, .. } =
-        profiles::ProfileData::open(&paths);
-    let saved = store
+    let data = profiles::ProfileData::open(&paths);
+    let saved = data
+        .store
         .as_ref()
         .and_then(|s| {
             s.load().inspect_err(|err| tracing::error!("loading saved sessions failed: {err:#}")).ok()
         })
         .unwrap_or_default();
-    let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
-    let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, store.as_ref());
-    let recent_projects = RecentProjects::load(store.as_ref());
+    let launch_hosts = crate::workspace::hosting::scan_at_launch(&root, &profiles, data.store.as_ref());
     let (menu, menu_commands) = status_item::MenuState::new();
-    let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
-    hub.ids_start_at(next_id);
     let (display_changed, display_options) = smol::channel::unbounded::<()>();
     let display_observer = crate::platform::look::observe_display_options(move || {
         let _ = display_changed.try_send(());
     });
     crate::workspace::open_in::OpenIn::install(cx);
     cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
-    cx.set_global(AppState {
+    cx.set_global(AppState::new(
         root,
         profiles,
-        profiles_error: profiles_error.map(|err| err.to_string()),
-        parked: Default::default(),
-        store,
-        tips,
-        hub,
-        recent_projects,
-        menu,
-        updates,
-        settings_window: None,
-        studio_window: None,
-        about_window: None,
-        licenses_window: None,
-        trust_window: None,
-        windows: Vec::new(),
-        front: 0,
-        quitting: false,
-        ending_hosts: false,
+        profiles_error.map(|err| err.to_string()),
+        data,
         launch_hosts,
-        quit_prompt: None,
-        usage,
-        pr: Default::default(),
-        worktrees,
-        last_panes,
-        welcomes: Default::default(),
-        first_welcome: None,
-        adopted: HashMap::new(),
-        next_id,
-        next_window_id,
-        applied_theme: None,
-        ticks: 0,
-        look_override: LookOverride::default(),
-        _display_options: display_observer,
-    });
+        menu,
+        display_observer,
+    ));
     // A profile switch changes what the menus show; they follow it at once, not on the next tick.
     cx.observe_global::<MenusChanged>(menus::sync).detach();
     // Before the first frame, so windows don't open in the default colors (nor in the
