@@ -1,4 +1,5 @@
-//! Owner-only files and folders for Wormhole's own data.
+//! Owner-only files and folders for Wormhole's own data, and the check that the other end of a Unix
+//! socket is this user.
 //!
 //! The data folder holds the terminals' saved text, profiles' environments and the logs, so nobody
 //! but its owner may read it: folders `0700`, files `0600` (`0700` for a program, `bin/wh`). Not
@@ -10,6 +11,7 @@ use std::ffi::OsStr;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 
 /// A folder's mode.
@@ -156,6 +158,51 @@ fn tighten_nofollow(path: &Path, dir_mode: u32) -> io::Result<Tightened> {
         && fs::symlink_metadata(path)
             .is_ok_and(|now| now.is_dir() && now.ino() == meta.ino() && now.dev() == meta.dev());
     Ok(Tightened { changed, dir: still_dir })
+}
+
+/// Whether the process at the other end of a Unix socket runs as this user; one whose uid can't be
+/// read does not. The hook socket serves only such peers, and the app speaks to a session host's
+/// socket only when one is there: the socket file may sit in a folder others can write to.
+pub fn peer_is_this_user(stream: &UnixStream) -> bool {
+    peer_uid(stream) == Some(current_uid())
+}
+
+/// The uid of the process at the other end of a Unix socket.
+#[cfg(any(
+    target_os = "macos",
+    target_os = "ios",
+    target_os = "freebsd",
+    target_os = "openbsd",
+    target_os = "netbsd"
+))]
+fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
+    use std::os::fd::AsRawFd;
+    let (mut uid, mut gid): (libc::uid_t, libc::gid_t) = (0, 0);
+    // SAFETY: `getpeereid` writes the peer's ids into the two out-parameters, which are valid for
+    // the call; the descriptor is this stream's, open for as long as `stream` is borrowed.
+    #[allow(unsafe_code)]
+    let rc = unsafe { libc::getpeereid(stream.as_raw_fd(), &mut uid, &mut gid) };
+    (rc == 0).then_some(uid)
+}
+
+#[cfg(target_os = "linux")]
+fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
+    use std::os::fd::AsRawFd;
+    // SAFETY: `ucred` is plain data, so zeroed is a valid value; `getsockopt` writes at most
+    // `len` bytes into it and updates `len`; the descriptor is this stream's.
+    #[allow(unsafe_code)]
+    unsafe {
+        let mut cred: libc::ucred = std::mem::zeroed();
+        let mut len = size_of::<libc::ucred>() as libc::socklen_t;
+        let rc = libc::getsockopt(
+            stream.as_raw_fd(),
+            libc::SOL_SOCKET,
+            libc::SO_PEERCRED,
+            (&raw mut cred).cast::<libc::c_void>(),
+            &mut len,
+        );
+        (rc == 0).then_some(cred.uid)
+    }
 }
 
 fn current_uid() -> u32 {

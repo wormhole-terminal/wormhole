@@ -96,7 +96,7 @@ fn ask_kill(meta: &HostMeta, wait: Duration) -> Result<(), String> {
     stream.set_write_timeout(Some(left())).map_err(|e| e.to_string())?;
     stream.set_read_timeout(Some(left())).map_err(|e| e.to_string())?;
     // The socket may sit in a folder others can write to; only our own host gets a word from us.
-    if crate::ipc::peer_uid(&stream) != Some(current_uid()) {
+    if !crate::fsutil::peer_is_this_user(&stream) {
         return Err("the socket's owner is not this user".into());
     }
     let mut writer = FrameWriter::new(&stream);
@@ -146,14 +146,6 @@ fn app_version() -> AppVersion {
         major: parts.next().unwrap_or(0),
         minor: parts.next().unwrap_or(0),
         patch: parts.next().unwrap_or(0),
-    }
-}
-
-fn current_uid() -> u32 {
-    // SAFETY: getuid has no preconditions and cannot fail.
-    #[allow(unsafe_code)]
-    unsafe {
-        libc::getuid()
     }
 }
 

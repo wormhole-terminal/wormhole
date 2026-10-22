@@ -46,7 +46,7 @@ pub(super) fn spawn(listener: UnixListener, tx: smol::channel::Sender<Incoming>)
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
 fn serve(mut stream: UnixStream, tx: &smol::channel::Sender<Incoming>) {
-    if !same_user(&stream) {
+    if !crate::fsutil::peer_is_this_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
         return;
     }
@@ -75,53 +75,6 @@ fn answer(stream: &mut UnixStream, request: Request, tx: &smol::channel::Sender<
     let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
     if let Ok(json) = serde_json::to_string(&reply) {
         let _ = writeln!(stream, "{json}");
-    }
-}
-
-/// Whether the other end of `stream` runs as this user. A peer whose uid can't be read is not
-/// served either.
-fn same_user(stream: &UnixStream) -> bool {
-    // SAFETY: getuid has no preconditions and cannot fail.
-    #[allow(unsafe_code)]
-    let ours = unsafe { libc::getuid() };
-    peer_uid(stream) == Some(ours)
-}
-
-/// The uid of the process at the other end of a Unix socket.
-#[cfg(any(
-    target_os = "macos",
-    target_os = "ios",
-    target_os = "freebsd",
-    target_os = "openbsd",
-    target_os = "netbsd"
-))]
-pub(crate) fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
-    use std::os::fd::AsRawFd;
-    let (mut uid, mut gid): (libc::uid_t, libc::gid_t) = (0, 0);
-    // SAFETY: `getpeereid` writes the peer's ids into the two out-parameters, which are valid for
-    // the call; the descriptor is this stream's, open for as long as `stream` is borrowed.
-    #[allow(unsafe_code)]
-    let rc = unsafe { libc::getpeereid(stream.as_raw_fd(), &mut uid, &mut gid) };
-    (rc == 0).then_some(uid)
-}
-
-#[cfg(target_os = "linux")]
-pub(crate) fn peer_uid(stream: &UnixStream) -> Option<libc::uid_t> {
-    use std::os::fd::AsRawFd;
-    // SAFETY: `ucred` is plain data, so zeroed is a valid value; `getsockopt` writes at most
-    // `len` bytes into it and updates `len`; the descriptor is this stream's.
-    #[allow(unsafe_code)]
-    unsafe {
-        let mut cred: libc::ucred = std::mem::zeroed();
-        let mut len = size_of::<libc::ucred>() as libc::socklen_t;
-        let rc = libc::getsockopt(
-            stream.as_raw_fd(),
-            libc::SOL_SOCKET,
-            libc::SO_PEERCRED,
-            (&raw mut cred).cast::<libc::c_void>(),
-            &mut len,
-        );
-        (rc == 0).then_some(cred.uid)
     }
 }
 

@@ -18,7 +18,7 @@ mod private;
 
 pub use private::{
     PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,
-    make_tree_private,
+    make_tree_private, peer_is_this_user,
 };
 
 use std::fmt;
