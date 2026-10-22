@@ -52,6 +52,8 @@
 set -euo pipefail
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
+# shellcheck source=perf_lib.sh
+. "$(dirname "$0")/perf_lib.sh"
 
 DRAW_FACTOR=1.3        # draw avg may be this many times the baseline ...
 DRAW_MARGIN_MS=0.5     # ... plus this
@@ -91,113 +93,19 @@ if [ -n "$only" ]; then
   done
 fi
 
-tools() { python3 -I "$ROOT/scripts/perf_tools.py" "$@"; }
-
 # ---------------------------------------------------------------- machine, scratch dir, cleanup
 
-machine_id="$(sysctl -n hw.model)-$(sysctl -n machdep.cpu.brand_string)"
-machine_id="$(printf '%s' "$machine_id" | tr -c 'A-Za-z0-9._-' '-' | sed 's/--*/-/g; s/-$//')"
+machine_id="$(machine_id)"
 baseline="$ROOT/tools/bench/baselines/$machine_id.json"
 
-stamp="$(date +%Y%m%d-%H%M%S)"
-base_dir="${TMPDIR:-/tmp}"; base_dir="${base_dir%/}/wormhole-perf"
-mkdir -p "$base_dir"
-scratch="$(cd "$base_dir" && pwd -P)/$stamp-$$"
-mkdir -p "$scratch"
-case "$scratch/" in "$(cd "$ROOT" && pwd -P)"/*) die "the scratch dir must be outside the repository" ;; esac
+perf_scratch wormhole-perf
 result="$base_dir/$stamp.json"
-
-started=()   # the instances' scratch dirs, to stop them again
-# shellcheck disable=SC2329  # runs from the EXIT trap
-cleanup() {
-  local dir
-  for dir in ${started[@]+"${started[@]}"}; do
-    "$ROOT/scripts/devctl-instance.sh" stop "$dir" >/dev/null 2>&1 || warn "could not stop the instance in $dir"
-  done
-  if [ "$keep" = 1 ]; then
-    log "scratch dir kept: $scratch"
-  else
-    # Exactly the dir this run made (never a glob).
-    [[ "$scratch" == */wormhole-perf/$stamp-$$ ]] && rm -rf "$scratch"
-  fi
-}
-trap cleanup EXIT
-trap 'exit 130' INT TERM
 
 # ---------------------------------------------------------------- builds
 
-if [ -z "$bin" ]; then
-  log "building the release app (devctl) into $TARGET_DIR/perf-build"
-  set_app_build_args devctl
-  (cd "$ROOT" && CARGO_TARGET_DIR="$TARGET_DIR/perf-build" cargo build --release "${APP_BUILD_ARGS[@]}" --quiet)
-  bin="$TARGET_DIR/perf-build/release/$APP_BINARY"
-  binary_from="HEAD"
-else
-  binary_from="$bin"
-fi
-[ -x "$bin" ] || die "no binary $bin"
-# Our own copy: a later build can't replace it while it runs.
-mkdir -p "$scratch/app"
-cp -c "$bin" "$scratch/app/$APP_BINARY" 2>/dev/null || cp "$bin" "$scratch/app/$APP_BINARY"
-# The session host beside it, where the app looks for it (a --bin without one runs in-process).
-copy_host_beside "$bin" "$scratch/app"
-bin="$scratch/app/$APP_BINARY"
-
-log "building ttystorm"
-# Its own workspace, so its own target dir: an inherited CARGO_TARGET_DIR would send it into the app's.
-(cd "$ROOT/tools/bench" && CARGO_TARGET_DIR="$TARGET_DIR/ttystorm-build" cargo build --release --quiet)
-ttystorm="$TARGET_DIR/ttystorm-build/release/ttystorm"
-[ -x "$ttystorm" ] || die "no $ttystorm"
+perf_builds "$bin"
 
 # ---------------------------------------------------------------- driving an instance
-
-# send <ctl dir> <command>...: one batch for the instance's next tick (written whole, then moved).
-send() {
-  local ctl="$1"; shift
-  local waited=0
-  while [ -e "$ctl/cmd" ] && [ "$waited" -lt 100 ]; do sleep 0.1; waited=$((waited + 1)); done
-  printf '%s\n' "$@" > "$ctl/cmd.tmp"
-  mv "$ctl/cmd.tmp" "$ctl/cmd"
-}
-
-# wait_for <seconds> <description> <command>...: poll until the command succeeds.
-wait_for() {
-  local seconds="$1" what="$2"; shift 2
-  for _ in $(seq $((seconds * 5))); do "$@" && return 0; sleep 0.2; done
-  die "timed out after ${seconds}s waiting for $what"
-}
-
-lines_in() { if [ -f "$1" ]; then wc -l < "$1" | tr -d ' '; else echo 0; fi; }
-# lines_over <file> <n>: the file has more than n lines now.
-# shellcheck disable=SC2329  # runs through wait_for
-lines_over() { [ "$(lines_in "$1")" -gt "$2" ]; }
-
-# start_workload <name> <ttystorm arguments>: an instance whose only terminal runs ttystorm once
-# the window has its size (the animations and the benchmark read the terminal's size when they
-# start), then cat. Sets $dir, $ctl, $pid.
-start_workload() {
-  local name="$1"; shift
-  dir="$scratch/$name"
-  mkdir -p "$dir"
-  cat > "$dir/shell.sh" <<EOF
-#!/bin/bash
-while [ ! -e "$dir/go" ]; do sleep 0.1; done
-"$ttystorm" $* 2>"$dir/ttystorm.err"
-exec /bin/cat
-EOF
-  chmod +x "$dir/shell.sh"
-  started+=("$dir")
-  "$ROOT/scripts/devctl-instance.sh" --bin "$bin" --shell "$dir/shell.sh" "$dir" > "$dir/start.txt"
-  ctl="$dir/ctl"
-  pid="$(sed -n 's/^pid=//p' "$dir/start.txt")"
-  send "$ctl" "onboarding close" "appearance dark" "resize $WINDOW_W $WINDOW_H"
-  sleep 3
-  : > "$dir/go"
-}
-
-stop_workload() {
-  "$ROOT/scripts/devctl-instance.sh" stop "$1" >/dev/null 2>&1
-}
 
 # measure_draws <ctl dir>: FRAME_RUNS times `frames`, each waited for.
 measure_draws() {
@@ -250,8 +158,7 @@ for w in $workloads; do
   esac
 done
 
-commit="$(git -C "$ROOT" rev-parse --short HEAD)"
-[ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ] || commit="$commit-dirty"
+commit="$(perf_commit)"
 tools assemble "$result" \
   "commit=$commit" "binary=$binary_from" "machine_id=$machine_id" \
   "model=$(sysctl -n hw.model)" "cpu=$(sysctl -n machdep.cpu.brand_string)" \
