@@ -8,6 +8,16 @@ mod coretext;
 mod none;
 
 #[cfg(target_os = "macos")]
-pub(super) use coretext::Face;
+pub(crate) use coretext::Face;
 #[cfg(not(target_os = "macos"))]
-pub(super) use none::Face;
+pub(crate) use none::Face;
+
+/// One piece of an outline, in device pixels from the glyph's origin, y down.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum Seg {
+    Move(f32, f32),
+    Line(f32, f32),
+    Quad([f32; 2], [f32; 2]),
+    Cubic([f32; 2], [f32; 2], [f32; 2]),
+    Close,
+}

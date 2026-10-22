@@ -1,8 +1,8 @@
 //! No glyph outlines off macOS.
 
-use super::super::Seg;
+use super::Seg;
 
-pub(in crate::terminal_view::render::outline) struct Face;
+pub(crate) struct Face;
 
 impl Face {
     pub fn named(_family: &str, _bold: bool, _italic: bool) -> Option<Face> {

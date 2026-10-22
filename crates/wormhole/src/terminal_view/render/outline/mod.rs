@@ -34,7 +34,7 @@ use gpui_kit::{
 
 mod face;
 
-use face::Face;
+use face::{Face, Seg};
 
 /// How many sprites are kept; past that the map starts over, as the word cache does.
 const MAX_SPRITES: usize = 4096;
@@ -59,16 +59,6 @@ pub(super) struct Stretch {
 impl Stretch {
     /// DECDWL: twice as wide, as tall as ever.
     pub const WIDE: Stretch = Stretch { x: 2, y: 1 };
-}
-
-/// One piece of an outline, in device pixels from the glyph's origin, y down.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum Seg {
-    Move(f32, f32),
-    Line(f32, f32),
-    Quad([f32; 2], [f32; 2]),
-    Cubic([f32; 2], [f32; 2], [f32; 2]),
-    Close,
 }
 
 /// A glyph ready to hand to `paint_svg`.

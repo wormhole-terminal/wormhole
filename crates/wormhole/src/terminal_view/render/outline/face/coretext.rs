@@ -9,13 +9,13 @@ use objc2_core_graphics::{CGPath, CGPathElement, CGPathElementType};
 use objc2_core_text::{CTFont, CTFontManagerCreateFontDescriptorFromData, CTFontSymbolicTraits};
 use wormhole_core::fonts::bundled;
 
-use super::super::Seg;
+use super::Seg;
 
 /// A face's size when it is made: its outlines are asked for at the size they are drawn at.
 const BASE_SIZE: f64 = 12.0;
 
 /// A CoreText font.
-pub(in crate::terminal_view::render::outline) struct Face(CFRetained<CTFont>);
+pub(crate) struct Face(CFRetained<CTFont>);
 
 impl Face {
     /// The face of `family` with the slant and weight asked for. CoreText gives a default font
@@ -137,5 +137,80 @@ unsafe extern "C-unwind" fn collect(info: *mut c_void, element: NonNull<CGPathEl
         segs.push(Seg::Cubic(at(0), at(1), at(2)));
     } else if kind == CGPathElementType::CloseSubpath {
         segs.push(Seg::Close);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Face, Seg};
+
+    /// The width of an outline's points.
+    fn width(segs: &[Seg]) -> f32 {
+        let xs: Vec<f32> = segs
+            .iter()
+            .flat_map(|seg| match *seg {
+                Seg::Move(x, _) | Seg::Line(x, _) => vec![x],
+                Seg::Quad(a, b) => vec![a[0], b[0]],
+                Seg::Cubic(a, b, c) => vec![a[0], b[0], c[0]],
+                Seg::Close => vec![],
+            })
+            .collect();
+        xs.iter().cloned().fold(f32::MIN, f32::max) - xs.iter().cloned().fold(f32::MAX, f32::min)
+    }
+
+    #[test]
+    fn menlos_h_is_twice_as_wide_stretched_and_as_tall_as_ever() {
+        let face = Face::named("Menlo", false, false).expect("a face");
+        let glyph = face.glyph_of('H').expect("Menlo has an H");
+        let plain = face.outline(u32::from(glyph), 14.0, (2.0, 2.0), 0.0).expect("an outline");
+        let wide = face.outline(u32::from(glyph), 14.0, (4.0, 2.0), 0.0).expect("an outline");
+        assert!((width(&wide) - 2.0 * width(&plain)).abs() < 0.01, "{} vs {}", width(&wide), width(&plain));
+        let height = |segs: &[Seg]| {
+            let ys: Vec<f32> = segs
+                .iter()
+                .filter_map(|s| if let Seg::Line(_, y) | Seg::Move(_, y) = *s { Some(y) } else { None })
+                .collect();
+            ys.iter().cloned().fold(f32::MIN, f32::max) - ys.iter().cloned().fold(f32::MAX, f32::min)
+        };
+        assert!((height(&wide) - height(&plain)).abs() < 0.01);
+        // y is down: the letter sits above its baseline.
+        assert!(wide.iter().any(|s| matches!(s, Seg::Line(_, y) if *y < -5.0)));
+    }
+
+    #[test]
+    fn the_bundled_font_has_faces_from_its_bytes_and_a_fallback_for_what_it_lacks() {
+        for (bold, italic) in [(false, false), (true, false), (false, true), (true, true)] {
+            let face = Face::named("JetBrains Mono", bold, italic).expect("a bundled face");
+            let glyph = face.glyph_of('H').expect("an H");
+            assert!(face.outline(u32::from(glyph), 14.0, (4.0, 2.0), 0.0).is_some_and(|s| !s.is_empty()));
+        }
+        let face = Face::named("JetBrains Mono", false, false).expect("a face");
+        assert!(face.glyph_of('日').is_none());
+        let fallback = face.for_char('日').expect("a substitute");
+        assert!(fallback.glyph_of('日').is_some(), "the substitute has the character");
+    }
+
+    #[test]
+    fn a_shift_moves_the_outline_right() {
+        let face = Face::named("Menlo", false, false).expect("a face");
+        let glyph = u32::from(face.glyph_of('l').expect("an l"));
+        let first = |segs: Vec<Seg>| match segs[0] {
+            Seg::Move(x, _) => x,
+            other => panic!("{other:?}"),
+        };
+        let at = first(face.outline(glyph, 14.0, (2.0, 1.0), 0.0).expect("outline"));
+        let shifted = first(face.outline(glyph, 14.0, (2.0, 1.0), 0.5).expect("outline"));
+        assert!((shifted - at - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn a_space_has_no_outline_and_a_cjk_character_finds_its_fallback() {
+        let face = Face::named("Menlo", false, false).expect("a face");
+        let space = u32::from(face.glyph_of(' ').expect("a space"));
+        assert!(face.outline(space, 14.0, (2.0, 1.0), 0.0).is_none_or(|segs| segs.is_empty()));
+        assert!(face.glyph_of('日').is_none(), "Menlo has no CJK");
+        let fallback = face.for_char('日').expect("CoreText substitutes a font");
+        let glyph = fallback.glyph_of('日').expect("the substitute has it");
+        assert!(fallback.outline(u32::from(glyph), 14.0, (2.0, 1.0), 0.0).is_some());
     }
 }
