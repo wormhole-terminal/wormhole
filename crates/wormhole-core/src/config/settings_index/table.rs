@@ -1,6 +1,7 @@
 //! The table: what every section and setting is called and says.
 
 use super::{Entry, Group, NavGroup, SectionId, SectionInfo};
+use crate::config::FeatureId;
 
 const fn entry(
     id: &'static str,
@@ -9,7 +10,15 @@ const fn entry(
     keywords: &'static str,
     keys: &'static [&'static str],
 ) -> Entry {
-    Entry { id, label, description, keywords, keys }
+    Entry { id, label, description, keywords, keys, feature: None }
+}
+
+impl Entry {
+    /// About the feature `feature`.
+    const fn of(mut self, feature: FeatureId) -> Self {
+        self.feature = Some(feature);
+        self
+    }
 }
 
 const fn group(title: &'static str, entries: &'static [Entry]) -> Group {
@@ -625,7 +634,8 @@ const SESSIONS: &[Group] = &[
                 "Note icon with the number of notes and open tasks",
                 "notes tasks next steps count",
                 &["sidebar_notes"],
-            ),
+            )
+            .of(FeatureId::Notes),
         ],
     ),
 ];

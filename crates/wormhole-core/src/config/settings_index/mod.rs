@@ -93,6 +93,17 @@ pub struct Entry {
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
     /// look at. Empty for a row that stores nothing there (a folder button, the agents' hooks).
     pub keys: &'static [&'static str],
+    /// The feature it is about, if it is one of an optional feature: while that is off the setting
+    /// does nothing. `None` for the rest.
+    pub feature: Option<crate::config::FeatureId>,
+}
+
+impl Entry {
+    /// Whether the setting is of use with these features on: always, unless it is about a feature
+    /// that is off.
+    pub fn is_of_use(&self, features: crate::config::FeatureMask) -> bool {
+        self.feature.is_none_or(|feature| features.has(feature))
+    }
 }
 
 impl SectionId {
@@ -248,6 +259,19 @@ mod tests {
 
     use super::{SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
     use crate::config::{APP_SETTINGS, PROJECT_SETTINGS, Settings, keys};
+
+    #[test]
+    fn a_row_about_a_feature_is_of_use_only_while_it_is_on() {
+        use crate::config::features::FlagMode;
+        use crate::config::{FeatureId, FeatureMask};
+        let (_, _, notes) = entries().find(|(_, _, e)| e.id == "sidebar-notes").expect("the row");
+        assert_eq!(notes.feature, Some(FeatureId::Notes));
+        let mut off = Settings::default();
+        off.feature_flags.insert("notes_and_tasks".into(), false);
+        assert!(!notes.is_of_use(FeatureMask::resolve_in(&off, FlagMode::Dev)));
+        assert!(notes.is_of_use(FeatureMask::resolve_in(&Settings::default(), FlagMode::Dev)));
+        assert!(entries().filter(|(_, _, e)| e.feature.is_some()).count() >= 1);
+    }
 
     #[test]
     fn every_config_key_has_a_row_or_is_listed_as_waiting_for_one() {

@@ -133,6 +133,17 @@ impl FeatureId {
     }
 }
 
+impl FeatureMask {
+    /// The actions that belong to a feature that is off (the keymap's rows are tagged with their
+    /// feature's key): what the menus, the palette and the shortcut sheet leave out.
+    pub fn hidden_actions(self) -> impl Iterator<Item = crate::keys::keymap::ActionId> {
+        crate::keys::keymap::entries().iter().filter_map(move |entry| {
+            let feature = FeatureId::from_key(entry.feature?)?;
+            (!self.has(feature)).then_some(entry.id)
+        })
+    }
+}
+
 /// Which features are on: one bit each. Reading it is a mask and a compare, with no lookup by name
 /// and no allocation, which is why the settings keep one worked out ([`Self::resolve`]) for the
 /// frame to ask.
@@ -192,6 +203,26 @@ mod tests {
         }
         assert_eq!(FeatureId::from_key("nope"), None);
         assert!(FEATURES.len() <= 16, "a mask is 16 bits");
+    }
+
+    #[test]
+    fn every_tag_in_the_keymap_names_a_feature() {
+        for entry in crate::keys::keymap::entries() {
+            if let Some(key) = entry.feature {
+                assert!(FeatureId::from_key(key).is_some(), "{:?} is tagged with {key:?}", entry.id);
+            }
+        }
+    }
+
+    #[test]
+    fn an_off_feature_hides_the_actions_it_is_tagged_on() {
+        use crate::keys::keymap::ActionId::{NewNote, ShowChanges, ShowNotes, StashPrompt};
+        let off = FeatureMask::resolve_in(&settings_with(&[("notes_and_tasks", false)]), FlagMode::Dev);
+        let hidden: Vec<_> = off.hidden_actions().collect();
+        assert_eq!(hidden, [ShowNotes, NewNote, StashPrompt]);
+        let on = FeatureMask::resolve_in(&settings_with(&[("notes_and_tasks", true)]), FlagMode::Dev);
+        assert!(on.hidden_actions().next().is_none());
+        assert!(!hidden.contains(&ShowChanges), "an always-on feature hides nothing");
     }
 
     #[test]

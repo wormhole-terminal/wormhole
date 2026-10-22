@@ -239,6 +239,10 @@ pub struct Entry {
     /// Only while persistent terminals are on (`FeatureFlag::PersistentTerminals`): the action is
     /// about terminals that outlive the app.
     pub persistent_only: bool,
+    /// The feature it belongs to, by its key in `config::FEATURES`: while that feature is off the
+    /// action is hidden from the menus, the palette and the sheet (`config::FeatureMask::hidden_actions`).
+    /// A key, not a `FeatureId`, because `config` is above this layer.
+    pub feature: Option<&'static str>,
 }
 
 impl Entry {

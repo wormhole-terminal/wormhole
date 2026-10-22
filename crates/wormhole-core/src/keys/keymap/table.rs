@@ -46,6 +46,7 @@ fn row(id: ActionId, title: &'static str, keys: &[(KeyMods, &str)]) -> Entry {
         palette: true,
         debug_only: false,
         persistent_only: false,
+        feature: None,
     }
 }
 
@@ -89,6 +90,12 @@ impl Entry {
 
     fn persistent_only(mut self) -> Self {
         self.persistent_only = true;
+        self
+    }
+
+    /// Belongs to the feature called `key` (`config::FEATURES`): hidden while it is off.
+    fn feature(mut self, key: &'static str) -> Self {
+        self.feature = Some(key);
         self
     }
 }
@@ -166,7 +173,7 @@ pub(super) fn entries() -> Vec<Entry> {
         row(ToggleMinimap, "Hide Minimap", &[]).toggle("Show Minimap", "Show / Hide Minimap"),
         row(ShowChanges, "Changes", &[(CTRL_CMD, "1")]).named("Show Changes"),
         row(ShowHistory, "History", &[(CTRL_CMD, "2")]).named("Show History"),
-        row(ShowNotes, "Notes", &[(CTRL_CMD, "3")]).named("Show Notes"),
+        row(ShowNotes, "Notes", &[(CTRL_CMD, "3")]).named("Show Notes").feature("notes"),
         row(ShowUsage, "Usage", &[(CTRL_CMD, "4")]).named("Show Usage"),
         row(ShowProject, "Project", &[(CTRL_CMD, "5")]).named("Show Project"),
         row(ToggleTerminalTabs, "Show Terminals in Sidebar", &[])
@@ -209,8 +216,8 @@ pub(super) fn entries() -> Vec<Entry> {
         row(CopyCommand, "Copy Command", &[]).scope(Scope::Terminal),
         row(RerunCommand, "Put Command at Prompt", &[]).scope(Scope::Terminal),
         // Notes.
-        row(NewNote, "New Note", &[(ALT_CMD, "n")]),
-        row(StashPrompt, "Stash Prompt", &[(ALT_CMD, "s")]),
+        row(NewNote, "New Note", &[(ALT_CMD, "n")]).feature("notes"),
+        row(StashPrompt, "Stash Prompt", &[(ALT_CMD, "s")]).feature("notes"),
         row(MoveItemUp, "Move Up", &[(ALT_CMD, "up")]).scope(Scope::List).not_in_palette(),
         row(MoveItemDown, "Move Down", &[(ALT_CMD, "down")]).scope(Scope::List).not_in_palette(),
         // The "Menu" key, ⌃↩ as in macOS's lists under Full Keyboard
