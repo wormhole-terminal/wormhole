@@ -13,7 +13,7 @@ use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 use crate::settings::settings_in;
 use crate::style;
 use crate::workspace::app::{AppState, OpenWindow, app, app_mut};
-use crate::workspace::app_tick::sync_system_look;
+use crate::workspace::app_look::sync_system_look;
 use crate::workspace::{Layout, Workspace, chrome, window_bounds};
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);

@@ -10,7 +10,6 @@ use wormhole_term::scrollbar::ScrollerStyle;
 use super::Ctx;
 use crate::platform::scroller::ScrollerPrefs;
 use crate::settings::SettingsStore;
-use crate::workspace::AppState;
 
 pub(super) fn open(ctx: &mut Ctx, _: &str) -> Result<String> {
     crate::workspace::settings_devctl::devctl_settings_section("", ctx.cx);
@@ -130,7 +129,7 @@ pub(super) fn reduce_motion(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "" => return Ok(format!("reduce-motion {}\n", on_off(ctx.cx.reduce_motion()))),
         other => switch(other)?,
     };
-    AppState::override_look(ctx.cx, |look| look.reduce_motion = value);
+    crate::workspace::override_look(ctx.cx, |look| look.reduce_motion = value);
     Ok(String::new())
 }
 
@@ -145,7 +144,7 @@ pub(super) fn increase_contrast(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => switch(other)?,
     };
-    AppState::override_look(ctx.cx, |look| look.increase_contrast = value);
+    crate::workspace::override_look(ctx.cx, |look| look.increase_contrast = value);
     Ok(String::new())
 }
 
@@ -189,7 +188,7 @@ pub(super) fn appearance(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => return Err(anyhow!("expected light|dark|system, got {other:?}")),
     };
-    AppState::override_look(ctx.cx, |look| look.appearance = value);
+    crate::workspace::override_look(ctx.cx, |look| look.appearance = value);
     Ok(String::new())
 }
 
@@ -203,7 +202,7 @@ pub(super) fn reduce_transparency(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => switch(other)?,
     };
-    AppState::override_look(ctx.cx, |look| look.reduce_transparency = value);
+    crate::workspace::override_look(ctx.cx, |look| look.reduce_transparency = value);
     Ok(String::new())
 }
 

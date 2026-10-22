@@ -15,10 +15,10 @@ use wormhole_core::git::worktree::{self as worktree, Worktree, Worktrees};
 use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
 use wormhole_core::storage::paths::{DataRoot, ProfileId};
 use wormhole_core::storage::store::Store;
-use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
+use crate::workspace::app_look::LookOverride;
 use crate::workspace::window_lifecycle::open_workspace_window;
 use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, updates};
 
@@ -104,15 +104,6 @@ pub(crate) struct AppState {
     pub(super) look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
     pub(super) _display_options: Option<crate::platform::look::DisplayObserver>,
-}
-
-/// Stand-ins for what the system says about how windows look; `None` follows the system.
-#[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct LookOverride {
-    pub appearance: Option<Appearance>,
-    pub reduce_transparency: Option<bool>,
-    pub increase_contrast: Option<bool>,
-    pub reduce_motion: Option<bool>,
 }
 
 impl Global for AppState {}

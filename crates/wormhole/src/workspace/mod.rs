@@ -17,6 +17,8 @@ pub(crate) use self::app::app;
 pub(crate) use self::app::app_mut;
 pub(crate) use self::app_handlers::init as init_actions;
 #[cfg(feature = "devctl")]
+pub(crate) use self::app_look::override_look;
+#[cfg(feature = "devctl")]
 pub(crate) use self::app_menu::dump as menu_dump;
 #[cfg(feature = "devctl")]
 pub(crate) use self::command_palette::devctl_palette;
@@ -46,6 +48,7 @@ pub(crate) mod ambient;
 mod app;
 mod app_handlers;
 mod app_launch;
+mod app_look;
 mod app_menu;
 mod app_tick;
 mod aux_window;
@@ -309,7 +312,7 @@ impl Workspace {
             if window.is_window_active() {
                 this.became_front(cx);
                 // macOS isn't relied on to say when Reduce Motion changes.
-                cx.defer(self::app_tick::sync_system_look);
+                cx.defer(self::app_look::sync_system_look);
             } else {
                 this.hints_blur(cx);
                 // A popover that is up has the key itself, which is why this window lost it.

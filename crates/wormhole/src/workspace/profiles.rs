@@ -329,8 +329,8 @@ impl AppState {
         state.applied_theme = None;
 
         Self::show_profile_windows(&from, target, cx);
-        crate::workspace::app_tick::sync_system_look(cx);
-        crate::workspace::app_tick::apply_theme(cx);
+        crate::workspace::app_look::sync_system_look(cx);
+        crate::workspace::app_look::apply_theme(cx);
         crate::workspace::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())

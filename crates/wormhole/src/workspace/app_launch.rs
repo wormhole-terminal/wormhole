@@ -6,7 +6,7 @@
 //! (Reduce Transparency, Increase Contrast, Reduce Motion), through their change notification
 //! and again whenever a window comes to the front (macOS is not relied on to tell). The
 //! look reaches the settings store, which re-derives what it touches; Reduce Motion is GPUI's
-//! own flag, which its animations follow (`app_tick::sync_system_look`).
+//! own flag, which its animations follow (`app_look::sync_system_look`).
 //!
 //! Part of the app root (it goes to `app/`): it may use every surface, and nothing below the app
 //! root may call into it.
@@ -20,8 +20,9 @@ use wormhole_core::ipc;
 use wormhole_core::storage::paths::DataRoot;
 
 use crate::settings::ParkedSettings;
-use crate::workspace::app::{AppState, LookOverride, app_mut};
-use crate::workspace::app_tick::{apply_theme, dispatch_hook, handle_menu_command, sync_system_look, tick};
+use crate::workspace::app::{AppState, app_mut};
+use crate::workspace::app_look::{LookOverride, apply_theme, sync_system_look};
+use crate::workspace::app_tick::{dispatch_hook, handle_menu_command, tick};
 use crate::workspace::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::workspace::{app_menu, menu_bar, notifications, onboarding, profiles, updates};
 
