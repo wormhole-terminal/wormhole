@@ -178,31 +178,6 @@ fn folder_item(path: PathBuf, terminals: usize, home: Option<&Path>) -> FolderIt
 }
 
 impl Workspace {
-    /// The sidebar's ⌘1–9, by session id.
-    fn palette_numbers(&self, cx: &App) -> Vec<(i64, u8)> {
-        let numbered = self.session_listing(cx).numbered();
-        numbered.iter().enumerate().map(|(n, &ix)| (self.sessions[ix].id, n as u8 + 1)).collect()
-    }
-
-    /// The folder each terminal is in, as the sidebar groups them: its repository, else the
-    /// folder itself.
-    fn session_folders(&self, cx: &App) -> Vec<PathBuf> {
-        self.sessions
-            .iter()
-            .filter_map(|session| {
-                let cwd = session.terminal().read(cx).cwd.clone()?;
-                Some(session.repo_root.of(&cwd))
-            })
-            .collect()
-    }
-
-    /// The first terminal in `folder` (as [`Self::session_folders`] says), if any.
-    fn session_in_folder(&self, folder: &Path, cx: &App) -> Option<usize> {
-        self.sessions.iter().position(|session| {
-            session.terminal().read(cx).cwd.as_deref().is_some_and(|cwd| session.repo_root.of(cwd) == folder)
-        })
-    }
-
     /// Where the current terminal is, how many files changed there, and its project's actions
     /// once it is trusted.
     fn palette_here(

@@ -117,4 +117,10 @@ impl Workspace {
         #[cfg(feature = "devctl")]
         self.run_tick_hook(window, cx);
     }
+
+    /// The selected session's project counts as recently used.
+    fn remember_project(&self, cx: &mut App) {
+        let Some(root) = self.active_session().project.clone() else { return };
+        crate::workspace::menu_bar::remember_project(root, cx);
+    }
 }

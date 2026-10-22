@@ -18,7 +18,7 @@ use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::window_lifecycle::open_tab;
-use crate::workspace::{Workspace, actions, settings_page, updates};
+use crate::workspace::{actions, settings_page, updates};
 
 const RECENT_PROJECTS: usize = 8;
 
@@ -429,17 +429,11 @@ pub(super) fn open_folder(cx: &mut App) {
     .detach();
 }
 
-impl Workspace {
-    /// The selected session's project counts as recently used.
-    pub(super) fn remember_project(&self, cx: &mut App) {
-        let Some(root) = self.active_session().project.clone() else { return };
-        let AppState { menu, store, .. } = app_mut(cx);
-        menu.remember(root, store.as_ref());
-    }
-
-    pub(super) fn session_for_project(&self, root: &Path) -> Option<usize> {
-        self.sessions.iter().position(|s| s.project.as_deref() == Some(root))
-    }
+/// `root`, the project of the terminal in front, counts as recently used (Open Recent, the status
+/// item's menu).
+pub(super) fn remember_project(root: PathBuf, cx: &mut App) {
+    let AppState { menu, store, .. } = app_mut(cx);
+    menu.remember(root, store.as_ref());
 }
 
 /// devctl: the status item's menu as text, as it would be built now.
