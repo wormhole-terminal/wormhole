@@ -74,7 +74,7 @@ pub(crate) mod focus;
 mod folder_color;
 #[cfg(test)]
 mod folder_color_tests;
-mod git_panel;
+pub(crate) mod git_panel;
 mod glass;
 #[cfg(test)]
 mod group_tests;
@@ -98,7 +98,7 @@ mod pane_drop;
 mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
-mod panel_list;
+pub(crate) mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
