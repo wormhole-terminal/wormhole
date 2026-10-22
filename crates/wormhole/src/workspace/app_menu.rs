@@ -7,22 +7,21 @@
 //! GPUI keeps the actions of every menu bar it was given for the life of the app, so the menus
 //! are not rebuilt for each step of a title an agent animates: a change of names alone waits
 //! [`NAMES_EVERY`].
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use gpui_kit::*;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::{self, Command, Item, MenuState};
-use wormhole_core::project::Feature;
 use wormhole_core::terminal::shells;
 
 use crate::settings::settings;
 use crate::workspace::actions::{
-    DEBUG, MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder,
-    RunProjectAction, SwitchProfile, gpui_action,
+    MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder, RunProjectAction,
+    SwitchProfile, gpui_action,
 };
-use crate::workspace::app::{AppState, app};
-use crate::workspace::{RightTab, Workspace};
+use crate::workspace::app::app;
+use crate::workspace::menu_state::state;
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);
@@ -64,93 +63,6 @@ pub(crate) fn rebuild(cx: &mut App) {
 #[cfg(feature = "devctl")]
 pub(crate) fn dump(cx: &App) -> String {
     cx.try_global::<Built>().map(|built| menus::dump(&menus::menus(&built.state))).unwrap_or_default()
-}
-
-/// What the menus show for the window in front (the command palette offers the same actions).
-pub(super) fn state(cx: &mut App) -> MenuState {
-    let front = AppState::front_window(cx);
-    let full_screen = front
-        .as_ref()
-        .and_then(|front| front.handle.update(cx, |_, window, _| window.is_fullscreen()).ok())
-        .unwrap_or(false);
-    let mut state = front
-        .and_then(|front| front.workspace.read_with(cx, |ws, cx| ws.menu_state(cx)).ok())
-        .unwrap_or_default();
-    let settings = settings(cx);
-    if !settings.status_bar {
-        state.off.push(ActionId::ToggleStatusBar);
-    }
-    if !settings.minimap {
-        state.off.push(ActionId::ToggleMinimap);
-    }
-    if settings.terminals_in == wormhole_core::view::sidebar::TerminalsIn::Sidebar {
-        state.off.push(ActionId::ToggleTerminalTabs);
-    }
-    if !full_screen {
-        state.off.push(ActionId::FullScreen);
-    }
-    state.recent = app(cx).menu.recent().iter().map(|root| folder_name(root)).collect();
-    state.shells = shells::choices(settings).into_iter().map(|choice| choice.name).collect();
-    let list = &app(cx).profiles;
-    state.profiles = list.profiles().iter().map(|p| p.name.clone()).collect();
-    state.current_profile = list.profiles().iter().position(|p| &p.id == list.active_id());
-    state.window_profile = AppState::front_window(cx)
-        .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
-    state.debug = DEBUG;
-    state.persistent = crate::workspace::windows::persistent_terminals_on(cx);
-    state
-}
-
-fn folder_name(root: &Path) -> String {
-    root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| root.display().to_string())
-}
-
-impl Workspace {
-    /// What the menus show about this window.
-    pub(super) fn menu_state(&self, cx: &App) -> MenuState {
-        use ActionId::*;
-        let mut state = MenuState::default();
-        if !self.sidebar_shown() {
-            state.off.push(ToggleSidebar);
-        }
-        if !self.notes_visible() {
-            state.off.push(ToggleRightPanel);
-        }
-        state.checked.push(match self.right_tab {
-            RightTab::Notes => ShowNotes,
-            RightTab::Changes => ShowChanges,
-            RightTab::History => ShowHistory,
-            RightTab::Project => ShowProject,
-            RightTab::Usage => ShowUsage,
-        });
-        if self.active_session().pinned {
-            state.checked.push(PinTerminal);
-        }
-        self.pane_menu_state(&mut state);
-        if self.active_terminal().read(cx).cwd.is_none() {
-            state.disabled.extend([RevealInFinder, CopyPath]);
-        }
-        // The Project tab needs a folder, and the whole project-folder feature behind its flag.
-        if self.active_folder(cx).is_none() || !crate::workspace::project::project_folders_on(cx) {
-            state.disabled.push(ShowProject);
-        }
-        if !self.usage_tab_on(cx) {
-            state.hidden.push(ShowUsage);
-        }
-        if !crate::workspace::notes::notes_on(cx) {
-            state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
-        }
-        if let Some(project) =
-            self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))
-        {
-            state.project_actions =
-                project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();
-        }
-        let numbered = self.session_listing(cx).numbered();
-        state.terminals = numbered.iter().map(|&ix| self.sessions[ix].name(cx).to_string()).collect();
-        state.current_terminal = numbered.iter().position(|&ix| ix == self.active);
-        state
-    }
 }
 
 /// GPUI's menus for the model. `recent` is the list the Open Recent items were named from, and

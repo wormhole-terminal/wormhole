@@ -1,0 +1,103 @@
+//! What the menus show for the window in front: which items are off, checked, disabled or hidden,
+//! the terminals ⌘1–9 and the project's actions. The menu bar (`app_menu`) puts it up and the
+//! command palette offers the same actions, so it is the window's to say, not the menu bar's.
+
+use std::path::Path;
+
+use gpui_kit::*;
+use wormhole_core::keys::keymap::ActionId;
+use wormhole_core::keys::keymap::menus::MenuState;
+use wormhole_core::project::Feature;
+use wormhole_core::terminal::shells;
+
+use crate::settings::settings;
+use crate::workspace::actions::DEBUG;
+use crate::workspace::app::{AppState, app};
+use crate::workspace::{RightTab, Workspace};
+
+/// What the menus show for the window in front (the command palette offers the same actions).
+pub(super) fn state(cx: &mut App) -> MenuState {
+    let front = AppState::front_window(cx);
+    let full_screen = front
+        .as_ref()
+        .and_then(|front| front.handle.update(cx, |_, window, _| window.is_fullscreen()).ok())
+        .unwrap_or(false);
+    let mut state = front
+        .and_then(|front| front.workspace.read_with(cx, |ws, cx| ws.menu_state(cx)).ok())
+        .unwrap_or_default();
+    let settings = settings(cx);
+    if !settings.status_bar {
+        state.off.push(ActionId::ToggleStatusBar);
+    }
+    if !settings.minimap {
+        state.off.push(ActionId::ToggleMinimap);
+    }
+    if settings.terminals_in == wormhole_core::view::sidebar::TerminalsIn::Sidebar {
+        state.off.push(ActionId::ToggleTerminalTabs);
+    }
+    if !full_screen {
+        state.off.push(ActionId::FullScreen);
+    }
+    state.recent = app(cx).menu.recent().iter().map(|root| folder_name(root)).collect();
+    state.shells = shells::choices(settings).into_iter().map(|choice| choice.name).collect();
+    let list = &app(cx).profiles;
+    state.profiles = list.profiles().iter().map(|p| p.name.clone()).collect();
+    state.current_profile = list.profiles().iter().position(|p| &p.id == list.active_id());
+    state.window_profile = AppState::front_window(cx)
+        .and_then(|front| list.profiles().iter().position(|p| p.id == front.profile));
+    state.debug = DEBUG;
+    state.persistent = crate::workspace::windows::persistent_terminals_on(cx);
+    state
+}
+
+fn folder_name(root: &Path) -> String {
+    root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| root.display().to_string())
+}
+
+impl Workspace {
+    /// What the menus show about this window.
+    pub(super) fn menu_state(&self, cx: &App) -> MenuState {
+        use ActionId::*;
+        let mut state = MenuState::default();
+        if !self.sidebar_shown() {
+            state.off.push(ToggleSidebar);
+        }
+        if !self.notes_visible() {
+            state.off.push(ToggleRightPanel);
+        }
+        state.checked.push(match self.right_tab {
+            RightTab::Notes => ShowNotes,
+            RightTab::Changes => ShowChanges,
+            RightTab::History => ShowHistory,
+            RightTab::Project => ShowProject,
+            RightTab::Usage => ShowUsage,
+        });
+        if self.active_session().pinned {
+            state.checked.push(PinTerminal);
+        }
+        self.pane_menu_state(&mut state);
+        if self.active_terminal().read(cx).cwd.is_none() {
+            state.disabled.extend([RevealInFinder, CopyPath]);
+        }
+        // The Project tab needs a folder, and the whole project-folder feature behind its flag.
+        if self.active_folder(cx).is_none() || !crate::workspace::project::project_folders_on(cx) {
+            state.disabled.push(ShowProject);
+        }
+        if !self.usage_tab_on(cx) {
+            state.hidden.push(ShowUsage);
+        }
+        if !crate::workspace::notes::notes_on(cx) {
+            state.hidden.extend([ShowNotes, NewNote, StashPrompt]);
+        }
+        if let Some(project) =
+            self.active_project(cx).filter(|project| app(cx).hub.enabled(project, Feature::Actions))
+        {
+            state.project_actions =
+                project.actions().iter().map(|a| (a.id.clone(), a.title.clone())).collect();
+        }
+        let numbered = self.session_listing(cx).numbered();
+        state.terminals = numbered.iter().map(|&ix| self.sessions[ix].name(cx).to_string()).collect();
+        state.current_terminal = numbered.iter().position(|&ix| ix == self.active);
+        state
+    }
+}

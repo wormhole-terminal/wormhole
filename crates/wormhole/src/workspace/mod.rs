@@ -69,6 +69,7 @@ mod items;
 mod key_tests;
 mod layout;
 pub(crate) mod menu_bar;
+mod menu_state;
 #[cfg(test)]
 mod menu_tests;
 #[cfg(test)]
