@@ -4,8 +4,8 @@
 //! `workspace::window_actions`.
 //!
 //! Below the window and the shared state, which bind and handle them. The actions' names come
-//! from the `workspace` namespace of `actions!`, not from this module's path, so the keymap and
-//! the menus are unchanged by where the types live.
+//! from the namespaces given to `actions!` (`workspace`, `app`), not from this module's path, so
+//! the keymap and the menus are unchanged by where the types live.
 
 use std::path::PathBuf;
 use std::rc::Rc;

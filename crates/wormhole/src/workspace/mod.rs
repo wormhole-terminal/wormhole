@@ -9,7 +9,7 @@
 //! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
 //! The window uses nothing above it but the known exceptions, kept until phase 5: it calls
 //! `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events instead)
-//! from `tick`, `terminals`, `panes`, `splits`, `windows` and this file's window-activation
+//! from `tick`, `terminals`, `panes` (and `panes::splits`), `windows` and this file's window-activation
 //! observer, `finished_commands` from `ambient`, and `permission_asks` from the welcome; and the
 //! welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`, which an
 //! action carrying the section will replace).
