@@ -181,11 +181,13 @@ impl Groups {
     }
 
     /// Set the folder new terminals in group `id` start in, or take it away (`None`, or a blank
-    /// path).
+    /// path). A group with a folder is pinned, as a project is: it is a place, so it stays when its
+    /// last terminal closes. Taking the folder away leaves it pinned; unpinning is its own choice.
     pub fn set_folder(&mut self, id: u32, folder: Option<&str>) {
         let folder = folder.map(str::trim).filter(|folder| !folder.is_empty());
         if let Some(group) = self.get_mut(id) {
             group.folder = folder.map(str::to_string);
+            group.pinned |= folder.is_some();
         }
     }
 
@@ -364,6 +366,25 @@ mod tests {
         assert_eq!(groups.get(a).and_then(|g| g.folder.clone()), None);
         groups.set_folder(99, Some("/tmp"));
         assert_eq!(groups.iter().count(), 1, "no such group, nothing made");
+    }
+
+    #[test]
+    fn setting_a_folder_pins_the_group_and_clearing_it_leaves_it_pinned() {
+        let mut groups = Groups::default();
+        let a = groups.create(&[1]);
+        groups.set_folder(a, Some("   "));
+        assert!(!groups.get(a).is_some_and(|g| g.pinned), "a blank path is no folder");
+        groups.set_folder(a, Some("/tmp/work"));
+        assert!(groups.get(a).is_some_and(|g| g.pinned));
+        groups.set_folder(a, None);
+        assert!(groups.get(a).is_some_and(|g| g.pinned), "clearing the folder does not unpin");
+        groups.set_pinned(a, false);
+        groups.retain_terminals(|_| false);
+        assert_eq!(groups.iter().count(), 0, "unpinned, it goes with its last terminal");
+        let b = groups.create(&[2]);
+        groups.set_folder(b, Some("/tmp/work"));
+        groups.retain_terminals(|_| false);
+        assert_eq!(groups.iter().count(), 1, "pinned by its folder, it stays");
     }
 
     #[test]
