@@ -476,10 +476,10 @@ pub fn writes_off() -> Error {
 /// `notify`'s words as the banner shows them: cleaned like a program's own notification (one
 /// line, no control or invisible characters, cut with an ellipsis), or nothing when nothing is
 /// left to say.
-pub fn notice_text(title: &str, body: &str) -> Option<crate::terminal::Notification> {
-    use crate::terminal::{BODY_MAX_CHARS, TITLE_MAX_CHARS, clean};
+pub fn notice_text(title: &str, body: &str) -> Option<wormhole_term::Notification> {
+    use wormhole_term::{BODY_MAX_CHARS, TITLE_MAX_CHARS, clean};
     let (title, body) = (clean(title, TITLE_MAX_CHARS), clean(body, BODY_MAX_CHARS));
-    (!title.is_empty() || !body.is_empty()).then_some(crate::terminal::Notification { title, body })
+    (!title.is_empty() || !body.is_empty()).then_some(wormhole_term::Notification { title, body })
 }
 
 #[cfg(test)]
