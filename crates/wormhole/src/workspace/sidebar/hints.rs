@@ -1,7 +1,11 @@
 //! The ⌘1–9 keycaps: ⌘ held on its own for a moment shows them; letting go, any other
 //! key, or the window losing focus hides them. Core's `CmdHold` keeps the time; this feeds it
 //! the window's modifier and key events and redraws when the answer changes.
-use super::*;
+use std::time::Instant;
+
+use gpui_kit::*;
+
+use crate::workspace::Workspace;
 
 impl Workspace {
     /// The modifier keys changed (from the root's `on_modifiers_changed`).

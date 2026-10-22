@@ -4,10 +4,16 @@
 //! keeps the groups and their order (`sidebar::WindowSidebar`, saved with the window); `group_head`
 //! draws them and has their menu, `rename` renames them in place and `group_actions` closes and
 //! moves them.
+use std::path::Path;
+
+use gpui_kit::*;
+use wormhole_core::profile::ProfileId;
 use wormhole_core::sidebar::{GroupColor, Item, Landing};
 
-use super::*;
+use crate::settings::store_in;
 use crate::theme_bridge;
+use crate::workspace::Workspace;
+use crate::workspace::session::home_dir;
 
 /// The colours a group can wear, as the theme in force draws them.
 pub(in crate::workspace) fn group_colors(profile: &ProfileId, cx: &App) -> Vec<(GroupColor, Hsla)> {

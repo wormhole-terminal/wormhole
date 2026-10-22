@@ -6,13 +6,15 @@
 //! right-click menu is Rename… (in place, `rename`), the same dots, Other colour…, No colour
 //! (checked when the group has none), the same folder lines, and the same actions.
 
+use gpui_kit::*;
 use wormhole_core::sidebar::{GroupColor, GroupPaint};
 use wormhole_core::tokens::Appearance;
 
 use super::groups::group_colors;
-use super::*;
 use crate::platform::popover::{Behavior, Colours, Custom, Field, Popover, Row};
 use crate::platform::{self, Item, Menu, Swatch};
+use crate::settings::store_in;
+use crate::workspace::Workspace;
 
 /// What a group's popover and menu are made from, as it is when they open.
 pub(super) struct GroupFacts {

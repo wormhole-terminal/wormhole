@@ -2,7 +2,10 @@
 //! which repository a worktree belongs to, read from disk now and then.
 use std::path::{Path, PathBuf};
 
-use super::*;
+use gpui_kit::*;
+
+use super::facts::row_times;
+use crate::workspace::Workspace;
 
 impl Workspace {
     /// The repository a worktree belongs to, by its root; read from disk once per refresh.

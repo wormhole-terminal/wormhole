@@ -3,18 +3,26 @@
 //! ringed, a pinned empty one saying "No terminals"), "Ungrouped" with its count, New group and
 //! "Show all groups in the sidebar", and the keys' hint. A click on a card goes to the group; typing
 //! lists the groups and terminals that match, and ↩ goes to the first.
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input::Input;
+use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::popover::Popover;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::sidebar::Urgency;
 use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::tabs::{Hit, UNGROUPED, search};
 
 use super::super::settings_page::update_settings;
+use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for};
 use super::tab_bar::SetView;
-use super::*;
 use crate::select;
+use crate::settings::{UiColors, settings_in};
+use crate::style::{self, Edges, TextRole};
 use crate::style::{GroupHead, GroupSwitch, PopoverRow, TileFace, popover_row, popover_rule};
+use crate::workspace::Workspace;
 
 /// What a card or row does once the popover has closed.
 type Then = Box<dyn Fn(&mut Workspace, &mut Window, &mut Context<Workspace>)>;

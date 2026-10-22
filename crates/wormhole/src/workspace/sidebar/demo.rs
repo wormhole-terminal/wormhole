@@ -14,12 +14,17 @@
 //! its terminal closes (`close_session`), and it is not drawn while the welcome's gate is shut or the
 //! terminal's program has exited, whatever else was missed.
 
+use std::time::{Duration, Instant};
+
+use gpui_kit::*;
 use wormhole_core::sidebar::RowState;
 use wormhole_core::welcome::demo as example;
 
 use super::rows::Frame;
-use super::*;
+use crate::style;
 use crate::style::{RowTone, SessionRow, StatusGlyph};
+use crate::terminal_view::Status;
+use crate::workspace::Workspace;
 
 /// How often the redraw timer looks again while Reduce Motion holds the rows still (it may be turned
 /// off meanwhile).

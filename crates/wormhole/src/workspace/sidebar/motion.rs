@@ -8,10 +8,12 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::sidebar::motion::{Drawn, plan_moves};
 
-use super::*;
 use crate::style::motion::{EASE_OUT, MOTION_MOVE};
+use crate::workspace::Workspace;
 
 /// A move longer than this is drawn from this far away, so a terminal sent across a long list
 /// still slides.

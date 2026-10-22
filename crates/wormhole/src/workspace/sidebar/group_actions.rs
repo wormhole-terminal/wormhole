@@ -2,13 +2,16 @@
 //! it) and move it, with its splits, to a window of its own.
 use std::collections::HashSet;
 
+use gpui_kit::*;
 use wormhole_core::sidebar::{Item, SplitId, WindowSidebar, group_key};
 use wormhole_core::store::{SplitRecord, WindowRecord};
 
 use super::super::app::{app_mut, open_workspace_window_in};
 use super::super::dialog;
 use super::super::session::{close_group_detail, close_group_title};
-use super::*;
+use crate::terminal_view::Status;
+use crate::workspace::session::Session;
+use crate::workspace::{Layout, Workspace};
 
 impl Workspace {
     /// Close group `group`: every terminal in it ends, and the group goes (a pinned one stays as a

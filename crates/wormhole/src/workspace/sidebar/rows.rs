@@ -5,8 +5,14 @@
 //! split also shows it: the chain mark at the right of its first line when its mates are elsewhere
 //! (rows of one split in no group share a card; VoiceOver is told they are on screen).
 use std::time::Duration;
+use std::time::Instant;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::component::{Icon, Sizable};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::sidebar::RowState;
 use wormhole_core::sidebar::SplitMarks;
 use wormhole_core::sidebar::hints::{keycap, keyshortcut};
 use wormhole_core::sidebar::spoken::{self, RowSpeech, SplitSpeech};
@@ -14,8 +20,13 @@ use wormhole_core::sidebar::text::{agent_detail, ago, clock, place_detail, took}
 
 use super::super::focus::SidebarStop;
 use super::super::terminal_drag::DragOrigin;
-use super::*;
+use super::facts::RowInfo;
+use super::{BODY_REM, CAPTION_REM, two_line_tooltip};
+use crate::settings::{UiColors, settings_in, ui_in};
+use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
+use crate::workspace::Workspace;
+use crate::workspace::session::home_dir;
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
@@ -70,7 +81,7 @@ impl Frame {
                 .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
-            show_notes: s.sidebar_notes && super::notes::notes_on(cx),
+            show_notes: s.sidebar_notes && crate::workspace::notes::notes_on(cx),
             hints: ws.hints_showing(cx),
             code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
             width,

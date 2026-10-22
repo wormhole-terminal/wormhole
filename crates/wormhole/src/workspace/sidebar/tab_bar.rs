@@ -5,17 +5,25 @@
 //! move between them in either layout.
 use std::collections::HashMap;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::keymap::{self, ActionId};
 use wormhole_core::sidebar::Urgency;
 use wormhole_core::sidebar::hints::keycap;
 use wormhole_core::sidebar::spoken;
 use wormhole_core::sidebar::tabs::{TabSet, current_set, others_need_you, set_numbered, step_set, tab_sets};
+use wormhole_core::sidebar::{Entry, Listing};
 
 use super::super::chrome::traffic_light_position;
 use super::super::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
+use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for, tile_for};
-use super::*;
+use crate::settings::{UiColors, settings_in, store_in, ui_in};
+use crate::style;
 use crate::style::TerminalTab;
+use crate::workspace::Workspace;
 
 /// The gap between the tabs and the terminal's surface under them.
 const TAB_GAP: f32 = 8.0;

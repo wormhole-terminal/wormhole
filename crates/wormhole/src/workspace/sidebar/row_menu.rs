@@ -5,13 +5,17 @@
 //! Reveal in Finder, Copy path.
 //! The row it was opened on wears the focus ring until it closes. ⌃↩ opens it for the row the keys
 //! are on, and a group's own menu (`groups`) for the head they are on.
+use std::path::Path;
 use std::path::PathBuf;
 
+use gpui_kit::*;
 use wormhole_core::panes::{TabPanes, Zone};
+use wormhole_core::sidebar::Entry;
 
 use super::super::focus::SidebarStop;
-use super::*;
+use super::facts::RowInfo;
 use crate::platform::{self, Item, Menu};
+use crate::workspace::Workspace;
 
 /// What a row's menu is made from, as it is when the menu opens.
 struct RowFacts {

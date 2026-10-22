@@ -2,9 +2,12 @@
 //! becomes a field with the current name selected; ↩ or a click elsewhere keeps what was typed, ⎋
 //! the old name, and an empty name goes back to what runs in the terminal (a group keeps its old
 //! one).
+use gpui_kit::component::Sizable;
 use gpui_kit::component::input::Input;
+use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::*;
 
-use super::*;
+use crate::workspace::Workspace;
 
 /// A terminal being renamed: which, and its name field.
 pub(in crate::workspace) struct TerminalRename {

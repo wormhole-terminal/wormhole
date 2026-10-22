@@ -7,12 +7,17 @@
 //! terminal out of its split. Core works out what a drop does (`sidebar::place`): where on the
 //! arrangement it lands, or which split it joins; this reads the pointer and draws the line.
 //! A drag inside a bracket reorders the sidebar only, never the layout.
+use gpui_kit::*;
 use wormhole_core::panes::{DropError, Zone};
 use wormhole_core::sidebar::{Card, Drop, DropInput, Item, Landing, Part, Target, group_drop, terminal_drop};
+use wormhole_core::sidebar::{Entry, Listing};
 
 use super::super::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over, TerminalDrag};
+use super::facts::RowInfo;
 use super::motion::ItemKey;
-use super::*;
+use crate::settings::UiColors;
+use crate::style;
+use crate::workspace::Workspace;
 
 /// Where a dragged thing would land, as a line on the list.
 #[derive(Clone, Debug, PartialEq, Eq)]

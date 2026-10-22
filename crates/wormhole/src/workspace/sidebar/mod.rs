@@ -6,23 +6,21 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::path::PathBuf;
 
 use gpui_kit::component::scroll::Scrollbar;
-
-use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
-use super::session::home_dir;
-use super::terminal_drag::Over;
-use super::*;
-
-use wormhole_core::agents::AgentId;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::sidebar::NUMBERED;
 use wormhole_core::sidebar::hints::CmdHold;
 use wormhole_core::sidebar::order::FrozenNumbers;
-use wormhole_core::sidebar::{
-    Card, Entry, ListInput, Listing, RowState, SidebarNumbers, Splits, WindowSidebar,
-};
+use wormhole_core::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
+
+use super::Workspace;
+use super::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
+use super::terminal_drag::Over;
+use crate::settings::{UiColors, settings_in, store_in, ui_in};
+use crate::style::{self, TextRole};
 
 mod demo;
 mod drag;

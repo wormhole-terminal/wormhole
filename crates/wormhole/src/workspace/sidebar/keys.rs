@@ -9,10 +9,12 @@
 
 use std::time::Instant;
 
+use gpui_kit::*;
 use wormhole_core::focus::list::{Item, Move, band_folds, type_ahead, walk};
+use wormhole_core::sidebar::Entry;
 
 use super::super::focus::{Activate, SidebarStop, activation, list_key};
-use super::*;
+use crate::workspace::Workspace;
 
 /// The list as the keys walk it, top to bottom.
 struct Walk {

@@ -3,15 +3,21 @@
 //! right-click and ⌃↩ open: Rename… (in place, `rename`), a row of the nine colours as Finder's tags
 //! are in its context menu, Other colour…, its folder with Set folder… and Clear folder, and the
 //! actions. Resting on the name shows the folder.
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::sidebar::{Entry, Listing};
 use wormhole_core::sidebar::{Urgency, spoken};
 
 use super::super::focus::SidebarStop;
+use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
-use super::*;
 use crate::platform::{self, Anchor};
+use crate::settings::store_in;
+use crate::style;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
+use crate::workspace::Workspace;
 
 impl Workspace {
     /// A group's head: the tiles of its terminals while folded, the dot while one needs you or
