@@ -47,7 +47,7 @@ struct Layers(HashMap<WindowId, Entity<Layer>>);
 impl Global for Layers {}
 
 /// `window`'s layer: the workspace puts it in its tree, [`show`] opens popovers in it.
-pub fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
+pub(crate) fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
     let id = window.window_handle().window_id();
     if let Some(layer) = cx.try_global::<Layers>().and_then(|layers| layers.0.get(&id)) {
         return layer.clone();
@@ -61,7 +61,7 @@ pub fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
 }
 
 /// Open `popover` under `anchor`. A transient one has the keyboard until it closes.
-pub fn show(popover: Popover, anchor: Bounds<Pixels>, window: &mut Window, cx: &mut App) -> Handle {
+pub(crate) fn show(popover: Popover, anchor: Bounds<Pixels>, window: &mut Window, cx: &mut App) -> Handle {
     let layer = layer(window, cx);
     let handle = window.window_handle();
     let field = popover.rows.iter().find_map(|row| match row {
@@ -294,6 +294,7 @@ impl Render for Layer {
     }
 }
 
+#[track_caller]
 fn path_line(text: &SharedString, ui: crate::settings::UiColors) -> AnyElement {
     let segments: Vec<String> = text.split_inclusive('/').map(str::to_string).collect();
     let last = segments.len().saturating_sub(1);

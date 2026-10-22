@@ -72,7 +72,7 @@ pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut Ap
         Ok(()) => return,
         Err(menu) => menu,
     };
-    fallback::menu::show(menu, at, window, cx);
+    crate::style::menu_layer::show(menu, at, window, cx);
 }
 
 /// Open `popover` under `anchor` (the element's bounds in the window) as the platform's own, and
@@ -88,7 +88,7 @@ pub fn show_popover(popover: Popover, anchor: Bounds<Pixels>, window: &mut Windo
         Ok(handle) => return handle,
         Err(popover) => popover,
     };
-    fallback::popover::show(popover, anchor, window, cx)
+    crate::style::popover_layer::show(popover, anchor, window, cx)
 }
 
 /// Open the system's Colours window showing `start`; each colour chosen in it reaches `on_change`,

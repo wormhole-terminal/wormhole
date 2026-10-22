@@ -32,7 +32,7 @@ struct Layers(HashMap<WindowId, Entity<Layer>>);
 impl Global for Layers {}
 
 /// `window`'s layer: the workspace puts it in its tree, [`show`] opens menus in it.
-pub fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
+pub(crate) fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
     let id = window.window_handle().window_id();
     if let Some(layer) = cx.try_global::<Layers>().and_then(|layers| layers.0.get(&id)) {
         return layer.clone();
@@ -47,7 +47,7 @@ pub fn layer(window: &Window, cx: &mut App) -> Entity<Layer> {
 
 /// Open `menu` at `at`; the menu has the keyboard until it closes, then the focus goes back to
 /// where it was unless the chosen item put it somewhere else.
-pub fn show(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
+pub(crate) fn show(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut App) {
     let layer = layer(window, cx);
     let previous = window.focused(cx);
     let on_close = menu.on_close.clone();
@@ -124,6 +124,7 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
     popup
 }
 
+#[track_caller]
 fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
     let picture = match icon {
         Icon::Image(file) => img(file.clone()).size_4().into_any_element(),
@@ -145,6 +146,7 @@ fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
 }
 
 /// A row of colour dots: a click on one picks it and dismisses the menu, as the native row does.
+#[track_caller]
 fn dots(row: &Swatches, cx: &App) -> AnyElement {
     let ui = crate::settings::ui(cx);
     div()

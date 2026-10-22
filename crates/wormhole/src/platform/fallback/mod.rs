@@ -17,8 +17,6 @@ pub mod hotkey;
 pub mod keys;
 #[cfg(not(target_os = "macos"))]
 pub mod look;
-pub mod menu;
-pub mod popover;
 #[cfg(not(target_os = "macos"))]
 pub mod scroller;
 #[cfg(not(target_os = "macos"))]
@@ -29,6 +27,3 @@ pub mod status_item;
 pub mod vibrancy;
 #[cfg(not(target_os = "macos"))]
 pub mod window;
-
-pub use menu::layer;
-pub use popover::layer as popover_layer;
