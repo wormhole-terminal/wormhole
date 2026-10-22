@@ -144,6 +144,30 @@ impl Usage {
     }
 }
 
+/// From this share used on (0 to 1), a plan limit's bar turns to the warning colour.
+pub const WARN_AT: f32 = 0.8;
+
+/// How alarming a plan limit's bar is: the colour it is drawn in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Level {
+    Normal,
+    /// From [`WARN_AT`] on.
+    Warn,
+    /// At the limit.
+    Danger,
+}
+
+impl Level {
+    /// The level of a share used, 0 to 1 (what [`PlanLimit::shown`] gives).
+    pub fn of(share: f32) -> Level {
+        match share {
+            s if s >= 1.0 => Level::Danger,
+            s if s >= WARN_AT => Level::Warn,
+            _ => Level::Normal,
+        }
+    }
+}
+
 /// What an agent's status line says about one terminal's session: the model it runs and how full
 /// its context window is. Unlike the plan limits this is the terminal's own (it travels with the
 /// terminal's id), and only an agent that reports it has one: nothing is guessed for the others.
@@ -271,7 +295,7 @@ pub fn from_json(json: &str) -> Vec<Usage> {
 mod tests {
     use serde_json::json;
 
-    use super::{AgentId, Gauge, Limit, Usage, Window, duration, from_json, record, to_json, updated};
+    use super::{AgentId, Gauge, Level, Limit, Usage, Window, duration, from_json, record, to_json, updated};
 
     const NOW: i64 = 1_800_000_000;
 
@@ -292,6 +316,15 @@ mod tests {
         assert_eq!(usage.five_hour, Some(Window { used: 25.4, resets_at: NOW + 34 * 60 }));
         assert_eq!(usage.shown(Limit::FiveHour, NOW), (0.254, "25% \u{b7} resets 34m".to_string()));
         assert_eq!(usage.shown(Limit::Weekly, NOW).1, "0% \u{b7} resets 6d");
+    }
+
+    #[test]
+    fn a_bar_warns_from_eighty_percent_and_is_in_danger_at_the_limit() {
+        assert_eq!(Level::of(0.0), Level::Normal);
+        assert_eq!(Level::of(0.79), Level::Normal);
+        assert_eq!(Level::of(0.8), Level::Warn);
+        assert_eq!(Level::of(0.99), Level::Warn);
+        assert_eq!(Level::of(1.0), Level::Danger);
     }
 
     #[test]
