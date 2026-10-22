@@ -75,6 +75,8 @@ pub(crate) fn start(
         menu,
         display_observer,
     ));
+    // The features that keep app-wide data for the shown profile read it now that its database is open.
+    crate::window::features::profile_shown(cx);
     // A profile switch changes what the menus show; they follow it at once, not on the next tick.
     menus::follow_changes(cx);
     // Before the first frame, so windows don't open in the default colors (nor in the

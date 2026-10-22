@@ -8,7 +8,10 @@ use gpui_kit::*;
 use wormhole_core::agents;
 use wormhole_core::agents::usage::{self, PlanLimit, Usage};
 
-use crate::app_state::app;
+mod state;
+
+pub(crate) use state::{install, profile_shown, record, reports};
+
 use crate::settings::{UiColors, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::Workspace;
@@ -26,7 +29,7 @@ pub(in crate::window) const REDRAW_TICKS: u64 = 25;
 impl Workspace {
     pub(in crate::window) fn render_usage_tab(&self, cx: &Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
-        let reports = &app(cx).usage;
+        let reports = reports(cx);
         if reports.is_empty() {
             return style::panel_card(
                 ui,

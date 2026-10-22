@@ -207,6 +207,7 @@ impl AppState {
             crate::window::window_lifecycle::open_workspace_window_in(&shown, None, None, cx);
         }
         crate::window::menu_state::menus_changed(cx);
+        crate::window::features::profile_shown(cx);
         cx.refresh_windows();
         Ok(())
     }
@@ -218,13 +219,13 @@ impl AppState {
 }
 
 /// What the app keeps per profile besides the settings: its database, closed tips, project
-/// folders, recent projects, plan usage, worktrees and remembered side columns.
+/// folders, recent projects, worktrees and remembered side columns. (The plan usage the Usage tab shows is
+/// the feature's own, read from the shown profile's database when the profile changes.)
 pub(crate) struct ProfileData {
     pub store: Option<Store>,
     pub tips: DismissedTips,
     pub hub: project::ProjectHub,
     pub recent: RecentProjects,
-    pub usage: Vec<wormhole_core::agents::usage::Usage>,
     pub worktrees: Worktrees,
     pub last_panes: RememberedPanes,
 }
@@ -236,24 +237,13 @@ impl ProfileData {
             Store::open_for(paths).inspect_err(|err| tracing::error!("persistence disabled: {err:#}")).ok();
         let meta = |key: &str| store.as_ref().and_then(|s| s.meta(key).ok().flatten());
         let tips = DismissedTips::parse(meta(DISMISSED_TIPS_KEY).as_deref());
-        let usage = meta(wormhole_core::agents::usage::STORE_KEY)
-            .map(|json| wormhole_core::agents::usage::from_json(&json))
-            .unwrap_or_default();
         // Worktrees removed by hand since are forgotten, so nothing offers to remove them.
         let mut worktrees =
             meta(worktree::STORE_KEY).map(|json| Worktrees::from_json(&json)).unwrap_or_default();
         worktrees.prune();
         let last_panes = RememberedPanes::parse(meta(REMEMBERED_PANES_KEY).as_deref());
         let recent = RecentProjects::load(store.as_ref());
-        Self {
-            store,
-            tips,
-            hub: project::ProjectHub::load_from(paths.dir()),
-            recent,
-            usage,
-            worktrees,
-            last_panes,
-        }
+        Self { store, tips, hub: project::ProjectHub::load_from(paths.dir()), recent, worktrees, last_panes }
     }
 }
 
@@ -307,13 +297,12 @@ impl AppState {
         cx.global_mut::<ParkedSettings>().park(from.clone(), leaving_settings);
         let first_free = app(cx).next_id;
         let state = app_mut(cx);
-        let ProfileData { store, tips, mut hub, recent, usage, worktrees, last_panes } = data;
+        let ProfileData { store, tips, mut hub, recent, worktrees, last_panes } = data;
         hub.ids_start_at(first_free);
         let leaving = ProfileData {
             store: std::mem::replace(&mut state.store, store),
             tips: std::mem::replace(&mut state.tips, tips),
             hub: std::mem::replace(&mut state.hub, hub),
-            usage: std::mem::replace(&mut state.usage, usage),
             worktrees: std::mem::replace(&mut state.worktrees, worktrees),
             last_panes: std::mem::replace(&mut state.last_panes, last_panes),
             recent: std::mem::replace(&mut state.recent_projects, recent),

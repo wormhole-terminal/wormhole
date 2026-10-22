@@ -19,7 +19,15 @@ use crate::window::feature::{FeatureDef, FeatureTable};
 /// The features in the table, in tab order.
 pub(in crate::window) const TABLE: &[FeatureDef] = &[git::changes::DEF, notes::DEF];
 
-/// Hands the table to the windows opened from now on. The app root calls it at launch.
+/// Hands the table to the windows opened from now on, and makes the app-wide state that features keep
+/// outside their windows. The app root calls it at launch.
 pub(crate) fn install(cx: &mut App) {
+    usage::install(cx);
     FeatureTable::install(TABLE, cx);
+}
+
+/// The shown profile's data is in `AppState` now (at launch, after a profile switch): each feature that
+/// keeps app-wide data reads this profile's.
+pub(crate) fn profile_shown(cx: &mut App) {
+    usage::profile_shown(cx);
 }

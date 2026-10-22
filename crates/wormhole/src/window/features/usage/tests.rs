@@ -33,12 +33,12 @@ pub(crate) fn claude(used: f32, updated: i64) -> Usage {
 
 /// An agent reports its limits, as the hook socket's message does.
 fn report(cx: &mut TestAppContext, usage: Usage) {
-    cx.update(|cx| app_mut(cx).record_usage(usage));
+    cx.update(|cx| super::record(usage, cx));
     cx.run_until_parked();
 }
 
 fn reports(cx: &mut TestAppContext) -> Vec<Usage> {
-    cx.update(|cx| app(cx).usage.clone())
+    cx.update(|cx| super::reports(cx).to_vec())
 }
 
 /// What the profile's database remembers of them.
@@ -49,9 +49,12 @@ fn remembered(cx: &mut TestAppContext) -> Vec<Usage> {
     })
 }
 
-/// Gives the app a database of its own in the test's scratch dir, which `report` then writes to.
-fn with_database(cx: &mut TestAppContext) {
-    let dir = std::env::temp_dir().join(format!("wormhole-usage-{}", std::process::id()));
+/// Gives the app the database `name` in the test's scratch dir, which `report` then writes to: a
+/// profile's, as a switch to it would.
+fn with_database(cx: &mut TestAppContext, name: &str) {
+    // The scratch data dir the test runs in, which the harness removes afterwards.
+    let data = std::env::var_os("WORMHOLE_DATA_DIR").expect("a scratch data dir");
+    let dir = std::path::PathBuf::from(data).join(format!("usage-{name}"));
     std::fs::create_dir_all(&dir).expect("makes the scratch dir");
     let store = Store::open_at(&dir).expect("opens a database");
     cx.update(|cx| app_mut(cx).store = Some(store));
@@ -97,7 +100,7 @@ fn the_latest_report_of_an_agent_wins_and_is_remembered(cx: &mut TestAppContext)
         return;
     }
     let _window = start(cx, 1);
-    with_database(cx);
+    with_database(cx, "one");
     report(cx, claude(25.0, 100));
     report(cx, Usage { agent: AgentId::Codex, ..claude(10.0, 110) });
     report(cx, claude(40.0, 120));
@@ -146,4 +149,30 @@ fn the_tab_redraws_on_the_tick_only_while_it_shows(cx: &mut TestAppContext) {
     let off = ticks(cx, TabId::Changes);
     assert!(on[1] == off[1], "between those ticks, the same as another tab");
     assert!(on[0] > off[0] && on[2] > off[2], "another tab: the tick leaves the window alone");
+}
+
+#[gpui_kit::test]
+fn each_profile_has_its_own_reports(cx: &mut TestAppContext) {
+    if isolate("each_profile_has_its_own_reports") {
+        return;
+    }
+    let _window = start(cx, 1);
+    with_database(cx, "work");
+    report(cx, claude(25.0, 100));
+    let work = reports(cx);
+    assert_eq!(work.len(), 1);
+
+    // Another profile is shown: its database, which has none yet.
+    with_database(cx, "home");
+    cx.update(super::profile_shown);
+    assert!(reports(cx).is_empty(), "the other profile's reports, which are none");
+    report(cx, Usage { agent: AgentId::Codex, ..claude(5.0, 200) });
+
+    // Back: the first profile's, as they were left, and the second's are kept for its return.
+    with_database(cx, "work");
+    cx.update(super::profile_shown);
+    assert_eq!(reports(cx), work);
+    with_database(cx, "home");
+    cx.update(super::profile_shown);
+    assert_eq!(reports(cx).iter().map(|u| u.agent).collect::<Vec<_>>(), [AgentId::Codex]);
 }

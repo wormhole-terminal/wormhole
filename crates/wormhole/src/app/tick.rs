@@ -43,11 +43,8 @@ pub(super) fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
                 None => open_workspace_window(None, None, cx),
             }
         }
-        ipc::Message::Usage { usage } => {
-            app_mut(cx).record_usage(usage);
-            // Every window's Usage tab shows it.
-            cx.refresh_windows();
-        }
+        // Every window's Usage tab shows it: the reports are one entity the windows watch.
+        ipc::Message::Usage { usage } => crate::window::features::usage::record(usage, cx),
         // The terminal's own: its model and context window, for its title row.
         ipc::Message::Gauge { tab, gauge } => {
             let Some(owner) = AppState::find_window(cx, |ws, _| ws.owns_terminal(&tab)) else { return };

@@ -90,8 +90,6 @@ pub(crate) struct AppState {
     pub launch_hosts: wormhole_core::ipc::hosts::LaunchHosts,
     /// The window showing the question before quitting, while it is up.
     pub quit_prompt: Option<i64>,
-    /// The coding agents' plan usage limits, one report per agent (the Usage tab).
-    pub usage: Vec<wormhole_core::agents::usage::Usage>,
     /// What `gh` said about each branch's pull request, asked rarely (the title row's PR link).
     pub pr: wormhole_core::git::pr::PrCache,
     /// The git worktrees Wormhole made (Shell → New Terminal in New Worktree), kept across
@@ -135,7 +133,7 @@ impl AppState {
         menu: status_item::MenuState,
         display_options: Option<crate::platform::look::DisplayObserver>,
     ) -> Self {
-        let profiles::ProfileData { store, tips, mut hub, recent, usage, worktrees, last_panes } = data;
+        let profiles::ProfileData { store, tips, mut hub, recent, worktrees, last_panes } = data;
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
         hub.ids_start_at(next_id);
         Self {
@@ -159,7 +157,6 @@ impl AppState {
             ending_hosts: false,
             launch_hosts,
             quit_prompt: None,
-            usage,
             pr: Default::default(),
             worktrees,
             last_panes,
@@ -208,7 +205,6 @@ impl AppState {
             ending_hosts: false,
             launch_hosts: Default::default(),
             quit_prompt: None,
-            usage: Vec::new(),
             pr: Default::default(),
             worktrees: Worktrees::default(),
             last_panes: RememberedPanes::default(),
@@ -246,19 +242,6 @@ impl AppState {
         if !self.tips.is_empty() {
             self.tips.clear();
             self.save_tips();
-        }
-    }
-
-    /// An agent's latest plan usage limits, kept across restarts.
-    pub(crate) fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
-        wormhole_core::agents::usage::record(&mut self.usage, usage);
-        if let Some(store) = &self.store
-            && let Err(err) = store.set_meta(
-                wormhole_core::agents::usage::STORE_KEY,
-                &wormhole_core::agents::usage::to_json(&self.usage),
-            )
-        {
-            tracing::warn!("remembering the usage limits: {err:#}");
         }
     }
 
