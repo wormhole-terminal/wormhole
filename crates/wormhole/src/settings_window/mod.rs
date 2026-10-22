@@ -253,6 +253,12 @@ pub(crate) fn reveal_row(id: &str, cx: &mut App) {
 /// thing on the page rather than as cut off.
 const REVEAL_INSET: f32 = style::TITLE_ROW_H;
 
+/// The user's home folder, asked of the environment each time: the pages that show a path as `~/…` or
+/// look under it are cold code, so nothing is cached.
+fn home() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(PathBuf::from)
+}
+
 /// The icon the settings nav gives a section (the palette's settings show it too).
 pub(crate) fn section_icon(section: Section) -> IconName {
     nav::section_icon(section)

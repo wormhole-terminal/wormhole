@@ -135,7 +135,7 @@ fn choices(known: &[PathBuf]) -> Vec<Choice<String>> {
 }
 
 fn short_home(path: &Path) -> String {
-    match std::env::var_os("HOME").map(PathBuf::from) {
+    match crate::settings_window::home() {
         Some(home) if path.starts_with(&home) => {
             format!("~/{}", path.strip_prefix(&home).unwrap_or(path).display())
         }

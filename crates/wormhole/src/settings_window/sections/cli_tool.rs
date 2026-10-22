@@ -59,14 +59,9 @@ fn current_status() -> Status {
     cli_tool::status(&Targets::from_env(), &binary())
 }
 
-/// The user's home folder: cold paths here, so asked of the environment each time.
-fn home() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
-}
-
 /// `path` as a person says it (`~/.local/bin/wh`).
 fn shown(path: &Path) -> String {
-    wormhole_core::view::sidebar::display_path(path, home().as_deref())
+    wormhole_core::view::sidebar::display_path(path, crate::settings_window::home().as_deref())
 }
 
 impl SettingsWindow {
@@ -135,7 +130,11 @@ fn path_note(dir: &Path) -> PathNote {
     if cli_tool::on_path(dir, &path) {
         return PathNote::On(said.into());
     }
-    let advice = cli_tool::advice(dir, &wormhole_core::terminal::shells::login_shell(), home().as_deref());
+    let advice = cli_tool::advice(
+        dir,
+        &wormhole_core::terminal::shells::login_shell(),
+        crate::settings_window::home().as_deref(),
+    );
     PathNote::Off(said.into(), advice)
 }
 

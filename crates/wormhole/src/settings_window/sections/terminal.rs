@@ -2,7 +2,7 @@
 //! Fonts), the shell a new terminal runs and the profiles config.json lists, the bell and
 //! whether programs may read the screen back, read or set the clipboard and control the window.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
@@ -133,7 +133,7 @@ fn describe_worktree_base(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) 
     if base.is_empty() {
         return None;
     }
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let home = crate::settings_window::home();
     let shown = wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref());
     Some(
         format!("Under {shown}, in a folder named after the repository (worktree_base in config.json)")

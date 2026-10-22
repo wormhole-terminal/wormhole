@@ -75,7 +75,7 @@ impl AgentsSnapshot {
     /// Read every agent's state under `home`, installed agents first (the registry's order
     /// otherwise).
     pub(crate) fn load(home: &Path, profiles: &[Profile]) -> Self {
-        let user_home = std::env::var_os("HOME").map(PathBuf::from);
+        let user_home = crate::settings_window::home();
         let mut rows: Vec<AgentRow> = AGENTS
             .iter()
             .map(|agent| {
@@ -378,7 +378,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
 
 /// `dir` as `~/…` when it is under the home folder, as the default location is shown.
 fn with_tilde(dir: &Path) -> String {
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let home = crate::settings_window::home();
     match home.as_deref().and_then(|home| dir.strip_prefix(home).ok()) {
         Some(rest) => format!("~/{}", rest.display()),
         None => dir.display().to_string(),

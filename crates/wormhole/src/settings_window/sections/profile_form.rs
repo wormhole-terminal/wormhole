@@ -4,7 +4,7 @@
 //! not one) is said under the page's title and the profile stays as it was.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::*;
@@ -312,7 +312,7 @@ pub(in crate::settings_window) enum Pick {
 
 /// `path` as `~/…` under the home folder, else in full.
 fn tilde(path: &Path) -> String {
-    match std::env::var_os("HOME").map(PathBuf::from) {
+    match crate::settings_window::home() {
         Some(home) => wormhole_core::onboarding::tilde(path, &home),
         None => path.display().to_string(),
     }
