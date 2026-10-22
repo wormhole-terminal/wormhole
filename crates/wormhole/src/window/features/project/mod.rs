@@ -34,7 +34,6 @@ use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::terminal::shells::ShellCommand;
 
 use crate::app_state::{AppState, app, app_mut};
-use crate::settings::settings;
 
 pub(in crate::window) use color::set_project_color;
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};
@@ -42,12 +41,12 @@ pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set
 pub(crate) use trust_window::devctl_trust_shot;
 pub(crate) use trust_window::open_trust_window;
 
-/// Whether the project-folder feature is on (its flag, see core `features`). Everything that reads
+/// Whether the project-folder feature is on (the feature table's mask: its flag, see core `features`). Everything that reads
 /// or writes a `.wormhole/` asks this itself instead of trusting that `refresh_projects` has
 /// already cleared the window's projects: a settings change doesn't run that refresh, so for up to
 /// a tick after the flag goes off the old projects are still there.
 pub(crate) fn project_folders_on(cx: &App) -> bool {
-    settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::ProjectFolders)
+    crate::settings::features(cx).has(wormhole_core::config::FeatureId::Project)
 }
 
 pub(crate) struct ProjectHub {

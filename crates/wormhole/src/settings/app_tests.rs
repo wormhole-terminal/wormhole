@@ -87,3 +87,23 @@ fn a_project_changes_how_its_sessions_look_not_the_app(cx: &mut TestAppContext) 
         assert_eq!(s.auto_update, auto_update, "nor whether it updates itself");
     });
 }
+
+#[gpui_kit::test]
+fn the_feature_mask_follows_the_flags_and_moves_its_revision_only_when_it_changes(cx: &mut TestAppContext) {
+    use wormhole_core::config::FeatureId;
+    cx.update(|cx| {
+        cx.set_global(SettingsStore::for_test());
+        let features = |cx: &gpui_kit::App| super::features(cx);
+        assert!(features(cx).has(FeatureId::Notes) && features(cx).has(FeatureId::Project), "dev: on");
+        let before = cx.global::<SettingsStore>().revisions.features;
+
+        SettingsStore::update(cx, |s| s.font_ligatures = !s.font_ligatures);
+        assert_eq!(cx.global::<SettingsStore>().revisions.features, before, "another setting");
+
+        SettingsStore::update(cx, |s| {
+            s.feature_flags.insert("notes_and_tasks".into(), false);
+        });
+        assert!(!features(cx).has(FeatureId::Notes) && features(cx).has(FeatureId::Project));
+        assert_eq!(cx.global::<SettingsStore>().revisions.features, before + 1);
+    });
+}

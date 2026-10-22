@@ -42,10 +42,10 @@ const NOTE_ROWS_MAX: usize = 1000;
 /// ... and the fewest rows an editor has, however short its text.
 const NOTE_ROWS_MIN: usize = 3;
 
-/// Whether notes and tasks are on: the `notes_and_tasks` feature flag. Off, no tab, key, count or
+/// Whether notes and tasks are on (the feature table's mask: the `notes_and_tasks` flag). Off, no tab, key, count or
 /// sync shows or reacts, while what was written stays in the database for when it is on again.
 pub(crate) fn notes_on(cx: &App) -> bool {
-    crate::settings::settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::NotesAndTasks)
+    crate::settings::features(cx).has(wormhole_core::config::FeatureId::Notes)
 }
 
 impl Workspace {

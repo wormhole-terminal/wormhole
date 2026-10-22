@@ -28,8 +28,8 @@ use std::sync::Arc;
 
 use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::{App, Global, SharedString};
-use wormhole_core::config::Config;
 pub use wormhole_core::config::Settings;
+use wormhole_core::config::{Config, FeatureMask};
 use wormhole_core::theme::fonts::ResolvedFonts;
 use wormhole_core::theme::tokens::{Appearance, Color, ThemeTokens, Translucency};
 
@@ -49,6 +49,8 @@ pub struct Revisions {
     pub theme: u64,
     pub fonts: u64,
     pub icons: u64,
+    /// Which features are on ([`SettingsStore::features`]).
+    pub features: u64,
 }
 
 /// What one re-derive found different.
@@ -132,6 +134,9 @@ pub struct SettingsStore {
     /// The settings in force: the user's, the project's on top, and the system's say (an
     /// opacity of 1 under Reduce Transparency or Increase Contrast).
     pub settings: Settings,
+    /// Which features the settings in force leave on, worked out when they change so that asking
+    /// is a bit test (`FeatureMask::resolve`).
+    features: FeatureMask,
     pub tokens: Arc<ThemeTokens>,
     pub palette: Rc<Palette>,
     /// The colours of a translucent window (the main window's), at the opacity in force.
@@ -180,6 +185,7 @@ impl SettingsStore {
             fonts: settings.resolved_fonts(&tokens.metrics),
             icons: crate::icons::resolve(&icon_key.0, icon_key.1),
             ui: main_ui(&tokens, &settings, false),
+            features: FeatureMask::resolve(&settings),
             ui_opaque: UiColors::new(&tokens, OPAQUE_LOOK),
             error: config.error.clone().map(Into::into),
             palette,
@@ -197,7 +203,7 @@ impl SettingsStore {
             project_theme: None,
             preview: None,
             revision: 1,
-            revisions: Revisions { settings: 1, theme: 1, fonts: 1, icons: 1 },
+            revisions: Revisions { settings: 1, theme: 1, fonts: 1, icons: 1, features: 1 },
         }
     }
 
@@ -237,6 +243,11 @@ impl SettingsStore {
             self.settings = settings;
             self.revisions.settings += 1;
             changed.settings = true;
+            let features = FeatureMask::resolve(&self.settings);
+            if features != self.features {
+                self.features = features;
+                self.revisions.features += 1;
+            }
         }
 
         if *self.config_tokens != self.config.tokens {
@@ -353,6 +364,11 @@ impl SettingsStore {
     /// window's look) or opaque.
     pub fn ui_for(&self, translucent: bool) -> UiColors {
         if translucent { self.ui } else { self.ui_opaque }
+    }
+
+    /// Which features are on under the settings in force.
+    pub fn features(&self) -> FeatureMask {
+        self.features
     }
 
     /// What the system said last about how windows look.
@@ -524,6 +540,12 @@ fn tally(_: &'static str) {}
 
 pub fn settings(cx: &App) -> &Settings {
     &cx.global::<SettingsStore>().settings
+}
+
+/// Which features are on in the shown profile (`SettingsStore::features`): one global read and a
+/// bit test, no lookup by name.
+pub fn features(cx: &App) -> FeatureMask {
+    cx.global::<SettingsStore>().features()
 }
 
 /// Update settings and notify every view (they re-read the global).

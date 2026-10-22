@@ -111,6 +111,7 @@ impl SettingsStore {
             theme: live.revisions.theme + 1,
             fonts: live.revisions.fonts + 1,
             icons: live.revisions.icons + 1,
+            features: live.revisions.features + 1,
         };
         let old = std::mem::replace(live, next);
         // Reduce Transparency and Increase Contrast shape the settings in force; the new store

@@ -89,8 +89,7 @@ pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// Whether the project-folder feature flag is on in this instance.
 fn project_folders_on(ctx: &Ctx) -> bool {
-    use wormhole_core::config::features::FeatureFlag;
-    crate::settings::settings(ctx.cx).feature_enabled(FeatureFlag::ProjectFolders)
+    crate::settings::features(ctx.cx).has(wormhole_core::config::FeatureId::Project)
 }
 
 /// `trust-window`: the window listing everything the active terminal's project wants to run.
