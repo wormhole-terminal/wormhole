@@ -22,6 +22,8 @@ use std::collections::HashMap;
 use gpui_kit::*;
 use wormhole_core::terminal::{Extent, Fullscreen, Maximize, WindowGeometry, WindowOp};
 
+use crate::platform::window as platform;
+
 /// The pane the operation is about: its cell and its size in cells.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PaneSize {
@@ -114,7 +116,7 @@ pub fn geometry(window: &Window, cx: &App, pane: PaneSize) -> Option<WindowGeome
         screen_height: f32::from(usable.size.height).round() as u32,
         max_cols,
         max_rows,
-        iconified: is_minimised(window),
+        iconified: platform::is_minimised(window),
     })
 }
 
@@ -127,12 +129,12 @@ pub fn apply(op: WindowOp, pane: PaneSize, window: &mut Window, cx: &mut App) ->
             done.minimised = Some(true);
         }
         WindowOp::Deiconify => {
-            deminiaturize(window);
+            platform::deminiaturize(window);
             done.minimised = Some(false);
         }
         // A test instance stays behind the user's windows: `background` decides what raising does.
         WindowOp::Raise => crate::background::activate_window(window, cx),
-        WindowOp::Lower => order_back(window),
+        WindowOp::Lower => platform::order_back(window),
         WindowOp::Move { x, y } => move_to(window, cx, x, y),
         WindowOp::ResizeCells { rows, cols } => {
             if !window.is_fullscreen() {
@@ -151,7 +153,7 @@ pub fn apply(op: WindowOp, pane: PaneSize, window: &mut Window, cx: &mut App) ->
                 Fullscreen::Toggle => !on,
             };
             if want != on {
-                allow_fullscreen(window);
+                platform::allow_fullscreen(window);
                 window.toggle_fullscreen();
                 done.size = SizeGoal::Forget;
             }
@@ -174,7 +176,7 @@ fn move_to(window: &mut Window, cx: &App, x: i32, y: i32) {
     };
     let x = place(x, full.origin.x, usable.origin.x, usable.size.width, bounds.size.width);
     let y = place(y, full.origin.y, usable.origin.y, usable.size.height, bounds.size.height);
-    set_top_left(window, cx, x, y);
+    platform::set_top_left(window, cx, x, y);
 }
 
 /// Resize the window so that the pane's text area is `rows` by `cols`.
@@ -213,7 +215,7 @@ fn fit_on_screen(window: &Window, cx: &App, width: f32, height: f32) {
     let x = place(at.x, usable.origin.x, full.right(), width);
     let y = place(at.y, usable.origin.y, full.bottom(), height);
     if (x, y) != (f32::from(at.x), f32::from(at.y)) {
-        set_top_left(window, cx, x, y);
+        platform::set_top_left(window, cx, x, y);
     }
 }
 
@@ -246,86 +248,3 @@ fn maximize(window: &mut Window, cx: &mut App, how: Maximize) {
         }
     }
 }
-
-#[cfg(target_os = "macos")]
-fn set_top_left(window: &Window, cx: &App, x: f32, y: f32) {
-    use objc2_foundation::NSPoint;
-
-    let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) else { return };
-    // AppKit counts y up from the bottom of the primary screen; GPUI down from its top.
-    let primary = cx.displays().into_iter().find(|d| d.bounds().origin == point(px(0.0), px(0.0)));
-    let Some(primary) = primary else { return };
-    let top = f64::from(f32::from(primary.bounds().size.height)) - f64::from(y);
-    ns_window.setFrameTopLeftPoint(NSPoint::new(f64::from(x), top));
-}
-
-#[cfg(not(target_os = "macos"))]
-fn set_top_left(_: &Window, _: &App, _: f32, _: f32) {}
-
-/// Whether the window is in the Dock. AppKit says so only once the minimise animation is done.
-#[cfg(target_os = "macos")]
-pub fn is_minimised(window: &Window) -> bool {
-    crate::platform::macos::appkit::ns_window(window).is_some_and(|w| w.isMiniaturized())
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn is_minimised(_: &Window) -> bool {
-    false
-}
-
-/// A window only enters full screen (XTWINOPS 10) when it says it may: GPUI's windows do not.
-#[cfg(target_os = "macos")]
-fn allow_fullscreen(window: &Window) {
-    use objc2_app_kit::NSWindowCollectionBehavior;
-    if let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) {
-        ns_window.setCollectionBehavior(
-            ns_window.collectionBehavior() | NSWindowCollectionBehavior::FullScreenPrimary,
-        );
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn allow_fullscreen(_: &Window) {}
-
-#[cfg(target_os = "macos")]
-fn deminiaturize(window: &Window) {
-    if let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) {
-        ns_window.deminiaturize(None);
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn deminiaturize(_: &Window) {}
-
-/// Take `window` off the screen without closing it: its view, terminals and agents go on
-/// running (a profile that is not shown, `AppState::switch_profile`). GPUI has no call for it.
-#[cfg(target_os = "macos")]
-pub fn hide(window: &Window) {
-    if let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) {
-        ns_window.orderOut(None);
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn hide(_: &Window) {}
-
-/// Put a window [`hide`] took away back on the screen, in front but not necessarily keyed.
-#[cfg(target_os = "macos")]
-pub fn show(window: &Window) {
-    if let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) {
-        ns_window.orderFront(None);
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn show(_: &Window) {}
-
-#[cfg(target_os = "macos")]
-fn order_back(window: &Window) {
-    if let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) {
-        ns_window.orderBack(None);
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn order_back(_: &Window) {}

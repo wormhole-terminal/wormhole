@@ -14,22 +14,10 @@
 
 use gpui_kit::*;
 
-/// Whether a `WORMHOLE_BACKGROUND` value asks for background mode.
-#[cfg_attr(not(feature = "devctl"), allow(dead_code))]
-pub fn requested(value: Option<&str>) -> bool {
-    value.is_some_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-}
-
 /// Whether this instance runs in background mode; never outside devctl builds, so the shipped app
-/// can't be put there by its environment.
+/// can't be put there by its environment. The platform's functions ask it themselves.
 pub fn on() -> bool {
-    #[cfg(feature = "devctl")]
-    {
-        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-        *ON.get_or_init(|| requested(std::env::var("WORMHOLE_BACKGROUND").ok().as_deref()))
-    }
-    #[cfg(not(feature = "devctl"))]
-    false
+    crate::platform::background_mode::on()
 }
 
 /// Whether Wormhole may bring itself or one of its windows forward: always, except in background
@@ -72,7 +60,7 @@ pub fn open_window<V: Render>(
     }
     let (handle, view) = gpui_kit::open_window(options, cx, build)?;
     if behind {
-        let _ = handle.update(cx, |_, window, _| platform::order_back(window));
+        let _ = handle.update(cx, |_, window, _| crate::platform::window::keep_behind(window));
     }
     Ok((handle, view))
 }
@@ -84,7 +72,7 @@ pub fn start(cx: &mut App) {
         return;
     }
     tracing::info!("background mode: windows open behind others and never take the focus");
-    platform::accessory();
+    crate::platform::dock::hide_icon();
     #[cfg(feature = "devctl")]
     pump::start(cx);
     #[cfg(not(feature = "devctl"))]
@@ -128,54 +116,9 @@ mod pump {
     }
 }
 
-#[cfg(target_os = "macos")]
-mod platform {
-    use gpui_kit::Window;
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy, NSNormalWindowLevel};
-
-    /// No Dock icon and no place in ⌘⇥: GPUI makes every app a regular one as it launches.
-    pub fn accessory() {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        if !NSApplication::sharedApplication(mtm)
-            .setActivationPolicy(NSApplicationActivationPolicy::Accessory)
-        {
-            tracing::warn!("background mode: could not drop the Dock icon");
-        }
-    }
-
-    /// Put `window` on screen behind every other window at the normal level, without the focus.
-    pub fn order_back(window: &Window) {
-        let Some(ns_window) = crate::platform::macos::appkit::ns_window(window) else { return };
-        // A pop-up (the quick panel) floats over every app's windows at its own level.
-        if ns_window.level() > NSNormalWindowLevel {
-            ns_window.setLevel(NSNormalWindowLevel);
-        }
-        ns_window.orderBack(None);
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-mod platform {
-    pub fn accessory() {}
-
-    pub fn order_back(_: &gpui_kit::Window) {}
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{comes_forward, requested};
-
-    #[test]
-    fn only_a_yes_turns_background_mode_on() {
-        for yes in ["1", "true", "TRUE", " yes ", "on"] {
-            assert!(requested(Some(yes)), "{yes:?}");
-        }
-        for no in ["", "0", "false", "no", "off", "2", "background"] {
-            assert!(!requested(Some(no)), "{no:?}");
-        }
-        assert!(!requested(None), "unset is the usual app");
-    }
+    use super::comes_forward;
 
     #[test]
     fn background_mode_comes_forward_only_once_the_person_brought_it_there() {

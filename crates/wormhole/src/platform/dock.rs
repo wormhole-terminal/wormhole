@@ -7,6 +7,9 @@
 
 use gpui_kit::{App, Global};
 
+use super::background_mode;
+use super::os::dock as os;
+
 /// What was last applied, so an unchanged badge costs nothing (and tests can read it).
 #[derive(Debug, Default)]
 pub struct DockState {
@@ -23,16 +26,16 @@ pub fn set_badge(label: Option<String>, cx: &mut App) {
         return;
     }
     state.badge.clone_from(&label);
-    if !cfg!(test) && !crate::background::on() {
-        platform::set_badge(label.as_deref());
+    if !cfg!(test) && !background_mode::on() {
+        os::set_badge(label.as_deref());
     }
 }
 
 /// One informational bounce (never the critical one that keeps going).
 pub fn bounce(cx: &mut App) {
     cx.default_global::<DockState>().bounces += 1;
-    if !cfg!(test) && !crate::background::on() {
-        platform::bounce();
+    if !cfg!(test) && !background_mode::on() {
+        os::bounce(cx);
     }
 }
 
@@ -42,40 +45,11 @@ pub fn app_is_active(cx: &App) -> bool {
     if cfg!(test) {
         return cx.active_window().is_some();
     }
-    platform::is_active()
+    os::is_active()
 }
 
-#[cfg(target_os = "macos")]
-mod platform {
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSApplication, NSRequestUserAttentionType};
-    use objc2_foundation::NSString;
-
-    pub fn set_badge(label: Option<&str>) {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        let label = label.map(NSString::from_str);
-        NSApplication::sharedApplication(mtm).dockTile().setBadgeLabel(label.as_deref());
-    }
-
-    pub fn bounce() {
-        let Some(mtm) = MainThreadMarker::new() else { return };
-        NSApplication::sharedApplication(mtm)
-            .requestUserAttention(NSRequestUserAttentionType::InformationalRequest);
-    }
-
-    pub fn is_active() -> bool {
-        MainThreadMarker::new().is_some_and(|mtm| NSApplication::sharedApplication(mtm).isActive())
-    }
-}
-
-/// Off macOS there is no Dock; the app counts as active so nothing is told twice.
-#[cfg(not(target_os = "macos"))]
-mod platform {
-    pub fn set_badge(_label: Option<&str>) {}
-
-    pub fn bounce() {}
-
-    pub fn is_active() -> bool {
-        true
-    }
+/// No Dock icon and no place in ⌘⇥ (an accessory app), for background mode: GPUI makes every app a
+/// regular one as it launches.
+pub fn hide_icon() {
+    os::hide_icon();
 }

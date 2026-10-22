@@ -25,7 +25,7 @@ struct Recorded {
 /// Remember `menu` as the open one. True when it is not to be shown.
 pub fn keep(menu: &Menu, _window: &Window) -> bool {
     LAST.with(|last| *last.borrow_mut() = Some(menu.clone()));
-    crate::background::on() || cfg!(test)
+    super::background_mode::on() || cfg!(test)
 }
 
 /// The menu that was opened last and not yet chosen from or closed.
@@ -105,7 +105,7 @@ pub fn dump() -> String {
 /// Remember `popover` as the open one, as `keep` does a menu. `Some(handle)` when it is not to be
 /// shown (a background instance, a test): the handle closes the record.
 pub fn keep_popover(popover: &Popover, window: &Window) -> Option<Handle> {
-    if !(crate::background::on() || cfg!(test)) {
+    if !(super::background_mode::on() || cfg!(test)) {
         return None;
     }
     let handle = window.window_handle();
@@ -127,7 +127,7 @@ pub fn keep_popover(popover: &Popover, window: &Window) -> Option<Handle> {
 
 /// A colour panel that was asked for, instead of one that is shown.
 pub fn keep_colour(on_change: &ColourChange) -> bool {
-    if !(crate::background::on() || cfg!(test)) {
+    if !(super::background_mode::on() || cfg!(test)) {
         return false;
     }
     COLOUR.with(|last| *last.borrow_mut() = Some(on_change.clone()));

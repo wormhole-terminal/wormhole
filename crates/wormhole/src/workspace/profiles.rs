@@ -408,7 +408,7 @@ impl AppState {
     /// Hide `from`'s windows and bring `target`'s forward, opening them first when it has none.
     fn show_profile_windows(from: &ProfileId, target: &ProfileId, cx: &mut App) {
         for window in app(cx).windows_of(from).cloned().collect::<Vec<_>>() {
-            let _ = window.handle.update(cx, |_, win, _| crate::window_ops::hide(win));
+            let _ = window.handle.update(cx, |_, win, _| crate::platform::window::hide(win));
         }
         for window in &mut app_mut(cx).windows {
             if &window.profile == from {
@@ -436,7 +436,7 @@ impl AppState {
             return;
         }
         for window in &shown {
-            let _ = window.handle.update(cx, |_, win, _| crate::window_ops::show(win));
+            let _ = window.handle.update(cx, |_, win, _| crate::platform::window::show(win));
         }
         let front = shown.iter().find(|w| w.id == app(cx).front).or(shown.first()).cloned();
         if let Some(front) = front {

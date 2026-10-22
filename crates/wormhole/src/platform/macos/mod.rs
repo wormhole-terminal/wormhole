@@ -3,9 +3,11 @@
 
 pub mod appkit;
 pub mod colour;
+pub mod dock;
 pub mod font_face;
 pub mod menu;
 pub mod popover;
 mod rows;
 pub mod status_item;
 mod swatches;
+pub mod window;

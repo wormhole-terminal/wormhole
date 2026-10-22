@@ -29,10 +29,7 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
     let find = find.map(|line| format!("find {line}\n")).unwrap_or_default();
     // The intro window, and the traffic lights it keeps away for as long as it is up. With the intro
     // closed the lights are named only when they aren't at rest, so one left away shows up here.
-    #[cfg(target_os = "macos")]
     let lights = crate::platform::window::opacity(ctx.window);
-    #[cfg(not(target_os = "macos"))]
-    let lights: Option<(f32, bool)> = None;
     let say =
         |(alpha, hidden): (f32, bool)| format!(" lights={alpha:.2}{}", if hidden { " hidden" } else { "" });
     let intro = match ctx.workspace.devctl_intro_state(ctx.cx) {

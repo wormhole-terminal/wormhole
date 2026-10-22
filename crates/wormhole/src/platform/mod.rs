@@ -13,6 +13,7 @@
 pub mod a11y;
 mod anchor;
 pub mod auth;
+pub mod background_mode;
 pub mod dock;
 pub mod fallback;
 pub mod font_face;
@@ -28,6 +29,12 @@ pub mod vibrancy;
 pub mod window;
 
 use gpui_kit::*;
+
+/// The implementation the neutral files call: AppKit's on macOS, the portable one elsewhere.
+#[cfg(not(target_os = "macos"))]
+use fallback as os;
+#[cfg(target_os = "macos")]
+use macos as os;
 
 pub use anchor::{Anchor, on_right_click};
 pub use menu::{Icon, Item, Menu, Swatch, run_on};
