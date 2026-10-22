@@ -219,8 +219,6 @@
     "orphans": {},
     "glob-imports": {},
     "cycles": {
-      "wormhole-core: config -> fonts": 1,
-      "wormhole-core: fonts -> config": 1,
       "wormhole-wire: header -> history": 1,
       "wormhole-wire: header -> stream": 1,
       "wormhole-wire: history -> stream": 1,

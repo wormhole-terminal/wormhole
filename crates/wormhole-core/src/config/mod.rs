@@ -7,6 +7,7 @@
 //! place (see `file`), so comments and keys we don't know survive.
 
 mod file;
+mod fonts;
 mod settings;
 mod theme;
 

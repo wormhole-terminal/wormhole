@@ -100,8 +100,8 @@ impl Workspace {
                 ui,
                 "onboarding-font-size",
                 format!("{size:.0}"),
-                |_, _, cx| update_settings(cx, |s| FontSlot::Terminal.step_size(s, -1.0)),
-                |_, _, cx| update_settings(cx, |s| FontSlot::Terminal.step_size(s, 1.0)),
+                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, -1.0)),
+                |_, _, cx| update_settings(cx, |s| s.step_slot_size(FontSlot::Terminal, 1.0)),
             ));
         let ligatures = s.font_ligatures;
         let term = &store.tokens.terminal;

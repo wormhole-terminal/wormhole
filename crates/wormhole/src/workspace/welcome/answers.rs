@@ -205,7 +205,7 @@ fn set_look(
             s.font_ligatures = on;
         }
         if let Some(step) = font_step {
-            FontSlot::Terminal.step_size(s, f32::from(step));
+            s.step_slot_size(FontSlot::Terminal, f32::from(step));
         }
     });
     Reply::ok(serde_json::json!({}))

@@ -1,15 +1,12 @@
-//! The three font settings (terminal, interface, code): how each resolves
-//! against the theme and the others, and the font lists the pickers show.
-//! `bundled` is the font that ships with the app, `custom` the user's font files.
+//! The three fonts (terminal, interface, code): their slots and size ranges, what they come to
+//! ([`ResolvedFonts`]; the settings resolve themselves into it, `config::fonts`), and the font lists
+//! the pickers show. `bundled` is the font that ships with the app, `custom` the user's font files.
 
 pub mod bundled;
 pub mod custom;
 
 use std::collections::HashSet;
 use std::ops::RangeInclusive;
-
-use crate::config::Settings;
-use crate::tokens::Metrics;
 
 /// macOS's virtual family for the system UI font (SF Pro); GPUI resolves it.
 pub const SYSTEM_FONT: &str = ".SystemUIFont";
@@ -78,46 +75,9 @@ impl FontSlot {
             FontSlot::Interface => (10.0, 20.0),
         }
     }
-
-    /// The family as stored (empty = inherit).
-    pub fn family(self, settings: &Settings) -> &str {
-        match self {
-            FontSlot::Terminal => &settings.font_family,
-            FontSlot::Interface => &settings.ui_font_family,
-            FontSlot::Code => &settings.code_font_family,
-        }
-    }
-
-    pub fn set_family(self, settings: &mut Settings, family: String) {
-        match self {
-            FontSlot::Terminal if family.trim().is_empty() => {}
-            FontSlot::Terminal => settings.font_family = family,
-            FontSlot::Interface => settings.ui_font_family = family,
-            FontSlot::Code => settings.code_font_family = family,
-        }
-    }
-
-    pub fn size(self, settings: &Settings) -> f32 {
-        match self {
-            FontSlot::Terminal => settings.font_size,
-            FontSlot::Interface => settings.ui_font_size,
-            FontSlot::Code => settings.code_font_size,
-        }
-    }
-
-    /// Change the size by `delta` points, within the slot's range.
-    pub fn step_size(self, settings: &mut Settings, delta: f32) {
-        let (min, max) = self.size_range();
-        let size = match self {
-            FontSlot::Terminal => &mut settings.font_size,
-            FontSlot::Interface => &mut settings.ui_font_size,
-            FontSlot::Code => &mut settings.code_font_size,
-        };
-        *size = (*size + delta).clamp(min, max);
-    }
 }
 
-/// The fonts in effect after the settings, the theme and the fallbacks.
+/// The fonts in effect after the settings, the theme and the fallbacks (`Settings::resolved_fonts`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResolvedFonts {
     pub terminal_family: String,
@@ -129,31 +89,6 @@ pub struct ResolvedFonts {
 }
 
 impl ResolvedFonts {
-    /// The user's choice wins over the theme: a non-empty family setting, or
-    /// a size changed from the default. Otherwise the theme's metrics apply,
-    /// then the system font (interface) or the terminal font (code).
-    pub fn resolve(settings: &Settings, metrics: &Metrics) -> Self {
-        let non_empty = |s: &str| (!s.trim().is_empty()).then(|| s.trim().to_string());
-        let ui_family = non_empty(&settings.ui_font_family)
-            .or_else(|| metrics.ui_font_family.as_deref().and_then(non_empty))
-            .unwrap_or_else(|| SYSTEM_FONT.to_string());
-        let ui_size = if settings.ui_font_size != DEFAULT_UI_FONT_SIZE {
-            settings.ui_font_size
-        } else {
-            metrics.ui_font_size
-        };
-        let (min, max) = FontSlot::Interface.size_range();
-        Self {
-            terminal_family: settings.font_family.clone(),
-            terminal_size: settings.font_size,
-            ui_family,
-            ui_size: ui_size.clamp(min, max),
-            code_family: non_empty(&settings.code_font_family)
-                .unwrap_or_else(|| settings.font_family.clone()),
-            code_size: settings.code_font_size,
-        }
-    }
-
     pub fn family(&self, slot: FontSlot) -> &str {
         match slot {
             FontSlot::Terminal => &self.terminal_family,
@@ -319,51 +254,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_families_inherit() {
-        let settings = Settings::default();
-        let fonts = ResolvedFonts::resolve(&settings, &Metrics::default());
-        assert_eq!(fonts.ui_family, SYSTEM_FONT);
-        assert_eq!(fonts.code_family, settings.font_family);
-        assert_eq!(fonts.ui_size, 13.0);
-    }
-
-    #[test]
-    fn a_fresh_config_uses_the_bundled_font_for_terminal_and_code() {
-        let fonts = ResolvedFonts::resolve(&Settings::default(), &Metrics::default());
-        assert_eq!(fonts.terminal_family, bundled::FAMILY);
-        assert_eq!(fonts.code_family, bundled::FAMILY);
-        assert_eq!(fonts.ui_family, SYSTEM_FONT);
-    }
-
-    #[test]
-    fn theme_metrics_apply_unless_the_user_chose() {
-        let metrics =
-            Metrics { ui_font_family: Some("Inter".into()), ui_font_size: 14.0, ..Metrics::default() };
-        let fonts = ResolvedFonts::resolve(&Settings::default(), &metrics);
-        assert_eq!((fonts.ui_family.as_str(), fonts.ui_size), ("Inter", 14.0));
-
-        let settings = Settings {
-            ui_font_family: "Helvetica Neue".into(),
-            ui_font_size: 15.0,
-            code_font_family: "SF Mono".into(),
-            ..Settings::default()
-        };
-        let fonts = ResolvedFonts::resolve(&settings, &metrics);
-        assert_eq!((fonts.ui_family.as_str(), fonts.ui_size), ("Helvetica Neue", 15.0));
-        assert_eq!(fonts.code_family, "SF Mono");
-    }
-
-    #[test]
-    fn slots_read_write_and_clamp() {
-        let mut settings = Settings::default();
-        FontSlot::Code.set_family(&mut settings, "Fira Code".into());
-        FontSlot::Terminal.set_family(&mut settings, "  ".into());
-        assert_eq!(FontSlot::Code.family(&settings), "Fira Code");
-        assert_eq!(FontSlot::Terminal.family(&settings), Settings::default().font_family);
-        FontSlot::Interface.step_size(&mut settings, 100.0);
-        assert_eq!(FontSlot::Interface.size(&settings), 20.0);
-        FontSlot::Code.step_size(&mut settings, -100.0);
-        assert_eq!(FontSlot::Code.size(&settings), 8.0);
+    fn slots_read_from_their_keys() {
         assert_eq!(FontSlot::from_key("Interface"), Some(FontSlot::Interface));
     }
 }

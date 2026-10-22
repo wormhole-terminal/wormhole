@@ -789,7 +789,7 @@ impl Settings {
         // Written out from now on, so the switch says what is in use.
         self.theme_primary = Some(self.uses_theme_primary());
         for slot in FontSlot::ALL {
-            slot.step_size(&mut self, 0.0);
+            self.step_slot_size(slot, 0.0);
         }
         self.line_height = self.line_height.clamp(1.0, 2.0);
         self.opacity = self.opacity.clamp(0.3, 1.0);

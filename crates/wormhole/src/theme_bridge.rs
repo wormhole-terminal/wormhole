@@ -331,7 +331,6 @@ mod kit_tests {
     use gpui_kit::TestAppContext;
     use gpui_kit::component::Theme as KitTheme;
     use wormhole_core::config::Config;
-    use wormhole_core::fonts::ResolvedFonts;
 
     use super::apply;
 
@@ -341,7 +340,7 @@ mod kit_tests {
             gpui_kit::init(cx);
             let config = Config::placeholder();
             let (tokens, fonts) =
-                (config.tokens.clone(), ResolvedFonts::resolve(&config.settings, &config.tokens.metrics));
+                (config.tokens.clone(), config.settings.resolved_fonts(&config.tokens.metrics));
             apply(&tokens, &fonts, cx);
             // Make a change a repeat would undo, to see whether it is redone.
             KitTheme::global_mut(cx).colors.primary = gpui_kit::red();

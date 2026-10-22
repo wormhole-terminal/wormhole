@@ -121,7 +121,7 @@ impl SettingsWindow {
     }
 
     fn is_selected(&self, slot: FontSlot, entry: &Entry, cx: &App) -> bool {
-        let family = slot.family(settings(cx));
+        let family = settings(cx).slot_family(slot);
         match entry {
             Entry::Inherit(_) => family.trim().is_empty(),
             Entry::Group(_) => false,
@@ -134,8 +134,8 @@ impl SettingsWindow {
         let ui = ui(cx);
         let store = cx.global::<SettingsStore>();
         let family = store.fonts.family(slot).to_string();
-        let size = slot.size(&store.settings);
-        let chosen = !slot.family(&store.settings).trim().is_empty();
+        let size = store.settings.slot_size(slot);
+        let chosen = !store.settings.slot_family(slot).trim().is_empty();
         let open = self.font_picker.open == Some(slot);
         let bundled = cx.try_global::<LoadedFonts>().is_some_and(|loaded| loaded.bundled.contains(&family));
         let key = slot.key();
@@ -207,8 +207,8 @@ impl SettingsWindow {
                 FontSlot::Code => "font-size-code",
             },
             format!("{size:.0} pt"),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| slot.step_size(s, -1.0))),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| slot.step_size(s, 1.0))),
+            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, -1.0))),
+            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, 1.0))),
         );
         div().flex().items_center().gap_2().child(picker).child(size_control).into_any_element()
     }
@@ -256,7 +256,7 @@ impl FontMenu {
         Self {
             slot,
             entries,
-            selected: slot.family(settings(cx)).to_string(),
+            selected: settings(cx).slot_family(slot).to_string(),
             tag_mono: !slot.prefers_monospace() || show_all,
             show_all,
             mono,
@@ -395,7 +395,7 @@ fn entry_row(
                 cx.notify();
             })
             .ok();
-            update_settings(cx, |s| slot.set_family(s, value));
+            update_settings(cx, |s| s.set_slot_family(slot, value));
         })
         .child(
             div()

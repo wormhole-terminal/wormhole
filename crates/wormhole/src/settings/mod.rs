@@ -177,7 +177,7 @@ impl SettingsStore {
         tally("icons");
         Self {
             asked_opacity: settings.opacity,
-            fonts: ResolvedFonts::resolve(&settings, &tokens.metrics),
+            fonts: settings.resolved_fonts(&tokens.metrics),
             icons: crate::icons::resolve(&icon_key.0, icon_key.1),
             ui: main_ui(&tokens, &settings, false),
             ui_opaque: UiColors::new(&tokens, OPAQUE_LOOK),
@@ -269,7 +269,7 @@ impl SettingsStore {
             self.ui_opaque = UiColors::new(&self.tokens, OPAQUE_LOOK);
         }
 
-        let fonts = ResolvedFonts::resolve(&self.settings, &self.tokens.metrics);
+        let fonts = self.settings.resolved_fonts(&self.tokens.metrics);
         if fonts != self.fonts {
             self.fonts = fonts;
             self.revisions.fonts += 1;
