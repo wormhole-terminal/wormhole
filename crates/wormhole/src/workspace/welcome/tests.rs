@@ -13,10 +13,11 @@ use wormhole_core::ipc::control::{
 };
 use wormhole_core::sidebar::RowState;
 
-use super::super::notifications::{self, Permission};
+use super::super::notifications;
 use super::super::view_tests::{draw, drive, isolate_in, read, start};
 use super::super::{app, app_mut, control};
 use super::{Plan, handle};
+use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::workspace::settings_page::update_settings;
 

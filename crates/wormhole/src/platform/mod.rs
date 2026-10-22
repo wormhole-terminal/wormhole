@@ -42,6 +42,7 @@ pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;
+pub mod notifications;
 // Type-checked in every macOS build; only a test calls it.
 #[cfg(target_os = "macos")]
 #[cfg_attr(not(test), allow(dead_code))]

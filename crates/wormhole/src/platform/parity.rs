@@ -12,6 +12,7 @@ use wormhole_core::tokens::Appearance;
 
 use super::font_face::Seg;
 use super::fonts::Traits;
+use super::notifications::{Buttons, FromCenter, Notice};
 use super::vibrancy::GlassRect;
 use super::{fallback, macos};
 
@@ -60,6 +61,10 @@ pub(super) fn signatures_match() {
         look::reduce_transparency: fn() -> bool;
         look::increase_contrast: fn() -> bool;
         look::reduce_motion: fn() -> Option<bool>;
+        notifications::available: fn() -> bool;
+        notifications::entitled_to_time_sensitive: fn() -> bool;
+        notifications::script: fn(&Notice) -> Option<std::process::Command>;
+        notifications::open_settings: fn(&App);
         scroller::style: fn(&App) -> ScrollerStyle;
         scroller::jump_to_spot: fn() -> bool;
         sound::beep: fn();
@@ -98,6 +103,11 @@ pub(super) fn signatures_match() {
         vibrancy::BlurViews::set_enabled: fn(&S, bool);
         vibrancy::GlassViews::find: fn(&Window) -> Option<S>;
         vibrancy::GlassViews::place: fn(&mut S, &[GlassRect]);
+        notifications::Center::open: fn(smol::channel::Sender<FromCenter>, Buttons) -> Option<S>;
+        notifications::Center::post: fn(&S, &Notice);
+        notifications::Center::remove: fn(&S, &str);
+        notifications::Center::ask: fn(&S);
+        notifications::Center::refresh_permission: fn(&S);
         status_item::MenuBar::install: fn(smol::channel::Sender<crate::menubar::MenuCommand>) -> Option<S>;
         status_item::MenuBar::update: fn(&mut S, &crate::menubar::MenuSnapshot);
         status_item::MenuBar::show_frame: fn(&mut S, Option<usize>);

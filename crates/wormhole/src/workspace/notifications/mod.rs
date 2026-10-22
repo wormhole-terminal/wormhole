@@ -5,24 +5,21 @@
 //! The rules are core's (`wormhole_core::notify`). Every tick (and right after an agent's
 //! hook) [`sweep`] reads every tab of every window, `watch` turns what changed into events, and
 //! the rules decide. Banners go out by one of these routes:
-//! - the bundled app: `UNUserNotificationCenter` (`center`), with interruption levels (Time
+//! - the bundled app: the system's notification centre (`platform::notifications`), with interruption levels (Time
 //!   Sensitive for "needs you" when the build is entitled to it), a thread per terminal, sound,
 //!   and the Open / Reply… / Show Changes actions;
 //! - a dev build (`cargo run`) has no bundle, and the notification center would abort the
-//!   process: `osascript` instead, without actions or levels;
-//! - tests: GPUI's test platform. devctl builds can ask for `WORMHOLE_NOTIFY=log`, which keeps
+//!   process: the platform's script instead, without actions or levels;
+//! - tests, and a system without notifications of its own: GPUI's. devctl builds can ask for `WORMHOLE_NOTIFY=log`, which keeps
 //!   them in a list instead of posting anything; a test instance in background mode does that
 //!   unless `WORMHOLE_NOTIFY` says otherwise.
 //!
 //! One notification per tab: a newer one replaces the older, and looking at the tab (or the
 //! agent moving on) takes it down.
 
-#[cfg(target_os = "macos")]
-use crate::platform::macos::notifications as center;
 mod watch;
 
 use std::collections::{HashMap, HashSet};
-use std::process::Command;
 use std::time::{Instant, SystemTime};
 
 use wormhole_core::config::Settings;
@@ -34,7 +31,9 @@ use wormhole_core::update::current_app_bundle;
 use super::ambient::{self, TabFacts};
 use super::app::{AppState, app, open_tab};
 use super::*;
-use crate::platform::spawn::spawn_detached;
+use crate::platform::notifications::{
+    self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
+};
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).
@@ -44,69 +43,13 @@ pub(crate) const SHOW_CHANGES: &str = "show-changes";
 /// The banner "Send test" posts.
 const TEST_ID: &str = "wormhole/test";
 
-/// Which buttons a notification carries.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Category {
-    /// Open, Reply…
-    NeedsYou,
-    /// Open, Show Changes.
-    Finished,
-    /// No buttons; a click opens.
-    Plain,
-}
-
-/// One notification, ready for any route.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Notice {
-    pub id: String,
-    pub thread: String,
-    pub title: String,
-    pub subtitle: String,
-    pub body: String,
-    pub level: Level,
-    pub sound: bool,
-    pub category: Category,
-}
-
-/// A click on one of our notifications, or one of its actions.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Response {
-    pub id: String,
-    /// `None` for a click on the notification itself.
-    pub action: Option<String>,
-    /// What was typed into Reply.
-    pub reply: Option<String>,
-}
-
-/// Whether macOS lets Wormhole notify.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-pub(crate) enum Permission {
-    Checking,
-    /// macOS hasn't asked yet; nothing is shown until it has.
-    NotAsked,
-    /// `time_sensitive`: the user lets Time Sensitive notifications through.
-    Allowed {
-        time_sensitive: bool,
-    },
-    /// Off in System Settings.
-    Denied,
-    /// A dev build: `osascript`, no actions or grouping.
-    OutsideBundle,
-}
-
-/// What the notification center reports back, from any thread.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-pub(crate) enum FromCenter {
-    Response(Response),
-    Permission(Permission),
-}
-
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum Route {
+    /// The bundled app: the system's notification centre.
     Center,
-    Osascript,
-    /// GPUI's test platform.
+    /// No bundle: the platform's script.
+    Script,
+    /// GPUI's notifications: tests, and a system without notifications of its own.
     Gpui,
     /// devctl: kept in [`Notifier::log`], never posted.
     #[cfg_attr(not(feature = "devctl"), allow(dead_code))]
@@ -124,9 +67,9 @@ fn route() -> Route {
         return Route::Log;
     }
     match () {
-        _ if !cfg!(target_os = "macos") => Route::Off,
+        _ if !system::available() => Route::Gpui,
         _ if current_app_bundle().is_some() => Route::Center,
-        _ => Route::Osascript,
+        _ => Route::Script,
     }
 }
 
@@ -162,8 +105,7 @@ struct Notifier {
     /// the question counts as answered yes).
     #[cfg(any(test, feature = "devctl"))]
     asks: u32,
-    #[cfg(target_os = "macos")]
-    center: Option<center::Center>,
+    center: Option<Center>,
 }
 
 impl Global for Notifier {}
@@ -176,12 +118,8 @@ fn notifier(cx: &mut App) -> &mut Notifier {
 pub(crate) fn init(cx: &mut App) {
     let (tx, rx) = smol::channel::unbounded();
     let route = route();
-    #[cfg(target_os = "macos")]
-    let center = (route == Route::Center).then(|| center::Center::open(tx.clone())).flatten();
-    #[cfg(target_os = "macos")]
-    let route = if route == Route::Center && center.is_none() { Route::Osascript } else { route };
-    #[cfg(not(target_os = "macos"))]
-    let _ = &tx;
+    let center = (route == Route::Center).then(|| Center::open(tx.clone(), actions)).flatten();
+    let route = if route == Route::Center && center.is_none() { Route::Script } else { route };
     let permission = match route {
         Route::Center => Permission::Checking,
         _ => Permission::OutsideBundle,
@@ -191,7 +129,6 @@ pub(crate) fn init(cx: &mut App) {
         bells: Some(Throttle::new(notify::BELL_RATE)),
         reports: Some(Throttle::new(notify::REPORT_RATE)),
         permission: Some(permission),
-        #[cfg(target_os = "macos")]
         center,
         ..Notifier::default()
     });
@@ -424,33 +361,27 @@ fn category(kind: Kind) -> Category {
 /// Whether "needs you" goes out as Time Sensitive: only from a bundle signed with the entitlement
 /// (a Developer ID build with its provisioning profile); every other build uses Active.
 pub(crate) fn time_sensitive(cx: &mut App) -> bool {
-    #[cfg(target_os = "macos")]
-    if notifier(cx).route == Route::Center {
-        return center::entitled_to_time_sensitive();
-    }
-    let _ = cx;
-    false
+    notifier(cx).route == Route::Center && system::entitled_to_time_sensitive()
 }
 
 fn post(notice: Notice, cx: &mut App) {
     let notifier = notifier(cx);
     notifier.up.insert(notice.id.clone());
     match notifier.route {
-        #[cfg(target_os = "macos")]
         Route::Center => {
             if let Some(center) = &notifier.center {
                 center.post(&notice);
             }
         }
-        Route::Osascript => {
-            if let Err(err) = spawn_detached(osascript(&notice)) {
+        Route::Script => {
+            if let Err(err) = system::post_by_script(&notice) {
                 tracing::warn!("could not show a notification: {err}");
             }
         }
         Route::Gpui => {
             let actions = actions(notice.category)
                 .iter()
-                .map(|(id, label)| SystemNotificationAction { id: (*id).into(), label: (*label).into() })
+                .map(|button| SystemNotificationAction { id: button.id.into(), label: button.label.into() })
                 .collect();
             cx.show_system_notification(SystemNotification {
                 tag: notice.id.into(),
@@ -464,11 +395,15 @@ fn post(notice: Notice, cx: &mut App) {
     }
 }
 
-/// A category's buttons: id and label.
-pub(crate) fn actions(category: Category) -> &'static [(&'static str, &'static str)] {
+/// A category's buttons. Open and Show Changes bring the app forward; typing a reply needs no
+/// window, as the text goes to the terminal as it is.
+pub(crate) fn actions(category: Category) -> &'static [Button] {
+    const OPEN_BUTTON: Button = Button { id: OPEN, label: "Open", kind: ButtonKind::Foreground };
     match category {
-        Category::NeedsYou => &[(OPEN, "Open"), (REPLY, "Reply…")],
-        Category::Finished => &[(OPEN, "Open"), (SHOW_CHANGES, "Show Changes")],
+        Category::NeedsYou => &[OPEN_BUTTON, Button { id: REPLY, label: "Reply…", kind: ButtonKind::Reply }],
+        Category::Finished => {
+            &[OPEN_BUTTON, Button { id: SHOW_CHANGES, label: "Show Changes", kind: ButtonKind::Foreground }]
+        }
         Category::Plain => &[],
     }
 }
@@ -480,7 +415,6 @@ fn take_down(id: &str, cx: &mut App) {
         return;
     }
     match notifier.route {
-        #[cfg(target_os = "macos")]
         Route::Center => {
             if let Some(center) = &notifier.center {
                 center.remove(id);
@@ -578,11 +512,9 @@ pub(crate) fn permission(cx: &App) -> Permission {
 
 /// Read the permission again (the answer arrives a moment later).
 pub(crate) fn refresh_permission(cx: &mut App) {
-    #[cfg(target_os = "macos")]
     if let Some(center) = &notifier(cx).center {
         center.refresh_permission();
     }
-    let _ = cx;
 }
 
 /// "Allow notifications": macOS asks the user (once; after that only System Settings can).
@@ -597,11 +529,9 @@ pub(crate) fn ask_permission(cx: &mut App) {
             notifier.permission = Some(Permission::Allowed { time_sensitive: false });
         }
     }
-    #[cfg(target_os = "macos")]
     if let Some(center) = &notifier(cx).center {
         center.ask();
     }
-    let _ = cx;
 }
 
 /// The welcome's presses that turn a banner on or say Allow: macOS is asked, but only when it has not
@@ -629,12 +559,8 @@ pub(crate) fn pretend_permission(permission: Permission, cx: &mut App) {
 }
 
 /// "Open System Settings": Wormhole's page under Notifications.
-pub(crate) fn open_system_settings() {
-    let mut command = Command::new("open");
-    command.arg("x-apple.systempreferences:com.apple.Notifications-Settings.extension");
-    if let Err(err) = spawn_detached(command) {
-        tracing::warn!("could not open System Settings: {err}");
-    }
+pub(crate) fn open_system_settings(cx: &App) {
+    system::open_settings(cx);
 }
 
 /// "Send test": a real banner, as "needs you" would be, about the terminal in front.
@@ -686,27 +612,12 @@ pub(crate) fn simulate(kind: Kind, facts: &TabFacts, post_it: bool, cx: &mut App
         text.title,
         text.subtitle,
         text.body,
-        actions(category(kind)).iter().map(|(_, label)| *label).collect::<Vec<_>>(),
+        actions(category(kind)).iter().map(|button| button.label).collect::<Vec<_>>(),
     );
     if post_it {
         announce(happened, app_active, &settings, cx);
     }
     line
-}
-
-/// The dev build's way: no bundle, so no notification center. The script gets the text as
-/// AppleScript string literals, so it is escaped rather than passed as arguments.
-fn osascript(notice: &Notice) -> Command {
-    let escape = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
-    let script = format!(
-        "display notification \"{}\" with title \"{}\" subtitle \"{}\"",
-        escape(&notice.body),
-        escape(&notice.title),
-        escape(&notice.subtitle)
-    );
-    let mut command = Command::new("osascript");
-    command.arg("-e").arg(script);
-    command
 }
 
 #[cfg(test)]
@@ -716,9 +627,7 @@ mod tests {
     use gpui_kit::{SystemNotificationResponse, TestAppContext};
     use wormhole_core::notify::{Kind, Level, Source, State};
 
-    use super::{
-        Category, Happened, Notice, category, dismiss, init, logs, osascript, post, spoken_words, tag,
-    };
+    use super::{Category, Happened, Notice, category, dismiss, init, logs, post, spoken_words, tag};
     use crate::terminal_view::Failure;
     use crate::workspace::ambient::TabFacts;
 
@@ -824,20 +733,6 @@ mod tests {
         assert!(logs(Some("log"), true));
         assert!(!logs(Some("center"), true), "an explicit route wins");
         assert!(!logs(Some(""), false));
-    }
-
-    #[test]
-    fn the_fallback_script_escapes_quotes_and_backslashes() {
-        let mut n = notice(1, r#"my "terminal" finished"#, r#"C:\temp says "hi""#);
-        n.subtitle = "Claude Code · api".into();
-        let command = osascript(&n);
-        let args: Vec<_> = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
-        assert_eq!(command.get_program(), "osascript");
-        assert_eq!(args[0], "-e");
-        assert_eq!(
-            args[1],
-            r#"display notification "C:\\temp says \"hi\"" with title "my \"terminal\" finished" subtitle "Claude Code · api""#
-        );
     }
 
     #[gpui_kit::test]

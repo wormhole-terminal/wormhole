@@ -8,7 +8,8 @@
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 
 use super::*;
-use crate::workspace::notifications::{self, Permission};
+use crate::platform::notifications::Permission;
+use crate::workspace::notifications;
 
 /// The command-finished threshold's steps, in seconds.
 const AFTER: [u32; 5] = [5, 10, 30, 60, 300];
@@ -116,7 +117,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             .small()
             .outline()
             .label("Open System Settings")
-            .on_click(|_, _, _| notifications::open_system_settings())
+            .on_click(|_, _, cx| notifications::open_system_settings(cx))
     };
     let buttons: Vec<AnyElement> = match permission {
         Permission::Allowed { .. } => {

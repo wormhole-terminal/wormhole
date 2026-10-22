@@ -1,6 +1,7 @@
-//! The macOS notification center (`UNUserNotificationCenter`), for the bundled app only: GPUI's
-//! own notifications carry a tag, a title, a body and buttons, but not the interruption level
-//! (Time Sensitive), the thread, the sound or a Reply field. So the app posts here itself.
+//! AppKit's side of `platform::notifications`: the notification center
+//! (`UNUserNotificationCenter`), for the bundled app only (GPUI's own notifications carry a tag, a
+//! title, a body and buttons, but not the interruption level (Time Sensitive), the thread, the
+//! sound or a Reply field), and `osascript` for a build without a bundle.
 //!
 //! The center has one delegate per app. GPUI sets its own when GPUI Component registers a
 //! response handler in `gpui_kit::init`; [`Center::open`] runs later and replaces it, so every
@@ -11,9 +12,11 @@
 
 use std::cell::Cell;
 use std::ffi::c_void;
+use std::process::Command;
 use std::sync::OnceLock;
 
 use block2::RcBlock;
+use gpui_kit::App;
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, ProtocolObject};
 use objc2_foundation::{NSArray, NSBundle, NSError, NSSet, NSString};
@@ -25,9 +28,7 @@ use objc2_user_notifications::{
 };
 use smol::channel::Sender;
 
-use crate::workspace::notifications::{
-    Category, FromCenter, Notice, OPEN, Permission, REPLY, SHOW_CHANGES, actions,
-};
+use crate::platform::notifications::{ButtonKind, Buttons, Category, FromCenter, Notice, Permission};
 use delegate::Delegate;
 use wormhole_core::notify::Level;
 
@@ -39,7 +40,7 @@ const FINISHED: &str = "wormhole.finished";
 /// provisioning profile by `scripts/bundle.sh`).
 const TIME_SENSITIVE: &str = "com.apple.developer.usernotifications.time-sensitive";
 
-pub(crate) struct Center {
+pub struct Center {
     center: Retained<UNUserNotificationCenter>,
     /// The center's `delegate` is weak: this keeps ours alive.
     _delegate: Retained<Delegate>,
@@ -50,7 +51,7 @@ pub(crate) struct Center {
 
 impl Center {
     /// The center, with our delegate and categories; `None` outside an app bundle.
-    pub(crate) fn open(tx: Sender<FromCenter>) -> Option<Self> {
+    pub fn open(tx: Sender<FromCenter>, buttons: Buttons) -> Option<Self> {
         if NSBundle::mainBundle().bundleIdentifier().is_none() {
             tracing::debug!("notifications: no bundle identifier, using osascript");
             return None;
@@ -58,14 +59,14 @@ impl Center {
         let center = UNUserNotificationCenter::currentNotificationCenter();
         let delegate = Delegate::new(tx.clone());
         center.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-        center.setNotificationCategories(&categories());
+        center.setNotificationCategories(&categories(buttons));
         if !entitled_to_time_sensitive() {
             tracing::debug!("notifications: no Time Sensitive entitlement, needs you is delivered at Active");
         }
         Some(Self { center, _delegate: delegate, tx, asked: Cell::new(false) })
     }
 
-    pub(crate) fn post(&self, notice: &Notice) {
+    pub fn post(&self, notice: &Notice) {
         if !self.asked.get() {
             self.ask();
         }
@@ -103,14 +104,14 @@ impl Center {
         self.center.addNotificationRequest_withCompletionHandler(&request, Some(&done));
     }
 
-    pub(crate) fn remove(&self, id: &str) {
+    pub fn remove(&self, id: &str) {
         let ids = NSArray::from_retained_slice(&[NSString::from_str(id)]);
         self.center.removePendingNotificationRequestsWithIdentifiers(&ids);
         self.center.removeDeliveredNotificationsWithIdentifiers(&ids);
     }
 
     /// Ask for permission (macOS prompts only while it hasn't been decided), then read it again.
-    pub(crate) fn ask(&self) {
+    pub fn ask(&self) {
         self.asked.set(true);
         let tx = self.tx.clone();
         let center = self.center.clone();
@@ -127,7 +128,7 @@ impl Center {
     }
 
     /// Read the permission; the answer arrives on the channel.
-    pub(crate) fn refresh_permission(&self) {
+    pub fn refresh_permission(&self) {
         read_permission(&self.center, self.tx.clone());
     }
 }
@@ -155,15 +156,41 @@ fn error_of(error: *mut NSError) -> Option<String> {
     unsafe { error.as_ref() }.map(|error| error.localizedDescription().to_string())
 }
 
-fn categories() -> Retained<NSSet<UNNotificationCategory>> {
+/// macOS has the center in a bundle and `osascript` without one.
+pub fn available() -> bool {
+    true
+}
+
+/// A build without a bundle (`cargo run`) has no notification center, which would abort the
+/// process: `osascript` instead. The script gets the text as AppleScript string literals, so it
+/// is escaped rather than passed as arguments.
+pub fn script(notice: &Notice) -> Option<Command> {
+    let escape = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
+    let script = format!(
+        "display notification \"{}\" with title \"{}\" subtitle \"{}\"",
+        escape(&notice.body),
+        escape(&notice.title),
+        escape(&notice.subtitle)
+    );
+    let mut command = Command::new("osascript");
+    command.arg("-e").arg(script);
+    Some(command)
+}
+
+/// Wormhole's page under System Settings → Notifications.
+pub fn open_settings(cx: &App) {
+    cx.open_url("x-apple.systempreferences:com.apple.Notifications-Settings.extension");
+}
+
+fn categories(buttons: Buttons) -> Retained<NSSet<UNNotificationCategory>> {
     let category = |id: &str, category: Category| {
-        let buttons: Vec<Retained<UNNotificationAction>> = actions(category)
+        let buttons: Vec<Retained<UNNotificationAction>> = buttons(category)
             .iter()
-            .map(|&(action, label)| {
-                let (id, label) = (NSString::from_str(action), NSString::from_str(label));
-                match action {
+            .map(|button| {
+                let (id, label) = (NSString::from_str(button.id), NSString::from_str(button.label));
+                match button.kind {
                     // Typing a reply needs no window: the text goes to the terminal as it is.
-                    REPLY => Retained::into_super(
+                    ButtonKind::Reply => Retained::into_super(
                         UNTextInputNotificationAction::actionWithIdentifier_title_options_textInputButtonTitle_textInputPlaceholder(
                             &id,
                             &label,
@@ -172,15 +199,10 @@ fn categories() -> Retained<NSSet<UNNotificationCategory>> {
                             &NSString::from_str("Reply"),
                         ),
                     ),
-                    OPEN | SHOW_CHANGES => UNNotificationAction::actionWithIdentifier_title_options(
+                    ButtonKind::Foreground => UNNotificationAction::actionWithIdentifier_title_options(
                         &id,
                         &label,
                         UNNotificationActionOptions::Foreground,
-                    ),
-                    _ => UNNotificationAction::actionWithIdentifier_title_options(
-                        &id,
-                        &label,
-                        UNNotificationActionOptions::empty(),
                     ),
                 }
             })
@@ -202,7 +224,7 @@ fn categories() -> Retained<NSSet<UNNotificationCategory>> {
 /// Developer ID build with the provisioning profile has it; everything else delivers "needs you"
 /// at Active.
 #[allow(unsafe_code)]
-pub(crate) fn entitled_to_time_sensitive() -> bool {
+pub fn entitled_to_time_sensitive() -> bool {
     #[link(name = "Security", kind = "framework")]
     unsafe extern "C" {
         fn SecTaskCreateFromSelf(allocator: *const c_void) -> *mut c_void;
@@ -253,7 +275,7 @@ mod delegate {
     };
     use smol::channel::Sender;
 
-    use crate::workspace::notifications::{FromCenter, Response};
+    use crate::platform::notifications::{FromCenter, Response};
 
     pub(super) struct Ivars {
         tx: Sender<FromCenter>,
@@ -306,10 +328,40 @@ mod delegate {
     );
 
     impl Delegate {
-        pub(crate) fn new(tx: Sender<FromCenter>) -> Retained<Self> {
+        pub fn new(tx: Sender<FromCenter>) -> Retained<Self> {
             let this = Self::alloc().set_ivars(Ivars { tx });
             // SAFETY: `-[NSObject init]` is the designated initializer of the superclass.
             unsafe { msg_send![super(this), init] }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use wormhole_core::notify::Level;
+
+    use super::script;
+    use crate::platform::notifications::{Category, Notice};
+
+    #[test]
+    fn the_fallback_script_escapes_quotes_and_backslashes() {
+        let n = Notice {
+            id: wormhole_core::notify::notice_id(1),
+            thread: "t".into(),
+            title: r#"my "terminal" finished"#.into(),
+            subtitle: "Claude Code · api".into(),
+            body: r#"C:\temp says "hi""#.into(),
+            level: Level::Active,
+            sound: false,
+            category: Category::Finished,
+        };
+        let command = script(&n).expect("macOS has the script");
+        let args: Vec<_> = command.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(command.get_program(), "osascript");
+        assert_eq!(args[0], "-e");
+        assert_eq!(
+            args[1],
+            r#"display notification "C:\\temp says \"hi\"" with title "my \"terminal\" finished" subtitle "Claude Code · api""#
+        );
     }
 }

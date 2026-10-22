@@ -12,6 +12,7 @@ use gpui_kit::*;
 use wormhole_core::notify::Kind;
 
 use super::{Ctx, append, file_name, nth};
+use crate::platform::notifications::Permission;
 use crate::workspace::ambient::TabFacts;
 use crate::workspace::{menu_bar, notifications, quick_panel};
 
@@ -116,11 +117,11 @@ pub(super) fn notify_log(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// a banner turned on) is counted and taken as answered yes.
 pub(super) fn notify_permission(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let permission = match arg.trim() {
-        "not-asked" => notifications::Permission::NotAsked,
-        "allowed" => notifications::Permission::Allowed { time_sensitive: false },
-        "denied" => notifications::Permission::Denied,
-        "outside" => notifications::Permission::OutsideBundle,
-        "checking" => notifications::Permission::Checking,
+        "not-asked" => Permission::NotAsked,
+        "allowed" => Permission::Allowed { time_sensitive: false },
+        "denied" => Permission::Denied,
+        "outside" => Permission::OutsideBundle,
+        "checking" => Permission::Checking,
         other => {
             return Err(anyhow!("permission {other:?}: not-asked, allowed, denied, outside or checking"));
         }
