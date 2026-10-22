@@ -740,7 +740,7 @@ pub(crate) fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
 /// Show one of our folders in the Finder (the icon themes, the fonts),
 /// creating it first so there's somewhere to drop files.
 fn open_folder(dir: &Path) {
-    let opened = std::fs::create_dir_all(dir).and_then(|()| {
+    let opened = wormhole_core::fsutil::create_dir_all_private(dir).and_then(|()| {
         let mut cmd = std::process::Command::new("open");
         cmd.arg(dir);
         crate::workspace::spawn::spawn_detached(cmd)

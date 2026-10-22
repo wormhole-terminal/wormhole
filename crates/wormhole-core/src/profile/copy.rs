@@ -21,7 +21,7 @@ const MAX_ENTRIES: usize = 20_000;
 const MAX_DEPTH: usize = 8;
 
 pub(super) fn copy_settings(from: &ProfilePaths, to: &ProfilePaths) -> io::Result<()> {
-    fs::create_dir_all(to.dir())?;
+    fsutil::ensure_private_dir(to.dir())?;
     match fsutil::read_capped(&from.config_file(), 1024 * 1024, LinkPolicy::Follow) {
         Ok(bytes) => fsutil::write_atomic(&to.config_file(), &bytes, LinkPolicy::Follow)?,
         Err(err) if err.kind() == io::ErrorKind::NotFound => {}
@@ -53,7 +53,7 @@ fn copy_tree(src: &Path, dst: &Path, depth: usize, budget: &mut usize) -> io::Re
     if meta.file_type().is_symlink() {
         let target = fs::read_link(src)?;
         if let Some(parent) = dst.parent() {
-            fs::create_dir_all(parent)?;
+            fsutil::create_dir_all_private(parent)?;
         }
         return match symlink(target, dst) {
             Err(err) if err.kind() != io::ErrorKind::AlreadyExists => Err(err),
@@ -61,7 +61,7 @@ fn copy_tree(src: &Path, dst: &Path, depth: usize, budget: &mut usize) -> io::Re
         };
     }
     if meta.is_dir() {
-        fs::create_dir_all(dst)?;
+        fsutil::create_dir_all_private(dst)?;
         let mut names: Vec<_> = fs::read_dir(src)?.filter_map(Result::ok).map(|e| e.file_name()).collect();
         names.sort();
         for name in names {

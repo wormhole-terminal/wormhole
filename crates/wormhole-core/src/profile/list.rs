@@ -232,7 +232,7 @@ impl ProfileList {
         let paths = root.profile(&id);
         let made = match &source {
             Some(source) => copy_settings(&root.profile(&source.id), &paths),
-            None => std::fs::create_dir_all(paths.dir()),
+            None => fsutil::ensure_private_dir(paths.dir()),
         };
         if let Err(err) = made {
             remove_profile_dir(root, &id);

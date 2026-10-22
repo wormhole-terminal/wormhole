@@ -11,7 +11,7 @@
 
 use std::fs::{self, File, TryLockError};
 use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -57,8 +57,13 @@ pub fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
 }
 
 pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::io::Result<Instance> {
-    fs::create_dir_all(dir)?;
-    let file = File::options().create(true).write(true).truncate(false).open(dir.join(LOCK_FILE))?;
+    crate::fsutil::create_dir_all_private(dir)?;
+    let file = File::options()
+        .create(true)
+        .write(true)
+        .truncate(false)
+        .mode(crate::fsutil::PRIVATE_FILE)
+        .open(dir.join(LOCK_FILE))?;
     match file.try_lock() {
         Ok(()) => {}
         Err(TryLockError::WouldBlock) => {

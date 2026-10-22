@@ -25,8 +25,11 @@ pub fn init() -> Option<WorkerGuard> {
     let stderr = std::io::stderr().is_terminal().then(|| fmt::layer().with_writer(std::io::stderr));
 
     let dir = dir();
-    // The appender prunes old files on start and complains if the folder is missing.
-    let _ = std::fs::create_dir_all(&dir);
+    // The appender prunes old files on start and complains if the folder is missing. Owner-only:
+    // the appender makes its files with the umask's mode, so the folder is what keeps them private.
+    if wormhole_core::fsutil::ensure_private_dir(&dir).is_err() {
+        let _ = std::fs::create_dir_all(&dir);
+    }
     let appender = Builder::new()
         .rotation(Rotation::DAILY)
         .filename_prefix("wormhole")

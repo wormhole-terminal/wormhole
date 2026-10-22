@@ -34,6 +34,17 @@ pub fn data_dir() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
 }
 
+/// Make Wormhole's data folder and everything in it owner-only (folders `0700`, files `0600`), for
+/// what an earlier version made with the umask's modes and what a library made since (the logs).
+/// Run at launch, off the UI thread; only ever on Wormhole's own data folder.
+pub fn make_data_dir_private(dir: &Path) {
+    match crate::fsutil::make_tree_private(dir) {
+        Ok(0) => {}
+        Ok(changed) => tracing::info!("made {changed} files and folders in the data folder owner-only"),
+        Err(err) => tracing::warn!("couldn't make the data folder {} owner-only: {err}", dir.display()),
+    }
+}
+
 /// The data folder's name, and its database's, in 0.2 and before, when the app went by its codename.
 const LEGACY_DIR: &str = "Andromeda";
 const LEGACY_DB_FILE: &str = "andromeda.db";
@@ -135,7 +146,12 @@ impl Store {
     /// upgrade) is an error and leaves the file alone. Copies past keeping are deleted first (see
     /// `copies`): each one holds the terminals' saved text as it was then.
     pub fn open_at(dir: &Path) -> Result<Self> {
-        std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+        if let Err(err) = crate::fsutil::ensure_private_dir(dir) {
+            // A data folder that is a link (to another disk, a synced folder) still works; it just
+            // isn't made private here.
+            tracing::warn!("couldn't make {} owner-only: {err}", dir.display());
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+        }
         copies::prune(dir, SystemTime::now());
         let path = dir.join(DB_FILE);
         match Self::open_file(&path) {
@@ -161,6 +177,16 @@ impl Store {
     }
 
     fn open_file(path: &Path) -> Result<Self> {
+        // Made owner-only before SQLite opens it, which then gives the `-wal` and `-shm` it creates
+        // the same mode; ones an earlier version made are tightened.
+        for file in [path.to_path_buf(), with_suffix(path, "-wal"), with_suffix(path, "-shm")] {
+            let made = if file == path {
+                crate::fsutil::create_private_file(&file)
+            } else {
+                crate::fsutil::make_private(&file)
+            };
+            made.with_context(|| format!("making {} owner-only", file.display()))?;
+        }
         let mut conn = Connection::open(path)?;
         configure(&conn)?;
         // Before anything is written: writing to a damaged file would only spread the damage.
@@ -174,6 +200,9 @@ impl Store {
             let copy = aside_path(path, &format!("v{version}"));
             conn.execute("VACUUM INTO ?1", [copy.to_string_lossy()])
                 .with_context(|| format!("keeping a copy of the database in {}", copy.display()))?;
+            // SQLite makes the copy with its default mode, readable by everyone.
+            crate::fsutil::make_private(&copy)
+                .with_context(|| format!("making {} owner-only", copy.display()))?;
             tracing::info!("kept a copy of the schema version {version} database in {}", copy.display());
         }
         schema::init(&mut conn)?;

@@ -61,6 +61,11 @@ fn main() {
         Ok(None) => {}
         Err(err) => tracing::error!("couldn't move the data of an earlier version: {err:#}"),
     }
+    // Files an earlier version (or the log appender) made with the umask's modes become
+    // owner-only; on a thread of its own so a large folder doesn't hold up the launch.
+    let _ = std::thread::Builder::new().name("private-data".into()).spawn(|| {
+        wormhole_core::store::make_data_dir_private(&wormhole_core::store::data_dir());
+    });
     let Some(hook_events) = wormhole_core::ipc::start_server() else {
         tracing::info!(
             "already running; asked the existing instance to activate, unless launched in one of its tabs"

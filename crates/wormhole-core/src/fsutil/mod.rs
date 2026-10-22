@@ -14,6 +14,13 @@
 //! [`FileStamp`] tells, from metadata alone, whether a file may have changed since it was read,
 //! so pollers re-read only what changed.
 
+mod private;
+
+pub use private::{
+    PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,
+    make_tree_private,
+};
+
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -23,7 +30,8 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Copy, Debug)]
 pub enum LinkPolicy<'a> {
     /// The user's own files (`config.json`, `~/.claude/settings.json`): a symlinked file is a
-    /// dotfiles setup, so writes go through the link and the link stays.
+    /// dotfiles setup, so writes go through the link and the link stays. A new file, and a folder
+    /// made for it, are owner-only (`0600`, `0700`); one that exists keeps its mode.
     Follow,
     /// Files that come from a repository: the path, with all links resolved, must stay inside
     /// this root. Writes replace a symlinked final component instead of following it.
@@ -105,7 +113,11 @@ pub fn write_atomic_executable(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>
 
 fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: bool) -> io::Result<()> {
     let (mut dir, mut target) = locate_for_write(path, policy)?;
-    fs::create_dir_all(&dir)?;
+    match policy {
+        // The user's and Wormhole's own files: a folder made for them is owner-only.
+        LinkPolicy::Follow => create_dir_all_private(&dir)?,
+        LinkPolicy::Within(_) => fs::create_dir_all(&dir)?,
+    }
     // Re-check after creating: a missing directory chain could not be canonicalized before.
     if let LinkPolicy::Within(root) = policy {
         let real_dir = fs::canonicalize(&dir)?;
@@ -125,8 +137,16 @@ fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: boo
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        // New files get the usual 0666 &! umask instead of the temp file's private 0600.
-        builder.permissions(fs::Permissions::from_mode(if executable { 0o777 } else { 0o666 }));
+        // A new file of the user's or Wormhole's own (`Follow`: settings, profiles, the data
+        // folder's files) is owner-only; one in a repository (`Within`) gets the usual
+        // 0666 &! umask, as any tool there would make it.
+        let mode = match (policy, executable) {
+            (LinkPolicy::Follow, true) => 0o700,
+            (LinkPolicy::Follow, false) => private::PRIVATE_FILE,
+            (LinkPolicy::Within(_), true) => 0o777,
+            (LinkPolicy::Within(_), false) => 0o666,
+        };
+        builder.permissions(fs::Permissions::from_mode(mode));
     }
     let mut tmp = builder.tempfile_in(&dir)?;
     tmp.write_all(bytes)?;

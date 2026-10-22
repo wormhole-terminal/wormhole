@@ -3,6 +3,7 @@
 mod copies;
 mod erasure;
 mod migrations;
+mod private;
 mod recovery;
 mod rename;
 mod schema;
