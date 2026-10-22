@@ -175,7 +175,7 @@ pub(crate) fn read<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOn
 }
 
 /// Run `f` on the window itself (not its workspace).
-fn with_window<R>(
+pub(super) fn with_window<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     f: impl FnOnce(&mut Window, &mut App) -> R,

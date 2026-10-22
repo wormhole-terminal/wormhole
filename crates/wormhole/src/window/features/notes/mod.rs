@@ -400,7 +400,7 @@ impl Workspace {
     pub(in crate::window) fn render_notes_panel(
         &self,
         width: f32,
-        window: &Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let ui = ui_in(&self.profile, cx);
@@ -418,30 +418,39 @@ impl Workspace {
             .h_full()
             .bg(ui.panel_right)
             .child(self.render_panel_tab_bar(window, cx))
-            .child(div().flex().flex_col().flex_1().min_h_0().child(match tab {
-                // Virtualized lists fill the panel and scroll themselves; the list area holds the
-                // keyboard for them.
-                TabId::Changes => {
-                    let list = self.render_changes_tab(window, cx);
-                    self.panel_content(list, cx)
-                }
-                TabId::History => {
-                    let list = self.render_history_tab(window, cx);
-                    self.panel_content(list, cx)
-                }
-                TabId::Notes => {
-                    let list = self.render_notes_tab(window, cx);
-                    self.panel_content(list, cx)
-                }
-                // Short tabs, all there at once: a plain scrolling column.
-                TabId::Project => {
-                    let content = self.render_project_tab(cx).into_any_element();
-                    panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
-                }
-                TabId::Usage => {
-                    let content = self.render_usage_tab(cx).into_any_element();
-                    panel_list::scroll_column("usage-scroll", &self.panel_scroll, ui, content, cx)
-                }
+            .child(div().flex().flex_col().flex_1().min_h_0().child(match self.tab_entry(tab) {
+                // A feature in the table draws its tab; a tab with a list gets the area that holds the
+                // keyboard for it.
+                Some((at, entry)) => match self.feature_entity(at) {
+                    Some(entity) => {
+                        let content = (entry.view)(entity, &self.facts(cx), window, cx);
+                        if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
+                    }
+                    None => div().into_any_element(),
+                },
+                None => match tab {
+                    // Virtualized lists fill the panel and scroll themselves; the list area holds the
+                    // keyboard for them.
+                    TabId::History => {
+                        let list = self.render_history_tab(window, cx);
+                        self.panel_content(list, cx)
+                    }
+                    TabId::Notes => {
+                        let list = self.render_notes_tab(window, cx);
+                        self.panel_content(list, cx)
+                    }
+                    // Short tabs, all there at once: a plain scrolling column.
+                    TabId::Project => {
+                        let content = self.render_project_tab(cx).into_any_element();
+                        panel_list::scroll_column("project-scroll", &self.panel_scroll, ui, content, cx)
+                    }
+                    TabId::Usage => {
+                        let content = self.render_usage_tab(cx).into_any_element();
+                        panel_list::scroll_column("usage-scroll", &self.panel_scroll, ui, content, cx)
+                    }
+                    // Changes is always in the table; a window made without it has nothing to show.
+                    TabId::Changes => div().into_any_element(),
+                },
             }))
     }
 
@@ -459,12 +468,19 @@ impl Workspace {
         self.reveal_notes();
         self.remember_panes(cx);
         self.picker = None;
-        let ix = self.active;
-        match tab {
-            TabId::Changes => self.refresh_git(ix, cx),
-            TabId::History => self.refresh_history(ix, cx),
-            TabId::Project => self.refresh_projects(cx),
-            TabId::Notes | TabId::Usage => {}
+        let session = self.active_session().id;
+        match self.tab_entry(tab) {
+            // The feature in the table says what showing its tab does.
+            Some((at, entry)) => {
+                if let (Some(on_show), Some(entity)) = (entry.on_show, self.feature_entity(at).cloned()) {
+                    on_show(&entity, self, session, cx);
+                }
+            }
+            None => match tab {
+                TabId::History => self.refresh_history(self.active, cx),
+                TabId::Project => self.refresh_projects(cx),
+                TabId::Changes | TabId::Notes | TabId::Usage => {}
+            },
         }
         self.mark_dirty(cx);
     }

@@ -13,9 +13,9 @@ use crate::actions::{
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
     GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewNote,
     NewSession, NewTerminalInWorktree, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal,
-    PinTerminal, PreviousGroup, PreviousTerminal, RevealInFinder, RunProjectAction, ShowChanges, ShowHistory,
-    ShowNotes, ShowProject, ShowUsage, Smaller, SplitDown, SplitRight, StashPrompt, ToggleRightPanel,
-    ToggleSidebar, UseSelectionForFind, ZoomPane,
+    PinTerminal, PreviousGroup, PreviousTerminal, RevealInFinder, RunProjectAction, ShowHistory, ShowNotes,
+    ShowProject, ShowUsage, Smaller, SplitDown, SplitRight, StashPrompt, ToggleRightPanel, ToggleSidebar,
+    UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
@@ -36,7 +36,8 @@ impl Workspace {
         // A worktree needs a repository: the terminal's folder has a git status.
         let has_repo = self.active_session().git.status.is_some();
         let split = self.active_split().is_some();
-        root.on_action(cx.listener(|this, _: &NewSession, window, cx| this.new_session(window, cx)))
+        let root = root
+            .on_action(cx.listener(|this, _: &NewSession, window, cx| this.new_session(window, cx)))
             .on_action(cx.listener(|this, _: &NewTerminalNoGroup, window, cx| {
                 let cwd = this.default_cwd(cx);
                 this.open_session_in(Some(None), None, cwd, window, cx);
@@ -129,7 +130,6 @@ impl Workspace {
             }))
             .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| this.toggle_sidebar(cx)))
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
-            .on_action(cx.listener(|this, _: &ShowChanges, _, cx| this.show_tab(TabId::Changes, cx)))
             .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(TabId::History, cx)))
             .when(self.usage_tab_on(cx), |root| {
                 root.on_action(cx.listener(|this, _: &ShowUsage, _, cx| this.show_tab(TabId::Usage, cx)))
@@ -168,7 +168,9 @@ impl Workspace {
                     let terminal = this.active_terminal().clone();
                     terminal.update(cx, |terminal, cx| terminal.use_selection_for_find(window, cx));
                 }))
-            })
+            });
+        // The features' tabs and their own actions, from the table.
+        self.bind_features(root, cx)
     }
 
     /// ⌘G / ⇧⌘G: the front terminal's next or previous match.

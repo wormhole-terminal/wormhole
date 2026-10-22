@@ -94,7 +94,8 @@ impl Workspace {
     /// selected one, or any pane of its split). It reads the same `TerminalView::agent` the title
     /// row's context status is keyed on (`agent_gauge`).
     pub(in crate::window) fn usage_tab_on(&self, cx: &App) -> bool {
-        self.on_screen_sessions().into_iter().any(|ix| self.sessions[ix].terminal().read(cx).agent.is_some())
+        (0..self.sessions.len())
+            .any(|ix| self.on_screen(ix) && self.sessions[ix].terminal().read(cx).agent.is_some())
     }
 
     /// Leave a tab that is no longer in the panel's list (Usage once the agent is gone, Notes
@@ -111,27 +112,33 @@ impl Workspace {
         self.show_tab(back, cx);
     }
 
-    /// The right panel's tabs as they are on screen. Project is there for any terminal that has a
-    /// folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
+    /// The right panel's tabs as they are on screen, in the panel's order: a tab of a feature in the
+    /// table is offered when its feature is on and the tab says it is `shown`; the rest follow
+    /// [`Self::legacy_tab_offered`] until their feature moves into the table.
+    pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
+        let facts = self.facts(cx);
+        TabId::ALL.into_iter().filter(|&tab| self.tab_offered(tab, &facts, cx)).collect()
+    }
+
+    /// The window's own rule for a tab whose feature has not moved into the table. Changes is always
+    /// in the table; a window made without it has no such tab. Project is there for any terminal that
+    /// has a folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
     /// one, where the project folder is made. It stays while it is the tab on show, so a terminal
     /// whose folder isn't known for a moment doesn't pull it out from under the person.
-    pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
-        let mut tabs = vec![TabId::Changes, TabId::History];
-        // Notes is behind its flag; when it's off Usage simply follows History.
-        if crate::window::features::notes::notes_on(cx) {
-            tabs.push(TabId::Notes);
+    pub(in crate::window) fn legacy_tab_offered(&self, tab: TabId, cx: &App) -> bool {
+        match tab {
+            TabId::Changes => false,
+            TabId::History => true,
+            // Notes is behind its flag; when it's off Usage simply follows History.
+            TabId::Notes => crate::window::features::notes::notes_on(cx),
+            TabId::Usage => self.usage_tab_on(cx),
+            // The Project tab belongs to the project-folder feature, so it's gone while that flag is
+            // off (see `features`).
+            TabId::Project => {
+                crate::window::features::project::project_folders_on(cx)
+                    && (self.active_folder(cx).is_some() || self.right_tab == TabId::Project)
+            }
         }
-        if self.usage_tab_on(cx) {
-            tabs.push(TabId::Usage);
-        }
-        // The Project tab belongs to the project-folder feature, so it's gone while that flag is
-        // off (see `features`). It comes last so that the other tabs keep their place, and their
-        // keys, whether it is there or not.
-        let project_folders = crate::window::features::project::project_folders_on(cx);
-        if project_folders && (self.active_folder(cx).is_some() || self.right_tab == TabId::Project) {
-            tabs.push(TabId::Project);
-        }
-        tabs
     }
 
     /// The panel's tabs: ← → switch at once, ↩ / Space / ↓ go into the tab's list.

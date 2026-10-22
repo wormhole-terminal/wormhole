@@ -257,7 +257,7 @@ impl Workspace {
 
     /// The right panel's title row: its icon tabs from the 16 pt inset, the Notes tab's stash
     /// button, and room for the panel toggle that floats over its right end.
-    pub(super) fn render_panel_tab_bar(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_panel_tab_bar(&self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         // The rule under the row is the terminal title row's, at the same height (outside the
         // 38 pt row, as there), so the two read as one line across the window.
@@ -272,6 +272,8 @@ impl Workspace {
             .pr(px(PANEL_TOGGLE_SLOT))
             .title_drag()
             .child(self.render_panel_tabs(window, cx))
+            // A tab of the table brings its own buttons.
+            .children(self.table_tab_actions(window, cx))
             // The Notes tab's one action sits beside the panel toggle rather than
             // on a row of its own above the list.
             .when(self.right_tab == TabId::Notes && crate::window::features::notes::notes_on(cx), |d| {
@@ -294,13 +296,18 @@ impl Workspace {
         div().flex_none().flex().flex_col().child(row).into_any_element()
     }
 
+    /// The buttons the tab on show brings beside the tabs, if its feature is in the table.
+    fn table_tab_actions(&self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let (at, tab) = self.tab_entry(self.right_tab)?;
+        let actions = tab.actions?;
+        actions(self.feature_entity(at)?, &self.facts(cx), window, cx)
+    }
+
     /// The panel's tabs: a tab list VoiceOver reads with its counts in words, one
     /// keyboard stop whose ← → switch tabs at once.
     fn render_panel_tabs(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
-        let files = session.git.status.as_ref().map(|s| s.files.len());
-        let changes = files.filter(|&n| n > 0);
         let open_steps = session.tasks.iter().filter(|t| !t.done).count();
         let notes = session
             .notes
@@ -308,35 +315,25 @@ impl Workspace {
             .filter(|n| !crate::window::features::notes::is_blank_note(n.state.read(cx)))
             .count();
         let tabs = self.panel_tab_list(cx);
+        let facts = self.facts(cx);
         let ring = self.ring(Area::PanelTabs, window);
-        let tab = |id: &'static str,
-                   icon: IconName,
-                   label: &str,
-                   key: ActionId,
-                   count: Option<usize>,
-                   tab: TabId| {
-            let active = self.right_tab == tab;
-            let spoken = spoken::panel_tab(match tab {
-                TabId::Notes => PanelTab::Notes { open_steps, notes },
-                TabId::Changes => PanelTab::Changes { files },
-                TabId::History => PanelTab::History,
-                TabId::Project => PanelTab::Project,
-                TabId::Usage => PanelTab::Usage,
-            });
-            style::icon_tab(id, ui, icon, keymap::with_key(label, key), active, count)
-                .relative()
-                .role(Role::Tab)
-                .aria_label(spoken)
-                .aria_selected(active)
-                .aria_position_in_set(tabs.iter().position(|&t| t == tab).map_or(1, |at| at + 1))
-                .aria_size_of_set(tabs.len())
-                // The active tab is where the keys are (automatic activation).
-                .when(active, |d| d.aria_active_descendant())
-                .when(active && ring, |d| {
-                    d.child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius))
-                })
-                .on_click(cx.listener(move |this, _, _, cx| this.show_tab(tab, cx)))
-        };
+        let tab =
+            |icon: IconName, label: &str, key: ActionId, count: Option<usize>, spoken: String, tab: TabId| {
+                let active = self.right_tab == tab;
+                style::icon_tab(tab_element_id(tab), ui, icon, keymap::with_key(label, key), active, count)
+                    .relative()
+                    .role(Role::Tab)
+                    .aria_label(spoken)
+                    .aria_selected(active)
+                    .aria_position_in_set(tabs.iter().position(|&t| t == tab).map_or(1, |at| at + 1))
+                    .aria_size_of_set(tabs.len())
+                    // The active tab is where the keys are (automatic activation).
+                    .when(active, |d| d.aria_active_descendant())
+                    .when(active && ring, |d| {
+                        d.child(style::focus_ring(ui, style::RingPlacement::Outside, ui.radius))
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| this.show_tab(tab, cx)))
+            };
         let bar = div()
             .id("panel-tabs")
             .role(Role::TabList)
@@ -346,48 +343,64 @@ impl Workspace {
             .flex()
             .items_center()
             .gap_1()
-            .child(tab(
-                "tab-changes",
-                IconName::GitCompare,
-                "Changes",
-                ActionId::ShowChanges,
-                changes,
-                TabId::Changes,
-            ))
-            .child(tab(
-                "tab-history",
-                IconName::GitCommitHorizontal,
-                "History",
-                ActionId::ShowHistory,
-                None,
-                TabId::History,
-            ))
-            .when(tabs.contains(&TabId::Notes), |d| {
-                d.child(tab(
-                    "tab-notes",
-                    IconName::FileText,
-                    "Notes",
-                    ActionId::ShowNotes,
-                    None,
-                    TabId::Notes,
-                ))
-            })
-            .when(tabs.contains(&TabId::Usage), |d| {
-                d.child(tab("tab-usage", IconName::Gauge, "Usage", ActionId::ShowUsage, None, TabId::Usage))
-            })
-            // Whenever the terminal has a folder: its colour is set there, and its project made.
-            // Last, so the tabs before it never shift when it comes and goes.
-            .when(tabs.contains(&TabId::Project), |d| {
-                d.child(tab(
-                    "tab-project",
-                    IconName::Folder,
-                    "Project",
-                    ActionId::ShowProject,
-                    None,
-                    TabId::Project,
-                ))
-            });
+            .children(tabs.iter().filter_map(|&id| match self.tab_entry(id) {
+                // A feature in the table says what its tab shows and says. It comes last in the
+                // panel's order when it is the Project, so the tabs before it never shift when it
+                // comes and goes.
+                Some((at, def)) => {
+                    let entity = self.feature_entity(at)?;
+                    let count = def.count.and_then(|count| count(entity, &facts, cx));
+                    Some(tab(def.icon, def.label, def.action, count, (def.spoken)(entity, &facts, cx), id))
+                }
+                None => Some(match id {
+                    TabId::Changes => return None,
+                    TabId::History => tab(
+                        IconName::GitCommitHorizontal,
+                        "History",
+                        ActionId::ShowHistory,
+                        None,
+                        spoken::panel_tab(PanelTab::History),
+                        id,
+                    ),
+                    TabId::Notes => tab(
+                        IconName::FileText,
+                        "Notes",
+                        ActionId::ShowNotes,
+                        None,
+                        spoken::panel_tab(PanelTab::Notes { open_steps, notes }),
+                        id,
+                    ),
+                    TabId::Usage => tab(
+                        IconName::Gauge,
+                        "Usage",
+                        ActionId::ShowUsage,
+                        None,
+                        spoken::panel_tab(PanelTab::Usage),
+                        id,
+                    ),
+                    // Whenever the terminal has a folder: its colour is set there, and its project made.
+                    TabId::Project => tab(
+                        IconName::Folder,
+                        "Project",
+                        ActionId::ShowProject,
+                        None,
+                        spoken::panel_tab(PanelTab::Project),
+                        id,
+                    ),
+                }),
+            }));
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()
+    }
+}
+
+/// A tab's element id, which the tests and devctl find it by.
+const fn tab_element_id(tab: TabId) -> &'static str {
+    match tab {
+        TabId::Changes => "tab-changes",
+        TabId::History => "tab-history",
+        TabId::Notes => "tab-notes",
+        TabId::Usage => "tab-usage",
+        TabId::Project => "tab-project",
     }
 }
 

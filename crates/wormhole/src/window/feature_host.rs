@@ -2,13 +2,16 @@
 //! window, hearing their events, and asking the table what the frame needs (the tab list, the action
 //! bindings, the menu, the keys over a list). Nothing here names a feature.
 
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::{FeatureId, TabId};
 use wormhole_core::keys::keymap::menus::MenuState;
 
+use crate::actions::gpui_action;
 use crate::settings::store_in;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, TabDef};
+use crate::window::facts::WindowFacts;
+use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, Root, TabDef};
 
 impl Workspace {
     /// What the table says this window does for `id`; `None` for a feature that hasn't moved out of
@@ -70,6 +73,40 @@ impl Workspace {
     /// The entity of the feature at `at` in the table, if it has state.
     pub(in crate::window) fn feature_entity(&self, at: usize) -> Option<&AnyEntity> {
         self.feature_states.get(at)?.as_ref().map(|state| &state.entity)
+    }
+
+    /// Whether the panel offers `tab` now, by the table's entry when it has one and by the window's
+    /// own rule when the feature has not moved into the table yet.
+    pub(in crate::window) fn tab_offered(&self, tab: TabId, facts: &WindowFacts<'_>, cx: &App) -> bool {
+        match self.tab_entry(tab) {
+            Some((at, entry)) => facts.features.has(self.features[at].id) && (entry.shown)(facts, cx),
+            None => self.legacy_tab_offered(tab, cx),
+        }
+    }
+
+    /// The window's actions for the table's tabs and its features' own, bound on `root`: every
+    /// offered tab's action shows the tab, then each feature's `bind` adds the rest.
+    pub(in crate::window) fn bind_features(&self, mut root: Root, cx: &mut Context<Self>) -> Root {
+        let facts = self.facts(cx);
+        let this = cx.weak_entity();
+        for (at, def) in self.features.iter().enumerate() {
+            if !facts.features.has(def.id) {
+                continue;
+            }
+            for tab in def.tabs {
+                let Some(action) = gpui_action(tab.action).filter(|_| (tab.shown)(&facts, cx)) else {
+                    continue;
+                };
+                let (this, id) = (this.clone(), tab.id);
+                root = root.on_boxed_action(&*action, move |_, _, cx| {
+                    this.update(cx, |this, cx| this.show_tab(id, cx)).ok();
+                });
+            }
+            if let (Some(bind), Some(entity)) = (def.bind, self.feature_entity(at)) {
+                root = bind(entity, &facts, root, cx);
+            }
+        }
+        root
     }
 
     /// Lets every feature with a `menu` hook say what it hides or disables, whether it is on or off:

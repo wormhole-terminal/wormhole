@@ -14,6 +14,7 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 use super::{activation, list_key};
 use crate::settings::UiColors;
 use crate::window::Workspace;
+use crate::window::feature::WalkFns;
 use wormhole_core::config::TabId;
 
 /// How an item is pressed: ↩ or Space.
@@ -30,20 +31,30 @@ pub(in crate::window) struct Walkable {
 }
 
 impl Workspace {
+    /// How the tab on show is walked and the entity that walks it, if its feature is in the table
+    /// and the tab has a list.
+    fn walker(&self) -> Option<(&'static WalkFns, &AnyEntity)> {
+        let (at, tab) = self.tab_entry(self.right_tab)?;
+        Some((tab.walk.as_ref()?, self.feature_entity(at)?))
+    }
+
     /// The rows of the tab on show that the keys can be on.
-    fn panel_walkable(&self) -> Vec<Walkable> {
+    fn panel_walkable(&self, cx: &App) -> Vec<Walkable> {
+        if let Some((walk, entity)) = self.walker() {
+            return (walk.walkable)(entity, &self.facts(cx), cx);
+        }
         match self.right_tab {
             TabId::Notes => self.notes_walkable(),
-            TabId::Changes => self.changes_walkable(),
             TabId::History => self.history_walkable(),
-            TabId::Project | TabId::Usage => Vec::new(),
+            // Changes is walked through the table; Project and Usage have no list.
+            TabId::Changes | TabId::Project | TabId::Usage => Vec::new(),
         }
     }
 
     /// Where each of the tab's lists starts, as indices into its walkable rows: one ⇥ stop per
     /// section (a tab without bands is one list).
-    pub(super) fn panel_lists(&self, _: &App) -> Vec<usize> {
-        let rows = self.panel_walkable();
+    pub(in crate::window) fn panel_lists(&self, cx: &App) -> Vec<usize> {
+        let rows = self.panel_walkable(cx);
         let mut starts: Vec<usize> =
             rows.iter().enumerate().filter(|(_, w)| w.band).map(|(ix, _)| ix).collect();
         if starts.first() != Some(&0) && !rows.is_empty() {
@@ -64,7 +75,7 @@ impl Workspace {
 
     /// Which of the tab's lists the cursor is in.
     pub(super) fn panel_list_at(&self, cx: &App) -> usize {
-        let rows = self.panel_walkable();
+        let rows = self.panel_walkable(cx);
         let Some(at) = self.panel_cursor(&rows) else { return 0 };
         self.panel_lists(cx).iter().rposition(|&start| start <= at).unwrap_or(0)
     }
@@ -72,7 +83,7 @@ impl Workspace {
     /// Coming into the panel's `index`th list (`usize::MAX`: the last): the cursor on its first
     /// row, unless it is already in that list.
     pub(super) fn enter_panel_list(&mut self, index: usize, cx: &App) {
-        let rows = self.panel_walkable();
+        let rows = self.panel_walkable(cx);
         let lists = self.panel_lists(cx);
         let Some(&start) = lists.get(index.min(lists.len().saturating_sub(1))) else {
             self.areas.panel_at = None;
@@ -82,16 +93,16 @@ impl Workspace {
             return;
         }
         self.areas.panel_at = Some((self.right_tab, rows[start].row));
-        self.panel_reveal(rows[start].row);
+        self.panel_reveal(rows[start].row, cx);
     }
 
-    pub(super) fn panel_key(
+    pub(in crate::window) fn panel_key(
         &mut self,
         keystroke: &Keystroke,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        let rows = self.panel_walkable();
+        let rows = self.panel_walkable(cx);
         let at = self.panel_cursor(&rows);
         if let Some(key) = list_key(keystroke) {
             let items: Vec<Item> = rows.iter().map(|w| w.item).collect();
@@ -99,7 +110,7 @@ impl Workspace {
                 Move::To(ix) => {
                     let row = rows[ix].row;
                     self.areas.panel_at = Some((self.right_tab, row));
-                    self.panel_reveal(row);
+                    self.panel_reveal(row, cx);
                     // A diff that is open follows the keys, file to file.
                     if self.diff_view.is_some() {
                         self.panel_press(row, Activate::Return, true, window, cx);
@@ -134,11 +145,16 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let keeps = match self.right_tab {
-            TabId::Notes if !following => self.notes_press(row, press, window, cx),
-            TabId::Changes => self.changes_press(row, following, cx),
-            TabId::History => self.history_press(row, following, cx),
-            TabId::Notes | TabId::Project | TabId::Usage => true,
+        let keeps = match self.walker().map(|(walk, entity)| (walk, entity.clone())) {
+            Some((walk, entity)) => {
+                let session = self.active_session().id;
+                (walk.press)(&entity, self, session, row, press, following, window, cx)
+            }
+            None => match self.right_tab {
+                TabId::Notes if !following => self.notes_press(row, press, window, cx),
+                TabId::History => self.history_press(row, following, cx),
+                TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => true,
+            },
         };
         if keeps {
             self.refocus(Area::PanelContent, window, cx);
@@ -147,21 +163,28 @@ impl Workspace {
 
     /// Fold or open the row at `row` (a section, a folder, a commit's files, the done steps).
     fn panel_fold(&mut self, row: usize, cx: &mut Context<Self>) {
+        if let Some((walk, entity)) = self.walker().map(|(walk, entity)| (walk, entity.clone())) {
+            let session = self.active_session().id;
+            (walk.fold)(&entity, self, session, row, cx);
+            return;
+        }
         match self.right_tab {
             TabId::Notes => self.notes_fold(row, cx),
-            TabId::Changes => self.changes_fold(row, cx),
             TabId::History => self.history_fold(row, cx),
-            TabId::Project | TabId::Usage => {}
+            TabId::Changes | TabId::Project | TabId::Usage => {}
         }
     }
 
     /// Scroll the tab's list to show row `row`.
-    fn panel_reveal(&self, row: usize) {
+    fn panel_reveal(&self, row: usize, cx: &App) {
+        if let Some((walk, entity)) = self.walker() {
+            (walk.reveal)(entity, &self.facts(cx), row, cx);
+            return;
+        }
         match self.right_tab {
             TabId::Notes => self.notes_reveal(row),
-            TabId::Changes => self.changes_reveal(row),
             TabId::History => self.history_reveal(row),
-            TabId::Project | TabId::Usage => {}
+            TabId::Changes | TabId::Project | TabId::Usage => {}
         }
     }
 

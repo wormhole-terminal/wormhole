@@ -29,8 +29,10 @@ use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel as rules;
 use wormhole_core::view::spoken;
 
+mod entry;
 mod rows;
 
+pub(in crate::window) use entry::DEF;
 #[cfg(test)]
 use rows::build_tree;
 pub(super) use rows::display_order;
