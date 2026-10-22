@@ -34,22 +34,6 @@
         "src/workspace/"
       ]
     },
-    "bucket_names": [
-      "text",
-      "utils",
-      "util",
-      "misc",
-      "helpers",
-      "helper",
-      "common"
-    ],
-    "size": {
-      "warn": 600,
-      "fail": 1000
-    },
-    "track_dirs": [
-      "crates/wormhole/src/workspace"
-    ],
     "layers": {
       "wormhole": [
         [
@@ -78,7 +62,23 @@
         "workspace",
         "devctl"
       ]
-    }
+    },
+    "bucket_names": [
+      "text",
+      "utils",
+      "util",
+      "misc",
+      "helpers",
+      "helper",
+      "common"
+    ],
+    "size": {
+      "warn": 600,
+      "fail": 1000
+    },
+    "track_dirs": [
+      "crates/wormhole/src/workspace"
+    ]
   },
   "allowlist": {
     "file-size": {
@@ -221,7 +221,6 @@
     "orphans": {},
     "glob-imports": {},
     "cycles": {
-      "wormhole-core: agents -> terminal": 1,
       "wormhole-core: cli_tool -> ipc": 1,
       "wormhole-core: cli_tool -> shells": 1,
       "wormhole-core: cli_tool -> store": 1,
@@ -230,16 +229,13 @@
       "wormhole-core: fonts -> config": 1,
       "wormhole-core: fonts -> store": 1,
       "wormhole-core: hosts -> ipc": 1,
-      "wormhole-core: ipc -> agents": 1,
       "wormhole-core: ipc -> config": 1,
       "wormhole-core: ipc -> hosts": 1,
       "wormhole-core: ipc -> notify": 1,
       "wormhole-core: ipc -> store": 1,
       "wormhole-core: ipc -> terminal": 1,
-      "wormhole-core: ipc -> usage": 1,
       "wormhole-core: notify -> config": 1,
       "wormhole-core: notify -> spoken": 1,
-      "wormhole-core: profile -> agents": 1,
       "wormhole-core: profile -> store": 1,
       "wormhole-core: shells -> config": 1,
       "wormhole-core: spoken -> terminal": 1,
@@ -250,8 +246,6 @@
       "wormhole-core: terminal -> profile": 1,
       "wormhole-core: terminal -> shells": 1,
       "wormhole-core: terminal -> welcome": 1,
-      "wormhole-core: usage -> agents": 1,
-      "wormhole-core: welcome -> agents": 1,
       "wormhole-core: welcome -> config": 1,
       "wormhole-core: welcome -> ipc": 1,
       "wormhole-core: welcome -> shells": 1,
@@ -260,8 +254,8 @@
       "wormhole-wire: history -> stream": 1,
       "wormhole-wire: stream -> header": 1
     },
+    "layers": {},
     "cross-reexports": {
-      "crates/wormhole-core/src/agents/mod.rs :: crate::terminal": 1,
       "crates/wormhole-core/src/cli_tool/mod.rs :: crate::ipc": 1,
       "crates/wormhole-core/src/tokens/mod.rs :: crate::color": 1,
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
