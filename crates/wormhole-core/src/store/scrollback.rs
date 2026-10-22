@@ -32,6 +32,17 @@ impl Store {
         tx.commit()?;
         Ok(written)
     }
+
+    /// Forget one terminal's saved text now (the user cleared it with ⌘K), and take it off the disk
+    /// (`secure_delete`, then a checkpoint) rather than leave it until the next minute's save
+    /// overwrites it. The next save stores what the terminal shows from then on.
+    pub fn clear_scrollback(&self, tab_id: i64) -> Result<()> {
+        let removed = super::exec(&self.conn, "DELETE FROM scrollback WHERE tab_id = ?1", [tab_id])?;
+        if removed > 0 {
+            self.checkpoint()?;
+        }
+        Ok(())
+    }
 }
 
 /// Whether anything was written. The caller provides the transaction (or the autocommit).

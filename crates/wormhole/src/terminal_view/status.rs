@@ -60,6 +60,8 @@ pub enum TerminalEvent {
     /// The session host it runs in changed: it fell back to the app's process, or the host went
     /// away. Its row is saved again, with the host it has now.
     HostChanged,
+    /// The user cleared the terminal (⌘K): its saved text goes from the database too, at once.
+    Cleared,
 }
 
 impl TerminalView {

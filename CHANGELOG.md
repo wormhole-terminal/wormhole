@@ -44,6 +44,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   closed, the text was deleted from the database but its bytes stayed in the file's free space and
   in its journal, where any program on your Mac could read them, along with whatever secrets were
   printed. Deleted text is now overwritten and the journal emptied.
+- **Low** · no advisory · affects 0.1.0–1.2.0: clearing a terminal with ⌘K left the saved copy of its
+  text on disk for up to a minute, so a secret you cleared right away could still come back after a
+  restart or be read from the file. Clearing now erases the saved copy at once.
 
 ## [1.2.0] - 2026-10-22
 

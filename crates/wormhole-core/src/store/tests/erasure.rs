@@ -56,3 +56,23 @@ fn deleted_rows_are_overwritten() {
     let store = Store::open_at(&dir).expect("opens");
     assert_eq!(count(&store, "PRAGMA secure_delete"), 1);
 }
+
+#[test]
+fn clearing_a_terminal_erases_its_saved_text_at_once() {
+    let dir = temp_dir("erase-cleared");
+    let mut store = Store::open_at(&dir).expect("opens");
+    store.save_window(&window(1, vec![session(1, "/a"), session(2, "/b")])).expect("saves");
+    store.save_scrollbacks(&[(1, scrollback_with_marker()), (2, "other text".into())]).expect("saves");
+    store.checkpoint().expect("checkpoint");
+
+    store.clear_scrollback(1).expect("clears");
+    assert_eq!(on_disk(&dir, MARKER), Vec::<String>::new());
+    let loaded = store.load().expect("loads");
+    assert_eq!(loaded[0].sessions[0].scrollback, None, "nothing comes back after a restart");
+    assert_eq!(loaded[0].sessions[1].scrollback.as_deref(), Some("other text"), "only that terminal's");
+    // The next save stores what the terminal shows now.
+    assert_eq!(store.save_scrollbacks(&[(1, "$ ")]).expect("saves"), 1);
+    assert_eq!(store.load().expect("loads")[0].sessions[0].scrollback.as_deref(), Some("$ "));
+    // A terminal with nothing saved is no error.
+    store.clear_scrollback(99).expect("clears nothing");
+}

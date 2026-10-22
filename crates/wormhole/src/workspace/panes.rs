@@ -74,6 +74,14 @@ impl Workspace {
             TerminalEvent::SummaryChanged => {}
             // Its row names the host it has now (none, after a fallback or a lost host).
             TerminalEvent::HostChanged => self.dirty = true,
+            // Not left for the next minute's save: what was cleared may have been a secret.
+            TerminalEvent::Cleared => {
+                if let Some(store) = app(cx).store_of(&self.profile)
+                    && let Err(err) = store.clear_scrollback(id)
+                {
+                    tracing::warn!("clearing terminal {id}'s saved text failed: {err:#}");
+                }
+            }
             // The workspace draws the find bar.
             TerminalEvent::FindChanged => cx.notify(),
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),

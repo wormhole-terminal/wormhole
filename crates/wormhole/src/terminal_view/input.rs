@@ -210,6 +210,7 @@ impl TerminalView {
                 }
                 // Ask the shell to redraw a clean prompt.
                 self.write_input(b"\x0c".to_vec());
+                cx.emit(TerminalEvent::Cleared);
             }
             TerminalCommand::Send(bytes) => self.write_input(bytes.to_vec()),
             TerminalCommand::Prompt(direction) => self.jump_prompt(direction, cx),
