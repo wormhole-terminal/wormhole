@@ -16,6 +16,8 @@ pub(in crate::window) mod items;
 #[cfg(test)]
 mod note_tests;
 pub(in crate::window) mod paragraphs;
+#[cfg(test)]
+mod state_tests;
 pub(in crate::window) mod tasks;
 mod view;
 
