@@ -32,7 +32,8 @@ crates/<crate>/src, tests included:
                     and so does a top-level module the list leaves out (`crate: unplaced x`) or names but the
                     crate doesn't have (`crate: no module x`). Edges as the cycles rule reads them
   cross-reexports   `pub use crate::B::...` in a file of another module A (modules as the cycles rule has them)
-  impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate)
+  impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate); the
+                    `pending` folders inside a home are not exempt: their blocks are counted in the allowlist
 
 Why a script that reads text: it runs in a second without building anything (tests only run on CI
 here), so check.sh can call it first and every phase of the restructuring has a number that goes to
@@ -899,7 +900,9 @@ def rule_impl_outside(crate: Crate, cfg: dict, found: Findings) -> None:
         return
     rx = impl_regex(conf["types"])
     for rel, src in crate.files.items():
-        if under(rel, conf["homes"]):
+        # A pending area is inside a home but still counted: its blocks are in the allowlist, which only
+        # shrinks, until the area has state of its own.
+        if under(rel, conf["homes"]) and not under(rel, conf.get("pending", [])):
             continue
         for m in scan(rx, src.clean):
             _add(found, "%s :: impl %s" % (src.rel, m.group(1)), crate.name, src.at(m.start()))
@@ -1470,6 +1473,16 @@ def selftest() -> int:
             "crates/lib/src/lib.rs": "impl Workspace {}\n"})
         expect("impl-outside", {k: it.count for k, it in an.found["impl-outside"].items()},
                {"crates/app/src/other.rs :: impl Workspace": 2, "crates/app/src/other.rs :: impl Session": 2})
+        an = make({
+            "crates/app/src/main.rs": "mod window;\n",
+            "crates/app/src/window/mod.rs": "impl Workspace {}\n",
+            "crates/app/src/window/area/mod.rs": "impl Workspace {}\nimpl Workspace {}\nimpl Session {}\n",
+            "crates/app/src/window/other.rs": "impl Workspace {}\n"},
+            dict(_fixture_cfg(), impl_outside=dict(_fixture_cfg()["impl_outside"], pending=["src/window/area/"])))
+        expect("impl-outside pending areas stay counted inside the home",
+               {k: it.count for k, it in an.found["impl-outside"].items()},
+               {"crates/app/src/window/area/mod.rs :: impl Workspace": 2,
+                "crates/app/src/window/area/mod.rs :: impl Session": 1})
 
         # file size: over 10 fails, over 5 is counted.
         an = make({"crates/app/src/main.rs": "mod a;\nmod b;\nmod c;\n", "crates/app/src/a.rs": "x\n" * 11,

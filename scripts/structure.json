@@ -32,6 +32,11 @@
       ],
       "homes": [
         "src/window/"
+      ],
+      "pending": [
+        "src/window/sidebar/",
+        "src/window/onboarding/",
+        "src/window/features/"
       ]
     },
     "layers": {
@@ -338,6 +343,59 @@
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
-    "impl-outside": {}
+    "impl-outside": {
+      "crates/wormhole/src/window/features/git/changes.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/header.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/load.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/mod.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/notes.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/render.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/review.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/diff/submodule.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/history.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/history/keys.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/picker.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/problem.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/git/worktree.rs :: impl Workspace": 2,
+      "crates/wormhole/src/window/features/notes/items.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/notes/mod.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/notes/tasks.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/notes/view.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/actions.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/create.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/detect.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/notes_sync.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/panel.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/trust.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/project/trust_window.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/features/usage.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/look_step.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/mod.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/page.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/steps.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/onboarding/welcome/mod.rs :: impl Workspace": 2,
+      "crates/wormhole/src/window/onboarding/welcome_page.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/demo.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/drag.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/facts.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/group_actions.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/group_head.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/group_popover.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/groups.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/hints.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/keys.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/mod.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/motion.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/profile_chip.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/rename.rs :: impl Workspace": 2,
+      "crates/wormhole/src/window/sidebar/row_menu.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/rows.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/shells.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/switcher.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/tab_bar.rs :: impl Workspace": 1,
+      "crates/wormhole/src/window/sidebar/tick.rs :: impl Workspace": 1
+    }
   }
 }
