@@ -1,6 +1,7 @@
 //! The wormhole intro: an effect over the whole screen around a window the first time Wormhole
-//! opens, and again from About. The styles and their timing are `wormhole_core::intro`; the overlay window and the
-//! shader are the platform's (`platform::intro`). One plays at a time: a new one replaces the one playing.
+//! opens, and again from About. The styles and their timing are `wormhole_core::intro`; the overlay
+//! window and the shader are the platform's (`platform::intro`). One plays at a time: a new one
+//! replaces the one playing.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -145,7 +146,6 @@ fn start(
     let setup = Setup {
         style,
         colors,
-        immersive: !crate::background::on(),
         start: options.start,
         lights: options.lights,
         ship: options.handover.is_none_or(|handover| handover.ship()),

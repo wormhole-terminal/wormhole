@@ -157,6 +157,8 @@ impl Workspace {
 
 /// Show a terminal's folder in the Finder, selected in its parent (also Terminal → Reveal in
 /// Finder).
+// GPUI's test platform panics on `reveal_path` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
+// test that clicks this needs a stand-in first.
 pub(in crate::workspace) fn reveal_in_finder(path: &Path, cx: &App) {
     cx.reveal_path(path);
 }

@@ -739,6 +739,8 @@ pub(crate) fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
 
 /// Show one of our folders in the Finder (the icon themes, the fonts),
 /// creating it first so there's somewhere to drop files.
+// GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
+// test that clicks this needs a stand-in first.
 fn open_folder(dir: &Path, cx: &App) {
     match wormhole_core::fsutil::create_dir_all_private(dir) {
         Ok(()) => cx.open_with_system(dir),

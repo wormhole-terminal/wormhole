@@ -1,7 +1,8 @@
 //! The menu bar as text, to hold against the menus' spec: what the system has where it has a native
 //! menu bar (`platform::inspect`: titles, the key equivalents GPUI gave the items from the
-//! bindings, check marks, and what the system adds); elsewhere the model the menus were built from. And the About and Licenses windows the
-//! Wormhole menu opens, the command palette and the keyboard-shortcuts sheet.
+//! bindings, check marks, and what the system adds); elsewhere the model the menus were built from.
+//! And the About and Licenses windows the Wormhole menu opens, the command palette and the
+//! keyboard-shortcuts sheet.
 
 use anyhow::Result;
 use gpui_kit::{Bounds, point, px, size};

@@ -5,14 +5,14 @@
 //! The rules are core's (`wormhole_core::notify`). Every tick (and right after an agent's
 //! hook) [`sweep`] reads every tab of every window, `watch` turns what changed into events, and
 //! the rules decide. Banners go out by one of these routes:
-//! - the bundled app: the system's notification centre (`platform::notifications`), with interruption levels (Time
-//!   Sensitive for "needs you" when the build is entitled to it), a thread per terminal, sound,
-//!   and the Open / Reply… / Show Changes actions;
+//! - the bundled app: the system's notification centre (`platform::notifications`), with
+//!   interruption levels (Time Sensitive for "needs you" when the build is entitled to it), a
+//!   thread per terminal, sound, and the Open / Reply… / Show Changes actions;
 //! - a dev build (`cargo run`) has no bundle, and the notification center would abort the
 //!   process: the platform's script instead, without actions or levels;
-//! - tests, and a system without notifications of its own: GPUI's. devctl builds can ask for `WORMHOLE_NOTIFY=log`, which keeps
-//!   them in a list instead of posting anything; a test instance in background mode does that
-//!   unless `WORMHOLE_NOTIFY` says otherwise.
+//! - tests, and a system without notifications of its own: GPUI's. devctl builds can ask for
+//!   `WORMHOLE_NOTIFY=log`, which keeps them in a list instead of posting anything; a test
+//!   instance in background mode does that unless `WORMHOLE_NOTIFY` says otherwise.
 //!
 //! One notification per tab: a newer one replaces the older, and looking at the tab (or the
 //! agent moving on) takes it down.
@@ -147,7 +147,8 @@ pub(crate) fn init(cx: &mut App) {
     if route == Route::Gpui {
         // GPUI keeps one response handler for the whole app (GPUI Component installs its own in
         // `gpui_kit::init`); this replaces it, which is harmless while nothing posts a Component
-        // notification with system delivery. The bundled app uses its own delegate (`platform::notifications::Center`).
+        // notification with system delivery. The bundled app uses its own delegate
+        // (`platform::notifications::Center`).
         cx.on_system_notification_response(|response, cx| {
             let action = response.action_id.map(|id| id.to_string());
             respond(Response { id: response.tag.to_string(), action, reply: None }, cx);

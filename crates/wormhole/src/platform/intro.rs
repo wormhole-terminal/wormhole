@@ -3,6 +3,9 @@
 //! its windows and has no custom shaders, so this is the platform's. When it plays, how long, the
 //! skip and the hand-over are the intro's (`crate::intro`); the styles and their timing core's.
 //!
+//! The overlay covers the whole screen, menu bar and Dock included, except in background mode,
+//! where it sits just above its window, behind the other apps' windows like the instance.
+//!
 //! An [`Overlay`] is the intro on screen: making one starts it, [`Overlay::frame`] draws each
 //! frame, and dropping it closes it and puts the window back. Where there is no overlay to make
 //! (a system without one, or a window without a native view), `Overlay::new` answers `None` and
@@ -18,9 +21,6 @@ pub struct Setup {
     pub style: Style,
     /// The theme's primary and info colours and its terminal magenta, as RGBA.
     pub colors: [[f32; 4]; 3],
-    /// Above everything, menu bar and Dock included; when not (test instances kept behind other
-    /// apps), just above the window.
-    pub immersive: bool,
     /// Whether the window was showing as the intro began.
     pub start: Start,
     /// Whether the traffic lights fade away as the run begins (a replay over a showing window).

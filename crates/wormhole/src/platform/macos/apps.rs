@@ -75,6 +75,8 @@ pub fn command(bundle: &str, launch: Launch) -> Option<Command> {
     Some(match launch {
         Launch::Open { path } => in_app(&path),
         Launch::Url { url } => in_app(&url),
+        // Finder as the chosen app: `open -R` like the others, so every launch is a process to start
+        // (GPUI's `reveal_path` would need the app here, and does the same through NSWorkspace).
         Launch::Reveal { path } => {
             let mut cmd = open();
             cmd.arg("-R").arg(path);

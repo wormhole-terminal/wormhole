@@ -248,6 +248,8 @@ impl Workspace {
     }
 
     /// Show the open diff's file in the Finder (the card of a diff too large to load).
+    // GPUI's test platform panics on `reveal_path` (gpui-pre 0.3.9, `platform/test/platform.rs`), so
+    // a view test that clicks this needs a stand-in first.
     pub(crate) fn reveal_diff_file(&mut self, cx: &App) {
         let Some(path) = self.diff_view.as_ref().and_then(DiffView::on_disk) else { return };
         cx.reveal_path(&path);

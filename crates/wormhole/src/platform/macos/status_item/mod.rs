@@ -146,7 +146,8 @@ pub struct MenuBar {
 impl MenuBar {
     /// Create the status item (main thread only; returns `None` elsewhere). Commands are sent
     /// on `tx` from the main thread when the user picks a menu item.
-    pub fn install(tx: Sender<MenuCommand>) -> Option<Self> {
+    /// Only `platform::status_item::install` calls it, which keeps background mode out.
+    pub(in crate::platform) fn install(tx: Sender<MenuCommand>) -> Option<Self> {
         let Some(mtm) = MainThreadMarker::new() else {
             tracing::warn!("MenuBar::install called off the main thread");
             return None;

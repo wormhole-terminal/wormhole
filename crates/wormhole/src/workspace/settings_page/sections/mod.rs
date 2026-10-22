@@ -173,6 +173,8 @@ pub(super) fn open_in_editor(path: &Path) {
 }
 
 /// Show a folder in the Finder.
+// GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
+// test that clicks this needs a stand-in first.
 fn reveal(path: &Path, cx: &App) {
     cx.open_with_system(path);
 }

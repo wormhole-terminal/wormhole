@@ -1,9 +1,10 @@
-//! AppKit's and Metal's side of `platform::intro`: a borderless, click-through window over the whole screen the app
-//! window is on, above the menu bar and the Dock, whose content is a `CAMetalLayer` that
-//! `shader/` draws into every frame. GPUI draws only inside a window and has no custom shaders,
-//! so space around the window needs a window of its own; the shader leaves the app window's own
-//! rectangle clear, so it shows through. While Emerge and Collapse play, the app window's layers
-//! are scaled about its centre and the window faded in; dropping the [`Overlay`] puts both back.
+//! AppKit's and Metal's side of `platform::intro`: a borderless, click-through window over the
+//! whole screen the app window is on, above the menu bar and the Dock, whose content is a
+//! `CAMetalLayer` that `shader/` draws into every frame. GPUI draws only inside a window and has no
+//! custom shaders, so space around the window needs a window of its own; the shader leaves the app
+//! window's own rectangle clear, so it shows through. While Emerge and Collapse play, the app
+//! window's layers are scaled about its centre and the window faded in; dropping the [`Overlay`]
+//! puts both back.
 
 use std::cell::Cell;
 use std::ffi::c_void;
@@ -317,7 +318,7 @@ pub struct Overlay {
 }
 
 impl Overlay {
-    /// Put an overlay over the screen of `window`: above everything, or, when not `immersive` (test
+    /// Put an overlay over the screen of `window`: above everything, or, in background mode (test
     /// instances kept behind other apps), just above that window. `None`: the window has no
     /// native view to put it over.
     pub fn new(window: &Window, setup: Setup, landing: Rc<Cell<Option<[f32; 3]>>>) -> Result<Option<Self>> {
@@ -327,7 +328,8 @@ impl Overlay {
 
     #[allow(unsafe_code)] // AppKit interop; see the SAFETY notes below.
     fn over(view: &NSView, setup: Setup, landing: Rc<Cell<Option<[f32; 3]>>>) -> Result<Self> {
-        let Setup { style, colors, immersive, start, lights, ship } = setup;
+        let Setup { style, colors, start, lights, ship } = setup;
+        let immersive = !crate::platform::background_mode::on();
         let mtm = MainThreadMarker::new().context("not on the main thread")?;
         let parent = view.window().context("the view has no window")?;
         let renderer = Renderer::new()?;

@@ -446,6 +446,8 @@ fn login_row(
 }
 
 /// Select a file in the Finder.
+// GPUI's test platform panics on `reveal_path` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
+// test that clicks this needs a stand-in first.
 fn reveal_file(path: &Path, cx: &App) {
     cx.reveal_path(path);
 }

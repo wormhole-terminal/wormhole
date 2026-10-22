@@ -7,7 +7,7 @@ use crate::menubar::{MenuCommand, MenuSnapshot};
 pub struct MenuBar;
 
 impl MenuBar {
-    pub fn install(_tx: Sender<MenuCommand>) -> Option<Self> {
+    pub(in crate::platform) fn install(_tx: Sender<MenuCommand>) -> Option<Self> {
         None
     }
 
