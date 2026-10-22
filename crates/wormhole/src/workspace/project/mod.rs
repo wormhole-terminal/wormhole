@@ -89,7 +89,7 @@ pub(crate) struct LoadedProject {
 impl ProjectHub {
     #[cfg(test)]
     pub fn load() -> Self {
-        Self::load_from(&wormhole_core::store::data_dir())
+        Self::load_from(&wormhole_core::profile::data_dir())
     }
 
     pub(crate) fn load_from(dir: &Path) -> Self {

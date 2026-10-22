@@ -150,7 +150,7 @@ fn put(path: &Path, script: &str) -> Result<bool, Error> {
 
 /// The folder Wormhole's own terminals get: `<data dir>/bin`.
 pub fn private_dir() -> PathBuf {
-    crate::store::data_dir().join("bin")
+    crate::profile::data_dir().join("bin")
 }
 
 /// Make the copy in [`private_dir`] the script for `binary` (the running app), rewriting it only

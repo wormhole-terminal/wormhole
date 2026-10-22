@@ -6,8 +6,8 @@ use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
+use wormhole_core::profile::data_dir;
 use wormhole_core::settings_index::Values;
-use wormhole_core::store::data_dir;
 
 use super::{open_button, open_in_editor, reveal};
 use crate::settings::{Settings, SettingsStore};

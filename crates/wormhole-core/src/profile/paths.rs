@@ -4,6 +4,20 @@ use std::path::{Path, PathBuf};
 
 use super::model::ProfileId;
 
+/// The running app's data folder: `Wormhole` in Application Support, or the folder
+/// `WORMHOLE_DATA_DIR` names (used for isolated test runs).
+pub fn data_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("WORMHOLE_DATA_DIR") {
+        return PathBuf::from(dir);
+    }
+    dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
+}
+
+/// The data folder's name in Application Support.
+pub(crate) fn data_dir_name() -> &'static str {
+    "Wormhole"
+}
+
 /// The data folder as a whole. Its own files are shared by every profile; a profile's files are in
 /// [`ProfilePaths`].
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,7 +32,7 @@ impl DataRoot {
 
     /// The running app's data folder (`WORMHOLE_DATA_DIR` overrides it, as it does everywhere).
     pub fn current() -> Self {
-        Self::new(crate::store::data_dir())
+        Self::new(data_dir())
     }
 
     pub fn base(&self) -> &Path {

@@ -28,15 +28,8 @@ use rusqlite::{Connection, OptionalExtension};
 
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
 
+use crate::profile::{data_dir, data_dir_name};
 use saved_text::platform::{self, Platform};
-
-/// `WORMHOLE_DATA_DIR` overrides the location (used for isolated test runs).
-pub fn data_dir() -> PathBuf {
-    if let Some(dir) = std::env::var_os("WORMHOLE_DATA_DIR") {
-        return PathBuf::from(dir);
-    }
-    dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
-}
 
 /// Make Wormhole's files and folders in its data folder owner-only (folders `0700`, files `0600`),
 /// for what an earlier version made with the umask's modes and what a library made since (the
@@ -121,11 +114,6 @@ fn migrate_legacy_data_in(base: &Path) -> Result<Option<PathBuf>> {
         }
     }
     Ok(Some(new))
-}
-
-/// The data folder's name in Application Support.
-fn data_dir_name() -> &'static str {
-    "Wormhole"
 }
 
 pub struct Store {

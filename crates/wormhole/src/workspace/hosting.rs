@@ -27,7 +27,7 @@ fn host_binary() -> Option<&'static PathBuf> {
 /// The hosts this data folder has at launch, matched against what every profile's database names:
 /// one scan, before any window opens. `live` is the shown profile's open database.
 pub(super) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Option<&Store>) -> LaunchHosts {
-    let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::store::data_dir())) {
+    let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::profile::data_dir())) {
         Ok(scan) => scan.live,
         Err(err) => {
             tracing::warn!("couldn't look for running session hosts: {err}");
@@ -116,7 +116,9 @@ impl Workspace {
         }
         let Some(binary) = host_binary() else { return Start::Local };
         match hosts::new_host_id() {
-            Ok(id) => Start::Host { binary: binary.clone(), data_dir: wormhole_core::store::data_dir(), id },
+            Ok(id) => {
+                Start::Host { binary: binary.clone(), data_dir: wormhole_core::profile::data_dir(), id }
+            }
             Err(err) => {
                 tracing::warn!("no id for a session host, the terminal runs in the app: {err}");
                 Start::Local

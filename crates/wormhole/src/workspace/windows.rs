@@ -336,7 +336,7 @@ fn finish_quit(cx: &mut App, end_hosts: bool) {
     // way out included, and nothing starts a new one (`quitting`).
     app_mut(cx).ending_hosts = true;
     super::app::save_all(cx);
-    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::store::data_dir());
+    let hosts_dir = wormhole_core::hosts::hosts_dir(&wormhole_core::profile::data_dir());
     let ending = cx
         .background_executor()
         .spawn(async move { wormhole_core::hosts::end_all_live(&hosts_dir, END_HOSTS_WAIT) });

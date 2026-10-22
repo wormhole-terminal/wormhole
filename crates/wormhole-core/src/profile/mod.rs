@@ -30,4 +30,5 @@ pub use model::{
     AgentLogin, DEFAULT_ID, GitIdentity, PROFILE_VAR, Profile, ProfileError, ProfileId, first_letter,
     login_env_var,
 };
-pub use paths::{DataRoot, ProfilePaths};
+pub(crate) use paths::data_dir_name;
+pub use paths::{DataRoot, ProfilePaths, data_dir};
