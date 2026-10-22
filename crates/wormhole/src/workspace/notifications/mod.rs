@@ -52,25 +52,37 @@ enum Route {
     /// GPUI's notifications: tests, and a system without notifications of its own.
     Gpui,
     /// devctl: kept in [`Notifier::log`], never posted.
-    #[cfg_attr(not(feature = "devctl"), allow(dead_code))]
     Log,
     #[default]
     Off,
 }
 
 fn route() -> Route {
-    if cfg!(test) {
-        return Route::Gpui;
-    }
     #[cfg(feature = "devctl")]
-    if logs(std::env::var("WORMHOLE_NOTIFY").ok().as_deref(), crate::background::on()) {
-        return Route::Log;
-    }
+    let logs = logs(std::env::var("WORMHOLE_NOTIFY").ok().as_deref(), crate::background::on());
+    #[cfg(not(feature = "devctl"))]
+    let logs = false;
+    route_for(cfg!(test), logs, system::available(), current_app_bundle().is_some())
+}
+
+/// The route for a run: a test is GPUI's test platform, devctl's log wins next, and a system with
+/// notifications of its own posts through them (the centre in a bundle, the script without one).
+/// GPUI's notifications are only for the rest: its macOS centre installs a delegate of its own,
+/// which would take the bundled centre's replies away.
+fn route_for(test: bool, logs: bool, available: bool, bundled: bool) -> Route {
     match () {
-        _ if !system::available() => Route::Gpui,
-        _ if current_app_bundle().is_some() => Route::Center,
+        _ if test => Route::Gpui,
+        _ if logs => Route::Log,
+        _ if !available => Route::Gpui,
+        _ if bundled => Route::Center,
         _ => Route::Script,
     }
+}
+
+/// The route once the centre has been opened (or not): a bundle whose centre can't be had falls
+/// back to the script, never to GPUI.
+fn settled(route: Route, center_opened: bool) -> Route {
+    if route == Route::Center && !center_opened { Route::Script } else { route }
 }
 
 /// devctl builds: whether notifications go to the log (`notify-log`) and nowhere else.
@@ -119,7 +131,7 @@ pub(crate) fn init(cx: &mut App) {
     let (tx, rx) = smol::channel::unbounded();
     let route = route();
     let center = (route == Route::Center).then(|| Center::open(tx.clone(), actions)).flatten();
-    let route = if route == Route::Center && center.is_none() { Route::Script } else { route };
+    let route = settled(route, center.is_some());
     let permission = match route {
         Route::Center => Permission::Checking,
         _ => Permission::OutsideBundle,
@@ -627,7 +639,11 @@ mod tests {
     use gpui_kit::{SystemNotificationResponse, TestAppContext};
     use wormhole_core::notify::{Kind, Level, Source, State};
 
-    use super::{Category, Happened, Notice, category, dismiss, init, logs, post, spoken_words, tag};
+    use super::{
+        Category, Happened, Notice, Route, actions, category, dismiss, init, logs, post, route_for, settled,
+        spoken_words, tag,
+    };
+    use crate::platform::notifications::ButtonKind;
     use crate::terminal_view::Failure;
     use crate::workspace::ambient::TabFacts;
 
@@ -723,6 +739,35 @@ mod tests {
         assert_eq!(happened.text().title, "build failed");
         assert_eq!(happened.text().body, "Error: no such formula");
         assert_eq!(spoken_words(Kind::AgentFailed, &brew).as_deref(), Some("Error: no such formula"));
+    }
+
+    /// The bundled app always posts through the system's centre and never through GPUI, whose
+    /// macOS centre would replace the delegate the replies arrive at.
+    #[test]
+    fn the_bundled_app_never_routes_through_gpui() {
+        assert_eq!(route_for(false, false, true, true), Route::Center);
+        assert_eq!(route_for(false, false, true, false), Route::Script, "no bundle: the script");
+        assert_eq!(route_for(false, false, false, true), Route::Gpui, "no notifications of the system's own");
+        assert_eq!(route_for(false, false, false, false), Route::Gpui);
+        assert_eq!(route_for(true, false, true, true), Route::Gpui, "a test");
+        assert_eq!(route_for(false, true, true, true), Route::Log, "devctl's log");
+        assert_eq!(settled(Route::Center, true), Route::Center);
+        assert_eq!(settled(Route::Center, false), Route::Script, "a centre that can't be had: the script");
+        assert_eq!(settled(Route::Gpui, false), Route::Gpui);
+    }
+
+    #[test]
+    fn reply_is_a_text_field_and_open_and_show_changes_bring_the_app_forward() {
+        let kinds = |category| actions(category).iter().map(|b| (b.id, b.kind)).collect::<Vec<_>>();
+        assert_eq!(
+            kinds(Category::NeedsYou),
+            [("open", ButtonKind::Foreground), ("reply", ButtonKind::Reply)]
+        );
+        assert_eq!(
+            kinds(Category::Finished),
+            [("open", ButtonKind::Foreground), ("show-changes", ButtonKind::Foreground)]
+        );
+        assert!(actions(Category::Plain).is_empty());
     }
 
     #[test]
