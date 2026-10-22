@@ -15,13 +15,13 @@ use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
 
 use super::reveal;
+use crate::app_state::app;
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
-use crate::workspace::app::app;
 use crate::workspace::project;
 use crate::workspace::project::LoadedProject;
 use crate::workspace::window_lifecycle::with_front_workspace;

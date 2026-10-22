@@ -14,10 +14,10 @@ use wormhole_core::storage::store::SessionRecord;
 use wormhole_core::storage::store::Store;
 use wormhole_core::terminal::SpawnOptions;
 
+use crate::app_state::{AppState, app, app_mut};
 use crate::terminal_view::Start;
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
-use crate::workspace::app::{AppState, app, app_mut};
 
 /// The host executable, looked for once: it sits beside the app's, which doesn't move while it runs.
 fn host_binary() -> Option<&'static PathBuf> {

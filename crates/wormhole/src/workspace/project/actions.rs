@@ -9,9 +9,9 @@ use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{ActionKind, ChainStep, Feature, ProjectSnapshot, Target};
 use wormhole_core::storage::store::SessionRecord;
 
+use crate::app_state::app;
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
-use crate::workspace::app::app;
 
 /// Longest action chain we follow (chains are validated for cycles, this is a backstop).
 const MAX_CHAIN_DEPTH: usize = 16;

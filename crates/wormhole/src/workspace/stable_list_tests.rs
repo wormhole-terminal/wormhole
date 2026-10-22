@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use gpui_kit::TestAppContext;
 use wormhole_core::view::panes::Axis;
 
-use crate::workspace::app::OpenWindow;
+use crate::app_state::OpenWindow;
 use crate::workspace::view_tests::{drive, read, start, use_stable};
 
 fn isolate(name: &str) -> bool {

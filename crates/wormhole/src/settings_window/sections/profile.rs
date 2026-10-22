@@ -14,11 +14,11 @@ use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::view::sidebar::GroupColor;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
+use crate::app_state::{AppState, app};
 use crate::settings::SettingsStore;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::app::{AppState, app};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("profile-name", draw_name),

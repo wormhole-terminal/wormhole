@@ -22,11 +22,11 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::REMEMBERED_PANES_KEY;
 use wormhole_core::view::layout::RememberedPanes;
 
+use crate::app_state::recent_projects::RecentProjects;
+use crate::app_state::{AppState, OpenWindow};
+use crate::app_state::{app, app_mut};
 use crate::settings::{ParkedSettings, SettingsStore};
-use crate::workspace::app::{AppState, OpenWindow};
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::project;
-use crate::workspace::recent_projects::RecentProjects;
 use crate::workspace::window_lifecycle::with_front_workspace;
 
 impl AppState {
@@ -272,7 +272,7 @@ fn open_beside(paths: &ProfilePaths) -> (ProfileData, SettingsStore) {
 }
 
 /// What each profile that is open but not shown keeps here (its settings are in [`ParkedSettings`]).
-pub(crate) type Parked = HashMap<ProfileId, ProfileData>;
+pub(super) type Parked = HashMap<ProfileId, ProfileData>;
 
 impl AppState {
     /// Wormhole is in profile `target` from now on: every window of the profile that was shown goes
@@ -329,8 +329,8 @@ impl AppState {
         state.applied_theme = None;
 
         Self::show_profile_windows(&from, target, cx);
-        crate::workspace::app_look::sync_system_look(cx);
-        crate::workspace::app_look::apply_theme(cx);
+        crate::app_state::look::sync_system_look(cx);
+        crate::app_state::look::apply_theme(cx);
         crate::workspace::menu_state::menus_changed(cx);
         cx.refresh_windows();
         Ok(())

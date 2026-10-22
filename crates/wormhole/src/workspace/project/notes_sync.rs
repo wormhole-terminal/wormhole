@@ -5,8 +5,8 @@ use gpui_kit::*;
 use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile};
 
 use super::project_folders_on;
+use crate::app_state::{app, app_mut};
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::notes::{Note, TaskItem};
 
 impl Workspace {

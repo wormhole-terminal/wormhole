@@ -6,9 +6,9 @@ use wormhole_core::config::ThemeMode;
 use wormhole_core::config::profile::{NewProfile, StartFrom};
 use wormhole_core::storage::paths::ProfileId;
 
+use crate::app_state::{AppState, app};
 use crate::settings::{ParkedSettings, SettingsStore, settings, settings_in, store_in, ui, ui_in};
 use crate::workspace::Workspace;
-use crate::workspace::app::{AppState, app};
 use crate::workspace::view_tests::{draw, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {

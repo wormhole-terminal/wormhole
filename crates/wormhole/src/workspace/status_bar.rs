@@ -19,12 +19,12 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::view::spoken;
 
+use crate::app_state::app;
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{StatusGlyph, StatusTile, TileFace};
 use crate::terminal_view::Status;
 use crate::workspace::Workspace;
-use crate::workspace::app::app;
 use crate::workspace::window_lifecycle::open_tab;
 
 /// One terminal (a sidebar row) as the bar counts it.

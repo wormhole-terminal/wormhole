@@ -12,11 +12,11 @@ use gpui_kit::*;
 use wormhole_core::notify::Kind;
 
 use super::{Ctx, append, file_name, nth};
+use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::status_item;
 use crate::status_item::quick_panel;
 use crate::workspace::ambient::TabFacts;
-use crate::workspace::notifications;
 
 /// Run `f` after this update and append what it returns to this window's results.
 pub(super) fn later(ctx: &mut Ctx, f: impl FnOnce(&mut App) -> String + 'static) {

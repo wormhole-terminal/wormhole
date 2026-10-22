@@ -1,7 +1,7 @@
 //! The system's own notifications, for the routes GPUI can't serve: the notification centre of the
 //! bundled app (interruption levels, a thread per terminal, sound, buttons and a Reply field, none of
 //! which GPUI's notifications carry) and a script for a build without a bundle. What is said, when,
-//! by which route, and what a click does are the app's (`workspace::notifications`); this only posts,
+//! by which route, and what a click does are the app's (`notifications`); this only posts,
 //! takes down and asks.
 //!
 //! The centre installs its own delegate, replacing the one GPUI sets for its notifications, so the

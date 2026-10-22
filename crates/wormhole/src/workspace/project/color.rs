@@ -9,7 +9,7 @@ use gpui_kit::*;
 use wormhole_core::project::{ProjectColorChoice, ProjectFolder};
 
 use super::{project_folders_on, reload_projects};
-use crate::workspace::app::app_mut;
+use crate::app_state::app_mut;
 
 /// What the hub's error says when writing the colour failed, so a later success can take it away
 /// without touching the other problems it may be showing.

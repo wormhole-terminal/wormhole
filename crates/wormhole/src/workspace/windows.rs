@@ -8,13 +8,14 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::layout::RememberedPanes;
 use wormhole_core::view::sidebar::WindowSidebar;
 
+use crate::app_state::AppState;
+use crate::app_state::{app, app_mut};
+use crate::notifications;
 use crate::settings::settings;
 use crate::terminal_view::Status;
-use crate::workspace::app::AppState;
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::session::{self, Session};
 use crate::workspace::window_lifecycle::open_workspace_window_in;
-use crate::workspace::{Layout, Workspace, dialog, notifications, window_bounds};
+use crate::workspace::{Layout, Workspace, dialog, window_bounds};
 
 impl Layout {
     /// A new window's layout, made from another's: the same panels, but the sidebar the way a

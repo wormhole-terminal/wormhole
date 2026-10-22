@@ -1,6 +1,6 @@
 //! What the app does on its tick, once whatever the number of windows, and with what arrives
 //! between ticks: the hook socket's messages, the menu bar's commands, and the theme and the system's
-//! look (kept in `app_look`, which the tick drives).
+//! look (kept in `app_state::look`, which the tick drives).
 //!
 //! Part of the app root (`app/`): it may use every surface, and nothing below the app
 //! root may call into it.
@@ -9,13 +9,15 @@ use gpui_kit::*;
 use wormhole_core::ipc;
 
 use crate::app::{control, menus};
+use crate::app_state::look::apply_theme;
+use crate::app_state::{AppState, app_mut};
 use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
-use crate::workspace::app::{AppState, app_mut};
-use crate::workspace::app_look::apply_theme;
+use crate::updates::restart;
+use crate::workspace::project;
 use crate::workspace::window_lifecycle::open_workspace_window;
-use crate::workspace::{notifications, project, update_restart, updates};
+use crate::{notifications, updates};
 
 /// What the socket delivered: a hook's message, or a control request to answer (`control`).
 pub(super) fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
@@ -87,7 +89,7 @@ pub(super) fn tick(cx: &mut App) {
     status_item::sync(cx);
     menus::sync(cx);
     updates::schedule_check(ticks, cx);
-    update_restart::tick(cx);
+    restart::tick(cx);
     if ticks.is_multiple_of(5) {
         project::prune_projects(cx);
         if crate::fonts::poll_custom(cx) {

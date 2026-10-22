@@ -15,12 +15,12 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::{self, Command, Item, MenuState};
 use wormhole_core::terminal::shells;
 
-use crate::settings::settings;
-use crate::workspace::actions::{
+use crate::actions::{
     MoveWindowToProfile, NewTerminalWith, OpenRecent, OpenWindowInProfile, Placeholder, RunProjectAction,
     SwitchProfile, gpui_action,
 };
-use crate::workspace::app::app;
+use crate::app_state::app;
+use crate::settings::settings;
 use crate::workspace::menu_state::{MenusChanged, front_window_state};
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.

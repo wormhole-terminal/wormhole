@@ -62,7 +62,7 @@ impl Workspace {
                 changed || before != terminal.status()
             });
             if is_active && window_active {
-                crate::workspace::notifications::dismiss(pane.id, cx);
+                crate::notifications::dismiss(pane.id, cx);
             }
         }
         // The Usage tab's times count down while it shows.
@@ -126,6 +126,6 @@ impl Workspace {
     /// The selected session's project counts as recently used.
     fn remember_project(&self, cx: &mut App) {
         let Some(root) = self.active_session().project.clone() else { return };
-        crate::workspace::app::app_mut(cx).remember_project(root);
+        crate::app_state::app_mut(cx).remember_project(root);
     }
 }

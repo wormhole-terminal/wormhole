@@ -37,10 +37,10 @@ use wormhole_core::onboarding::{
     self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
 };
 
+use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
 use crate::settings_window;
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::{Workspace, project};
 
 pub(crate) use keys::init;

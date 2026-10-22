@@ -1,6 +1,11 @@
 //! The app's actions as GPUI actions and their keys, bound from core's `keymap` table. The menus
 //! (`app::menus`) and the tooltips read the same table, so a key is written down once. Who handles
-//! them: the app-wide ones in `app::handlers`, a window's terminals and panels in `window_actions`.
+//! them: the app-wide ones in `app::handlers`, a window's terminals and panels in
+//! `workspace::window_actions`.
+//!
+//! Below the window and the shared state, which bind and handle them. The actions' names come
+//! from the `workspace` namespace of `actions!`, not from this module's path, so the keymap and
+//! the menus are unchanged by where the types live.
 
 use std::path::PathBuf;
 use std::rc::Rc;

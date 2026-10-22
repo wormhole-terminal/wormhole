@@ -8,11 +8,12 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::config::InFront;
 use wormhole_term::{Mark, PtyEvent};
 
+use crate::app_state::OpenWindow;
+use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::{Status, TerminalView};
-use crate::workspace::app::OpenWindow;
+use crate::workspace::Workspace;
 use crate::workspace::view_tests::{drive, hook, isolate_in, read, start};
-use crate::workspace::{Workspace, notifications};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

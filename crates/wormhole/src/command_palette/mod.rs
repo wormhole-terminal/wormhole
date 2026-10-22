@@ -24,10 +24,10 @@ use wormhole_core::project::{ActionKind, Feature};
 use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
+use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::settings;
 use crate::settings_window;
 use crate::workspace::Workspace;
-use crate::workspace::app::{AppState, OpenWindow, app};
 use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
@@ -101,7 +101,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     let menu = crate::workspace::menu_state::front_window_state(cx);
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let key = cx.active_window().map(|w| w.window_id());
-    let finished = crate::workspace::notifications::finished_commands(cx);
+    let finished = crate::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.
     let default = crate::workspace::shells::default_key(settings(cx)).to_string();
     let shells = wormhole_core::terminal::shells::choices(settings(cx))
@@ -449,7 +449,7 @@ impl CommandPalette {
             // The row itself, scrolled to and marked, not a search for its label.
             Item::Setting(id) => cx.defer(move |cx| settings_window::reveal_row(id, cx)),
             Item::Action(id) => {
-                if let Some(action) = crate::workspace::actions::gpui_action(id) {
+                if let Some(action) = crate::actions::gpui_action(id) {
                     window.dispatch_action(action, cx);
                 }
             }
@@ -462,13 +462,9 @@ impl CommandPalette {
             Item::Profile(command, id) => {
                 let id = SharedString::from(id);
                 let action: Box<dyn Action> = match command {
-                    ProfileCommand::Switch => Box::new(crate::workspace::actions::SwitchProfile(id)),
-                    ProfileCommand::OpenWindowIn => {
-                        Box::new(crate::workspace::actions::OpenWindowInProfile(id))
-                    }
-                    ProfileCommand::MoveWindowTo => {
-                        Box::new(crate::workspace::actions::MoveWindowToProfile(id))
-                    }
+                    ProfileCommand::Switch => Box::new(crate::actions::SwitchProfile(id)),
+                    ProfileCommand::OpenWindowIn => Box::new(crate::actions::OpenWindowInProfile(id)),
+                    ProfileCommand::MoveWindowTo => Box::new(crate::actions::MoveWindowToProfile(id)),
                 };
                 window.dispatch_action(action, cx);
             }
@@ -610,7 +606,7 @@ mod tests {
     use gpui_kit::{Focusable as _, TestAppContext};
 
     use super::CommandPalette;
-    use crate::workspace::app::OpenWindow;
+    use crate::app_state::OpenWindow;
     use crate::workspace::view_tests::{draw, isolate_in, press, read, start};
 
     fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {

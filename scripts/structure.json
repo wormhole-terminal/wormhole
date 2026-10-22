@@ -306,19 +306,37 @@
       "wormhole-term: screen -> marks": 1,
       "wormhole-term: text -> images": 1,
       "wormhole-term: text -> screen": 1,
+      "wormhole: about -> app_state": 1,
       "wormhole: about -> workspace": 1,
+      "wormhole: app_state -> status_item": 1,
+      "wormhole: app_state -> updates": 1,
+      "wormhole: app_state -> workspace": 1,
+      "wormhole: notifications -> app_state": 1,
+      "wormhole: notifications -> workspace": 1,
+      "wormhole: settings_window -> app_state": 1,
+      "wormhole: settings_window -> notifications": 1,
       "wormhole: settings_window -> studio": 1,
+      "wormhole: settings_window -> updates": 1,
       "wormhole: settings_window -> workspace": 1,
+      "wormhole: status_item -> app_state": 1,
+      "wormhole: status_item -> notifications": 1,
       "wormhole: status_item -> settings_window": 1,
+      "wormhole: status_item -> updates": 1,
       "wormhole: status_item -> workspace": 1,
       "wormhole: studio -> about": 1,
+      "wormhole: studio -> app_state": 1,
       "wormhole: studio -> workspace": 1,
-      "wormhole: workspace -> settings_window": 1,
-      "wormhole: workspace -> status_item": 1
+      "wormhole: updates -> app_state": 1,
+      "wormhole: updates -> workspace": 1,
+      "wormhole: workspace -> app_state": 1,
+      "wormhole: workspace -> notifications": 1,
+      "wormhole: workspace -> settings_window": 1
     },
     "layers": {
-      "wormhole: workspace -> settings_window": 1,
-      "wormhole: workspace -> status_item": 1
+      "wormhole: app_state -> status_item": 1,
+      "wormhole: app_state -> updates": 1,
+      "wormhole: workspace -> notifications": 1,
+      "wormhole: workspace -> settings_window": 1
     },
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1

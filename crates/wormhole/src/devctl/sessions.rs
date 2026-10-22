@@ -69,12 +69,12 @@ pub(super) fn activate(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn menu_new_window(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.window.dispatch_action(Box::new(crate::workspace::NewWindow), ctx.cx);
+    ctx.window.dispatch_action(Box::new(crate::actions::NewWindow), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn menu_updates(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.window.dispatch_action(Box::new(crate::workspace::CheckForUpdates), ctx.cx);
+    ctx.window.dispatch_action(Box::new(crate::actions::CheckForUpdates), ctx.cx);
     Ok(String::new())
 }
 
@@ -277,7 +277,7 @@ pub(super) fn front(ctx: &mut Ctx, _: &str) -> Result<String> {
 pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
-        if let Err(err) = crate::workspace::AppState::switch_profile(&id, cx) {
+        if let Err(err) = crate::app_state::AppState::switch_profile(&id, cx) {
             tracing::warn!("devctl profile: {err}");
         }
     });
@@ -287,7 +287,7 @@ pub(super) fn profile(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `profile-open <id>`: a new window in that profile (the odd window when Wormhole is in another).
 pub(super) fn profile_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
-    ctx.cx.defer(move |cx| crate::workspace::AppState::open_window_in_profile(&id, cx));
+    ctx.cx.defer(move |cx| crate::app_state::AppState::open_window_in_profile(&id, cx));
     Ok(String::new())
 }
 
@@ -295,7 +295,7 @@ pub(super) fn profile_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn profile_move(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
-        if let Err(err) = crate::workspace::AppState::move_front_window_to_profile(&id, cx) {
+        if let Err(err) = crate::app_state::AppState::move_front_window_to_profile(&id, cx) {
             tracing::warn!("devctl profile-move: {err}");
         }
     });
@@ -306,7 +306,7 @@ pub(super) fn profile_move(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = wormhole_core::storage::paths::ProfileId::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
     ctx.cx.defer(move |cx| {
-        if let Err(err) = crate::workspace::AppState::delete_profile(&id, cx) {
+        if let Err(err) = crate::app_state::AppState::delete_profile(&id, cx) {
             tracing::warn!("devctl profile-delete: {err}");
         }
     });
@@ -317,7 +317,7 @@ pub(super) fn profile_delete(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// of that name and email, when an email is given) and print its id.
 pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
     use wormhole_core::config::profile::{NewProfile, StartFrom};
-    let state = crate::workspace::app::app_mut(ctx.cx);
+    let state = crate::app_state::app_mut(ctx.cx);
     let root = state.root.clone();
     let (name, email) = match arg.trim().rsplit_once(' ') {
         Some((name, email)) if email.contains('@') => (name.trim(), Some(email)),
@@ -338,7 +338,7 @@ pub(super) fn profile_new(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `profiles`: one a line, `*` on the shown one.
 pub(super) fn profiles(ctx: &mut Ctx, _: &str) -> Result<String> {
-    let state = crate::workspace::app::app(ctx.cx);
+    let state = crate::app_state::app(ctx.cx);
     Ok(state
         .profiles
         .profiles()

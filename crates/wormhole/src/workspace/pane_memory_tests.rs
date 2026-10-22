@@ -5,7 +5,7 @@ use gpui_kit::{TestAppContext, px, size};
 use wormhole_core::storage::store::Store;
 use wormhole_core::view::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, WINDOW_MIN_WIDTH};
 
-use crate::workspace::app::{OpenWindow, app, app_mut};
+use crate::app_state::{OpenWindow, app, app_mut};
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 use crate::workspace::window_lifecycle::open_workspace_window;
 use crate::workspace::{RightTab, Workspace};

@@ -14,9 +14,9 @@ use wormhole_core::keys::keymap::menus::MenuState;
 use wormhole_core::project::Feature;
 use wormhole_core::terminal::shells;
 
+use crate::actions::DEBUG;
+use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::workspace::actions::DEBUG;
-use crate::workspace::app::{AppState, app};
 use crate::workspace::{RightTab, Workspace};
 
 /// What the menus show changed outside a key or the tick (a profile switch, a window moved to

@@ -11,10 +11,10 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::ipc::control::{Opened, PaneInfo, TabInfo, Target, TerminalInfo, TerminalState};
 use wormhole_term::Notification;
 
+use crate::app_state::app;
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
 use crate::workspace::ambient::state_of;
-use crate::workspace::app::app;
 
 /// An agent's id as the hooks spell it (`claude`, `codex`).
 fn agent_id(agent: AgentId) -> Option<String> {

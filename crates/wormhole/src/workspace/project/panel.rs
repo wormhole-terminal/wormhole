@@ -21,13 +21,13 @@ use wormhole_core::view::sidebar::display_path;
 use wormhole_core::view::spoken;
 
 use super::LoadedProject;
+use crate::app_state::app;
 use crate::platform::auth;
 use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
 use crate::workspace::Workspace;
-use crate::workspace::app::app;
 use crate::workspace::folder_color;
 use crate::workspace::session::home_dir;
 

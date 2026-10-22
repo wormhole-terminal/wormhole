@@ -13,10 +13,10 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::Feature;
 
+use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::workspace::Workspace;
-use crate::workspace::app::{AppState, OpenWindow, app};
 use crate::workspace::overlay::{OverlayContent, OverlayKind, OverlayView, scrim};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.

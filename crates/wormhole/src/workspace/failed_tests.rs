@@ -6,10 +6,10 @@ use gpui_kit::{Entity, TestAppContext};
 use wormhole_core::notify::{Source, State};
 use wormhole_term::{Mark, PtyEvent};
 
+use crate::app_state::OpenWindow;
+use crate::notifications;
 use crate::terminal_view::{Status, TerminalView};
 use crate::workspace::ambient::TabFacts;
-use crate::workspace::app::OpenWindow;
-use crate::workspace::notifications;
 use crate::workspace::reported_tests::{banners_in_front, event, now, report, terminal, words};
 use crate::workspace::view_tests::{drive, hook, isolate_in, start};
 

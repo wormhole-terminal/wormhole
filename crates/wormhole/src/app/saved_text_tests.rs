@@ -4,8 +4,8 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::Store;
 
-use crate::workspace::app::OpenWindow;
-use crate::workspace::app::{app, app_mut};
+use crate::app_state::OpenWindow;
+use crate::app_state::{app, app_mut};
 use crate::workspace::view_tests::{drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {

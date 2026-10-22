@@ -6,7 +6,7 @@ use anyhow::{Result, bail};
 use gpui_kit::*;
 use wormhole_core::agents::{AgentId, integrations};
 
-use crate::workspace::app::app;
+use crate::app_state::app;
 use crate::workspace::{Workspace, folder_color};
 
 /// What runs at the end of every window tick in a devctl build: devctl's command reader, which

@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 use gpui_kit::*;
 use wormhole_core::storage::store::WindowRecord;
 
+use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::{Layout, Workspace};
 
 /// How many lines of each terminal's scrollback are saved and restored. Fixed, whatever the

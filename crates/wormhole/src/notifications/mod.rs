@@ -2,6 +2,9 @@
 //! (while Wormhole is in front only if asked for: nothing shows inside the window), the Dock's
 //! bounce, and what a click, Reply or Show Changes does.
 //!
+//! Above the window and the shared state, which it reads; the window calls `dismiss` and `sweep` (a
+//! known edge, kept until the window emits seen and closed events instead).
+//!
 //! The rules are core's (`wormhole_core::notify`). Every tick (and right after an agent's
 //! hook) [`sweep`] reads every tab of every window, `watch` turns what changed into events, and
 //! the rules decide. Banners go out by one of these routes:
@@ -29,13 +32,13 @@ use wormhole_core::notify::{
 };
 use wormhole_core::update::current_app_bundle;
 
+use crate::app_state::{AppState, app};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
 use crate::settings::{settings, settings_in};
 use crate::workspace::RightTab;
 use crate::workspace::ambient::{self, TabFacts};
-use crate::workspace::app::{AppState, app};
 use crate::workspace::window_lifecycle::open_tab;
 use watch::{Event, Watch};
 

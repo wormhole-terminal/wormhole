@@ -16,9 +16,9 @@ use wormhole_core::config::settings_index::Query;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 
 use super::{SettingsWindow, ui};
+use crate::app_state::app;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::app::app;
 
 /// The nav's width.
 pub(super) const NAV_W: f32 = 220.0;

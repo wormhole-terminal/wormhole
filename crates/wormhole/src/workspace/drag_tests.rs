@@ -10,7 +10,7 @@ use gpui_kit::{
 use wormhole_core::view::panes::Zone;
 use wormhole_core::view::sidebar::Entry;
 
-use crate::workspace::app::OpenWindow;
+use crate::app_state::OpenWindow;
 use crate::workspace::terminal_drag::{Over, PaneHover};
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 

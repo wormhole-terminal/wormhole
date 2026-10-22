@@ -10,10 +10,10 @@ use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::storage::paths::ProfileId;
 
+use crate::app_state::{AppState, app};
 use crate::settings::SettingsStore;
 use crate::settings_window::{self, SettingsWindow, ui};
 use crate::style::{self, TextRole};
-use crate::workspace::app::{AppState, app};
 
 const SHEET_W: f32 = 380.0;
 

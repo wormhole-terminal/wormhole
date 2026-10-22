@@ -12,9 +12,9 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::{Edge, PanelToggle};
 use wormhole_core::view::spoken::{self, PanelTab};
 
+use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
 use crate::style;
-use crate::workspace::app::app;
 use crate::workspace::focus::TitleButton;
 use crate::workspace::{RightTab, Workspace};
 

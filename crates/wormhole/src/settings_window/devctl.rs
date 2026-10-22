@@ -12,7 +12,7 @@ use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
 use super::{SettingsWindow, SidebarLook, current_window, open_settings, reveal_row, sections};
-use crate::workspace::app::app;
+use crate::app_state::app;
 
 pub(crate) fn section(name: &str, cx: &mut App) {
     let section = Section::ALL.into_iter().find(|s| format!("{s:?}").eq_ignore_ascii_case(name));

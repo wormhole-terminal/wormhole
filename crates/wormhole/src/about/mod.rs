@@ -124,7 +124,7 @@ mod devctl {
     use gpui_kit::App;
 
     use super::{licenses, open_about, open_licenses};
-    use crate::workspace::app::app;
+    use crate::app_state::app;
 
     /// The About and Licenses commands of devctl: what to print, or `None` if `cmd` isn't one.
     pub(crate) fn command(cmd: &str, arg: &str, dir: &Path, cx: &mut App) -> anyhow::Result<Option<String>> {

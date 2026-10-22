@@ -2,7 +2,7 @@
 //! something on the front window or opening one when there is none, saving every window on the way
 //! out, bringing a terminal's window forward, and a window moving to another profile.
 //!
-//! Part of the window: it reads and updates the shared state (`app`, `app_look`) and must not use
+//! Part of the window: it reads and updates the shared state (`app`, `app_state::look`) and must not use
 //! the surfaces above it (the command palette, the shortcut sheet, the Settings and Studio windows,
 //! the status item, the app root). The shared state never calls it back: whoever needs a window
 //! opened comes here.
@@ -12,10 +12,10 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
 
+use crate::app_state::look::sync_system_look;
+use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::settings::settings_in;
 use crate::style;
-use crate::workspace::app::{AppState, OpenWindow, app, app_mut};
-use crate::workspace::app_look::sync_system_look;
 use crate::workspace::{Layout, Workspace, chrome, window_bounds};
 
 const DEFAULT_SIZE: (f32, f32) = (1320.0, 820.0);

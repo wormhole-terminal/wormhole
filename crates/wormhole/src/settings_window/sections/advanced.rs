@@ -10,12 +10,12 @@ use wormhole_core::config::settings_index::Values;
 use wormhole_core::storage::paths::data_dir;
 
 use super::{open_button, open_in_editor, reveal};
+use crate::app_state::{app, app_mut};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
-use crate::workspace::app::{app, app_mut};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("open-config", |_, _| {

@@ -25,9 +25,9 @@ use wormhole_core::view::title_extras::BranchStatus;
 use wormhole_term::Notification;
 use wormhole_term::listening_ports;
 
+use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, app_mut};
 
 /// How often the ports under the terminal on screen are looked at.
 const PORTS_EVERY: Duration = Duration::from_secs(5);

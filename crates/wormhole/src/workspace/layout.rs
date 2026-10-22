@@ -4,9 +4,9 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::layout::{Columns, Edge, Panes};
 
+use crate::app_state::app_mut;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::style;
-use crate::workspace::app::app_mut;
 use crate::workspace::resize::edge_rule;
 use crate::workspace::{RightTab, Workspace, panes};
 

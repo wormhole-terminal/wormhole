@@ -1,7 +1,7 @@
 //! Settings across a profile switch: the global holds the shown profile's store, and a switch
 //! puts another profile's store in its place. The stores of the other open profiles are kept here
 //! too ([`ParkedSettings`]), so a window in another profile finds its own without settings knowing
-//! the app state that opens and switches profiles (`workspace::profiles`, which keeps the rest of
+//! the app state that opens and switches profiles (`app_state::profiles`, which keeps the rest of
 //! each profile's data beside them).
 
 use std::collections::HashMap;

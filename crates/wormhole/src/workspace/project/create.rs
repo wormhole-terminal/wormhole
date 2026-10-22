@@ -8,8 +8,8 @@ use gpui_kit::*;
 use wormhole_core::project::{self as proj, ProjectError, ProjectFolder};
 
 use super::{project_folders_on, reload_projects};
+use crate::app_state::app_mut;
 use crate::workspace::Workspace;
-use crate::workspace::app::app_mut;
 
 impl Workspace {
     /// Make the project folder for the active terminal's folder, then have every window look for

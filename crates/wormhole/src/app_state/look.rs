@@ -2,16 +2,16 @@
 //! Transparency, Increase Contrast and Reduce Motion (or what devctl says in its place), and the
 //! resolved theme pushed to GPUI Kit and to every window's material.
 //!
-//! Part of the shared state (it goes to `app_state/look.rs`): it touches only `AppState`'s fields,
+//! Part of the shared state: it touches only `AppState`'s fields,
 //! the settings store, `theme_bridge` and `platform`, so the windows and the profile swap call it
 //! without reaching up to the app tick.
 
 use gpui_kit::*;
 use wormhole_core::theme::tokens::Appearance;
 
+use crate::app_state::{app, app_mut};
 use crate::platform::vibrancy;
 use crate::settings::{SettingsStore, SystemLook};
-use crate::workspace::app::{app, app_mut};
 
 /// Stand-ins for what the system says about how windows look; `None` follows the system.
 #[derive(Clone, Copy, Debug, Default)]

@@ -7,9 +7,9 @@ use gpui_kit::*;
 use wormhole_core::project::{Feature, ProjectFolder, TrustRequest};
 
 use super::{ProjectHub, load_project, projects_changed};
+use crate::app_state::{app, app_mut};
 use crate::platform::auth;
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, app_mut};
 
 impl ProjectHub {
     /// The answer to an approval dialog for `request` (`None`: it went away without one).

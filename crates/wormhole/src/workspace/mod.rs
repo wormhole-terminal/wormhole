@@ -1,19 +1,18 @@
 //! One window: a [`Workspace`] is the view of one window's terminals, with their splits and panes,
 //! the sidebar, the side panels (notes, changes, history, project), the title rows and the status
 //! bar, and it saves and restores itself. What must exist once, whatever the number of windows,
-//! is `AppState` (`app`), which the windows read and update; windows are opened and closed in
-//! `window_lifecycle`.
+//! is `AppState` (`app_state`), which the windows read and update (the two are one tier of the
+//! order, until phase 5 separates them); windows are opened and closed in `window_lifecycle`.
 //!
-//! Until phase 4's moves finish this folder also holds the surfaces that sit above the window (the
-//! Studio window, the notifications, the updater, About); they leave, and the window then uses none
-//! of them. The app root, the palette, the sheet, the status item and the Settings window have left
-//! (`app`, `command_palette`, `shortcut_sheet`, `status_item`, `settings_window`). The known
-//! exceptions, kept until phase 5, are the window using `notifications`: it calls `dismiss` and
-//! `sweep` (the window will emit seen and closed events instead) from `tick`, `terminals`, `panes`,
-//! `splits`, `windows` and this file's window-activation observer, `finished_commands` from
-//! `ambient`, and `permission_asks` from the welcome; and the welcome's agents step opening
-//! Settings (`onboarding`: `settings_window::open_settings`, which an action carrying the section
-//! will replace).
+//! Everything that sits above the window has left this folder (`app`, `command_palette`,
+//! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,
+//! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
+//! The window uses nothing above it but the known exceptions, kept until phase 5: it calls
+//! `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events instead)
+//! from `tick`, `terminals`, `panes`, `splits`, `windows` and this file's window-activation
+//! observer, `finished_commands` from `ambient`, and `permission_asks` from the welcome; and the
+//! welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`, which an
+//! action carrying the section will replace).
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -24,21 +23,11 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 #[cfg(feature = "devctl")]
-pub(crate) use self::actions::CheckForUpdates;
-#[cfg(feature = "devctl")]
-pub(crate) use self::actions::NewWindow;
-#[cfg(feature = "devctl")]
-pub(crate) use self::app::AppState;
-pub(crate) use self::app::app_mut;
-#[cfg(feature = "devctl")]
-pub(crate) use self::app_look::override_look;
-#[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
 #[cfg(feature = "devctl")]
 pub(crate) use self::project::devctl_trust_shot;
-#[cfg(feature = "devctl")]
-pub(crate) use self::updates::devctl_installed as devctl_update_installed;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
+use crate::app_state::app_mut;
 use crate::platform::vibrancy;
 use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
@@ -132,16 +121,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
-
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::actions;
-pub(crate) use crate::app_state as app;
-pub(crate) use crate::app_state::look as app_look;
-pub(crate) use crate::app_state::profiles;
-pub(crate) use crate::app_state::recent_projects;
-pub(crate) use crate::notifications;
-pub(crate) use crate::updates;
-pub(crate) use crate::updates::restart as update_restart;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;
@@ -301,7 +280,7 @@ impl Workspace {
             if window.is_window_active() {
                 this.became_front(cx);
                 // macOS isn't relied on to say when Reduce Motion changes.
-                cx.defer(self::app_look::sync_system_look);
+                cx.defer(crate::app_state::look::sync_system_look);
             } else {
                 this.hints_blur(cx);
                 // A popover that is up has the key itself, which is why this window lost it.
@@ -448,7 +427,7 @@ impl Workspace {
         }
         if status != before {
             // At once rather than on the next tick; after this update, so this window can be read.
-            cx.defer(self::notifications::sweep);
+            cx.defer(crate::notifications::sweep);
         }
         cx.notify();
     }

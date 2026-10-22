@@ -6,10 +6,10 @@ use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
 
+use crate::app_state::app;
 use crate::settings::Settings;
 use crate::settings_window::recorder::RecorderRow;
 use crate::settings_window::registry::{Segment, Setting, toggle};
-use crate::workspace::app::app;
 
 pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),

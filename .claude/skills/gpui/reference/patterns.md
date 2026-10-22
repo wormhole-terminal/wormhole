@@ -11,9 +11,9 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
 - App start, `gpui_kit::init`, app-level actions, `cx.bind_keys`, menus: `main.rs`.
 - `AppState` (a `Global`) with `app(cx)` / `app_mut(cx)`, long-lived
   `cx.spawn` loops fed by channels, and `open_workspace_window`:
-  `workspace/app.rs`.
+  `app_state/mod.rs`.
 - Reaching another window's workspace safely: `AppState::with_workspace` in
-  `workspace/app.rs`. It returns `None` for the window you are in, because
+  `app_state/mod.rs`. It returns `None` for the window you are in, because
   that one is already being updated.
 - Opening extra windows (Settings, Studio) with `open_window`:
   `settings_window/mod.rs`, `studio/mod.rs`; their shared

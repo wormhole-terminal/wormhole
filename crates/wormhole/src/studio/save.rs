@@ -15,9 +15,9 @@ use wormhole_core::theme::tokens::ThemeFile;
 
 use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
 use super::{StudioWindow, ui};
+use crate::app_state::{AppState, app};
 use crate::settings::SettingsStore;
 use crate::style::{self, Edges};
-use crate::workspace::app::{AppState, app};
 
 /// The app record (`Store::meta`) of the folder the last export went to, so the next one's
 /// dialog starts there, across launches.

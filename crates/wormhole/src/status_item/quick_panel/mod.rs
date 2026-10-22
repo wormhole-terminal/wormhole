@@ -15,9 +15,9 @@ mod view;
 use gpui_kit::*;
 use wormhole_core::notify::Terminal;
 
+use crate::app_state::AppState;
 use crate::menubar::ActionItem;
 use crate::style;
-use crate::workspace::app::AppState;
 
 pub(crate) use rows::{Do, Row, rows};
 pub(crate) use view::QuickPanel;

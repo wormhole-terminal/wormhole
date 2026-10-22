@@ -13,8 +13,8 @@ use wormhole_core::config::profile::{AgentLogin, GitIdentity, Profile, first_let
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::sidebar::GroupColor;
 
+use crate::app_state::{app, app_mut};
 use crate::settings_window::SettingsWindow;
-use crate::workspace::app::{app, app_mut};
 
 /// The agents that have a login folder of their own, in the order the page lists them.
 pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] =

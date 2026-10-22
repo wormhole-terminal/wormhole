@@ -5,6 +5,12 @@
 //! exist once (the menu bar item, the hook socket, the updater) lives here and
 //! is driven by one app-level tick and two message tasks (`app::launch`, `app::tick`), so it works
 //! the same with one window or five; windows open and close in `window_lifecycle`.
+//!
+//! One tier with the window (`workspace`): the shared state names the window's type and opens and
+//! closes windows through it, and a window reads the shared state, until phase 5 separates them.
+//! The two edges up, kept until then, are the field holding the status item's `MenuState` and the
+//! one holding the updater's `Updates`; the cycle entries in `scripts/structure.json` that name this
+//! module come from them and from that tie.
 
 pub(crate) mod look;
 pub(crate) mod profiles;
@@ -22,10 +28,11 @@ use wormhole_core::storage::store::Store;
 use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
+use crate::app_state::look::LookOverride;
+use crate::app_state::recent_projects::RecentProjects;
 use crate::status_item;
-use crate::workspace::app_look::LookOverride;
-use crate::workspace::recent_projects::RecentProjects;
-use crate::workspace::{Workspace, aux_window, project, updates};
+use crate::updates;
+use crate::workspace::{Workspace, aux_window, project};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -47,7 +54,7 @@ pub(crate) struct AppState {
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
-    pub(crate) parked: profiles::Parked,
+    parked: profiles::Parked,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -102,14 +109,14 @@ pub(crate) struct AppState {
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
-    pub(crate) next_id: i64,
+    next_id: i64,
     next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
-    pub(crate) applied_theme: Option<u64>,
+    applied_theme: Option<u64>,
     ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
-    pub(crate) look_override: LookOverride,
+    look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
     _display_options: Option<crate::platform::look::DisplayObserver>,
 }

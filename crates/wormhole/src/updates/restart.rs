@@ -9,12 +9,12 @@ use std::time::{Duration, Instant};
 use gpui_kit::*;
 use wormhole_core::agents::agent;
 
+use crate::app_state::{app, app_mut};
 use crate::terminal_view::Status;
+use crate::updates::{self, UpdatePhase};
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::dialog::{self, shortened};
 use crate::workspace::restart_facts::RestartFacts;
-use crate::workspace::updates::{self, UpdatePhase};
 
 /// How long every terminal must stay idle, without a break, before the app restarts by itself. An
 /// agent is idle for a moment between its steps, so a single quiet look would restart under it.
@@ -24,7 +24,7 @@ const IDLE_FOR: Duration = Duration::from_secs(30);
 const LISTED: usize = 6;
 
 /// A terminal a restart would cut off, as the question names it.
-pub(crate) struct Running {
+pub(super) struct Running {
     pub name: String,
     /// The agent in front by its short name ("Claude").
     pub agent: Option<&'static str>,
@@ -76,7 +76,7 @@ fn repeats(name: &str, what: &str) -> bool {
 
 /// What the question before restarting says: the terminals that would be cut off, one per line, and
 /// that they come back. A long list ends in "and N more".
-pub(crate) fn restart_detail(running: &[Running]) -> String {
+pub(super) fn restart_detail(running: &[Running]) -> String {
     let shown = if running.len() > LISTED + 1 { LISTED } else { running.len() };
     let mut lines: Vec<String> = running.iter().take(shown).map(Running::line).collect();
     if shown < running.len() {
@@ -89,7 +89,7 @@ pub(crate) fn restart_detail(running: &[Running]) -> String {
 /// Whether a terminal lets "Restart When Idle" go ahead: no agent working or waiting for an
 /// answer, and no command of its own in front. An agent sitting at its prompt has its program in
 /// front too (`command_running`, `agent_in_front`), but it is waiting for you, not working.
-pub(crate) fn is_idle(status: Status, command_running: bool, agent_in_front: bool) -> bool {
+pub(super) fn is_idle(status: Status, command_running: bool, agent_in_front: bool) -> bool {
     match status {
         Status::Busy | Status::Attention => false,
         Status::Exited => true,
@@ -176,7 +176,7 @@ pub(crate) fn tick(cx: &mut App) {
 }
 
 /// [`tick`] at `now`, so a test can let the minutes pass.
-pub(crate) fn tick_at(now: Instant, cx: &mut App) {
+pub(super) fn tick_at(now: Instant, cx: &mut App) {
     let updates = &app(cx).updates;
     if !updates.restart_pending() {
         return;

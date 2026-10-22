@@ -26,7 +26,7 @@ pub(super) fn section(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn update_installed(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let mut words = arg.split_whitespace();
     let version = words.next().ok_or_else(|| anyhow!("expected a version, e.g. 0.3.1"))?;
-    crate::workspace::devctl_update_installed(version, words.next() == Some("pending"), ctx.cx);
+    crate::updates::devctl_installed(version, words.next() == Some("pending"), ctx.cx);
     Ok(String::new())
 }
 
@@ -129,7 +129,7 @@ pub(super) fn reduce_motion(ctx: &mut Ctx, arg: &str) -> Result<String> {
         "" => return Ok(format!("reduce-motion {}\n", on_off(ctx.cx.reduce_motion()))),
         other => switch(other)?,
     };
-    crate::workspace::override_look(ctx.cx, |look| look.reduce_motion = value);
+    crate::app_state::look::override_look(ctx.cx, |look| look.reduce_motion = value);
     Ok(String::new())
 }
 
@@ -144,7 +144,7 @@ pub(super) fn increase_contrast(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => switch(other)?,
     };
-    crate::workspace::override_look(ctx.cx, |look| look.increase_contrast = value);
+    crate::app_state::look::override_look(ctx.cx, |look| look.increase_contrast = value);
     Ok(String::new())
 }
 
@@ -188,7 +188,7 @@ pub(super) fn appearance(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => return Err(anyhow!("expected light|dark|system, got {other:?}")),
     };
-    crate::workspace::override_look(ctx.cx, |look| look.appearance = value);
+    crate::app_state::look::override_look(ctx.cx, |look| look.appearance = value);
     Ok(String::new())
 }
 
@@ -202,7 +202,7 @@ pub(super) fn reduce_transparency(ctx: &mut Ctx, arg: &str) -> Result<String> {
         }
         other => switch(other)?,
     };
-    crate::workspace::override_look(ctx.cx, |look| look.reduce_transparency = value);
+    crate::app_state::look::override_look(ctx.cx, |look| look.reduce_transparency = value);
     Ok(String::new())
 }
 

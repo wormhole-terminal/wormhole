@@ -11,10 +11,10 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::Event;
 
 use super::Intro;
+use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::workspace::app::app;
 use crate::workspace::{Workspace, project};
 
 impl Workspace {

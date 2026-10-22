@@ -19,9 +19,9 @@ use wormhole_core::ipc::control::{
     writes_off,
 };
 
+use crate::app_state::{AppState, OpenWindow, app};
+use crate::notifications;
 use crate::settings::settings;
-use crate::workspace::app::{AppState, OpenWindow, app};
-use crate::workspace::notifications;
 
 /// Each caller's budgets, app-wide (a tab's requests count the same whichever window they reach).
 #[derive(Default)]

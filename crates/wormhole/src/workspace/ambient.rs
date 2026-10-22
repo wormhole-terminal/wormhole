@@ -11,10 +11,10 @@ use wormhole_core::agents::Foreground;
 use wormhole_core::notify::{self, Source, State};
 use wormhole_core::view::sidebar::command::ends_by_itself;
 
+use crate::app_state::app;
 use crate::terminal_view::Status;
 use crate::terminal_view::{Failure, ProgramNotice};
 use crate::workspace::Workspace;
-use crate::workspace::app::app;
 use crate::workspace::window_lifecycle::open_tab;
 
 /// One terminal of one window, as read on this tick.
@@ -163,7 +163,7 @@ fn tabs_of(with_hidden: bool, cx: &App) -> Vec<TabFacts> {
 /// Every sidebar terminal of every window, for the status item, the Dock and the quick panel.
 pub(crate) fn terminals(cx: &App) -> Vec<notify::Terminal> {
     let tabs = shown_tabs(cx);
-    let finished = crate::workspace::notifications::finished_commands(cx);
+    let finished = crate::notifications::finished_commands(cx);
     tabs.iter().map(|t| terminal(t, finished.and_then(|f| f.get(&t.tab)))).collect()
 }
 

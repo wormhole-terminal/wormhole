@@ -10,8 +10,8 @@ use wormhole_core::storage::store::{NoteRecord, SessionRecord, TaskRecord};
 use wormhole_core::view::panes::PaneId;
 use wormhole_core::view::sidebar::{SplitId, names};
 
+use crate::app_state::app;
 use crate::terminal_view::{Status, TerminalEvent, TerminalView};
-use crate::workspace::app::app;
 use crate::workspace::dialog::shortened;
 use crate::workspace::git_panel::{changes, history};
 use crate::workspace::notes::{Note, TaskItem};

@@ -15,9 +15,10 @@ use wormhole_core::view::panes::{
 };
 use wormhole_core::view::sidebar::SplitId;
 
+use crate::notifications;
 use crate::style;
 use crate::terminal_view::TerminalView;
-use crate::workspace::{Workspace, notifications};
+use crate::workspace::Workspace;
 
 /// A split: its id (one counter with the sessions') and the layout its members share.
 pub(super) struct Split {

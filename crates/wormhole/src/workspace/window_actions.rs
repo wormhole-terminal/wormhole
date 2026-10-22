@@ -8,9 +8,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::sidebar::order::shortcut_target;
 
-use crate::settings::settings;
-use crate::terminal_view::FONT_SIZES;
-use crate::workspace::actions::{
+use crate::actions::{
     ActualSize, Bigger, CloseTerminal, CloseWindow, CopyPath, Find, FindNext, FindPrevious, FocusNextArea,
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
     GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewNote,
@@ -19,6 +17,8 @@ use crate::workspace::actions::{
     ShowNotes, ShowProject, ShowUsage, Smaller, SplitDown, SplitRight, StashPrompt, ToggleRightPanel,
     ToggleSidebar, UseSelectionForFind, ZoomPane,
 };
+use crate::settings::settings;
+use crate::terminal_view::FONT_SIZES;
 use crate::workspace::{RightTab, Workspace, sidebar};
 
 /// The zoom (points over the Settings size) after one more step, kept within [`FONT_SIZES`].

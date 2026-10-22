@@ -6,8 +6,8 @@ use gpui_kit::*;
 use wormhole_core::storage::store::{SplitRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 
+use crate::app_state::app_mut;
 use crate::terminal_view::Status;
-use crate::workspace::app::app_mut;
 use crate::workspace::dialog;
 use crate::workspace::session::Session;
 use crate::workspace::session::{close_group_detail, close_group_title};

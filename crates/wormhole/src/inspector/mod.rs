@@ -56,7 +56,7 @@ thread_local! {
 
 pub fn init(cx: &mut App) {
     // GPUI Kit has an inspector of its own (a raw style editor) on ⌥⌘I, which is the right
-    // panel's key now: `workspace::actions` unbinds it and binds the keymap's ⇧⌥⌘I to
+    // panel's key now: `actions` unbinds it and binds the keymap's ⇧⌥⌘I to
     // `Inspect`. Setting the renderer after `gpui_kit::init` swaps in this panel.
     cx.on_action(|_: &Inspect, cx| {
         // The window is in the middle of dispatching the menu action; toggle once it's done.

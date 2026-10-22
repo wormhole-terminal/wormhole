@@ -16,11 +16,11 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::folder_color::FolderColor;
 use wormhole_core::theme::tokens::{Color, ThemeTokens};
 
+use crate::app_state::app;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, settings, settings_in, store_in};
 use crate::theme_bridge;
 use crate::workspace::Workspace;
-use crate::workspace::app::app;
 use crate::workspace::project::{project_folders_on, set_project_color};
 use crate::workspace::title_row::Tint;
 

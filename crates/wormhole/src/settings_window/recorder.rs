@@ -19,10 +19,10 @@ use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
 
 use super::{SettingsWindow, registry, ui};
+use crate::app_state::app_mut;
 use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
 use crate::style::{self, TextRole};
-use crate::workspace::app::app_mut;
 
 /// A recorder in progress, or one that refused keys.
 pub(super) enum Recording {

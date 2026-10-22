@@ -1,10 +1,13 @@
 //! Self-updates: scheduled and manual checks against the release feed,
 //! download + install in the background, restart when the user is ready.
 //!
+//! Above the window and the shared state, which hold its `Updates` as a field (a known edge, kept
+//! until it is a global of its own). Settings and the status item use it.
+//!
 //! The feed URL and Apple team come from the release build's environment
 //! (`WORMHOLE_UPDATE_URL`, `WORMHOLE_TEAM_ID`); development builds have no
-//! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key is `packaging/updater.pub`, the same
-//! file `scripts/package.sh` checks the signing key against.
+//! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key
+//! is `packaging/updater.pub`, the same file `scripts/package.sh` checks the signing key against.
 
 pub(crate) mod restart;
 #[cfg(test)]
@@ -22,9 +25,9 @@ use wormhole_core::update::{
     self, DownloadedUpdate, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
+use crate::app_state::{app, app_mut};
 use crate::settings::{SettingsStore, settings};
-use crate::workspace::app::{app, app_mut};
-use crate::workspace::update_restart::IdleWatch;
+use crate::updates::restart::IdleWatch;
 
 const BUNDLE_ID: &str = "app.getwormhole.terminal";
 const SCHEDULE_KEY: &str = "update_schedule";
@@ -53,7 +56,7 @@ pub(crate) struct Updates {
     progress: Arc<(AtomicU64, AtomicU64)>,
     task: Option<Task<()>>,
     /// "Restart When Idle" was chosen: the app restarts once its terminals have been idle for a
-    /// while (`update_restart::tick`). Not saved: a request lives as long as the run that made it.
+    /// while (`updates::restart::tick`). Not saved: a request lives as long as the run that made it.
     restart_when_idle: Option<IdleWatch>,
     /// The channel the shown phase belongs to; switching it checks the new one (see [`init`]).
     channel: UpdateChannel,
@@ -98,7 +101,7 @@ impl Updates {
         self.restart_when_idle.is_some()
     }
 
-    pub(crate) fn restart_watch(&mut self) -> Option<&mut IdleWatch> {
+    fn restart_watch(&mut self) -> Option<&mut IdleWatch> {
         self.restart_when_idle.as_mut()
     }
 

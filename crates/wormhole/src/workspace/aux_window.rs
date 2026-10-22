@@ -7,12 +7,12 @@
 use gpui_kit::*;
 use wormhole_core::theme::tokens::{Color, OPAQUE};
 
+use crate::app_state::AppState;
+use crate::app_state::app_mut;
 use crate::settings::Settings;
 use crate::settings::SettingsStore;
 use crate::style;
 use crate::theme_bridge::hsla;
-use crate::workspace::app::AppState;
-use crate::workspace::app::app_mut;
 use crate::workspace::chrome::TitleDrag as _;
 
 /// Surface colors for a secondary window.

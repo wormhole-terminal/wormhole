@@ -18,14 +18,14 @@ use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
 
+use crate::app_state::{AppState, app, app_mut};
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::hotkey::Hotkey;
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
-use crate::workspace::app::{AppState, app, app_mut};
-use crate::workspace::updates;
+use crate::updates;
 use crate::workspace::window_lifecycle::open_tab;
 use crate::workspace::window_lifecycle::with_front_workspace;
 

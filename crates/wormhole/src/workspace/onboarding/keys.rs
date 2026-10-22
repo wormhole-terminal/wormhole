@@ -13,7 +13,8 @@ use wormhole_core::onboarding::intro::page::Entrance;
 use wormhole_core::onboarding::{Event, Step};
 
 use super::FADE_OUT;
-use crate::workspace::{Workspace, actions};
+use crate::actions;
+use crate::workspace::Workspace;
 
 /// The most buttons the page is walked through when ⇥ looks for its stops.
 const STOPS_MAX: usize = 32;

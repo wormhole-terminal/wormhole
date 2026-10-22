@@ -5,8 +5,8 @@
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, px, size};
 use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
+use crate::app_state::OpenWindow;
 use crate::platform::record;
-use crate::workspace::app::OpenWindow;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {

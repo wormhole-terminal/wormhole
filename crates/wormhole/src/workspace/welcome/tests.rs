@@ -15,11 +15,11 @@ use wormhole_core::view::sidebar::RowState;
 
 use super::{Plan, handle};
 use crate::app::control;
+use crate::app_state::{app, app_mut};
+use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::workspace::app::{app, app_mut};
-use crate::workspace::notifications;
 use crate::workspace::view_tests::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
@@ -356,7 +356,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         gpui_kit::init(cx);
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(crate::settings::SettingsStore::load());
-        cx.set_global(crate::workspace::app::AppState::for_test(100));
+        cx.set_global(crate::app_state::AppState::for_test(100));
         crate::app::handlers::init(cx);
         app_mut(cx).first_welcome = Some(Plan { handover: Handover::Portal, first_run: true });
         crate::workspace::window_lifecycle::open_workspace_window(None, None, cx);
@@ -377,7 +377,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
 // ------------------------------------------------------------------------- the example band
 
 /// The three states the band shows, as `state` would list them.
-fn band(cx: &mut TestAppContext, window: &crate::workspace::app::OpenWindow) -> Option<Vec<RowState>> {
+fn band(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Option<Vec<RowState>> {
     cx.update(|cx| {
         window
             .workspace
@@ -389,7 +389,7 @@ fn band(cx: &mut TestAppContext, window: &crate::workspace::app::OpenWindow) -> 
 /// What a script, the saved window and the sidebar's list each say of the window's terminals.
 fn terminals_as_seen(
     cx: &mut TestAppContext,
-    window: &crate::workspace::app::OpenWindow,
+    window: &crate::app_state::OpenWindow,
 ) -> (serde_json::Value, String, wormhole_core::view::sidebar::Listing, usize) {
     let (record, listing, sessions) = cx.update(|cx| {
         window

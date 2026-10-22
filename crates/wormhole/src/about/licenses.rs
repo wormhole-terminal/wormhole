@@ -8,10 +8,10 @@ use gpui_kit::*;
 use wormhole_core::update::licenses::Licenses;
 
 use super::ui;
+#[cfg(feature = "devctl")]
+use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
-#[cfg(feature = "devctl")]
-use crate::workspace::app::app;
 use crate::workspace::aux_window;
 use crate::workspace::panel_list::Rows;
 

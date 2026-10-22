@@ -27,12 +27,12 @@ use wormhole_core::config::settings_index::{self, Query};
 use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
+use crate::app_state::{AppState, app, app_mut};
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
-use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::aux_window;
 use crate::workspace::chrome::TitleDrag as _;
 use font_picker::FontPickerState;

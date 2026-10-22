@@ -10,10 +10,10 @@ use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
+use crate::app_state::{app, app_mut};
 use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::workspace::Workspace;
-use crate::workspace::app::{app, app_mut};
 use crate::workspace::git_panel::{changes, history};
 use crate::workspace::notes::TaskItem;
 use crate::workspace::session::{Pane, Session};
@@ -247,7 +247,7 @@ impl Workspace {
         let after = crate::workspace::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
         self.sidebar.view.groups.leave(closed.id);
-        crate::workspace::notifications::dismiss(closed.pane.id, cx);
+        crate::notifications::dismiss(closed.pane.id, cx);
         crate::workspace::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);
         self.dirty = true;
@@ -277,7 +277,7 @@ impl Workspace {
         for ix in self.on_screen_sessions() {
             let pane = &self.sessions[ix].pane;
             pane.terminal.update(cx, |t, _| t.acknowledge());
-            crate::workspace::notifications::dismiss(pane.id, cx);
+            crate::notifications::dismiss(pane.id, cx);
         }
     }
 
