@@ -2,7 +2,7 @@
 //! text is erased when it is turned off, at launch while it stays off (it may have been changed in
 //! config.json while the app was closed), and when Wormhole switches to a profile that has it off.
 //! Saving stops by itself (`Workspace::save_scrollback`); a profile opened beside the shown one is
-//! erased as it opens (`ProfileSlot::open`).
+//! erased as it opens (`profiles::open_beside`).
 
 use gpui_kit::{App, Global};
 use wormhole_core::profile::ProfileId;

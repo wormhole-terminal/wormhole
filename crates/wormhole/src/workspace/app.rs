@@ -34,8 +34,8 @@ use super::{
 };
 use crate::menubar::MenuCommand;
 use crate::platform::vibrancy;
-use crate::settings::SettingsStore;
 use crate::settings::SystemLook;
+use crate::settings::{ParkedSettings, SettingsStore};
 use crate::style;
 
 const TICK: Duration = Duration::from_millis(400);
@@ -293,6 +293,7 @@ impl AppState {
             let _ = display_changed.try_send(());
         });
         super::open_in::OpenIn::install(cx);
+        cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
         cx.set_global(AppState {
             root,
             profiles,
@@ -644,9 +645,9 @@ fn tick(cx: &mut App) {
     app_mut(cx).ticks += 1;
     let ticks = app(cx).ticks;
     let mut moved = SettingsStore::poll(cx);
-    if !app(cx).parked.is_empty() {
+    if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
         let system = cx.global::<SettingsStore>().system();
-        moved |= app_mut(cx).follow_parked(system);
+        moved |= cx.global_mut::<ParkedSettings>().follow(system);
     }
     if moved {
         cx.refresh_windows();

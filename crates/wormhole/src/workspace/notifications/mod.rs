@@ -36,7 +36,7 @@ use super::{RightTab, Workspace};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
-use crate::settings::settings;
+use crate::settings::{settings, settings_in};
 use watch::{Event, Watch};
 
 /// The actions a notification can carry (`Notice::category` picks which).
@@ -202,7 +202,7 @@ pub(crate) fn sweep(cx: &mut App) {
                     // By the settings of the profile the terminal is in, shown or not.
                     let owner = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some());
                     let settings = match owner {
-                        Some(owner) => app(cx).settings_of(&owner.profile, cx),
+                        Some(owner) => settings_in(&owner.profile, cx).clone(),
                         None => settings(cx).clone(),
                     };
                     announce(happened, app_active, &settings, cx);

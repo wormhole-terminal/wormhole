@@ -1,12 +1,81 @@
 //! Settings across a profile switch: the global holds the shown profile's store, and a switch
-//! puts another profile's store in its place.
+//! puts another profile's store in its place. The stores of the other open profiles are kept here
+//! too ([`ParkedSettings`]), so a window in another profile finds its own without settings knowing
+//! the app state that opens and switches profiles (`workspace::profiles`, which keeps the rest of
+//! each profile's data beside them).
 
-use gpui_kit::App;
+use std::collections::HashMap;
+
+use gpui_kit::{App, Global};
 use wormhole_core::config::Settings;
 use wormhole_core::profile::ProfileId;
 
 use super::{SettingsStore, UiColors};
-use crate::workspace::AppState;
+
+/// The settings stores of the profiles that are open but not shown, by profile: what their odd
+/// windows draw with. The shown profile's store is the [`SettingsStore`] global, never one of these.
+pub struct ParkedSettings {
+    /// The profile shown. Checked first, so a window of the shown profile pays one comparison
+    /// and no lookup.
+    shown: ProfileId,
+    stores: HashMap<ProfileId, SettingsStore>,
+}
+
+impl Global for ParkedSettings {}
+
+impl Default for ParkedSettings {
+    /// Nothing parked, with Default shown (as a fresh profile list has it).
+    fn default() -> Self {
+        Self::new(ProfileId::default_profile())
+    }
+}
+
+impl ParkedSettings {
+    pub fn new(shown: ProfileId) -> Self {
+        Self { shown, stores: HashMap::new() }
+    }
+
+    /// The store of `profile` when it is open and not shown.
+    pub fn get(&self, profile: &ProfileId) -> Option<&SettingsStore> {
+        if *profile == self.shown { None } else { self.stores.get(profile) }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_mut(&mut self, profile: &ProfileId) -> Option<&mut SettingsStore> {
+        if *profile == self.shown { None } else { self.stores.get_mut(profile) }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.stores.is_empty()
+    }
+
+    /// Keep `store` for `profile`, which is not the one shown.
+    pub fn park(&mut self, profile: ProfileId, store: SettingsStore) {
+        self.stores.insert(profile, store);
+    }
+
+    /// `profile` was closed (deleted): its store goes.
+    pub fn remove(&mut self, profile: &ProfileId) {
+        self.stores.remove(profile);
+    }
+
+    /// `profile` is the shown one from now on: its parked store, if it had one, is handed back to
+    /// be swapped in (`SettingsStore::swap_in`).
+    pub fn show(&mut self, profile: &ProfileId) -> Option<SettingsStore> {
+        self.shown = profile.clone();
+        self.stores.remove(profile)
+    }
+
+    /// Every parked store keeps up with the system and its files (`SettingsStore::follow`).
+    /// Returns whether any look changed.
+    pub fn follow(&mut self, system: super::SystemLook) -> bool {
+        let mut moved = false;
+        for store in self.stores.values_mut() {
+            moved |= store.follow(system);
+        }
+        moved
+    }
+}
 
 impl SettingsStore {
     /// Make `next` (another profile's settings) the store in force and hand back the one it
@@ -56,10 +125,7 @@ impl SettingsStore {
 /// or separately dirtied child view renders without its window's root, and event handlers have
 /// no render at all.
 pub fn store_in<'a>(profile: &ProfileId, cx: &'a App) -> &'a SettingsStore {
-    if let Some(state) = cx.try_global::<AppState>()
-        && profile != state.active_profile()
-        && let Some(parked) = state.parked_settings(profile)
-    {
+    if let Some(parked) = cx.try_global::<ParkedSettings>().and_then(|parked| parked.get(profile)) {
         return parked;
     }
     cx.global::<SettingsStore>()

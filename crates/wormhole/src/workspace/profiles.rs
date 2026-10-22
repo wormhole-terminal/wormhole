@@ -3,8 +3,9 @@
 //!
 //! One profile is shown at a time and its state is the app's own (`AppState.store`, `hub`, the
 //! `SettingsStore` global, …), so everything written for a single profile keeps working. Every
-//! other profile that has been opened is parked in a [`ProfileSlot`]; switching swaps the two
-//! (`switch_profile`), so no call site has to know which profile it is in. A window knows its
+//! other profile that has been opened is parked: its [`ProfileData`] here, its settings in
+//! settings' own [`ParkedSettings`]; switching swaps the two (`switch_profile`), so no call site
+//! has to know which profile it is in. A window knows its
 //! profile (`Workspace.profile`) and saves into that profile's database, shown or parked.
 
 use std::collections::HashMap;
@@ -24,7 +25,7 @@ use wormhole_core::store::{SessionRecord, WindowRecord};
 use super::app::{AppState, OpenWindow};
 use super::app::{app, app_mut};
 use super::{Workspace, menu_bar, project};
-use crate::settings::{SettingsStore, settings, settings_in};
+use crate::settings::{ParkedSettings, SettingsStore, settings_in};
 
 impl AppState {
     /// The profile Wormhole is in.
@@ -37,7 +38,7 @@ impl AppState {
         if profile == self.active_profile() {
             self.store.as_ref()
         } else {
-            self.parked.get(profile).and_then(|slot| slot.data.store.as_ref())
+            self.parked.get(profile).and_then(|data| data.store.as_ref())
         }
     }
 
@@ -45,19 +46,8 @@ impl AppState {
         if profile == self.profiles.active_id() {
             self.store.as_mut()
         } else {
-            self.parked.get_mut(profile).and_then(|slot| slot.data.store.as_mut())
+            self.parked.get_mut(profile).and_then(|data| data.store.as_mut())
         }
-    }
-
-    /// The settings of a profile that is not shown, when it has been opened: what its odd windows
-    /// draw with.
-    pub(crate) fn parked_settings(&self, profile: &ProfileId) -> Option<&SettingsStore> {
-        self.parked.get(profile).map(|slot| &slot.settings)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn parked_settings_mut(&mut self, profile: &ProfileId) -> Option<&mut SettingsStore> {
-        self.parked.get_mut(profile).map(|slot| &mut slot.settings)
     }
 
     /// The project folders (preferences, trust, notes sync) of `profile`.
@@ -65,7 +55,7 @@ impl AppState {
         if profile == self.profiles.active_id() {
             Some(&mut self.hub)
         } else {
-            self.parked.get_mut(profile).map(|slot| &mut slot.data.hub)
+            self.parked.get_mut(profile).map(|data| &mut data.hub)
         }
     }
 
@@ -96,7 +86,7 @@ impl AppState {
     /// Every open profile's WAL folded in and cut to nothing (`Store::checkpoint`): at quit, so
     /// text deleted since the last checkpoint doesn't wait in the WAL for the next launch.
     pub(crate) fn checkpoint_stores(&self) {
-        let parked = self.parked.values().filter_map(|slot| slot.data.store.as_ref());
+        let parked = self.parked.values().filter_map(|data| data.store.as_ref());
         for store in self.store.iter().chain(parked) {
             if let Err(err) = store.checkpoint() {
                 tracing::warn!("{err:#}");
@@ -148,6 +138,7 @@ impl AppState {
         for window in app(cx).windows_of(id).cloned().collect::<Vec<_>>() {
             let _ = window.handle.update(cx, |_, win, _| win.remove_window());
         }
+        cx.default_global::<ParkedSettings>().remove(id);
         let state = app_mut(cx);
         // Its database closes before its folder goes, and its saved text's key with it.
         state.parked.remove(id);
@@ -160,13 +151,16 @@ impl AppState {
 
     /// Open `profile`'s database and settings when this launch hasn't yet, so a window can live in
     /// it without Wormhole being in it. The shown profile is always open.
-    pub(crate) fn ensure_open(&mut self, profile: &ProfileId) {
-        if profile == self.active_profile() || self.parked.contains_key(profile) {
+    pub(crate) fn ensure_open(profile: &ProfileId, cx: &mut App) {
+        let state = app(cx);
+        if profile == state.active_profile() || state.parked.contains_key(profile) {
             return;
         }
-        let mut slot = ProfileSlot::open(&self.root.profile(profile));
-        slot.data.hub.ids_start_at(self.next_id);
-        self.parked.insert(profile.clone(), slot);
+        let (mut data, settings) = open_beside(&state.root.profile(profile));
+        let state = app_mut(cx);
+        data.hub.ids_start_at(state.next_id);
+        state.parked.insert(profile.clone(), data);
+        cx.default_global::<ParkedSettings>().park(profile.clone(), settings);
     }
 
     /// A new window in `target` ("Open a window in…"), stepped away from the window in front. When
@@ -175,7 +169,7 @@ impl AppState {
         if app(cx).profiles.get(target).is_none() {
             return;
         }
-        app_mut(cx).ensure_open(target);
+        Self::ensure_open(target, cx);
         let target = target.clone();
         // A start folder of its own (the profile's), not the window in front's.
         if AppState::with_front_workspace(cx, |ws, window, cx| {
@@ -198,7 +192,7 @@ impl AppState {
         if &front.profile == target {
             return Ok(());
         }
-        app_mut(cx).ensure_open(target);
+        Self::ensure_open(target, cx);
         Self::with_workspace(&front, cx, |ws, _, cx| ws.rehome(target, cx)).unwrap_or(Ok(()))?;
         if let Some(window) = app_mut(cx).windows.iter_mut().find(|w| w.id == front.id) {
             window.profile = target.clone();
@@ -213,25 +207,6 @@ impl AppState {
         super::app_menu::sync(cx);
         cx.refresh_windows();
         Ok(())
-    }
-
-    /// The settings of `profile`: the live ones when it is shown, else its parked ones. A hidden
-    /// profile's agents tell you by their own profile's notification settings.
-    pub(crate) fn settings_of(&self, profile: &ProfileId, cx: &App) -> wormhole_core::config::Settings {
-        match self.parked.get(profile) {
-            Some(slot) if profile != self.active_profile() => slot.settings.settings.clone(),
-            _ => settings(cx).clone(),
-        }
-    }
-
-    /// Parked profiles keep up with the system and their files, as their odd windows draw by them.
-    /// Returns whether any look changed.
-    pub(crate) fn follow_parked(&mut self, system: crate::settings::SystemLook) -> bool {
-        let mut moved = false;
-        for slot in self.parked.values_mut() {
-            moved |= slot.settings.follow(system);
-        }
-        moved
     }
 
     /// The windows of `profile`, shown or not.
@@ -325,29 +300,22 @@ impl ProfileData {
     }
 }
 
-/// What a profile keeps while another is shown: [`ProfileData`] and its settings (the
-/// `SettingsStore` global is the shown profile's).
-pub(super) struct ProfileSlot {
-    pub data: ProfileData,
-    pub settings: SettingsStore,
-}
-
-impl ProfileSlot {
-    /// A profile opened beside the shown one: with Restore terminal text after restart off, what its
-    /// store still holds of its terminals' text is erased now, not when Wormhole next switches to it.
-    fn open(paths: &ProfilePaths) -> Self {
-        let slot = Self { data: ProfileData::open(paths), settings: SettingsStore::load_for(paths) };
-        if !slot.settings.settings.restore_terminal_text
-            && let Some(store) = &slot.data.store
-            && let Err(err) = store.erase_saved_text()
-        {
-            tracing::warn!("erasing the saved terminal text of {}: {err:#}", paths.dir().display());
-        }
-        slot
+/// A profile opened beside the shown one: its data and its settings. With Restore terminal text
+/// after restart off, what its store still holds of its terminals' text is erased now, not when
+/// Wormhole next switches to it.
+fn open_beside(paths: &ProfilePaths) -> (ProfileData, SettingsStore) {
+    let (data, settings) = (ProfileData::open(paths), SettingsStore::load_for(paths));
+    if !settings.settings.restore_terminal_text
+        && let Some(store) = &data.store
+        && let Err(err) = store.erase_saved_text()
+    {
+        tracing::warn!("erasing the saved terminal text of {}: {err:#}", paths.dir().display());
     }
+    (data, settings)
 }
 
-pub(super) type Parked = HashMap<ProfileId, ProfileSlot>;
+/// What each profile that is open but not shown keeps here (its settings are in [`ParkedSettings`]).
+pub(super) type Parked = HashMap<ProfileId, ProfileData>;
 
 impl AppState {
     /// Wormhole is in profile `target` from now on: every window of the profile that was shown goes
@@ -372,12 +340,14 @@ impl AppState {
         // Before the target's settings resolve their fonts and icon themes.
         crate::active_profile::set(paths.clone());
         crate::fonts::poll_custom(cx);
-        let slot = match app_mut(cx).parked.remove(target) {
-            Some(slot) => slot,
-            None => ProfileSlot::open(&paths),
+        // Both halves of a parked profile are there, or neither.
+        let parked_settings = cx.default_global::<ParkedSettings>().show(target);
+        let (data, settings) = match (app_mut(cx).parked.remove(target), parked_settings) {
+            (Some(data), Some(settings)) => (data, settings),
+            _ => open_beside(&paths),
         };
-        let ProfileSlot { data, settings } = slot;
         let leaving_settings = SettingsStore::swap_in(cx, settings);
+        cx.global_mut::<ParkedSettings>().park(from.clone(), leaving_settings);
         let first_free = app(cx).next_id;
         let state = app_mut(cx);
         let ProfileData { store, tips, mut hub, mut recent, usage, worktrees, last_panes } = data;
@@ -393,7 +363,7 @@ impl AppState {
         };
         state.menu.switch_profile(&mut recent);
         let leaving = ProfileData { recent, ..leaving };
-        state.parked.insert(from.clone(), ProfileSlot { data: leaving, settings: leaving_settings });
+        state.parked.insert(from.clone(), leaving);
         if let Err(err) = state.profiles.set_active(target) {
             return Err(err.to_string());
         }

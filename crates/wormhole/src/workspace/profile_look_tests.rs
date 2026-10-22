@@ -5,10 +5,10 @@ use gpui_kit::TestAppContext;
 use wormhole_core::config::ThemeMode;
 use wormhole_core::profile::{NewProfile, ProfileId, StartFrom};
 
-use super::app::{AppState, app, app_mut};
+use super::app::{AppState, app};
 use super::view_tests::{draw, isolate_in, read, start};
 use super::{Workspace, settings_page};
-use crate::settings::{SettingsStore, settings, settings_in, store_in, ui, ui_in};
+use crate::settings::{ParkedSettings, SettingsStore, settings, settings_in, store_in, ui, ui_in};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -25,7 +25,7 @@ fn an_odd_window_reads_its_profiles_theme_and_fonts(cx: &mut TestAppContext) {
             let new =
                 NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
             let id = AppState::create_profile(new, cx)?;
-            app_mut(cx).ensure_open(&id);
+            AppState::ensure_open(&id, cx);
             Ok::<ProfileId, String>(id)
         })
         .expect("makes the profile");
@@ -35,7 +35,7 @@ fn an_odd_window_reads_its_profiles_theme_and_fonts(cx: &mut TestAppContext) {
             s.theme_mode = ThemeMode::Dark;
             s.font_family = "Menlo".into();
         });
-        app_mut(cx).parked_settings_mut(&work).expect("Work is parked").restyle(|s| {
+        cx.global_mut::<ParkedSettings>().get_mut(&work).expect("Work is parked").restyle(|s| {
             s.theme_mode = ThemeMode::Light;
             s.font_family = "Monaco".into();
         });
