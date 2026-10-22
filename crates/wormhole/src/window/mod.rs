@@ -181,9 +181,9 @@ pub struct Workspace {
     /// A feature's text field has the keyboard (`FeatureEvent::Editing`): the panel's content is the
     /// focused area, as for a note being written.
     feature_editing: bool,
-    /// The tab that was open when a conditional tab (Usage) was opened: where the panel goes back to
+    /// The tab that was open when a tab that returns to it (Usage) was opened: where the panel goes back to
     /// when the condition no longer holds (no agent is left to show usage for).
-    tab_before_conditional: Option<TabId>,
+    tab_before_previous: Option<TabId>,
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
@@ -348,7 +348,7 @@ impl Workspace {
             features,
             feature_states,
             feature_editing: false,
-            tab_before_conditional: None,
+            tab_before_previous: None,
             panel_scroll: ScrollHandle::new(),
             picker: None,
             branches: Vec::new(),

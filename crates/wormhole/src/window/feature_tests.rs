@@ -119,7 +119,7 @@ static STAND_IN: &[FeatureDef] = &[
                 on.then(|| gpui_kit::div().into_any_element())
             }),
             refresh_ticks: None,
-            conditional: false,
+            returns_to_previous: false,
             window_side: None,
         }],
         bind: Some(|_, _, root, _| root),
@@ -133,7 +133,7 @@ static STAND_IN: &[FeatureDef] = &[
         }),
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
         tick: None,
-        profile: None,
+        profile_shown: None,
         state: Some(StateDef {
             make: |window, cx| {
                 let entity = cx.new(|_| Marker {
@@ -676,7 +676,7 @@ macro_rules! crowd_member {
                 walk: None,
                 actions: None,
                 refresh_ticks: None,
-                conditional: false,
+                returns_to_previous: false,
                 window_side: None,
             }],
             bind: Some(|_, _, root, _| root),
@@ -684,7 +684,7 @@ macro_rules! crowd_member {
             close_stake: None,
             menu: None,
             tick: None,
-            profile: None,
+            profile_shown: None,
             state: Some(StateDef {
                 make: |window, cx| {
                     let entity = cx.new(|_| Marker {

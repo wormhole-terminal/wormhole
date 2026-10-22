@@ -57,7 +57,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         walk: None,
         actions: None,
         refresh_ticks: None,
-        conditional: false,
+        returns_to_previous: false,
         window_side: Some(&SIDE),
     }],
     bind: None,
@@ -65,7 +65,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     close_stake: None,
     menu: None,
     tick: None,
-    profile: None,
+    profile_shown: None,
     state: Some(StateDef {
         make: |window, cx| {
             let entity = cx.new(|_| ChangesPanel);

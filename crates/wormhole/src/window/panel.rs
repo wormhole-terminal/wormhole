@@ -100,8 +100,8 @@ impl Workspace {
                 _ => tab,
             }
         };
-        if self.right_tab != tab && self.tab_entry(tab).is_some_and(|(_, entry)| entry.conditional) {
-            self.tab_before_conditional = Some(self.right_tab);
+        if self.right_tab != tab && self.tab_entry(tab).is_some_and(|(_, entry)| entry.returns_to_previous) {
+            self.tab_before_previous = Some(self.right_tab);
         }
         self.set_right_tab(tab);
         self.reveal_notes();

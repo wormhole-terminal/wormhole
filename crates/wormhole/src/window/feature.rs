@@ -95,6 +95,7 @@ pub(in crate::window) type TabActionsFn =
 pub(in crate::window) type OnShowFn = fn(&AnyEntity, session: i64, &mut App);
 pub(in crate::window) type FocusInFn =
     fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut Window, &mut App) -> bool;
+pub(in crate::window) type ProfileShownFn = fn(&mut App);
 pub(in crate::window) type TickFn = fn(&AnyEntity, &mut Window, &mut App);
 pub(in crate::window) type PressFn =
     fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
@@ -133,7 +134,7 @@ pub(in crate::window) struct FeatureDef {
     /// The shown profile's data is in `AppState` (at launch, after a profile switch): the feature reads
     /// its own app-wide data for it (Usage's reports). Per window state is the window's and doesn't
     /// need this. Called from outside any window, so it gets only the app.
-    pub profile: Option<fn(&mut App)>,
+    pub profile_shown: Option<ProfileShownFn>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -172,7 +173,7 @@ pub(in crate::window) struct TabDef {
     pub refresh_ticks: Option<u64>,
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
-    pub conditional: bool,
+    pub returns_to_previous: bool,
     /// **Temporary, for Changes only, until 5d.** When set, the frame draws, shows, walks and presses
     /// the tab through this instead of `view`, `on_show` and `walk`. See the end of the module comment.
     pub window_side: Option<&'static WindowSideTab>,

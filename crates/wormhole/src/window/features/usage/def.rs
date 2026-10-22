@@ -32,7 +32,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         walk: None,
         actions: None,
         refresh_ticks: Some(REDRAW_TICKS),
-        conditional: true,
+        returns_to_previous: true,
         window_side: None,
     }],
     bind: None,
@@ -45,7 +45,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         }
     }),
     tick: None,
-    profile: Some(profile_shown),
+    profile_shown: Some(profile_shown),
     state: Some(STATE),
 };
 

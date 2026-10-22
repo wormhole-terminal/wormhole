@@ -91,13 +91,13 @@ impl Workspace {
     }
 
     /// Leave a tab that is no longer in the panel's list (Usage once the agent is gone, Notes
-    /// with its flag off): back to the tab before a conditional one (Usage) was opened, else Changes.
+    /// with its flag off): back to the tab before one that returns to it (Usage) was opened, else Changes.
     pub(in crate::window) fn leave_missing_tab(&mut self, cx: &mut Context<Self>) {
         if self.panel_tab_list(cx).contains(&self.right_tab) {
             return;
         }
         let back = self
-            .tab_before_conditional
+            .tab_before_previous
             .take()
             .filter(|tab| *tab != self.right_tab && self.panel_tab_list(cx).contains(tab))
             .unwrap_or(TabId::Changes);

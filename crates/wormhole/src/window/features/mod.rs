@@ -29,7 +29,7 @@ pub(crate) fn install(cx: &mut App) {
 /// The shown profile's data is in `AppState` now (at launch, after a profile switch): each feature that
 /// keeps app-wide data reads this profile's.
 pub(crate) fn profile_shown(cx: &mut App) {
-    for profile in TABLE.iter().filter_map(|def| def.profile) {
-        profile(cx);
+    for profile_shown in TABLE.iter().filter_map(|def| def.profile_shown) {
+        profile_shown(cx);
     }
 }

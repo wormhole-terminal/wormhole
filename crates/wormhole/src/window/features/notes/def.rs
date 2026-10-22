@@ -35,7 +35,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         walk: Some(list::WALK),
         actions: Some(view::stash_button),
         refresh_ticks: None,
-        conditional: false,
+        returns_to_previous: false,
         window_side: None,
     }],
     bind: Some(bind),
@@ -46,7 +46,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         // The backstop for a new note that never got the focus it would be thrown away on losing.
         typed(entity).update(cx, |notes, cx| notes.prune_blank_notes(window, cx));
     }),
-    profile: None,
+    profile_shown: None,
     state: Some(STATE),
 };
 
