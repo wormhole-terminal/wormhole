@@ -272,13 +272,13 @@ impl Workspace {
         }
     }
 
-    /// Whether the terminal a hook names (`WORMHOLE_TAB_ID`, its id) is in this window.
     /// The saved window this is (`OpenWindow` in the shared state has the same id).
     #[cfg(feature = "devctl")]
     pub(crate) fn window_id(&self) -> i64 {
         self.window_id
     }
 
+    /// Whether the terminal a hook names (`WORMHOLE_TAB_ID`, its id) is in this window.
     pub(crate) fn owns_terminal(&self, id: &str) -> bool {
         id.parse().ok().is_some_and(|id| self.find_session(id).is_some())
     }
