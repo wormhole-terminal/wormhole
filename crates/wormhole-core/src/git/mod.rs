@@ -40,7 +40,7 @@ pub use cmd::GitError;
 pub(crate) use diff::parse_diff;
 pub use diff::{
     DIFF_ASK_BYTES, DIFF_HIGHLIGHT_MAX_LINES, DIFF_MEASURE_BYTES, DiffLimits, DiffLine, FileDiff, Hunk,
-    LineKind, diff, diff_with_limits,
+    LineKind, diff, diff_with_limits, lines_in_new_file,
 };
 pub use diff_text::{byte_size, lfs_side, lfs_summary, sizes_label, too_large_detail, too_large_title};
 pub use head::{HeadCommit, head_commit, worktree_of};

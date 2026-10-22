@@ -14,7 +14,6 @@ use gpui_kit::*;
 use super::highlight::Highlights;
 use wormhole_core::config::Settings;
 use wormhole_core::git::{self, DiffLine, FileDiff, LineKind, SplitRow};
-use wormhole_core::open_file;
 use wormhole_core::tokens::{Appearance, ThemeTokens};
 
 pub(crate) struct RenderedLine {
@@ -106,7 +105,7 @@ pub(super) fn build_rows(
     // line itself (the split rows hand out references into the hunks).
     let mut nearest: HashMap<*const DiffLine, u32> = HashMap::new();
     for hunk in &diff.hunks {
-        for (line, found) in hunk.lines.iter().zip(open_file::lines_in_new_file(&hunk.lines)) {
+        for (line, found) in hunk.lines.iter().zip(git::lines_in_new_file(&hunk.lines)) {
             if let (None, Some(found)) = (line.new, found) {
                 nearest.insert(line, found);
             }

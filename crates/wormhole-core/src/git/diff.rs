@@ -31,6 +31,25 @@ pub struct Hunk {
     pub lines: Vec<DiffLine>,
 }
 
+/// For each line of a hunk, the line of the file as it is now that an editor should open for it:
+/// its own number on the new side; for a removed line, which has none there, the line that
+/// follows it (where its text used to be), or the last one before it when the removal ends the
+/// hunk. `None` for a hunk that leaves no line at all.
+pub fn lines_in_new_file(lines: &[DiffLine]) -> Vec<Option<u32>> {
+    let mut found = vec![None; lines.len()];
+    let mut next = None;
+    for (ix, line) in lines.iter().enumerate().rev() {
+        next = line.new.or(next);
+        found[ix] = next;
+    }
+    let mut before = None;
+    for (ix, line) in lines.iter().enumerate() {
+        before = line.new.or(before);
+        found[ix] = found[ix].or(before);
+    }
+    found
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FileDiff {
     pub hunks: Vec<Hunk>,
@@ -407,5 +426,24 @@ mod tests {
         let diff = parse_diff("@@ -1 +1 @@\n--- /dev/null\n+x\n");
         assert!(!diff.new_file);
         assert_eq!(diff.hunks[0].lines[0].text, "-- /dev/null");
+    }
+
+    #[test]
+    fn a_removed_line_opens_where_its_text_used_to_be() {
+        use LineKind::{Added, Context, Removed};
+        let line = |kind, old, new| DiffLine { kind, old, new, text: String::new(), no_newline: false };
+        let hunk = [
+            line(Context, Some(1), Some(1)),
+            line(Removed, Some(2), None),
+            line(Removed, Some(3), None),
+            line(Added, None, Some(2)),
+            line(Context, Some(4), Some(3)),
+            line(Removed, Some(5), None),
+        ];
+        // The removals sit before new line 2; the one at the end falls back to the line above.
+        assert_eq!(lines_in_new_file(&hunk), [Some(1), Some(2), Some(2), Some(2), Some(3), Some(3)]);
+        // Nothing left at all: no line to open.
+        assert_eq!(lines_in_new_file(&[line(Removed, Some(1), None)]), [None]);
+        assert_eq!(lines_in_new_file(&[]), Vec::<Option<u32>>::new());
     }
 }

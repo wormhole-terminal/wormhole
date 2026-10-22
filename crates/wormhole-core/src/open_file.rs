@@ -22,7 +22,6 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::git::DiffLine;
 use crate::open_in::FINDER;
 
 /// How to open a file, before it is turned into a process.
@@ -113,25 +112,6 @@ fn encode_path(path: &str) -> String {
     out
 }
 
-/// For each line of a hunk, the line of the file as it is now that an editor should open for it:
-/// its own number on the new side; for a removed line, which has none there, the line that
-/// follows it (where its text used to be), or the last one before it when the removal ends the
-/// hunk. `None` for a hunk that leaves no line at all.
-pub fn lines_in_new_file(lines: &[DiffLine]) -> Vec<Option<u32>> {
-    let mut found = vec![None; lines.len()];
-    let mut next = None;
-    for (ix, line) in lines.iter().enumerate().rev() {
-        next = line.new.or(next);
-        found[ix] = next;
-    }
-    let mut before = None;
-    for (ix, line) in lines.iter().enumerate() {
-        before = line.new.or(before);
-        found[ix] = found[ix].or(before);
-    }
-    found
-}
-
 /// The hover icon's tooltip: "Open in Zed at line 12", "Reveal in Finder".
 pub fn tooltip(bundle: &str, app: &str, line: Option<u32>) -> String {
     if bundle == FINDER.bundle {
@@ -147,8 +127,7 @@ pub fn tooltip(bundle: &str, app: &str, line: Option<u32>) -> String {
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{Launch, encode_path, launch, lines_in_new_file, opens_at_line, tooltip};
-    use crate::git::DiffLine;
+    use super::{Launch, encode_path, launch, opens_at_line, tooltip};
     use crate::open_in::{EDITORS, FINDER};
 
     const FILE: &str = "/Users/me/code/app/src/main.rs";
@@ -258,25 +237,6 @@ mod tests {
             matches!(open_at("com.microsoft.VSCode", path, Some(3)), Launch::Url { url } if url.ends_with("a%3A12/main.rs:3"))
         );
         assert!(matches!(open_at("com.jetbrains.PhpStorm", path, Some(3)), Launch::Args { .. }));
-    }
-
-    #[test]
-    fn a_removed_line_opens_where_its_text_used_to_be() {
-        use crate::git::LineKind::{Added, Context, Removed};
-        let line = |kind, old, new| DiffLine { kind, old, new, text: String::new(), no_newline: false };
-        let hunk = [
-            line(Context, Some(1), Some(1)),
-            line(Removed, Some(2), None),
-            line(Removed, Some(3), None),
-            line(Added, None, Some(2)),
-            line(Context, Some(4), Some(3)),
-            line(Removed, Some(5), None),
-        ];
-        // The removals sit before new line 2; the one at the end falls back to the line above.
-        assert_eq!(lines_in_new_file(&hunk), [Some(1), Some(2), Some(2), Some(2), Some(3), Some(3)]);
-        // Nothing left at all: no line to open.
-        assert_eq!(lines_in_new_file(&[line(Removed, Some(1), None)]), [None]);
-        assert_eq!(lines_in_new_file(&[]), Vec::<Option<u32>>::new());
     }
 
     #[test]
