@@ -122,7 +122,7 @@ fn feed_config() -> Option<UpdaterConfig> {
     Some(config)
 }
 
-/// Follows the `update_channel` setting: once AppState exists, and whenever settings change.
+/// Follows the `update_channel` setting: once `app::launch` has set the `Updates` global, and whenever settings change.
 pub(crate) fn init(cx: &mut App) {
     let channel = settings(cx).update_channel;
     cx.global_mut::<Updates>().channel = channel;
@@ -133,7 +133,7 @@ pub(crate) fn init(cx: &mut App) {
 /// at once, as if the person had pressed Check: they just made a choice about updates.
 fn channel_changed(cx: &mut App) {
     let channel = settings(cx).update_channel;
-    let updates = &mut cx.global_mut::<Updates>();
+    let updates = cx.global_mut::<Updates>();
     if updates.channel == channel {
         return;
     }
@@ -167,7 +167,7 @@ pub(crate) fn schedule_check(ticks: u64, cx: &mut App) {
 /// `manual`: the user asked, so show every result (even a skipped version).
 pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     let channel = settings(cx).update_channel;
-    let updates = &mut cx.global_mut::<Updates>();
+    let updates = cx.global_mut::<Updates>();
     let Some(mut config) = updates.config.clone() else {
         updates.phase = UpdatePhase::Failed("This is a development build; it doesn't update itself.".into());
         notify_settings(cx);
@@ -240,7 +240,7 @@ fn finish_check(result: Result<UpdateStatus, UpdateError>, manual: bool, cx: &mu
 
 /// Download, verify and swap in the new bundle; the running app keeps going until restart.
 pub(crate) fn install_update(release: Release, cx: &mut App) {
-    let updates = &mut cx.global_mut::<Updates>();
+    let updates = cx.global_mut::<Updates>();
     let Some(config) = updates.config.clone() else { return };
     let Some(bundle) = update::current_app_bundle() else {
         updates.phase = UpdatePhase::Failed("Wormhole isn't running from an app bundle.".into());
@@ -301,7 +301,7 @@ pub(crate) fn skip_update(release: &Release, cx: &mut App) {
     if release.is_security_update() {
         return;
     }
-    let updates = &mut cx.global_mut::<Updates>();
+    let updates = cx.global_mut::<Updates>();
     updates.schedule.skip(&release.version);
     updates.phase = UpdatePhase::Idle;
     save_update_schedule(cx);
@@ -328,7 +328,7 @@ pub(crate) fn restart_to_update(cx: &mut App) {
 
 /// Restart once the terminals have been idle for a while (the tick settles it).
 pub(crate) fn restart_when_idle(cx: &mut App) {
-    let updates = &mut cx.global_mut::<Updates>();
+    let updates = cx.global_mut::<Updates>();
     if matches!(updates.phase, UpdatePhase::Installed(_)) {
         updates.restart_when_idle = Some(IdleWatch::default());
         notify_settings(cx);
@@ -345,8 +345,9 @@ pub(crate) fn cancel_restart_when_idle(cx: &mut App) {
 /// "Restart When Idle" chosen when `pending` (a dev build has no feed to install from).
 #[cfg(feature = "devctl")]
 pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
-    cx.global_mut::<Updates>().phase = UpdatePhase::Installed(version.to_string());
-    cx.global_mut::<Updates>().restart_when_idle = pending.then(IdleWatch::default);
+    let updates = cx.global_mut::<Updates>();
+    updates.phase = UpdatePhase::Installed(version.to_string());
+    updates.restart_when_idle = pending.then(IdleWatch::default);
     notify_settings(cx);
 }
 
