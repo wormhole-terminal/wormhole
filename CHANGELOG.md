@@ -6,6 +6,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ## [Unreleased]
 
+### Changed
+
+- Lists and panels bounce a little at their ends when you scroll past them with a trackpad, as in
+  other Mac apps.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added
