@@ -15,6 +15,7 @@ pub mod hotkey;
 pub mod keys;
 pub mod look;
 pub mod notifications;
+pub mod panel;
 pub mod scroller;
 pub mod sheet;
 pub mod sound;

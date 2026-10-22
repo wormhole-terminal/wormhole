@@ -9,8 +9,6 @@
 //! another app stays active. It sits 20 % from the top of the screen with the pointer, and goes
 //! when it loses the keyboard (a click elsewhere) or on Esc.
 
-#[cfg(target_os = "macos")]
-use crate::platform::macos::panel as macos;
 mod rows;
 mod view;
 
@@ -95,8 +93,7 @@ pub(crate) fn open(cx: &mut App) {
 
 /// The display the pointer is on (the panel opens there, as Spotlight does).
 fn pointer_display(cx: &App) -> Option<std::rc::Rc<dyn PlatformDisplay>> {
-    #[cfg(target_os = "macos")]
-    if let Some(id) = macos::pointer_display_id() {
+    if let Some(id) = crate::platform::panel::pointer_display_id() {
         let found = cx.displays().into_iter().find(|d| u64::from(d.id()) == id);
         if found.is_some() {
             return found;

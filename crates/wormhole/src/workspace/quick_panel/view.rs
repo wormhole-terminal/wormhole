@@ -8,6 +8,7 @@ use wormhole_core::notify::{self, State, Terminal};
 use super::super::*;
 use super::rows::{Do, Row};
 use super::{close, do_items, run, terminals_now};
+use crate::platform::panel;
 
 /// The tallest the panel gets before its list scrolls.
 const MAX_H: f32 = 560.0;
@@ -63,8 +64,7 @@ impl QuickPanel {
     pub(super) fn new(height: f32, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search terminals and actions"));
         window.focus(&search.focus_handle(cx), cx);
-        #[cfg(target_os = "macos")]
-        super::macos::prepare(window);
+        panel::hide_window_buttons(window);
         let window_id = window.window_handle().window_id();
         let panel = cx.weak_entity();
         // Ahead of the search field, which would take ↑ ↓ and ⏎ for itself.
@@ -225,15 +225,7 @@ impl QuickPanel {
             return;
         }
         self.height = height;
-        #[cfg(target_os = "macos")]
-        if let Some(native) = crate::platform::macos::appkit::ns_window(window) {
-            cx.spawn(async move |_, _| super::macos::set_height_keeping_top(&native, height)).detach();
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            let _ = cx;
-            window.resize(size(px(style::QUICK_PANEL_W), px(height)));
-        }
+        panel::set_height_keeping_top(window, height, cx);
     }
 
     fn render_row(&self, ix: usize, row: &Row, selected: bool, cx: &mut Context<Self>) -> AnyElement {

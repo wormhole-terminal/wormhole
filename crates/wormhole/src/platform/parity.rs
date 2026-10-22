@@ -76,6 +76,9 @@ pub(super) fn signatures_match() {
         scroller::style: fn(&App) -> ScrollerStyle;
         scroller::jump_to_spot: fn() -> bool;
         sheet::ask_with_checkbox: fn(&Window, &super::sheet::Question) -> Option<smol::channel::Receiver<Option<bool>>>;
+        panel::hide_window_buttons: fn(&Window);
+        panel::set_height_keeping_top: fn(&mut Window, f32, &mut App);
+        panel::pointer_display_id: fn() -> Option<u64>;
         sound::beep: fn();
         vibrancy::glass_available: fn() -> bool;
         vibrancy::set_material_appearance: fn(Appearance);

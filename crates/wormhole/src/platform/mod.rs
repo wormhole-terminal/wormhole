@@ -46,6 +46,7 @@ pub mod macos;
 pub mod menu;
 pub mod notifications;
 // Type-checked in every macOS build; only a test calls it.
+pub mod panel;
 #[cfg(target_os = "macos")]
 #[cfg_attr(not(test), allow(dead_code))]
 mod parity;

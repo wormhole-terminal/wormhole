@@ -1,17 +1,17 @@
-//! What the quick panel needs from AppKit and Core Graphics beyond GPUI's window: which display
-//! the pointer is on, a panel without the title bar's buttons, and growing or shrinking from the
-//! top (AppKit keeps a window's bottom edge where it is).
+//! AppKit's and Core Graphics' side of `platform::panel`: which display the pointer is on, a panel
+//! without the title bar's buttons, and growing or shrinking from the top (AppKit keeps a window's
+//! bottom edge where it is).
 
 use std::ffi::c_void;
 
 use super::appkit::ns_window;
-use gpui_kit::Window;
+use gpui_kit::{App, Window};
 use objc2_app_kit::{NSWindow, NSWindowButton};
 use objc2_core_foundation::CGPoint;
 use objc2_foundation::NSRect;
 
 /// No traffic lights on a panel: GPUI gives a pop-up window a (transparent) title bar.
-pub(crate) fn prepare(window: &Window) {
+pub fn hide_window_buttons(window: &Window) {
     let Some(ns_window) = ns_window(window) else { return };
     for button in [NSWindowButton::CloseButton, NSWindowButton::MiniaturizeButton, NSWindowButton::ZoomButton]
     {
@@ -21,10 +21,16 @@ pub(crate) fn prepare(window: &Window) {
     }
 }
 
-/// Make the panel `height` tall, keeping its top edge where it is. Call it outside any update
-/// of the panel's window (from a task, as GPUI's own `resize` does): AppKit tells the view about
-/// its new size at once, and GPUI only hears that while the window isn't being updated.
-pub(crate) fn set_height_keeping_top(ns_window: &NSWindow, height: f32) {
+/// Make the panel `height` tall, keeping its top edge where it is. It is done from a task, outside
+/// any update of the panel's window (as GPUI's own `resize` does): AppKit tells the view about its
+/// new size at once, and GPUI only hears that while the window isn't being updated.
+pub fn set_height_keeping_top(window: &mut Window, height: f32, cx: &mut App) {
+    if let Some(native) = ns_window(window) {
+        cx.spawn(async move |_| set_frame_height(&native, height)).detach();
+    }
+}
+
+fn set_frame_height(ns_window: &NSWindow, height: f32) {
     let frame = ns_window.frame();
     let content = ns_window.contentRectForFrameRect(frame);
     let chrome = frame.size.height - content.size.height;
@@ -38,7 +44,7 @@ pub(crate) fn set_height_keeping_top(ns_window: &NSWindow, height: f32) {
 
 /// The Core Graphics id of the display the pointer is on.
 #[allow(unsafe_code)] // Core Graphics C calls; see the SAFETY note below.
-pub(crate) fn pointer_display_id() -> Option<u64> {
+pub fn pointer_display_id() -> Option<u64> {
     #[link(name = "CoreGraphics", kind = "framework")]
     unsafe extern "C" {
         fn CGEventCreate(source: *const c_void) -> *mut c_void;
