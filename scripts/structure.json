@@ -64,78 +64,74 @@
       ],
       "wormhole-core": [
         [
-          "color",
-          "elide",
           "fsutil",
           "jsonc",
-          "limits",
+          "keymap",
+          "keyspec",
+          "open_file",
+          "open_in",
           "paths",
+          "quit_signal",
+          "shortcut_record",
+          "store",
           "text"
         ],
         [
-          "clipboard",
-          "features",
-          "host_binary",
-          "licenses",
-          "open_in",
-          "quit_signal",
-          "update"
-        ],
-        [
-          "folder_color",
-          "icon_theme",
-          "theme",
-          "theme_registry",
-          "tokens"
-        ],
-        [
-          "keymap",
-          "keyspec",
-          "shortcut_record"
-        ],
-        [
           "agents",
+          "color",
+          "folder_color",
+          "fonts",
+          "icon_theme",
+          "licenses",
+          "theme",
+          "theme_catalog",
+          "theme_registry",
+          "tokens",
+          "update",
           "usage"
         ],
         [
+          "elide",
           "focus",
-          "intro",
           "layout",
-          "onboarding",
+          "limits",
           "panel",
           "panes",
+          "project",
           "reorder",
-          "review",
           "search",
           "sidebar",
           "spoken",
           "title_extras"
         ],
-        "project",
         [
-          "fonts",
-          "profile"
+          "clipboard",
+          "config",
+          "features",
+          "profile",
+          "settings_index"
         ],
-        "config",
         [
           "git",
           "notify",
-          "settings_index",
-          "shells",
-          "theme_catalog"
+          "review"
         ],
         [
+          "host_binary",
           "hosts",
           "ipc"
         ],
         [
           "cli_tool",
-          "open_file",
-          "store",
-          "welcome"
+          "default_terminal",
+          "shells",
+          "terminal"
         ],
-        "terminal",
-        "default_terminal"
+        [
+          "intro",
+          "onboarding",
+          "welcome"
+        ]
       ],
       "wormhole-wire": [
         [
