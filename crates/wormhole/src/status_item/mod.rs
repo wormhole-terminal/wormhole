@@ -1,7 +1,9 @@
 //! The status item, the Dock (badge and menu) and the global hotkey: keeps them in step with the
 //! settings and the terminals of every window, and carries out what the user picks.
 //!
-//! Above the window: it may use the window and the shared state; only the app root uses it.
+//! Above the window: it may use the window and the shared state; the app root uses it, and so does
+//! the shared state (`AppState`), which holds the status item's [`MenuState`] as a field and builds
+//! it. That is the one edge back down, kept until `MenuState` is a global of its own.
 
 pub(crate) mod quick_panel;
 
