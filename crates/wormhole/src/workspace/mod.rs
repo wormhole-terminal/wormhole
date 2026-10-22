@@ -88,7 +88,7 @@ mod saved_layout;
 mod session;
 pub(crate) mod shells;
 mod shortcuts;
-mod sidebar;
+pub(crate) mod sidebar;
 mod slide;
 mod splits;
 #[cfg(test)]
