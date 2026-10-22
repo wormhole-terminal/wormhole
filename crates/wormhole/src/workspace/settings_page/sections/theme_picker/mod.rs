@@ -19,7 +19,18 @@ mod card;
 #[cfg(test)]
 use self::card::CARD_RENDERS;
 use self::card::ThemeCard;
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::Button;
+use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+
+use super::import_theme;
+use crate::settings::{SettingsStore, UiColors};
+use crate::style::{self, TextRole};
+use crate::workspace::settings_page::{SettingsWindow, ui};
+use crate::workspace::studio;
 
 /// How many cards show before "Show all": two rows.
 const FIRST_CARDS: usize = 8;

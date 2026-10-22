@@ -12,12 +12,16 @@
 //! While the global hotkey's own field records, the hotkey is held off, so pressing the
 //! current keys records them instead of opening the quick panel.
 
+use gpui_kit::*;
+use style::RecorderState;
 use wormhole_core::keymap::ActionId;
 use wormhole_core::keyspec::{KeyMods, KeySpec};
 use wormhole_core::shortcut_record::{self, Recorded};
 
-use super::*;
-use style::RecorderState;
+use super::{SettingsWindow, registry, ui, update_settings};
+use crate::settings::{Settings, settings};
+use crate::style::{self, TextRole};
+use crate::workspace::app::app_mut;
 
 /// A recorder in progress, or one that refused keys.
 pub(super) enum Recording {

@@ -8,13 +8,26 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use gpui_kit::component::Sizable;
 use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::popover::Popover;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_name, grouped_font_choices};
+#[cfg(feature = "devctl")]
+use wormhole_core::settings_index::SectionId as Section;
 
-use super::*;
+#[cfg(feature = "devctl")]
+use super::open_settings;
+use super::{SettingsWindow, ui, update_settings};
 use crate::fonts::{FontCatalog, LoadedFonts};
 use crate::select::{self, SelectTrigger};
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::{self, Edges, TextRole};
+#[cfg(feature = "devctl")]
+use crate::workspace::Workspace;
+#[cfg(feature = "devctl")]
+use crate::workspace::app::app;
 
 const LIST_HEIGHT: f32 = 264.0;
 const ENTRY_HEIGHT: f32 = 32.0;

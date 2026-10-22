@@ -7,10 +7,17 @@
 
 use std::path::{Path, PathBuf};
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::cli_tool::{self, Advice, COMMAND_NAME, Status, Targets};
 
-use super::*;
+use crate::style::{self, TextRole};
+use crate::workspace::settings_page::registry::Setting;
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTING: Setting = Setting::custom("cli-tool", draw).describe(describe).below(below);
 

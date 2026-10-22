@@ -4,11 +4,16 @@
 //! it is the window's own effect view behind everything GPUI paints, which a drawing inside a
 //! window can't have; the caption says so.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::fonts::FontSlot;
 
-use super::*;
+use crate::settings::{SettingsStore, UiColors};
+use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
+use crate::workspace::settings_page::SettingsWindow;
 
 /// The design's window at this scale: every size below is the real one times it, so the
 /// miniature keeps the window's proportions.

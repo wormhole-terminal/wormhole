@@ -1,10 +1,18 @@
 //! Fonts: one specimen for the three fonts, then the terminal font with its line height
 //! and ligatures, the code and interface fonts, and the user's own fonts.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::fonts::{FontSlot, display_name};
 
-use super::*;
+use super::open_button;
 use crate::fonts::LoadedFonts;
+use crate::settings::{SettingsStore, settings};
+use crate::style::{self, Edges, TextRole};
+use crate::theme_bridge;
+use crate::workspace::settings_page::registry::{Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, open_folder, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("font-specimen", draw_specimen),

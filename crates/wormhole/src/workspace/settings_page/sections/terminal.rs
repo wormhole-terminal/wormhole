@@ -2,16 +2,28 @@
 //! Fonts), the shell a new terminal runs and the profiles config.json lists, the bell and
 //! whether programs may read the screen back, read or set the clipboard and control the window.
 
+use std::path::{Path, PathBuf};
+
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::Button;
+use gpui_kit::*;
 use wormhole_core::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::OptionAsMeta;
+use wormhole_core::fonts::FontSlot;
+use wormhole_core::settings_index::SectionId as Section;
 use wormhole_core::shells::{self, ShellChoice, ShellKind};
 
-use gpui_kit::component::Disableable as _;
-
-use super::*;
+use super::open_in_editor;
 use crate::platform::apps;
+use crate::select::Choice;
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::{self, TextRole};
 use crate::workspace::default_terminal;
 use crate::workspace::open_in::OpenIn;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
 
 /// The scrollback sizes offered; a value set in config.json shows as it is.
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];

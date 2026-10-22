@@ -1,10 +1,20 @@
 //! Advanced: what is wrong in config.json, the files and folders, and a way back to the
 //! defaults that asks first.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
 use wormhole_core::settings_index::Values;
+use wormhole_core::store::data_dir;
 
-use super::*;
+use super::{open_button, open_in_editor, reveal};
+use crate::settings::{Settings, SettingsStore};
+use crate::style;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::settings_page::registry::Setting;
+use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("open-config", |_, _| {

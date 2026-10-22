@@ -5,11 +5,17 @@
 //! `notifications` stays the master switch: it is on while any kind is on, so turning every kind
 //! off turns it off.
 
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
 
-use super::*;
 use crate::platform::notifications::Permission;
+use crate::settings::{Settings, settings};
+use crate::style::{self, SettingParts, SettingState};
 use crate::workspace::notifications;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
 
 /// The command-finished threshold's steps, in seconds.
 const AFTER: [u32; 5] = [5, 10, 30, 60, 300];

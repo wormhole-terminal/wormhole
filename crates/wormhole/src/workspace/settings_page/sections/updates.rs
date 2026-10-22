@@ -4,11 +4,19 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::progress::Progress;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::update::{Release, Security, Severity, UpdateChannel};
 
 use super::super::super::updates::UpdatePhase;
-use super::*;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
+use crate::workspace::app::app;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("version", |_, cx| {

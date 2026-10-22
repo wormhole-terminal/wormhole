@@ -2,13 +2,28 @@
 //! projects (plus the trusted list) or one project's own switches and trust.
 
 use std::cell::{OnceCell, RefCell};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::*;
+use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
+use wormhole_core::settings_index::SectionId as Section;
 
-use super::*;
+use super::reveal;
 use crate::select;
+use crate::select::{Choice, SearchSelect, SelectTrigger};
+use crate::settings::UiColors;
+use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
+use crate::workspace::app::{AppState, app};
+use crate::workspace::project;
 use crate::workspace::project::LoadedProject;
+use crate::workspace::settings_page::registry::Setting;
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];
 

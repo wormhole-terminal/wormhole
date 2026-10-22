@@ -1,12 +1,15 @@
 //! Menu bar & hotkey: the status item and what its icon shows, the global hotkey (recorded,
 //! not typed) and what it opens, and the key that jumps to the terminal waiting longest.
 
+use gpui_kit::*;
 use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keymap::ActionId;
 use wormhole_core::keyspec::KeySpec;
 
 use super::super::recorder::RecorderRow;
-use super::*;
+use crate::settings::Settings;
+use crate::workspace::app::app;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),

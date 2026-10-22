@@ -10,25 +10,33 @@ mod recorder;
 mod registry;
 mod sections;
 
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
-use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
+use gpui_kit::*;
 use wormhole_core::fonts::FontSlot;
-pub(crate) use wormhole_core::settings_index::SectionId as Section;
 use wormhole_core::settings_index::{self, Query};
 use wormhole_core::sidebar::Density;
 
+use super::app::{AppState, app, app_mut};
 use super::aux_window;
-use super::*;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{Settings, SettingsStore};
+use crate::settings::{UiColors, settings};
+use crate::style::{self, TextRole};
 use crate::theme_bridge;
 use crate::workspace::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
-use registry::{ProjectSource, Segment, Setting, toggle};
+
 pub(crate) use sections::open_new_profile_sheet;
-use style::{SettingParts, SettingState};
+pub(crate) use wormhole_core::settings_index::SectionId as Section;
 
 /// Where a page's title row starts: under the traffic lights, which the nav runs beneath like
 /// System Settings.

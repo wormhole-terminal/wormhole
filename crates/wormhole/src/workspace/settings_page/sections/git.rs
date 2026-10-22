@@ -1,9 +1,10 @@
 //! Changes & diffs: the Changes panel's file view and untracked group, the diff's
 //! default layout, wrapping, tab width and the units file sizes are written in.
 
+use gpui_kit::assets::IconName;
 use wormhole_core::config::SizeUnits;
 
-use super::*;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::segmented(

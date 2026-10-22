@@ -2,9 +2,17 @@
 //! settings window, opened from the Profile page, the File menu and the command palette. Create
 //! makes the profile and switches Wormhole to it.
 
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::*;
 use wormhole_core::profile::{NewProfile, ProfileId, StartFrom, first_letter};
+use wormhole_core::settings_index::SectionId as Section;
 
-use super::*;
+use crate::settings::SettingsStore;
+use crate::style::{self, TextRole};
+use crate::workspace::app::{AppState, app};
+use crate::workspace::settings_page::{self, SettingsWindow, ui};
 
 const SHEET_W: f32 = 380.0;
 

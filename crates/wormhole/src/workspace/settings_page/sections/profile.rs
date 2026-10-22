@@ -3,12 +3,22 @@
 //! These live in `profiles.json`, not in `config.json`, so no row has a reset arrow; the text
 //! fields are made in `profile_form`.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::{Input, InputState, Textarea};
+use gpui_kit::*;
 use wormhole_core::profile::Profile;
+use wormhole_core::settings_index::SectionId as Section;
 use wormhole_core::sidebar::GroupColor;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
-use super::*;
+use crate::settings::SettingsStore;
+use crate::style::{self, TextRole};
+use crate::workspace::app::{AppState, app};
+use crate::workspace::settings_page::registry::Setting;
+use crate::workspace::settings_page::{SettingsWindow, ui};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("profile-name", draw_name),

@@ -3,13 +3,24 @@
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
 use gpui_kit::component::slider::Slider;
+use gpui_kit::*;
 use wormhole_core::config::{ThemeMode, TitleBorder};
+use wormhole_core::settings_index::{self, SectionId as Section};
 use wormhole_core::tokens::Translucency;
 
-use super::*;
+use super::{open_button, stage};
+use crate::select::Choice;
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::{self, Edges};
+use crate::theme_bridge;
+use crate::workspace::settings_page::registry::{ProjectSource, Segment, Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, open_folder, ui, update_settings};
 
 const MODES: &[Segment] = &[
     Segment::icon(IconName::Moon, "Dark"),

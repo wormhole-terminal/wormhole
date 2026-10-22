@@ -2,12 +2,17 @@
 //! heads and rows from the current options, beside the option under the pointer. Appearance's
 //! stage is `stage`.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
 use wormhole_core::sidebar::Density;
 
-use super::*;
 use crate::settings::SettingsStore;
+use crate::settings::{Settings, UiColors, settings};
+use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
-use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
+use crate::workspace::settings_page::{SettingsWindow, SidebarLook, ui};
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 320.0;

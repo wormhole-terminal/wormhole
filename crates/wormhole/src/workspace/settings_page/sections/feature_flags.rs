@@ -4,9 +4,13 @@
 //! flag on makes its feature's own section appear (Project folders) and the feature work in every
 //! window at once.
 
+use gpui_kit::*;
 use wormhole_core::features::FeatureFlag;
 
-use super::*;
+use crate::settings::settings;
+use crate::style::{self, Edges, SettingParts};
+use crate::workspace::settings_page::registry::Setting;
+use crate::workspace::settings_page::{SettingsWindow, ui, update_settings};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("feature-flags", |w, cx| w.draw_feature_flags(cx))];
 

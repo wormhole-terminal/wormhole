@@ -1,11 +1,18 @@
 //! The controls of each section, one file each, and what pages share: the select, the
 //! page's header action, opening a file in the editor.
 
-use wormhole_core::project::Feature;
-use wormhole_core::store::data_dir;
+use std::path::Path;
 
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::Button;
+use gpui_kit::*;
+use wormhole_core::settings_index::SectionId as Section;
+
+use super::registry::Setting;
+use super::{SettingsWindow, ui, update_settings};
 use crate::select::{Choice, SearchSelect, SelectTrigger};
+use crate::settings::{Settings, SettingsStore};
 
 mod advanced;
 mod agents;

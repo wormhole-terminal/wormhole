@@ -4,12 +4,16 @@
 //! not one) is said under the page's title and the profile stays as it was.
 
 use std::collections::BTreeMap;
+use std::path::Path;
 
+use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
+use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::profile::{AgentLogin, GitIdentity, Profile, ProfileId, first_letter};
 use wormhole_core::sidebar::GroupColor;
 
-use super::*;
+use crate::workspace::app::{app, app_mut};
+use crate::workspace::settings_page::SettingsWindow;
 
 /// The agents that have a login folder of their own, in the order the page lists them.
 pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] =

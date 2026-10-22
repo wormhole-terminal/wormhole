@@ -3,7 +3,15 @@
 
 #![cfg(feature = "devctl")]
 
-use super::*;
+use std::path::PathBuf;
+
+use gpui_kit::*;
+use wormhole_core::settings_index::{Query, SectionId as Section};
+use wormhole_core::sidebar::Density;
+
+use super::{SettingsWindow, SidebarLook, open_settings, reveal_row, sections};
+use crate::workspace::Workspace;
+use crate::workspace::app::app;
 
 impl Workspace {
     pub(crate) fn devctl_settings_section(&mut self, name: &str, cx: &mut Context<Self>) {

@@ -11,11 +11,18 @@
 //! a test fails while one has no other.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::settings_index::SectionId as Section;
 use wormhole_core::settings_index::{self, Entry, Hit, Query, Values};
 
-use super::*;
+use super::{FrontWindow, SettingsWindow, section_icon, sections, ui, update_settings};
+use crate::settings::{Settings, SettingsStore, UiColors, settings};
+use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
 
 /// Draws part of a page that is more than a switch, a segmented control or a stepper.
 pub(super) type Draw = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> AnyElement;

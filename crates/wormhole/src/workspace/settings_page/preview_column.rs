@@ -12,7 +12,11 @@
 //! The column holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
 //! group for VoiceOver. A search result for a preview names where it went instead of drawing it.
 
-use super::*;
+use gpui_kit::*;
+use wormhole_core::settings_index::{self, SectionId as Section};
+
+use super::{PAGE_TOP, SettingsWindow, nav, sections, ui};
+use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
 
 /// The column's width, border to border: a 16 pt inset round the miniature window.
 pub(super) const PREVIEW_W: f32 = 448.0 + 2.0 * 16.0;

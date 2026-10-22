@@ -1,8 +1,13 @@
 //! Terminals & sidebar: the live preview, the density, the ⌘ hints, and what each row shows.
 
+use gpui_kit::*;
 use wormhole_core::sidebar::{Density, SidebarNumbers, TerminalsIn};
 
-use super::*;
+use super::preview;
+use crate::settings::settings;
+use crate::style;
+use crate::workspace::settings_page::registry::{Segment, Setting, toggle};
+use crate::workspace::settings_page::{SettingsWindow, SidebarLook, ui, update_settings};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
