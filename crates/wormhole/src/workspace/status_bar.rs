@@ -197,7 +197,7 @@ impl Workspace {
         // What runs in front (the agent, or the command), as the title row names it, not the shell.
         let program = session.pane.program(cx);
         let size = detail.size().then(|| rules::size(&program, cols, rows));
-        let state = crate::workspace::breadcrumb::crumb_words(terminal);
+        let state = crate::workspace::title::breadcrumb::crumb_words(terminal);
         let now = Instant::now();
         let attention = summary.attention().map(|ix| {
             let (entry, counted) = (&entries[ix], &counted[ix]);

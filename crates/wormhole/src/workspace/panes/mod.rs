@@ -27,11 +27,11 @@ use crate::settings::{settings_in, ui_in};
 use crate::style;
 use crate::terminal_view::TerminalEvent;
 use crate::workspace::Workspace;
-use crate::workspace::breadcrumb::terminal_tile;
+use crate::workspace::panes::splits::Split;
 use crate::workspace::session::Pane;
 use crate::workspace::session::home_dir;
-use crate::workspace::splits::Split;
 use crate::workspace::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
+use crate::workspace::title::breadcrumb::terminal_tile;
 
 /// A drag on a divider, from the press to the release.
 pub(super) struct PaneDrag {

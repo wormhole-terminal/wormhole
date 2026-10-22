@@ -268,7 +268,7 @@ impl Workspace {
             apps.join(","),
             crate::settings::settings(cx).title_border,
             self.path_card.is_shown(),
-            crate::workspace::title_chips::describe(&plan),
+            crate::workspace::title::chips::describe(&plan),
         )
     }
 

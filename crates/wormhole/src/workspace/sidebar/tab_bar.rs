@@ -169,7 +169,7 @@ impl Workspace {
         let bar = div()
             .id("tab-bar")
             .absolute()
-            .top(px(crate::workspace::title_row::SURFACE_TOP))
+            .top(px(crate::workspace::title::SURFACE_TOP))
             .left_0()
             .right_0()
             .flex()

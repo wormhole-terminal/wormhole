@@ -37,7 +37,7 @@ use crate::workspace::Workspace;
 use crate::workspace::chrome::TitleDrag as _;
 use crate::workspace::folder_color;
 use crate::workspace::open_in::{self, OpenIn};
-use crate::workspace::title_extras::ExtraFacts;
+use crate::workspace::title::extras::ExtraFacts;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
 pub(super) struct Facts {
@@ -57,7 +57,7 @@ pub(super) struct Facts {
     pub(super) branch: Option<Option<String>>,
     /// For a terminal in a submodule, whose it is: "in terminal".
     pub(super) parent: Option<String>,
-    /// The extras beside it (`title_extras`): its status, the agent's model and context, the ports
+    /// The extras beside it (`workspace::title::extras`): its status, the agent's model and context, the ports
     /// and the pull request, each only if its setting is on and there is something to say.
     pub(super) extras: ExtraFacts,
 }

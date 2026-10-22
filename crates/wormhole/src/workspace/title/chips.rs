@@ -1,6 +1,6 @@
 //! The title row's extras as chips: how wide each is, which core's
 //! `layout::title_row` needs to decide what fits, and drawing the ones it keeps. What each says
-//! comes from `title_extras`; the pieces are `style::extras`.
+//! comes from `workspace::title::extras`; the pieces are `style::extras`.
 //!
 //! The branch's status follows the branch chip in the breadcrumb. The agent's model and context,
 //! the ports and the pull request sit at the right end of the row, in front of Open in…, in the
@@ -20,9 +20,9 @@ use wormhole_core::view::title_extras::{more_ports_words, port_label, port_url, 
 use crate::select;
 use crate::settings::{UiColors, ui_in};
 use crate::style;
-use crate::workspace::breadcrumb::{CRUMB_GAP, Measure};
-use crate::workspace::title_extras::ExtraFacts;
-use crate::workspace::title_row::TitlePlan;
+use crate::workspace::title::TitlePlan;
+use crate::workspace::title::breadcrumb::{CRUMB_GAP, Measure};
+use crate::workspace::title::extras::ExtraFacts;
 use crate::workspace::{RightTab, Workspace};
 
 /// The gap in front of each chip at the right end of the row (`ml_2`).

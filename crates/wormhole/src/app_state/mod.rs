@@ -103,10 +103,10 @@ pub(crate) struct AppState {
     /// layout of its own starts (`open_workspace_window`). Kept in the store's `meta`.
     pub last_panes: RememberedPanes,
     /// The terminal welcomes running, and the doors to them (core's token rules).
-    pub welcomes: crate::workspace::welcome::Welcomes,
+    pub welcomes: crate::workspace::onboarding::welcome::Welcomes,
     /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
     /// that window is being opened.
-    pub first_welcome: Option<crate::workspace::welcome::Plan>,
+    pub first_welcome: Option<crate::workspace::onboarding::welcome::Plan>,
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,

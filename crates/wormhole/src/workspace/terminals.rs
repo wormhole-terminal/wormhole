@@ -253,7 +253,7 @@ impl Workspace {
         let closed = self.sessions.remove(ix);
         self.sidebar.view.groups.leave(closed.id);
         crate::notifications::dismiss(closed.pane.id, cx);
-        crate::workspace::welcome::forget(closed.id, cx);
+        crate::workspace::onboarding::welcome::forget(closed.id, cx);
         self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on

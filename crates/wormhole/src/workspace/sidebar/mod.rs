@@ -88,7 +88,7 @@ pub(super) struct SidebarState {
     /// The tab bar, while the terminals are in tabs.
     pub(super) tabs: tab_bar::TabBarState,
     /// The profile chip's menu being open, and the list it shows.
-    pub(super) profile_menu: Option<crate::workspace::profile_chip::ProfilePage>,
+    pub(super) profile_menu: Option<crate::workspace::sidebar::profile_chip::ProfilePage>,
 }
 
 impl SidebarState {

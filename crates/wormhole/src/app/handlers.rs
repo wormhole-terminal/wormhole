@@ -133,12 +133,14 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayIntroTentacles, cx| play_intro_in_front(Style::Tentacles, cx));
     cx.on_action(|_: &PlayIntroVoyage, cx| play_intro_in_front(Style::Voyage, cx));
     cx.on_action(|_: &PlayWelcomeCursor, cx| {
-        crate::workspace::welcome::replay_in_front(Handover::Cursor, cx)
+        crate::workspace::onboarding::welcome::replay_in_front(Handover::Cursor, cx)
     });
     cx.on_action(|_: &PlayWelcomePortal, cx| {
-        crate::workspace::welcome::replay_in_front(Handover::Portal, cx)
+        crate::workspace::onboarding::welcome::replay_in_front(Handover::Portal, cx)
     });
-    cx.on_action(|_: &PlayWelcomeLogo, cx| crate::workspace::welcome::replay_in_front(Handover::Logo, cx));
+    cx.on_action(|_: &PlayWelcomeLogo, cx| {
+        crate::workspace::onboarding::welcome::replay_in_front(Handover::Logo, cx)
+    });
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();
         cx.defer(move |cx| status_item::run_command(MenuCommand::OpenProject(root), cx));

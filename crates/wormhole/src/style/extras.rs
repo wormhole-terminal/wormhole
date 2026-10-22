@@ -2,7 +2,7 @@
 //! context meter and the small chips the ports and the pull request are (the pull request's
 //! mark on a folder band is here too). They are drawn at the
 //! row's own height, in its caption type, and each knows its own fixed widths so the row can
-//! measure them (`workspace::title_extras`) before it draws them.
+//! measure them (`workspace::title::extras`) before it draws them.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable};

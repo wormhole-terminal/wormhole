@@ -175,7 +175,7 @@ impl Workspace {
     pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
         // hand-over.
-        if crate::workspace::welcome::enabled(cx) {
+        if crate::workspace::onboarding::welcome::enabled(cx) {
             self.replay_welcome(wormhole_core::onboarding::intro::Handover::Cursor, window, cx);
             return;
         }

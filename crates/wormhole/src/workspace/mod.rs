@@ -99,19 +99,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::workspace::onboarding::welcome;
-pub(in crate::workspace) use crate::workspace::panes::drop as pane_drop;
-pub(in crate::workspace) use crate::workspace::panes::splits;
-pub(in crate::workspace) use crate::workspace::sidebar::profile_chip;
-pub(crate) use crate::workspace::sidebar::shells;
-use crate::workspace::title as title_row;
-pub(in crate::workspace) use crate::workspace::title::breadcrumb;
-pub(in crate::workspace) use crate::workspace::title::chips as title_chips;
-pub(in crate::workspace) use crate::workspace::title::extras as title_extras;
-pub(in crate::workspace) use crate::workspace::title::path_card;
-pub(in crate::workspace) use crate::workspace::title::path_menu;
-
 use self::saved_layout::Layout;
 pub(crate) use self::saved_layout::RightTab;
 use self::session::Session;
@@ -126,7 +113,7 @@ pub struct Workspace {
     /// The window's terminals, one session each, in the order the sidebar's manual order keeps.
     sessions: Vec<Session>,
     /// The splits some of them are shown in (a split's members are adjacent in `sessions`).
-    splits: Vec<self::splits::Split>,
+    splits: Vec<crate::workspace::panes::splits::Split>,
     /// The root of the `.wormhole/` project that governs each folder a band names (the terminals'
     /// and the pinned ones), as of the last look (`refresh_projects`): the band, the title row and
     /// the Project tab ask it where a folder's colour lives without touching the disk. A folder in
@@ -177,7 +164,7 @@ pub struct Workspace {
     /// A drag on a panel's edge, while the button is down.
     resizing: Option<self::resize::ResizeDrag>,
     /// A drag on a divider between two panes, while the button is down.
-    pane_drag: Option<self::panes::PaneDrag>,
+    pane_drag: Option<crate::workspace::panes::PaneDrag>,
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
     terminal_drag: Option<self::terminal_drag::TerminalDrag>,
@@ -198,7 +185,7 @@ pub struct Workspace {
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
     /// The path's hover card, a popover under the title row's folder.
-    path_card: self::path_card::PathCard,
+    path_card: crate::workspace::title::path_card::PathCard,
     /// Where the title row's folder is drawn: the card and the path menu open under it.
     path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.

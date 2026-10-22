@@ -1,5 +1,5 @@
 //! The title row's extras, the data side: what each one knows about the
-//! terminal on screen, and when it is looked up. `title_chips` measures and draws them.
+//! terminal on screen, and when it is looked up. `workspace::title::chips` measures and draws them.
 //!
 //! - **Branch status** is git's own answer for the session, which the Changes tab already refreshes
 //!   every few seconds (`RepoStatus::dirty` and `upstream`): no process of its own.

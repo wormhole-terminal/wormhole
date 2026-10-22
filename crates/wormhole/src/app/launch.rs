@@ -123,12 +123,12 @@ pub(crate) fn start(
     if saved.is_empty() {
         // With the terminal welcome on, the window's first terminal runs it and the run plays
         // around the window; otherwise the intro window opens over a plain terminal.
-        let welcome = crate::workspace::welcome::first_launch_plan(cx);
+        let welcome = crate::workspace::onboarding::welcome::first_launch_plan(cx);
         app_mut(cx).first_welcome = welcome;
         open_workspace_window(None, None, cx);
         app_mut(cx).first_welcome = None;
         match welcome {
-            Some(plan) => crate::workspace::welcome::play_first(plan, cx),
+            Some(plan) => crate::workspace::onboarding::welcome::play_first(plan, cx),
             None => onboarding::start_if_first_launch(cx),
         }
     }

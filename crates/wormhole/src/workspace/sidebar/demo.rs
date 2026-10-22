@@ -76,7 +76,7 @@ impl Workspace {
     /// program not ended (a welcome that was killed would otherwise leave it up).
     fn demo_in_view(&self, cx: &App) -> Option<&Demo> {
         self.sidebar.demo.as_ref().filter(|demo| {
-            crate::workspace::welcome::running(demo.tab, cx)
+            crate::workspace::onboarding::welcome::running(demo.tab, cx)
                 && self.sessions.iter().any(|session| {
                     session.id == demo.tab && session.terminal().read(cx).status() != Status::Exited
                 })

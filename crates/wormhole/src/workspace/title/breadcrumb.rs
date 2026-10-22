@@ -2,7 +2,7 @@
 //! terminal is and what it does, as the folder (cut in its middle where it is long, with the
 //! hover card of `path_card` and the path menu of `path_menu`), the branch chip, and the terminal's tool and name with its live
 //! status. It is one keyboard stop. Open in… and the splits sit at the right end of the row
-//! (`title_row`).
+//! (`workspace::title`).
 //!
 //! When the row is narrow its parts give way in the order core's `layout::title_row` says; this
 //! measures them, asks, and draws what is left.
@@ -19,8 +19,8 @@ use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
 use crate::workspace::features::git::picker;
-use crate::workspace::path_card::Over;
-use crate::workspace::title_row::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
+use crate::workspace::title::path_card::Over;
+use crate::workspace::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 use crate::workspace::{RightTab, Workspace};
 
 impl Workspace {
@@ -115,7 +115,7 @@ impl Workspace {
         // The split buttons are always there; Open in… and its chevron only for a terminal that
         // has a folder to open.
         let (group, folded) = match facts.folder {
-            Some(_) => (ROW_GAP + crate::workspace::title_row::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
+            Some(_) => (ROW_GAP + crate::workspace::title::OPEN_IN_W + SPLITS_W, ROW_GAP + MORE_W),
             None => (ROW_GAP + SPLITS_W, ROW_GAP + MORE_W),
         };
         // A crumb before the terminal brings a gap, the separator and a gap.

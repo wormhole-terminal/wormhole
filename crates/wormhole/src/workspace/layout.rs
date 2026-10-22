@@ -7,8 +7,9 @@ use wormhole_core::view::layout::{Columns, Edge, Panes};
 use crate::app_state::app_mut;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::style;
+use crate::workspace::panes;
 use crate::workspace::resize::edge_rule;
-use crate::workspace::{RightTab, Workspace, panes};
+use crate::workspace::{RightTab, Workspace};
 
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
@@ -249,7 +250,7 @@ impl Render for Workspace {
                                 surface
                                     .min_h_0()
                                     // Terminals as tabs: their bar lies between the title row and the surface.
-                                    .mt(px(crate::workspace::title_row::SURFACE_TOP
+                                    .mt(px(crate::workspace::title::SURFACE_TOP
                                         + if tabs_shown {
                                             crate::workspace::sidebar::TAB_ROW_H
                                         } else {
