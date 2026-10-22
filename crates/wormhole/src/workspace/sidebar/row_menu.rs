@@ -15,6 +15,7 @@ use wormhole_core::sidebar::Entry;
 use super::super::focus::SidebarStop;
 use super::facts::RowInfo;
 use crate::platform::{self, Item, Menu};
+use crate::settings::settings_in;
 use crate::workspace::Workspace;
 
 /// What a row's menu is made from, as it is when the menu opens.

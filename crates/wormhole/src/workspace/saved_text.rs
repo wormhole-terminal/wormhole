@@ -4,10 +4,11 @@
 //! Saving stops by itself (`Workspace::save_scrollback`); a profile opened beside the shown one is
 //! erased as it opens (`ProfileSlot::open`).
 
+use gpui_kit::{App, Global};
 use wormhole_core::profile::ProfileId;
 
 use super::app::app;
-use super::*;
+use crate::settings::{SettingsStore, settings};
 
 /// The shown profile and its setting, as last seen: the settings global changes on every settings
 /// poll, and only a change of these two means anything here.

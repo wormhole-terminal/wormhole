@@ -24,7 +24,7 @@ use wormhole_core::store::{SessionRecord, WindowRecord};
 use super::app::{AppState, OpenWindow};
 use super::app::{app, app_mut};
 use super::{Workspace, menu_bar, project};
-use crate::settings::{SettingsStore, settings};
+use crate::settings::{SettingsStore, settings, settings_in};
 
 impl AppState {
     /// The profile Wormhole is in.
