@@ -32,10 +32,6 @@ pub(in crate::window) fn item_key(keystroke: &Keystroke, empty: bool) -> Option<
 }
 
 impl Workspace {
-    pub(in crate::window) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
-        window.focus(&self.active_terminal().focus_handle(cx), cx);
-    }
-
     /// The list key of this window's tasks or notes, so a dragged item only drops among its
     /// own kind in its own window.
     pub(in crate::window) fn reorder_list(&self, kind: &str, cx: &Context<Self>) -> SharedString {

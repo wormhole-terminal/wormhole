@@ -318,6 +318,12 @@ impl Workspace {
         }
     }
 
+    /// Give the keyboard to the terminal on screen: where it goes back to when a panel, the sidebar
+    /// or an editor lets go of it.
+    pub(in crate::window) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
+        window.focus(&self.active_terminal().focus_handle(cx), cx);
+    }
+
     /// Make `element` the container that holds `area`'s keyboard focus: the keys (arrows, ↩,
     /// Space, letters, ⇥) go to it while it, not something inside it, has the focus.
     pub(super) fn area_container(
