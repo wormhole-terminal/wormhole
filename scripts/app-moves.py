@@ -19,7 +19,8 @@ rename a top-level folder with no per-file moves (`{"from": "workspace", "to": "
 structure checker's layer, `track_dirs`, `homes` and module-pair keys follow it). A moved file's `super::`
 paths (at any depth, but not the ones inside the file's own inline `mod`s) and `pub(super)` keep the meaning
 they had where the file was: a `super::` whose target is no longer the file's `super` becomes
-`crate::<old target>::`, and a `pub(super)` becomes `pub(in crate::<old parent>)`; the rewrite step then maps
+`crate::<old target>::`, and a `pub(super)` becomes `pub(in crate::<old parent>)` (`pub(crate)` when the file
+moved out of the old parent, which can no longer be named: the step lists those); the rewrite step then maps
 both onto the new places. In a file that did not move, a `super::` that names something that moved is made
 absolute and rewritten too.
 
@@ -277,12 +278,14 @@ _SUPERS = re.compile(r"(?<![\w:$])((?:super::)+)")
 _PUB_SUPER = re.compile(r"\bpub\(super\)")
 
 
-def keep_meaning(text: str, old_file: str, new_file: str, plan: Plan) -> str:
+def keep_meaning(text: str, old_file: str, new_file: str, plan: Plan, notes: Optional[List[str]] = None) -> str:
     """A file that moved: `super::` and `pub(super)` still mean what they did where the file was.
 
     `super::` is the file's parent module, so it stays unless the parent is not where the old one went; then
     it is the old parent's absolute path (the rewrite step names it by its new place). Inside the file's own
-    inline `mod x { … }` the first `super::` is the file itself and is left alone.
+    inline `mod x { … }` the first `super::` is the file itself and is left alone. A `pub(super)` can only be
+    pinned to an ancestor of the file's new module: when the old parent is not one (a folder that moved to
+    the top, its mod.rs: `pub(super)` was `workspace`) it becomes `pub(crate)`, and `notes` says where.
     """
     old_mod, new_mod = module_of(old_file), module_of(new_file)
     events = inline_mod_depths(text)
@@ -300,10 +303,17 @@ def keep_meaning(text: str, old_file: str, new_file: str, plan: Plan) -> str:
     out = _SUPERS.sub(supers, text)
     old_parent, new_parent = ancestor(old_mod, 1), ancestor(new_mod, 1)
     if old_parent is not None and (new_parent is None or plan.translate(old_parent) != new_parent):
-        pin = "pub(in %s)" % crate_path(old_parent) if old_parent else "pub(crate)"
+        target = plan.translate(old_parent)
+        pinned = not target or new_mod.startswith(target + "::")
+        pin = "pub(in %s)" % crate_path(old_parent) if old_parent and pinned else "pub(crate)"
 
         def pub_super(m: "re.Match[str]") -> str:
-            return m.group(0) if depth_at(events, m.start()) else pin
+            if depth_at(events, m.start()):
+                return m.group(0)
+            if notes is not None and old_parent and not pinned:
+                notes.append("%s:%d: pub(super) is pub(crate) now (%s is no ancestor)" % (
+                    new_file, text.count("\n", 0, m.start()) + 1, crate_path(old_parent)))
+            return pin
 
         out = _PUB_SUPER.sub(pub_super, out)
     return out
@@ -420,12 +430,13 @@ def move(plan: Plan) -> int:
     # A visibility path cannot go through a shim (`pub(in crate::workspace::x)` must name a real ancestor),
     # so the moved files' are rewritten here, not in the next step.
     vis = re.compile(r"\bpub\(in crate::([\w:]+)\)")
+    notes: List[str] = []
     for old_file, new_file in fmap.items():
         if not new_file.endswith(".rs"):
             continue
         path = os.path.join(plan.src, new_file)
         text = read(path)
-        out = keep_meaning(text, old_file, new_file, plan)
+        out = keep_meaning(text, old_file, new_file, plan, notes)
         out = vis.sub(lambda m: "pub(in crate::%s)" % plan.translate(m.group(1)), out)
         if out != text:
             write(path, out)
@@ -482,6 +493,8 @@ def move(plan: Plan) -> int:
         write(path, text)
     print("app-moves: moved %d entries (%d files); shims in %s" % (
         len(plan.moves), len(fmap), ", ".join(sorted(shims))))
+    for note in notes:
+        print("app-moves: widened: " + note)
     restructure(plan, fmap)
     return 0
 
