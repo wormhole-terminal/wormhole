@@ -93,7 +93,7 @@ impl Workspace {
         }
     }
 
-    pub(in crate::workspace) fn active_project<'a>(&self, cx: &'a App) -> Option<&'a LoadedProject> {
+    pub(crate) fn active_project<'a>(&self, cx: &'a App) -> Option<&'a LoadedProject> {
         // The one accessor the title tint, menus, palette, shortcut sheet and the Project tab reach
         // a project through, so gating it here makes them all inert the instant the flag is off,
         // without waiting for the next `refresh_projects` tick to clear `session.project`.

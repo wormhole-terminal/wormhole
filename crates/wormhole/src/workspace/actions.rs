@@ -270,7 +270,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
 /// a US keyboard reports the shifted ones (⇧⌘] arrives as ⌘}). App keys have no context: they
 /// work anywhere in a window, ahead of a view's own. The editing keys are GPUI Kit's text
 /// fields' own and the terminal answers them itself, so they aren't bound here.
-pub(super) fn bindings() -> Vec<KeyBinding> {
+pub(crate) fn bindings() -> Vec<KeyBinding> {
     let terminal = KeyBindingContextPredicate::parse("Terminal").ok().map(Rc::new);
     // GPUI Kit binds ⌥⌘I to its inspector; it is the right panel's key now.
     let mut out = vec![KeyBinding::new("alt-cmd-i", Unbind("inspector::ToggleInspector".into()), None)];

@@ -15,7 +15,7 @@ use crate::workspace::Workspace;
 const MENU_TITLE: &str = "New terminal with";
 
 /// The key `default_shell` names, as the choices spell it: what a plain + opens.
-pub(super) fn default_key(settings: &Settings) -> &str {
+pub(crate) fn default_key(settings: &Settings) -> &str {
     settings.default_shell.trim()
 }
 

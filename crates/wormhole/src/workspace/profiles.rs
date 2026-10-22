@@ -219,7 +219,7 @@ impl AppState {
 
 /// What the app keeps per profile besides the settings: its database, closed tips, project
 /// folders, recent projects, plan usage, worktrees and remembered side columns.
-pub(super) struct ProfileData {
+pub(crate) struct ProfileData {
     pub store: Option<Store>,
     pub tips: DismissedTips,
     pub hub: project::ProjectHub,
@@ -380,7 +380,7 @@ impl AppState {
 
 /// The first ids free in every profile's database: one counter serves them all, so a terminal
 /// or window id never repeats across profiles. `live` is the shown profile's open database.
-pub(super) fn first_free_ids(root: &DataRoot, list: &ProfileList, live: Option<&Store>) -> (i64, i64) {
+pub(crate) fn first_free_ids(root: &DataRoot, list: &ProfileList, live: Option<&Store>) -> (i64, i64) {
     let mut ids = live.and_then(|s| s.next_ids().ok()).unwrap_or((1, 1));
     for profile in list.profiles().iter().filter(|p| &p.id != list.active_id()) {
         let paths = root.profile(&profile.id);

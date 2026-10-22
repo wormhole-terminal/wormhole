@@ -145,7 +145,7 @@ const FADE_OUT: Duration = Duration::from_millis(320);
 
 /// On a first launch (nothing saved, the intro never finished or skipped), open the intro window
 /// on the window that was just opened.
-pub(super) fn start_if_first_launch(cx: &mut App) {
+pub(crate) fn start_if_first_launch(cx: &mut App) {
     let Some(store) = &app(cx).store else { return };
     let flag = store.meta(ONBOARDED_KEY).ok().flatten();
     if !should_show(flag.as_deref(), 0) {

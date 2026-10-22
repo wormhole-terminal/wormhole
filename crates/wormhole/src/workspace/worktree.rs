@@ -126,7 +126,7 @@ impl Workspace {
 
     /// The command line's `new-terminal --worktree <branch>`: the dialog, filled in, in this
     /// window; the terminal opens (running `command`) once the user confirms.
-    pub(super) fn control_ask_worktree(
+    pub(crate) fn control_ask_worktree(
         &mut self,
         folder: Option<String>,
         branch: &str,

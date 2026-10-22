@@ -44,7 +44,7 @@ impl Workspace {
 
     /// Another window, laid out like this one, with a session starting in `cwd` (the command
     /// palette's ⌘↩).
-    pub(super) fn new_window_in(&mut self, cwd: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn new_window_in(&mut self, cwd: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
         let profile = self.profile.clone();
         self.new_window_in_profile(cwd, profile, window, cx);
     }
@@ -167,7 +167,7 @@ impl Workspace {
 
     /// The × on a terminal's row, or ⌘W. Closing a terminal ends its shell, so it asks first
     /// while an agent or a command is running in it; notes and tasks alone don't ask.
-    pub(super) fn request_close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn request_close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
         let Some(session) = self.sessions.get(ix) else { return };
         // A terminal in a worktree Wormhole made asks whether the worktree goes with it.
         if let Some(worktree) = self.made_worktree_of(ix, cx) {
@@ -273,13 +273,19 @@ impl Workspace {
     }
 
     /// Whether the terminal a hook names (`WORMHOLE_TAB_ID`, its id) is in this window.
-    pub(super) fn owns_terminal(&self, id: &str) -> bool {
+    /// The saved window this is (`OpenWindow` in the shared state has the same id).
+    #[cfg(feature = "devctl")]
+    pub(crate) fn window_id(&self) -> i64 {
+        self.window_id
+    }
+
+    pub(crate) fn owns_terminal(&self, id: &str) -> bool {
         id.parse().ok().is_some_and(|id| self.find_session(id).is_some())
     }
 
     /// Projects of this window's sessions (the terminal's and the one its notes sync with) and of
     /// its folders (whose colour they hold), in session order.
-    pub(super) fn project_roots(&self, cx: &App) -> Vec<PathBuf> {
+    pub(crate) fn project_roots(&self, cx: &App) -> Vec<PathBuf> {
         // No project roots while the project-folder feature is off, so nothing that scans them
         // (the menu bar's project actions, pruning the hub) keeps a stale project alive.
         if !crate::workspace::project::project_folders_on(cx) {

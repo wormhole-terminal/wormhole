@@ -261,11 +261,7 @@ impl Workspace {
     /// Esc while the terminal has the keys, which a focused terminal would otherwise send its
     /// program before any listener hears it: the ladder's rungs above the shell (a diff covering
     /// the terminal) take it.
-    pub(in crate::workspace) fn terminal_escape(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
+    pub(crate) fn terminal_escape(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         self.active_terminal().focus_handle(cx).is_focused(window) && self.escape_key(window, cx)
     }
 

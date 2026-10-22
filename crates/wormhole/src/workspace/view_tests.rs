@@ -38,7 +38,7 @@ fn isolate(name: &str) -> bool {
 }
 
 /// [`isolate`] for a test of another module (`module_path!()` there).
-pub(super) fn isolate_in(module_path: &str, name: &str) -> bool {
+pub(crate) fn isolate_in(module_path: &str, name: &str) -> bool {
     if std::env::var_os(CHILD).is_some() {
         return false;
     }
@@ -94,7 +94,7 @@ pub(super) fn isolate_in(module_path: &str, name: &str) -> bool {
 }
 
 /// An app with one window of `sessions` sessions (terminals), ids 1..
-pub(super) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
+pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
     let record = WindowRecord {
         id: 1,
         sessions: (1..=sessions).map(|id| SessionRecord::new(id, None, None)).collect(),
@@ -134,7 +134,7 @@ pub(super) fn use_stable(cx: &mut TestAppContext) {
 }
 
 /// Run `f` on the window's workspace, then let everything it set in motion finish.
-pub(super) fn drive<R>(
+pub(crate) fn drive<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
     f: impl FnOnce(&mut Workspace, &mut Window, &mut Context<Workspace>) -> R,
@@ -145,12 +145,12 @@ pub(super) fn drive<R>(
 }
 
 /// Draw the window once, as a frame would (not from inside an update of the workspace).
-pub(super) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
+pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
     cx.update(|cx| window.handle.update(cx, |_, window, cx| window.render_frame(cx)))
         .expect("the window is open");
 }
 
-pub(super) fn read<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOnce(&Workspace) -> R) -> R {
+pub(crate) fn read<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOnce(&Workspace) -> R) -> R {
     cx.update(|cx| window.workspace.read_with(cx, |ws, _| f(ws))).expect("the window is open")
 }
 
@@ -541,7 +541,7 @@ fn the_sidebar_lists_groups_pins_and_folds(cx: &mut TestAppContext) {
 }
 
 /// Press a key combination in the window, as the keyboard would (`cmd-1`).
-pub(super) fn press(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
+pub(crate) fn press(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
     let keystroke = Keystroke::parse(keys).expect("a keystroke");
     cx.update(|cx| window.handle.update(cx, |_, window, cx| window.dispatch_keystroke(keystroke, cx)))
         .expect("the window is open");

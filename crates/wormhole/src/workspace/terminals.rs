@@ -289,14 +289,14 @@ impl Workspace {
     }
 
     /// The sidebar's ⌘1–9, by session id.
-    pub(super) fn palette_numbers(&self, cx: &App) -> Vec<(i64, u8)> {
+    pub(crate) fn palette_numbers(&self, cx: &App) -> Vec<(i64, u8)> {
         let numbered = self.session_listing(cx).numbered();
         numbered.iter().enumerate().map(|(n, &ix)| (self.sessions[ix].id, n as u8 + 1)).collect()
     }
 
     /// The folder each terminal is in, as the sidebar groups them: its repository, else the
     /// folder itself.
-    pub(super) fn session_folders(&self, cx: &App) -> Vec<PathBuf> {
+    pub(crate) fn session_folders(&self, cx: &App) -> Vec<PathBuf> {
         self.sessions
             .iter()
             .filter_map(|session| {
@@ -307,13 +307,39 @@ impl Workspace {
     }
 
     /// The first terminal in `folder` (as [`Self::session_folders`] says), if any.
-    pub(super) fn session_in_folder(&self, folder: &Path, cx: &App) -> Option<usize> {
+    pub(crate) fn session_in_folder(&self, folder: &Path, cx: &App) -> Option<usize> {
         self.sessions.iter().position(|session| {
             session.terminal().read(cx).cwd.as_deref().is_some_and(|cwd| session.repo_root.of(cwd) == folder)
         })
     }
 
-    pub(super) fn session_for_project(&self, root: &Path) -> Option<usize> {
+    /// The folder terminal `tab` is in, if this window has it and it has reported one.
+    pub(crate) fn terminal_cwd(&self, tab: i64, cx: &App) -> Option<PathBuf> {
+        let ix = self.find_session(tab)?;
+        self.sessions[ix].terminal().read(cx).cwd.clone()
+    }
+
+    /// How many terminals the window has.
+    #[cfg(test)]
+    pub(crate) fn session_count(&self) -> usize {
+        self.sessions.len()
+    }
+
+    /// How many files changed in the folder the current terminal is in, once the git panel has
+    /// looked there (a count for another folder, or none, is `None`).
+    pub(crate) fn active_changes(&self, cx: &App) -> Option<usize> {
+        let session = self.active_session();
+        let cwd = &session.terminal().read(cx).cwd;
+        session
+            .git
+            .status
+            .as_ref()
+            .filter(|_| &session.git.cwd == cwd)
+            .map(|status| status.files.len())
+            .filter(|&n| n > 0)
+    }
+
+    pub(crate) fn session_for_project(&self, root: &Path) -> Option<usize> {
         self.sessions.iter().position(|s| s.project.as_deref() == Some(root))
     }
 }

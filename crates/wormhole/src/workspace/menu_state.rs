@@ -20,7 +20,7 @@ use crate::workspace::app::{AppState, app};
 use crate::workspace::{RightTab, Workspace};
 
 /// What the menus show for the window in front (the command palette offers the same actions).
-pub(super) fn front_window_state(cx: &mut App) -> MenuState {
+pub(crate) fn front_window_state(cx: &mut App) -> MenuState {
     let front = AppState::front_window(cx);
     let full_screen = front
         .as_ref()
@@ -60,7 +60,7 @@ fn folder_name(root: &Path) -> String {
 
 impl Workspace {
     /// What the menus show about this window.
-    pub(super) fn menu_state(&self, cx: &App) -> MenuState {
+    pub(crate) fn menu_state(&self, cx: &App) -> MenuState {
         use ActionId::*;
         let mut state = MenuState::default();
         if !self.sidebar_shown() {

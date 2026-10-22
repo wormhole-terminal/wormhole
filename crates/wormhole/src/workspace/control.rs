@@ -208,7 +208,7 @@ fn new_terminal(
 }
 
 /// Count a `kind` request of `from` against its budget, or say when to try again.
-pub(super) fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
+pub(crate) fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
     let now = Instant::now();
     let budgets = &mut cx.default_global::<Budgets>().0;
     if budgets.allow(kind, from, now) {
@@ -226,13 +226,13 @@ fn not_found(target: Target) -> Reply {
 }
 
 /// Where a target is: its window, its terminal (session) and the tab the request means.
-pub(super) struct Found {
-    pub(super) window: OpenWindow,
+pub(crate) struct Found {
+    pub(crate) window: OpenWindow,
     terminal: i64,
     tab: i64,
 }
 
-pub(super) fn find(target: Target, cx: &App) -> Option<Found> {
+pub(crate) fn find(target: Target, cx: &App) -> Option<Found> {
     app(cx).windows.iter().find_map(|window| {
         let (terminal, tab) =
             window.workspace.read_with(cx, |ws, _| ws.control_find(target)).ok().flatten()?;

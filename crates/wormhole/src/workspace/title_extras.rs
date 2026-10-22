@@ -85,7 +85,7 @@ impl Workspace {
     }
 
     /// A terminal's agent reported its model and context window (a status line ran in it).
-    pub(super) fn handle_gauge(&mut self, tab: &str, gauge: Gauge, cx: &mut Context<Self>) {
+    pub(crate) fn handle_gauge(&mut self, tab: &str, gauge: Gauge, cx: &mut Context<Self>) {
         let Some(ix) = tab.parse().ok().and_then(|id| self.find_session(id)) else { return };
         let extras = &mut self.sessions[ix].extras;
         // A status line runs many times a minute: redraw only for a change.

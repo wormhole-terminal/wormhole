@@ -42,7 +42,7 @@ pub(crate) struct AppState {
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
-    pub(super) parked: profiles::Parked,
+    pub(crate) parked: profiles::Parked,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -96,16 +96,16 @@ pub(crate) struct AppState {
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
-    pub(super) next_id: i64,
-    pub(super) next_window_id: i64,
+    pub(crate) next_id: i64,
+    pub(crate) next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
-    pub(super) applied_theme: Option<u64>,
-    pub(super) ticks: u64,
+    pub(crate) applied_theme: Option<u64>,
+    pub(crate) ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
-    pub(super) look_override: LookOverride,
+    pub(crate) look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
-    pub(super) _display_options: Option<crate::platform::look::DisplayObserver>,
+    pub(crate) _display_options: Option<crate::platform::look::DisplayObserver>,
 }
 
 impl Global for AppState {}
@@ -179,7 +179,7 @@ impl AppState {
     }
 
     /// An agent's latest plan usage limits, kept across restarts.
-    pub(super) fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
+    pub(crate) fn record_usage(&mut self, usage: wormhole_core::agents::usage::Usage) {
         wormhole_core::agents::usage::record(&mut self.usage, usage);
         if let Some(store) = &self.store
             && let Err(err) = store.set_meta(

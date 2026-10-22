@@ -18,7 +18,7 @@ pub(super) const SCROLLBACK_LINES: usize = 2000;
 pub(super) const SCROLLBACK_SAVE_INTERVAL: Duration = Duration::from_secs(60);
 
 impl Workspace {
-    pub(super) fn window_record(&self, cx: &App) -> WindowRecord {
+    pub(crate) fn window_record(&self, cx: &App) -> WindowRecord {
         // The groups keep only the terminals that are still here.
         let mut view = self.sidebar.view.clone();
         view.groups.retain_terminals(|id| self.sessions.iter().any(|session| session.id == id));
@@ -33,7 +33,7 @@ impl Workspace {
         }
     }
 
-    pub(super) fn save(&mut self, cx: &mut App) {
+    pub(crate) fn save(&mut self, cx: &mut App) {
         self.dirty = false;
         if self.discarded {
             return;
@@ -44,7 +44,7 @@ impl Workspace {
 
     /// Every terminal's text whose text is kept, in one transaction (sealed: `store::saved_text`).
     /// Nothing when Restore terminal text after restart is off.
-    pub(super) fn save_scrollback(&mut self, cx: &mut App) {
+    pub(crate) fn save_scrollback(&mut self, cx: &mut App) {
         self.last_scrollback_save = Instant::now();
         if self.discarded || !settings_in(&self.profile, cx).restore_terminal_text {
             return;

@@ -137,7 +137,7 @@ impl ProjectHub {
 
     /// Ids from `first_free` on are handed out to new sessions and splits from now on; see
     /// [`NotesBaseStore::forget_from`].
-    pub(super) fn ids_start_at(&mut self, first_free: i64) {
+    pub(crate) fn ids_start_at(&mut self, first_free: i64) {
         self.notes_bases.forget_from(first_free);
     }
 
@@ -235,7 +235,7 @@ fn load_projects(roots: impl IntoIterator<Item = PathBuf>, cx: &mut App) -> bool
 }
 
 /// Forget projects no session in any window uses any more, and the notes bases of closed sessions.
-pub(super) fn prune_projects(cx: &mut App) {
+pub(crate) fn prune_projects(cx: &mut App) {
     let open = AppState::open_project_roots(cx);
     let sessions = open_session_ids(cx);
     let hub = &mut app_mut(cx).hub;

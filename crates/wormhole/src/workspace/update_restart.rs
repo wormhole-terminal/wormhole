@@ -171,7 +171,7 @@ pub(crate) fn request_restart(window: &mut Window, cx: &mut App) {
 
 /// Every app tick: restart if "Restart When Idle" was chosen and the terminals have been idle long
 /// enough. Costs nothing while no request is pending.
-pub(super) fn tick(cx: &mut App) {
+pub(crate) fn tick(cx: &mut App) {
     tick_at(Instant::now(), cx);
 }
 

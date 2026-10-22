@@ -60,7 +60,7 @@ impl OverlayContent for ShortcutSheet {
 /// or close it there. Runs outside any window's update.
 pub(crate) fn toggle(cx: &mut App) {
     let Some(front) = AppState::front_window(cx) else { return };
-    match front.workspace.read_with(cx, |ws, _| (ws.sheet_open(), ws.first_run.is_open())) {
+    match front.workspace.read_with(cx, |ws, _| (ws.sheet_open(), ws.first_run_open())) {
         Ok((_, true)) | Err(_) => {}
         Ok((true, false)) => {
             AppState::with_workspace(&front, cx, |ws, window, cx| ws.close_overlay(window, cx));
@@ -395,6 +395,6 @@ pub(crate) fn devctl_sheet(ws: &mut Workspace, arg: &str, window: &mut Window, c
         });
         return;
     }
-    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id).cloned() else { return };
+    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id()).cloned() else { return };
     cx.defer(move |cx| open_in(&own, &arg, cx));
 }

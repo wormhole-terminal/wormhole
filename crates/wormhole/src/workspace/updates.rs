@@ -136,7 +136,7 @@ fn channel_changed(cx: &mut App) {
 }
 
 /// Called from the app tick: automatic checks at launch and every few hours.
-pub(super) fn schedule_check(ticks: u64, cx: &mut App) {
+pub(crate) fn schedule_check(ticks: u64, cx: &mut App) {
     // Once a minute is plenty for a schedule measured in hours.
     if !ticks.is_multiple_of(150) && ticks != 5 {
         return;

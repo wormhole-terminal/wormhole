@@ -35,7 +35,7 @@ impl Split {
 impl Workspace {
     /// The session whose terminal has this id (what hooks, notifications and the control socket
     /// name: a terminal's id is its session's).
-    pub(super) fn find_session(&self, id: i64) -> Option<usize> {
+    pub(crate) fn find_session(&self, id: i64) -> Option<usize> {
         self.sessions.iter().position(|session| session.id == id)
     }
 

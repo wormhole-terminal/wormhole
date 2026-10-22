@@ -37,7 +37,7 @@ use crate::workspace::app::{AppState, app, app_mut};
 use crate::workspace::notifications;
 use crate::workspace::window_lifecycle::with_front_workspace;
 
-pub(super) use answers::handle;
+pub(crate) use answers::handle;
 
 /// What a welcome is to be.
 #[derive(Clone, Copy, Debug)]
@@ -94,7 +94,7 @@ impl Welcomes {
 
 /// The plan for the first launch, when the terminal welcome is on and this is one (nothing saved, the
 /// first run never finished or skipped): the window's first terminal is then the welcome.
-pub(super) fn first_launch_plan(cx: &App) -> Option<Plan> {
+pub(crate) fn first_launch_plan(cx: &App) -> Option<Plan> {
     let store = app(cx).store.as_ref()?;
     let flag = store.meta(ONBOARDED_KEY).ok().flatten();
     (should_show(flag.as_deref(), 0) && enabled(cx))
@@ -109,7 +109,7 @@ pub(crate) fn enabled(cx: &App) -> bool {
 /// The first launch's welcome has its terminal; play the animation around the window that was just
 /// opened (never shown, so it arrives out of the run). Test instances stay behind other windows and
 /// skip the show, as the intro window does.
-pub(super) fn play_first(plan: Plan, cx: &mut App) {
+pub(crate) fn play_first(plan: Plan, cx: &mut App) {
     let Some(window) = app(cx).windows.first().cloned() else { return };
     // Deferred: the window is still being set up.
     cx.defer(move |cx| {

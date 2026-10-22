@@ -17,12 +17,7 @@ use crate::workspace::app::app;
 const MAX_CHAIN_DEPTH: usize = 16;
 
 impl Workspace {
-    pub(in crate::workspace) fn run_project_action(
-        &mut self,
-        id: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn run_project_action(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
         let Some(project) = self.active_project(cx) else { return };
         if !app(cx).hub.enabled(project, Feature::Actions) {
             return;
@@ -107,7 +102,7 @@ impl Workspace {
     }
 
     /// Open a new session (optionally named, in `cwd`) and focus it.
-    pub(in crate::workspace) fn spawn_session(
+    pub(crate) fn spawn_session(
         &mut self,
         name: Option<String>,
         cwd: Option<PathBuf>,
@@ -152,11 +147,7 @@ impl Workspace {
     }
 
     /// Match a keystroke against the active project's action shortcuts.
-    pub(in crate::workspace) fn project_action_for_key(
-        &self,
-        keystroke: &Keystroke,
-        cx: &App,
-    ) -> Option<String> {
+    pub(crate) fn project_action_for_key(&self, keystroke: &Keystroke, cx: &App) -> Option<String> {
         let project = self.active_project(cx)?;
         // The keys first: this runs for every ⌘ key typed, and asking whether the feature is
         // on resolves the project's folder on disk.

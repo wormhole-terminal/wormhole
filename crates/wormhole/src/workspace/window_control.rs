@@ -24,22 +24,22 @@ fn agent_id(agent: AgentId) -> Option<String> {
 impl Workspace {
     /// The terminal and tab `target` names in this window: one id, whichever way it is named
     /// (what its hooks report).
-    pub(super) fn control_find(&self, target: Target) -> Option<(i64, i64)> {
+    pub(crate) fn control_find(&self, target: Target) -> Option<(i64, i64)> {
         let (Target::Terminal(id) | Target::Tab(id) | Target::Pane(id)) = target;
         self.find_session(id).map(|ix| (self.sessions[ix].id, id))
     }
 
     /// Every terminal of this window, in the sidebar's order.
-    pub(super) fn control_terminals(&self, cx: &App) -> Vec<TerminalInfo> {
+    pub(crate) fn control_terminals(&self, cx: &App) -> Vec<TerminalInfo> {
         self.session_order(cx).into_iter().map(|ix| self.terminal_info(ix, cx)).collect()
     }
 
-    pub(super) fn control_terminal(&self, session: i64, cx: &App) -> Option<TerminalInfo> {
+    pub(crate) fn control_terminal(&self, session: i64, cx: &App) -> Option<TerminalInfo> {
         let ix = self.sessions.iter().position(|s| s.id == session)?;
         Some(self.terminal_info(ix, cx))
     }
 
-    pub(super) fn control_tab_state(&self, tab: i64, cx: &App) -> Option<TerminalState> {
+    pub(crate) fn control_tab_state(&self, tab: i64, cx: &App) -> Option<TerminalState> {
         Some(tab_state(self.pane_terminal(tab)?.read(cx)))
     }
 
@@ -83,7 +83,7 @@ impl Workspace {
     }
 
     /// `notify`'s words into `tab`'s terminal, for the notification sweep to tell.
-    pub(super) fn control_notice(&mut self, tab: i64, words: Notification, cx: &mut Context<Self>) -> bool {
+    pub(crate) fn control_notice(&mut self, tab: i64, words: Notification, cx: &mut Context<Self>) -> bool {
         let Some(terminal) = self.pane_terminal(tab) else { return false };
         terminal.update(cx, |t, _| t.notice_from_control(words));
         cx.notify();
@@ -92,7 +92,7 @@ impl Workspace {
 
     /// Paste `text` into `tab` and, with `submit`, press Return a moment later (the program reads
     /// the paste first, as `type_reply` does for a notification's Reply).
-    pub(super) fn control_send_text(
+    pub(crate) fn control_send_text(
         &mut self,
         tab: i64,
         text: &str,
@@ -113,7 +113,7 @@ impl Workspace {
 
     /// A new terminal in `folder` (where the current one is without), selected, with `command`
     /// typed into its shell and run.
-    pub(super) fn control_new_terminal(
+    pub(crate) fn control_new_terminal(
         &mut self,
         folder: Option<String>,
         command: Option<&str>,

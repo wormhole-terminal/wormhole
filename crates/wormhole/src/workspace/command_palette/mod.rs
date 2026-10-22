@@ -67,7 +67,7 @@ impl Global for Chosen {}
 /// there. Runs outside any window's update (the action handler defers it).
 pub(crate) fn toggle(cx: &mut App) {
     let Some(front) = AppState::front_window(cx) else { return };
-    let state = front.workspace.read_with(cx, |ws, _| (ws.palette_open(), ws.first_run.is_open()));
+    let state = front.workspace.read_with(cx, |ws, _| (ws.palette_open(), ws.first_run_open()));
     match state {
         // The first-run sheet holds the keyboard until it is done.
         Ok((_, true)) | Err(_) => {}
@@ -189,16 +189,8 @@ fn palette_here(
     home: Option<&Path>,
     cx: &App,
 ) -> (Option<String>, Option<usize>, Option<ProjectItem>) {
-    let session = ws.active_session();
-    let terminal = session.terminal().read(cx);
-    let cwd = terminal.cwd.as_deref().map(|cwd| display_path(cwd, home));
-    let changes = session
-        .git
-        .status
-        .as_ref()
-        .filter(|_| session.git.cwd == terminal.cwd)
-        .map(|status| status.files.len())
-        .filter(|&n| n > 0);
+    let cwd = ws.active_terminal().read(cx).cwd.as_deref().map(|cwd| display_path(cwd, home));
+    let changes = ws.active_changes(cx);
     let hub = &app(cx).hub;
     let project = ws.active_project(cx).filter(|p| hub.enabled(p, Feature::Actions)).map(|project| {
         let root = &project.folder.root;
@@ -514,14 +506,7 @@ impl CommandPalette {
                 Folder::Path(path) => Some(path),
                 Folder::OfTab(tab) => AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some())
                     .and_then(|owner| {
-                        owner
-                            .workspace
-                            .read_with(cx, |ws, cx| {
-                                let ix = ws.find_session(tab)?;
-                                ws.sessions[ix].terminal().read(cx).cwd.clone()
-                            })
-                            .ok()
-                            .flatten()
+                        owner.workspace.read_with(cx, |ws, cx| ws.terminal_cwd(tab, cx)).ok().flatten()
                     }),
             };
             let cwd = cwd.map(|path| path.to_string_lossy().into_owned());
@@ -613,7 +598,7 @@ pub(crate) fn devctl_palette(
         });
         return;
     }
-    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id).cloned() else { return };
+    let Some(own) = app(cx).windows.iter().find(|w| w.id == ws.window_id()).cloned() else { return };
     let query = arg.to_string();
     // After this update: the palette reads every window, this one too.
     cx.defer(move |cx| open_in(&own, &query, cx));
@@ -697,7 +682,7 @@ mod tests {
         key(cx, &window, "enter");
         read(cx, &window, |ws| {
             assert!(!ws.palette_open());
-            assert_eq!(ws.sessions.len(), 3, "New terminal ran");
+            assert_eq!(ws.session_count(), 3, "New terminal ran");
         });
     }
 }

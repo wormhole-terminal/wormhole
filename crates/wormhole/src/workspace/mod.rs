@@ -58,13 +58,13 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
-mod about;
-mod actions;
+pub(crate) mod about;
+pub(crate) mod actions;
 pub(crate) mod ambient;
-mod app;
+pub(crate) mod app;
 mod app_handlers;
 pub(crate) mod app_launch;
-mod app_look;
+pub(crate) mod app_look;
 mod app_menu;
 mod app_tick;
 mod aux_window;
@@ -84,7 +84,7 @@ mod dialog;
 mod drag_tests;
 #[cfg(test)]
 mod failed_tests;
-mod focus;
+pub(crate) mod focus;
 mod folder_color;
 #[cfg(test)]
 mod folder_color_tests;
@@ -92,22 +92,22 @@ mod git_panel;
 mod glass;
 #[cfg(test)]
 mod group_tests;
-mod hosting;
+pub(crate) mod hosting;
 mod items;
 #[cfg(test)]
 mod key_tests;
 mod layout;
 pub(crate) mod menu_bar;
-mod menu_state;
+pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
 #[cfg(test)]
 mod note_tests;
 pub(crate) mod notes;
 pub(crate) mod notifications;
-mod onboarding;
+pub(crate) mod onboarding;
 pub(crate) mod open_in;
-mod overlay;
+pub(crate) mod overlay;
 mod pane_drop;
 #[cfg(test)]
 mod pane_memory_tests;
@@ -122,10 +122,10 @@ mod path_menu;
 mod profile_chip;
 #[cfg(test)]
 mod profile_look_tests;
-mod profiles;
-mod project;
+pub(crate) mod profiles;
+pub(crate) mod project;
 pub(crate) mod quick_panel;
-mod recent_projects;
+pub(crate) mod recent_projects;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
@@ -135,8 +135,8 @@ mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;
 mod session;
-mod settings_page;
-mod shells;
+pub(crate) mod settings_page;
+pub(crate) mod shells;
 mod shortcut_sheet;
 mod shortcuts;
 mod sidebar;
@@ -145,7 +145,7 @@ mod splits;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
-mod studio;
+pub(crate) mod studio;
 mod tasks;
 mod terminal_drag;
 mod terminals;
@@ -156,19 +156,19 @@ mod title_extras;
 mod title_row;
 #[cfg(test)]
 mod title_tests;
-mod update_restart;
+pub(crate) mod update_restart;
 #[cfg(test)]
 mod update_restart_tests;
-mod updates;
+pub(crate) mod updates;
 mod usage;
 #[cfg(test)]
-mod view_tests;
-mod welcome;
+pub(crate) mod view_tests;
+pub(crate) mod welcome;
 mod window_actions;
 mod window_bounds;
 mod window_control;
-mod window_lifecycle;
-mod windows;
+pub(crate) mod window_lifecycle;
+pub(crate) mod windows;
 mod worktree;
 
 use self::git_panel::{diff_view, picker};

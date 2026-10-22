@@ -27,7 +27,7 @@ fn host_binary() -> Option<&'static PathBuf> {
 
 /// The hosts this data folder has at launch, matched against what every profile's database names:
 /// one scan, before any window opens. `live` is the shown profile's open database.
-pub(super) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Option<&Store>) -> LaunchHosts {
+pub(crate) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Option<&Store>) -> LaunchHosts {
     let found = match hosts::scan(&hosts::hosts_dir(&wormhole_core::storage::paths::data_dir())) {
         Ok(scan) => scan.live,
         Err(err) => {
@@ -63,7 +63,7 @@ pub(super) fn scan_at_launch(root: &DataRoot, profiles: &ProfileList, live: Opti
 
 /// After the windows opened at launch: the live hosts no terminal named come into the front window's
 /// Recovered group, attached headless. Never ended: what runs in them is the person's.
-pub(super) fn adopt_orphans(cx: &mut App) {
+pub(crate) fn adopt_orphans(cx: &mut App) {
     let orphans = app_mut(cx).launch_hosts.take_orphans();
     if orphans.is_empty() {
         return;
@@ -75,7 +75,7 @@ pub(super) fn adopt_orphans(cx: &mut App) {
 /// As the app quits, before anything drops a terminal (GPUI drops the windows, and with them every
 /// terminal, right after the quit observers run): let go of every host, so dropping a hosted `Pty`
 /// leaves its program running instead of ending it.
-pub(super) fn detach_all(cx: &mut App) {
+pub(crate) fn detach_all(cx: &mut App) {
     // First: a start or attach that finishes after this lets go of its host too.
     crate::terminal_view::note_app_quitting();
     let mut terminals: Vec<Entity<TerminalView>> = Vec::new();

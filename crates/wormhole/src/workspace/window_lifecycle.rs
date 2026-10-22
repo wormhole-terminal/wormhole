@@ -116,7 +116,7 @@ pub(crate) fn with_front_workspace<R>(
 }
 
 /// ⌘N (or the menu): a window like the one in front.
-pub(super) fn new_window_from_front(cx: &mut App) {
+pub(crate) fn new_window_from_front(cx: &mut App) {
     if with_front_workspace(cx, |ws, window, cx| ws.new_window(window, cx)).is_none()
         && app(cx).windows.is_empty()
     {
@@ -124,7 +124,7 @@ pub(super) fn new_window_from_front(cx: &mut App) {
     }
 }
 
-pub(super) fn window_closed(cx: &mut App, id: WindowId) {
+pub(crate) fn window_closed(cx: &mut App, id: WindowId) {
     let state = app_mut(cx);
     state.windows.retain(|w| w.handle.window_id() != id);
     // Sessions end with their window, so with none left there is nothing to show. (The close
@@ -135,7 +135,7 @@ pub(super) fn window_closed(cx: &mut App, id: WindowId) {
 }
 
 /// Everything that is worth keeping, for every window (scrollback included).
-pub(super) fn save_all(cx: &mut App) {
+pub(crate) fn save_all(cx: &mut App) {
     app_mut(cx).quitting = true;
     let windows = app(cx).windows.clone();
     for window in &windows {
@@ -146,7 +146,7 @@ pub(super) fn save_all(cx: &mut App) {
 
 /// A notification about the terminal `tab` (its id) was clicked (this runs from the platform's
 /// callback, outside any window's update): bring its window and the terminal forward.
-pub(super) fn open_tab(tab: i64, cx: &mut App) {
+pub(crate) fn open_tab(tab: i64, cx: &mut App) {
     let Some(owner) = AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some()) else { return };
     AppState::with_workspace(&owner, cx, |ws, window, cx| {
         crate::background::activate_window(window, cx);
