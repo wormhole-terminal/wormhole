@@ -49,7 +49,36 @@
     },
     "track_dirs": [
       "crates/wormhole/src/workspace"
-    ]
+    ],
+    "layers": {
+      "wormhole": [
+        [
+          "logging",
+          "menubar",
+          "perf"
+        ],
+        "platform",
+        "background",
+        "window_ops",
+        [
+          "active_profile",
+          "icons",
+          "palette",
+          "theme_bridge"
+        ],
+        "settings",
+        "fonts",
+        "style",
+        [
+          "inspector",
+          "intro",
+          "select"
+        ],
+        "terminal_view",
+        "workspace",
+        "devctl"
+      ]
+    }
   },
   "allowlist": {
     "file-size": {

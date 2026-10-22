@@ -23,6 +23,10 @@ crates/<crate>/src, tests included:
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
   cycles            strongly connected groups of top-level modules (an edge: a file of A names `crate::B`)
+  layers            per crate in `layers`, its top-level modules as tiers, lowest first (modules in one tier
+                    may use each other): an edge from a lower tier up to a higher one fails (`crate: a -> b`),
+                    and so does a top-level module the list leaves out (`crate: unplaced x`) or names but the
+                    crate doesn't have (`crate: no module x`). Edges as the cycles rule reads them
   cross-reexports   `pub use crate::B::...` in a file of another top-level module A
   impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate)
 
@@ -57,7 +61,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_NAME = os.path.join("scripts", "structure.json")
 
 RULES = [
-    "file-size", "os-edge", "bucket-names", "orphans", "glob-imports", "cycles", "cross-reexports", "impl-outside",
+    "file-size", "os-edge", "bucket-names", "orphans", "glob-imports", "cycles", "layers", "cross-reexports",
+    "impl-outside",
 ]
 RULE_HELP = {
     "file-size": "files over {fail} lines",
@@ -66,6 +71,7 @@ RULE_HELP = {
     "orphans": "files no mod declaration reaches",
     "glob-imports": "`use super::*` outside tests",
     "cycles": "cycles between top-level modules",
+    "layers": "top-level modules using a higher layer",
     "cross-reexports": "re-exports across top-level modules",
     "impl-outside": "impl Workspace/Session outside the home",
 }
@@ -84,6 +90,8 @@ DEFAULT_CONFIG = {
     "os_edge_sanctioned": {},
     # The inherent impls of these types belong in the home (a folder or file, relative to the crate).
     "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/workspace/"]},
+    # Per crate, its top-level modules in tiers, lowest first; a tier is a module or a list of them.
+    "layers": {},
     "bucket_names": ["text", "utils", "util", "misc", "helpers", "helper", "common"],
     "size": {"warn": 600, "fail": 1000},
     # Folders whose size the plan tracks (files and lines, listed by `counts`).
@@ -641,6 +649,29 @@ def rule_cycles(crate: Crate, cfg: dict, found: Findings) -> None:
                 _add(found, "%s: %s -> %s" % (crate.name, a, b), crate.name, where)
 
 
+def layer_tiers(tiers: List) -> Dict[str, int]:
+    """module -> its tier's index, from a list whose entries are a module or a list of modules."""
+    return {m: i for i, tier in enumerate(tiers) for m in ([tier] if isinstance(tier, str) else tier)}
+
+
+def rule_layers(crate: Crate, cfg: dict, found: Findings) -> None:
+    """Lower tiers never use higher ones. Every top-level module has a tier, so a new one can't slip past
+    the rule by being left out of the list."""
+    tiers = cfg.get("layers", {}).get(crate.name)
+    if tiers is None:
+        return
+    tier = layer_tiers(tiers)
+    root = os.path.join("crates", crate.name, "src")
+    for m in crate.tops:
+        if m not in tier:
+            _add(found, "%s: unplaced %s" % (crate.name, m), crate.name, root)
+    for m in sorted(set(tier) - set(crate.tops)):
+        _add(found, "%s: no module %s" % (crate.name, m), crate.name, root)
+    for (a, b), where in sorted(module_edges(crate, cfg.get("cycles_with_tests", False)).items()):
+        if a in tier and b in tier and tier[a] < tier[b]:
+            _add(found, "%s: %s -> %s" % (crate.name, a, b), crate.name, where)
+
+
 _REEXPORT = re.compile(r"pub\s*(?:\([^)]*\)\s*)?use\s+crate\s*::\s*(\{|\w+)")
 
 
@@ -677,7 +708,7 @@ def rule_impl_outside(crate: Crate, cfg: dict, found: Findings) -> None:
 
 RULE_FUNCS = {
     "file-size": rule_file_size, "os-edge": rule_os_edge, "bucket-names": rule_bucket_names,
-    "orphans": rule_orphans, "glob-imports": rule_glob_imports, "cycles": rule_cycles,
+    "orphans": rule_orphans, "glob-imports": rule_glob_imports, "cycles": rule_cycles, "layers": rule_layers,
     "cross-reexports": rule_cross_reexports, "impl-outside": rule_impl_outside,
 }
 
@@ -755,6 +786,13 @@ def describe(an: Analysis, rule: str, key: str, item: Item, have: int) -> str:
         return "%d lines, over %d (%s)" % (item.count, an.cfg["size"]["fail"], allowed)
     if rule == "cycles":
         return "%s depends on %s inside a cycle (%s)" % (tuple(key.split(": ", 1)[1].split(" -> ")) + (allowed,))
+    if rule == "layers":
+        what = key.split(": ", 1)[1]
+        if what.startswith("unplaced "):
+            return "top-level module %s has no tier in `layers` (%s)" % (what[9:], allowed)
+        if what.startswith("no module "):
+            return "`layers` names %s, which the crate doesn't have (%s)" % (what[10:], allowed)
+        return "%s uses %s, a higher layer (%s)" % (tuple(what.split(" -> ")) + (allowed,))
     if rule == "orphans":
         return "no `mod` declaration reaches this file"
     if rule == "bucket-names":
@@ -817,7 +855,7 @@ def per_crate(an: Analysis, rule: str) -> Dict[str, Tuple[int, int]]:
     for key, item in an.found[rule].items():
         n, _ = out[item.crate]
         out[item.crate] = (n + (1 if rule in ("orphans", "bucket-names") else item.count), 0)
-        files[item.crate].add(key.split(" :: ")[0] if rule != "cycles" else key)
+        files[item.crate].add(key.split(" :: ")[0] if rule not in ("cycles", "layers") else key)
     return {c: (out[c][0], len(files[c])) for c in out}
 
 
@@ -846,6 +884,9 @@ def build_counts(an: Analysis) -> dict:
             row("cycles: modules in a group", {c.name: sum(len(g) for g in c.cycles) for c in an.crates})
             row("cycles: edges inside a group", {c: pc[c][0] for c in crates})
             row("cycles: back-and-forth pairs", {c.name: len(mutual_pairs(an.found["cycles"], c.name)) for c in an.crates})
+            continue
+        if rule == "layers":
+            row("layers: violations", {c: pc[c][0] for c in crates})
             continue
         unit = {"os-edge": "sites", "glob-imports": "uses", "cross-reexports": "re-exports", "impl-outside": "impl blocks"}.get(rule)
         if unit:
@@ -1127,6 +1168,29 @@ def selftest() -> int:
         expect("cycle groups", an.crates[0].cycles if an.crates[0].name == "app" else None, [["a", "b"], ["c", "d"]])
         expect("cross-reexports", keys(an, "cross-reexports"), [
             "crates/app/src/d.rs :: crate::e", "crates/app/src/f.rs :: crate::a"])
+
+        # layers: up a tier fails, within a tier and down are fine; every module needs a tier; test edges
+        # count only with cycles_with_tests.
+        layered = dict(_fixture_cfg(), layers={"app": ["low", ["mid", "side"], "top"], "lib": []})
+        an = make({
+            "crates/app/src/main.rs": "mod low;\nmod mid;\nmod side;\nmod top;\nmod stray;\n",
+            "crates/app/src/low.rs": "use crate::top::T;\n#[cfg(test)]\nmod tests {\n    use crate::mid::M;\n}\n",
+            "crates/app/src/mid.rs": "use crate::{low::L, side::S};\n",
+            "crates/app/src/side.rs": "use crate::mid::M;\nuse crate::top::T;\n",
+            "crates/app/src/top.rs": "use crate::{low, mid::M, stray};\n",
+            "crates/app/src/stray.rs": "",
+            "crates/lib/src/lib.rs": "mod a;\n", "crates/lib/src/a.rs": "",
+        }, layered)
+        expect("layers", keys(an, "layers"), [
+            "app: low -> top", "app: side -> top", "app: unplaced stray", "lib: unplaced a"])
+        an = make({"crates/app/src/main.rs": "mod low;\n", "crates/app/src/low.rs": ""},
+                  dict(_fixture_cfg(), layers={"app": ["low", "gone"]}))
+        expect("layers name a missing module", keys(an, "layers"), ["app: no module gone"])
+        an = make({"crates/app/src/main.rs": "mod a;\nmod b;\n", "crates/app/src/a.rs": "#[cfg(test)]\nmod tests {\n"
+                   "    use crate::b::X;\n}\n", "crates/app/src/b.rs": ""},
+                  dict(_fixture_cfg(), layers={"app": ["a", "b"]}, cycles_with_tests=True))
+        expect("layers read test edges on request", keys(an, "layers"), ["app: a -> b"])
+        expect("no layers, no rule", keys(make({"crates/app/src/main.rs": "mod a;\n", "crates/app/src/a.rs": ""}), "layers"), [])
 
         # impl-outside: inherent impls only, generics and paths included, the home exempt.
         an = make({
