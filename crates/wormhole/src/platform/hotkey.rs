@@ -53,7 +53,7 @@ fn install_handler() {
     });
 }
 
-/// A registered global hotkey. Dropping it (or [`Hotkey::unregister`]) releases the key.
+/// A registered global hotkey. Dropping it releases the key.
 pub struct Hotkey {
     /// `None` in background mode, where nothing is registered.
     held: Option<Held>,
@@ -68,17 +68,18 @@ struct Held {
 impl Hotkey {
     /// Registers `spec` (e.g. `"alt-space"`, `"cmd-`"`, `"ctrl-alt-t"`) system-wide.
     /// Must be called on the main thread. Fails if another app already owns the combination.
-    /// A test instance in background mode leaves the keys of the person at the Mac alone: it gets
-    /// a hotkey that holds nothing, so the app shows the key as it would be.
+    /// A test instance in background mode leaves the keys of the person at the Mac alone: the spec
+    /// is checked as anywhere, but it gets a hotkey that holds nothing, so the app shows the key as
+    /// it would be. (Whether another app owns the combination isn't known there.)
     pub fn register(spec: &str) -> Result<Self, String> {
-        if super::background_mode::on() {
-            tracing::info!(spec, "background mode: the global hotkey is not registered");
-            return Ok(Self { held: None });
-        }
         if !super::os::hotkey::on_registering_thread() {
             return Err("global hotkeys must be registered on the main thread".into());
         }
         let (mods, code) = parse_spec(spec)?;
+        if super::background_mode::on() {
+            tracing::info!(spec, "background mode: the global hotkey is not registered");
+            return Ok(Self { held: None });
+        }
         let hotkey = HotKey::new(Some(mods), code);
         install_handler();
         let manager = GlobalHotKeyManager::new().map_err(|e| format!("hotkey manager: {e}"))?;
