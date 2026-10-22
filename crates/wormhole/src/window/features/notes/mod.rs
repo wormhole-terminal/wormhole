@@ -421,12 +421,17 @@ impl Workspace {
             .child(div().flex().flex_col().flex_1().min_h_0().child(match self.tab_entry(tab) {
                 // A feature in the table draws its tab; a tab with a list gets the area that holds the
                 // keyboard for it.
-                Some((at, entry)) => match self.feature_entity(at) {
-                    Some(entity) => {
+                Some((at, entry)) => match (entry.window_side, self.feature_entity(at)) {
+                    // The temporary side door (Changes until 5d): the window draws the tab itself.
+                    (Some(side), _) => {
+                        let content = (side.view)(self, window, cx);
+                        self.panel_content(content, cx)
+                    }
+                    (None, Some(entity)) => {
                         let content = (entry.view)(entity, &self.facts(cx), window, cx);
                         if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
                     }
-                    None => div().into_any_element(),
+                    (None, None) => div().into_any_element(),
                 },
                 None => match tab {
                     // Virtualized lists fill the panel and scroll themselves; the list area holds the
@@ -472,8 +477,12 @@ impl Workspace {
         match self.tab_entry(tab) {
             // The feature in the table says what showing its tab does.
             Some((at, entry)) => {
-                if let (Some(on_show), Some(entity)) = (entry.on_show, self.feature_entity(at).cloned()) {
-                    on_show(&entity, self, session, cx);
+                if let Some(side) = entry.window_side {
+                    (side.on_show)(self, session, cx);
+                } else if let (Some(on_show), Some(entity)) =
+                    (entry.on_show, self.feature_entity(at).cloned())
+                {
+                    on_show(&entity, session, cx);
                 }
             }
             None => match tab {

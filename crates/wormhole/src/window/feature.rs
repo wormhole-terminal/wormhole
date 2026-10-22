@@ -8,7 +8,7 @@
 //!    emitting an event the `Workspace` subscribed to when it made the entity. A feature never calls
 //!    `workspace.update(..)` from inside its own update.
 //! 2. What a feature needs to *read* of the window arrives as [`WindowFacts`](super::facts), borrowed,
-//!    never as `&Workspace` (the transitional exception is at the end of this comment).
+//!    never as `&Workspace` (the one exception is the side door at the end of this comment).
 //!
 //! A feature's state is one entity per window, made whether the feature is on or off (an off feature
 //! keeps and records its data; only its views, keys and counts go). The window keeps it as an
@@ -20,13 +20,12 @@
 //! added when the first feature needs it, so a field below that nothing uses yet is the shape the
 //! design settled on, not a promise that each is used.
 //!
-//! **Transitional.** Changes' state is still the `Workspace`'s fields and the `Session`'s, so its hooks
-//! cannot do everything through an entity of their own yet. Where a hook has to read the window, it
-//! reads the facts ([`WindowFacts::workspace`](super::facts::WindowFacts::workspace)); the four that
-//! change it (`TabDef::view` and `on_show`, `WalkFns::press` and `fold`) are handed the `Workspace`
-//! the window is already inside of (`ws`) and, for `view`, the window's `Context`. Both are the
-//! window's own borrow passed down, so no lease is taken twice; they go with the last feature whose
-//! state is still in the window (Changes, 5d), and a feature with an entity of its own ignores them.
+//! **Transitional: one side door.** Changes' state is still the `Workspace`'s fields and the `Session`'s,
+//! so it cannot do everything through an entity of its own yet. Instead of bending the hooks above for
+//! it, [`TabDef::window_side`] ([`WindowSideTab`]) is the one place where a tab is given the window
+//! itself; the frame prefers it when it is set and nothing else uses it. It goes with the last feature
+//! whose state is still in the window (Changes, 5d), and a ratchet in `scripts/structure.json` keeps it
+//! out of every other file under `features/`.
 
 #![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
 
@@ -95,18 +94,10 @@ pub(in crate::window) type MenuFn = fn(&AnyEntity, &WindowFacts<'_>, &mut MenuSt
 pub(in crate::window) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<usize>;
 pub(in crate::window) type TabActionsFn =
     fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> Option<AnyElement>;
-pub(in crate::window) type OnShowFn = fn(&AnyEntity, &mut Workspace, session: i64, &mut Context<Workspace>);
+pub(in crate::window) type OnShowFn = fn(&AnyEntity, session: i64, &mut App);
 pub(in crate::window) type FocusInFn = fn(&AnyEntity, session: i64, &mut Window, &mut App) -> bool;
-pub(in crate::window) type PressFn = fn(
-    &AnyEntity,
-    &mut Workspace,
-    session: i64,
-    row: usize,
-    Activate,
-    following: bool,
-    &mut Window,
-    &mut Context<Workspace>,
-) -> bool;
+pub(in crate::window) type PressFn =
+    fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
 
 /// The root element a feature adds its action handlers to.
 pub(in crate::window) type Root = Div;
@@ -147,8 +138,9 @@ pub(in crate::window) struct TabDef {
     /// The action that shows it: its key and its menu line are core's keymap's, and the window binds
     /// it ([`gpui_action`](crate::actions::gpui_action)) while the tab is offered.
     pub action: ActionId,
-    /// What showing the tab does besides switching to it (Changes: refresh the repository), for the
-    /// session shown. The window calls it from `show_tab`, after the switch.
+    /// What showing the tab does besides switching to it, for the session shown. The window calls it
+    /// from `show_tab`, after the switch. It takes no `Window`: `show_tab` is called from places that
+    /// have none (a notification, a title chip's click handler off the render path).
     pub on_show: Option<OnShowFn>,
     /// Whether the tab is offered now (Usage: an agent on screen; Project: the terminal has a folder).
     pub shown: fn(&WindowFacts<'_>, &App) -> bool,
@@ -159,13 +151,44 @@ pub(in crate::window) struct TabDef {
     /// The tab's content, built inline from `Workspace::render` with the frame's facts: a panel as its
     /// own `Render` entity could not read the window, and pushing every fact into it would notify on
     /// each push. The per-frame list syncs run here, on the feature's entity. Its listeners capture the
-    /// entity, not the `Workspace`.
-    pub view: fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut Context<Workspace>) -> AnyElement,
+    /// entity, not the `Workspace`. (Changes' list sync still runs in `layout.rs` until 5d, because the
+    /// list is `Session.git`'s; its panel is drawn through [`Self::window_side`], so this is a stub.)
+    pub view: fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> AnyElement,
     /// The keys over the tab's rows, for a tab that has a list. The window also gives such a tab the
     /// list area that holds the keyboard for it.
     pub walk: Option<WalkFns>,
     /// Buttons beside the tabs while it is on show (Notes' stash).
     pub actions: Option<TabActionsFn>,
+    /// **Temporary, for Changes only, until 5d.** When set, the frame draws, shows, walks and presses
+    /// the tab through this instead of `view`, `on_show` and `walk`. See the end of the module comment.
+    pub window_side: Option<&'static WindowSideTab>,
+}
+
+/// The side door: a tab whose state is still the window's is handed the window itself. Same questions
+/// as [`TabDef::view`], [`TabDef::on_show`] and [`WalkFns`], answered over the `Workspace` the frame is
+/// already inside of, so no lease is taken twice. **Temporary**: Changes only, gone in 5d. A feature
+/// with an entity of its own never needs one.
+pub(in crate::window) struct WindowSideTab {
+    /// The tab's content, built inline from `Workspace::render`.
+    pub view: fn(&Workspace, &mut Window, &mut Context<Workspace>) -> AnyElement,
+    /// What showing the tab does, for the session shown.
+    pub on_show: fn(&mut Workspace, session: i64, &mut Context<Workspace>),
+    /// The rows the keys can be on.
+    pub walkable: fn(&Workspace) -> Vec<Walkable>,
+    /// ↩ or Space on a row of `session`; whether the keys stay in the list.
+    pub press: fn(
+        &mut Workspace,
+        session: i64,
+        row: usize,
+        Activate,
+        following: bool,
+        &mut Window,
+        &mut Context<Workspace>,
+    ) -> bool,
+    /// → ← on a row.
+    pub fold: fn(&mut Workspace, session: i64, row: usize, &mut Context<Workspace>),
+    /// Scrolls a row into view.
+    pub reveal: fn(&Workspace, row: usize),
 }
 
 /// F-70's four questions about a tab's rows, each over the feature's entity: a `&'static` table of
@@ -177,7 +200,7 @@ pub(in crate::window) struct WalkFns {
     /// the keys stay in the list.
     pub press: PressFn,
     /// → ← on a row.
-    pub fold: fn(&AnyEntity, &mut Workspace, session: i64, row: usize, &mut Context<Workspace>),
+    pub fold: fn(&AnyEntity, session: i64, row: usize, &mut App),
     /// Scrolls a row into view.
     pub reveal: fn(&AnyEntity, &WindowFacts<'_>, row: usize, &App),
 }

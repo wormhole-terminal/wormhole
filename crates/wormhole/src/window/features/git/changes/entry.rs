@@ -1,8 +1,8 @@
 //! Changes as an entry of the feature table (`window::feature`). The tab's state is still the
 //! `Workspace`'s and the `Session`'s (the status, the folds and the list on `Session.git`, the open
-//! diff on the window), so each hook here calls today's code on them through the facts, or through
-//! the `Workspace` the window passes for the hooks that change it. Phase 5d moves that state into
-//! [`ChangesPanel`], and the hooks then lose those arguments.
+//! diff on the window), so the tab is drawn, shown and walked through its [`WindowSideTab`], the
+//! temporary side door that hands it the window. The facts still serve its count and words. Phase 5d
+//! moves that state into [`ChangesPanel`], deletes the side door and fills in the entity's hooks.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
@@ -13,8 +13,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, StateDef, TabDef, WalkFns};
-use crate::window::focus::Walkable;
+use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, StateDef, TabDef, WindowSideTab};
 
 /// The Changes tab's entity: nothing yet. It exists so that the tab is made with the window like
 /// any feature's, and says what it will say to the window ([`FeatureEvent`]).
@@ -27,9 +26,19 @@ fn files(facts: &WindowFacts<'_>) -> Option<usize> {
     facts.active()?.git.status.as_ref().map(|status| status.files.len())
 }
 
-fn walkable(_: &AnyEntity, facts: &WindowFacts<'_>, _: &App) -> Vec<Walkable> {
-    facts.workspace().changes_walkable()
-}
+/// Changes' side door (5d deletes it): today's code on the window, unchanged.
+const SIDE: WindowSideTab = WindowSideTab {
+    view: |ws, window, cx| ws.render_changes_tab(window, cx),
+    on_show: |ws, session, cx| {
+        if let Some(ix) = ws.find_session(session) {
+            ws.refresh_git(ix, cx);
+        }
+    },
+    walkable: Workspace::changes_walkable,
+    press: |ws, _, row, _, following, _, cx| ws.changes_press(row, following, cx),
+    fold: |ws, _, row, cx| ws.changes_fold(row, cx),
+    reveal: Workspace::changes_reveal,
+};
 
 /// The Changes entry: the tab, what showing it does, its count and words, its panel and its keys.
 pub(in crate::window) const DEF: FeatureDef = FeatureDef {
@@ -39,22 +48,15 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         icon: IconName::GitCompare,
         label: "Changes",
         action: ActionId::ShowChanges,
-        on_show: Some(|_, ws, session, cx| {
-            if let Some(ix) = ws.find_session(session) {
-                ws.refresh_git(ix, cx);
-            }
-        }),
+        on_show: None,
         shown: |_, _| true,
         count: Some(|_, facts, _| files(facts).filter(|&n| n > 0)),
         spoken: |_, facts, _| spoken::panel_tab(PanelTab::Changes { files: files(facts) }),
-        view: |_, facts, window, cx| facts.workspace().render_changes_tab(window, cx),
-        walk: Some(WalkFns {
-            walkable,
-            press: |_, ws, _, row, _, following, _, cx| ws.changes_press(row, following, cx),
-            fold: |_, ws, _, row, cx| ws.changes_fold(row, cx),
-            reveal: |_, facts, row, _| facts.workspace().changes_reveal(row),
-        }),
+        // Drawn through the side door; there is no entity-side panel yet.
+        view: |_, _, _, _| gpui_kit::div().into_any_element(),
+        walk: None,
         actions: None,
+        window_side: Some(&SIDE),
     }],
     bind: None,
     row_extras: None,

@@ -78,13 +78,6 @@ impl<'a> WindowFacts<'a> {
     pub fn agent_on_screen(&self, cx: &App) -> bool {
         self.on_screen().any(|session| session.terminal.read(cx).agent.is_some())
     }
-
-    /// The window itself, for a feature whose state has not left the `Workspace`'s fields yet
-    /// (Changes, until 5d). A feature with an entity of its own never needs it, and the last user
-    /// removes it.
-    pub fn workspace(&self) -> &'a Workspace {
-        self.workspace
-    }
 }
 
 impl Workspace {

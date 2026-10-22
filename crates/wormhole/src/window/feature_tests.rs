@@ -14,14 +14,15 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keymap::menus::MenuState;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::focus::Area;
+use wormhole_core::view::focus::list::Item;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::actions::ShowChanges;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, Stake, StateDef, TabDef};
+use crate::window::feature::{FeatureDef, FeatureEvent, FeatureState, Stake, StateDef, TabDef, WalkFns};
 use crate::window::features::TABLE;
 use crate::window::features::git::changes;
-use crate::window::focus::Activate;
+use crate::window::focus::{Activate, Walkable};
 use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
 
@@ -60,6 +61,10 @@ struct Marker {
     count: i64,
     selected: Vec<i64>,
     focused_for: Vec<i64>,
+    /// What the tab's hooks were asked: `shown:7`, `press:7:1`, `fold:7:1`.
+    asked: Vec<String>,
+    /// The row `reveal` was asked for: it only gets `&App`, so it can't change the entity.
+    revealed: std::cell::Cell<Option<usize>>,
 }
 
 impl EventEmitter<FeatureEvent> for Marker {}
@@ -79,7 +84,9 @@ static STAND_IN: &[FeatureDef] = &[
             icon: IconName::PanelRight,
             label: "Stand-in",
             action: ActionId::ShowUsage,
-            on_show: None,
+            on_show: Some(|entity, session, cx| {
+                marker(entity).update(cx, |m, _| m.asked.push(format!("shown:{session}")));
+            }),
             shown: |facts, _| facts.active().is_some(),
             count: Some(|entity, facts, cx| {
                 Some(marker(entity).read(cx).count as usize + facts.on_screen().count())
@@ -91,12 +98,27 @@ static STAND_IN: &[FeatureDef] = &[
                 let width = f32::from(facts.panel_width);
                 gpui_kit::div().w(gpui_kit::px(width)).into_any_element()
             },
-            walk: None,
+            walk: Some(WalkFns {
+                walkable: |_, _, _| {
+                    (0..2)
+                        .map(|row| Walkable { row, item: Item { level: 0, fold: None }, band: row == 0 })
+                        .collect()
+                },
+                press: |entity, session, row, _, _, _, cx| {
+                    marker(entity).update(cx, |m, _| m.asked.push(format!("press:{session}:{row}")));
+                    row == 1
+                },
+                fold: |entity, session, row, cx| {
+                    marker(entity).update(cx, |m, _| m.asked.push(format!("fold:{session}:{row}")));
+                },
+                reveal: |entity, _, row, cx| marker(entity).read(cx).revealed.set(Some(row)),
+            }),
             actions: Some(|entity, facts, _, cx| {
                 let on = facts.agent_on_screen(cx);
                 marker(entity).update(cx, |marker, _| marker.count += 10);
                 on.then(|| gpui_kit::div().into_any_element())
             }),
+            window_side: None,
         }],
         bind: Some(|_, _, root, _| root),
         row_extras: Some(|_, _, extras, _| {
@@ -110,7 +132,13 @@ static STAND_IN: &[FeatureDef] = &[
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
         state: Some(StateDef {
             make: |window, cx| {
-                let entity = cx.new(|_| Marker { count: 41, selected: Vec::new(), focused_for: Vec::new() });
+                let entity = cx.new(|_| Marker {
+                    count: 41,
+                    selected: Vec::new(),
+                    focused_for: Vec::new(),
+                    asked: Vec::new(),
+                    revealed: Default::default(),
+                });
                 let _events = Workspace::listen(&entity, window, cx);
                 FeatureState { entity: entity.into(), _events }
             },
@@ -138,6 +166,33 @@ static STAND_IN: &[FeatureDef] = &[
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
+}
+
+/// The side door (`TabDef::window_side`) is Changes' until 5d and nobody else's: a second user would
+/// make the window-shaped hook the contract's habit again. Its entry is `git/changes/entry.rs`; the
+/// only other file that names it is `notes/mod.rs`, where the window's panel body and `show_tab` still
+/// live (the frame, not a feature). `Context<Workspace>` in a feature's other
+/// code is the same debt and is the 5g checker's to ban when each feature has its own state.
+#[test]
+fn only_changes_uses_the_side_door() {
+    fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
+        for entry in std::fs::read_dir(dir).expect("reads the features folder") {
+            let path = entry.expect("an entry").path();
+            if path.is_dir() {
+                walk(&path, found);
+            } else if path.extension().is_some_and(|ext| ext == "rs")
+                && std::fs::read_to_string(&path).expect("reads a source file").contains("window_side")
+            {
+                found.push(path.to_string_lossy().into_owned());
+            }
+        }
+    }
+    let mut found = Vec::new();
+    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/window/features"), &mut found);
+    found.sort();
+    let names: Vec<&str> =
+        found.iter().filter_map(|path| path.split("src/window/features/").nth(1)).collect();
+    assert_eq!(names, ["git/changes/entry.rs", "notes/mod.rs"]);
 }
 
 #[gpui_kit::test]
@@ -195,6 +250,17 @@ fn a_window_makes_its_features_state_and_hands_facts_to_its_hooks(cx: &mut TestA
             (marker(&entity).read(cx).selected.clone(), marker(&entity).read(cx).focused_for.clone()),
             (vec![8], vec![7])
         );
+
+        // The tab's own hooks need no `Workspace`: the entity, the session and the app's `cx` are enough.
+        (tab.on_show.expect("has on_show"))(&entity, 7, cx);
+        let walk = tab.walk.as_ref().expect("has a list");
+        assert_eq!((walk.walkable)(&entity, &facts, cx).len(), 2);
+        assert!((walk.press)(&entity, 7, 1, Activate::Space, false, window, cx));
+        assert!(!(walk.press)(&entity, 7, 0, Activate::Return, true, window, cx));
+        (walk.fold)(&entity, 7, 1, cx);
+        (walk.reveal)(&entity, &facts, 1, cx);
+        assert_eq!(marker(&entity).read(cx).asked, ["shown:7", "press:7:1", "press:7:0", "fold:7:1"]);
+        assert_eq!(marker(&entity).read(cx).revealed.get(), Some(1));
 
         let mut state = MenuState::default();
         ws.feature_menus(&mut state, cx);
@@ -332,8 +398,11 @@ fn changes_is_a_table_entry_the_frame_reads(cx: &mut TestAppContext) {
             ("Changes", IconName::GitCompare, ActionId::ShowChanges)
         );
         assert!((tab.shown)(&facts, cx));
-        // The panel and its buttons are built with the facts alive and `cx` lent mutably.
-        let _ = (tab.view)(&entity, &facts, window, cx);
+        // The panel is drawn through the temporary side door, which has the window; the entity-side
+        // `view` is a stub that draws nothing.
+        let side = tab.window_side.expect("Changes uses the side door until 5d");
+        let _ = (side.view)(ws, window, cx);
+        assert!(tab.on_show.is_none() && tab.walk.is_none(), "its hooks are the side door's");
         assert!((tab.actions.is_none()), "Changes has no buttons beside the tabs");
         assert_eq!(facts.active().expect("selected").git.status.as_ref().map(|s| s.files.len()), Some(3));
     });
@@ -349,29 +418,25 @@ fn the_keys_walk_the_changes_list_through_the_table(cx: &mut TestAppContext) {
     drive(cx, &window, |ws, window, cx| {
         ws.sessions[0].git.status = Some(three_changes());
         ws.sync_changes_list(cx);
-        let (at, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
-        let walk = tab.walk.as_ref().expect("Changes has a list");
-        let entity = ws.feature_entity(at).expect("made with the window").clone();
+        let (_, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
+        let side = tab.window_side.expect("Changes uses the side door until 5d");
         let id = ws.sessions[0].id;
 
-        let rows = (walk.walkable)(&entity, &ws.facts(cx), cx);
+        let rows = (side.walkable)(ws);
         assert!(rows[0].band, "a section's band leads the list");
         assert!(rows.len() >= 4, "the band and the three files, in folders or not: {rows:?}");
         assert_eq!(ws.panel_lists(cx), [0], "one ⇥ stop");
-        (walk.reveal)(&entity, &ws.facts(cx), rows[1].row, cx);
+        (side.reveal)(ws, rows[1].row);
 
         // → ← on the band folds or opens its section; Space on it does the same through `press`.
         let band = rows[0].row;
-        (walk.fold)(&entity, ws, id, band, cx);
+        (side.fold)(ws, id, band, cx);
         ws.sync_changes_list(cx);
-        let folded = (walk.walkable)(&entity, &ws.facts(cx), cx);
+        let folded = (side.walkable)(ws);
         assert_ne!(folded.len(), rows.len(), "the section changed shape");
-        assert!(
-            (walk.press)(&entity, ws, id, band, Activate::Space, false, window, cx),
-            "the keys stay in the list"
-        );
+        assert!((side.press)(ws, id, band, Activate::Space, false, window, cx), "the keys stay in the list");
         ws.sync_changes_list(cx);
-        assert_eq!((walk.walkable)(&entity, &ws.facts(cx), cx), rows, "and back");
+        assert_eq!((side.walkable)(ws), rows, "and back");
     });
 
     // The window's key path reaches the same functions: ↓ moves the cursor onto the next row.
