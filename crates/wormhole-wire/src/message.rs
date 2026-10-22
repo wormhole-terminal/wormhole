@@ -18,7 +18,7 @@ use crate::event::{Event, decode_backlog, encode_backlog};
 use crate::header::{HEADER_LEN, Header, MAX_DATA, flags as frame_flags, max_payload, ty};
 use crate::history::{FindResults, FindStart, Page, PageGet};
 use crate::stream::{Out, Repaint, ResizeApplied, check_data};
-use crate::types::{Counters, DetachReason, List};
+use crate::types::{ColorScheme, Counters, DetachReason, List};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Message<'a> {
@@ -47,6 +47,7 @@ pub enum Message<'a> {
     SetColors(Colors<'a>),
     SetLimits(Limits),
     SetOptions(Options),
+    SetColorScheme(ColorScheme),
     /// End the session: hang up the shell, wait `grace_ms` before killing it.
     Close {
         grace_ms: u32,
@@ -107,6 +108,7 @@ impl Message<'_> {
             Self::SetColors(_) => ty::SET_COLORS,
             Self::SetLimits(_) => ty::SET_LIMITS,
             Self::SetOptions(_) => ty::SET_OPTIONS,
+            Self::SetColorScheme(_) => ty::SET_COLOR_SCHEME,
             Self::Close { .. } => ty::CLOSE,
             Self::ClipboardReply(_) => ty::CLIPBOARD_REPLY,
             Self::Hook(_) => ty::HOOK,
@@ -146,6 +148,7 @@ impl Message<'_> {
             Self::SetColors(m) => m.write(w)?,
             Self::SetLimits(m) => m.encode(w),
             Self::SetOptions(m) => m.write(w),
+            Self::SetColorScheme(s) => w.u8(s.to_wire()),
             Self::Close { grace_ms } => w.u32(*grace_ms),
             Self::ClipboardReply(m) => m.encode(w)?,
             Self::Hook(m) => m.encode(w)?,
@@ -194,6 +197,7 @@ impl<'a> Message<'a> {
             ty::SET_COLORS => Self::SetColors(Colors::read(r)?),
             ty::SET_LIMITS => Self::SetLimits(Limits::decode(r)?),
             ty::SET_OPTIONS => Self::SetOptions(Options::read(r)?),
+            ty::SET_COLOR_SCHEME => Self::SetColorScheme(ColorScheme::from_wire(r.u8()?)),
             ty::CLOSE => Self::Close { grace_ms: r.u32()? },
             ty::CLIPBOARD_REPLY => Self::ClipboardReply(ClipboardReply::decode(r)?),
             ty::HOOK => Self::Hook(Hook::decode(r)?),
@@ -241,6 +245,7 @@ fn type_name(t: u8) -> &'static str {
         ty::SET_COLORS => "SetColors",
         ty::SET_LIMITS => "SetLimits",
         ty::SET_OPTIONS => "SetOptions",
+        ty::SET_COLOR_SCHEME => "SetColorScheme",
         ty::CLOSE => "Close",
         ty::CLIPBOARD_REPLY => "ClipboardReply",
         ty::HOOK => "Hook",

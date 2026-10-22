@@ -262,6 +262,11 @@ pub(crate) fn hosted(
     let input = link.clone();
     shared.set_writer(Box::new(move |bytes| input.send(super::link::Cmd::Input(bytes.into()))));
     let sink = Sink::new(screen.clone(), feed, proxy.clone());
+    // A host learns the scheme only from this message, so a program that asks before it comes in
+    // goes unanswered, as in a local terminal before its first draw; one attached again kept it.
+    if let Some(scheme) = options.color_scheme {
+        link.send(super::link::Cmd::ColorScheme(scheme));
+    }
     let state = State::new(link.clone(), proxy, sink, replica, replica_options, first);
     let client = Client::new(joined.stream, joined.dec, poller, state)?;
     std::thread::Builder::new().name("host client".into()).spawn(move || client.run())?;

@@ -73,6 +73,7 @@ impl<S: Spawner> Session<S> {
                 | Message::Input(_)
                 | Message::Resize(_)
                 | Message::SetColors(_)
+                | Message::SetColorScheme(_)
                 | Message::SetOptions(_)
                 | Message::Close { .. }
                 | Message::ClipboardReply(_)
@@ -86,6 +87,7 @@ impl<S: Spawner> Session<S> {
                 | Message::Input(_)
                 | Message::Resize(_)
                 | Message::SetColors(_)
+                | Message::SetColorScheme(_)
                 | Message::SetOptions(_)
                 | Message::ClipboardReply(_)
         );
@@ -144,6 +146,11 @@ impl<S: Spawner> Session<S> {
             Message::SetColors(colors) => {
                 if let Some(program) = &mut self.program {
                     program.set_colors(&colors);
+                }
+            }
+            Message::SetColorScheme(scheme) => {
+                if let Some(program) = &mut self.program {
+                    program.set_color_scheme(scheme);
                 }
             }
             Message::SetOptions(options) => {

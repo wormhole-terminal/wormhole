@@ -9,7 +9,8 @@ use crate::history::{FindDirection, FindMatch, FindResults, FindStart, Page, Pag
 use crate::message::Message;
 use crate::stream::{Out, Repaint, RepaintKind, ResizeApplied};
 use crate::types::{
-    AppVersion, Counters, DetachReason, ExitInfo, Features, HostState, List, Role, Size, StreamMode,
+    AppVersion, ColorScheme, Counters, DetachReason, ExitInfo, Features, HostState, List, Role, Size,
+    StreamMode,
 };
 
 const SIZE: Size = Size { cols: 120, rows: 40, cell_w: 134, cell_h: 272 };
@@ -186,6 +187,7 @@ pub fn all() -> Vec<(&'static str, Message<'static>)> {
         ),
         ("set_limits", Message::SetLimits(Limits { history_bytes: 1 << 30, ring_bytes: 1 << 20 })),
         ("set_options", Message::SetOptions(Options { scrollback_lines: 2_000, flags: 1 })),
+        ("set_color_scheme", Message::SetColorScheme(ColorScheme::Light)),
         ("close", Message::Close { grace_ms: 3000 }),
         ("clipboard_reply", Message::ClipboardReply(ClipboardReply { ticket: 17, data: b"hello" })),
         ("hook", Message::Hook(Hook { name: "needs_you", payload: br#"{"a":1}"# })),

@@ -634,8 +634,15 @@ impl Pty {
     /// (`CSI ? 996 n`) and the ones that asked to hear of changes (mode 2031): they are told now.
     pub fn set_color_scheme(&self, scheme: types::ColorScheme) {
         let replies = self.term.lock().set_color_scheme(scheme);
-        if !replies.is_empty() && self.is_alive() {
-            self.shared.reply(replies);
+        match &self.io {
+            Backend::Local(_) => {
+                if !replies.is_empty() && self.is_alive() {
+                    self.shared.reply(replies);
+                }
+            }
+            // The host's engine answers and tells the program; the replica's report would be a
+            // second one.
+            Backend::Hosted(host) => host.set_color_scheme(scheme),
         }
     }
 

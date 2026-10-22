@@ -35,7 +35,7 @@ use wormhole_wire::{
 
 use super::events::{self, Heard};
 use super::link::{Cmd, Link};
-use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_size};
+use super::replica::{ReplicaOptions, grid_of, wire_colors, wire_scheme, wire_size};
 use super::{ACK_EVERY, INPUT_WINDOW, PING_IDLE, WINDOW};
 use crate::GridSize;
 use crate::engine::OwnFeed;
@@ -196,6 +196,11 @@ impl State {
                 Cmd::Input(_) => {}
                 Cmd::Resize(size) => self.resize = Some(size),
                 Cmd::Colors(palette) => self.queue(&Message::SetColors(wire_colors(&palette))),
+                Cmd::ColorScheme(scheme) => {
+                    if let Some(scheme) = wire_scheme(scheme) {
+                        self.queue(&Message::SetColorScheme(scheme));
+                    }
+                }
                 Cmd::Clipboard { ticket, data } => {
                     self.queue(&Message::ClipboardReply(wire::ClipboardReply { ticket, data: &data }))
                 }
