@@ -22,12 +22,15 @@ crates/<crate>/src, tests included:
   bucket-names      modules named text, utils, util, misc, helpers, helper, common
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
-  cycles            strongly connected groups of top-level modules (an edge: a file of A names `crate::B`)
-  layers            per crate in `layers`, its top-level modules as tiers, lowest first (modules in one tier
+  cycles            strongly connected groups of modules (an edge: a file of A names `crate::B`); a module is
+                    a top-level one, or for a crate in `module_depth` (`{"wormhole-core": 2}`) the module
+                    that many levels down (`view::sidebar`), and a module's own parent or children don't
+                    count as an edge (a domain and the modules in it are one tree)
+  layers            per crate in `layers`, its top-level modules (whatever `module_depth` says) as tiers, lowest first (modules in one tier
                     may use each other): an edge from a lower tier up to a higher one fails (`crate: a -> b`),
                     and so does a top-level module the list leaves out (`crate: unplaced x`) or names but the
                     crate doesn't have (`crate: no module x`). Edges as the cycles rule reads them
-  cross-reexports   `pub use crate::B::...` in a file of another top-level module A
+  cross-reexports   `pub use crate::B::...` in a file of another module A (modules as the cycles rule has them)
   impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate)
 
 Why a script that reads text: it runs in a second without building anything (tests only run on CI
@@ -37,8 +40,9 @@ zero. What a text reader cannot see, said plainly:
   - `use super::*` hides the edges behind it from the cycle rule, which is why that rule exists;
   - cfg: every `#[cfg(...)] mod x;` counts as declared, whatever the target; a cfg condition is read
     as words, not evaluated;
-  - paths: only `crate::B` (also in `crate::{B::x, C}` groups) is an edge, not `super::super::B`, not a
-    name re-exported at the crate root, not `use` of a module through an alias.
+  - paths: only `crate::B` (also in `crate::{B::x, C}` and `crate::B::{x, y}` groups) is an edge, not
+    `super::super::B`, not `use` of a module through an alias. A module the crate root re-exports
+    (`pub use view::sidebar;`, as a move leaves for one commit) is followed to where it is.
 
 The allowlist keys are stable text: `path`, `path :: token`, `path :: crate::B`, `crate: a, b, c` (a
 cycle), each with a count. Python 3.9, standard library only.
@@ -70,9 +74,9 @@ RULE_HELP = {
     "bucket-names": "bucket module names",
     "orphans": "files no mod declaration reaches",
     "glob-imports": "`use super::*` outside tests",
-    "cycles": "cycles between top-level modules",
+    "cycles": "cycles between modules",
     "layers": "top-level modules using a higher layer",
-    "cross-reexports": "re-exports across top-level modules",
+    "cross-reexports": "re-exports across modules",
     "impl-outside": "impl Workspace/Session outside the home",
 }
 
@@ -92,6 +96,9 @@ DEFAULT_CONFIG = {
     "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/workspace/"]},
     # Per crate, its top-level modules in tiers, lowest first; a tier is a module or a list of them.
     "layers": {},
+    # Per crate, how many levels of modules the cycles and cross-reexports rules tell apart (default 1,
+    # the top level): 2 for a crate whose top level is domains of modules.
+    "module_depth": {},
     "bucket_names": ["text", "utils", "util", "misc", "helpers", "helper", "common"],
     "size": {"warn": 600, "fail": 1000},
     # Folders whose size the plan tracks (files and lines, listed by `counts`).
@@ -283,6 +290,7 @@ class Crate:
         self.files: Dict[str, Src] = {}  # by path relative to the crate folder: src/a/b.rs
         self.mods: Dict[str, List[ModItem]] = {}
         self.reached: Dict[str, Tuple[Optional[str], bool]] = {}  # file -> (top-level module, test code)
+        self.modpath: Dict[str, Tuple[str, ...]] = {}  # file -> its module's path below the crate root
         self.tops: List[str] = []
         self.unresolved: List[str] = []
         self.cycles: List[List[str]] = []  # filled by the cycles rule
@@ -314,8 +322,10 @@ class Crate:
         for r in roots:
             queue.append((r, None, bool(_INNER_CFG_TEST.search(self.files[r].clean)), os.path.dirname(r)))
             self.reached[r] = (None, queue[-1][2])
+            self.modpath[r] = ()
         while queue:
             rel, top, test, base = queue.pop()
+            here = self.modpath.get(rel, ())
             src = self.files[rel]
             mods = self.mods.setdefault(rel, parse_mods(src))
             is_root = top is None and rel in roots
@@ -351,6 +361,7 @@ class Crate:
                     if target.endswith("/mod.rs"):
                         child_base = os.path.dirname(target)
                     self.reached[target] = (child_top, child_test)
+                    self.modpath[target] = here + tuple(p.name for p in it.parents) + (it.name,)
                     queue.append((target, child_top, child_test, child_base))
                     break
                 else:
@@ -361,10 +372,45 @@ class Crate:
                 target = os.path.normpath(os.path.join(os.path.dirname(rel), name or "")).replace(os.sep, "/")
                 if name and target in self.files and target not in self.reached:
                     self.reached[target] = (top, test)
+                    self.modpath[target] = here
                     queue.append((target, top, test, os.path.dirname(target)))
 
     def top_of(self, rel: str) -> Optional[str]:
         return self.reached.get(rel, (None, False))[0]
+
+    def root_aliases(self) -> Dict[str, List[str]]:
+        """Modules the crate root re-exports under a top-level name: `pub use view::sidebar;` makes
+        `crate::sidebar` mean `crate::view::sidebar`."""
+        out: Dict[str, List[str]] = {}
+        for r in self._roots():
+            for m in re.finditer(r"pub\s+use\s+(?:crate\s*::\s*)?(\w+(?:\s*::\s*\w+)+)\s*(?:as\s+(\w+)\s*)?;",
+                                 self.files[r].clean):
+                path = [p.strip() for p in m.group(1).split("::")]
+                if path[0] in self.tops:
+                    out[m.group(2) or path[-1]] = path
+        return out
+
+    def node_of(self, rel: str, depth: int) -> Optional[str]:
+        """The module a file counts for at `depth`: its module path's first `depth` names (`view::sidebar`
+        for view/sidebar/text.rs at 2; `config` for config/mod.rs, which has only one)."""
+        if self.top_of(rel) is None:
+            return None
+        path = self.modpath.get(rel, ())
+        return "::".join(path[:depth]) if depth > 1 and path else self.top_of(rel)
+
+    def nodes(self, depth: int) -> List[str]:
+        """Every module at `depth` or above it, the top-level ones first."""
+        out = list(self.tops)
+        if depth > 1:
+            seen = set(out)
+            for rel in sorted(self.files):
+                path = self.modpath.get(rel, ()) if self.top_of(rel) is not None else ()
+                for k in range(2, min(depth, len(path)) + 1):
+                    name = "::".join(path[:k])
+                    if name not in seen:
+                        seen.add(name)
+                        out.append(name)
+        return out
 
     def is_test_file(self, rel: str) -> bool:
         return is_test_name(rel[len("src/"):]) or self.reached.get(rel, (None, False))[1]
@@ -552,14 +598,9 @@ def rule_glob_imports(crate: Crate, cfg: dict, found: Findings) -> None:
 _CRATE_REF = re.compile(r"crate\s*::\s*(\{|\w+)")
 
 
-def crate_refs(clean: str, m: "re.Match[str]") -> List[str]:
-    """The first segments after `crate::` (several for a `crate::{a::x, b}` group)."""
-    if m.group(1) != "{":
-        return [m.group(1)]
-    close = match_close(clean, m.end() - 1, _BRACE)
-    names, depth, start = [], 0, m.end()
-    body = clean[m.end():close]
-    pieces, cur = [], []
+def _split_top(body: str) -> List[str]:
+    """`a::x, {b, c}, d` -> its pieces at the top level."""
+    pieces, cur, depth = [], [], 0
     for ch in body:
         if ch in "{(":
             depth += 1
@@ -571,28 +612,101 @@ def crate_refs(clean: str, m: "re.Match[str]") -> List[str]:
         else:
             cur.append(ch)
     pieces.append("".join(cur))
-    for p in pieces:
-        w = re.match(r"\s*(?:pub\s+)?(\w+)", p)
-        if w:
-            names.append(w.group(1))
-    return names
+    return pieces
 
 
-def module_edges(crate: Crate, with_tests: bool = False) -> Dict[Tuple[str, str], str]:
-    """(A, B) -> where a file of top-level module A first names crate::B. Test code is left out unless
-    asked for: a use in a test can't make the build go in circles, and it moves with the test."""
+_SEGMENT = re.compile(r"\s*(?:pub\s+)?(\w+)")
+_PATH_SEP = re.compile(r"\s*::\s*")
+
+
+def use_paths(tree: str, limit: int) -> List[List[str]]:
+    """The paths a use tree names, each cut to `limit` names: `view::{sidebar::X, layout}` ->
+    [view, sidebar], [view, layout] at 2. A group's `self`, a glob or an alias ends a path."""
+    tree = tree.strip()
+    if tree.startswith("{"):
+        close = match_close(tree, 0, _BRACE)
+        return [p for piece in _split_top(tree[1:close]) for p in use_paths(piece, limit)]
+    m = _SEGMENT.match(tree)
+    if not m:
+        return []
+    segs, pos = [m.group(1)], m.end()
+    while len(segs) < limit:
+        sep = _PATH_SEP.match(tree, pos)
+        if not sep:
+            break
+        pos = sep.end()
+        if tree.startswith("{", pos):
+            close = match_close(tree, pos, _BRACE)
+            subs = [p for piece in _split_top(tree[pos + 1:close]) for p in use_paths(piece, limit - len(segs))]
+            return [segs + sub for sub in subs] or [segs]
+        n = re.match(r"\w+", tree[pos:])
+        if not n:
+            break
+        segs.append(n.group(0))
+        pos += n.end()
+    return [segs]
+
+
+def crate_paths(clean: str, m: "re.Match[str]", limit: int) -> List[List[str]]:
+    """The paths after `crate::` at a match whose group(1) is the first name or a group's brace, each
+    cut to `limit` names (several for a `crate::{a::x, b}` group)."""
+    start = m.start(1)
+    if m.group(1) == "{":
+        end = match_close(clean, start, _BRACE) + 1
+    else:
+        end = start
+        tail = re.compile(r"\w+(?:\s*::\s*\w+)*(?:\s*::\s*\{)?")
+        t = tail.match(clean, start)
+        end = t.end() if t else start
+        if clean[end - 1:end] == "{":
+            end = match_close(clean, end - 1, _BRACE) + 1
+    return use_paths(clean[start:end], limit)
+
+
+def crate_refs(clean: str, m: "re.Match[str]") -> List[str]:
+    """The first segments after `crate::` (several for a `crate::{a::x, b}` group)."""
+    return [p[0] for p in crate_paths(clean, m, 1)]
+
+
+def depth_of(crate: Crate, cfg: dict) -> int:
+    return int(cfg.get("module_depth", {}).get(crate.name, 1))
+
+
+def resolve(path: List[str], nodes: Set[str], aliases: Optional[Dict[str, List[str]]] = None) -> Optional[str]:
+    """The deepest module of `nodes` a path names (`git` for `crate::git::DiffLine`), through the crate
+    root's re-exported modules."""
+    if aliases and path and path[0] not in nodes and path[0] in aliases:
+        path = aliases[path[0]] + path[1:]
+    for k in range(len(path), 0, -1):
+        name = "::".join(path[:k])
+        if name in nodes:
+            return name
+    return None
+
+
+def related(a: str, b: str) -> bool:
+    """One module is the other, or inside it: a domain and its modules are one tree."""
+    return a == b or a.startswith(b + "::") or b.startswith(a + "::")
+
+
+def module_edges(crate: Crate, with_tests: bool = False, depth: int = 1) -> Dict[Tuple[str, str], str]:
+    """(A, B) -> where a file of module A first names crate::B, modules at `depth`. Test code is left
+    out unless asked for: a use in a test can't make the build go in circles, and it moves with the
+    test."""
     edges: Dict[Tuple[str, str], str] = {}
-    tops = set(crate.tops)
+    nodes = set(crate.nodes(depth))
+    aliases = crate.root_aliases()
     for rel, src in crate.files.items():
-        a = crate.top_of(rel)
+        a = crate.node_of(rel, depth)
         if a is None or (not with_tests and crate.is_test_file(rel)):
             continue
         regions = [] if with_tests else crate.test_regions(rel)
         for m in scan(_CRATE_REF, src.clean):
             if regions and any(x <= m.start() < y for x, y in regions):
                 continue
-            for b in crate_refs(src.clean, m):
-                if b in tops and b != a and (a, b) not in edges:
+            for path in crate_paths(src.clean, m, depth + 1):
+                b = resolve(path, nodes, aliases)
+                if b is not None and not related(a, b) and (a, b) not in edges:
                     edges[(a, b)] = src.at(m.start())
     return edges
 
@@ -641,8 +755,9 @@ def sccs(nodes: List[str], edges: Iterable[Tuple[str, str]]) -> List[List[str]]:
 def rule_cycles(crate: Crate, cfg: dict, found: Findings) -> None:
     """The violations are the edges inside a cycle (`crate: a -> b`), so a new dependency between modules
     that are already tangled is caught too; the groups themselves are kept for the report."""
-    edges = module_edges(crate, cfg.get("cycles_with_tests", False))
-    crate.cycles = sccs(crate.tops, edges)
+    depth = depth_of(crate, cfg)
+    edges = module_edges(crate, cfg.get("cycles_with_tests", False), depth)
+    crate.cycles = sccs(crate.nodes(depth), edges)
     for comp in crate.cycles:
         for (a, b), where in sorted(edges.items()):
             if a in comp and b in comp:
@@ -679,15 +794,18 @@ _REEXPORT = re.compile(r"pub\s*(?:\([^)]*\)\s*)?use\s+crate\s*::\s*(\{|\w+)")
 
 
 def rule_cross_reexports(crate: Crate, cfg: dict, found: Findings) -> None:
-    tops = set(crate.tops)
+    depth = depth_of(crate, cfg)
+    nodes = set(crate.nodes(depth))
+    aliases = crate.root_aliases()
     for rel, src in crate.files.items():
-        a = crate.top_of(rel)
+        a = crate.node_of(rel, depth)
         if a is None:
             continue
         for m in scan(_REEXPORT, src.clean):
-            # crate_refs wants a match whose group(1) is the first segment, or a group's brace.
-            for b in crate_refs(src.clean, m):
-                if b in tops and b != a:
+            # crate_paths wants a match whose group(1) is the first segment, or a group's brace.
+            for path in crate_paths(src.clean, m, depth + 1):
+                b = resolve(path, nodes, aliases)
+                if b is not None and not related(a, b):
                     _add(found, "%s :: crate::%s" % (src.rel, b), crate.name, src.at(m.start()))
 
 
@@ -952,7 +1070,7 @@ def cmd_counts(args: argparse.Namespace) -> int:
     for b in data["big_files"]:
         print("  %5d%s %s" % (b["lines"], "*" if b["lines"] > cfg["size"]["fail"] else " ", b["file"]))
     print()
-    print("cycles between top-level modules")
+    print("cycles between modules")
     if not data["cycles"]:
         print("  none")
     for c in data["cycles"]:
@@ -1173,6 +1291,40 @@ def selftest() -> int:
         expect("cycle groups", an.crates[0].cycles if an.crates[0].name == "app" else None, [["a", "b"], ["c", "d"]])
         expect("cross-reexports", keys(an, "cross-reexports"), [
             "crates/app/src/d.rs :: crate::e", "crates/app/src/f.rs :: crate::a"])
+
+        # module_depth: cycles and cross-reexports between modules inside domains (`view::sidebar`), a
+        # domain and its own modules never an edge, nested groups read to the depth; layers stay per domain.
+        domains = {
+            "crates/lib/src/lib.rs": "pub mod view;\npub mod theme;\n",
+            "crates/lib/src/view/mod.rs": "pub mod sidebar;\npub mod layout;\npub use crate::view::sidebar::S;\n",
+            "crates/lib/src/view/sidebar.rs": "use crate::view::layout::X;\nuse crate::view::Root;\n",
+            "crates/lib/src/view/layout.rs": "use crate::view::{sidebar::Y, Root};\npub use crate::theme::tokens::Color;\n",
+            "crates/lib/src/theme/mod.rs": "pub mod tokens;\npub use crate::theme::tokens::T;\n"
+                                           "use crate::{view::{sidebar, layout::Z}, theme};\n",
+            "crates/lib/src/theme/tokens/mod.rs": "mod color;\npub use crate::theme::tokens::color::Color;\n",
+            "crates/lib/src/theme/tokens/color.rs": "fn f() { crate::theme::tokens::g(); }\n",
+        }
+        deep = dict(_fixture_cfg(), module_depth={"lib": 2}, layers={"lib": ["view", "theme"]})
+        an = make(domains, deep)
+        expect("depth: cycles inside a domain", keys(an, "cycles"), ["lib: view::layout -> view::sidebar",
+                                                                    "lib: view::sidebar -> view::layout"])
+        expect("depth: cross-reexports", keys(an, "cross-reexports"), ["crates/lib/src/view/layout.rs :: crate::theme::tokens"])
+        expect("depth: layers per domain", keys(an, "layers"), ["lib: view -> theme"])
+        expect("depth: modules", sorted(an.crates[0].nodes(2)), ["theme", "theme::tokens", "view", "view::layout", "view::sidebar"])
+        an = make(domains, dict(deep, module_depth={}))
+        expect("depth 1: one cycle between domains", keys(an, "cycles"), ["lib: theme -> view", "lib: view -> theme"])
+        expect("depth 1: cross-reexports", keys(an, "cross-reexports"), ["crates/lib/src/view/layout.rs :: crate::theme"])
+        # a module the root re-exports for a move's one commit is followed to its new place.
+        shimmed = dict(domains)
+        shimmed["crates/lib/src/lib.rs"] = "pub mod view;\npub mod theme;\n#[doc(hidden)]\npub use view::sidebar;\n" \
+                                           "pub use theme::tokens as colours;\n"
+        shimmed["crates/lib/src/theme/tokens/color.rs"] = "use crate::sidebar::Q;\nuse crate::colours::R;\n"
+        an = make(shimmed, deep)
+        expect("shims: edges through them", "lib: theme -> view" in an.found["layers"], False)
+        edges = module_edges(an.crates[0], False, 2)
+        expect("shims: followed", (("theme::tokens", "view::sidebar") in edges, ("theme::tokens", "theme::tokens") in edges),
+               (True, False))
+        expect("use paths", use_paths("a::{b::{c, d}, e as f, self}, g", 3), [["a", "b", "c"], ["a", "b", "d"], ["a", "e"], ["a", "self"]])
 
         # layers: up a tier fails, within a tier and down are fine; every module needs a tier; test edges
         # count only with cycles_with_tests.
