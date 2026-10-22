@@ -17,6 +17,7 @@ use super::rows::Style;
 use super::shaping::{ShapeKey, colors_key, shape_blurred, shape_word, text_run};
 use super::{RenderState, blink, images, words};
 use crate::palette::Palette;
+use crate::perf::{self, Count, Part};
 use crate::terminal_view::{Layout, PADDING_X, PADDING_Y, TerminalView};
 
 /// The per-frame part, handed from prepaint to paint.
@@ -131,7 +132,9 @@ impl Prepare {
             this.share_palette(palette);
             this.share_window(geometry);
             let Some(pty) = &this.pty else { return false };
+            let span = perf::span();
             pty.snapshot(&mut cache.snapshot, overscan);
+            span.end(Part::Snapshot);
             found = this.found_rows(&cache.snapshot);
             ticks = this.found_ticks(&cache.snapshot);
             this.mode = cache.snapshot.mode;
@@ -161,6 +164,7 @@ impl Prepare {
         words.sync((font_id, font_size, cell_width));
         words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));
         let base_font = &self.base_font;
+        let rows_span = perf::span();
         let stats = cache.prepare(
             key,
             geometry,
@@ -168,12 +172,24 @@ impl Prepare {
             &found,
             |segment| {
                 let glyphs = words.glyphs(&segment, cell_width, |segment| {
-                    shape_word(segment, &text_system, base_font, font_size, cell_width, outlines)
+                    let span = perf::span();
+                    let shaped =
+                        shape_word(segment, &text_system, base_font, font_size, cell_width, outlines);
+                    span.end(Part::Shape);
+                    perf::count(Count::WordsShaped, 1);
+                    shaped
                 });
                 (glyphs, !words.take_deferred())
             },
-            |text, runs| shape_blurred(text, runs, &text_system, base_font, font_size, cell_width),
+            |text, runs| {
+                let span = perf::span();
+                let shaped = shape_blurred(text, runs, &text_system, base_font, font_size, cell_width);
+                span.end(Part::Blur);
+                shaped
+            },
         );
+        rows_span.end(Part::Rows);
+        perf::count(Count::RowsBuilt, stats.rows.built);
         // Words the budget didn't reach are shaped in the next frame, also when nothing
         // else changes by then.
         if stats.provisional > 0 {
@@ -202,6 +218,7 @@ impl Prepare {
         // The pictures: under the placeholder cells and placed in the grid. The terminal's
         // lock for what the engine knows of the placeholders, then the store's for the
         // pixels; never both at once.
+        let images_span = perf::span();
         let (images, overlay) = self.entity.read(cx).pty.as_ref().map_or_else(Default::default, |pty| {
             let mut tiles: HashMap<(u32, u32), Tiles> = HashMap::new();
             for (_, run) in cache.image_runs() {
@@ -226,6 +243,7 @@ impl Prepare {
             paints.extend(under);
             (paints, over)
         });
+        images_span.end(Part::Images);
         Some(Frame {
             geometry,
             reach,

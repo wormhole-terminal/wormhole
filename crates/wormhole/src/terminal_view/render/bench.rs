@@ -9,8 +9,6 @@
 //! allocations per frame, 39 lines shaped (7,400 glyphs, half of them trailing
 //! blanks), 1,204 box quads and 5,200 blurred glyph paints.
 
-use std::alloc::{GlobalAlloc, Layout as AllocLayout, System};
-use std::cell::Cell as StdCell;
 use std::time::Instant;
 
 use gpui_kit::{Font, SharedString, TextRun, font, point, px};
@@ -20,47 +18,11 @@ use super::frame::{FrameCache, Geometry};
 use super::shaping::word_runs;
 use crate::palette::Palette;
 
-/// Counts this thread's allocations, so tests running in parallel don't
-/// disturb a measurement. Everything is forwarded to the system allocator.
-struct Counting;
-
-thread_local! {
-    // `const` and without a destructor: touching it never allocates.
-    static ALLOCATIONS: StdCell<usize> = const { StdCell::new(0) };
-}
-
-fn count() {
-    let _ = ALLOCATIONS.try_with(|n| n.set(n.get() + 1));
-}
-
+/// This thread's allocations so far, from the test build's counting allocator
+/// (`crate::perf::allocations`), so tests running in parallel don't disturb a measurement.
 pub(super) fn allocations() -> usize {
-    ALLOCATIONS.with(StdCell::get)
+    usize::try_from(crate::perf::allocations::thread_counts().allocations).unwrap_or(usize::MAX)
 }
-
-// SAFETY: every method forwards its arguments unchanged to `System`, which
-// upholds the `GlobalAlloc` contract; counting touches only a thread-local.
-#[allow(unsafe_code)]
-unsafe impl GlobalAlloc for Counting {
-    unsafe fn alloc(&self, layout: AllocLayout) -> *mut u8 {
-        count();
-        // SAFETY: the caller's `layout` obligations pass straight through.
-        unsafe { System.alloc(layout) }
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: AllocLayout) {
-        // SAFETY: `ptr` came from `System` with this `layout`.
-        unsafe { System.dealloc(ptr, layout) }
-    }
-
-    unsafe fn realloc(&self, ptr: *mut u8, layout: AllocLayout, new_size: usize) -> *mut u8 {
-        count();
-        // SAFETY: as for `alloc` and `dealloc`.
-        unsafe { System.realloc(ptr, layout, new_size) }
-    }
-}
-
-#[global_allocator]
-static ALLOCATOR: Counting = Counting;
 
 /// Allocations a frame may make. A full frame builds every row; most of its allocations are this
 /// benchmark's stand-in for the text system (`fed`: three per word, and a row of words is many of

@@ -57,6 +57,7 @@ use self::words::{Glyph, WordCache};
 use super::blocks;
 use super::input::TerminalCommand;
 use super::*;
+use crate::perf;
 use crate::scroller::ScrollerPrefs;
 use gpui_kit::component::input as text_input;
 use wormhole_core::terminal::ScreenSnapshot;
@@ -161,12 +162,19 @@ impl Render for TerminalView {
             view: weak,
         };
         let grid = canvas(
-            move |bounds, window, cx| prepare.run(bounds, window, cx),
+            move |bounds, window, cx| {
+                let span = perf::span();
+                let frame = prepare.run(bounds, window, cx);
+                span.end(perf::Part::Prepare);
+                frame
+            },
             move |bounds, frame, window, cx| {
                 let Some(frame) = frame else { return };
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let span = perf::span();
                 paint.run(bounds, &frame, window, cx);
+                span.end(perf::Part::Paint);
             },
         )
         .size_full();

@@ -15,6 +15,7 @@ mod logging;
 mod menubar;
 mod native;
 mod palette;
+mod perf;
 mod scroller;
 mod select;
 mod settings;

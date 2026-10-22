@@ -42,5 +42,6 @@ release, measures draw time per frame and main-thread load under ttystorm's work
 against the baseline in `tools/bench/baselines/`. The engine alone: `vtbench`, and against other
 engines `tools/vt-compare`, both in `../wormhole-vt` (`../repo-docs/docs/performance.md`). To look deeper: `sample <pid> 5`
 on an isolated instance (see the `devctl` skill), devctl `frames <n>` (draw time, any window state) and `paints`
-(frames drawn on screen). `paints` means nothing while the window can't be seen (display asleep,
+(frames drawn on screen). Where the time goes, part by part (snapshot, rows, shaping, paint, allocations,
+the parser, the lock), against a baseline: `scripts/profile-app.sh`, or devctl `perf-profile` by hand. `paints` means nothing while the window can't be seen (display asleep,
 covered): macOS throttles it to ~20 per second.

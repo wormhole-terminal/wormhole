@@ -233,6 +233,11 @@
 //!                   under test has finished loading
 //!   paints          terminal grids drawn since the last `paints` (or launch) and per second: the
 //!                   frame rate on screen, where a program in the terminal only sees what it sent
+//!   perf-profile [seconds] [name]   draw this window again and again for that long (5 s) and record
+//!                   what each draw cost (time, its terminal's parts, allocations) and what the
+//!                   terminals' readers and locks cost meanwhile: <dir>/<name>.json and <name>.txt
+//!                   (`perf-profile`), and the table in the results; the rest of the batch waits
+//!                   (`scripts/profile-app.sh` runs it under a fixed load and compares)
 //!   hover <x> <y>   move the pointer there (no click)
 //!   scroll <x> <y> <dy>   turn the wheel over that point, dy logical pixels down (negative = up),
 //!                   in steps with a frame between them, as a trackpad's scroll arrives: a long
@@ -324,6 +329,7 @@ mod hosts;
 mod input;
 mod menus;
 mod panels;
+mod profiling;
 mod sessions;
 mod settings;
 mod shots;
@@ -376,6 +382,7 @@ fn command(name: &str) -> Option<Command> {
         "settings-shot" => shots::settings_shot,
         "frames" => shots::frames,
         "paints" => shots::paints,
+        "perf-profile" => profiling::perf_profile,
         "type" => input::type_text,
         "paste" => input::paste,
         "drag" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::Enter),

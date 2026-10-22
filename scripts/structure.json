@@ -197,7 +197,7 @@
       "crates/wormhole/src/scroller.rs :: objc2": 7,
       "crates/wormhole/src/terminal_view/input.rs :: cfg(target_os": 2,
       "crates/wormhole/src/terminal_view/input.rs :: objc2": 1,
-      "crates/wormhole/src/terminal_view/render/bench.rs :: allow(unsafe_code)": 1,
+      "crates/wormhole/src/perf/allocations.rs :: allow(unsafe_code)": 1,
       "crates/wormhole/src/terminal_view/render/outline/face/coretext.rs :: allow(unsafe_code)": 6,
       "crates/wormhole/src/terminal_view/render/outline/face/coretext.rs :: objc2": 3,
       "crates/wormhole/src/terminal_view/render/outline/face/mod.rs :: cfg(target_os": 4,
