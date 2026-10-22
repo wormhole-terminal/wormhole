@@ -194,20 +194,20 @@ fn ctrl_return_opens_the_rows_menu_from_the_keyboard(cx: &mut TestAppContext) {
         return;
     }
     let window = start(cx, 2);
-    crate::native::record::close();
+    crate::platform::record::close();
 
     f6_to(cx, &window, Area::Sidebar);
     key(cx, &window, "ctrl-enter");
     draw(cx, &window);
-    let menu = crate::native::record::open().expect("⌃↩ opened the row's menu");
+    let menu = crate::platform::record::open().expect("⌃↩ opened the row's menu");
     assert_eq!(menu.outline().first().map(String::as_str), Some("- Rename…"), "the row's own menu");
     assert_eq!(area(cx, &window), Some(Area::Sidebar), "the list keeps the keys; the menu is the system's");
-    assert!(crate::native::record::close().is_some(), "and it can be dismissed");
+    assert!(crate::platform::record::close().is_some(), "and it can be dismissed");
 
     drive(cx, &window, |ws, _, cx| ws.show_tab(RightTab::Notes, cx));
     f6_to(cx, &window, Area::PanelContent);
     key(cx, &window, "ctrl-enter");
-    assert!(crate::native::record::open().is_none(), "the panel's rows have no menu yet");
+    assert!(crate::platform::record::open().is_none(), "the panel's rows have no menu yet");
     assert_eq!(area(cx, &window), Some(Area::PanelContent), "the list kept the key");
 }
 

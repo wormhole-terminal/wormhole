@@ -69,8 +69,8 @@ impl OpenIn {
     /// The icon a menu item of the app has: the file icon of its `.app`, which AppKit gives as Finder
     /// shows it; for an app whose place isn't known, the one drawn from its bundle (below), if that
     /// can be read; else none.
-    pub(crate) fn menu_icon(cx: &App, app: &Installed) -> Option<crate::native::Icon> {
-        use crate::native::Icon;
+    pub(crate) fn menu_icon(cx: &App, app: &Installed) -> Option<crate::platform::Icon> {
+        use crate::platform::Icon;
         match app_path(&app.bundle) {
             Some(path) => Some(Icon::File(path)),
             None => Some(match Self::icon(cx, &app.bundle) {

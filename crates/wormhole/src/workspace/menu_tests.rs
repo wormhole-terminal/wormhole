@@ -1,13 +1,13 @@
 //! The context menus in a real window (GPUI's test platform; see `view_tests` for how each test
 //! runs in a child process with scratch data). A native menu can't be shown there, so the app
-//! records the menu it was asked to open (`native::record`, what devctl's `menu` prints): the
+//! records the menu it was asked to open (`platform::record`, what devctl's `menu` prints): the
 //! tests right-click, read the recorded model and choose an item as a click would.
 use gpui_kit::{Modifiers, MouseButton, TestAppContext, VisualTestContext, px, size};
 use wormhole_core::sidebar::{GroupColor, GroupPaint};
 
 use super::app::OpenWindow;
 use super::view_tests::{draw, drive, isolate_in, read, start};
-use crate::native::record;
+use crate::platform::record;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -101,7 +101,7 @@ fn settle(cx: &mut TestAppContext, window: &OpenWindow) {
 }
 
 /// Run what a recorded popover command left to run, as its task would after the controls.
-fn run(cx: &mut TestAppContext, window: &OpenWindow, callbacks: Vec<crate::native::menu::Callback>) {
+fn run(cx: &mut TestAppContext, window: &OpenWindow, callbacks: Vec<crate::platform::menu::Callback>) {
     cx.update(|cx| {
         window.handle.update(cx, |_, window, cx| {
             for run in callbacks {

@@ -17,7 +17,7 @@ use super::splits::Split;
 use super::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
 use super::*;
 use crate::menubar::model::KeyEquivalent;
-use crate::native::{self, Anchor, Item, Menu};
+use crate::platform::{self, Anchor, Item, Menu};
 
 /// A drag on a divider, from the press to the release.
 pub(super) struct PaneDrag {
@@ -514,7 +514,7 @@ impl Workspace {
                                 .in_row()
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     let menu = this.pane_menu(id, cx);
-                                    native::show_menu(menu, menu_anchor.below(), window, cx);
+                                    platform::show_menu(menu, menu_anchor.below(), window, cx);
                                 })),
                         ),
                     )
@@ -537,7 +537,7 @@ impl Workspace {
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                     cx.stop_propagation();
                     let menu = this.pane_menu(id, cx);
-                    native::show_menu(menu, event.position, window, cx);
+                    platform::show_menu(menu, event.position, window, cx);
                 }),
             )
             .into_any_element()
@@ -611,7 +611,7 @@ fn pane_menu(id: PaneId, facts: PaneFacts, this: &WeakEntity<Workspace>) -> Menu
         Item::new(label)
             .key(keymap::key(action).and_then(KeyEquivalent::from_spec))
             .enabled(enabled)
-            .on_select(native::run_on(this, move |ws, window, cx| {
+            .on_select(platform::run_on(this, move |ws, window, cx| {
                 ws.focus_pane(id, window, cx);
                 run(ws, id, window, cx);
             }))

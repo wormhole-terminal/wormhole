@@ -11,7 +11,7 @@ use wormhole_core::panes::{TabPanes, Zone};
 
 use super::super::focus::SidebarStop;
 use super::*;
-use crate::native::{self, Item, Menu};
+use crate::platform::{self, Item, Menu};
 
 /// What a row's menu is made from, as it is when the menu opens.
 struct RowFacts {
@@ -77,7 +77,7 @@ impl Workspace {
         self.sidebar.menu_row = Some(id);
         self.sidebar.menu_group = None;
         cx.notify();
-        native::show_menu(menu, at, window, cx);
+        platform::show_menu(menu, at, window, cx);
     }
 
     /// Terminal `id`'s row menu, with its groups and neighbours as they are now.
@@ -171,7 +171,7 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
     // An item that finds the terminal again by its id: the list may have changed while the menu
     // was open.
     let on = |run: fn(&mut Workspace, usize, &mut Window, &mut Context<Workspace>)| {
-        native::run_on(this, move |ws, window, cx| {
+        platform::run_on(this, move |ws, window, cx| {
             if let Some(ix) = ws.find_session(id) {
                 run(ws, ix, window, cx);
             }
@@ -184,33 +184,31 @@ fn row_menu(facts: RowFacts, this: &WeakEntity<Workspace>) -> Menu {
             menu.item(
                 Item::new(name.clone())
                     .checked(*current)
-                    .on_select(native::run_on(this, move |ws, _, cx| ws.move_to_group(id, group, cx))),
+                    .on_select(platform::run_on(this, move |ws, _, cx| ws.move_to_group(id, group, cx))),
             )
         })
     });
-    let next_to = beside.iter().fold(Menu::new(), |menu, (other, name)| {
-        let other = *other;
-        menu.item(
-            Item::new(name.clone())
-                .on_select(native::run_on(this, move |ws, window, cx| ws.show_beside(other, id, window, cx))),
-        )
-    });
+    let next_to =
+        beside.iter().fold(Menu::new(), |menu, (other, name)| {
+            let other = *other;
+            menu.item(Item::new(name.clone()).on_select(platform::run_on(this, move |ws, window, cx| {
+                ws.show_beside(other, id, window, cx)
+            })))
+        });
     Menu::new()
-        .item(
-            Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
-                ws.start_terminal_rename(id, window, cx)
-            })),
-        )
+        .item(Item::new("Rename…").on_select(platform::run_on(this, move |ws, window, cx| {
+            ws.start_terminal_rename(id, window, cx)
+        })))
         .item(
             Item::new("Add terminal to new group")
-                .on_select(native::run_on(this, move |ws, window, cx| ws.group_terminal(id, window, cx))),
+                .on_select(platform::run_on(this, move |ws, window, cx| ws.group_terminal(id, window, cx))),
         )
         .when(groups.is_empty(), |menu| menu.disabled_submenu("Add terminal to group"))
         .when(!groups.is_empty(), |menu| menu.submenu("Add terminal to group", into))
         .when(grouped, |menu| {
             menu.item(
                 Item::new("Remove from group")
-                    .on_select(native::run_on(this, move |ws, _, cx| ws.remove_from_group(id, cx))),
+                    .on_select(platform::run_on(this, move |ws, _, cx| ws.remove_from_group(id, cx))),
             )
         })
         .item(Item::new("Split right").on_select(on(|ws, ix, window, cx| {

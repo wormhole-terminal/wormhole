@@ -15,7 +15,7 @@ use objc2::{DefinedClass as _, MainThreadMarker, MainThreadOnly, define_class, m
 use objc2_app_kit::{NSColorPanel, NSColorSpace};
 
 use super::appkit;
-use crate::native::popover::ColourChange;
+use crate::platform::popover::ColourChange;
 
 /// The sRGB colour the panel shows now, each channel 0–1.
 type Rgb = [f64; 3];

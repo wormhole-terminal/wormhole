@@ -52,7 +52,7 @@ pub struct GroupHead {
     /// What a click on the label does (opens the group's popover); without it the label is the head's.
     pub on_label: Option<ClickHandler>,
     /// Measures the label, which the popover's arrow points at.
-    pub label_anchor: Option<crate::native::Anchor>,
+    pub label_anchor: Option<crate::platform::Anchor>,
     /// The field that stands where the name is while the group is renamed in place.
     pub name_edit: Option<AnyElement>,
 }

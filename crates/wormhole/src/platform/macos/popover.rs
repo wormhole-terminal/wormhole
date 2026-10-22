@@ -30,8 +30,8 @@ use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize,
 use wormhole_core::tokens::Appearance;
 
 use super::{appkit, rows, swatches};
-use crate::native::menu::Callback;
-use crate::native::popover::{Behavior, Button, Colours, Done, Field, Glyph, Handle, Popover, Row};
+use crate::platform::menu::Callback;
+use crate::platform::popover::{Behavior, Button, Colours, Done, Field, Glyph, Handle, Popover, Row};
 
 /// The popover's padding, the gap between its rows, the least width it has, and how wide the path
 /// wraps.
@@ -261,7 +261,7 @@ pub fn show(
                         }
                         run(Box::new(move |window, cx| {
                             let start = custom.color.unwrap_or(custom.start);
-                            crate::native::pick_colour(start, custom.on_change.clone(), window, cx);
+                            crate::platform::pick_colour(start, custom.on_change.clone(), window, cx);
                         }));
                         finish(&ns_popover, false, false);
                         break;

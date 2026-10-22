@@ -11,8 +11,8 @@ use wormhole_core::tokens::Appearance;
 
 use super::groups::group_colors;
 use super::*;
-use crate::native::popover::{Behavior, Colours, Custom, Field, Popover, Row};
-use crate::native::{self, Item, Menu, Swatch};
+use crate::platform::popover::{Behavior, Colours, Custom, Field, Popover, Row};
+use crate::platform::{self, Item, Menu, Swatch};
 
 /// What a group's popover and menu are made from, as it is when they open.
 pub(super) struct GroupFacts {
@@ -64,7 +64,7 @@ fn dots(
     facts: &GroupFacts,
     none: bool,
     this: &WeakEntity<Workspace>,
-) -> (Vec<Swatch>, Option<usize>, native::menu::Pick) {
+) -> (Vec<Swatch>, Option<usize>, platform::menu::Pick) {
     let lead = usize::from(none);
     let swatches: Vec<Swatch> = none
         .then(|| Swatch::none(NO_COLOUR))
@@ -81,7 +81,7 @@ fn dots(
             .map(|ix| ix + lead)
     };
     let (group, colors, this) = (facts.group, facts.colors.clone(), this.clone());
-    let on_pick: native::menu::Pick = std::rc::Rc::new(move |ix, _, cx| match ix.checked_sub(lead) {
+    let on_pick: platform::menu::Pick = std::rc::Rc::new(move |ix, _, cx| match ix.checked_sub(lead) {
         Some(ix) => {
             if let Some(&(color, _)) = colors.get(ix) {
                 this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
@@ -95,7 +95,7 @@ fn dots(
 }
 
 /// What the Colours window does with each colour it sends: the group follows it.
-fn follow(group: u32, this: &WeakEntity<Workspace>) -> native::ColourChange {
+fn follow(group: u32, this: &WeakEntity<Workspace>) -> platform::ColourChange {
     let this = this.clone();
     std::rc::Rc::new(move |color, _, cx| {
         this.update(cx, |ws, cx| ws.set_group_custom_color(group, color, cx)).ok();
@@ -109,13 +109,13 @@ const START: Hsla = Hsla { h: 0.0, s: 0.0, l: 0.5, a: 1.0 };
 /// (greyed out, it is not a choice) when there is one, then what changes it.
 fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Workspace>) -> Vec<Item> {
     let set = Item::new("Set folder…")
-        .on_select(native::run_on(this, move |ws, _, cx| ws.choose_group_folder(group, cx)));
+        .on_select(platform::run_on(this, move |ws, _, cx| ws.choose_group_folder(group, cx)));
     match folder {
         Some(folder) => vec![
             Item::new(folder).enabled(false),
             set,
             Item::new("Clear folder")
-                .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_folder(group, None, cx))),
+                .on_select(platform::run_on(this, move |ws, _, cx| ws.set_group_folder(group, None, cx))),
         ],
         None => vec![set],
     }
@@ -124,15 +124,15 @@ fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Workspace>) 
 /// The actions both the popover and the menu end with, in their order.
 fn actions(group: u32, pinned: bool, this: &WeakEntity<Workspace>) -> Vec<Item> {
     vec![
-        Item::new("New terminal in group").on_select(native::run_on(this, move |ws, window, cx| {
+        Item::new("New terminal in group").on_select(platform::run_on(this, move |ws, window, cx| {
             ws.new_session_in_group(group, window, cx)
         })),
-        Item::new("Ungroup").on_select(native::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))),
+        Item::new("Ungroup").on_select(platform::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))),
         Item::new("Close group")
-            .on_select(native::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
+            .on_select(platform::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
         Item::new(if pinned { "Unpin group" } else { "Pin group" })
-            .on_select(native::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
-        Item::new("Move group to new window").on_select(native::run_on(this, move |ws, window, cx| {
+            .on_select(platform::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
+        Item::new("Move group to new window").on_select(platform::run_on(this, move |ws, window, cx| {
             ws.move_group_to_window(group, window, cx)
         })),
     ]
@@ -169,7 +169,7 @@ pub(super) fn group_popover(
             on_cancel: None,
         }))
         .row(Row::Colours(Colours {
-            swatches: native::menu::Swatches { swatches, selected: chosen, on_pick },
+            swatches: platform::menu::Swatches { swatches, selected: chosen, on_pick },
             custom: Some(Custom {
                 color: facts.custom,
                 start: facts.shown.unwrap_or(START),
@@ -197,24 +197,23 @@ pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Men
     let group = facts.group;
     let (swatches, chosen, on_pick) = dots(&facts, false, this);
     let (start, on_change) = (facts.custom.or(facts.shown).unwrap_or(START), follow(group, this));
-    let menu =
-        Menu::new()
-            .item(Item::new("Rename…").on_select(native::run_on(this, move |ws, window, cx| {
-                ws.start_group_rename(group, window, cx)
-            })))
-            .separator()
-            .swatches(swatches, chosen, move |ix, window, cx| on_pick(ix, window, cx))
-            .item(
-                Item::new("Other colour…")
-                    .checked(facts.custom.is_some())
-                    .on_select(move |window, cx| native::pick_colour(start, on_change.clone(), window, cx)),
-            )
-            .item(
-                Item::new(NO_COLOUR)
-                    .checked(facts.paint.is_none())
-                    .on_select(native::run_on(this, move |ws, _, cx| ws.set_group_color(group, None, cx))),
-            )
-            .separator();
+    let menu = Menu::new()
+        .item(Item::new("Rename…").on_select(platform::run_on(this, move |ws, window, cx| {
+            ws.start_group_rename(group, window, cx)
+        })))
+        .separator()
+        .swatches(swatches, chosen, move |ix, window, cx| on_pick(ix, window, cx))
+        .item(
+            Item::new("Other colour…")
+                .checked(facts.custom.is_some())
+                .on_select(move |window, cx| platform::pick_colour(start, on_change.clone(), window, cx)),
+        )
+        .item(
+            Item::new(NO_COLOUR)
+                .checked(facts.paint.is_none())
+                .on_select(platform::run_on(this, move |ws, _, cx| ws.set_group_color(group, None, cx))),
+        )
+        .separator();
     let menu = folder_items(group, facts.folder.as_deref(), this).into_iter().fold(menu, Menu::item);
     actions(group, facts.pinned, this).into_iter().fold(menu.separator(), Menu::item)
 }

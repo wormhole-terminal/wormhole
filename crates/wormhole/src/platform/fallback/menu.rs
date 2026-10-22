@@ -10,7 +10,7 @@ use gpui_kit::base::actions::Cancel;
 use gpui_kit::component::menu::{PopupMenu, PopupMenuItem};
 use gpui_kit::*;
 
-use crate::native::menu::{Check, Entry, Icon, Menu, Swatches};
+use crate::platform::menu::{Check, Entry, Icon, Menu, Swatches};
 use crate::style::TextRole as _;
 
 /// The open menu of one window, and the element that draws it.

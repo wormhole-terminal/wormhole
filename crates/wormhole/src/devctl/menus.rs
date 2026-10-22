@@ -117,13 +117,13 @@ pub(super) fn sheet(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `menu`: the last menu a right-click or a menu button opened, one row a line (items numbered).
 /// A native menu can't be screenshotted, so the scripted checks read the model instead.
 pub(super) fn menu(_: &mut Ctx, _: &str) -> Result<String> {
-    Ok(crate::native::record::dump())
+    Ok(crate::platform::record::dump())
 }
 
 /// `menu-pick <n|title>`: choose an item of that menu as a click on it would, by its number in
 /// `menu` or its title (`Submenu > Title` inside a submenu): the menu closes, then the item runs.
 pub(super) fn menu_pick(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let (title, callbacks) = crate::native::record::pick(arg).map_err(anyhow::Error::msg)?;
+    let (title, callbacks) = crate::platform::record::pick(arg).map_err(anyhow::Error::msg)?;
     // Deferred like a click: the item updates the workspace, which a command may hold.
     ctx.window.defer(ctx.cx, move |window, cx| {
         for run in callbacks {
@@ -135,7 +135,7 @@ pub(super) fn menu_pick(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `menu-close`: dismiss that menu as Esc does.
 pub(super) fn menu_close(ctx: &mut Ctx, _: &str) -> Result<String> {
-    let Some(callbacks) = crate::native::record::close() else { anyhow::bail!("no menu is open") };
+    let Some(callbacks) = crate::platform::record::close() else { anyhow::bail!("no menu is open") };
     ctx.window.defer(ctx.cx, move |window, cx| {
         for run in callbacks {
             run(window, cx);
@@ -149,14 +149,14 @@ pub(super) fn menu_close(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// presses the n-th dot as VoiceOver does and tells which one the menu took as chosen. The check of
 /// what `menu` can't see: the AppKit side of a menu, short of a person's click in its loop.
 pub(super) fn menu_native(_: &mut Ctx, arg: &str) -> Result<String> {
-    let menu = crate::native::record::open().ok_or_else(|| anyhow::anyhow!("no menu is open"))?;
+    let menu = crate::platform::record::open().ok_or_else(|| anyhow::anyhow!("no menu is open"))?;
     let press = match arg.trim().strip_prefix("press") {
         Some(n) => Some(n.trim().parse::<usize>()?),
         None => None,
     };
     #[cfg(target_os = "macos")]
     {
-        crate::native::macos::menu::inspect(&menu, press)
+        crate::platform::macos::menu::inspect(&menu, press)
             .ok_or_else(|| anyhow::anyhow!("not on the main thread"))
     }
     #[cfg(not(target_os = "macos"))]
@@ -170,7 +170,7 @@ pub(super) fn menu_native(_: &mut Ctx, arg: &str) -> Result<String> {
 
 /// Run what a popover command says is to run, deferred like a click: it updates the workspace,
 /// which a command may hold.
-fn run_deferred(ctx: &mut Ctx, callbacks: Vec<crate::native::menu::Callback>) {
+fn run_deferred(ctx: &mut Ctx, callbacks: Vec<crate::platform::menu::Callback>) {
     ctx.window.defer(ctx.cx, move |window, cx| {
         for run in callbacks {
             run(window, cx);
@@ -180,25 +180,25 @@ fn run_deferred(ctx: &mut Ctx, callbacks: Vec<crate::native::menu::Callback>) {
 
 /// `popover`: the last popover a hover, a click or a button opened, one row a line.
 pub(super) fn popover(_: &mut Ctx, _: &str) -> Result<String> {
-    Ok(crate::native::record::dump_popover())
+    Ok(crate::platform::record::dump_popover())
 }
 
 /// `popover-press <title>`: press that button or action row as a click does.
 pub(super) fn popover_press(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let (title, callbacks) = crate::native::record::popover_press(arg).map_err(anyhow::Error::msg)?;
+    let (title, callbacks) = crate::platform::record::popover_press(arg).map_err(anyhow::Error::msg)?;
     run_deferred(ctx, callbacks);
     Ok(format!("pressed {title}\n"))
 }
 
 /// `popover-type <text>`: type into the popover's field (it replaces what is there).
 pub(super) fn popover_type(_: &mut Ctx, arg: &str) -> Result<String> {
-    crate::native::record::popover_type(arg).map_err(anyhow::Error::msg)?;
+    crate::platform::record::popover_type(arg).map_err(anyhow::Error::msg)?;
     Ok(String::new())
 }
 
 /// `popover-key <enter|escape>`: ↩ keeps what is in the field and closes, ⎋ drops it and closes.
 pub(super) fn popover_key(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let callbacks = crate::native::record::popover_key(arg).map_err(anyhow::Error::msg)?;
+    let callbacks = crate::platform::record::popover_key(arg).map_err(anyhow::Error::msg)?;
     run_deferred(ctx, callbacks);
     Ok(String::new())
 }
@@ -206,14 +206,14 @@ pub(super) fn popover_key(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// `popover-colour <name|#rrggbb>`: a dot of the popover by name, or a colour chosen in the
 /// Colours window (`#rrggbb`: the popover's last dot, or the window `Other colour…` asked for).
 pub(super) fn popover_colour(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let callbacks = crate::native::record::popover_colour(arg).map_err(anyhow::Error::msg)?;
+    let callbacks = crate::platform::record::popover_colour(arg).map_err(anyhow::Error::msg)?;
     run_deferred(ctx, callbacks);
     Ok(String::new())
 }
 
 /// `popover-close`: close it as a click outside does: the field's text is kept.
 pub(super) fn popover_close(ctx: &mut Ctx, _: &str) -> Result<String> {
-    let Some(callbacks) = crate::native::record::popover_close(true) else {
+    let Some(callbacks) = crate::platform::record::popover_close(true) else {
         anyhow::bail!("no popover is open")
     };
     run_deferred(ctx, callbacks);
@@ -224,12 +224,12 @@ pub(super) fn popover_close(ctx: &mut Ctx, _: &str) -> Result<String> {
 /// drawn to `<dir>/<name>.png`, as AppKit lays them out; prints its size and what it holds.
 pub(super) fn popover_native(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let popover =
-        crate::native::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
+        crate::platform::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
     let name = super::file_name(arg, "popover-native")?;
     let path = ctx.dir.join(format!("{name}.png"));
     #[cfg(target_os = "macos")]
     {
-        let summary = crate::native::macos::popover::render(&popover, &path)
+        let summary = crate::platform::macos::popover::render(&popover, &path)
             .ok_or_else(|| anyhow::anyhow!("not on the main thread"))?;
         Ok(format!("{summary}\nsaved {}\n", path.display()))
     }
@@ -241,7 +241,7 @@ pub(super) fn popover_native(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 thread_local! {
-    static REAL: std::cell::RefCell<Option<crate::native::Handle>> = const { std::cell::RefCell::new(None) };
+    static REAL: std::cell::RefCell<Option<crate::platform::Handle>> = const { std::cell::RefCell::new(None) };
 }
 
 /// `popover-real`: open the recorded popover for real, as an `NSPopover` under the window's top left
@@ -250,12 +250,12 @@ thread_local! {
 /// a hover popover (`path-card open`), which doesn't take the keyboard.
 pub(super) fn popover_real(ctx: &mut Ctx, _: &str) -> Result<String> {
     let popover =
-        crate::native::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
+        crate::platform::record::open_popover().ok_or_else(|| anyhow::anyhow!("no popover is open"))?;
     #[cfg(target_os = "macos")]
     {
         use gpui_kit::{Bounds, point, px, size};
         let anchor = Bounds::new(point(px(520.0), px(8.0)), size(px(120.0), px(24.0)));
-        match crate::native::macos::popover::show(popover, anchor, ctx.window, ctx.cx) {
+        match crate::platform::macos::popover::show(popover, anchor, ctx.window, ctx.cx) {
             Ok(handle) => REAL.with_borrow_mut(|real| *real = Some(handle)),
             Err(_) => anyhow::bail!("the window has no native view"),
         }

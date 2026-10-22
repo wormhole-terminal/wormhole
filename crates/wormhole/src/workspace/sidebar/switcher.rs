@@ -363,7 +363,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
         let group = card.group;
         let empty = card.count == 0;
         let (add_this, add_label) = (this.clone(), card.label.clone());
-        let label_at = crate::native::Anchor::default();
+        let label_at = crate::platform::Anchor::default();
         let parts = GroupHead {
             metrics,
             name: card.label.clone(),

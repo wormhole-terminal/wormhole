@@ -18,7 +18,7 @@ use objc2_foundation::{NSArray, NSDictionary, NSMutableAttributedString, NSRange
 
 use super::model::{self, Entry, Glyph, ItemModel, StatusIcon};
 use super::{MenuCommand, MenuSnapshot, StatusColors};
-use crate::native::macos::appkit::{modifier_mask, ns_color, symbol};
+use crate::platform::macos::appkit::{modifier_mask, ns_color, symbol};
 use target::MenuTarget;
 use wormhole_core::notify::ItemState;
 

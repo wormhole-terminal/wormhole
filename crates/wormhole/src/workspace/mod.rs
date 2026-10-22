@@ -293,7 +293,7 @@ pub struct Workspace {
     /// The path's hover card, a popover under the title row's folder.
     path_card: path_card::PathCard,
     /// Where the title row's folder is drawn: the card and the path menu open under it.
-    path_anchor: crate::native::Anchor,
+    path_anchor: crate::platform::Anchor,
     /// The other windows' terminals as the bar counts them, by window id, read on the tick.
     status_others: Vec<(i64, Vec<status_bar::Counted>)>,
     /// Index into the active session's notes that ⌘↵ / Stash act on.

@@ -9,7 +9,7 @@ use super::super::focus::SidebarStop;
 use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
 use super::*;
-use crate::native::{self, Anchor};
+use crate::platform::{self, Anchor};
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
 
@@ -170,7 +170,7 @@ impl Workspace {
             })
             .ok();
         });
-        native::show_menu(menu, at, window, cx);
+        platform::show_menu(menu, at, window, cx);
     }
 
     /// Open group `group`'s popover under its name (`anchor`): the name in a field, the colours, and
@@ -186,7 +186,7 @@ impl Workspace {
         let facts = self.group_facts(group, cx);
         let appearance = store_in(&self.profile, cx).tokens.appearance;
         let popover = group_popover(facts, name, appearance, &cx.weak_entity());
-        native::show_popover(popover, anchor, window, cx);
+        platform::show_popover(popover, anchor, window, cx);
     }
 
     /// The groups a terminal's menu offers to move it to: every group, with its name and whether

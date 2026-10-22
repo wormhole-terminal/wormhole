@@ -12,7 +12,7 @@ use std::path::Path;
 use wormhole_core::layout::path_menu::{self, PathFolder};
 
 use super::*;
-use crate::native::{self, Icon, Item, Menu};
+use crate::platform::{self, Icon, Item, Menu};
 
 impl Workspace {
     /// Open the menu of the active terminal's folder under the folder in the title row (a right-click
@@ -22,8 +22,8 @@ impl Workspace {
         let Some(folder) = terminal.cwd.clone() else { return };
         let exited = terminal.status() == Status::Exited;
         let shown = wormhole_core::sidebar::display_path(&folder, session::home_dir());
-        let menu = path_menu(&folder, &shown, &native::boot_volume_name(), exited, &cx.weak_entity());
-        native::show_menu(menu, self.path_anchor.below(), window, cx);
+        let menu = path_menu(&folder, &shown, &platform::boot_volume_name(), exited, &cx.weak_entity());
+        platform::show_menu(menu, self.path_anchor.below(), window, cx);
     }
 }
 
@@ -39,7 +39,7 @@ fn path_menu(folder: &Path, shown: &str, volume: &str, exited: bool, this: &Weak
         .item(
             Item::new("Insert into terminal")
                 .enabled(!exited)
-                .on_select(native::run_on(this, move |ws, window, cx| {
+                .on_select(platform::run_on(this, move |ws, window, cx| {
                     ws.insert_path(&insert_of, window, cx)
                 })),
         )

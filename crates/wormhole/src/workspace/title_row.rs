@@ -21,7 +21,7 @@ use super::open_in::{self, OpenIn};
 use super::title_extras::ExtraFacts;
 use super::*;
 use crate::menubar::model::KeyEquivalent;
-use crate::native::{self, Anchor, Icon, Item, Menu};
+use crate::platform::{self, Anchor, Icon, Item, Menu};
 use crate::theme_bridge::token;
 
 /// What the title row says about the terminal it is for, gathered once per frame.
@@ -203,7 +203,7 @@ impl Workspace {
         let open_menu = {
             let anchor = anchor.clone();
             move |window: &mut Window, cx: &mut App| {
-                native::show_menu(menu.clone(), anchor.below(), window, cx)
+                platform::show_menu(menu.clone(), anchor.below(), window, cx)
             }
         };
         if plan.fit.folded {
@@ -328,7 +328,7 @@ fn actions_menu(
         Item::new(label)
             .key(keymap::key(action).and_then(KeyEquivalent::from_spec))
             .enabled(enabled)
-            .on_select(native::run_on(this, move |ws, window, cx| ws.split_pane(axis, window, cx)))
+            .on_select(platform::run_on(this, move |ws, window, cx| ws.split_pane(axis, window, cx)))
     };
     menu.separator().item(split("Split right", ActionId::SplitRight, right, Axis::Row)).item(split(
         "Split down",
@@ -356,7 +356,7 @@ mod menu_model_tests {
 
     use super::actions_menu;
 
-    fn app(bundle: &str, name: &str) -> (Installed, Option<crate::native::Icon>) {
+    fn app(bundle: &str, name: &str) -> (Installed, Option<crate::platform::Icon>) {
         (Installed { bundle: bundle.into(), name: name.into(), monogram: name[..1].into() }, None)
     }
 

@@ -11,7 +11,7 @@ use wormhole_core::layout::title_row::{Extra, PathShown};
 use wormhole_core::usage::Gauge;
 
 use super::view_tests::{draw, drive, isolate_in, start};
-use crate::native::record;
+use crate::platform::record;
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

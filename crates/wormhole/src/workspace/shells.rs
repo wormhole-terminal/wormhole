@@ -6,7 +6,7 @@
 use wormhole_core::shells::{self, ShellChoice};
 
 use super::*;
-use crate::native::{self, Item, Menu};
+use crate::platform::{self, Item, Menu};
 use crate::settings::Settings;
 
 /// The menu's heading.
@@ -34,10 +34,10 @@ impl Workspace {
             .debug_selector(move || id.to_string())
             .child(button)
             // Over the button, which blocks the pointer from what lies behind it.
-            .child(native::on_right_click(move |at, window, cx| {
+            .child(platform::on_right_click(move |at, window, cx| {
                 this.update(cx, |ws, cx| {
                     let menu = ws.shell_menu(cx);
-                    native::show_menu(menu, at, window, cx);
+                    platform::show_menu(menu, at, window, cx);
                 })
                 .ok();
             }))
@@ -58,7 +58,7 @@ fn shell_menu(choices: &[ShellChoice], default: &str, workspace: &WeakEntity<Wor
         menu.item(
             Item::new(choice.name.clone())
                 .checked(choice.key == default)
-                .on_select(native::run_on(workspace, move |ws, window, cx| {
+                .on_select(platform::run_on(workspace, move |ws, window, cx| {
                     ws.new_session_with(Some(key.clone()), window, cx)
                 })),
         )

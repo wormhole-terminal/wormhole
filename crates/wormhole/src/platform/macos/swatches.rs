@@ -22,7 +22,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
 use super::appkit;
-use crate::native::menu::Swatches;
+use crate::platform::menu::Swatches;
 
 /// The row's left margin, a dot's cell (the dot is centred in it), and the row's height.
 const INSET: f64 = 12.0;

@@ -21,7 +21,7 @@ use objc2_foundation::{NSData, NSSize, NSString};
 
 use super::appkit;
 use super::swatches::{self, Chosen};
-use crate::native::menu::{Callback, Check, Entry, Icon, Item, Menu, Pick};
+use crate::platform::menu::{Callback, Check, Entry, Icon, Item, Menu, Pick};
 
 /// The pictures in front of titles are this many points square, as the system's own menus have
 /// them.

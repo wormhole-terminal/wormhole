@@ -2,7 +2,7 @@
   "config": {
     "os_edge": {
       "wormhole": [
-        "src/native/"
+        "src/platform/"
       ],
       "wormhole-core": [],
       "wormhole-host": [
@@ -454,7 +454,7 @@
       "wormhole: background -> dock": 1,
       "wormhole: devctl -> inspector": 1,
       "wormhole: devctl -> intro": 1,
-      "wormhole: devctl -> native": 1,
+      "wormhole: devctl -> platform": 1,
       "wormhole: devctl -> settings": 1,
       "wormhole: devctl -> terminal_view": 1,
       "wormhole: devctl -> workspace": 1,
@@ -467,10 +467,10 @@
       "wormhole: inspector -> theme_bridge": 1,
       "wormhole: intro -> settings": 1,
       "wormhole: intro -> workspace": 1,
-      "wormhole: menubar -> native": 1,
-      "wormhole: native -> menubar": 1,
-      "wormhole: native -> settings": 1,
-      "wormhole: native -> style": 1,
+      "wormhole: menubar -> platform": 1,
+      "wormhole: platform -> menubar": 1,
+      "wormhole: platform -> settings": 1,
+      "wormhole: platform -> style": 1,
       "wormhole: palette -> theme_bridge": 1,
       "wormhole: select -> settings": 1,
       "wormhole: select -> style": 1,
@@ -480,7 +480,7 @@
       "wormhole: settings -> workspace": 1,
       "wormhole: style -> fonts": 1,
       "wormhole: style -> icons": 1,
-      "wormhole: style -> native": 1,
+      "wormhole: style -> platform": 1,
       "wormhole: style -> settings": 1,
       "wormhole: style -> theme_bridge": 1,
       "wormhole: terminal_view -> fonts": 1,
@@ -496,7 +496,7 @@
       "wormhole: workspace -> inspector": 1,
       "wormhole: workspace -> intro": 1,
       "wormhole: workspace -> menubar": 1,
-      "wormhole: workspace -> native": 1,
+      "wormhole: workspace -> platform": 1,
       "wormhole: workspace -> select": 1,
       "wormhole: workspace -> settings": 1,
       "wormhole: workspace -> style": 1,
@@ -507,7 +507,7 @@
       "crates/wormhole-core/src/agents/mod.rs :: crate::terminal": 1,
       "crates/wormhole-core/src/cli_tool/mod.rs :: crate::ipc": 1,
       "crates/wormhole-core/src/tokens/mod.rs :: crate::color": 1,
-      "crates/wormhole/src/native/menu.rs :: crate::menubar": 1
+      "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
     "impl-outside": {}
   }

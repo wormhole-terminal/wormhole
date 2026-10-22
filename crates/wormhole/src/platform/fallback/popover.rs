@@ -14,7 +14,7 @@ use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use crate::native::popover::{Behavior, Glyph, Handle, Popover, Row};
+use crate::platform::popover::{Behavior, Glyph, Handle, Popover, Row};
 use crate::settings::ui;
 use crate::style::{self, TextRole as _};
 
@@ -142,7 +142,7 @@ impl Layer {
     }
 }
 
-use crate::native::popover::Field;
+use crate::platform::popover::Field;
 
 impl Render for Layer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

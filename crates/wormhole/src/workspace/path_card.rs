@@ -12,8 +12,8 @@ use std::path::Path;
 use wormhole_core::shells;
 
 use super::*;
-use crate::native::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
-use crate::native::{self};
+use crate::platform::popover::{Behavior, Button, Glyph, Handle, Popover, Row};
+use crate::platform::{self};
 use crate::style::motion::{PATH_CARD_CLOSE_DELAY, PATH_CARD_COPIED_FOR, PATH_CARD_OPEN_DELAY};
 
 /// What the pointer is over: the folder in the title row, or the card under it.
@@ -118,7 +118,7 @@ impl Workspace {
         self.path_card.opened += 1;
         let which = self.path_card.opened;
         let popover = path_popover(&folder, &shown, exited, appearance, &cx.weak_entity(), which);
-        let handle = native::show_popover(popover, self.path_anchor.bounds(), window, cx);
+        let handle = platform::show_popover(popover, self.path_anchor.bounds(), window, cx);
         self.path_card.shown = true;
         self.path_card.open = Some((which, handle));
         cx.notify();
@@ -163,7 +163,7 @@ fn path_popover(
             Button::new(
                 "Insert into terminal",
                 Some(Glyph::Terminal),
-                native::run_on(this, move |ws, window, cx| ws.insert_path(&insert_of, window, cx)),
+                platform::run_on(this, move |ws, window, cx| ws.insert_path(&insert_of, window, cx)),
             )
             .enabled(!exited, "No terminal is running"),
         ]))

@@ -279,7 +279,7 @@ mod tests {
     use wormhole_core::tokens::Appearance;
 
     use super::{Behavior, Button, Colours, Custom, Field, Glyph, Popover, Row, hex};
-    use crate::native::menu::{Item, Swatch, Swatches};
+    use crate::platform::menu::{Item, Swatch, Swatches};
 
     fn swatches(selected: Option<usize>) -> Swatches {
         let swatch = |name: &str| Swatch { color: hsla(0.6, 0.8, 0.5, 1.0), name: name.to_string().into() };
