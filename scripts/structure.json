@@ -276,7 +276,7 @@
       "crates/wormhole-core/src/notify/text.rs": 1,
       "crates/wormhole-core/src/view/sidebar/text.rs": 1,
       "crates/wormhole-term/src/text.rs": 1,
-      "crates/wormhole/src/workspace/text.rs": 1
+      "crates/wormhole/src/workspace/features/notes/paragraphs.rs": 1
     },
     "orphans": {},
     "glob-imports": {},

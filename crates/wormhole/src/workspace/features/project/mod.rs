@@ -36,7 +36,7 @@ use wormhole_core::terminal::shells::ShellCommand;
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::settings;
 
-pub(super) use color::set_project_color;
+pub(in crate::workspace) use color::set_project_color;
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};
 #[cfg(feature = "devctl")]
 pub(crate) use trust_window::devctl_trust_shot;
@@ -311,7 +311,7 @@ pub(crate) fn load_project_info(root: &Path, cx: &App) -> Option<LoadedProject> 
 
 pub(crate) type BTreeMapEnv = std::collections::BTreeMap<String, String>;
 
-pub(super) fn spawn_options(
+pub(in crate::workspace) fn spawn_options(
     tab_id: i64,
     cwd: Option<PathBuf>,
     restore: Option<String>,

@@ -30,7 +30,7 @@ use crate::workspace::{Workspace, dialog, project, session};
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to
 /// run in the terminal once it opens, and why the last Create was refused.
-pub(super) struct Asking {
+pub(in crate::workspace) struct Asking {
     input: Entity<InputState>,
     repo: PathBuf,
     command: Option<String>,
@@ -115,7 +115,11 @@ impl Workspace {
     }
 
     /// Shell → New Terminal in New Worktree…: ask for the branch.
-    pub(super) fn new_terminal_in_worktree(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn new_terminal_in_worktree(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(repo) = self.repo_for_worktree(cx) else { return };
         if let Err(why) = allowed(&repo, cx) {
             tell("Can't make a worktree here", why, window, cx);
@@ -358,7 +362,7 @@ impl Workspace {
     }
 
     /// The worktree Wormhole made that session `ix`'s terminal is in, if any.
-    pub(super) fn made_worktree_of(&self, ix: usize, cx: &App) -> Option<Worktree> {
+    pub(in crate::workspace) fn made_worktree_of(&self, ix: usize, cx: &App) -> Option<Worktree> {
         let session = self.sessions.get(ix)?;
         let cwd = session.terminal().read(cx).cwd.clone()?;
         app(cx).worktrees.find(&cwd).cloned()
@@ -367,7 +371,7 @@ impl Workspace {
     /// Closing a terminal in a worktree Wormhole made: Close keeps the worktree, Close and Remove
     /// Worktree deletes its folder too (the branch stays); not offered while the folder has
     /// changes as last read, and refused again by git itself if it has some by then.
-    pub(super) fn request_close_worktree_session(
+    pub(in crate::workspace) fn request_close_worktree_session(
         &mut self,
         ix: usize,
         worktree: Worktree,
@@ -446,15 +450,15 @@ impl Workspace {
 /// The worktrees Wormhole made that a group's terminals are in, for the question before closing the
 /// group: each once, and whether it may be offered for removal (no changes as last read, and no
 /// terminal outside the group still in it).
-pub(super) struct GroupWorktrees(Vec<(Worktree, bool)>);
+pub(in crate::workspace) struct GroupWorktrees(Vec<(Worktree, bool)>);
 
 impl GroupWorktrees {
-    pub(super) fn is_empty(&self) -> bool {
+    pub(in crate::workspace) fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// What the question adds: which worktrees, and what Close and Close and Remove do with them.
-    pub(super) fn note(&self) -> String {
+    pub(in crate::workspace) fn note(&self) -> String {
         let names = self
             .0
             .iter()
@@ -479,14 +483,14 @@ impl GroupWorktrees {
     }
 
     /// The worktrees "Close and Remove Worktrees" removes.
-    pub(super) fn removable(&self) -> Vec<Worktree> {
+    pub(in crate::workspace) fn removable(&self) -> Vec<Worktree> {
         self.0.iter().filter(|(_, removable)| *removable).map(|(w, _)| w.clone()).collect()
     }
 }
 
 impl Workspace {
     /// The worktrees Wormhole made that the terminals `members` are in.
-    pub(super) fn made_worktrees_of(&self, members: &[i64], cx: &App) -> GroupWorktrees {
+    pub(in crate::workspace) fn made_worktrees_of(&self, members: &[i64], cx: &App) -> GroupWorktrees {
         let mut found: Vec<(Worktree, bool)> = Vec::new();
         for session in members.iter().filter_map(|&id| self.find_session(id)).map(|ix| &self.sessions[ix]) {
             let Some(cwd) = session.terminal().read(cx).cwd.clone() else { continue };
@@ -507,7 +511,7 @@ impl Workspace {
 
 /// Remove `worktree` off the UI thread, once its terminal is closed; forgotten when it is gone,
 /// and git's refusal (changes made in the meantime) shown in the front window.
-pub(super) fn remove_worktree(worktree: Worktree, cx: &mut App) {
+pub(in crate::workspace) fn remove_worktree(worktree: Worktree, cx: &mut App) {
     cx.spawn(async move |cx| {
         let gone = worktree.clone();
         let result = cx.background_spawn(async move { worktree::remove(&gone) }).await;

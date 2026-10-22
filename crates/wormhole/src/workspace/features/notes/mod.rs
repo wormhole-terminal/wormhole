@@ -11,11 +11,16 @@ use crate::workspace::items::{ItemKey, item_key};
 use crate::workspace::text::{chunks_blank, paragraph_at};
 use crate::workspace::{RightTab, Workspace, panel_list};
 
+pub(in crate::workspace) mod items;
+#[cfg(test)]
+mod note_tests;
+pub(in crate::workspace) mod paragraphs;
+pub(in crate::workspace) mod tasks;
 mod view;
 
 use crate::settings::ui_in;
 use view::wrapped_placeholder;
-pub(super) use view::{NotesList, NotesView};
+pub(in crate::workspace) use view::{NotesList, NotesView};
 
 pub(in crate::workspace) struct Note {
     pub(in crate::workspace) state: Entity<TextareaState>,
@@ -44,7 +49,7 @@ pub(crate) fn notes_on(cx: &App) -> bool {
 }
 
 impl Workspace {
-    pub(super) fn add_note(
+    pub(in crate::workspace) fn add_note(
         &mut self,
         session_ix: usize,
         value: Option<String>,
@@ -97,12 +102,17 @@ impl Workspace {
     /// Make the Notes tab what the panel shows, open and with its section unfolded, so a
     /// note added or focused next is on screen. (With Changes, History or Project showing, or
     /// the section folded, there is nothing to type into.)
-    pub(super) fn reveal_notes_tab(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn reveal_notes_tab(&mut self, cx: &mut Context<Self>) {
         self.show_tab(RightTab::Notes, cx);
         self.sessions[self.active].notes_collapsed = false;
     }
 
-    pub(super) fn new_note(&mut self, text: Option<String>, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn new_note(
+        &mut self,
+        text: Option<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if !notes_on(cx) {
             return;
         }
@@ -116,7 +126,13 @@ impl Workspace {
     /// Put note `ix` of the active session on screen and give it the keyboard: the Notes tab
     /// open, the section and the note unfolded. `to_end` also puts the cursor at the end of its
     /// text (clicking its title); otherwise it stays where it was (⇧⌘E).
-    pub(super) fn show_note(&mut self, ix: usize, to_end: bool, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn show_note(
+        &mut self,
+        ix: usize,
+        to_end: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if ix >= self.active_session().notes.len() {
             return;
         }
@@ -142,13 +158,13 @@ impl Workspace {
     }
 
     /// Clicking a note's title: open it and put the cursor at the end of its text.
-    pub(super) fn open_note(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn open_note(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
         self.show_note(ix, true, window, cx);
     }
 
     /// Throw away every note with nothing in it that isn't being written right now. Runs
     /// when a note loses focus, and on the tick for one that never got it.
-    pub(super) fn prune_blank_notes(&mut self, window: &Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn prune_blank_notes(&mut self, window: &Window, cx: &mut Context<Self>) {
         let blank = |note: &Note| {
             let state = note.state.read(cx);
             is_blank_note(state) && !state.focus_handle(cx).is_focused(window)
@@ -180,7 +196,7 @@ impl Workspace {
     }
 
     /// The keys a note's text shares with a task's editor ([`ItemKey`]).
-    pub(super) fn note_key(
+    pub(in crate::workspace) fn note_key(
         &mut self,
         state: &Entity<TextareaState>,
         event: &KeyDownEvent,
@@ -210,7 +226,7 @@ impl Workspace {
     }
 
     /// Move a note to another place in the list (drag and drop, ⌥⌘↑/↓).
-    pub(super) fn move_note(&mut self, from: usize, to: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn move_note(&mut self, from: usize, to: usize, cx: &mut Context<Self>) {
         if !reorder::move_item(&mut self.sessions[self.active].notes, from, to) {
             return;
         }
@@ -271,7 +287,7 @@ impl Workspace {
         cx.notify();
     }
 
-    pub(super) fn delete_note(&mut self, ix: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn delete_note(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = &mut self.sessions[self.active];
         if ix < session.notes.len() {
             session.notes.remove(ix);
@@ -283,7 +299,7 @@ impl Workspace {
         }
     }
 
-    pub(super) fn toggle_notes_section(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_notes_section(&mut self, cx: &mut Context<Self>) {
         let session = &mut self.sessions[self.active];
         session.notes_collapsed = !session.notes_collapsed;
         // A note that was focused is about to disappear from the list.
@@ -291,7 +307,7 @@ impl Workspace {
         self.mark_dirty(cx);
     }
 
-    pub(super) fn toggle_note(&mut self, ix: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_note(&mut self, ix: usize, cx: &mut Context<Self>) {
         if let Some(note) = self.sessions[self.active].notes.get_mut(ix) {
             note.collapsed = !note.collapsed;
             // Opened again, a long note is cut at the cap again.
@@ -309,7 +325,7 @@ impl Workspace {
     }
 
     /// "N done" under the open next steps: show or fold the done ones.
-    pub(super) fn toggle_done_steps(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_done_steps(&mut self, cx: &mut Context<Self>) {
         let list = &mut self.sessions[self.active].notes_list;
         list.done_open = !list.done_open;
         cx.notify();
@@ -380,7 +396,7 @@ impl Workspace {
     // ---------------------------------------------------------------- notes tab
 
     /// The right panel, `width` points wide (its column's, or its width at rest while it slides).
-    pub(super) fn render_notes_panel(
+    pub(in crate::workspace) fn render_notes_panel(
         &self,
         width: f32,
         window: &Window,
@@ -458,11 +474,11 @@ impl Workspace {
 
 /// Whether the editor holds nothing but whitespace. Read where the text is, not copied: this
 /// runs for every note of every session on the tick and in the sidebar's render.
-pub(super) fn is_blank_note(state: &TextareaState) -> bool {
+pub(in crate::workspace) fn is_blank_note(state: &TextareaState) -> bool {
     chunks_blank(state.text().chunks())
 }
 
-pub(super) fn selection_or_paragraph(notes: &TextareaState) -> String {
+pub(in crate::workspace) fn selection_or_paragraph(notes: &TextareaState) -> String {
     let selected = notes.selected_value().to_string();
     if selected.trim().is_empty() { paragraph_at(&notes.value(), notes.cursor()) } else { selected }
 }

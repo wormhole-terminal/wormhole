@@ -10,6 +10,7 @@ pub(crate) mod open_file;
 pub mod picker;
 mod problem;
 mod submodule_row;
+pub(in crate::workspace) mod worktree;
 
 // The diff view's old paths, which `workspace` and the Theme Studio still use.
 pub(crate) use diff as diff_view;

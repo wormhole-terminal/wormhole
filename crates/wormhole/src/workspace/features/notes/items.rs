@@ -7,7 +7,7 @@ use crate::workspace::Workspace;
 
 /// A key an item's editor handles the same way for every kind of item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ItemKey {
+pub(in crate::workspace) enum ItemKey {
     /// Escape: back to the terminal. Leaving an item empty throws it away.
     Leave,
     /// Backspace in an empty editor: delete the item and carry on in the one above.
@@ -16,7 +16,7 @@ pub(super) enum ItemKey {
     Move(isize),
 }
 
-pub(super) fn item_key(keystroke: &Keystroke, empty: bool) -> Option<ItemKey> {
+pub(in crate::workspace) fn item_key(keystroke: &Keystroke, empty: bool) -> Option<ItemKey> {
     let m = &keystroke.modifiers;
     let plain = !m.modified();
     match keystroke.key.as_str() {
@@ -32,20 +32,20 @@ pub(super) fn item_key(keystroke: &Keystroke, empty: bool) -> Option<ItemKey> {
 }
 
 impl Workspace {
-    pub(super) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn focus_terminal(&self, window: &mut Window, cx: &mut Context<Self>) {
         window.focus(&self.active_terminal().focus_handle(cx), cx);
     }
 
     /// The list key of this window's tasks or notes, so a dragged item only drops among its
     /// own kind in its own window.
-    pub(super) fn reorder_list(&self, kind: &str, cx: &Context<Self>) -> SharedString {
+    pub(in crate::workspace) fn reorder_list(&self, kind: &str, cx: &Context<Self>) -> SharedString {
         format!("{kind}-{}", cx.entity_id()).into()
     }
 }
 
 /// An item's editor with the keys every item handles ([`ItemKey`]); `on_key` gets the
 /// event first and returns whether it handled it.
-pub(super) fn with_item_keys(
+pub(in crate::workspace) fn with_item_keys(
     editor: impl IntoElement,
     on_key: impl Fn(&KeyDownEvent, &mut Window, &mut App) -> bool + 'static,
 ) -> Div {

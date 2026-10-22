@@ -6,14 +6,14 @@ use wormhole_core::storage::store;
 /// Whether text handed over in `chunks` is only whitespace. Editors keep their text in a rope,
 /// whose chunks can be read where it is, instead of copying the whole text into a `String`
 /// first. A character is never split between chunks, so this agrees with `store::is_blank`.
-pub(super) fn chunks_blank<'a>(mut chunks: impl Iterator<Item = &'a str>) -> bool {
+pub(in crate::workspace) fn chunks_blank<'a>(mut chunks: impl Iterator<Item = &'a str>) -> bool {
     chunks.all(store::is_blank)
 }
 
 /// The paragraph (the lines around the cursor, up to the nearest blank lines) containing byte
 /// offset `cursor`. On a blank line itself there is none: sending then must send nothing, not
 /// the paragraphs on either side.
-pub(super) fn paragraph_at(text: &str, cursor: usize) -> String {
+pub(in crate::workspace) fn paragraph_at(text: &str, cursor: usize) -> String {
     let mut cursor = cursor.min(text.len());
     while !text.is_char_boundary(cursor) {
         cursor -= 1;
@@ -47,7 +47,7 @@ pub(super) fn paragraph_at(text: &str, cursor: usize) -> String {
 }
 
 /// A title from the note's first non-empty line.
-pub(super) fn note_title(text: &str) -> Option<String> {
+pub(in crate::workspace) fn note_title(text: &str) -> Option<String> {
     let line = text.lines().map(str::trim).find(|l| !l.is_empty())?;
     Some(line.trim_start_matches(['#', '-', '*', '>', ' ']).to_string())
 }
@@ -55,7 +55,7 @@ pub(super) fn note_title(text: &str) -> Option<String> {
 /// What an open note shows under its title: the text after the line the title
 /// comes from, without the blank lines around it. `None` for a note that is its title alone,
 /// which then shows its one line once.
-pub(super) fn note_body(text: &str) -> Option<&str> {
+pub(in crate::workspace) fn note_body(text: &str) -> Option<&str> {
     let mut rest = text;
     // Past the title line (the first with something on it) and the line break after it.
     loop {

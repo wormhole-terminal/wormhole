@@ -213,6 +213,57 @@
           ]
         }
       ]
+    },
+    "5a": {
+      "doc": "The window's features get one folder: notes, usage, project and git (phase 4, series 5, first run)",
+      "parents": {
+        "workspace::features": {
+          "doc": [
+            "The window's features: the side panels' contents and what they work on, each in its own folder until",
+            "phase 5 gives them their own state (they read and write `Workspace`'s fields today). `notes` holds the",
+            "notes and tasks of a terminal, `usage` the coding agents' plan limits, `project` the `.wormhole/`",
+            "folder's panel, trust and sync, and `git` the Changes, History and diff views and the worktrees."
+          ]
+        }
+      },
+      "moves": [
+        {
+          "from": "workspace/notes",
+          "to": "workspace/features/notes"
+        },
+        {
+          "from": "workspace/tasks.rs",
+          "to": "workspace/features/notes/tasks.rs"
+        },
+        {
+          "from": "workspace/items.rs",
+          "to": "workspace/features/notes/items.rs"
+        },
+        {
+          "from": "workspace/text.rs",
+          "to": "workspace/features/notes/paragraphs.rs"
+        },
+        {
+          "from": "workspace/note_tests.rs",
+          "to": "workspace/features/notes/note_tests.rs"
+        },
+        {
+          "from": "workspace/usage.rs",
+          "to": "workspace/features/usage.rs"
+        },
+        {
+          "from": "workspace/project",
+          "to": "workspace/features/project"
+        },
+        {
+          "from": "workspace/git_panel",
+          "to": "workspace/features/git"
+        },
+        {
+          "from": "workspace/worktree.rs",
+          "to": "workspace/features/git/worktree.rs"
+        }
+      ]
     }
   }
 }

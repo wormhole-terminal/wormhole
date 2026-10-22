@@ -20,7 +20,7 @@ use crate::workspace::notes::TaskItem;
 use crate::workspace::{RightTab, Workspace};
 
 /// The task being written or edited in place.
-pub(super) struct TaskEdit {
+pub(in crate::workspace) struct TaskEdit {
     /// The task being edited; for a `new` one, where it goes (before the task now there).
     pub ix: usize,
     pub new: bool,
@@ -73,14 +73,20 @@ impl Workspace {
     }
 
     /// The header's "+": a new, empty task at the end, with the cursor in it.
-    pub(super) fn new_task(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn new_task(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let end = self.active_session().tasks.len();
         self.edit_task(end, true, window, cx);
     }
 
     /// Edit task `ix` in place, or with `new`, start writing a task that goes in at `ix`.
     /// Whatever was being edited is finished first.
-    pub(super) fn edit_task(&mut self, ix: usize, new: bool, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn edit_task(
+        &mut self,
+        ix: usize,
+        new: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let mut ix = ix;
         let current = self.active_session().task_edit.as_ref().map(|edit| edit.input.clone());
         if let Some(current) = current {
@@ -208,7 +214,7 @@ impl Workspace {
     }
 
     /// Move a task to another place in the list (drag and drop, ⌥⌘↑/↓).
-    pub(super) fn move_task(&mut self, from: usize, to: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn move_task(&mut self, from: usize, to: usize, cx: &mut Context<Self>) {
         let session = &mut self.sessions[self.active];
         if !reorder::move_item(&mut session.tasks, from, to) {
             return;
@@ -219,14 +225,14 @@ impl Workspace {
         self.mark_dirty(cx);
     }
 
-    pub(super) fn toggle_task(&mut self, ix: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_task(&mut self, ix: usize, cx: &mut Context<Self>) {
         if let Some(task) = self.sessions[self.active].tasks.get_mut(ix) {
             task.done = !task.done;
             self.mark_dirty(cx);
         }
     }
 
-    pub(super) fn delete_task(&mut self, ix: usize, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn delete_task(&mut self, ix: usize, cx: &mut Context<Self>) {
         let session = &mut self.sessions[self.active];
         if ix >= session.tasks.len() {
             return;
@@ -257,7 +263,7 @@ impl Workspace {
 
 impl NotesView {
     /// The Next steps card's head.
-    pub(super) fn render_tasks_band(&self, ui: UiColors) -> AnyElement {
+    pub(in crate::workspace) fn render_tasks_band(&self, ui: UiColors) -> AnyElement {
         let (toggle, add) = (self.this.clone(), self.this.clone());
         let open = self.tasks.iter().filter(|t| !t.done).count();
         style::section_card(
@@ -297,13 +303,18 @@ impl NotesView {
     }
 
     /// The section counts a task being written, so it has its chevron while it's there.
-    pub(super) fn tasks_section(&self) -> style::Section {
+    pub(in crate::workspace) fn tasks_section(&self) -> style::Section {
         let draft = self.task_edit.as_ref().is_some_and(|(_, new, _)| *new);
         style::Section::of(self.tasks.len() + usize::from(draft), self.tasks_collapsed)
     }
 
     /// "N done": the done steps folded after the open ones, a click shows or folds them.
-    pub(super) fn render_done_fold(&self, count: usize, open: bool, ui: UiColors) -> AnyElement {
+    pub(in crate::workspace) fn render_done_fold(
+        &self,
+        count: usize,
+        open: bool,
+        ui: UiColors,
+    ) -> AnyElement {
         let this = self.this.clone();
         style::flush_row("done-steps", ui, false)
             .child(style::lead(style::disclosure(ui, !open)))
@@ -315,7 +326,7 @@ impl NotesView {
     }
 
     /// Task `ix`, or with `ix == None` the new task being written.
-    pub(super) fn render_task(&self, ix: Option<usize>, ui: UiColors, cx: &App) -> AnyElement {
+    pub(in crate::workspace) fn render_task(&self, ix: Option<usize>, ui: UiColors, cx: &App) -> AnyElement {
         let task = match ix {
             Some(ix) => match self.tasks.get(ix) {
                 Some(task) => Some(task),

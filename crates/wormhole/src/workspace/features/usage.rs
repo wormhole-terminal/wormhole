@@ -18,10 +18,10 @@ const WARN_AT: f32 = 0.8;
 
 /// The Usage tab redraws this often while it shows, so "resets 34m" and "Updated 2m ago" move
 /// on (in ticks of the window, 400 ms each).
-pub(super) const REDRAW_TICKS: u64 = 25;
+pub(in crate::workspace) const REDRAW_TICKS: u64 = 25;
 
 impl Workspace {
-    pub(super) fn render_usage_tab(&self, cx: &Context<Self>) -> AnyElement {
+    pub(in crate::workspace) fn render_usage_tab(&self, cx: &Context<Self>) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let reports = &app(cx).usage;
         if reports.is_empty() {

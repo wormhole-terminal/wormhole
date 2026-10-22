@@ -49,25 +49,21 @@ pub(crate) mod dialog;
 mod drag_tests;
 #[cfg(test)]
 mod failed_tests;
+pub(crate) mod features;
 pub(crate) mod focus;
 mod folder_color;
 #[cfg(test)]
 mod folder_color_tests;
-pub(crate) mod git_panel;
 mod glass;
 #[cfg(test)]
 mod group_tests;
 pub(crate) mod hosting;
-mod items;
 #[cfg(test)]
 mod key_tests;
 mod layout;
 pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
-#[cfg(test)]
-mod note_tests;
-pub(crate) mod notes;
 pub(crate) mod onboarding;
 pub(crate) mod open_in;
 pub(crate) mod overlay;
@@ -85,7 +81,6 @@ mod path_menu;
 mod profile_chip;
 #[cfg(test)]
 mod profile_look_tests;
-pub(crate) mod project;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
@@ -101,17 +96,14 @@ mod splits;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
-mod tasks;
 mod terminal_drag;
 mod terminals;
-mod text;
 mod tick;
 mod title_chips;
 mod title_extras;
 mod title_row;
 #[cfg(test)]
 mod title_tests;
-mod usage;
 #[cfg(test)]
 pub(crate) mod view_tests;
 pub(crate) mod welcome;
@@ -120,7 +112,16 @@ mod window_bounds;
 mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
-mod worktree;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::workspace::features::git as git_panel;
+pub(in crate::workspace) use crate::workspace::features::git::worktree;
+pub(crate) use crate::workspace::features::notes;
+pub(in crate::workspace) use crate::workspace::features::notes::items;
+pub(in crate::workspace) use crate::workspace::features::notes::paragraphs as text;
+pub(in crate::workspace) use crate::workspace::features::notes::tasks;
+pub(crate) use crate::workspace::features::project;
+pub(in crate::workspace) use crate::workspace::features::usage;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;
