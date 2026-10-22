@@ -34,15 +34,39 @@ pub fn data_dir() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
 }
 
-/// Make Wormhole's data folder and everything in it owner-only (folders `0700`, files `0600`), for
-/// what an earlier version made with the umask's modes and what a library made since (the logs).
-/// Run at launch, off the UI thread; only ever on Wormhole's own data folder.
+/// Make Wormhole's files and folders in its data folder owner-only (folders `0700`, files `0600`),
+/// for what an earlier version made with the umask's modes and what a library made since (the
+/// logs). Run at launch, off the UI thread. A folder `WORMHOLE_DATA_DIR` names is only touched when
+/// it already holds Wormhole's data, and then only the names Wormhole puts there.
 pub fn make_data_dir_private(dir: &Path) {
-    match crate::fsutil::make_tree_private(dir) {
+    let chosen = std::env::var_os("WORMHOLE_DATA_DIR").is_some();
+    if !is_data_dir(dir, chosen) {
+        return;
+    }
+    match crate::fsutil::make_tree_private(dir, &is_wormhole_name) {
         Ok(0) => {}
         Ok(changed) => tracing::info!("made {changed} files and folders in the data folder owner-only"),
         Err(err) => tracing::warn!("couldn't make the data folder {} owner-only: {err}", dir.display()),
     }
+}
+
+/// Whether `dir` is Wormhole's data folder: the default one, or (`chosen` by `WORMHOLE_DATA_DIR`)
+/// one that holds its database or settings already.
+fn is_data_dir(dir: &Path, chosen: bool) -> bool {
+    !chosen || dir.join(DB_FILE).is_file() || dir.join("config.json").is_file()
+}
+
+/// The names Wormhole puts at the top of its data folder (and a profile's): its database with its
+/// journals and copies, its JSON files, the instance lock and its folders.
+fn is_wormhole_name(name: &std::ffi::OsStr) -> bool {
+    let Some(name) = name.to_str() else { return false };
+    const FOLDERS: [&str; 7] = ["logs", "profiles", "hosts", "bin", "fonts", "themes", "icon-themes"];
+    FOLDERS.contains(&name)
+        || name == "instance.lock"
+        || name.ends_with(".json")
+        || ["wormhole.db", "andromeda.db", "andromeda-before-wormhole.db"]
+            .iter()
+            .any(|db| name.starts_with(db))
 }
 
 /// The data folder's name, and its database's, in 0.2 and before, when the app went by its codename.

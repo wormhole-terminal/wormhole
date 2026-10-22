@@ -6,6 +6,7 @@
 //! (`WORMHOLE_DATA_DIR`), copied, or loosened. The process umask itself is never changed, since the
 //! shells Wormhole starts inherit it.
 
+use std::ffi::OsStr;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
@@ -71,60 +72,90 @@ pub fn make_private(path: &Path) -> io::Result<()> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(err) => return Err(err),
     };
-    if meta.is_file() && meta.uid() == current_uid() {
-        tighten(path, meta.mode())?;
+    if meta.is_file() && meta.uid() == current_uid() && meta.mode() & 0o077 != 0 {
+        tighten_nofollow(path, PRIVATE_DIR)?;
     }
     Ok(())
 }
 
 /// Every folder and regular file under `root` (and `root` itself) owner-only: what launch does
-/// for a data folder an earlier version made with the umask's modes. Links are never followed or
-/// changed, sockets and other special files are left as they are, and so is anything another user
-/// owns. Returns how many were changed. `root` must be a real folder, not a link.
-pub fn make_tree_private(root: &Path) -> io::Result<usize> {
+/// for a data folder an earlier version made with the umask's modes. At the top only the entries
+/// `ours` accepts are looked at (below them, everything): the data folder may be one a person
+/// pointed somewhere with other files in it. Links are never followed or changed, sockets and
+/// other special files are left as they are, and so is anything another user owns; an entry that
+/// can't be read or changed is skipped. Returns how many were changed. `root` must be a real
+/// folder, not a link.
+pub fn make_tree_private(root: &Path, ours: &dyn Fn(&OsStr) -> bool) -> io::Result<usize> {
     ensure_private_dir(root)?;
-    let mut changed = 0;
-    let mut budget = MAX_ENTRIES;
-    walk(root, 0, &mut budget, &mut changed)?;
-    Ok(changed)
+    let mut walk = Walk { changed: 0, budget: MAX_ENTRIES };
+    walk.dir(root, 0, Some(ours));
+    Ok(walk.changed)
 }
 
-fn walk(dir: &Path, depth: usize, budget: &mut usize, changed: &mut usize) -> io::Result<()> {
-    if depth > MAX_DEPTH {
-        return Ok(());
-    }
-    for entry in fs::read_dir(dir)? {
-        if *budget == 0 {
-            return Ok(());
+struct Walk {
+    changed: usize,
+    budget: usize,
+}
+
+impl Walk {
+    fn dir(&mut self, dir: &Path, depth: usize, ours: Option<&dyn Fn(&OsStr) -> bool>) {
+        if depth > MAX_DEPTH {
+            return;
         }
-        *budget -= 1;
-        let Ok(entry) = entry else { continue };
-        let path = entry.path();
-        // `symlink_metadata`: a link is seen as a link, so it is never followed.
-        let Ok(meta) = fs::symlink_metadata(&path) else { continue };
-        if meta.uid() != current_uid() {
-            continue;
-        }
-        if meta.is_dir() {
-            if meta.mode() & 0o777 != PRIVATE_DIR {
-                fs::set_permissions(&path, fs::Permissions::from_mode(PRIVATE_DIR))?;
-                *changed += 1;
+        let Ok(entries) = fs::read_dir(dir) else { return };
+        for entry in entries {
+            if self.budget == 0 {
+                return;
             }
-            walk(&path, depth + 1, budget, changed)?;
-        } else if meta.is_file() && tighten(&path, meta.mode())? {
-            *changed += 1;
+            self.budget -= 1;
+            let Ok(entry) = entry else { continue };
+            if ours.is_some_and(|ours| !ours(&entry.file_name())) {
+                continue;
+            }
+            let path = entry.path();
+            match tighten_nofollow(&path, PRIVATE_DIR) {
+                Ok(Tightened { changed, dir: is_dir }) => {
+                    self.changed += usize::from(changed);
+                    if is_dir {
+                        self.dir(&path, depth + 1, None);
+                    }
+                }
+                Err(err) => tracing::debug!("not made owner-only: {}: {err}", path.display()),
+            }
         }
     }
-    Ok(())
 }
 
-/// Whether the mode had to change.
-fn tighten(path: &Path, mode: u32) -> io::Result<bool> {
-    if mode & 0o077 == 0 {
-        return Ok(false);
+struct Tightened {
+    changed: bool,
+    dir: bool,
+}
+
+/// Take group and other access off the file or folder at `path` through a descriptor opened
+/// without following a link (`O_NOFOLLOW`), so a link swapped in after the folder was listed is
+/// refused rather than its target changed. A folder gets `dir_mode`; a file keeps its owner's
+/// bits. Anything else, or another user's, is left alone.
+fn tighten_nofollow(path: &Path, dir_mode: u32) -> io::Result<Tightened> {
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC)
+        .open(path)?;
+    let meta = file.metadata()?;
+    let (is_dir, mode) = (meta.is_dir(), meta.mode() & 0o7777);
+    if !(is_dir || meta.is_file()) || meta.uid() != current_uid() {
+        return Ok(Tightened { changed: false, dir: false });
     }
-    fs::set_permissions(path, fs::Permissions::from_mode(mode & 0o700))?;
-    Ok(true)
+    let wanted = if is_dir { dir_mode } else { mode & 0o700 };
+    let changed = mode != wanted;
+    if changed {
+        // `fchmod` on the descriptor: the file that was checked is the one changed.
+        file.set_permissions(fs::Permissions::from_mode(wanted))?;
+    }
+    // Recursing goes by path again: only into the folder that was opened, not one swapped in since.
+    let still_dir = is_dir
+        && fs::symlink_metadata(path)
+            .is_ok_and(|now| now.is_dir() && now.ino() == meta.ino() && now.dev() == meta.dev());
+    Ok(Tightened { changed, dir: still_dir })
 }
 
 fn current_uid() -> u32 {
@@ -137,6 +168,7 @@ fn current_uid() -> u32 {
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsStr;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
@@ -165,7 +197,7 @@ mod tests {
         std::os::unix::fs::symlink(&outside, data.join("link")).expect("links");
 
         assert_eq!(
-            make_tree_private(&data).expect("walks"),
+            make_tree_private(&data, &|_| true).expect("walks"),
             3,
             "logs, config.json, tool (the root on its own)"
         );
@@ -174,7 +206,34 @@ mod tests {
         assert_eq!(mode(&data.join("config.json")), 0o600);
         assert_eq!(mode(&data.join("tool")), 0o700);
         assert_eq!(mode(&outside), 0o644, "a link's target is not ours to change");
-        assert_eq!(make_tree_private(&data).expect("walks"), 0, "nothing left to do");
+        assert_eq!(make_tree_private(&data, &|_| true).expect("walks"), 0, "nothing left to do");
+    }
+
+    #[test]
+    fn only_the_names_it_is_given_are_walked_and_a_failing_one_is_skipped() {
+        let root = tempfile::tempdir().expect("temp dir");
+        let data = root.path().join("data");
+        fs::create_dir_all(data.join("logs")).expect("dirs");
+        fs::create_dir_all(data.join("someone-elses")).expect("dirs");
+        for (name, mode) in [("config.json", 0o644), ("notes.txt", 0o644), ("logs/locked.log", 0o244)] {
+            fs::write(data.join(name), "x").expect("writes");
+            fs::set_permissions(data.join(name), fs::Permissions::from_mode(mode)).expect("chmod");
+        }
+        fs::write(data.join("logs/today.log"), "x").expect("writes");
+        fs::set_permissions(data.join("logs/today.log"), fs::Permissions::from_mode(0o644)).expect("chmod");
+        fs::set_permissions(data.join("someone-elses"), fs::Permissions::from_mode(0o755)).expect("chmod");
+
+        let ours = |name: &OsStr| name == "logs" || name == "config.json";
+        make_tree_private(&data, &ours).expect("walks");
+        assert_eq!(mode(&data.join("config.json")), 0o600);
+        assert_eq!(mode(&data.join("logs")), 0o700);
+        assert_eq!(
+            mode(&data.join("logs/today.log")),
+            0o600,
+            "the unreadable file before it didn't stop the walk"
+        );
+        assert_eq!(mode(&data.join("notes.txt")), 0o644, "not a name of ours");
+        assert_eq!(mode(&data.join("someone-elses")), 0o755);
     }
 
     #[test]
@@ -185,7 +244,7 @@ mod tests {
         let link = root.path().join("data");
         std::os::unix::fs::symlink(elsewhere.path(), &link).expect("links");
         assert!(ensure_private_dir(&link).is_err());
-        assert!(make_tree_private(&link).is_err());
+        assert!(make_tree_private(&link, &|_| true).is_err());
         assert_eq!(mode(elsewhere.path()), 0o755);
     }
 

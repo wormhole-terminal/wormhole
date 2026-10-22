@@ -63,3 +63,34 @@ fn data_folder_is_private() {
     assert_eq!(std::fs::metadata(&data).expect("stat").permissions().mode() & 0o777, 0o700);
     assert!(found.is_empty(), "not owner-only: {found:?}");
 }
+
+#[test]
+fn launch_tightens_only_wormholes_names_and_only_in_its_data_folder() {
+    let base = tempfile::tempdir().expect("temp dir");
+    let loose = |path: &Path| {
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).expect("chmod");
+    };
+    // A folder someone pointed `WORMHOLE_DATA_DIR` at that holds no Wormhole data: left alone.
+    let elsewhere = base.path().join("elsewhere");
+    std::fs::create_dir_all(&elsewhere).expect("dir");
+    std::fs::write(elsewhere.join("notes.txt"), "x").expect("writes");
+    loose(&elsewhere.join("notes.txt"));
+    std::fs::set_permissions(&elsewhere, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+    assert!(!super::super::is_data_dir(&elsewhere, true));
+
+    // Wormhole's: its names tightened, a stranger's file beside them not.
+    let data = base.path().join("data");
+    std::fs::create_dir_all(data.join("profiles/work")).expect("dir");
+    for name in ["wormhole.db", "wormhole.db-wal", "config.json", "profiles/work/config.json", "notes.txt"] {
+        std::fs::write(data.join(name), "x").expect("writes");
+        loose(&data.join(name));
+    }
+    assert!(super::super::is_data_dir(&data, true));
+    super::super::make_data_dir_private(&data);
+    let mode = |name: &str| std::fs::metadata(data.join(name)).expect("stat").permissions().mode() & 0o777;
+    for name in ["wormhole.db", "wormhole.db-wal", "config.json", "profiles/work/config.json"] {
+        assert_eq!(mode(name), 0o600, "{name}");
+    }
+    assert_eq!(mode("profiles"), 0o700);
+    assert_eq!(mode("notes.txt"), 0o644);
+}

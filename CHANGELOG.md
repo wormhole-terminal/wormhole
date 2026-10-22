@@ -53,7 +53,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   upgrade or when it sets a damaged one aside were never deleted, and each held every terminal's
   saved text as it was then. Wormhole now keeps the newest copy from before an upgrade for two weeks,
   in case you need to go back, and deletes the others, and any copy older than two weeks, at launch.
-- **Medium** · no advisory · affects 0.1.0–1.2.0: Wormhole's data folder and the files in it (the
+- **Low** · no advisory · affects 0.1.0–1.2.0: Wormhole's data folder and the files in it (the
   database with your terminals' saved text, settings, profiles and their environment, logs) could be
   read by other accounts on the Mac wherever the folder wasn't already protected by macOS, for
   example when it was moved or copied elsewhere. Wormhole now makes the folder and everything in it
