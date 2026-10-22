@@ -1,18 +1,40 @@
-//! One window: a [`Workspace`] is the view of one window's terminals, with their splits and panes,
-//! the sidebar, the side panels (notes, changes, history, project), the title rows and the status
-//! bar, and it saves and restores itself. What must exist once, whatever the number of windows,
-//! is `AppState` (`app_state`), which the windows read and update (the two are one tier of the
-//! order, until phase 5 separates them); windows are opened and closed in `window_lifecycle`.
+//! One window. A [`Workspace`] is the view of one window's terminals with their splits and panes, the
+//! sidebar, the side panels (notes, changes, history, project), the title rows and the status bar; it
+//! saves and restores itself. What must exist once, whatever the number of windows, is `AppState`
+//! (`app_state`), which the windows read and update: the two are one tier of the order until phase 5
+//! separates them. Windows are opened and closed in `window_lifecycle`. The type keeps the name
+//! `Workspace`, and so do the action namespace `workspace` and the key context `"Workspace"`: they
+//! are in users' keymaps.
+//!
+//! Inside, by folder:
+//! - `panes/` the split on screen, its model (`splits`) and the pane drop; `title/` the title rows
+//!   (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's areas, the
+//!   stops, the Esc ladder and the ring.
+//! - `features/` the side panels' contents, each in a folder (`notes`, `usage`, `project`, `git`).
+//! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
+//!   window and the welcome.
+//!
+//! and by file: the session (`session`), the window's terminals (`terminals`), its tick (`tick`), its
+//! saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`), what it
+//! answers from outside (`window_control`, `restart_facts`, `ambient`, `menu_state`), its actions and
+//! keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`, `glass`,
+//! `status_bar`, `panel_list`) and what opens over it (`overlay`, `dialog`).
 //!
 //! Everything that sits above the window has left this folder (`app`, `command_palette`,
 //! `shortcut_sheet`, `status_item`, `settings_window`, `studio`, `about`, `notifications`,
 //! `updates`), and so have the shared state and the actions it builds on (`app_state`, `actions`).
-//! The window uses nothing above it but the known exceptions, kept until phase 5: it calls
-//! `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events instead)
-//! from `tick`, `terminals`, `panes` (and `panes::splits`), `windows` and this file's window-activation
-//! observer, `finished_commands` from `ambient`, and `permission_asks` from the welcome; and the
-//! welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`, which an
-//! action carrying the section will replace).
+//! The window uses nothing above it but two known exceptions, kept until phase 5:
+//! - it calls `notifications`' `dismiss` and `sweep` (the window will emit seen and closed events
+//!   instead) from `tick`, `terminals`, `panes` (and `panes::splits`), `windows` and this file's
+//!   window-activation observer, `finished_commands` from `ambient`, and `permission_asks` from
+//!   the welcome;
+//! - the welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`,
+//!   which an action carrying the section will replace).
+//!
+//! The nested areas (`sidebar/`, `onboarding/`, `features/`) still keep their state in `Workspace`:
+//! their `impl Workspace` blocks are the `impl-outside` rule's `pending` list in
+//! `scripts/structure.json`, phase 5's shrink-only counter. Outside `window/` no `impl Workspace`
+//! is allowed.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
