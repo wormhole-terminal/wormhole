@@ -371,7 +371,10 @@ pub fn first_letter(name: &str) -> char {
 
 /// The colour as its name in the file; a name this build doesn't know is blue, not an error.
 mod color_key {
-    use super::*;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    use super::default_color;
+    use crate::sidebar::GroupColor;
 
     pub fn serialize<S: Serializer>(color: &GroupColor, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(color.key())
@@ -386,7 +389,7 @@ mod color_key {
 /// The avatar as a one-character string; anything else reads as "none yet" (a space, then
 /// [`Profile::sanitize`] picks the name's letter).
 mod letter {
-    use super::*;
+    use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S: Serializer>(letter: &char, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&letter.to_string())

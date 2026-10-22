@@ -182,9 +182,7 @@
       "crates/wormhole/src/workspace/text.rs": 1
     },
     "orphans": {},
-    "glob-imports": {
-      "crates/wormhole-core/src/profile/model.rs": 2
-    },
+    "glob-imports": {},
     "cycles": {
       "wormhole-core: agents -> terminal": 1,
       "wormhole-core: cli_tool -> ipc": 1,
