@@ -1,6 +1,8 @@
 mod about;
+mod actions;
 mod active_profile;
 mod app;
+mod app_state;
 mod background;
 mod command_palette;
 #[cfg(feature = "devctl")]
@@ -11,6 +13,7 @@ mod icons;
 mod inspector;
 mod intro;
 mod menubar;
+mod notifications;
 mod palette;
 mod perf;
 mod platform;
@@ -23,6 +26,7 @@ mod studio;
 mod style;
 mod terminal_view;
 mod theme_bridge;
+mod updates;
 mod window_ops;
 mod workspace;
 

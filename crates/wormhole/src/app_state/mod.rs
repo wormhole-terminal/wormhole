@@ -6,6 +6,10 @@
 //! is driven by one app-level tick and two message tasks (`app::launch`, `app::tick`), so it works
 //! the same with one window or five; windows open and close in `window_lifecycle`.
 
+pub(crate) mod look;
+pub(crate) mod profiles;
+pub(crate) mod recent_projects;
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -21,7 +25,7 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use crate::status_item;
 use crate::workspace::app_look::LookOverride;
 use crate::workspace::recent_projects::RecentProjects;
-use crate::workspace::{Workspace, aux_window, profiles, project, updates};
+use crate::workspace::{Workspace, aux_window, project, updates};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -43,7 +47,7 @@ pub(crate) struct AppState {
     /// Why `profiles.json` was set aside and rebuilt at launch, for Settings to say (the Profile page).
     pub profiles_error: Option<String>,
     /// The profiles that were shown before and are not now (see `profiles`).
-    pub(super) parked: profiles::Parked,
+    pub(crate) parked: profiles::Parked,
     pub store: Option<Store>,
     /// The tips closed with "Don't show again", kept in the store across launches.
     pub tips: DismissedTips,
@@ -98,14 +102,14 @@ pub(crate) struct AppState {
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
-    pub(super) next_id: i64,
+    pub(crate) next_id: i64,
     next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
-    pub(super) applied_theme: Option<u64>,
+    pub(crate) applied_theme: Option<u64>,
     ticks: u64,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
-    pub(super) look_override: LookOverride,
+    pub(crate) look_override: LookOverride,
     /// Hears the accessibility display options change while the app runs.
     _display_options: Option<crate::platform::look::DisplayObserver>,
 }
@@ -177,7 +181,7 @@ impl AppState {
 #[cfg(test)]
 impl AppState {
     /// An app with no database and no windows, for tests that open a `Workspace` themselves.
-    pub(super) fn for_test(next_id: i64) -> Self {
+    pub(crate) fn for_test(next_id: i64) -> Self {
         let (menu, _) = status_item::MenuState::new();
         Self {
             root: DataRoot::current(),

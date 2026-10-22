@@ -44,7 +44,7 @@ impl AppState {
         }
     }
 
-    pub(super) fn store_of_mut(&mut self, profile: &ProfileId) -> Option<&mut Store> {
+    pub(crate) fn store_of_mut(&mut self, profile: &ProfileId) -> Option<&mut Store> {
         if profile == self.profiles.active_id() {
             self.store.as_mut()
         } else {
@@ -53,7 +53,7 @@ impl AppState {
     }
 
     /// The project folders (preferences, trust, notes sync) of `profile`.
-    pub(super) fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
+    pub(crate) fn hub_of_mut(&mut self, profile: &ProfileId) -> Option<&mut project::ProjectHub> {
         if profile == self.profiles.active_id() {
             Some(&mut self.hub)
         } else {
@@ -272,7 +272,7 @@ fn open_beside(paths: &ProfilePaths) -> (ProfileData, SettingsStore) {
 }
 
 /// What each profile that is open but not shown keeps here (its settings are in [`ParkedSettings`]).
-pub(super) type Parked = HashMap<ProfileId, ProfileData>;
+pub(crate) type Parked = HashMap<ProfileId, ProfileData>;
 
 impl AppState {
     /// Wormhole is in profile `target` from now on: every window of the profile that was shown goes

@@ -449,7 +449,7 @@ pub(crate) fn dismiss(tab: i64, cx: &mut App) {
 
 /// A tab's notification tag.
 #[cfg(test)]
-pub(super) fn tag(tab: i64) -> SharedString {
+pub(crate) fn tag(tab: i64) -> SharedString {
     notify::notice_id(tab).into()
 }
 

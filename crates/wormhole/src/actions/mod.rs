@@ -148,7 +148,7 @@ pub struct MoveWindowToProfile(pub SharedString);
 pub struct NewTerminalWith(pub SharedString);
 
 /// The inspector is in debug builds only (or with the `inspector` feature).
-pub(super) const DEBUG: bool = cfg!(any(feature = "inspector", debug_assertions));
+pub(crate) const DEBUG: bool = cfg!(any(feature = "inspector", debug_assertions));
 
 /// The GPUI action of a table row. `None` for what nothing binds yet (later phases, the system's
 /// Help search, the keys kept for Terminal.app's meanings) and for the keys a view reads from

@@ -58,7 +58,13 @@
           "select"
         ],
         "terminal_view",
-        "workspace",
+        "actions",
+        [
+          "app_state",
+          "workspace"
+        ],
+        "notifications",
+        "updates",
         "about",
         "studio",
         "settings_window",

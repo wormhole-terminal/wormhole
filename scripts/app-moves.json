@@ -142,6 +142,77 @@
           "studio"
         ]
       }
+    },
+    "4": {
+      "doc": "The shared state, the actions, the notifications and the updater leave workspace/ (phase 4, series 4)",
+      "moves": [
+        {
+          "from": "workspace/app.rs",
+          "to": "app_state/mod.rs"
+        },
+        {
+          "from": "workspace/profiles.rs",
+          "to": "app_state/profiles.rs"
+        },
+        {
+          "from": "workspace/app_look.rs",
+          "to": "app_state/look.rs"
+        },
+        {
+          "from": "workspace/recent_projects.rs",
+          "to": "app_state/recent_projects.rs"
+        },
+        {
+          "from": "workspace/actions.rs",
+          "to": "actions/mod.rs"
+        },
+        {
+          "from": "workspace/notifications",
+          "to": "notifications"
+        },
+        {
+          "from": "workspace/updates.rs",
+          "to": "updates/mod.rs"
+        },
+        {
+          "from": "workspace/update_restart.rs",
+          "to": "updates/restart.rs"
+        },
+        {
+          "from": "workspace/update_restart_tests.rs",
+          "to": "updates/restart_tests.rs"
+        }
+      ],
+      "reexports": {
+        "AppState": "app_state::AppState",
+        "app_mut": "app_state::app_mut",
+        "override_look": "app_state::look::override_look",
+        "CheckForUpdates": "actions::CheckForUpdates",
+        "NewWindow": "actions::NewWindow",
+        "devctl_update_installed": "updates::devctl_installed"
+      },
+      "layers": [
+        {
+          "remove": [
+            "workspace"
+          ],
+          "after": "terminal_view",
+          "insert": [
+            "actions",
+            [
+              "app_state",
+              "workspace"
+            ]
+          ]
+        },
+        {
+          "after": "workspace",
+          "insert": [
+            "notifications",
+            "updates"
+          ]
+        }
+      ]
     }
   }
 }

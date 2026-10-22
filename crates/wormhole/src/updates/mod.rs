@@ -6,6 +6,10 @@
 //! URL and never check. Which feeds a check reads is the `update_channel` setting. The public key is `packaging/updater.pub`, the same
 //! file `scripts/package.sh` checks the signing key against.
 
+pub(crate) mod restart;
+#[cfg(test)]
+mod restart_tests;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -94,7 +98,7 @@ impl Updates {
         self.restart_when_idle.is_some()
     }
 
-    pub(super) fn restart_watch(&mut self) -> Option<&mut IdleWatch> {
+    pub(crate) fn restart_watch(&mut self) -> Option<&mut IdleWatch> {
         self.restart_when_idle.as_mut()
     }
 

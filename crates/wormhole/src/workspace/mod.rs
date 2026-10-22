@@ -45,10 +45,7 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
-pub(crate) mod actions;
 pub(crate) mod ambient;
-pub(crate) mod app;
-pub(crate) mod app_look;
 pub(crate) mod aux_window;
 mod breadcrumb;
 pub(crate) mod chrome;
@@ -82,7 +79,6 @@ mod menu_tests;
 #[cfg(test)]
 mod note_tests;
 pub(crate) mod notes;
-pub(crate) mod notifications;
 pub(crate) mod onboarding;
 pub(crate) mod open_in;
 pub(crate) mod overlay;
@@ -100,9 +96,7 @@ mod path_menu;
 mod profile_chip;
 #[cfg(test)]
 mod profile_look_tests;
-pub(crate) mod profiles;
 pub(crate) mod project;
-pub(crate) mod recent_projects;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
@@ -128,10 +122,6 @@ mod title_extras;
 mod title_row;
 #[cfg(test)]
 mod title_tests;
-pub(crate) mod update_restart;
-#[cfg(test)]
-mod update_restart_tests;
-pub(crate) mod updates;
 mod usage;
 #[cfg(test)]
 pub(crate) mod view_tests;
@@ -142,6 +132,16 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 mod worktree;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::actions;
+pub(crate) use crate::app_state as app;
+pub(crate) use crate::app_state::look as app_look;
+pub(crate) use crate::app_state::profiles;
+pub(crate) use crate::app_state::recent_projects;
+pub(crate) use crate::notifications;
+pub(crate) use crate::updates;
+pub(crate) use crate::updates::restart as update_restart;
 
 use self::git_panel::{diff_view, picker};
 use self::saved_layout::Layout;
