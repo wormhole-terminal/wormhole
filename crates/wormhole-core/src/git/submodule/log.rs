@@ -15,7 +15,6 @@ use anyhow::Result;
 
 use super::{Submodule, commit_id};
 use crate::git::head::{POINTER_CAP, normalize, pointed_dir};
-use crate::git::log::parse_record;
 use crate::git::{Commit, FileChange, GitCmd, GitError, RepoStatus};
 use crate::storage::fsutil::{LinkPolicy, read_capped};
 
@@ -207,7 +206,7 @@ fn commits_between(folder: &Path, old: &str, new: &str) -> Result<Range> {
         let record = record.trim_start_matches('\n');
         let mut chars = record.chars();
         let Some(side) = chars.next() else { continue };
-        let Some(commit) = parse_record(chars.as_str().trim_start_matches('\x1f')) else { continue };
+        let Some(commit) = Commit::from_record(chars.as_str().trim_start_matches('\x1f')) else { continue };
         if side == '>' { ahead.push(commit) } else { behind.push(commit) }
     }
     let (mut ahead_total, mut behind_total) = (ahead.len(), behind.len());

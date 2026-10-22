@@ -226,6 +226,25 @@ pub struct Commit {
     pub subject: String,
 }
 
+impl Commit {
+    /// One commit of `--format=%H%x1f%h%x1f%P%x1f%an%x1f%at%x1f%s`. Beside the type rather than in
+    /// `log`, because a submodule's log reads the same records and `log` itself uses `submodule`.
+    pub(crate) fn from_record(record: &str) -> Option<Self> {
+        let fields: Vec<&str> = record.split('\x1f').collect();
+        if fields.len() < 6 {
+            return None;
+        }
+        Some(Self {
+            sha: fields[0].to_string(),
+            short: fields[1].to_string(),
+            parent: fields[2].split(' ').next().filter(|p| !p.is_empty()).map(str::to_string),
+            author: fields[3].to_string(),
+            time: fields[4].parse().unwrap_or(0),
+            subject: fields[5].to_string(),
+        })
+    }
+}
+
 pub(crate) fn has_head(root: &Path) -> bool {
     GitCmd::new(root)
         .args(["rev-parse", "--verify", "--quiet", "HEAD"])
