@@ -257,7 +257,7 @@ fn choose_app(cx: &mut App) {
 /// config.json) is shown as written, with what happens instead.
 fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let settings = settings(cx);
-    let current = crate::window::sidebar::shells::default_key(settings).to_string();
+    let current = wormhole_core::terminal::shells::default_key(settings).to_string();
     let choices = shells::choices(settings);
     let face = choices.iter().find(|c| c.key == current).map_or(current.clone(), |c| c.name.clone());
     let mut options: Vec<Choice<String>> = choices.iter().map(shell_choice).collect();

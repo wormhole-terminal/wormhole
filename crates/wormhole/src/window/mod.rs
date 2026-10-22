@@ -82,7 +82,7 @@ mod save;
 mod saved_layout;
 mod session;
 mod shortcuts;
-pub(crate) mod sidebar;
+mod sidebar;
 mod slide;
 #[cfg(test)]
 mod stable_list_tests;

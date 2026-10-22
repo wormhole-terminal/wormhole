@@ -7,17 +7,11 @@ use gpui_kit::*;
 use wormhole_core::terminal::shells::{self, ShellChoice};
 
 use crate::platform::{self, Item, Menu};
-use crate::settings::Settings;
 use crate::settings::settings;
 use crate::window::Workspace;
 
 /// The menu's heading.
 const MENU_TITLE: &str = "New terminal with";
-
-/// The key `default_shell` names, as the choices spell it: what a plain + opens.
-pub(crate) fn default_key(settings: &Settings) -> &str {
-    settings.default_shell.trim()
-}
 
 impl Workspace {
     /// `button` (a +) with the shells' menu under a right-click: every shell by name, the default
@@ -49,7 +43,7 @@ impl Workspace {
     /// The shells' menu, with the shells and the default as they are now.
     fn shell_menu(&self, cx: &mut Context<Self>) -> Menu {
         let settings = settings(cx);
-        shell_menu(&shells::choices(settings), default_key(settings), &cx.weak_entity())
+        shell_menu(&shells::choices(settings), shells::default_key(settings), &cx.weak_entity())
     }
 }
 

@@ -140,7 +140,7 @@ fn for_terminal_with(
     if let Some(shell) = project_shell.map(str::trim).filter(|shell| !shell.is_empty()) {
         return ShellCommand::login(shell);
     }
-    let default = settings.default_shell.trim();
+    let default = default_key(settings);
     if default != LOGIN {
         match resolve_with(default, &settings.shells, login) {
             Some(command) => return command,
@@ -150,6 +150,11 @@ fn for_terminal_with(
         }
     }
     ShellCommand::login(login)
+}
+
+/// The key `default_shell` names, as the choices spell it: what a plain + opens.
+pub fn default_key(settings: &Settings) -> &str {
+    settings.default_shell.trim()
 }
 
 /// The shells to offer, in order: the login shell, the profiles of `config.json`, then the

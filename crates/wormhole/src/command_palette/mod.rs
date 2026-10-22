@@ -103,7 +103,7 @@ fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     let key = cx.active_window().map(|w| w.window_id());
     let finished = crate::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.
-    let default = crate::window::sidebar::shells::default_key(settings(cx)).to_string();
+    let default = wormhole_core::terminal::shells::default_key(settings(cx)).to_string();
     let shells = wormhole_core::terminal::shells::choices(settings(cx))
         .into_iter()
         .filter(|c| c.key != default)
