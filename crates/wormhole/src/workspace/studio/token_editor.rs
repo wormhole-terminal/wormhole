@@ -4,11 +4,25 @@
 //! what uses it; the contrast pairs it is part of; and the draft's low-contrast pairs, each
 //! with a fix written as an expression.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::color_picker::ColorPicker;
+use gpui_kit::component::input::Input;
+use gpui_kit::component::slider::Slider;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::tokens::{
     ExprError, check_expression, contrast_issues, default_rule, followers, refers_to, uses_of,
 };
+use wormhole_core::tokens::{METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
 
-use super::*;
+use super::draft::{self, is_metric, number, override_of, set_override};
+use super::{Edit, StudioWindow, tokens_of, ui};
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::{self, Edges, TextRole};
+use crate::theme_bridge::hsla;
+use crate::workspace::aux_window;
 
 /// The editor's width.
 pub(super) const EDITOR_W: f32 = 320.0;

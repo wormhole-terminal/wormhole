@@ -23,17 +23,21 @@ mod token_rows;
 
 use std::sync::Arc;
 
-use gpui_kit::component::color_picker::{ColorPicker, ColorPickerEvent, ColorPickerState};
-use gpui_kit::component::slider::{Slider, SliderEvent, SliderState};
+use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
+use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::component::slider::{SliderEvent, SliderState};
+use gpui_kit::*;
 use wormhole_core::keyspec::KeySpec;
-use wormhole_core::tokens::{self, Color, METRIC_TOKENS, ThemeFile, ThemeTokens, UI_TOKENS};
+use wormhole_core::tokens::{Color, ThemeFile, ThemeTokens};
 
+use super::app::{AppState, app, app_mut};
 use super::aux_window;
-use super::*;
 use crate::platform::vibrancy::Blur;
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::Edges;
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
-use draft::{ANSI_NAMES, Themes, draft_for, group_of, is_metric, number, override_of, set_override};
+use draft::{Themes, draft_for, group_of, is_metric, number, override_of, set_override};
 use gallery::{Area, GalleryView};
 use save::Notice;
 use title::SaveAction;

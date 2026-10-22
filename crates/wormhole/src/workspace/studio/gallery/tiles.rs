@@ -1,11 +1,17 @@
 //! The status tiles in every state, a card of terminals and the terminal's tab.
 
-use super::*;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use style::{
     RowTone, SessionRow, StatusGlyph, StatusTile, TILE, TILE_DENSE_FOLD, TILE_MINI, TILE_SMALL, TILE_TITLE,
     TerminalTab, TileFace,
 };
 use wormhole_core::agents::AgentId;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

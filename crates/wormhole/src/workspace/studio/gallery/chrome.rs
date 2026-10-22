@@ -1,8 +1,13 @@
 //! The chrome's icons: a bare icon, the icon button in its sizes and states, the × that
 //! closes a row, and a hit area grown round a small drawing.
 
-use super::*;
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Selectable as _;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, Edges, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

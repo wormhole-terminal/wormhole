@@ -2,7 +2,14 @@
 //! close question), the first-run sheet, About and Licenses. Each is the real
 //! window's parts on the live tokens; the windows themselves need their own state.
 
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, Edges, TextRole};
 use crate::workspace::about;
 
 /// The About window's width: its content is drawn on a card that wide.

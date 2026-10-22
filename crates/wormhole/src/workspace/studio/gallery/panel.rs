@@ -4,11 +4,21 @@
 
 use std::rc::Rc;
 
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::Input;
 use gpui_kit::component::switch::Switch;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use style::{BandKind, BandParts, FileLines, FileRow, ItemParts, Section};
 use wormhole_core::git::ChangeKind;
 use wormhole_core::project::{Feature, FeatureStanding};
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
 
 /// The panel's slices are drawn 300 wide (narrower in a narrow gallery column).
 const COLUMN_W: f32 = 300.0;

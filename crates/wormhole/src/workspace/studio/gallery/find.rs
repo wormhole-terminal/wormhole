@@ -2,9 +2,15 @@
 
 use std::rc::Rc;
 
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::terminal::find::FindOptions;
 
-use super::*;
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::settings;
+use crate::style::{self, TextRole};
+use crate::theme_bridge::hsla;
 
 pub(super) fn render(
     _studio: &GalleryView,

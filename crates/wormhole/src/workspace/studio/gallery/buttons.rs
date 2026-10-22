@@ -1,6 +1,11 @@
 //! GPUI Kit's button variants and sizes.
 
-use super::*;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
 
 pub(super) fn render(
     _studio: &GalleryView,

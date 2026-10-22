@@ -1,13 +1,20 @@
 //! The sidebar's parts: group cards and their heads, terminal rows in every state
 //! (agents and plain terminals), the status glyphs and the status bar's items.
 
-use super::*;
-use crate::theme_bridge;
+use gpui_kit::assets::IconName;
+use gpui_kit::component::{Icon, Sizable};
+use gpui_kit::*;
 use style::{RowTone, SessionRow, StatusGlyph};
 use wormhole_core::agents::{self, AgentId};
 use wormhole_core::folder_color::FolderColor;
 use wormhole_core::sidebar::Bracket;
 use wormhole_core::sidebar::GroupColor;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
+use crate::theme_bridge;
 
 /// The sidebar's width (and its minimum in the app).
 const COLUMN_W: f32 = 350.0;

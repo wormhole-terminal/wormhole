@@ -1,9 +1,14 @@
 //! Split panes: two pane headers, the focused one with its primary line, over a divider
 //! at rest and one under the pointer.
 
+use gpui_kit::assets::IconName;
+use gpui_kit::*;
 use wormhole_core::panes::{Axis, Zone};
 
-use super::*;
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

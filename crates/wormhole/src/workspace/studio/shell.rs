@@ -3,9 +3,14 @@
 //! the shell can be redrawn without the gallery, the list and the editor, and each of those
 //! alone.
 
+use gpui_kit::*;
+
+use super::gallery::Area;
 use super::token_editor::EDITOR_W;
 use super::token_list::LIST_W;
-use super::*;
+use super::{StudioWindow, ui};
+use crate::settings::settings;
+use crate::workspace::{aux_window, chrome};
 
 impl StudioWindow {
     /// The gallery's filter, which narrows the token list to the same part of the app.

@@ -8,9 +8,13 @@
 use std::ops::Range;
 
 use gpui_kit::component::input::{Escape, IndentInline, MoveDown, MoveUp};
+use gpui_kit::*;
 use wormhole_core::tokens::{Completion, completions};
 
-use super::*;
+use super::StudioWindow;
+use super::draft::{group_of, is_metric};
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
 
 /// The list while it is open.
 pub(super) struct Open {

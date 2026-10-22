@@ -3,8 +3,13 @@
 
 use std::time::Duration;
 
-use super::*;
+use gpui_kit::*;
 use style::motion::{self, CubicBezier};
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

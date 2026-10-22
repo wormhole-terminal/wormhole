@@ -1,8 +1,14 @@
 //! Form controls in their states.
 
-use super::*;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::input::Input;
 use gpui_kit::component::radio::Radio;
 use gpui_kit::component::switch::Switch;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     studio: &GalleryView,

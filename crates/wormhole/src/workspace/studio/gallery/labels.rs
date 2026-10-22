@@ -1,6 +1,10 @@
 //! Titles, notes and toolbars: the text that heads or fills a panel.
 
-use super::*;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

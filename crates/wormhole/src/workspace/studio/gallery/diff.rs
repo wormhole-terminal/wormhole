@@ -2,9 +2,13 @@
 //! the file, the counts, wrap, Split | Unified and esc) over its own rows (split: hunk
 //! header, a replacement padded with hatched fillers, context).
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Selectable as _;
+use gpui_kit::*;
 
-use super::*;
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, Edges, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

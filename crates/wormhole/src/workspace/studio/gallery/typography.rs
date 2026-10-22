@@ -1,6 +1,10 @@
 //! The type roles (and the label role of band titles) and the text colors.
 
-use super::*;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::TextRole;
 
 pub(super) fn render(
     _studio: &GalleryView,

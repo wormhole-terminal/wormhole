@@ -1,10 +1,17 @@
 //! Highlighting from the theme's syntax tokens.
 
 use std::ops::Range;
+use std::sync::Arc;
 
-use super::*;
 use gpui_kit::component::highlighter::{HighlightTheme, Language, SyntaxHighlighter};
 use gpui_kit::component::input::Rope;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::SettingsStore;
+use crate::style::TextRole;
+use crate::theme_bridge::hsla;
 
 const CODE_SAMPLE: &str = "/// Count words, ignoring case.\nfn count(text: &str) -> usize {\n    let words = text.split_whitespace();\n    words.map(str::to_lowercase).count() // 42\n}";
 

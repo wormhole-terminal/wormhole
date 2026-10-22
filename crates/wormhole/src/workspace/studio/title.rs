@@ -2,12 +2,21 @@
 //! (click the name to rename it), what it extends, Unsaved; then Discard, Export… and the
 //! Save theme split, whose menu has the other ways to save.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
 use gpui_kit::component::button::ButtonGroup;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::Input;
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::tooltip::Tooltip;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::tokens;
 
-use super::*;
+use super::{StudioWindow, ui};
+use crate::settings::{SettingsStore, UiColors};
+use crate::style::{self, Edges, TextRole};
 use crate::workspace::chrome::TitleDrag as _;
 
 /// The name field while renaming.

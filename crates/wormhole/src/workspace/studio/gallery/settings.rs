@@ -1,9 +1,19 @@
 //! The settings window's parts: the rows in their states under a group's head, the
 //! nav items, and the controls that are ours.
 
-use super::*;
+use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use style::{BannerKind, NavMark, RecorderState, SettingParts, SettingState};
+
+use super::Env;
+use super::view::GalleryView;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
+use crate::theme_bridge;
 
 /// The settings content column and the nav, as wide as in the app.
 const COLUMN_W: f32 = 560.0;

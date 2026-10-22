@@ -1,8 +1,14 @@
 //! What devctl drives in the Theme Studio window (`studio-*` commands, `state`'s studio line).
 //! Compiled with the `devctl` feature only.
 
+use gpui_kit::*;
+
 use super::draft::Show;
-use super::*;
+use super::gallery::Area;
+use super::title::SaveAction;
+use super::{StudioWindow, WINDOW_MIN, toggle_studio};
+use crate::workspace::Workspace;
+use crate::workspace::app::app;
 
 impl Workspace {
     /// ⌥⌘, (Wormhole → Theme Studio): open the Studio window, or close it if it is open.

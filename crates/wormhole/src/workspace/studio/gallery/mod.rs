@@ -27,14 +27,16 @@ mod typography;
 mod view;
 mod windows;
 
-use syntax::CodeSample;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::tokens::TOKEN_USES;
+use wormhole_core::tokens::{self, ThemeTokens};
+
+use super::t;
+use crate::settings::UiColors;
+use crate::style::{self, TextRole};
+
 pub(super) use view::GalleryView;
-
-use wormhole_core::tokens::{TOKEN_USES, TokenUse, uses_of};
-
-use super::token_editor::EDITOR_W;
-use super::token_list::LIST_W;
-use super::*;
 
 /// What a specimen draws with: the interface colors, the resolved tokens, and what the
 /// selected token is used by.

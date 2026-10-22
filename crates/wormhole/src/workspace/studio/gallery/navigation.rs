@@ -1,6 +1,11 @@
 //! Tabs, chips, badges, rows, cards and a tooltip: the shared components of `style`, on the live tokens.
 
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

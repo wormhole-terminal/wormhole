@@ -1,8 +1,12 @@
 //! The select: a trigger with chevrons, and the menu it opens (a search row over roomy
 //! options on a lifted surface).
 
-use super::*;
+use gpui_kit::*;
+
+use super::Env;
+use super::view::GalleryView;
 use crate::select;
+use crate::style::TextRole;
 
 pub(super) fn render(
     _studio: &GalleryView,

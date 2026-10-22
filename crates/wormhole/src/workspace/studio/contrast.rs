@@ -3,10 +3,18 @@
 
 use std::collections::BTreeSet;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::button::Button;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::tokens::ThemeTokens;
 use wormhole_core::tokens::{ContrastCheck, ContrastIssue};
 
 use super::token_editor::section;
-use super::*;
+use super::{Edit, StudioWindow};
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
 
 /// The tokens whose text falls short somewhere: the list marks them and filters by them.
 pub(super) fn low_contrast_tokens(tokens: &ThemeTokens) -> BTreeSet<String> {

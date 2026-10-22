@@ -9,10 +9,20 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use gpui_kit::assets::IconName;
+use gpui_kit::component::Sizable;
+use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use style::{BandKind, BandParts, Section};
+use wormhole_core::tokens::ThemeTokens;
+
 use super::draft::Show;
 use super::token_rows::{Band, Chip, Inputs, ListRow, TokenRow, build};
-use super::*;
-use style::{BandKind, BandParts, Section};
+use super::{StudioWindow, color_chip, contrast, gallery, metric_chip, tokens_of, ui};
+use crate::settings::{SettingsStore, UiColors, settings};
+use crate::style::{self, Edges, TextRole};
+use crate::workspace::aux_window;
 
 /// The token list's width.
 pub(super) const LIST_W: f32 = 300.0;

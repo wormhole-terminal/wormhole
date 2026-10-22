@@ -1,8 +1,13 @@
 //! What the app shows outside the lists: the quick panel and the
 //! command palette with their parts, and the readout beside a resize handle.
 
-use super::*;
+use gpui_kit::assets::IconName;
+use gpui_kit::*;
 use style::StatusGlyph;
+
+use super::Env;
+use super::view::GalleryView;
+use crate::style::{self, TextRole};
 
 pub(super) fn render(
     _studio: &GalleryView,

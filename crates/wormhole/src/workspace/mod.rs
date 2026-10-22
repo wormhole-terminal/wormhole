@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::color_picker::{ColorPickerEvent, ColorPickerState};
 use gpui_kit::component::input::{Input, InputEvent, InputState, TextareaState};
 use gpui_kit::component::{Icon, Sizable};
