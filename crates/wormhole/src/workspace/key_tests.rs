@@ -4,7 +4,7 @@ use gpui_kit::{OwnedMenuItem, TestAppContext};
 use wormhole_core::view::focus::Area;
 
 use crate::workspace::RightTab;
-use crate::workspace::app::{OpenWindow, app};
+use crate::workspace::app::{OpenWindow, app, app_mut};
 use crate::workspace::view_tests::{draw, drive, hook, isolate_in, press, read, start};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
@@ -167,6 +167,30 @@ fn the_menus_follow_the_window_in_front(cx: &mut TestAppContext) {
     let window_menu = items(cx, "Window");
     let first = window_menu.iter().position(|item| *item == names[0]).expect("the terminals are listed");
     assert_eq!(window_menu[first..first + 2], names[..], "in the sidebar's order: {window_menu:?}");
+}
+
+#[gpui_kit::test]
+fn the_menus_follow_a_change_the_shared_state_announces_at_once(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "the_menus_follow_a_change_the_shared_state_announces_at_once") {
+        return;
+    }
+    let window = start(cx, 1);
+    draw(cx, &window);
+    cx.update(|cx| {
+        crate::app::menus::follow_changes(cx);
+        crate::app::menus::sync(cx);
+    });
+    assert!(!cx.update(|cx| crate::app::menus::dump(cx)).contains("zebra-project"));
+    // What a profile switch does at its end: change what the menus show and say so, with no tick
+    // or key between.
+    cx.update(|cx| {
+        app_mut(cx).remember_project(std::path::PathBuf::from("/tmp/zebra-project"));
+        crate::workspace::menu_state::menus_changed(cx);
+    });
+    assert!(
+        cx.update(|cx| crate::app::menus::dump(cx)).contains("zebra-project"),
+        "the menus were put up again when the update ended, not on the next tick"
+    );
 }
 
 #[gpui_kit::test]

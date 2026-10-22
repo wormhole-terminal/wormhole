@@ -21,7 +21,7 @@ use crate::workspace::actions::{
     SwitchProfile, gpui_action,
 };
 use crate::workspace::app::app;
-use crate::workspace::menu_state::front_window_state;
+use crate::workspace::menu_state::{MenusChanged, front_window_state};
 
 /// The longest the Window menu's terminal names may lag behind the sidebar's.
 const NAMES_EVERY: Duration = Duration::from_secs(5);
@@ -50,6 +50,13 @@ pub(crate) fn sync(cx: &mut App) {
         app(cx).profiles.profiles().iter().map(|p| p.id.to_string().into()).collect();
     cx.set_menus(gpui_menus(menus::menus(&state), &recent, &shells, &profiles));
     cx.set_global(Built { state, at: Instant::now() });
+}
+
+/// Put the menus up as soon as what they show changes outside a key or the tick (a profile switch
+/// says so with `menu_state::menus_changed`). The observer runs when the update that said it is
+/// done, so it sees the finished change.
+pub(crate) fn follow_changes(cx: &mut App) {
+    cx.observe_global::<MenusChanged>(sync).detach();
 }
 
 /// Put the menus up again on the next sync, whatever they show (a key binding changed).
