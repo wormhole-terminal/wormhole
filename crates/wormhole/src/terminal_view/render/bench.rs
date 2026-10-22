@@ -17,7 +17,7 @@ use gpui_kit::{Font, SharedString, TextRun, font, point, px};
 use wormhole_core::terminal::testing::TestTerm;
 
 use super::frame::{FrameCache, Geometry};
-use super::shaping::text_run;
+use super::shaping::word_runs;
 use crate::palette::Palette;
 
 /// Counts this thread's allocations, so tests running in parallel don't
@@ -143,7 +143,7 @@ fn frame(
         |segment| {
             counts.lines_shaped += 1;
             counts.glyphs_shaped += segment.text.chars().count();
-            let runs = segment.runs.iter().map(|(len, style)| text_run(*len, style, base_font)).collect();
+            let runs = word_runs(&segment, base_font);
             (fed(segment.text, runs), true)
         },
         |text, runs| {

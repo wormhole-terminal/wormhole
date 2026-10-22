@@ -63,6 +63,31 @@ pub(super) fn text_run(len: usize, style: &Style, base_font: &Font) -> TextRun {
     }
 }
 
+/// GPUI's text runs to shape a word with: one per stretch of the same font (bold, italic), whatever
+/// the colors. GPUI starts a new CoreText run at every color change, in a font copy of its own, so a
+/// word of a color per cell (`ttystorm flood --kind colorflood`, a gradient) was shaped one cell at a
+/// time: 3 to 4 ms for a screen-wide one. The glyphs are painted in their cells' colors afterwards
+/// anyway, and [`super::words`] caches words by text and fonts alone, so shaping them by text and
+/// fonts alone is also what keeps a cached word the same in any colors: a ligature now forms across a
+/// color change, painted in the color of its first cell, as it already did when the word was first
+/// seen in one color.
+pub(super) fn word_runs(segment: &Segment, base_font: &Font) -> Vec<TextRun> {
+    let mut runs: Vec<TextRun> = Vec::new();
+    let mut font: Option<(bool, bool)> = None;
+    for (len, style) in &segment.runs {
+        match runs.last_mut() {
+            Some(run) if font == Some((style.bold, style.italic)) => run.len += len,
+            _ => {
+                font = Some((style.bold, style.italic));
+                // Strikethroughs are painted by the terminal; one here would only split the run.
+                let plain = Style { strike: false, ..*style };
+                runs.push(text_run(*len, &plain, base_font));
+            }
+        }
+    }
+    runs
+}
+
 /// Shape one word of a row, each glyph pinned to its cells.
 pub(super) fn shape_word(
     segment: &Segment,
@@ -72,8 +97,7 @@ pub(super) fn shape_word(
     cell_width: Pixels,
     outlines: &mut Outlines,
 ) -> Vec<Shaped> {
-    let runs: Vec<TextRun> =
-        segment.runs.iter().map(|(len, style)| text_run(*len, style, base_font)).collect();
+    let runs = word_runs(segment, base_font);
     let advance = if segment.wide { cell_width * 2.0 } else { cell_width };
     let line = text_system.shape_line(segment.text.clone().into(), font_size, &runs, Some(advance));
     // Which faces the glyphs are from is only known here, with the text and the runs at hand.
@@ -113,4 +137,48 @@ pub(super) fn shape_blurred(
         })
         .collect();
     text_system.shape_line(text.into(), font_size, &runs, Some(cell_width))
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui_kit::{FontStyle, FontWeight, font};
+    use wormhole_core::terminal::types::{Cell, Color, Colors, Flags, NamedColor, RowExtras};
+    use wormhole_core::theme;
+
+    use super::word_runs;
+    use crate::palette::Palette;
+    use crate::terminal_view::render::rows::{Marks, build_row};
+
+    #[test]
+    fn a_word_is_shaped_in_one_run_per_font_whatever_its_colors() {
+        let colors = [NamedColor::Red, NamedColor::Green, NamedColor::Blue];
+        let cells: Vec<Cell> = "abcdefg"
+            .chars()
+            .enumerate()
+            .map(|(col, c)| Cell {
+                c,
+                fg: Color::Named(colors[col % 3]),
+                flags: match col {
+                    3 | 4 => Flags::BOLD,
+                    5 => Flags::STRIKEOUT,
+                    _ => Flags::empty(),
+                },
+                ..Cell::default()
+            })
+            .collect();
+        let palette = Palette::from_theme(&theme::builtin()[0]);
+        let row = build_row(&cells, &RowExtras::default(), &palette, &Colors::default(), &Marks::default());
+        let [segment] = row.segments.as_slice() else { panic!("one word: {:?}", row.segments) };
+        assert_eq!(segment.runs.len(), 7, "a run per cell: each has its own color");
+        let runs = word_runs(segment, &font("JetBrains Mono"));
+        let shape: Vec<(usize, FontWeight, FontStyle, bool)> = runs
+            .iter()
+            .map(|run| (run.len, run.font.weight, run.font.style, run.strikethrough.is_some()))
+            .collect();
+        let (normal, bold, upright) = (FontWeight::NORMAL, FontWeight::BOLD, FontStyle::Normal);
+        assert_eq!(
+            shape,
+            [(3, normal, upright, false), (2, bold, upright, false), (2, normal, upright, false)]
+        );
+    }
 }

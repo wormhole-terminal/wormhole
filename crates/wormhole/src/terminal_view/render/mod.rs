@@ -43,6 +43,8 @@ mod words;
 mod bench;
 #[cfg(test)]
 mod guards;
+#[cfg(test)]
+mod word_tests;
 
 use self::frame::FrameCache;
 use self::overlays::bell_edge;
