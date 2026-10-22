@@ -82,6 +82,7 @@ fn main() {
         // Before anything opens: a test instance in background mode never shows a Dock icon.
         background::start(cx);
         gpui_kit::init(cx);
+        style::menu_layer::install(cx);
         fonts::init(cx);
         // The profile Wormhole was left in: its files are the ones read from here on. With only
         // Default (no `profiles.json`) these are the data folder's own, where they have always been.

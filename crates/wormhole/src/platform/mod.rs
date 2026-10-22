@@ -1,20 +1,29 @@
-//! What the platform draws or does itself, behind one API for the app, so a port to another
-//! platform adds a sibling folder to `macos/` and nothing else changes: `menu` is what a
-//! menu is (platform-neutral), `macos/` its AppKit implementation (the only code here with
-//! `objc2` and `unsafe`), `fallback/` GPUI's own for platforms with no native one, which is also
-//! what a window without a native view gets.
+//! The app's OS edge: everything the app asks of the operating system beyond GPUI, behind one
+//! neutral API, so a port to another system writes a sibling of `macos/` and nothing else
+//! changes. Each concern is a neutral file here (plain functions and types, no OS names: `window`,
+//! `vibrancy`, `look`, `dock`, `a11y`, `auth`, `hotkey`, `keys`, `sound`, `scroller`, `fonts`,
+//! `font_face`, `status_item`, `menu`, `popover`) that calls `os::…`: `macos/` is AppKit's
+//! implementation (the only code in the app with `objc2`, `block2`, raw window handles and
+//! `unsafe` for the system), `fallback/` the portable one, GPUI's own call where GPUI has one and
+//! "not available" where it hasn't (built only off macOS; not a target yet). `macos::appkit` holds
+//! the one cast from a GPUI window to its `NSView` and `NSWindow`.
 //!
-//! Context menus and popovers (`popover`: the folder's hover card, a group's name card) live here, and
-//! the system's colour panel (`pick_colour`). The dialogs, the status item's menu (`menubar`), the
-//! window's blur (`vibrancy`), the traffic lights, Touch ID (`auth`) and the rest of what is
-//! AppKit's are meant to move here one by one, each as a neutral file beside `menu.rs` and an
-//! implementation in `macos/`.
+//! Test and background-mode runs are decided inside these functions (`background_mode`, `cfg!(test)`),
+//! so no feature checks them. What a feature owns keeps its own OS part for now (the quick panel's
+//! window, the notification centre, the dialogs, the intro's Metal), calling `macos::appkit` for
+//! the window.
+//!
+//! The platform is the lowest layer of the app: it must not use `settings`, `style`, `workspace`
+//! or any other feature. Where drawing needs the app's look (the GPUI-drawn menus and popovers),
+//! the app hands it over (`Drawn`). It still names the status item's model and the menu key type
+//! from `menubar`, which are to move down into the neutral menu model.
 
 pub mod a11y;
 mod anchor;
 pub mod auth;
 pub mod background_mode;
 pub mod dock;
+#[cfg(not(target_os = "macos"))]
 pub mod fallback;
 pub mod font_face;
 pub mod fonts;
@@ -72,7 +81,10 @@ pub fn show_menu(menu: Menu, at: Point<Pixels>, window: &mut Window, cx: &mut Ap
         Ok(()) => return,
         Err(menu) => menu,
     };
-    crate::style::menu_layer::show(menu, at, window, cx);
+    match cx.try_global::<Drawn>().copied() {
+        Some(drawn) => (drawn.menu)(menu, at, window, cx),
+        None => tracing::warn!("no drawn menus handed over: the menu can't open"),
+    }
 }
 
 /// Open `popover` under `anchor` (the element's bounds in the window) as the platform's own, and
@@ -88,8 +100,26 @@ pub fn show_popover(popover: Popover, anchor: Bounds<Pixels>, window: &mut Windo
         Ok(handle) => return handle,
         Err(popover) => popover,
     };
-    crate::style::popover_layer::show(popover, anchor, window, cx)
+    match cx.try_global::<Drawn>().copied() {
+        Some(drawn) => (drawn.popover)(popover, anchor, window, cx),
+        None => {
+            tracing::warn!("no drawn popovers handed over: the popover can't open");
+            Handle::new(|_| {})
+        }
+    }
 }
+
+/// Menus and popovers drawn by GPUI in the app's look, for a window the platform can't show its
+/// own in (one without a native view, or a system without native menus). Drawing them takes the
+/// app's colours and components, which sit above the platform, so the app hands them over as it
+/// starts (`style::menu_layer::install`) instead of the platform reaching up for them.
+#[derive(Clone, Copy)]
+pub struct Drawn {
+    pub menu: fn(Menu, Point<Pixels>, &mut Window, &mut App),
+    pub popover: fn(Popover, Bounds<Pixels>, &mut Window, &mut App) -> Handle,
+}
+
+impl Global for Drawn {}
 
 /// Open the system's Colours window showing `start`; each colour chosen in it reaches `on_change`,
 /// the latest per tick, outside every borrow of the app. Nowhere to open it, nothing happens.

@@ -1,7 +1,7 @@
 //! What a menu is, whoever draws it: titles, checks, keys, small pictures, separators, section
 //! headers, submenus and what choosing an item does. No AppKit and no widget is named here, so
 //! the same value is a native `NSMenu` on macOS (`macos::menu`), GPUI's own popup elsewhere
-//! (`fallback::menu`), and plain text in tests and in devctl's `menu` command.
+//! (`style::menu_layer`, handed over as `Drawn`), and plain text in tests and in devctl's `menu` command.
 //!
 //! The model lives in the app, not in `wormhole-core`: choosing an item runs a closure on GPUI's
 //! `Window` and `App`, and core has no GPUI.

@@ -1,29 +1,19 @@
-//! GPUI's own implementations of what the platform draws natively elsewhere: for platforms that
-//! have no native one yet, and for a window the native one can't reach.
+//! The portable side of each platform concern, for a system that isn't macOS: GPUI's own call
+//! where GPUI has one (the Dock's bounce is `request_attention`, the scroller style
+//! `should_auto_hide_scrollbars`), and "not available" where it hasn't. Built only off macOS,
+//! which isn't a target yet: kept to the same functions as `macos/` by hand.
 
-#[cfg(not(target_os = "macos"))]
 pub mod a11y;
-#[cfg(all(not(target_os = "macos"), not(test)))]
+#[cfg(not(test))]
 pub mod auth;
-#[cfg(not(target_os = "macos"))]
 pub mod dock;
-#[cfg(not(target_os = "macos"))]
 pub mod font_face;
-#[cfg(not(target_os = "macos"))]
 pub mod fonts;
-#[cfg(not(target_os = "macos"))]
 pub mod hotkey;
-#[cfg(not(target_os = "macos"))]
 pub mod keys;
-#[cfg(not(target_os = "macos"))]
 pub mod look;
-#[cfg(not(target_os = "macos"))]
 pub mod scroller;
-#[cfg(not(target_os = "macos"))]
 pub mod sound;
-#[cfg(not(target_os = "macos"))]
 pub mod status_item;
-#[cfg(not(target_os = "macos"))]
 pub mod vibrancy;
-#[cfg(not(target_os = "macos"))]
 pub mod window;

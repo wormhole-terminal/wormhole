@@ -1,8 +1,8 @@
 //! A [`Popover`] as a card GPUI draws over the window, as the folder's and the group's cards were
 //! before they were native: for platforms without a native popover, and for a window with no native
 //! view to open one in. A layer the workspace renders holds the open one; its closures run from
-//! GPUI's own handlers, so there is nothing to queue here (see `popover` for why the native one
-//! must). The colour of one's own needs the system's colour panel, which only macOS has here: the
+//! GPUI's own handlers, so there is nothing to queue here (see `platform::popover` for why the
+//! native one must). The colour of one's own needs the system's colour panel, which only macOS has here: the
 //! card shows its nine dots alone.
 
 use std::collections::HashMap;

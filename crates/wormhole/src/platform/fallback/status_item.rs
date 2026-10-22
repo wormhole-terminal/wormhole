@@ -2,7 +2,7 @@
 
 use smol::channel::Sender;
 
-use crate::menubar::{MenuCommand, MenuSnapshot, StatusColors};
+use crate::menubar::{MenuCommand, MenuSnapshot};
 
 pub struct MenuBar;
 
@@ -20,7 +20,7 @@ impl MenuBar {
 pub fn save_icons(
     _dir: &std::path::Path,
     _prefix: &str,
-    _colors: StatusColors,
+    _colors: crate::menubar::StatusColors,
 ) -> anyhow::Result<Vec<std::path::PathBuf>> {
     anyhow::bail!("no status item off macOS")
 }

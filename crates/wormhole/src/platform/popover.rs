@@ -2,7 +2,7 @@
 //! and acts in: a line of text, a text field, a row of buttons, a row of colour dots, a list of
 //! actions like a menu's. No AppKit and no widget is named here, so the same value is an
 //! `NSPopover` of native controls on macOS (`macos::popover`), GPUI's own card elsewhere
-//! (`fallback::popover`), and plain text in tests and devctl's `popover` command.
+//! (`style::popover_layer`, handed over as `Drawn`), and plain text in tests and devctl's `popover` command.
 //!
 //! The model lives in the app, not in `wormhole-core`: pressing a button runs a closure on GPUI's
 //! `Window` and `App`.
