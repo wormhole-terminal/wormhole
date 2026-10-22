@@ -11,12 +11,11 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::update::{Release, Security, Severity, UpdateChannel};
 
-use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::updates::UpdatePhase;
+use crate::updates::{UpdatePhase, Updates};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("version", |_, cx| {
@@ -88,7 +87,7 @@ fn security_color(ui: UiColors, severity: Severity) -> Hsla {
 /// Where an update stands, with the button for the next step and the release notes.
 fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let updates = &app(cx).updates;
+    let updates = cx.global::<Updates>();
     let (phase, busy, available, (done, total), last, restart_pending) = (
         updates.phase.clone(),
         updates.busy(),

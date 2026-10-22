@@ -8,9 +8,9 @@
 //!
 //! One tier with the window (`workspace`): the shared state names the window's type and opens and
 //! closes windows through it, and a window reads the shared state, until phase 5 separates them.
-//! The two edges up, kept until then, are the field holding the status item's `MenuState` and the
-//! one holding the updater's `Updates`; the cycle entries in `scripts/structure.json` that name this
-//! module come from them and from that tie.
+//! The one edge up, kept until then, is the field holding the status item's `MenuState`; the cycle
+//! entries in `scripts/structure.json` that name this module come from it and from that tie. The
+//! updater's `Updates` is a global of its own, set at launch.
 
 pub(crate) mod look;
 pub(crate) mod profiles;
@@ -31,7 +31,6 @@ use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 use crate::app_state::look::LookOverride;
 use crate::app_state::recent_projects::RecentProjects;
 use crate::status_item;
-use crate::updates;
 use crate::workspace::features::project;
 use crate::workspace::{Workspace, aux_window};
 
@@ -65,7 +64,6 @@ pub(crate) struct AppState {
     pub recent_projects: RecentProjects,
     /// Menu bar item and global hotkey.
     pub menu: status_item::MenuState,
-    pub updates: updates::Updates,
     /// The settings window, while open, and its page: untyped (the page is `settings_window::SettingsWindow`,
     /// which sits above the shared state and reads it back typed with `current_window`).
     pub settings_window: Option<(AnyWindowHandle, AnyEntity)>,
@@ -140,7 +138,6 @@ impl AppState {
         let profiles::ProfileData { store, tips, mut hub, recent, usage, worktrees, last_panes } = data;
         let (next_id, next_window_id) = profiles::first_free_ids(&root, &profiles, store.as_ref());
         hub.ids_start_at(next_id);
-        let updates = updates::Updates::new(Some(root.update_schedule_file()), store.as_ref());
         Self {
             root,
             profiles,
@@ -151,7 +148,6 @@ impl AppState {
             hub,
             recent_projects: recent,
             menu,
-            updates,
             settings_window: None,
             studio_window: None,
             about_window: None,
@@ -201,7 +197,6 @@ impl AppState {
             hub: project::ProjectHub::load(),
             recent_projects: RecentProjects::default(),
             menu,
-            updates: updates::Updates::new(None, None),
             settings_window: None,
             studio_window: None,
             about_window: None,

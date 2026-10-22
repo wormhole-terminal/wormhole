@@ -112,6 +112,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(SettingsStore::load());
         cx.set_global(AppState::for_test(100));
+        cx.set_global(crate::updates::Updates::new(None, None));
         // These tests were written for the numbers that follow the list; the ones that stay with the
         // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
         crate::settings::update_settings(cx, |settings| {

@@ -9,9 +9,9 @@ use std::time::{Duration, Instant};
 use gpui_kit::*;
 use wormhole_core::agents::agent;
 
-use crate::app_state::{app, app_mut};
+use crate::app_state::app;
 use crate::terminal_view::Status;
-use crate::updates::{self, UpdatePhase};
+use crate::updates::{self, UpdatePhase, Updates};
 use crate::workspace::Workspace;
 use crate::workspace::dialog::{self, shortened};
 use crate::workspace::restart_facts::RestartFacts;
@@ -177,7 +177,7 @@ pub(crate) fn tick(cx: &mut App) {
 
 /// [`tick`] at `now`, so a test can let the minutes pass.
 pub(super) fn tick_at(now: Instant, cx: &mut App) {
-    let updates = &app(cx).updates;
+    let updates = cx.global::<Updates>();
     if !updates.restart_pending() {
         return;
     }
@@ -188,7 +188,7 @@ pub(super) fn tick_at(now: Instant, cx: &mut App) {
         return;
     }
     let idle = all_idle(cx);
-    let due = app_mut(cx).updates.restart_watch().is_some_and(|watch| watch.seen(idle, now));
+    let due = cx.global_mut::<Updates>().restart_watch().is_some_and(|watch| watch.seen(idle, now));
     if due {
         tracing::info!("restarting to update: the terminals have been idle");
         updates::restart_to_update(cx);

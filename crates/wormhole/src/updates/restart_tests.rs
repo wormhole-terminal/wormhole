@@ -6,9 +6,9 @@ use std::time::{Duration, Instant};
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
-use crate::app_state::{OpenWindow, app, app_mut};
-use crate::updates::UpdatePhase;
+use crate::app_state::{OpenWindow, app};
 use crate::updates::restart::{request_restart, tick_at};
+use crate::updates::{UpdatePhase, Updates};
 use crate::workspace::view_tests::{hook, isolate_in, start};
 use crate::workspace::window_lifecycle::open_workspace_window;
 
@@ -18,7 +18,7 @@ fn isolate(name: &str) -> bool {
 
 /// An update is installed, as Settings → Updates shows the Restart button.
 fn install_update(cx: &mut TestAppContext) {
-    cx.update(|cx| app_mut(cx).updates.phase = UpdatePhase::Installed("0.3.1".into()));
+    cx.update(|cx| cx.global_mut::<Updates>().phase = UpdatePhase::Installed("0.3.1".into()));
 }
 
 /// Restart, as the button in Settings does, with the sheet on `window`.
@@ -29,7 +29,7 @@ fn press_restart(cx: &mut TestAppContext, window: &OpenWindow) {
 }
 
 fn pending(cx: &mut TestAppContext) -> bool {
-    cx.update(|cx| app(cx).updates.restart_pending())
+    cx.update(|cx| cx.global::<Updates>().restart_pending())
 }
 
 /// Let the tick look at `at`, `secs` seconds after `start`.
@@ -132,7 +132,7 @@ fn a_request_does_not_outlive_the_installed_update(cx: &mut TestAppContext) {
     cx.run_until_parked();
     assert!(pending(cx));
     // A new check changed what Settings shows: the line is gone, so the request must be too.
-    cx.update(|cx| app_mut(cx).updates.phase = UpdatePhase::Checking);
+    cx.update(|cx| cx.global_mut::<Updates>().phase = UpdatePhase::Checking);
     look(cx, Instant::now(), 0);
     assert!(!pending(cx));
 }

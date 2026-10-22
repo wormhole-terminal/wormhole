@@ -62,6 +62,8 @@ pub(crate) fn start(
     });
     crate::workspace::open_in::OpenIn::install(cx);
     cx.set_global(ParkedSettings::new(profiles.active_id().clone()));
+    // The updater's state is a global of its own, so the shared state does not name it.
+    cx.set_global(updates::Updates::new(Some(root.update_schedule_file()), data.store.as_ref()));
     cx.set_global(AppState::new(
         root,
         profiles,

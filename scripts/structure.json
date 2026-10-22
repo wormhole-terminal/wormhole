@@ -308,7 +308,6 @@
       "wormhole: about -> app_state": 1,
       "wormhole: about -> workspace": 1,
       "wormhole: app_state -> status_item": 1,
-      "wormhole: app_state -> updates": 1,
       "wormhole: app_state -> workspace": 1,
       "wormhole: notifications -> app_state": 1,
       "wormhole: notifications -> workspace": 1,
@@ -333,7 +332,6 @@
     },
     "layers": {
       "wormhole: app_state -> status_item": 1,
-      "wormhole: app_state -> updates": 1,
       "wormhole: workspace -> notifications": 1,
       "wormhole: workspace -> settings_window": 1
     },
