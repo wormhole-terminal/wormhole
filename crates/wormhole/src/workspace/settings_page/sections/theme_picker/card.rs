@@ -6,6 +6,7 @@ use std::rc::Rc;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::config::{Settings, ThemeMode};
 use wormhole_core::theme_catalog::ThemeEntry;
 use wormhole_core::tokens::{Appearance, ThemeTokens};
@@ -14,7 +15,6 @@ use super::{CardLook, card_height};
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
-use crate::workspace::settings_page::sections::*;
 use crate::workspace::settings_page::update_settings;
 
 // The preview is a drawing at its own small scale, not a control: its rules and bars do not
