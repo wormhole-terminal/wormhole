@@ -37,6 +37,7 @@ pub mod panel;
 pub mod panes;
 pub mod profile;
 pub mod project;
+pub mod quit_signal;
 pub mod reorder;
 pub mod review;
 pub mod search;

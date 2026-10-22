@@ -73,6 +73,10 @@ fn main() {
         return;
     };
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "starting");
+    // Only the instance that runs: a second launch above has handed over and returned.
+    if let Err(err) = wormhole_core::quit_signal::catch_sigterm() {
+        tracing::warn!("SIGTERM will end the app without saving: {err}");
+    }
     // The `wh` command for the terminals this app starts, pointing at the binary that runs now.
     // Before any window opens a terminal.
     wormhole_core::cli_tool::keep_current_at_launch();

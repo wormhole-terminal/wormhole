@@ -176,15 +176,16 @@ report_failure() {
 stop_app() {
   alive "$app_pid" || { app_pid=""; return 0; }
   log "stopping dev instance (pid $app_pid)"
-  # Graceful first with devctl (saves terminals and scrollback), then SIGTERM, then SIGKILL; only
-  # ever our PID. Without devctl SIGTERM is the first step, and up to a minute of saved text is lost.
+  # devctl's quit first when it is on, then SIGTERM (which the app answers as ⌘Q, saving terminals
+  # and scrollback), then SIGKILL; only ever our PID.
   if [ -n "${WORMHOLE_DEVCTL:-}" ]; then
     printf 'quit\n' > "$WORMHOLE_DEVCTL/cmd"
     for _ in $(seq 50); do alive "$app_pid" || break; sleep 0.1; done
   fi
   if alive "$app_pid"; then
     kill -TERM "$app_pid" 2>/dev/null
-    for _ in $(seq 30); do alive "$app_pid" || break; sleep 0.1; done
+    # The app quits on SIGTERM as on ⌘Q, saving every window first.
+    for _ in $(seq 50); do alive "$app_pid" || break; sleep 0.1; done
   fi
   alive "$app_pid" && kill -KILL "$app_pid" 2>/dev/null
   wait "$app_pid" 2>/dev/null

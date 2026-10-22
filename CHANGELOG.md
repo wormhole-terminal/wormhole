@@ -37,6 +37,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Fast output of long lines with a colour per character (gradients, colour floods) draws several
   times faster.
 
+- Quitting Wormhole with `kill` (or anything else that sends it SIGTERM) now saves every window and
+  the terminals' text first, as ⌘Q does, instead of losing what changed since the last save. Session
+  hosts keep running, as with ⌘Q.
+
 ### Security
 
 - **High** · no advisory · affects 0.1.0–1.2.0: the text of a closed terminal stayed on disk. Wormhole
