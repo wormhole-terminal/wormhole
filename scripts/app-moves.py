@@ -604,6 +604,11 @@ def rewrite(plan: Plan) -> int:
                 mod = leaves[m.group(1)]
                 if mod.old_leaf != mod.new_leaf:
                     rebound.add(mod.old_leaf)
+        # `use crate::workspace::x::{self, y};`: `x` is then called by the new name too.
+        for old, mod in ((m.old, m) for m in plan.moves if m.old_leaf != m.new_leaf):
+            if re.search(r"(?m)^[ \t]*(?:pub(?:\([^)]*\))? )?use crate::%s::\{[^;{}]*\bself\b(?!\s+as\b)" %
+                         re.escape(old), out):
+                rebound.add(mod.old_leaf)
         if reexp:
             out = reexp.sub(lambda m: "crate::" + reexports[m.group(1)], out)
         out = full.sub(lambda m: "crate::" + new_of[m.group(1)], out)
