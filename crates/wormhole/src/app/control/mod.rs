@@ -51,7 +51,7 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
             new_terminal(folder, command, worktree, window, from, cx)
         }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
-        Action::Welcome { token, op } => crate::workspace::welcome::handle(token, op, from, cx),
+        Action::Welcome { token, op } => crate::workspace::welcome::handle(token, op, from, budget, cx),
     }
 }
 
@@ -208,7 +208,7 @@ fn new_terminal(
 }
 
 /// Count a `kind` request of `from` against its budget, or say when to try again.
-pub(crate) fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
+fn budget(kind: Limited, from: Option<i64>, cx: &mut App) -> Result<(), Reply> {
     let now = Instant::now();
     let budgets = &mut cx.default_global::<Budgets>().0;
     if budgets.allow(kind, from, now) {
@@ -226,13 +226,13 @@ fn not_found(target: Target) -> Reply {
 }
 
 /// Where a target is: its window, its terminal (session) and the tab the request means.
-pub(crate) struct Found {
-    pub(crate) window: OpenWindow,
+struct Found {
+    window: OpenWindow,
     terminal: i64,
     tab: i64,
 }
 
-pub(crate) fn find(target: Target, cx: &App) -> Option<Found> {
+fn find(target: Target, cx: &App) -> Option<Found> {
     app(cx).windows.iter().find_map(|window| {
         let (terminal, tab) =
             window.workspace.read_with(cx, |ws, _| ws.control_find(target)).ok().flatten()?;

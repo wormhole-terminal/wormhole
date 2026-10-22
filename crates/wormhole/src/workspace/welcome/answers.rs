@@ -16,23 +16,28 @@ use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::NotifySound;
 use wormhole_core::ipc::control::{
     AgentFact, ErrorCode, HooksFact, Limited, LookFacts, NotifyFacts, PermissionFact, PrimaryFact, Reply,
-    Target, ThemeFact, WelcomeOp, WelcomeState,
+    ThemeFact, WelcomeOp, WelcomeState,
 };
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::{Play, Run, remember_first_run};
-use crate::app::control::{budget, find};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::workspace::app::{AppState, app, app_mut};
+use crate::workspace::app::{AppState, OpenWindow, app, app_mut};
 use crate::workspace::notifications;
 use crate::workspace::onboarding::{offered_primaries, offered_themes};
 use gpui_kit::App;
 
-/// Answer a welcome request. `from` is the tab it says it comes from.
-pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, cx: &mut App) -> Reply {
+/// Counts one request of a kind against its caller's budget, or says when to try again. It is the
+/// control socket's, which every caller's budgets are kept by; it is handed in because the app root
+/// that owns them sits above the welcome.
+pub(crate) type Budget = fn(Limited, Option<i64>, &mut App) -> Result<(), Reply>;
+
+/// Answer a welcome request. `from` is the tab it says it comes from; `budget` is checked after the
+/// request is authorised, so a request the door refuses does not use any up.
+pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, budget: Budget, cx: &mut App) -> Reply {
     if let Err(error) = app(cx).welcomes.gates.authorize(from, &token, &op) {
         return Reply::error(error.code, error.message);
     }
@@ -280,13 +285,18 @@ fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
     }
 }
 
+/// The window the welcome's terminal `tab` is in.
+fn in_window(tab: i64, cx: &App) -> Option<OpenWindow> {
+    AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some())
+}
+
 /// `Demo`: the example band in the sidebar of the window the welcome's terminal is in. It is the
 /// window's own, drawn for as long as the welcome runs and the program asks (`Workspace::set_welcome_demo`).
 fn demo(tab: i64, show: bool, cx: &mut App) -> Reply {
-    let Some(found) = find(Target::Tab(tab), cx) else {
+    let Some(window) = in_window(tab, cx) else {
         return Reply::error(ErrorCode::NotFound, "no such terminal");
     };
-    AppState::with_workspace(&found.window, cx, |ws, _, cx| ws.set_welcome_demo(tab, show, cx));
+    AppState::with_workspace(&window, cx, |ws, _, cx| ws.set_welcome_demo(tab, show, cx));
     Reply::ok(serde_json::json!({}))
 }
 
@@ -302,8 +312,8 @@ fn finish(tab: i64, skipped: bool, cx: &mut App) -> Reply {
     if first_run {
         remember_first_run(cx);
     }
-    if let Some(found) = find(Target::Tab(tab), cx) {
-        AppState::with_workspace(&found.window, cx, |ws, _, cx| {
+    if let Some(window) = in_window(tab, cx) {
+        AppState::with_workspace(&window, cx, |ws, _, cx| {
             ws.welcome_ended(tab, first_run && primer && !skipped, cx)
         });
     }

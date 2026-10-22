@@ -35,7 +35,8 @@ fn welcome_terminal(cx: &mut TestAppContext) -> (i64, String) {
 }
 
 fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -> Reply {
-    cx.update(|cx| handle(token.to_string(), op, from, cx))
+    // The budgets are the control socket's (`app::control`); no test here asks enough to meet them.
+    cx.update(|cx| handle(token.to_string(), op, from, |_, _, _| Ok(()), cx))
 }
 
 fn state_of(reply: &Reply) -> WelcomeState {
