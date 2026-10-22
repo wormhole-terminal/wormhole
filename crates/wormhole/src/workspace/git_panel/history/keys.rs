@@ -1,9 +1,12 @@
 //! History under the keys: the commits and the open one's files, → ← to show or fold a
 //! commit's files, ↩ / Space on a file opening its diff with the list keeping the keyboard.
 
-use super::*;
-use crate::workspace::focus::Walkable;
+use gpui_kit::*;
 use wormhole_core::focus::list::Item;
+
+use super::HistoryRow;
+use crate::workspace::Workspace;
+use crate::workspace::focus::Walkable;
 
 impl Workspace {
     /// The History rows the keys can be on: the commits, and the open one's files under it.

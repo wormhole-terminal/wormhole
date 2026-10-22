@@ -1,11 +1,19 @@
 //! The Licenses window: every crate Wormhole is built from on the left (searchable), the
 //! selected one's license on the right. The data is `wormhole_core::licenses`.
 
+use gpui_kit::component::Sizable;
 use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::licenses::Licenses;
 
 use super::super::panel_list::Rows;
-use super::*;
+use super::ui;
+use crate::settings::UiColors;
+use crate::style::{self, Edges, TextRole};
+#[cfg(feature = "devctl")]
+use crate::workspace::app;
+use crate::workspace::aux_window;
 
 const SIZE: (f32, f32) = (940.0, 660.0);
 const MIN_SIZE: (f32, f32) = (640.0, 420.0);

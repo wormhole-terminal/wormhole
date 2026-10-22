@@ -1,16 +1,23 @@
 //! The palette's view: 600 wide, 72 below the window's top, on the scrim; the search row,
 //! the scope row, the results (a virtual list up to 560 in all), and the footer's keys.
 
+use std::rc::Rc;
 use std::time::Instant;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input::Input;
+use gpui_kit::prelude::*;
+use gpui_kit::*;
 use wormhole_core::keymap::ActionId;
 use wormhole_core::search::Scope;
 use wormhole_core::settings_index;
 
 use super::super::overlay::scrim;
+use super::CommandPalette;
 use super::rows::{self, Item, ProfileCommand, Row, Snapshot};
-use super::*;
+use crate::settings::{UiColors, settings, ui};
+use crate::style::{self, Edges, TextRole};
+use crate::workspace::settings_page;
 
 /// How far below the window's top the palette opens, and the most it grows to before its list
 /// scrolls.

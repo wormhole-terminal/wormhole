@@ -12,9 +12,12 @@
 mod rows;
 mod view;
 
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::Duration;
 
 use gpui_kit::component::input::{InputEvent, InputState};
+use gpui_kit::*;
 use wormhole_core::git;
 use wormhole_core::keymap::palette as palette_actions;
 use wormhole_core::project::{ActionKind, Feature};
@@ -23,9 +26,11 @@ use wormhole_core::sidebar::display_path;
 
 use super::app::{AppState, OpenWindow, app, open_tab};
 use super::overlay::OverlayView;
-use super::*;
-pub(crate) use rows::Recent;
+use super::{Workspace, settings_page};
+use crate::settings::settings;
 use rows::{FolderItem, Item, ProfileCommand, ProjectAction, ProjectItem, Row, Snapshot, TerminalItem};
+
+pub(crate) use rows::Recent;
 
 pub(crate) struct CommandPalette {
     workspace: WeakEntity<Workspace>,

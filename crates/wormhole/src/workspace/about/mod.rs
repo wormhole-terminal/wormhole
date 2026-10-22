@@ -3,9 +3,12 @@
 
 mod licenses;
 
+use gpui_kit::*;
+
 use super::aux_window;
-use super::*;
 use crate::icons::app_icon;
+use crate::settings::UiColors;
+use crate::style::{self, TextRole};
 
 pub(crate) use licenses::open_licenses;
 
@@ -116,7 +119,10 @@ pub(crate) use devctl::command as devctl_command;
 mod devctl {
     use std::path::Path;
 
-    use super::*;
+    use gpui_kit::App;
+
+    use super::{licenses, open_about, open_licenses};
+    use crate::workspace::app::app;
 
     /// The About and Licenses commands of devctl: what to print, or `None` if `cmd` isn't one.
     pub(crate) fn command(cmd: &str, arg: &str, dir: &Path, cx: &mut App) -> anyhow::Result<Option<String>> {
