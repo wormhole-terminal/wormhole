@@ -63,12 +63,11 @@ impl Notes {
         for (text, slot) in doc.notes.iter().zip(slots) {
             match slot.and_then(|i| Some((i, filled[i].take()?))) {
                 Some((i, note)) => {
+                    let Some(of) = self.of_mut(session) else { continue };
+                    of.notes.push(note);
                     if texts[i] != text.trim() {
-                        let text = SharedString::from(text.clone());
-                        note.state.update(cx, |n, cx| n.set_value(text, window, cx));
-                    }
-                    if let Some(of) = self.of_mut(session) {
-                        of.notes.push(note);
+                        let at = of.notes.len() - 1;
+                        self.set_note_text(session, at, SharedString::from(text.clone()), window, cx);
                     }
                 }
                 None => {

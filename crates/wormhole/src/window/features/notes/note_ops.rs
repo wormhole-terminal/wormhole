@@ -79,6 +79,30 @@ impl Notes {
         ix
     }
 
+    /// Replaces the text of note `ix` of terminal `session`; whether there was such a note. Setting
+    /// an editor's value sends no `InputEvent`, so what a typed change would have told is told here: the
+    /// count of notes with something in them (the row, VoiceOver and the close question read it) and
+    /// the save. Every place that sets a note's text from outside goes through this.
+    pub(super) fn set_note_text(
+        &mut self,
+        session: i64,
+        ix: usize,
+        text: SharedString,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(state) = self.of.get(&session).and_then(|of| of.notes.get(ix)).map(|n| n.state.clone())
+        else {
+            return false;
+        };
+        state.update(cx, |state, cx| state.set_value(text, window, cx));
+        if let Some(of) = self.of_mut(session) {
+            of.recount(cx);
+        }
+        self.dirty(cx);
+        true
+    }
+
     /// Make the Notes tab what the panel shows, open and with `session`'s section unfolded, so a note
     /// added or focused next is on screen. (With Changes, History or Project showing, or the section
     /// folded, there is nothing to type into.)

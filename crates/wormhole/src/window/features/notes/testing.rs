@@ -44,6 +44,20 @@ pub(in crate::window) fn add_note(
     })
 }
 
+/// Replaces the text of note `n` of terminal `ix` from outside (devctl's `note`, the project sync).
+pub(in crate::window) fn set_note_text(
+    ws: &Workspace,
+    ix: usize,
+    n: usize,
+    text: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    at(ws, ix, cx, |notes, session, _, cx| {
+        notes.set_note_text(session, n, text.to_string().into(), window, cx)
+    })
+}
+
 /// Note `ix` of terminal `t` on screen with the keyboard (`to_end`: clicking its title).
 pub(in crate::window) fn show_note(
     ws: &Workspace,

@@ -126,11 +126,10 @@ impl Notes {
             self.add_note(session, None, false, panel, window, cx);
         }
         let Some(of) = self.of_mut(session) else { return };
-        let Some(note) = of.notes.first() else { return };
-        let state = note.state.clone();
         of.notes_collapsed = false;
-        state.update(cx, |n, cx| n.set_value(SharedString::from(text), window, cx));
-        self.focused = Some((session, 0));
+        if self.set_note_text(session, 0, SharedString::from(text), window, cx) {
+            self.focused = Some((session, 0));
+        }
     }
 
     /// ⌘↵ outside a note: send from the last focused note.

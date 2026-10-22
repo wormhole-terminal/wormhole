@@ -146,6 +146,29 @@ fn the_row_and_the_close_question_count_notes_with_text_and_tasks_not_done(cx: &
 }
 
 #[gpui_kit::test]
+fn setting_a_notes_text_from_outside_updates_the_count_and_the_save(cx: &mut TestAppContext) {
+    if isolate("setting_a_notes_text_from_outside_updates_the_count_and_the_save") {
+        return;
+    }
+    let window = start(cx, 1);
+    let counted = |cx: &mut TestAppContext, text: &str| {
+        drive(cx, &window, |ws, window, cx| {
+            assert!(notes::set_note_text(ws, 0, 0, text, window, cx), "the note is there");
+            (open_items(ws, 1, cx), saved(ws, 1, cx).notes.len(), ws.close_stakes(&[1], cx).len())
+        })
+    };
+    drive(cx, &window, |ws, window, cx| {
+        notes::add_note(ws, 0, "", false, window, cx);
+    });
+    assert_eq!(drive(cx, &window, |ws, _, cx| open_items(ws, 1, cx)), 0, "a blank note counts for nothing");
+    // `set_value` sends no event of its own: the count, the row and the close question follow anyway.
+    assert_eq!(counted(cx, "written by devctl"), (1, 1, 1));
+    assert_eq!(counted(cx, "  "), (0, 1, 0), "blank again: not counted, and still a note");
+    let missing = drive(cx, &window, |ws, window, cx| notes::set_note_text(ws, 0, 5, "x", window, cx));
+    assert!(!missing, "no such note");
+}
+
+#[gpui_kit::test]
 fn switching_the_feature_off_keeps_what_is_saved_and_on_again_brings_it_back(cx: &mut TestAppContext) {
     if isolate("switching_the_feature_off_keeps_what_is_saved_and_on_again_brings_it_back") {
         return;
