@@ -356,7 +356,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         gpui_kit::init(cx);
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(crate::settings::SettingsStore::load());
-        cx.set_global(crate::app_state::AppState::for_test(100));
+        crate::window::view_tests::set_shared_state(cx);
         crate::app::handlers::init(cx);
         app_mut(cx).first_welcome = Some(Plan { handover: Handover::Portal, first_run: true });
         crate::window::window_lifecycle::open_workspace_window(None, None, cx);

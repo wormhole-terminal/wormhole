@@ -104,6 +104,13 @@ pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
     start_with(cx, record)
 }
 
+/// The globals every window reads besides the settings: the shared state and the updater, both of
+/// which `app::launch` sets. A test that opens a window sets them here, so none can lack one.
+pub(crate) fn set_shared_state(cx: &mut App) {
+    cx.set_global(AppState::for_test(100));
+    cx.set_global(crate::updates::Updates::new(None, None));
+}
+
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).
 pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenWindow {
     cx.update(|cx| {
@@ -111,8 +118,7 @@ pub(super) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenW
         // The test platform delivers notifications only to an app with an identity.
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(SettingsStore::load());
-        cx.set_global(AppState::for_test(100));
-        cx.set_global(crate::updates::Updates::new(None, None));
+        set_shared_state(cx);
         // These tests were written for the numbers that follow the list; the ones that stay with the
         // terminal have their own (`stable_list_tests`), which switch back with `use_stable`.
         crate::settings::update_settings(cx, |settings| {
