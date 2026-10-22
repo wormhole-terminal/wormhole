@@ -7,7 +7,6 @@ use super::draft::Show;
 use super::gallery::Area;
 use super::title::SaveAction;
 use super::{StudioWindow, WINDOW_MIN};
-use crate::workspace::app::app;
 
 /// ⌥⌘, (Wormhole → Theme Studio), as devctl's `studio` presses it.
 pub(crate) use super::toggle_studio;
@@ -52,7 +51,7 @@ pub(crate) fn devctl_studio_frames(
     cx: &mut App,
 ) -> anyhow::Result<()> {
     let (handle, studio) =
-        app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
+        super::current_window(cx).ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
     let mode = FrameMode::parse(mode);
     // Outside the tick's update: drawing renders (and so borrows) the windows.
     cx.spawn(async move |cx| {
@@ -105,7 +104,7 @@ pub(crate) fn devctl_studio_frames(
 /// devctl `state`: the Studio's line while it is open: whether it has edits, and whether a
 /// sheet (which no shot shows) is waiting for an answer.
 pub(crate) fn devctl_studio_state(cx: &App) -> Option<String> {
-    let (_, studio) = app(cx).studio_window.clone()?;
+    let (_, studio) = super::current_window(cx)?;
     let studio = studio.upgrade()?;
     let studio = studio.read(cx);
     Some(format!("studio dirty={} asking={}", studio.dirty, studio.asking))
@@ -118,7 +117,7 @@ pub(crate) fn with_studio(
     f: impl FnOnce(&mut StudioWindow, &mut Window, &mut Context<StudioWindow>),
 ) -> anyhow::Result<()> {
     let (handle, studio) =
-        app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
+        super::current_window(cx).ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
     let studio = studio.upgrade().ok_or_else(|| anyhow::anyhow!("Theme Studio closed"))?;
     handle.update(cx, |_, window, cx| studio.update(cx, |s, cx| f(s, window, cx)))
 }
@@ -126,8 +125,7 @@ pub(crate) fn with_studio(
 /// devctl: render the Studio window to a PNG.
 #[cfg(feature = "devctl")]
 pub(crate) fn devctl_studio_shot(path: &std::path::Path, cx: &mut App) -> anyhow::Result<()> {
-    let (handle, _) =
-        app(cx).studio_window.clone().ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
+    let (handle, _) = super::current_window(cx).ok_or_else(|| anyhow::anyhow!("Theme Studio not open"))?;
     // Draw first: a window behind others may not have redrawn since its last change.
     let image = handle.update(cx, |_, window, cx| {
         window.draw(cx).clear(cx);

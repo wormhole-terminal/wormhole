@@ -20,7 +20,7 @@ use wormhole_core::view::layout::Panes;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
 
 use crate::workspace::window_lifecycle::open_workspace_window;
-use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, studio, updates};
+use crate::workspace::{Workspace, aux_window, menu_bar, profiles, project, settings_page, updates};
 
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
@@ -54,8 +54,8 @@ pub(crate) struct AppState {
     /// The settings window, while open.
     pub settings_window: Option<(AnyWindowHandle, Entity<settings_page::SettingsWindow>)>,
     /// The Theme Studio window, while open. Weak, so closing the window drops
-    /// the Studio (which clears its preview).
-    pub studio_window: Option<(AnyWindowHandle, WeakEntity<studio::StudioWindow>)>,
+    /// the Studio (which clears its preview); `studio::current_window` reads it typed.
+    pub studio_window: aux_window::Slot,
     /// The About and Licenses windows, while open.
     pub about_window: aux_window::Slot,
     pub licenses_window: aux_window::Slot,
