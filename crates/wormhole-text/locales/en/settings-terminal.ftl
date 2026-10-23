@@ -98,3 +98,48 @@ settings-terminal-window-ops = Let programs control the window
 settings-terminal-title-report = Let programs read the window title back
     .description = Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals
     .keywords = xtwinops title icon name report read back window security ssh esctest
+
+## settings_window/sections/terminal.rs (labels, hints and notes drawn by this page's code)
+
+settings-terminal-off = Off
+settings-terminal-left = Left
+settings-terminal-right = Right
+settings-terminal-both = Both
+settings-terminal-edit-in-fonts = Edit in Fonts
+settings-terminal-edit-in-config-json = Edit in config.json
+settings-terminal-ask = Ask
+settings-terminal-allow = Allow
+settings-terminal-deny = Deny
+settings-terminal-wormhole-is-the-default = { -brand } is the default
+settings-terminal-to-change-it-pick-another-app = To change it, pick another app for a .command file in Finder's Get Info
+settings-terminal-make-default = Make default
+settings-terminal-instead-of-terminal = Instead of Terminal
+settings-terminal-default-only-app = Only { -brand }.app can be the default terminal
+settings-terminal-not-installed-the-title-row-opens = Not installed: the title row opens it in another app
+settings-terminal-choose-app = Choose app…
+settings-terminal-choose = Choose
+settings-terminal-not-found-the-login-shell-runs = Not found: the login shell runs instead
+
+## Sentences with a hole in them
+
+# Under the Terminal page's switch when making the app the default terminal failed. { $error } is the
+# system's reason, in English.
+settings-terminal-default-failed = Couldn't make { -brand } the default: { $error }
+
+# The Font row's quiet line in Fonts. { $family } is the font's name, { $size } its size in points and
+# { $line_height } the line height as a multiple, both already formatted as numbers. The two messages
+# are the same sentence with ligatures on and off.
+settings-terminal-font-summary-ligatures-on = { $family } { $size } pt · line height { $line_height } · ligatures on
+# The same sentence with ligatures off.
+settings-terminal-font-summary-ligatures-off = { $family } { $size } pt · line height { $line_height } · ligatures off
+
+# The Worktrees folder row's quiet line once a folder is set. { $folder } is that folder, as the
+# terminal title row would show it.
+settings-terminal-worktree-base-under = Under { $folder }, in a folder named after the repository (worktree_base in config.json)
+
+# A scrollback size in the select. { $count } is the number of lines, already written with its
+# thousands separators ("10,000").
+settings-terminal-scrollback-lines = { $count } lines
+
+# A shell in the Default shell select: what runs under its name. { $command } is the command line.
+settings-terminal-login-shell = Login shell · { $command }

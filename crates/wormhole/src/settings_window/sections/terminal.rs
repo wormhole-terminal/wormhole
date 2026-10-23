@@ -3,6 +3,7 @@
 //! whether programs may read the screen back, read or set the clipboard and control the window.
 
 use std::path::Path;
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
@@ -37,17 +38,17 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::segmented(
         "meta",
         &[
-            Segment::literal("Off"),
-            Segment::literal("Left"),
-            Segment::literal("Right"),
-            Segment::literal("Both"),
+            Segment::text(SETTINGS_TERMINAL_OFF),
+            Segment::text(SETTINGS_TERMINAL_LEFT),
+            Segment::text(SETTINGS_TERMINAL_RIGHT),
+            Segment::text(SETTINGS_TERMINAL_BOTH),
         ],
         |s| OptionAsMeta::ALL.iter().position(|o| *o == s.option_as_meta).unwrap_or(0),
         |s, ix| s.option_as_meta = OptionAsMeta::ALL.get(ix).copied().unwrap_or_default(),
     ),
     Setting::custom("terminal-font", |_, cx| {
         let ui = ui(cx);
-        style::link_button("edit-in-fonts", ui, "Edit in Fonts", true)
+        style::link_button("edit-in-fonts", ui, text(SETTINGS_TERMINAL_EDIT_IN_FONTS), true)
             .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Fonts, cx)))
             .into_any_element()
     })
@@ -56,13 +57,13 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("default-terminal", draw_default_terminal),
     Setting::custom("default-shell", draw_default_shell),
     Setting::custom("shells", |_, cx| {
-        style::link_button("edit-shells", ui(cx), "Edit in config.json", false)
+        style::link_button("edit-shells", ui(cx), text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
             .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path()))
             .into_any_element()
     })
     .below(list_shells),
     Setting::custom("worktree-base", |_, cx| {
-        style::link_button("edit-worktree-base", ui(cx), "Edit in config.json", false)
+        style::link_button("edit-worktree-base", ui(cx), text(SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON), false)
             .on_click(|_, _, _| open_in_editor(&SettingsStore::config_path()))
             .into_any_element()
     })
@@ -71,13 +72,17 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("bell-visual", bell_visual),
     Setting::segmented(
         "clipboard-read",
-        &[Segment::literal("Ask"), Segment::literal("Allow"), Segment::literal("Deny")],
+        &[
+            Segment::text(SETTINGS_TERMINAL_ASK),
+            Segment::text(SETTINGS_TERMINAL_ALLOW),
+            Segment::text(SETTINGS_TERMINAL_DENY),
+        ],
         |s| ClipboardRead::ALL.iter().position(|o| *o == s.clipboard_read).unwrap_or(0),
         |s, ix| s.clipboard_read = ClipboardRead::ALL.get(ix).copied().unwrap_or_default(),
     ),
     Setting::segmented(
         "clipboard-write",
-        &[Segment::literal("Allow"), Segment::literal("Deny")],
+        &[Segment::text(SETTINGS_TERMINAL_ALLOW), Segment::text(SETTINGS_TERMINAL_DENY)],
         |s| ClipboardWrite::ALL.iter().position(|o| *o == s.clipboard_write).unwrap_or(0),
         |s, ix| s.clipboard_write = ClipboardWrite::ALL.get(ix).copied().unwrap_or_default(),
     ),
@@ -92,11 +97,19 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
     let (icon, label, tooltip) = match state {
         Some(true) => (
             IconName::Check,
-            "Wormhole is the default",
-            "To change it, pick another app for a .command file in Finder's Get Info",
+            text(SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT),
+            text(SETTINGS_TERMINAL_TO_CHANGE_IT_PICK_ANOTHER_APP),
         ),
-        Some(false) => (IconName::SquareTerminal, "Make default", "Instead of Terminal"),
-        None => (IconName::SquareTerminal, "Make default", "Only Wormhole.app can be the default terminal"),
+        Some(false) => (
+            IconName::SquareTerminal,
+            text(SETTINGS_TERMINAL_MAKE_DEFAULT),
+            text(SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL),
+        ),
+        None => (
+            IconName::SquareTerminal,
+            text(SETTINGS_TERMINAL_MAKE_DEFAULT),
+            text(SETTINGS_TERMINAL_DEFAULT_ONLY_APP),
+        ),
     };
     Button::new("default-terminal")
         .outline()
@@ -109,7 +122,7 @@ fn draw_default_terminal(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -
             if let Err(err) = default_app::make_default() {
                 tracing::warn!("making Wormhole the default terminal: {err:#}");
                 this.notice =
-                    Some((Section::Terminal, format!("Couldn't make Wormhole the default: {err}").into()));
+                    Some((Section::Terminal, settings_terminal_default_failed(&err.to_string()).into()));
             }
             cx.notify();
         }))
@@ -121,15 +134,13 @@ fn describe_font(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option
     let store = cx.global::<SettingsStore>();
     let s = &store.settings;
     let family = wormhole_core::theme::fonts::display_name(store.fonts.family(FontSlot::Terminal));
-    Some(
-        format!(
-            "{family} {:.0} pt · line height {:.2} · ligatures {}",
-            s.font_size,
-            s.line_height,
-            if s.font_ligatures { "on" } else { "off" }
-        )
-        .into(),
-    )
+    let (size, line_height) = (format!("{:.0}", s.font_size), format!("{:.2}", s.line_height));
+    let summary = if s.font_ligatures {
+        settings_terminal_font_summary_ligatures_on(family, &size, &line_height)
+    } else {
+        settings_terminal_font_summary_ligatures_off(family, &size, &line_height)
+    };
+    Some(summary.into())
 }
 
 /// Where worktrees go once `worktree_base` names a folder; the table's words until then.
@@ -140,10 +151,7 @@ fn describe_worktree_base(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) 
     }
     let home = crate::settings_window::home();
     let shown = wormhole_core::view::sidebar::display_path(Path::new(&base), home.as_deref());
-    Some(
-        format!("Under {shown}, in a folder named after the repository (worktree_base in config.json)")
-            .into(),
-    )
+    Some(settings_terminal_worktree_base_under(&shown).into())
 }
 
 /// "10,000 lines".
@@ -156,7 +164,7 @@ fn lines(n: usize) -> String {
         }
         grouped.push(c);
     }
-    format!("{grouped} lines")
+    settings_terminal_scrollback_lines(&grouped)
 }
 
 fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
@@ -200,7 +208,7 @@ fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
         let chosen = settings(cx).open_in.trim().to_string();
         options.push(
             Choice::new(chosen, missing.clone())
-                .detail("Not installed: the title row opens it in another app"),
+                .detail(text(SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS)),
         );
     }
     let face = div()
@@ -224,7 +232,7 @@ fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
         .gap_2()
         .child(select)
         .child(
-            style::link_button("open-in-choose", ui, "Choose app…", false)
+            style::link_button("open-in-choose", ui, text(SETTINGS_TERMINAL_CHOOSE_APP), false)
                 .on_click(cx.listener(|_, _, _, cx| choose_app(cx))),
         )
         .into_any_element()
@@ -245,7 +253,7 @@ fn choose_app(cx: &mut App) {
         files: true,
         directories: false,
         multiple: false,
-        prompt: Some("Choose".into()),
+        prompt: Some(text(SETTINGS_TERMINAL_CHOOSE).into()),
     });
     cx.spawn(async move |cx| {
         let Ok(Ok(Some(paths))) = paths.await else { return };
@@ -268,7 +276,8 @@ fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>)
     let mut options: Vec<Choice<String>> = choices.iter().map(shell_choice).collect();
     if !choices.iter().any(|c| c.key == current) {
         options.push(
-            Choice::new(current.clone(), current.clone()).detail("Not found: the login shell runs instead"),
+            Choice::new(current.clone(), current.clone())
+                .detail(text(SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS)),
         );
     }
     window.select(
@@ -285,7 +294,7 @@ fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>)
 /// A shell in the Default shell select: its name, and what it runs under it.
 fn shell_choice(choice: &ShellChoice) -> Choice<String> {
     let detail = match choice.kind {
-        ShellKind::Login => format!("Login shell · {}", choice.command_line),
+        ShellKind::Login => settings_terminal_login_shell(&choice.command_line),
         ShellKind::Profile | ShellKind::System => choice.command_line.clone(),
     };
     Choice::new(choice.key.clone(), choice.name.clone()).detail(detail)

@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-terminal.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Terminal"
 pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(364);
@@ -127,3 +128,81 @@ pub const SETTINGS_TERMINAL_TITLE_REPORT: Key = Key::new(422);
 pub const SETTINGS_TERMINAL_TITLE_REPORT_DESCRIPTION: Key = Key::new(423);
 /// "xtwinops title icon name report read back window security ssh esctest"
 pub const SETTINGS_TERMINAL_TITLE_REPORT_KEYWORDS: Key = Key::new(424);
+/// "Off"
+pub const SETTINGS_TERMINAL_OFF: Key = Key::new(425);
+/// "Left"
+pub const SETTINGS_TERMINAL_LEFT: Key = Key::new(426);
+/// "Right"
+pub const SETTINGS_TERMINAL_RIGHT: Key = Key::new(427);
+/// "Both"
+pub const SETTINGS_TERMINAL_BOTH: Key = Key::new(428);
+/// "Edit in Fonts"
+pub const SETTINGS_TERMINAL_EDIT_IN_FONTS: Key = Key::new(429);
+/// "Edit in config.json"
+pub const SETTINGS_TERMINAL_EDIT_IN_CONFIG_JSON: Key = Key::new(430);
+/// "Ask"
+pub const SETTINGS_TERMINAL_ASK: Key = Key::new(431);
+/// "Allow"
+pub const SETTINGS_TERMINAL_ALLOW: Key = Key::new(432);
+/// "Deny"
+pub const SETTINGS_TERMINAL_DENY: Key = Key::new(433);
+/// "Wormhole is the default"
+pub const SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT: Key = Key::new(434);
+/// "To change it, pick another app for a .command file in Finder's Get Info"
+pub const SETTINGS_TERMINAL_TO_CHANGE_IT_PICK_ANOTHER_APP: Key = Key::new(435);
+/// "Make default"
+pub const SETTINGS_TERMINAL_MAKE_DEFAULT: Key = Key::new(436);
+/// "Instead of Terminal"
+pub const SETTINGS_TERMINAL_INSTEAD_OF_TERMINAL: Key = Key::new(437);
+/// "Only Wormhole.app can be the default terminal"
+pub const SETTINGS_TERMINAL_DEFAULT_ONLY_APP: Key = Key::new(438);
+/// "Not installed: the title row opens it in another app"
+pub const SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS: Key = Key::new(439);
+/// "Choose app…"
+pub const SETTINGS_TERMINAL_CHOOSE_APP: Key = Key::new(440);
+/// "Choose"
+pub const SETTINGS_TERMINAL_CHOOSE: Key = Key::new(441);
+/// "Not found: the login shell runs instead"
+pub const SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS: Key = Key::new(442);
+
+/// ```text
+/// Couldn't make { -brand } the default: { $error }
+/// ```
+pub fn settings_terminal_default_failed(error: &str) -> String {
+    crate::active::message(443, &[("error", Arg::Str(error))])
+}
+
+/// ```text
+/// { $family } { $size } pt · line height { $line_height } · ligatures on
+/// ```
+pub fn settings_terminal_font_summary_ligatures_on(family: &str, size: &str, line_height: &str) -> String {
+    crate::active::message(444, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
+}
+
+/// ```text
+/// { $family } { $size } pt · line height { $line_height } · ligatures off
+/// ```
+pub fn settings_terminal_font_summary_ligatures_off(family: &str, size: &str, line_height: &str) -> String {
+    crate::active::message(445, &[("family", Arg::Str(family)), ("size", Arg::Str(size)), ("line_height", Arg::Str(line_height))])
+}
+
+/// ```text
+/// Under { $folder }, in a folder named after the repository (worktree_base in config.json)
+/// ```
+pub fn settings_terminal_worktree_base_under(folder: &str) -> String {
+    crate::active::message(446, &[("folder", Arg::Str(folder))])
+}
+
+/// ```text
+/// { $count } lines
+/// ```
+pub fn settings_terminal_scrollback_lines(count: &str) -> String {
+    crate::active::message(447, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// Login shell · { $command }
+/// ```
+pub fn settings_terminal_login_shell(command: &str) -> String {
+    crate::active::message(448, &[("command", Arg::Str(command))])
+}

@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 445] = [
+pub(crate) const IDS: [&str; 469] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -147,7 +147,15 @@ pub(crate) const IDS: [&str; 445] = [
     "settings-terminal-clipboard-write.description", "settings-terminal-clipboard-write.keywords", "settings-terminal-screen-checksum",
     "settings-terminal-screen-checksum.description", "settings-terminal-screen-checksum.keywords", "settings-terminal-window-ops",
     "settings-terminal-window-ops.description", "settings-terminal-window-ops.keywords", "settings-terminal-title-report",
-    "settings-terminal-title-report.description", "settings-terminal-title-report.keywords", "settings-section-updates",
+    "settings-terminal-title-report.description", "settings-terminal-title-report.keywords", "settings-terminal-off",
+    "settings-terminal-left", "settings-terminal-right", "settings-terminal-both",
+    "settings-terminal-edit-in-fonts", "settings-terminal-edit-in-config-json", "settings-terminal-ask",
+    "settings-terminal-allow", "settings-terminal-deny", "settings-terminal-wormhole-is-the-default",
+    "settings-terminal-to-change-it-pick-another-app", "settings-terminal-make-default", "settings-terminal-instead-of-terminal",
+    "settings-terminal-default-only-app", "settings-terminal-not-installed-the-title-row-opens", "settings-terminal-choose-app",
+    "settings-terminal-choose", "settings-terminal-not-found-the-login-shell-runs", "settings-terminal-default-failed",
+    "settings-terminal-font-summary-ligatures-on", "settings-terminal-font-summary-ligatures-off", "settings-terminal-worktree-base-under",
+    "settings-terminal-scrollback-lines", "settings-terminal-login-shell", "settings-section-updates",
     "settings-section-updates.intro", "settings-updates-group-updates", "settings-updates-version",
     "settings-updates-version.keywords", "settings-updates-auto-update", "settings-updates-auto-update.description",
     "settings-updates-auto-update.keywords", "settings-updates-update-channel", "settings-updates-update-channel.description",
@@ -158,7 +166,7 @@ pub(crate) const IDS: [&str; 445] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 445] = [
+pub(crate) const TAKES_ARGS: [bool; 469] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, true, false, false, false, false, false, false,
@@ -195,6 +203,8 @@ pub(crate) const TAKES_ARGS: [bool; 445] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, false, true,
+    true, true, true, true, true, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, true,
     true,
 ];
