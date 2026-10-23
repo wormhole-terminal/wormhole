@@ -355,6 +355,30 @@
           ]
         ]
       }
+    },
+    "8": {
+      "doc": "What the window and its features share leaves window/: the dialogs, Open in\u2026 and the secondary windows' options (phase 5, step 5g)",
+      "moves": [
+        {
+          "from": "window/dialog.rs",
+          "to": "dialog.rs"
+        },
+        {
+          "from": "window/open_in.rs",
+          "to": "open_in.rs"
+        },
+        {
+          "from": "window/aux_window.rs",
+          "to": "aux_window.rs"
+        }
+      ],
+      "layers": {
+        "after": "select",
+        "insert": [
+          "dialog",
+          "open_in"
+        ]
+      }
     }
   }
 }

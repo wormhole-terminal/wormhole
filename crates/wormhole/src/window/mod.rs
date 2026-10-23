@@ -54,7 +54,6 @@ use wormhole_core::agents::integrations;
 use wormhole_core::storage::paths::ProfileId;
 
 pub(crate) mod ambient;
-pub(crate) mod aux_window;
 pub(crate) mod chrome;
 #[cfg(test)]
 mod clear_tests;
@@ -62,7 +61,6 @@ mod clear_tests;
 mod close_tests;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
-pub(crate) mod dialog;
 #[cfg(test)]
 mod drag_tests;
 mod facts;
@@ -89,7 +87,6 @@ mod menu_tests;
 mod onboarding_host;
 #[cfg(test)]
 mod onboarding_tests;
-pub(crate) mod open_in;
 pub(crate) mod overlay;
 #[cfg(test)]
 mod pane_memory_tests;
@@ -134,6 +131,11 @@ mod window_bounds;
 mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
+
+// Old paths, for one commit only: the next commit names every module by its new path and removes them.
+pub(crate) use crate::aux_window;
+pub(crate) use crate::dialog;
+pub(crate) use crate::open_in;
 
 use self::saved_layout::Layout;
 use self::session::Session;

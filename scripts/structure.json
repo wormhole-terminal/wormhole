@@ -88,6 +88,10 @@
           "intro",
           "select"
         ],
+        [
+          "dialog",
+          "open_in"
+        ],
         "terminal_view",
         "actions",
         "focus_keys",
@@ -99,6 +103,7 @@
           "app_state",
           "window"
         ],
+        "aux_window",
         "notifications",
         "updates",
         "about",
