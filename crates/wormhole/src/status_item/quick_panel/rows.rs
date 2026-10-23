@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 
 use wormhole_core::notify::{self, Terminal};
+use wormhole_core::platform::paths;
 
 use crate::menubar::ActionItem;
 
@@ -31,7 +32,7 @@ impl Do {
     pub(crate) fn detail(&self) -> Option<String> {
         match self {
             Do::NewTerminal { cwd } => {
-                let home = std::env::var_os("HOME").map(PathBuf::from);
+                let home = paths::home();
                 cwd.as_deref().map(|cwd| {
                     format!("in {}", wormhole_core::view::sidebar::display_path(cwd, home.as_deref()))
                 })

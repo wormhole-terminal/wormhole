@@ -3,6 +3,7 @@
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::platform::paths;
 
 use super::{Ctx, nth};
 use crate::features::notes::devctl as notes;
@@ -18,8 +19,8 @@ pub(super) fn new(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 /// `dir` with a leading `~/` as the home folder.
 pub(super) fn expand_home(dir: &str) -> String {
-    let home = std::env::var("HOME").unwrap_or_default();
-    dir.strip_prefix("~/").map_or_else(|| dir.to_string(), |rest| format!("{home}/{rest}"))
+    let home = paths::home().unwrap_or_default();
+    dir.strip_prefix("~/").map_or_else(|| dir.to_string(), |rest| format!("{}/{rest}", home.display()))
 }
 
 /// `new-shell <key> [dir]`: a new terminal running the shell `key` names (`shells` lists the

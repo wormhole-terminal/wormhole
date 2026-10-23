@@ -3,7 +3,7 @@
 //! last step) along the bottom. The first step lists the places a Finder does instead of
 //! a scan of ~/Projects, and takes a folder dropped on the card.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -13,6 +13,7 @@ use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::{Event, Place, Step};
 use wormhole_core::onboarding::{PlaceKind, STEPS};
+use wormhole_core::platform::paths;
 
 use super::{FirstRun, Intro};
 use crate::settings::{UiColors, ui};
@@ -317,6 +318,6 @@ const SHADOW_BLUR: f32 = 48.0;
 
 /// `~/…` for a folder in the home folder.
 fn short_home(path: &Path) -> String {
-    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+    let home = paths::home().unwrap_or_default();
     wormhole_core::onboarding::tilde(path, &home)
 }

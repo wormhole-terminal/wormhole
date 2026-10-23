@@ -5,6 +5,7 @@
 
 use anyhow::{Result, anyhow};
 use wormhole_core::ipc::control::{Parsed, Request, help, parse};
+use wormhole_core::platform::paths;
 
 use super::Ctx;
 use super::ambient::later;
@@ -20,7 +21,7 @@ pub(super) fn control(ctx: &mut Ctx, arg: &str) -> Result<String> {
         words.remove(0);
     }
     let cwd = std::env::current_dir().unwrap_or_default();
-    let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+    let home = paths::home();
     let cli = match parse(&words, &cwd, home.as_deref()).map_err(|mistake| anyhow!(mistake))? {
         Parsed::Run(cli) => cli,
         Parsed::Help => return Ok(help()),

@@ -24,6 +24,7 @@ use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, Query};
+use wormhole_core::platform::paths;
 use wormhole_core::theme::fonts::FontSlot;
 use wormhole_core::view::sidebar::Density;
 
@@ -258,10 +259,10 @@ pub(crate) fn reveal_row(id: &str, cx: &mut App) {
 /// thing on the page rather than as cut off.
 const REVEAL_INSET: f32 = style::TITLE_ROW_H;
 
-/// The user's home folder, asked of the environment each time: the pages that show a path as `~/…` or
+/// The user's home folder, asked each time: the pages that show a path as `~/…` or
 /// look under it are cold code, so nothing is cached.
 fn home() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
+    paths::home()
 }
 
 /// The icon the settings nav gives a section (the palette's settings show it too).

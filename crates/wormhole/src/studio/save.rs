@@ -9,6 +9,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use style::BannerKind;
+use wormhole_core::platform::paths;
 use wormhole_core::project::ProjectFolder;
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::ThemeFile;
@@ -142,7 +143,7 @@ impl StudioWindow {
         let json = export_json(&self.draft);
         let file_name = export_file_name(self.draft.name.as_deref().unwrap_or("theme"));
         let remembered = store(cx).and_then(|store| store.meta(EXPORT_DIR_KEY).ok().flatten());
-        let home = std::env::var_os("HOME").map(PathBuf::from);
+        let home = paths::home();
         let dir = export_dir(remembered.as_deref(), home, |dir| dir.is_dir());
         let chosen = cx.prompt_for_new_path(&dir, Some(&file_name));
         self.export = Some(cx.spawn(async move |this, cx| {
@@ -314,6 +315,6 @@ fn store(cx: &App) -> Option<&wormhole_core::storage::store::Store> {
 
 /// A path with the home folder as `~`.
 fn display_path(path: &Path) -> String {
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let home = paths::home();
     wormhole_core::view::sidebar::display_path(path, home.as_deref())
 }

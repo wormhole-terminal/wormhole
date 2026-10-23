@@ -41,6 +41,7 @@ use wormhole_core::agents::{self, AGENTS, Agent};
 use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::onboarding::intro::Start;
 use wormhole_core::onboarding::{self, Action, Event, Onboarding, Place, Step};
+use wormhole_core::platform::paths;
 
 use crate::actions::OpenSettingsAt;
 
@@ -323,7 +324,7 @@ impl FirstRun {
     ) -> Intro {
         let focus = cx.focus_handle();
         // A handful of `stat`s, once: the places don't change while the intro is up.
-        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+        let home = paths::home().unwrap_or_default();
         let places = onboarding::places(&home, recent, |path| path.is_dir());
         let scan = cx.spawn(async move |this, cx| {
             let home = integrations::home();

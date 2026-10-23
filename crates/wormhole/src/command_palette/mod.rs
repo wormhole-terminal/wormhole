@@ -20,6 +20,7 @@ use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::git;
 use wormhole_core::keys::keymap::palette as palette_actions;
+use wormhole_core::platform::paths;
 use wormhole_core::project::ActionKind;
 use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
@@ -101,7 +102,7 @@ pub(crate) fn open_in(front: &OpenWindow, query: &str, cx: &mut App) {
 /// ones, the actions the window in front can do, its project's actions and where its terminal is.
 fn gather(window_id: i64, cx: &mut App) -> Snapshot {
     let menu = crate::window::menu_state::front_window_state(cx);
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let home = paths::home();
     let key = cx.active_window().map(|w| w.window_id());
     let finished = crate::notifications::finished_commands(cx);
     // The shells besides the default: that one is what New terminal opens.

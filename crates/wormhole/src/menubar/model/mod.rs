@@ -8,6 +8,7 @@ use std::time::Instant;
 use wormhole_core::config::MenuBarIcon;
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::notify::{self, Counts, ItemState, State, Terminal};
+use wormhole_core::platform::paths;
 
 use super::{ActionItem, MenuCommand, MenuSnapshot};
 
@@ -242,7 +243,7 @@ fn open_folder() -> ItemModel {
 
 /// A path with the home folder as `~`.
 fn display_path(path: &std::path::Path) -> String {
-    let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+    let home = paths::home();
     wormhole_core::view::sidebar::display_path(path, home.as_deref())
 }
 
