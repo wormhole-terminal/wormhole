@@ -101,7 +101,7 @@ impl ChangeRow {
 
 /// Whether `status`'s list has a band for the untracked files, given the "group untracked"
 /// setting: not when compared with a branch, where the list is one group.
-pub(in crate::window) fn untracked_apart(status: &RepoStatus, setting: bool) -> bool {
+pub(crate) fn untracked_apart(status: &RepoStatus, setting: bool) -> bool {
     rules::untracked_apart(setting, status.compare.is_some())
 }
 
@@ -151,11 +151,7 @@ pub(super) fn build_rows(
 /// The files in the order the list shows them (blocks, then folders before
 /// files in tree mode, folded folders included): what the diff's ‹ › step
 /// through, so the next file is the one below in the list.
-pub(in crate::window) fn display_order(
-    status: &RepoStatus,
-    tree: bool,
-    group_untracked: bool,
-) -> Vec<FileChange> {
+pub(crate) fn display_order(status: &RepoStatus, tree: bool, group_untracked: bool) -> Vec<FileChange> {
     let (files, group_untracked) = (&status.files[..], untracked_apart(status, group_untracked));
     let none = HashSet::new();
     // Folded sections and folders too: stepping goes through every file.

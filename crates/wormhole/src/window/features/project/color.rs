@@ -18,7 +18,7 @@ const FAILED: &str = "Couldn't change the project's colour";
 /// Write `color` as the `project_color` of the project at `root` (`None` takes the key out), then
 /// have every window read the project again, so the band, the title row and the Project tab turn to
 /// it at once. The file is read, spliced and replaced off the UI thread.
-pub(in crate::window) fn set_project_color(
+pub(crate) fn set_project_color(
     profile: &ProfileId,
     root: &Path,
     color: Option<ProjectColorChoice>,

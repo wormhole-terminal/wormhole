@@ -16,7 +16,7 @@ use crate::window::feature::FeatureEvent;
 impl Notes {
     /// Makes a note of terminal `session` with `value` in it, at the end of its list. `panel` is the
     /// panel's width, which the hint of an empty note is broken to. Its index.
-    pub(in crate::window) fn add_note(
+    pub(crate) fn add_note(
         &mut self,
         session: i64,
         value: Option<String>,
@@ -113,7 +113,7 @@ impl Notes {
         }
     }
 
-    pub(in crate::window) fn new_note(
+    pub(crate) fn new_note(
         &mut self,
         session: i64,
         text: Option<String>,
@@ -134,7 +134,7 @@ impl Notes {
     /// Put note `ix` of `session` on screen and give it the keyboard: the Notes tab open, the section
     /// and the note unfolded. `to_end` also puts the cursor at the end of its text (clicking its
     /// title); otherwise it stays where it was (⇧⌘E).
-    pub(in crate::window) fn show_note(
+    pub(crate) fn show_note(
         &mut self,
         session: i64,
         ix: usize,
@@ -167,19 +167,13 @@ impl Notes {
     }
 
     /// Clicking a note's title: open it and put the cursor at the end of its text.
-    pub(in crate::window) fn open_note(
-        &mut self,
-        session: i64,
-        ix: usize,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn open_note(&mut self, session: i64, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
         self.show_note(session, ix, true, window, cx);
     }
 
     /// Throw away every note with nothing in it that isn't being written right now. Runs when a note
     /// loses focus, and on the tick for one that never got it.
-    pub(in crate::window) fn prune_blank_notes(&mut self, window: &Window, cx: &mut Context<Self>) {
+    pub(crate) fn prune_blank_notes(&mut self, window: &Window, cx: &mut Context<Self>) {
         let mut changed = false;
         let focused = self.focused;
         let mut focused_now = focused;
@@ -213,7 +207,7 @@ impl Notes {
     }
 
     /// The keys a note's text shares with a task's editor ([`ItemKey`]); whether it handled the key.
-    pub(in crate::window) fn note_key(
+    pub(crate) fn note_key(
         &mut self,
         session: i64,
         state: &Entity<TextareaState>,
@@ -245,13 +239,7 @@ impl Notes {
     }
 
     /// Move a note to another place in the list (drag and drop, ⌥⌘↑/↓).
-    pub(in crate::window) fn move_note(
-        &mut self,
-        session: i64,
-        from: usize,
-        to: usize,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn move_note(&mut self, session: i64, from: usize, to: usize, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         if !reorder::move_item(&mut of.notes, from, to) {
             return;
@@ -262,7 +250,7 @@ impl Notes {
         self.dirty(cx);
     }
 
-    pub(in crate::window) fn delete_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
+    pub(crate) fn delete_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         if ix >= of.notes.len() {
             return;
@@ -278,7 +266,7 @@ impl Notes {
         self.dirty(cx);
     }
 
-    pub(in crate::window) fn toggle_notes_section(&mut self, session: i64, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_notes_section(&mut self, session: i64, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         of.notes_collapsed = !of.notes_collapsed;
         // A note that was focused is about to disappear from the list.
@@ -286,7 +274,7 @@ impl Notes {
         self.dirty(cx);
     }
 
-    pub(in crate::window) fn toggle_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
         if let Some(note) = self.of_mut(session).and_then(|of| of.notes.get_mut(ix)) {
             note.collapsed = !note.collapsed;
             // Opened again, a long note is cut at the cap again.
@@ -296,7 +284,7 @@ impl Notes {
     }
 
     /// "Show all · N lines" under a long open note.
-    pub(in crate::window) fn show_all_of_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
+    pub(crate) fn show_all_of_note(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
         if let Some(note) = self.of_mut(session).and_then(|of| of.notes.get_mut(ix)) {
             note.show_all = true;
             cx.notify();
@@ -304,7 +292,7 @@ impl Notes {
     }
 
     /// "N done" under the open next steps: show or fold the done ones.
-    pub(in crate::window) fn toggle_done_steps(&mut self, session: i64, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_done_steps(&mut self, session: i64, cx: &mut Context<Self>) {
         if let Some(of) = self.of_mut(session) {
             of.list.done_open = !of.list.done_open;
             cx.notify();
@@ -313,13 +301,7 @@ impl Notes {
 
     /// Paste `text` into terminal `session`, and press Enter after it with `submit`. The window does
     /// it (the terminal is its); the keyboard goes to the terminal.
-    pub(in crate::window) fn send_text(
-        &mut self,
-        session: i64,
-        text: String,
-        submit: bool,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn send_text(&mut self, session: i64, text: String, submit: bool, cx: &mut Context<Self>) {
         let text = text.trim();
         if text.is_empty() {
             return;
@@ -328,7 +310,7 @@ impl Notes {
     }
 
     /// Move the prompt typed in the terminal (or the selection) into a new note.
-    pub(in crate::window) fn stash_prompt(
+    pub(crate) fn stash_prompt(
         &mut self,
         session: i64,
         terminal: &Entity<crate::terminal_view::TerminalView>,
@@ -348,7 +330,7 @@ impl Notes {
 
     /// ⇧⌘E from the terminal: into the note being worked on, else the first, else a new one. `true`:
     /// the notes took the keys (they always do while they are on).
-    pub(in crate::window) fn focus_in(
+    pub(crate) fn focus_in(
         &mut self,
         session: i64,
         panel: f32,

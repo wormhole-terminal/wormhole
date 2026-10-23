@@ -26,7 +26,7 @@ fn files(facts: &WindowFacts<'_>) -> Option<usize> {
 
 /// The Changes entry: the tab, what showing it does, its count and words, its panel and its keys, the
 /// diff over the terminal and the terminals' state.
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Changes,
     tabs: &[TabDef {
         id: TabId::Changes,

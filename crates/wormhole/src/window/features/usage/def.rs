@@ -16,7 +16,7 @@ use crate::window::feature::{FeatureDef, ProfileHooks, StateDef, TabDef};
 /// the window (400 ms each).
 const REDRAW_TICKS: u64 = 25;
 
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Usage,
     tabs: &[TabDef {
         id: TabId::Usage,

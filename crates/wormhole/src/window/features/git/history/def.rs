@@ -18,7 +18,7 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<History> {
 }
 
 /// The History entry: the tab, its panel and keys, the log's polling and the terminals' state.
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::History,
     tabs: &[TabDef {
         id: TabId::History,

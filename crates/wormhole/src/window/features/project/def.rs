@@ -22,7 +22,7 @@ fn typed(entity: &AnyEntity) -> Entity<Project> {
     entity.clone().downcast::<Project>().expect("the project entity is made by this entry's `make`")
 }
 
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Project,
     tabs: &[TabDef {
         id: TabId::Project,

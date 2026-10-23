@@ -18,7 +18,7 @@ use gpui_kit::App;
 use crate::window::feature::{FeatureDef, FeatureTable};
 
 /// The features in the table, in tab order.
-pub(in crate::window) const TABLE: &[FeatureDef] =
+pub(crate) const TABLE: &[FeatureDef] =
     &[git::changes::DEF, git::history::DEF, notes::DEF, usage::DEF, project::DEF, git::worktree::DEF];
 
 /// Hands the table to the windows opened from now on, and makes the app-wide state that features keep

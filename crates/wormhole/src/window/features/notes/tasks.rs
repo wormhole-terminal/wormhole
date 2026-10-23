@@ -15,7 +15,7 @@ use crate::window::feature::FeatureEvent;
 impl Notes {
     /// Add a finished task at the end (devctl, tests). Blank text adds nothing.
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn add_task(&mut self, session: i64, text: &str, cx: &mut Context<Self>) {
+    pub(crate) fn add_task(&mut self, session: i64, text: &str, cx: &mut Context<Self>) {
         if self.of_mut(session).is_some_and(|of| of.tasks.add(text, false)) {
             self.dirty(cx);
         }
@@ -24,7 +24,7 @@ impl Notes {
     /// Fill `session` with `open` next steps and `done` done ones (interleaved, one done after every
     /// few open ones), for checking how the list copes with many.
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn devctl_seed_tasks(
+    pub(crate) fn devctl_seed_tasks(
         &mut self,
         session: i64,
         open: usize,
@@ -45,14 +45,14 @@ impl Notes {
     }
 
     /// The header's "+": a new, empty task at the end, with the cursor in it.
-    pub(in crate::window) fn new_task(&mut self, session: i64, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn new_task(&mut self, session: i64, window: &mut Window, cx: &mut Context<Self>) {
         let end = self.of.get(&session).map_or(0, |of| of.tasks.len());
         self.edit_task(session, end, true, window, cx);
     }
 
     /// Edit task `ix` in place, or with `new`, start writing a task that goes in at `ix`. Whatever was
     /// being edited is finished first.
-    pub(in crate::window) fn edit_task(
+    pub(crate) fn edit_task(
         &mut self,
         session: i64,
         ix: usize,
@@ -150,7 +150,7 @@ impl Notes {
     }
 
     /// The keys a task's editor shares with a note's ([`ItemKey`]); whether it handled the key.
-    pub(in crate::window) fn task_key(
+    pub(crate) fn task_key(
         &mut self,
         session: i64,
         input: &Entity<InputState>,
@@ -182,13 +182,7 @@ impl Notes {
     }
 
     /// Move a task to another place in the list (drag and drop, ⌥⌘↑/↓).
-    pub(in crate::window) fn move_task(
-        &mut self,
-        session: i64,
-        from: usize,
-        to: usize,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn move_task(&mut self, session: i64, from: usize, to: usize, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         if !of.tasks.move_item(from, to) {
             return;
@@ -199,20 +193,20 @@ impl Notes {
         self.dirty(cx);
     }
 
-    pub(in crate::window) fn toggle_task(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_task(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
         if self.of_mut(session).is_some_and(|of| of.tasks.toggle(ix)) {
             self.dirty(cx);
         }
     }
 
-    pub(in crate::window) fn toggle_tasks_section(&mut self, session: i64, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_tasks_section(&mut self, session: i64, cx: &mut Context<Self>) {
         if let Some(of) = self.of_mut(session) {
             of.tasks.collapsed = !of.tasks.collapsed;
             self.dirty(cx);
         }
     }
 
-    pub(in crate::window) fn delete_task(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
+    pub(crate) fn delete_task(&mut self, session: i64, ix: usize, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         if !of.tasks.delete(ix) {
             return;
@@ -225,7 +219,7 @@ impl Notes {
     }
 
     /// Throw away the new task being written (its hover ✕).
-    pub(in crate::window) fn discard_task_draft(&mut self, session: i64, cx: &mut Context<Self>) {
+    pub(crate) fn discard_task_draft(&mut self, session: i64, cx: &mut Context<Self>) {
         let Some(of) = self.of_mut(session) else { return };
         if of.edit.as_ref().is_some_and(|edit| edit.edit.new) {
             of.edit = None;

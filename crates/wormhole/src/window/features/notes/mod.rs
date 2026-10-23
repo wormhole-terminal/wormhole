@@ -25,7 +25,7 @@ use wormhole_core::view::notes::tasks::{Edit, Tasks};
 
 use crate::window::feature::FeatureEvent;
 
-pub(in crate::window) mod api;
+pub(crate) mod api;
 mod def;
 #[cfg(feature = "devctl")]
 pub(crate) mod devctl;
@@ -39,10 +39,10 @@ mod state_tests;
 mod task_rows;
 mod tasks;
 #[cfg(test)]
-pub(in crate::window) mod testing;
+pub(crate) mod testing;
 mod view;
 
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 use list::NotesList;
 
 /// How tall a note's editor grows before it scrolls inside: every line shows while it's edited
@@ -54,12 +54,12 @@ const NOTE_ROWS_MIN: usize = 3;
 /// Whether notes and tasks are on (the feature table's mask: the `notes_and_tasks` flag). Off, no tab,
 /// key, count or sync shows or reacts, while what was written stays in the database for when it is on
 /// again.
-pub(in crate::window) fn on(cx: &App) -> bool {
+pub(crate) fn on(cx: &App) -> bool {
     crate::settings::features(cx).has(FeatureId::Notes)
 }
 
 /// The window's notes and tasks: every terminal's, by its id.
-pub(in crate::window) struct Notes {
+pub(crate) struct Notes {
     of: HashMap<i64, NotesOf>,
     /// The note ⌘↵ and the stash act on: terminal and index. Only the selected terminal's, so it is
     /// let go of when another is chosen.
@@ -74,7 +74,7 @@ pub(in crate::window) struct Notes {
 impl EventEmitter<FeatureEvent> for Notes {}
 
 /// One terminal's notes and tasks.
-pub(in crate::window) struct NotesOf {
+pub(crate) struct NotesOf {
     tasks: Tasks,
     /// The task being written or edited in place, if any.
     edit: Option<TaskEdit>,
@@ -128,7 +128,7 @@ impl NotesOf {
 }
 
 impl Notes {
-    pub(in crate::window) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             of: HashMap::new(),
             focused: None,
@@ -144,12 +144,7 @@ impl Notes {
 
     /// The terminal's notes and tasks were read from its record: makes its entry. The notes' editors
     /// need `window`.
-    pub(in crate::window) fn open(
-        &mut self,
-        record: &SessionRecord,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub(crate) fn open(&mut self, record: &SessionRecord, window: &mut Window, cx: &mut Context<Self>) {
         self.of.insert(record.id, NotesOf::new(record));
         for note in &record.notes {
             self.add_note(record.id, Some(note.body.clone()), note.collapsed, self.panel, window, cx);
@@ -157,7 +152,7 @@ impl Notes {
     }
 
     /// Writes the terminal's notes and tasks into its record.
-    pub(in crate::window) fn record(&self, session: i64, record: &mut SessionRecord, cx: &App) {
+    pub(crate) fn record(&self, session: i64, record: &mut SessionRecord, cx: &App) {
         let Some(of) = self.of.get(&session) else { return };
         record.tasks = of.tasks.to_records();
         record.tasks_collapsed = of.tasks.collapsed;
@@ -175,7 +170,7 @@ impl Notes {
 
     /// The terminal is gone from this window (closed, or moved to another one): its entry goes with
     /// its editors. Nothing else is stored for it here.
-    pub(in crate::window) fn forget(&mut self, session: i64) {
+    pub(crate) fn forget(&mut self, session: i64) {
         self.of.remove(&session);
         if self.focused.is_some_and(|(id, _)| id == session) {
             self.focused = None;
@@ -183,7 +178,7 @@ impl Notes {
     }
 
     /// Another terminal was chosen: the focused note belonged to the one before.
-    pub(in crate::window) fn selected(&mut self) {
+    pub(crate) fn selected(&mut self) {
         self.focused = None;
     }
 
@@ -200,12 +195,12 @@ impl Notes {
 
 /// Whether the editor holds nothing but whitespace. Read where the text is, not copied: this
 /// runs for every note of every terminal on the tick.
-pub(in crate::window) fn is_blank_note(state: &TextareaState) -> bool {
+pub(crate) fn is_blank_note(state: &TextareaState) -> bool {
     chunks_blank(state.text().chunks())
 }
 
 /// What ⌘↵ sends from a note: the selection, else the paragraph under the cursor.
-pub(in crate::window) fn selection_or_paragraph(notes: &TextareaState) -> String {
+pub(crate) fn selection_or_paragraph(notes: &TextareaState) -> String {
     let selected = notes.selected_value().to_string();
     if selected.trim().is_empty() {
         wormhole_core::view::notes::paragraphs::paragraph_at(&notes.value(), notes.cursor())

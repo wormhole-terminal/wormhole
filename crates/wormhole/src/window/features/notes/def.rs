@@ -20,7 +20,7 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<Notes> {
 
 /// The notes entry: the Notes tab and its stash button, the keys for a new note and the stash, the
 /// count on a terminal's row, the close question's stake and the terminals' notes and tasks.
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Notes,
     tabs: &[TabDef {
         id: TabId::Notes,

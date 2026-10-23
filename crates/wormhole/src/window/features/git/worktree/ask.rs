@@ -76,7 +76,7 @@ impl Worktrees {
 
     /// Shell → New Terminal in New Worktree…: ask for the branch, for the terminal in front, which is in
     /// `band_folder` (`SessionFacts::band_folder`).
-    pub(in crate::window) fn new_terminal_in_worktree(
+    pub(crate) fn new_terminal_in_worktree(
         &mut self,
         profile: &ProfileId,
         band_folder: Option<PathBuf>,

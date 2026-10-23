@@ -319,7 +319,7 @@ impl Changes {
     /// Build the rows again if a setting they depend on (layout, tab width,
     /// syntax colors) or the room for a split view changed. Called every tick and
     /// after a frame that found the room changed; cheap when nothing did.
-    pub(in crate::window) fn sync_diff(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn sync_diff(&mut self, cx: &mut Context<Self>) {
         let Some(want) = self.build_key(cx) else { return };
         let Some(view) = self.diff.as_mut() else { return };
         // A rebuild never supersedes a load in flight: that answer lands first
@@ -335,7 +335,7 @@ impl Changes {
     /// working-tree diff in line. The list the arrows step through follows the Changes list; a file that
     /// changed is read again in place, so the scroll position stays; one that is no longer changed is
     /// marked as such.
-    pub(in crate::window) fn refresh_open_diff(
+    pub(crate) fn refresh_open_diff(
         &mut self,
         facts: &WindowFacts<'_>,
         session: i64,

@@ -12,7 +12,7 @@ use super::Notes;
 impl Notes {
     /// A note with `text` on the terminal, selected and given the keyboard, as the key for a new note
     /// does. `panel` is the panel's width, for the hint of an empty note.
-    pub(in crate::window) fn note_from(
+    pub(crate) fn note_from(
         &mut self,
         session: i64,
         text: String,
@@ -24,7 +24,7 @@ impl Notes {
     }
 
     /// The terminal's tasks and its notes with something in them, as the document the sync compares.
-    pub(in crate::window) fn snapshot(&self, session: i64, cx: &App) -> NotesDoc {
+    pub(crate) fn snapshot(&self, session: i64, cx: &App) -> NotesDoc {
         let Some(of) = self.of.get(&session) else { return NotesDoc::default() };
         NotesDoc {
             tasks: of
@@ -43,7 +43,7 @@ impl Notes {
     }
 
     /// Whether a task or a note of the terminal has an editor open.
-    pub(in crate::window) fn being_written(&self, session: i64) -> bool {
+    pub(crate) fn being_written(&self, session: i64) -> bool {
         let Some(of) = self.of.get(&session) else { return false };
         of.edit.is_some()
             || self.editing.is_some_and(|id| of.notes.iter().any(|note| note.state.entity_id() == id))
@@ -51,7 +51,7 @@ impl Notes {
 
     /// Replace the terminal's tasks and (non-empty) notes with `doc`. A note keeps its editor (folding,
     /// cursor, undo) when its text is still there, wherever it moved.
-    pub(in crate::window) fn apply(
+    pub(crate) fn apply(
         &mut self,
         session: i64,
         doc: &NotesDoc,

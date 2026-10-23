@@ -142,7 +142,7 @@ impl DiffView {
     /// What the window tests ask of an open diff: the file's path, whether it is the working tree's
     /// (not a commit's), and how many files the arrows step through.
     #[cfg(test)]
-    pub(in crate::window) fn on_view(&self) -> (String, bool, usize) {
+    pub(crate) fn on_view(&self) -> (String, bool, usize) {
         (self.request.file.path.clone(), self.is_working_tree(), self.siblings.len())
     }
 
@@ -214,7 +214,7 @@ impl Changes {
     /// Show `file` between the sides `spec` names, over terminal `session`. Replaces the diff on view;
     /// the old one's work, still running, finds nobody waiting and stops.
     #[expect(clippy::too_many_arguments, reason = "what a diff is of: where, which file, between what")]
-    pub(in crate::window) fn open_diff(
+    pub(crate) fn open_diff(
         &mut self,
         session: i64,
         root: PathBuf,
@@ -263,7 +263,7 @@ impl Changes {
     }
 
     /// Takes the diff down and gives `terminal`, which it covered, the keyboard.
-    pub(in crate::window) fn close_diff(
+    pub(crate) fn close_diff(
         &mut self,
         terminal: &Entity<TerminalView>,
         window: &mut Window,
@@ -283,7 +283,7 @@ impl Changes {
     }
 
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn toggle_split(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn toggle_split(&mut self, cx: &mut Context<Self>) {
         let split = settings_in(&self.profile, cx).diff_split;
         self.set_diff_split(!split, cx);
     }
@@ -310,7 +310,7 @@ impl Changes {
     }
 
     /// Scroll the code sideways by a wheel delta (positive = toward the start).
-    pub(in crate::window) fn scroll_diff_by(&mut self, delta: f32, cx: &mut Context<Self>) {
+    pub(crate) fn scroll_diff_by(&mut self, delta: f32, cx: &mut Context<Self>) {
         let wrap = settings_in(&self.profile, cx).diff_wrap;
         let Some(view) = self.diff.as_mut() else { return };
         if delta == 0.0 || wrap {

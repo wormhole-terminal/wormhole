@@ -35,13 +35,13 @@ mod state;
 mod tests;
 mod view;
 
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 use state::{CommitFiles, HistoryRow, HistoryState};
 #[cfg(test)]
 use state::{FILES_KEPT, Fetched, HistoryKey};
 
 /// The window's History: every terminal's log, by its id, and the branch picker.
-pub(in crate::window) struct History {
+pub(crate) struct History {
     of: HashMap<i64, HistoryState>,
     /// The terminal of each session, as the window last lent it: the log is read in the folder it is in
     /// now, which a read that lands later is checked against.
@@ -71,7 +71,7 @@ impl PickerHost for History {
 }
 
 impl History {
-    pub(in crate::window) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         Self {
             of: HashMap::new(),
             terminals: HashMap::new(),
@@ -159,12 +159,12 @@ impl History {
 #[cfg(test)]
 impl History {
     /// How many commits the log of terminal `session` lists.
-    pub(in crate::window) fn commit_count(&self, session: i64) -> usize {
+    pub(crate) fn commit_count(&self, session: i64) -> usize {
         self.of.get(&session).map_or(0, |state| state.commits.len())
     }
 
     /// The newest commit of the log of terminal `session`.
-    pub(in crate::window) fn first_commit(&self, session: i64) -> Option<wormhole_core::git::Commit> {
+    pub(crate) fn first_commit(&self, session: i64) -> Option<wormhole_core::git::Commit> {
         self.of.get(&session)?.commits.first().cloned()
     }
 }

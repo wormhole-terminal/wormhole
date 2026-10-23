@@ -439,7 +439,7 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
 
 impl Changes {
     /// The diff view, its card inset in the column the terminal is in (`None`: no diff is open).
-    pub(in crate::window) fn render_diff(
+    pub(crate) fn render_diff(
         &mut self,
         facts: &WindowFacts<'_>,
         _: &mut Window,

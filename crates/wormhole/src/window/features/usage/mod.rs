@@ -11,5 +11,5 @@ mod state;
 pub(crate) mod tests;
 mod view;
 
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 pub(crate) use state::{install, record, reports};

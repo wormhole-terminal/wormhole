@@ -20,7 +20,7 @@ fn at<R>(
 }
 
 /// ⌥⌘N in terminal `ix`.
-pub(in crate::window) fn new_note(
+pub(crate) fn new_note(
     ws: &Workspace,
     ix: usize,
     text: Option<&str>,
@@ -31,7 +31,7 @@ pub(in crate::window) fn new_note(
 }
 
 /// A note with `text` at the end of terminal `ix`'s list; its index.
-pub(in crate::window) fn add_note(
+pub(crate) fn add_note(
     ws: &Workspace,
     ix: usize,
     text: &str,
@@ -45,7 +45,7 @@ pub(in crate::window) fn add_note(
 }
 
 /// Replaces the text of note `n` of terminal `ix` from outside (devctl's `note`, the project sync).
-pub(in crate::window) fn set_note_text(
+pub(crate) fn set_note_text(
     ws: &Workspace,
     ix: usize,
     n: usize,
@@ -59,7 +59,7 @@ pub(in crate::window) fn set_note_text(
 }
 
 /// Note `ix` of terminal `t` on screen with the keyboard (`to_end`: clicking its title).
-pub(in crate::window) fn show_note(
+pub(crate) fn show_note(
     ws: &Workspace,
     t: usize,
     ix: usize,
@@ -71,7 +71,7 @@ pub(in crate::window) fn show_note(
 }
 
 /// Clicking the title of note `ix` of terminal `t`.
-pub(in crate::window) fn open_note(
+pub(crate) fn open_note(
     ws: &Workspace,
     t: usize,
     ix: usize,
@@ -82,56 +82,46 @@ pub(in crate::window) fn open_note(
 }
 
 /// A next step added to terminal `ix`.
-pub(in crate::window) fn add_task(ws: &Workspace, ix: usize, text: &str, cx: &mut Context<Workspace>) {
+pub(crate) fn add_task(ws: &Workspace, ix: usize, text: &str, cx: &mut Context<Workspace>) {
     at(ws, ix, cx, |n, session, _, cx| n.add_task(session, text, cx));
 }
 
 /// A task of the terminal `ix` as the test looks at it.
-pub(in crate::window) fn tasks(ws: &Workspace, ix: usize, cx: &App) -> Vec<(String, bool)> {
+pub(crate) fn tasks(ws: &Workspace, ix: usize, cx: &App) -> Vec<(String, bool)> {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     let of = &notes.read(cx).of[&ws.sessions[ix].id];
     of.tasks.items().iter().map(|t| (t.text.to_string(), t.done)).collect()
 }
 
 /// Whether terminal `ix`'s Next steps section is folded.
-pub(in crate::window) fn tasks_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
+pub(crate) fn tasks_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     notes.read(cx).of[&ws.sessions[ix].id].tasks.collapsed
 }
 
-pub(in crate::window) fn notes_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
+pub(crate) fn notes_collapsed(ws: &Workspace, ix: usize, cx: &App) -> bool {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     notes.read(cx).of[&ws.sessions[ix].id].notes_collapsed
 }
 
-pub(in crate::window) fn set_notes_collapsed(
-    ws: &Workspace,
-    ix: usize,
-    collapsed: bool,
-    cx: &mut Context<Workspace>,
-) {
+pub(crate) fn set_notes_collapsed(ws: &Workspace, ix: usize, collapsed: bool, cx: &mut Context<Workspace>) {
     at(ws, ix, cx, |n, session, _, _| n.of_mut(session).expect("a terminal").notes_collapsed = collapsed);
 }
 
 /// How many notes terminal `ix` has.
-pub(in crate::window) fn note_count(ws: &Workspace, ix: usize, cx: &App) -> usize {
+pub(crate) fn note_count(ws: &Workspace, ix: usize, cx: &App) -> usize {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     notes.read(cx).of[&ws.sessions[ix].id].notes.len()
 }
 
 /// Note `n` of terminal `ix`: its editor and whether it is folded.
-pub(in crate::window) fn note(
-    ws: &Workspace,
-    ix: usize,
-    n: usize,
-    cx: &App,
-) -> (Entity<TextareaState>, bool) {
+pub(crate) fn note(ws: &Workspace, ix: usize, n: usize, cx: &App) -> (Entity<TextareaState>, bool) {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     let note = &notes.read(cx).of[&ws.sessions[ix].id].notes[n];
     (note.state.clone(), note.collapsed)
 }
 
-pub(in crate::window) fn set_note_collapsed(
+pub(crate) fn set_note_collapsed(
     ws: &Workspace,
     ix: usize,
     n: usize,
@@ -144,19 +134,19 @@ pub(in crate::window) fn set_note_collapsed(
 }
 
 /// The note ⌘↵ and the stash act on, in the selected terminal.
-pub(in crate::window) fn focused_note(ws: &Workspace, cx: &App) -> Option<usize> {
+pub(crate) fn focused_note(ws: &Workspace, cx: &App) -> Option<usize> {
     let notes = ws.feature::<Notes>()?;
     notes.read(cx).focused.filter(|&(id, _)| id == ws.active_session().id).map(|(_, ix)| ix)
 }
 
-pub(in crate::window) fn set_focused_note(ws: &Workspace, ix: Option<usize>, cx: &mut Context<Workspace>) {
+pub(crate) fn set_focused_note(ws: &Workspace, ix: Option<usize>, cx: &mut Context<Workspace>) {
     let session = ws.active_session().id;
     let notes = ws.feature::<Notes>().expect("the window has notes");
     notes.update(cx, |notes, _| notes.focused = ix.map(|ix| (session, ix)));
 }
 
 /// The ids of the terminals the window's notes keep an entry for, in order.
-pub(in crate::window) fn kept_ids(ws: &Workspace, cx: &App) -> Vec<i64> {
+pub(crate) fn kept_ids(ws: &Workspace, cx: &App) -> Vec<i64> {
     let notes = ws.feature::<Notes>().expect("the window has notes");
     let mut ids: Vec<i64> = notes.read(cx).of.keys().copied().collect();
     ids.sort_unstable();

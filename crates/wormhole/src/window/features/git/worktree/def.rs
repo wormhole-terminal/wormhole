@@ -19,7 +19,7 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<Worktrees> {
 
 /// The worktrees entry. Last in the table: its environment comes after the project's, so a worktree's own
 /// ports win over what a project says.
-pub(in crate::window) const DEF: FeatureDef = FeatureDef {
+pub(crate) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Worktrees,
     tabs: &[],
     close: Some(CloseHooks {

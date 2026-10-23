@@ -32,7 +32,7 @@ const FIELD_ROWS: (usize, usize) = (3, 10);
 const BAR_H: f32 = 40.0;
 
 /// The comment dialog while it is up: which line, and its field.
-pub(in crate::window) struct Commenting {
+pub(crate) struct Commenting {
     /// The terminal the comment is for: the one selected when the line was clicked, whatever is
     /// selected by the time it is saved.
     session: i64,
@@ -192,7 +192,7 @@ impl Changes {
 
     /// devctl `comment`: the open dialog's field set to `text`, then saved and closed.
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn devctl_comment(
+    pub(crate) fn devctl_comment(
         &mut self,
         text: &str,
         window: &mut Window,

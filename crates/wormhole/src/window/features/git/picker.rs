@@ -28,7 +28,7 @@ pub enum Picker {
 }
 
 /// The entity that owns a [`BranchPicker`] and decides what picking a branch does.
-pub(in crate::window) trait PickerHost: Sized + 'static {
+pub(crate) trait PickerHost: Sized + 'static {
     fn picker(&self) -> &BranchPicker;
     fn picker_mut(&mut self) -> &mut BranchPicker;
     /// The person picked `branch` (`None`: HEAD) for terminal `session`. The picker is closed already.
@@ -36,7 +36,7 @@ pub(in crate::window) trait PickerHost: Sized + 'static {
 }
 
 /// One branch picker: whether it is open and for which terminal, the branches it listed, its search box.
-pub(in crate::window) struct BranchPicker {
+pub(crate) struct BranchPicker {
     kind: Picker,
     /// The terminal it is open for. A picker is closed when another terminal is selected.
     open: Option<i64>,
@@ -51,11 +51,7 @@ pub(in crate::window) struct BranchPicker {
 impl BranchPicker {
     /// A closed picker whose search box lives in `host`'s window. Enter in the box picks the first
     /// branch that matches.
-    pub(in crate::window) fn new<H: PickerHost>(
-        kind: Picker,
-        window: &mut Window,
-        cx: &mut Context<H>,
-    ) -> Self {
+    pub(crate) fn new<H: PickerHost>(kind: Picker, window: &mut Window, cx: &mut Context<H>) -> Self {
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search branches"));
         let subscription =
             cx.subscribe_in(&search, window, |this: &mut H, _, event: &InputEvent, _, cx| match event {
@@ -73,26 +69,26 @@ impl BranchPicker {
         }
     }
 
-    pub(in crate::window) fn is_open(&self) -> bool {
+    pub(crate) fn is_open(&self) -> bool {
         self.open.is_some()
     }
 
     /// Closes it and drops what it listed.
-    pub(in crate::window) fn close(&mut self) {
+    pub(crate) fn close(&mut self) {
         self.open = None;
         self.branches.clear();
     }
 
     /// The branches listed (empty until the list is in).
     #[cfg(test)]
-    pub(in crate::window) fn branches(&self) -> &[String] {
+    pub(crate) fn branches(&self) -> &[String] {
         &self.branches
     }
 
     /// Opens it for `session`, or closes it when it is open. Asks for the repository's branches off the
     /// UI thread. The picker sits in a header that is drawn once git has answered, so a failure to
     /// list them is the panel's to show, not the list's: it just stays empty.
-    pub(in crate::window) fn toggle<H: PickerHost>(
+    pub(crate) fn toggle<H: PickerHost>(
         &mut self,
         session: i64,
         terminal: &Entity<TerminalView>,
@@ -160,14 +156,14 @@ impl BranchPicker {
 
     /// The search box, to type into (devctl).
     #[cfg(feature = "devctl")]
-    pub(in crate::window) fn search(&self) -> &Entity<InputState> {
+    pub(crate) fn search(&self) -> &Entity<InputState> {
         &self.search
     }
 
     /// The picker in a panel card's head, as the data its chip draws from: the rows of a list are
     /// drawn from a callback that can't borrow the entity, so the chip is described here and built
     /// there ([`PickerChip::render`]). `prefix` reads muted before the picked branch.
-    pub(in crate::window) fn chip<H: PickerHost>(
+    pub(crate) fn chip<H: PickerHost>(
         &self,
         host: WeakEntity<H>,
         of: ChipOf<'_>,
@@ -194,7 +190,7 @@ impl BranchPicker {
 
 /// What a chip shows: the terminal it is for, the words before the branch, the branch it names and the
 /// one the picker has as picked (they differ when the picked branch is gone).
-pub(in crate::window) struct ChipOf<'a> {
+pub(crate) struct ChipOf<'a> {
     pub session: i64,
     pub terminal: &'a Entity<TerminalView>,
     pub prefix: &'static str,
@@ -218,7 +214,7 @@ fn pick_first_match<H: PickerHost>(this: &mut H, cx: &mut Context<H>) {
 
 /// A branch picker's chip and, while it is open, the floating, searchable list of branches under it.
 /// It reads `prefix` ("vs", muted) then the picked branch after its mark in `git.branch`, or HEAD.
-pub(in crate::window) struct PickerChip<H: PickerHost> {
+pub(crate) struct PickerChip<H: PickerHost> {
     kind: Picker,
     prefix: &'static str,
     branch: Option<String>,
@@ -233,7 +229,7 @@ pub(in crate::window) struct PickerChip<H: PickerHost> {
 }
 
 impl<H: PickerHost> PickerChip<H> {
-    pub(in crate::window) fn render(&self, ui: UiColors, cx: &App) -> AnyElement {
+    pub(crate) fn render(&self, ui: UiColors, cx: &App) -> AnyElement {
         let (kind, prefix, session) = (self.kind, self.prefix, self.session);
         let label = div()
             .flex()

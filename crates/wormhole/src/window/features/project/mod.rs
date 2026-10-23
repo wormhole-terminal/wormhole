@@ -50,7 +50,7 @@ use wormhole_core::storage::paths::ProfileId;
 use crate::window::feature::FeatureEvent;
 
 pub(crate) use create::create_project_folder;
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 pub(crate) use hub::{LoadedProject, ProjectHub, load_project};
 #[cfg(test)]
 pub(crate) use hubs::hub_mut;
@@ -100,7 +100,7 @@ struct ProjectOf {
 }
 
 impl Project {
-    pub(in crate::window) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let picker = cx.new(|cx| ColorPickerState::new(window, cx));
         let subscription = cx.subscribe_in(&picker, window, |this, _, event: &ColorPickerEvent, _, cx| {
             let ColorPickerEvent::Change(Some(color)) = event else { return };

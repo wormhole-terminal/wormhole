@@ -31,13 +31,13 @@ mod rows;
 mod tests;
 mod view;
 
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 use list::ChangesList;
 use rows::Group;
 pub(super) use rows::display_order;
 
 /// The window's Changes: every terminal's list and comments, the diff on view and the picker.
-pub(in crate::window) struct Changes {
+pub(crate) struct Changes {
     pub(super) of: HashMap<i64, ChangesOf>,
     /// The diff on view, covering the terminal it was opened from (selecting another closes it).
     pub(super) diff: Option<DiffView>,
@@ -85,7 +85,7 @@ pub(super) struct ChangesOf {
 }
 
 impl Changes {
-    pub(in crate::window) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         Self {
             of: HashMap::new(),
             diff: None,

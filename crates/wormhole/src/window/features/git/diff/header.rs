@@ -30,7 +30,7 @@ const TITLE_LEAD: f32 = 6.0;
 
 impl Changes {
     /// Title bar while a diff is open: where the file sits among its siblings.
-    pub(in crate::window) fn render_diff_title(
+    pub(crate) fn render_diff_title(
         &mut self,
         facts: &WindowFacts<'_>,
         cx: &mut Context<Self>,

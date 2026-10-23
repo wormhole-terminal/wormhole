@@ -34,23 +34,23 @@ mod def;
 mod tests;
 
 use ask::Asking;
-pub(in crate::window) use def::DEF;
+pub(crate) use def::DEF;
 
 /// The window's worktree feature: the dialog while it is up.
-pub(in crate::window) struct Worktrees {
+pub(crate) struct Worktrees {
     asking: Option<Asking>,
 }
 
 impl EventEmitter<FeatureEvent> for Worktrees {}
 
 impl Worktrees {
-    pub(in crate::window) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { asking: None }
     }
 
     /// Whether the dialog is up.
     #[cfg(test)]
-    pub(in crate::window) fn is_asking(&self) -> bool {
+    pub(crate) fn is_asking(&self) -> bool {
         self.asking.is_some()
     }
 }

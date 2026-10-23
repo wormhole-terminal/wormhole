@@ -379,6 +379,21 @@
           "open_in"
         ]
       }
+    },
+    "9": {
+      "doc": "The features leave window/ (phase 5, step 5g)",
+      "moves": [
+        {
+          "from": "window/features",
+          "to": "features"
+        }
+      ],
+      "layers": {
+        "after": "aux_window",
+        "insert": [
+          "features"
+        ]
+      }
     }
   }
 }
