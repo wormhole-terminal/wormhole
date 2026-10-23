@@ -43,15 +43,14 @@ impl Workspace {
         (hosted, self.sessions.len() - hosted)
     }
 
-    /// Git work this window still waits for: a status or history refresh in flight, or a session
-    /// whose status was read for another folder than the one it is in now (the next tick asks
-    /// again). A diff being read has no flag here; `wait-idle` waits for the picture instead.
-    pub(crate) fn devctl_git_busy(&self, cx: &App) -> bool {
-        crate::window::features::git::history::devctl::busy(self, cx)
-            || self
-                .sessions
-                .iter()
-                .any(|session| session.git.loading() || session.git.cwd != session.terminal().read(cx).cwd)
+    /// Repository reads this window still waits for: a status refresh in flight, or a session whose
+    /// status was read for another folder than the one it is in now (the next tick asks again). A
+    /// feature's own reads (History's log) are its, and a diff being read has no flag here;
+    /// `wait-idle` waits for the picture instead.
+    pub(crate) fn devctl_repo_busy(&self, cx: &App) -> bool {
+        self.sessions
+            .iter()
+            .any(|session| session.git.loading() || session.git.cwd != session.terminal().read(cx).cwd)
     }
 
     /// The selected terminal's id (devctl `pane-close` without an id): the focused pane.

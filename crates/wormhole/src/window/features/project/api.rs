@@ -10,6 +10,7 @@ use wormhole_core::project::Feature;
 use wormhole_core::storage::paths::ProfileId;
 
 use super::{LoadedProject, Project, hub_of, project_folders_on};
+use crate::onboarding::TrustCard;
 use crate::window::Workspace;
 
 /// Projects of the window's terminals and of its folders (whose colour they hold), in terminal order. None
@@ -60,25 +61,15 @@ pub(crate) fn action_for_key(ws: &Workspace, keystroke: &Keystroke, cx: &App) ->
     ws.feature::<Project>()?.read(cx).action_for_key(ws.active_session().id, ws.profile(), keystroke, cx)
 }
 
-/// What the first run's trust card says of a project that is not trusted yet.
-pub(crate) struct TrustPrompt {
-    /// The project folder's name, and the name of its `.wormhole` directory on disk.
-    pub name: String,
-    pub dir: String,
-    /// How many commands trusting it would let run.
-    pub commands: usize,
-    /// The approval dialog is up.
-    pub approving: bool,
-}
-
 /// The first run's trust card for the project at `root`, as `profile` (the window's) sees it: `None` when
 /// the project can't be read or is trusted already.
-pub(crate) fn trust_prompt(profile: &ProfileId, root: &Path, cx: &App) -> Option<TrustPrompt> {
+pub(crate) fn trust_card(profile: &ProfileId, root: &Path, cx: &App) -> Option<TrustCard> {
     let project = super::load_project_info(profile, root, cx)?;
     if project.status == wormhole_core::project::TrustStatus::Trusted {
         return None;
     }
-    Some(TrustPrompt {
+    Some(TrustCard {
+        root: root.to_path_buf(),
         name: root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
         dir: wormhole_core::project::dir_name_at(root),
         commands: project.request.as_ref().map_or(0, |request| request.commands.len()),

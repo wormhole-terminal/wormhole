@@ -32,6 +32,7 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::focus_keys::Activate;
+use crate::onboarding::TrustCard;
 use crate::sidebar::RowExtras;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
@@ -237,6 +238,9 @@ pub(in crate::window) struct FeatureDef {
     pub tab_changed: Option<TabChangedFn>,
     /// The title row's branch chip: what a click on it opens (Changes' "compare with").
     pub branch_chip: Option<BranchChip>,
+    /// What the first run asks of the folder's project: which one the terminal in front is in, the trust
+    /// card it shows for one, and the approval its button asks for.
+    pub trust: Option<TrustHooks>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -262,6 +266,7 @@ impl FeatureDef {
         cover: None,
         tab_changed: None,
         branch_chip: None,
+        trust: None,
         state: None,
     };
 }
@@ -287,6 +292,19 @@ pub(in crate::window) struct CoverDef {
     /// the file `watch` named. The answer is in the facts. Called whether or not something is laid over
     /// the terminal now: it is how an open diff finds out that its file changed.
     pub read: ReadFn,
+}
+
+/// The first run's trust card, from the feature that keeps the projects. Asked whether or not the feature
+/// is on: the card is the intro's own page, and a project is trusted or not whatever the tab shows.
+pub(in crate::window) struct TrustHooks {
+    /// The project folder the terminal in front is in, for the card when no folder was picked.
+    pub active_root: fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<PathBuf>,
+    /// The card for the project at this root as the profile sees it; `None` when there is nothing to
+    /// show (it can't be read, or it is trusted already).
+    pub card: fn(&ProfileId, &Path, &App) -> Option<TrustCard>,
+    /// "Trust with Touch ID…" on the card: ask for the approval and trust the project at this root as
+    /// the profile.
+    pub approve: fn(&ProfileId, &Path, &mut App),
 }
 
 /// The title row's branch chip. The window draws it (it knows the row's width) and hands a click to
