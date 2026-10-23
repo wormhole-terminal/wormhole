@@ -5,6 +5,7 @@
 //! Hooks are written only by a row's own button, never by opening the page.
 
 use std::path::{Path, PathBuf};
+use wormhole_text::{keys::*, text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -27,7 +28,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-summary", draw_summary),
     Setting::custom("agents-notifications", |_, cx| {
         let ui = ui(cx);
-        style::link_button("open-notifications", ui, "Open Notifications", true)
+        style::link_button("open-notifications", ui, text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS), true)
             .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Notifications, cx)))
             .into_any_element()
     }),
@@ -154,7 +155,12 @@ impl SettingsWindow {
 fn draw_summary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let Some(snapshot) = &window.agents else {
-        return div().py_3().text_body().text_color(ui.muted).child("Looking for agents…").into_any_element();
+        return div()
+            .py_3()
+            .text_body()
+            .text_color(ui.muted)
+            .child(text(SETTINGS_AGENTS_LOOKING_FOR_AGENTS))
+            .into_any_element();
     };
     let installed = snapshot.installed().count();
     let hooked = snapshot.installed().filter(|row| row.hooks() == Some(State::Installed)).count();
@@ -186,12 +192,17 @@ fn draw_summary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
         .child(cell(installed, "installed", ui.text, true))
         .child(cell(
             hooked,
-            "reporting through hooks",
+            text(SETTINGS_AGENTS_REPORTING_THROUGH_HOOKS),
             if hooked > 0 { ui.success_text } else { ui.text },
             false,
         ))
-        .child(cell(repair, "needs repair", if repair > 0 { ui.warning_text } else { ui.text }, false))
-        .child(cell(others, "recognised, not on PATH", ui.muted, false))
+        .child(cell(
+            repair,
+            text(SETTINGS_AGENTS_NEEDS_REPAIR),
+            if repair > 0 { ui.warning_text } else { ui.text },
+            false,
+        ))
+        .child(cell(others, text(SETTINGS_AGENTS_RECOGNISED_NOT_ON_PATH), ui.muted, false))
         .into_any_element()
 }
 
@@ -202,10 +213,12 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
     let rows: Vec<AnyElement> =
         snapshot.installed().map(|row| agent_row(ui, row, snapshot.home(), cx)).collect();
     let none = rows.is_empty().then(|| {
-        div().py_3().rule_top(ui).text_body().text_color(ui.muted).child(
-            "No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: \
-             Wormhole recognises it in any terminal, and offers its hooks here.",
-        )
+        div()
+            .py_3()
+            .rule_top(ui)
+            .text_body()
+            .text_color(ui.muted)
+            .child(text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS))
     });
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
@@ -233,24 +246,24 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
     let agent = row.agent;
     let (code_font, _) = crate::fonts::code_font(cx);
     let (badge, badge_color) = match (row.spec, row.hooks()) {
-        (Some(_), Some(State::Installed)) => ("Status hooks on", ui.success_text),
-        (Some(_), Some(State::Partial)) => ("Hooks incomplete", ui.warning_text),
-        _ => ("Reading output", ui.muted),
+        (Some(_), Some(State::Installed)) => (text(SETTINGS_AGENTS_STATUS_HOOKS_ON), ui.success_text),
+        (Some(_), Some(State::Partial)) => (text(SETTINGS_AGENTS_HOOKS_INCOMPLETE), ui.warning_text),
+        _ => (text(SETTINGS_AGENTS_READING_OUTPUT), ui.muted),
     };
     let path = row.spec.map(|spec| (spec.display_path(home), spec.path(home)));
     let detail = match row.hooks() {
-        Some(State::Installed) => "Installed · hooks in",
-        Some(State::Partial) => "Installed · hooks incomplete in",
-        Some(State::NotInstalled) => "Installed · status from output; hooks go in",
-        None => "Installed · status from output (no hook support)",
+        Some(State::Installed) => text(SETTINGS_AGENTS_INSTALLED_HOOKS_IN),
+        Some(State::Partial) => text(SETTINGS_AGENTS_INSTALLED_HOOKS_INCOMPLETE_IN),
+        Some(State::NotInstalled) => text(SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_HOOKS_GO),
+        None => text(SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_NO_HOOK),
     };
     let action = match (row.spec, row.hooks()) {
         (Some(spec), Some(state)) => {
             let remove = state == State::Installed;
             let label = match state {
-                State::Installed => "Remove hooks",
-                State::Partial => "Repair hooks",
-                State::NotInstalled => "Install hooks",
+                State::Installed => text(SETTINGS_AGENTS_REMOVE_HOOKS),
+                State::Partial => text(SETTINGS_AGENTS_REPAIR_HOOKS),
+                State::NotInstalled => text(SETTINGS_AGENTS_INSTALL_HOOKS),
             };
             Some(
                 Button::new(SharedString::from(format!("agent-hooks-{:?}", agent.id)))
@@ -264,9 +277,9 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                         if let Err(err) = &result {
                             tracing::warn!("{} hooks: {err}", agent.name);
                         }
-                        this.notice = result
-                            .err()
-                            .map(|e| (Section::Agents, format!("{} hooks: {e}", agent.name).into()));
+                        this.notice = result.err().map(|e| {
+                            (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                        });
                         // The files changed: read them again.
                         this.load_agents(cx);
                         cx.notify();
@@ -282,11 +295,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
             ui,
             style::BannerKind::Warning,
             false,
-            format!(
-                "Some of {}'s hook events are missing (it may have been updated). Repair adds them back; \
-                 your own entries stay.",
-                agent.name
-            ),
+            settings_agents_hooks_partial(agent.name),
         )),
         _ => None,
     };
@@ -346,7 +355,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                                                 SharedString::from(format!("agent-reveal-{:?}", agent.id)),
                                                 ui,
                                                 IconName::ExternalLink,
-                                                "Reveal in Finder",
+                                                text(SETTINGS_AGENTS_REVEAL_IN_FINDER),
                                             )
                                             .in_row()
                                             .on_click(move |_, _, cx| reveal_file(&full, cx)),
@@ -400,14 +409,14 @@ fn login_row(
     let dir = login.dir.clone();
     let shown = with_tilde(&dir);
     let (label, remove) = match state {
-        Some(State::Installed) => ("Remove hooks", true),
-        Some(State::Partial) => ("Repair hooks", false),
-        _ => ("Install hooks", false),
+        Some(State::Installed) => (text(SETTINGS_AGENTS_REMOVE_HOOKS), true),
+        Some(State::Partial) => (text(SETTINGS_AGENTS_REPAIR_HOOKS), false),
+        _ => (text(SETTINGS_AGENTS_INSTALL_HOOKS), false),
     };
     let badge = match state {
-        Some(State::Installed) => "Status hooks on",
-        Some(State::Partial) => "Hooks incomplete",
-        _ => "No hooks",
+        Some(State::Installed) => text(SETTINGS_AGENTS_STATUS_HOOKS_ON),
+        Some(State::Partial) => text(SETTINGS_AGENTS_HOOKS_INCOMPLETE),
+        _ => text(SETTINGS_AGENTS_NO_HOOKS),
     };
     let id = format!("agent-login-{:?}-{ix}", agent.id);
     div()
@@ -425,7 +434,7 @@ fn login_row(
                 .gap_1()
                 .text_caption()
                 .text_color(ui.muted)
-                .child(format!("{} profile · {badge} in", login.profile))
+                .child(settings_agents_login_state(&login.profile, badge))
                 .child(
                     div()
                         .px_1()
@@ -447,8 +456,9 @@ fn login_row(
                     if let Err(err) = &result {
                         tracing::warn!("{} hooks in {}: {err}", agent.name, dir.display());
                     }
-                    this.notice =
-                        result.err().map(|e| (Section::Agents, format!("{} hooks: {e}", agent.name).into()));
+                    this.notice = result.err().map(|e| {
+                        (Section::Agents, settings_agents_hooks_failed(agent.name, &e.to_string()).into())
+                    });
                     this.load_agents(cx);
                     cx.notify();
                 })),
@@ -493,21 +503,28 @@ fn draw_others(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 .min_w_0()
                 .flex()
                 .flex_col()
-                .child(div().text_body().font_weight(FontWeight::MEDIUM).child(format!(
-                    "{} more {} Wormhole recognises",
-                    others.len(),
-                    if others.len() == 1 { "agent" } else { "agents" }
-                )))
+                .child(
+                    div()
+                        .text_body()
+                        .font_weight(FontWeight::MEDIUM)
+                        .child(settings_agents_others_head(whole(others.len()))),
+                )
                 .when(!open, |d| d.child(div().text_caption().text_color(ui.muted).child(names))),
         )
-        .child(div().flex_none().text_caption().text_color(ui.faint).child("Not on PATH"));
+        .child(
+            div().flex_none().text_caption().text_color(ui.faint).child(text(SETTINGS_AGENTS_NOT_ON_PATH)),
+        );
     div()
         .flex()
         .flex_col()
         .child(head)
         .when(open, |d| {
             d.children(others.into_iter().map(|row| {
-                let hooks = if row.spec.is_some() { "status hooks available" } else { "status from output" };
+                let hooks = if row.spec.is_some() {
+                    text(SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE)
+                } else {
+                    text(SETTINGS_AGENTS_STATUS_FROM_OUTPUT)
+                };
                 div()
                     .flex()
                     .items_center()
@@ -549,19 +566,22 @@ fn draw_how(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement 
                 .child(column(
                     IconName::Check,
                     ui.success,
-                    "With status hooks",
-                    "The agent tells Wormhole the moment it starts working, waits for you or finishes.",
+                    text(SETTINGS_AGENTS_WITH_STATUS_HOOKS),
+                    text(SETTINGS_AGENTS_THE_AGENT_TELLS_WORMHOLE_THE_MOMENT),
                 ))
                 .child(column(
                     IconName::SquareTerminal,
                     ui.muted,
-                    "Without",
-                    "Status is read from the terminal output: usually right, sometimes a beat late.",
+                    text(SETTINGS_AGENTS_WITHOUT),
+                    text(SETTINGS_AGENTS_STATUS_IS_READ_FROM_THE_TERMINAL),
                 )),
         )
-        .child(div().text_caption().text_color(ui.muted).child(
-            "Hooks do nothing outside Wormhole, only add entries of their own, and a backup of every changed file is kept.",
-        ))
+        .child(
+            div()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(text(SETTINGS_AGENTS_HOOKS_DO_NOTHING_OUTSIDE_WORMHOLE_ONLY)),
+        )
         .into_any_element()
 }
 

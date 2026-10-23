@@ -6,6 +6,7 @@
 //! The script is written only by the Install (or Update) button, never by opening the page.
 
 use std::path::{Path, PathBuf};
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
@@ -100,7 +101,7 @@ impl SettingsWindow {
             Err(cli_tool::Error::Foreign(_)) => None,
             Err(err) => {
                 tracing::warn!("installing the command line tool: {err}");
-                Some(format!("Couldn't install {COMMAND_NAME}: {err}").into())
+                Some(settings_agents_cli_install_failed(COMMAND_NAME, &err.to_string()).into())
             }
         };
         self.load_cli_tool(cx);
@@ -114,7 +115,7 @@ impl SettingsWindow {
             }
             Err(err) => {
                 tracing::warn!("removing the command line tool: {err}");
-                Some(format!("Couldn't remove {COMMAND_NAME}: {err}").into())
+                Some(settings_agents_cli_remove_failed(COMMAND_NAME, &err.to_string()).into())
             }
         };
         self.load_cli_tool(cx);
@@ -142,13 +143,9 @@ fn path_note(dir: &Path) -> PathNote {
 fn describe(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> Option<SharedString> {
     Some(
         match &window.cli_tool.status {
-            Status::NotInstalled => format!("{COMMAND_NAME} in any terminal. Not installed"),
-            Status::Installed { path, .. } => {
-                format!("{COMMAND_NAME} in any terminal. Installed at {}", shown(path))
-            }
-            Status::Foreign { path } => {
-                format!("{COMMAND_NAME} in any terminal. Another {COMMAND_NAME} is at {}", shown(path))
-            }
+            Status::NotInstalled => settings_agents_cli_not_installed(COMMAND_NAME),
+            Status::Installed { path, .. } => settings_agents_cli_installed_at(COMMAND_NAME, &shown(path)),
+            Status::Foreign { path } => settings_agents_cli_foreign_at(COMMAND_NAME, &shown(path)),
         }
         .into(),
     )
@@ -167,24 +164,26 @@ fn draw(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement
         Button::new("cli-tool-uninstall")
             .small()
             .outline()
-            .label("Uninstall")
+            .label(text(SETTINGS_AGENTS_UNINSTALL))
             .on_click(cx.listener(|this, _, _, cx| this.uninstall_cli_tool(cx)))
     };
     let row = div().flex().items_center().gap_2();
     match &window.cli_tool.status {
         Status::NotInstalled => row
-            .child(install("Install", cx).tooltip(format!(
-                "Puts {COMMAND_NAME} in /usr/local/bin, or in ~/.local/bin when that can't be written"
-            )))
+            .child(
+                install(text(SETTINGS_AGENTS_INSTALL), cx)
+                    .tooltip(settings_agents_cli_install_tooltip(COMMAND_NAME)),
+            )
             .into_any_element(),
-        Status::Installed { current, .. } => {
-            row.when(!current, |row| row.child(install("Update", cx))).child(uninstall(cx)).into_any_element()
-        }
+        Status::Installed { current, .. } => row
+            .when(!current, |row| row.child(install(text(SETTINGS_AGENTS_UPDATE), cx)))
+            .child(uninstall(cx))
+            .into_any_element(),
         Status::Foreign { .. } => row
             .child(
-                install("Install", cx)
+                install(text(SETTINGS_AGENTS_INSTALL), cx)
                     .disabled(true)
-                    .tooltip(format!("Another {COMMAND_NAME} is in the way; Wormhole never replaces it")),
+                    .tooltip(settings_agents_cli_foreign_tooltip(COMMAND_NAME)),
             )
             .into_any_element(),
     }
@@ -206,10 +205,7 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                 ui,
                 style::BannerKind::Warning,
                 false,
-                format!(
-                    "Wormhole never replaces a command it didn't write. Move that {COMMAND_NAME} away to \
-                     install this one."
-                ),
+                settings_agents_cli_foreign_note(COMMAND_NAME),
             )
             .into_any_element(),
         ),
@@ -220,21 +216,19 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                         ui,
                         style::BannerKind::Info,
                         false,
-                        format!(
-                            "The installed {COMMAND_NAME} runs a copy of Wormhole that is somewhere else. \
-                             Update points it at this one."
-                        ),
+                        settings_agents_cli_stale_note(COMMAND_NAME),
                     )
                     .into_any_element(),
                 );
             }
             match &panel.path {
                 PathNote::None => {}
-                PathNote::Reading => lines.push(note(ui.muted, "Checking your shell's PATH…".into())),
-                PathNote::On(dir) => lines.push(note(
-                    ui.success_text,
-                    format!("{dir} is on your shell's PATH: {COMMAND_NAME} works in new terminals.").into(),
-                )),
+                PathNote::Reading => {
+                    lines.push(note(ui.muted, text(SETTINGS_AGENTS_CHECKING_YOUR_SHELLS_PATH).into()))
+                }
+                PathNote::On(dir) => {
+                    lines.push(note(ui.success_text, settings_agents_cli_path_on(dir, COMMAND_NAME).into()))
+                }
                 PathNote::Off(dir, advice) => {
                     let line = advice.line.clone();
                     let (code_font, _) = crate::fonts::code_font(cx);
@@ -243,18 +237,14 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                             ui,
                             style::BannerKind::Warning,
                             false,
-                            format!(
-                                "{dir} isn't on your shell's PATH, so new terminals won't find {COMMAND_NAME}. \
-                                 Add this line to {}, then open a new terminal:",
-                                advice.file
-                            ),
+                            settings_agents_cli_path_off(dir, COMMAND_NAME, &advice.file),
                         )
                         .child(
                             Button::new("cli-tool-copy-line")
                                 .ghost()
                                 .small()
                                 .icon(IconName::Copy)
-                                .label("Copy line")
+                                .label(text(SETTINGS_AGENTS_COPY_LINE))
                                 .on_click(move |_, _, cx| {
                                     cx.write_to_clipboard(ClipboardItem::new_string(line.clone()));
                                 }),
@@ -274,13 +264,9 @@ fn below(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<An
                             .into_any_element(),
                     );
                 }
-                PathNote::Unknown(dir) => lines.push(note(
-                    ui.muted,
-                    format!(
-                        "Couldn't read your shell's PATH. If {COMMAND_NAME} isn't found, add {dir} to it."
-                    )
-                    .into(),
-                )),
+                PathNote::Unknown(dir) => {
+                    lines.push(note(ui.muted, settings_agents_cli_path_unknown(COMMAND_NAME, dir).into()))
+                }
             }
         }
     }
