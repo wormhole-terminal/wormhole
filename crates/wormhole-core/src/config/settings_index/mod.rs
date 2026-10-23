@@ -13,6 +13,8 @@ mod english;
 mod search;
 mod table;
 
+use wormhole_text::{Key, text};
+
 use serde_json::{Map, Value};
 
 use crate::config::{PROJECT_SETTINGS, Settings};
@@ -66,45 +68,66 @@ impl NavGroup {
 
 /// What a section is called, what its page says under the title, and where the nav lists it.
 pub struct SectionInfo {
-    title: &'static str,
-    intro: &'static str,
+    title: Word,
+    intro: Word,
     pub nav: NavGroup,
 }
 
 impl SectionInfo {
     pub fn title(&self) -> &'static str {
-        self.title
+        self.title.get()
     }
 
     /// The line under the page's title.
     pub fn intro(&self) -> &'static str {
-        self.intro
+        self.intro.get()
+    }
+}
+
+/// A piece of the table's wording: a key into the catalogs, or, while a section still has its words
+/// in Rust, the literal itself. Only the sections not yet moved use the second.
+#[derive(Clone, Copy)]
+enum Word {
+    Key(Key),
+    Literal(&'static str),
+}
+
+impl Word {
+    /// No wording: an empty description, a group without a title.
+    const NONE: Word = Word::Literal("");
+
+    /// The words in the language in use.
+    fn get(self) -> &'static str {
+        match self {
+            Word::Key(key) => text(key),
+            Word::Literal(literal) => literal,
+        }
     }
 }
 
 /// A titled run of settings on a page (an empty title: rows without a label above them).
 pub struct Group {
-    title: &'static str,
-    /// A paragraph under the title; empty for none.
-    blurb: &'static str,
+    title: Word,
+    /// A paragraph under the title; none for none.
+    blurb: Word,
     /// A quiet note at the right of the title ("Follows the terminal until you pick one").
-    aside: &'static str,
+    aside: Word,
     pub entries: &'static [Entry],
 }
 
 impl Group {
     pub fn title(&self) -> &'static str {
-        self.title
+        self.title.get()
     }
 
     /// A paragraph under the title; empty for none.
     pub fn blurb(&self) -> &'static str {
-        self.blurb
+        self.blurb.get()
     }
 
     /// A quiet note at the right of the title ("Follows the terminal until you pick one"); empty for none.
     pub fn aside(&self) -> &'static str {
-        self.aside
+        self.aside.get()
     }
 }
 
@@ -113,12 +136,12 @@ pub struct Entry {
     /// Names the setting's row and control in the app, and the setting in tests and devctl.
     /// Unique across the sections.
     pub id: &'static str,
-    label: &'static str,
-    /// The quiet line under the label; empty for none. A page may say something more
+    label: Word,
+    /// The quiet line under the label; none for none. A page may say something more
     /// current in its place (the font in use, how many custom fonts were found).
-    description: &'static str,
+    description: Word,
     /// Words that find it besides its label and description.
-    keywords: &'static str,
+    keywords: Word,
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
     /// look at. Empty for a row that stores nothing there (a folder button, the agents' hooks).
     pub keys: &'static [&'static str],
@@ -129,17 +152,17 @@ pub struct Entry {
 
 impl Entry {
     pub fn label(&self) -> &'static str {
-        self.label
+        self.label.get()
     }
 
     /// The quiet line under the label; empty for none.
     pub fn description(&self) -> &'static str {
-        self.description
+        self.description.get()
     }
 
     /// Words that find it besides its label and description; empty for none.
     pub fn keywords(&self) -> &'static str {
-        self.keywords
+        self.keywords.get()
     }
 
     /// Whether the setting is of use with these features on: always, unless it is about a feature

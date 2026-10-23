@@ -1,27 +1,27 @@
 //! The Terminal section: scrollback and restoring, opening, the shell, worktrees, the bell and privacy.
 
-use super::{entry, group};
+use super::{literal_entry, literal_group};
 use crate::config::settings_index::Group;
 
 pub(super) const TERMINAL: &[Group] = &[
-    group(
+    literal_group(
         "Behaviour",
         &[
-            entry(
+            literal_entry(
                 "scrollback",
                 "Scrollback",
                 "Lines kept per terminal (applies to new terminals)",
                 "history buffer lines",
                 &["scrollback_lines"],
             ),
-            entry(
+            literal_entry(
                 "restore-text",
                 "Restore terminal text after restart",
                 "Encrypted and kept only on this Mac. Off erases what's saved",
                 "scrollback history saved restore privacy secrets encrypted keychain",
                 &["restore_terminal_text"],
             ),
-            entry(
+            literal_entry(
                 "minimap",
                 "Show minimap",
                 "The scrollback drawn small along the terminal's right edge. Click or drag it to \
@@ -29,7 +29,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "overview scrollbar map outline",
                 &["minimap"],
             ),
-            entry(
+            literal_entry(
                 "split-gaps",
                 "Gaps between split terminals",
                 "Each terminal of a split is its own rounded surface, a small gap apart. Off joins \
@@ -37,7 +37,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "panes divider spacing rounded margin",
                 &["split_gaps"],
             ),
-            entry(
+            literal_entry(
                 "meta",
                 "Use Option as Meta",
                 "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some \
@@ -45,13 +45,13 @@ pub(super) const TERMINAL: &[Group] = &[
                 "alt option escape keyboard left right",
                 &["option_as_meta"],
             ),
-            entry("terminal-font", "Font", "", "typeface size line height", &[]),
+            literal_entry("terminal-font", "Font", "", "typeface size line height", &[]),
         ],
     ),
-    group(
+    literal_group(
         "Opening",
         &[
-            entry(
+            literal_entry(
                 "open-in",
                 "Open folders in",
                 "The Open in… button in a terminal's title row opens its folder here; its menu lists \
@@ -59,7 +59,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app",
                 &["open_in"],
             ),
-            entry(
+            literal_entry(
                 "default-terminal",
                 "Default terminal",
                 "Double-clicked .command files and programs run in a new Wormhole terminal instead \
@@ -69,10 +69,10 @@ pub(super) const TERMINAL: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Shell",
         &[
-            entry(
+            literal_entry(
                 "default-shell",
                 "Default shell",
                 "What a new terminal runs: your login shell, a shell on this Mac, or a profile \
@@ -80,7 +80,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "shell zsh bash fish nu nushell login program default",
                 &["default_shell"],
             ),
-            entry(
+            literal_entry(
                 "shells",
                 "Shells",
                 "Profiles for New Terminal With: a program with its arguments, listed \
@@ -90,9 +90,9 @@ pub(super) const TERMINAL: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Worktrees",
-        &[entry(
+        &[literal_entry(
             "worktree-base",
             "Worktrees folder",
             "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in \
@@ -101,17 +101,17 @@ pub(super) const TERMINAL: &[Group] = &[
             &["worktree_base"],
         )],
     ),
-    group(
+    literal_group(
         "Bell",
         &[
-            entry(
+            literal_entry(
                 "bell-sound",
                 "Play a sound",
                 "The system beep when a program in a terminal rings the bell",
                 "bell beep audible alert",
                 &["bell_sound"],
             ),
-            entry(
+            literal_entry(
                 "bell-visual",
                 "Flash the window edge",
                 "A short glow along the terminal's edge when it rings the bell",
@@ -120,10 +120,10 @@ pub(super) const TERMINAL: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Privacy",
         &[
-            entry(
+            literal_entry(
                 "clipboard-read",
                 "Programs reading the clipboard",
                 "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask \
@@ -131,7 +131,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "osc 52 clipboard read paste copy password ask allow deny security ssh",
                 &["clipboard_read"],
             ),
-            entry(
+            literal_entry(
                 "clipboard-write",
                 "Programs setting the clipboard",
                 "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. \
@@ -139,7 +139,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "osc 52 clipboard write copy set security ssh notice",
                 &["clipboard_write"],
             ),
-            entry(
+            literal_entry(
                 "screen-checksum",
                 "Let programs read the screen back",
                 "Answers a program's request for the checksum of part of the screen (DECRQCRA), which \
@@ -148,7 +148,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "decrqcra checksum screen read capture esctest security ssh",
                 &["allow_screen_checksum"],
             ),
-            entry(
+            literal_entry(
                 "window-ops",
                 "Let programs control the window",
                 "Lets a program move, resize, minimise, raise or full-screen the window (xterm's \
@@ -156,7 +156,7 @@ pub(super) const TERMINAL: &[Group] = &[
                 "xtwinops window operations resize move iconify fullscreen maximize security ssh",
                 &["allow_window_ops"],
             ),
-            entry(
+            literal_entry(
                 "title-report",
                 "Let programs read the window title back",
                 "Answers a program's request for the window title and icon name (XTWINOPS 20 and \

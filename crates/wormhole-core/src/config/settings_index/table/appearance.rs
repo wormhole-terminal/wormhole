@@ -1,21 +1,24 @@
 //! The Appearance and Fonts sections: theme, accent, window, title row, file icons and the type.
 
-use super::{entry, group};
-use crate::config::settings_index::Group;
+use super::{literal_entry, literal_group};
+use crate::config::settings_index::{Group, Word};
 
 pub(super) const APPEARANCE: &[Group] = &[
-    group("", &[entry("appearance-preview", "Live preview", "", "preview wallpaper window", &[])]),
-    group(
+    literal_group(
+        "",
+        &[literal_entry("appearance-preview", "Live preview", "", "preview wallpaper window", &[])],
+    ),
+    literal_group(
         "Theme",
         &[
-            entry(
+            literal_entry(
                 "theme-mode",
                 "Mode",
                 "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode",
                 "dark light system appearance match night day",
                 &["theme_mode"],
             ),
-            entry(
+            literal_entry(
                 "theme",
                 "Theme",
                 "",
@@ -24,9 +27,9 @@ pub(super) const APPEARANCE: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Accent",
-        &[entry(
+        &[literal_entry(
             "primary-color",
             "Use the theme's primary colour",
             "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme",
@@ -34,24 +37,24 @@ pub(super) const APPEARANCE: &[Group] = &[
             &["theme_primary", "primary_color"],
         )],
     ),
-    group(
+    literal_group(
         "Window",
         &[
-            entry(
+            literal_entry(
                 "opacity",
                 "Background opacity",
                 "30–100 %. Below 100 % the desktop shows through",
                 "transparency translucent see through",
                 &["opacity"],
             ),
-            entry(
+            literal_entry(
                 "blur",
                 "Blur what's behind the window",
                 "Only visible below 100 % opacity",
                 "vibrancy frosted",
                 &["blur"],
             ),
-            entry(
+            literal_entry(
                 "liquid-glass",
                 "Liquid Glass",
                 "Glass under the sidebar's and the panel's cards on macOS 26 and later. Off: every \
@@ -59,14 +62,14 @@ pub(super) const APPEARANCE: &[Group] = &[
                 "glass translucent material apple tahoe cards",
                 &["liquid_glass"],
             ),
-            entry(
+            literal_entry(
                 "translucent",
                 "Also translucent",
                 "Use the opacity and blur above for these windows too",
                 "settings theme studio window",
                 &["settings_translucent", "studio_translucent"],
             ),
-            entry(
+            literal_entry(
                 "title-border",
                 "Line under the title row",
                 "Between the bar and the terminal: always, only when output is scrolled under the bar, \
@@ -74,7 +77,7 @@ pub(super) const APPEARANCE: &[Group] = &[
                 "border hairline rule separator title bar toolbar",
                 &["title_border"],
             ),
-            entry(
+            literal_entry(
                 "column-dividers",
                 "Column dividers",
                 "The lines between the sidebar, the terminal and the right panel. Off hides them in \
@@ -82,7 +85,7 @@ pub(super) const APPEARANCE: &[Group] = &[
                 "border hairline rule separator edge columns divider",
                 &["column_dividers"],
             ),
-            entry(
+            literal_entry(
                 "status-bar",
                 "Show status bar",
                 "Branch, agents and terminal size along the bottom of every window",
@@ -91,10 +94,10 @@ pub(super) const APPEARANCE: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Title row",
         &[
-            entry(
+            literal_entry(
                 "title-branch-status",
                 "Branch status",
                 "A dot while the tree has uncommitted changes, and how many commits the branch is ahead \
@@ -102,7 +105,7 @@ pub(super) const APPEARANCE: &[Group] = &[
                 "git dirty uncommitted ahead behind upstream push pull sync commits chip",
                 &["title_branch_status"],
             ),
-            entry(
+            literal_entry(
                 "title-agent-gauge",
                 "Agent model and context",
                 "The model a coding agent runs and how much of its context window is used, when the \
@@ -110,14 +113,14 @@ pub(super) const APPEARANCE: &[Group] = &[
                 "claude model context window tokens percent compact meter usage",
                 &["title_agent_gauge"],
             ),
-            entry(
+            literal_entry(
                 "title-ports",
                 "Open ports",
                 "The ports a terminal's programs listen on, as chips that open localhost in your browser",
                 "localhost server dev http listen browser network",
                 &["title_ports"],
             ),
-            entry(
+            literal_entry(
                 "title-pull-request",
                 "Pull request",
                 "The branch's pull request and how its checks and reviews stand: a link in the title \
@@ -129,17 +132,17 @@ pub(super) const APPEARANCE: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "File icons",
         &[
-            entry(
+            literal_entry(
                 "icon-theme",
                 "File icons",
                 "In the Changes and History panels. Zed icon themes work too",
                 "icon theme",
                 &["icon_theme"],
             ),
-            entry(
+            literal_entry(
                 "icon-themes-folder",
                 "Icon themes folder",
                 "Put a Zed icon theme folder here; it's listed above within seconds",
@@ -151,25 +154,25 @@ pub(super) const APPEARANCE: &[Group] = &[
 ];
 
 pub(super) const FONTS: &[Group] = &[
-    group("", &[entry("font-specimen", "Specimen", "", "preview sample", &[])]),
-    group(
+    literal_group("", &[literal_entry("font-specimen", "Specimen", "", "preview sample", &[])]),
+    literal_group(
         "Terminal",
         &[
-            entry(
+            literal_entry(
                 "font-terminal",
                 "Font",
                 "The terminal grid",
                 "terminal font typeface size monospace jetbrains bundled",
                 &["font_family", "font_size"],
             ),
-            entry(
+            literal_entry(
                 "line-height",
                 "Line height",
                 "Terminal rows, as a multiple of the font size",
                 "spacing leading",
                 &["line_height"],
             ),
-            entry(
+            literal_entry(
                 "font-ligatures",
                 "Ligatures",
                 "Join sequences like => and != into one glyph",
@@ -179,10 +182,10 @@ pub(super) const FONTS: &[Group] = &[
         ],
     ),
     Group {
-        title: "Code",
-        blurb: "",
-        aside: "Follows the terminal until you pick one",
-        entries: &[entry(
+        title: Word::Literal("Code"),
+        blurb: Word::Literal(""),
+        aside: Word::Literal("Follows the terminal until you pick one"),
+        entries: &[literal_entry(
             "font-code",
             "Font",
             "Diffs, commit hashes, file lists, Theme Studio",
@@ -190,9 +193,9 @@ pub(super) const FONTS: &[Group] = &[
             &["code_font_family", "code_font_size"],
         )],
     },
-    group(
+    literal_group(
         "Interface",
-        &[entry(
+        &[literal_entry(
             "font-interface",
             "Font",
             "Sidebar, panels, settings and controls. The size scales the whole interface",
@@ -200,10 +203,10 @@ pub(super) const FONTS: &[Group] = &[
             &["ui_font_family", "ui_font_size"],
         )],
     ),
-    group(
+    literal_group(
         "Your fonts",
         &[
-            entry(
+            literal_entry(
                 "fonts-folder",
                 "Fonts folder",
                 "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put \
@@ -212,7 +215,7 @@ pub(super) const FONTS: &[Group] = &[
                 "custom bundled ttf otf ttc folder",
                 &[],
             ),
-            entry("custom-fonts", "Custom fonts", "", "custom families", &[]),
+            literal_entry("custom-fonts", "Custom fonts", "", "custom families", &[]),
         ],
     ),
 ];

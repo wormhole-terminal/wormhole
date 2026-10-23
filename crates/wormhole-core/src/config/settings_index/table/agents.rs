@@ -1,13 +1,16 @@
 //! The Coding agents section, and the Project folders and Feature flags sections that hold one setting each.
 
-use super::{entry, group};
-use crate::config::settings_index::Group;
+use super::{literal_entry, literal_group};
+use crate::config::settings_index::{Group, Word};
 
 pub(super) const AGENTS: &[Group] = &[
-    group("", &[entry("agents-summary", "Agents found", "", "installed hooks repair path summary", &[])]),
-    group(
+    literal_group(
+        "",
+        &[literal_entry("agents-summary", "Agents found", "", "installed hooks repair path summary", &[])],
+    ),
+    literal_group(
         "Notifications",
-        &[entry(
+        &[literal_entry(
             "agents-notifications",
             "Notify me when an agent needs you or finishes",
             "These, and notifications about long commands and the bell, have their own section",
@@ -15,9 +18,9 @@ pub(super) const AGENTS: &[Group] = &[
             &[],
         )],
     ),
-    group(
+    literal_group(
         "Installed",
-        &[entry(
+        &[literal_entry(
             "agents-installed",
             "Installed agents",
             "",
@@ -26,9 +29,9 @@ pub(super) const AGENTS: &[Group] = &[
             &[],
         )],
     ),
-    group(
+    literal_group(
         "Other agents",
-        &[entry(
+        &[literal_entry(
             "agents-other",
             "Other agents",
             "Agents Wormhole recognises that aren't on this Mac's PATH",
@@ -36,9 +39,9 @@ pub(super) const AGENTS: &[Group] = &[
             &[],
         )],
     ),
-    group(
+    literal_group(
         "How status works",
-        &[entry(
+        &[literal_entry(
             "agents-how",
             "How status works",
             "With status hooks the agent tells Wormhole the moment it starts working, waits for you or \
@@ -48,21 +51,23 @@ pub(super) const AGENTS: &[Group] = &[
         )],
     ),
     Group {
-        title: "Command line",
-        blurb: "Scripts and agents can drive Wormhole from the command line: list terminals, read a \
+        title: Word::Literal("Command line"),
+        blurb: Word::Literal(
+            "Scripts and agents can drive Wormhole from the command line: list terminals, read a \
                 status and send notifications.",
-        aside: "",
+        ),
+        aside: Word::Literal(""),
         entries: &[
             // The command's name is on the row itself (`ipc::control::COMMAND_NAME`); the keywords
             // carry the names it has been called, so a search finds the row by either.
-            entry(
+            literal_entry(
                 "cli-tool",
                 "Command line tool",
                 "The Wormhole command in any terminal",
                 "wh wht cli command install uninstall path shell alias symlink bin usr local terminal",
                 &[],
             ),
-            entry(
+            literal_entry(
                 "control-write",
                 "Let the command line type and open terminals",
                 "send-text types into a terminal and new-terminal opens one, as a paste; never into the \
@@ -75,9 +80,9 @@ pub(super) const AGENTS: &[Group] = &[
     },
 ];
 
-pub(super) const PROJECTS: &[Group] = &[group(
+pub(super) const PROJECTS: &[Group] = &[literal_group(
     "",
-    &[entry(
+    &[literal_entry(
         "projects",
         "Project folders",
         "The .wormhole folder of a project: trust, and which of its files you use",
@@ -86,9 +91,9 @@ pub(super) const PROJECTS: &[Group] = &[group(
     )],
 )];
 
-pub(super) const FEATURE_FLAGS: &[Group] = &[group(
+pub(super) const FEATURE_FLAGS: &[Group] = &[literal_group(
     "",
-    &[entry(
+    &[literal_entry(
         "feature-flags",
         "Feature flags",
         "Turn features that are still being built on or off in this build",

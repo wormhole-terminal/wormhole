@@ -1,41 +1,41 @@
 //! The Profile section: a profile's name, start folder, environment, git identity and agent logins, and deleting it.
 
-use super::{entry, group};
+use super::{literal_entry, literal_group};
 use crate::config::settings_index::Group;
 
 pub(super) const PROFILE: &[Group] = &[
-    group(
+    literal_group(
         "",
         &[
-            entry(
+            literal_entry(
                 "profile-name",
                 "Name and colour",
                 "",
                 "profile rename avatar letter swatch colour color edge",
                 &[],
             ),
-            entry(
+            literal_entry(
                 "profile-start",
                 "Start new terminals in",
                 "",
                 "folder directory cwd home path open also claim",
                 &[],
             ),
-            entry(
+            literal_entry(
                 "profile-env",
                 "Environment",
                 "Variables this profile's terminals start with",
                 "env variable aws path registry export",
                 &[],
             ),
-            entry(
+            literal_entry(
                 "profile-git",
                 "Git identity",
                 "Set in its terminals only; Wormhole never writes to a repository.",
                 "author committer name email commit user",
                 &[],
             ),
-            entry(
+            literal_entry(
                 "profile-logins",
                 "Agent logins",
                 "A separate login for each agent.",
@@ -44,9 +44,9 @@ pub(super) const PROFILE: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Danger zone",
-        &[entry(
+        &[literal_entry(
             "profile-delete",
             "Delete profile",
             "Its terminals, notes, tasks and settings are removed and its windows close.",

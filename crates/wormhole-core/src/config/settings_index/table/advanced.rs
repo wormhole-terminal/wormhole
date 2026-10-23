@@ -1,16 +1,28 @@
 //! The Advanced section: resetting settings and tips.
 
-use super::{entry, group};
+use super::{literal_entry, literal_group};
 use crate::config::settings_index::Group;
 
 pub(super) const ADVANCED: &[Group] = &[
-    group(
+    literal_group(
         "Files",
         &[
-            entry("open-config", "Settings file", "config.json: edits apply live", "json config", &[]),
-            entry("open-data", "Data folder", "Terminals, notes, themes, logs", "finder database", &[]),
-            entry("open-logs", "Logs", "Set WORMHOLE_LOG=debug for more detail", "debug log", &[]),
-            entry(
+            literal_entry(
+                "open-config",
+                "Settings file",
+                "config.json: edits apply live",
+                "json config",
+                &[],
+            ),
+            literal_entry(
+                "open-data",
+                "Data folder",
+                "Terminals, notes, themes, logs",
+                "finder database",
+                &[],
+            ),
+            literal_entry("open-logs", "Logs", "Set WORMHOLE_LOG=debug for more detail", "debug log", &[]),
+            literal_entry(
                 "reset-settings",
                 "Reset all settings",
                 "Your terminals, notes and themes are kept",
@@ -19,9 +31,9 @@ pub(super) const ADVANCED: &[Group] = &[
             ),
         ],
     ),
-    group(
+    literal_group(
         "Tips",
-        &[entry(
+        &[literal_entry(
             "reset-tips",
             "Closed tips",
             "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note",
