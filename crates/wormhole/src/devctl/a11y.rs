@@ -14,8 +14,11 @@ use crate::window::Workspace;
 const WAKE_TIMEOUT: Duration = Duration::from_millis(3000);
 const WAKE_POLL: Duration = Duration::from_millis(50);
 
-/// `a11y [said]`: the accessibility tree (woken first, as an assistive app would), or with `said`
-/// the announcements made lately (`!` before one that interrupts).
+/// `a11y [live|said]`: the accessibility tree (woken first, as an assistive app would), or with `said`
+/// the announcements made lately (`!` before one that interrupts). `live` draws one frame as the display
+/// would, replaying whatever GPUI keeps (the plain form drops every cache first), and prints the tree that
+/// frame built: it shows whether the views kept between frames stay in the tree. The tree must have been
+/// woken by an earlier `a11y`.
 pub(super) fn a11y(ctx: &mut Ctx, arg: &str) -> Result<String> {
     match arg.trim() {
         "said" => Ok(crate::platform::a11y::recent()
@@ -24,10 +27,14 @@ pub(super) fn a11y(ctx: &mut Ctx, arg: &str) -> Result<String> {
             .collect()),
         "" => {
             crate::platform::a11y::wake_tree(ctx.window);
-            ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx).await));
+            ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, true).await));
             Ok(String::new())
         }
-        other => Err(anyhow!("expected nothing or `said`, got {other:?}")),
+        "live" => {
+            ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, false).await));
+            Ok(String::new())
+        }
+        other => Err(anyhow!("expected nothing, `live` or `said`, got {other:?}")),
     }
 }
 
@@ -64,13 +71,15 @@ pub(super) fn window_front(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 /// Draw until GPUI has built the tree (it builds it from the frame after it was woken), then
-/// print it.
-async fn dump(_: WeakEntity<Workspace>, cx: &mut AsyncWindowContext) -> String {
+/// print it. `refresh`: drop GPUI's caches before each frame; without it a frame replays what it can.
+async fn dump(_: WeakEntity<Workspace>, cx: &mut AsyncWindowContext, refresh: bool) -> String {
     let start = cx.background_executor().now();
     loop {
         // Outside the workspace's update: drawing renders it.
         let tree = cx.update(|window, cx| {
-            window.refresh();
+            if refresh {
+                window.refresh();
+            }
             window.draw(cx).clear(cx);
             window.is_a11y_active().then(|| window.debug_a11y_tree_json()).flatten()
         });

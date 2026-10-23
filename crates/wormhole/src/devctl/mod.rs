@@ -297,9 +297,10 @@
 //!                   40% longer, in `⟦ ⟧`, so a label with no accent or bracket is hard-coded and a cut
 //!                   closing bracket is a truncation; it exists in devctl builds only) or the system's
 //!                   again, and redraw every window; without one, the language in use (`state` names it too)
-//!   a11y [said]     the accessibility tree VoiceOver gets (woken first, as an assistive app does), one
-//!                   node a line: role, label, states, `*` on the focused one; `said`: the
-//!                   announcements made lately (`!` before one that interrupts)
+//!   a11y [live|said]   the accessibility tree VoiceOver gets (woken first, as an assistive app does),
+//!                   one node a line: role, label, states, `*` on the focused one; `live`: one frame
+//!                   drawn as the display would, replaying what GPUI keeps, and its tree (after an
+//!                   `a11y`); `said`: the announcements made lately (`!` before one that interrupts)
 //!   keyboard-navigation [on|off|system]   say macOS's Keyboard navigation is on or off (⇥ then reaches
 //!                   the title row's buttons too), or follow the system again
 //!   window-front <on|off|system>   say this window is in front as far as the focus ring goes (it

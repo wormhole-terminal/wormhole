@@ -15,6 +15,10 @@
 //! changing (`feature_host`) and the settings. A new fact a part draws must notify the workspace the
 //! same way; one that only changes in a draw would be missed.
 //!
+//! While an assistive app is connected the regions are not cached at all (`embed`): GPUI rebuilds the
+//! accessibility tree in every frame and replays none of a reused view's nodes, so a cached region would
+//! drop out of the tree (and its buttons stop answering VoiceOver) at the terminal's frame rate.
+//!
 //! A change of focus, the keyboard modality, the window's size or activation and every click, drag
 //! and tooltip make GPUI drop all its caches for a frame (`Window::refresh`), so those need no notify.
 
@@ -113,28 +117,28 @@ impl Regions {
     }
 
     /// The sidebar's column, `width` wide and as tall as the window.
-    pub(super) fn sidebar(&self, width: f32) -> AnyElement {
+    pub(super) fn sidebar(&self, width: f32, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        self.sidebar.clone().cached(style).into_any_element()
+        embed(&self.sidebar, style, window)
     }
 
     /// The right panel's column, `width` wide and as tall as the window.
-    pub(super) fn panel(&self, width: f32) -> AnyElement {
+    pub(super) fn panel(&self, width: f32, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w(px(width)).h_full().flex_none();
-        self.panel.clone().cached(style).into_any_element()
+        embed(&self.panel, style, window)
     }
 
     /// The terminal's title row, across the top of its column.
-    pub(super) fn title_row(&self) -> AnyElement {
+    pub(super) fn title_row(&self, window: &Window) -> AnyElement {
         let style =
             StyleRefinement::default().absolute().top_0().left_0().right_0().h(px(crate::style::TITLE_ROW_H));
-        self.title_row.clone().cached(style).into_any_element()
+        embed(&self.title_row, style, window)
     }
 
     /// The status bar, across the bottom of the window.
-    pub(super) fn status_bar(&self) -> AnyElement {
+    pub(super) fn status_bar(&self, window: &Window) -> AnyElement {
         let style = StyleRefinement::default().w_full().h(px(STATUS_BAR_H)).flex_none();
-        self.status_bar.clone().cached(style).into_any_element()
+        embed(&self.status_bar, style, window)
     }
 
     /// Tell the regions when a global they draw from changes. The workspace's own state notifies the
@@ -149,6 +153,21 @@ impl Regions {
     #[cfg(any(test, feature = "devctl"))]
     pub(super) fn builds(&self, cx: &App) -> [usize; 4] {
         self.all().map(|region| region.read(cx).builds)
+    }
+}
+
+/// `region` laid out at `style`: replayed from the last frame while nothing in it changed, except while
+/// the accessibility tree is built. GPUI fills the tree during every frame's prepaint and replays no
+/// nodes, so a replayed region would vanish from it (VoiceOver would lose the sidebar's rows, the
+/// panel's tabs and the bar's buttons at the terminal's frame rate). Then the region is a plain child in a
+/// box of the same style, built in every frame like the rest of the window.
+fn embed(region: &Entity<Region>, style: StyleRefinement, window: &Window) -> AnyElement {
+    if crate::platform::a11y::tree_built(window) {
+        let mut shell = div();
+        *shell.style() = style;
+        shell.child(region.clone()).into_any_element()
+    } else {
+        region.clone().cached(style).into_any_element()
     }
 }
 

@@ -63,6 +63,42 @@ fn a_frame_only_a_terminal_asks_for_builds_none_of_the_chrome(cx: &mut TestAppCo
     assert_eq!(builds(cx, &window), before, "twenty frames of output left the chrome as it was");
 }
 
+/// GPUI fills the accessibility tree during every frame and replays no nodes: with it built, a region kept
+/// between frames would drop out of the tree and VoiceOver would lose the chrome at the terminal's frame
+/// rate. The test platform has no assistive app, so the test says the tree is built.
+#[gpui_kit::test]
+fn with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame(cx: &mut TestAppContext) {
+    if isolate("with_the_accessibility_tree_built_the_chrome_is_drawn_in_every_frame") {
+        return;
+    }
+    let window = settled_window(cx);
+    let shown = terminal(cx, &window, 0);
+    output(cx, &shown);
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    crate::platform::a11y::force_tree(true);
+    // GPUI refreshes the window when the tree turns on; the first frame builds the regions as plain children.
+    draw(cx, &window);
+    let before = builds(cx, &window);
+    for _ in 0..5 {
+        output(cx, &shown);
+        draw(cx, &window);
+    }
+    let after = builds(cx, &window);
+    for (region, (before, after)) in before.iter().zip(after).enumerate() {
+        assert!(after >= before + 5, "region {region} is built in each of five frames ({before} to {after})");
+    }
+    crate::platform::a11y::force_tree(false);
+    draw(cx, &window);
+    let before = builds(cx, &window);
+    for _ in 0..5 {
+        output(cx, &shown);
+        draw(cx, &window);
+    }
+    assert_eq!(builds(cx, &window), before, "with the tree off again, the chrome is replayed");
+}
+
 #[gpui_kit::test]
 fn a_terminal_that_needs_you_draws_the_sidebar_and_the_status_bar_again(cx: &mut TestAppContext) {
     if isolate("a_terminal_that_needs_you_draws_the_sidebar_and_the_status_bar_again") {

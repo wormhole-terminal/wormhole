@@ -149,10 +149,10 @@ impl Render for Workspace {
         // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
-        let titlebar = self.regions.title_row();
+        let titlebar = self.regions.title_row(window);
         let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
         // The bar itself is built by its region, which keeps what the bar drew (`regions.drawn`).
-        let status_bar = settings_in(&self.profile, cx).status_bar.then(|| self.regions.status_bar());
+        let status_bar = settings_in(&self.profile, cx).status_bar.then(|| self.regions.status_bar(window));
         if status_bar.is_none() {
             self.regions.drawn.status_bar = None;
         }
@@ -209,7 +209,7 @@ impl Render for Workspace {
                     .flex_1()
                     .min_h_0()
                     .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
-                        d.child(self.regions.sidebar(columns.sidebar))
+                        d.child(self.regions.sidebar(columns.sidebar, window))
                     })
                     .child({
                         let surface = div()
@@ -265,7 +265,7 @@ impl Render for Workspace {
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
-                        d.child(self.regions.panel(columns.panel))
+                        d.child(self.regions.panel(columns.panel, window))
                     })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))

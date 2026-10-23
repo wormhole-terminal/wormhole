@@ -22,6 +22,41 @@ pub fn announce(text: &str, interrupt: bool) {
     }
 }
 
+/// Whether GPUI builds the accessibility tree for the frame being drawn (an assistive app is connected).
+/// GPUI rebuilds the tree from scratch in every frame's prepaint and does not replay the nodes of a view it
+/// reuses, so a view kept between frames would drop out of the tree: callers that keep one draw it afresh
+/// while this is true. GPUI forces a frame when it turns on or off.
+pub fn tree_built(window: &gpui_kit::Window) -> bool {
+    #[cfg(test)]
+    if forced::get() {
+        return true;
+    }
+    window.is_a11y_active()
+}
+
+/// In a test, say the tree is built (GPUI's test platform has no assistive app to connect).
+#[cfg(test)]
+pub fn force_tree(on: bool) {
+    forced::set(on);
+}
+
+#[cfg(test)]
+mod forced {
+    use std::cell::Cell;
+
+    thread_local! {
+        static ON: Cell<bool> = const { Cell::new(false) };
+    }
+
+    pub(super) fn get() -> bool {
+        ON.get()
+    }
+
+    pub(super) fn set(on: bool) {
+        ON.set(on);
+    }
+}
+
 /// Whether macOS's Keyboard navigation is on (System Settings → Keyboard): ⇥ then reaches buttons
 /// too, the title row's among them. AppKit can't be watched for it, so it is read when ⇥
 /// is pressed; it is cheap.

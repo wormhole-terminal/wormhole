@@ -174,8 +174,9 @@ scripts/visual-check.sh all --against origin/main --out <scratchpad dir>/vc-2   
   keys are on, and says ring while the ring shows). The ring hides in a window that isn't in front, which a
   scripted instance never is: `window-front on` says it is. `keyboard-navigation on` makes the title
   row's buttons ⇥ stops. `a11y` wakes the accessibility tree (GPUI builds it only for an assistive app)
-  and prints it a node a line, `*` on the one VoiceOver's focus is on; `a11y said` lists the
-  announcements made lately (`!` for one that interrupts). Never start VoiceOver for a check.
+  and prints it a node a line, `*` on the one VoiceOver's focus is on; `a11y live` prints the tree of one
+  frame drawn as the display does (GPUI's cached views replayed), to see that no view drops out of it;
+  `a11y said` lists the announcements made lately (`!` for one that interrupts). Never start VoiceOver for a check.
 - A copy of `/bin/cat` that is killed at launch (exit 137) runs once re-signed: `codesign -s - -f <copy>`.
 
 ## Quit and confirm
