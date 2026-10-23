@@ -11,8 +11,12 @@ mod launch;
 mod scan;
 
 use std::io;
-use std::os::unix::fs::{DirBuilderExt as _, MetadataExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
+
+use ring::rand::{SecureRandom as _, SystemRandom};
+
+use crate::platform::fs::{mode, private_dir, set_mode};
+use crate::platform::user::UserId;
 
 pub use admin::{
     EndHow, ForgetError, ForgetOutcome, end_all, end_all_live, end_host, find, forget, is_host_process,
@@ -37,21 +41,12 @@ pub fn new_host_id() -> io::Result<String> {
     let mut id = String::with_capacity(ID_LEN);
     while id.len() < ID_LEN {
         let mut bytes = [0u8; 32];
-        fill_random(&mut bytes)?;
+        SystemRandom::new().fill(&mut bytes).map_err(|_| io::Error::other("no random bytes"))?;
         // 252 = 7 * 36: bytes at or above it are skipped so every letter is equally likely.
         id.extend(bytes.iter().filter(|b| **b < 252).map(|b| ALPHABET[usize::from(*b) % 36] as char));
     }
     id.truncate(ID_LEN);
     Ok(id)
-}
-
-#[allow(unsafe_code)]
-fn fill_random(buf: &mut [u8]) -> io::Result<()> {
-    debug_assert!(buf.len() <= 256, "getentropy gives at most 256 bytes");
-    // SAFETY: `buf` is valid for writes of `buf.len()` bytes, which is at most the 256 getentropy
-    // accepts.
-    let result = unsafe { libc::getentropy(buf.as_mut_ptr().cast(), buf.len()) };
-    if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
 }
 
 /// Whether `id` is a host id: exactly [`ID_LEN`] characters of `[a-z0-9]`. Anything that becomes
@@ -72,7 +67,7 @@ pub fn hosts_dir(data_dir: &Path) -> PathBuf {
 pub fn ensure_hosts_dir(data_dir: &Path) -> io::Result<PathBuf> {
     let dir = hosts_dir(data_dir);
     std::fs::create_dir_all(data_dir)?;
-    match std::fs::DirBuilder::new().mode(0o700).create(&dir) {
+    match private_dir(&mut std::fs::DirBuilder::new()).create(&dir) {
         Ok(()) => {}
         Err(err) if err.kind() == io::ErrorKind::AlreadyExists => {}
         Err(err) => return Err(err),
@@ -85,24 +80,16 @@ pub fn ensure_hosts_dir(data_dir: &Path) -> io::Result<PathBuf> {
             format!("{} is not a folder", dir.display()),
         ));
     }
-    if meta.uid() != current_uid() {
+    if UserId::owner_of(&meta) != UserId::current() {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             format!("{} belongs to another user", dir.display()),
         ));
     }
-    if meta.permissions().mode() & 0o777 != 0o700 {
-        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
+    if mode(&meta) & 0o777 != 0o700 {
+        set_mode(&dir, 0o700)?;
     }
     Ok(dir)
-}
-
-fn current_uid() -> u32 {
-    // SAFETY: getuid has no preconditions and cannot fail.
-    #[allow(unsafe_code)]
-    unsafe {
-        libc::getuid()
-    }
 }
 
 #[cfg(test)]
@@ -148,18 +135,18 @@ mod tests {
         let data = tempfile::tempdir().expect("temp");
         let dir = ensure_hosts_dir(&data.path().join("Wormhole")).expect("creates, parents too");
         assert_eq!(dir, data.path().join("Wormhole").join("hosts"));
-        let mode = |p: &Path| std::fs::metadata(p).expect("meta").permissions().mode() & 0o777;
-        assert_eq!(mode(&dir), 0o700);
-        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).expect("loosen");
+        let bits = |p: &Path| mode(&std::fs::metadata(p).expect("meta")) & 0o777;
+        assert_eq!(bits(&dir), 0o700);
+        set_mode(&dir, 0o755).expect("loosen");
         ensure_hosts_dir(&data.path().join("Wormhole")).expect("again");
-        assert_eq!(mode(&dir), 0o700);
+        assert_eq!(bits(&dir), 0o700);
     }
 
     #[test]
     fn a_link_in_place_of_the_hosts_dir_is_refused() {
         let data = tempfile::tempdir().expect("temp");
         let elsewhere = tempfile::tempdir().expect("temp");
-        std::os::unix::fs::symlink(elsewhere.path(), data.path().join("hosts")).expect("link");
+        crate::platform::fs::symlink(elsewhere.path(), data.path().join("hosts")).expect("link");
         let err = ensure_hosts_dir(data.path()).expect_err("refused");
         assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
     }

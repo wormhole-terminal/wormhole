@@ -11,12 +11,12 @@
 //! answers on its UI thread in a moment, and a connection waits [`REPLY_WAIT`] at most for it.
 
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use super::control::{ErrorCode, Reply, Request};
 use super::{Incoming, Message};
+use crate::platform::socket::{Listener, Stream, peer_is_same_user};
 
 /// How long one connection may take to send what it has, start to end.
 const DEADLINE: Duration = Duration::from_secs(2);
@@ -27,7 +27,7 @@ const MAX_BYTES: u64 = 64 * 1024;
 const REPLY_WAIT: Duration = Duration::from_secs(5);
 
 /// Serve `listener` on its own thread, forwarding every message to `tx`.
-pub(super) fn spawn(listener: UnixListener, tx: smol::channel::Sender<Incoming>) -> io::Result<()> {
+pub(super) fn spawn(listener: Listener, tx: smol::channel::Sender<Incoming>) -> io::Result<()> {
     std::thread::Builder::new().name("wormhole-socket".into()).spawn(move || {
         loop {
             match listener.accept() {
@@ -45,8 +45,8 @@ pub(super) fn spawn(listener: UnixListener, tx: smol::channel::Sender<Incoming>)
 
 /// Read one connection's messages until it closes, its deadline passes or it
 /// sent too much; answer the control requests among them.
-fn serve(mut stream: UnixStream, tx: &smol::channel::Sender<Incoming>) {
-    if !crate::storage::fsutil::peer_is_this_user(&stream) {
+fn serve(mut stream: Stream, tx: &smol::channel::Sender<Incoming>) {
+    if !peer_is_same_user(&stream) {
         tracing::warn!("hook socket: a connection from another user was refused");
         return;
     }
@@ -64,7 +64,7 @@ fn serve(mut stream: UnixStream, tx: &smol::channel::Sender<Incoming>) {
 }
 
 /// Hand `request` to the app and write its reply back on `stream`.
-fn answer(stream: &mut UnixStream, request: Request, tx: &smol::channel::Sender<Incoming>) {
+fn answer(stream: &mut Stream, request: Request, tx: &smol::channel::Sender<Incoming>) {
     let (reply_tx, reply_rx) = mpsc::sync_channel(1);
     if tx.send_blocking(Incoming::Control { request, reply: reply_tx }).is_err() {
         return;
@@ -80,7 +80,7 @@ fn answer(stream: &mut UnixStream, request: Request, tx: &smol::channel::Sender<
 
 /// A stream whose reads fail once `until` has passed.
 struct Deadline {
-    stream: UnixStream,
+    stream: Stream,
     until: Instant,
 }
 
@@ -102,24 +102,24 @@ impl Read for Deadline {
 mod tests {
     use std::io::{BufRead, BufReader, Write};
     use std::net::Shutdown;
-    use std::os::unix::net::{UnixListener, UnixStream};
     use std::time::{Duration, Instant};
 
     use super::spawn;
     use crate::ipc::control::{Action, Reply, Request, Summary, TerminalState};
     use crate::ipc::test_support::{recv_message_within, recv_within};
     use crate::ipc::{Incoming, Message};
+    use crate::platform::socket::{Listener, Stream};
 
     fn server() -> (tempfile::TempDir, std::path::PathBuf, smol::channel::Receiver<Incoming>) {
         let dir = tempfile::tempdir().expect("tempdir");
         let socket = dir.path().join("hd.sock");
         let (tx, rx) = smol::channel::unbounded();
-        spawn(UnixListener::bind(&socket).expect("bind"), tx).expect("spawn");
+        spawn(Listener::bind(&socket).expect("bind"), tx).expect("spawn");
         (dir, socket, rx)
     }
 
     fn hook(socket: &std::path::Path, tab: &str) {
-        let mut stream = UnixStream::connect(socket).expect("connect");
+        let mut stream = Stream::connect(socket).expect("connect");
         writeln!(stream, r#"{{"kind":"hook","tab":"{tab}","event":"Stop"}}"#).expect("write");
     }
 
@@ -129,7 +129,7 @@ mod tests {
         // `Wormhole hook` process does when the server is busy.
         let dir = tempfile::tempdir().expect("tempdir");
         let socket = dir.path().join("hd.sock");
-        let listener = UnixListener::bind(&socket).expect("bind");
+        let listener = Listener::bind(&socket).expect("bind");
         hook(&socket, "3");
         let (tx, rx) = smol::channel::unbounded();
         spawn(listener, tx).expect("spawn");
@@ -144,7 +144,7 @@ mod tests {
         let slow = std::thread::spawn({
             let socket = socket.clone();
             move || {
-                let mut stream = UnixStream::connect(socket).expect("connect");
+                let mut stream = Stream::connect(socket).expect("connect");
                 for _ in 0..8 {
                     if stream.write_all(b"{").is_err() {
                         return;
@@ -170,7 +170,7 @@ mod tests {
         let flood = std::thread::spawn({
             let socket = socket.clone();
             move || {
-                let mut stream = UnixStream::connect(socket).expect("connect");
+                let mut stream = Stream::connect(socket).expect("connect");
                 let chunk = vec![b'x'; 1 << 16];
                 let start = Instant::now();
                 while start.elapsed() < Duration::from_secs(4) && stream.write_all(&chunk).is_ok() {}
@@ -204,7 +204,7 @@ mod tests {
                 other => panic!("expected a control request: {other:?}"),
             }
         });
-        let mut stream = UnixStream::connect(&socket).expect("connect");
+        let mut stream = Stream::connect(&socket).expect("connect");
         let request = Message::Control(Request::new(Action::List, Some("7".into())));
         writeln!(stream, "{}", serde_json::to_string(&request).expect("serializes")).expect("write");
         stream.shutdown(Shutdown::Write).expect("half close");

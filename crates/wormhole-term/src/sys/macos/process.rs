@@ -101,3 +101,16 @@ pub(crate) fn children(pid: u32) -> Vec<u32> {
     let count = (written as usize / size_of::<libc::c_int>()).min(pids.len());
     pids[..count].iter().filter(|&&child| child > 0).map(|&child| child as u32).collect()
 }
+
+/// The path of the process's executable.
+#[allow(unsafe_code)] // libproc FFI; the buffer's size is passed along with it.
+pub(crate) fn executable(pid: u32) -> Option<PathBuf> {
+    use std::os::unix::ffi::OsStrExt as _;
+    let pid = i32::try_from(pid).ok().filter(|p| *p > 0)?;
+    // PROC_PIDPATHINFO_MAXSIZE is 4 * MAXPATHLEN.
+    let mut buf = vec![0u8; 4 * libc::PATH_MAX as usize];
+    // SAFETY: `buf` is writable for the length given; proc_pidpath writes at most that many bytes.
+    let len = unsafe { libc::proc_pidpath(pid, buf.as_mut_ptr().cast(), buf.len() as u32) };
+    let len = usize::try_from(len).ok().filter(|len| *len > 0)?;
+    Some(PathBuf::from(std::ffi::OsStr::from_bytes(&buf[..len.min(buf.len())])))
+}

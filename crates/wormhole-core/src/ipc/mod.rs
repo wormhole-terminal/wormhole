@@ -33,12 +33,12 @@ mod server;
 #[cfg(test)]
 mod test_support;
 
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use sha2::{Digest, Sha256};
 
+use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
 
 pub use client::{Command, command, run_cli, run_status_line_cli};
@@ -83,10 +83,8 @@ pub fn socket_path() -> PathBuf {
 /// (unlike std's `DefaultHasher`). Unix socket paths are limited to about 104
 /// bytes, so an unusually long temp folder falls back to `/tmp`.
 fn socket_path_in(temp: &Path, data_dir: &Path) -> PathBuf {
-    let digest = Sha256::digest(data_dir.as_os_str().as_bytes());
-    // SAFETY: getuid has no preconditions and cannot fail.
-    #[allow(unsafe_code)]
-    let uid = unsafe { libc::getuid() };
+    let digest = Sha256::digest(data_dir.as_os_str().as_encoded_bytes());
+    let uid = UserId::current();
     let name =
         format!("wormhole-{uid}-{:02x}{:02x}{:02x}{:02x}.sock", digest[0], digest[1], digest[2], digest[3]);
     let path = temp.join(&name);
@@ -102,16 +100,11 @@ mod tests {
     use std::path::Path;
 
     use super::socket_path_in;
+    use crate::platform::user::UserId;
 
     #[test]
     fn the_socket_name_is_stable_and_short() {
-        let uid = {
-            // SAFETY: getuid has no preconditions and cannot fail.
-            #[allow(unsafe_code)]
-            unsafe {
-                libc::getuid()
-            }
-        };
+        let uid = UserId::current();
         let path = socket_path_in(Path::new("/var/folders/ab/T"), Path::new("/Users/me/Library/Wormhole"));
         // The same name from every build, so a running instance is always found.
         assert_eq!(path, Path::new(&format!("/var/folders/ab/T/wormhole-{uid}-18a91d25.sock")));

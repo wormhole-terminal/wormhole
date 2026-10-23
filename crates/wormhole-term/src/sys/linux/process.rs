@@ -9,6 +9,10 @@ pub(crate) fn cwd(pid: u32) -> Option<PathBuf> {
     std::fs::read_link(format!("/proc/{pid}/cwd")).ok()
 }
 
+pub(crate) fn executable(pid: u32) -> Option<PathBuf> {
+    std::fs::read_link(format!("/proc/{pid}/exe")).ok()
+}
+
 pub(crate) fn foreground_group(_shell_pid: u32) -> Option<u32> {
     None
 }

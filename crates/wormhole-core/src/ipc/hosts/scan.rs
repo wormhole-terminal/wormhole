@@ -6,11 +6,11 @@
 //! tells the stale files apart. Nothing here deletes anything.
 
 use std::io;
-use std::os::unix::fs::FileTypeExt as _;
 use std::path::Path;
 
 use wormhole_term::hosted::meta::Meta;
 
+use crate::platform::{fs, process};
 use crate::storage::fsutil::{self, LinkPolicy};
 
 use super::is_valid_host_id;
@@ -87,7 +87,7 @@ pub struct Scan {
 
 /// Look in `hosts_dir`. A folder that is not there is an empty scan.
 pub fn scan(hosts_dir: &Path) -> io::Result<Scan> {
-    scan_with(hosts_dir, pid_runs)
+    scan_with(hosts_dir, process::exists)
 }
 
 /// [`scan`] with the check for a running pid as an argument, for the tests.
@@ -141,29 +141,15 @@ pub fn scan_with(hosts_dir: &Path, pid_runs: impl Fn(u32) -> bool) -> io::Result
     Ok(scan)
 }
 
-/// Whether a process with this pid exists: signal 0 checks without sending anything. `EPERM` means
-/// it exists but is not ours, which still counts (the pid is taken).
-#[allow(unsafe_code)]
-fn pid_runs(pid: u32) -> bool {
-    let Ok(pid) = i32::try_from(pid) else { return false };
-    if pid <= 0 {
-        return false;
-    }
-    // SAFETY: kill with signal 0 only checks that the process exists and may be signalled.
-    let result = unsafe { libc::kill(pid, 0) };
-    result == 0 || io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
-}
-
 /// Whether `path` is a socket itself (a link, or a file of another kind, is not).
 fn is_socket(path: &Path) -> bool {
-    std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_socket())
+    std::fs::symlink_metadata(path).is_ok_and(|m| fs::is_socket(&m.file_type()))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::net::UnixListener;
-
     use super::*;
+    use crate::platform::socket::Listener;
 
     fn meta_text(id: &str, pid: u32, socket: &Path, started_at: u64) -> String {
         format!(
@@ -174,11 +160,11 @@ mod tests {
     }
 
     /// A host's files: its meta, and a socket when `listening`. Returns the listener to keep it open.
-    fn host(dir: &Path, id: &str, pid: u32, started_at: u64, listening: bool) -> Option<UnixListener> {
+    fn host(dir: &Path, id: &str, pid: u32, started_at: u64, listening: bool) -> Option<Listener> {
         let socket = dir.join(format!("{id}.sock"));
         std::fs::write(dir.join(format!("{id}.meta")), meta_text(id, pid, &socket, started_at))
             .expect("meta");
-        listening.then(|| UnixListener::bind(&socket).expect("binds"))
+        listening.then(|| Listener::bind(&socket).expect("binds"))
     }
 
     fn runs(pids: &'static [u32]) -> impl Fn(u32) -> bool {
@@ -265,7 +251,7 @@ mod tests {
         let _dead = host(d, "cccccccccccc", 300, 1500, true); // its pid is gone
         let _no_socket = host(d, "dddddddddddd", 100, 1600, false);
         std::fs::write(d.join("eeeeeeeeeeee.meta"), "garbage").expect("write");
-        let _stray = UnixListener::bind(d.join("ffffffffffff.sock")).expect("binds");
+        let _stray = Listener::bind(d.join("ffffffffffff.sock")).expect("binds");
         // Files that are not a host's are ignored.
         std::fs::write(d.join("notes.txt"), "x").expect("write");
         std::fs::write(d.join("SHORT.meta"), "x").expect("write");
@@ -301,12 +287,14 @@ mod tests {
 
     #[test]
     fn the_real_pid_check_knows_this_process_and_a_gone_one() {
-        assert!(pid_runs(std::process::id()));
+        assert!(process::exists(std::process::id()));
+        // Not ours to signal (EPERM), and still taken.
+        assert!(process::exists(1));
         let mut child = std::process::Command::new("/usr/bin/true").spawn().expect("spawns");
         let pid = child.id();
         child.wait().expect("waits");
-        assert!(!pid_runs(pid), "a reaped child is gone");
-        assert!(!pid_runs(0));
-        assert!(!pid_runs(u32::MAX));
+        assert!(!process::exists(pid), "a reaped child is gone");
+        assert!(!process::exists(0));
+        assert!(!process::exists(u32::MAX));
     }
 }

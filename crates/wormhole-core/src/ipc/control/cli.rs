@@ -6,7 +6,6 @@
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
-use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -15,6 +14,7 @@ use super::{
     SEND_TEXT_MAX_BYTES, StatusInfo, Summary, TabInfo, Target, TerminalInfo,
 };
 use crate::ipc::Message;
+use crate::platform::socket::Stream;
 
 /// What the arguments asked for.
 #[derive(Debug, Clone, PartialEq)]
@@ -351,7 +351,7 @@ impl Exchange {
 
 /// Send `request` to the app at `socket` and read its reply, waiting at most `wait` for it.
 pub(crate) fn exchange(socket: &Path, request: &Request, wait: Duration) -> Result<Reply, Exchange> {
-    let mut stream = UnixStream::connect(socket).map_err(|_| Exchange::NotRunning)?;
+    let mut stream = Stream::connect(socket).map_err(|_| Exchange::NotRunning)?;
     let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
     let _ = stream.set_read_timeout(Some(wait));
     let line = serde_json::to_string(&Message::Control(request.clone()))

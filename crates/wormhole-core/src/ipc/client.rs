@@ -2,14 +2,14 @@
 //! what Claude Code's status line runs to hand over its plan usage limits and the terminal's
 //! model and context window.
 
-use std::io::{Read, Write};
-use std::os::unix::net::UnixStream;
+use std::io::{IsTerminal as _, Read, Write};
 use std::time::Duration;
 
 use serde_json::Value;
 
 use super::Message;
 use crate::agents::{AgentId, integrations};
+use crate::platform::socket::Stream;
 
 /// What the binary was started to do, from its arguments.
 #[derive(Debug, PartialEq, Eq)]
@@ -104,7 +104,7 @@ fn status_line_messages(input: &Value, tab: Option<String>, now: i64) -> Vec<Mes
 }
 
 fn send(socket: &str, message: &Message) {
-    if let Ok(mut stream) = UnixStream::connect(socket) {
+    if let Ok(mut stream) = Stream::connect(socket) {
         let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
         if let Ok(json) = serde_json::to_string(message) {
             let _ = writeln!(stream, "{json}");
@@ -115,9 +115,7 @@ fn send(socket: &str, message: &Message) {
 /// The JSON payload on stdin, if the agent piped one. Never waits on a
 /// terminal, and gives up quickly on a pipe that stays open.
 fn read_stdin_payload() -> Value {
-    // SAFETY: isatty only inspects the descriptor.
-    #[allow(unsafe_code)]
-    if unsafe { libc::isatty(0) } == 1 {
+    if std::io::stdin().is_terminal() {
         return Value::Null;
     }
     let (tx, rx) = std::sync::mpsc::channel();

@@ -11,13 +11,13 @@
 
 use std::fs::{self, File, TryLockError};
 use std::io::Write;
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
 
 use super::{Incoming, Message, server, socket_path};
+use crate::platform::fs::{private_file, set_mode};
+use crate::platform::socket::{Listener, Stream};
 use crate::storage::paths::{INSTANCE_LOCK_FILE, data_dir};
 
 /// Held while this process is the running instance (closing the file unlocks).
@@ -50,11 +50,7 @@ pub fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
 
 pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::io::Result<Instance> {
     crate::storage::fsutil::create_dir_all_private(dir)?;
-    let file = File::options()
-        .create(true)
-        .write(true)
-        .truncate(false)
-        .mode(crate::storage::fsutil::PRIVATE_FILE)
+    let file = private_file(File::options().create(true).write(true).truncate(false))
         .open(dir.join(INSTANCE_LOCK_FILE))?;
     match file.try_lock() {
         Ok(()) => {}
@@ -82,9 +78,9 @@ fn listen(socket: &Path) -> std::io::Result<smol::channel::Receiver<Incoming>> {
     if let Some(parent) = socket.parent() {
         fs::create_dir_all(parent)?;
     }
-    let listener = UnixListener::bind(socket)?;
+    let listener = Listener::bind(socket)?;
     // Only this user's hooks may talk to us; a socket that can't be made private is not served.
-    let served = fs::set_permissions(socket, fs::Permissions::from_mode(0o600)).and_then(|()| {
+    let served = set_mode(socket, 0o600).and_then(|()| {
         let (tx, rx) = smol::channel::unbounded();
         server::spawn(listener, tx)?;
         Ok(rx)
@@ -99,7 +95,7 @@ fn listen(socket: &Path) -> std::io::Result<smol::channel::Receiver<Incoming>> {
 /// not listen yet (it is starting), so keep trying for a moment.
 fn activate(socket: &Path) {
     for _ in 0..20 {
-        if let Ok(mut stream) = UnixStream::connect(socket) {
+        if let Ok(mut stream) = Stream::connect(socket) {
             if let Ok(json) = serde_json::to_string(&Message::Activate) {
                 let _ = writeln!(stream, "{json}");
             }
@@ -130,14 +126,14 @@ pub fn start_server() -> Option<smol::channel::Receiver<Incoming>> {
 #[cfg(test)]
 mod tests {
     use std::io::Write;
-    use std::os::unix::fs::PermissionsExt;
-    use std::os::unix::net::UnixStream;
     use std::sync::{Arc, Barrier};
     use std::time::Duration;
 
     use super::{Instance, acquire_in, asks_to_come_forward};
     use crate::ipc::Message;
     use crate::ipc::test_support::{recv_message_within, recv_within};
+    use crate::platform::fs::mode;
+    use crate::platform::socket::Stream;
 
     /// Long enough for a loaded CI runner; a message that is not coming fails the test after this
     /// instead of hanging it.
@@ -166,15 +162,15 @@ mod tests {
         // The second launch asked the first to come forward, and hooks reach it.
         let activate = recv_message_within(events, WAIT);
         assert!(matches!(activate, Some(Message::Activate)), "no Activate within {WAIT:?}: {activate:?}");
-        let mut hook = UnixStream::connect(&socket).expect("connect");
+        let mut hook = Stream::connect(&socket).expect("connect");
         writeln!(hook, r#"{{"kind":"hook","tab":"7","event":"Stop"}}"#).expect("write");
         let message = recv_message_within(events, WAIT);
         assert!(
             matches!(message, Some(Message::Hook { ref tab, .. }) if tab == "7"),
             "no hook within {WAIT:?}: {message:?}"
         );
-        let mode = std::fs::metadata(&socket).expect("socket").permissions().mode() & 0o777;
-        assert_eq!(mode, 0o600);
+        let bits = mode(&std::fs::metadata(&socket).expect("socket")) & 0o777;
+        assert_eq!(bits, 0o600);
     }
 
     /// The next launch after the primary is gone. The lock is released when the last copy of its
@@ -220,7 +216,7 @@ mod tests {
         assert!(socket.exists());
         let third = acquire_once_free(dir.path(), &socket);
         let Instance::Primary { events, .. } = third else { panic!("not primary: {third:?}") };
-        let mut hook = UnixStream::connect(&socket).expect("connect");
+        let mut hook = Stream::connect(&socket).expect("connect");
         writeln!(hook, r#"{{"kind":"activate"}}"#).expect("write");
         let message = recv_message_within(&events, WAIT);
         assert!(matches!(message, Some(Message::Activate)), "no Activate within {WAIT:?}: {message:?}");

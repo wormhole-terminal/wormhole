@@ -13,8 +13,6 @@
 //! **Forget.** Removes the files of a host that is not alive, and refuses one that is (or might be).
 
 use std::io;
-use std::os::unix::fs::FileTypeExt as _;
-use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -23,6 +21,9 @@ use wormhole_wire::{AppVersion, CHANNEL_LOCAL, Features, Hello, Message, Role, v
 
 use super::scan::{StaleReason, scan};
 use super::{HostMeta, meta_path, read_meta};
+use crate::platform::fs::is_socket;
+use crate::platform::process;
+use crate::platform::socket::{Stream, peer_is_same_user};
 
 /// How an ended host was reached.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,7 +52,7 @@ pub fn end_host(meta: &HostMeta, wait: Duration) -> Result<EndHow, String> {
     if !is_host_process(meta.pid) {
         return Err(format!("{why}; pid {} is not a wormhole-host, so it was left alone", meta.pid));
     }
-    signal_term(meta.pid).map_err(|err| format!("{why}; SIGTERM to {}: {err}", meta.pid))?;
+    process::terminate(meta.pid).map_err(|err| format!("{why}; SIGTERM to {}: {err}", meta.pid))?;
     Ok(EndHow::Signalled)
 }
 
@@ -91,12 +92,12 @@ pub fn end_all_live(hosts_dir: &Path, wait: Duration) -> Vec<(String, Result<End
 /// `Hello{Admin}`, check `Welcome`, `Kill`, wait for the hang-up.
 fn ask_kill(meta: &HostMeta, wait: Duration) -> Result<(), String> {
     let deadline = Instant::now() + wait;
-    let stream = UnixStream::connect(&meta.socket).map_err(|e| format!("connecting: {e}"))?;
+    let stream = Stream::connect(&meta.socket).map_err(|e| format!("connecting: {e}"))?;
     let left = || deadline.saturating_duration_since(Instant::now()).max(Duration::from_millis(1));
     stream.set_write_timeout(Some(left())).map_err(|e| e.to_string())?;
     stream.set_read_timeout(Some(left())).map_err(|e| e.to_string())?;
     // The socket may sit in a folder others can write to; only our own host gets a word from us.
-    if !crate::storage::fsutil::peer_is_this_user(&stream) {
+    if !peer_is_same_user(&stream) {
         return Err("the socket's owner is not this user".into());
     }
     let mut writer = FrameWriter::new(&stream);
@@ -149,43 +150,13 @@ fn app_version() -> AppVersion {
     }
 }
 
-#[allow(unsafe_code)]
-fn signal_term(pid: u32) -> io::Result<()> {
-    let pid = i32::try_from(pid).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "pid"))?;
-    if pid <= 1 {
-        // 0 and 1 would signal a process group or init; never from a file's say-so.
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "not a host's pid"));
-    }
-    // SAFETY: kill with a positive pid signals that one process; the pid was checked to be a host.
-    let result = unsafe { libc::kill(pid, libc::SIGTERM) };
-    if result == 0 { Ok(()) } else { Err(io::Error::last_os_error()) }
-}
-
 /// Whether process `pid` runs the `wormhole-host` executable. Only its name is checked: a pid in a
 /// file proves nothing, and a signal must not go to whatever reused the number. (To *talk* to a
 /// host the meta and `Welcome` identify it; this guards the signal fallback.)
 pub fn is_host_process(pid: u32) -> bool {
-    process_path(pid)
+    process::executable(pid)
         .and_then(|path| path.file_name().map(|n| n == crate::ipc::host_binary::HOST_BINARY_NAME))
         == Some(true)
-}
-
-#[cfg(target_os = "macos")]
-#[allow(unsafe_code)] // libproc FFI; the buffer's size is passed along with it.
-fn process_path(pid: u32) -> Option<PathBuf> {
-    use std::os::unix::ffi::OsStrExt as _;
-    let pid = i32::try_from(pid).ok().filter(|p| *p > 0)?;
-    // PROC_PIDPATHINFO_MAXSIZE is 4 * MAXPATHLEN.
-    let mut buf = vec![0u8; 4 * libc::PATH_MAX as usize];
-    // SAFETY: `buf` is writable for the length given; proc_pidpath writes at most that many bytes.
-    let len = unsafe { libc::proc_pidpath(pid, buf.as_mut_ptr().cast(), buf.len() as u32) };
-    let len = usize::try_from(len).ok().filter(|len| *len > 0)?;
-    Some(PathBuf::from(std::ffi::OsStr::from_bytes(&buf[..len.min(buf.len())])))
-}
-
-#[cfg(not(target_os = "macos"))]
-fn process_path(pid: u32) -> Option<PathBuf> {
-    std::fs::read_link(format!("/proc/{pid}/exe")).ok()
 }
 
 /// What `forget` removed.
@@ -272,12 +243,12 @@ fn removable(path: &Path, id: &str) -> bool {
     }
     let socket_name = name == format!("{id}.sock")
         || name.strip_prefix("wormhole-host-").is_some_and(|rest| rest.ends_with(&format!("-{id}.sock")));
-    socket_name && meta.file_type().is_socket()
+    socket_name && is_socket(&meta.file_type())
 }
 
 /// Whether something accepts connections on `path`.
 fn answers(path: &Path) -> bool {
-    UnixStream::connect(path).is_ok()
+    Stream::connect(path).is_ok()
 }
 
 /// The meta file of host `id` in `hosts_dir`, checked.
@@ -293,9 +264,8 @@ pub fn find(hosts_dir: &Path, id: &str) -> Result<HostMeta, String> {
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::net::UnixListener;
-
     use super::*;
+    use crate::platform::socket::Listener;
 
     fn write_meta(dir: &Path, id: &str, pid: u32, socket: &Path) {
         let text = format!(
@@ -332,7 +302,7 @@ mod tests {
         let dir = short_dir();
         let d = dir.path();
         let sock = d.join("aaaaaaaaaaaa.sock");
-        drop(UnixListener::bind(&sock).expect("binds")); // the file stays after the listener is gone
+        drop(Listener::bind(&sock).expect("binds")); // the file stays after the listener is gone
         write_meta(d, "aaaaaaaaaaaa", dead_pid(), &sock);
         std::fs::write(d.join("other.txt"), "x").expect("write");
         let outcome = forget(d, "aaaaaaaaaaaa").expect("forgets");
@@ -347,7 +317,7 @@ mod tests {
         let dir = short_dir();
         let d = dir.path();
         let sock = d.join("bbbbbbbbbbbb.sock");
-        let _listener = UnixListener::bind(&sock).expect("binds");
+        let _listener = Listener::bind(&sock).expect("binds");
         // This test process stands in for the host: its pid runs.
         write_meta(d, "bbbbbbbbbbbb", std::process::id(), &sock);
         assert!(matches!(forget(d, "bbbbbbbbbbbb"), Err(ForgetError::Live(_))));
@@ -368,7 +338,7 @@ mod tests {
         let dir = short_dir();
         let d = dir.path();
         std::fs::write(d.join("dddddddddddd.meta"), "format=9\n").expect("write");
-        let listener = UnixListener::bind(d.join("dddddddddddd.sock")).expect("binds");
+        let listener = Listener::bind(d.join("dddddddddddd.sock")).expect("binds");
         assert!(matches!(forget(d, "dddddddddddd"), Err(ForgetError::Live(_))));
         drop(listener);
         let outcome = forget(d, "dddddddddddd").expect("forgets");
@@ -379,7 +349,7 @@ mod tests {
     fn a_socket_without_a_meta_is_forgotten() {
         let dir = short_dir();
         let d = dir.path();
-        drop(UnixListener::bind(d.join("eeeeeeeeeeee.sock")).expect("binds"));
+        drop(Listener::bind(d.join("eeeeeeeeeeee.sock")).expect("binds"));
         assert_eq!(forget(d, "eeeeeeeeeeee").expect("forgets").removed.len(), 1);
     }
 
@@ -397,7 +367,7 @@ mod tests {
         assert!(precious.exists());
         // A real socket with another name is not a host's either.
         let odd = elsewhere.path().join("my.sock");
-        drop(UnixListener::bind(&odd).expect("binds"));
+        drop(Listener::bind(&odd).expect("binds"));
         write_meta(d, "gggggggggggg", dead_pid(), &odd);
         forget(d, "gggggggggggg").expect("forgets");
         assert!(odd.exists());
@@ -422,11 +392,7 @@ mod tests {
     }
 
     /// A stand-in host: says `Welcome` to `Hello`, and ends on `Kill` by closing the connection.
-    fn serve_one(
-        listener: UnixListener,
-        id: &'static str,
-        answer_kill: bool,
-    ) -> std::thread::JoinHandle<bool> {
+    fn serve_one(listener: Listener, id: &'static str, answer_kill: bool) -> std::thread::JoinHandle<bool> {
         std::thread::spawn(move || {
             let Ok((stream, _)) = listener.accept() else { return false };
             let mut reader = FrameReader::new(&stream);
@@ -494,7 +460,7 @@ mod tests {
     fn end_sends_kill_to_a_host_that_names_itself_and_waits_for_the_hang_up() {
         let dir = short_dir();
         let sock = dir.path().join("kkkkkkkkkkkk.sock");
-        let server = serve_one(UnixListener::bind(&sock).expect("binds"), "kkkkkkkkkkkk", true);
+        let server = serve_one(Listener::bind(&sock).expect("binds"), "kkkkkkkkkkkk", true);
         let how = end_host(&meta_for("kkkkkkkkkkkk", &sock), Duration::from_secs(5)).expect("ends");
         assert_eq!(how, EndHow::Asked);
         assert!(server.join().expect("joins"), "the host got Kill");
@@ -504,7 +470,7 @@ mod tests {
     fn end_does_not_trust_a_socket_that_names_another_host() {
         let dir = short_dir();
         let sock = dir.path().join("llllllllllll.sock");
-        let server = serve_one(UnixListener::bind(&sock).expect("binds"), "mmmmmmmmmmmm", true);
+        let server = serve_one(Listener::bind(&sock).expect("binds"), "mmmmmmmmmmmm", true);
         // The pid is gone, so there is no signal fallback either.
         let err = end_host(&meta_for("llllllllllll", &sock), Duration::from_secs(5)).expect_err("refused");
         assert!(err.contains("another host"), "{err}");
@@ -515,7 +481,7 @@ mod tests {
     fn end_gives_up_on_a_host_that_never_hangs_up_and_on_a_missing_socket() {
         let dir = short_dir();
         let sock = dir.path().join("nnnnnnnnnnnn.sock");
-        let server = serve_one(UnixListener::bind(&sock).expect("binds"), "nnnnnnnnnnnn", false);
+        let server = serve_one(Listener::bind(&sock).expect("binds"), "nnnnnnnnnnnn", false);
         let err =
             end_host(&meta_for("nnnnnnnnnnnn", &sock), Duration::from_millis(250)).expect_err("times out");
         assert!(err.contains("did not hang up"), "{err}");
@@ -530,7 +496,7 @@ mod tests {
         let dir = short_dir();
         let d = dir.path();
         let (a, b) = (d.join("pppppppppppp.sock"), d.join("qqqqqqqqqqqq.sock"));
-        let first = serve_one(UnixListener::bind(&a).expect("binds"), "pppppppppppp", true);
+        let first = serve_one(Listener::bind(&a).expect("binds"), "pppppppppppp", true);
         let metas = [meta_for("pppppppppppp", &a), meta_for("qqqqqqqqqqqq", &b)];
         let answers = end_all(&metas, Duration::from_secs(5));
         assert_eq!(answers.len(), 2);

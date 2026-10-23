@@ -1,5 +1,4 @@
-//! Filesystem primitives for everything that reads or writes user and project files, and the
-//! owner check for Unix sockets (`private::peer_is_this_user`).
+//! Filesystem primitives for everything that reads or writes user and project files.
 //!
 //! Two problems recur across the code base and are solved once here:
 //!
@@ -19,7 +18,7 @@ mod private;
 
 pub use private::{
     PRIVATE_FILE, create_dir_all_private, create_private_file, ensure_private_dir, make_private,
-    make_tree_private, peer_is_this_user,
+    make_tree_private,
 };
 
 use std::fmt;

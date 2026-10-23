@@ -332,10 +332,9 @@ fn offline_in(action: &super::Action, json: bool, hosts_dir: &Path) -> Option<St
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::net::UnixListener;
-
     use super::*;
     use crate::ipc::control::Action;
+    use crate::platform::socket::Listener;
 
     fn words(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
@@ -396,9 +395,9 @@ mod tests {
     }
 
     /// A live host (this process's pid, a bound socket) and a stale one (its pid is gone).
-    fn two_hosts(dir: &Path) -> UnixListener {
+    fn two_hosts(dir: &Path) -> Listener {
         let socket = write_meta(dir, "aaaaaaaaaaaa", std::process::id(), 1_760_000_000);
-        let listener = UnixListener::bind(&socket).expect("binds");
+        let listener = Listener::bind(&socket).expect("binds");
         write_meta(dir, "bbbbbbbbbbbb", dead_pid(), 1_700_000_000);
         listener
     }
