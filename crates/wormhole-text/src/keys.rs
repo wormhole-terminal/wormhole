@@ -45,61 +45,103 @@ pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(16);
 pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(17);
 /// "hints tips reset show again dismissed"
 pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(18);
-/// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(19);
-/// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(20);
-/// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(21);
-/// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(22);
-/// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(23);
-/// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(24);
-/// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(25);
-/// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(26);
-/// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(27);
-/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(28);
-/// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(29);
-/// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(30);
-/// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(31);
-/// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(32);
-/// "Appearance"
-pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(33);
-/// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(34);
-/// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(35);
-/// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(36);
-/// "Changes & diffs"
-pub const SETTINGS_SECTION_GIT: Key = Key::new(37);
-/// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(38);
-/// "Notifications"
-pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(39);
 /// "Menu bar & hotkey"
-pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(40);
+pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(19);
+/// "Wormhole in the macOS menu bar, and a shortcut that works from any app."
+pub const SETTINGS_SECTION_MENU_BAR_INTRO: Key = Key::new(20);
+/// "Menu bar"
+pub const SETTINGS_MENU_BAR_GROUP_MENU_BAR: Key = Key::new(21);
+/// "Show Wormhole in the menu bar"
+pub const SETTINGS_MENU_BAR_MENU_BAR: Key = Key::new(22);
+/// "Terminals by status and quick actions"
+pub const SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION: Key = Key::new(23);
+/// "status bar tray item menubar"
+pub const SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS: Key = Key::new(24);
+/// "Icon shows"
+pub const SETTINGS_MENU_BAR_ICON: Key = Key::new(25);
+/// "The dot and count on the status item"
+pub const SETTINGS_MENU_BAR_ICON_DESCRIPTION: Key = Key::new(26);
+/// "status item icon count"
+pub const SETTINGS_MENU_BAR_ICON_KEYWORDS: Key = Key::new(27);
+/// "Animate menu bar icon while working"
+pub const SETTINGS_MENU_BAR_ANIMATE: Key = Key::new(28);
+/// "The prompt in the icon types itself out while something runs. Off: a still, filled icon"
+pub const SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION: Key = Key::new(29);
+/// "animation"
+pub const SETTINGS_MENU_BAR_ANIMATE_KEYWORDS: Key = Key::new(30);
+/// "Global hotkey"
+pub const SETTINGS_MENU_BAR_GROUP_GLOBAL_HOTKEY: Key = Key::new(31);
+/// "Shortcut"
+pub const SETTINGS_MENU_BAR_HOTKEY: Key = Key::new(32);
+/// "Works from any app. Click, then press the keys"
+pub const SETTINGS_MENU_BAR_HOTKEY_DESCRIPTION: Key = Key::new(33);
+/// "global shortcut quake record hotkey"
+pub const SETTINGS_MENU_BAR_HOTKEY_KEYWORDS: Key = Key::new(34);
+/// "Hotkey opens"
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION: Key = Key::new(35);
+/// "Pressing it again with the panel open shows Wormhole"
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_DESCRIPTION: Key = Key::new(36);
+/// "quick panel toggle"
+pub const SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS: Key = Key::new(37);
+/// "Jump to next waiting terminal"
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(38);
+/// "Inside Wormhole, in any window"
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(39);
+/// "needs you waiting shortcut"
+pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(40);
+/// "Updates"
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(41);
+/// "Signed releases, checked in the background."
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(42);
+/// "Updates"
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(43);
+/// "Version"
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(44);
+/// "release build"
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(45);
+/// "Update automatically"
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(46);
+/// "Checks in the background and installs on the next restart"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(47);
+/// "download auto"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(48);
+/// "Channel"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(49);
+/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(50);
+/// "beta nightly unstable stable prerelease dev builds main feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(51);
+/// "Check for updates"
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(52);
+/// "install restart release notes check skip"
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(53);
+/// "Profile"
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(54);
+/// "Appearance"
+pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(55);
+/// "Fonts"
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(56);
+/// "Terminal"
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(57);
+/// "Terminals & sidebar"
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(58);
+/// "Changes & diffs"
+pub const SETTINGS_SECTION_GIT: Key = Key::new(59);
+/// "Coding agents"
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(60);
+/// "Notifications"
+pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(61);
 /// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(41);
+pub const SETTINGS_THEME_MODE: Key = Key::new(62);
 /// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(42);
+pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(63);
 /// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(43);
+pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(64);
 /// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(47);
+pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(68);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 45] = [
+pub const ALL: [Key; 66] = [
     SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO,
     SETTINGS_ADVANCED_GROUP_FILES,
@@ -119,6 +161,28 @@ pub const ALL: [Key; 45] = [
     SETTINGS_ADVANCED_RESET_TIPS,
     SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION,
     SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS,
+    SETTINGS_SECTION_MENU_BAR,
+    SETTINGS_SECTION_MENU_BAR_INTRO,
+    SETTINGS_MENU_BAR_GROUP_MENU_BAR,
+    SETTINGS_MENU_BAR_MENU_BAR,
+    SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION,
+    SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS,
+    SETTINGS_MENU_BAR_ICON,
+    SETTINGS_MENU_BAR_ICON_DESCRIPTION,
+    SETTINGS_MENU_BAR_ICON_KEYWORDS,
+    SETTINGS_MENU_BAR_ANIMATE,
+    SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION,
+    SETTINGS_MENU_BAR_ANIMATE_KEYWORDS,
+    SETTINGS_MENU_BAR_GROUP_GLOBAL_HOTKEY,
+    SETTINGS_MENU_BAR_HOTKEY,
+    SETTINGS_MENU_BAR_HOTKEY_DESCRIPTION,
+    SETTINGS_MENU_BAR_HOTKEY_KEYWORDS,
+    SETTINGS_MENU_BAR_HOTKEY_ACTION,
+    SETTINGS_MENU_BAR_HOTKEY_ACTION_DESCRIPTION,
+    SETTINGS_MENU_BAR_HOTKEY_ACTION_KEYWORDS,
+    SETTINGS_MENU_BAR_JUMP_WAITING_KEY,
+    SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION,
+    SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS,
     SETTINGS_SECTION_UPDATES,
     SETTINGS_SECTION_UPDATES_INTRO,
     SETTINGS_UPDATES_GROUP_UPDATES,
@@ -140,7 +204,6 @@ pub const ALL: [Key; 45] = [
     SETTINGS_SECTION_GIT,
     SETTINGS_SECTION_AGENTS,
     SETTINGS_SECTION_NOTIFICATIONS,
-    SETTINGS_SECTION_MENU_BAR,
     SETTINGS_THEME_MODE,
     SETTINGS_THEME_MODE_DESCRIPTION,
     SETTINGS_THEME_MODE_KEYWORDS,
@@ -151,7 +214,7 @@ pub const ALL: [Key; 45] = [
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(44, &[("section", Arg::Str(section))])
+    crate::active::message(65, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -161,7 +224,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(45, &[("count", Arg::Int(count))])
+    crate::active::message(66, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -171,7 +234,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(46, &[("count", Arg::Int(count))])
+    crate::active::message(67, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

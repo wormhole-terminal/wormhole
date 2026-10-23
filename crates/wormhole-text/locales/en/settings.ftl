@@ -8,7 +8,6 @@ settings-section-sessions = Terminals & sidebar
 settings-section-git = Changes & diffs
 settings-section-agents = Coding agents
 settings-section-notifications = Notifications
-settings-section-menu-bar = Menu bar & hotkey
 
 # The Mode row of Appearance. The description is the quiet line under the label, the keywords find
 # the row in search besides its label and description.

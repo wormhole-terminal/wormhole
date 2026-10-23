@@ -157,8 +157,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::App,
         },
         SectionId::MenuBar => &SectionInfo {
-            title: Word::Literal("Menu bar & hotkey"),
-            intro: Word::Literal("Wormhole in the macOS menu bar, and a shortcut that works from any app."),
+            title: Word::Key(SETTINGS_SECTION_MENU_BAR),
+            intro: Word::Key(SETTINGS_SECTION_MENU_BAR_INTRO),
             nav: NavGroup::App,
         },
         SectionId::Updates => &SectionInfo {
