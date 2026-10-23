@@ -1,6 +1,7 @@
 //! What the catalog tests share: reading `.ftl` files into a model, the generator, the rules.
 //! Included by each test binary with `mod support;`, which uses only part of it.
 #![allow(dead_code)]
+#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 pub mod catalog;
 pub mod check;

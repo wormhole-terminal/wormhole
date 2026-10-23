@@ -7,6 +7,7 @@
 
 #![allow(dead_code)] // each test file uses what it needs
 #![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 use std::fs;
 use std::io::{self, Read as _};

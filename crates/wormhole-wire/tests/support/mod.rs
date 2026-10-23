@@ -2,6 +2,7 @@
 //! bytes in chosen pieces, and small helpers. No dependency: the generator is a xorshift and
 //! every test prints its seed, so a failure is reproducible.
 #![allow(dead_code)] // each test binary uses a part
+#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 use std::io::{self, Read};
 
