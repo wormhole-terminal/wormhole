@@ -87,8 +87,10 @@ pub(in crate::window) enum FeatureEvent {
     /// This tab is gone (its feature went off): if the panel shows it, show Changes. Nothing else is
     /// done for the change, unlike a [`Self::ShowTab`].
     TabGone(TabId),
-    /// Put `input` into a terminal of this window, as the `target` says which. The terminals
-    /// are found, or made, when the event is handled, so several in a row see each other's.
+    /// Put `input` into a terminal of this window, as the `target` says which. The window checks nothing
+    /// (not whether the input is a command a project may run): the feature that emits the event owns
+    /// that decision. The terminals are found, or made, when the event is handled, so several in a row
+    /// see each other's.
     Terminal { target: TerminalTarget, input: TerminalInput },
     /// Open these terminals, each in turn selected and given the keyboard, then select the last of them
     /// that asks for the focus. One whose name is already a terminal's is not opened again.

@@ -1,6 +1,10 @@
 //! What the window does when a feature asks for terminals (`FeatureEvent::Terminal`,
 //! `FeatureEvent::OpenTerminals`): finding or making the one asked for, typing or pasting into it, and
 //! opening a set. A project's actions and layout use them, and any terminal opened in a folder.
+//!
+//! The window does no checking here: it opens, types and pastes what it is told. Whether the feature
+//! may ask (a project's commands only once the project is trusted, a worktree's only on the person's
+//! confirmation) is decided by the feature that emits the event, before it does.
 
 use std::path::PathBuf;
 use std::time::Duration;

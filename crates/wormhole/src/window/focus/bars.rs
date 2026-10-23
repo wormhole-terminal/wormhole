@@ -112,11 +112,9 @@ impl Workspace {
         TabId::ALL.into_iter().filter(|&tab| self.tab_offered(tab, &facts, cx)).collect()
     }
 
-    /// The window's own rule for a tab whose feature has not moved into the table. Changes is always
-    /// in the table; a window made without it has no such tab. Project is there for any terminal that
-    /// has a folder, with or without a `.wormhole/`: it is where a folder gets its colour and, without
-    /// one, where the project folder is made. It stays while it is the tab on show, so a terminal
-    /// whose folder isn't known for a moment doesn't pull it out from under the person.
+    /// The window's own rule for a tab whose feature has not moved into the table: only History is
+    /// left, which is offered always. A tab whose feature is in the table is offered by the table's
+    /// entry (`tab_offered`); a window made without the entry has no such tab.
     pub(in crate::window) fn legacy_tab_offered(&self, tab: TabId) -> bool {
         match tab {
             TabId::Changes => false,
