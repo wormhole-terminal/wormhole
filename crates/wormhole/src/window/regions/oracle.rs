@@ -57,6 +57,17 @@ impl Oracle {
     }
 }
 
+/// `f` without its allocations counted, where they are (tests and devctl builds): the check is not the code
+/// it checks, for the tests that count a frame's allocations and `perf-profile`.
+#[cfg(any(test, feature = "devctl"))]
+use crate::perf::allocations::uncounted;
+
+/// Without a counting allocator there is nothing to leave out.
+#[cfg(not(any(test, feature = "devctl")))]
+fn uncounted<R>(f: impl FnOnce() -> R) -> R {
+    f()
+}
+
 /// `name` among `facts`, as text.
 fn fact(facts: &mut Facts, name: &'static str, value: &impl Debug) {
     facts.push((name, format!("{value:?}")));
@@ -130,13 +141,13 @@ impl Workspace {
     /// Remember what `part` was just built from.
     pub(super) fn record_region(&mut self, part: Part, window: &Window, cx: &App) {
         // Not the code it checks, for the tests that count a frame's allocations.
-        let facts = crate::perf::allocations::uncounted(|| self.region_facts(part, window, cx));
+        let facts = uncounted(|| self.region_facts(part, window, cx));
         self.regions.oracle.recorded[part.index()] = Some(facts);
     }
 
     /// At the end of a frame: every region it placed shows what the window holds now.
     pub(in crate::window) fn check_regions(&mut self, window: &Window, cx: &App) {
-        crate::perf::allocations::uncounted(|| self.check_placed_regions(window, cx));
+        uncounted(|| self.check_placed_regions(window, cx));
     }
 
     fn check_placed_regions(&mut self, window: &Window, cx: &App) {
