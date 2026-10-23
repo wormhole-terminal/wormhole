@@ -382,25 +382,7 @@ impl Sidebar {
             (info.name.clone(), SharedString::from(second))
         });
 
-        let label = spoken::row_label_in_split(
-            &info.name,
-            if info.told() {
-                RowSpeech::Agent {
-                    state: info.state,
-                    detail: info.message.as_deref().filter(|_| info.state != RowState::Idle),
-                }
-            } else {
-                RowSpeech::Plain {
-                    command: info.command.as_deref(),
-                    running: info.running,
-                    bell: info.bell,
-                    unread: info.unread,
-                    failed: info.failure.as_ref().map(|failure| failure.code),
-                }
-            },
-            spoken::Place { selected, position: place.position, of: place.of, number: place.number },
-            SplitSpeech::of(place.marks),
-        );
+        let label = row_label(info, selected, place);
 
         let row = style::session_row(
             ("session", id as u64),
@@ -533,6 +515,29 @@ impl Sidebar {
             ))
             .into_any_element()
     }
+}
+
+/// What VoiceOver says of a row: its name, what it is doing, its split and its place in the list.
+fn row_label(info: &RowInfo, selected: bool, place: &Place) -> String {
+    spoken::row_label_in_split(
+        &info.name,
+        if info.told() {
+            RowSpeech::Agent {
+                state: info.state,
+                detail: info.message.as_deref().filter(|_| info.state != RowState::Idle),
+            }
+        } else {
+            RowSpeech::Plain {
+                command: info.command.as_deref(),
+                running: info.running,
+                bell: info.bell,
+                unread: info.unread,
+                failed: info.failure.as_ref().map(|failure| failure.code),
+            }
+        },
+        spoken::Place { selected, position: place.position, of: place.of, number: place.number },
+        SplitSpeech::of(place.marks),
+    )
 }
 
 /// The second line's color for an agent's state.
@@ -684,5 +689,45 @@ mod tests {
         let running = RowInfo { running: Some(Duration::from_secs(72)), ..info(false, RowState::Working) };
         assert_eq!(time_text(&running, false).as_deref(), Some("1:12"));
         assert_eq!(time_text(&running, true), None, "compact rows have no second line");
+    }
+
+    fn place(position: usize, of: usize, number: Option<usize>) -> super::Place {
+        super::Place {
+            solo: false,
+            position,
+            of,
+            number,
+            grouped: false,
+            marks: wormhole_core::view::sidebar::SplitMarks::default(),
+            changes_above: false,
+        }
+    }
+
+    #[test]
+    fn a_rows_label_says_its_name_what_it_does_and_where_it_is() {
+        use super::row_label;
+        let working = RowInfo { name: "claude".into(), ..info(true, RowState::Working) };
+        assert_eq!(
+            row_label(&working, true, &place(1, 3, Some(1))),
+            "claude, working, selected, 1 of 3, Command 1"
+        );
+        let asking = RowInfo {
+            name: "api".into(),
+            message: Some("Allow edit?".into()),
+            ..info(true, RowState::NeedsYou)
+        };
+        assert_eq!(row_label(&asking, false, &place(2, 3, None)), "api, needs you, Allow edit?, 2 of 3");
+        let build = RowInfo {
+            name: "web".into(),
+            command: Some("cargo build --release".into()),
+            running: Some(Duration::from_secs(72)),
+            ..info(false, RowState::Working)
+        };
+        assert!(row_label(&build, false, &place(3, 3, None)).starts_with("web, running cargo"));
+        let failed =
+            RowInfo { failure: Some(failed(101, Some("cargo test"), 5)), ..info(false, RowState::Failed) };
+        assert!(row_label(&failed, false, &place(1, 1, None)).contains("last command failed, exit 101"));
+        let idle = info(false, RowState::Idle);
+        assert!(row_label(&idle, false, &place(1, 1, None)).contains("shell, nothing running"));
     }
 }
