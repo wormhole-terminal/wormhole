@@ -5,6 +5,8 @@
 //! `TEXT_BLESS=1 cargo test -p wormhole-text --test generated`, and the diff of `src/keys.rs` and `src/generated/` is
 //! reviewed with it. Never bless to make a red test green without knowing why it was red.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 mod support;
 
 use std::fs;

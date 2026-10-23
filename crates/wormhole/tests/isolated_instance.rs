@@ -3,6 +3,8 @@
 //! settings and nothing of the Mac's. It runs the function on a stand-in for the app that prints
 //! its environment, so it needs only `bash` and `env`, not macOS or a display.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

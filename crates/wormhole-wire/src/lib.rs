@@ -13,6 +13,7 @@
 //!
 //! `#![forbid(unsafe_code)]`, no dependencies, no serde, no async runtime; it builds on Linux too.
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 pub mod boot;
 mod control;

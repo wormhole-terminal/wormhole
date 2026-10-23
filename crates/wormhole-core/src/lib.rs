@@ -11,6 +11,8 @@
 //! `platform`, `storage`, `keys`; `theme`, `agents`, `update`; `view`, `project`; `config`; `git`, `notify`;
 //! `ipc`; `terminal`; `onboarding`.
 
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
+
 pub mod agents;
 pub mod config;
 pub mod git;

@@ -27,6 +27,7 @@
 //! `InputAck`, `Resize` → `ResizeApplied` in the stream, `Detached{TooSlow}` means attach again.
 
 #![deny(unsafe_code)]
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 pub mod args;
 mod listen;

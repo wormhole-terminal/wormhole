@@ -12,6 +12,7 @@
 //! The crate is a leaf: no GPUI, no app state, no I/O, so core and the app (and later the terminal
 //! layer) can all use it, and the session host never links it. See `repo-docs/docs/languages.md`.
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
 
 mod active;
 mod args;

@@ -4,6 +4,8 @@
 //!
 //!     cargo run -p wormhole-wire --example seeds -- crates/wormhole-wire/fuzz/corpus
 
+#![allow(clippy::disallowed_methods, reason = "a tool that writes the fuzz corpus, not the app")]
+
 use std::fs;
 use std::path::PathBuf;
 

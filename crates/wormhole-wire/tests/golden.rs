@@ -8,6 +8,8 @@
 //! `golden.txt` is then reviewed like the protocol change it is. Never bless to make a red test
 //! green without knowing why it was red.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 mod support;
 
 use std::collections::BTreeMap;

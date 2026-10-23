@@ -2,6 +2,8 @@
 //! "Integration"): starting and the readiness pipe, the stream, detach and attach, resizes, the
 //! ways a host ends, and the clients that misbehave.
 
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
+
 mod support;
 
 use std::fs;

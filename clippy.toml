@@ -1,3 +1,7 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allowed-wildcard-imports = ["gpui_kit"]
+disallowed-methods = [
+  { path = "std::process::Command::new", reason = "build commands with wormhole_term::sys::process::command: one place spawns" },
+  { path = "std::fs::write", reason = "write with wormhole_core::storage::files::write_atomic: atomic, link-safe, owner-only" },
+]

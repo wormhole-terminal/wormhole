@@ -42,6 +42,8 @@
 //! - `links`: OSC 8 hyperlinks and URLs in the text, and which may be opened;
 //! - `glyphs`: geometry of the characters the UI paints as shapes.
 
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
+
 pub mod agents;
 mod blocks;
 pub mod client;

@@ -6,6 +6,7 @@
 //! one host (one PTY), so the PTY count stays far from the system's limit.
 
 #![allow(dead_code)] // each test file uses what it needs
+#![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
 
 use std::fs;
 use std::io::{self, Read as _};
