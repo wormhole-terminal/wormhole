@@ -23,7 +23,7 @@
 //! - `sys`: the OS edge besides the PTY: users, sockets and peers, file modes, a process's folder, the
 //!   machine's name (`procinfo` keeps the check that an OSC 7 host is this machine);
 //! - `agents`: the coding agents' registry and which one runs in the foreground of a terminal;
-//! - `ports`: the TCP ports the programs under the shell listen on (libproc);
+//! - `ports`: the TCP ports the programs under the shell listen on;
 //! - `events`: the bridge from the PTY thread to the UI;
 //! - `hosted`: a terminal run by a session host (`wormhole-host`): the stream its clients read,
 //!   the attach repaint, its meta file and socket path;

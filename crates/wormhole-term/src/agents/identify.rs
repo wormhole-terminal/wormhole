@@ -51,23 +51,9 @@ pub fn identify(exe: &str, argv: &[String]) -> Option<AgentId> {
     by_executable(base_name(exe)).or_else(|| by_executable(base_name(program))).or_else(|| by_package(exe))
 }
 
-/// Split a `KERN_PROCARGS2` buffer into the exec path and argv.
-// Only macOS reads the buffer from the kernel; the parser itself is portable and unit-tested.
-#[cfg_attr(not(any(target_os = "macos", test)), allow(dead_code))]
-pub(super) fn parse_procargs(buf: &[u8]) -> Option<(String, Vec<String>)> {
-    let argc = i32::from_ne_bytes(buf.get(..4)?.try_into().ok()?);
-    let rest = &buf[4..];
-    let exe_end = rest.iter().position(|&b| b == 0)?;
-    let exe = String::from_utf8_lossy(&rest[..exe_end]).into_owned();
-    let mut args = rest[exe_end..].split(|&b| b == 0).filter(|s| !s.is_empty());
-    let argv =
-        (0..argc.clamp(0, 64)).map_while(|_| args.next()).map(|a| String::from_utf8_lossy(a).into_owned());
-    Some((exe, argv.collect()))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AgentId, identify, parse_procargs};
+    use super::{AgentId, identify};
 
     fn argv(args: &[&str]) -> Vec<String> {
         args.iter().map(|s| s.to_string()).collect()
@@ -119,16 +105,6 @@ mod tests {
         assert_eq!(identify("/opt/homebrew/bin/node", &argv(&["node"])), None);
         // An argument that merely names an agent isn't the agent.
         assert_eq!(identify("/bin/cat", &argv(&["cat", "/tmp/claude"])), None);
-    }
-
-    #[test]
-    fn procargs_are_parsed() {
-        let mut buf = 2i32.to_ne_bytes().to_vec();
-        buf.extend_from_slice(b"/usr/bin/node\0\0\0\0node\0/x/gemini\0HOME=/Users/me\0");
-        let (exe, args) = parse_procargs(&buf).expect("parses");
-        assert_eq!(exe, "/usr/bin/node");
-        assert_eq!(args, argv(&["node", "/x/gemini"]));
-        assert!(parse_procargs(&[1, 0]).is_none());
     }
 
     #[test]
