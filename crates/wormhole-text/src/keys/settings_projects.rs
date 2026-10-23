@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-projects.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Project folders"
 pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(375);
@@ -15,3 +16,113 @@ pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(377);
 pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(378);
 /// ".wormhole project folder trust touch id actions prompts layout notes theme settings"
 pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(379);
+/// "Search projects"
+pub const SETTINGS_PROJECTS_SEARCH_PROJECTS: Key = Key::new(380);
+/// "All projects (defaults)"
+pub const SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS: Key = Key::new(381);
+/// "All projects"
+pub const SETTINGS_PROJECTS_ALL_PROJECTS: Key = Key::new(382);
+/// "Project"
+pub const SETTINGS_PROJECTS_PROJECT: Key = Key::new(383);
+/// "Use from projects by default"
+pub const SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT: Key = Key::new(384);
+/// "A project can still turn a feature on or off just for you: pick it above."
+pub const SETTINGS_PROJECTS_DEFAULTS_NOTE: Key = Key::new(385);
+/// "Trusted projects"
+pub const SETTINGS_PROJECTS_TRUSTED_PROJECTS: Key = Key::new(386);
+/// "Projects allowed to run commands"
+pub const SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS: Key = Key::new(387);
+/// "None yet."
+pub const SETTINGS_PROJECTS_NONE_YET: Key = Key::new(388);
+/// "Settings"
+pub const SETTINGS_PROJECTS_SETTINGS: Key = Key::new(389);
+/// "Revoke"
+pub const SETTINGS_PROJECTS_REVOKE: Key = Key::new(390);
+/// "Approval isn't available on this Mac (no Touch ID or login password), so projects can't be trusted."
+pub const SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC: Key = Key::new(391);
+/// "Trusted"
+pub const SETTINGS_PROJECTS_TRUSTED: Key = Key::new(392);
+/// "Changed since you trusted it"
+pub const SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT: Key = Key::new(393);
+/// "Not trusted"
+pub const SETTINGS_PROJECTS_NOT_TRUSTED: Key = Key::new(394);
+/// "Revoke trust"
+pub const SETTINGS_PROJECTS_REVOKE_TRUST: Key = Key::new(395);
+/// "Waiting for approval…"
+pub const SETTINGS_PROJECTS_WAITING_FOR_APPROVAL: Key = Key::new(396);
+/// "Trust with Touch ID…"
+pub const SETTINGS_PROJECTS_TRUST_WITH_TOUCH_ID: Key = Key::new(397);
+/// "Trust"
+pub const SETTINGS_PROJECTS_TRUST: Key = Key::new(398);
+/// "This project"
+pub const SETTINGS_PROJECTS_THIS_PROJECT: Key = Key::new(399);
+/// "Use from this project"
+pub const SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT: Key = Key::new(400);
+/// "Only for you: nothing is written into the project folder."
+pub const SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN: Key = Key::new(401);
+/// "Default (on)"
+pub const SETTINGS_PROJECTS_DEFAULT_ON: Key = Key::new(402);
+/// "Default (off)"
+pub const SETTINGS_PROJECTS_DEFAULT_OFF: Key = Key::new(403);
+/// "On"
+pub const SETTINGS_PROJECTS_ON: Key = Key::new(404);
+/// "Off"
+pub const SETTINGS_PROJECTS_OFF: Key = Key::new(405);
+/// "Problems"
+pub const SETTINGS_PROJECTS_PROBLEMS: Key = Key::new(406);
+/// "Open in a new terminal"
+pub const SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL: Key = Key::new(407);
+/// "Actions, the terminal layout and env/shell may run."
+pub const SETTINGS_PROJECTS_ACTIONS_THE_TERMINAL_LAYOUT_AND_ENV: Key = Key::new(408);
+/// "Nothing in it needs trust."
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST: Key = Key::new(409);
+/// "Review the commands below and trust it again."
+pub const SETTINGS_PROJECTS_REVIEW_THE_COMMANDS_BELOW_AND_TRUST: Key = Key::new(410);
+/// "Nothing in it needs trust now."
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST_NOW: Key = Key::new(411);
+/// "Nothing in it can run commands until you trust it."
+pub const SETTINGS_PROJECTS_NOTHING_IN_IT_CAN_RUN_COMMANDS: Key = Key::new(412);
+/// "No notes.md yet. On creates it and syncs this project's terminals' notes"
+pub const SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES: Key = Key::new(413);
+
+/// ```text
+/// { $folder } has no .wormhole folder anymore.
+/// ```
+pub fn settings_projects_missing_folder(folder: &str) -> String {
+    crate::active::message(414, &[("folder", Arg::Str(folder))])
+}
+
+/// ```text
+/// Show { $folder } in Finder
+/// ```
+pub fn settings_projects_show_in_finder(folder: &str) -> String {
+    crate::active::message(415, &[("folder", Arg::Str(folder))])
+}
+
+/// ```text
+/// Applies { $applies }.
+/// ```
+pub fn settings_projects_trust_applies(applies: &str) -> String {
+    crate::active::message(416, &[("applies", Arg::Str(applies))])
+}
+
+/// ```text
+/// Trust it again to apply { $applies }.
+/// ```
+pub fn settings_projects_trust_again(applies: &str) -> String {
+    crate::active::message(417, &[("applies", Arg::Str(applies))])
+}
+
+/// ```text
+/// Trusting it applies { $applies }.
+/// ```
+pub fn settings_projects_trust_would_apply(applies: &str) -> String {
+    crate::active::message(418, &[("applies", Arg::Str(applies))])
+}
+
+/// ```text
+/// { $description }. Only after you trust the project
+/// ```
+pub fn settings_projects_feature_needs_trust(description: &str) -> String {
+    crate::active::message(419, &[("description", Arg::Str(description))])
+}

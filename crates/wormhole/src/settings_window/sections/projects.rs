@@ -4,6 +4,7 @@
 use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use wormhole_text::{keys::*, text};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -46,7 +47,8 @@ pub(crate) struct ProjectPicker {
 impl ProjectPicker {
     pub(crate) fn new(window: &mut Window, cx: &mut Context<SettingsWindow>) -> (Self, Vec<Subscription>) {
         let known = Rc::new(project::known_projects(cx));
-        let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search projects"));
+        let search =
+            cx.new(|cx| InputState::new(window, cx).placeholder(text(SETTINGS_PROJECTS_SEARCH_PROJECTS)));
         let subscriptions =
             vec![cx.subscribe_in(&search, window, |this, _, event: &InputEvent, _, cx| match event {
                 InputEvent::Change => cx.notify(),
@@ -118,7 +120,10 @@ impl ProjectPicker {
     }
 }
 
-const ALL_PROJECTS: &str = "All projects (defaults)";
+/// The select's first choice: the defaults every project starts from.
+fn all_projects() -> &'static str {
+    text(SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS)
+}
 
 /// A project's name in the select: its folder's name.
 fn choice_label(root: &Path) -> SharedString {
@@ -126,7 +131,7 @@ fn choice_label(root: &Path) -> SharedString {
 }
 
 fn choices(known: &[PathBuf]) -> Vec<Choice<String>> {
-    let mut items = vec![Choice::new(String::new(), ALL_PROJECTS)];
+    let mut items = vec![Choice::new(String::new(), all_projects())];
     items.extend(known.iter().map(|root| {
         Choice::new(root.to_string_lossy().into_owned(), choice_label(root)).detail(short_home(root))
     }));
@@ -150,7 +155,7 @@ impl SettingsWindow {
         // The trigger's own text; the options are only built while the menu is open.
         let label = match &self.projects.selected {
             Some(root) if self.projects.known.contains(root) => choice_label(root),
-            _ => ALL_PROJECTS.into(),
+            _ => all_projects().into(),
         };
         let known = self.projects.known.clone();
         let this = cx.weak_entity();
@@ -211,24 +216,28 @@ impl SettingsWindow {
     fn draw_projects(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
         let all_projects = self.projects.selected.is_some().then(|| {
-            style::link_button("all-projects", ui, "All projects", false)
+            style::link_button("all-projects", ui, text(SETTINGS_PROJECTS_ALL_PROJECTS), false)
                 .on_click(cx.listener(|this, _, _, cx| {
                     this.projects.selected = None;
                     cx.notify();
                 }))
                 .into_any_element()
         });
-        let picker = div().flex().flex_col().child(style::setting_group_head(ui, "Project", None)).child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap_4()
-                .py_2()
-                .rule_top(ui)
-                .child(self.project_select(ui, cx))
-                .children(all_projects),
-        );
+        let picker = div()
+            .flex()
+            .flex_col()
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROJECT), None))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap_4()
+                    .py_2()
+                    .rule_top(ui)
+                    .child(self.project_select(ui, cx))
+                    .children(all_projects),
+            );
         let body = match self.projects.selected.clone() {
             None => self.render_project_defaults(cx),
             Some(root) => self.render_project(&root, cx),
@@ -241,13 +250,9 @@ impl SettingsWindow {
         let mut defaults = div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, "Use from projects by default", None))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT), None))
             .child(
-                div()
-                    .pb_2()
-                    .text_body()
-                    .text_color(ui.muted)
-                    .child("A project can still turn a feature on or off just for you: pick it above."),
+                div().pb_2().text_body().text_color(ui.muted).child(text(SETTINGS_PROJECTS_DEFAULTS_NOTE)),
             );
         for feature in Feature::ALL {
             let on = project::api::default_enabled(feature, cx);
@@ -257,10 +262,11 @@ impl SettingsWindow {
                 on,
                 move |on, _, cx| project::set_feature_default(&profile, feature, on, cx),
             );
-            let mut description = feature.description().to_string();
-            if feature.requires_trust() {
-                description.push_str(". Only after you trust the project");
-            }
+            let description = if feature.requires_trust() {
+                settings_projects_feature_needs_trust(feature.description())
+            } else {
+                feature.description().to_string()
+            };
             defaults = defaults.child(feature_row(
                 ui,
                 feature,
@@ -274,13 +280,19 @@ impl SettingsWindow {
 
         let mut trusted = div().flex().flex_col().child(style::setting_group_head(
             ui,
-            "Trusted projects",
-            Some("Projects allowed to run commands"),
+            text(SETTINGS_PROJECTS_TRUSTED_PROJECTS),
+            Some(text(SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS)),
         ));
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
         if list.is_empty() {
-            trusted =
-                trusted.child(div().py_3().rule_top(ui).text_body().text_color(ui.faint).child("None yet."));
+            trusted = trusted.child(
+                div()
+                    .py_3()
+                    .rule_top(ui)
+                    .text_body()
+                    .text_color(ui.faint)
+                    .child(text(SETTINGS_PROJECTS_NONE_YET)),
+            );
         }
         for (ix, root) in list.into_iter().enumerate() {
             let (open, revoke) = (root.clone(), root.clone());
@@ -298,20 +310,30 @@ impl SettingsWindow {
                             .flex()
                             .gap_1()
                             .child(
-                                Button::new(("trusted-open", ix)).ghost().small().label("Settings").on_click(
-                                    cx.listener(move |this, _, _, cx| {
+                                Button::new(("trusted-open", ix))
+                                    .ghost()
+                                    .small()
+                                    .label(text(SETTINGS_PROJECTS_SETTINGS))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
                                         this.projects.select(open.clone());
                                         cx.notify();
-                                    }),
-                                ),
+                                    })),
                             )
-                            .child(Button::new(("revoke", ix)).ghost().small().label("Revoke").on_click(
-                                cx.listener(move |this, _, _, cx| {
-                                    let root = revoke.clone();
-                                    project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
-                                    this.projects.forget_info();
-                                }),
-                            )),
+                            .child(
+                                Button::new(("revoke", ix))
+                                    .ghost()
+                                    .small()
+                                    .label(text(SETTINGS_PROJECTS_REVOKE))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        let root = revoke.clone();
+                                        project::revoke_project(
+                                            &project::shown_profile(cx).clone(),
+                                            &root,
+                                            cx,
+                                        );
+                                        this.projects.forget_info();
+                                    })),
+                            ),
                     ),
             );
         }
@@ -320,7 +342,7 @@ impl SettingsWindow {
                 ui,
                 style::BannerKind::Warning,
                 false,
-                "Approval isn't available on this Mac (no Touch ID or login password), so projects can't be trusted.",
+                text(SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC),
             )));
         }
         div().flex().flex_col().gap_6().child(defaults).child(trusted.rule_bottom(ui)).into_any_element()
@@ -333,7 +355,7 @@ impl SettingsWindow {
                 ui,
                 style::BannerKind::Warning,
                 false,
-                format!("{} has no .wormhole folder anymore.", root.display()),
+                settings_projects_missing_folder(&root.display().to_string()),
             )
             .into_any_element();
         };
@@ -345,60 +367,73 @@ impl SettingsWindow {
 
         // Trust: a badge for where it stands, the one action that fits.
         let (status, color) = match project.status {
-            TrustStatus::Trusted => ("Trusted", ui.success_text),
-            TrustStatus::Changed => ("Changed since you trusted it", ui.warning_text),
-            TrustStatus::Untrusted => ("Not trusted", ui.muted),
+            TrustStatus::Trusted => (text(SETTINGS_PROJECTS_TRUSTED), ui.success_text),
+            TrustStatus::Changed => (text(SETTINGS_PROJECTS_CHANGED_SINCE_YOU_TRUSTED_IT), ui.warning_text),
+            TrustStatus::Untrusted => (text(SETTINGS_PROJECTS_NOT_TRUSTED), ui.muted),
         };
         let detail = trust_detail(project.status, has_commands, &needing);
         let trusted = project.status == TrustStatus::Trusted;
         let trust_root = root.to_path_buf();
         let trust_button = if trusted {
-            Button::new("project-revoke").outline().small().label("Revoke trust").on_click(cx.listener(
-                move |this, _, _, cx| {
+            Button::new("project-revoke")
+                .outline()
+                .small()
+                .label(text(SETTINGS_PROJECTS_REVOKE_TRUST))
+                .on_click(cx.listener(move |this, _, _, cx| {
                     let root = trust_root.clone();
                     project::revoke_project(&project::shown_profile(cx).clone(), &root, cx);
                     this.projects.forget_info();
-                },
-            ))
+                }))
         } else {
             Button::new("project-trust")
                 .primary()
                 .small()
                 .icon(IconName::FingerprintPattern)
-                .label(if approving { "Waiting for approval…" } else { "Trust with Touch ID…" })
+                .label(if approving {
+                    text(SETTINGS_PROJECTS_WAITING_FOR_APPROVAL)
+                } else {
+                    text(SETTINGS_PROJECTS_TRUST_WITH_TOUCH_ID)
+                })
                 .on_click(cx.listener(move |this, _, _, cx| {
                     let root = trust_root.clone();
                     project::approve_project(&project::shown_profile(cx).clone(), &root, cx);
                     this.projects.forget_info();
                 }))
         };
-        let mut trust = div().flex().flex_col().child(style::setting_group_head(ui, "Trust", None)).child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap_4()
-                .min_h(px(style::SETTING_ROW_MIN_H))
-                .py_2()
-                .rule_top(ui)
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap_2()
-                                .child(
-                                    div().text_body().font_weight(FontWeight::MEDIUM).child("This project"),
-                                )
-                                .child(style::status_badge(ui, color, status)),
-                        )
-                        .child(div().text_caption().text_color(ui.muted).child(detail)),
-                )
-                .child(trust_button),
-        );
+        let mut trust = div()
+            .flex()
+            .flex_col()
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_TRUST), None))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap_4()
+                    .min_h(px(style::SETTING_ROW_MIN_H))
+                    .py_2()
+                    .rule_top(ui)
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(
+                                        div()
+                                            .text_body()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .child(text(SETTINGS_PROJECTS_THIS_PROJECT)),
+                                    )
+                                    .child(style::status_badge(ui, color, status)),
+                            )
+                            .child(div().text_caption().text_color(ui.muted).child(detail)),
+                    )
+                    .child(trust_button),
+            );
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
             trust = trust.child(
                 div().pb_2().child(
@@ -421,21 +456,28 @@ impl SettingsWindow {
         let mut features = div()
             .flex()
             .flex_col()
-            .child(style::setting_group_head(ui, "Use from this project", None))
+            .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT), None))
             .child(
                 div()
                     .pb_2()
                     .text_body()
                     .text_color(ui.muted)
-                    .child("Only for you: nothing is written into the project folder."),
+                    .child(text(SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN)),
             );
         for (feature, standing, current, default) in prefs {
             let description = feature_description(feature, standing);
             let key = feature.key();
             let options = [
-                (None, if default { "Default (on)" } else { "Default (off)" }),
-                (Some(true), "On"),
-                (Some(false), "Off"),
+                (
+                    None,
+                    if default {
+                        text(SETTINGS_PROJECTS_DEFAULT_ON)
+                    } else {
+                        text(SETTINGS_PROJECTS_DEFAULT_OFF)
+                    },
+                ),
+                (Some(true), text(SETTINGS_PROJECTS_ON)),
+                (Some(false), text(SETTINGS_PROJECTS_OFF)),
             ];
             let control = style::segmented(ui)
                 .children(options.into_iter().enumerate().map(|(ix, (value, label))| {
@@ -469,12 +511,17 @@ impl SettingsWindow {
         let features = features.rule_bottom(ui);
 
         let errors = (!project.errors.is_empty()).then(|| {
-            div().flex().flex_col().gap_2().child(style::setting_group_head(ui, "Problems", None)).children(
-                project
-                    .errors
-                    .iter()
-                    .map(|e| style::banner(ui, style::BannerKind::Warning, false, e.clone())),
-            )
+            div()
+                .flex()
+                .flex_col()
+                .gap_2()
+                .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROBLEMS), None))
+                .children(
+                    project
+                        .errors
+                        .iter()
+                        .map(|e| style::banner(ui, style::BannerKind::Warning, false, e.clone())),
+                )
         });
 
         let open_root = root.to_path_buf();
@@ -486,7 +533,7 @@ impl SettingsWindow {
                 Button::new("project-open-session")
                     .small()
                     .icon(IconName::SquareTerminal)
-                    .label("Open in a new terminal")
+                    .label(text(SETTINGS_PROJECTS_OPEN_IN_A_NEW_TERMINAL))
                     .on_click(cx.listener(move |_, _, _, cx| {
                         let root = open_root.clone();
                         with_front_workspace(cx, |ws, window, cx| {
@@ -500,7 +547,7 @@ impl SettingsWindow {
                     .ghost()
                     .small()
                     .icon(IconName::ExternalLink)
-                    .label(format!("Show {} in Finder", project.folder.dir_name()))
+                    .label(settings_projects_show_in_finder(&project.folder.dir_name()))
                     .on_click(move |_, _, cx| reveal(&reveal_root, cx)),
             );
 
@@ -521,15 +568,25 @@ impl SettingsWindow {
 fn trust_detail(status: TrustStatus, has_commands: bool, needing: &[Feature]) -> String {
     let applies = trust_applies(needing);
     match (status, has_commands, needing.is_empty()) {
-        (TrustStatus::Trusted, true, _) => "Actions, the terminal layout and env/shell may run.".to_string(),
-        (TrustStatus::Trusted, false, false) => format!("Applies {applies}."),
-        (TrustStatus::Trusted, false, true) => "Nothing in it needs trust.".to_string(),
-        (TrustStatus::Changed, true, _) => "Review the commands below and trust it again.".to_string(),
-        (TrustStatus::Changed, false, false) => format!("Trust it again to apply {applies}."),
-        (TrustStatus::Changed, false, true) => "Nothing in it needs trust now.".to_string(),
-        (TrustStatus::Untrusted, true, _) => "Nothing in it can run commands until you trust it.".to_string(),
-        (TrustStatus::Untrusted, false, false) => format!("Trusting it applies {applies}."),
-        (TrustStatus::Untrusted, false, true) => "Nothing in it needs trust.".to_string(),
+        (TrustStatus::Trusted, true, _) => {
+            text(SETTINGS_PROJECTS_ACTIONS_THE_TERMINAL_LAYOUT_AND_ENV).to_string()
+        }
+        (TrustStatus::Trusted, false, false) => settings_projects_trust_applies(&applies),
+        (TrustStatus::Trusted, false, true) => text(SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST).to_string(),
+        (TrustStatus::Changed, true, _) => {
+            text(SETTINGS_PROJECTS_REVIEW_THE_COMMANDS_BELOW_AND_TRUST).to_string()
+        }
+        (TrustStatus::Changed, false, false) => settings_projects_trust_again(&applies),
+        (TrustStatus::Changed, false, true) => {
+            text(SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST_NOW).to_string()
+        }
+        (TrustStatus::Untrusted, true, _) => {
+            text(SETTINGS_PROJECTS_NOTHING_IN_IT_CAN_RUN_COMMANDS).to_string()
+        }
+        (TrustStatus::Untrusted, false, false) => settings_projects_trust_would_apply(&applies),
+        (TrustStatus::Untrusted, false, true) => {
+            text(SETTINGS_PROJECTS_NOTHING_IN_IT_NEEDS_TRUST).to_string()
+        }
     }
 }
 
@@ -539,11 +596,9 @@ fn feature_description(feature: Feature, standing: FeatureStanding) -> String {
     match (feature, standing) {
         // The switch is how the file gets made.
         (Feature::Notes, FeatureStanding::Missing) => {
-            "No notes.md yet. On creates it and syncs this project's terminals' notes".to_string()
+            text(SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES).to_string()
         }
-        (_, FeatureStanding::NeedsTrust) => {
-            format!("{}. Only after you trust the project", feature.description())
-        }
+        (_, FeatureStanding::NeedsTrust) => settings_projects_feature_needs_trust(feature.description()),
         (_, standing) => standing.hint(feature).unwrap_or_else(|| feature.description().to_string()),
     }
 }
