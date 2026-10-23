@@ -15,6 +15,8 @@ const PROC_PPID_ONLY: u32 = 6;
 
 #[allow(unsafe_code)] // libproc FFI; buffer sizes are checked below.
 pub(crate) fn cwd(pid: u32) -> Option<PathBuf> {
+    // SAFETY: `proc_vnodepathinfo` is a plain C struct of integers and byte arrays, for which all-zero
+    // bytes is a valid value.
     let mut info: libc::proc_vnodepathinfo = unsafe { std::mem::zeroed() };
     let size = size_of::<libc::proc_vnodepathinfo>() as i32;
     // SAFETY: `info` is a correctly sized, writable buffer for this flavor.
