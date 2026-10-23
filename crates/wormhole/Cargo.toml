@@ -22,6 +22,8 @@ wormhole-text.workspace = true
 # the graph through GPUI with these features).
 image = { version = "0.25", default-features = false, features = ["png"] }
 gpui-kit = { version = "0.8.0", features = [
+    # Retained views, kept layout and an allocation-free scene sort: a trial, see speed-research.md.
+    "gpui-fast",
     # Syntax highlighting in the diff view.
     "tree-sitter-rust", "tree-sitter-typescript", "tree-sitter-tsx", "tree-sitter-javascript",
     "tree-sitter-python", "tree-sitter-go", "tree-sitter-bash", "tree-sitter-toml",
