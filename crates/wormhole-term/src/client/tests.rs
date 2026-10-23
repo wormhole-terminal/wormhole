@@ -250,20 +250,32 @@ fn credit_is_acknowledged_after_each_batch_and_at_least_every_64_kib() {
 
 #[test]
 fn the_replica_wakes_the_app_for_a_synchronized_update_when_it_begins_and_ends_and_not_between() {
-    let (pty, events, mut script) = connected(StreamMode::Raw);
-    let mut offset = 0;
-    let mut send = |script: &mut Script, bytes: &[u8]| {
-        script.send(&Message::Out(wire::Out { offset, bytes }));
-        offset += bytes.len() as u64;
-    };
-    send(&mut script, b"\x1b[?2026h");
-    next_event(&events, "the update's begin", |e| matches!(e, PtyEvent::Output));
-    send(&mut script, b"inside");
-    wait_for("the update's text", || pty.screen_text().contains("inside"));
-    assert_eq!(events.queued(), 0, "nothing to draw while the update holds the screen");
-    send(&mut script, b"\x1b[?2026l");
-    next_event(&events, "the update's end", |e| matches!(e, PtyEvent::Output));
-    drop(pty);
+    // The update's real timeout (150 ms) gives up on it: on a slow runner it can pass before the
+    // check of the quiet, and that run proves nothing. It is run again, a few times.
+    let margin = Duration::from_millis(50);
+    for _ in 0..5 {
+        let (pty, events, mut script) = connected(StreamMode::Raw);
+        let mut offset = 0;
+        let mut send = |script: &mut Script, bytes: &[u8]| {
+            script.send(&Message::Out(wire::Out { offset, bytes }));
+            offset += bytes.len() as u64;
+        };
+        let began = Instant::now();
+        send(&mut script, b"\x1b[?2026h");
+        next_event(&events, "the update's begin", |e| matches!(e, PtyEvent::Output));
+        send(&mut script, b"inside");
+        wait_for("the update's text", || pty.screen_text().contains("inside"));
+        if began.elapsed() + margin >= crate::screen::SYNC_TIMEOUT {
+            drop(pty);
+            continue;
+        }
+        assert_eq!(events.queued(), 0, "nothing to draw while the update holds the screen");
+        send(&mut script, b"\x1b[?2026l");
+        next_event(&events, "the update's end", |e| matches!(e, PtyEvent::Output));
+        drop(pty);
+        return;
+    }
+    panic!("the update timed out before it could be checked, five times in a row");
 }
 
 #[test]
