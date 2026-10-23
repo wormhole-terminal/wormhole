@@ -8,7 +8,7 @@ use wormhole_core::keys::keymap::ActionId;
 
 use crate::features::notes::testing as notes;
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start};
 use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {

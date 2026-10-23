@@ -110,7 +110,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `cargo test` builds them.
 - A whole `Workspace` window in a test, isolated in a child process with a
   scratch data dir and `/bin/cat` as the shell (`isolate`), driven with
-  `gpui_kit::test::TestWindowExt`: `window/view_tests.rs`.
+  `gpui_kit::test::TestWindowExt`: `window/test_harness.rs`.
 - Logic that needs no UI goes into `wormhole-core` and is tested there.
 - Scripted checks of the real app (screenshots, clicks, typing): the
   `devctl` skill and `devctl/`. The inspector (⇧⌥⌘I in debug builds):

@@ -1,4 +1,4 @@
-//! The terminal list pinned from outside, in a real window (GPUI's test platform; see `view_tests`
+//! The terminal list pinned from outside, in a real window (GPUI's test platform; see `test_harness`
 //! for how each test runs in a child process with scratch data): what a click, a drag, a key or the
 //! modifier keys do to the list, whatever holds its state. The helpers at the top are the only place
 //! a test names where the sidebar's state is kept.
@@ -10,7 +10,7 @@ use gpui_kit::{
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, sidebar_of, start};
+use crate::window::test_harness::{draw, drive, isolate_in, press, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

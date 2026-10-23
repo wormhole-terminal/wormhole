@@ -13,7 +13,7 @@ use super::changes::Changes;
 use crate::app_state::OpenWindow;
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
-use crate::window::view_tests::drive;
+use crate::window::test_harness::drive;
 
 /// Runs git in `dir`, as a test's fixture (the app itself never writes to a repository this way).
 pub(super) fn git(dir: &Path, args: &[&str]) {

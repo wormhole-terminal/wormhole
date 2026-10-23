@@ -11,7 +11,7 @@ use wormhole_core::agents::usage::Gauge;
 use wormhole_core::view::layout::title_row::{Extra, PathShown};
 
 use crate::platform::record;
-use crate::window::view_tests::{draw, drive, isolate_in, start};
+use crate::window::test_harness::{draw, drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -270,7 +270,7 @@ fn the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch
         cache.finish(&branch, Ok(Some(pr.clone())), Instant::now());
     });
     let shown = |cx: &mut TestAppContext| {
-        crate::window::view_tests::read_cx(cx, &window, |ws, cx| {
+        crate::window::test_harness::read_cx(cx, &window, |ws, cx| {
             ws.extra_facts(cx).pull_request.map(|pr| (pr.label(), pr.words()))
         })
     };

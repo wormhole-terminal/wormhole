@@ -11,7 +11,7 @@ use crate::notifications;
 use crate::terminal_view::{Status, TerminalView};
 use crate::window::ambient::TabFacts;
 use crate::window::reported_tests::{banners_in_front, event, now, report, terminal, words};
-use crate::window::view_tests::{drive, hook, isolate_in, start};
+use crate::window::test_harness::{drive, hook, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

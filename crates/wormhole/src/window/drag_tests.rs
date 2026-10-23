@@ -1,5 +1,5 @@
 //! Dragging terminals between the sidebar and the panes in a real window (GPUI's test
-//! platform; see `view_tests` for how each test runs in a child process with scratch data). The
+//! platform; see `test_harness` for how each test runs in a child process with scratch data). The
 //! pointer does what a person's does: it goes down on a row or a pane's header, moves with the
 //! button held (a frame between, so the overlay over the panes is drawn before the next move
 //! reaches it) and lets go. What each gesture does to the panes and the list is core's; these tests
@@ -12,7 +12,7 @@ use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
 use crate::sidebar::terminal_drag::{Over, PaneHover};
-use crate::window::view_tests::{draw, drive, isolate_in, read, sidebar_of, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

@@ -15,7 +15,7 @@ use crate::app_state::OpenWindow;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::window::Workspace;
-use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start, start_with};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start, start_with};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

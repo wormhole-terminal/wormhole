@@ -1,5 +1,5 @@
 //! View tests of the remembered side columns: a window opened with no saved layout starts with
-//! the columns as they were last left, app-wide (see `view_tests` for how each test runs in a
+//! the columns as they were last left, app-wide (see `test_harness` for how each test runs in a
 //! child process with scratch data).
 use gpui_kit::{TestAppContext, px, size};
 use wormhole_core::storage::store::Store;
@@ -7,7 +7,7 @@ use wormhole_core::view::layout::{Panes, REMEMBERED_PANES_KEY, RememberedPanes, 
 
 use crate::app_state::{OpenWindow, app, app_mut};
 use crate::window::Workspace;
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, start};
 use crate::window::window_lifecycle::open_workspace_window;
 use wormhole_core::config::TabId;
 

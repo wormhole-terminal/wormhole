@@ -26,7 +26,7 @@ use crate::features::notes::testing as notes;
 use crate::window::Workspace;
 use wormhole_core::storage::store::WindowRecord;
 
-use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start, start_with_table};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start, start_with_table};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

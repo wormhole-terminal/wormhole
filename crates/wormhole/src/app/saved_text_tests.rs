@@ -1,12 +1,12 @@
 //! Restore terminal text after restart turned off, and "Don't keep this terminal's text": nothing of
-//! it stays in the profile's store (see `view_tests` for how each test runs in a child process with
+//! it stays in the profile's store (see `test_harness` for how each test runs in a child process with
 //! scratch data; the store's key is the development build's key file there, never the Keychain).
 use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::Store;
 
 use crate::app_state::OpenWindow;
 use crate::app_state::{app, app_mut};
-use crate::window::view_tests::{drive, isolate_in, start};
+use crate::window::test_harness::{drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

@@ -612,7 +612,7 @@ mod tests {
 
     use super::CommandPalette;
     use crate::app_state::OpenWindow;
-    use crate::window::view_tests::{draw, isolate_in, press, read, start};
+    use crate::window::test_harness::{draw, isolate_in, press, read, start};
 
     fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
         draw(cx, window);

@@ -1,4 +1,4 @@
-//! The context menus in a real window (GPUI's test platform; see `view_tests` for how each test
+//! The context menus in a real window (GPUI's test platform; see `test_harness` for how each test
 //! runs in a child process with scratch data). A native menu can't be shown there, so the app
 //! records the menu it was asked to open (`platform::record`, what devctl's `menu` prints): the
 //! tests right-click, read the recorded model and choose an item as a click would.
@@ -7,7 +7,7 @@ use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
 use crate::app_state::OpenWindow;
 use crate::platform::record;
-use crate::window::view_tests::{draw, drive, isolate_in, read, sidebar_of, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

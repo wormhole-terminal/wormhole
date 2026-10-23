@@ -14,7 +14,7 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::Store;
 
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

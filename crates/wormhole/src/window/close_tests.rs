@@ -1,6 +1,6 @@
 //! Whole-window tests of asking before closing: a terminal, a window, the last window (which
 //! quits), and the close button's dot that says a question would come. The harness is
-//! `view_tests`'.
+//! `test_harness`'.
 //!
 //! Tests only: they drive the window through the harness and must not touch the person's data.
 
@@ -9,7 +9,7 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::app;
 use crate::features::notes::testing as notes;
-use crate::window::view_tests::{drive, hook, isolate_in, read, start};
+use crate::window::test_harness::{drive, hook, isolate_in, read, start};
 use crate::window::window_lifecycle::open_workspace_window;
 
 fn isolate(name: &str) -> bool {

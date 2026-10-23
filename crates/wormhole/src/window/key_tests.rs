@@ -1,10 +1,10 @@
-//! The keys, F6 and the menus in a real window (GPUI's test platform; see `view_tests` for
+//! The keys, F6 and the menus in a real window (GPUI's test platform; see `test_harness` for
 //! how each test runs in a child process with scratch data).
 use gpui_kit::{OwnedMenuItem, TestAppContext};
 use wormhole_core::view::focus::Area;
 
 use crate::app_state::{OpenWindow, app, app_mut};
-use crate::window::view_tests::{draw, drive, hook, isolate_in, press, read, start};
+use crate::window::test_harness::{draw, drive, hook, isolate_in, press, read, start};
 use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).

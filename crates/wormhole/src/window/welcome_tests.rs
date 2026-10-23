@@ -20,7 +20,7 @@ use crate::onboarding::welcome::{Plan, Services, handle};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -367,7 +367,7 @@ fn the_first_launch_makes_the_windows_first_terminal_the_welcome(cx: &mut TestAp
         gpui_kit::init(cx);
         cx.set_app_identity("app.getwormhole.terminal.test", "Wormhole");
         cx.set_global(crate::settings::SettingsStore::load());
-        crate::window::view_tests::set_shared_state(cx);
+        crate::window::test_harness::set_shared_state(cx);
         crate::app::handlers::init(cx);
         crate::onboarding::welcome::set_first_launch(
             Some(Plan { handover: Handover::Portal, first_run: true }),
@@ -483,7 +483,7 @@ fn the_example_band_goes_when_its_terminal_closes(cx: &mut TestAppContext) {
         ws.close_session(ix, window, cx);
     });
     assert_eq!(band(cx, &window), None, "the terminal is gone");
-    crate::window::view_tests::sidebar_of(cx, &window, |sidebar| {
+    crate::window::test_harness::sidebar_of(cx, &window, |sidebar| {
         assert!(!sidebar.has_demo(), "and so is the state, not just the drawing")
     });
     draw(cx, &window);

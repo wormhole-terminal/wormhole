@@ -1,5 +1,5 @@
 //! An odd window (a window in a profile Wormhole is not in) draws with its own profile's look,
-//! while the windows of the shown profile keep drawing with the shown one (see `view_tests` for
+//! while the windows of the shown profile keep drawing with the shown one (see `test_harness` for
 //! how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 use wormhole_core::config::ThemeMode;
@@ -9,7 +9,7 @@ use wormhole_core::storage::paths::ProfileId;
 use crate::app_state::{AppState, app};
 use crate::settings::{ParkedSettings, SettingsStore, settings, settings_in, store_in, ui, ui_in};
 use crate::window::Workspace;
-use crate::window::view_tests::{draw, isolate_in, read, start};
+use crate::window::test_harness::{draw, isolate_in, read, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

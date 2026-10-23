@@ -26,7 +26,7 @@ use crate::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
 use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
-use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
+use crate::window::test_harness::{draw, drive, isolate_in, read, start, start_with_table, with_window};
 
 #[test]
 fn every_feature_core_lists_has_exactly_one_entry_in_the_table() {

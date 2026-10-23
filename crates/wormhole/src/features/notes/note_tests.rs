@@ -1,4 +1,4 @@
-//! View tests of the Notes tab's editors: the hint an empty note shows (see `view_tests` for how
+//! View tests of the Notes tab's editors: the hint an empty note shows (see `test_harness` for how
 //! each test runs in a child process with scratch data).
 use gpui_kit::component::ActiveTheme as _;
 use gpui_kit::{TestAppContext, TextRun, font, px, rems, size};
@@ -6,7 +6,7 @@ use wormhole_core::view::layout::{PANEL_MIN, SIDEBAR_DEFAULT, TERMINAL_MIN};
 
 use crate::app_state::OpenWindow;
 use crate::features::notes::testing as notes;
-use crate::window::view_tests::{draw, drive, isolate_in, start};
+use crate::window::test_harness::{draw, drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

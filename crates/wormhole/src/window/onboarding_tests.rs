@@ -1,4 +1,4 @@
-//! The intro window in a real window (GPUI's test platform; `view_tests` says how each test runs in
+//! The intro window in a real window (GPUI's test platform; `test_harness` says how each test runs in
 //! a child process with scratch data): its pages walked with the keys, Esc, ⇥ staying among its
 //! buttons, a replay coming back to the welcome page, and the intro opened again later.
 
@@ -18,7 +18,7 @@ use wormhole_core::storage::store::Store;
 use crate::app_state::{OpenWindow, app, app_mut};
 use crate::onboarding::{AgentsNote, FADE_OUT, FirstRun};
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
+use crate::window::test_harness::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
 fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {

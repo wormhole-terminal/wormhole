@@ -1,5 +1,5 @@
 //! View tests of restarting to update: the question before it, and "Restart When Idle" settled by
-//! the tick (see `view_tests` for how each test runs in a child process with scratch data). A test
+//! the tick (see `test_harness` for how each test runs in a child process with scratch data). A test
 //! process is not an app bundle, so a restart that goes ahead only clears the request.
 use std::time::{Duration, Instant};
 
@@ -9,7 +9,7 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use crate::app_state::{OpenWindow, app};
 use crate::update::restart::{request_restart, tick_at};
 use crate::update::{UpdatePhase, Updates};
-use crate::window::view_tests::{hook, isolate_in, start};
+use crate::window::test_harness::{hook, isolate_in, start};
 use crate::window::window_lifecycle::open_workspace_window;
 
 fn isolate(name: &str) -> bool {

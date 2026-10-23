@@ -1,5 +1,5 @@
 //! Terminals and the splits they are shown in, in a real window (GPUI's test platform; see
-//! `view_tests` for how each test runs in a child process with scratch data).
+//! `test_harness` for how each test runs in a child process with scratch data).
 use gpui_kit::{Focusable as _, TestAppContext, VisualTestContext};
 use wormhole_core::storage::store::{SessionRecord, SplitRecord, WindowRecord};
 use wormhole_core::view::panes::{Axis, DropError, Preset, TabPanes, Zone};
@@ -7,7 +7,7 @@ use wormhole_core::view::sidebar::{Bracket, Drop, Landing, Part};
 
 use crate::app_state::OpenWindow;
 use crate::terminal_view::Status;
-use crate::window::view_tests::{draw, drive, hook, isolate_in, press, read, start, start_with};
+use crate::window::test_harness::{draw, drive, hook, isolate_in, press, read, start, start_with};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

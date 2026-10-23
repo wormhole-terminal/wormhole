@@ -10,7 +10,7 @@ use wormhole_core::git::review::LineSide;
 use super::super::testing::{changes, git, go, open_change, read_repo, repo, write};
 use super::render::LineAt;
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{drive, isolate_in, read_cx, start};
+use crate::window::test_harness::{drive, isolate_in, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -46,7 +46,7 @@ fn shown(cx: &mut TestAppContext, window: &OpenWindow) -> Option<Shown> {
 
 fn open(cx: &mut TestAppContext, window: &OpenWindow, path: &str) {
     // The list is drawn first: it keeps what a click opens a diff against.
-    crate::window::view_tests::draw(cx, window);
+    crate::window::test_harness::draw(cx, window);
     drive(cx, window, |ws, _, cx| open_change(ws, path, cx));
     cx.run_until_parked();
 }
@@ -104,11 +104,11 @@ fn the_diff_covers_the_terminal_until_it_is_closed(cx: &mut TestAppContext) {
     let window = start(cx, 1);
     changed(cx, &window, "covers");
     open(cx, &window, "a.txt");
-    crate::window::view_tests::draw(cx, &window);
+    crate::window::test_harness::draw(cx, &window);
     assert!(shown(cx, &window).is_some());
     // The Tabs area is not one to move to while a diff covers the terminal (the diff has the keys).
     close(cx, &window);
-    crate::window::view_tests::draw(cx, &window);
+    crate::window::test_harness::draw(cx, &window);
     assert!(shown(cx, &window).is_none());
 }
 

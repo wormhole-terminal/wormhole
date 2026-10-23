@@ -152,7 +152,7 @@ fn the_lint_sees_what_it_is_for() {
 fn background_rs_and_test_code_are_left_alone() {
     let call = "fn f(cx: &mut App) {\n    cx.activate(true);\n}\n";
     assert!(violations("background.rs", call).is_empty(), "the wrapper itself");
-    assert!(violations("window/view_tests.rs", call).is_empty(), "a tests file");
+    assert!(violations("window/session_tests.rs", call).is_empty(), "a tests file");
     assert!(violations("select/tests.rs", call).is_empty());
 
     let inline = format!(

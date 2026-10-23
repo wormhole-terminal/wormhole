@@ -1751,7 +1751,7 @@ def selftest() -> int:
                 "mod bridge;\nmod def;\nmod holes;\nuse crate::window::feature::F;\nuse crate::window::Workspace;\n"
                 "use crate::window::{facts::W, sessions::S, focus::G};\nuse crate::features::a::own::Z;\n"
                 "use crate::features::b::Y;\n// use crate::window::sessions::C;\n"
-                "#[cfg(test)]\nmod tests {\n    use crate::window::view_tests::V;\n    use crate::features::b::T;\n}\n",
+                "#[cfg(test)]\nmod tests {\n    use crate::window::test_harness::V;\n    use crate::features::b::T;\n}\n",
             "crates/app/src/features/a/bridge.rs": "use crate::features::b::Y;\nuse crate::features::c::W;\n",
             "crates/app/src/features/b.rs": "use crate::features::a::A;\n",
             # Workspace is the one file name's business; the bare and relative forms are caught.

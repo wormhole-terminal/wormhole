@@ -17,7 +17,7 @@ use crate::features::project;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
 use crate::window::Workspace;
-use crate::window::view_tests::{draw, drive, isolate_in, read_cx, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read_cx, start};
 use wormhole_core::config::TabId;
 
 fn isolate(name: &str) -> bool {

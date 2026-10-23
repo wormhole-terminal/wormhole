@@ -12,8 +12,8 @@ use super::testing as notes;
 use crate::app_state::{OpenWindow, app};
 use crate::settings::update_settings;
 use crate::window::Workspace;
-use crate::window::view_tests::read;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read_cx, start};
+use crate::window::test_harness::read;
+use crate::window::test_harness::{draw, drive, isolate_in, press, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)

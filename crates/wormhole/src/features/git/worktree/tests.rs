@@ -18,7 +18,7 @@ use crate::app_state::{OpenWindow, app};
 use crate::features::project::{self, hub_mut};
 use crate::window::Workspace;
 use crate::window::feature::CloseOf;
-use crate::window::view_tests::{drive, isolate_in, read, read_cx, start};
+use crate::window::test_harness::{drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -331,7 +331,7 @@ fn a_worktree_that_git_refuses_leaves_the_keys_in_the_terminal(cx: &mut TestAppC
     use gpui_kit::component::dialog::Confirm;
     use std::time::Duration;
 
-    use crate::window::view_tests::with_window;
+    use crate::window::test_harness::with_window;
     if isolate("a_worktree_that_git_refuses_leaves_the_keys_in_the_terminal") {
         return;
     }

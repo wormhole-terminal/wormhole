@@ -1,12 +1,12 @@
 //! Groups in a real window: one goes with its last terminal unless it is pinned, closing one closes
 //! its terminals, a terminal is renamed in its row, and one moves with its terminals to a window of
-//! its own (see `view_tests` for how each test runs in a child process with scratch data).
+//! its own (see `test_harness` for how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 
-use crate::window::view_tests::{draw, drive, read, sidebar_of, start};
+use crate::window::test_harness::{draw, drive, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
-    crate::window::view_tests::isolate_in(module_path!(), name)
+    crate::window::test_harness::isolate_in(module_path!(), name)
 }
 
 fn group_names(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Vec<(String, bool, usize)> {

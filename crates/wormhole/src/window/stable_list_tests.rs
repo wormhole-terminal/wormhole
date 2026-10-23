@@ -1,5 +1,5 @@
 //! The terminal list in a real window with the numbers that stay: a new terminal or a split moves no
-//! other terminal and changes no other ⌘ number (see `view_tests` for how each test runs in a child
+//! other terminal and changes no other ⌘ number (see `test_harness` for how each test runs in a child
 //! process with scratch data).
 use std::collections::BTreeMap;
 
@@ -7,10 +7,10 @@ use gpui_kit::TestAppContext;
 use wormhole_core::view::panes::Axis;
 
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{drive, read, sidebar_of, start, use_stable};
+use crate::window::test_harness::{drive, read, sidebar_of, start, use_stable};
 
 fn isolate(name: &str) -> bool {
-    crate::window::view_tests::isolate_in(module_path!(), name)
+    crate::window::test_harness::isolate_in(module_path!(), name)
 }
 
 /// Each numbered terminal's id and ⌘ number.

@@ -17,7 +17,7 @@ use super::testing::{
     ask_for_worktree, change_of, changed_paths, changes, diff_path, folder, git, go, open_change, read_repo,
     repo, walkable, worktree_dialog_up, write,
 };
-use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
+use crate::window::test_harness::{draw, drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -270,7 +270,7 @@ fn a_picker_belongs_to_the_terminal_and_the_tab_it_was_opened_in(cx: &mut TestAp
 #[gpui_kit::test]
 fn the_history_key_shows_the_tab_and_the_menu_checks_it(cx: &mut TestAppContext) {
     use crate::actions::ShowHistory;
-    use crate::window::view_tests::with_window;
+    use crate::window::test_harness::with_window;
     if isolate("the_history_key_shows_the_tab_and_the_menu_checks_it") {
         return;
     }
@@ -292,7 +292,7 @@ fn the_history_key_shows_the_tab_and_the_menu_checks_it(cx: &mut TestAppContext)
 #[gpui_kit::test]
 fn the_worktree_action_is_bound_only_where_the_folder_is_in_a_repository(cx: &mut TestAppContext) {
     use crate::actions::NewTerminalInWorktree;
-    use crate::window::view_tests::with_window;
+    use crate::window::test_harness::with_window;
     if isolate("the_worktree_action_is_bound_only_where_the_folder_is_in_a_repository") {
         return;
     }
@@ -340,7 +340,7 @@ fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_work
     cx: &mut TestAppContext,
 ) {
     use crate::actions::ShowHistory;
-    use crate::window::view_tests::with_window;
+    use crate::window::test_harness::with_window;
     use wormhole_core::config::FeatureId;
     if isolate("history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_worktrees") {
         return;

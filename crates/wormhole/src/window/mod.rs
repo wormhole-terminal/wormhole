@@ -62,6 +62,8 @@ mod failed_tests;
 pub(crate) mod feature;
 mod feature_host;
 pub(crate) use self::feature_host::refresh_all_features;
+#[cfg(all(test, feature = "devctl"))]
+mod devctl_tests;
 mod feature_terminals;
 #[cfg(test)]
 mod feature_tests;
@@ -74,9 +76,17 @@ pub(crate) mod hosting;
 #[cfg(test)]
 mod key_tests;
 mod layout;
+#[cfg(test)]
+mod layout_tests;
+#[cfg(test)]
+mod list_tests;
 pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
+#[cfg(test)]
+mod notes_tab_tests;
+#[cfg(test)]
+mod notification_tests;
 mod onboarding_host;
 #[cfg(test)]
 mod onboarding_tests;
@@ -99,6 +109,8 @@ pub(crate) mod restart_facts;
 mod save;
 mod saved_layout;
 mod session;
+#[cfg(test)]
+mod session_tests;
 mod shortcuts;
 #[cfg(feature = "devctl")]
 mod sidebar_devctl;
@@ -110,13 +122,15 @@ mod slide;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
+#[cfg(test)]
+mod terminal_tests;
 mod terminals;
 #[cfg(test)]
 mod test_access;
+#[cfg(test)]
+pub(crate) mod test_harness;
 mod tick;
 mod title;
-#[cfg(test)]
-pub(crate) mod view_tests;
 mod welcome_host;
 #[cfg(test)]
 mod welcome_tests;

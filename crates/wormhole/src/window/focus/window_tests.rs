@@ -1,4 +1,4 @@
-//! The keys in a real window (GPUI's test platform; see `view_tests` for how each test runs in
+//! The keys in a real window (GPUI's test platform; see `test_harness` for how each test runs in
 //! a child process with scratch data): ⇥ between stops, the arrows, ↩ and Space inside the
 //! sidebar and the panel, Esc back to the terminal.
 use gpui_kit::TestAppContext;
@@ -8,7 +8,7 @@ use crate::app_state::OpenWindow;
 use crate::features::git::changes::Changes;
 use crate::features::notes::testing as notes;
 use crate::sidebar::SidebarStop;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, sidebar_of, start};
+use crate::window::test_harness::{draw, drive, isolate_in, press, read, read_cx, sidebar_of, start};
 use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
