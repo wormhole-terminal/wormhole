@@ -369,13 +369,12 @@ impl Workspace {
         }
         let handled = match area {
             Area::TitleRow => self.title_key(&event.keystroke, window, cx),
-            // The list is its own container and hears its keys itself (`Sidebar::on_area_key`).
-            Area::Sidebar => false,
             Area::Tabs => self.tabs_key(&event.keystroke, window, cx),
             Area::PanelTabs => self.panel_tabs_key(&event.keystroke, window, cx),
             Area::PanelContent => self.panel_key(&event.keystroke, window, cx),
             Area::StatusBar => self.status_key(&event.keystroke, window, cx),
-            Area::Terminal => false,
+            // The terminal hears its keys itself, and so does the list (`Sidebar::on_area_key`).
+            Area::Terminal | Area::Sidebar => false,
         };
         if handled {
             cx.stop_propagation();

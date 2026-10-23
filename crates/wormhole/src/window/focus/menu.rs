@@ -28,11 +28,8 @@ impl Workspace {
     /// ⌃↩ in `area`'s list: open the menu of the row the keys are on, if it has one.
     pub(super) fn row_menu_key(&mut self, area: Area, window: &mut Window, cx: &mut Context<Self>) {
         // The panel's rows have no menu yet; the title strip's is the folder's path menu.
-        match area {
-            // The list opens its own rows' menus.
-            Area::Sidebar => {}
-            Area::Tabs => self.open_path_menu(window, cx),
-            _ => {}
+        if area == Area::Tabs {
+            self.open_path_menu(window, cx);
         }
     }
 }
