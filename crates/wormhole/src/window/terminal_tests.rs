@@ -5,7 +5,9 @@ use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::terminal_view::Status;
-use crate::window::test_harness::{draw, hook, isolate_in, press, read, start, start_with, with_window};
+use crate::window::test_harness::{
+    draw, hook, isolate_in, let_programs_print, press, read, start, start_with, with_window,
+};
 
 /// ⌘F opens the bar with the keyboard in its field, typing finds every match and picks the
 /// newest, ⌘G / ⇧⌘G go round, and Esc closes it and gives the terminal the keyboard back.
@@ -85,18 +87,22 @@ fn answering_the_agents_question_by_key_ends_needs_you(cx: &mut TestAppContext) 
 
 /// A program that prints while the test waits (the echo of what was typed into a terminal) reaches the
 /// window from the PTY's reader thread; the test scheduler does not report that as a test that is not
-/// deterministic (`test_harness::start_with_table`).
+/// deterministic (`test_harness::let_programs_print`).
 #[gpui_kit::test]
 fn a_program_printing_while_the_test_waits_does_not_fail_it(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "a_program_printing_while_the_test_waits_does_not_fail_it") {
         return;
     }
     let window = start(cx, 1);
+    let_programs_print(cx);
     cx.run_until_parked();
     // The terminal's event task is waiting for the first event now: the echo wakes it from the reader.
     let terminal = read(cx, &window, |ws| ws.active_terminal());
     cx.update(|cx| terminal.update(cx, |t, _| t.write_input(b"hello\r".to_vec())));
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    cx.run_until_parked();
-    assert!(terminal.read_with(cx, |t, _| t.screen_text()).contains("hello"), "the echo arrived");
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !terminal.read_with(cx, |t, _| t.screen_text()).contains("hello") {
+        assert!(std::time::Instant::now() < until, "the echo arrived");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        cx.run_until_parked();
+    }
 }

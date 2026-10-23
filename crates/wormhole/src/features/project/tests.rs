@@ -476,6 +476,7 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
         return;
     }
     let first = start(cx, 1);
+    crate::window::test_harness::let_programs_print(cx);
     let default = ProfileId::default_profile();
     let work = cx
         .update(|cx| {
@@ -555,6 +556,7 @@ fn a_window_reads_the_feature_switches_of_its_own_profile(cx: &mut TestAppContex
         return;
     }
     let first = start(cx, 1);
+    crate::window::test_harness::let_programs_print(cx);
     let default = ProfileId::default_profile();
     let work = cx
         .update(|cx| {
@@ -612,6 +614,7 @@ fn a_status_item_action_runs_in_a_window_of_the_shown_profile(cx: &mut TestAppCo
         return;
     }
     let first = start(cx, 1);
+    crate::window::test_harness::let_programs_print(cx);
     let default = ProfileId::default_profile();
     let work = cx
         .update(|cx| {
