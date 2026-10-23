@@ -93,11 +93,8 @@ impl Group {
 pub(super) fn section(id: SectionId) -> &'static SectionInfo {
     match id {
         SectionId::Profile => &SectionInfo {
-            title: Word::Literal("Profile"),
-            intro: Word::Literal(
-                "Every page here is this profile's. A new profile starts as a copy of one you have, \
-                    without its terminals or agent logins.",
-            ),
+            title: Word::Key(SETTINGS_SECTION_PROFILE),
+            intro: Word::Key(SETTINGS_SECTION_PROFILE_INTRO),
             nav: NavGroup::Profile,
         },
         SectionId::Appearance => &SectionInfo {

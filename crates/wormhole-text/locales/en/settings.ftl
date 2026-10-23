@@ -1,6 +1,5 @@
 # The Settings window: the section titles in the nav and over each page, and a few messages with variables.
 
-settings-section-profile = Profile
 settings-section-appearance = Appearance
 settings-section-fonts = Fonts
 settings-section-terminal = Terminal

@@ -89,59 +89,95 @@ pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(38);
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(39);
 /// "needs you waiting shortcut"
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(40);
-/// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(41);
-/// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(42);
-/// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(43);
-/// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(44);
-/// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(45);
-/// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(46);
-/// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(47);
-/// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(48);
-/// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(49);
-/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(50);
-/// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(51);
-/// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(52);
-/// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(53);
 /// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(54);
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(41);
+/// "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins."
+pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(42);
+/// "Name and colour"
+pub const SETTINGS_PROFILE_NAME: Key = Key::new(43);
+/// "profile rename avatar letter swatch colour color edge"
+pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(44);
+/// "Start new terminals in"
+pub const SETTINGS_PROFILE_START: Key = Key::new(45);
+/// "folder directory cwd home path open also claim"
+pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(46);
+/// "Environment"
+pub const SETTINGS_PROFILE_ENV: Key = Key::new(47);
+/// "Variables this profile's terminals start with"
+pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(48);
+/// "env variable aws path registry export"
+pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(49);
+/// "Git identity"
+pub const SETTINGS_PROFILE_GIT: Key = Key::new(50);
+/// "Set in its terminals only; Wormhole never writes to a repository."
+pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(51);
+/// "author committer name email commit user"
+pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(52);
+/// "Agent logins"
+pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(53);
+/// "A separate login for each agent."
+pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(54);
+/// "claude codex account config dir home sign in"
+pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(55);
+/// "Danger zone"
+pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(56);
+/// "Delete profile"
+pub const SETTINGS_PROFILE_DELETE: Key = Key::new(57);
+/// "Its terminals, notes, tasks and settings are removed and its windows close."
+pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(58);
+/// "remove danger"
+pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(59);
+/// "Updates"
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(60);
+/// "Signed releases, checked in the background."
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(61);
+/// "Updates"
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(62);
+/// "Version"
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(63);
+/// "release build"
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(64);
+/// "Update automatically"
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(65);
+/// "Checks in the background and installs on the next restart"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(66);
+/// "download auto"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(67);
+/// "Channel"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(68);
+/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(69);
+/// "beta nightly unstable stable prerelease dev builds main feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(70);
+/// "Check for updates"
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(71);
+/// "install restart release notes check skip"
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(72);
 /// "Appearance"
-pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(55);
+pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(73);
 /// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(56);
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(74);
 /// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(57);
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(75);
 /// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(58);
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(76);
 /// "Changes & diffs"
-pub const SETTINGS_SECTION_GIT: Key = Key::new(59);
+pub const SETTINGS_SECTION_GIT: Key = Key::new(77);
 /// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(60);
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(78);
 /// "Notifications"
-pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(61);
+pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(79);
 /// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(62);
+pub const SETTINGS_THEME_MODE: Key = Key::new(80);
 /// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(63);
+pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(81);
 /// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(64);
+pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(82);
 /// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(68);
+pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(86);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 66] = [
+pub const ALL: [Key; 84] = [
     SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO,
     SETTINGS_ADVANCED_GROUP_FILES,
@@ -183,6 +219,25 @@ pub const ALL: [Key; 66] = [
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY,
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION,
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS,
+    SETTINGS_SECTION_PROFILE,
+    SETTINGS_SECTION_PROFILE_INTRO,
+    SETTINGS_PROFILE_NAME,
+    SETTINGS_PROFILE_NAME_KEYWORDS,
+    SETTINGS_PROFILE_START,
+    SETTINGS_PROFILE_START_KEYWORDS,
+    SETTINGS_PROFILE_ENV,
+    SETTINGS_PROFILE_ENV_DESCRIPTION,
+    SETTINGS_PROFILE_ENV_KEYWORDS,
+    SETTINGS_PROFILE_GIT,
+    SETTINGS_PROFILE_GIT_DESCRIPTION,
+    SETTINGS_PROFILE_GIT_KEYWORDS,
+    SETTINGS_PROFILE_LOGINS,
+    SETTINGS_PROFILE_LOGINS_DESCRIPTION,
+    SETTINGS_PROFILE_LOGINS_KEYWORDS,
+    SETTINGS_PROFILE_GROUP_DANGER_ZONE,
+    SETTINGS_PROFILE_DELETE,
+    SETTINGS_PROFILE_DELETE_DESCRIPTION,
+    SETTINGS_PROFILE_DELETE_KEYWORDS,
     SETTINGS_SECTION_UPDATES,
     SETTINGS_SECTION_UPDATES_INTRO,
     SETTINGS_UPDATES_GROUP_UPDATES,
@@ -196,7 +251,6 @@ pub const ALL: [Key; 66] = [
     SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS,
     SETTINGS_UPDATES_UPDATE_STATUS,
     SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS,
-    SETTINGS_SECTION_PROFILE,
     SETTINGS_SECTION_APPEARANCE,
     SETTINGS_SECTION_FONTS,
     SETTINGS_SECTION_TERMINAL,
@@ -214,7 +268,7 @@ pub const ALL: [Key; 66] = [
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(65, &[("section", Arg::Str(section))])
+    crate::active::message(83, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -224,7 +278,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(66, &[("count", Arg::Int(count))])
+    crate::active::message(84, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -234,7 +288,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(67, &[("count", Arg::Int(count))])
+    crate::active::message(85, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and

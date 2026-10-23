@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 69] = [
+pub(crate) const IDS: [&str; 87] = [
     "settings-section-advanced",
     "settings-section-advanced.intro",
     "settings-advanced-group-files",
@@ -47,6 +47,25 @@ pub(crate) const IDS: [&str; 69] = [
     "settings-menu-bar-jump-waiting-key",
     "settings-menu-bar-jump-waiting-key.description",
     "settings-menu-bar-jump-waiting-key.keywords",
+    "settings-section-profile",
+    "settings-section-profile.intro",
+    "settings-profile-name",
+    "settings-profile-name.keywords",
+    "settings-profile-start",
+    "settings-profile-start.keywords",
+    "settings-profile-env",
+    "settings-profile-env.description",
+    "settings-profile-env.keywords",
+    "settings-profile-git",
+    "settings-profile-git.description",
+    "settings-profile-git.keywords",
+    "settings-profile-logins",
+    "settings-profile-logins.description",
+    "settings-profile-logins.keywords",
+    "settings-profile-group-danger-zone",
+    "settings-profile-delete",
+    "settings-profile-delete.description",
+    "settings-profile-delete.keywords",
     "settings-section-updates",
     "settings-section-updates.intro",
     "settings-updates-group-updates",
@@ -60,7 +79,6 @@ pub(crate) const IDS: [&str; 69] = [
     "settings-updates-update-channel.keywords",
     "settings-updates-update-status",
     "settings-updates-update-status.keywords",
-    "settings-section-profile",
     "settings-section-appearance",
     "settings-section-fonts",
     "settings-section-terminal",
@@ -78,7 +96,25 @@ pub(crate) const IDS: [&str; 69] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 69] = [
+pub(crate) const TAKES_ARGS: [bool; 87] = [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
     false,
     false,
     false,
