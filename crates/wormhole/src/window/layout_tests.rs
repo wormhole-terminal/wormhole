@@ -6,6 +6,7 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::app;
 use crate::settings::SettingsStore;
+use crate::terminal_view::TerminalEvent;
 use crate::window::status_bar::StatusItem;
 use crate::window::test_harness::{draw, drive, hook, isolate_in, own_window, read, start, with_window};
 use crate::window::window_lifecycle::open_workspace_window;
@@ -77,8 +78,8 @@ fn the_panels_edge_follows_the_workspaces_column_beside_the_inspector(cx: &mut T
 }
 
 /// The bar's size item is the terminal's grid. A resize is found out by the frame that lays the grid
-/// out, after the bar was built: that frame has the window drawn again, so the bar shows the size from
-/// the next frame on, not from the window's tick.
+/// out, after the bar was built: the terminal says so (`Resized`), and the window, which draws the bar
+/// from what it knew, is drawn again then, not on its tick.
 #[gpui_kit::test]
 fn the_status_bar_shows_a_new_grid_size_without_waiting_for_the_tick(cx: &mut TestAppContext) {
     if isolate_in(module_path!(), "the_status_bar_shows_a_new_grid_size_without_waiting_for_the_tick") {
@@ -86,28 +87,47 @@ fn the_status_bar_shows_a_new_grid_size_without_waiting_for_the_tick(cx: &mut Te
     }
     let window = start(cx, 1);
     cx.update(|cx| SettingsStore::update(cx, |s| s.status_bar = true));
+    let settle = |cx: &mut TestAppContext| {
+        for _ in 0..3 {
+            draw(cx, &window);
+            cx.run_until_parked();
+        }
+    };
     cx.simulate_window_resize(window.handle, size(px(1800.0), px(900.0)));
-    for _ in 0..3 {
-        draw(cx, &window);
-        cx.run_until_parked();
-    }
-    let before = read(cx, &window, |ws| ws.drawn_size()).expect("the bar says the size");
-
+    settle(cx);
+    let terminal = read(cx, &window, |ws| ws.sessions[0].terminal().clone());
+    let resized = std::rc::Rc::new(std::cell::Cell::new(0));
+    let counted = resized.clone();
+    let _count = cx.update(|cx| {
+        cx.subscribe(&terminal, move |_, event: &TerminalEvent, _| {
+            if *event == TerminalEvent::Resized {
+                counted.set(counted.get() + 1);
+            }
+        })
+    });
+    settle(cx);
+    assert_eq!(resized.get(), 0, "a frame that lays out the same size says nothing");
     cx.simulate_window_resize(window.handle, size(px(1400.0), px(700.0)));
-    cx.run_until_parked();
+    settle(cx);
+    assert!(resized.get() >= 1, "the grid has another size and the terminal says so");
+
+    // The window follows it when the bar it drew is not what it would draw now, and only then.
     let wakes = std::rc::Rc::new(std::cell::Cell::new(0));
     let counted = wakes.clone();
     cx.update(|cx| {
         let workspace = window.workspace.upgrade().expect("the window is open");
         cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
     });
-    // The frame that lays the new size out. Whatever it leaves the bar saying, it asks for another.
-    draw(cx, &window);
-    cx.run_until_parked();
-    assert!(wakes.get() >= 1, "the window is drawn again once the grid is known");
+    let said = |cx: &mut TestAppContext| {
+        drive(cx, &window, |ws, window, cx| ws.on_terminal_event(1, TerminalEvent::Resized, window, cx))
+    };
+    said(cx);
+    assert_eq!(wakes.get(), 0, "the bar already says the size");
+    drive(cx, &window, |ws, _, _| ws.forget_drawn_size());
+    said(cx);
+    assert_eq!(wakes.get(), 1, "the bar is behind: the window is drawn again");
     draw(cx, &window);
     let (shown, grid) = read(cx, &window, |ws| (ws.drawn_size(), ws.sessions[0].pane.grid.size()));
-    assert_ne!(shown.as_deref(), Some(before.as_str()), "the size changed with the window");
     let shell = read(cx, &window, |ws| ws.active_session().pane.program());
     assert_eq!(
         shown,

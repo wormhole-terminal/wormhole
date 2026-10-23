@@ -252,6 +252,14 @@ impl Workspace {
         }
     }
 
+    /// Make the bar drawn last say a size no terminal has, for the tests.
+    #[cfg(test)]
+    pub(super) fn forget_drawn_size(&mut self) {
+        if let Some(bar) = &mut self.status_bar_drawn {
+            bar.size = Some("(not yet)".into());
+        }
+    }
+
     /// What the bar drew for the terminal's size, for the tests.
     #[cfg(test)]
     pub(super) fn drawn_size(&self) -> Option<String> {
