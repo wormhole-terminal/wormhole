@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-updates.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Updates"
 pub const SETTINGS_SECTION_UPDATES: Key = Key::new(466);
@@ -31,3 +32,115 @@ pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(476);
 pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(477);
 /// "install restart release notes check skip"
 pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(478);
+/// "Stable"
+pub const SETTINGS_UPDATES_STABLE: Key = Key::new(479);
+/// "Unstable"
+pub const SETTINGS_UPDATES_UNSTABLE: Key = Key::new(480);
+/// "Checked just now."
+pub const SETTINGS_UPDATES_CHECKED_JUST_NOW: Key = Key::new(481);
+/// "Checked a minute ago."
+pub const SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO: Key = Key::new(482);
+/// "Checked an hour ago."
+pub const SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO: Key = Key::new(483);
+/// "Fixes a security issue."
+pub const SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE: Key = Key::new(484);
+/// "Development build: updates only work in released builds."
+pub const SETTINGS_UPDATES_DEVELOPMENT_BUILD: Key = Key::new(485);
+/// "Not checked yet."
+pub const SETTINGS_UPDATES_NOT_CHECKED_YET: Key = Key::new(486);
+/// "Checking…"
+pub const SETTINGS_UPDATES_CHECKING: Key = Key::new(487);
+/// "Wormhole is up to date."
+pub const SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE: Key = Key::new(488);
+/// "Downloading…"
+pub const SETTINGS_UPDATES_DOWNLOADING: Key = Key::new(489);
+/// "Skip this version"
+pub const SETTINGS_UPDATES_SKIP_THIS_VERSION: Key = Key::new(490);
+/// "Install update"
+pub const SETTINGS_UPDATES_INSTALL_UPDATE: Key = Key::new(491);
+/// "Don't restart"
+pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(492);
+/// "Restart now"
+pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(493);
+/// "Check now"
+pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(494);
+/// "Fixes a critical-severity security issue."
+pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(501);
+/// "Fixes a high-severity security issue."
+pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(502);
+/// "Fixes a medium-severity security issue."
+pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(503);
+/// "Fixes a low-severity security issue."
+pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(504);
+
+/// ```text
+/// { $count ->
+///     [one] Checked { $count } minute ago.
+///    *[other] Checked { $count } minutes ago.
+/// }
+/// ```
+pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
+    crate::active::message(495, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Checked { $count } hour ago.
+///    *[other] Checked { $count } hours ago.
+/// }
+/// ```
+pub fn settings_updates_checked_hours_ago(count: i64) -> String {
+    crate::active::message(496, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Checked { $count } day ago.
+///    *[other] Checked { $count } days ago.
+/// }
+/// ```
+pub fn settings_updates_checked_days_ago(count: i64) -> String {
+    crate::active::message(497, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { -brand } is up to date. { $checked }
+/// ```
+pub fn settings_updates_up_to_date_checked(checked: &str) -> String {
+    crate::active::message(498, &[("checked", Arg::Str(checked))])
+}
+
+/// ```text
+/// Security update available: { -brand } { $version }.
+/// ```
+pub fn settings_updates_security_available(version: &str) -> String {
+    crate::active::message(499, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// Version { $version } is available.
+/// ```
+pub fn settings_updates_version_available(version: &str) -> String {
+    crate::active::message(500, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// Version { $version } is installed. Restarts when your terminals are idle.
+/// ```
+pub fn settings_updates_installed_waits(version: &str) -> String {
+    crate::active::message(505, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// Version { $version } is installed. Restart to use it.
+/// ```
+pub fn settings_updates_installed_restart(version: &str) -> String {
+    crate::active::message(506, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// What's new in { $version }
+/// ```
+pub fn settings_updates_whats_new(version: &str) -> String {
+    crate::active::message(507, &[("version", Arg::Str(version))])
+}

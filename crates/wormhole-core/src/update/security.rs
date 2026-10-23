@@ -32,17 +32,6 @@ impl Severity {
             _ => Self::Unknown,
         }
     }
-
-    /// The word for a sentence ("a high-severity issue"); `None` for [`Severity::Unknown`].
-    pub fn word(self) -> Option<&'static str> {
-        match self {
-            Self::Critical => Some("critical"),
-            Self::High => Some("high"),
-            Self::Medium => Some("medium"),
-            Self::Low => Some("low"),
-            Self::Unknown => None,
-        }
-    }
 }
 
 /// What the feed says about a release's security fixes.

@@ -52,7 +52,7 @@ pub use settings_updates::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 459] = [
+pub const ALL: [Key; 479] = [
     SETTINGS_SECTION_ADVANCED, SETTINGS_SECTION_ADVANCED_INTRO, SETTINGS_ADVANCED_GROUP_FILES,
     SETTINGS_ADVANCED_OPEN_CONFIG, SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION, SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS,
     SETTINGS_ADVANCED_OPEN_DATA, SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION, SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS,
@@ -204,8 +204,15 @@ pub const ALL: [Key; 459] = [
     SETTINGS_UPDATES_VERSION, SETTINGS_UPDATES_VERSION_KEYWORDS, SETTINGS_UPDATES_AUTO_UPDATE,
     SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION, SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS, SETTINGS_UPDATES_UPDATE_CHANNEL,
     SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION, SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS, SETTINGS_UPDATES_UPDATE_STATUS,
-    SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS, SETTINGS_NAV_LOOK, SETTINGS_NAV_WORK,
-    SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP, SETTINGS_NAV_PREVIEW,
+    SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS, SETTINGS_UPDATES_STABLE, SETTINGS_UPDATES_UNSTABLE,
+    SETTINGS_UPDATES_CHECKED_JUST_NOW, SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO, SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO,
+    SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE, SETTINGS_UPDATES_DEVELOPMENT_BUILD, SETTINGS_UPDATES_NOT_CHECKED_YET,
+    SETTINGS_UPDATES_CHECKING, SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE, SETTINGS_UPDATES_DOWNLOADING,
+    SETTINGS_UPDATES_SKIP_THIS_VERSION, SETTINGS_UPDATES_INSTALL_UPDATE, SETTINGS_UPDATES_DONT_RESTART,
+    SETTINGS_UPDATES_RESTART_NOW, SETTINGS_UPDATES_CHECK_NOW, SETTINGS_UPDATES_FIXES_CRITICAL,
+    SETTINGS_UPDATES_FIXES_HIGH, SETTINGS_UPDATES_FIXES_MEDIUM, SETTINGS_UPDATES_FIXES_LOW,
+    SETTINGS_NAV_LOOK, SETTINGS_NAV_WORK, SETTINGS_NAV_AGENTS,
+    SETTINGS_NAV_APP, SETTINGS_NAV_PREVIEW,
 ];
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and
@@ -243,5 +250,17 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-terminal-worktree-base-under", settings_terminal_worktree_base_under("Sample")),
         ("settings-terminal-scrollback-lines", settings_terminal_scrollback_lines("Sample")),
         ("settings-terminal-login-shell", settings_terminal_login_shell("Sample")),
+        ("settings-updates-checked-minutes-ago", settings_updates_checked_minutes_ago(1)),
+        ("settings-updates-checked-minutes-ago", settings_updates_checked_minutes_ago(5)),
+        ("settings-updates-checked-hours-ago", settings_updates_checked_hours_ago(1)),
+        ("settings-updates-checked-hours-ago", settings_updates_checked_hours_ago(5)),
+        ("settings-updates-checked-days-ago", settings_updates_checked_days_ago(1)),
+        ("settings-updates-checked-days-ago", settings_updates_checked_days_ago(5)),
+        ("settings-updates-up-to-date-checked", settings_updates_up_to_date_checked("Sample")),
+        ("settings-updates-security-available", settings_updates_security_available("Sample")),
+        ("settings-updates-version-available", settings_updates_version_available("Sample")),
+        ("settings-updates-installed-waits", settings_updates_installed_waits("Sample")),
+        ("settings-updates-installed-restart", settings_updates_installed_restart("Sample")),
+        ("settings-updates-whats-new", settings_updates_whats_new("Sample")),
     ]
 }

@@ -3,6 +3,7 @@
 //! development build, failed), its status and actions on one row.
 
 use std::time::{SystemTime, UNIX_EPOCH};
+use wormhole_text::{keys::*, text, whole};
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -30,7 +31,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("auto-update", auto_update),
     Setting::segmented(
         "update-channel",
-        &[Segment::literal("Stable"), Segment::literal("Unstable")],
+        &[Segment::text(SETTINGS_UPDATES_STABLE), Segment::text(SETTINGS_UPDATES_UNSTABLE)],
         |s| usize::from(s.update_channel == UpdateChannel::Unstable),
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),
@@ -44,30 +45,34 @@ const METER_W: f32 = 120.0;
 fn checked_ago(last: u64, now: u64) -> String {
     let minutes = now.saturating_sub(last) / 60;
     match minutes {
-        0 => "Checked just now.".into(),
-        1 => "Checked a minute ago.".into(),
-        2..=59 => format!("Checked {minutes} minutes ago."),
-        60..=119 => "Checked an hour ago.".into(),
-        _ if minutes < 48 * 60 => format!("Checked {} hours ago.", minutes / 60),
-        _ => format!("Checked {} days ago.", minutes / (24 * 60)),
+        0 => text(SETTINGS_UPDATES_CHECKED_JUST_NOW).into(),
+        1 => text(SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO).into(),
+        2..=59 => settings_updates_checked_minutes_ago(whole(minutes)),
+        60..=119 => text(SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO).into(),
+        _ if minutes < 48 * 60 => settings_updates_checked_hours_ago(whole(minutes / 60)),
+        _ => settings_updates_checked_days_ago(whole(minutes / (24 * 60))),
     }
 }
 
 /// "Security update available: Wormhole 0.3.1." for a security update, else "Version 0.3.1 is available."
 fn available_text(release: &Release) -> String {
     if release.is_security_update() {
-        format!("Security update available: Wormhole {}.", release.version)
+        settings_updates_security_available(&release.version.to_string())
     } else {
-        format!("Version {} is available.", release.version)
+        settings_updates_version_available(&release.version.to_string())
     }
 }
 
 /// What the update fixes, from the (unsigned, so only advisory) severity in the feed.
 fn security_line(security: &Security) -> String {
-    match security.severity.word() {
-        Some(word) => format!("Fixes a {word}-severity security issue."),
-        None => "Fixes a security issue.".into(),
+    match security.severity {
+        Severity::Critical => text(SETTINGS_UPDATES_FIXES_CRITICAL),
+        Severity::High => text(SETTINGS_UPDATES_FIXES_HIGH),
+        Severity::Medium => text(SETTINGS_UPDATES_FIXES_MEDIUM),
+        Severity::Low => text(SETTINGS_UPDATES_FIXES_LOW),
+        Severity::Unknown => text(SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE),
     }
+    .into()
 }
 
 /// Where GitHub shows an advisory. The id has passed the feed's strict format check, so it can't
@@ -99,25 +104,23 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
 
     let status: SharedString = match &phase {
-        UpdatePhase::Idle if !available => "Development build: updates only work in released builds.".into(),
+        UpdatePhase::Idle if !available => text(SETTINGS_UPDATES_DEVELOPMENT_BUILD).into(),
         UpdatePhase::Idle => match last {
             Some(last) => checked_ago(last, now).into(),
-            None => "Not checked yet.".into(),
+            None => text(SETTINGS_UPDATES_NOT_CHECKED_YET).into(),
         },
-        UpdatePhase::Checking => "Checking…".into(),
+        UpdatePhase::Checking => text(SETTINGS_UPDATES_CHECKING).into(),
         UpdatePhase::UpToDate => match last {
-            Some(last) => format!("Wormhole is up to date. {}", checked_ago(last, now)).into(),
-            None => "Wormhole is up to date.".into(),
+            Some(last) => settings_updates_up_to_date_checked(&checked_ago(last, now)).into(),
+            None => text(SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE).into(),
         },
         UpdatePhase::Available(release) => available_text(release).into(),
         UpdatePhase::Unsupported(message) | UpdatePhase::Failed(message) => message.clone().into(),
-        UpdatePhase::Downloading => "Downloading…".into(),
+        UpdatePhase::Downloading => text(SETTINGS_UPDATES_DOWNLOADING).into(),
         UpdatePhase::Installed(version) if restart_pending => {
-            format!("Version {version} is installed. Restarts when your terminals are idle.").into()
+            settings_updates_installed_waits(version).into()
         }
-        UpdatePhase::Installed(version) => {
-            format!("Version {version} is installed. Restart to use it.").into()
-        }
+        UpdatePhase::Installed(version) => settings_updates_installed_restart(version).into(),
     };
     let status_color = match &phase {
         UpdatePhase::Failed(_) | UpdatePhase::Unsupported(_) => ui.warning_text,
@@ -139,14 +142,18 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                     Button::new("update-skip")
                         .ghost()
                         .small()
-                        .label("Skip this version")
+                        .label(text(SETTINGS_UPDATES_SKIP_THIS_VERSION))
                         .on_click(cx.listener(move |_, _, _, cx| crate::update::skip_update(&skip, cx))),
                 );
             }
             actions = actions.child(
-                Button::new("update-install").primary().small().label("Install update").on_click(
-                    cx.listener(move |_, _, _, cx| crate::update::install_update(install.clone(), cx)),
-                ),
+                Button::new("update-install")
+                    .primary()
+                    .small()
+                    .label(text(SETTINGS_UPDATES_INSTALL_UPDATE))
+                    .on_click(
+                        cx.listener(move |_, _, _, cx| crate::update::install_update(install.clone(), cx)),
+                    ),
             );
         }
         UpdatePhase::Installed(_) => {
@@ -157,20 +164,23 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                     Button::new("update-restart-cancel")
                         .ghost()
                         .small()
-                        .label("Don't restart")
+                        .label(text(SETTINGS_UPDATES_DONT_RESTART))
                         .on_click(cx.listener(|_, _, _, cx| crate::update::cancel_restart_when_idle(cx))),
                 );
             }
-            actions =
-                actions.child(Button::new("update-restart").primary().small().label("Restart now").on_click(
-                    cx.listener(move |_, _, window, cx| {
+            actions = actions.child(
+                Button::new("update-restart")
+                    .primary()
+                    .small()
+                    .label(text(SETTINGS_UPDATES_RESTART_NOW))
+                    .on_click(cx.listener(move |_, _, window, cx| {
                         if restart_pending {
                             crate::update::restart_to_update(cx);
                         } else {
                             crate::update::restart::request_restart(window, cx);
                         }
-                    }),
-                ));
+                    })),
+            );
         }
         UpdatePhase::Checking => {
             actions = actions.child(Button::new("update-checking").ghost().small().loading(true).label(""));
@@ -183,13 +193,15 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         }
         UpdatePhase::Idle if !available => {}
         _ => {
-            actions = actions.child(Button::new("update-check").small().label("Check now").on_click(
-                cx.listener(move |_, _, _, cx| {
-                    if !busy {
-                        crate::update::check_for_updates(true, cx);
-                    }
-                }),
-            ));
+            actions = actions.child(
+                Button::new("update-check").small().label(text(SETTINGS_UPDATES_CHECK_NOW)).on_click(
+                    cx.listener(move |_, _, _, cx| {
+                        if !busy {
+                            crate::update::check_for_updates(true, cx);
+                        }
+                    }),
+                ),
+            );
         }
     }
 
@@ -255,7 +267,7 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
                         .text_caption()
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_color(ui.muted)
-                        .child(format!("What's new in {version}")),
+                        .child(settings_updates_whats_new(&version)),
                 )
                 .children(
                     notes
