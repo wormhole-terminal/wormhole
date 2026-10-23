@@ -395,8 +395,18 @@ mod tests {
     fn serve_one(listener: Listener, id: &'static str, answer_kill: bool) -> std::thread::JoinHandle<bool> {
         std::thread::spawn(move || {
             let Ok((stream, _)) = listener.accept() else { return false };
-            let mut reader = FrameReader::new(&stream);
-            let mut writer = FrameWriter::new(&stream);
+            let served = serve_stream(&stream, id, answer_kill);
+            // A child another test thread spawns between std's socket() and its CLOEXEC call keeps a
+            // copy of this socket, so dropping it would not give the client its EOF.
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+            served
+        })
+    }
+
+    fn serve_stream(stream: &Stream, id: &str, answer_kill: bool) -> bool {
+        {
+            let mut reader = FrameReader::new(stream);
+            let mut writer = FrameWriter::new(stream);
             let hello_role = match reader.read_frame() {
                 Ok(Some(frame)) => match frame.message {
                     Message::Hello(hello) => hello.role,
@@ -439,7 +449,7 @@ mod tests {
                 std::thread::sleep(Duration::from_millis(600)); // never hangs up in time
             }
             killed
-        })
+        }
     }
 
     fn meta_for(id: &str, socket: &Path) -> HostMeta {
