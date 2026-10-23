@@ -25,7 +25,7 @@ const POLL: Duration = Duration::from_millis(250);
 
 /// The app's answer to something we sent.
 #[derive(Debug)]
-pub struct Answer {
+pub(super) struct Answer {
     /// The op's name (`WelcomeOp::name`).
     pub op: &'static str,
     /// The reply's result, or what went wrong (the words of the refusal, or why no reply came).
@@ -34,7 +34,7 @@ pub struct Answer {
 
 /// What to do after a tick.
 #[derive(Debug, Default)]
-pub struct Tick {
+pub(super) struct Tick {
     /// Bytes for the terminal.
     pub draw: Vec<u8>,
     /// Requests to send, in order.
@@ -43,7 +43,7 @@ pub struct Tick {
     pub end: Option<End>,
 }
 
-pub struct Driver {
+pub(super) struct Driver {
     /// There is a way to reach the app (a token, a tab and a socket).
     linked: bool,
     home: PathBuf,
@@ -67,7 +67,7 @@ pub struct Driver {
 }
 
 impl Driver {
-    pub fn new(linked: bool, home: PathBuf) -> Self {
+    pub(super) fn new(linked: bool, home: PathBuf) -> Self {
         Self {
             linked,
             home,
@@ -88,17 +88,17 @@ impl Driver {
 
     /// The model, once there is one.
     #[cfg(test)]
-    pub fn model(&self) -> Option<&Welcome> {
+    pub(super) fn model(&self) -> Option<&Welcome> {
         self.model.as_ref()
     }
 
     /// Whether the text has started (the animation's wait is over).
-    pub fn started(&self, now: Duration) -> bool {
+    pub(super) fn started(&self, now: Duration) -> bool {
         self.model.is_some() && self.text_start.is_some_and(|start| now >= start)
     }
 
     /// One step of the program at `now`.
-    pub fn tick(&mut self, now: Duration, size: Size, input: &[u8], answers: Vec<Answer>) -> Tick {
+    pub(super) fn tick(&mut self, now: Duration, size: Size, input: &[u8], answers: Vec<Answer>) -> Tick {
         let mut tick = Tick::default();
         if self.ended {
             return tick;

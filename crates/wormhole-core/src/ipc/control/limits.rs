@@ -44,7 +44,7 @@ impl Limited {
 }
 
 /// The sliding window the budgets apply to.
-pub const WINDOW: Duration = Duration::from_secs(60);
+pub(super) const WINDOW: Duration = Duration::from_secs(60);
 
 /// Who asked: a tab's id, or `None` for a shell outside the app.
 type Caller = Option<i64>;

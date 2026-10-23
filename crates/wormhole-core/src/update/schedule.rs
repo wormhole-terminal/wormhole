@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 use super::UpdateStatus;
 
 /// Background re-check interval while the app stays open.
-pub const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+pub(super) const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 /// At launch we check unless we checked very recently, so quitting and reopening a few times in a
 /// row doesn't hit the feed each time.
-pub const LAUNCH_MIN_GAP: Duration = Duration::from_secs(60 * 60);
+pub(super) const LAUNCH_MIN_GAP: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpdateSchedule {

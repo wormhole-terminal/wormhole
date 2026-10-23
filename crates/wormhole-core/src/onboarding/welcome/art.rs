@@ -105,7 +105,7 @@ fn paint(pixel: Pixel) -> Option<u8> {
 
 /// The logo's cell at (`row`, `col`) within it: a character and its style, from the two pixels it
 /// stacks.
-pub fn logo_cell(row: usize, col: usize) -> (char, Style) {
+pub(super) fn logo_cell(row: usize, col: usize) -> (char, Style) {
     let (top, bottom) = (paint(pixel(col, 2 * row)), paint(pixel(col, 2 * row + 1)));
     match (top, bottom) {
         (None, None) => (' ', Style::PLAIN),
@@ -118,7 +118,7 @@ pub fn logo_cell(row: usize, col: usize) -> (char, Style) {
 
 /// Draw the logo with its top left at (`row`, `col`), showing only the first `rows` of its rows (the
 /// logo appears whole when the ship has docked, so this is for a clipped window).
-pub fn draw_logo(grid: &mut Grid, row: usize, col: usize) {
+pub(super) fn draw_logo(grid: &mut Grid, row: usize, col: usize) {
     for r in 0..LOGO.rows {
         for c in 0..LOGO.cols {
             let (ch, style) = logo_cell(r, c);

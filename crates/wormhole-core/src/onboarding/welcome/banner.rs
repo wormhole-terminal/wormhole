@@ -16,7 +16,7 @@ const HINTS: [(ActionId, &str); 3] = [
 
 /// The banner's lines as plain text and as styled spans, for a screen `cols` wide: hints that would
 /// not fit are left out rather than cut.
-pub fn lines(cols: usize) -> Vec<Vec<(String, Style)>> {
+pub(super) fn lines(cols: usize) -> Vec<Vec<(String, Style)>> {
     let bold = Style::PLAIN.bold();
     let mut lines: Vec<Vec<(String, Style)>> = Vec::new();
     // Blank rows so the mark is at MARK_CELL's row; then the mark, `>_`, at its column.
@@ -55,7 +55,7 @@ pub fn lines(cols: usize) -> Vec<Vec<(String, Style)>> {
 
 /// The banner as the bytes to print after the screen is cleared: each line ends in CR LF, with the
 /// styles reset at the end of each.
-pub fn bytes(cols: usize) -> Vec<u8> {
+pub(super) fn bytes(cols: usize) -> Vec<u8> {
     let mut out = String::new();
     for line in lines(cols) {
         for (text, style) in line {

@@ -38,14 +38,14 @@ pub(super) const LINE_PAUSE: Duration = Duration::from_millis(70);
 
 /// The screen's size in cells.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Size {
+pub(super) struct Size {
     pub cols: usize,
     pub rows: usize,
 }
 
 /// What a click on a span of a row does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Target {
+pub(super) enum Target {
     /// The cursor goes to this line of the list and Return is pressed on it.
     Row(usize),
     /// A key in the footer.
@@ -54,7 +54,7 @@ pub enum Target {
 
 /// A clickable span: cells `from..to` of `row`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Hit {
+pub(super) struct Hit {
     pub row: usize,
     pub from: usize,
     pub to: usize,
@@ -62,14 +62,14 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn contains(&self, row: usize, col: usize) -> bool {
+    pub(super) fn contains(&self, row: usize, col: usize) -> bool {
         self.row == row && (self.from..self.to).contains(&col)
     }
 }
 
 /// A drawn page.
 #[derive(Debug, PartialEq, Eq)]
-pub struct Frame {
+pub(super) struct Frame {
     pub grid: Grid,
     pub hits: Vec<Hit>,
 }
@@ -83,7 +83,7 @@ const ATTENTION: Style = Style::PLAIN.fg(color::YELLOW);
 const MARK: Style = Style::PLAIN.fg(color::BRIGHT_WHITE).bold();
 
 /// Draw the welcome as it looks `clock` into the program.
-pub fn render(welcome: &Welcome, size: Size, clock: Duration) -> Frame {
+pub(super) fn render(welcome: &Welcome, size: Size, clock: Duration) -> Frame {
     let mut page = Page {
         grid: Grid::new(size.cols, size.rows),
         hits: Vec::new(),

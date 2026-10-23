@@ -27,11 +27,11 @@ pub(super) struct FakePlatform {
 }
 
 impl FakePlatform {
-    pub fn with_key(byte: u8) -> Arc<Self> {
+    pub(super) fn with_key(byte: u8) -> Arc<Self> {
         Arc::new(Self { key: Some([byte; 32]), ..Self::default() })
     }
 
-    pub fn without_key() -> Arc<Self> {
+    pub(super) fn without_key() -> Arc<Self> {
         Arc::new(Self::default())
     }
 }

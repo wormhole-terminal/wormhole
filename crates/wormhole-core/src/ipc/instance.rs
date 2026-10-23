@@ -44,7 +44,7 @@ pub fn acquire() -> std::io::Result<Instance> {
 /// its tabs (`tab_id`: that tab's `WORMHOLE_TAB_ID`): there the app is in front already when a
 /// person launches it, and otherwise it is a program running in the tab (an agent's `cargo run`,
 /// a script) that must not take the screen from whatever the person is doing.
-pub fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
+pub(super) fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
     tab_id.is_none_or(|id| id.trim().is_empty())
 }
 

@@ -49,7 +49,7 @@ pub fn resolve_row_drop(
 /// [`resolve_row_drop`], `across` saying the drop moves the row to another group even where it
 /// keeps its place in the list (the first row under a group's head dropped on its top): then a
 /// move that leaves every row where it is still counts.
-pub fn resolve_drop(
+pub(super) fn resolve_drop(
     order: &[usize],
     ids: &[Option<SplitId>],
     dragged: usize,

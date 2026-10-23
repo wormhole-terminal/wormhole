@@ -18,7 +18,7 @@ use crate::onboarding::intro::Handover;
 
 /// What the program does about a key.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Effect {
+pub(super) enum Effect {
     /// Ask the app (never sent in a read-only tour).
     Ask(WelcomeOp),
     /// The welcome is over.
@@ -27,14 +27,14 @@ pub enum Effect {
 
 /// How the welcome ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct End {
+pub(super) struct End {
     /// Esc (or Ctrl-C) ended it.
     pub skipped: bool,
 }
 
 /// A row of the notifications step the cursor can be on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NotifyRow {
+pub(super) enum NotifyRow {
     /// Ask macOS to allow banners, offered only while it has not been asked.
     Allow,
     NeedsYou,
@@ -44,7 +44,7 @@ pub enum NotifyRow {
 
 /// A line of a step's list that the cursor can be on.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Item {
+pub(super) enum Item {
     Theme(usize),
     Notify(NotifyRow),
     Agent(usize),
@@ -54,7 +54,7 @@ pub enum Item {
 
 /// One welcome, from its first state to its end.
 #[derive(Clone, Debug)]
-pub struct Welcome {
+pub(super) struct Welcome {
     flow: Flow,
     /// Talking to the app that started it: the choices work. Without, a read-only tour.
     live: bool,
@@ -76,7 +76,7 @@ pub struct Welcome {
 
 impl Welcome {
     /// The welcome for the first state the app reported, `live`, or for a tour (`facts` made locally).
-    pub fn new(facts: WelcomeState, live: bool) -> Self {
+    pub(super) fn new(facts: WelcomeState, live: bool) -> Self {
         let flow = if facts.first_run { Flow::new() } else { Flow::replay() };
         let theme_at = facts.look.themes.iter().position(|theme| theme.name == facts.look.theme).unwrap_or(0);
         Self {
@@ -96,65 +96,65 @@ impl Welcome {
 
     // ---------------------------------------------------------------- what the pages read
 
-    pub fn step(&self) -> Step {
+    pub(super) fn step(&self) -> Step {
         self.flow.step()
     }
 
     #[cfg(test)]
-    pub fn facts(&self) -> &WelcomeState {
+    pub(super) fn facts(&self) -> &WelcomeState {
         &self.facts
     }
 
-    pub fn live(&self) -> bool {
+    pub(super) fn live(&self) -> bool {
         self.live
     }
 
     /// The hand-over the app named; one this program doesn't know plays as the default.
-    pub fn handover(&self) -> Handover {
+    pub(super) fn handover(&self) -> Handover {
         Handover::parse(&self.facts.handover).unwrap_or_default()
     }
 
     /// A replay of the welcome: the welcome page alone.
-    pub fn is_replay(&self) -> bool {
+    pub(super) fn is_replay(&self) -> bool {
         self.flow.is_replay()
     }
 
     #[cfg(test)]
-    pub fn ended(&self) -> Option<&End> {
+    pub(super) fn ended(&self) -> Option<&End> {
         self.ended.as_ref()
     }
 
     /// Whether the app is to show its example band in the sidebar: while the sidebar step is up, in a
     /// welcome that talks to the app and has not ended.
-    pub fn wants_demo(&self) -> bool {
+    pub(super) fn wants_demo(&self) -> bool {
         self.live && self.ended.is_none() && self.flow.step() == Step::Sidebar
     }
 
-    pub fn look(&self) -> &LookFacts {
+    pub(super) fn look(&self) -> &LookFacts {
         &self.facts.look
     }
 
     /// What reaches the person now, when there is an app to ask.
-    pub fn notify(&self) -> Option<&NotifyFacts> {
+    pub(super) fn notify(&self) -> Option<&NotifyFacts> {
         self.facts.notify.as_ref().filter(|_| self.live)
     }
 
-    pub fn agents(&self) -> Option<&AgentsFacts> {
+    pub(super) fn agents(&self) -> Option<&AgentsFacts> {
         self.facts.agents.as_ref()
     }
 
     /// What went wrong: the app's word about the last Install, else a request it refused.
-    pub fn problem(&self) -> Option<&str> {
+    pub(super) fn problem(&self) -> Option<&str> {
         self.facts.problem.as_deref().or(self.note.as_deref())
     }
 
     /// A request the app refused or could not answer (`None` once one works again).
-    pub fn note_failure(&mut self, message: Option<String>) {
+    pub(super) fn note_failure(&mut self, message: Option<String>) {
         self.note = message;
     }
 
     /// The lines of the current step's list the cursor can be on, in order.
-    pub fn items(&self) -> Vec<Item> {
+    pub(super) fn items(&self) -> Vec<Item> {
         match self.flow.step() {
             Step::Welcome | Step::Extras => vec![Item::Start],
             // With nothing to list (a tour has no themes) the step still has its way on.
@@ -184,7 +184,7 @@ impl Welcome {
     }
 
     /// Where the cursor is among [`items`](Self::items).
-    pub fn cursor(&self) -> usize {
+    pub(super) fn cursor(&self) -> usize {
         let items = self.items();
         let last = items.len().saturating_sub(1);
         match self.flow.step() {
@@ -200,7 +200,7 @@ impl Welcome {
 
     /// The clock the current page draws by, given the program's clock: how long this step has been
     /// up, or for ever when its entrance should not play (Reduce Motion, a key pressed, a step seen).
-    pub fn page_clock(&self, now: Duration) -> Duration {
+    pub(super) fn page_clock(&self, now: Duration) -> Duration {
         if self.settled || self.facts.reduce_motion {
             Duration::MAX
         } else {
@@ -214,7 +214,7 @@ impl Welcome {
     /// step) stays. `stale` says the state was asked for before the last choice was sent, so it may
     /// still show what was there before: the choices on the page are kept as the person made them
     /// (the next state corrects them if the app didn't take them).
-    pub fn update(&mut self, mut facts: WelcomeState, stale: bool) {
+    pub(super) fn update(&mut self, mut facts: WelcomeState, stale: bool) {
         // The handover and first-run flag are the app's word for the whole run: fixed at the start.
         facts.handover = self.facts.handover.clone();
         facts.first_run = self.facts.first_run;
@@ -234,7 +234,7 @@ impl Welcome {
     // ---------------------------------------------------------------- keys
 
     /// What the key at `now` (the program's clock) does.
-    pub fn key(&mut self, key: Key, now: Duration) -> Vec<Effect> {
+    pub(super) fn key(&mut self, key: Key, now: Duration) -> Vec<Effect> {
         if self.ended.is_some() {
             return Vec::new();
         }
@@ -258,7 +258,7 @@ impl Welcome {
 
     /// A click on list line `at`: the cursor goes there and it is activated, as Return does (on the
     /// look step it only chooses the theme).
-    pub fn click_row(&mut self, at: usize, now: Duration) -> Vec<Effect> {
+    pub(super) fn click_row(&mut self, at: usize, now: Duration) -> Vec<Effect> {
         let len = self.items().len();
         if at >= len {
             return Vec::new();

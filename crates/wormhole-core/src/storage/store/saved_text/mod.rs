@@ -66,7 +66,7 @@ pub(super) struct Keeper {
 }
 
 impl Keeper {
-    pub fn new(platform: Arc<dyn Platform>, dir: &Path) -> Self {
+    pub(super) fn new(platform: Arc<dyn Platform>, dir: &Path) -> Self {
         Self {
             platform,
             dir: dir.to_path_buf(),
@@ -76,13 +76,13 @@ impl Keeper {
         }
     }
 
-    pub fn platform(&self) -> &dyn Platform {
+    pub(super) fn platform(&self) -> &dyn Platform {
         self.platform.as_ref()
     }
 
     /// Read the key's id from `meta`, making one the first time (a main-database write: run it in
     /// the open's transaction or after the schema is in place).
-    pub fn load_account(&self, conn: &Connection) -> Result<()> {
+    pub(super) fn load_account(&self, conn: &Connection) -> Result<()> {
         if self.account.get().is_some() {
             return Ok(());
         }
@@ -126,7 +126,7 @@ impl Keeper {
 
     /// Throw the key away (after erasing every text): a copy of the old file anywhere (a snapshot,
     /// a backup) can't be opened any more. The next save makes a new one.
-    pub fn forget_key(&self) {
+    pub(super) fn forget_key(&self) {
         *self.cipher.lock().unwrap_or_else(PoisonError::into_inner) = None;
         if let Some(account) = self.account.get()
             && let Err(err) = self.platform.forget_key(&self.dir, account)
@@ -136,14 +136,14 @@ impl Keeper {
     }
 
     /// `text` sealed for terminal `tab_id`, or `None` when there is no key.
-    pub fn seal(&self, tab_id: i64, text: &str) -> Result<Option<Vec<u8>>> {
+    pub(super) fn seal(&self, tab_id: i64, text: &str) -> Result<Option<Vec<u8>>> {
         self.cipher().map(|cipher| cipher.seal(tab_id, text)).transpose()
     }
 
     /// The text of a record, remembered as written; `None` (and a warning, without the text) when it
     /// doesn't open: another key (the Keychain item was removed, a development build wrote it), or
     /// a changed record. The next save writes it again.
-    pub fn open(&self, tab_id: i64, record: &[u8]) -> Option<String> {
+    pub(super) fn open(&self, tab_id: i64, record: &[u8]) -> Option<String> {
         let cipher = self.cipher()?;
         match cipher.open(tab_id, record) {
             Ok(text) => {
@@ -158,22 +158,22 @@ impl Keeper {
     }
 
     /// Whether `print` is what was last written for `tab_id`.
-    pub fn is_written(&self, tab_id: i64, print: u64) -> bool {
+    pub(super) fn is_written(&self, tab_id: i64, print: u64) -> bool {
         self.written().get(&tab_id) == Some(&print)
     }
 
-    pub fn remember(&self, tab_id: i64, print: u64) {
+    pub(super) fn remember(&self, tab_id: i64, print: u64) {
         self.written().insert(tab_id, print);
     }
 
     /// After a terminal was deleted or cleared: a fingerprint of a terminal whose id may come back
     /// must not skip its next save.
-    pub fn forget(&self, tab_id: i64) {
+    pub(super) fn forget(&self, tab_id: i64) {
         self.written().remove(&tab_id);
     }
 
     /// Every text erased: none is written any more.
-    pub fn forget_all(&self) {
+    pub(super) fn forget_all(&self) {
         self.written().clear();
     }
 

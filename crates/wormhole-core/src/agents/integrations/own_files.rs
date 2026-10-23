@@ -27,7 +27,7 @@ fn is_legacy_ours(home: &Path, path: &Path) -> bool {
             }))
 }
 
-pub fn has_legacy(files: Files, home: &Path) -> bool {
+pub(super) fn has_legacy(files: Files, home: &Path) -> bool {
     legacy_paths(files).iter().any(|rel| is_legacy_ours(home, &home.join(rel)))
 }
 
@@ -55,9 +55,9 @@ fn prune(path: &Path, own: &Path) {
 }
 
 /// Files (relative to the home directory) and their contents.
-pub type Files = fn() -> Vec<(&'static str, String)>;
+pub(super) type Files = fn() -> Vec<(&'static str, String)>;
 
-pub fn copilot() -> Vec<(&'static str, String)> {
+pub(super) fn copilot() -> Vec<(&'static str, String)> {
     let hook = |event: &str| json!([{ "type": "command", "bash": hook_command(AgentId::Copilot, event), "timeoutSec": 5 }]);
     let hooks = json!({
         "version": 1,
@@ -72,7 +72,7 @@ pub fn copilot() -> Vec<(&'static str, String)> {
     vec![(".copilot/hooks/wormhole.json", pretty(&hooks))]
 }
 
-pub fn goose() -> Vec<(&'static str, String)> {
+pub(super) fn goose() -> Vec<(&'static str, String)> {
     let manifest = json!({
         "name": "wormhole",
         "version": "1.0.0",
@@ -93,7 +93,7 @@ pub fn goose() -> Vec<(&'static str, String)> {
     ]
 }
 
-pub fn opencode() -> Vec<(&'static str, String)> {
+pub(super) fn opencode() -> Vec<(&'static str, String)> {
     vec![(".config/opencode/plugins/wormhole.js", OPENCODE_PLUGIN.replace("{MARKER}", MARKER))]
 }
 
@@ -136,7 +136,7 @@ fn is_ours(home: &Path, path: &Path) -> bool {
                 .is_ok_and(|text| text.contains(MARKER) || text.contains(&MARKER.replace('"', "\\\""))))
 }
 
-pub fn state(files: Files, home: &Path) -> Result<State, String> {
+pub(super) fn state(files: Files, home: &Path) -> Result<State, String> {
     let list = files();
     if has_legacy(files, home) {
         // An earlier version's files still work but are due to be replaced.
@@ -150,7 +150,7 @@ pub fn state(files: Files, home: &Path) -> Result<State, String> {
     })
 }
 
-pub fn install(files: Files, home: &Path) -> Result<(), String> {
+pub(super) fn install(files: Files, home: &Path) -> Result<(), String> {
     let list = files();
     // Check everything first so a conflict never leaves half an install.
     for (rel, _) in &list {
@@ -165,7 +165,7 @@ pub fn install(files: Files, home: &Path) -> Result<(), String> {
     remove_legacy(files, home)
 }
 
-pub fn uninstall(files: Files, home: &Path) -> Result<(), String> {
+pub(super) fn uninstall(files: Files, home: &Path) -> Result<(), String> {
     for (rel, _) in files() {
         let path = home.join(rel);
         if is_ours(home, &path) {

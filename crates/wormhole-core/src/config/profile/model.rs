@@ -321,11 +321,11 @@ mod color_key {
     use super::default_color;
     use crate::view::sidebar::GroupColor;
 
-    pub fn serialize<S: Serializer>(color: &GroupColor, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(super) fn serialize<S: Serializer>(color: &GroupColor, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(color.key())
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<GroupColor, D::Error> {
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<GroupColor, D::Error> {
         let key = String::deserialize(deserializer)?;
         Ok(GroupColor::from_key(&key).unwrap_or_else(default_color))
     }
@@ -336,11 +336,11 @@ mod color_key {
 mod letter {
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<S: Serializer>(letter: &char, serializer: S) -> Result<S::Ok, S::Error> {
+    pub(super) fn serialize<S: Serializer>(letter: &char, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&letter.to_string())
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<char, D::Error> {
+    pub(super) fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<char, D::Error> {
         let text = String::deserialize(deserializer)?;
         let mut chars = text.chars();
         Ok(match (chars.next(), chars.next()) {

@@ -9,7 +9,7 @@ use crate::ipc::control::{
 };
 use crate::onboarding::intro::Handover;
 
-pub fn look() -> LookFacts {
+pub(super) fn look() -> LookFacts {
     let theme = |name: &str, light: bool| ThemeFact { name: name.into(), light };
     let primary =
         |name: &str, hex: &str, ansi: Option<u8>| PrimaryFact { name: name.into(), hex: hex.into(), ansi };
@@ -39,7 +39,7 @@ pub fn look() -> LookFacts {
 }
 
 /// The defaults, with macOS not asked yet: the page offers Allow.
-pub fn notify() -> NotifyFacts {
+pub(super) fn notify() -> NotifyFacts {
     NotifyFacts {
         needs_you: true,
         agent_done: true,
@@ -48,12 +48,12 @@ pub fn notify() -> NotifyFacts {
     }
 }
 
-pub fn agent(id: AgentId, name: &str, hooks: HooksFact, path: Option<&str>) -> AgentFact {
+pub(super) fn agent(id: AgentId, name: &str, hooks: HooksFact, path: Option<&str>) -> AgentFact {
     AgentFact { id, name: name.into(), hooks, path: path.map(Into::into) }
 }
 
 /// Claude Code without hooks, Codex with, Aider (no hooks to install).
-pub fn agents() -> AgentsFacts {
+pub(super) fn agents() -> AgentsFacts {
     AgentsFacts {
         found: vec![
             agent(AgentId::Claude, "Claude Code", HooksFact::Missing, Some("~/.claude/settings.json")),
@@ -64,7 +64,7 @@ pub fn agents() -> AgentsFacts {
     }
 }
 
-pub fn state(handover: Handover) -> WelcomeState {
+pub(super) fn state(handover: Handover) -> WelcomeState {
     WelcomeState {
         wait_ms: 0,
         reduce_motion: false,
@@ -78,6 +78,6 @@ pub fn state(handover: Handover) -> WelcomeState {
 }
 
 /// A live welcome.
-pub fn welcome(handover: Handover) -> Welcome {
+pub(super) fn welcome(handover: Handover) -> Welcome {
     Welcome::new(state(handover), true)
 }

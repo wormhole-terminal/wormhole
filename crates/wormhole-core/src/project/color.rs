@@ -34,7 +34,7 @@ pub const TINT_STOPS: [(f32, f32); 3] = [(0.0, 1.0), (0.12, 20.0 / 36.0), (0.40,
 pub const TINT_PEAK: f32 = 0.36;
 /// How much of [`ProjectColor::tint_peak`] the title row's rounded bar wears across its whole width:
 /// an even fill is read everywhere at once, so it is softer than the gradient's start.
-pub const BAR_TINT_SHARE: f32 = 0.5;
+pub(super) const BAR_TINT_SHARE: f32 = 0.5;
 /// The contrast the bar's main text keeps under the strongest tint, where the bar itself allows it.
 const TEXT_CONTRAST: f32 = 5.5;
 /// Under Increase Contrast the tint gives way to a line, which keeps this much against the bar.

@@ -9,10 +9,10 @@
 use std::time::Duration;
 
 /// How long a lone Esc waits for the rest of an escape sequence.
-pub const ESC_WAIT: Duration = Duration::from_millis(40);
+pub(super) const ESC_WAIT: Duration = Duration::from_millis(40);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Key {
+pub(super) enum Key {
     Up,
     Down,
     Left,
@@ -34,13 +34,13 @@ pub enum Key {
 
 /// Turns bytes into keys, holding what is not whole yet.
 #[derive(Debug, Default)]
-pub struct Parser {
+pub(super) struct Parser {
     pending: Vec<u8>,
 }
 
 impl Parser {
     /// Feed `bytes`, get the keys they complete.
-    pub fn feed(&mut self, bytes: &[u8]) -> Vec<Key> {
+    pub(super) fn feed(&mut self, bytes: &[u8]) -> Vec<Key> {
         self.pending.extend_from_slice(bytes);
         let mut keys = Vec::new();
         loop {
@@ -63,7 +63,7 @@ impl Parser {
     }
 
     /// No more bytes came: a lone Esc is the Esc key.
-    pub fn flush(&mut self) -> Vec<Key> {
+    pub(super) fn flush(&mut self) -> Vec<Key> {
         if self.pending == [0x1b] {
             self.pending.clear();
             return vec![Key::Esc];
@@ -72,7 +72,7 @@ impl Parser {
     }
 
     /// Whether bytes of an unfinished sequence are being held.
-    pub fn holding(&self) -> bool {
+    pub(super) fn holding(&self) -> bool {
         !self.pending.is_empty()
     }
 

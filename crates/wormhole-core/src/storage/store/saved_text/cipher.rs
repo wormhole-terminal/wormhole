@@ -38,14 +38,14 @@ pub(crate) struct Cipher {
 }
 
 impl Cipher {
-    pub fn new(key: &Key) -> Result<Self> {
+    pub(super) fn new(key: &Key) -> Result<Self> {
         let key = UnboundKey::new(&CHACHA20_POLY1305, key.as_ref())
             .map_err(|_| anyhow!("a key of the wrong length"))?;
         Ok(Self { key: LessSafeKey::new(key), random: SystemRandom::new() })
     }
 
     /// `text` sealed for the terminal `tab_id`.
-    pub fn seal(&self, tab_id: i64, text: &str) -> Result<Vec<u8>> {
+    pub(super) fn seal(&self, tab_id: i64, text: &str) -> Result<Vec<u8>> {
         let mut nonce = [0u8; NONCE_LEN];
         self.random.fill(&mut nonce).map_err(|_| anyhow!("the system has no random numbers"))?;
         // One buffer, sized up front: the text is sealed where it lies, never copied again.
@@ -68,7 +68,7 @@ impl Cipher {
 
     /// The text of a record sealed for `tab_id`; an error when the key is another, or the record was
     /// changed, cut, or sealed for another terminal (which can't be told apart, by design).
-    pub fn open(&self, tab_id: i64, record: &[u8]) -> Result<String> {
+    pub(super) fn open(&self, tab_id: i64, record: &[u8]) -> Result<String> {
         let Some((&FORMAT, rest)) = record.split_first() else { bail!("not a saved text record") };
         if rest.len() < NONCE_LEN + CHACHA20_POLY1305.tag_len() {
             bail!("a saved text record cut short");

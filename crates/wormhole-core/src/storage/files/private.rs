@@ -17,7 +17,7 @@ use crate::platform::fs::{
 use crate::platform::user::UserId;
 
 /// A folder's mode.
-pub const PRIVATE_DIR: u32 = 0o700;
+pub(super) const PRIVATE_DIR: u32 = 0o700;
 /// A new file's mode.
 pub const PRIVATE_FILE: u32 = 0o600;
 

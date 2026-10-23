@@ -13,7 +13,7 @@ use super::keys;
 use crate::platform::backup;
 
 /// The operating system's part in keeping the saved text.
-pub trait Platform: Send + Sync {
+pub(crate) trait Platform: Send + Sync {
     /// The key the text of the profile in `dir` is sealed with, kept under `account` (a random id the
     /// profile's database holds), made and kept on first use (see `keys`). An error (no Keychain,
     /// access denied, a locked Keychain) means the text isn't kept: it is never written unsealed.
@@ -33,7 +33,7 @@ pub(crate) fn uses_dev_key() -> bool {
 }
 
 /// The real thing: the Keychain, or the development key file (see [`uses_dev_key`]).
-pub struct System;
+pub(crate) struct System;
 
 /// Each account's key, or why there is none, once per process: another store of the same profile,
 /// or a profile opened later, never asks the Keychain (or the user) again.

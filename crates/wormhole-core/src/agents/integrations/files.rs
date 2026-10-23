@@ -10,7 +10,7 @@ use crate::storage::files::{self, LinkPolicy};
 /// Suffix of the copy kept next to a config file before we change it.
 pub(crate) const BACKUP_SUFFIX: &str = "wormhole-backup";
 
-pub fn display(path: &Path) -> String {
+pub(super) fn display(path: &Path) -> String {
     let home = dirs::home_dir().unwrap_or_default();
     match path.strip_prefix(&home) {
         Ok(rest) if !home.as_os_str().is_empty() => format!("~/{}", rest.display()),
@@ -19,7 +19,7 @@ pub fn display(path: &Path) -> String {
 }
 
 /// The text of a config file, or `None` if it doesn't exist yet.
-pub fn read_text(path: &Path) -> Result<Option<String>, String> {
+pub(super) fn read_text(path: &Path) -> Result<Option<String>, String> {
     match std::fs::read_to_string(path) {
         Ok(text) => Ok(Some(text)),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -29,7 +29,7 @@ pub fn read_text(path: &Path) -> Result<Option<String>, String> {
 
 /// A JSON object config; missing or empty files are `{}`. Files with
 /// comments are refused: writing them back would drop the comments.
-pub fn read_json(path: &Path) -> Result<Value, String> {
+pub(super) fn read_json(path: &Path) -> Result<Value, String> {
     let Some(text) = read_text(path)? else { return Ok(json!({})) };
     if text.trim().is_empty() {
         return Ok(json!({}));
@@ -47,7 +47,7 @@ pub fn read_json(path: &Path) -> Result<Value, String> {
     Ok(value)
 }
 
-pub fn write_json(path: &Path, value: &Value) -> Result<(), String> {
+pub(super) fn write_json(path: &Path, value: &Value) -> Result<(), String> {
     let text = serde_json::to_string_pretty(value).map_err(|e| e.to_string())?;
     write_text(path, &(text + "\n"))
 }
@@ -57,7 +57,7 @@ pub fn write_json(path: &Path, value: &Value) -> Result<(), String> {
 /// These are the user's own files: a symlinked one (a dotfiles setup) is written
 /// through so the link stays, and the file keeps its mode, since a 0600
 /// `settings.json` may hold API keys. `fs::copy` keeps the mode for the backup.
-pub fn write_text(path: &Path, text: &str) -> Result<(), String> {
+pub(super) fn write_text(path: &Path, text: &str) -> Result<(), String> {
     let err = |e: std::io::Error| format!("{}: {e}", display(path));
     if path.exists() {
         std::fs::copy(path, with_suffix(path, BACKUP_SUFFIX)).map_err(err)?;
@@ -67,7 +67,7 @@ pub fn write_text(path: &Path, text: &str) -> Result<(), String> {
 }
 
 /// `settings.json` → `settings.json.<suffix>`.
-pub fn with_suffix(path: &Path, suffix: &str) -> std::path::PathBuf {
+pub(super) fn with_suffix(path: &Path, suffix: &str) -> std::path::PathBuf {
     let mut name = path.file_name().unwrap_or_default().to_os_string();
     name.push(".");
     name.push(suffix);

@@ -12,42 +12,42 @@ use semver::Version;
 
 use super::{Asset, DEFAULT_MAX_DOWNLOAD_SIZE, Release, UpdateChannel, UpdaterConfig};
 
-pub const BUNDLE_ID: &str = "dev.wormhole.test";
+pub(super) const BUNDLE_ID: &str = "dev.wormhole.test";
 
 /// What `scripts/package.sh` puts in the signature of the 0.2.0 test archive:
 /// `<app name> <version> <archive file name>`.
-pub const TEST_TRUSTED_COMMENT: &str = "Wormhole 0.2.0 Wormhole-0.2.0-macos.app.tar.gz";
+pub(super) const TEST_TRUSTED_COMMENT: &str = "Wormhole 0.2.0 Wormhole-0.2.0-macos.app.tar.gz";
 
-pub struct TestKey {
+pub(super) struct TestKey {
     pk: minisign::PublicKey,
     sk: minisign::SecretKey,
 }
 
 impl TestKey {
-    pub fn generate() -> Self {
+    pub(super) fn generate() -> Self {
         let kp = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
         Self { pk: kp.pk, sk: kp.sk }
     }
 
     /// The `.pub` file text, as it would be embedded in the app.
-    pub fn public_key_text(&self) -> String {
+    pub(super) fn public_key_text(&self) -> String {
         self.pk.to_box().unwrap().into_string()
     }
 
     /// The `.minisig` text, as CI would put it in the feed for the test release (0.2.0).
-    pub fn sign(&self, data: &[u8]) -> String {
+    pub(super) fn sign(&self, data: &[u8]) -> String {
         self.sign_with_comment(data, TEST_TRUSTED_COMMENT)
     }
 
     /// Signed with another trusted comment, like an archive CI signed for a different release.
-    pub fn sign_with_comment(&self, data: &[u8], trusted_comment: &str) -> String {
+    pub(super) fn sign_with_comment(&self, data: &[u8], trusted_comment: &str) -> String {
         minisign::sign(Some(&self.pk), &self.sk, Cursor::new(data), Some(trusted_comment), None)
             .unwrap()
             .into_string()
     }
 }
 
-pub fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
+pub(super) fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
     UpdaterConfig {
         base_url: "http://127.0.0.1:1".into(),
         channel: UpdateChannel::Stable,
@@ -64,7 +64,7 @@ pub fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
     }
 }
 
-pub fn sample_release(version: &str) -> Release {
+pub(super) fn sample_release(version: &str) -> Release {
     Release {
         version: Version::parse(version).unwrap(),
         notes: String::new(),
@@ -75,7 +75,7 @@ pub fn sample_release(version: &str) -> Release {
     }
 }
 
-pub fn info_plist(bundle_id: &str, version: &str) -> String {
+pub(super) fn info_plist(bundle_id: &str, version: &str) -> String {
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -88,7 +88,7 @@ pub fn info_plist(bundle_id: &str, version: &str) -> String {
 }
 
 /// Writes a minimal bundle at `path` whose executable prints `marker`.
-pub fn write_fake_app(path: &Path, bundle_id: &str, version: &str, marker: &str) {
+pub(super) fn write_fake_app(path: &Path, bundle_id: &str, version: &str, marker: &str) {
     fs::create_dir_all(path.join("Contents/MacOS")).unwrap();
     fs::write(path.join("Contents/Info.plist"), info_plist(bundle_id, version)).unwrap();
     let exe = path.join("Contents/MacOS/Wormhole");
@@ -96,12 +96,12 @@ pub fn write_fake_app(path: &Path, bundle_id: &str, version: &str, marker: &str)
     fs::set_permissions(&exe, crate::platform::fs::permissions(0o755)).unwrap();
 }
 
-pub fn marker_of(app: &Path) -> String {
+pub(super) fn marker_of(app: &Path) -> String {
     fs::read_to_string(app.join("Contents/MacOS/Wormhole")).unwrap()
 }
 
 /// A `.tar.gz` of a fake `Wormhole.app`, shaped like CI's (with a framework symlink).
-pub fn fake_app_archive(bundle_id: &str, version: &str) -> Vec<u8> {
+pub(super) fn fake_app_archive(bundle_id: &str, version: &str) -> Vec<u8> {
     let src = tempfile::tempdir().unwrap();
     let app = src.path().join("Wormhole.app");
     write_fake_app(&app, bundle_id, version, "new");
@@ -116,7 +116,7 @@ pub fn fake_app_archive(bundle_id: &str, version: &str) -> Vec<u8> {
     builder.into_inner().unwrap().finish().unwrap()
 }
 
-pub enum RawEntry<'a> {
+pub(super) enum RawEntry<'a> {
     File(&'a str, &'a [u8]),
     /// A file with explicit mode bits (setuid and friends included).
     FileMode(&'a str, &'a [u8], u32),
@@ -131,7 +131,7 @@ pub enum RawEntry<'a> {
 
 /// Builds a `.tar.gz` byte-for-byte, bypassing `tar::Builder`'s own path checks, so tests can
 /// produce the malicious archives a real attacker would.
-pub fn raw_archive(entries: &[RawEntry<'_>]) -> Vec<u8> {
+pub(super) fn raw_archive(entries: &[RawEntry<'_>]) -> Vec<u8> {
     let mut out = Vec::new();
     for entry in entries {
         let mut header = tar::Header::new_old();
@@ -172,7 +172,7 @@ pub fn raw_archive(entries: &[RawEntry<'_>]) -> Vec<u8> {
 
 /// Serves fixed bodies on 127.0.0.1 and returns the base URL. The server thread lives until the
 /// test process exits, which is fine for tests.
-pub fn serve(routes: HashMap<String, Vec<u8>>) -> String {
+pub(super) fn serve(routes: HashMap<String, Vec<u8>>) -> String {
     let server = Arc::new(tiny_http::Server::http("127.0.0.1:0").unwrap());
     let base = format!("http://{}", server.server_addr().to_ip().unwrap());
     std::thread::spawn(move || {
@@ -187,7 +187,7 @@ pub fn serve(routes: HashMap<String, Vec<u8>>) -> String {
     base
 }
 
-pub fn temp_apps_dir() -> (tempfile::TempDir, PathBuf) {
+pub(super) fn temp_apps_dir() -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let app = dir.path().join("Wormhole.app");
     write_fake_app(&app, BUNDLE_ID, "0.1.0", "old");

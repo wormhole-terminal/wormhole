@@ -8,7 +8,7 @@ use serde_json::{Map, Value, json};
 
 use super::{AgentId, State, files, hook_command, is_legacy_command, is_our_command, status_line};
 
-pub struct Format {
+pub(super) struct Format {
     /// Key holding the event map; `None` when events are top-level keys.
     pub root: Option<&'static str>,
     pub events: &'static [&'static str],
@@ -23,7 +23,7 @@ fn claude_entry(command: String) -> Value {
     json!({ "hooks": [{ "type": "command", "command": command, "timeout": 5 }] })
 }
 
-pub const CLAUDE: Format = Format {
+pub(super) const CLAUDE: Format = Format {
     root: Some("hooks"),
     events: &[
         "UserPromptSubmit",
@@ -39,14 +39,14 @@ pub const CLAUDE: Format = Format {
     status_line: true,
 };
 
-pub const CODEX: Format = Format {
+pub(super) const CODEX: Format = Format {
     root: Some("hooks"),
     events: &["UserPromptSubmit", "PermissionRequest", "PostToolUse", "Stop", "SessionEnd"],
     entry: claude_entry,
     status_line: false,
 };
 
-pub const GEMINI: Format = Format {
+pub(super) const GEMINI: Format = Format {
     root: Some("hooks"),
     events: &["BeforeAgent", "AfterTool", "Notification", "AfterAgent", "AfterModel", "SessionEnd"],
     // Gemini's timeout is in milliseconds.
@@ -58,14 +58,14 @@ pub const GEMINI: Format = Format {
     status_line: false,
 };
 
-pub const QWEN: Format = Format {
+pub(super) const QWEN: Format = Format {
     root: Some("hooks"),
     events: &["UserPromptSubmit", "PostToolUse", "Notification", "Stop", "SessionEnd"],
     entry: claude_entry,
     status_line: false,
 };
 
-pub const DROID: Format = Format {
+pub(super) const DROID: Format = Format {
     root: None,
     events: &["UserPromptSubmit", "PostToolUse", "Notification", "Stop", "SessionEnd"],
     entry: claude_entry,
@@ -75,7 +75,7 @@ pub const DROID: Format = Format {
 /// Any string inside the entry that runs our hook command. The whole entry
 /// counts as ours then: a command the user added inside our entry's `hooks`
 /// list goes with it on uninstall.
-pub fn is_ours(entry: &Value) -> bool {
+pub(super) fn is_ours(entry: &Value) -> bool {
     match entry {
         Value::String(s) => is_our_command(s),
         Value::Array(items) => items.iter().any(is_ours),
@@ -115,11 +115,11 @@ fn is_legacy(entry: &Value) -> bool {
     }
 }
 
-pub fn has_legacy(format: &Format, path: &Path) -> bool {
+pub(super) fn has_legacy(format: &Format, path: &Path) -> bool {
     path.exists() && files::read_json(path).is_ok_and(|settings| legacy_in(format, &settings))
 }
 
-pub fn state(format: &Format, path: &Path) -> Result<State, String> {
+pub(super) fn state(format: &Format, path: &Path) -> Result<State, String> {
     let settings = files::read_json(path)?;
     // Hooks under the old names still work but are due to be replaced: not "installed" yet.
     if legacy_in(format, &settings) {
@@ -134,7 +134,7 @@ pub fn state(format: &Format, path: &Path) -> Result<State, String> {
     })
 }
 
-pub fn install(format: &Format, agent: AgentId, path: &Path) -> Result<(), String> {
+pub(super) fn install(format: &Format, agent: AgentId, path: &Path) -> Result<(), String> {
     let mut settings = files::read_json(path)?;
     // Hooks under the old names go first, so today's take their place.
     let replaced = remove_legacy(format, &mut settings);
@@ -176,7 +176,7 @@ fn remove_legacy(format: &Format, settings: &mut Value) -> bool {
     changed
 }
 
-pub fn uninstall(format: &Format, path: &Path) -> Result<(), String> {
+pub(super) fn uninstall(format: &Format, path: &Path) -> Result<(), String> {
     if !path.exists() {
         return Ok(());
     }

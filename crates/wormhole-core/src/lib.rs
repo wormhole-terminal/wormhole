@@ -12,7 +12,6 @@
 //! `ipc`; `terminal`; `onboarding`.
 
 #![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
-#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 pub mod agents;
 pub mod config;

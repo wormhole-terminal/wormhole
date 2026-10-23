@@ -15,7 +15,7 @@
 
 /// A step of the terminal welcome.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Step {
+pub(super) enum Step {
     Welcome,
     Look,
     Notify,
@@ -46,7 +46,7 @@ impl Step {
 
 /// What the person did.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Event {
+pub(super) enum Event {
     Continue,
     Back,
     /// Esc: close without going further.
@@ -55,7 +55,7 @@ pub enum Event {
 
 /// What the program is to do about an event.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Action {
+pub(super) enum Action {
     /// Nothing beyond showing the step now current.
     None,
     /// The welcome is over; `skipped` when Esc ended it.
@@ -64,7 +64,7 @@ pub enum Action {
 
 /// The flow's state.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Flow {
+pub(super) struct Flow {
     step: Step,
     /// A replay: the first step is all there is, and it is the last.
     replay: bool,
@@ -72,24 +72,24 @@ pub struct Flow {
 
 impl Flow {
     /// The first run, from the first step.
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self { step: Step::Welcome, replay: false }
     }
 
     /// The welcome shown again once the first run is over: its first step alone.
-    pub fn replay() -> Self {
+    pub(super) fn replay() -> Self {
         Self { step: Step::Welcome, replay: true }
     }
 
-    pub fn step(&self) -> Step {
+    pub(super) fn step(&self) -> Step {
         self.step
     }
 
-    pub fn is_replay(&self) -> bool {
+    pub(super) fn is_replay(&self) -> bool {
         self.replay
     }
 
-    pub fn apply(&mut self, event: Event) -> Action {
+    pub(super) fn apply(&mut self, event: Event) -> Action {
         match event {
             Event::Skip => Action::End { skipped: true },
             Event::Back => {

@@ -159,7 +159,7 @@ pub struct NotesFile {
 }
 
 /// What reading `notes.md` gave: its notes (`None` without a file) or why it can't be read.
-pub type NotesRead = Result<Option<NotesDoc>, ProjectError>;
+pub(super) type NotesRead = Result<Option<NotesDoc>, ProjectError>;
 
 impl NotesFile {
     pub fn new(folder: ProjectFolder) -> Self {

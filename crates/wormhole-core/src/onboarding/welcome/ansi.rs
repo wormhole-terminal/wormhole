@@ -12,19 +12,19 @@
 use std::fmt::Write as _;
 
 /// The ANSI colours, by the number the terminal's palette has for them.
-pub mod color {
-    pub const RED: u8 = 1;
-    pub const GREEN: u8 = 2;
+pub(super) mod color {
+    pub(crate) const RED: u8 = 1;
+    pub(crate) const GREEN: u8 = 2;
     /// The sidebar's amber, in the palette: a terminal that needs you.
-    pub const YELLOW: u8 = 3;
-    pub const BLUE: u8 = 4;
-    pub const BRIGHT_BLACK: u8 = 8;
-    pub const BRIGHT_WHITE: u8 = 15;
+    pub(crate) const YELLOW: u8 = 3;
+    pub(crate) const BLUE: u8 = 4;
+    pub(crate) const BRIGHT_BLACK: u8 = 8;
+    pub(crate) const BRIGHT_WHITE: u8 = 15;
 }
 
 /// How a cell is drawn: palette colours (`None` is the terminal's default), bold, dim, reverse.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Style {
+pub(super) struct Style {
     pub fg: Option<u8>,
     pub bg: Option<u8>,
     pub bold: bool,
@@ -33,30 +33,30 @@ pub struct Style {
 }
 
 impl Style {
-    pub const PLAIN: Style = Style { fg: None, bg: None, bold: false, dim: false, reverse: false };
+    pub(super) const PLAIN: Style = Style { fg: None, bg: None, bold: false, dim: false, reverse: false };
 
-    pub const fn fg(mut self, colour: u8) -> Self {
+    pub(super) const fn fg(mut self, colour: u8) -> Self {
         self.fg = Some(colour);
         self
     }
 
-    pub const fn bg(mut self, colour: u8) -> Self {
+    pub(super) const fn bg(mut self, colour: u8) -> Self {
         self.bg = Some(colour);
         self
     }
 
-    pub const fn bold(mut self) -> Self {
+    pub(super) const fn bold(mut self) -> Self {
         self.bold = true;
         self
     }
 
-    pub const fn dim(mut self) -> Self {
+    pub(super) const fn dim(mut self) -> Self {
         self.dim = true;
         self
     }
 
     /// The escape that sets exactly this style from the plain one.
-    pub fn escape(self) -> String {
+    pub(super) fn escape(self) -> String {
         let mut out = String::from("\x1b[0");
         if self.bold {
             out.push_str(";1");
@@ -96,7 +96,7 @@ const BLANK: Cell = Cell { ch: ' ', style: Style::PLAIN, cont: false };
 /// How many cells `c` takes: 0 for what has no width (those are dropped), 2 for the wide ones
 /// (CJK, emoji), else 1. An approximation of the terminal's own table, enough for the program's
 /// words and the names of folders: a name that is off by a cell only shifts the rest of its row.
-pub fn width(c: char) -> usize {
+pub(super) fn width(c: char) -> usize {
     let u = c as u32;
     match u {
         0..=0x1f | 0x7f..=0x9f => 0,
@@ -117,12 +117,12 @@ pub fn width(c: char) -> usize {
 }
 
 /// The cells `text` takes.
-pub fn text_width(text: &str) -> usize {
+pub(super) fn text_width(text: &str) -> usize {
     text.chars().map(width).sum()
 }
 
 /// `text` broken into lines of at most `max` cells at its spaces. A word wider than a line is cut.
-pub fn wrap(text: &str, max: usize) -> Vec<String> {
+pub(super) fn wrap(text: &str, max: usize) -> Vec<String> {
     let max = max.max(1);
     let mut lines = Vec::new();
     let mut line = String::new();
@@ -154,7 +154,7 @@ pub fn wrap(text: &str, max: usize) -> Vec<String> {
 }
 
 /// `text` in at most `max` cells, an ellipsis in place of what does not fit.
-pub fn fit(text: &str, max: usize) -> String {
+pub(super) fn fit(text: &str, max: usize) -> String {
     if text_width(text) <= max {
         return text.to_string();
     }
@@ -176,25 +176,25 @@ pub fn fit(text: &str, max: usize) -> String {
 
 /// The screen: `rows` rows of `cols` cells.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Grid {
+pub(super) struct Grid {
     cols: usize,
     rows: usize,
     cells: Vec<Cell>,
 }
 
 impl Grid {
-    pub fn new(cols: usize, rows: usize) -> Self {
+    pub(super) fn new(cols: usize, rows: usize) -> Self {
         Self { cols, rows, cells: vec![BLANK; cols * rows] }
     }
 
     #[cfg(test)]
-    pub fn rows(&self) -> usize {
+    pub(super) fn rows(&self) -> usize {
         self.rows
     }
 
     /// Write `text` from (`row`, `col`), clipped at the right edge; returns the column after it.
     /// Characters with no width are dropped, so what is written is only ever printable.
-    pub fn put(&mut self, row: usize, col: usize, text: &str, style: Style) -> usize {
+    pub(super) fn put(&mut self, row: usize, col: usize, text: &str, style: Style) -> usize {
         let mut at = col;
         if row >= self.rows {
             return at;
@@ -220,13 +220,13 @@ impl Grid {
 
     /// The style of the cell at (`row`, `col`).
     #[cfg(test)]
-    pub fn style_at(&self, row: usize, col: usize) -> Style {
+    pub(super) fn style_at(&self, row: usize, col: usize) -> Style {
         self.cells.get(row * self.cols + col).map_or(Style::PLAIN, |cell| cell.style)
     }
 
     /// The row's text without its styles, trailing spaces cut (what a snapshot test compares).
     #[cfg(test)]
-    pub fn text_row(&self, row: usize) -> String {
+    pub(super) fn text_row(&self, row: usize) -> String {
         let cells = &self.cells[row * self.cols..(row + 1) * self.cols];
         let text: String = cells.iter().filter(|cell| !cell.cont).map(|cell| cell.ch).collect();
         text.trim_end().to_string()
@@ -234,13 +234,13 @@ impl Grid {
 
     /// Every row as plain text.
     #[cfg(test)]
-    pub fn text(&self) -> Vec<String> {
+    pub(super) fn text(&self) -> Vec<String> {
         (0..self.rows).map(|row| self.text_row(row)).collect()
     }
 
     /// The bytes that put `row` on the screen: move there, draw it with its styles and clear the rest
     /// of the line. The cursor stays where the next row's move puts it.
-    pub fn encode_row(&self, row: usize, out: &mut Vec<u8>) {
+    pub(super) fn encode_row(&self, row: usize, out: &mut Vec<u8>) {
         let cells = &self.cells[row * self.cols..(row + 1) * self.cols];
         out.extend_from_slice(format!("\x1b[{};1H\x1b[0m", row + 1).as_bytes());
         // Up to the last cell that is not a plain blank: the rest is cleared, not drawn.
@@ -264,7 +264,7 @@ impl Grid {
     /// after an erase from the top when there was no previous grid or the size changed. Never a full
     /// clear (`2J`): a terminal keeps what that wipes in its scrollback, which a resize would fill
     /// with copies of the page.
-    pub fn encode(&self, previous: Option<&Grid>) -> Vec<u8> {
+    pub(super) fn encode(&self, previous: Option<&Grid>) -> Vec<u8> {
         let mut out = Vec::new();
         let same_size = previous.is_some_and(|prev| prev.cols == self.cols && prev.rows == self.rows);
         if !same_size {
