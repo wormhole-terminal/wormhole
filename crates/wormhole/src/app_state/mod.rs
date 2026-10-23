@@ -107,7 +107,9 @@ pub(crate) struct AppState {
     next_window_id: i64,
     /// Settings revision whose theme was last pushed to GPUI Kit.
     applied_theme: Option<u64>,
-    ticks: u64,
+    /// How many app ticks there have been. A cell: counting one is no change anyone could read, and
+    /// writing the global for it would mark the state changed every 400 ms.
+    ticks: std::cell::Cell<u64>,
     /// What devctl says in place of the system (`appearance`, `reduce-transparency`,
     /// `increase-contrast`, `reduce-motion`).
     look_override: LookOverride,
@@ -156,7 +158,7 @@ impl AppState {
             next_id,
             next_window_id,
             applied_theme: None,
-            ticks: 0,
+            ticks: std::cell::Cell::new(0),
             look_override: LookOverride::default(),
             _display_options: display_options,
         }
@@ -168,9 +170,9 @@ impl AppState {
     }
 
     /// Count one app tick (400 ms) and say which one it is.
-    pub(crate) fn advance_tick(&mut self) -> u64 {
-        self.ticks += 1;
-        self.ticks
+    pub(crate) fn advance_tick(&self) -> u64 {
+        self.ticks.set(self.ticks.get() + 1);
+        self.ticks.get()
     }
 }
 
@@ -203,7 +205,7 @@ impl AppState {
             next_id,
             next_window_id: 2,
             applied_theme: None,
-            ticks: 0,
+            ticks: std::cell::Cell::new(0),
             look_override: LookOverride::default(),
             _display_options: None,
         }

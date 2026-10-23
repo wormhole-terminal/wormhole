@@ -18,5 +18,7 @@ mod saved_text;
 mod saved_text_tests;
 mod tick;
 #[cfg(test)]
+mod tick_tests;
+#[cfg(test)]
 mod usage_tests;
 pub(crate) mod welcome;

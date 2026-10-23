@@ -241,6 +241,18 @@ impl Config {
         files::write_atomic(&self.path, text.as_bytes(), LinkPolicy::Follow).map_err(|e| e.to_string())
     }
 
+    /// Whether [`poll`](Self::poll) would reload: `config.json` changed on disk, or a file the theme
+    /// may come from did. Reads the disk and changes nothing, so a caller that guards a shared value
+    /// can ask before it takes the value to change.
+    pub fn changed_on_disk(&self) -> bool {
+        let current = mtime(&self.path);
+        if current.is_some() && current != self.modified {
+            return true;
+        }
+        let stamp = ThemeStamp::of(&self.themes, self.settings.shown_theme(self.appearance));
+        self.theme_stamp.as_ref() != Some(&stamp)
+    }
+
     /// Reload if `config.json` changed on disk, or resolve the theme again if
     /// a file it may come from changed (the selected theme edited by hand, or
     /// saved from the Studio). Returns true if anything was reloaded.
@@ -368,6 +380,7 @@ mod tests {
         let fixed = ONE_BAD_VALUE.replace("\"16\"", "16");
         std::fs::write(&path, &fixed).expect("write");
         config.modified = None;
+        assert!(config.changed_on_disk());
         assert!(config.poll());
         assert!(!config.is_unreadable());
         assert_eq!(config.error, None);
@@ -527,9 +540,13 @@ mod tests {
         let mine = themes.join("mine.json");
         std::fs::write(&mine, r##"{"name": "Mine", "ui": {"primary": "#ff0000"}}"##).expect("write theme");
         let mut config = Config::load_from(path.clone(), themes.clone());
+        assert!(!config.changed_on_disk(), "nothing changed: poll would not reload");
         assert!(!config.poll());
         std::fs::write(&mine, r##"{"name": "Mine", "ui": {"primary": "#0000ff"}} "##).expect("write theme");
+        assert!(config.changed_on_disk(), "the theme file changed, and asking changes nothing");
+        assert!(config.changed_on_disk());
         assert!(config.poll());
+        assert!(!config.changed_on_disk());
         assert_eq!(config.tokens.get("primary").map(|c| c.to_hex()).as_deref(), Some("#0000ff"));
         assert!(!config.poll());
         // A theme that breaks is reported, and the default shown, until it is fixed.

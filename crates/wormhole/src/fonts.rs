@@ -74,10 +74,11 @@ pub fn init(cx: &mut App) {
 /// Returns true if anything changed.
 pub fn poll_custom(cx: &mut App) -> bool {
     let fingerprint = custom::fingerprint(&crate::active_profile::paths().fonts_dir());
-    let loaded = cx.global_mut::<LoadedFonts>();
-    if fingerprint == loaded.fingerprint {
+    // Looked at without taking the global to change: this runs every few ticks.
+    if fingerprint == cx.global::<LoadedFonts>().fingerprint {
         return false;
     }
+    let loaded = cx.global_mut::<LoadedFonts>();
     let (removed, added) = custom::changes(&loaded.fingerprint, &fingerprint);
     loaded.fingerprint = fingerprint;
     loaded.custom.retain(|file| {

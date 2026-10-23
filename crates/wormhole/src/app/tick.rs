@@ -10,7 +10,7 @@ use wormhole_core::ipc;
 
 use crate::app::{control, menus};
 use crate::app_state::look::apply_theme;
-use crate::app_state::{AppState, app_mut};
+use crate::app_state::{AppState, app};
 use crate::features::project;
 use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
@@ -72,7 +72,7 @@ pub(super) fn tick(cx: &mut App) {
         cx.quit();
         return;
     }
-    let ticks = app_mut(cx).advance_tick();
+    let ticks = app(cx).advance_tick();
     let mut moved = SettingsStore::poll(cx);
     if cx.try_global::<ParkedSettings>().is_some_and(|parked| !parked.is_empty()) {
         let system = cx.global::<SettingsStore>().system();

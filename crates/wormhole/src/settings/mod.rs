@@ -339,6 +339,11 @@ impl SettingsStore {
     /// re-derived otherwise: this runs every tick, and a re-derive would also reset a
     /// problem a settings page put in `error`, such as a failed import.)
     pub fn poll(cx: &mut App) -> bool {
+        // Asked of the shared value without taking it to change: taking it marks the settings
+        // changed for every view that read them, and this runs every tick.
+        if !cx.global::<SettingsStore>().config.changed_on_disk() {
+            return false;
+        }
         if !cx.global_mut::<SettingsStore>().config.poll() {
             return false;
         }
