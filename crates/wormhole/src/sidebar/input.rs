@@ -1,7 +1,8 @@
 //! What the window tells the sidebar, and what the sidebar tells the window. The sidebar never reads
-//! the `Workspace`: every frame (and before the window calls it for something that needs the terminals
-//! as they are now) the window pushes a [`SidebarInput`], and what the person does in the list comes
-//! back as a [`SidebarEvent`] the window handles when the update that raised it ends.
+//! the `Workspace`: whenever its facts change (and before the window calls it for something that needs
+//! the terminals as they are now) the window pushes a [`SidebarInput`], never while it draws, and what
+//! the person does in the list comes back as a [`SidebarEvent`] the window handles when the update that
+//! raised it ends.
 
 use std::rc::Rc;
 
@@ -22,10 +23,6 @@ pub(crate) struct SidebarInput {
     pub(crate) active: usize,
     /// The profile the window is in, whose settings and theme the list is drawn with.
     pub(crate) profile: ProfileId,
-    /// The sidebar column's width (its width at rest while it slides).
-    pub(crate) width: f32,
-    /// The window's width, which the tab bar fits itself to.
-    pub(crate) window_width: f32,
     /// The terminals are in tabs across the top, not in the sidebar.
     pub(crate) tabs_on: bool,
     /// The window's glass, while it is on: each card asks for a glass of its own.
@@ -40,14 +37,33 @@ pub(crate) struct SidebarInput {
     pub(crate) welcomes: Vec<i64>,
 }
 
+/// Whether the window says the same twice: the sidebar draws again for a different input only.
+/// (Times are instants in the rows, so the same facts at two moments are equal; the glass is the
+/// window's own, compared by identity.)
+impl PartialEq for SidebarInput {
+    fn eq(&self, other: &Self) -> bool {
+        self.rows == other.rows
+            && self.active == other.active
+            && self.profile == other.profile
+            && self.tabs_on == other.tabs_on
+            && match (&self.glass, &other.glass) {
+                (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+                (None, None) => true,
+                _ => false,
+            }
+            && self.asking == other.asking
+            && self.terminal_drag == other.terminal_drag
+            && self.group_drag == other.group_drag
+            && self.welcomes == other.welcomes
+    }
+}
+
 impl Default for SidebarInput {
     fn default() -> Self {
         Self {
             rows: Vec::new(),
             active: usize::MAX,
             profile: ProfileId::default_profile(),
-            width: 0.0,
-            window_width: f32::MAX,
             tabs_on: false,
             glass: None,
             asking: false,

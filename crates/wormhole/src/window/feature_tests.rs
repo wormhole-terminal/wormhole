@@ -411,7 +411,10 @@ fn changes_is_a_table_entry_the_frame_reads(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     draw(cx, &window);
-    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(three_changes());
+        cx.notify();
+    });
     draw(cx, &window);
     drive(cx, &window, |ws, window, cx| {
         let (at, tab) = ws.tab_entry(TabId::Changes).expect("Changes is in the table");
@@ -448,7 +451,10 @@ fn the_keys_walk_the_changes_list_through_the_table(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     draw(cx, &window);
-    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(three_changes());
+        cx.notify();
+    });
     draw(cx, &window);
     drive(cx, &window, |ws, _, cx| {
         let (at, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
@@ -556,7 +562,10 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
         return;
     }
     let window = start(cx, 1);
-    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(three_changes());
+        cx.notify();
+    });
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
     // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
     draw(cx, &window);
@@ -744,7 +753,10 @@ fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext)
         return;
     }
     let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, CROWD);
-    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(many_changes(50)));
+    drive(cx, &window, |ws, _, cx| {
+        ws.sessions[0].git.status = Some(many_changes(50));
+        cx.notify();
+    });
     draw(cx, &window);
     let drawn = drive(cx, &window, |ws, window, cx| {
         let width = ws.columns().panel;

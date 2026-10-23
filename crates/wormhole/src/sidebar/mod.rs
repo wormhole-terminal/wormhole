@@ -61,6 +61,9 @@ pub(crate) struct Sidebar {
     view: WindowSidebar,
     /// What the window last said of itself.
     input: Rc<SidebarInput>,
+    /// The column's width, and the window's: layout (`set_metrics`), not facts.
+    width: f32,
+    window_width: f32,
     /// ⌘ held on its own (the ⌘1–9 keycaps), and the timer that shows them.
     hold: CmdHold,
     hold_timer: Option<Task<()>>,
@@ -120,6 +123,8 @@ impl Sidebar {
         Self {
             view,
             input: Rc::default(),
+            width: 0.0,
+            window_width: f32::MAX,
             hold: CmdHold::default(),
             hold_timer: None,
             _keys: keys,
@@ -146,13 +151,31 @@ impl Sidebar {
 
     /// What the window says of itself now: what the next frame, and every call that reads the
     /// terminals, goes by.
-    pub(crate) fn set_input(&mut self, input: SidebarInput) {
+    ///
+    /// Draws again when it differs from what it was told last; the window says so when its facts
+    /// change (`window::sidebar_host`), never while it draws.
+    pub(crate) fn set_input(&mut self, input: SidebarInput, cx: &mut Context<Self>) -> bool {
+        if *self.input == input {
+            return false;
+        }
         self.input = Rc::new(input);
+        cx.notify();
+        true
     }
 
-    /// The column's width as last said, for a push that changes nothing else.
-    pub(crate) fn width(&self) -> f32 {
-        self.input.width
+    /// What the window last said, to compare against what it would say now.
+    #[cfg(test)]
+    pub(crate) fn input(&self) -> &SidebarInput {
+        &self.input
+    }
+
+    /// The column's width (its width at rest while it slides) and the window's, which the tab bar
+    /// fits itself to: layout, known when the window lays out. Draws again when one changed.
+    pub(crate) fn set_metrics(&mut self, width: f32, window_width: f32, cx: &mut Context<Self>) {
+        if (self.width, self.window_width) != (width, window_width) {
+            (self.width, self.window_width) = (width, window_width);
+            cx.notify();
+        }
     }
 
     /// The saved view: the groups, their order, which are folded.
@@ -308,7 +331,7 @@ impl Sidebar {
             })
             .collect();
         self.plan_list_motion(keys.clone(), cx);
-        let frame = rows::Frame::new(&input, input.width, self.hints_showing(cx), window, cx);
+        let frame = rows::Frame::new(&input, self.width, self.hints_showing(cx), window, cx);
         let mark = self.drop_mark(&listing, infos);
         let group_wash: std::collections::HashMap<u32, Hsla> = {
             let tokens = &store_in(&input.profile, cx).tokens;
@@ -477,7 +500,7 @@ impl Sidebar {
     }
 }
 
-/// The window draws the list as a child view, after it has told it how it stands (`set_input`): a child
+/// The window draws the list as a child view, from what it told it of how it stands (`set_input`): a child
 /// renders once its parent's render has returned, so this never meets the window's lease.
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

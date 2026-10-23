@@ -1,5 +1,5 @@
 //! The window's side of the sidebar (`sidebar::Sidebar`, an entity of its own): the facts it is told
-//! every frame (the terminals as rows), what the window does when the list asks for something
+//! when they change (the terminals as rows), what the window does when the list asks for something
 //! (`SidebarEvent`), and the few calls the rest of the window makes into the list's state. The
 //! sidebar never reads the `Workspace`; this is the only place that reads both.
 
@@ -117,13 +117,11 @@ impl Workspace {
     }
 
     /// What the sidebar is told of the window, `width` points wide.
-    pub(super) fn sidebar_input(&self, width: f32, cx: &App) -> SidebarInput {
+    pub(super) fn sidebar_input(&self, cx: &App) -> SidebarInput {
         SidebarInput {
             rows: self.row_infos(cx),
             active: self.active,
             profile: self.profile.clone(),
-            width,
-            window_width: self.window_width,
             tabs_on: self.sidebar_feed.tabs_on,
             glass: self.glass_on(cx).then(|| self.glass.clone()),
             asking: self.closing_session_prompt || self.closing_prompt,
@@ -138,11 +136,14 @@ impl Workspace {
         }
     }
 
-    /// Tell the sidebar how the window stands now (the frame does, and every call below that needs
-    /// the terminals as they are).
-    pub(super) fn push_sidebar(&self, width: f32, cx: &mut Context<Self>) {
-        let input = self.sidebar_input(width, cx);
-        self.sidebar.update(cx, |sidebar, _| sidebar.set_input(input));
+    /// Tell the sidebar how the window stands now, if that is not what it was told last; it draws
+    /// again then. Called when the facts may have changed (the window was notified, the settings
+    /// changed, the tick), never while the window draws: a view that is drawn from what it was
+    /// told is only drawn again when it is told something.
+    pub(super) fn sync_sidebar(&mut self, cx: &mut Context<Self>) {
+        self.sidebar_feed.tabs_on = self.tabs_wanted(cx);
+        let input = self.sidebar_input(cx);
+        self.sidebar.update(cx, |sidebar, cx| sidebar.set_input(input, cx));
     }
 
     /// Run `f` on the sidebar after telling it how the window stands now.
@@ -151,9 +152,9 @@ impl Workspace {
         cx: &mut Context<Self>,
         f: impl FnOnce(&mut Sidebar, &mut Context<Sidebar>) -> R,
     ) -> R {
-        let input = self.sidebar_input(self.sidebar.read(cx).width(), cx);
+        let input = self.sidebar_input(cx);
         self.sidebar.update(cx, |sidebar, cx| {
-            sidebar.set_input(input);
+            sidebar.set_input(input, cx);
             f(sidebar, cx)
         })
     }
@@ -174,7 +175,7 @@ impl Workspace {
 
     /// The list without drawing it (shortcuts, devctl).
     pub(super) fn session_listing(&self, cx: &App) -> Listing {
-        let input = self.sidebar_input(0.0, cx);
+        let input = self.sidebar_input(cx);
         self.sidebar.read(cx).listing_of(&input, cx)
     }
 
@@ -213,10 +214,15 @@ impl Workspace {
         self.sidebar_feed.tabs_on
     }
 
+    /// Whether the settings list the terminals in tabs across the top.
+    fn tabs_wanted(&self, cx: &App) -> bool {
+        settings_in(&self.profile, cx).terminals_in == TerminalsIn::Tabs
+    }
+
     /// Read where the terminals are listed from the settings (once a frame, before anything is laid
     /// out), and centre the traffic lights on the row they sit in.
     pub(super) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
-        self.sidebar_feed.tabs_on = settings_in(&self.profile, cx).terminals_in == TerminalsIn::Tabs;
+        self.sidebar_feed.tabs_on = self.tabs_wanted(cx);
         let row = style::TITLE_ROW_H;
         if self.sidebar_feed.lights_row != Some(row) {
             self.sidebar_feed.lights_row = Some(row);
@@ -225,6 +231,21 @@ impl Workspace {
     }
 
     // ---------------------------------------------------------------- drawing
+
+    /// Tell the sidebar how wide its column is, and the window: layout, known only when the window
+    /// lays out, and unchanged from frame to frame.
+    fn fit_sidebar(&self, width: f32, cx: &mut Context<Self>) {
+        let window_width = self.window_width;
+        self.sidebar.update(cx, |sidebar, cx| sidebar.set_metrics(width, window_width, cx));
+    }
+
+    /// What the sidebar was told is what a frame would tell it: every change of a fact reached it
+    /// (`sync_sidebar`) before the frame, none is left to be found by drawing.
+    #[cfg(test)]
+    fn assert_sidebar_told(&self, cx: &App) {
+        let now = self.sidebar_input(cx);
+        assert!(*self.sidebar.read(cx).input() == now, "the window drew with the sidebar not told");
+    }
 
     /// The sidebar, `width` points wide (its column's, or its width at rest while it slides): the
     /// window's header over the list, which is the sidebar's, and the first-run note under it.
@@ -236,7 +257,9 @@ impl Workspace {
     ) -> AnyElement {
         let ui = ui_in(&self.profile, cx);
         let glass = self.glass_on(cx);
-        self.push_sidebar(width, cx);
+        self.fit_sidebar(width, cx);
+        #[cfg(test)]
+        self.assert_sidebar_told(cx);
         div()
             .id("sidebar")
             .relative()
@@ -263,7 +286,9 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        self.push_sidebar(0.0, cx);
+        self.fit_sidebar(0.0, cx);
+        #[cfg(test)]
+        self.assert_sidebar_told(cx);
         self.sidebar.update(cx, |sidebar, cx| sidebar.render_tab_bar(window, cx))
     }
 
@@ -332,15 +357,19 @@ impl Workspace {
         if self.ticks % 5 == 1 {
             self.sidebar_feed.worktrees.borrow_mut().clear();
         }
+        // The backstop for a fact no notification said: told only if it differs.
+        self.sync_sidebar(cx);
         // Only what is on screen: the times on the rows (the tab bar draws them too).
         let shown = self.panes.sidebar_open || self.sidebar_feed.tabs_on;
-        // The times on the rows ("Working · 3m", a command's clock) move on their own; redraw
-        // when one would read differently, but not for a window nobody is looking at.
+        // The times on the rows ("Working · 3m", a command's clock) move on their own; the sidebar
+        // alone draws again when one would read differently, but not for a window nobody is looking at.
         if window_active && shown {
             let now = row_times(&self.row_infos(cx), &self.profile, cx);
-            if self.sidebar.update(cx, |sidebar, _| sidebar.times_changed(now)) {
-                cx.notify();
-            }
+            self.sidebar.update(cx, |sidebar, cx| {
+                if sidebar.times_changed(now) {
+                    cx.notify();
+                }
+            });
         }
     }
 
@@ -494,7 +523,7 @@ impl Workspace {
         &self,
         cx: &App,
     ) -> Option<[wormhole_core::onboarding::welcome::demo::Row; 3]> {
-        self.sidebar.read(cx).welcome_demo_rows(&self.sidebar_input(0.0, cx), cx)
+        self.sidebar.read(cx).welcome_demo_rows(&self.sidebar_input(cx), cx)
     }
 
     /// ⌃⌥] and ⌃⌥[: the next or previous group, in the switcher's order. Both layouts.

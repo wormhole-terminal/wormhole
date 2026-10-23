@@ -477,8 +477,9 @@ impl Workspace {
             // Dragged by its header: to the sidebar the terminal leaves the split, onto another
             // pane's edge it moves there.
             .on_drag(dragged, move |dragged, grabbed, _, cx| {
-                this.update(cx, |ws, _| {
-                    ws.terminal_drag = Some(TerminalDrag::new(dragged.id, dragged.origin))
+                this.update(cx, |ws, cx| {
+                    ws.terminal_drag = Some(TerminalDrag::new(dragged.id, dragged.origin));
+                    cx.notify();
                 })
                 .ok();
                 cx.new(|_| DraggedTerminal { grabbed, ..dragged.clone() })

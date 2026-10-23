@@ -95,7 +95,7 @@ impl Workspace {
         let Some(found) = self.sidebar_view(cx).groups.get(group).cloned() else { return };
         // The group's terminals and the rest of every split they are in.
         let mut ids: Vec<i64> = Vec::new();
-        let input = self.sidebar_input(0.0, cx);
+        let input = self.sidebar_input(cx);
         for &id in &found.members {
             for mate in input.with_split_mates(id) {
                 if !ids.contains(&mate) {

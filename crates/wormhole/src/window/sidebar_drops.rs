@@ -62,7 +62,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Result<Option<Drop>, DropError> {
-        let input = self.sidebar_input(self.sidebar.read(cx).width(), cx);
+        let input = self.sidebar_input(cx);
         let listing = self.sidebar.read(cx).listing_of(&input, cx);
         let Some(drop) = Sidebar::terminal_drop_plan(&input, &listing, dragged, over) else {
             return Ok(None);

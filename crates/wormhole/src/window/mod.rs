@@ -392,6 +392,12 @@ impl Workspace {
         }
         // Saved on the first tick, so a window opened just now survives a quit.
         this.dirty = true;
+        // The sidebar is told when the window's facts change, not while it draws: now, and whenever
+        // the window is notified or the settings change.
+        this.sync_sidebar(cx);
+        let me = cx.entity();
+        cx.observe(&me, |this, _, cx| this.sync_sidebar(cx)).detach();
+        cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar(cx)).detach();
         this
     }
 

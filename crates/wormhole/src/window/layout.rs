@@ -131,6 +131,8 @@ impl Render for Workspace {
         if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
             self.group_drag = None;
+            // The one fact the frame itself finds out, and the list is drawn after this returns.
+            self.sync_sidebar(cx);
         }
         let notes_visible = self.notes_visible();
         let columns = self.columns();

@@ -129,6 +129,11 @@ impl TerminalView {
         self.after_events(cx);
     }
 
+    /// The terminal has been in its status `by` longer than it has.
+    pub(crate) fn backdate_status_for_test(&mut self, by: std::time::Duration) {
+        self.status_since = self.status_since.checked_sub(by).expect("a time long enough ago");
+    }
+
     /// `event` as the PTY's reader task delivers it: handled, and the batch ended.
     pub(crate) fn event_for_test(&mut self, event: PtyEvent, cx: &mut Context<Self>) {
         self.handle_event(event, cx);

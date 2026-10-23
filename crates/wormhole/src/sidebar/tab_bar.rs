@@ -112,7 +112,7 @@ impl Sidebar {
                 _ => None,
             })
             .collect();
-        let frame = Frame::new(&input, input.window_width, self.hints_showing(cx), window, cx);
+        let frame = Frame::new(&input, self.window_width, self.hints_showing(cx), window, cx);
         let glass = input.glass.clone();
         let ui = frame.ui;
         let mut tabs: Vec<AnyElement> = Vec::new();
