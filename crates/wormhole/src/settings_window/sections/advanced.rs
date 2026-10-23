@@ -8,6 +8,7 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::config::settings_index::Values;
 use wormhole_core::storage::paths::data_dir;
+use wormhole_text::{keys::*, text, whole};
 
 use super::{open_button, open_in_editor, reveal};
 use crate::app_state::{app, app_mut};
@@ -19,15 +20,17 @@ use crate::style;
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("open-config", |_, _| {
-        open_button("open-config", IconName::CodeXml, "Open", |_| {
+        open_button("open-config", IconName::CodeXml, text(SETTINGS_ADVANCED_OPEN), |_| {
             open_in_editor(&SettingsStore::config_path())
         })
     }),
     Setting::custom("open-data", |_, _| {
-        open_button("open-data", IconName::FolderOpen, "Show in Finder", |cx| reveal(&data_dir(), cx))
+        open_button("open-data", IconName::FolderOpen, text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| {
+            reveal(&data_dir(), cx)
+        })
     }),
     Setting::custom("open-logs", |_, _| {
-        open_button("open-logs", IconName::FolderOpen, "Show in Finder", |cx| {
+        open_button("open-logs", IconName::FolderOpen, text(SETTINGS_ADVANCED_SHOW_IN_FINDER), |cx| {
             reveal(&data_dir().join("logs"), cx)
         })
     }),
@@ -42,9 +45,13 @@ fn draw_reset_tips(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         .outline()
         .small()
         .icon(IconName::RotateCcw)
-        .label("Reset tips")
+        .label(text(SETTINGS_ADVANCED_RESET_TIPS_BUTTON))
         .disabled(none)
-        .tooltip(if none { "No tip was closed for good" } else { "They show again where they belong" })
+        .tooltip(if none {
+            text(SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD)
+        } else {
+            text(SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG)
+        })
         .on_click(|_, _, cx| {
             app_mut(cx).reset_tips();
             cx.refresh_windows();
@@ -59,9 +66,13 @@ fn draw_reset(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         .danger()
         .outline()
         .small()
-        .label("Reset to defaults…")
+        .label(text(SETTINGS_ADVANCED_RESET_TO_DEFAULTS))
         .disabled(changed == 0 || window.confirm_reset)
-        .tooltip(if changed == 0 { "Every setting is at its default" } else { "Asks first" })
+        .tooltip(if changed == 0 {
+            text(SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT)
+        } else {
+            text(SETTINGS_ADVANCED_ASKS_FIRST)
+        })
         .on_click(cx.listener(|this, _, _, cx| {
             this.confirm_reset = true;
             cx.notify();
@@ -82,24 +93,24 @@ impl SettingsWindow {
                 ui,
                 style::BannerKind::Danger,
                 false,
-                format!(
-                    "Reset {changed} changed {} to {} default? Your terminals, notes and themes are kept.",
-                    if changed == 1 { "setting" } else { "settings" },
-                    if changed == 1 { "its" } else { "their" },
+                settings_advanced_reset_question(whole(changed)),
+            )
+            .child(
+                Button::new("reset-cancel").ghost().small().label(text(SETTINGS_ADVANCED_CANCEL)).on_click(
+                    cx.listener(|this, _, _, cx| {
+                        this.confirm_reset = false;
+                        cx.notify();
+                    }),
                 ),
             )
-            .child(Button::new("reset-cancel").ghost().small().label("Cancel").on_click(cx.listener(
-                |this, _, _, cx| {
-                    this.confirm_reset = false;
-                    cx.notify();
-                },
-            )))
-            .child(Button::new("reset-confirm").danger().small().label("Reset").on_click(cx.listener(
-                |this, _, _, cx| {
-                    this.confirm_reset = false;
-                    update_settings(cx, |s| *s = Settings::default());
-                },
-            )))
+            .child(
+                Button::new("reset-confirm").danger().small().label(text(SETTINGS_ADVANCED_RESET)).on_click(
+                    cx.listener(|this, _, _, cx| {
+                        this.confirm_reset = false;
+                        update_settings(cx, |s| *s = Settings::default());
+                    }),
+                ),
+            )
             .into_any_element(),
         )
     }

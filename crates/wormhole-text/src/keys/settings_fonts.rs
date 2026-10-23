@@ -6,50 +6,50 @@
 use crate::key::Key;
 
 /// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(112);
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(123);
 /// "Terminal first: it's what you read most. Code follows it and Interface uses the system font until you pick one."
-pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(113);
+pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(124);
 /// "Specimen"
-pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(114);
+pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(125);
 /// "preview sample"
-pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(115);
+pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(126);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(116);
+pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(127);
 /// "The terminal grid"
-pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(117);
+pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(128);
 /// "terminal font typeface size monospace jetbrains bundled"
-pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(118);
+pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(129);
 /// "Line height"
-pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(119);
+pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(130);
 /// "Terminal rows, as a multiple of the font size"
-pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(120);
+pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(131);
 /// "spacing leading"
-pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(121);
+pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(132);
 /// "Ligatures"
-pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(122);
+pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(133);
 /// "Join sequences like => and != into one glyph"
-pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(123);
+pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(134);
 /// "ligature"
-pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(124);
+pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(135);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(125);
+pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(136);
 /// "Diffs, commit hashes, file lists, Theme Studio"
-pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(126);
+pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(137);
 /// "code font typeface size monospace diff"
-pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(127);
+pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(138);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(128);
+pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(139);
 /// "Sidebar, panels, settings and controls. The size scales the whole interface"
-pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(129);
+pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(140);
 /// "interface font typeface size system ui"
-pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(130);
+pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(141);
 /// "Fonts folder"
-pub const SETTINGS_FONTS_FOLDER: Key = Key::new(131);
+pub const SETTINGS_FONTS_FOLDER: Key = Key::new(142);
 /// "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds"
-pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(132);
+pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(143);
 /// "custom bundled ttf otf ttc folder"
-pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(133);
+pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(144);
 /// "Custom fonts"
-pub const SETTINGS_FONTS_CUSTOM_FONTS: Key = Key::new(134);
+pub const SETTINGS_FONTS_CUSTOM_FONTS: Key = Key::new(145);
 /// "custom families"
-pub const SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS: Key = Key::new(135);
+pub const SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS: Key = Key::new(146);

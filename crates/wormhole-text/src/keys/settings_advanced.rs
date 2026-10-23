@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-advanced.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Advanced"
 pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(0);
@@ -43,3 +44,33 @@ pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(16);
 pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(17);
 /// "hints tips reset show again dismissed"
 pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(18);
+/// "Open"
+pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(19);
+/// "Show in Finder"
+pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(20);
+/// "Reset tips"
+pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(21);
+/// "No tip was closed for good"
+pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(22);
+/// "They show again where they belong"
+pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(23);
+/// "Reset to defaults…"
+pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(24);
+/// "Every setting is at its default"
+pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(25);
+/// "Asks first"
+pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(26);
+/// "Cancel"
+pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(27);
+/// "Reset"
+pub const SETTINGS_ADVANCED_RESET: Key = Key::new(28);
+
+/// ```text
+/// { $count ->
+///     [one] Reset { $count } changed setting to its default? Your terminals, notes and themes are kept.
+///    *[other] Reset { $count } changed settings to their default? Your terminals, notes and themes are kept.
+/// }
+/// ```
+pub fn settings_advanced_reset_question(count: i64) -> String {
+    crate::active::message(29, &[("count", Arg::Int(count))])
+}

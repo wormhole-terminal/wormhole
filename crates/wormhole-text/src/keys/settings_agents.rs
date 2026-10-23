@@ -6,56 +6,56 @@
 use crate::key::Key;
 
 /// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(19);
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(30);
 /// "Wormhole recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done."
-pub const SETTINGS_SECTION_AGENTS_INTRO: Key = Key::new(20);
+pub const SETTINGS_SECTION_AGENTS_INTRO: Key = Key::new(31);
 /// "Agents found"
-pub const SETTINGS_AGENTS_SUMMARY: Key = Key::new(21);
+pub const SETTINGS_AGENTS_SUMMARY: Key = Key::new(32);
 /// "installed hooks repair path summary"
-pub const SETTINGS_AGENTS_SUMMARY_KEYWORDS: Key = Key::new(22);
+pub const SETTINGS_AGENTS_SUMMARY_KEYWORDS: Key = Key::new(33);
 /// "Notifications"
-pub const SETTINGS_AGENTS_GROUP_NOTIFICATIONS: Key = Key::new(23);
+pub const SETTINGS_AGENTS_GROUP_NOTIFICATIONS: Key = Key::new(34);
 /// "Notify me when an agent needs you or finishes"
-pub const SETTINGS_AGENTS_NOTIFICATIONS: Key = Key::new(24);
+pub const SETTINGS_AGENTS_NOTIFICATIONS: Key = Key::new(35);
 /// "These, and notifications about long commands and the bell, have their own section"
-pub const SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION: Key = Key::new(25);
+pub const SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION: Key = Key::new(36);
 /// "notifications alerts banner"
-pub const SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS: Key = Key::new(26);
+pub const SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS: Key = Key::new(37);
 /// "Installed"
-pub const SETTINGS_AGENTS_GROUP_INSTALLED: Key = Key::new(27);
+pub const SETTINGS_AGENTS_GROUP_INSTALLED: Key = Key::new(38);
 /// "Installed agents"
-pub const SETTINGS_AGENTS_INSTALLED: Key = Key::new(28);
+pub const SETTINGS_AGENTS_INSTALLED: Key = Key::new(39);
 /// "claude code codex gemini copilot cursor opencode aider amp goose qwen hooks status install remove repair"
-pub const SETTINGS_AGENTS_INSTALLED_KEYWORDS: Key = Key::new(29);
+pub const SETTINGS_AGENTS_INSTALLED_KEYWORDS: Key = Key::new(40);
 /// "Other agents"
-pub const SETTINGS_AGENTS_GROUP_OTHER_AGENTS: Key = Key::new(30);
+pub const SETTINGS_AGENTS_GROUP_OTHER_AGENTS: Key = Key::new(41);
 /// "Other agents"
-pub const SETTINGS_AGENTS_OTHER: Key = Key::new(31);
+pub const SETTINGS_AGENTS_OTHER: Key = Key::new(42);
 /// "Agents Wormhole recognises that aren't on this Mac's PATH"
-pub const SETTINGS_AGENTS_OTHER_DESCRIPTION: Key = Key::new(32);
+pub const SETTINGS_AGENTS_OTHER_DESCRIPTION: Key = Key::new(43);
 /// "not installed path"
-pub const SETTINGS_AGENTS_OTHER_KEYWORDS: Key = Key::new(33);
+pub const SETTINGS_AGENTS_OTHER_KEYWORDS: Key = Key::new(44);
 /// "How status works"
-pub const SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS: Key = Key::new(34);
+pub const SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS: Key = Key::new(45);
 /// "How status works"
-pub const SETTINGS_AGENTS_HOW: Key = Key::new(35);
+pub const SETTINGS_AGENTS_HOW: Key = Key::new(46);
 /// "With status hooks the agent tells Wormhole the moment it starts working, waits for you or finishes; without them the status is read from the terminal output"
-pub const SETTINGS_AGENTS_HOW_DESCRIPTION: Key = Key::new(36);
+pub const SETTINGS_AGENTS_HOW_DESCRIPTION: Key = Key::new(47);
 /// "hooks output heuristic backup"
-pub const SETTINGS_AGENTS_HOW_KEYWORDS: Key = Key::new(37);
+pub const SETTINGS_AGENTS_HOW_KEYWORDS: Key = Key::new(48);
 /// "Command line"
-pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE: Key = Key::new(38);
+pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE: Key = Key::new(49);
 /// "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications."
-pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB: Key = Key::new(39);
+pub const SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB: Key = Key::new(50);
 /// "Command line tool"
-pub const SETTINGS_AGENTS_CLI_TOOL: Key = Key::new(40);
+pub const SETTINGS_AGENTS_CLI_TOOL: Key = Key::new(51);
 /// "The Wormhole command in any terminal"
-pub const SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION: Key = Key::new(41);
+pub const SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION: Key = Key::new(52);
 /// "wh wht cli command install uninstall path shell alias symlink bin usr local terminal"
-pub const SETTINGS_AGENTS_CLI_TOOL_KEYWORDS: Key = Key::new(42);
+pub const SETTINGS_AGENTS_CLI_TOOL_KEYWORDS: Key = Key::new(53);
 /// "Let the command line type and open terminals"
-pub const SETTINGS_AGENTS_CONTROL_WRITE: Key = Key::new(43);
+pub const SETTINGS_AGENTS_CONTROL_WRITE: Key = Key::new(54);
 /// "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer"
-pub const SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION: Key = Key::new(44);
+pub const SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION: Key = Key::new(55);
 /// "cli command line control api socket send-text new-terminal scripts agents automation remote type"
-pub const SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS: Key = Key::new(45);
+pub const SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS: Key = Key::new(56);
