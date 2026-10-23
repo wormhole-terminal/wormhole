@@ -16,6 +16,8 @@ path = "src/main.rs"
 wormhole-core.workspace = true
 # The terminal itself (a program in a PTY and the screen it draws); core only starts its programs.
 wormhole-term.workspace = true
+# The interface's words (Fluent catalogs, typed keys) and the language they are shown in.
+wormhole-text.workspace = true
 # Inline images: core's decoded pixels become GPUI's frames (its own image type; the crate is in
 # the graph through GPUI with these features).
 image = { version = "0.25", default-features = false, features = ["png"] }
@@ -101,6 +103,8 @@ objc2-app-kit = { version = "0.3", features = [
 # The render tests build terminals without a PTY (`wormhole_term::testing`), which the shipped build
 # never has: dev-dependency features are off in it.
 wormhole-term = { workspace = true, features = ["test-support"] }
+# `with_language`: a test's own language, so tests that read the wording run in `en` and `en-XA` side by side.
+wormhole-text = { workspace = true, features = ["test-support"] }
 # The view tests drive real windows through GPUI's test platform, so a plain `cargo test` (what CI
 # and contributors run) needs these without the devctl feature. Dev-dependency features are
 # never active in the shipped binary.

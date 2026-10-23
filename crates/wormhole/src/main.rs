@@ -106,6 +106,8 @@ fn main() {
         // Before anything opens: a test instance in background mode never shows a Dock icon.
         background::start(cx);
         gpui_kit::init(cx);
+        // Before any window: the words it draws are in this language from the first frame.
+        app::language::init();
         style::menu_layer::install(cx);
         fonts::init(cx);
         // The profile Wormhole was left in: its files are the ones read from here on. With only

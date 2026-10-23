@@ -289,6 +289,10 @@
 //!                   opaque, no blur, the note in Settings), or follow the system again
 //!   increase-contrast [on|off|system]   say Increase Contrast is on or off (the theme's
 //!                   high-contrast variant, opaque windows, a 3 pt focus ring), or follow the system
+//!   language [<tag>|system]   speak that language (`en`, or `en-XA`, the pseudo-language: accented,
+//!                   40% longer, in `⟦ ⟧`, so a label with no accent or bracket is hard-coded and a cut
+//!                   closing bracket is a truncation; it exists in devctl builds only) or the system's
+//!                   again, and redraw every window; without one, the language in use (`state` names it too)
 //!   a11y [said]     the accessibility tree VoiceOver gets (woken first, as an assistive app does), one
 //!                   node a line: role, label, states, `*` on the focused one; `said`: the
 //!                   announcements made lately (`!` before one that interrupts)
@@ -329,6 +333,7 @@ mod control;
 mod flow;
 mod hosts;
 mod input;
+mod language;
 mod menus;
 mod panels;
 mod profiling;

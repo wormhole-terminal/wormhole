@@ -5,8 +5,8 @@
 use anyhow::anyhow;
 
 use super::{
-    Command, a11y, ambient, blocks, control, flow, hosts, input, menus, panels, profiling, sessions,
-    settings, shots, sidebar, studio, title, welcome,
+    Command, a11y, ambient, blocks, control, flow, hosts, input, language, menus, panels, profiling,
+    sessions, settings, shots, sidebar, studio, title, welcome,
 };
 
 /// The command called `name`, if there is one.
@@ -172,6 +172,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-reset-confirm" => settings::reset_confirm,
         "settings-cli-tool" => settings::cli_tool,
         "font-picker" => settings::font_picker,
+        "language" => language::language,
         "a11y" => a11y::a11y,
         "keyboard-navigation" => a11y::keyboard_navigation,
         "window-front" => a11y::window_front,

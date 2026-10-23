@@ -9448,6 +9448,7 @@ dependencies = [
  "tracing-subscriber",
  "wormhole-core",
  "wormhole-term",
+ "wormhole-text",
 ]
 
 [[package]]
@@ -9480,6 +9481,7 @@ dependencies = [
  "tracing",
  "ureq",
  "wormhole-term",
+ "wormhole-text",
  "wormhole-vt",
  "wormhole-wire",
  "zeroize",

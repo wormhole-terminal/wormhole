@@ -39,7 +39,11 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
             .unwrap_or_default(),
     };
     let welcome = ctx.workspace.devctl_welcome_state(crate::notifications::permission_asks(ctx.cx), ctx.cx);
-    Ok(format!("{}focus {focus}\n{find}{studio}{intro}{welcome}", ctx.workspace.debug_state(ctx.cx)))
+    let language = wormhole_text::language().tag();
+    Ok(format!(
+        "{}focus {focus}\nlanguage {language}\n{find}{studio}{intro}{welcome}",
+        ctx.workspace.debug_state(ctx.cx)
+    ))
 }
 
 pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {

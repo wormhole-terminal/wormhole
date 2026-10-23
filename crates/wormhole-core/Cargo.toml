@@ -14,6 +14,8 @@ wormhole-vt.workspace = true
 wormhole-term.workspace = true
 # The session host's wire protocol, to end a host from the command line (`hosts::end_host`).
 wormhole-wire.workspace = true
+# The words of the settings table and the other wording core owns, by key.
+wormhole-text.workspace = true
 anyhow.workspace = true
 # Agent reports carry RFC 3339 timestamps; compare source times across concurrent terminals.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
@@ -61,5 +63,7 @@ dev-key = []
 workspace = true
 
 [dev-dependencies]
+# `with_language`, for the tests that read the wording in another language.
+wormhole-text = { workspace = true, features = ["test-support"] }
 minisign = "0.9"
 tiny_http = "0.12"
