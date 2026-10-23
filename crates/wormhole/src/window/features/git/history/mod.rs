@@ -126,7 +126,12 @@ impl History {
         });
         // The window found a repository where the tab had answered "none" (a `git init` since): now,
         // not at the next period.
-        let appeared = state.root.is_none() && state.problem.is_none() && active.git.status.is_some();
+        // Only a status that is for this folder counts: the one left from before a `cd` out of a
+        // repository is stale, and would refresh the log for nothing.
+        let appeared = state.root.is_none()
+            && state.problem.is_none()
+            && cwd.is_some_and(|cwd| active.git.answered_for(cwd))
+            && active.git.status.is_some();
         if (facts.ticks.is_multiple_of(12) || unanswered || appeared) && !state.waits_for_retry() && !absent {
             self.refresh(active.id, cx);
         }
