@@ -16,11 +16,10 @@ use wormhole_core::storage::paths::ProfileId;
 use super::Worktrees;
 use crate::app_state::{app, app_mut};
 use crate::dialog;
-use crate::features::project;
 use crate::settings::{settings, ui};
 use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
-use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
+use crate::window::feature::{FeatureEvent, FeatureTable, TerminalInput, TerminalTarget};
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to run in the
 /// terminal once it opens and why the last Create was refused.
@@ -84,7 +83,7 @@ impl Worktrees {
         cx: &mut Context<Self>,
     ) {
         let Some(repo) = band_folder.and_then(Self::repo_for_worktree) else { return };
-        if let Err(why) = project::api::worktree_allowed(profile, &repo, cx) {
+        if let Err(why) = FeatureTable::worktree_allowed(profile, &repo, cx) {
             tell("Can't make a worktree here", why, window, cx);
             return;
         }
@@ -118,7 +117,7 @@ impl Worktrees {
             ));
         };
         let repo = worktree_of(&root).unwrap_or(root);
-        project::api::worktree_allowed(profile, &repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
+        FeatureTable::worktree_allowed(profile, &repo, cx).map_err(|why| refuse(ErrorCode::Refused, why))?;
         let plan = worktree::plan(&repo, branch, base(cx).as_deref())
             .map_err(|why| refuse(ErrorCode::BadRequest, why))?;
         if self.asking.is_some() {
@@ -322,7 +321,7 @@ impl Worktrees {
                         _ => app(cx).worktrees.free_ports(worktree::port_free),
                     };
                     tracing::info!(branch = plan.branch, folder = %plan.folder.display(), port = ?plan.port, "worktree made");
-                    let setup = project::api::worktree_setup(&profile, &plan.repo, cx);
+                    let setup = FeatureTable::worktree_setup(&profile, &plan.repo, cx);
                     app_mut(cx).record_worktree(plan.clone());
                     // The project's setup first, then what was asked for, as one line: the command
                     // starts once the setup has finished and only if it worked, and a setup that

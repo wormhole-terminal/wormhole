@@ -15,7 +15,7 @@ use super::{Project, detect, hub_of, hubs, panel, project_folders_on};
 use crate::actions::RunProjectAction;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, ProfileHooks, Root, StateDef, TabDef, TrustHooks};
+use crate::window::feature::{FeatureDef, ProfileHooks, Root, StateDef, TabDef, TrustHooks, WorktreeHooks};
 
 /// The window's `Project`, from the handle the window keeps. The entry makes it, so it is one.
 fn typed(entity: &AnyEntity) -> Entity<Project> {
@@ -60,6 +60,10 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         active_root: |entity, facts, cx| typed(entity).read(cx).of.get(&facts.active()?.id)?.root.clone(),
         card: super::api::trust_card,
         approve: super::api::approve,
+    }),
+    worktree: Some(WorktreeHooks {
+        allowed: super::api::worktree_allowed,
+        setup: super::api::worktree_setup,
     }),
     state: Some(STATE),
     ..FeatureDef::NONE

@@ -49,6 +49,21 @@ pub(crate) struct FeatureTable(pub(crate) &'static [FeatureDef]);
 impl Global for FeatureTable {}
 
 impl FeatureTable {
+    /// Whether a worktree may be made of `repo` in a window of `profile`: every feature that has a say
+    /// allows it, or the first that doesn't says why.
+    pub(crate) fn worktree_allowed(profile: &ProfileId, repo: &Path, cx: &mut App) -> Result<(), String> {
+        for allowed in Self::installed(cx).iter().filter_map(|def| def.worktree.as_ref()).map(|w| w.allowed) {
+            allowed(profile, repo, cx)?;
+        }
+        Ok(())
+    }
+
+    /// What the first terminal of a new worktree of `repo` runs first, if a feature says so.
+    pub(crate) fn worktree_setup(profile: &ProfileId, repo: &Path, cx: &mut App) -> Option<String> {
+        let table = Self::installed(cx);
+        table.iter().filter_map(|def| def.worktree.as_ref()).find_map(|w| (w.setup)(profile, repo, cx))
+    }
+
     /// The shown profile's data is in `AppState` now (at launch, after a profile switch): each feature that
     /// keeps app-wide data reads this profile's.
     pub(crate) fn profile_shown(cx: &mut App) {
@@ -268,6 +283,9 @@ pub(crate) struct FeatureDef {
     /// What the first run asks of the folder's project: which one the terminal in front is in, the trust
     /// card it shows for one, and the approval its button asks for.
     pub trust: Option<TrustHooks>,
+    /// What the feature says about a worktree made of a repository, for the feature that makes them to
+    /// ask through [`FeatureTable`] (a project that is not trusted has no worktree).
+    pub worktree: Option<WorktreeHooks>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
 }
@@ -294,6 +312,7 @@ impl FeatureDef {
         tab_changed: None,
         branch_chip: None,
         trust: None,
+        worktree: None,
         state: None,
     };
 }
@@ -319,6 +338,14 @@ pub(crate) struct CoverDef {
     /// the file `watch` named. The answer is in the facts. Called whether or not something is laid over
     /// the terminal now: it is how an open diff finds out that its file changed.
     pub read: ReadFn,
+}
+
+/// A feature's say about a worktree made of a repository, for the window's profile.
+pub(crate) struct WorktreeHooks {
+    /// Whether a worktree may be made of the repository: `Err` says why not, in words for the dialog.
+    pub allowed: fn(&ProfileId, &Path, &mut App) -> Result<(), String>,
+    /// What the new worktree's first terminal runs before anything else (a project's `worktree.setup`).
+    pub setup: fn(&ProfileId, &Path, &mut App) -> Option<String>,
 }
 
 /// The first run's trust card, from the feature that keeps the projects. Asked whether or not the feature
