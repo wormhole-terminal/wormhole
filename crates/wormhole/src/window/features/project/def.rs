@@ -43,12 +43,8 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: None,
         refresh_ticks: None,
         returns_to_previous: false,
-        pick_branch: None,
     }],
-    close_extra: None,
     bind: Some(bind),
-    row_extras: None,
-    close_stake: None,
     menu: Some(menu),
     tick: Some(tick),
     profile_shown: Some(hubs::profile_shown),
@@ -59,11 +55,9 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     }),
     refresh: Some(look),
     approves_programs: Some(approves_programs),
-    cover: None,
-    tab_changed: None,
-    repo: None,
     spawn: Some(detect::spawn_options),
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 /// The window looks for each terminal's project again.

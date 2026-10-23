@@ -10,7 +10,7 @@ use super::{Notes, list, view};
 use crate::actions::{NewNote, StashPrompt};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, Root, Stake, StateDef, TabDef};
+use crate::window::feature::{CloseHooks, FeatureDef, Root, Stake, StateDef, TabDef};
 use crate::window::sidebar::{RowExtra, RowExtras};
 
 /// The window's `Notes`, from the handle the window keeps. The entry makes it, so it is one.
@@ -36,26 +36,16 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: Some(view::stash_button),
         refresh_ticks: None,
         returns_to_previous: false,
-        pick_branch: None,
     }],
-    close_extra: None,
     bind: Some(bind),
     row_extras: Some(row_extras),
-    close_stake: Some(close_stake),
-    menu: None,
+    close: Some(CloseHooks { stake: Some(close_stake), ..CloseHooks::NONE }),
     tick: Some(|entity, _, window, cx| {
         // The backstop for a new note that never got the focus it would be thrown away on losing.
         typed(entity).update(cx, |notes, cx| notes.prune_blank_notes(window, cx));
     }),
-    profile_shown: None,
-    profiles: None,
-    refresh: None,
-    approves_programs: None,
-    cover: None,
-    tab_changed: None,
-    repo: None,
-    spawn: None,
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 /// New note and Stash prompt, for the terminal on screen at this frame.

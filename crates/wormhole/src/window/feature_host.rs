@@ -160,8 +160,8 @@ impl Workspace {
     /// on screen.
     pub(in crate::window) fn repo_watched(&self, cx: &App) -> Option<std::path::PathBuf> {
         self.features.iter().enumerate().find_map(|(at, def)| {
-            let (repo, entity) = (def.repo.as_ref()?, self.feature_entity(at)?);
-            (repo.watch)(entity, cx)
+            let (cover, entity) = (def.cover.as_ref()?, self.feature_entity(at)?);
+            (cover.watch)(entity, cx)
         })
     }
 
@@ -175,8 +175,8 @@ impl Workspace {
     ) {
         let facts = self.facts(cx);
         for (at, def) in self.features.iter().enumerate() {
-            if let (Some(repo), Some(entity)) = (def.repo.as_ref(), self.feature_entity(at)) {
-                (repo.read)(entity, &facts, session, observed.as_ref(), cx);
+            if let (Some(cover), Some(entity)) = (def.cover.as_ref(), self.feature_entity(at)) {
+                (cover.read)(entity, &facts, session, observed.as_ref(), cx);
             }
         }
     }
@@ -402,7 +402,9 @@ impl Workspace {
             if !features.has(def.id) {
                 continue;
             }
-            if let (Some(close_stake), Some(entity)) = (def.close_stake, self.feature_entity(at)) {
+            if let (Some(close_stake), Some(entity)) =
+                (def.close.as_ref().and_then(|close| close.stake), self.feature_entity(at))
+            {
                 stakes.extend(close_stake(entity, sessions, cx));
             }
         }
@@ -418,7 +420,9 @@ impl Workspace {
             if !facts.features.has(def.id) {
                 continue;
             }
-            if let (Some(close_extra), Some(entity)) = (def.close_extra, self.feature_entity(at)) {
+            if let (Some(close_extra), Some(entity)) =
+                (def.close.as_ref().and_then(|close| close.extra), self.feature_entity(at))
+            {
                 extras.extend(close_extra(entity, &facts, sessions, of, cx));
             }
         }

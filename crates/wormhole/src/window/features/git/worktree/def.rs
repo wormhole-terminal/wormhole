@@ -10,7 +10,7 @@ use crate::actions::NewTerminalInWorktree;
 use crate::app_state::app;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, Root, SpawnAdd, StateDef};
+use crate::window::feature::{CloseHooks, FeatureDef, Root, SpawnAdd, StateDef};
 
 /// The window's `Worktrees`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Worktrees> {
@@ -22,16 +22,11 @@ pub(super) fn typed(entity: &AnyEntity) -> Entity<Worktrees> {
 pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     id: FeatureId::Worktrees,
     tabs: &[],
-    close_extra: Some(|_, facts, sessions, of, cx| close::extra(facts, sessions, of, cx)),
+    close: Some(CloseHooks {
+        extra: Some(|_, facts, sessions, of, cx| close::extra(facts, sessions, of, cx)),
+        ..CloseHooks::NONE
+    }),
     bind: Some(bind),
-    row_extras: None,
-    close_stake: None,
-    menu: None,
-    tick: None,
-    profile_shown: None,
-    profiles: None,
-    refresh: None,
-    approves_programs: None,
     // A worktree Wormhole made: its own ports, whatever the project says.
     spawn: Some(|_, cwd, cx| SpawnAdd {
         env: cwd
@@ -40,10 +35,8 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
             .unwrap_or_default(),
         shell: None,
     }),
-    cover: None,
-    tab_changed: None,
-    repo: None,
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 /// New Terminal in New Worktree… for the terminal in front. A worktree needs a repository: the action is

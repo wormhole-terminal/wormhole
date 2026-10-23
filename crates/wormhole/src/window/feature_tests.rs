@@ -19,7 +19,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::actions::ShowChanges;
 use crate::window::Workspace;
-use crate::window::feature::{FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
+use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
 use crate::window::features::TABLE;
 use crate::window::features::git::changes;
 use crate::window::features::notes::testing as notes;
@@ -111,28 +111,20 @@ static STAND_IN: &[FeatureDef] = &[
             }),
             refresh_ticks: None,
             returns_to_previous: false,
-            pick_branch: None,
         }],
-        close_extra: None,
         bind: Some(|_, _, root, _| root),
         row_extras: Some(|_, _, extras, _| {
             for (id, slot) in extras.iter_mut() {
                 *slot = Some(RowExtra { count: id as usize });
             }
         }),
-        close_stake: Some(|_, sessions, _| {
-            Some(Stake { count: sessions.len(), sentence: format!("{} stand-ins", sessions.len()) })
+        close: Some(CloseHooks {
+            stake: Some(|_, sessions, _| {
+                Some(Stake { count: sessions.len(), sentence: format!("{} stand-ins", sessions.len()) })
+            }),
+            ..CloseHooks::NONE
         }),
         menu: Some(|_, _, state, _| state.disabled.push(ActionId::NewNote)),
-        tick: None,
-        profile_shown: None,
-        profiles: None,
-        refresh: None,
-        approves_programs: None,
-        cover: None,
-        tab_changed: None,
-        repo: None,
-        spawn: None,
         state: Some(StateDef {
             make: |window, cx| {
                 let entity = cx.new(|_| Marker {
@@ -166,6 +158,7 @@ static STAND_IN: &[FeatureDef] = &[
                 marker(entity).update(cx, |m, _| m.focused_for.retain(|&s| s != session));
             },
         }),
+        ..FeatureDef::NONE
     },
 ];
 
@@ -239,7 +232,9 @@ fn a_window_makes_its_features_state_and_hands_facts_to_its_hooks(cx: &mut TestA
         let marks: Vec<_> = extras.iter_mut().map(|(id, slot)| (id, *slot)).collect();
         assert_eq!(marks, [(3, Some(RowExtra { count: 3 })), (4, Some(RowExtra { count: 4 }))]);
         // The terminals' lifetime hooks and the close question's stake.
-        let stake = (def.close_stake.expect("has a stake"))(&entity, &[1, 2], cx).expect("a stake");
+        let stake =
+            (def.close.as_ref().and_then(|close| close.stake).expect("has a stake"))(&entity, &[1, 2], cx)
+                .expect("a stake");
         assert_eq!((stake.count, stake.sentence.as_str()), (2, "2 stand-ins"));
         let state_def = def.state.as_ref().expect("has state");
         let mut record = SessionRecord::new(7, None, None);
@@ -436,7 +431,9 @@ fn changes_is_a_table_entry_the_frame_reads(cx: &mut TestAppContext) {
         assert!((tab.shown)(&facts, cx));
         // Its panel, hooks and keys are the entity's, like any feature's.
         let _ = (tab.view)(&entity, &facts, window, cx);
-        assert!(tab.on_show.is_some() && tab.walk.is_some() && tab.pick_branch.is_some());
+        assert!(tab.on_show.is_some() && tab.walk.is_some());
+        let def = &ws.features[0];
+        assert!(def.branch_chip.is_some() && def.cover.is_some(), "the diff and the title row's branch chip");
         assert!((tab.actions.is_none()), "Changes has no buttons beside the tabs");
         assert_eq!(facts.active().expect("selected").git.status.as_ref().map(|s| s.files.len()), Some(3));
     });
@@ -690,22 +687,8 @@ macro_rules! crowd_member {
                 actions: None,
                 refresh_ticks: None,
                 returns_to_previous: false,
-                pick_branch: None,
             }],
-            close_extra: None,
             bind: Some(|_, _, root, _| root),
-            row_extras: None,
-            close_stake: None,
-            menu: None,
-            tick: None,
-            profile_shown: None,
-            profiles: None,
-            refresh: None,
-            approves_programs: None,
-            cover: None,
-            tab_changed: None,
-            repo: None,
-            spawn: None,
             state: Some(StateDef {
                 make: |window, cx| {
                     let entity = cx.new(|_| Marker {
@@ -724,6 +707,7 @@ macro_rules! crowd_member {
                 closed: |_, _, _| {},
                 left: |_, _, _| {},
             }),
+            ..FeatureDef::NONE
         }
     };
 }

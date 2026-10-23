@@ -65,20 +65,19 @@ impl Workspace {
                 .is_some_and(|every| self.ticks.is_multiple_of(every))
     }
 
-    /// Opens the branch picker of `tab`, asked from outside the tab (the title row's branch chip): the
-    /// tab is shown first.
-    pub(in crate::window) fn pick_branch_in(
-        &mut self,
-        tab: TabId,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.show_tab(tab, cx);
-        if let Some((at, entry)) = self.tab_entry(tab)
-            && let (Some(pick), Some(entity)) = (entry.pick_branch, self.feature_entity(at).cloned())
-        {
+    /// The title row's branch chip was clicked: the feature that contributes it shows its tab and opens
+    /// the branch picker it stands for.
+    pub(in crate::window) fn pick_branch(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some((at, chip)) = self.features.iter().enumerate().find_map(|(at, def)| {
+            let chip = def.branch_chip.as_ref()?;
+            self.facts(cx).features.has(def.id).then_some((at, chip))
+        }) else {
+            return;
+        };
+        self.show_tab(chip.tab, cx);
+        if let Some(entity) = self.feature_entity(at).cloned() {
             let facts = self.facts(cx);
-            pick(&entity, &facts, window, cx);
+            (chip.pick)(&entity, &facts, window, cx);
         }
     }
 

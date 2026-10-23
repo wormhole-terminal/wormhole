@@ -33,29 +33,18 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: None,
         refresh_ticks: Some(REDRAW_TICKS),
         returns_to_previous: true,
-        pick_branch: None,
     }],
-    close_extra: None,
-    bind: None,
-    row_extras: None,
-    close_stake: None,
     // The key is the window's (it binds each offered tab's action); its menu line goes with the tab.
     menu: Some(|_, facts, state, cx| {
         if !facts.agent_on_screen(cx) {
             state.hidden.push(ActionId::ShowUsage);
         }
     }),
-    tick: None,
     profile_shown: Some(profile_shown),
     // A profile's id is a slug that a deleted profile's name can get again: its reports go with it.
     profiles: Some(ProfileHooks { deleted: Some(profile_deleted), ..ProfileHooks::DEFAULT }),
-    refresh: None,
-    approves_programs: None,
-    cover: None,
-    tab_changed: None,
-    repo: None,
-    spawn: None,
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 const STATE: StateDef = StateDef {

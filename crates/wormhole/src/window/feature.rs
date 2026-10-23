@@ -199,14 +199,8 @@ pub(in crate::window) struct FeatureDef {
     /// A row's extras (notes' open count, Changes' file count), for every row at once, through
     /// the narrow view the sidebar lends ([`RowExtras`]).
     pub row_extras: Option<RowExtrasFn>,
-    /// What closing these terminals would lose (notes' open items, a worktree's changes), for the
-    /// whole set being closed (a group, a window).
-    pub close_stake: Option<CloseStakeFn>,
-    /// What closing these terminals adds to the question the window asks: a sentence and, if the feature
-    /// can do something more than closing, a button for it (a worktree Wormhole made may go with its
-    /// terminal). Asked of every feature that is on, for the terminal or the group being closed; any
-    /// extra makes the window ask even when nothing would be lost otherwise.
-    pub close_extra: Option<CloseExtraFn>,
+    /// What the feature adds to the question before terminals are closed.
+    pub close: Option<CloseHooks>,
     /// Menu, palette and sheet state: actions disabled or hidden right now (Usage without an agent).
     /// Called whether the feature is on or off (the facts carry the mask). What an off feature hides
     /// is not this hook's: the keymap's rows are tagged with their feature, and the window hides the
@@ -234,21 +228,48 @@ pub(in crate::window) struct FeatureDef {
     /// exception to "a hook when a second feature needs it": the terminal is made by the window, and
     /// what it is made with is not the window's to know.
     pub spawn: Option<SpawnFn>,
-    /// Something the feature lays over the terminal while it has it (Changes' open diff).
+    /// Something the feature lays over the terminal while it has it (Changes' open diff), and its part in
+    /// the window's reading of the repository that diff is of.
     pub cover: Option<CoverDef>,
     /// The panel's tab was shown (any tab, also the one already on show): a feature drops what only
     /// belongs to its own tab being on show (a branch picker that is open).
     pub tab_changed: Option<TabChangedFn>,
-    /// The feature's part in the window's reading of a terminal's repository.
-    pub repo: Option<RepoHooks>,
+    /// The title row's branch chip: what a click on it opens (Changes' "compare with").
+    pub branch_chip: Option<BranchChip>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
+}
+
+impl FeatureDef {
+    /// A feature that contributes nothing, for a table entry to build on in a `const`
+    /// (`FeatureDef { id, tabs, ..FeatureDef::NONE }`), so an entry lists only what it brings and a
+    /// hook added to the contract later touches only the features that use it. The id is a stand-in:
+    /// every entry names its own.
+    pub const NONE: Self = Self {
+        id: FeatureId::Changes,
+        tabs: &[],
+        bind: None,
+        row_extras: None,
+        close: None,
+        menu: None,
+        tick: None,
+        profile_shown: None,
+        profiles: None,
+        refresh: None,
+        approves_programs: None,
+        spawn: None,
+        cover: None,
+        tab_changed: None,
+        branch_chip: None,
+        state: None,
+    };
 }
 
 /// What a feature lays over the terminal: the card of a diff. The window draws it in place of the
 /// terminal and its panes, gives the title row the feature's entry in place of the breadcrumb, takes
 /// the find shortcuts and the tab bar's focus stop away while it is up, and has Esc close it before
-/// anything else.
+/// anything else. What it lays over is a file of the terminal's repository, so it also takes part in the
+/// window's reading of that repository (`window::repo`).
 pub(in crate::window) struct CoverDef {
     /// Whether the feature has something over the terminal now. Asked each frame and at keys: a read.
     pub open: fn(&AnyEntity, &App) -> bool,
@@ -258,16 +279,22 @@ pub(in crate::window) struct CoverDef {
     pub title: CoverTitleFn,
     /// Esc, and the feature's own close buttons: takes it down and gives the keyboard to the terminal.
     pub close: CoverCloseFn,
-}
-
-/// The feature's part in the window's reading of a terminal's repository (`window::repo`).
-pub(in crate::window) struct RepoHooks {
     /// A file to look at in the same background hop as the status, when the read is for the terminal
     /// on screen: what an open diff of the working tree watches.
     pub watch: WatchFn,
     /// The window read the status of terminal `session` (on screen); `observed` is what the hop saw of
-    /// the file `watch` named. The answer is in the facts.
+    /// the file `watch` named. The answer is in the facts. Called whether or not something is laid over
+    /// the terminal now: it is how an open diff finds out that its file changed.
     pub read: ReadFn,
+}
+
+/// The title row's branch chip. The window draws it (it knows the row's width) and hands a click to
+/// the feature that contributed it, so the row names neither the feature nor its tab.
+pub(in crate::window) struct BranchChip {
+    /// The panel tab the click shows first, so what it opens is in view.
+    pub tab: TabId,
+    /// Opens the branch picker the chip stands for.
+    pub pick: PickBranchFn,
 }
 
 /// A panel tab of a feature.
@@ -298,9 +325,6 @@ pub(in crate::window) struct TabDef {
     pub walk: Option<WalkFns>,
     /// Buttons beside the tabs while it is on show (Notes' stash).
     pub actions: Option<TabActionsFn>,
-    /// Opens the tab's branch picker, asked from outside the tab (the title row's branch chip opens
-    /// Changes' "compare with"). The window shows the tab first. One user, like `spawn`.
-    pub pick_branch: Option<PickBranchFn>,
     /// Redraw the window every this many ticks (400 ms each) while the tab is on show, for a tab whose
     /// words change with time and no event (Usage's "resets 34m").
     pub refresh_ticks: Option<u64>,
@@ -344,6 +368,23 @@ pub(in crate::window) struct ProfileHooks {
 impl ProfileHooks {
     /// No hook, for a table entry to build on in a `const` (`..ProfileHooks::DEFAULT`).
     pub const DEFAULT: Self = Self { opened: None, deleted: None, id_allocated: None };
+}
+
+/// A feature's part in the question before terminals are closed: both hooks see the whole set being
+/// closed (a group, a window), and a feature registers the one it needs.
+pub(in crate::window) struct CloseHooks {
+    /// What closing these terminals would lose (notes' open items, a worktree's changes).
+    pub stake: Option<CloseStakeFn>,
+    /// What closing these terminals adds to the question the window asks: a sentence and, if the feature
+    /// can do something more than closing, a button for it (a worktree Wormhole made may go with its
+    /// terminal). Asked of every feature that is on; any extra makes the window ask even when nothing
+    /// would be lost otherwise.
+    pub extra: Option<CloseExtraFn>,
+}
+
+impl CloseHooks {
+    /// No hook, for a table entry to build on in a `const` (`..CloseHooks::NONE`).
+    pub const NONE: Self = Self { stake: None, extra: None };
 }
 
 /// What is being closed, for a feature's part in the question.

@@ -34,23 +34,15 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(keys::WALK),
         actions: None,
-        pick_branch: None,
         refresh_ticks: None,
         returns_to_previous: false,
     }],
-    close_extra: None,
-    bind: None,
-    row_extras: None,
-    close_stake: None,
-    menu: None,
     // The log is read again while the tab shows.
     tick: Some(|entity, facts, _, cx| {
         if facts.features.has(FeatureId::History) {
             typed(entity).update(cx, |history, cx| history.tick(facts, cx));
         }
     }),
-    profile_shown: None,
-    profiles: None,
     // The window came to the front.
     refresh: Some(|entity, facts, cx| {
         // Off, the tab keeps its data and reads nothing.
@@ -58,9 +50,6 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
             typed(entity).update(cx, |history, cx| history.came_to_front(facts, cx));
         }
     }),
-    approves_programs: None,
-    spawn: None,
-    cover: None,
     // Its picker is closed by `shown`, which the window runs for every tab: a picker of this tab is not
     // open on another.
     tab_changed: Some(|entity, tab, cx| {
@@ -71,8 +60,8 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
             }
         });
     }),
-    repo: None,
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 const STATE: StateDef = StateDef {

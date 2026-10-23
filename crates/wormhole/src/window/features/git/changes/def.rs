@@ -11,7 +11,7 @@ use wormhole_core::view::spoken::{self, PanelTab};
 use super::{Changes, list, view};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{CoverDef, FeatureDef, FeatureEvent, RepoHooks, RepoRequest, StateDef, TabDef};
+use crate::window::feature::{BranchChip, CoverDef, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef};
 use crate::window::features::git::diff::DiffView;
 
 /// The window's `Changes`, from the handle the window keeps. The entry makes it, so it is one.
@@ -44,31 +44,15 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         view: view::tab,
         walk: Some(list::WALK),
         actions: None,
-        pick_branch: Some(|entity, facts, window, cx| {
-            let Some(active) = facts.active() else { return };
-            typed(entity).update(cx, |changes, cx| {
-                changes.picker.toggle(active.id, active.terminal, window, cx);
-            });
-        }),
         refresh_ticks: None,
         returns_to_previous: false,
     }],
-    close_extra: None,
-    bind: None,
-    row_extras: None,
-    close_stake: None,
-    menu: None,
     tick: Some(|entity, facts, _, cx| {
         typed(entity).update(cx, |changes, cx| {
             changes.follow(facts);
             changes.sync_diff(cx);
         });
     }),
-    profile_shown: None,
-    profiles: None,
-    refresh: None,
-    approves_programs: None,
-    spawn: None,
     cover: Some(CoverDef {
         open: |entity, cx| typed(entity).read(cx).diff.is_some(),
         view: |entity, facts, window, cx| {
@@ -84,6 +68,10 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
                 typed(entity).update(cx, |changes, cx| changes.close_diff(active.terminal, window, cx));
             }
         },
+        watch: |entity, cx| typed(entity).read(cx).diff.as_ref().and_then(DiffView::watched_path),
+        read: |entity, facts, session, observed, cx| {
+            typed(entity).update(cx, |changes, cx| changes.refresh_open_diff(facts, session, observed, cx));
+        },
     }),
     // Any tab being shown closes the picker of this one.
     tab_changed: Some(|entity, _, cx| {
@@ -94,13 +82,17 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
             }
         });
     }),
-    repo: Some(RepoHooks {
-        watch: |entity, cx| typed(entity).read(cx).diff.as_ref().and_then(DiffView::watched_path),
-        read: |entity, facts, session, observed, cx| {
-            typed(entity).update(cx, |changes, cx| changes.refresh_open_diff(facts, session, observed, cx));
+    branch_chip: Some(BranchChip {
+        tab: TabId::Changes,
+        pick: |entity, facts, window, cx| {
+            let Some(active) = facts.active() else { return };
+            typed(entity).update(cx, |changes, cx| {
+                changes.picker.toggle(active.id, active.terminal, window, cx);
+            });
         },
     }),
     state: Some(STATE),
+    ..FeatureDef::NONE
 };
 
 const STATE: StateDef = StateDef {
