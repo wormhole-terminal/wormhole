@@ -2,6 +2,7 @@
 
 use gpui_kit::*;
 use wormhole_core::view::sidebar::{Density, SidebarNumbers, TerminalsIn};
+use wormhole_text::keys::*;
 
 use super::preview;
 use crate::settings::settings;
@@ -14,7 +15,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
     Setting::segmented(
         "terminals-in",
-        &[Segment::literal("Sidebar"), Segment::literal("Tabs")],
+        &[Segment::text(SETTINGS_SESSIONS_SIDEBAR), Segment::text(SETTINGS_SESSIONS_TABS)],
         |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
         |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
     ),
@@ -24,7 +25,10 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("show-group-folders", show_group_folders),
     Setting::segmented(
         "sidebar-numbers",
-        &[Segment::literal("Stay with the terminal"), Segment::literal("Follow the list")],
+        &[
+            Segment::text(SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL),
+            Segment::text(SETTINGS_SESSIONS_FOLLOW_THE_LIST),
+        ],
         |s| usize::from(s.sidebar_numbers == SidebarNumbers::List),
         |s, ix| s.sidebar_numbers = if ix == 0 { SidebarNumbers::Terminal } else { SidebarNumbers::List },
     ),

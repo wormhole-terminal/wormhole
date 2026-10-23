@@ -70,3 +70,24 @@ settings-sessions-group-changes-panel = Changes panel
 ## Diff view
 
 settings-sessions-group-diff-view = Diff view
+
+## settings_window/sections/sessions.rs (labels, hints and notes drawn by this page's code)
+
+settings-sessions-sidebar = Sidebar
+settings-sessions-tabs = Tabs
+settings-sessions-stay-with-the-terminal = Stay with the terminal
+settings-sessions-follow-the-list = Follow the list
+
+## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
+
+settings-sessions-preview-caption-stacked = Live preview of the Terminals list. Hovering a density previews it under the current one
+settings-sessions-preview-caption-side-by-side = Live preview of the Terminals list. Hovering a density previews it next to the current one
+settings-sessions-terminals = Terminals
+
+## Sentences with a hole in them
+
+# Over the live preview: the Terminals list as it is now. { $density } is the density's name.
+settings-sessions-preview-now = Now · { $density }
+
+# Over the live preview: the list as the density under the pointer would draw it.
+settings-sessions-preview-hovering = Previewed while hovering { $density }

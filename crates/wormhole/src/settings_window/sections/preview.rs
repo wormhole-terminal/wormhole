@@ -7,6 +7,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
 use wormhole_core::view::sidebar::Density;
+use wormhole_text::{keys::*, text};
 
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
@@ -38,7 +39,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
             .flex()
             .flex_col()
             .gap_2()
-            .child(label(format!("Now · {}", now.density.label())))
+            .child(label(settings_sessions_preview_now(now.density.label())))
             .child(list("now", now, ui, cx)),
     );
     if let Some(SidebarLook::Density(density)) = window.sidebar_preview
@@ -53,7 +54,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .flex()
                 .flex_col()
                 .gap_2()
-                .child(label(format!("Previewed while hovering {}", previewed.density.label())))
+                .child(label(settings_sessions_preview_hovering(previewed.density.label())))
                 .child(list("previewed", previewed, ui, cx)),
         );
     }
@@ -63,9 +64,9 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
         .gap_2()
         .child(div().p_4().rounded(ui.radius_lg).outlined(ui, ui.border).bg(ui.background).child(panes))
         .child(div().text_caption().text_color(ui.muted).child(if column {
-            "Live preview of the Terminals list. Hovering a density previews it under the current one"
+            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED)
         } else {
-            "Live preview of the Terminals list. Hovering a density previews it next to the current one"
+            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)
         }))
         .into_any_element()
 }
@@ -125,29 +126,29 @@ const SAMPLES: &[Card] = &[
         }],
     },
     Card {
-        group: Some("Release 1.2"),
-        folder: Some("~/Projects/wormhole"),
+        group: Some("Release 1.2"), // text: sample (a made-up terminal of the preview)
+        folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
         rows: &[
             Sample {
-                name: "Sidebar cards",
+                name: "Sidebar cards", // text: sample (a made-up terminal of the preview)
                 glyph: StatusGlyph::Working,
-                detail: "Working · 4m",
+                detail: "Working · 4m", // text: sample (a made-up terminal of the preview)
                 tone: RowTone::Plain,
                 selected: true,
                 notes: 2,
             },
             Sample {
-                name: "Fix pile fan-out",
+                name: "Fix pile fan-out", // text: sample (a made-up terminal of the preview)
                 glyph: StatusGlyph::NeedsYou,
-                detail: "Needs you · 2m",
+                detail: "Needs you · 2m", // text: sample (a made-up terminal of the preview)
                 tone: RowTone::Attention,
                 selected: false,
                 notes: 0,
             },
             Sample {
-                name: "cargo test",
+                name: "cargo test", // text: sample (a made-up terminal of the preview)
                 glyph: StatusGlyph::Running,
-                detail: "cargo test --workspace",
+                detail: "cargo test --workspace", // text: sample (a made-up terminal of the preview)
                 tone: RowTone::Plain,
                 selected: false,
                 notes: 0,
@@ -160,7 +161,7 @@ const SAMPLES: &[Card] = &[
         rows: &[Sample {
             name: "zsh",
             glyph: StatusGlyph::Idle,
-            detail: "~/Projects/terminal/wormhole",
+            detail: "~/Projects/terminal/wormhole", // text: sample (a made-up folder of the preview)
             tone: RowTone::Plain,
             selected: false,
             notes: 0,
@@ -178,7 +179,7 @@ fn list(id: &'static str, look: Look, ui: UiColors, cx: &App) -> AnyElement {
         .gap_2()
         .h(px(style::TITLE_ROW_H))
         .px_4()
-        .child(style::panel_title(ui, "Terminals"))
+        .child(style::panel_title(ui, text(SETTINGS_SESSIONS_TERMINALS)))
         .child(div().flex_1())
         .child(style::icon(IconName::Plus).text_color(ui.muted));
     let claude = wormhole_core::agents::AGENTS.first();

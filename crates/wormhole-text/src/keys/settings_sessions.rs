@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-sessions.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Terminals & sidebar"
 pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(249);
@@ -83,3 +84,31 @@ pub const SETTINGS_SESSIONS_SIDEBAR_NOTES_KEYWORDS: Key = Key::new(285);
 pub const SETTINGS_SESSIONS_GROUP_CHANGES_PANEL: Key = Key::new(286);
 /// "Diff view"
 pub const SETTINGS_SESSIONS_GROUP_DIFF_VIEW: Key = Key::new(287);
+/// "Sidebar"
+pub const SETTINGS_SESSIONS_SIDEBAR: Key = Key::new(288);
+/// "Tabs"
+pub const SETTINGS_SESSIONS_TABS: Key = Key::new(289);
+/// "Stay with the terminal"
+pub const SETTINGS_SESSIONS_STAY_WITH_THE_TERMINAL: Key = Key::new(290);
+/// "Follow the list"
+pub const SETTINGS_SESSIONS_FOLLOW_THE_LIST: Key = Key::new(291);
+/// "Live preview of the Terminals list. Hovering a density previews it under the current one"
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(292);
+/// "Live preview of the Terminals list. Hovering a density previews it next to the current one"
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(293);
+/// "Terminals"
+pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(294);
+
+/// ```text
+/// Now · { $density }
+/// ```
+pub fn settings_sessions_preview_now(density: &str) -> String {
+    crate::active::message(295, &[("density", Arg::Str(density))])
+}
+
+/// ```text
+/// Previewed while hovering { $density }
+/// ```
+pub fn settings_sessions_preview_hovering(density: &str) -> String {
+    crate::active::message(296, &[("density", Arg::Str(density))])
+}

@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 369] = [
+pub(crate) const IDS: [&str; 378] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -102,6 +102,9 @@ pub(crate) const IDS: [&str; 369] = [
     "settings-sessions-sidebar-changes.keywords", "settings-sessions-sidebar-dot", "settings-sessions-sidebar-dot.description",
     "settings-sessions-sidebar-dot.keywords", "settings-sessions-sidebar-notes", "settings-sessions-sidebar-notes.description",
     "settings-sessions-sidebar-notes.keywords", "settings-sessions-group-changes-panel", "settings-sessions-group-diff-view",
+    "settings-sessions-sidebar", "settings-sessions-tabs", "settings-sessions-stay-with-the-terminal",
+    "settings-sessions-follow-the-list", "settings-sessions-preview-caption-stacked", "settings-sessions-preview-caption-side-by-side",
+    "settings-sessions-terminals", "settings-sessions-preview-now", "settings-sessions-preview-hovering",
     "settings-section-terminal", "settings-section-terminal.intro", "settings-terminal-group-behaviour",
     "settings-terminal-scrollback", "settings-terminal-scrollback.description", "settings-terminal-scrollback.keywords",
     "settings-terminal-restore-text", "settings-terminal-restore-text.description", "settings-terminal-restore-text.keywords",
@@ -132,7 +135,7 @@ pub(crate) const IDS: [&str; 369] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 369] = [
+pub(crate) const TAKES_ARGS: [bool; 378] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
@@ -157,11 +160,12 @@ pub(crate) const TAKES_ARGS: [bool; 369] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, true, true, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, true, true,
+    false, false, false, false, true, true,
 ];
