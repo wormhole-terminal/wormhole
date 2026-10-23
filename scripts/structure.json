@@ -240,9 +240,7 @@
     }
   },
   "allowlist": {
-    "file-size": {
-      "crates/wormhole-core/src/config/settings.rs": 1437
-    },
+    "file-size": {},
     "os-edge": {
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/model/mod.rs :: cfg_attr(": 1
