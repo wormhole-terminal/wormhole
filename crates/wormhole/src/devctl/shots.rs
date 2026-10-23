@@ -240,14 +240,14 @@ pub(super) fn frames(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
-/// Redraw the workspace `frames` times, each after marking it dirty like a
-/// scroll tick does, and append the draw times to `out`. Runs outside the
-/// tick's entity update because drawing renders (and so borrows) the workspace.
+/// Redraw the workspace `frames` times, as the display would (the workspace is not marked dirty:
+/// what the terminals' own output dirtied is drawn again), and append the draw times to `out`. Runs
+/// outside the tick's entity update because drawing renders (and so borrows) the workspace.
 fn bench_frames(frames: usize, out: PathBuf, window: &mut Window, cx: &mut Context<Workspace>) {
     cx.spawn_in(window, async move |this, cx| {
         let mut times = Vec::with_capacity(frames);
         for _ in 0..frames {
-            if this.update(cx, |_, cx| cx.notify()).is_err() {
+            if this.upgrade().is_none() {
                 return;
             }
             let Ok(elapsed) = cx.update(|window, cx| {

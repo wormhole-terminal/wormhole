@@ -228,7 +228,7 @@
 //!   history [branch]   the History tab, on that branch (HEAD: the current one); a branch that
 //!                   doesn't exist shows git's error, as a deleted one does
 //!   diff-scroll-x <px>  scroll the open diff's code sideways (negative = back)
-//!   frames <n>      redraw the workspace n times (as a scroll tick does) and append the timings
+//!   frames <n>      draw the window n times (the workspace is not marked dirty) and append the timings
 //!                   to <dir>/frames.txt (out.txt is rewritten per batch); run it once the tab
 //!                   under test has finished loading
 //!   paints          terminal grids drawn since the last `paints` (or launch) and per second: the

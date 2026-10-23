@@ -107,7 +107,11 @@ async fn record(
     let started = Instant::now();
     let mut samples = Vec::new();
     while started.elapsed() < period {
-        this.update(cx, |_, cx| cx.notify()).map_err(|_| anyhow!("the window closed"))?;
+        // No notify of the workspace first: a frame is the one the window would draw, and a window
+        // that retains the views the output didn't touch would draw it without rebuilding them.
+        if this.upgrade().is_none() {
+            return Err(anyhow!("the window closed"));
+        }
         let sample = cx.update(|window, cx| {
             crate::perf::begin_frame();
             let waited = wormhole_term::perf::read().ui.wait_ns;
