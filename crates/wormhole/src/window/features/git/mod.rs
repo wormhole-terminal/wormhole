@@ -12,6 +12,11 @@ mod problem;
 mod submodule_row;
 pub(in crate::window) mod worktree;
 
+#[cfg(test)]
+mod flow_tests;
+#[cfg(test)]
+mod testing;
+
 // The diff view's old paths, which `window` and the Theme Studio still use.
 pub(crate) use diff as diff_view;
 pub(crate) use diff::render as diff_render;

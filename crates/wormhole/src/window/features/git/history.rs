@@ -691,6 +691,8 @@ fn files_line(color: Hsla) -> Div {
         .text_color(color)
 }
 
+#[cfg(test)]
+mod flow_tests;
 mod keys;
 #[cfg(test)]
 mod tests;

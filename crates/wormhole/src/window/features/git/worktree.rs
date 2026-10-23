@@ -497,3 +497,6 @@ pub(in crate::window) fn remove_worktree(worktree: Worktree, cx: &mut App) {
     })
     .detach();
 }
+
+#[cfg(test)]
+mod tests;

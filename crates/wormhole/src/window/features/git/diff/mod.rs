@@ -14,6 +14,9 @@ mod review;
 mod rows;
 mod submodule;
 
+#[cfg(test)]
+mod flow_tests;
+
 use std::cell::Cell as StdCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -133,6 +136,13 @@ impl DiffView {
             gesture: OngoingScroll::default(),
             body_width: Rc::default(),
         }
+    }
+
+    /// What the window tests ask of an open diff: the file's path, whether it is the working tree's
+    /// (not a commit's), and how many files the arrows step through.
+    #[cfg(test)]
+    pub(in crate::window) fn on_view(&self) -> (String, bool, usize) {
+        (self.request.file.path.clone(), self.is_working_tree(), self.siblings.len())
     }
 
     /// The file shown, as the last status described it.

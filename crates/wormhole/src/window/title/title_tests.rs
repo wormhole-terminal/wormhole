@@ -213,3 +213,82 @@ fn the_extras_give_way_after_the_path_and_in_their_order(cx: &mut TestAppContext
     let (_, narrow) = *rows.last().expect("widths");
     assert!(!narrow.0 && !narrow.1, "a narrow window has none of them");
 }
+
+// ---------------------------------------------------------------- the pull request chip
+
+/// The chip shows a pull request only for a branch it may ask `gh` about: the switch is on, the
+/// terminal's folder is in a repository on a branch git has answered for, and its project is trusted
+/// (`gh` reads the repository's own configuration, which a repository the person has not approved may
+/// have filled with anything). What it shows is what the app has cached for the branch, and its words
+/// are VoiceOver's.
+#[gpui_kit::test]
+fn the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch(cx: &mut TestAppContext) {
+    use std::time::Instant;
+
+    use wormhole_core::git::RepoStatus;
+    use wormhole_core::git::pr::{Branch, Checks, PrState, PullRequest};
+    if isolate("the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch") {
+        return;
+    }
+    let window = start(cx, 1);
+    let root = std::env::current_dir().expect("the scratch dir").join("pr-repo");
+    std::fs::create_dir_all(root.join(".wormhole")).expect("mkdir");
+    let root = root.canonicalize().expect("canonical");
+    std::fs::write(root.join(".wormhole").join("actions.json"), "[]").expect("write");
+    let status = RepoStatus {
+        root: root.clone(),
+        branch: Some("feature".into()),
+        files: Vec::new(),
+        base_rev: "HEAD".into(),
+        compare: None,
+        compare_missing: None,
+        dirty: false,
+        upstream: None,
+        superproject: None,
+    };
+    drive(cx, &window, {
+        let (root, status) = (root.clone(), status.clone());
+        move |ws, _, cx| {
+            ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(root.clone()));
+            ws.sessions[0].git.status = Some(status);
+            ws.sessions[0].git.cwd = Some(root);
+            ws.refresh_features(cx);
+        }
+    });
+    let branch = Branch { root: root.clone(), name: "feature".into() };
+    let pr = PullRequest {
+        number: 142,
+        url: "https://example.com/pull/142".into(),
+        state: PrState::Open,
+        draft: false,
+        checks: Some(Checks::Failing),
+        review: None,
+    };
+    cx.update(|cx| {
+        let cache = &mut crate::app_state::app_mut(cx).pr;
+        assert!(cache.begin(&branch, Instant::now()));
+        cache.finish(&branch, Ok(Some(pr.clone())), Instant::now());
+    });
+    let shown = |cx: &mut TestAppContext| {
+        crate::window::view_tests::read_cx(cx, &window, |ws, cx| {
+            ws.extra_facts(cx).pull_request.map(|pr| (pr.label(), pr.words()))
+        })
+    };
+    assert_eq!(shown(cx), None, "the project is not trusted: no lookup, and nothing shown");
+    cx.update(|cx| {
+        let folder = wormhole_core::project::ProjectFolder::open(&root).expect("a project");
+        crate::window::features::project::hub_mut(cx).trust.trust(&folder);
+    });
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
+    let (label, words) = shown(cx).expect("trusted: the cached pull request");
+    assert_eq!(label, "#142");
+    assert_eq!(words, pr.words());
+    assert!(words.starts_with("Pull request #142, open"), "{words}");
+
+    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.title_pull_request = false));
+    assert_eq!(shown(cx), None, "the switch is off");
+    cx.update(|cx| crate::settings::update_settings(cx, |settings| settings.title_pull_request = true));
+    // A branch git has not answered for (another folder's answer) shows nothing.
+    drive(cx, &window, |ws, _, _| ws.sessions[0].git.cwd = Some(PathBuf::from("/elsewhere")));
+    assert_eq!(shown(cx), None);
+}

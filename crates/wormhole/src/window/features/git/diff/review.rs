@@ -36,7 +36,7 @@ pub(in crate::window) struct Commenting {
     session: i64,
     path: String,
     at: LineAt,
-    input: Entity<TextareaState>,
+    pub(super) input: Entity<TextareaState>,
     /// ⌘↩ in the field saves.
     _enter: Subscription,
 }
@@ -59,7 +59,13 @@ impl Workspace {
 
     /// The dialog for the comment on `at` in `path`: empty for a new one, with its text to change
     /// or remove an old one.
-    fn comment_on_line(&mut self, path: String, at: LineAt, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn comment_on_line(
+        &mut self,
+        path: String,
+        at: LineAt,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if self.commenting.is_some() {
             return;
         }
@@ -187,7 +193,7 @@ impl Workspace {
     }
 
     /// The dialog's text becomes the line's comment; an empty one removes it.
-    fn save_comment(&mut self, cx: &mut Context<Self>) {
+    pub(super) fn save_comment(&mut self, cx: &mut Context<Self>) {
         let Some(commenting) = &self.commenting else { return };
         let comment = ReviewComment {
             path: commenting.path.clone(),
