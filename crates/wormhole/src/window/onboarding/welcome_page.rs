@@ -14,7 +14,6 @@ use super::{FirstRun, Intro};
 use crate::icons::app_icon_for;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, TextRole};
-use crate::window::aux_window;
 
 /// The page's width: the specimen is as wide as the sidebar's column, less the page's side padding.
 const WELCOME_W: f32 = 408.0;
@@ -65,7 +64,7 @@ impl FirstRun {
                     .flex_col()
                     .items_center()
                     .gap_4()
-                    .child(specimen(ui, aux_window::surfaces(cx, false).panel, cx))
+                    .child(specimen(ui, style::window_surfaces(cx, false).panel, cx))
                     .child(
                         div()
                             .text_caption()

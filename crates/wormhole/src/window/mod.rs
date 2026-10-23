@@ -255,7 +255,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let blur_wanted = self::aux_window::wants_blur(settings_in(&profile, cx), true);
+        let blur_wanted = crate::style::wants_blur(settings_in(&profile, cx), true);
         let tick = cx.spawn_in(window, async move |this, cx| {
             loop {
                 cx.background_executor().timer(Duration::from_millis(400)).await;

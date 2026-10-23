@@ -124,7 +124,7 @@ impl Render for TrustWindow {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
         // Opaque: a window of text to read, not a place for the blur.
-        let surfaces = aux_window::surfaces(cx, false);
+        let surfaces = style::window_surfaces(cx, false);
         let shown = Shown::of(hub_of(&self.profile, cx).projects.get(&self.root), &self.root);
         let approving = hub_of(&self.profile, cx).approving;
         if self.list.item_count() != shown.lines.len() {
@@ -179,8 +179,8 @@ impl Render for TrustWindow {
             .flex_col()
             .bg(surfaces.background)
             .text_color(ui.text)
-            // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
-            .child(aux_window::drag_strip())
+            // First, so it is behind what is drawn over it (`style::TitleDrag`).
+            .child(style::drag_strip())
             .child(
                 div()
                     .flex()

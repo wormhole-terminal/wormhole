@@ -33,7 +33,7 @@ use wormhole_core::theme::tokens::{Color, ThemeFile, ThemeTokens};
 use crate::app_state::{AppState, app, app_mut};
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, UiColors, settings};
-use crate::style::Edges;
+use crate::style::{self, Edges};
 use crate::terminal_view::keystroke_spec;
 use crate::theme_bridge::{self, hsla, token};
 use crate::window::aux_window;
@@ -255,7 +255,7 @@ impl StudioWindow {
             }),
         ];
         let translucent = settings(cx).studio_translucent;
-        let blur = Blur::install(window, aux_window::wants_blur(settings(cx), translucent));
+        let blur = Blur::install(window, style::wants_blur(settings(cx), translucent));
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
         // The window's own close button asks too. (`remove_window`, which the keys and

@@ -70,7 +70,7 @@ pub(crate) fn open_workspace_window_in(
         }),
         window_background: WindowBackgroundAppearance::Transparent,
         window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),
-        // The title rows drag the window themselves (`chrome::TitleDrag`).
+        // The title rows drag the window themselves (`style::TitleDrag`).
         app_owns_titlebar_drag: true,
         ..Default::default()
     };

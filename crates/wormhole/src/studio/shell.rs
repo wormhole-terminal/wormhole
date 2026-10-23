@@ -10,7 +10,8 @@ use super::token_editor::EDITOR_W;
 use super::token_list::LIST_W;
 use super::{StudioWindow, ui};
 use crate::settings::settings;
-use crate::window::{aux_window, chrome};
+use crate::style;
+use crate::window::chrome;
 
 impl StudioWindow {
     /// The gallery's filter, which narrows the token list to the same part of the app.
@@ -24,8 +25,8 @@ impl Render for StudioWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
         let translucent = settings(cx).studio_translucent;
-        self.blur.set_enabled(aux_window::wants_blur(settings(cx), translucent));
-        let surfaces = aux_window::surfaces(cx, translucent);
+        self.blur.set_enabled(style::wants_blur(settings(cx), translucent));
+        let surfaces = style::window_surfaces(cx, translucent);
         div()
             .id("studio-window")
             .track_focus(&self.focus_handle)

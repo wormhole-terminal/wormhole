@@ -22,7 +22,6 @@ use super::{Edit, StudioWindow, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::hsla;
-use crate::window::aux_window;
 
 /// The editor's width.
 pub(super) const EDITOR_W: f32 = 320.0;
@@ -59,7 +58,7 @@ impl Render for TokenEditorView {
         {
             self.renders += 1;
         }
-        let panel = aux_window::surfaces(cx, settings(cx).studio_translucent).panel_right;
+        let panel = style::window_surfaces(cx, settings(cx).studio_translucent).panel_right;
         match self.studio.upgrade() {
             Some(studio) => studio.update(cx, |studio, cx| studio.render_token_editor(panel, cx)),
             None => div().into_any_element(),

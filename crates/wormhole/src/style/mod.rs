@@ -88,6 +88,8 @@ mod submodule;
 mod tabs;
 mod tile;
 mod tint;
+mod title_drag;
+mod window_surfaces;
 
 pub use bands::*;
 pub use buttons::*;
@@ -116,3 +118,5 @@ pub use status::*;
 pub use submodule::*;
 pub use tabs::*;
 pub use tile::*;
+pub(crate) use title_drag::TitleDrag;
+pub(crate) use window_surfaces::{drag_strip, wants_blur, window_surfaces};

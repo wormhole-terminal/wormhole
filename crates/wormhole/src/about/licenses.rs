@@ -204,7 +204,7 @@ impl LicensesWindow {
 impl Render for LicensesWindow {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
-        let surfaces = aux_window::surfaces(cx, false);
+        let surfaces = style::window_surfaces(cx, false);
         let total = self.licenses.crates().len();
         let count = if self.matches.len() == total {
             format!("{total} packages")
@@ -248,8 +248,8 @@ impl Render for LicensesWindow {
             .relative()
             .flex()
             .text_color(ui.text)
-            // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
-            .child(aux_window::drag_strip())
+            // First, so it is behind what is drawn over it (`style::TitleDrag`).
+            .child(style::drag_strip())
             .child(list_column)
             .child(detail_column)
     }

@@ -31,10 +31,10 @@ use crate::app_state::{AppState, app, app_mut};
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, update_settings};
 use crate::settings::{UiColors, settings};
+use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
 use crate::window::aux_window;
-use crate::window::chrome::TitleDrag as _;
 use font_picker::FontPickerState;
 use preview_column::{COLUMN_SWITCH_W, PREVIEW_W};
 
@@ -347,7 +347,7 @@ impl SettingsWindow {
         }));
         let theme_picker = sections::ThemePicker::new(window, cx);
         let translucent = settings(cx).settings_translucent;
-        let blur = Blur::install(window, aux_window::wants_blur(settings(cx), translucent));
+        let blur = Blur::install(window, style::wants_blur(settings(cx), translucent));
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
         // Sessions move between folders and windows come to the front; keep the project list
@@ -563,8 +563,8 @@ impl Render for SettingsWindow {
             self.section = Section::Appearance;
         }
         let translucent = settings(cx).settings_translucent;
-        self.blur.set_enabled(aux_window::wants_blur(settings(cx), translucent));
-        let surfaces = aux_window::surfaces(cx, translucent);
+        self.blur.set_enabled(style::wants_blur(settings(cx), translucent));
+        let surfaces = style::window_surfaces(cx, translucent);
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
 
@@ -624,7 +624,7 @@ impl Render for SettingsWindow {
             .flex()
             .text_color(ui.text)
             // Drag the window by its top strip (the title bar is transparent); first, so it is
-            // behind what is drawn over it (`chrome::TitleDrag`).
+            // behind what is drawn over it (`style::TitleDrag`).
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
             .child(self.render_nav(&query, surfaces.panel, cx))
             .child(content)

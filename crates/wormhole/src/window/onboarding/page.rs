@@ -10,7 +10,6 @@ use wormhole_core::onboarding::intro::page::Entrance;
 use super::FirstRun;
 use crate::settings::{UiColors, ui};
 use crate::style;
-use crate::window::aux_window;
 
 /// How far a part rises as it comes in, points.
 const RISE: f32 = 16.0;
@@ -74,7 +73,7 @@ impl FirstRun {
                 .size_full()
                 .flex()
                 .flex_col()
-                .bg(aux_window::surfaces(cx, false).background)
+                .bg(style::window_surfaces(cx, false).background)
                 .text_color(ui.text)
                 .occlude()
                 .track_focus(&intro.focus)
@@ -89,8 +88,8 @@ impl FirstRun {
                     }),
                 )
                 .on_key_down(cx.listener(Self::intro_escape))
-                // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
-                .child(aux_window::drag_strip())
+                // First, so it is behind what is drawn over it (`style::TitleDrag`).
+                .child(style::drag_strip())
                 // The light of the wormhole, faint, falling from the top: it comes in with the logo.
                 .child(
                     div()

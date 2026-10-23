@@ -15,7 +15,7 @@ use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
 impl Workspace {
     /// Apply settings that live outside GPUI's render tree.
     fn sync_appearance(&mut self, cx: &mut Context<Self>) {
-        let blur = crate::window::aux_window::wants_blur(settings_in(&self.profile, cx), true);
+        let blur = crate::style::wants_blur(settings_in(&self.profile, cx), true);
         self.blur.set_enabled(blur);
         // Without the blur the window stands on the panel's colour: the gaps round the terminal's
         // surface and between a split's panes show the window, glass or not, and would otherwise

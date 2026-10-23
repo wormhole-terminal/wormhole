@@ -22,7 +22,6 @@ use super::token_rows::{Band, Chip, Inputs, ListRow, TokenRow, build};
 use super::{StudioWindow, color_chip, contrast, gallery, metric_chip, tokens_of, ui};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::window::aux_window;
 
 /// The token list's width.
 pub(super) const LIST_W: f32 = 300.0;
@@ -338,7 +337,7 @@ impl Render for TokenListView {
             self.counts.renders += 1;
         }
         let ui = ui(cx);
-        let panel = aux_window::surfaces(cx, settings(cx).studio_translucent).panel;
+        let panel = style::window_surfaces(cx, settings(cx).studio_translucent).panel;
         self.sync(&tokens_of(cx), cx);
         let (changed_count, low_count) = self.shown_counts;
         let show = |id: &'static str, label: String, value: Show| {

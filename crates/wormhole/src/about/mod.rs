@@ -79,7 +79,7 @@ impl Render for AboutWindow {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
         // Opaque: a small window of text, not a place for the blur.
-        let surfaces = aux_window::surfaces(cx, false);
+        let surfaces = style::window_surfaces(cx, false);
         let copyright = copyright();
 
         // The system's About panel, as Terminal and Finder show it: icon, name, version, copyright,
@@ -100,8 +100,8 @@ impl Render for AboutWindow {
             .pt(px(style::TITLE_ROW_H))
             .bg(surfaces.background)
             .text_color(ui.text)
-            // First, so it is behind what is drawn over it (`chrome::TitleDrag`).
-            .child(aux_window::drag_strip())
+            // First, so it is behind what is drawn over it (`style::TitleDrag`).
+            .child(style::drag_strip())
             .child(
                 img(app_icon_for(cx.global::<SettingsStore>().tokens.appearance)).size(px(ICON)).flex_none(),
             )
