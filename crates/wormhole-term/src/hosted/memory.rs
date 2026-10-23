@@ -30,20 +30,20 @@ pub(super) struct Memory {
 }
 
 impl Memory {
-    pub fn set_title(&mut self, title: &str) {
+    pub(super) fn set_title(&mut self, title: &str) {
         self.title = Some(title.to_owned());
     }
 
-    pub fn clear_title(&mut self) {
+    pub(super) fn clear_title(&mut self) {
         self.title = None;
     }
 
-    pub fn set_cwd(&mut self, path: &str) {
+    pub(super) fn set_cwd(&mut self, path: &str) {
         self.cwd = Some(path.to_owned());
     }
 
     /// An accepted report's body; read as a client reads it, so what is kept is what it keeps.
-    pub fn report(&mut self, body: &str) {
+    pub(super) fn report(&mut self, body: &str) {
         let Some(Parsed::Report(report)) = program_status::parse(body.as_bytes(), 1) else { return };
         match report {
             Report::Clear { id: None } => self.status.clear(),
@@ -66,19 +66,19 @@ impl Memory {
     }
 
     /// A new prompt, or the program's exit: only what outlives the program stands.
-    pub fn program_over(&mut self) {
+    pub(super) fn program_over(&mut self) {
         self.status.retain(|s| s.state.outlives_program());
     }
 
     /// RIS: the title and every record are gone (the folder is not: a reset does not move the
     /// shell).
-    pub fn full_reset(&mut self) {
+    pub(super) fn full_reset(&mut self) {
         self.title = None;
         self.status.clear();
     }
 
     /// The events that bring a client to this state, in the order to deliver them.
-    pub fn events(&self) -> Vec<HostEvent> {
+    pub(super) fn events(&self) -> Vec<HostEvent> {
         let title = self.title.iter().map(|t| HostEvent::Title(t.clone()));
         let cwd = self.cwd.iter().map(|p| HostEvent::Cwd(p.clone()));
         let status = self.status.iter().map(|s| HostEvent::ProgramStatus(s.body.clone()));

@@ -69,7 +69,7 @@ pub(super) struct Core {
 }
 
 impl Core {
-    pub fn new(wake: Wake, rows: u16) -> Self {
+    pub(super) fn new(wake: Wake, rows: u16) -> Self {
         Self {
             stream: Arc::new(Stream::default()),
             slice_end: AtomicU64::new(0),
@@ -89,7 +89,7 @@ impl Core {
         }
     }
 
-    pub fn wake(&self) {
+    pub(super) fn wake(&self) {
         (self.wake)();
     }
 
@@ -98,7 +98,7 @@ impl Core {
     }
 
     /// The events that tell a late client the title, folder and reports (see [`Memory`]).
-    pub fn remembered(&self) -> Vec<HostEvent> {
+    pub(super) fn remembered(&self) -> Vec<HostEvent> {
         self.memory().events()
     }
 
@@ -107,7 +107,7 @@ impl Core {
     }
 
     /// What the screen looks like to the counters, after a slice.
-    pub fn publish(&self, screen: &Screen, ready: bool) {
+    pub(super) fn publish(&self, screen: &Screen, ready: bool) {
         self.history_lines.store(screen.history_size().min(u32::MAX as usize) as u32, Ordering::Release);
         self.screen_rows.store(screen.screen_lines() as u32, Ordering::Release);
         self.alt_screen.store(screen.mode().contains(Modes::ALT_SCREEN), Ordering::Release);
@@ -115,7 +115,7 @@ impl Core {
         self.progress.fetch_add(1, Ordering::AcqRel);
     }
 
-    pub fn finish(&self) {
+    pub(super) fn finish(&self) {
         self.finished.store(true, Ordering::Release);
         self.cancel_clipboard();
         self.wake();
@@ -123,7 +123,7 @@ impl Core {
 
     // ---- the clipboard (OSC 52 read) ----
 
-    pub fn set_controller_attached(&self, attached: bool) {
+    pub(super) fn set_controller_attached(&self, attached: bool) {
         self.controller.store(attached, Ordering::Release);
         if !attached {
             self.cancel_clipboard();
@@ -155,7 +155,7 @@ impl Core {
 
     /// The controller's answer to `ClipboardLoad{ticket}`; a ticket answered or expired already is
     /// ignored. Empty data is "nothing to give".
-    pub fn clipboard_reply(&self, ticket: u32, data: &[u8]) {
+    pub(super) fn clipboard_reply(&self, ticket: u32, data: &[u8]) {
         let found = {
             let mut clipboard = self.clipboard();
             clipboard.pending.iter().position(|p| p.ticket == ticket).map(|at| clipboard.pending.remove(at))
@@ -167,7 +167,7 @@ impl Core {
     }
 
     /// Answer "empty" to every load whose time is up; when the next one is due.
-    pub fn clipboard_expire(&self, now: Instant) -> Option<Instant> {
+    pub(super) fn clipboard_expire(&self, now: Instant) -> Option<Instant> {
         let (expired, next) = {
             let mut clipboard = self.clipboard();
             let (expired, rest): (Vec<_>, Vec<_>) =
@@ -182,7 +182,7 @@ impl Core {
     }
 
     /// Answer "empty" to every load (the controller is gone).
-    pub fn cancel_clipboard(&self) {
+    pub(super) fn cancel_clipboard(&self) {
         let all = std::mem::take(&mut self.clipboard().pending);
         for pending in all {
             pending.reply.send((pending.format)("").into_bytes());
@@ -312,7 +312,7 @@ pub(super) struct HostedFeed {
 }
 
 impl HostedFeed {
-    pub fn new(inner: OwnFeed, core: Arc<Core>) -> Self {
+    pub(super) fn new(inner: OwnFeed, core: Arc<Core>) -> Self {
         Self { inner, core, offset: 0 }
     }
 }

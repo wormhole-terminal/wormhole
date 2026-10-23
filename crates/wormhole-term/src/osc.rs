@@ -205,7 +205,7 @@ fn keeps(c: char, selectable: &mut bool) -> bool {
 /// that is not the space, tab or newline it looks like (no-break and other Unicode spaces, which a
 /// shell does not read as a space). For text that is about to be typed as it was shown, where
 /// cleaning it would be a different command.
-pub fn hides_text(raw: &str) -> bool {
+pub(crate) fn hides_text(raw: &str) -> bool {
     let mut selectable = false;
     raw.chars().any(|c| {
         if c.is_whitespace() {
