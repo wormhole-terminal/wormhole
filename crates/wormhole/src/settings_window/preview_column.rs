@@ -129,7 +129,7 @@ impl SettingsWindow {
             SharedString::from(format!("setting-{}", entry.id)),
             ui,
             SettingParts {
-                label: entry.label.into(),
+                label: entry.label().into(),
                 description: Some("Shown in the preview column at the right of the window".into()),
                 chip: None,
                 key: "",

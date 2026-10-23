@@ -108,10 +108,10 @@ fn range_in(original: &str, lower: &str, at: usize, len: usize) -> Option<Range<
 }
 
 fn score(query: &Query, section: SectionId, group: &'static Group, entry: &'static Entry) -> Option<Hit> {
-    let label = entry.label.to_lowercase();
-    let description = entry.description.to_lowercase();
-    let keywords = entry.keywords.to_lowercase();
-    let group_title = group.title.to_lowercase();
+    let label = entry.label().to_lowercase();
+    let description = entry.description().to_lowercase();
+    let keywords = entry.keywords().to_lowercase();
+    let group_title = group.title().to_lowercase();
     let section_title = section.title().to_lowercase();
     let mut hit =
         Hit { section, group, entry, score: 0, label_range: None, description_range: None, key: None };
@@ -120,7 +120,7 @@ fn score(query: &Query, section: SectionId, group: &'static Group, entry: &'stat
         if let Some((at, starts)) = find(&label, word) {
             best = best.max(if starts { LABEL_WORD_START } else { LABEL_INSIDE });
             if hit.label_range.is_none() {
-                hit.label_range = range_in(entry.label, &label, at, word.len());
+                hit.label_range = range_in(entry.label(), &label, at, word.len());
             }
         }
         if let Some(key) = entry.keys.iter().find(|key| key.contains(word.as_str())) {
@@ -132,7 +132,7 @@ fn score(query: &Query, section: SectionId, group: &'static Group, entry: &'stat
         if let Some((at, true)) = find(&description, word) {
             best = best.max(DESCRIPTION_WORD_START);
             if hit.description_range.is_none() {
-                hit.description_range = range_in(entry.description, &description, at, word.len());
+                hit.description_range = range_in(entry.description(), &description, at, word.len());
             }
         }
         if let Some((_, true)) = find(&keywords, word) {
@@ -226,12 +226,12 @@ mod tests {
         let scrollback = hits.iter().find(|h| h.entry.id == "scrollback").expect("found");
         assert_eq!(scrollback.label_range, None);
         let range = scrollback.description_range.clone().expect("in the description");
-        assert_eq!(&scrollback.entry.description[range], "kept");
+        assert_eq!(&scrollback.entry.description()[range], "kept");
 
         // Inside a word of the label too ("lines" in "Wrap long lines").
         let hits = search(&Query::new("ines"));
         let wrap = hits.iter().find(|h| h.entry.id == "diff-wrap").expect("found");
-        assert_eq!(wrap.label_range.clone().map(|r| &wrap.entry.label[r]), Some("ines"));
+        assert_eq!(wrap.label_range.clone().map(|r| &wrap.entry.label()[r]), Some("ines"));
         // But not inside a word of the description: "readline" is not a line.
         assert!(!ids("line").contains(&"meta"));
     }

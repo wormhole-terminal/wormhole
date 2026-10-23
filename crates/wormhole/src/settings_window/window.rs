@@ -275,7 +275,7 @@ impl SettingsWindow {
             };
             ("Results".into(), intro.into())
         } else {
-            (self.section.title().into(), self.section.info().intro.into())
+            (self.section.title().into(), self.section.info().intro().into())
         };
         let action = if self.show_results {
             Some(style::key_hint(ui, "esc", "clears the search, then closes").into_any_element())

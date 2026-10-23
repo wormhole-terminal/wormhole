@@ -85,7 +85,7 @@ fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
         None if !store.settings.uses_theme_primary() => {
             format!("Pick a colour below · the theme's is {base}").into()
         }
-        None => format!("The theme's · {base}. {}", entry.description).into(),
+        None => format!("The theme's · {base}. {}", entry.description()).into(),
     })
 }
 

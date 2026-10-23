@@ -249,15 +249,15 @@ impl SettingsWindow {
         let mut column = div().flex().flex_col().gap_6();
         for group in section.groups() {
             let mut rows = div().flex().flex_col();
-            if !group.title.is_empty() {
+            if !group.title().is_empty() {
                 rows = rows.child(style::setting_group_head(
                     page.ui,
-                    group.title,
-                    (!group.aside.is_empty()).then_some(group.aside),
+                    group.title(),
+                    (!group.aside().is_empty()).then_some(group.aside()),
                 ));
             }
-            if !group.blurb.is_empty() {
-                rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb));
+            if !group.blurb().is_empty() {
+                rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb()));
             }
             let mut any_row = false;
             let mut shown = 0;
@@ -315,7 +315,7 @@ impl SettingsWindow {
             None => setting
                 .describe
                 .and_then(|describe| describe(self, cx))
-                .or_else(|| (!entry.description.is_empty()).then(|| entry.description.into())),
+                .or_else(|| (!entry.description().is_empty()).then(|| entry.description().into())),
         };
         // A description of the moment is not the table's: its search marks don't fit it.
         let found_description = hit
@@ -343,12 +343,12 @@ impl SettingsWindow {
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
         let found = hit
             .and_then(|hit| hit.label_range.clone())
-            .or_else(|| revealed.as_ref().map(|_| 0..entry.label.len()));
+            .or_else(|| revealed.as_ref().map(|_| 0..entry.label().len()));
         style::setting(
             SharedString::from(format!("setting-{}", entry.id)),
             ui,
             SettingParts {
-                label: entry.label.into(),
+                label: entry.label().into(),
                 description,
                 chip,
                 key: keys.first().copied().unwrap_or(""),
@@ -429,8 +429,8 @@ impl SettingsWindow {
                 .pb_1()
                 .child(style::icon(section_icon(section)).text_color(ui.muted))
                 .child(div().text_label().text_color(ui.text).child(section.title()))
-                .when(!group.title.is_empty(), |d| {
-                    d.child(div().text_caption().text_color(ui.faint).child(format!("› {}", group.title)))
+                .when(!group.title().is_empty(), |d| {
+                    d.child(div().text_caption().text_color(ui.faint).child(format!("› {}", group.title())))
                 })
                 .child(div().flex_1())
                 .child(

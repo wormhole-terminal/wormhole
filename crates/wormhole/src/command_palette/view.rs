@@ -184,7 +184,7 @@ fn render_row(ix: usize, row: &Row, env: &RowEnv, cx: &mut App) -> AnyElement {
                     return div().into_any_element();
                 };
                 let mut parts =
-                    style::PaletteResult::new(icon(settings_window::section_icon(section)), entry.label);
+                    style::PaletteResult::new(icon(settings_window::section_icon(section)), entry.label());
                 parts.detail = Some(format!("Settings › {}", section.title()).into());
                 let value_color = if selected { ui.list_selected_muted } else { ui.muted };
                 parts.trailing.extend(setting_value(id, cx).map(|value| {

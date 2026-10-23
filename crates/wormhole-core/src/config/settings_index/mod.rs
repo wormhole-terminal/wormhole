@@ -8,6 +8,8 @@
 //! A new setting is a row here plus its control in the app's `settings_window/registry.rs`; a
 //! test fails while a `config.json` key has neither a row nor a place in [`UNLISTED`].
 
+#[cfg(test)]
+mod english;
 mod search;
 mod table;
 
@@ -64,19 +66,46 @@ impl NavGroup {
 
 /// What a section is called, what its page says under the title, and where the nav lists it.
 pub struct SectionInfo {
-    pub title: &'static str,
-    pub intro: &'static str,
+    title: &'static str,
+    intro: &'static str,
     pub nav: NavGroup,
+}
+
+impl SectionInfo {
+    pub fn title(&self) -> &'static str {
+        self.title
+    }
+
+    /// The line under the page's title.
+    pub fn intro(&self) -> &'static str {
+        self.intro
+    }
 }
 
 /// A titled run of settings on a page (an empty title: rows without a label above them).
 pub struct Group {
-    pub title: &'static str,
+    title: &'static str,
     /// A paragraph under the title; empty for none.
-    pub blurb: &'static str,
+    blurb: &'static str,
     /// A quiet note at the right of the title ("Follows the terminal until you pick one").
-    pub aside: &'static str,
+    aside: &'static str,
     pub entries: &'static [Entry],
+}
+
+impl Group {
+    pub fn title(&self) -> &'static str {
+        self.title
+    }
+
+    /// A paragraph under the title; empty for none.
+    pub fn blurb(&self) -> &'static str {
+        self.blurb
+    }
+
+    /// A quiet note at the right of the title ("Follows the terminal until you pick one"); empty for none.
+    pub fn aside(&self) -> &'static str {
+        self.aside
+    }
 }
 
 /// One setting.
@@ -84,12 +113,12 @@ pub struct Entry {
     /// Names the setting's row and control in the app, and the setting in tests and devctl.
     /// Unique across the sections.
     pub id: &'static str,
-    pub label: &'static str,
+    label: &'static str,
     /// The quiet line under the label; empty for none. A page may say something more
     /// current in its place (the font in use, how many custom fonts were found).
-    pub description: &'static str,
+    description: &'static str,
     /// Words that find it besides its label and description.
-    pub keywords: &'static str,
+    keywords: &'static str,
     /// The `config.json` keys it writes: what "changed", the reset arrow and "set by a project"
     /// look at. Empty for a row that stores nothing there (a folder button, the agents' hooks).
     pub keys: &'static [&'static str],
@@ -99,6 +128,20 @@ pub struct Entry {
 }
 
 impl Entry {
+    pub fn label(&self) -> &'static str {
+        self.label
+    }
+
+    /// The quiet line under the label; empty for none.
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
+    /// Words that find it besides its label and description; empty for none.
+    pub fn keywords(&self) -> &'static str {
+        self.keywords
+    }
+
     /// Whether the setting is of use with these features on: always, unless it is about a feature
     /// that is off.
     pub fn is_of_use(&self, features: crate::config::FeatureMask) -> bool {
@@ -129,7 +172,7 @@ impl SectionId {
     }
 
     pub fn title(self) -> &'static str {
-        self.info().title
+        self.info().title()
     }
 
     pub fn groups(self) -> &'static [Group] {
@@ -295,7 +338,7 @@ mod tests {
         let mut seen = HashSet::new();
         for (section, group, entry) in entries() {
             assert!(seen.insert(entry.id), "{} appears twice", entry.id);
-            assert!(!entry.label.is_empty(), "{} has no label", entry.id);
+            assert!(!entry.label().is_empty(), "{} has no label", entry.id);
             assert!(!group.entries.is_empty(), "an empty group in {section:?}");
         }
         assert_eq!(entry("tab-width").map(|(s, _, _)| s), Some(SectionId::Git));
