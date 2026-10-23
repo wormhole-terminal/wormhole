@@ -9,7 +9,9 @@
 //!
 //! Native menus, the status item and the Dock menu hold their strings in AppKit and are rebuilt by
 //! whoever owns them when the language changes at run time; no language but English ships yet, so
-//! nothing rebuilds them here.
+//! nothing rebuilds them here. Input placeholders are set when an input is created, so a Settings window
+//! that is already open keeps its search and field placeholders in the old language after a devctl
+//! language switch (only devctl can switch today); a window opened afterwards has the new one.
 //!
 //! Part of the app root (`app/`): it may use every surface, and nothing below the app root may call
 //! into it.
