@@ -3,6 +3,10 @@
 //! `keys/` itself aside. No lookup by a string exists in the API, so a scan is complete: a table that
 //! maps an enum to keys (`match section { … => KEY }`) names the constants and counts.
 //!
+//! Test code does not count as a use: a message only a test asks for is still one nobody sees. A file of
+//! tests (`tests.rs`, `*_tests.rs`, a `tests/` folder under `src`) and an inline `#[cfg(test)] mod … {`
+//! are left out, as `crates/wormhole/tests/support/mod.rs` does for its scans (copied: a different crate).
+//!
 //! A message that is no longer used is deleted from `locales/en/` (and blessed away), or a translator is
 //! made to translate a sentence the interface never shows.
 
@@ -31,7 +35,33 @@ fn keys_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("src/keys")
 }
 
-/// The text of every source under `crates/*/src` except the generated `keys/`, comments cut.
+/// A file of tests only, which `#[cfg(test)] mod x;` pulls in.
+fn is_test_file(path: &Path) -> bool {
+    let in_tests_dir = path.components().any(|part| part.as_os_str() == "tests");
+    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or("");
+    in_tests_dir || name == "tests.rs" || name.ends_with("_tests.rs")
+}
+
+/// The part of a file that is not test code: up to a `#[cfg(test)]`-style attribute (one that
+/// names `test`) in front of an inline module, which closes the file.
+fn non_test_part(text: &str) -> &str {
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("#[cfg(") && trimmed.contains("test") {
+            let rest = &text[offset + line.len()..];
+            let item = rest.lines().map(str::trim_start).find(|l| !l.starts_with("#["));
+            if item.is_some_and(|l| (l.starts_with("mod ") || l.starts_with("pub mod ")) && l.ends_with('{'))
+            {
+                return &text[..offset];
+            }
+        }
+        offset += line.len();
+    }
+    text
+}
+
+/// The text of every source under `crates/*/src` except the generated `keys/` and test code, comments cut.
 fn used_text() -> String {
     let keys = keys_dir();
     let mut files = Vec::new();
@@ -40,9 +70,10 @@ fn used_text() -> String {
     }
     files.sort();
     let mut text = String::new();
-    for file in files.into_iter().filter(|file| !file.starts_with(&keys)) {
+    let relevant = files.into_iter().filter(|file| !file.starts_with(&keys) && !is_test_file(file));
+    for file in relevant {
         let source = fs::read_to_string(&file).unwrap_or_default();
-        for line in source.lines() {
+        for line in non_test_part(&source).lines() {
             text.push_str(line.split("//").next().unwrap_or(""));
             text.push('\n');
         }
