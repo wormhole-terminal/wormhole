@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-appearance.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Appearance"
 pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(104);
@@ -127,3 +128,102 @@ pub const SETTINGS_APPEARANCE_GROUP_CODE_ASIDE: Key = Key::new(162);
 pub const SETTINGS_APPEARANCE_GROUP_INTERFACE: Key = Key::new(163);
 /// "Your fonts"
 pub const SETTINGS_APPEARANCE_GROUP_YOUR_FONTS: Key = Key::new(164);
+/// "Dark"
+pub const SETTINGS_APPEARANCE_DARK: Key = Key::new(165);
+/// "Light"
+pub const SETTINGS_APPEARANCE_LIGHT: Key = Key::new(166);
+/// "Match system"
+pub const SETTINGS_APPEARANCE_MATCH_SYSTEM: Key = Key::new(167);
+/// "Always"
+pub const SETTINGS_APPEARANCE_ALWAYS: Key = Key::new(168);
+/// "When scrolled"
+pub const SETTINGS_APPEARANCE_WHEN_SCROLLED: Key = Key::new(169);
+/// "Never"
+pub const SETTINGS_APPEARANCE_NEVER: Key = Key::new(170);
+/// "Open folder"
+pub const SETTINGS_APPEARANCE_OPEN_FOLDER: Key = Key::new(171);
+/// "Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off."
+pub const SETTINGS_APPEARANCE_OPAQUE_REDUCE_TRANSPARENCY: Key = Key::new(172);
+/// "Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off."
+pub const SETTINGS_APPEARANCE_OPAQUE_INCREASE_CONTRAST: Key = Key::new(173);
+/// "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read."
+pub const SETTINGS_APPEARANCE_BLUR_OFF_WARNING: Key = Key::new(174);
+/// "Turn on blur"
+pub const SETTINGS_APPEARANCE_TURN_ON_BLUR: Key = Key::new(175);
+/// "Liquid Glass needs macOS 26 or later."
+pub const SETTINGS_APPEARANCE_LIQUID_GLASS_NEEDS_MACOS_26: Key = Key::new(176);
+/// "Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off."
+pub const SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY: Key = Key::new(177);
+/// "Settings"
+pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(178);
+/// "Theme Studio"
+pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(179);
+/// "Project settings"
+pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(180);
+/// "Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)"
+pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(185);
+/// "Terminals"
+pub const SETTINGS_APPEARANCE_TERMINALS: Key = Key::new(186);
+/// "~/Projects/"
+pub const SETTINGS_APPEARANCE_PROJECTS: Key = Key::new(187);
+/// "Next steps"
+pub const SETTINGS_APPEARANCE_NEXT_STEPS: Key = Key::new(188);
+/// "Notes"
+pub const SETTINGS_APPEARANCE_NOTES: Key = Key::new(189);
+/// "Context"
+pub const SETTINGS_APPEARANCE_CONTEXT: Key = Key::new(190);
+/// "Filter themes"
+pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(191);
+/// "All"
+pub const SETTINGS_APPEARANCE_ALL: Key = Key::new(192);
+/// "Show fewer"
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(193);
+/// "Import theme…"
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(194);
+/// "No themes match the filter."
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(195);
+
+/// ```text
+/// Yours · { $color }, in every theme
+/// ```
+pub fn settings_appearance_primary_yours(color: &str) -> String {
+    crate::active::message(181, &[("color", Arg::Str(color))])
+}
+
+/// ```text
+/// Pick a colour below · the theme's is { $color }
+/// ```
+pub fn settings_appearance_primary_pick(color: &str) -> String {
+    crate::active::message(182, &[("color", Arg::Str(color))])
+}
+
+/// ```text
+/// The theme's · { $color }. { $description }
+/// ```
+pub fn settings_appearance_primary_theme(color: &str, description: &str) -> String {
+    crate::active::message(183, &[("color", Arg::Str(color)), ("description", Arg::Str(description))])
+}
+
+/// ```text
+/// This terminal shows { $project }'s theme. Your own is kept for everything else.
+/// ```
+pub fn settings_appearance_project_theme_note(project: &str) -> String {
+    crate::active::message(184, &[("project", Arg::Str(project))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] Filter { $count } theme
+///    *[other] Filter { $count } themes
+/// }
+/// ```
+pub fn settings_appearance_filter_themes_count(count: i64) -> String {
+    crate::active::message(196, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// Show all { $total }
+/// ```
+pub fn settings_appearance_show_all_themes(total: &str) -> String {
+    crate::active::message(197, &[("total", Arg::Str(total))])
+}

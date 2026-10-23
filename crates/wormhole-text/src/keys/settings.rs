@@ -7,19 +7,19 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(595);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(628);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(596);
+pub const SETTINGS_NAV_WORK: Key = Key::new(629);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(597);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(630);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(598);
+pub const SETTINGS_NAV_APP: Key = Key::new(631);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(599);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(632);
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(600, &[("section", Arg::Str(section))])
+    crate::active::message(633, &[("section", Arg::Str(section))])
 }

@@ -9,6 +9,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::theme::fonts::FontSlot;
+use wormhole_text::{keys::*, text};
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings_window::SettingsWindow;
@@ -115,10 +116,7 @@ pub(in crate::settings_window) fn draw_stage(
                 .bg(base)
                 .child(div().size_full().flex().items_center().justify_center().bg(wallpaper).child(window)),
         )
-        .child(div().text_caption().text_color(ui.muted).child(
-            "Live preview: your windows over the desktop, with everything below applied as you change it \
-             (the blur behind a window isn't drawn here)",
-        ))
+        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
         .into_any_element()
 }
 
@@ -298,7 +296,7 @@ impl Mini {
             .child(
                 self.title_row()
                     .child(
-                        self.text("Terminals", MINI_HEADING, MINI_LINE, ui.text)
+                        self.text(text(SETTINGS_APPEARANCE_TERMINALS), MINI_HEADING, MINI_LINE, ui.text)
                             .font_weight(FontWeight::BOLD),
                     )
                     .child(div().flex_1())
@@ -312,14 +310,14 @@ impl Mini {
             ))
             .child(self.row(
                 self.ring(ui.agent_working),
-                "sidebar polish",
-                Some(("Editing sidebar.rs…", ui.selected_muted)),
+                "sidebar polish", // text: sample (the miniature's made-up terminals, commands and notes)
+                Some(("Editing sidebar.rs…", ui.selected_muted)), // text: sample (the miniature's made-up terminals, commands and notes)
                 true,
             ))
             .child(self.row(
                 self.dot(ui.agent_attention, false),
-                "diff perf",
-                Some(("Needs you · Approve cargo test?", ui.agent_attention)),
+                "diff perf", // text: sample (the miniature's made-up terminals, commands and notes)
+                Some(("Needs you · Approve cargo test?", ui.agent_attention)), // text: sample (the miniature's made-up terminals, commands and notes)
                 false,
             ))
             .child(self.row(self.dot(ui.faint, true), "zsh", None, false))
@@ -331,11 +329,11 @@ impl Mini {
             ))
             .child(self.row(
                 self.icon(IconName::Check, MINI_GLYPH, ui.agent_done),
-                "auth tokens",
-                Some(("Finished · 12m ago", ui.agent_done)),
+                "auth tokens", // text: sample (the miniature's made-up terminals, commands and notes)
+                Some(("Finished · 12m ago", ui.agent_done)), // text: sample (the miniature's made-up terminals, commands and notes)
                 false,
             ))
-            .child(self.row(self.dot(ui.faint, true), "rate limits", None, false))
+            .child(self.row(self.dot(ui.faint, true), "rate limits", None, false)) // text: sample (the miniature's made-up terminals, commands and notes)
             .child(self.band("dotfiles", None, vec![self.badge("3")], true))
             .child(self.band("website", Some(self.chip("main")), vec![self.badge("2")], true))
     }
@@ -351,9 +349,14 @@ impl Mini {
             .items_center()
             .gap(px(MINI_GAP))
             .child(self.icon(IconName::Folder, MINI_CRUMB_ICON, ui.muted))
-            .child(div().flex().child(self.text("~/Projects/", MINI_LABEL, MINI_LINE, ui.muted)).child(
-                self.text("terminal", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM),
-            ));
+            .child(
+                div()
+                    .flex()
+                    .child(self.text(text(SETTINGS_APPEARANCE_PROJECTS), MINI_LABEL, MINI_LINE, ui.muted))
+                    .child(
+                        self.text("terminal", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM),
+                    ),
+            );
         let claude = wormhole_core::agents::agent(AgentId::Claude);
         let process = div()
             .flex()
@@ -371,9 +374,9 @@ impl Mini {
                     .child(self.lead(self.ring(ui.agent_working))),
             )
             .child(
-                self.text("sidebar polish", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM),
+                self.text("sidebar polish", MINI_LABEL, MINI_LINE, ui.text).font_weight(FontWeight::MEDIUM), // text: sample (the miniature's made-up terminals, commands and notes)
             )
-            .child(self.caption("working · 4m", ui.muted));
+            .child(self.caption("working · 4m", ui.muted)); // text: sample (the miniature's made-up terminals, commands and notes)
         div()
             .min_w_0()
             .flex()
@@ -436,37 +439,33 @@ impl Mini {
                     .font_family(self.mono.clone())
                     .text_size(px(MINI_LABEL))
                     .line_height(px(MINI_LINE))
-                    .child(self.mono_line(&[("~/Projects/terminal on ui-unify", muted, false)]))
-                    .child(self.mono_line(&[("$ claude", text, false)]))
+                    .child(self.mono_line(&[("~/Projects/terminal on ui-unify", muted, false)])) // text: sample (the miniature's made-up terminals, commands and notes)
+                    .child(self.mono_line(&[("$ claude", text, false)])) // text: sample (the miniature's made-up terminals, commands and notes)
                     .child(self.mono_line(&[]))
                     .child(self.mono_line(&[(
-                        "> Folder bands, one lead column, and ⌘ hints only while ⌘ is held.",
+                        "> Folder bands, one lead column, and ⌘ hints only while ⌘ is held.", // text: sample (the miniature's made-up terminals, commands and notes)
                         ui.primary,
                         false,
                     )]))
                     .child(self.mono_line(&[]))
+                    .child(self.mono_line(&step(
+                        "Read", // text: sample (the miniature's made-up terminals, commands and notes)
+                        " crates/wormhole/src/workspace/sidebar.rs (532 lines)", // text: sample (the miniature's made-up terminals, commands and notes)
+                    )))
+                    .child(self.mono_line(&step("Update", " crates/wormhole/src/workspace/sidebar.rs"))) // text: sample (the miniature's made-up terminals, commands and notes)
+                    .child(self.mono_line(&note(
+                        "└ +18 −11 group_header: branch as a chip, badge right-aligned", // text: sample (the miniature's made-up terminals, commands and notes)
+                    )))
+                    .child(self.mono_line(&step("Bash", " cargo test -p wormhole-core"))) // text: sample (the miniature's made-up terminals, commands and notes)
                     .child(
-                        self.mono_line(&step(
-                            "Read",
-                            " crates/wormhole/src/workspace/sidebar.rs (532 lines)",
-                        )),
+                        self.mono_line(&note("└ test result: ok. 214 passed; 0 failed; finished in 3.42s")), // text: sample (the miniature's made-up terminals, commands and notes)
                     )
-                    .child(self.mono_line(&step("Update", " crates/wormhole/src/workspace/sidebar.rs")))
-                    .child(
-                        self.mono_line(&note(
-                            "└ +18 −11 group_header: branch as a chip, badge right-aligned",
-                        )),
-                    )
-                    .child(self.mono_line(&step("Bash", " cargo test -p wormhole-core")))
-                    .child(
-                        self.mono_line(&note("└ test result: ok. 214 passed; 0 failed; finished in 3.42s")),
-                    )
-                    .child(self.mono_line(&step("Update", " crates/wormhole/src/style.rs")))
-                    .child(self.mono_line(&note("└ +6 −2 section_header: one shared 28px header row")))
+                    .child(self.mono_line(&step("Update", " crates/wormhole/src/style.rs"))) // text: sample (the miniature's made-up terminals, commands and notes)
+                    .child(self.mono_line(&note("└ +6 −2 section_header: one shared 28px header row"))) // text: sample (the miniature's made-up terminals, commands and notes)
                     .child(self.mono_line(&[]))
                     .child(self.mono_line(&[
-                        ("* Editing sidebar.rs… ", yellow, false),
-                        ("(esc to interrupt)", muted, false),
+                        ("* Editing sidebar.rs… ", yellow, false), // text: sample (the miniature's made-up terminals, commands and notes)
+                        ("(esc to interrupt)", muted, false), // text: sample (the miniature's made-up terminals, commands and notes)
                     ]))
                     .child(self.mono_line(&[("> ", text, false)]).child(cursor)),
             )
@@ -552,17 +551,17 @@ impl Mini {
                     .child(self.icon(IconName::Inbox, MINI_ICON, ui.muted))
                     .child(self.icon(IconName::PanelRight, MINI_ICON, ui.muted)),
             )
-            .child(self.band("Next steps", None, vec![self.badge("2"), add()], false))
-            .child(self.task(true, "Fix the flaky login test"))
-            .child(self.task(false, "Update README with setup steps"))
-            .child(self.task(false, "Tighten folder header spacing"))
-            .child(self.band("Notes", None, vec![self.badge("2"), add()], false))
-            .child(self.note(true, "Sidebar ideas"))
-            .child(note_line("Drop the idle line on quiet rows."))
-            .child(note_line("Branch as a chip next to the folder name."))
+            .child(self.band(text(SETTINGS_APPEARANCE_NEXT_STEPS), None, vec![self.badge("2"), add()], false))
+            .child(self.task(true, "Fix the flaky login test")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(self.task(false, "Update README with setup steps")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(self.task(false, "Tighten folder header spacing")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(self.band(text(SETTINGS_APPEARANCE_NOTES), None, vec![self.badge("2"), add()], false))
+            .child(self.note(true, "Sidebar ideas")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(note_line("Drop the idle line on quiet rows.")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(note_line("Branch as a chip next to the folder name.")) // text: sample (the miniature's made-up terminals, commands and notes)
             .child(note_line(""))
-            .child(note_line("One lead column: chevron, status, checkbox."))
-            .child(self.note(false, "Release checklist").mt(px(MINI_GAP)))
+            .child(note_line("One lead column: chevron, status, checkbox.")) // text: sample (the miniature's made-up terminals, commands and notes)
+            .child(self.note(false, "Release checklist").mt(px(MINI_GAP))) // text: sample (the miniature's made-up terminals, commands and notes)
     }
 
     /// The status bar: branch, agents, the context meter, the terminal's size.
@@ -602,22 +601,22 @@ impl Mini {
                 self.caption("±3", ui.muted),
             ]))
             .child(divider())
-            .child(item(vec![self.ring(ui.agent_working), self.caption("Claude working · 4m", ui.muted)]))
+            .child(item(vec![self.ring(ui.agent_working), self.caption("Claude working · 4m", ui.muted)])) // text: sample (the miniature's made-up terminals, commands and notes)
             .child(item(vec![
                 self.icon(IconName::CircleAlert, MINI_GLYPH, ui.agent_attention),
-                self.caption("1 needs you", ui.agent_attention),
+                self.caption("1 needs you", ui.agent_attention), // text: sample (the miniature's made-up terminals, commands and notes)
             ]))
             .child(item(vec![
                 self.icon(IconName::CircleCheck, MINI_GLYPH, ui.agent_done),
-                self.caption("1 done", ui.muted),
+                self.caption("1 done", ui.muted), // text: sample (the miniature's made-up terminals, commands and notes)
             ]))
             .child(div().flex_1())
             .child(item(vec![
-                self.caption("Context", ui.muted),
+                self.caption(text(SETTINGS_APPEARANCE_CONTEXT), ui.muted),
                 meter,
                 self.caption("62%", ui.text).font_weight(FontWeight::SEMIBOLD),
             ]))
             .child(divider())
-            .child(item(vec![self.caption("zsh · 90×40", ui.muted)]))
+            .child(item(vec![self.caption("zsh · 90×40", ui.muted)])) // text: sample (the miniature's made-up terminals, commands and notes)
     }
 }

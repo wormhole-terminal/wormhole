@@ -106,3 +106,65 @@ settings-appearance-group-interface = Interface
 ## Your fonts
 
 settings-appearance-group-your-fonts = Your fonts
+
+## settings_window/sections/appearance.rs (labels, hints and notes drawn by this page's code)
+
+settings-appearance-dark = Dark
+settings-appearance-light = Light
+settings-appearance-match-system = Match system
+settings-appearance-always = Always
+settings-appearance-when-scrolled = When scrolled
+settings-appearance-never = Never
+settings-appearance-open-folder = Open folder
+settings-appearance-opaque-reduce-transparency = Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
+settings-appearance-opaque-increase-contrast = Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
+settings-appearance-blur-off-warning = Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.
+settings-appearance-turn-on-blur = Turn on blur
+settings-appearance-liquid-glass-needs-macos-26 = Liquid Glass needs macOS 26 or later.
+settings-appearance-glass-held-by-accessibility = Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off.
+settings-appearance-settings = Settings
+settings-appearance-theme-studio = Theme Studio
+settings-appearance-project-settings = Project settings
+
+## The primary colour row's quiet line, and the project theme note
+
+# The line under "Use the theme's primary colour" once a colour was picked. { $color } is its hex code.
+settings-appearance-primary-yours = Yours · { $color }, in every theme
+
+# The same line while no colour is picked yet. { $color } is the theme's own primary, as a hex code.
+settings-appearance-primary-pick = Pick a colour below · the theme's is { $color }
+
+# The same line while the theme's primary is in use. { $color } is its hex code and { $description } the
+# row's own description, which follows after a full stop.
+settings-appearance-primary-theme = The theme's · { $color }. { $description }
+
+# Over the theme picker in a project's terminal. { $project } is the project's name.
+settings-appearance-project-theme-note = This terminal shows { $project }'s theme. Your own is kept for everything else.
+
+## settings_window/sections/stage.rs (labels, hints and notes drawn by this page's code)
+
+settings-appearance-stage-caption = Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)
+settings-appearance-terminals = Terminals
+settings-appearance-projects = ~/Projects/
+settings-appearance-next-steps = Next steps
+settings-appearance-notes = Notes
+settings-appearance-context = Context
+
+## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
+
+settings-appearance-filter-themes = Filter themes
+settings-appearance-all = All
+settings-appearance-show-fewer = Show fewer
+settings-appearance-import-theme = Import theme…
+settings-appearance-no-themes-match-the-filter = No themes match the filter.
+
+## Sentences with a hole in them
+
+# The theme filter's placeholder. { $count } is how many themes there are to filter.
+settings-appearance-filter-themes-count = { $count ->
+    [one] Filter { $count } theme
+   *[other] Filter { $count } themes
+}
+
+# The link under the theme cards that shows the rest. { $total } is how many cards there are.
+settings-appearance-show-all-themes = Show all { $total }

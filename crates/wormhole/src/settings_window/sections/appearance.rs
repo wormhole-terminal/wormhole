@@ -13,6 +13,7 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::config::{ThemeMode, TitleBorder};
 use wormhole_core::theme::tokens::Translucency;
+use wormhole_text::{keys::*, text};
 
 use super::{open_button, stage};
 use crate::select::Choice;
@@ -24,9 +25,9 @@ use crate::style::{self, Edges};
 use crate::theme_bridge;
 
 const MODES: &[Segment] = &[
-    Segment::icon_literal(IconName::Moon, "Dark"),
-    Segment::icon_literal(IconName::Sun, "Light"),
-    Segment::icon_literal(IconName::Monitor, "Match system"),
+    Segment::icon(IconName::Moon, SETTINGS_APPEARANCE_DARK),
+    Segment::icon(IconName::Sun, SETTINGS_APPEARANCE_LIGHT),
+    Segment::icon(IconName::Monitor, SETTINGS_APPEARANCE_MATCH_SYSTEM),
 ];
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -57,7 +58,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("translucent", draw_translucent),
     Setting::segmented(
         "title-border",
-        &[Segment::literal("Always"), Segment::literal("When scrolled"), Segment::literal("Never")],
+        &[
+            Segment::text(SETTINGS_APPEARANCE_ALWAYS),
+            Segment::text(SETTINGS_APPEARANCE_WHEN_SCROLLED),
+            Segment::text(SETTINGS_APPEARANCE_NEVER),
+        ],
         |s| TitleBorder::ALL.iter().position(|b| *b == s.title_border).unwrap_or(1),
         |s, ix| s.title_border = TitleBorder::ALL.get(ix).copied().unwrap_or_default(),
     ),
@@ -69,9 +74,12 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("title-pull-request", title_pull_request),
     Setting::custom("icon-theme", draw_icon_select),
     Setting::custom("icon-themes-folder", |_, _| {
-        open_button("icon-themes-folder", IconName::ExternalLink, "Open folder", |cx| {
-            open_folder(&crate::icons::user_dir(), cx)
-        })
+        open_button(
+            "icon-themes-folder",
+            IconName::ExternalLink,
+            text(SETTINGS_APPEARANCE_OPEN_FOLDER),
+            |cx| open_folder(&crate::icons::user_dir(), cx),
+        )
     }),
 ];
 
@@ -81,11 +89,9 @@ fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     let base = store.base_tokens().get("primary").map(|c| c.to_hex()).unwrap_or_default();
     let (_, _, entry) = settings_index::entry("primary-color")?;
     Some(match store.settings.primary() {
-        Some(chosen) => format!("Yours · {}, in every theme", chosen.to_hex()).into(),
-        None if !store.settings.uses_theme_primary() => {
-            format!("Pick a colour below · the theme's is {base}").into()
-        }
-        None => format!("The theme's · {base}. {}", entry.description()).into(),
+        Some(chosen) => settings_appearance_primary_yours(&chosen.to_hex()).into(),
+        None if !store.settings.uses_theme_primary() => settings_appearance_primary_pick(&base).into(),
+        None => settings_appearance_primary_theme(&base, entry.description()).into(),
     })
 }
 
@@ -150,18 +156,12 @@ fn draw_opacity(w: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
 /// Contrast.
 fn reduced_transparency_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let system = cx.global::<SettingsStore>().system();
-    let text = match (system.reduce_transparency, system.increase_contrast) {
-        (true, _) => {
-            "Reduce Transparency is on in System Settings, so every window is opaque. \
-             Your opacity applies again when it's off."
-        }
-        (false, true) => {
-            "Increase Contrast is on in System Settings, so every window is opaque. \
-             Your opacity applies again when it's off."
-        }
+    let note = match (system.reduce_transparency, system.increase_contrast) {
+        (true, _) => text(SETTINGS_APPEARANCE_OPAQUE_REDUCE_TRANSPARENCY),
+        (false, true) => text(SETTINGS_APPEARANCE_OPAQUE_INCREASE_CONTRAST),
         (false, false) => return None,
     };
-    Some(style::banner(ui(cx), style::BannerKind::Info, false, text).into_any_element())
+    Some(style::banner(ui(cx), style::BannerKind::Info, false, note).into_any_element())
 }
 
 /// Below 95 % without the blur the desktop shows sharp behind the text, and no text colour
@@ -170,20 +170,15 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     let s = settings(cx);
     let look = Translucency { opacity: s.opacity, blur: s.blur };
     look.unsafe_without_blur().then(|| {
-        style::banner(
-            ui(cx),
-            style::BannerKind::Warning,
-            false,
-            "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.",
-        )
-        .child(
-            Button::new("blur-on")
-                .ghost()
-                .small()
-                .label("Turn on blur")
-                .on_click(|_, _, cx| update_settings(cx, |s| s.blur = true)),
-        )
-        .into_any_element()
+        style::banner(ui(cx), style::BannerKind::Warning, false, text(SETTINGS_APPEARANCE_BLUR_OFF_WARNING))
+            .child(
+                Button::new("blur-on")
+                    .ghost()
+                    .small()
+                    .label(text(SETTINGS_APPEARANCE_TURN_ON_BLUR))
+                    .on_click(|_, _, cx| update_settings(cx, |s| s.blur = true)),
+            )
+            .into_any_element()
     })
 }
 
@@ -196,15 +191,14 @@ fn draw_liquid_glass(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
 }
 
 fn liquid_glass_hint(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
-    let text = if !crate::platform::vibrancy::glass_available() {
-        "Liquid Glass needs macOS 26 or later."
+    let note = if !crate::platform::vibrancy::glass_available() {
+        text(SETTINGS_APPEARANCE_LIQUID_GLASS_NEEDS_MACOS_26)
     } else if cx.global::<SettingsStore>().system().opaque() {
-        "Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays \
-         painted. The glass returns when it's off."
+        text(SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY)
     } else {
         return None;
     };
-    Some(style::banner(ui(cx), style::BannerKind::Info, false, text).into_any_element())
+    Some(style::banner(ui(cx), style::BannerKind::Info, false, note).into_any_element())
 }
 
 /// The settings and Studio windows in one row of checkboxes.
@@ -216,12 +210,12 @@ fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .gap_4()
         .child(
             style::checkbox("translucent-settings", ui, s.settings_translucent)
-                .in_form("Settings")
+                .in_form(text(SETTINGS_APPEARANCE_SETTINGS))
                 .on_change(|checked, _, cx| update_settings(cx, |s| s.settings_translucent = checked)),
         )
         .child(
             style::checkbox("translucent-studio", ui, s.studio_translucent)
-                .in_form("Theme Studio")
+                .in_form(text(SETTINGS_APPEARANCE_THEME_STUDIO))
                 .on_change(|checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked)),
         )
         .into_any_element()
@@ -258,18 +252,17 @@ fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
                 ui,
                 style::BannerKind::Info,
                 false,
-                format!(
-                    "This terminal shows {}'s theme. Your own is kept for everything else.",
-                    project.name
-                ),
+                settings_appearance_project_theme_note(&project.name),
             )
             .child(
-                Button::new("project-theme-settings").ghost().small().label("Project settings").on_click(
-                    cx.listener(move |this, _, _, cx| {
+                Button::new("project-theme-settings")
+                    .ghost()
+                    .small()
+                    .label(text(SETTINGS_APPEARANCE_PROJECT_SETTINGS))
+                    .on_click(cx.listener(move |this, _, _, cx| {
                         this.projects.select(root.clone());
                         this.show_section(Section::Projects, cx);
-                    }),
-                ),
+                    })),
             )
         }))
         .child(window.render_theme_picker(cx))

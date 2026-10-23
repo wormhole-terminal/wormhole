@@ -7,71 +7,71 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(553);
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(586);
 /// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(554);
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(587);
 /// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(555);
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(588);
 /// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(556);
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(589);
 /// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(557);
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(590);
 /// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(558);
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(591);
 /// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(559);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(592);
 /// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(560);
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(593);
 /// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(561);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(594);
 /// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(562);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(595);
 /// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(563);
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(596);
 /// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(564);
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(597);
 /// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(565);
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(598);
 /// "Stable"
-pub const SETTINGS_UPDATES_STABLE: Key = Key::new(566);
+pub const SETTINGS_UPDATES_STABLE: Key = Key::new(599);
 /// "Unstable"
-pub const SETTINGS_UPDATES_UNSTABLE: Key = Key::new(567);
+pub const SETTINGS_UPDATES_UNSTABLE: Key = Key::new(600);
 /// "Checked just now."
-pub const SETTINGS_UPDATES_CHECKED_JUST_NOW: Key = Key::new(568);
+pub const SETTINGS_UPDATES_CHECKED_JUST_NOW: Key = Key::new(601);
 /// "Checked a minute ago."
-pub const SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO: Key = Key::new(569);
+pub const SETTINGS_UPDATES_CHECKED_A_MINUTE_AGO: Key = Key::new(602);
 /// "Checked an hour ago."
-pub const SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO: Key = Key::new(570);
+pub const SETTINGS_UPDATES_CHECKED_AN_HOUR_AGO: Key = Key::new(603);
 /// "Fixes a security issue."
-pub const SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE: Key = Key::new(571);
+pub const SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE: Key = Key::new(604);
 /// "Development build: updates only work in released builds."
-pub const SETTINGS_UPDATES_DEVELOPMENT_BUILD: Key = Key::new(572);
+pub const SETTINGS_UPDATES_DEVELOPMENT_BUILD: Key = Key::new(605);
 /// "Not checked yet."
-pub const SETTINGS_UPDATES_NOT_CHECKED_YET: Key = Key::new(573);
+pub const SETTINGS_UPDATES_NOT_CHECKED_YET: Key = Key::new(606);
 /// "Checking…"
-pub const SETTINGS_UPDATES_CHECKING: Key = Key::new(574);
+pub const SETTINGS_UPDATES_CHECKING: Key = Key::new(607);
 /// "Wormhole is up to date."
-pub const SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE: Key = Key::new(575);
+pub const SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE: Key = Key::new(608);
 /// "Downloading…"
-pub const SETTINGS_UPDATES_DOWNLOADING: Key = Key::new(576);
+pub const SETTINGS_UPDATES_DOWNLOADING: Key = Key::new(609);
 /// "Skip this version"
-pub const SETTINGS_UPDATES_SKIP_THIS_VERSION: Key = Key::new(577);
+pub const SETTINGS_UPDATES_SKIP_THIS_VERSION: Key = Key::new(610);
 /// "Install update"
-pub const SETTINGS_UPDATES_INSTALL_UPDATE: Key = Key::new(578);
+pub const SETTINGS_UPDATES_INSTALL_UPDATE: Key = Key::new(611);
 /// "Don't restart"
-pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(579);
+pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(612);
 /// "Restart now"
-pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(580);
+pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(613);
 /// "Check now"
-pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(581);
+pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(614);
 /// "Fixes a critical-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(588);
+pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(621);
 /// "Fixes a high-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(589);
+pub const SETTINGS_UPDATES_FIXES_HIGH: Key = Key::new(622);
 /// "Fixes a medium-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(590);
+pub const SETTINGS_UPDATES_FIXES_MEDIUM: Key = Key::new(623);
 /// "Fixes a low-severity security issue."
-pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(591);
+pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(624);
 
 /// ```text
 /// { $count ->
@@ -80,7 +80,7 @@ pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(591);
 /// }
 /// ```
 pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
-    crate::active::message(582, &[("count", Arg::Int(count))])
+    crate::active::message(615, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -90,7 +90,7 @@ pub fn settings_updates_checked_minutes_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_hours_ago(count: i64) -> String {
-    crate::active::message(583, &[("count", Arg::Int(count))])
+    crate::active::message(616, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -100,47 +100,47 @@ pub fn settings_updates_checked_hours_ago(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_updates_checked_days_ago(count: i64) -> String {
-    crate::active::message(584, &[("count", Arg::Int(count))])
+    crate::active::message(617, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { -brand } is up to date. { $checked }
 /// ```
 pub fn settings_updates_up_to_date_checked(checked: &str) -> String {
-    crate::active::message(585, &[("checked", Arg::Str(checked))])
+    crate::active::message(618, &[("checked", Arg::Str(checked))])
 }
 
 /// ```text
 /// Security update available: { -brand } { $version }.
 /// ```
 pub fn settings_updates_security_available(version: &str) -> String {
-    crate::active::message(586, &[("version", Arg::Str(version))])
+    crate::active::message(619, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is available.
 /// ```
 pub fn settings_updates_version_available(version: &str) -> String {
-    crate::active::message(587, &[("version", Arg::Str(version))])
+    crate::active::message(620, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restarts when your terminals are idle.
 /// ```
 pub fn settings_updates_installed_waits(version: &str) -> String {
-    crate::active::message(592, &[("version", Arg::Str(version))])
+    crate::active::message(625, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// Version { $version } is installed. Restart to use it.
 /// ```
 pub fn settings_updates_installed_restart(version: &str) -> String {
-    crate::active::message(593, &[("version", Arg::Str(version))])
+    crate::active::message(626, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// What's new in { $version }
 /// ```
 pub fn settings_updates_whats_new(version: &str) -> String {
-    crate::active::message(594, &[("version", Arg::Str(version))])
+    crate::active::message(627, &[("version", Arg::Str(version))])
 }

@@ -10,6 +10,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use wormhole_text::{keys::*, text, whole};
 
 use wormhole_core::theme::catalog::{self, ThemeEntry};
 use wormhole_core::theme::tokens::Appearance;
@@ -84,11 +85,10 @@ fn card_count(cx: &mut App) -> usize {
 }
 
 /// The filter's placeholder: how many themes there are to filter.
-fn filter_placeholder(count: usize) -> String {
-    match count {
-        0 => "Filter themes".to_string(),
-        1 => "Filter 1 theme".to_string(),
-        n => format!("Filter {n} themes"),
+fn filter_placeholder(themes: usize) -> String {
+    match themes {
+        0 => text(SETTINGS_APPEARANCE_FILTER_THEMES).to_string(),
+        n => settings_appearance_filter_themes_count(whole(n)),
     }
 }
 
@@ -342,9 +342,9 @@ impl SettingsWindow {
             )
             .child(
                 style::segmented_form(ui)
-                    .child(mode_segment(0, "All", None))
-                    .child(mode_segment(1, "Dark", Some(Appearance::Dark)))
-                    .child(mode_segment(2, "Light", Some(Appearance::Light))),
+                    .child(mode_segment(0, text(SETTINGS_APPEARANCE_ALL), None))
+                    .child(mode_segment(1, text(SETTINGS_APPEARANCE_DARK), Some(Appearance::Dark)))
+                    .child(mode_segment(2, text(SETTINGS_APPEARANCE_LIGHT), Some(Appearance::Light))),
             );
         let total = set.cards.len();
         let footer = div()
@@ -356,7 +356,11 @@ impl SettingsWindow {
                     style::link_button(
                         "themes-all",
                         ui,
-                        if self.themes_all { "Show fewer".to_string() } else { format!("Show all {total}") },
+                        if self.themes_all {
+                            text(SETTINGS_APPEARANCE_SHOW_FEWER).to_string()
+                        } else {
+                            settings_appearance_show_all_themes(&total.to_string())
+                        },
                         false,
                     )
                     .text_color(ui.text)
@@ -377,7 +381,7 @@ impl SettingsWindow {
                     .outline()
                     .small()
                     .icon(IconName::ArrowDown)
-                    .label("Import theme…")
+                    .label(text(SETTINGS_APPEARANCE_IMPORT_THEME))
                     .on_click(cx.listener(|_, _, _, cx| import_theme(cx.weak_entity(), cx))),
             )
             .child(
@@ -385,7 +389,7 @@ impl SettingsWindow {
                     .outline()
                     .small()
                     .icon(IconName::Palette)
-                    .label("Theme Studio")
+                    .label(text(SETTINGS_APPEARANCE_THEME_STUDIO))
                     .child(style::keycap(
                         ui,
                         wormhole_core::keys::keymap::glyphs(
@@ -402,7 +406,13 @@ impl SettingsWindow {
             .child(toolbar)
             .child(div().grid().grid_cols(4).gap_3().children(cards))
             .when(shown == 0, |d| {
-                d.child(div().py_4().text_body().text_color(ui.muted).child("No themes match the filter."))
+                d.child(
+                    div()
+                        .py_4()
+                        .text_body()
+                        .text_color(ui.muted)
+                        .child(text(SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER)),
+                )
             })
             .child(footer)
             .into_any_element()
