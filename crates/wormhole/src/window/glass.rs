@@ -46,77 +46,68 @@ impl Workspace {
         let store = store_in(&self.profile, cx);
         store.settings.glass_on(self.glass.available(), store.system().opaque())
     }
+}
 
-    /// A probe filling its parent that asks for glass under that region, inset, as the glass
-    /// `key`: the stretches of one card all name it.
-    pub(in crate::window) fn glass_probe(
-        &self,
-        key: u64,
-        inset: Insets,
-        radius: f32,
-        clip: Option<u32>,
-    ) -> AnyElement {
-        Self::glass_probe_on(&self.glass, key, inset, radius, clip)
-    }
+/// A probe filling its parent that asks for glass under that region, inset, as the glass `key`, on a
+/// window's glass held apart from its workspace (the sidebar's cards, a pile's cards).
+pub(in crate::window) fn probe(
+    glass: &std::rc::Rc<crate::platform::vibrancy::Glass>,
+    key: u64,
+    inset: Insets,
+    radius: f32,
+    clip: Option<u32>,
+) -> AnyElement {
+    let glass = glass.clone();
+    canvas(
+        move |bounds, _, _| {
+            let Insets(l, t, r, b) = inset;
+            glass.propose(
+                key,
+                GlassRect {
+                    x: f32::from(bounds.origin.x) + l,
+                    y: f32::from(bounds.origin.y) + t,
+                    w: (f32::from(bounds.size.width) - l - r).max(0.0),
+                    h: (f32::from(bounds.size.height) - t - b).max(0.0),
+                    radius,
+                },
+                clip,
+            );
+        },
+        |_, _, _, _| {},
+    )
+    // Pinned to the corner: an absolute child otherwise starts after its parent's padding.
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
+}
 
-    /// [`Self::glass_probe`] for a window's glass held apart from its workspace (a pile's cards
-    /// ask for theirs while they animate).
-    pub(in crate::window) fn glass_probe_on(
-        glass: &std::rc::Rc<crate::platform::vibrancy::Glass>,
-        key: u64,
-        inset: Insets,
-        radius: f32,
-        clip: Option<u32>,
-    ) -> AnyElement {
-        let glass = glass.clone();
-        canvas(
-            move |bounds, _, _| {
-                let Insets(l, t, r, b) = inset;
-                glass.propose(
-                    key,
-                    GlassRect {
-                        x: f32::from(bounds.origin.x) + l,
-                        y: f32::from(bounds.origin.y) + t,
-                        w: (f32::from(bounds.size.width) - l - r).max(0.0),
-                        h: (f32::from(bounds.size.height) - t - b).max(0.0),
-                        radius,
-                    },
-                    clip,
-                );
-            },
-            |_, _, _, _| {},
-        )
-        // Pinned to the corner: an absolute child otherwise starts after its parent's padding.
-        .absolute()
-        .top_0()
-        .left_0()
-        .size_full()
-        .into_any_element()
-    }
-
-    /// A probe filling its parent that makes it clip `id`: the glass of the regions that name it
-    /// is cut to it (the sidebar's list, which scrolls under its header; a row of tabs).
-    pub(in crate::window) fn glass_clip_probe(&self, id: u32) -> AnyElement {
-        let glass = self.glass.clone();
-        canvas(
-            move |bounds, _, _| {
-                glass.clip_to(
-                    id,
-                    GlassRect {
-                        x: f32::from(bounds.origin.x),
-                        y: f32::from(bounds.origin.y),
-                        w: f32::from(bounds.size.width),
-                        h: f32::from(bounds.size.height),
-                        radius: 0.0,
-                    },
-                );
-            },
-            |_, _, _, _| {},
-        )
-        .absolute()
-        .top_0()
-        .left_0()
-        .size_full()
-        .into_any_element()
-    }
+/// A probe filling its parent that makes it clip `id`: the glass of the regions that name it is cut to
+/// it (the sidebar's list, which scrolls under its header; a row of tabs).
+pub(in crate::window) fn clip_probe(
+    glass: &std::rc::Rc<crate::platform::vibrancy::Glass>,
+    id: u32,
+) -> AnyElement {
+    let glass = glass.clone();
+    canvas(
+        move |bounds, _, _| {
+            glass.clip_to(
+                id,
+                GlassRect {
+                    x: f32::from(bounds.origin.x),
+                    y: f32::from(bounds.origin.y),
+                    w: f32::from(bounds.size.width),
+                    h: f32::from(bounds.size.height),
+                    radius: 0.0,
+                },
+            );
+        },
+        |_, _, _, _| {},
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+    .into_any_element()
 }

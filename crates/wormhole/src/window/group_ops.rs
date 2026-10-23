@@ -1,5 +1,6 @@
-//! What a group's menu does beyond rearranging: close it (asking once if an agent is working in
-//! it) and move it, with its splits, to a window of its own.
+//! What a group's menu does to terminals and windows beyond rearranging the list (`sidebar::groups`
+//! does that): close it (asking once if an agent is working in it) and move it, with its splits, to a
+//! window of its own.
 use std::collections::HashSet;
 
 use gpui_kit::*;
@@ -17,10 +18,19 @@ use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace};
 
 impl Workspace {
+    /// Terminal `id` and the rest of its split: they move, join and leave groups together.
+    fn with_split_mates(&self, id: i64) -> Vec<i64> {
+        let Some(ix) = self.find_session(id) else { return Vec::new() };
+        match self.sessions[ix].split {
+            Some(split) => self.members(split).into_iter().map(|member| self.sessions[member].id).collect(),
+            None => vec![id],
+        }
+    }
+
     /// Close group `group`: every terminal in it ends, and the group goes (a pinned one stays as a
     /// line). One question first when an agent works or waits in it, or a command runs.
-    pub(in crate::window) fn close_group(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(found) = self.sidebar.view.groups.get(group) else { return };
+    pub(super) fn close_group(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(found) = self.sidebar_view(cx).groups.get(group) else { return };
         let (name, members) = (found.name.clone(), found.members.clone());
         let sessions: Vec<&Session> =
             members.iter().filter_map(|&id| self.find_session(id)).map(|ix| &self.sessions[ix]).collect();
@@ -90,13 +100,8 @@ impl Workspace {
     /// Move group `group` to a window of its own, its terminals running on (the new window takes
     /// the live terminals) and the splits they are in along with them. An empty pinned group has
     /// nothing to move.
-    pub(in crate::window) fn move_group_to_window(
-        &mut self,
-        group: u32,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(found) = self.sidebar.view.groups.get(group).cloned() else { return };
+    pub(super) fn move_group_to_window(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(found) = self.sidebar_view(cx).groups.get(group).cloned() else { return };
         // The group's terminals and the rest of every split they are in.
         let mut ids: Vec<i64> = Vec::new();
         for &id in &found.members {
@@ -123,7 +128,7 @@ impl Workspace {
         let mut sidebar = WindowSidebar::default();
         sidebar.groups.0.push(found.clone());
         sidebar.items = vec![Item::Group(group)];
-        if self.sidebar.view.is_group_folded(group) {
+        if self.sidebar_view(cx).is_group_folded(group) {
             sidebar.folded.insert(group_key(group));
         }
         let layout = Layout::new(self.panes, self.right_tab, sidebar);
@@ -137,17 +142,19 @@ impl Workspace {
             self.features_left(left.id, cx);
         }
         self.splits.retain(|split| !split_ids.contains(&split.id));
-        self.sidebar.view.groups.remove(group);
-        self.sidebar.view.folded.remove(&group_key(group));
-        for &id in &ids {
-            self.sidebar.view.groups.leave(id);
-        }
+        self.edit_sidebar_view(cx, |view| {
+            view.groups.remove(group);
+            view.folded.remove(&group_key(group));
+            for &id in &ids {
+                view.groups.leave(id);
+            }
+        });
         self.active = selected.and_then(|id| self.find_session(id)).unwrap_or(0);
         if self.sessions.is_empty() {
             self.active = usize::MAX;
             self.new_session(window, cx);
         }
-        self.list_rearranged(cx);
+        self.with_sidebar(cx, |sidebar, cx| sidebar.rearranged(cx));
 
         let source = window.bounds();
         // The new window stays in this window's profile: its database, its environment.

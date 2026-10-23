@@ -34,7 +34,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let cwd = self.start_cwd(self.active_group(), cx);
+        let cwd = self.start_cwd(self.active_group(cx), cx);
         self.open_session(shell, cwd, window, cx);
     }
 
@@ -62,12 +62,12 @@ impl Workspace {
     ) -> usize {
         let mut record = SessionRecord::new(self.alloc_id(cx), None, cwd);
         record.shell = shell;
-        let group = group.unwrap_or_else(|| self.active_group());
+        let group = group.unwrap_or_else(|| self.active_group(cx));
         let id = record.id;
         let ix = self.add_session(Some(record), window, cx);
         if let Some(group) = group {
             let ids = self.session_ids();
-            self.sidebar.view.place_in_group(&ids, id, group, None);
+            self.edit_sidebar_view(cx, |view| view.place_in_group(&ids, id, group, None));
         }
         self.activate(ix, window, cx);
         self.dirty = true;
@@ -231,11 +231,11 @@ impl Workspace {
         self.leave_layout(ix);
         let after = crate::window::session::session_after_close(self.active, ix, len);
         let closed = self.sessions.remove(ix);
-        self.sidebar.view.groups.leave(closed.id);
+        self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
         crate::notifications::dismiss(closed.pane.id, cx);
         crate::window::onboarding::welcome::forget(closed.id, cx);
-        self.end_welcome_demo(closed.id);
+        self.end_welcome_demo(closed.id, cx);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
         // screen (a feature's diff or picker), so only a real change of session

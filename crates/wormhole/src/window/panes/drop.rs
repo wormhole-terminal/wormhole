@@ -92,7 +92,7 @@ impl Workspace {
         let point = self.in_pane_area(event.event.position);
         let hover = point.and_then(|point| self.pane_hover_at(dragged, point));
         // The sidebar's rows hear every move too: over the panes none of them is the target.
-        let cleared = point.is_some() && self.sidebar.over.take().is_some();
+        let cleared = point.is_some() && self.sidebar.update(cx, |sidebar, _| sidebar.take_over());
         let Some(drag) = self.terminal_drag.as_mut() else { return };
         if drag.pane != hover || cleared {
             drag.pane = hover;
@@ -134,7 +134,7 @@ impl Workspace {
         let split_id = self.sessions[self.active].split.ok_or(DropError::Unknown)?;
         let split = self.split_mut(split_id).ok_or(DropError::Unknown)?;
         split.layout.move_to(dragged, target, zone, room)?;
-        self.follow_layout(split_id);
+        self.follow_layout(split_id, cx);
         self.dirty = true;
         let at = self.find_session(dragged).unwrap_or(ix);
         self.activate(at, window, cx);
@@ -144,13 +144,13 @@ impl Workspace {
     /// The split's terminals take the places in the list its panes have in reading order: the
     /// sidebar follows the layout when a pane is moved. Only its members' places are
     /// swapped; the rest of the list stays where it is.
-    fn follow_layout(&mut self, id: SplitId) {
+    fn follow_layout(&mut self, id: SplitId, cx: &mut App) {
         let Some(panes) = self.split_with(id).map(|split| split.layout.panes()) else { return };
         if self.members(id).len() != panes.len() {
             return;
         }
         let ids = self.session_ids();
-        self.sidebar.view.reorder_terminals(&ids, &panes);
+        self.edit_sidebar_view(cx, |view| view.reorder_terminals(&ids, &panes));
     }
 
     /// The overlay over the panes while a terminal is dragged (and nothing otherwise): the

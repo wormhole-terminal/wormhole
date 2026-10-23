@@ -12,7 +12,7 @@ use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
 use crate::window::terminal_drag::{Over, PaneHover};
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::view_tests::{draw, drive, isolate_in, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -44,7 +44,7 @@ fn row_bounds(cx: &mut TestAppContext, window: &OpenWindow, id: i64) -> Bounds<P
                     |entry| matches!(entry, Entry::Row { session, .. } if ws.sessions[*session].id == id),
                 )
                 .expect("the terminal is listed");
-            ws.sidebar.scroll.bounds_for_item(at).expect("the row was drawn")
+            ws.sidebar.read(cx).scroll().bounds_for_item(at).expect("the row was drawn")
         })
     })
     .expect("the window is open")
@@ -113,7 +113,7 @@ fn ids(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<i64> {
 
 /// The terminal whose row the pointer is over while something is dragged.
 fn onto(cx: &mut TestAppContext, window: &OpenWindow) -> Option<i64> {
-    read(cx, window, |ws| match ws.sidebar.over {
+    sidebar_of(cx, window, |sidebar| match sidebar.over() {
         Some(Over::Row { id, .. }) => Some(id),
         _ => None,
     })
@@ -221,7 +221,7 @@ fn the_middle_of_a_row_in_another_group_makes_a_split_in_that_group(cx: &mut Tes
     let (same_group, chained) = cx
         .update(|cx| {
             window.workspace.read_with(cx, |ws, cx| {
-                let groups = &ws.sidebar.view.groups;
+                let groups = &ws.sidebar_view(cx).groups;
                 let same = groups.group_of(1).is_some() && groups.group_of(1) == groups.group_of(2);
                 let chained = ws
                     .session_listing(cx)

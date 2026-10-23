@@ -20,7 +20,7 @@ pub(super) const SCROLLBACK_SAVE_INTERVAL: Duration = Duration::from_secs(60);
 impl Workspace {
     pub(crate) fn window_record(&self, cx: &App) -> WindowRecord {
         // The groups keep only the terminals that are still here.
-        let mut view = self.sidebar.view.clone();
+        let mut view = self.sidebar_view(cx).clone();
         view.groups.retain_terminals(|id| self.sessions.iter().any(|session| session.id == id));
         let layout = Layout::new(self.panes, self.right_tab, view);
         WindowRecord {

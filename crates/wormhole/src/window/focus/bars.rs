@@ -33,7 +33,7 @@ impl Workspace {
     /// The title row's buttons on screen: both with the sidebar open, its show button alone
     /// without it.
     pub(in crate::window) fn title_buttons(&self, _cx: &App) -> Vec<TitleButton> {
-        if self.sidebar.tabs.on {
+        if self.sidebar_feed.tabs_on {
             // Under tabs the window has no sidebar, nor a button for it.
             Vec::new()
         } else if self.panes.sidebar_open {

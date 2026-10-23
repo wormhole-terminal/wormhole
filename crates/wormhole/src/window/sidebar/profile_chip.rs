@@ -12,6 +12,7 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::spoken;
 
+use super::Sidebar;
 use crate::actions::SwitchProfile;
 use crate::actions::{ManageProfiles, MoveWindowToProfile, NewProfile, OpenSettings, OpenWindowInProfile};
 use crate::app_state::app;
@@ -20,7 +21,6 @@ use crate::settings::{UiColors, store_in, ui_in};
 use crate::style;
 use crate::style::{PopoverRow, popover_heading, popover_row, popover_rule};
 use crate::theme_bridge;
-use crate::window::Workspace;
 
 /// Which list the open menu shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,19 +48,19 @@ struct Choice {
     here: bool,
 }
 
-impl Workspace {
+impl Sidebar {
     /// Whether the chip is drawn: two or more profiles.
-    pub(in crate::window) fn profile_chip_shown(&self, cx: &App) -> bool {
+    pub(in crate::window) fn profile_chip_shown(cx: &App) -> bool {
         app(cx).profiles.profiles().len() >= 2
     }
 
     /// The chip with its menu, or nothing while there is one profile.
     pub(in crate::window) fn render_profile_chip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        if !self.profile_chip_shown(cx) {
+        if !Self::profile_chip_shown(cx) {
             return None;
         }
-        let ui = ui_in(&self.profile, cx);
-        let tokens = &store_in(&self.profile, cx).tokens;
+        let ui = ui_in(&self.input.profile, cx);
+        let tokens = &store_in(&self.input.profile, cx).tokens;
         let state = app(cx);
         let active = state.profiles.active_id().clone();
         let choices: Vec<Choice> = state
@@ -73,11 +73,11 @@ impl Workspace {
                 letter: profile.avatar,
                 color: theme_bridge::hsla(profile.color.color(tokens)),
                 current: profile.id == active,
-                here: profile.id == self.profile,
+                here: profile.id == self.input.profile,
             })
             .collect();
         let current = choices.iter().find(|choice| choice.current)?.clone();
-        let page = self.sidebar.profile_menu;
+        let page = self.profile_menu;
         let settings_key = SharedString::from(keymap::glyphs(ActionId::Settings));
         let bg = select::menu_bg(ui, cx);
         let this = cx.weak_entity();
@@ -96,8 +96,8 @@ impl Workspace {
             .open(page.is_some())
             .on_open_change(move |open, _, cx| {
                 on_open
-                    .update(cx, |ws, cx| {
-                        ws.sidebar.profile_menu = open.then_some(ProfilePage::Main);
+                    .update(cx, |sidebar, cx| {
+                        sidebar.profile_menu = open.then_some(ProfilePage::Main);
                         cx.notify();
                     })
                     .ok();
@@ -116,7 +116,7 @@ impl Workspace {
 
     /// Close the menu.
     fn close_profile_menu(&mut self, cx: &mut Context<Self>) {
-        self.sidebar.profile_menu = None;
+        self.profile_menu = None;
         cx.notify();
     }
 }
@@ -127,13 +127,13 @@ fn profile_menu(
     choices: &[Choice],
     settings_key: &SharedString,
     ui: UiColors,
-    this: WeakEntity<Workspace>,
+    this: WeakEntity<Sidebar>,
 ) -> AnyElement {
     // A row that closes the menu and then runs `action`.
     let run = |action: Box<dyn Action>| {
         let this = this.clone();
         move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
-            this.update(cx, |ws, cx| ws.close_profile_menu(cx)).ok();
+            this.update(cx, |sidebar, cx| sidebar.close_profile_menu(cx)).ok();
             window.dispatch_action(action.boxed_clone(), cx);
         }
     };
@@ -141,8 +141,8 @@ fn profile_menu(
     let go = |to: ProfilePage| {
         let this = this.clone();
         move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
-            this.update(cx, |ws, cx| {
-                ws.sidebar.profile_menu = Some(to);
+            this.update(cx, |sidebar, cx| {
+                sidebar.profile_menu = Some(to);
                 cx.notify();
             })
             .ok();

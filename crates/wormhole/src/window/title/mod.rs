@@ -203,8 +203,8 @@ impl Workspace {
     /// paints, so it needs no trust.
     fn title_tint(&self, cx: &App) -> Option<Tint> {
         let id = self.sessions.get(self.active)?.id;
-        let group = self.sidebar.view.groups.group_of(id)?;
-        let color = self.sidebar.view.groups.get(group)?.paint()?;
+        let groups = &self.sidebar_view(cx).groups;
+        let color = groups.get(groups.group_of(id)?)?.paint()?;
         let tokens = &store_in(&self.profile, cx).tokens;
         let color = ProjectColor::from_color(color.color(tokens));
         let store = store_in(&self.profile, cx);

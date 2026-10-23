@@ -11,10 +11,10 @@ use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::sidebar::{GroupColor, GroupPaint};
 
 use super::groups::group_colors;
+use super::{Sidebar, SidebarEvent};
 use crate::platform::popover::{Behavior, Colours, Custom, Field, Popover, Row};
 use crate::platform::{self, Item, Menu, Swatch};
 use crate::settings::store_in;
-use crate::window::Workspace;
 
 /// What a group's popover and menu are made from, as it is when they open.
 pub(super) struct GroupFacts {
@@ -32,11 +32,11 @@ pub(super) struct GroupFacts {
     pub(super) colors: Vec<(GroupColor, Hsla)>,
 }
 
-impl Workspace {
+impl Sidebar {
     pub(super) fn group_facts(&self, group: u32, cx: &App) -> GroupFacts {
-        let found = self.sidebar.view.groups.get(group);
+        let found = self.view.groups.get(group);
         let paint = found.and_then(|g| g.paint());
-        let tokens = &store_in(&self.profile, cx).tokens;
+        let tokens = &store_in(&self.input.profile, cx).tokens;
         GroupFacts {
             group,
             paint,
@@ -47,7 +47,7 @@ impl Workspace {
             shown: paint.map(|paint| crate::theme_bridge::hsla(paint.color(tokens))),
             pinned: found.is_some_and(|g| g.pinned),
             folder: self.group_folder_label(group),
-            colors: group_colors(&self.profile, cx),
+            colors: group_colors(&self.input.profile, cx),
         }
     }
 }
@@ -65,7 +65,7 @@ const NO_COLOUR: &str = "No colour";
 fn dots(
     facts: &GroupFacts,
     none: bool,
-    this: &WeakEntity<Workspace>,
+    this: &WeakEntity<Sidebar>,
 ) -> (Vec<Swatch>, Option<usize>, platform::menu::Pick) {
     let lead = usize::from(none);
     let swatches: Vec<Swatch> = none
@@ -86,21 +86,21 @@ fn dots(
     let on_pick: platform::menu::Pick = std::rc::Rc::new(move |ix, _, cx| match ix.checked_sub(lead) {
         Some(ix) => {
             if let Some(&(color, _)) = colors.get(ix) {
-                this.update(cx, |ws, cx| ws.set_group_color(group, Some(color), cx)).ok();
+                this.update(cx, |sidebar, cx| sidebar.set_group_color(group, Some(color), cx)).ok();
             }
         }
         None => {
-            this.update(cx, |ws, cx| ws.set_group_color(group, None, cx)).ok();
+            this.update(cx, |sidebar, cx| sidebar.set_group_color(group, None, cx)).ok();
         }
     });
     (swatches, chosen, on_pick)
 }
 
 /// What the Colours window does with each colour it sends: the group follows it.
-fn follow(group: u32, this: &WeakEntity<Workspace>) -> platform::ColourChange {
+fn follow(group: u32, this: &WeakEntity<Sidebar>) -> platform::ColourChange {
     let this = this.clone();
     std::rc::Rc::new(move |color, _, cx| {
-        this.update(cx, |ws, cx| ws.set_group_custom_color(group, color, cx)).ok();
+        this.update(cx, |sidebar, cx| sidebar.set_group_custom_color(group, color, cx)).ok();
     })
 }
 
@@ -109,33 +109,35 @@ const START: Hsla = Hsla { h: 0.0, s: 0.0, l: 0.5, a: 1.0 };
 
 /// The group's folder, which both the popover and the menu list above the actions: an info line
 /// (greyed out, it is not a choice) when there is one, then what changes it.
-fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Workspace>) -> Vec<Item> {
+fn folder_items(group: u32, folder: Option<&str>, this: &WeakEntity<Sidebar>) -> Vec<Item> {
     let set = Item::new("Set folder…")
-        .on_select(platform::run_on(this, move |ws, _, cx| ws.choose_group_folder(group, cx)));
+        .on_select(platform::run_on(this, move |sidebar, _, cx| sidebar.choose_group_folder(group, cx)));
     match folder {
         Some(folder) => vec![
             Item::new(folder).enabled(false),
             set,
-            Item::new("Clear folder")
-                .on_select(platform::run_on(this, move |ws, _, cx| ws.set_group_folder(group, None, cx))),
+            Item::new("Clear folder").on_select(platform::run_on(this, move |sidebar, _, cx| {
+                sidebar.set_group_folder(group, None, cx)
+            })),
         ],
         None => vec![set],
     }
 }
 
 /// The actions both the popover and the menu end with, in their order.
-fn actions(group: u32, pinned: bool, this: &WeakEntity<Workspace>) -> Vec<Item> {
+fn actions(group: u32, pinned: bool, this: &WeakEntity<Sidebar>) -> Vec<Item> {
     vec![
-        Item::new("New terminal in group").on_select(platform::run_on(this, move |ws, window, cx| {
-            ws.new_session_in_group(group, window, cx)
+        Item::new("New terminal in group").on_select(platform::run_on(this, move |_, _, cx| {
+            cx.emit(SidebarEvent::NewTerminal(super::NewTerminal::InGroup(group)))
         })),
-        Item::new("Ungroup").on_select(platform::run_on(this, move |ws, _, cx| ws.ungroup(group, cx))),
+        Item::new("Ungroup")
+            .on_select(platform::run_on(this, move |sidebar, _, cx| sidebar.ungroup(group, cx))),
         Item::new("Close group")
-            .on_select(platform::run_on(this, move |ws, window, cx| ws.close_group(group, window, cx))),
+            .on_select(platform::run_on(this, move |_, _, cx| cx.emit(SidebarEvent::CloseGroup(group)))),
         Item::new(if pinned { "Unpin group" } else { "Pin group" })
-            .on_select(platform::run_on(this, move |ws, _, cx| ws.toggle_group_pin(group, cx))),
-        Item::new("Move group to new window").on_select(platform::run_on(this, move |ws, window, cx| {
-            ws.move_group_to_window(group, window, cx)
+            .on_select(platform::run_on(this, move |sidebar, _, cx| sidebar.toggle_group_pin(group, cx))),
+        Item::new("Move group to new window").on_select(platform::run_on(this, move |_, _, cx| {
+            cx.emit(SidebarEvent::MoveGroupToWindow(group))
         })),
     ]
 }
@@ -145,7 +147,7 @@ pub(super) fn group_popover(
     facts: GroupFacts,
     name: String,
     appearance: Appearance,
-    this: &WeakEntity<Workspace>,
+    this: &WeakEntity<Sidebar>,
 ) -> Popover {
     let group = facts.group;
     let (swatches, chosen, on_pick) = dots(&facts, true, this);
@@ -153,10 +155,10 @@ pub(super) fn group_popover(
         let this = this.clone();
         move |text: &str, _: &mut Window, cx: &mut App| {
             let text = text.to_string();
-            this.update(cx, |ws, cx| {
+            this.update(cx, |sidebar, cx| {
                 // A blank name keeps the old one.
-                ws.sidebar.view.groups.rename(group, &text);
-                ws.mark_dirty(cx);
+                sidebar.view.groups.rename(group, &text);
+                sidebar.changed(cx);
             })
             .ok();
         }
@@ -183,11 +185,11 @@ pub(super) fn group_popover(
         .row(Row::Separator)
         .row(Row::Actions(actions(group, facts.pinned, this)))
         // The keyboard goes back to the terminal, unless an action put it somewhere else.
-        .on_close(move |window, cx| {
+        .on_close(move |_, cx| {
             focus_back
-                .update(cx, |ws, cx| {
-                    if ws.sidebar.group_renaming.is_none() {
-                        window.focus(&ws.active_terminal().focus_handle(cx), cx);
+                .update(cx, |sidebar, cx| {
+                    if sidebar.group_renaming.is_none() {
+                        cx.emit(SidebarEvent::FocusTerminal);
                     }
                 })
                 .ok();
@@ -195,13 +197,13 @@ pub(super) fn group_popover(
 }
 
 /// The menu of the group `facts` describe; every item acts on `this`.
-pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Menu {
+pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Sidebar>) -> Menu {
     let group = facts.group;
     let (swatches, chosen, on_pick) = dots(&facts, false, this);
     let (start, on_change) = (facts.custom.or(facts.shown).unwrap_or(START), follow(group, this));
     let menu = Menu::new()
-        .item(Item::new("Rename…").on_select(platform::run_on(this, move |ws, window, cx| {
-            ws.start_group_rename(group, window, cx)
+        .item(Item::new("Rename…").on_select(platform::run_on(this, move |sidebar, window, cx| {
+            sidebar.start_group_rename(group, window, cx)
         })))
         .separator()
         .swatches(swatches, chosen, move |ix, window, cx| on_pick(ix, window, cx))
@@ -213,7 +215,9 @@ pub(super) fn group_menu(facts: GroupFacts, this: &WeakEntity<Workspace>) -> Men
         .item(
             Item::new(NO_COLOUR)
                 .checked(facts.paint.is_none())
-                .on_select(platform::run_on(this, move |ws, _, cx| ws.set_group_color(group, None, cx))),
+                .on_select(platform::run_on(this, move |sidebar, _, cx| {
+                    sidebar.set_group_color(group, None, cx)
+                })),
         )
         .separator();
     let menu = folder_items(group, facts.folder.as_deref(), this).into_iter().fold(menu, Menu::item);

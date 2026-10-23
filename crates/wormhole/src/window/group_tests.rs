@@ -3,15 +3,15 @@
 //! its own (see `view_tests` for how each test runs in a child process with scratch data).
 use gpui_kit::TestAppContext;
 
-use crate::window::view_tests::{draw, drive, read, start};
+use crate::window::view_tests::{draw, drive, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     crate::window::view_tests::isolate_in(module_path!(), name)
 }
 
 fn group_names(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Vec<(String, bool, usize)> {
-    read(cx, window, |ws| {
-        ws.sidebar.view.groups.iter().map(|g| (g.name.clone(), g.pinned, g.members.len())).collect()
+    sidebar_of(cx, window, |sidebar| {
+        sidebar.view().groups.iter().map(|g| (g.name.clone(), g.pinned, g.members.len())).collect()
     })
 }
 
@@ -40,9 +40,9 @@ fn a_group_goes_with_its_last_terminal_unless_it_is_pinned(cx: &mut TestAppConte
         let three = ws.find_session(3).expect("a row");
         ws.close_session(three, window, cx);
     });
-    read(cx, &window, |ws| {
-        assert!(ws.sidebar.view.groups.get(docs).is_some_and(|g| g.pinned && g.members.is_empty()));
-        assert!(ws.sidebar.view.groups.get(review).is_none(), "unpinned, it went with its last terminal");
+    sidebar_of(cx, &window, |sidebar| {
+        assert!(sidebar.view().groups.get(docs).is_some_and(|g| g.pinned && g.members.is_empty()));
+        assert!(sidebar.view().groups.get(review).is_none(), "unpinned, it went with its last terminal");
     });
     draw(cx, &window);
     let listed = cx
@@ -73,9 +73,9 @@ fn a_terminal_is_renamed_in_its_row_and_an_empty_name_gives_it_back(cx: &mut Tes
     let rename = |cx: &mut TestAppContext, text: &'static str| {
         drive(cx, &window, |ws, window, cx| {
             ws.start_terminal_rename(2, window, cx);
-            let input = ws.sidebar.renaming.as_ref().map(|r| r.input.clone()).expect("renaming");
+            let input = ws.sidebar.read(cx).terminal_renaming().expect("renaming");
             input.update(cx, |input, cx| input.set_value(text, window, cx));
-            ws.finish_terminal_rename(true, window, cx);
+            ws.sidebar.update(cx, |sidebar, cx| sidebar.finish_terminal_rename(true, cx));
         });
         read(cx, &window, |ws| ws.sessions[1].custom_name.clone())
     };

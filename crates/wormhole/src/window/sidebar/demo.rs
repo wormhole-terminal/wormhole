@@ -21,17 +21,16 @@ use wormhole_core::onboarding::welcome::demo as example;
 use wormhole_core::view::sidebar::RowState;
 
 use super::rows::Frame;
+use super::{Sidebar, SidebarInput};
 use crate::style;
 use crate::style::{RowTone, SessionRow, StatusGlyph};
-use crate::terminal_view::Status;
-use crate::window::Workspace;
 
 /// How often the redraw timer looks again while Reduce Motion holds the rows still (it may be turned
 /// off meanwhile).
 const STILL_CHECK: Duration = Duration::from_secs(1);
 
 /// The band while it is up.
-pub(in crate::window) struct Demo {
+pub(super) struct Demo {
     /// The welcome terminal whose step asked for it.
     tab: i64,
     /// Since when it has been up: the rows' states follow the time.
@@ -40,15 +39,20 @@ pub(in crate::window) struct Demo {
     _redraw: Task<()>,
 }
 
-impl Workspace {
+impl Sidebar {
     /// The welcome in `tab` says its sidebar step is up (`show`) or was left. Only a terminal of this
-    /// window can put the band up; asking again while it is up leaves the cycle where it is.
-    pub(in crate::window) fn set_welcome_demo(&mut self, tab: i64, show: bool, cx: &mut Context<Self>) {
+    /// window can put the band up (`in_window`: the window checked); asking again while it is up
+    /// leaves the cycle where it is.
+    pub(in crate::window) fn set_welcome_demo(
+        &mut self,
+        tab: i64,
+        show: bool,
+        in_window: bool,
+        cx: &mut Context<Self>,
+    ) {
         if !show {
             self.end_welcome_demo(tab);
-        } else if self.sidebar.demo.as_ref().is_none_or(|demo| demo.tab != tab)
-            && self.sessions.iter().any(|session| session.id == tab)
-        {
+        } else if self.demo.as_ref().is_none_or(|demo| demo.tab != tab) && in_window {
             let since = Instant::now();
             let redraw = cx.spawn(async move |this, cx| {
                 loop {
@@ -60,40 +64,42 @@ impl Workspace {
                     }
                 }
             });
-            self.sidebar.demo = Some(Demo { tab, since, _redraw: redraw });
+            self.demo = Some(Demo { tab, since, _redraw: redraw });
         }
         cx.notify();
     }
 
     /// Take the band away if it is `tab`'s.
     pub(in crate::window) fn end_welcome_demo(&mut self, tab: i64) {
-        if self.sidebar.demo.as_ref().is_some_and(|demo| demo.tab == tab) {
-            self.sidebar.demo = None;
+        if self.demo.as_ref().is_some_and(|demo| demo.tab == tab) {
+            self.demo = None;
         }
     }
 
     /// The band, if it is to be drawn now: asked for, its welcome still running, and its terminal's
     /// program not ended (a welcome that was killed would otherwise leave it up).
-    fn demo_in_view(&self, cx: &App) -> Option<&Demo> {
-        self.sidebar.demo.as_ref().filter(|demo| {
+    fn demo_in_view(&self, input: &SidebarInput, cx: &App) -> Option<&Demo> {
+        self.demo.as_ref().filter(|demo| {
             crate::window::onboarding::welcome::running(demo.tab, cx)
-                && self.sessions.iter().any(|session| {
-                    session.id == demo.tab && session.terminal().read(cx).status() != Status::Exited
-                })
+                && input.rows.iter().any(|row| row.id == demo.tab && row.state != RowState::Exited)
         })
     }
 
     /// The example rows as drawn now (devctl and the tests).
     #[cfg(any(test, feature = "devctl"))]
-    pub(in crate::window) fn welcome_demo_rows(&self, cx: &App) -> Option<[example::Row; 3]> {
-        let demo = self.demo_in_view(cx)?;
+    pub(in crate::window) fn welcome_demo_rows(
+        &self,
+        input: &SidebarInput,
+        cx: &App,
+    ) -> Option<[example::Row; 3]> {
+        let demo = self.demo_in_view(input, cx)?;
         Some(example::rows(demo.since.elapsed(), cx.reduce_motion()))
     }
 
     /// The group and its three rows, to follow the list's own entries; none when it is not up. It is
     /// drawn as a card, as any group is.
     pub(super) fn render_demo(&self, frame: &Frame, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let Some(demo) = self.demo_in_view(cx) else { return Vec::new() };
+        let Some(demo) = self.demo_in_view(&self.input, cx) else { return Vec::new() };
         let ui = frame.ui;
         let metrics = frame.metrics;
         let rows = example::rows(demo.since.elapsed(), cx.reduce_motion());

@@ -135,15 +135,13 @@ impl Workspace {
                     let folded = if band.folded { " folded" } else { "" };
                     let pinned = if band.pinned { " pinned" } else { "" };
                     let colored = self
-                        .sidebar
-                        .view
+                        .sidebar_view(cx)
                         .groups
                         .get(band.group)
                         .and_then(|group| group.paint())
                         .map_or(String::new(), |color| format!(" colour={}", color.key()));
                     let folder = self
-                        .sidebar
-                        .view
+                        .sidebar_view(cx)
                         .groups
                         .get(band.group)
                         .and_then(|group| group.folder.as_deref())
@@ -297,8 +295,8 @@ impl Workspace {
             self.notes_visible(),
             self.resizing.is_some(),
             self.status_bar_drawn.is_some(),
-            self.sidebar.view.groups.iter().count(),
-            self.sidebar.view.folded,
+            self.sidebar_view(cx).groups.iter().count(),
+            self.sidebar_view(cx).folded,
             self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
         );

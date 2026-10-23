@@ -12,8 +12,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::view::sidebar::motion::{Drawn, plan_moves};
 
+use super::Sidebar;
 use crate::style::motion::{EASE_OUT, MOTION_MOVE};
-use crate::window::Workspace;
 
 /// A move longer than this is drawn from this far away, so a terminal sent across a long list
 /// still slides.
@@ -66,23 +66,23 @@ impl ListMotion {
     }
 }
 
-impl Workspace {
+impl Sidebar {
     /// Notice that the list's lines are not the ones last drawn, and start the slide for those
     /// that moved. Call it once per render with the lines about to be drawn, top to bottom.
     pub(super) fn plan_list_motion(&mut self, keys: Vec<ItemKey>, cx: &mut Context<Self>) {
-        let motion = &mut self.sidebar.motion;
+        let motion = &mut self.motion;
         if motion.keys == keys {
             return;
         }
         let before = std::mem::replace(&mut motion.keys, keys);
-        let scroll = &self.sidebar.scroll;
+        let scroll = &self.scroll;
         let drawn = if cx.reduce_motion() { None } else { measured(&before, scroll) };
         let Some(drawn) = drawn else {
-            self.sidebar.motion.moving.clear();
-            self.sidebar.motion.entering.clear();
+            self.motion.moving.clear();
+            self.motion.entering.clear();
             return;
         };
-        let motion = &mut self.sidebar.motion;
+        let motion = &mut self.motion;
         // The first line sits at the same place at rest whatever the list holds.
         if motion.moving.is_empty() || motion.pad.is_none() {
             motion.pad = Some(drawn.first().map_or(0.0, |line| line.top));
@@ -109,9 +109,9 @@ impl Workspace {
         motion.end = Some(cx.spawn(async move |this, cx| {
             cx.background_executor().timer(MOTION_MOVE).await;
             this.update(cx, |this, cx| {
-                if this.sidebar.motion.serial == serial {
-                    this.sidebar.motion.moving.clear();
-                    this.sidebar.motion.entering.clear();
+                if this.motion.serial == serial {
+                    this.motion.moving.clear();
+                    this.motion.entering.clear();
                     cx.notify();
                 }
             })
@@ -122,7 +122,7 @@ impl Workspace {
     /// `row` (a line of the list) with the slide it owes: shifted to where it was and coming back,
     /// and faded in if it is new. Not for the row held in a drag.
     pub(super) fn with_list_motion(&self, key: ItemKey, line: AnyElement, held: bool) -> AnyElement {
-        let motion = &self.sidebar.motion;
+        let motion = &self.motion;
         let (shift, entering) = (motion.shift(&key), motion.is_entering(&key));
         let line = div().relative().w_full().child(line);
         if held || (shift.is_none() && !entering) {

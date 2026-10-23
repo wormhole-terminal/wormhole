@@ -35,7 +35,6 @@
         "src/window/"
       ],
       "pending": [
-        "src/window/sidebar/",
         "src/window/onboarding/"
       ]
     },
@@ -363,26 +362,7 @@
       "crates/wormhole/src/window/onboarding/page.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/steps.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/welcome/mod.rs :: impl Workspace": 2,
-      "crates/wormhole/src/window/onboarding/welcome_page.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/demo.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/drag.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/facts.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/group_actions.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/group_head.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/group_popover.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/groups.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/hints.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/keys.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/mod.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/motion.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/profile_chip.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/rename.rs :: impl Workspace": 2,
-      "crates/wormhole/src/window/sidebar/row_menu.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/rows.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/shells.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/switcher.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/tab_bar.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/sidebar/tick.rs :: impl Workspace": 1
+      "crates/wormhole/src/window/onboarding/welcome_page.rs :: impl Workspace": 1
     }
   }
 }

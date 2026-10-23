@@ -174,7 +174,7 @@ impl Workspace {
             ids.push(record.id);
             self.add_session(Some(record), window, cx);
         }
-        self.sidebar.view.groups.recover(&ids);
+        self.edit_sidebar_view(cx, |view| view.groups.recover(&ids));
         self.dirty = true;
         cx.notify();
     }

@@ -5,20 +5,26 @@ use std::time::Instant;
 
 use gpui_kit::*;
 
-use crate::window::Workspace;
+use super::Sidebar;
+use crate::settings::settings_in;
 
-impl Workspace {
-    /// The modifier keys changed (from the root's `on_modifiers_changed`).
-    pub(in crate::window) fn on_modifiers(
+impl Sidebar {
+    /// The ⌘1–9 keycaps are showing (⌘ held alone long enough, and the setting on).
+    pub(in crate::window) fn hints_showing(&self, cx: &App) -> bool {
+        settings_in(&self.input.profile, cx).sidebar_cmd_hints && self.hold.showing(Instant::now())
+    }
+
+    /// The modifier keys changed (from the window's root).
+    pub(in crate::window) fn modifiers(
         &mut self,
         event: &ModifiersChangedEvent,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let before = self.hints_showing(cx);
-        self.sidebar.hold.modifiers(event.modifiers == Modifiers::command(), Instant::now());
+        self.hold.modifiers(event.modifiers == Modifiers::command(), Instant::now());
         // Ask again when the hold is long enough.
-        self.sidebar.hold_timer = self.sidebar.hold.due_in(Instant::now()).map(|due| {
+        self.hold_timer = self.hold.due_in(Instant::now()).map(|due| {
             cx.spawn_in(window, async move |this, cx| {
                 cx.background_executor().timer(due).await;
                 this.update(cx, |_, cx| cx.notify()).ok();
@@ -32,18 +38,18 @@ impl Workspace {
     /// A key other than a modifier went down while ⌘ may be held: no hints for this press.
     fn on_key(&mut self, cx: &mut Context<Self>) {
         let before = self.hints_showing(cx);
-        self.sidebar.hold.key();
-        self.sidebar.hold_timer = None;
+        self.hold.key();
+        self.hold_timer = None;
         if before {
             cx.notify();
         }
     }
 
     /// The window lost focus: whatever is held is not for this window.
-    pub(in crate::window) fn hints_blur(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::window) fn blur(&mut self, cx: &mut Context<Self>) {
         let before = self.hints_showing(cx);
-        self.sidebar.hold.blur();
-        self.sidebar.hold_timer = None;
+        self.hold.blur();
+        self.hold_timer = None;
         if before {
             cx.notify();
         }
@@ -52,7 +58,7 @@ impl Workspace {
 
 /// Hear every key pressed in `window`, including the ones the terminal takes for itself (⌘C):
 /// a keystroke interceptor sees them all before anything handles them.
-pub(super) fn watch_keys(window: &mut Window, cx: &mut Context<Workspace>) -> Subscription {
+pub(super) fn watch_keys(window: &mut Window, cx: &mut Context<Sidebar>) -> Subscription {
     let handle = window.window_handle();
     let this = cx.weak_entity();
     cx.intercept_keystrokes(move |event, window, cx| {

@@ -79,11 +79,6 @@ impl Workspace {
         self.split_mut(id)
     }
 
-    /// Each session's split, in the window's order, for the sidebar's list.
-    pub(in crate::window) fn split_ids(&self) -> Vec<Option<SplitId>> {
-        self.sessions.iter().map(|session| session.split).collect()
-    }
-
     /// The sessions in split `id`, in the window's order.
     pub(in crate::window) fn members(&self, id: SplitId) -> Vec<usize> {
         (0..self.sessions.len()).filter(|&ix| self.sessions[ix].split == Some(id)).collect()
@@ -338,7 +333,7 @@ impl Workspace {
         let ids: Vec<i64> = self.sessions.iter().map(|s| s.id).collect();
         let joiner_id = self.sessions[joiner].id;
         let mates: Vec<i64> = self.members(id).into_iter().map(|m| self.sessions[m].id).collect();
-        self.sidebar.view.seat_beside(&ids, joiner_id, &mates);
+        self.edit_sidebar_view(cx, |view| view.seat_beside(&ids, joiner_id, &mates));
         self.dirty = true;
     }
 

@@ -20,12 +20,11 @@ use wormhole_core::view::sidebar::{Entry, Listing};
 
 use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for, tile_for};
-use crate::settings::{UiColors, settings_in, store_in, ui_in};
+use super::{NewTerminal, Sidebar, SidebarEvent};
+use crate::settings::{UiColors, store_in, ui_in};
 use crate::style;
 use crate::style::TerminalTab;
-use crate::window::Workspace;
-use crate::window::chrome::traffic_light_position;
-use crate::window::glass::{GlassKind, Insets, TAB_ROW_CLIP, glass_key};
+use crate::window::glass::{GlassKind, Insets, TAB_ROW_CLIP, clip_probe, glass_key, probe};
 
 /// The gap between the tabs and the terminal's surface under them.
 const TAB_GAP: f32 = 8.0;
@@ -44,13 +43,9 @@ const CLOSE_RIGHT: f32 = 8.0 - (style::CONTROL_H_SM - style::GLYPH) / 2.0;
 
 /// What the tab bar remembers between frames.
 #[derive(Default)]
-pub(in crate::window) struct TabBarState {
-    /// The terminals are in tabs (Settings → Show terminals in), in every window.
-    pub(in crate::window) on: bool,
+pub(super) struct TabBarState {
     /// The terminal last selected in each set, by its key: where opening the set goes back to.
     last: HashMap<String, i64>,
-    /// The height of the row the traffic lights were last centred on.
-    lights_row: Option<f32>,
     /// The group switcher being open: its search field.
     pub(super) switcher: Option<super::switcher::Switcher>,
     /// The row of tabs, which scrolls sideways once they are at their narrowest, and the terminal it
@@ -77,39 +72,15 @@ pub(super) struct SetView {
     pub(super) current: Option<usize>,
 }
 
-impl Workspace {
-    /// Whether the sidebar is on screen: wanted, and the terminals aren't in tabs.
-    pub(in crate::window) fn sidebar_shown(&self) -> bool {
-        self.panes.sidebar_open && !self.sidebar.tabs.on
-    }
-
-    /// Whether the terminals are in tabs across the top.
-    pub(in crate::window) fn tabs_on_top(&self) -> bool {
-        self.sidebar.tabs.on
-    }
-
-    /// Read where the terminals are listed from the settings (once a frame, before anything is laid
-    /// out), and centre the traffic lights on the row they sit in.
-    pub(in crate::window) fn sync_tab_layout(&mut self, window: &mut Window, cx: &App) {
-        self.sidebar.tabs.on =
-            settings_in(&self.profile, cx).terminals_in == wormhole_core::view::sidebar::TerminalsIn::Tabs;
-        let row = style::TITLE_ROW_H;
-        if self.sidebar.tabs.lights_row != Some(row) {
-            self.sidebar.tabs.lights_row = Some(row);
-            window.set_traffic_light_position(traffic_light_position(row));
-        }
-    }
-
+impl Sidebar {
     /// The sets of the list as it is now, each with its look, and the current one; the terminal
     /// last selected in the current one is remembered, so coming back to the set lands there.
     pub(super) fn set_view(&mut self, listing: &Listing, cx: &App) -> SetView {
         let sets = tab_sets(listing);
-        let current = current_set(&sets, self.active);
+        let current = current_set(&sets, self.input.active);
         let looks: Vec<SetLook> = sets.iter().map(|set| self.set_look(listing, set, cx)).collect();
-        if let (Some(look), Some(session)) =
-            (current.and_then(|at| looks.get(at)), self.sessions.get(self.active))
-        {
-            self.sidebar.tabs.last.insert(look.key.clone(), session.id);
+        if let (Some(look), Some(id)) = (current.and_then(|at| looks.get(at)), self.input.active_id()) {
+            self.tabs.last.insert(look.key.clone(), id);
         }
         SetView { sets, looks, current }
     }
@@ -123,8 +94,9 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
+        let input = self.input.clone();
+        let infos = &input.rows;
+        let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let current = view.current.unwrap_or(0);
         let switch = view.sets.len() > 1;
@@ -140,28 +112,37 @@ impl Workspace {
                 _ => None,
             })
             .collect();
-        let frame = Frame::new(self, self.window_width, window, cx);
-        let glass = self.glass_on(cx);
+        let frame = Frame::new(&input, input.window_width, self.hints_showing(cx), window, cx);
+        let glass = input.glass.clone();
         let ui = frame.ui;
         let mut tabs: Vec<AnyElement> = Vec::new();
         // A newly selected terminal's tab is brought into view (once, so the row can be scrolled away).
-        let active_id = self.sessions.get(self.active).map(|session| session.id);
-        if self.sidebar.tabs.scrolled_to != active_id
+        let active_id = input.active_id();
+        if self.tabs.scrolled_to != active_id
             && let Some(at) =
-                view.sets.get(current).and_then(|set| set.members.iter().position(|&m| m == self.active))
+                view.sets.get(current).and_then(|set| set.members.iter().position(|&m| m == input.active))
         {
             // The glass's clip probe, when there is one, is the row's first child.
-            self.sidebar.tabs.scroll.scroll_to_item(at + usize::from(glass));
-            self.sidebar.tabs.scrolled_to = active_id;
+            self.tabs.scroll.scroll_to_item(at + usize::from(glass.is_some()));
+            self.tabs.scrolled_to = active_id;
         }
         if let Some(set) = view.sets.get(current) {
             // Each tab is a box of its own, so nothing is drawn between them.
             for (at, &ix) in set.members.iter().enumerate() {
-                tabs.push(self.tab(&frame, &infos, &numbers, (at, set.members.len()), ix, glass, window, cx));
+                tabs.push(self.tab(
+                    &frame,
+                    infos,
+                    &numbers,
+                    (at, set.members.len()),
+                    ix,
+                    glass.as_ref(),
+                    window,
+                    cx,
+                ));
             }
         }
         let alert = others_need_you(&view.sets, current, |ix| Urgency::from(glyph_for(&infos[ix])));
-        let switcher = switch.then(|| self.render_switcher(&view, &infos, &frame, alert, cx));
+        let switcher = switch.then(|| self.render_switcher(&view, infos, &frame, alert, cx));
         let chip = self.render_profile_chip(cx);
         let group = view.looks.get(current).and_then(|look| look.group);
         // Under the terminal's title row, which is the same as with the sidebar (the lights, the
@@ -192,8 +173,8 @@ impl Workspace {
                     .gap_1()
                     // Tabs give way down to their least width, then the row scrolls sideways.
                     .overflow_x_scroll()
-                    .track_scroll(&self.sidebar.tabs.scroll)
-                    .when(glass, |d| d.child(self.glass_clip_probe(TAB_ROW_CLIP)))
+                    .track_scroll(&self.tabs.scroll)
+                    .children(glass.as_ref().map(|glass| clip_probe(glass, TAB_ROW_CLIP)))
                     .children(tabs),
             )
             // The + stays at the bar's right end, however many tabs there are.
@@ -207,9 +188,8 @@ impl Workspace {
         let band = set.band.and_then(|band| listing.bands.get(band));
         let key = band.map_or_else(|| "ungrouped".to_string(), |band| band.key());
         let group = band.map(|band| band.group);
-        let tokens = &store_in(&self.profile, cx).tokens;
-        let paint =
-            group.and_then(|group| self.sidebar.view.groups.get(group)).and_then(|group| group.paint());
+        let tokens = &store_in(&self.input.profile, cx).tokens;
+        let paint = group.and_then(|group| self.view.groups.get(group)).and_then(|group| group.paint());
         let color = paint.map(|color| crate::theme_bridge::hsla(color.color(tokens)));
         let wash = paint.map(|color| crate::theme_bridge::hsla(color.wash(tokens)));
         SetLook { key, color, wash, group, pinned: band.is_some_and(|band| band.pinned) }
@@ -222,52 +202,45 @@ impl Workspace {
         bar_set: &TabSet,
         key: &str,
         group: Option<u32>,
-        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let last = self.sidebar.tabs.last.get(key).and_then(|&id| self.find_session(id));
+        let last = self.tabs.last.get(key).and_then(|&id| self.input.find(id));
         let target =
             last.filter(|ix| bar_set.members.contains(ix)).or_else(|| bar_set.members.first().copied());
         match (target, group) {
-            (Some(ix), _) => self.activate(ix, window, cx),
-            (None, Some(group)) => self.new_session_in_group(group, window, cx),
+            (Some(ix), _) => {
+                cx.emit(SidebarEvent::Activate { id: self.input.rows[ix].id, then_focus_list: false })
+            }
+            (None, Some(group)) => cx.emit(SidebarEvent::NewTerminal(NewTerminal::InGroup(group))),
             (None, None) => {}
         }
     }
 
     /// Open the set at `at` of the list as it is now.
-    pub(super) fn open_set_at(&mut self, at: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
+    pub(super) fn open_set_at(&mut self, at: usize, cx: &mut Context<Self>) {
+        let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let (Some(set), Some(look)) = (view.sets.get(at), view.looks.get(at)) else { return };
-        self.open_set(set, &look.key, look.group, window, cx);
+        self.open_set(set, &look.key, look.group, cx);
     }
 
     /// ⌃⌥] and ⌃⌥[: the next or previous group, in the switcher's order with the terminals in no
     /// group last. Both layouts.
-    pub(in crate::window) fn step_group(
-        &mut self,
-        forward: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
+    pub(in crate::window) fn step_group(&mut self, forward: bool, cx: &mut Context<Self>) {
+        let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let Some(current) = view.current else { return };
         if let Some(at) = step_set(&view.sets, current, forward) {
-            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, window, cx);
+            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, cx);
         }
     }
 
     /// ⌃⌥1–9: the group with that number in the switcher's list.
-    pub(in crate::window) fn go_to_group(&mut self, number: u8, window: &mut Window, cx: &mut Context<Self>) {
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
+    pub(in crate::window) fn go_to_group(&mut self, number: u8, cx: &mut Context<Self>) {
+        let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         if let Some(at) = set_numbered(&view.sets, usize::from(number)) {
-            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, window, cx);
+            self.open_set(&view.sets[at], &view.looks[at].key, view.looks[at].group, cx);
         }
     }
 
@@ -281,13 +254,13 @@ impl Workspace {
         numbers: &HashMap<usize, usize>,
         (position, of): (usize, usize),
         ix: usize,
-        glass: bool,
+        glass: Option<&std::rc::Rc<crate::platform::vibrancy::Glass>>,
         window: &Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some(info) = infos.get(ix) else { return div().into_any_element() };
-        let ui = frame.ui;
-        let selected = ix == self.active;
+        let (ui, id) = (frame.ui, info.id);
+        let selected = ix == self.input.active;
         let hint = numbers.get(&ix).filter(|_| frame.hints).map(|&n| SharedString::from(keycap(n)));
         let group = SharedString::from(style::TAB_GROUP);
         let close = (!frame.hints).then(|| self.tab_close(info, &group, ui, cx));
@@ -315,20 +288,23 @@ impl Workspace {
                 ),
             },
         )
-        .when(glass && selected, |d| d.bg(ui.selected_row.opacity(GLASS_SELECTED)))
-        .when(glass, |d| {
-            d.child(self.glass_probe(
+        .when(glass.is_some() && selected, |d| d.bg(ui.selected_row.opacity(GLASS_SELECTED)))
+        .children(glass.map(|glass| {
+            probe(
+                glass,
                 glass_key(GlassKind::Tab, info.id as u64),
                 Insets::NONE,
                 style::CARD_ROW_RADIUS,
                 Some(TAB_ROW_CLIP),
-            ))
-        })
+            )
+        }))
         .group(group)
         .role(Role::Tab)
         .aria_label(spoken)
         .aria_selected(selected)
-        .on_click(cx.listener(move |this, _, window, cx| this.activate(ix, window, cx)));
+        .on_click(
+            cx.listener(move |_, _, _, cx| cx.emit(SidebarEvent::Activate { id, then_focus_list: false })),
+        );
         self.with_row_menu(tab, info, cx).into_any_element()
     }
 
@@ -340,9 +316,9 @@ impl Workspace {
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ix = info.ix;
+        let id = info.id;
         // No tooltip while a close question is up: the pointer still rests on the ×.
-        let asking = self.closing_session_prompt || self.closing_prompt;
+        let asking = self.input.asking;
         // Laid over the tab's right end, its glyph where the tab's padding starts, over the faded end
         // of a long name; it shows under the pointer (a style that only paints, as the sidebar row's ×).
         div()
@@ -362,9 +338,9 @@ impl Workspace {
                         .when(!asking, |d| {
                             d.tooltip(|window, cx| Tooltip::new("Close terminal").build(window, cx))
                         })
-                        .on_click(cx.listener(move |this, _, window, cx| {
+                        .on_click(cx.listener(move |_, _, _, cx| {
                             cx.stop_propagation();
-                            this.request_close_session(ix, window, cx);
+                            cx.emit(SidebarEvent::Close(id));
                         }))
                 },
             ))
@@ -375,22 +351,25 @@ impl Workspace {
     /// A right-click offers the other shells (profiles), as the sidebar's + does; one opens in the
     /// selected terminal's set too.
     fn new_tab_button(&self, group: Option<u32>, cx: &mut Context<Self>) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
+        let ui = ui_in(&self.input.profile, cx);
         let button = style::icon_button(
             "tab-new",
             ui,
             IconName::Plus,
             keymap::with_key("New terminal", ActionId::NewTerminal),
         )
-        .on_click(cx.listener(move |this, _, window, cx| match group {
-            Some(group) => this.new_session_in_group(group, window, cx),
-            None => this.new_session(window, cx),
+        .on_click(cx.listener(move |_, _, _, cx| {
+            cx.emit(SidebarEvent::NewTerminal(group.map_or(NewTerminal::Plain, NewTerminal::InGroup)))
         }));
+        let this = cx.weak_entity();
+        let on_shell: super::shells::OnShell = std::rc::Rc::new(move |key, _, cx| {
+            this.update(cx, |_, cx| cx.emit(SidebarEvent::NewTerminal(NewTerminal::Shell(key)))).ok();
+        });
         div()
             .flex()
             .flex_none()
             .items_center()
-            .child(self.with_shell_menu("tab-new-shells", button, cx))
+            .child(super::shells::with_shell_menu("tab-new-shells", button, on_shell))
             .into_any_element()
     }
 }

@@ -11,15 +11,15 @@ use wormhole_core::view::sidebar::{Urgency, spoken};
 use super::facts::RowInfo;
 use super::group_popover::{group_menu, group_popover};
 use super::rows::{Frame, glyph_for, tile_for};
+use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::platform::{self, Anchor};
 use crate::settings::store_in;
 use crate::style;
 use crate::style::{ClickHandler, GroupHead};
 use crate::theme_bridge;
-use crate::window::Workspace;
-use crate::window::focus::SidebarStop;
+use crate::window::focus::{SidebarStop, key_menu_origin};
 
-impl Workspace {
+impl Sidebar {
     /// A group's head: the tiles of its terminals while folded, the dot while one needs you or
     /// failed, a + when it is pinned and empty.
     #[allow(clippy::too_many_arguments)]
@@ -36,8 +36,8 @@ impl Workspace {
         let ui = frame.ui;
         let band = &listing.bands[band_ix];
         let group = band.group;
-        let color = self.sidebar.view.groups.get(group).and_then(|g| g.paint());
-        let tokens = &store_in(&self.profile, cx).tokens;
+        let color = self.view.groups.get(group).and_then(|g| g.paint());
+        let tokens = &store_in(&self.input.profile, cx).tokens;
         let hsla = color.map(|color| theme_bridge::hsla(color.color(tokens)));
         let folded = band.folded;
         // One order of urgency for the dot and for the tiles (core's, the same the tab switcher and
@@ -68,8 +68,8 @@ impl Workspace {
         // The + is the same button for a pinned, empty group (always shown) and any other head
         // (under the pointer): New terminal in group, which starts in the group's folder.
         let tooltip = SharedString::from(spoken::new_in_group_label(&band.label));
-        let add: ClickHandler = Box::new(move |_, window, cx| {
-            on_add.update(cx, |this, cx| this.new_session_in_group(group, window, cx)).ok();
+        let add: ClickHandler = Box::new(move |_, _, cx| {
+            on_add.update(cx, |_, cx| cx.emit(SidebarEvent::NewTerminal(NewTerminal::InGroup(group)))).ok();
         });
         let (empty, add) = if band.pinned && band.members.is_empty() {
             (Some((tooltip, add)), None)
@@ -117,8 +117,8 @@ impl Workspace {
         if alerts > 0 && folded {
             label = format!("{label}, {}", wormhole_core::view::spoken::terminals_need_you(alerts));
         }
-        let (keyed, ring) = self.sidebar_keyed(&SidebarStop::Group(group), window);
-        let menu_open = self.sidebar.menu_group == Some(group);
+        let (keyed, ring) = self.keyed(&SidebarStop::Group(group), window);
+        let menu_open = self.menu_group == Some(group);
         let element = style::group_head(id, ui, parts)
             .role(Role::TreeItem)
             .aria_label(label)
@@ -134,9 +134,9 @@ impl Workspace {
         element
             .on_mouse_down(
                 MouseButton::Right,
-                cx.listener(move |ws, event: &MouseDownEvent, window, cx| {
+                cx.listener(move |sidebar, event: &MouseDownEvent, window, cx| {
                     cx.stop_propagation();
-                    ws.open_group_menu(group, event.position, window, cx);
+                    sidebar.open_group_menu(group, event.position, window, cx);
                 }),
             )
             .into_any_element()
@@ -144,13 +144,13 @@ impl Workspace {
 
     /// ⌃↩ with the keys on group `group`'s head: its menu, under it.
     pub(super) fn group_key_menu(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
-        let listing = self.session_listing(cx);
+        let listing = self.listing(cx);
         // The list's children are its entries, in order.
         let at = listing.entries.iter().position(
             |entry| matches!(entry, Entry::Band { band, .. } if listing.bands[*band].group == group),
         );
-        let Some(bounds) = at.and_then(|at| self.sidebar.scroll.bounds_for_item(at)) else { return };
-        self.open_group_menu(group, crate::window::focus::key_menu_origin(bounds), window, cx);
+        let Some(bounds) = at.and_then(|at| self.scroll.bounds_for_item(at)) else { return };
+        self.open_group_menu(group, key_menu_origin(bounds), window, cx);
     }
 
     /// Open group `group`'s menu at `at`, its head wearing the ring until the menu closes.
@@ -162,15 +162,15 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let facts = self.group_facts(group, cx);
-        self.sidebar.menu_row = None;
-        self.sidebar.menu_group = Some(group);
+        self.menu_row = None;
+        self.menu_group = Some(group);
         cx.notify();
         let this = cx.weak_entity();
         let ring = this.clone();
         let menu = group_menu(facts, &this).on_close(move |_, cx| {
-            ring.update(cx, |ws, cx| {
-                if ws.sidebar.menu_group == Some(group) {
-                    ws.sidebar.menu_group = None;
+            ring.update(cx, |sidebar, cx| {
+                if sidebar.menu_group == Some(group) {
+                    sidebar.menu_group = None;
                     cx.notify();
                 }
             })
@@ -188,9 +188,9 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(name) = self.sidebar.view.groups.get(group).map(|g| g.name.clone()) else { return };
+        let Some(name) = self.view.groups.get(group).map(|g| g.name.clone()) else { return };
         let facts = self.group_facts(group, cx);
-        let appearance = store_in(&self.profile, cx).tokens.appearance;
+        let appearance = store_in(&self.input.profile, cx).tokens.appearance;
         let popover = group_popover(facts, name, appearance, &cx.weak_entity());
         platform::show_popover(popover, anchor, window, cx);
     }
@@ -198,9 +198,8 @@ impl Workspace {
     /// The groups a terminal's menu offers to move it to: every group, with its name and whether
     /// the terminal is in it.
     pub(super) fn group_choices(&self, id: i64) -> Vec<(u32, SharedString, bool)> {
-        let current = self.sidebar.view.groups.group_of(id);
-        self.sidebar
-            .view
+        let current = self.view.groups.group_of(id);
+        self.view
             .groups
             .iter()
             .map(|group| (group.id, SharedString::from(group.name.clone()), current == Some(group.id)))

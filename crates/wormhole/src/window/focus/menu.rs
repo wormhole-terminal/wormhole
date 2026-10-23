@@ -13,7 +13,7 @@ use crate::style;
 use crate::window::Workspace;
 
 /// Whether `keystroke` is the row menu's key.
-pub(super) fn is_menu_key(keystroke: &Keystroke) -> bool {
+pub(in crate::window) fn is_menu_key(keystroke: &Keystroke) -> bool {
     keymap::list_action(&crate::terminal_view::keystroke_spec(keystroke)) == Some(ActionId::RowMenu)
 }
 
@@ -29,7 +29,8 @@ impl Workspace {
     pub(super) fn row_menu_key(&mut self, area: Area, window: &mut Window, cx: &mut Context<Self>) {
         // The panel's rows have no menu yet; the title strip's is the folder's path menu.
         match area {
-            Area::Sidebar => self.sidebar_key_menu(window, cx),
+            // The list opens its own rows' menus.
+            Area::Sidebar => {}
             Area::Tabs => self.open_path_menu(window, cx),
             _ => {}
         }

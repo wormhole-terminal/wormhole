@@ -7,7 +7,7 @@ use gpui_kit::TestAppContext;
 use wormhole_core::view::panes::Axis;
 
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{drive, read, start, use_stable};
+use crate::window::view_tests::{drive, read, sidebar_of, start, use_stable};
 
 fn isolate(name: &str) -> bool {
     crate::window::view_tests::isolate_in(module_path!(), name)
@@ -78,7 +78,7 @@ fn a_new_terminal_beside_a_grouped_one_joins_its_group_and_renumbers_nobody(cx: 
     assert!(before.iter().all(|(id, n)| after.get(id) == Some(n)), "{before:?} -> {after:?}");
     assert_eq!(after.len(), 5);
     let made = read(cx, &window, |ws| ws.sessions[4].id);
-    let group = read(cx, &window, |ws| ws.sidebar.view.groups.group_of(made));
+    let group = sidebar_of(cx, &window, |sidebar| sidebar.view().groups.group_of(made));
     assert!(group.is_some(), "the new terminal is in the group of the one beside it");
     // ⇧⌘T opens one in no group.
     drive(cx, &window, |ws, window, cx| {
@@ -86,5 +86,5 @@ fn a_new_terminal_beside_a_grouped_one_joins_its_group_and_renumbers_nobody(cx: 
         ws.open_session_in(Some(None), None, None, window, cx);
     });
     let alone = read(cx, &window, |ws| ws.sessions[5].id);
-    assert_eq!(read(cx, &window, |ws| ws.sidebar.view.groups.group_of(alone)), None);
+    assert_eq!(sidebar_of(cx, &window, |sidebar| sidebar.view().groups.group_of(alone)), None);
 }

@@ -344,7 +344,7 @@ impl Workspace {
         if let Some(session) = self.sessions.iter().find(|s| s.id == tab) {
             session.terminal().update(cx, |terminal, cx| terminal.set_dock(None, cx));
         }
-        self.end_welcome_demo(tab);
+        self.end_welcome_demo(tab, cx);
         if primer {
             self.first_run.show_no_agents_note();
         }

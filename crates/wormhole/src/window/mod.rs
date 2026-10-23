@@ -80,6 +80,7 @@ mod feature_tests;
 pub(crate) mod features;
 pub(crate) mod focus;
 mod glass;
+mod group_ops;
 #[cfg(test)]
 mod group_tests;
 pub(crate) mod hosting;
@@ -113,6 +114,10 @@ mod saved_layout;
 mod session;
 mod shortcuts;
 mod sidebar;
+#[cfg(feature = "devctl")]
+mod sidebar_devctl;
+mod sidebar_drops;
+mod sidebar_host;
 mod slide;
 #[cfg(test)]
 mod stable_list_tests;
@@ -161,8 +166,11 @@ pub struct Workspace {
     /// How much of the window the last frame gave to something beside the workspace: the debug
     /// Inspector's panel, which GPUI lays out in the same window (`layout::column_probe`).
     beside: f32,
-    /// The terminal list: its saved view (grouping, filter, folded bands) and its state.
-    sidebar: self::sidebar::SidebarState,
+    /// The terminal list: an entity of its own, told how the window stands (`sidebar_host`) and heard
+    /// through its events.
+    sidebar: Entity<self::sidebar::Sidebar>,
+    /// What the window keeps for the list besides: where the terminals are listed, the traffic lights.
+    sidebar_feed: self::sidebar_host::SidebarFeed,
     right_tab: TabId,
     /// The features the app has (`feature`), copied from the installed table when the window was
     /// made so the frame never reads the global. A test installs its own before it opens one.
@@ -286,7 +294,13 @@ impl Workspace {
 
         let saved: Option<Layout> = record.layout.as_deref().and_then(|json| serde_json::from_str(json).ok());
         let mut layout = saved.unwrap_or_default();
-        let sidebar = self::sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
+        let areas = self::focus::FocusAreas::new(cx);
+        let list_focus = areas.list_focus();
+        let view = std::mem::take(&mut layout.sidebar);
+        let sidebar = cx.new(|cx| self::sidebar::Sidebar::new(view, list_focus, window, cx));
+        cx.subscribe_in(&sidebar, window, Self::on_sidebar_event).detach();
+        // The list draws itself (a hover, a rename, a menu): so does the window around it.
+        cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
 
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
@@ -302,6 +316,7 @@ impl Workspace {
             window_width: f32::MAX,
             beside: 0.0,
             sidebar,
+            sidebar_feed: self::sidebar_host::SidebarFeed::new(),
             right_tab: TabId::default(),
             features,
             feature_states,
@@ -328,7 +343,7 @@ impl Workspace {
             bounds: record.bounds,
             bounds_watch: Default::default(),
             title: SharedString::default(),
-            areas: self::focus::FocusAreas::new(cx),
+            areas,
             font_zoom: 0.0,
             closing_prompt: false,
             close_dot: false,

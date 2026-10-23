@@ -17,15 +17,15 @@ use wormhole_core::view::sidebar::tabs::{Hit, UNGROUPED, search};
 use super::facts::RowInfo;
 use super::rows::{Frame, glyph_for};
 use super::tab_bar::SetView;
+use super::{NewTerminal, Sidebar, SidebarEvent};
 use crate::select;
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings_in};
 use crate::style::{self, Edges, TextRole};
 use crate::style::{GroupHead, GroupSwitch, PopoverRow, TileFace, popover_row, popover_rule};
-use crate::window::Workspace;
 
 /// What a card or row does once the popover has closed.
-type Then = Box<dyn Fn(&mut Workspace, &mut Window, &mut Context<Workspace>)>;
+type Then = Box<dyn Fn(&mut Sidebar, &mut Window, &mut Context<Sidebar>)>;
 
 /// The popover's width.
 const POPOVER_W: f32 = 340.0;
@@ -33,7 +33,7 @@ const POPOVER_W: f32 = 340.0;
 const CARD_GAP: f32 = 6.0;
 
 /// The switcher being open: its search field.
-pub(in crate::window) struct Switcher {
+pub(super) struct Switcher {
     input: Entity<InputState>,
     _events: Subscription,
 }
@@ -90,7 +90,7 @@ struct Snapshot {
     keys: SharedString,
 }
 
-impl Workspace {
+impl Sidebar {
     /// The switcher in the bar: the current group's dot, name and count with the popover on it.
     pub(super) fn render_switcher(
         &self,
@@ -125,11 +125,11 @@ impl Workspace {
             .open(snapshot.open)
             .on_open_change(move |open, window, cx| {
                 on_open
-                    .update(cx, |ws, cx| {
+                    .update(cx, |sidebar, cx| {
                         if *open {
-                            ws.start_switcher(window, cx);
+                            sidebar.start_switcher(window, cx);
                         } else {
-                            ws.finish_switcher(window, cx);
+                            sidebar.finish_switcher(window, cx);
                         }
                     })
                     .ok();
@@ -152,34 +152,43 @@ impl Workspace {
             _ => {}
         });
         input.update(cx, |input, cx| input.focus(window, cx));
-        self.sidebar.tabs.switcher = Some(Switcher { input, _events: events });
+        self.tabs.switcher = Some(Switcher { input, _events: events });
         cx.notify();
     }
 
     /// Close the popover and give the keyboard back to the terminal.
-    pub(super) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.sidebar.tabs.switcher.take().is_some() {
+    pub(in crate::window) fn finish_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.end_switcher(true, window, cx);
+    }
+
+    /// [`Self::finish_switcher`], with the keyboard handed back to the terminal only when `refocus`.
+    pub(super) fn end_switcher(&mut self, refocus: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if self.tabs.switcher.take().is_some() {
             // A group being renamed on a card goes with it.
-            self.finish_group_rename(true, window, cx);
-            window.focus(&self.active_terminal().focus_handle(cx), cx);
+            self.end_group_rename(true, refocus, window, cx);
+            if refocus {
+                cx.emit(SidebarEvent::FocusTerminal);
+            }
             cx.notify();
         }
     }
 
     /// ↩ in the search: the first match.
     fn switcher_enter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(query) = self.sidebar.tabs.switcher.as_ref().map(|s| s.input.read(cx).value().to_string())
-        else {
+        let Some(query) = self.tabs.switcher.as_ref().map(|s| s.input.read(cx).value().to_string()) else {
             return;
         };
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
+        let input = self.input.clone();
+        let infos = &input.rows;
+        let listing = self.listing(cx);
         let view = self.set_view(&listing, cx);
         let first = search(&view.sets, &query, |ix| infos[ix].name.to_string()).first().copied();
         self.finish_switcher(window, cx);
         match first {
-            Some(Hit::Set(at)) => self.open_set_at(at, window, cx),
-            Some(Hit::Terminal(_, ix)) => self.activate(ix, window, cx),
+            Some(Hit::Set(at)) => self.open_set_at(at, cx),
+            Some(Hit::Terminal(_, ix)) => {
+                cx.emit(SidebarEvent::Activate { id: infos[ix].id, then_focus_list: false })
+            }
             None => {}
         }
     }
@@ -187,10 +196,7 @@ impl Workspace {
     /// New group: a new terminal in a group of its own.
     fn new_group_from_switcher(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.finish_switcher(window, cx);
-        self.new_session(window, cx);
-        if let Some(id) = self.sessions.get(self.active).map(|session| session.id) {
-            self.group_terminals(&[id], cx);
-        }
+        cx.emit(SidebarEvent::NewTerminal(NewTerminal::InNewGroup));
     }
 
     fn switcher_snapshot(&self, view: &SetView, infos: &[RowInfo], frame: &Frame, cx: &App) -> Snapshot {
@@ -238,12 +244,12 @@ impl Workspace {
                 .into(),
                 group: look.group,
                 renaming: look.group.and_then(|group| {
-                    let renaming = self.sidebar.group_renaming.as_ref()?;
+                    let renaming = self.group_renaming.as_ref()?;
                     (renaming.group == group).then(|| renaming.input.clone())
                 }),
             });
         }
-        let input = self.sidebar.tabs.switcher.as_ref().map(|s| s.input.clone());
+        let input = self.tabs.switcher.as_ref().map(|s| s.input.clone());
         let query = input.as_ref().map(|input| input.read(cx).value().to_string()).unwrap_or_default();
         let hits = (!query.trim().is_empty()).then(|| {
             search(&view.sets, &query, |ix| infos[ix].name.to_string())
@@ -280,11 +286,11 @@ impl Workspace {
             metrics: style::Metrics {
                 card_margin: 0.0,
                 card_gap: CARD_GAP,
-                ..style::Metrics::of(settings_in(&self.profile, cx).density, true)
-                    .fading(settings_in(&self.profile, cx).fade_group_colors)
-                    .with_group_folders(settings_in(&self.profile, cx).show_group_folders)
+                ..style::Metrics::of(settings_in(&self.input.profile, cx).density, true)
+                    .fading(settings_in(&self.input.profile, cx).fade_group_colors)
+                    .with_group_folders(settings_in(&self.input.profile, cx).show_group_folders)
             },
-            open: self.sidebar.tabs.switcher.is_some(),
+            open: self.tabs.switcher.is_some(),
             input,
             cards,
             loose,
@@ -296,16 +302,16 @@ impl Workspace {
 }
 
 /// The popover's content.
-fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) -> AnyElement {
+fn switcher_content(snap: &Snapshot, this: WeakEntity<Sidebar>, cx: &mut App) -> AnyElement {
     let Snapshot { ui, metrics, input, cards, loose, hits, hint, keys, .. } = snap;
     let (ui, metrics) = (*ui, *metrics);
     // A click that closes the popover first, then does `then`.
     let go = |then: Then| {
         let this = this.clone();
         move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
-            this.update(cx, |ws, cx| {
-                ws.finish_switcher(window, cx);
-                then(ws, window, cx);
+            this.update(cx, |sidebar, cx| {
+                sidebar.finish_switcher(window, cx);
+                then(sidebar, window, cx);
             })
             .ok();
         }
@@ -358,9 +364,13 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             };
             let target = hit.hit;
             list = list.child(popover_row(("switch-hit", at), ui, row).on_click(go(Box::new(
-                move |ws, window, cx| match target {
-                    Hit::Set(at) => ws.open_set_at(at, window, cx),
-                    Hit::Terminal(_, ix) => ws.activate(ix, window, cx),
+                move |sidebar, _, cx| match target {
+                    Hit::Set(at) => sidebar.open_set_at(at, cx),
+                    Hit::Terminal(_, ix) => {
+                        if let Some(id) = sidebar.input.rows.get(ix).map(|row| row.id) {
+                            cx.emit(SidebarEvent::Activate { id, then_focus_list: false });
+                        }
+                    }
                 },
             ))));
         }
@@ -387,10 +397,10 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 let tooltip = SharedString::from(spoken::new_in_group_label(&add_label));
                 let add: style::ClickHandler = Box::new(move |_, window, cx| {
                     add_this
-                        .update(cx, |ws, cx| {
-                            ws.finish_switcher(window, cx);
+                        .update(cx, |sidebar, cx| {
+                            sidebar.finish_switcher(window, cx);
                             if let Some(group) = group {
-                                ws.new_session_in_group(group, window, cx);
+                                cx.emit(SidebarEvent::NewTerminal(NewTerminal::InGroup(group)));
                             }
                         })
                         .ok();
@@ -398,7 +408,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 (tooltip, add)
             }),
             add: None,
-            on_toggle: Box::new(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx)))),
+            on_toggle: Box::new(go(Box::new(move |sidebar, _, cx| sidebar.open_set_at(set, cx)))),
             spoken_edit: card.label.clone(),
             spoken_fold: card.spoken.clone(),
             // The name opens the sidebar's group popover, under the name.
@@ -406,7 +416,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 let (this, at) = (this.clone(), label_at.clone());
                 Box::new(move |_: &ClickEvent, window: &mut Window, cx: &mut App| {
                     let bounds = at.bounds();
-                    this.update(cx, |ws, cx| ws.open_group_popover(group, bounds, window, cx)).ok();
+                    this.update(cx, |sidebar, cx| sidebar.open_group_popover(group, bounds, window, cx)).ok();
                 }) as style::ClickHandler
             }),
             label_anchor: group.map(|_| label_at.clone()),
@@ -422,11 +432,12 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
                 let this = this.clone();
                 head.on_mouse_down(MouseButton::Right, move |event, window, cx| {
                     cx.stop_propagation();
-                    this.update(cx, |ws, cx| ws.open_group_menu(group, event.position, window, cx)).ok();
+                    this.update(cx, |sidebar, cx| sidebar.open_group_menu(group, event.position, window, cx))
+                        .ok();
                 })
             });
         let head = if empty && card.pinned {
-            head.on_click(go(Box::new(move |ws, window, cx| ws.open_set_at(set, window, cx))))
+            head.on_click(go(Box::new(move |sidebar, _, cx| sidebar.open_set_at(set, cx))))
         } else {
             head
         };
@@ -453,12 +464,11 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             ..PopoverRow::new(UNGROUPED)
         };
         content =
-            content.child(popover_row("switch-loose", ui, row).on_click(go(Box::new(|ws, window, cx| {
-                let infos = ws.row_infos(cx);
-                let listing = ws.listing(&infos, cx);
-                let view = ws.set_view(&listing, cx);
+            content.child(popover_row("switch-loose", ui, row).on_click(go(Box::new(|sidebar, _, cx| {
+                let listing = sidebar.listing(cx);
+                let view = sidebar.set_view(&listing, cx);
                 if let Some(at) = view.sets.iter().position(|set| set.band.is_none()) {
-                    ws.open_set_at(at, window, cx);
+                    sidebar.open_set_at(at, cx);
                 }
             }))));
     }
@@ -476,7 +486,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             .on_click({
                 let this = this.clone();
                 move |_, window, cx| {
-                    this.update(cx, |ws, cx| ws.new_group_from_switcher(window, cx)).ok();
+                    this.update(cx, |sidebar, cx| sidebar.new_group_from_switcher(window, cx)).ok();
                 }
             }),
         )
@@ -484,7 +494,7 @@ fn switcher_content(snap: &Snapshot, this: WeakEntity<Workspace>, cx: &mut App) 
             popover_row("switch-show-all", ui, PopoverRow::new("Show all groups in the sidebar")).on_click({
                 let this = this.clone();
                 move |_, window, cx| {
-                    this.update(cx, |ws, cx| ws.finish_switcher(window, cx)).ok();
+                    this.update(cx, |sidebar, cx| sidebar.finish_switcher(window, cx)).ok();
                     update_settings(cx, |s| {
                         s.terminals_in = wormhole_core::view::sidebar::TerminalsIn::Sidebar
                     });

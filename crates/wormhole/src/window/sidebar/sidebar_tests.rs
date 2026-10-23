@@ -10,7 +10,7 @@ use gpui_kit::{
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, start};
+use crate::window::view_tests::{draw, drive, isolate_in, press, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -59,7 +59,7 @@ fn lines(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<String> {
 
 /// Where the list's line `at` was drawn.
 fn line_bounds(cx: &mut TestAppContext, window: &OpenWindow, at: usize) -> Bounds<Pixels> {
-    read(cx, window, |ws| ws.sidebar.scroll.bounds_for_item(at).expect("the line was drawn"))
+    sidebar_of(cx, window, |sidebar| sidebar.scroll().bounds_for_item(at).expect("the line was drawn"))
 }
 
 fn selected(cx: &mut TestAppContext, window: &OpenWindow) -> i64 {
@@ -89,7 +89,8 @@ fn area(cx: &mut TestAppContext, window: &OpenWindow) -> Option<wormhole_core::v
 }
 
 fn hints_showing(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
-    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.hints_showing(cx))).expect("the window is open")
+    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.sidebar.read(cx).hints_showing(cx)))
+        .expect("the window is open")
 }
 
 // ---------------------------------------------------------------- clicks
@@ -140,7 +141,7 @@ fn a_groups_head_folds_and_opens_it_and_its_plus_adds_a_terminal_to_it(cx: &mut 
     click(cx, &window, point(head.origin.x + px(120.0), head.center().y));
     settle(cx, &window);
     assert_eq!(lines(cx, &window), ["1", "[Group 1]"], "folded: its terminals are out of the list");
-    assert!(read(cx, &window, |ws| ws.sidebar.view.is_group_folded(group)));
+    assert!(sidebar_of(cx, &window, |sidebar| sidebar.view().is_group_folded(group)));
     click(cx, &window, point(head.origin.x + px(120.0), head.center().y));
     settle(cx, &window);
     assert_eq!(lines(cx, &window), ["1", "[Group 1]", "2", "3"], "and open again");
@@ -153,7 +154,7 @@ fn a_groups_head_folds_and_opens_it_and_its_plus_adds_a_terminal_to_it(cx: &mut 
     settle(cx, &window);
     assert_eq!(read(cx, &window, |ws| ws.sessions.len()), 4, "a terminal was made");
     let made = read(cx, &window, |ws| ws.sessions.last().expect("a terminal").id);
-    assert_eq!(read(cx, &window, |ws| ws.sidebar.view.groups.group_of(made)), Some(group));
+    assert_eq!(sidebar_of(cx, &window, |sidebar| sidebar.view().groups.group_of(made)), Some(group));
 }
 
 // ---------------------------------------------------------------- drags
@@ -212,7 +213,7 @@ fn a_row_dropped_on_a_groups_head_joins_the_group(cx: &mut TestAppContext) {
     pointer.simulate_mouse_up(to, MouseButton::Left, Modifiers::none());
     cx.run_until_parked();
     settle(cx, &window);
-    assert_eq!(read(cx, &window, |ws| ws.sidebar.view.groups.group_of(3)), Some(group));
+    assert_eq!(sidebar_of(cx, &window, |sidebar| sidebar.view().groups.group_of(3)), Some(group));
 }
 
 // ---------------------------------------------------------------- the keycaps
@@ -294,7 +295,7 @@ fn letters_typed_in_the_list_jump_to_the_next_name_that_starts_with_them(cx: &mu
         draw(cx, &window);
         press(cx, &window, "f6");
     }
-    let at = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.areas.sidebar_at.clone());
+    let at = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.keys_at().cloned());
     press(cx, &window, "b");
     assert_eq!(at(cx), Some(SidebarStop::Row(2)), "the first name starting with b");
     press(cx, &window, "r");
@@ -355,7 +356,7 @@ fn the_profile_chip_is_drawn_only_while_there_are_two_profiles(cx: &mut TestAppC
     );
     draw(cx, &window);
     // Its menu opens and closes with the chip.
-    assert_eq!(read(cx, &window, |ws| ws.sidebar.profile_menu), None);
+    assert!(sidebar_of(cx, &window, |sidebar| !sidebar.profile_menu_open()));
 }
 
 // ---------------------------------------------------------------- scrolling
@@ -369,7 +370,7 @@ fn the_wheel_scrolls_a_list_longer_than_the_window(cx: &mut TestAppContext) {
     cx.simulate_window_resize(window.handle, size(px(1200.0), px(500.0)));
     draw(cx, &window);
     draw(cx, &window);
-    assert_eq!(read(cx, &window, |ws| f32::from(ws.sidebar.scroll.offset().y)), 0.0);
+    assert_eq!(sidebar_of(cx, &window, |sidebar| f32::from(sidebar.scroll().offset().y)), 0.0);
     let at = line_bounds(cx, &window, 0).center();
     pointer(cx, &window).simulate_event(gpui_kit::ScrollWheelEvent {
         position: at,
@@ -379,7 +380,10 @@ fn the_wheel_scrolls_a_list_longer_than_the_window(cx: &mut TestAppContext) {
     });
     cx.run_until_parked();
     draw(cx, &window);
-    assert!(read(cx, &window, |ws| f32::from(ws.sidebar.scroll.offset().y)) < 0.0, "the list moved up");
+    assert!(
+        sidebar_of(cx, &window, |sidebar| f32::from(sidebar.scroll().offset().y)) < 0.0,
+        "the list moved up"
+    );
 }
 
 // ---------------------------------------------------------------- the frame
@@ -444,7 +448,7 @@ fn the_sidebars_part_of_a_frame(cx: &mut TestAppContext) {
     }
     let window = crowded(cx);
     let frames = 300;
-    let mut run = |cx: &mut TestAppContext| -> f64 {
+    let run = |cx: &mut TestAppContext| -> f64 {
         let started = Instant::now();
         for _ in 0..frames {
             drive(cx, &window, |ws, _, cx| ws.mark_dirty(cx));

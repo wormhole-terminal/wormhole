@@ -14,7 +14,7 @@ use crate::window::resize::edge_rule;
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
         // Under tabs there is no sidebar to show or hide.
-        if self.sidebar.tabs.on {
+        if self.sidebar_feed.tabs_on {
             return;
         }
         let before = self.columns().sidebar;
@@ -39,7 +39,7 @@ impl Workspace {
     /// The columns as they are drawn: under tabs there is no sidebar, whatever it would be.
     fn shown_panes(&self) -> Panes {
         let mut panes = self.panes;
-        panes.sidebar_open &= !self.sidebar.tabs.on;
+        panes.sidebar_open &= !self.sidebar_feed.tabs_on;
         panes
     }
 
@@ -133,7 +133,6 @@ impl Render for Workspace {
         if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
             self.group_drag = None;
-            self.sidebar.over = None;
         }
         let notes_visible = self.notes_visible();
         let columns = self.columns();
@@ -153,7 +152,7 @@ impl Render for Workspace {
         self.status_bar_drawn = self.status_bar(cx);
         let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
         let sidebar_glass = lifted;
-        let tabs = self.sidebar.tabs.on;
+        let tabs = self.sidebar_feed.tabs_on;
         let top_tabs = if tabs { self.render_tab_bar(window, cx) } else { None };
         // One terminal and no group to switch to: no tab bar, as in macOS Terminal.
         let tabs_shown = top_tabs.is_some();

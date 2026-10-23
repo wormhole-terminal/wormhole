@@ -175,6 +175,16 @@ pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
         .expect("the window is open");
 }
 
+/// Read the window's sidebar (its list's state), which is an entity of its own.
+pub(in crate::window) fn sidebar_of<R>(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    f: impl FnOnce(&crate::window::sidebar::Sidebar) -> R,
+) -> R {
+    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| f(ws.sidebar.read(cx))))
+        .expect("the window is open")
+}
+
 /// [`read`] with the app too, for what lives in an entity beside the workspace.
 pub(crate) fn read_cx<R>(
     cx: &mut TestAppContext,
@@ -581,7 +591,7 @@ fn the_sidebar_lists_groups_pins_and_folds(cx: &mut TestAppContext) {
     draw(cx, &window);
     assert_eq!(listed(cx, &window), ["1:1", "[band]", "2:2", "3:3"]);
 
-    let saved = read(cx, &window, |ws| ws.sidebar.view.clone());
+    let saved = sidebar_of(cx, &window, |sidebar| sidebar.view().clone());
     // What is saved with the window brings all of it back.
     let record = cx
         .update(|cx| window.workspace.read_with(cx, |ws, cx| ws.window_record(cx)))

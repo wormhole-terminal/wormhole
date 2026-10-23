@@ -469,7 +469,9 @@ fn the_example_band_goes_when_its_terminal_closes(cx: &mut TestAppContext) {
         ws.close_session(ix, window, cx);
     });
     assert_eq!(band(cx, &window), None, "the terminal is gone");
-    read(cx, &window, |ws| assert!(ws.sidebar.demo.is_none(), "and so is the state, not just the drawing"));
+    crate::window::view_tests::sidebar_of(cx, &window, |sidebar| {
+        assert!(!sidebar.has_demo(), "and so is the state, not just the drawing")
+    });
     draw(cx, &window);
 }
 

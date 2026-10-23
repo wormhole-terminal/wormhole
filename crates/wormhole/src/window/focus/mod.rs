@@ -17,7 +17,7 @@ mod panel;
 mod window_tests;
 
 use gpui_kit::*;
-use wormhole_core::view::focus::list::{Key, TypeAhead};
+use wormhole_core::view::focus::list::Key;
 use wormhole_core::view::focus::{self, Area, EscState, Escape, Stop};
 
 use crate::actions;
@@ -25,13 +25,13 @@ use crate::window::Workspace;
 use wormhole_core::config::TabId;
 
 pub(super) use bars::TitleButton;
-pub(in crate::window) use menu::key_menu_origin;
+pub(in crate::window) use menu::{is_menu_key, key_menu_origin};
 pub(in crate::window) use panel::{Activate, Walkable};
 
 actions!(focus_area, [NextStop, PreviousStop]);
 
 /// The key context of an area's container: where ⇥ / ⇧⇥ step from stop to stop.
-const AREA_CONTEXT: &str = "FocusArea";
+pub(in crate::window) const AREA_CONTEXT: &str = "FocusArea";
 
 /// Bind ⇥ and ⇧⇥ inside the areas. They are the conventions for moving through a window, like
 /// a text field's own keys, not shortcuts, so they aren't in core's key table. The terminal takes
@@ -47,7 +47,7 @@ pub(crate) fn init(cx: &mut App) {
 /// A sidebar item the keys can be on: one of the person's groups (by its id) or a terminal (by its
 /// id).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) enum SidebarStop {
+pub(in crate::window) enum SidebarStop {
     Group(u32),
     Row(i64),
 }
@@ -61,13 +61,10 @@ pub(super) struct FocusAreas {
     status_bar: FocusHandle,
     /// The title row's button the keys are on.
     pub(super) title: usize,
-    pub(super) sidebar_at: Option<SidebarStop>,
     /// The panel row the keys are on: its tab and its place among that tab's rows.
     pub(super) panel_at: Option<(TabId, usize)>,
     /// The status bar's item the keys are on.
     pub(super) status: usize,
-    /// Letters typed in the sidebar to jump to a name.
-    pub(super) typed: TypeAhead,
 }
 
 impl FocusAreas {
@@ -80,10 +77,8 @@ impl FocusAreas {
             panel_content: cx.focus_handle(),
             status_bar: cx.focus_handle(),
             title: 0,
-            sidebar_at: None,
             panel_at: None,
             status: 0,
-            typed: TypeAhead::default(),
         }
     }
 
@@ -100,8 +95,13 @@ impl FocusAreas {
         })
     }
 
+    /// The sidebar's handle, which the list holds the keyboard with.
+    pub(in crate::window) fn list_focus(&self) -> FocusHandle {
+        self.sidebar.clone()
+    }
+
     /// The area one of these handles holds the focus for.
-    fn holder(&self, window: &Window) -> Option<Area> {
+    pub(super) fn holder(&self, window: &Window) -> Option<Area> {
         Area::ALL.into_iter().find(|&area| self.handle(area).is_some_and(|h| h.is_focused(window)))
     }
 }
@@ -229,7 +229,7 @@ impl Workspace {
     }
 
     /// ⇥ (`1`) / ⇧⇥ (`-1`): the next or previous stop.
-    fn step_stop(&mut self, delta: isize, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn step_stop(&mut self, delta: isize, window: &mut Window, cx: &mut Context<Self>) {
         let to = focus::tab_step(self.current_stop(window, cx), delta, |area| self.stops(area, cx));
         self.focus_stop(to, window, cx);
     }
@@ -362,16 +362,15 @@ impl Workspace {
             return;
         }
         // ⌃↩ in a list: its row's menu.
-        if matches!(area, Area::Sidebar | Area::Tabs | Area::PanelContent)
-            && menu::is_menu_key(&event.keystroke)
-        {
+        if matches!(area, Area::Tabs | Area::PanelContent) && menu::is_menu_key(&event.keystroke) {
             self.row_menu_key(area, window, cx);
             cx.stop_propagation();
             return;
         }
         let handled = match area {
             Area::TitleRow => self.title_key(&event.keystroke, window, cx),
-            Area::Sidebar => self.sidebar_key(&event.keystroke, window, cx),
+            // The list is its own container and hears its keys itself (`Sidebar::on_area_key`).
+            Area::Sidebar => false,
             Area::Tabs => self.tabs_key(&event.keystroke, window, cx),
             Area::PanelTabs => self.panel_tabs_key(&event.keystroke, window, cx),
             Area::PanelContent => self.panel_key(&event.keystroke, window, cx),
@@ -397,7 +396,7 @@ impl Workspace {
         let Some(area) = self.focus_area(window, cx) else { return "none".into() };
         let at = match area {
             Area::TitleRow => self.title_buttons(cx).get(self.areas.title).map(|b| format!("{b:?}")),
-            Area::Sidebar => self.areas.sidebar_at.as_ref().map(|at| match at {
+            Area::Sidebar => self.sidebar.read(cx).keys_at().map(|at| match at {
                 SidebarStop::Group(id) => format!("group {id}"),
                 SidebarStop::Row(id) => format!("terminal id={id}"),
             }),

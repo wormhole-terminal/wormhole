@@ -5,7 +5,6 @@
 //! split also shows it: the chain mark at the right of its first line when its mates are elsewhere
 //! (rows of one split in no group share a card; VoiceOver is told they are on screen).
 use std::time::Duration;
-use std::time::Instant;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
@@ -19,11 +18,11 @@ use wormhole_core::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};
 use wormhole_core::view::sidebar::text::{agent_detail, ago, clock, place_detail, took};
 
 use super::facts::RowInfo;
-use super::{BODY_REM, CAPTION_REM, two_line_tooltip};
+use super::input::SidebarInput;
+use super::{BODY_REM, CAPTION_REM, Sidebar, SidebarEvent, two_line_tooltip};
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
-use crate::window::Workspace;
 use crate::window::focus::SidebarStop;
 use crate::window::session::home_dir;
 use crate::window::terminal_drag::DragOrigin;
@@ -72,18 +71,18 @@ pub(super) struct Frame {
 }
 
 impl Frame {
-    pub(super) fn new(ws: &Workspace, width: f32, window: &mut Window, cx: &App) -> Self {
-        let s = settings_in(&ws.profile, cx);
+    pub(super) fn new(input: &SidebarInput, width: f32, hints: bool, window: &mut Window, cx: &App) -> Self {
+        let s = settings_in(&input.profile, cx);
         Self {
-            ui: ui_in(&ws.profile, cx),
+            ui: ui_in(&input.profile, cx),
             metrics: Metrics::of(s.density, s.show_groups_as_cards)
                 .fading(s.fade_group_colors)
                 .with_group_folders(s.show_group_folders),
             show_dot: s.sidebar_status_dot,
             show_changes: s.sidebar_changes,
             show_notes: s.sidebar_notes,
-            hints: ws.hints_showing(cx),
-            code_font: crate::fonts::code_font_in(&ws.profile, cx).0,
+            hints,
+            code_font: crate::fonts::code_font_in(&input.profile, cx).0,
             width,
             text_style: window.text_style(),
             rem: window.rem_size(),
@@ -257,12 +256,7 @@ pub(super) fn time_text(info: &RowInfo, compact: bool) -> Option<String> {
     }
 }
 
-impl Workspace {
-    /// The ⌘1–9 keycaps are showing (⌘ held alone long enough, and the setting on).
-    pub(in crate::window) fn hints_showing(&self, cx: &App) -> bool {
-        settings_in(&self.profile, cx).sidebar_cmd_hints && self.sidebar.hold.showing(Instant::now())
-    }
-
+impl Sidebar {
     pub(super) fn render_row(
         &self,
         info: &RowInfo,
@@ -272,8 +266,8 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let ui = frame.ui;
-        let (ix, id) = (info.ix, info.id);
-        let selected = ix == self.active;
+        let id = info.id;
+        let selected = info.ix == self.input.active;
         let group = SharedString::from("terminal-row");
 
         // Every row leads with its status tile: what the terminal is inside, what it is doing round
@@ -449,7 +443,7 @@ impl Workspace {
                     .map(|fade| (fade, group.clone())),
             },
         );
-        let flash = self.sidebar.flash.filter(|(flashed, _)| *flashed == id).map(|(_, generation)| {
+        let flash = self.flash.filter(|(flashed, _)| *flashed == id).map(|(_, generation)| {
             div().absolute().top_0().left_0().size_full().bg(ui.highlight).with_animation(
                 ("move-flash", generation),
                 Animation::new(MOVE_FLASH),
@@ -457,12 +451,9 @@ impl Workspace {
             )
         });
         let dragged = cx.has_active_drag()
-            && self
-                .terminal_drag
-                .as_ref()
-                .is_some_and(|drag| drag.id == id && drag.origin == DragOrigin::Row);
+            && self.input.terminal_drag.is_some_and(|(drag, origin)| drag == id && origin == DragOrigin::Row);
         // The keys' place: VoiceOver follows it, and the ring shows while keys move it.
-        let (keyed, ring) = self.sidebar_keyed(&SidebarStop::Row(id), window);
+        let (keyed, ring) = self.keyed(&SidebarStop::Row(id), window);
         let row = row
             .group(group.clone())
             .relative()
@@ -475,12 +466,16 @@ impl Workspace {
             .when_some(place.number, |d, n| d.aria_keyshortcuts(keyshortcut(n)))
             .when(keyed, |d| d.aria_active_descendant())
             .when(dragged, |d| d.opacity(style::DRAG_LIFT_OPACITY))
-            .on_click(cx.listener(move |this, _, window, cx| this.activate(ix, window, cx)))
+            .on_click(
+                cx.listener(move |_, _, _, cx| {
+                    cx.emit(SidebarEvent::Activate { id, then_focus_list: false })
+                }),
+            )
             .when_some(tooltip, |d, (name, second)| {
                 d.tooltip(move |window, cx| two_line_tooltip(name.clone(), second.clone(), ui, window, cx))
             })
             .children(flash)
-            .when(self.sidebar.menu_row == Some(id) || ring, |d| {
+            .when(self.menu_row == Some(id) || ring, |d| {
                 d.child(style::focus_ring(ui, style::RingPlacement::Inside, px(style::CARD_ROW_RADIUS)))
             })
             .when(!frame.hints, |d| {
@@ -508,11 +503,11 @@ impl Workspace {
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ix = info.ix;
+        let id = info.id;
         let fill = if selected { style::SelectedFill::Tint } else { style::SelectedFill::Plain };
         // No tooltip while a close question is up: the pointer still rests on the ×, and GPUI
         // would show (or keep) its tooltip beside the dialog. Dropping it clears what is pending.
-        let asking = self.closing_session_prompt || self.closing_prompt;
+        let asking = self.input.asking;
         div()
             .absolute()
             .top(px(CLOSE_X_TOP))
@@ -530,9 +525,9 @@ impl Workspace {
                         .when(!asking, |d| {
                             d.tooltip(|window, cx| Tooltip::new("Close terminal").build(window, cx))
                         })
-                        .on_click(cx.listener(move |this, _, window, cx| {
+                        .on_click(cx.listener(move |_, _, _, cx| {
                             cx.stop_propagation();
-                            this.request_close_session(ix, window, cx);
+                            cx.emit(SidebarEvent::Close(id));
                         }))
                 },
             ))

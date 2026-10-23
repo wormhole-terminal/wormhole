@@ -1,16 +1,21 @@
-//! The terminal list on the left. Core
+//! The terminal list on the left, an entity of its own (`Sidebar`) that the window hosts. Core
 //! (`wormhole_core::view::sidebar`) decides what is listed, in what order, with which ⌘ numbers
-//! and in which words; this gathers each terminal's facts, draws the groups and rows, and
-//! wires up the ⌘-hold hints (`hints`), the row and group menus (`row_menu`, `groups`) and drag
-//! and drop (`drag`).
+//! and in which words; this holds the list's state, draws the groups and rows, and wires up the
+//! ⌘-hold hints (`hints`), the row and group menus (`row_menu`, `groups`) and drag and drop (`drag`).
+//!
+//! The sidebar never reads the `Workspace`. The window pushes it a [`SidebarInput`] (the terminals as
+//! rows, which is selected, the profile, the width, the glass, the drag in flight) before it is drawn
+//! and before the window asks it for something that depends on the terminals as they are; what the
+//! person does in the list comes back as a [`SidebarEvent`] the window handles (`window::sidebar_host`).
+//! The window reaches the list's state through the methods marked `pub(in crate::window)`.
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::PathBuf;
+use std::rc::Rc;
 
 use gpui_kit::component::scroll::Scrollbar;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::view::focus::list::TypeAhead;
 use wormhole_core::view::sidebar::NUMBERED;
 use wormhole_core::view::sidebar::hints::CmdHold;
 use wormhole_core::view::sidebar::order::FrozenNumbers;
@@ -18,18 +23,18 @@ use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbe
 
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, TextRole};
-use crate::window::Workspace;
-use crate::window::glass::{GlassKind, Insets, LIST_CLIP, glass_key};
+use crate::window::focus::SidebarStop;
+use crate::window::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
 use crate::window::terminal_drag::Over;
 
 mod demo;
 mod drag;
 mod facts;
-mod group_actions;
 mod group_head;
 mod group_popover;
 mod groups;
 mod hints;
+mod input;
 mod keys;
 mod motion;
 pub(in crate::window) mod profile_chip;
@@ -41,39 +46,45 @@ pub(crate) mod shells;
 mod sidebar_tests;
 mod switcher;
 mod tab_bar;
-mod tick;
 
-use facts::row_times;
-pub(in crate::window) use facts::{RowExtra, RowExtras, RowInfo};
+pub(in crate::window) use facts::row_times;
+pub(in crate::window) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};
+pub(in crate::window) use input::{NewTerminal, SidebarEvent, SidebarInput};
 use motion::{ItemKey, ListMotion};
-pub(super) use row_menu::reveal_in_finder;
-pub(super) use tab_bar::TAB_ROW_H;
+pub(in crate::window) use row_menu::reveal_in_finder;
+pub(in crate::window) use tab_bar::TAB_ROW_H;
 
-/// The sidebar's part of a window: what is saved with it (the groups, their order, which are
-/// folded) and what it is doing right now.
-pub(super) struct SidebarState {
+/// The terminal list: what is saved with the window (the groups, their order, which are folded) and what
+/// it is doing right now.
+pub(in crate::window) struct Sidebar {
     /// Saved in the window's layout.
-    pub(super) view: WindowSidebar,
+    view: WindowSidebar,
+    /// What the window last said of itself.
+    input: Rc<SidebarInput>,
     /// ⌘ held on its own (the ⌘1–9 keycaps), and the timer that shows them.
     hold: CmdHold,
     hold_timer: Option<Task<()>>,
     _keys: Subscription,
+    /// The list's focus: the keys walk it while it has the keyboard (F6, ⇥).
+    focus: FocusHandle,
+    /// The item the keys are on.
+    keys_at: Option<SidebarStop>,
+    /// Letters typed in the list to jump to a name.
+    typed: TypeAhead,
     /// The terminal whose context menu is open: its row wears the focus ring.
-    pub(super) menu_row: Option<i64>,
+    menu_row: Option<i64>,
     /// The group whose head's context menu is open.
     menu_group: Option<u32>,
     /// The group being renamed on its head.
-    pub(super) group_renaming: Option<rename::GroupRename>,
+    group_renaming: Option<rename::GroupRename>,
     /// The terminal being renamed in its row.
-    pub(super) renaming: Option<rename::TerminalRename>,
-    pub(super) scroll: ScrollHandle,
-    /// Bring this terminal's row into view on the next frame.
-    pub(super) scroll_to: Option<i64>,
+    renaming: Option<rename::TerminalRename>,
+    scroll: ScrollHandle,
     /// The row that just moved to another group, flashed once: its terminal and a counter that
     /// restarts the flash.
-    pub(super) flash: Option<(i64, u64)>,
+    flash: Option<(i64, u64)>,
     /// What the pointer is over while something is dragged over the list.
-    pub(super) over: Option<Over>,
+    over: Option<Over>,
     /// How many times the person rearranged the list (a drag, a group made or taken apart): the
     /// ⌘ numbers are dealt again when it changes.
     order_rev: u64,
@@ -81,125 +92,222 @@ pub(super) struct SidebarState {
     numbers: RefCell<FrozenNumbers<i64>>,
     /// The list's lines as last drawn and the slide of those that moved.
     motion: ListMotion,
-    /// Which repository a worktree belongs to, by its root (read from disk once per refresh).
-    worktrees: RefCell<HashMap<PathBuf, Option<PathBuf>>>,
     /// The times the rows showed when last drawn ("Working · 3m", "1:12"), so a tick redraws
     /// only when one of them would read differently.
     times_drawn: RefCell<Vec<Option<String>>>,
     /// The terminal welcome's example group while its sidebar step is up (`demo`). Never saved.
-    pub(super) demo: Option<demo::Demo>,
+    demo: Option<demo::Demo>,
     /// The tab bar, while the terminals are in tabs.
-    pub(super) tabs: tab_bar::TabBarState,
+    tabs: tab_bar::TabBarState,
     /// The profile chip's menu being open, and the list it shows.
-    pub(super) profile_menu: Option<crate::window::sidebar::profile_chip::ProfilePage>,
+    profile_menu: Option<profile_chip::ProfilePage>,
 }
 
-impl SidebarState {
-    pub(super) fn new(view: WindowSidebar, window: &mut Window, cx: &mut Context<Workspace>) -> Self {
+impl EventEmitter<SidebarEvent> for Sidebar {}
+
+impl Sidebar {
+    /// A list with `view` saved from the window it was in, whose keys go to `focus` (the area's handle).
+    pub(in crate::window) fn new(
+        view: WindowSidebar,
+        focus: FocusHandle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let keys = hints::watch_keys(window, cx);
         Self {
             view,
+            input: Rc::default(),
             hold: CmdHold::default(),
             hold_timer: None,
             _keys: keys,
+            focus,
+            keys_at: None,
+            typed: TypeAhead::default(),
             menu_row: None,
             menu_group: None,
             group_renaming: None,
             renaming: None,
             scroll: ScrollHandle::new(),
-            scroll_to: None,
             flash: None,
             over: None,
             order_rev: 0,
             numbers: RefCell::default(),
             motion: ListMotion::default(),
-            worktrees: RefCell::default(),
             times_drawn: RefCell::default(),
             demo: None,
             tabs: tab_bar::TabBarState::default(),
             profile_menu: None,
         }
     }
-}
 
-impl Workspace {
-    /// The list as the sidebar draws it.
-    fn listing(&self, infos: &[RowInfo], cx: &App) -> Listing {
-        let ids: Vec<i64> = infos.iter().map(|info| info.id).collect();
-        let pinned: Vec<bool> = infos.iter().map(|info| info.pinned).collect();
-        let split_of = self.split_ids();
-        let numbers = settings_in(&self.profile, cx).sidebar_numbers;
+    /// What the window says of itself now: what the next frame, and every call that reads the
+    /// terminals, goes by.
+    pub(in crate::window) fn set_input(&mut self, input: SidebarInput) {
+        self.input = Rc::new(input);
+    }
+
+    /// The column's width as last said, for a push that changes nothing else.
+    pub(in crate::window) fn width(&self) -> f32 {
+        self.input.width
+    }
+
+    /// The saved view: the groups, their order, which are folded.
+    pub(in crate::window) fn view(&self) -> &WindowSidebar {
+        &self.view
+    }
+
+    /// The saved view, to change (the window seats a joined terminal beside its mates, closes one).
+    /// The caller says `Changed` itself when it matters.
+    pub(in crate::window) fn view_mut(&mut self) -> &mut WindowSidebar {
+        &mut self.view
+    }
+
+    /// The list's scroll, which devctl and the tests turn and measure.
+    #[cfg(any(test, feature = "devctl"))]
+    pub(in crate::window) fn scroll(&self) -> &ScrollHandle {
+        &self.scroll
+    }
+
+    /// What the pointer is over in the list while something is dragged over it.
+    #[cfg(test)]
+    pub(in crate::window) fn over(&self) -> Option<Over> {
+        self.over
+    }
+
+    /// The pointer left the list for the panes: nothing in the list is the target. Whether it was.
+    pub(in crate::window) fn take_over(&mut self) -> bool {
+        self.over.take().is_some()
+    }
+
+    /// The list's focus handle, which holds the keyboard while the list is the area the keys are in.
+    pub(in crate::window) fn focus_handle(&self) -> &FocusHandle {
+        &self.focus
+    }
+
+    /// The item the keys are on.
+    #[cfg(any(test, feature = "devctl"))]
+    pub(in crate::window) fn keys_at(&self) -> Option<&SidebarStop> {
+        self.keys_at.as_ref()
+    }
+
+    /// The terminal whose row wears the ring for an open menu.
+    #[cfg(test)]
+    pub(in crate::window) fn menu_row(&self) -> Option<i64> {
+        self.menu_row
+    }
+
+    /// The group being renamed, and its name field.
+    #[cfg(test)]
+    pub(in crate::window) fn group_renaming(
+        &self,
+    ) -> Option<(u32, Entity<gpui_kit::component::input::InputState>)> {
+        self.group_renaming.as_ref().map(|r| (r.group, r.input.clone()))
+    }
+
+    /// Whether the terminal welcome's example band is up.
+    #[cfg(test)]
+    pub(in crate::window) fn has_demo(&self) -> bool {
+        self.demo.is_some()
+    }
+
+    /// The profile chip's menu is open.
+    #[cfg(test)]
+    pub(in crate::window) fn profile_menu_open(&self) -> bool {
+        self.profile_menu.is_some()
+    }
+
+    /// The terminal being renamed, and its name field.
+    #[cfg(test)]
+    pub(in crate::window) fn terminal_renaming(
+        &self,
+    ) -> Option<Entity<gpui_kit::component::input::InputState>> {
+        self.renaming.as_ref().map(|r| r.input.clone())
+    }
+
+    /// Whether the times on the rows read as `now` says: no, and the list wants a redraw (a row's
+    /// "Working · 3m" moved on its own).
+    pub(in crate::window) fn times_changed(&self, now: Vec<Option<String>>) -> bool {
+        if *self.times_drawn.borrow() == now {
+            return false;
+        }
+        *self.times_drawn.borrow_mut() = now;
+        true
+    }
+
+    /// The list as the sidebar draws it, from `input`'s terminals.
+    pub(in crate::window) fn listing_of(&self, input: &SidebarInput, cx: &App) -> Listing {
+        let ids = input.ids();
+        let pinned = input.pinned();
+        let split_of = input.split_of();
+        let numbers = settings_in(&input.profile, cx).sidebar_numbers;
         let mut listing = Listing::build(&ListInput {
             ids: &ids,
             pinned: &pinned,
-            sidebar: &self.sidebar.view,
-            splits: Splits { split_of: &split_of, selected: Some(self.active) },
+            sidebar: &self.view,
+            splits: Splits { split_of: &split_of, selected: Some(input.active) },
             numbers,
         });
-        self.freeze_numbers(&mut listing, infos, numbers);
+        self.freeze_numbers(&mut listing, input, numbers);
         listing
+    }
+
+    /// The list as the window last described it.
+    fn listing(&self, cx: &App) -> Listing {
+        self.listing_of(&self.input, cx)
     }
 
     /// Under "Stay with the terminal", the numbers the listing dealt are replaced by the frozen ones:
     /// kept while the terminals are only added to, dealt again when the person rearranges the list,
     /// folds a group, closes a terminal or changes the setting (`FrozenNumbers`).
-    fn freeze_numbers(&self, listing: &mut Listing, infos: &[RowInfo], numbers: SidebarNumbers) {
-        let mut frozen = self.sidebar.numbers.borrow_mut();
+    fn freeze_numbers(&self, listing: &mut Listing, input: &SidebarInput, numbers: SidebarNumbers) {
+        let mut frozen = self.numbers.borrow_mut();
         if numbers != SidebarNumbers::Terminal {
             frozen.reset();
             return;
         }
         let mut tag = DefaultHasher::new();
-        self.sidebar.order_rev.hash(&mut tag);
-        self.sidebar.view.folded.hash(&mut tag);
-        let window: Vec<(i64, bool)> = infos.iter().map(|info| (info.id, info.pinned)).collect();
-        let dealt: Vec<i64> = listing.visible().map(|ix| infos[ix].id).collect();
+        self.order_rev.hash(&mut tag);
+        self.view.folded.hash(&mut tag);
+        let window: Vec<(i64, bool)> = input.rows.iter().map(|info| (info.id, info.pinned)).collect();
+        let dealt: Vec<i64> = listing.visible().map(|ix| input.rows[ix].id).collect();
         let held = frozen.settle(&window, tag.finish(), &dealt, NUMBERED);
-        let at = |id: &i64| infos.iter().position(|info| info.id == *id);
+        let at = |id: &i64| input.rows.iter().position(|info| info.id == *id);
         listing.set_numbers(held.iter().filter_map(at).collect());
     }
 
-    /// The listing without drawing it (shortcuts, devctl).
-    pub(super) fn session_listing(&self, cx: &App) -> Listing {
-        self.listing(&self.row_infos(cx), cx)
+    /// The person rearranged the list: the ⌘ numbers are dealt again, and the window saves.
+    fn list_rearranged(&mut self, cx: &mut Context<Self>) {
+        self.order_rev += 1;
+        self.changed(cx);
     }
 
-    /// Every terminal top to bottom as the sidebar lists it (folded ones included).
-    pub(super) fn session_order(&self, cx: &App) -> Vec<usize> {
-        self.session_listing(cx).order().to_vec()
+    /// The window rearranged the list's terminals (a group moved out): the ⌘ numbers are dealt again.
+    pub(in crate::window) fn rearranged(&mut self, cx: &mut Context<Self>) {
+        self.list_rearranged(cx);
     }
 
-    /// The window's terminals' ids, in the order they were made.
-    pub(super) fn session_ids(&self) -> Vec<i64> {
-        self.sessions.iter().map(|session| session.id).collect()
+    /// The saved view changed: tell the window to save it, and draw.
+    fn changed(&mut self, cx: &mut Context<Self>) {
+        cx.emit(SidebarEvent::Changed);
+        cx.notify();
     }
 
-    /// The person rearranged the list: the ⌘ numbers are dealt again.
-    pub(super) fn list_rearranged(&mut self, cx: &mut Context<Self>) {
-        self.sidebar.order_rev += 1;
-        self.mark_dirty(cx);
-    }
-
-    /// The sidebar, `width` points wide (its column's, or its width at rest while it slides).
-    pub(super) fn render_sidebar(
+    /// The list, `input.width` points wide: what lies under the sidebar's header (the window's).
+    pub(in crate::window) fn render_list(
         &mut self,
-        width: f32,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
-        let glass = self.glass_on(cx);
-        let infos = self.row_infos(cx);
-        let listing = self.listing(&infos, cx);
-        *self.sidebar.times_drawn.borrow_mut() = row_times(&infos, &self.profile, cx);
-        if let Some(id) = self.sidebar.scroll_to.take()
-            && let Some(at) = listing
-                .entries
-                .iter()
-                .position(|e| matches!(e, Entry::Row { session, .. } if infos[*session].id == id))
-        {
-            self.sidebar.scroll.scroll_to_item(at);
+        let input = self.input.clone();
+        let infos = &input.rows;
+        // A drag that ended outside every drop target never heard its drop.
+        if !cx.has_active_drag() {
+            self.over = None;
         }
+        let ui = ui_in(&input.profile, cx);
+        let glass = input.glass.clone();
+        let listing = self.listing(cx);
+        *self.times_drawn.borrow_mut() = row_times(infos, &input.profile, cx);
         let keys: Vec<ItemKey> = listing
             .entries
             .iter()
@@ -209,12 +317,11 @@ impl Workspace {
             })
             .collect();
         self.plan_list_motion(keys.clone(), cx);
-        let frame = rows::Frame::new(self, width, window, cx);
-        let mark = self.drop_mark(&listing, &infos);
-        let group_wash: HashMap<u32, Hsla> = {
-            let tokens = &store_in(&self.profile, cx).tokens;
-            self.sidebar
-                .view
+        let frame = rows::Frame::new(&input, input.width, self.hints_showing(cx), window, cx);
+        let mark = self.drop_mark(&listing, infos);
+        let group_wash: std::collections::HashMap<u32, Hsla> = {
+            let tokens = &store_in(&input.profile, cx).tokens;
+            self.view
                 .groups
                 .iter()
                 .filter_map(|group| {
@@ -223,15 +330,15 @@ impl Workspace {
                 })
                 .collect()
         };
-        let held = cx.has_active_drag().then(|| self.terminal_drag.as_ref().map(|drag| drag.id)).flatten();
+        let held = cx.has_active_drag().then(|| input.terminal_drag.map(|(id, _)| id)).flatten();
         let mut items: Vec<AnyElement> = Vec::with_capacity(listing.entries.len());
         // The changes the previous row of the card counted: a group's terminals in one repository
         // say "±3" once, not on every row.
-        let mut counted_above: Option<(Option<usize>, &Option<PathBuf>, usize)> = None;
+        let mut counted_above: Option<(Option<usize>, &Option<std::path::PathBuf>, usize)> = None;
         for (at, entry) in listing.entries.iter().enumerate() {
             let line = match *entry {
                 Entry::Band { band, position, of } => {
-                    self.render_group_band(&listing, &infos, band, (position, of), &frame, window, cx)
+                    self.render_group_band(&listing, infos, band, (position, of), &frame, window, cx)
                 }
                 Entry::Row { session, band, position, of, number, marks } => {
                     let info = &infos[session];
@@ -266,45 +373,46 @@ impl Workspace {
             };
             let segment = match (listing.card(at), entry) {
                 (Some(Card::Loose(_)), Entry::Row { session, .. }) => {
-                    style::card_segment_solo(ui, frame.metrics, *session == self.active, line)
+                    style::card_segment_solo(ui, frame.metrics, *session == input.active, line)
                 }
                 _ => style::card_segment(ui, frame.metrics, top, bottom, wash, line),
             };
             // Each card is a glass of its own.
-            let segment = if glass && frame.metrics.cards {
-                let (key, inset) = match listing.card(at) {
-                    Some(Card::Group(band)) => (
-                        glass_key(GlassKind::Card, 1 + band as u64),
-                        Insets(
-                            frame.metrics.card_margin,
-                            0.0,
-                            frame.metrics.card_margin,
-                            if bottom { frame.metrics.card_gap } else { 0.0 },
+            let segment = match glass.as_ref().filter(|_| frame.metrics.cards) {
+                Some(glass) => {
+                    let (key, inset) = match listing.card(at) {
+                        Some(Card::Group(band)) => (
+                            glass_key(GlassKind::Card, 1 + band as u64),
+                            Insets(
+                                frame.metrics.card_margin,
+                                0.0,
+                                frame.metrics.card_margin,
+                                if bottom { frame.metrics.card_gap } else { 0.0 },
+                            ),
                         ),
-                    ),
-                    Some(Card::Split(first)) => (
-                        glass_key(GlassKind::Loose, infos[first].id as u64),
-                        Insets(
-                            frame.metrics.card_margin,
-                            0.0,
-                            frame.metrics.card_margin,
-                            if bottom { frame.metrics.card_gap } else { 0.0 },
+                        Some(Card::Split(first)) => (
+                            glass_key(GlassKind::Loose, infos[first].id as u64),
+                            Insets(
+                                frame.metrics.card_margin,
+                                0.0,
+                                frame.metrics.card_margin,
+                                if bottom { frame.metrics.card_gap } else { 0.0 },
+                            ),
                         ),
-                    ),
-                    Some(Card::Loose(session)) => (
-                        glass_key(GlassKind::Loose, infos[session].id as u64),
-                        Insets(
-                            frame.metrics.card_margin,
-                            0.0,
-                            frame.metrics.card_margin,
-                            frame.metrics.card_gap,
+                        Some(Card::Loose(session)) => (
+                            glass_key(GlassKind::Loose, infos[session].id as u64),
+                            Insets(
+                                frame.metrics.card_margin,
+                                0.0,
+                                frame.metrics.card_margin,
+                                frame.metrics.card_gap,
+                            ),
                         ),
-                    ),
-                    None => (0, Insets(0.0, 0.0, 0.0, 0.0)),
-                };
-                segment.child(self.glass_probe(key, inset, frame.metrics.card_radius, Some(LIST_CLIP)))
-            } else {
-                segment
+                        None => (0, Insets(0.0, 0.0, 0.0, 0.0)),
+                    };
+                    segment.child(probe(glass, key, inset, frame.metrics.card_radius, Some(LIST_CLIP)))
+                }
+                None => segment,
             };
             let line = match *entry {
                 Entry::Row { session, .. } => {
@@ -340,178 +448,41 @@ impl Workspace {
         items.extend(self.render_demo(&frame, cx));
 
         div()
-            .id("sidebar")
             .relative()
-            .flex()
-            .flex_col()
-            .w(px(width))
-            // Long, untruncated text must never widen the panel.
-            .min_w(px(width))
-            .max_w(px(width))
+            .flex_1()
+            .min_h_0()
             .overflow_hidden()
-            .h_full()
-            .flex_none()
-            .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
-            .child(self.render_sidebar_header(window, cx))
-            .child(
-                div()
-                    .relative()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_hidden()
-                    .when(glass, |d| d.child(self.glass_clip_probe(LIST_CLIP)))
-                    .child({
-                        let list = div()
-                            .id("session-list")
-                            .role(Role::Tree)
-                            .aria_label("Terminals")
-                            .size_full()
-                            .flex()
-                            .flex_col()
-                            .pt_1()
-                            .overflow_y_scroll()
-                            .track_scroll(&self.sidebar.scroll)
-                            .children(items);
-                        let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
-                        // It holds the keyboard for the sidebar.
-                        self.area_container(wormhole_core::view::focus::Area::Sidebar, list, cx)
-                    })
-                    // Beside the list, not in it: a child of the scrolled list would move with its rows.
-                    .child(self.list_edges(ui, cx)),
-            )
-            .children(self.render_no_agents_note(cx))
+            .children(glass.as_ref().map(|glass| clip_probe(glass, LIST_CLIP)))
+            .child({
+                let list = div()
+                    .id("session-list")
+                    .role(Role::Tree)
+                    .aria_label("Terminals")
+                    .size_full()
+                    .flex()
+                    .flex_col()
+                    .pt_1()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.scroll)
+                    .children(items);
+                let list = self.with_list_drop(list.child(self.list_tail(cx)), cx);
+                // It holds the keyboard for the sidebar.
+                self.area_container(list, cx)
+            })
+            // Beside the list, not in it: a child of the scrolled list would move with its rows.
+            .child(self.list_edges(ui, cx))
             .into_any_element()
     }
 
     /// What lies over the list's edges (`panel_list::scroll_edges`, as the panel's lists).
     fn list_edges(&self, ui: UiColors, cx: &App) -> AnyElement {
-        let scroll = &self.sidebar.scroll;
-        let scrollbar = Scrollbar::vertical(scroll).id("sidebar-scrollbar");
+        let scrollbar = Scrollbar::vertical(&self.scroll).id("sidebar-scrollbar");
         crate::window::panel_list::scroll_edges(
             ui,
-            crate::window::panel_list::is_scrolled(scroll),
+            crate::window::panel_list::is_scrolled(&self.scroll),
             scrollbar,
             cx,
         )
-    }
-
-    /// Fold the group called `label`, or open it; `false` if there is none.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_fold(&mut self, label: &str, cx: &mut Context<Self>) -> bool {
-        let listing = self.session_listing(cx);
-        let Some(band) = listing.bands.iter().find(|band| band.label == label) else { return false };
-        let group = band.group;
-        self.toggle_group_band(group, cx);
-        true
-    }
-
-    /// A new group named `name` holding the terminals at `rows` (as `state` numbers them, from 0);
-    /// its id.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_new_group(&mut self, name: &str, rows: &[usize], cx: &mut Context<Self>) -> u32 {
-        let ids: Vec<i64> = rows.iter().filter_map(|&ix| self.sessions.get(ix).map(|s| s.id)).collect();
-        let group = self.group_terminals(&ids, cx);
-        self.sidebar.view.groups.rename(group, name);
-        self.mark_dirty(cx);
-        group
-    }
-
-    /// devctl `group <name> <rename|pin|ungroup|close|move|color:<colour>|none|folder:<path>|none>`: what
-    /// the group's menu does. `rename` makes its name a field.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_group(
-        &mut self,
-        name: &str,
-        action: &str,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Result<(), String> {
-        let group = self
-            .sidebar
-            .view
-            .groups
-            .iter()
-            .find(|group| group.name == name)
-            .map(|group| group.id)
-            .ok_or_else(|| format!("no group {name:?}"))?;
-        match action {
-            "rename" | "edit" => self.start_group_rename(group, window, cx),
-            "pin" => self.toggle_group_pin(group, cx),
-            "ungroup" => self.ungroup(group, cx),
-            "close" => self.close_group(group, window, cx),
-            "move" => self.move_group_to_window(group, window, cx),
-            folder if folder.starts_with("folder:") => {
-                // The picker can't be driven, so the path comes with the command.
-                let folder = folder.trim_start_matches("folder:");
-                self.set_group_folder(group, (folder != "none").then_some(folder), cx);
-            }
-            color => {
-                let color =
-                    color.strip_prefix("color:").ok_or_else(|| format!("unknown action {action:?}"))?;
-                let found = if color == "none" {
-                    None
-                } else {
-                    Some(
-                        wormhole_core::view::sidebar::GroupColor::from_key(color)
-                            .ok_or_else(|| format!("no colour {color:?}"))?,
-                    )
-                };
-                self.set_group_color(group, found, cx);
-            }
-        }
-        Ok(())
-    }
-
-    /// devctl `to-group <row> <name|none>`: put the terminal in the group, or take it out.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_to_group(
-        &mut self,
-        ix: usize,
-        name: &str,
-        cx: &mut Context<Self>,
-    ) -> Result<(), String> {
-        let id = self.sessions.get(ix).map(|session| session.id).ok_or("no such row")?;
-        if name == "none" {
-            self.remove_from_group(id, cx);
-            return Ok(());
-        }
-        let group = self
-            .sidebar
-            .view
-            .groups
-            .iter()
-            .find(|group| group.name == name)
-            .map(|group| group.id)
-            .ok_or_else(|| format!("no group {name:?}"))?;
-        self.move_to_group(id, group, cx);
-        Ok(())
-    }
-
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_rename_edit(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(id) = self.sessions.get(ix).map(|session| session.id) {
-            self.start_terminal_rename(id, window, cx);
-        }
-    }
-
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_rename(&mut self, ix: usize, name: &str, cx: &mut Context<Self>) {
-        if let Some(session) = self.sessions.get_mut(ix) {
-            session.custom_name = (!name.is_empty()).then(|| name.to_string());
-            self.mark_dirty(cx);
-        }
-    }
-
-    /// Scroll the terminal list by `dy` (negative = up), within its bounds; where it is now and
-    /// how far it goes.
-    #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_sidebar_scroll(&mut self, dy: f32, cx: &mut Context<Self>) -> String {
-        let scroll = &self.sidebar.scroll;
-        let (offset, max) = (scroll.offset(), scroll.max_offset());
-        let y = (offset.y - px(dy)).clamp(-max.y, px(0.0));
-        scroll.set_offset(point(offset.x, y));
-        cx.notify();
-        format!("sidebar scroll {} of {}", -f32::from(y), f32::from(max.y))
     }
 }
 

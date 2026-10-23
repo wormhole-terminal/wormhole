@@ -8,7 +8,7 @@ use super::SidebarStop;
 use crate::app_state::OpenWindow;
 use crate::window::features::git::changes::Changes;
 use crate::window::features::notes::testing as notes;
-use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start};
+use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, sidebar_of, start};
 use wormhole_core::config::TabId;
 
 /// Press a key as the keyboard would, after a frame (the keys go where the last frame's focus is).
@@ -47,7 +47,7 @@ fn the_sidebar_is_walked_with_the_arrows_and_opened_with_return_or_space(cx: &mu
     }
     let window = start(cx, 3);
     let ids: Vec<i64> = read(cx, &window, |ws| ws.sessions.iter().map(|s| s.id).collect());
-    let at = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.areas.sidebar_at.clone());
+    let at = |cx: &mut TestAppContext| sidebar_of(cx, &window, |sidebar| sidebar.keys_at().cloned());
     let active = |cx: &mut TestAppContext| read(cx, &window, |ws| ws.sessions[ws.active].id);
 
     f6_to(cx, &window, Area::Sidebar);
@@ -169,8 +169,8 @@ fn on_a_sidebar_group_only_space_folds_it(cx: &mut TestAppContext) {
         ws.group_terminals(&[1, 2], cx);
     });
     let folded = |cx: &mut TestAppContext| {
-        read(cx, &window, |ws| match &ws.areas.sidebar_at {
-            Some(SidebarStop::Group(group)) => ws.sidebar.view.is_group_folded(*group),
+        sidebar_of(cx, &window, |sidebar| match sidebar.keys_at() {
+            Some(&SidebarStop::Group(group)) => sidebar.view().is_group_folded(group),
             at => panic!("the keys are on {at:?}, not a group"),
         })
     };
