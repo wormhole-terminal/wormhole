@@ -139,6 +139,11 @@ pub fn settings_in<'a>(profile: &ProfileId, cx: &'a App) -> &'a Settings {
     &store_in(profile, cx).settings
 }
 
+/// [`super::features`] for a window in `profile`: a hidden profile's window reads its own mask.
+pub fn features_in(profile: &ProfileId, cx: &App) -> wormhole_core::config::FeatureMask {
+    store_in(profile, cx).features()
+}
+
 /// [`super::ui`] (the translucent main window's colours) for a window in `profile`.
 pub fn ui_in(profile: &ProfileId, cx: &App) -> UiColors {
     store_in(profile, cx).ui

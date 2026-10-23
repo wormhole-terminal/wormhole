@@ -21,7 +21,7 @@ impl Project {
         // The whole project-folder feature is behind a flag: while it is off, nothing reads a
         // `.wormhole/`. Drop any project each terminal was in and any overlay a project applied, so
         // bands untint, the Project tab goes away and no settings or theme follow from one.
-        if !project_folders_on(cx) {
+        if !project_folders_on(facts.profile, cx) {
             let mut moved = !self.folder_projects.is_empty();
             self.folder_projects.clear();
             // The Project tab is gone with the feature; leave it showing nothing.
@@ -128,7 +128,7 @@ impl Project {
 /// Env and shell for a new terminal of a window of `profile` started in `cwd`, if its project allows it
 /// under that profile's approvals.
 pub(super) fn spawn_options(profile: &ProfileId, cwd: Option<&Path>, cx: &mut App) -> SpawnAdd {
-    if !project_folders_on(cx) {
+    if !project_folders_on(profile, cx) {
         return Default::default();
     }
     let Some(folder) = cwd.and_then(proj::find_project) else {

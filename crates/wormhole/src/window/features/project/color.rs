@@ -25,7 +25,7 @@ pub(in crate::window) fn set_project_color(
     cx: &mut App,
 ) {
     // The one write into a project's `config.json`: never while the project-folder feature is off.
-    if !project_folders_on(cx) {
+    if !project_folders_on(profile, cx) {
         return;
     }
     let (root, profile) = (root.to_path_buf(), profile.clone());

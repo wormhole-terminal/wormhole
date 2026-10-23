@@ -126,7 +126,7 @@ impl Project {
     pub(super) fn folder_paint(&self, profile: &ProfileId, folder: &Path, cx: &App) -> FolderPaint {
         // With the project-folder feature off a folder only has the person's own colour, at once:
         // `folder_projects` still holds the old projects until the next look.
-        let project = project_folders_on(cx)
+        let project = project_folders_on(profile, cx)
             .then(|| self.folder_projects.get(folder))
             .flatten()
             .and_then(|root| hub_of(profile, cx).projects.get(root))
@@ -203,7 +203,7 @@ pub(super) fn set_folder_choice(
     // A menu opened before the project-folder flag went off still holds the project's paint; with
     // the feature off the pick is the person's own colour, never a write into the repository.
     let project = match paint {
-        FolderPaint::Project(project) if project_folders_on(cx) => project,
+        FolderPaint::Project(project) if project_folders_on(profile, cx) => project,
         _ => {
             if settings(cx).folder_color_choice(folder) != color {
                 update_settings(cx, |settings| {

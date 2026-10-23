@@ -16,7 +16,7 @@ use crate::window::Workspace;
 /// while the feature is off, so nothing that scans them (the menu bar's project actions, pruning the hub)
 /// keeps a stale project alive.
 pub(crate) fn roots(ws: &Workspace, cx: &App) -> Vec<PathBuf> {
-    if !project_folders_on(cx) {
+    if !project_folders_on(&ws.profile, cx) {
         return Vec::new();
     }
     let Some(project) = ws.feature::<Project>() else { return Vec::new() };
@@ -97,7 +97,7 @@ pub(crate) fn approve(profile: &ProfileId, root: &Path, cx: &mut App) {
 pub(crate) fn worktree_allowed(profile: &ProfileId, repo: &Path, cx: &mut App) -> Result<(), String> {
     // With the project-folder feature off, `.wormhole/` isn't read at all, so a worktree carries
     // no project settings and there's nothing to trust.
-    if !project_folders_on(cx) {
+    if !project_folders_on(profile, cx) {
         return Ok(());
     }
     let Some(folder) = wormhole_core::project::find_project(repo) else { return Ok(()) };
@@ -117,7 +117,7 @@ pub(crate) fn worktree_allowed(profile: &ProfileId, repo: &Path, cx: &mut App) -
 /// nothing). It is the repository's project that is asked, not the copy of `.wormhole/` the new
 /// worktree checks out: that one has not been trusted in its new folder.
 pub(crate) fn worktree_setup(profile: &ProfileId, repo: &Path, cx: &mut App) -> Option<String> {
-    if !project_folders_on(cx) {
+    if !project_folders_on(profile, cx) {
         return None;
     }
     let folder = wormhole_core::project::find_project(repo)?;

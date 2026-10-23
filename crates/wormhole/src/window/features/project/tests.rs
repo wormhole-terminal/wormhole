@@ -475,8 +475,23 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
         .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.profile == work).cloned())
         .expect("the window in Work opened");
 
-    let dir = project("two-profiles", &[("actions.json", ACTIONS)]);
+    let dir = project(
+        "two-profiles",
+        &[("actions.json", ACTIONS), ("config.json", r#"{"env": {"WH_TWO_PROFILES": "1"}}"#)],
+    );
     let folder = ProjectFolder::open(&dir).expect("a project");
+    // What a terminal or a worktree started for `profile` gets from the project: its environment, and
+    // whether a worktree of it may be made. Both ask for the profile's own approval.
+    let reach = |cx: &mut TestAppContext, profile: &ProfileId| {
+        cx.update(|cx| {
+            let added = Workspace::spawn_adds(profile, Some(&dir), crate::window::features::TABLE, cx);
+            (
+                added.env.contains_key("WH_TWO_PROFILES"),
+                super::api::worktree_allowed(profile, &dir, cx).is_ok(),
+            )
+        })
+    };
+    let (starts, refuses) = ((true, true), (false, false));
     // What each window may run: its project's actions, and the pull request lookup's approval.
     let actions = |cx: &mut TestAppContext, window: &OpenWindow| {
         drive(cx, window, |ws, _, cx| go(ws, &dir, cx));
@@ -493,7 +508,9 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
     // Only the shown profile (Default) trusts it.
     cx.update(|cx| super::hub_of_mut(&default, cx).expect("Default's hub").trust.trust(&folder));
     assert_eq!(actions(cx, &first), yes, "Default's window: trusted in Default");
+    assert_eq!(reach(cx, &default), starts, "Default's terminals and worktrees: trusted in Default");
     assert_eq!(actions(cx, &odd), no, "Work's window: Default's approval is not Work's");
+    assert_eq!(reach(cx, &work), refuses, "Work's terminals and worktrees: Default's approval is not Work's");
 
     // The switch makes Work the shown profile: the windows keep their own profile's trust.
     cx.update(|cx| AppState::switch_profile(&work, cx)).expect("switches");
@@ -506,7 +523,67 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
     cx.update(|cx| revoke_project(&default, &dir, cx));
     cx.run_until_parked();
     assert_eq!(actions(cx, &odd), yes, "Work's window: trusted in Work");
+    assert_eq!(reach(cx, &work), starts, "Work's terminals and worktrees: trusted in Work");
     assert_eq!(actions(cx, &first), no, "Default's window: revoked in Default, though Work trusts it");
+    assert_eq!(reach(cx, &default), refuses, "Default's terminals and worktrees: revoked in Default");
+}
+
+/// A window reads the features of the profile it lives in: with the project folders off in the shown
+/// profile, a window of another profile, where they are on, still runs its project's actions and
+/// starts its terminals and worktrees with the project, and the shown profile's window does not.
+#[gpui_kit::test]
+fn a_window_reads_the_feature_switches_of_its_own_profile(cx: &mut TestAppContext) {
+    if isolate("a_window_reads_the_feature_switches_of_its_own_profile") {
+        return;
+    }
+    let first = start(cx, 1);
+    let default = ProfileId::default_profile();
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = AppState::create_profile(new, cx)?;
+            AppState::ensure_open(&id, cx);
+            Ok::<ProfileId, String>(id)
+        })
+        .expect("makes the profile");
+    cx.update(|cx| cx.set_global(crate::fonts::LoadedFonts::default()));
+    cx.update(|cx| AppState::open_window_in_profile(&work, cx));
+    cx.run_until_parked();
+    let odd = cx
+        .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.profile == work).cloned())
+        .expect("the window in Work opened");
+
+    let dir = project(
+        "two-masks",
+        &[("actions.json", ACTIONS), ("config.json", r#"{"env": {"WH_TWO_MASKS": "1"}}"#)],
+    );
+    let folder = ProjectFolder::open(&dir).expect("a project");
+    cx.update(|cx| super::hub_of_mut(&default, cx).expect("Default's hub").trust.trust(&folder));
+    cx.update(|cx| super::hub_of_mut(&work, cx).expect("Work's hub").trust.trust(&folder));
+    let reach = |cx: &mut TestAppContext, window: &OpenWindow, profile: &ProfileId| {
+        drive(cx, window, |ws, _, cx| go(ws, &dir, cx));
+        let actionable = read_cx(cx, window, |ws, cx| super::api::actionable(ws, cx).is_some());
+        let started = cx.update(|cx| {
+            Workspace::spawn_adds(profile, Some(&dir), crate::window::features::TABLE, cx)
+                .env
+                .contains_key("WH_TWO_MASKS")
+        });
+        (actionable, started)
+    };
+    assert_eq!(reach(cx, &first, &default), (true, true), "on in both");
+    assert_eq!(reach(cx, &odd, &work), (true, true), "on in both");
+
+    // Work is shown and has the project folders off; Default is parked with them on.
+    cx.update(|cx| AppState::switch_profile(&work, cx)).expect("switches");
+    cx.run_until_parked();
+    cx.update(|cx| crate::settings::switch_feature(cx, wormhole_core::config::FeatureId::Project, false));
+    assert_eq!(reach(cx, &odd, &work), (false, false), "Work's window: its own switch is off");
+    assert_eq!(
+        reach(cx, &first, &default),
+        (true, true),
+        "Default's window, not shown: its own switch is on, not the shown profile's"
+    );
 }
 
 /// The Project tab's menu line is there for a terminal with a folder and the feature on.

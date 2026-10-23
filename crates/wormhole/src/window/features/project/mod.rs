@@ -67,8 +67,8 @@ pub(crate) use trust_window::open_trust_window;
 /// Everything that reads or writes a `.wormhole/` asks this itself instead of trusting that a refresh
 /// has already cleared the window's projects: a settings change doesn't run that refresh, so for up to
 /// a tick after the flag goes off the old projects are still there.
-pub(crate) fn project_folders_on(cx: &App) -> bool {
-    crate::settings::features(cx).has(wormhole_core::config::FeatureId::Project)
+pub(crate) fn project_folders_on(profile: &ProfileId, cx: &App) -> bool {
+    crate::settings::features_in(profile, cx).has(wormhole_core::config::FeatureId::Project)
 }
 
 /// The window's project state: every terminal's, by its id, the project each folder a band names is in
@@ -126,7 +126,7 @@ impl Project {
         // The one accessor the menus, the palette, the shortcut sheet and the Project tab reach a project
         // through, so gating it here makes them all inert the instant the flag is off, without waiting
         // for the next look to clear the terminal's project.
-        if !project_folders_on(cx) {
+        if !project_folders_on(profile, cx) {
             return None;
         }
         hub_of(profile, cx).projects.get(self.of.get(&session)?.root.as_ref()?)

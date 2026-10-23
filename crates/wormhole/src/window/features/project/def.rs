@@ -84,7 +84,7 @@ fn menu(
     cx: &App,
 ) {
     let active = facts.active();
-    if active.is_none_or(|session| session.folder(cx).is_none()) || !project_folders_on(cx) {
+    if active.is_none_or(|session| session.folder(cx).is_none()) || !project_folders_on(facts.profile, cx) {
         state.disabled.push(ActionId::ShowProject);
     }
     let Some(active) = active else { return };

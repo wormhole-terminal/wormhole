@@ -38,7 +38,9 @@ impl Project {
     ) {
         // It runs more often than the look for projects, so the terminals' projects may not be cleared yet
         // when the project-folder flag goes off: check the flag itself before touching notes.md.
-        if !project_folders_on(cx) || !crate::settings::features(cx).has(FeatureId::Notes) {
+        if !project_folders_on(facts.profile, cx)
+            || !crate::settings::features_in(facts.profile, cx).has(FeatureId::Notes)
+        {
             return;
         }
         let Some(notes) = facts.feature::<Notes>() else { return };

@@ -14,7 +14,7 @@ use super::{hub_of_mut, project_folders_on, reload_projects};
 /// window look for it, so the tab turns into the project's at once. A new project is untrusted and sets
 /// nothing, which the tab already shows.
 pub(crate) fn create_project_folder(profile: &ProfileId, folder: PathBuf, cx: &mut App) {
-    if !project_folders_on(cx) {
+    if !project_folders_on(profile, cx) {
         return;
     }
     let profile = profile.clone();
