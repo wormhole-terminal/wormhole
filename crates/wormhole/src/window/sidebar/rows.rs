@@ -259,7 +259,7 @@ pub(super) fn time_text(info: &RowInfo, compact: bool) -> Option<String> {
 
 impl Workspace {
     /// The ⌘1–9 keycaps are showing (⌘ held alone long enough, and the setting on).
-    pub(super) fn hints_showing(&self, cx: &App) -> bool {
+    pub(in crate::window) fn hints_showing(&self, cx: &App) -> bool {
         settings_in(&self.profile, cx).sidebar_cmd_hints && self.sidebar.hold.showing(Instant::now())
     }
 

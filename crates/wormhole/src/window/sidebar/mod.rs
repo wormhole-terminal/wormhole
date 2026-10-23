@@ -37,6 +37,8 @@ mod rename;
 mod row_menu;
 mod rows;
 pub(crate) mod shells;
+#[cfg(test)]
+mod sidebar_tests;
 mod switcher;
 mod tab_bar;
 mod tick;
