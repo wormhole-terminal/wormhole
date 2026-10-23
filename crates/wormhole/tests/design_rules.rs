@@ -5,6 +5,10 @@
 
 use std::path::{Path, PathBuf};
 
+mod support;
+
+use support::{all_sources, sources, src, string_literals};
+
 /// Spacing helpers off the 4-point grid. A view that needs one of these
 /// wants a shared component in `style/` instead.
 const OFF_GRID: [&str; 10] =
@@ -12,28 +16,6 @@ const OFF_GRID: [&str; 10] =
 
 /// GPUI's fixed corner steps; radii come from the theme's metrics instead.
 const FIXED_RADII: [&str; 4] = ["rounded_sm()", "rounded_md()", "rounded_lg()", "rounded_xl()"];
-
-fn src() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
-}
-
-fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
-    for entry in std::fs::read_dir(dir).expect("read source dir").flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            sources(&path, out);
-        } else if path.extension().is_some_and(|e| e == "rs") {
-            out.push(path);
-        }
-    }
-}
-
-fn all_sources() -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    sources(&src(), &mut files);
-    files.sort();
-    files
-}
 
 /// The lines of every source file that contain one of `patterns` in code (not in a comment).
 fn offenders(patterns: &[&str]) -> Vec<String> {
@@ -550,95 +532,6 @@ fn no_chat_wording() {
         }
     }
     assert!(found.is_empty(), "say session (code) or terminal (UI, docs):\n{}", found.join("\n"));
-}
-
-/// A string literal in a Rust source, with the line it starts on.
-struct Literal {
-    line: usize,
-    text: String,
-    /// It is an argument of a `tracing` macro (a log line, not something on screen).
-    logged: bool,
-}
-
-/// The string literals of a Rust source (plain and raw), skipping comments and char literals.
-fn string_literals(source: &str) -> Vec<Literal> {
-    const LOG_MACROS: [&str; 6] = ["tracing::", "trace!(", "debug!(", "info!(", "warn!(", "error!("];
-    let chars: Vec<char> = source.chars().collect();
-    let (mut found, mut i, mut line, mut statement) = (Vec::new(), 0, 1, 0);
-    let at = |i: usize, s: &str| s.chars().enumerate().all(|(k, c)| chars.get(i + k) == Some(&c));
-    while i < chars.len() {
-        let c = chars[i];
-        let ident_before = i > 0 && (chars[i - 1].is_alphanumeric() || chars[i - 1] == '_');
-        if at(i, "//") {
-            while i < chars.len() && chars[i] != '\n' {
-                i += 1;
-            }
-            continue;
-        }
-        if at(i, "/*") {
-            while i < chars.len() && !at(i, "*/") {
-                line += usize::from(chars[i] == '\n');
-                i += 1;
-            }
-            i += 2;
-            continue;
-        }
-        let raw_hashes = (c == 'r' && !ident_before)
-            .then(|| chars[i + 1..].iter().take_while(|&&h| h == '#').count())
-            .filter(|&n| chars.get(i + 1 + n) == Some(&'"'));
-        if c == '"' || raw_hashes.is_some() {
-            let start_line = line;
-            let before: String = chars[statement..i].iter().collect();
-            let logged = LOG_MACROS.iter().any(|m| before.contains(m));
-            let mut text = String::new();
-            match raw_hashes {
-                Some(n) => {
-                    let close: String = std::iter::once('"').chain(std::iter::repeat_n('#', n)).collect();
-                    i += n + 2;
-                    while i < chars.len() && !at(i, &close) {
-                        line += usize::from(chars[i] == '\n');
-                        text.push(chars[i]);
-                        i += 1;
-                    }
-                    i += close.chars().count();
-                }
-                None => {
-                    i += 1;
-                    while i < chars.len() && chars[i] != '"' {
-                        if chars[i] == '\\' {
-                            text.push(chars[i]);
-                            i += 1;
-                        }
-                        line += usize::from(chars.get(i) == Some(&'\n'));
-                        text.extend(chars.get(i));
-                        i += 1;
-                    }
-                    i += 1;
-                }
-            }
-            found.push(Literal { line: start_line, text, logged });
-            continue;
-        }
-        if c == '\'' {
-            // A char literal ('x', '\n', '"'); anything else is a lifetime.
-            if chars.get(i + 1) == Some(&'\\') {
-                i += 2;
-                while i < chars.len() && chars[i] != '\'' {
-                    i += 1;
-                }
-            } else if chars.get(i + 2) == Some(&'\'') {
-                i += 2;
-            }
-            i += 1;
-            continue;
-        }
-        if matches!(c, ';' | '{' | '}') {
-            statement = i + 1;
-        }
-        line += usize::from(c == '\n');
-        i += 1;
-    }
-    found
 }
 
 /// Whether a literal's text says "session" to a reader. Element ids, group names and keys (one

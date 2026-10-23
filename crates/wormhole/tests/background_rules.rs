@@ -10,7 +10,9 @@
 //! `#[cfg(test)]` module closing a file), whose windows belong to GPUI's test platform; and
 //! devctl's `front`, which brings a window forward on purpose (see [`ALLOWED`]).
 
-use std::path::{Path, PathBuf};
+mod support;
+
+use support::{is_test_file, non_test_part, sources, src};
 
 /// The calls that bypass `background.rs`, as they appear in code. (`open_window(` is checked on
 /// its own below, as `background::open_window(` is the right call.)
@@ -24,47 +26,6 @@ const ALLOWED: [(&str, &str, usize); 2] = [
     ("devctl/sessions.rs", ".activate(true)", 1),
     ("devctl/sessions.rs", ".activate_window()", 1),
 ];
-
-fn src() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("src")
-}
-
-fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
-    for entry in std::fs::read_dir(dir).expect("read source dir").flatten() {
-        let path = entry.path();
-        if path.is_dir() {
-            sources(&path, out);
-        } else if path.extension().is_some_and(|e| e == "rs") {
-            out.push(path);
-        }
-    }
-}
-
-/// A file of tests only, which `#[cfg(test)] mod x;` pulls in.
-fn is_test_file(relative: &str) -> bool {
-    let name = relative.rsplit('/').next().unwrap_or(relative);
-    name == "tests.rs" || name.ends_with("_tests.rs")
-}
-
-/// The part of a file that is not test code: up to a `#[cfg(test)]`-style attribute (one that
-/// names `test`) in front of an inline module, which closes the file.
-fn non_test_part(text: &str) -> &str {
-    let mut offset = 0;
-    for line in text.split_inclusive('\n') {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("#[cfg(") && trimmed.contains("test") {
-            // The attribute is followed (perhaps after more attributes) by the item it gates.
-            let rest = &text[offset + line.len()..];
-            let item = rest.lines().map(str::trim_start).find(|l| !l.starts_with("#["));
-            if item.is_some_and(|l| (l.starts_with("mod ") || l.starts_with("pub mod ")) && l.ends_with('{'))
-            {
-                return &text[..offset];
-            }
-        }
-        offset += line.len();
-    }
-    text
-}
 
 /// What `line` (comments cut) does that background mode can't have: the pattern, and for
 /// `open_window(` anything but the wrapper.
