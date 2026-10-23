@@ -14,7 +14,9 @@ use super::render::DiffColors;
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings::{settings_in, ui_in};
 use crate::style::{self, Edges, TextRole};
-use crate::window::Workspace;
+use crate::terminal_view::TerminalView;
+use crate::window::facts::WindowFacts;
+use crate::window::features::git::changes::Changes;
 use wormhole_core::git::{ChangeKind, Side};
 use wormhole_core::view::limits::count_grouped;
 
@@ -26,10 +28,15 @@ const CLOSE_H: f32 = 24.0;
 /// inset below it.
 const TITLE_LEAD: f32 = 6.0;
 
-impl Workspace {
+impl Changes {
     /// Title bar while a diff is open: where the file sits among its siblings.
-    pub(crate) fn render_diff_title(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
-        let view = self.diff_view.as_ref()?;
+    pub(in crate::window) fn render_diff_title(
+        &mut self,
+        facts: &WindowFacts<'_>,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        self.follow(facts);
+        let view = self.diff.as_ref()?;
         let ui = ui_in(&self.profile, cx);
         let position = view.siblings.iter().position(|f| f.path == view.file().path);
         let count = view.siblings.len();
@@ -60,7 +67,8 @@ impl Workspace {
                         .text_color(ui.muted)
                         .children(position.map(|ix| format!("File {} of {count}", ix + 1)))
                         .children(view.context.clone().map(|c| div().text_color(ui.primary).child(c))),
-                ),
+                )
+                .into_any_element(),
         )
     }
 
@@ -73,11 +81,12 @@ impl Workspace {
         ui: UiColors,
         colors: DiffColors,
         split_fits: bool,
+        terminal: &Entity<TerminalView>,
         cx: &mut Context<Self>,
     ) -> Div {
         let (font_family, font_size) = crate::fonts::code_font_in(&self.profile, cx);
         let wrap = settings_in(&self.profile, cx).diff_wrap;
-        let split = view.split(split_fits, cx);
+        let split = view.split(&self.profile, split_fits, cx);
         let (dir, name) = match view.file().path.rsplit_once('/') {
             Some((dir, name)) => (format!("{dir}/"), name.to_string()),
             None => (String::new(), view.file().path.clone()),
@@ -247,7 +256,10 @@ impl Workspace {
                             .text_caption()
                             .text_color(ui.muted)
                             .hover(|d| d.text_color(ui.text))
-                            .on_click(cx.listener(|this, _, window, cx| this.close_diff(window, cx)))
+                            .on_click({
+                                let terminal = terminal.clone();
+                                cx.listener(move |this, _, window, cx| this.close_diff(&terminal, window, cx))
+                            })
                             .child(style::keycap(ui, "esc"))
                             .child("close"),
                     )
@@ -256,7 +268,10 @@ impl Workspace {
                     d.child(
                         style::icon_button("diff-close", ui, IconName::X, "Close diff (esc)")
                             .in_title_row()
-                            .on_click(cx.listener(|this, _, window, cx| this.close_diff(window, cx))),
+                            .on_click({
+                                let terminal = terminal.clone();
+                                cx.listener(move |this, _, window, cx| this.close_diff(&terminal, window, cx))
+                            }),
                     )
                 }
             })

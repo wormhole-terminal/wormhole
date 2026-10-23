@@ -17,9 +17,7 @@ use wormhole_core::storage::paths::ProfileId;
 
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
-// A feature's type that the window names. It moves to `window/repo.rs` in 5d, when Changes takes its
-// state; until then `Session.git` is lent through the facts, not copied.
-use crate::window::features::git::changes::GitState;
+use crate::window::repo::GitState;
 use crate::window::session::{RepoRoot, Session};
 
 /// The window as a feature sees it.
@@ -33,6 +31,8 @@ pub(in crate::window) struct WindowFacts<'a> {
     pub tab: TabId,
     /// The panel's width.
     pub panel_width: Pixels,
+    /// The terminal's column's width: what a diff is laid out in beside the panel.
+    pub terminal_width: Pixels,
     /// The row of the shown tab the keys are on, and whether its ring shows (the keys, not a click,
     /// were last used, and the window is in front). Only for facts made for drawing a frame
     /// ([`Workspace::frame_facts`]); `None` otherwise.
@@ -118,11 +118,13 @@ impl Workspace {
     /// The facts a feature may read of this window, as of now. `cx` is read for the settings' feature
     /// mask and not kept.
     pub(in crate::window) fn facts<'a>(&'a self, cx: &App) -> WindowFacts<'a> {
+        let columns = self.columns();
         WindowFacts {
             profile: &self.profile,
             features: crate::settings::store_in(&self.profile, cx).features(),
             tab: self.right_tab,
-            panel_width: px(self.columns().panel),
+            panel_width: px(columns.panel),
+            terminal_width: px(columns.terminal),
             panel_cursor: None,
             ticks: self.ticks,
             panel_scroll: &self.panel_scroll,

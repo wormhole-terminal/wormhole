@@ -36,7 +36,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: Some(view::stash_button),
         refresh_ticks: None,
         returns_to_previous: false,
-        window_side: None,
+        pick_branch: None,
     }],
     bind: Some(bind),
     row_extras: Some(row_extras),
@@ -50,6 +50,9 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     profiles: None,
     refresh: None,
     approves_programs: None,
+    cover: None,
+    tab_changed: None,
+    repo: None,
     spawn: None,
     state: Some(STATE),
 };

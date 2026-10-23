@@ -188,12 +188,10 @@ impl Workspace {
         }
         state.forget_window(&from, self.window_id);
         self.profile = target.clone();
-        // What it draws with follows: its terminals and an open diff read their window's profile.
+        // What it draws with follows: its terminals read their window's profile (an open diff reads it
+        // from the window's facts at the next frame).
         for session in &self.sessions {
             session.pane.terminal.update(cx, |terminal, cx| terminal.set_profile(target.clone(), cx));
-        }
-        if let Some(diff) = self.diff_view.as_mut() {
-            diff.set_profile(target.clone());
         }
         self.dirty = false;
         cx.notify();

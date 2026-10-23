@@ -42,7 +42,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: None,
         refresh_ticks: None,
         returns_to_previous: false,
-        window_side: None,
+        pick_branch: None,
     }],
     bind: Some(bind),
     row_extras: None,
@@ -57,6 +57,9 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     }),
     refresh: Some(look),
     approves_programs: Some(approves_programs),
+    cover: None,
+    tab_changed: None,
+    repo: None,
     spawn: Some(detect::spawn_options),
     state: Some(STATE),
 };

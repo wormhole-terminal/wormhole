@@ -19,7 +19,6 @@ use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
 use crate::terminal_view::{Status, TerminalView};
 use crate::window::Workspace;
-use crate::window::features::git::picker;
 use crate::window::title::path_card::Over;
 use crate::window::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
 use wormhole_core::config::TabId;
@@ -253,8 +252,7 @@ impl Workspace {
                         .when(text, |d| d.child(div().min_w_0().truncate().child(name.to_string()))),
                 )
                 .on_click(cx.listener(|this, _, window, cx| {
-                    this.show_tab(TabId::Changes, cx);
-                    this.toggle_picker(picker::Picker::Compare, window, cx);
+                    this.pick_branch_in(TabId::Changes, window, cx);
                 }))
         });
 

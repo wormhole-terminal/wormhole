@@ -15,7 +15,7 @@
 //!   window and the welcome.
 //!
 //! and by file: what a feature is to the window (`feature`, its facts in `facts`), the session
-//! (`session`), the window's terminals (`terminals`) and their drag (`terminal_drag`), its tick
+//! (`session`), what git says of each terminal's folder (`repo`), the window's terminals (`terminals`) and their drag (`terminal_drag`), its tick
 //! (`tick`), its saves (`save`, `saved_layout`, `window_bounds`), its life (`windows`,
 //! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
 //! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
@@ -42,7 +42,6 @@
 
 use std::time::{Duration, Instant};
 
-use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -102,6 +101,7 @@ mod panel_tab_tests;
 mod panes;
 #[cfg(test)]
 mod profile_look_tests;
+mod repo;
 #[cfg(test)]
 mod reported_tests;
 mod resize;
@@ -129,7 +129,7 @@ pub(crate) mod windows;
 
 use self::saved_layout::Layout;
 use self::session::Session;
-use crate::window::features::git::{diff_view, picker};
+use crate::window::features::git::picker;
 use wormhole_core::config::TabId;
 
 use crate::terminal_view::Status;
@@ -178,15 +178,8 @@ pub struct Workspace {
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
-    /// Open branch picker (Changes "compare with" / History branch).
-    picker: Option<picker::Picker>,
-    branches: Vec<String>,
-    /// The branch picker's search box (one for both tabs: only one picker is open at a time).
-    picker_search: Entity<InputState>,
-    _picker_subscription: Subscription,
-    diff_view: Option<diff_view::DiffView>,
-    /// Folders collapsed in the Changes tree view.
-    collapsed_dirs: std::collections::HashSet<String>,
+    /// The History tab's branch picker, until History keeps its own state.
+    history_picker: picker::BranchPicker,
     /// A drag on a panel's edge, while the button is down.
     resizing: Option<self::resize::ResizeDrag>,
     /// A drag on a divider between two panes, while the button is down.
@@ -236,8 +229,6 @@ pub struct Workspace {
     closing_session_prompt: bool,
     /// The New Terminal in New Worktree dialog, while it is up.
     worktree_ask: Option<crate::window::features::git::worktree::Asking>,
-    /// The comment dialog of a diff line, while it is up.
-    commenting: Option<crate::window::features::git::diff::Commenting>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
@@ -300,13 +291,7 @@ impl Workspace {
         let mut layout = saved.unwrap_or_default();
         let sidebar = self::sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
 
-        let picker_search = cx.new(|cx| InputState::new(window, cx).placeholder("Search branches"));
-        let picker_subscription =
-            cx.subscribe_in(&picker_search, window, |this, _, event: &InputEvent, _, cx| match event {
-                InputEvent::Change => cx.notify(),
-                InputEvent::PressEnter { .. } => this.pick_first_match(cx),
-                _ => {}
-            });
+        let history_picker = picker::BranchPicker::new(picker::Picker::History, window, cx);
 
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
@@ -328,12 +313,7 @@ impl Workspace {
             feature_editing: false,
             tab_before_previous: None,
             panel_scroll: ScrollHandle::new(),
-            picker: None,
-            branches: Vec::new(),
-            picker_search,
-            _picker_subscription: picker_subscription,
-            diff_view: None,
-            collapsed_dirs: Default::default(),
+            history_picker,
             resizing: None,
             pane_drag: None,
             terminal_drag: None,
@@ -360,7 +340,6 @@ impl Workspace {
             close_dot: false,
             closing_session_prompt: false,
             worktree_ask: None,
-            commenting: None,
             discarded: false,
             dirty: false,
             first_run: Default::default(),

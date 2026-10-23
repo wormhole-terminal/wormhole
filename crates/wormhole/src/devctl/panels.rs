@@ -3,27 +3,28 @@
 use anyhow::{Result, anyhow};
 
 use super::{Ctx, nth};
+use crate::window::features::git::changes::devctl as changes_panel;
 use crate::window::features::notes::devctl as notes;
 
 pub(super) fn changes(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.show_changes(ctx.cx);
+    changes_panel::show(ctx.workspace, ctx.cx);
     Ok(String::new())
 }
 
 /// Open the n-th file's diff.
 pub(super) fn diff(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.open_nth_diff(nth(arg), ctx.cx);
+    changes_panel::open_nth(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())
 }
 
 /// Toggle Split / Unified.
 pub(super) fn split(ctx: &mut Ctx, _: &str) -> Result<String> {
-    ctx.workspace.toggle_split(ctx.cx);
+    changes_panel::toggle_split(ctx.workspace, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn diff_scroll_x(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.scroll_diff_by(-arg.trim().parse::<f32>().unwrap_or(0.0), ctx.cx);
+    changes_panel::scroll_x(ctx.workspace, -arg.trim().parse::<f32>().unwrap_or(0.0), ctx.cx);
     Ok(String::new())
 }
 
@@ -40,7 +41,11 @@ pub(super) fn history(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_picker(arg.trim(), ctx.window, ctx.cx);
+    let (which, query) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
+    match which {
+        "history" => ctx.workspace.devctl_history_picker(query, ctx.window, ctx.cx),
+        _ => changes_panel::picker(ctx.workspace, query, ctx.window, ctx.cx),
+    }
     Ok(String::new())
 }
 
@@ -57,7 +62,7 @@ pub(super) fn commit_file(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// Compare with a branch (none, or HEAD, to stop comparing).
 pub(super) fn compare(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let branch = (!arg.trim().is_empty() && arg.trim() != "HEAD").then(|| arg.trim().to_string());
-    ctx.workspace.devctl_compare(branch, ctx.cx);
+    changes_panel::compare(ctx.workspace, branch, ctx.cx);
     Ok(String::new())
 }
 

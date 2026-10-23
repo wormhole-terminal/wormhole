@@ -10,7 +10,6 @@ use gpui_kit::*;
 
 use crate::settings::{settings_in, ui_in};
 use crate::window::Workspace;
-use crate::window::features::git::changes::GitPoll;
 use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
 use wormhole_core::config::TabId;
 
@@ -29,7 +28,6 @@ impl Workspace {
         self.ticks += 1;
         self.sync_appearance(cx);
         self.track_window(window, cx);
-        self.sync_diff(cx);
         // Folders are also re-read when a terminal prints (see `TerminalView`); this
         // is the backstop. Agent detection walks the process tree, so less often.
         let refresh_agent = self.ticks % 5 == 1;
@@ -81,17 +79,7 @@ impl Workspace {
             let ix = self.active;
             self.refresh_history(ix, cx);
         }
-        for ix in 0..self.sessions.len() {
-            if self.sessions[ix].git.waits_for_retry() {
-                continue;
-            }
-            let cwd = self.sessions[ix].terminal().read(cx).cwd.clone();
-            match self.sessions[ix].git.poll(cwd.as_deref(), self.ticks + ix as u64, ix == self.active) {
-                GitPoll::Refresh => self.refresh_git(ix, cx),
-                GitPoll::Probe => self.probe_repo(ix, cx),
-                GitPoll::Idle => {}
-            }
-        }
+        self.poll_repos(cx);
         if self.ticks % 5 == 1 {
             // A `git init` in the folder a session is already in changes its root without a `cd`.
             for session in &self.sessions {

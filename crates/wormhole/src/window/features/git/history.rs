@@ -8,17 +8,18 @@ use std::rc::Rc;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use super::changes::Changes;
 use super::file_line::{Placement, change_row};
-use super::job::{Job, Ticket, Wanted};
 use super::open_file::OpenTarget;
-use super::picker::{Picker, PickerChip};
-use super::problem::GitTab;
+use super::picker::{ChipOf, PickerChip, PickerHost};
+use super::problem::{self, GitTab};
 use super::submodule_row::submodule_row;
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, TextRole};
 use crate::window::Workspace;
 use crate::window::panel_list::{CardPart, Rows};
+use crate::window::repo::job::{Job, Ticket, Wanted};
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;
@@ -407,7 +408,12 @@ impl Workspace {
         let Some(root) = session.history.root.clone() else { return };
         let siblings = session.history.loaded(&commit.sha).cloned().unwrap_or_default();
         let spec = git::commit_spec(&commit);
-        self.open_diff(root, file, spec, siblings, Some(commit.short.clone().into()), cx);
+        let id = session.id;
+        let Some(changes) = self.feature::<Changes>() else { return };
+        let context = Some(commit.short.clone().into());
+        changes.update(cx, |changes, cx| {
+            changes.open_diff(id, root, file, spec, siblings, context, cx);
+        });
     }
 
     // ------------------------------------------------------------ devctl
@@ -436,30 +442,22 @@ impl Workspace {
     }
 
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_compare(&mut self, branch: Option<String>, cx: &mut Context<Self>) {
-        self.pick_branch(Picker::Compare, branch, cx);
-    }
-
-    #[cfg(feature = "devctl")]
     pub(crate) fn devctl_history_branch(&mut self, branch: Option<String>, cx: &mut Context<Self>) {
-        self.pick_branch(Picker::History, branch, cx);
+        let session = self.active_session().id;
+        self.history_picker.close();
+        self.pick(session, branch, cx);
     }
 
-    /// Open the branch select in the Changes ("compare") or History tab,
-    /// optionally with `query` typed into its search box.
+    /// Open the History branch select, optionally with `query` typed into its search box.
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_picker(&mut self, arg: &str, window: &mut Window, cx: &mut Context<Self>) {
-        let (which, query) = arg.split_once(' ').unwrap_or((arg, ""));
-        let (tab, picker) = match which {
-            "history" => (wormhole_core::config::TabId::History, Picker::History),
-            _ => (wormhole_core::config::TabId::Changes, Picker::Compare),
-        };
-        self.show_tab(tab, cx);
-        if self.picker != Some(picker) {
-            self.toggle_picker(picker, window, cx);
+    pub(crate) fn devctl_history_picker(&mut self, query: &str, window: &mut Window, cx: &mut Context<Self>) {
+        self.show_tab(wormhole_core::config::TabId::History, cx);
+        if !self.history_picker.is_open() {
+            let (session, terminal) = (self.active_session().id, self.active_terminal());
+            self.history_picker.toggle(session, &terminal, window, cx);
         }
         let query = query.to_string();
-        self.picker_search.update(cx, |search, cx| search.set_value(query, window, cx));
+        self.history_picker.search().update(cx, |search, cx| search.set_value(query, window, cx));
     }
 
     // ------------------------------------------------------------ branch picker
@@ -488,7 +486,17 @@ impl Workspace {
         if history.root.is_none() {
             if let Some(problem) = &history.problem {
                 return panel
-                    .child(style::panel_card(ui, self.render_git_problem(GitTab::History, problem, cx)))
+                    .child(style::panel_card(ui, {
+                        let this = cx.weak_entity();
+                        let retry = move |cx: &mut App| {
+                            this.update(cx, |ws, cx| {
+                                let ix = ws.active;
+                                ws.refresh_history(ix, cx);
+                            })
+                            .ok();
+                        };
+                        problem::render_git_problem(&self.profile, GitTab::History, problem, retry, cx)
+                    }))
                     .into_any_element();
             }
             let answered =
@@ -517,14 +525,26 @@ impl Workspace {
             }),
             error: history.error.clone(),
             root: history.root.clone(),
-            open_path: self.diff_view.as_ref().map(|d| d.file().path.clone()),
+            open_path: self
+                .feature::<Changes>()
+                .and_then(|changes| changes.read(cx).diff.as_ref().map(|diff| diff.file().path.clone())),
             code_font: crate::fonts::code_font_in(&self.profile, cx).0,
             now: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs() as i64)
                 .unwrap_or(0),
             width: self.columns().panel,
-            picker: self.picker_chip(Picker::History, "", history.rev.as_deref(), cx),
+            picker: self.history_picker.chip(
+                cx.weak_entity(),
+                ChipOf {
+                    session: session.id,
+                    terminal: session.terminal(),
+                    prefix: "",
+                    branch: history.rev.as_deref(),
+                    current: history.rev.clone(),
+                },
+                ui.branch,
+            ),
             this: cx.weak_entity(),
         };
 
@@ -582,7 +602,7 @@ struct HistoryView {
     now: i64,
     /// The panel's width, which file names are fitted to.
     width: f32,
-    picker: PickerChip,
+    picker: PickerChip<Workspace>,
     this: WeakEntity<Workspace>,
 }
 
@@ -655,7 +675,17 @@ impl HistoryView {
                     width: self.width,
                 };
                 let row = match (&file.submodule, &self.root) {
-                    (Some(_), Some(root)) => submodule_row(&file, place, root, self.this.clone(), ui, cx),
+                    (Some(_), Some(root)) => {
+                        let this = self.this.clone();
+                        let open = move |folder: std::path::PathBuf, window: &mut Window, cx: &mut App| {
+                            let cwd = Some(folder.to_string_lossy().into_owned());
+                            this.update(cx, |this, cx| {
+                                this.open_session(None, cwd, window, cx);
+                            })
+                            .ok();
+                        };
+                        submodule_row(&file, place, root, open, ui, cx)
+                    }
                     _ => {
                         let row = change_row(&file, place, ui, window, cx);
                         // The file as it is now: none for one that is gone from the working tree.
@@ -696,3 +726,22 @@ mod flow_tests;
 mod keys;
 #[cfg(test)]
 mod tests;
+
+/// The History tab's branch picker is the window's until History is an entity of its own.
+impl PickerHost for Workspace {
+    fn picker(&self) -> &super::picker::BranchPicker {
+        &self.history_picker
+    }
+
+    fn picker_mut(&mut self) -> &mut super::picker::BranchPicker {
+        &mut self.history_picker
+    }
+
+    /// The log of the branch picked, for the terminal the picker was open for.
+    fn pick(&mut self, session: i64, branch: Option<String>, cx: &mut Context<Self>) {
+        let Some(ix) = self.find_session(session) else { return };
+        self.sessions[ix].history = HistoryState::for_rev(branch);
+        self.refresh_history(ix, cx);
+        cx.notify();
+    }
+}

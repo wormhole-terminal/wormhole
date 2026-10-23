@@ -4,14 +4,19 @@
 //! through the helpers at the top of each section, which are the only places that name where it is
 //! kept.
 
-use gpui_kit::{Keystroke, TestAppContext};
+use gpui_kit::{Context, Keystroke, TestAppContext, Window};
+
+use crate::window::Workspace;
 use wormhole_core::config::TabId;
 use wormhole_core::git::ChangeKind;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
-use super::picker::Picker;
-use super::testing::{change_of, changed_paths, folder, git, go, read_repo, repo, write};
+use super::picker::PickerHost;
+use super::testing::{
+    change_of, changed_paths, changes, diff_path, folder, git, go, open_change, read_repo, repo, walkable,
+    write,
+};
 use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
@@ -21,21 +26,20 @@ fn isolate(name: &str) -> bool {
 // ---------------------------------------------------------------- where the state is kept
 
 /// The Changes tab's rows the keys can be on, as the window asks the table.
-fn walkable(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> usize {
-    drive(cx, window, |ws, _, cx| {
-        ws.sync_changes_list(cx);
-        ws.changes_walkable().len()
-    })
+fn rows(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> usize {
+    // The list is kept up to date by the frame.
+    draw(cx, window);
+    read_cx(cx, window, |ws, cx| walkable(ws, cx).len())
 }
 
 /// The path of the diff on view.
 fn open_path(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Option<String> {
-    read(cx, window, |ws| ws.diff_view.as_ref().map(|view| view.file().path.clone()))
+    read_cx(cx, window, diff_path)
 }
 
 /// The branch the Changes tab compares with.
 fn compared_with(cx: &mut TestAppContext, window: &crate::app_state::OpenWindow) -> Option<String> {
-    read(cx, window, |ws| ws.active_session().compare.clone())
+    read(cx, window, |ws| ws.active_session().git.compare.clone())
 }
 
 /// A repository with `a.txt` modified, `b.txt` untracked, and `main` plus `other` (a commit ahead of
@@ -87,7 +91,7 @@ fn a_terminal_in_a_repository_lists_what_changed(cx: &mut TestAppContext) {
         assert_eq!(tab.action, ActionId::ShowChanges);
     });
     // A band for the section, then the two files (the untracked one in a section of its own or not).
-    assert!(walkable(cx, &window) >= 3);
+    assert!(rows(cx, &window) >= 3);
 }
 
 #[gpui_kit::test]
@@ -105,7 +109,7 @@ fn a_folder_outside_any_repository_is_not_one(cx: &mut TestAppContext) {
         assert!(git.answered_for(&plain) && git.is_absent_for(&plain), "and not asked about again");
     });
     assert_eq!(read_cx(cx, &window, |ws, cx| ws.active_changes(cx)), None);
-    assert_eq!(walkable(cx, &window), 0);
+    assert_eq!(rows(cx, &window), 0);
     draw(cx, &window);
 }
 
@@ -151,19 +155,17 @@ fn the_keys_walk_the_list_and_return_opens_a_diff(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     dirty_repo(cx, &window, "keys");
-    drive(cx, &window, |ws, _, cx| {
-        ws.show_tab(TabId::Changes, cx);
-        ws.sync_changes_list(cx);
-    });
-    let rows = drive(cx, &window, |ws, _, _| ws.changes_walkable());
-    assert!(rows[0].band, "the section's band leads the list");
-    let first_file = rows.iter().find(|row| !row.band && row.item.fold.is_none()).expect("a file row").row;
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
+    draw(cx, &window);
+    let list = read_cx(cx, &window, walkable);
+    assert!(list[0].band, "the section's band leads the list");
+    let first_file = list.iter().find(|row| !row.band && row.item.fold.is_none()).expect("a file row").row;
     // ↓ moves the cursor onto the first row, then on.
     drive(cx, &window, |ws, window, cx| {
         assert!(ws.panel_key(&Keystroke::parse("down").expect("a key"), window, cx));
         assert!(ws.panel_key(&Keystroke::parse("down").expect("a key"), window, cx));
         assert_eq!(
-            ws.areas.panel_at.map(|(tab, row)| (tab, row > rows[0].row)),
+            ws.areas.panel_at.map(|(tab, row)| (tab, row > list[0].row)),
             Some((TabId::Changes, true))
         );
     });
@@ -174,12 +176,12 @@ fn the_keys_walk_the_list_and_return_opens_a_diff(cx: &mut TestAppContext) {
     });
     assert!(open_path(cx, &window).is_some(), "the diff is open");
     // ↩ on the band does nothing; Space folds it, and the rows change shape.
-    let before = walkable(cx, &window);
+    let before = rows(cx, &window);
     drive(cx, &window, |ws, window, cx| {
-        ws.areas.panel_at = Some((TabId::Changes, rows[0].row));
+        ws.areas.panel_at = Some((TabId::Changes, list[0].row));
         assert!(ws.panel_key(&Keystroke::parse("space").expect("a key"), window, cx));
     });
-    assert_ne!(walkable(cx, &window), before, "the section folded");
+    assert_ne!(rows(cx, &window), before, "the section folded");
 }
 
 // ---------------------------------------------------------------- compare with
@@ -191,34 +193,34 @@ fn comparing_with_a_branch_lists_the_changes_against_it_and_closes_the_diff(cx: 
     }
     let window = start(cx, 1);
     dirty_repo(cx, &window, "compare");
-    drive(cx, &window, |ws, _, cx| {
-        let file = change_of(ws, "a.txt");
-        ws.open_change(file, cx);
-    });
+    draw(cx, &window);
+    drive(cx, &window, |ws, _, cx| open_change(ws, "a.txt", cx));
     cx.run_until_parked();
     assert!(open_path(cx, &window).is_some());
 
     // The picker opens, asks for the branches, and shows them once they are in.
-    drive(cx, &window, |ws, window, cx| ws.toggle_picker(Picker::Compare, window, cx));
+    drive(cx, &window, toggle_compare);
     cx.run_until_parked();
-    read(cx, &window, |ws| {
-        assert_eq!(ws.picker, Some(Picker::Compare));
-        let mut branches = ws.branches.clone();
+    read_cx(cx, &window, |ws, cx| {
+        let entity = changes(ws);
+        let changes = entity.read(cx);
+        assert!(changes.picker().is_open());
+        let mut branches = changes.picker().branches().to_vec();
         branches.sort();
         assert_eq!(branches, ["main", "other"]);
     });
     // Picking one reads the status against it and drops the diff (its file may be gone from the list).
-    drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::Compare, Some("other".into()), cx));
+    drive(cx, &window, |ws, _, cx| pick_compare(ws, Some("other".into()), cx));
     cx.run_until_parked();
     assert_eq!(compared_with(cx, &window).as_deref(), Some("other"));
     assert!(open_path(cx, &window).is_none(), "the diff closed");
-    read(cx, &window, |ws| {
-        assert!(ws.picker.is_none());
+    read_cx(cx, &window, |ws, cx| {
+        assert!(!changes(ws).read(cx).picker().is_open());
         let status = ws.active_session().git.status.as_ref().expect("read again");
         assert_eq!(status.compare.as_deref(), Some("other"));
     });
     // Back to HEAD.
-    drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::Compare, None, cx));
+    drive(cx, &window, |ws, _, cx| pick_compare(ws, None, cx));
     cx.run_until_parked();
     assert_eq!(compared_with(cx, &window), None);
     read(cx, &window, |ws| {
@@ -233,17 +235,28 @@ fn a_picker_belongs_to_the_terminal_and_the_tab_it_was_opened_in(cx: &mut TestAp
     }
     let window = start(cx, 2);
     dirty_repo(cx, &window, "picker-owner");
-    drive(cx, &window, |ws, window, cx| ws.toggle_picker(Picker::Compare, window, cx));
+    let compare_open =
+        |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| changes(ws).read(cx).picker().is_open());
+    drive(cx, &window, toggle_compare);
     cx.run_until_parked();
-    assert!(read(cx, &window, |ws| ws.picker.is_some()));
+    assert!(compare_open(cx));
     // Another tab: the picker is gone.
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
-    assert!(read(cx, &window, |ws| ws.picker.is_none()));
-    // Another terminal: the same.
-    drive(cx, &window, |ws, window, cx| ws.toggle_picker(Picker::History, window, cx));
-    assert!(read(cx, &window, |ws| ws.picker.is_some()));
+    assert!(!compare_open(cx));
+    // The History tab's picker: gone with the tab too.
+    drive(cx, &window, |ws, window, cx| {
+        let (session, terminal) = (ws.active_session().id, ws.active_terminal());
+        ws.history_picker.toggle(session, &terminal, window, cx);
+    });
+    assert!(read(cx, &window, |ws| ws.history_picker.is_open()));
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
+    assert!(!read(cx, &window, |ws| ws.history_picker.is_open()));
+    // Another terminal: the same for the compare picker, and an open diff goes too.
+    drive(cx, &window, toggle_compare);
+    assert!(compare_open(cx));
     drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
-    assert!(read(cx, &window, |ws| ws.picker.is_none() && ws.diff_view.is_none()));
+    assert!(!compare_open(cx));
+    assert_eq!(open_path(cx, &window), None);
 }
 
 // ---------------------------------------------------------------- keys and menus
@@ -295,4 +308,21 @@ fn the_worktree_action_is_bound_only_where_the_folder_is_in_a_repository(cx: &mu
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(NewTerminalInWorktree), cx));
     cx.run_until_parked();
     assert!(read(cx, &window, |ws| ws.worktree_ask.is_some()), "in one: the dialog");
+}
+
+// ---------------------------------------------------------------- the compare picker
+
+/// The person opens (or closes) the "compare with" picker of the terminal in front.
+fn toggle_compare(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
+    let (session, terminal) = (ws.active_session().id, ws.active_terminal());
+    changes(ws).update(cx, |changes, cx| changes.picker_mut().toggle(session, &terminal, window, cx));
+}
+
+/// The person picks a branch (`None`: HEAD) in the picker.
+fn pick_compare(ws: &mut Workspace, branch: Option<String>, cx: &mut Context<Workspace>) {
+    let session = ws.active_session().id;
+    changes(ws).update(cx, |changes, cx| {
+        changes.picker_mut().close();
+        changes.pick(session, branch, cx);
+    });
 }

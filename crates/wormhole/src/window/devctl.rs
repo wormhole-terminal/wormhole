@@ -19,7 +19,10 @@ impl Workspace {
     pub(crate) fn devctl_panel_scroll(&mut self, y: f32, cx: &mut Context<Self>) {
         use wormhole_core::config::TabId;
         let list = match self.right_tab {
-            TabId::Changes => self.devctl_changes_list(),
+            TabId::Changes => match crate::window::features::git::changes::devctl::list(self, cx) {
+                Some(list) => list,
+                None => return,
+            },
             TabId::History => self.devctl_history_list(),
             TabId::Notes => match crate::window::features::notes::devctl::list(self, cx) {
                 Some(list) => list,

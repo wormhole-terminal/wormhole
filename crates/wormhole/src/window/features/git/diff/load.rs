@@ -7,10 +7,9 @@
 //! sessions or an edit landing mid-load can no longer put one file's lines under
 //! another's name.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::prelude::*;
@@ -20,9 +19,10 @@ use super::highlight::Highlights;
 use super::rows::{BuildKey, Row, RowStats, build_rows, syntax_fingerprint};
 use super::{DiffView, Request};
 use crate::settings::{settings_in, store_in};
-use crate::window::Workspace;
-use crate::window::features::git::changes::display_order;
-use crate::window::features::git::job::{Ticket, Wanted};
+use crate::window::facts::WindowFacts;
+use crate::window::features::git::changes::{Changes, display_order};
+use crate::window::repo::job::{Ticket, Wanted};
+use crate::window::repo::{Observed, Stamp};
 use wormhole_core::git::{self, DiffLimits, FileChange, FileDiff, LineKind, RepoStatus, SubmoduleLog};
 use wormhole_core::theme::tokens::ThemeTokens;
 
@@ -70,40 +70,6 @@ pub(super) enum Outcome {
 pub(super) enum Work {
     Load(Request),
     Rebuild { diff: Arc<FileDiff>, path: String },
-}
-
-/// A working-tree file's modification time and size. When they differ from what
-/// the diff was read from, the file was edited since.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct Stamp {
-    modified: Option<SystemTime>,
-    len: u64,
-}
-
-impl Stamp {
-    fn of(path: &Path) -> Option<Self> {
-        Some(Self::from(&std::fs::metadata(path).ok()?))
-    }
-}
-
-impl From<&std::fs::Metadata> for Stamp {
-    fn from(meta: &std::fs::Metadata) -> Self {
-        Self { modified: meta.modified().ok(), len: meta.len() }
-    }
-}
-
-/// What a status refresh saw of the open diff's file, read in the same
-/// background hop as the status.
-pub(crate) struct Observed {
-    path: PathBuf,
-    stamp: Option<Stamp>,
-}
-
-impl Observed {
-    pub(crate) fn of(path: PathBuf) -> Self {
-        let stamp = Stamp::of(&path);
-        Self { path, stamp }
-    }
 }
 
 /// What a fresh status says about the open working-tree diff.
@@ -318,12 +284,12 @@ impl DiffView {
     }
 }
 
-impl Workspace {
+impl Changes {
     /// The key rows would be built with now. `None` without a diff on view.
     pub(super) fn build_key(&mut self, cx: &App) -> Option<BuildKey> {
         let split_fits = self.diff_split_fits(cx);
         let store = store_in(&self.profile, cx);
-        let view = self.diff_view.as_mut()?;
+        let view = self.diff.as_mut()?;
         Some(BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens)))
     }
 
@@ -342,7 +308,7 @@ impl Workspace {
             let Some(outcome) = task.await else { return };
             let _ = this.update(cx, |this, cx| {
                 // Whatever is on view now takes the answer only if it is the one that asked.
-                if this.diff_view.as_mut().is_some_and(|view| view.finish(ticket, outcome)) {
+                if this.diff.as_mut().is_some_and(|view| view.finish(ticket, outcome)) {
                     cx.notify();
                 }
             });
@@ -353,9 +319,9 @@ impl Workspace {
     /// Build the rows again if a setting they depend on (layout, tab width,
     /// syntax colors) or the room for a split view changed. Called every tick and
     /// after a frame that found the room changed; cheap when nothing did.
-    pub(crate) fn sync_diff(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::window) fn sync_diff(&mut self, cx: &mut Context<Self>) {
         let Some(want) = self.build_key(cx) else { return };
-        let Some(view) = self.diff_view.as_mut() else { return };
+        let Some(view) = self.diff.as_mut() else { return };
         // A rebuild never supersedes a load in flight: that answer lands first
         // and the next tick sees whatever differs.
         if view.built == Some(want) || view.job.is_pending() {
@@ -365,18 +331,27 @@ impl Workspace {
         self.spawn_diff_work(wanted, work, want, cx);
     }
 
-    /// A status refresh for the active session finished: bring the open
-    /// working-tree diff in line. The list ‹ › steps through follows the
-    /// Changes list; a file that changed is read again in place, so the scroll
-    /// position stays; one that is no longer changed is marked as such.
-    pub(crate) fn refresh_open_diff(&mut self, observed: Option<Observed>, cx: &mut Context<Self>) {
+    /// The window read the status of terminal `session`, the one on screen: bring the open
+    /// working-tree diff in line. The list the arrows step through follows the Changes list; a file that
+    /// changed is read again in place, so the scroll position stays; one that is no longer changed is
+    /// marked as such.
+    pub(in crate::window) fn refresh_open_diff(
+        &mut self,
+        facts: &WindowFacts<'_>,
+        session: i64,
+        observed: Option<&Observed>,
+        cx: &mut Context<Self>,
+    ) {
+        self.follow(facts);
         let (tree, group_untracked) = {
             let s = settings_in(&self.profile, cx);
             (s.changes_tree, s.group_untracked)
         };
         let reload = {
-            let Some(view) = self.diff_view.as_mut() else { return };
-            let Some(status) = self.sessions.get(self.active).and_then(|s| s.git.status.as_ref()) else {
+            let Some(view) = self.diff.as_mut().filter(|view| view.session == session) else { return };
+            let Some(status) =
+                facts.active().filter(|active| active.id == session).and_then(|a| a.git.status.as_ref())
+            else {
                 return;
             };
             if !view.is_working_tree() {
@@ -388,7 +363,7 @@ impl Workspace {
                 view.siblings = Rc::new(order);
                 notify = true;
             }
-            let reload = match view.check(status, observed.as_ref()) {
+            let reload = match view.check(status, observed) {
                 Check::Same => None,
                 Check::Gone => {
                     notify |= !view.gone;
@@ -410,7 +385,7 @@ impl Workspace {
     /// Read the open diff again for `file`, as the status now describes it.
     fn reload_diff(&mut self, file: FileChange, base_rev: String, cx: &mut Context<Self>) {
         let Some(build) = self.build_key(cx) else { return };
-        let Some(view) = self.diff_view.as_mut() else { return };
+        let Some(view) = self.diff.as_mut() else { return };
         view.request.file = file;
         view.request.spec.old = base_rev;
         view.gone = false;

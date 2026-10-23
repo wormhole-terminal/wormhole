@@ -108,14 +108,14 @@ pub(super) const WALK: WalkFns = WalkFns {
         let notes = notes.read(cx);
         facts.active().and_then(|active| notes.of.get(&active.id)).map(Notes::walkable).unwrap_or_default()
     },
-    press: |entity, session, row, press, following, window, cx| {
+    press: |entity, _, session, row, press, following, window, cx| {
         // With a diff open the keys only follow it from file to file: nothing here to press.
         if following {
             return true;
         }
         super::def::typed(entity).update(cx, |notes, cx| notes.press_row(session, row, press, window, cx))
     },
-    fold: |entity, session, row, cx| {
+    fold: |entity, _, session, row, cx| {
         super::def::typed(entity).update(cx, |notes, cx| notes.fold_row(session, row, cx));
     },
     reveal: |entity, facts, row, cx| {

@@ -7,10 +7,10 @@ use gpui_kit::TestAppContext;
 use wormhole_core::config::TabId;
 use wormhole_core::git::review::LineSide;
 
-use super::super::testing::{change_of, git, go, read_repo, repo, write};
+use super::super::testing::{changes, git, go, open_change, read_repo, repo, write};
 use super::render::LineAt;
 use crate::app_state::OpenWindow;
-use crate::window::view_tests::{drive, isolate_in, read, start};
+use crate::window::view_tests::{drive, isolate_in, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -30,8 +30,9 @@ struct Shown {
 }
 
 fn shown(cx: &mut TestAppContext, window: &OpenWindow) -> Option<Shown> {
-    read(cx, window, |ws| {
-        let view = ws.diff_view.as_ref()?;
+    read_cx(cx, window, |ws, cx| {
+        let entity = changes(ws);
+        let view = entity.read(cx).diff.as_ref()?;
         Some(Shown {
             path: view.file().path.clone(),
             loading: view.loading,
@@ -44,10 +45,9 @@ fn shown(cx: &mut TestAppContext, window: &OpenWindow) -> Option<Shown> {
 }
 
 fn open(cx: &mut TestAppContext, window: &OpenWindow, path: &str) {
-    drive(cx, window, |ws, _, cx| {
-        let file = change_of(ws, path);
-        ws.open_change(file, cx);
-    });
+    // The list is drawn first: it keeps what a click opens a diff against.
+    crate::window::view_tests::draw(cx, window);
+    drive(cx, window, |ws, _, cx| open_change(ws, path, cx));
     cx.run_until_parked();
 }
 
@@ -82,17 +82,17 @@ fn a_change_opens_its_diff_and_the_arrows_step_through_the_listed_files(cx: &mut
             position: Some(0)
         })
     );
-    drive(cx, &window, |ws, _, cx| ws.step_diff(1, cx));
+    step(cx, &window, 1);
     cx.run_until_parked();
     assert_eq!(shown(cx, &window).map(|s| (s.path, s.counts)), Some(("b.txt".into(), (1, 0))));
-    drive(cx, &window, |ws, _, cx| ws.step_diff(1, cx));
+    step(cx, &window, 1);
     cx.run_until_parked();
     assert_eq!(shown(cx, &window).map(|s| s.path), Some("a.txt".into()), "past the last: the first");
-    drive(cx, &window, |ws, _, cx| ws.step_diff(-1, cx));
+    step(cx, &window, -1);
     cx.run_until_parked();
     assert_eq!(shown(cx, &window).map(|s| s.path), Some("b.txt".into()), "before the first: the last");
 
-    drive(cx, &window, |ws, window, cx| ws.close_diff(window, cx));
+    close(cx, &window);
     assert_eq!(shown(cx, &window), None);
 }
 
@@ -105,11 +105,11 @@ fn the_diff_covers_the_terminal_until_it_is_closed(cx: &mut TestAppContext) {
     changed(cx, &window, "covers");
     open(cx, &window, "a.txt");
     crate::window::view_tests::draw(cx, &window);
-    assert!(read(cx, &window, |ws| ws.diff_view.is_some()));
+    assert!(shown(cx, &window).is_some());
     // The Tabs area is not one to move to while a diff covers the terminal (the diff has the keys).
-    drive(cx, &window, |ws, window, cx| ws.close_diff(window, cx));
+    close(cx, &window);
     crate::window::view_tests::draw(cx, &window);
-    assert!(read(cx, &window, |ws| ws.diff_view.is_none()));
+    assert!(shown(cx, &window).is_none());
 }
 
 // ---------------------------------------------------------------- following the working tree
@@ -137,7 +137,10 @@ fn an_open_diff_follows_the_file_and_says_when_it_is_no_longer_changed(cx: &mut 
     assert_eq!(shown(cx, &window).map(|s| (s.counts, s.gone)), Some(((2, 0), true)));
 
     // The siblings follow the list: b.txt only now.
-    assert_eq!(read(cx, &window, |ws| ws.diff_view.as_ref().map(|v| v.siblings.len())), Some(1));
+    assert_eq!(
+        read_cx(cx, &window, |ws, cx| changes(ws).read(cx).diff.as_ref().map(|v| v.siblings.len())),
+        Some(1)
+    );
 }
 
 #[gpui_kit::test]
@@ -162,20 +165,24 @@ fn comment(
     text: &str,
 ) -> Result<(), &'static str> {
     drive(cx, window, |ws, window, cx| {
+        let terminal = ws.active_terminal();
         let at = LineAt { side: LineSide::New, line, code: "three".into() };
-        ws.comment_on_line(path.to_string(), at, window, cx);
-        let input = ws.commenting.as_ref().ok_or("no dialog")?.input.clone();
-        input.update(cx, |input, cx| input.set_value(text.to_string(), window, cx));
-        ws.save_comment(cx);
-        ws.commenting = None;
-        Ok(())
+        changes(ws).update(cx, |changes, cx| {
+            changes.comment_on_line(terminal.clone(), path.to_string(), at, window, cx);
+            let input = changes.commenting.as_ref().ok_or("no dialog")?.input.clone();
+            input.update(cx, |input, cx| input.set_value(text.to_string(), window, cx));
+            changes.save_comment(cx);
+            changes.commenting = None;
+            Ok(())
+        })
     })
 }
 
 fn review(cx: &mut TestAppContext, window: &OpenWindow, session: usize) -> (String, Option<String>) {
-    read(cx, window, |ws| {
-        let review = &ws.sessions[session].review;
-        (review.summary(), review.message())
+    read_cx(cx, window, |ws, cx| {
+        let entity = changes(ws);
+        let review = entity.read(cx).review(ws.sessions[session].id);
+        review.map_or(("0 comments".to_string(), None), |review| (review.summary(), review.message()))
     })
 }
 
@@ -191,9 +198,10 @@ fn comments_are_kept_per_terminal_and_marked_on_the_diff(cx: &mut TestAppContext
     assert_eq!(review(cx, &window, 0).0, "1 comment");
     assert_eq!(review(cx, &window, 1).0, "0 comments", "the other terminal has none");
     // The diff marks the commented line; commenting on it again replaces the text; empty removes it.
-    let marked = read(cx, &window, |ws| {
-        let view = ws.diff_view.as_ref().expect("a diff");
-        ws.commented_lines(view)
+    let marked = read_cx(cx, &window, |ws, cx| {
+        let entity = changes(ws);
+        let changes = entity.read(cx);
+        changes.commented_lines(changes.diff.as_ref().expect("a diff"))
     });
     assert_eq!(marked, [(LineSide::New, 3)]);
     comment(cx, &window, "a.txt", 3, "Please explain").expect("a comment");
@@ -216,12 +224,15 @@ fn a_review_is_copied_when_the_program_cant_take_a_paste_and_cleared_on_request(
     comment(cx, &window, "a.txt", 3, "Why three?").expect("a comment");
     // `cat` has not asked for bracketed paste, so a paste would run each line: the comments go to the
     // clipboard instead, the review is kept, and the diff stays open.
-    drive(cx, &window, |ws, window, cx| ws.paste_review(window, cx));
+    drive(cx, &window, |ws, window, cx| {
+        let terminal = ws.active_terminal();
+        changes(ws).update(cx, |changes, cx| changes.paste_review(&terminal, window, cx));
+    });
     let copied = cx.read_from_clipboard().and_then(|item| item.text()).unwrap_or_default();
     assert!(copied.starts_with("Review comments on your changes."), "{copied}");
     assert_eq!(review(cx, &window, 0).0, "1 comment");
     assert!(shown(cx, &window).is_some());
-    drive(cx, &window, |ws, _, cx| ws.clear_review(cx));
+    drive(cx, &window, |ws, _, cx| changes(ws).update(cx, |changes, cx| changes.clear_review(cx)));
     assert_eq!(review(cx, &window, 0), ("0 comments".to_string(), None));
 }
 
@@ -239,4 +250,18 @@ fn the_files_status_is_read_again_after_a_commit_so_the_list_empties(cx: &mut Te
     cx.run_until_parked();
     assert_eq!(shown(cx, &window).map(|s| s.gone), Some(true), "no longer among the changes");
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
+}
+
+/// The arrows of the diff's title row.
+fn step(cx: &mut TestAppContext, window: &OpenWindow, delta: isize) {
+    drive(cx, window, |ws, _, cx| changes(ws).update(cx, |changes, cx| changes.step_diff(delta, cx)));
+    cx.run_until_parked();
+}
+
+/// Esc, or the diff's close button.
+fn close(cx: &mut TestAppContext, window: &OpenWindow) {
+    drive(cx, window, |ws, window, cx| {
+        let terminal = ws.active_terminal();
+        changes(ws).update(cx, |changes, cx| changes.close_diff(&terminal, window, cx));
+    });
 }

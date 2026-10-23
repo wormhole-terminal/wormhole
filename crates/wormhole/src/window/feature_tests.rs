@@ -104,11 +104,11 @@ static STAND_IN: &[FeatureDef] = &[
                         .map(|row| Walkable { row, item: Item { level: 0, fold: None }, band: row == 0 })
                         .collect()
                 },
-                press: |entity, session, row, _, _, _, cx| {
+                press: |entity, _, session, row, _, _, _, cx| {
                     marker(entity).update(cx, |m, _| m.asked.push(format!("press:{session}:{row}")));
                     row == 1
                 },
-                fold: |entity, session, row, cx| {
+                fold: |entity, _, session, row, cx| {
                     marker(entity).update(cx, |m, _| m.asked.push(format!("fold:{session}:{row}")));
                 },
                 reveal: |entity, _, row, cx| marker(entity).read(cx).revealed.set(Some(row)),
@@ -120,7 +120,7 @@ static STAND_IN: &[FeatureDef] = &[
             }),
             refresh_ticks: None,
             returns_to_previous: false,
-            window_side: None,
+            pick_branch: None,
         }],
         bind: Some(|_, _, root, _| root),
         row_extras: Some(|_, _, extras, _| {
@@ -137,6 +137,9 @@ static STAND_IN: &[FeatureDef] = &[
         profiles: None,
         refresh: None,
         approves_programs: None,
+        cover: None,
+        tab_changed: None,
+        repo: None,
         spawn: None,
         state: Some(StateDef {
             make: |window, cx| {
@@ -178,31 +181,30 @@ fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
 }
 
-/// The side door (`TabDef::window_side`) is Changes' until 5d and nobody else's: a second user would
-/// make the window-shaped hook the contract's habit again. It asserts on where the door is *set*
-/// (`window_side: Some`), so the frame code that only reads it (`panel.rs`) is no exemption to hide
-/// behind. `Context<Workspace>` in a feature's other code is the same debt and is the 5g checker's to
-/// ban when each feature has its own state.
+/// The contract has no side door: no tab is handed the window itself, in place of the entity it keeps
+/// its state in. The names of the old one (`window_side`, `WindowSideTab`) appear nowhere in the window
+/// but in this test; `Context<Workspace>` in a feature's other code is the same debt and is the
+/// checker's to ban (`impl-outside`).
 #[test]
-fn only_changes_uses_the_side_door() {
+fn no_tab_is_given_the_window_through_a_side_door() {
     fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
-        for entry in std::fs::read_dir(dir).expect("reads the features folder") {
+        for entry in std::fs::read_dir(dir).expect("reads the window's folder") {
             let path = entry.expect("an entry").path();
             if path.is_dir() {
                 walk(&path, found);
             } else if path.extension().is_some_and(|ext| ext == "rs")
-                && std::fs::read_to_string(&path).expect("reads a source file").contains("window_side: Some")
+                && path.file_name().is_some_and(|name| name != "feature_tests.rs")
             {
-                found.push(path.to_string_lossy().into_owned());
+                let text = std::fs::read_to_string(&path).expect("reads a source file");
+                if text.contains("window_side") || text.contains("WindowSideTab") {
+                    found.push(path.to_string_lossy().into_owned());
+                }
             }
         }
     }
     let mut found = Vec::new();
-    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/window/features"), &mut found);
-    found.sort();
-    let names: Vec<&str> =
-        found.iter().filter_map(|path| path.split("src/window/features/").nth(1)).collect();
-    assert_eq!(names, ["git/changes/entry.rs"]);
+    walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/window"), &mut found);
+    assert!(found.is_empty(), "a side door is back: {found:?}");
 }
 
 #[gpui_kit::test]
@@ -265,9 +267,9 @@ fn a_window_makes_its_features_state_and_hands_facts_to_its_hooks(cx: &mut TestA
         (tab.on_show.expect("has on_show"))(&entity, &facts, 7, cx);
         let walk = tab.walk.as_ref().expect("has a list");
         assert_eq!((walk.walkable)(&entity, &facts, cx).len(), 2);
-        assert!((walk.press)(&entity, 7, 1, Activate::Space, false, window, cx));
-        assert!(!(walk.press)(&entity, 7, 0, Activate::Return, true, window, cx));
-        (walk.fold)(&entity, 7, 1, cx);
+        assert!((walk.press)(&entity, &facts, 7, 1, Activate::Space, false, window, cx));
+        assert!(!(walk.press)(&entity, &facts, 7, 0, Activate::Return, true, window, cx));
+        (walk.fold)(&entity, &facts, 7, 1, cx);
         (walk.reveal)(&entity, &facts, 1, cx);
         assert_eq!(marker(&entity).read(cx).asked, ["shown:7", "press:7:1", "press:7:0", "fold:7:1"]);
         assert_eq!(marker(&entity).read(cx).revealed.get(), Some(1));
@@ -420,9 +422,9 @@ fn changes_is_a_table_entry_the_frame_reads(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     draw(cx, &window);
+    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
+    draw(cx, &window);
     drive(cx, &window, |ws, window, cx| {
-        ws.sessions[0].git.status = Some(three_changes());
-        ws.sync_changes_list(cx);
         let (at, tab) = ws.tab_entry(TabId::Changes).expect("Changes is in the table");
         assert_eq!(at, 0, "first in tab order");
         assert_eq!(ws.panel_tab_list(cx)[..2], [TabId::Changes, TabId::History]);
@@ -440,11 +442,9 @@ fn changes_is_a_table_entry_the_frame_reads(cx: &mut TestAppContext) {
             ("Changes", IconName::GitCompare, ActionId::ShowChanges)
         );
         assert!((tab.shown)(&facts, cx));
-        // The panel is drawn through the temporary side door, which has the window; the entity-side
-        // `view` is a stub that draws nothing.
-        let side = tab.window_side.expect("Changes uses the side door until 5d");
-        let _ = (side.view)(ws, window, cx);
-        assert!(tab.on_show.is_none() && tab.walk.is_none(), "its hooks are the side door's");
+        // Its panel, hooks and keys are the entity's, like any feature's.
+        let _ = (tab.view)(&entity, &facts, window, cx);
+        assert!(tab.on_show.is_some() && tab.walk.is_some() && tab.pick_branch.is_some());
         assert!((tab.actions.is_none()), "Changes has no buttons beside the tabs");
         assert_eq!(facts.active().expect("selected").git.status.as_ref().map(|s| s.files.len()), Some(3));
     });
@@ -457,28 +457,45 @@ fn the_keys_walk_the_changes_list_through_the_table(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     draw(cx, &window);
-    drive(cx, &window, |ws, window, cx| {
-        ws.sessions[0].git.status = Some(three_changes());
-        ws.sync_changes_list(cx);
-        let (_, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
-        let side = tab.window_side.expect("Changes uses the side door until 5d");
+    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
+    draw(cx, &window);
+    drive(cx, &window, |ws, _, cx| {
+        let (at, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
+        let (walk, entity) =
+            (tab.walk.as_ref().expect("has a list"), ws.feature_entity(at).expect("made").clone());
         let id = ws.sessions[0].id;
 
-        let rows = (side.walkable)(ws);
+        let facts = ws.facts(cx);
+        let rows = (walk.walkable)(&entity, &facts, cx);
         assert!(rows[0].band, "a section's band leads the list");
         assert!(rows.len() >= 4, "the band and the three files, in folders or not: {rows:?}");
         assert_eq!(ws.panel_lists(cx), [0], "one ⇥ stop");
-        (side.reveal)(ws, rows[1].row);
+        (walk.reveal)(&entity, &facts, rows[1].row, cx);
 
         // → ← on the band folds or opens its section; Space on it does the same through `press`.
         let band = rows[0].row;
-        (side.fold)(ws, id, band, cx);
-        ws.sync_changes_list(cx);
-        let folded = (side.walkable)(ws);
-        assert_ne!(folded.len(), rows.len(), "the section changed shape");
-        assert!((side.press)(ws, id, band, Activate::Space, false, window, cx), "the keys stay in the list");
-        ws.sync_changes_list(cx);
-        assert_eq!((side.walkable)(ws), rows, "and back");
+        (walk.fold)(&entity, &facts, id, band, cx);
+    });
+    // The list is rebuilt by the frame.
+    draw(cx, &window);
+    drive(cx, &window, |ws, window, cx| {
+        let (at, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
+        let (walk, entity) =
+            (tab.walk.as_ref().expect("has a list"), ws.feature_entity(at).expect("made").clone());
+        let (id, facts) = (ws.sessions[0].id, ws.facts(cx));
+        let folded = (walk.walkable)(&entity, &facts, cx);
+        assert!(folded.len() < 4, "{folded:?}");
+        assert!(
+            (walk.press)(&entity, &facts, id, folded[0].row, Activate::Space, false, window, cx),
+            "the keys stay in the list"
+        );
+    });
+    draw(cx, &window);
+    drive(cx, &window, |ws, _, cx| {
+        let (at, tab) = ws.tab_entry(TabId::Changes).expect("in the table");
+        let (walk, entity) =
+            (tab.walk.as_ref().expect("has a list"), ws.feature_entity(at).expect("made").clone());
+        assert!((walk.walkable)(&entity, &ws.facts(cx), cx).len() >= 4, "and back");
     });
 
     // The window's key path reaches the same functions: ↓ moves the cursor onto the next row.
@@ -515,21 +532,24 @@ fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
     // A folder to ask git about: the refresh only starts for a terminal that reports one.
     let folder = std::env::temp_dir();
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(folder));
+        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(folder.clone()));
         ws.show_tab(TabId::History, cx);
     });
-    drive(cx, &window, |ws, _, cx| {
-        assert!(!ws.sessions[0].git.loading(), "History's refresh is not git's");
-        // `show_tab` → the table's `on_show` for Changes → `refresh_git`: a refresh is under way.
-        ws.show_tab(TabId::Changes, cx);
-        assert_eq!(ws.right_tab, TabId::Changes);
-        assert!(ws.sessions[0].git.loading(), "showing Changes asked git through the table");
-    });
+    assert!(read(cx, &window, |ws| ws.sessions[0].git.cwd.is_none()), "History's refresh is not git's");
+    // `show_tab` → the table's `on_show` for Changes asks the window to read the repository (an event,
+    // which the window handles when the update that showed the tab ends): git has answered for the folder.
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+    assert_eq!(
+        read(cx, &window, |ws| ws.sessions[0].git.cwd.clone()),
+        Some(std::env::temp_dir()),
+        "showing Changes asked git through the table"
+    );
 }
 
 /// Allocations the second draw of a one-terminal window on Changes (three changed files) may make.
-/// Measured: 3,697 allocations (1.8 MB), the same on every run: the count is exact. The budget is that
-/// plus about a hundredth. It guards the window's own frame, which the table's loops (tab bar, bindings, panel
+/// Measured: 3,698 allocations (1.8 MB), the same on every run: the count is exact (3,697 before Changes
+/// moved into its entity). The budget is that plus about a hundredth. It guards the window's own frame, which the table's loops (tab bar, bindings, panel
 /// body) are part of: a lookup, clone or `Vec` per feature per frame shows as a few dozen and a
 /// per-row one as hundreds. Any rise must be explained in the change that makes it, and then raised
 /// here with the new measurement.
@@ -542,10 +562,7 @@ fn a_window_frame_on_changes_stays_within_its_allocation_budget(cx: &mut TestApp
         return;
     }
     let window = start(cx, 1);
-    drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].git.status = Some(three_changes());
-        ws.sync_changes_list(cx);
-    });
+    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(three_changes()));
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
     // The first draw builds what a window keeps (lists, layouts, caches); the second is a frame.
     draw(cx, &window);
@@ -681,7 +698,7 @@ macro_rules! crowd_member {
                 actions: None,
                 refresh_ticks: None,
                 returns_to_previous: false,
-                window_side: None,
+                pick_branch: None,
             }],
             bind: Some(|_, _, root, _| root),
             row_extras: None,
@@ -692,6 +709,9 @@ macro_rules! crowd_member {
             profiles: None,
             refresh: None,
             approves_programs: None,
+            cover: None,
+            tab_changed: None,
+            repo: None,
             spawn: None,
             state: Some(StateDef {
                 make: |window, cx| {
@@ -725,10 +745,11 @@ static CROWD: &[FeatureDef] = &[
 
 /// Allocations the table's loops make in one frame, for 50 changed files and three stand-in features:
 /// `bind_features`, the tab bar (`render_panel_tabs`, in `render_panel`) and the panel body. Measured:
-/// 122 (26 KB), exact on every run; the budget is that plus about a hundredth. Run with 50 files and
+/// 109 (24 KB), exact on every run (122 before Changes moved into its entity, which draws its list
+/// from rows kept per terminal); the budget is that plus about a hundredth. Run with 50 files and
 /// four features so that a cost per row (fifty times) or per feature (four times) shows at once; a
 /// change that adds either must say why, and raise this with the new measurement.
-const TABLE_LOOP_ALLOCATIONS: u64 = 124;
+const TABLE_LOOP_ALLOCATIONS: u64 = 111;
 
 #[gpui_kit::test]
 fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext) {
@@ -737,10 +758,7 @@ fn the_tables_loops_stay_within_their_allocation_budget(cx: &mut TestAppContext)
         return;
     }
     let window = start_with_table(cx, WindowRecord { id: 1, ..Default::default() }, CROWD);
-    drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].git.status = Some(many_changes(50));
-        ws.sync_changes_list(cx);
-    });
+    drive(cx, &window, |ws, _, _| ws.sessions[0].git.status = Some(many_changes(50)));
     draw(cx, &window);
     let drawn = drive(cx, &window, |ws, window, cx| {
         let width = ws.columns().panel;

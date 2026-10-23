@@ -9,7 +9,7 @@ use gpui_kit::*;
 use super::DiffView;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
-use crate::window::Workspace;
+use crate::window::features::git::changes::Changes;
 use wormhole_core::git::{COMMITS_SHOWN, Commit, Range, SubmoduleLog, short};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;
@@ -17,7 +17,7 @@ use wormhole_core::view::panel::age;
 /// The room round the card's notes.
 const NOTE_PAD: f32 = 16.0;
 
-impl Workspace {
+impl Changes {
     /// The body of a submodule's card. `view` has the submodule's own change; `log` what is
     /// between its commits.
     pub(super) fn render_submodule_body(

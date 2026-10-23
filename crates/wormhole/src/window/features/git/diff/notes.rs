@@ -14,7 +14,7 @@ use super::render::DiffColors;
 use crate::settings::UiColors;
 use crate::settings::settings_in;
 use crate::style::{self, Edges, TextRole};
-use crate::window::Workspace;
+use crate::window::features::git::changes::Changes;
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{self, Side};
 
@@ -139,7 +139,7 @@ pub(crate) fn side_note(ui: UiColors, colors: DiffColors, note: Note) -> Div {
         }))
 }
 
-impl Workspace {
+impl Changes {
     /// In place of a diff too large to load unasked: how big it is and how many lines changed
     /// (git's count, from the status), then Load diff, and Reveal in Finder for a file on disk.
     pub(super) fn render_too_large(&self, view: &DiffView, ui: UiColors, cx: &mut Context<Self>) -> Div {
@@ -209,7 +209,7 @@ mod tests {
         };
         let spec = DiffSpec { old: "HEAD".into(), new: None };
         let request = Request { root: PathBuf::from("/repo"), file, spec, limits: DiffLimits::default() };
-        let mut view = DiffView::new(request, Rc::default(), None);
+        let mut view = DiffView::new(1, request, Rc::default(), None);
         view.sides = git::sides(&diff, kind);
         view.diff = Some(Arc::new(diff));
         view

@@ -12,8 +12,8 @@ use crate::settings::UiColors;
 use crate::settings::{store_in, ui_in};
 use crate::style::{self, ROW_H, TextRole};
 use crate::theme_bridge::token;
-use crate::window::Workspace;
 use wormhole_core::git::GitError;
+use wormhole_core::storage::paths::ProfileId;
 
 /// The git tab a problem is drawn in, which its wording and its Retry are for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,67 +59,54 @@ pub(super) fn wording(tab: GitTab, error: &GitError) -> Option<Wording> {
     }
 }
 
-impl Workspace {
-    /// In place of a git tab's list when git could not read the folder at all.
-    pub(super) fn render_git_problem(
-        &self,
-        tab: GitTab,
-        error: &GitError,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let ui = ui_in(&self.profile, cx);
-        let Some(Wording { headline, hint, detail, copy }) = wording(tab, error) else {
-            return style::empty_note(ui, "This terminal's folder isn't inside a git repository.")
-                .into_any_element();
-        };
-        let code_font = crate::fonts::code_font_in(&self.profile, cx).0;
-        // Everything starts at the panel's 16 pt inset, like the rows it stands in for.
-        div()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .child(style::empty_note(ui, headline))
-            .children(hint.map(|hint| div().px_3().text_caption().text_color(ui.muted).child(hint)))
-            .child(
-                div()
-                    .mx_3()
-                    .p_2()
-                    .rounded(ui.radius)
-                    // A well a step darker than the panel (lighter in a light theme), like a field.
-                    .bg(token(&store_in(&self.profile, cx).tokens, "input.background"))
-                    .text_caption()
-                    .text_color(ui.muted)
-                    .font_family(code_font)
-                    .font_features(crate::fonts::code_font_features(cx))
-                    .child(detail),
-            )
-            .child(
-                div()
-                    .flex()
-                    .gap_2()
-                    .px_3()
-                    .pb_2()
-                    .child(
-                        button("git-retry", "Retry")
-                            .on_click(cx.listener(move |this, _, _, cx| this.retry_git(tab, cx))),
-                    )
-                    .children(copy.map(|message| {
-                        button("git-copy-error", "Copy error").on_click(move |_, _, cx| {
-                            cx.write_to_clipboard(ClipboardItem::new_string(message.clone()))
-                        })
-                    })),
-            )
-            .into_any_element()
-    }
-
-    /// Ask git again, now: the Retry of a git problem.
-    pub(super) fn retry_git(&mut self, tab: GitTab, cx: &mut Context<Self>) {
-        let ix = self.active;
-        match tab {
-            GitTab::Changes => self.refresh_git(ix, cx),
-            GitTab::History => self.refresh_history(ix, cx),
-        }
-    }
+/// In place of a git tab's list when git could not read the folder at all. `retry` asks git again.
+pub(super) fn render_git_problem(
+    profile: &ProfileId,
+    tab: GitTab,
+    error: &GitError,
+    retry: impl Fn(&mut App) + 'static,
+    cx: &App,
+) -> AnyElement {
+    let ui = ui_in(profile, cx);
+    let Some(Wording { headline, hint, detail, copy }) = wording(tab, error) else {
+        return style::empty_note(ui, "This terminal's folder isn't inside a git repository.")
+            .into_any_element();
+    };
+    let code_font = crate::fonts::code_font_in(profile, cx).0;
+    // Everything starts at the panel's 16 pt inset, like the rows it stands in for.
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .child(style::empty_note(ui, headline))
+        .children(hint.map(|hint| div().px_3().text_caption().text_color(ui.muted).child(hint)))
+        .child(
+            div()
+                .mx_3()
+                .p_2()
+                .rounded(ui.radius)
+                // A well a step darker than the panel (lighter in a light theme), like a field.
+                .bg(token(&store_in(profile, cx).tokens, "input.background"))
+                .text_caption()
+                .text_color(ui.muted)
+                .font_family(code_font)
+                .font_features(crate::fonts::code_font_features(cx))
+                .child(detail),
+        )
+        .child(
+            div()
+                .flex()
+                .gap_2()
+                .px_3()
+                .pb_2()
+                .child(button("git-retry", "Retry").on_click(move |_, _, cx| retry(cx)))
+                .children(copy.map(|message| {
+                    button("git-copy-error", "Copy error").on_click(move |_, _, cx| {
+                        cx.write_to_clipboard(ClipboardItem::new_string(message.clone()))
+                    })
+                })),
+        )
+        .into_any_element()
 }
 
 /// The red line over a list that is still the last good one: git failed this time, maybe

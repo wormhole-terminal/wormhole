@@ -138,7 +138,7 @@ impl Workspace {
             .on_action(cx.listener(|this, _: &Smaller, _, cx| this.zoom_font(Some(-1.0), cx)))
             .on_action(cx.listener(|this, _: &ActualSize, _, cx| this.zoom_font(None, cx)))
             // Find works on the terminal in front, so not while a diff covers it.
-            .when(self.diff_view.is_none(), |root| {
+            .when(!self.covered(cx), |root| {
                 root.on_action(cx.listener(|this, _: &Find, window, cx| {
                     let terminal = this.active_terminal().clone();
                     terminal.update(cx, |terminal, cx| {

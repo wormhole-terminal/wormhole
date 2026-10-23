@@ -5,7 +5,6 @@ pub mod changes;
 pub mod diff;
 mod file_line;
 pub mod history;
-mod job;
 pub(crate) mod open_file;
 pub mod picker;
 mod problem;
@@ -18,5 +17,4 @@ mod flow_tests;
 mod testing;
 
 // The diff view's old paths, which `window` and the Theme Studio still use.
-pub(crate) use diff as diff_view;
 pub(crate) use diff::render as diff_render;

@@ -14,7 +14,7 @@ use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 use super::{activation, list_key};
 use crate::settings::UiColors;
 use crate::window::Workspace;
-use crate::window::feature::{WalkFns, WindowSideTab};
+use crate::window::feature::WalkFns;
 use wormhole_core::config::TabId;
 
 /// How an item is pressed: ↩ or Space.
@@ -30,20 +30,13 @@ pub(in crate::window) struct Walkable {
     pub band: bool,
 }
 
-/// How the tab on show is walked: through its feature's entity, or through the temporary side door
-/// that hands the window to a tab whose state is still in it (Changes, until 5d). `E` is the entity,
-/// borrowed from the window or cloned out of it for a call that changes the window.
-enum Walker<E> {
-    Own(&'static WalkFns, E),
-    Side(&'static WindowSideTab),
-}
+/// How the tab on show is walked: through its feature's entity. `E` is the entity, borrowed from the
+/// window or cloned out of it for a call that changes the window.
+struct Walker<E>(&'static WalkFns, E);
 
 impl Walker<&AnyEntity> {
     fn cloned(self) -> Walker<AnyEntity> {
-        match self {
-            Walker::Own(walk, entity) => Walker::Own(walk, entity.clone()),
-            Walker::Side(side) => Walker::Side(side),
-        }
+        Walker(self.0, self.1.clone())
     }
 }
 
@@ -51,22 +44,17 @@ impl Workspace {
     /// How the tab on show is walked, if its feature is in the table and the tab has a list.
     fn walker(&self) -> Option<Walker<&AnyEntity>> {
         let (at, tab) = self.tab_entry(self.right_tab)?;
-        if let Some(side) = tab.window_side {
-            return Some(Walker::Side(side));
-        }
-        Some(Walker::Own(tab.walk.as_ref()?, self.feature_entity(at)?))
+        Some(Walker(tab.walk.as_ref()?, self.feature_entity(at)?))
     }
 
     /// The rows of the tab on show that the keys can be on.
     fn panel_walkable(&self, cx: &App) -> Vec<Walkable> {
-        match self.walker() {
-            Some(Walker::Own(walk, entity)) => return (walk.walkable)(entity, &self.facts(cx), cx),
-            Some(Walker::Side(side)) => return (side.walkable)(self),
-            None => {}
+        if let Some(Walker(walk, entity)) = self.walker() {
+            return (walk.walkable)(entity, &self.facts(cx), cx);
         }
         match self.right_tab {
             TabId::History => self.history_walkable(),
-            // Changes and Notes are walked through the table; Project and Usage have no list.
+            // The others are walked through the table, or have no list.
             TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => Vec::new(),
         }
     }
@@ -132,7 +120,7 @@ impl Workspace {
                     self.areas.panel_at = Some((self.right_tab, row));
                     self.panel_reveal(row, cx);
                     // A diff that is open follows the keys, file to file.
-                    if self.diff_view.is_some() {
+                    if self.covered(cx) {
                         self.panel_press(row, Activate::Return, true, window, cx);
                     }
                 }
@@ -167,10 +155,10 @@ impl Workspace {
     ) {
         let session = self.active_session().id;
         let keeps = match self.walker().map(Walker::cloned) {
-            Some(Walker::Own(walk, entity)) => {
-                (walk.press)(&entity, session, row, press, following, window, cx)
+            Some(Walker(walk, entity)) => {
+                let facts = self.facts(cx);
+                (walk.press)(&entity, &facts, session, row, press, following, window, cx)
             }
-            Some(Walker::Side(side)) => (side.press)(self, session, row, press, following, window, cx),
             None => match self.right_tab {
                 TabId::History => self.history_press(row, following, cx),
                 TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => true,
@@ -184,10 +172,9 @@ impl Workspace {
     /// Fold or open the row at `row` (a section, a folder, a commit's files, the done steps).
     fn panel_fold(&mut self, row: usize, cx: &mut Context<Self>) {
         let session = self.active_session().id;
-        match self.walker().map(Walker::cloned) {
-            Some(Walker::Own(walk, entity)) => return (walk.fold)(&entity, session, row, cx),
-            Some(Walker::Side(side)) => return (side.fold)(self, session, row, cx),
-            None => {}
+        if let Some(Walker(walk, entity)) = self.walker().map(Walker::cloned) {
+            let facts = self.facts(cx);
+            return (walk.fold)(&entity, &facts, session, row, cx);
         }
         match self.right_tab {
             TabId::History => self.history_fold(row, cx),
@@ -197,10 +184,8 @@ impl Workspace {
 
     /// Scroll the tab's list to show row `row`.
     fn panel_reveal(&self, row: usize, cx: &App) {
-        match self.walker() {
-            Some(Walker::Own(walk, entity)) => return (walk.reveal)(entity, &self.facts(cx), row, cx),
-            Some(Walker::Side(side)) => return (side.reveal)(self, row),
-            None => {}
+        if let Some(Walker(walk, entity)) = self.walker() {
+            return (walk.reveal)(entity, &self.facts(cx), row, cx);
         }
         match self.right_tab {
             TabId::History => self.history_reveal(row),

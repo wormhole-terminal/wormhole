@@ -49,6 +49,11 @@ impl Workspace {
                 let ix = self.spawn_session(None, cwd, window, cx);
                 self.sessions[ix].terminal().clone()
             }
+            TerminalTarget::Beside { cwd } => {
+                let cwd = cwd.map(|cwd| cwd.to_string_lossy().into_owned());
+                let ix = self.open_session(None, cwd, window, cx);
+                self.sessions[ix].terminal().clone()
+            }
             TerminalTarget::Named { name, cwd } => {
                 let existing = self.sessions.iter().position(|s| s.name(cx).as_ref() == name.as_str());
                 let ix = match existing {
@@ -71,6 +76,7 @@ impl Workspace {
     ) {
         let terminal = self.target_terminal(target, window, cx);
         match input {
+            TerminalInput::None => {}
             TerminalInput::Command(command) => {
                 terminal.update(cx, |t, _| t.write_input(format!("{command}\r").into_bytes()));
             }

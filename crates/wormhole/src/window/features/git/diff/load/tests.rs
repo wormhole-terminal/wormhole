@@ -6,8 +6,8 @@ use std::sync::Arc;
 use super::{Built, Check, Observed, Outcome, Stamp, Work, run};
 use crate::window::features::git::diff::rows::{BuildKey, build_rows};
 use crate::window::features::git::diff::{DiffView, Request};
-use crate::window::features::git::job::testing::ManualExecutor;
-use crate::window::features::git::job::{Job, Wanted};
+use crate::window::repo::job::testing::ManualExecutor;
+use crate::window::repo::job::{Job, Wanted};
 use gpui_kit::component::highlighter::HighlightTheme;
 use gpui_kit::{TouchPhase, point, px};
 use wormhole_core::git::{
@@ -39,7 +39,7 @@ fn working_tree(path: &str) -> Request {
 }
 
 fn view(request: Request) -> DiffView {
-    DiffView::new(request, Rc::default(), None)
+    DiffView::new(1, request, Rc::default(), None)
 }
 
 /// What git would answer for `path`: one added line that says whose diff it is.

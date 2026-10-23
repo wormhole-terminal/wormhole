@@ -6,11 +6,13 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use gpui_kit::{Context, TestAppContext};
+use gpui_kit::{App, Context, Entity, TestAppContext};
 use wormhole_core::git::FileChange;
 
+use super::changes::Changes;
 use crate::app_state::OpenWindow;
 use crate::window::Workspace;
+use crate::window::focus::Walkable;
 use crate::window::view_tests::drive;
 
 /// Runs git in `dir`, as a test's fixture (the app itself never writes to a repository this way).
@@ -84,4 +86,29 @@ pub(super) fn changed_paths(ws: &Workspace) -> Option<Vec<String>> {
 pub(super) fn change_of(ws: &Workspace, path: &str) -> FileChange {
     let status = ws.active_session().git.status.as_ref().expect("git has answered");
     status.files.iter().find(|f| f.path == path).cloned().expect("a changed file")
+}
+
+/// The window's Changes.
+pub(super) fn changes(ws: &Workspace) -> Entity<Changes> {
+    ws.feature::<Changes>().expect("the window has the Changes feature")
+}
+
+/// The path of the diff on view.
+pub(super) fn diff_path(ws: &Workspace, cx: &App) -> Option<String> {
+    changes(ws).read(cx).diff.as_ref().map(|view| view.file().path.clone())
+}
+
+/// A click on the changed file `path` of the terminal in front in the list: its diff opens.
+pub(super) fn open_change(ws: &mut Workspace, path: &str, cx: &mut Context<Workspace>) {
+    let file = change_of(ws, path);
+    let session = ws.active_session().id;
+    let target = changes(ws).read(cx).target(session).expect("the list has been drawn");
+    changes(ws).update(cx, |changes, cx| changes.open_change(session, file, &target, cx));
+}
+
+/// The Changes list's rows the keys can be on, as the window asks the table.
+pub(super) fn walkable(ws: &Workspace, cx: &App) -> Vec<Walkable> {
+    let (at, tab) = ws.tab_entry(wormhole_core::config::TabId::Changes).expect("in the table");
+    let entity = ws.feature_entity(at).expect("made with the window");
+    (tab.walk.as_ref().expect("has a list").walkable)(entity, &ws.facts(cx), cx)
 }

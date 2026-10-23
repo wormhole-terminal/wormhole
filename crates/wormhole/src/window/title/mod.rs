@@ -109,7 +109,7 @@ impl Workspace {
             let store = store_in(&self.profile, cx);
             (token(&store.tokens, "state.highlight"), store.system())
         };
-        let in_diff = self.diff_view.is_some();
+        let in_diff = self.covered(cx);
         let plan = (!in_diff).then(|| self.title_plan(window, cx));
         let (left, right) = self.title_row_pads(window);
 
@@ -145,7 +145,7 @@ impl Workspace {
                                 .flex_1()
                                 .min_w_0()
                                 .flex()
-                                .children(self.render_diff_title(cx))
+                                .children(self.render_cover_title(cx))
                                 .children(strip)
                                 .when(extras.is_some(), |d| d.child(div().flex_1().min_w_0()))
                                 .children(extras),

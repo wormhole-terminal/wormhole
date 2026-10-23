@@ -15,7 +15,8 @@ use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::window::Workspace;
 use crate::window::dialog::shortened;
 use crate::window::feature::Stake;
-use crate::window::features::git::{changes, history};
+use crate::window::features::git::history;
+use crate::window::repo::GitState;
 
 /// A session's terminal: what the shell's agent hooks report is its id.
 pub(super) struct Pane {
@@ -73,9 +74,8 @@ pub(super) struct Session {
     pub pane: Pane,
     /// The split it is shown in with other terminals (the window's `splits`), if any.
     pub split: Option<SplitId>,
-    pub git: changes::GitState,
-    /// Branch the Changes tab compares against (None = HEAD).
-    pub compare: Option<String>,
+    /// What git last said of its folder.
+    pub git: GitState,
     pub history: history::HistoryState,
     /// Where the session's folder lives on disk, for grouping the sidebar by folder.
     pub repo_root: RepoRoot,
@@ -85,8 +85,6 @@ pub(super) struct Session {
     pub forget_text: bool,
     /// What the title row's extras know about it: its agent's model and context, its ports.
     pub extras: crate::window::title::extras::SessionExtras,
-    /// The comments written on its diffs and not pasted into its terminal yet.
-    pub review: wormhole_core::git::review::Review,
 }
 
 impl Session {

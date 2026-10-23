@@ -14,7 +14,9 @@ use wormhole_core::storage::store::SessionRecord;
 use crate::actions::gpui_action;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{FeatureDef, FeatureEvent, Root, SpawnAdd, Stake, TabDef};
+use crate::window::feature::{
+    CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake, TabDef,
+};
 use crate::window::sidebar::{RowExtras, RowInfo};
 
 /// The pause between a pasted text and the Enter that submits it.
@@ -87,6 +89,95 @@ impl Workspace {
             }
             FeatureEvent::OpenTerminals { terminals } => {
                 self.open_terminals(terminals.clone(), window, cx);
+            }
+            FeatureEvent::Repo(request) => self.on_repo_request(request, cx),
+        }
+    }
+
+    /// A feature asked for the window's reading of a terminal's repository to be done or changed.
+    fn on_repo_request(&mut self, request: &RepoRequest, cx: &mut Context<Self>) {
+        match request {
+            RepoRequest::Refresh { session } => {
+                if let Some(ix) = self.find_session(*session) {
+                    self.refresh_git(ix, cx);
+                }
+            }
+            RepoRequest::Compare { session, branch } => {
+                if let Some(ix) = self.find_session(*session) {
+                    self.compare_with(ix, branch.clone(), cx);
+                }
+            }
+        }
+    }
+
+    /// The feature that has something laid over the terminal now, with its entity.
+    fn open_cover(&self, cx: &App) -> Option<(&'static CoverDef, &AnyEntity)> {
+        let features = crate::settings::store_in(&self.profile, cx).features();
+        self.features.iter().enumerate().find_map(|(at, def)| {
+            let (cover, entity) = (def.cover.as_ref()?, self.feature_entity(at)?);
+            (features.has(def.id) && (cover.open)(entity, cx)).then_some((cover, entity))
+        })
+    }
+
+    /// Whether a feature has something laid over the terminal (a diff): the terminal and its panes are
+    /// not drawn, find and the tab bar's focus stop are not offered, and Esc closes it first.
+    pub(in crate::window) fn covered(&self, cx: &App) -> bool {
+        self.open_cover(cx).is_some()
+    }
+
+    /// What is laid over the terminal, built for this frame.
+    pub(in crate::window) fn render_cover(&self, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
+        let (cover, entity) = self.open_cover(cx)?;
+        let entity = entity.clone();
+        Some((cover.view)(&entity, &self.frame_facts(window, cx), window, cx))
+    }
+
+    /// The title row's entry while something is laid over the terminal.
+    pub(in crate::window) fn render_cover_title(&self, cx: &mut App) -> Option<AnyElement> {
+        let (cover, entity) = self.open_cover(cx)?;
+        let entity = entity.clone();
+        (cover.title)(&entity, &self.facts(cx), cx)
+    }
+
+    /// Takes down what is laid over the terminal and gives the terminal the keyboard. Whether there
+    /// was something.
+    pub(in crate::window) fn close_cover(&self, window: &mut Window, cx: &mut App) -> bool {
+        let Some((cover, entity)) = self.open_cover(cx) else { return false };
+        let entity = entity.clone();
+        (cover.close)(&entity, &self.facts(cx), window, cx);
+        true
+    }
+
+    /// The panel's tab was shown: each feature drops what only belongs to its own tab being on show.
+    pub(in crate::window) fn tabs_changed(&self, tab: TabId, cx: &mut App) {
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(changed), Some(entity)) = (def.tab_changed, self.feature_entity(at)) {
+                changed(entity, tab, cx);
+            }
+        }
+    }
+
+    /// The files the features want looked at in the background hop of the status read for the terminal
+    /// on screen.
+    pub(in crate::window) fn repo_watched(&self, cx: &App) -> Option<std::path::PathBuf> {
+        self.features.iter().enumerate().find_map(|(at, def)| {
+            let (repo, entity) = (def.repo.as_ref()?, self.feature_entity(at)?);
+            (repo.watch)(entity, cx)
+        })
+    }
+
+    /// The window read the repository status of the terminal on screen: each feature that follows it
+    /// looks at the answer.
+    pub(in crate::window) fn repo_was_read(
+        &self,
+        session: i64,
+        observed: Option<crate::window::repo::Observed>,
+        cx: &mut App,
+    ) {
+        let facts = self.facts(cx);
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(repo), Some(entity)) = (def.repo.as_ref(), self.feature_entity(at)) {
+                (repo.read)(entity, &facts, session, observed.as_ref(), cx);
             }
         }
     }

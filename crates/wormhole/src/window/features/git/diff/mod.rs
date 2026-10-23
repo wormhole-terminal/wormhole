@@ -27,18 +27,18 @@ use gpui_kit::*;
 
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
-use crate::window::Workspace;
-use crate::window::features::git::changes::display_order;
-use crate::window::features::git::job::Job;
+use crate::terminal_view::TerminalView;
+use crate::window::features::git::changes::Changes;
 use crate::window::features::git::open_file::{OpenFile, OpenTarget};
-use load::{Ask, Stamp};
+use crate::window::repo::Stamp;
+use crate::window::repo::job::Job;
+use load::Ask;
 use rows::{BuildKey, Row, RowStats};
 use wormhole_core::git::{self, DiffLimits, DiffSpec, FileChange, FileDiff, Side, SubmoduleLog};
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::view::limits;
 
-pub(super) use load::Observed;
-pub(in crate::window) use review::Commenting;
+pub(super) use review::Commenting;
 
 /// What a diff shows: one file between two sides of a repository.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,8 +52,8 @@ struct Request {
 }
 
 pub struct DiffView {
-    /// The profile of the window showing it: whose settings and colours it draws with.
-    profile: ProfileId,
+    /// The terminal it was opened from: its review takes the comments.
+    session: i64,
     request: Request,
     /// Files ‹ › steps through (the Changes list in the order it shows them, or a commit's files).
     siblings: Rc<Vec<FileChange>>,
@@ -102,14 +102,15 @@ pub struct DiffView {
 }
 
 impl DiffView {
-    pub fn set_profile(&mut self, profile: ProfileId) {
-        self.profile = profile;
-    }
-
-    fn new(request: Request, siblings: Rc<Vec<FileChange>>, context: Option<SharedString>) -> Self {
+    fn new(
+        session: i64,
+        request: Request,
+        siblings: Rc<Vec<FileChange>>,
+        context: Option<SharedString>,
+    ) -> Self {
         let file = &request.file;
         Self {
-            profile: ProfileId::default_profile(),
+            session,
             sides: git::sides(&FileDiff::default(), file.kind),
             counts: load::file_counts(file),
             request,
@@ -145,6 +146,11 @@ impl DiffView {
         (self.request.file.path.clone(), self.is_working_tree(), self.siblings.len())
     }
 
+    /// The terminal it was opened from.
+    pub(super) fn session(&self) -> i64 {
+        self.session
+    }
+
     /// The file shown, as the last status described it.
     pub(super) fn file(&self) -> &FileChange {
         &self.request.file
@@ -157,8 +163,8 @@ impl DiffView {
 
     /// Whether the rows on hand are side by side (they may lag the setting, or the room for
     /// it, `split_fits`, by a frame).
-    fn split(&self, split_fits: bool, cx: &App) -> bool {
-        self.built.map_or(split_fits && settings_in(&self.profile, cx).diff_split, |k| k.split)
+    fn split(&self, profile: &ProfileId, split_fits: bool, cx: &App) -> bool {
+        self.built.map_or(split_fits && settings_in(profile, cx).diff_split, |k| k.split)
     }
 
     /// Stored with Git LFS: each side a pointer, or `.gitattributes` says so.
@@ -202,23 +208,15 @@ impl DiffView {
     }
 }
 
-impl Workspace {
+impl Changes {
     // ------------------------------------------------------------ opening
 
-    /// Open a working-tree change from the Changes tab.
-    pub(crate) fn open_change(&mut self, file: FileChange, cx: &mut Context<Self>) {
-        let Some(status) = &self.active_session().git.status else { return };
-        let spec = DiffSpec { old: status.base_rev.clone(), new: None };
-        let s = settings_in(&self.profile, cx);
-        let siblings = Rc::new(display_order(status, s.changes_tree, s.group_untracked));
-        let root = status.root.clone();
-        self.open_diff(root, file, spec, siblings, None, cx);
-    }
-
-    /// Show `file` between the sides `spec` names. Replaces the diff on view; the
-    /// old one's work, still running, finds nobody waiting and stops.
-    pub(crate) fn open_diff(
+    /// Show `file` between the sides `spec` names, over terminal `session`. Replaces the diff on view;
+    /// the old one's work, still running, finds nobody waiting and stops.
+    #[expect(clippy::too_many_arguments, reason = "what a diff is of: where, which file, between what")]
+    pub(in crate::window) fn open_diff(
         &mut self,
+        session: i64,
         root: PathBuf,
         file: FileChange,
         spec: DiffSpec,
@@ -227,13 +225,12 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let request = Request { root, file, spec, limits: DiffLimits::default() };
-        let mut view = DiffView::new(request, siblings, context);
-        view.profile = self.profile.clone();
+        let mut view = DiffView::new(session, request, siblings, context);
         let split_fits = self.diff_split_fits(cx);
         let store = store_in(&self.profile, cx);
         let build = BuildKey::of(&store.settings, split_fits, view.syntax(store.revision, &store.tokens));
         let started = view.begin_load(build);
-        self.diff_view = Some(view);
+        self.diff = Some(view);
         if let Some((wanted, work)) = started {
             self.spawn_diff_work(wanted, work, build, cx);
         }
@@ -241,9 +238,9 @@ impl Workspace {
     }
 
     /// The user chose to load a diff that was too large to load unasked.
-    pub(crate) fn load_diff_anyway(&mut self, cx: &mut Context<Self>) {
+    pub(super) fn load_diff_anyway(&mut self, cx: &mut Context<Self>) {
         let Some(build) = self.build_key(cx) else { return };
-        let Some(view) = self.diff_view.as_mut() else { return };
+        let Some(view) = self.diff.as_mut() else { return };
         if let Some((wanted, work)) = view.begin_load_anyway(build) {
             self.spawn_diff_work(wanted, work, build, cx);
             cx.notify();
@@ -254,74 +251,68 @@ impl Workspace {
     /// column less the card's inset and border, and needs two columns of 280.
     pub(super) fn diff_split_fits(&self, cx: &App) -> bool {
         let border = f32::from(ui_in(&self.profile, cx).border_width);
-        limits::diff_split_fits(self.columns().terminal - 2.0 * (render::CARD_INSET + border))
+        limits::diff_split_fits(self.terminal_width - 2.0 * (render::CARD_INSET + border))
     }
 
     /// Show the open diff's file in the Finder (the card of a diff too large to load).
     // GPUI's test platform panics on `reveal_path` (gpui-pre 0.3.9, `platform/test/platform.rs`), so
     // a view test that clicks this needs a stand-in first.
-    pub(crate) fn reveal_diff_file(&mut self, cx: &App) {
-        let Some(path) = self.diff_view.as_ref().and_then(DiffView::on_disk) else { return };
+    pub(super) fn reveal_diff_file(&mut self, cx: &App) {
+        let Some(path) = self.diff.as_ref().and_then(DiffView::on_disk) else { return };
         cx.reveal_path(&path);
     }
 
-    pub(crate) fn close_diff(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.diff_view.take().is_some() {
-            window.focus(&self.active_terminal().focus_handle(cx), cx);
+    /// Takes the diff down and gives `terminal`, which it covered, the keyboard.
+    pub(in crate::window) fn close_diff(
+        &mut self,
+        terminal: &Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.diff.take().is_some() {
+            window.focus(&terminal.focus_handle(cx), cx);
             cx.notify();
         }
     }
 
-    #[cfg(feature = "devctl")]
-    pub(crate) fn show_changes(&mut self, cx: &mut Context<Self>) {
-        self.show_tab(wormhole_core::config::TabId::Changes, cx);
-    }
-
-    #[cfg(feature = "devctl")]
-    pub(crate) fn open_nth_diff(&mut self, ix: usize, cx: &mut Context<Self>) {
-        let file = self.active_session().git.status.as_ref().and_then(|s| s.files.get(ix).cloned());
-        if let Some(file) = file {
-            self.open_change(file, cx);
-        }
-    }
-
     /// Side by side or unified; remembered in config.json.
-    pub(crate) fn set_diff_split(&mut self, split: bool, cx: &mut Context<Self>) {
+    pub(super) fn set_diff_split(&mut self, split: bool, cx: &mut Context<Self>) {
         SettingsStore::update(cx, |s| s.diff_split = split);
         self.sync_diff(cx);
         cx.notify();
     }
 
     #[cfg(feature = "devctl")]
-    pub(crate) fn toggle_split(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::window) fn toggle_split(&mut self, cx: &mut Context<Self>) {
         let split = settings_in(&self.profile, cx).diff_split;
         self.set_diff_split(!split, cx);
     }
 
     /// Open the previous / next changed file.
-    pub(crate) fn step_diff(&mut self, delta: isize, cx: &mut Context<Self>) {
-        let Some(view) = &self.diff_view else { return };
+    pub(super) fn step_diff(&mut self, delta: isize, cx: &mut Context<Self>) {
+        let Some(view) = &self.diff else { return };
         let files = view.siblings.clone();
         let Some(ix) = files.iter().position(|f| f.path == view.file().path) else { return };
         let next = (ix as isize + delta).rem_euclid(files.len() as isize) as usize;
+        let session = view.session;
         let (root, spec, context) =
             (view.request.root.clone(), view.request.spec.clone(), view.context.clone());
         let file = files[next].clone();
-        self.open_diff(root, file, spec, files, context, cx);
+        self.open_diff(session, root, file, spec, files, context, cx);
     }
 
     /// Sideways scrolling moves the code only, so line numbers stay in view.
     fn scroll_diff_sideways(&mut self, event: &ScrollWheelEvent, window: &Window, cx: &mut Context<Self>) {
-        let Some(view) = self.diff_view.as_mut() else { return };
+        let Some(view) = self.diff.as_mut() else { return };
         let delta = event.delta.pixel_delta(window.line_height());
         let delta = view.sideways(delta, event.touch_phase, event.delta.precise());
         self.scroll_diff_by(delta, cx);
     }
 
     /// Scroll the code sideways by a wheel delta (positive = toward the start).
-    pub(crate) fn scroll_diff_by(&mut self, delta: f32, cx: &mut Context<Self>) {
+    pub(in crate::window) fn scroll_diff_by(&mut self, delta: f32, cx: &mut Context<Self>) {
         let wrap = settings_in(&self.profile, cx).diff_wrap;
-        let Some(view) = self.diff_view.as_mut() else { return };
+        let Some(view) = self.diff.as_mut() else { return };
         if delta == 0.0 || wrap {
             return;
         }

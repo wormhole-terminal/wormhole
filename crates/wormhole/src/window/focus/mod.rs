@@ -175,12 +175,12 @@ impl Workspace {
     }
 
     /// Whether an area is on screen to move to.
-    fn area_shown(&self, area: Area) -> bool {
+    fn area_shown(&self, area: Area, cx: &App) -> bool {
         match area {
             Area::TitleRow | Area::Terminal => true,
             Area::Sidebar => self.sidebar_shown(),
             // A diff covers the terminal and its title row's tabs.
-            Area::Tabs => self.diff_view.is_none(),
+            Area::Tabs => !self.covered(cx),
             Area::PanelTabs | Area::PanelContent => self.notes_visible(),
             Area::StatusBar => self.status_bar_drawn.is_some(),
         }
@@ -197,7 +197,7 @@ impl Workspace {
 
     /// F6 (`1`) / ⇧F6 (`-1`): the next or previous area on screen gets the keyboard.
     pub(super) fn step_focus_area(&mut self, delta: isize, window: &mut Window, cx: &mut Context<Self>) {
-        let to = focus::step(self.focus_area(window, cx), delta, |area| self.area_shown(area));
+        let to = focus::step(self.focus_area(window, cx), delta, |area| self.area_shown(area, cx));
         // Back into the title row from behind (⇧F6), the last button is the nearest.
         let index = if to == Area::TitleRow && delta < 0 { usize::MAX } else { 0 };
         self.focus_stop(Stop { area: to, index }, window, cx);
@@ -206,7 +206,7 @@ impl Workspace {
     /// How many ⇥ stops an area has now: none while it is hidden; the title row's buttons
     /// only with macOS's Keyboard navigation on; one per list in the panel.
     fn stops(&self, area: Area, cx: &App) -> usize {
-        if !self.area_shown(area) {
+        if !self.area_shown(area, cx) {
             return 0;
         }
         match area {
@@ -282,19 +282,19 @@ impl Workspace {
             terminal: self.active_terminal().focus_handle(cx).is_focused(window),
             // A native menu is modal: no key reaches the workspace while one is open.
             popup: false,
-            detail: self.diff_view.is_some() || self.active_terminal().read(cx).find_open(),
+            detail: self.covered(cx) || self.active_terminal().read(cx).find_open(),
         };
         match focus::escape(state) {
             // A row's menu cancels itself; the terminal hands Esc to its program.
             Escape::ToShell | Escape::ClosePopup => false,
             // The find bar closes and the keyboard goes back to its terminal.
-            Escape::CloseDetail if self.diff_view.is_none() => {
+            Escape::CloseDetail if !self.covered(cx) => {
                 let terminal = self.active_terminal().clone();
                 terminal.update(cx, |terminal, cx| terminal.close_find(window, cx));
                 true
             }
             Escape::CloseDetail => {
-                self.close_diff(window, cx);
+                self.close_cover(window, cx);
                 // Its list keeps the keyboard (a second Esc goes to the terminal).
                 if in_area {
                     self.refocus(Area::PanelContent, window, cx);

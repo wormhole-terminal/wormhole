@@ -7,12 +7,13 @@ use gpui_kit::TestAppContext;
 use wormhole_core::config::TabId;
 use wormhole_core::git::Commit;
 
-use super::super::picker::Picker;
-use super::super::testing::{folder, git, go, repo, write};
+use super::super::picker::PickerHost;
+use super::super::testing::{changes, folder, git, go, repo, write};
 use crate::app_state::OpenWindow;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
-use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with};
+use crate::window::Workspace;
+use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start, start_with};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -125,8 +126,9 @@ fn a_commit_opens_to_its_files_and_a_file_opens_its_diff(cx: &mut TestAppContext
         ws.open_commit_file(second.clone(), file.expect("a file"), cx);
     });
     cx.run_until_parked();
-    read(cx, &window, |ws| {
-        let on_view = ws.diff_view.as_ref().expect("a diff").on_view();
+    read_cx(cx, &window, |ws, cx| {
+        let entity = changes(ws);
+        let on_view = entity.read(cx).diff.as_ref().expect("a diff").on_view();
         // A commit's file, not the working tree's; the arrows step through the commit's two files.
         assert_eq!(on_view, ("a.txt".to_string(), false, 2));
     });
@@ -144,21 +146,24 @@ fn another_branchs_log_is_shown_when_it_is_picked(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     two_commits(cx, &window, "branch-log");
-    drive(cx, &window, |ws, window, cx| ws.toggle_picker(Picker::History, window, cx));
+    drive(cx, &window, |ws, window, cx| {
+        let (session, terminal) = (ws.active_session().id, ws.active_terminal());
+        ws.history_picker.toggle(session, &terminal, window, cx);
+    });
     cx.run_until_parked();
     read(cx, &window, |ws| {
-        assert_eq!(ws.picker, Some(Picker::History));
-        let mut branches = ws.branches.clone();
+        assert!(ws.history_picker.is_open());
+        let mut branches = ws.history_picker.branches().to_vec();
         branches.sort();
         assert_eq!(branches, ["main", "other"]);
     });
-    drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::History, Some("other".into()), cx));
+    drive(cx, &window, |ws, _, cx| pick(ws, Some("other".into()), cx));
     cx.run_until_parked();
     assert_eq!(history_branch(cx, &window).as_deref(), Some("other"));
     assert_eq!(subjects(cx, &window), ["on other", "second", "first"]);
-    assert!(read(cx, &window, |ws| ws.picker.is_none()));
+    assert!(!read(cx, &window, |ws| ws.history_picker.is_open()));
     // Back to HEAD.
-    drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::History, None, cx));
+    drive(cx, &window, |ws, _, cx| pick(ws, None, cx));
     cx.run_until_parked();
     assert_eq!(subjects(cx, &window), ["second", "first"]);
 }
@@ -174,7 +179,7 @@ fn a_commit_found_in_the_palette_is_revealed_on_its_branch_or_on_head(cx: &mut T
     let root = read(cx, &window, |ws| ws.active_session().history.root.clone().expect("a root"));
     // On another tab, with the log on `other`: `second` is on it, so the branch stays.
     drive(cx, &window, |ws, _, cx| {
-        ws.pick_branch(Picker::History, Some("other".into()), cx);
+        pick(ws, Some("other".into()), cx);
         ws.show_tab(TabId::Notes, cx);
     });
     cx.run_until_parked();
@@ -185,14 +190,14 @@ fn a_commit_found_in_the_palette_is_revealed_on_its_branch_or_on_head(cx: &mut T
     assert_eq!(history_branch(cx, &window).as_deref(), Some("other"));
     // A commit that is not on the branch shown puts the log back on HEAD.
     let on_other = {
-        drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::History, Some("other".into()), cx));
+        drive(cx, &window, |ws, _, cx| pick(ws, Some("other".into()), cx));
         cx.run_until_parked();
         first_commit(cx, &window)
     };
-    drive(cx, &window, |ws, _, cx| ws.pick_branch(Picker::History, None, cx));
+    drive(cx, &window, |ws, _, cx| pick(ws, None, cx));
     cx.run_until_parked();
     drive(cx, &window, |ws, _, cx| {
-        ws.pick_branch(Picker::History, Some("main".into()), cx);
+        pick(ws, Some("main".into()), cx);
     });
     cx.run_until_parked();
     drive(cx, &window, |ws, _, cx| ws.reveal_commit(root.clone(), on_other.clone(), cx));
@@ -241,4 +246,11 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
     });
     cx.run_until_parked();
     assert_eq!(subjects(cx, &window).len(), 3);
+}
+
+/// The person picks a branch (`None`: HEAD) in the History picker.
+fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<Workspace>) {
+    let session = ws.active_session().id;
+    ws.history_picker.close();
+    ws.pick(session, branch, cx);
 }

@@ -357,18 +357,8 @@
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
     "impl-outside": {
-      "crates/wormhole/src/window/features/git/changes.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/header.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/load.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/mod.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/notes.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/render.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/review.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/diff/submodule.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/git/history.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/git/history/keys.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/picker.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/problem.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/git/worktree.rs :: impl Workspace": 2,
       "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,

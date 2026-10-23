@@ -25,8 +25,9 @@ use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
+use crate::window::features::git::changes::Changes;
+use crate::window::features::git::picker::PickerHost as _;
 use crate::window::features::notes::testing as notes;
-use crate::window::picker::Picker;
 use crate::window::status_bar::StatusItem;
 use crate::window::window_lifecycle::open_workspace_window;
 use wormhole_core::config::TabId;
@@ -210,15 +211,35 @@ fn some_change() -> FileChange {
 
 /// Give the active session the panels that belong to it: an open diff, a branch picker and a
 /// focused note.
-fn open_session_panels(ws: &mut Workspace, cx: &mut Context<Workspace>) {
+fn open_session_panels(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
     let spec = DiffSpec { old: "HEAD".into(), new: None };
-    ws.open_diff(PathBuf::from("/nonexistent"), some_change(), spec, Rc::default(), None, cx);
-    ws.picker = Some(Picker::Compare);
+    let (session, terminal) = (ws.active_session().id, ws.active_terminal());
+    let changes = ws.feature::<Changes>().expect("in the table");
+    changes.update(cx, |changes, cx| {
+        changes.open_diff(
+            session,
+            PathBuf::from("/nonexistent"),
+            some_change(),
+            spec,
+            Rc::default(),
+            None,
+            cx,
+        );
+        changes.picker_mut().toggle(session, &terminal, window, cx);
+    });
     notes::set_focused_note(ws, Some(2), cx);
 }
 
+/// Whether the diff, the branch picker or a note focus is up.
 fn has_session_panels(ws: &Workspace, cx: &App) -> bool {
-    ws.diff_view.is_some() || ws.picker.is_some() || notes::focused_note(ws, cx).is_some()
+    ws.covered(cx)
+        || ws.feature::<Changes>().is_some_and(|c| c.read(cx).picker().is_open())
+        || notes::focused_note(ws, cx).is_some()
+}
+
+/// Whether both the diff and the branch picker are up.
+fn has_diff_and_picker(ws: &Workspace, cx: &App) -> bool {
+    ws.covered(cx) && ws.feature::<Changes>().is_some_and(|c| c.read(cx).picker().is_open())
 }
 
 /// A view test reaches nothing of the person running it: its home (where its terminals start and
@@ -261,8 +282,8 @@ fn closing_the_only_session_starts_the_new_one_clean(cx: &mut TestAppContext) {
         return;
     }
     let window = start(cx, 1);
-    drive(cx, &window, |ws, _, cx| open_session_panels(ws, cx));
-    read(cx, &window, |ws| assert!(ws.diff_view.is_some() && ws.picker.is_some()));
+    drive(cx, &window, open_session_panels);
+    read_cx(cx, &window, |ws, cx| assert!(has_diff_and_picker(ws, cx)));
 
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
     read_cx(cx, &window, |ws, cx| {
@@ -280,19 +301,19 @@ fn closing_another_session_leaves_the_one_you_are_in_alone(cx: &mut TestAppConte
     }
     let window = start(cx, 3);
     drive(cx, &window, |ws, window, cx| ws.activate(1, window, cx));
-    drive(cx, &window, |ws, _, cx| open_session_panels(ws, cx));
+    drive(cx, &window, open_session_panels);
 
     // A session above it: the selection moves up with its session.
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));
     read_cx(cx, &window, |ws, cx| {
         assert_eq!((ws.sessions.len(), ws.active, ws.sessions[ws.active].id), (2, 0, 2));
-        assert!(ws.diff_view.is_some() && ws.picker.is_some() && notes::focused_note(ws, cx) == Some(2));
+        assert!(has_diff_and_picker(ws, cx) && notes::focused_note(ws, cx) == Some(2));
     });
     // One below it.
     drive(cx, &window, |ws, window, cx| ws.close_session(1, window, cx));
     read_cx(cx, &window, |ws, cx| {
         assert_eq!((ws.sessions.len(), ws.active, ws.sessions[ws.active].id), (1, 0, 2));
-        assert!(ws.diff_view.is_some() && ws.picker.is_some() && notes::focused_note(ws, cx) == Some(2));
+        assert!(has_diff_and_picker(ws, cx) && notes::focused_note(ws, cx) == Some(2));
     });
     // The selected one itself: whatever came next starts fresh.
     drive(cx, &window, |ws, window, cx| ws.close_session(0, window, cx));

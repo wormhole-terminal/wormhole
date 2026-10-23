@@ -19,8 +19,10 @@ use super::rows::{Cell, RenderedLine, Row};
 use crate::settings::UiColors;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::style::{self, Edges, TextRole};
+use crate::terminal_view::TerminalView;
 use crate::theme_bridge::token;
-use crate::window::Workspace;
+use crate::window::facts::WindowFacts;
+use crate::window::features::git::changes::Changes;
 use crate::window::features::git::open_file::OpenFile;
 use wormhole_core::git::review::LineSide;
 use wormhole_core::git::{LineKind, Side};
@@ -435,11 +437,17 @@ pub(crate) fn sample(ui: UiColors, colors: DiffColors, font_family: SharedString
         ))
 }
 
-impl Workspace {
-    /// The diff view, its card `top` below the column's top (under the floating title row), or
-    /// inset like its sides where nothing is over it (`None`: the title row sits above the column).
-    pub(crate) fn render_diff(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let view = self.diff_view.as_ref()?;
+impl Changes {
+    /// The diff view, its card inset in the column the terminal is in (`None`: no diff is open).
+    pub(in crate::window) fn render_diff(
+        &mut self,
+        facts: &WindowFacts<'_>,
+        _: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        self.follow(facts);
+        let terminal = facts.active()?.terminal.clone();
+        let view = self.diff.as_ref()?;
         let ui = ui_in(&self.profile, cx);
         let colors = DiffColors::new(&store_in(&self.profile, cx).tokens);
         let split_fits = self.diff_split_fits(cx);
@@ -452,8 +460,8 @@ impl Workspace {
                 let _ = this.update(cx, |this, cx| this.sync_diff(cx));
             });
         }
-        let header = self.render_diff_header(view, ui, colors, split_fits, cx);
-        let body = self.render_diff_body(view, ui, colors, split_fits, cx);
+        let header = self.render_diff_header(view, ui, colors, split_fits, &terminal, cx);
+        let body = self.render_diff_body(view, ui, colors, split_fits, &terminal, cx);
         let card = div()
             .flex()
             .flex_col()
@@ -465,7 +473,7 @@ impl Workspace {
             .bg(colors.surface)
             .child(header)
             .child(body)
-            .children(self.render_review_bar(ui, cx));
+            .children(self.render_review_bar(ui, &terminal, cx));
         Some(
             div()
                 .id("diff-view")
@@ -486,6 +494,7 @@ impl Workspace {
         ui: UiColors,
         colors: DiffColors,
         split_fits: bool,
+        terminal: &Entity<TerminalView>,
         cx: &mut Context<Self>,
     ) -> Div {
         let body = div().relative().flex_1().min_h_0();
@@ -508,7 +517,7 @@ impl Workspace {
         if view.measured_font.replace(font_size) != font_size {
             view.wrap_list.remeasure();
         }
-        let split = view.split(split_fits, cx);
+        let split = view.split(&self.profile, split_fits, cx);
         let wrap = settings_in(&self.profile, cx).diff_wrap;
         let empty = view.rows.is_empty();
         let (old_side, new_side) = view.sides;
@@ -526,7 +535,7 @@ impl Workspace {
             old_hatched,
             new_hatched,
             // Only the working tree's lines are the ones the agent edits.
-            on_line: view.is_working_tree().then(|| self.comment_click(view, cx)),
+            on_line: view.is_working_tree().then(|| self.comment_click(view, terminal.clone(), cx)),
             commented: Rc::new(if view.is_working_tree() { self.commented_lines(view) } else { Vec::new() }),
             // The same lines, and only a file that is in the working tree now to open.
             open: view

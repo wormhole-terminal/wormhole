@@ -138,20 +138,19 @@ impl Render for Workspace {
         }
         let notes_visible = self.notes_visible();
         let columns = self.columns();
-        if notes_visible {
-            // The panel's long lists are virtualized; bring their rows up to date first.
-            match self.right_tab {
-                TabId::Changes => self.sync_changes_list(cx),
-                TabId::History => self.sync_history_list(),
-                // In the table: their frames build their own lists.
-                TabId::Notes | TabId::Usage | TabId::Project => {}
-            }
+        if notes_visible && self.right_tab == TabId::History {
+            // The panel's long lists are virtualized; bring their rows up to date first. The table's
+            // features build their own in their frames.
+            self.sync_history_list();
         }
+        // What a feature lays over the terminal (a diff), built for this frame.
+        let cover = self.render_cover(window, cx);
+        let covered = cover.is_some();
         let ui = ui_in(&self.profile, cx);
         let session = self.active_session();
         let terminal = session.terminal().clone();
         let split = self.active_split().is_some();
-        let gaps = settings_in(&self.profile, cx).split_gaps && self.diff_view.is_none();
+        let gaps = settings_in(&self.profile, cx).split_gaps && !covered;
         // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
@@ -214,17 +213,17 @@ impl Render for Workspace {
                             // No fill of its own: the column has the terminal's colour, and a second
                             // coat of a translucent one would draw the surface as a darker box. A split
                             // with gaps: each pane is the surface, the gaps show the window.
-                            .children(self.render_diff(cx))
+                            .children(cover)
                             // Cached: window frames the terminal didn't cause reuse its last
                             // paint. A split's panes are drawn with their headers below the
                             // title rows.
-                            .when(self.diff_view.is_none() && !split, |d| {
+                            .when(!covered && !split, |d| {
                                 d.child(terminal.cached(StyleRefinement::default().size_full()))
                             })
-                            .when(self.diff_view.is_none() && split, |d| d.child(self.render_panes(cx)))
-                            .when(self.diff_view.is_none(), |d| d.child(self.pane_probe(cx)))
+                            .when(!covered && split, |d| d.child(self.render_panes(cx)))
+                            .when(!covered, |d| d.child(self.pane_probe(cx)))
                             // While a terminal is dragged, over the panes (the terminal swallows the mouse).
-                            .when(self.diff_view.is_none(), |d| d.children(self.render_drop_overlay(cx)))
+                            .when(!covered, |d| d.children(self.render_drop_overlay(cx)))
                             .children(self.render_find_bar(cx));
                         // The terminal is a rounded surface below the title row, its own inset from the
                         // column's sides and bottom; with the grid's padding inside it the text stands on the

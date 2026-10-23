@@ -15,14 +15,16 @@ use gpui_kit::component::dialog::{Cancel, Confirm, DialogFooter};
 use gpui_kit::component::input::{InputEvent, Textarea, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::git::review::{LineSide, ReviewComment};
+use wormhole_core::git::review::{LineSide, Review, ReviewComment};
 
 use super::DiffView;
 use super::render::{LineAt, OnLine};
 use crate::settings::UiColors;
 use crate::settings::ui_in;
 use crate::style::{self, Edges, TextRole};
-use crate::window::{Workspace, dialog};
+use crate::terminal_view::TerminalView;
+use crate::window::dialog;
+use crate::window::features::git::changes::Changes;
 
 /// How tall the comment field grows, in lines.
 const FIELD_ROWS: (usize, usize) = (3, 10);
@@ -41,26 +43,34 @@ pub(in crate::window) struct Commenting {
     _enter: Subscription,
 }
 
-impl Workspace {
+impl Changes {
     /// What a click on a line of `view` does: comment on it.
-    pub(super) fn comment_click(&self, view: &DiffView, cx: &mut Context<Self>) -> OnLine {
+    pub(super) fn comment_click(
+        &self,
+        view: &DiffView,
+        terminal: Entity<TerminalView>,
+        cx: &mut Context<Self>,
+    ) -> OnLine {
         let path = view.file().path.clone();
         let this = cx.weak_entity();
         Rc::new(move |at, window, cx| {
             let path = path.clone();
-            let _ = this.update(cx, |ws, cx| ws.comment_on_line(path, at, window, cx));
+            let _ = this.update(cx, |ws, cx| ws.comment_on_line(terminal.clone(), path, at, window, cx));
         })
     }
 
-    /// The lines of `view`'s file the active terminal has comments on.
+    /// The lines of `view`'s file its terminal has comments on.
     pub(super) fn commented_lines(&self, view: &DiffView) -> Vec<(LineSide, u32)> {
-        self.active_session().review.lines_of(&view.file().path).collect()
+        self.review(view.session())
+            .map(|review| review.lines_of(&view.file().path).collect())
+            .unwrap_or_default()
     }
 
     /// The dialog for the comment on `at` in `path`: empty for a new one, with its text to change
     /// or remove an old one.
     pub(super) fn comment_on_line(
         &mut self,
+        terminal: Entity<TerminalView>,
         path: String,
         at: LineAt,
         window: &mut Window,
@@ -69,7 +79,11 @@ impl Workspace {
         if self.commenting.is_some() {
             return;
         }
-        let old = self.active_session().review.on(&path, at.side, at.line).map(|c| c.text.clone());
+        let Some(session) = self.diff.as_ref().map(|view| view.session()) else { return };
+        let old = self
+            .review(session)
+            .and_then(|review| review.on(&path, at.side, at.line))
+            .map(|c| c.text.clone());
         let editing = old.is_some();
         let input = cx.new(|cx| {
             TextareaState::new(window, cx)
@@ -93,7 +107,6 @@ impl Workspace {
         }
         .location();
         let code = SharedString::from(at.code.trim().to_string());
-        let session = self.active_session().id;
         self.commenting = Some(Commenting { session, path, at, input: input.clone(), _enter: enter });
         let weak = cx.weak_entity();
         let (font_family, _) = crate::fonts::code_font_in(&self.profile, cx);
@@ -104,6 +117,7 @@ impl Workspace {
         dialog::open_alert(window, cx, move |alert, _, cx| {
             let ui = ui_in(&profile, cx);
             let (save, dismiss, remove) = (weak.clone(), weak.clone(), weak.clone());
+            let terminal = terminal.clone();
             alert
                 .title(format!("Comment on {place}"))
                 .child(
@@ -136,9 +150,9 @@ impl Workspace {
                     let _ = dismiss.update(cx, |this, cx| {
                         this.commenting = None;
                         cx.notify();
-                        cx.defer_in(window, |this, window, cx| {
-                            let terminal = this.active_terminal().focus_handle(cx);
-                            window.focus(&terminal, cx);
+                        let terminal = terminal.clone();
+                        cx.defer_in(window, move |_, window, cx| {
+                            window.focus(&terminal.focus_handle(cx), cx);
                         });
                     });
                 })
@@ -178,7 +192,7 @@ impl Workspace {
 
     /// devctl `comment`: the open dialog's field set to `text`, then saved and closed.
     #[cfg(feature = "devctl")]
-    pub(crate) fn devctl_comment(
+    pub(in crate::window) fn devctl_comment(
         &mut self,
         text: &str,
         window: &mut Window,
@@ -189,7 +203,8 @@ impl Workspace {
         // Saved now, so the summary counts it; the dialog's own save, as it closes, puts the same.
         self.save_comment(cx);
         window.dispatch_action(Box::new(Confirm { secondary: false }), cx);
-        Ok(self.active_session().review.summary())
+        let session = self.diff.as_ref().map(|view| view.session()).ok_or("no diff is open")?;
+        Ok(self.review(session).map(Review::summary).unwrap_or_default())
     }
 
     /// The dialog's text becomes the line's comment; an empty one removes it.
@@ -202,8 +217,8 @@ impl Workspace {
             code: commenting.at.code.to_string(),
             text: commenting.input.read(cx).value().to_string(),
         };
-        if let Some(ix) = self.find_session(commenting.session) {
-            self.sessions[ix].review.put(comment);
+        if let Some(of) = self.of.get_mut(&commenting.session) {
+            of.review.put(comment);
         }
         cx.notify();
     }
@@ -217,8 +232,8 @@ impl Workspace {
             code: String::new(),
             text: String::new(),
         };
-        if let Some(ix) = self.find_session(commenting.session) {
-            self.sessions[ix].review.put(empty);
+        if let Some(of) = self.of.get_mut(&commenting.session) {
+            of.review.put(empty);
         }
         cx.notify();
     }
@@ -227,9 +242,14 @@ impl Workspace {
     /// reads it there and presses Return. The comments are gone once pasted. A program that
     /// doesn't take a paste as text would run each line, so then the review is copied instead and
     /// the comments stay.
-    pub(crate) fn paste_review(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(message) = self.active_session().review.message() else { return };
-        let terminal = self.active_terminal();
+    pub(super) fn paste_review(
+        &mut self,
+        terminal: &Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(session) = self.diff.as_ref().map(|view| view.session()) else { return };
+        let Some(message) = self.review(session).and_then(Review::message) else { return };
         if !terminal.read(cx).bracketed_paste() {
             cx.write_to_clipboard(ClipboardItem::new_string(message));
             dialog::open_alert(window, cx, |alert, _, _| {
@@ -245,19 +265,29 @@ impl Workspace {
             return;
         }
         terminal.update(cx, |terminal, _| terminal.paste(&message));
-        self.sessions[self.active].review.clear();
-        self.close_diff(window, cx);
+        if let Some(of) = self.of.get_mut(&session) {
+            of.review.clear();
+        }
+        self.close_diff(terminal, window, cx);
     }
 
-    pub(crate) fn clear_review(&mut self, cx: &mut Context<Self>) {
-        self.sessions[self.active].review.clear();
+    pub(super) fn clear_review(&mut self, cx: &mut Context<Self>) {
+        let session = self.diff.as_ref().map(|view| view.session());
+        if let Some(of) = session.and_then(|session| self.of.get_mut(&session)) {
+            of.review.clear();
+        }
         cx.notify();
     }
 
     /// The bar under the rows while the terminal has comments: how many, Clear, and Paste into
     /// Terminal.
-    pub(super) fn render_review_bar(&self, ui: UiColors, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let review = &self.active_session().review;
+    pub(super) fn render_review_bar(
+        &self,
+        ui: UiColors,
+        terminal: &Entity<TerminalView>,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let review = self.diff.as_ref().and_then(|view| self.review(view.session()))?;
         if review.is_empty() {
             return None;
         }
@@ -294,7 +324,10 @@ impl Workspace {
                         .xsmall()
                         .with_variant(ButtonVariant::Primary)
                         .tooltip("Paste the comments into the terminal's prompt, for you to send")
-                        .on_click(cx.listener(|this, _, window, cx| this.paste_review(window, cx))),
+                        .on_click({
+                            let terminal = terminal.clone();
+                            cx.listener(move |this, _, window, cx| this.paste_review(&terminal, window, cx))
+                        }),
                 )
                 .into_any_element(),
         )

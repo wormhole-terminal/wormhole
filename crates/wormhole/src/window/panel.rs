@@ -33,17 +33,12 @@ impl Workspace {
             .child(div().flex().flex_col().flex_1().min_h_0().child(match self.tab_entry(tab) {
                 // A feature in the table draws its tab; a tab with a list gets the area that holds the
                 // keyboard for it.
-                Some((at, entry)) => match (entry.window_side, self.feature_entity(at)) {
-                    // The temporary side door (Changes until 5d): the window draws the tab itself.
-                    (Some(side), _) => {
-                        let content = (side.view)(self, window, cx);
-                        self.panel_content(content, cx)
-                    }
-                    (None, Some(entity)) => {
+                Some((at, entry)) => match self.feature_entity(at) {
+                    Some(entity) => {
                         let content = (entry.view)(entity, &self.frame_facts(window, cx), window, cx);
                         if entry.walk.is_some() { self.panel_content(content, cx) } else { content }
                     }
-                    (None, None) => div().into_any_element(),
+                    None => div().into_any_element(),
                 },
                 None => match tab {
                     // Virtualized lists fill the panel and scroll themselves; the list area holds the
@@ -82,6 +77,23 @@ impl Workspace {
                 .is_some_and(|every| self.ticks.is_multiple_of(every))
     }
 
+    /// Opens the branch picker of `tab`, asked from outside the tab (the title row's branch chip): the
+    /// tab is shown first.
+    pub(in crate::window) fn pick_branch_in(
+        &mut self,
+        tab: TabId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.show_tab(tab, cx);
+        if let Some((at, entry)) = self.tab_entry(tab)
+            && let (Some(pick), Some(entity)) = (entry.pick_branch, self.feature_entity(at).cloned())
+        {
+            let facts = self.facts(cx);
+            pick(&entity, &facts, window, cx);
+        }
+    }
+
     pub(crate) fn show_tab(&mut self, tab: TabId, cx: &mut Context<Self>) {
         // A tab of a feature that is off, or that is not offered now (Usage without an agent), is gone.
         let tab = {
@@ -101,16 +113,13 @@ impl Workspace {
         self.set_right_tab(tab);
         self.reveal_notes();
         self.remember_panes(cx);
-        self.picker = None;
+        self.history_picker.close();
+        self.tabs_changed(tab, cx);
         let session = self.active_session().id;
         match self.tab_entry(tab) {
             // The feature in the table says what showing its tab does.
             Some((at, entry)) => {
-                if let Some(side) = entry.window_side {
-                    (side.on_show)(self, session, cx);
-                } else if let (Some(on_show), Some(entity)) =
-                    (entry.on_show, self.feature_entity(at).cloned())
-                {
+                if let (Some(on_show), Some(entity)) = (entry.on_show, self.feature_entity(at).cloned()) {
                     let facts = self.facts(cx);
                     on_show(&entity, &facts, session, cx);
                 }

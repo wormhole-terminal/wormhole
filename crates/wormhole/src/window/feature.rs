@@ -8,7 +8,7 @@
 //!    emitting an event the `Workspace` subscribed to when it made the entity. A feature never calls
 //!    `workspace.update(..)` from inside its own update.
 //! 2. What a feature needs to *read* of the window arrives as [`WindowFacts`](super::facts), borrowed,
-//!    never as `&Workspace` (the one exception is the side door at the end of this comment).
+//!    never as `&Workspace`.
 //!
 //! A feature's state is one entity per window, made whether the feature is on or off (an off feature
 //! keeps and records its data; only its views, keys and counts go). The window keeps it as an
@@ -16,16 +16,8 @@
 //! rows or terminals take the whole set. A downcast clones a handle, which is a weak upgrade and an
 //! atomic, and that is not a price to pay per row.
 //!
-//! Only Changes, Notes, Usage and Project are in the table so far. Features move in one at a time, and a hook is
-//! added when the first feature needs it, so a field below that nothing uses yet is the shape the
+//! Features move in one at a time, and a hook is added when the first feature needs it, so a field below that nothing uses yet is the shape the
 //! design settled on, not a promise that each is used.
-//!
-//! **Transitional: one side door.** Changes' state is still the `Workspace`'s fields and the `Session`'s,
-//! so it cannot do everything through an entity of its own yet. Instead of bending the hooks above for
-//! it, [`TabDef::window_side`] ([`WindowSideTab`]) is the one place where a tab is given the window
-//! itself; the frame prefers it when it is set and nothing else uses it. It goes with the last feature
-//! whose state is still in the window (Changes, 5d), and the test `only_changes_uses_the_side_door`
-//! (`feature_tests`) keeps `window_side: Some` out of every other file.
 
 #![cfg_attr(not(test), expect(dead_code, reason = "the contract is built before every feature uses it"))]
 
@@ -43,6 +35,7 @@ use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature_host::FeatureState;
 use crate::window::focus::{Activate, Walkable};
+use crate::window::repo::Observed;
 use crate::window::sidebar::RowExtras;
 
 /// The features the app has, in the order of their tabs. The app installs it once at launch
@@ -95,6 +88,19 @@ pub(in crate::window) enum FeatureEvent {
     /// Open these terminals, each in turn selected and given the keyboard, then select the last of them
     /// that asks for the focus. One whose name is already a terminal's is not opened again.
     OpenTerminals { terminals: Vec<NewTerminal> },
+    /// The feature wants the window to read, or to read differently, what git says of a terminal's
+    /// repository. The window owns that read (the sidebar's rows, the title row and the status bar
+    /// show its answer), so a feature asks for it and finds the answer in the facts.
+    Repo(RepoRequest),
+}
+
+/// What a feature asks of the window's reading of a terminal's repository ([`FeatureEvent::Repo`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) enum RepoRequest {
+    /// Read the status now (a Retry, the refresh button, the tab being shown).
+    Refresh { session: i64 },
+    /// Read it against `branch` from now on (`None`: HEAD), and forget the answer for the old one.
+    Compare { session: i64, branch: Option<String> },
 }
 
 /// Which terminal of the window a [`FeatureEvent::Terminal`] is for.
@@ -104,6 +110,9 @@ pub(in crate::window) enum TerminalTarget {
     Active,
     /// A new one, in `cwd`, selected.
     New { cwd: Option<PathBuf> },
+    /// A new one in `cwd`, beside the selected terminal and in its group, selected and given the
+    /// keyboard: what the New Terminal commands do.
+    Beside { cwd: Option<PathBuf> },
     /// The one called `name`, made in `cwd` if there is none, and selected.
     Named { name: String, cwd: Option<PathBuf> },
 }
@@ -111,6 +120,8 @@ pub(in crate::window) enum TerminalTarget {
 /// What goes into the terminal.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::window) enum TerminalInput {
+    /// Nothing: the terminal is only found or made, and given the keyboard when it is a new one.
+    None,
     /// Typed in, then Enter.
     Command(String),
     /// Pasted, then Enter a moment later with `submit`. The terminal doesn't get the keyboard.
@@ -145,8 +156,24 @@ pub(in crate::window) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window
 pub(in crate::window) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
 pub(in crate::window) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &App) -> bool;
 pub(in crate::window) type SpawnFn = fn(Option<&Path>, &mut App) -> SpawnAdd;
-pub(in crate::window) type PressFn =
-    fn(&AnyEntity, session: i64, row: usize, Activate, following: bool, &mut Window, &mut App) -> bool;
+pub(in crate::window) type PressFn = fn(
+    &AnyEntity,
+    &WindowFacts<'_>,
+    session: i64,
+    row: usize,
+    Activate,
+    following: bool,
+    &mut Window,
+    &mut App,
+) -> bool;
+pub(in crate::window) type FoldFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, row: usize, &mut App);
+pub(in crate::window) type CoverCloseFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(in crate::window) type CoverTitleFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App) -> Option<AnyElement>;
+pub(in crate::window) type TabChangedFn = fn(&AnyEntity, TabId, &mut App);
+pub(in crate::window) type PickBranchFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
+pub(in crate::window) type WatchFn = fn(&AnyEntity, &App) -> Option<PathBuf>;
+pub(in crate::window) type ReadFn =
+    fn(&AnyEntity, &WindowFacts<'_>, session: i64, Option<&Observed>, &mut App);
 
 /// The root element a feature adds its action handlers to.
 pub(in crate::window) type Root = Div;
@@ -198,8 +225,40 @@ pub(in crate::window) struct FeatureDef {
     /// exception to "a hook when a second feature needs it": the terminal is made by the window, and
     /// what it is made with is not the window's to know.
     pub spawn: Option<SpawnFn>,
+    /// Something the feature lays over the terminal while it has it (Changes' open diff).
+    pub cover: Option<CoverDef>,
+    /// The panel's tab was shown (any tab, also the one already on show): a feature drops what only
+    /// belongs to its own tab being on show (a branch picker that is open).
+    pub tab_changed: Option<TabChangedFn>,
+    /// The feature's part in the window's reading of a terminal's repository.
+    pub repo: Option<RepoHooks>,
     /// The per-window state, if the feature has any.
     pub state: Option<StateDef>,
+}
+
+/// What a feature lays over the terminal: the card of a diff. The window draws it in place of the
+/// terminal and its panes, gives the title row the feature's entry in place of the breadcrumb, takes
+/// the find shortcuts and the tab bar's focus stop away while it is up, and has Esc close it before
+/// anything else.
+pub(in crate::window) struct CoverDef {
+    /// Whether the feature has something over the terminal now. Asked each frame and at keys: a read.
+    pub open: fn(&AnyEntity, &App) -> bool,
+    /// The card, built inline from `Workspace::render`.
+    pub view: fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> AnyElement,
+    /// The title row's entry while it is up (where the file sits among its siblings).
+    pub title: CoverTitleFn,
+    /// Esc, and the feature's own close buttons: takes it down and gives the keyboard to the terminal.
+    pub close: CoverCloseFn,
+}
+
+/// The feature's part in the window's reading of a terminal's repository (`window::repo`).
+pub(in crate::window) struct RepoHooks {
+    /// A file to look at in the same background hop as the status, when the read is for the terminal
+    /// on screen: what an open diff of the working tree watches.
+    pub watch: WatchFn,
+    /// The window read the status of terminal `session` (on screen); `observed` is what the hop saw of
+    /// the file `watch` named. The answer is in the facts.
+    pub read: ReadFn,
 }
 
 /// A panel tab of a feature.
@@ -223,50 +282,22 @@ pub(in crate::window) struct TabDef {
     /// The tab's content, built inline from `Workspace::render` with the frame's facts: a panel as its
     /// own `Render` entity could not read the window, and pushing every fact into it would notify on
     /// each push. The per-frame list syncs run here, on the feature's entity. Its listeners capture the
-    /// entity, not the `Workspace`. (Changes' list sync still runs in `layout.rs` until 5d, because the
-    /// list is `Session.git`'s; its panel is drawn through [`Self::window_side`], so this is a stub.)
+    /// entity, not the `Workspace`.
     pub view: fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App) -> AnyElement,
     /// The keys over the tab's rows, for a tab that has a list. The window also gives such a tab the
     /// list area that holds the keyboard for it.
     pub walk: Option<WalkFns>,
     /// Buttons beside the tabs while it is on show (Notes' stash).
     pub actions: Option<TabActionsFn>,
+    /// Opens the tab's branch picker, asked from outside the tab (the title row's branch chip opens
+    /// Changes' "compare with"). The window shows the tab first. One user, like `spawn`.
+    pub pick_branch: Option<PickBranchFn>,
     /// Redraw the window every this many ticks (400 ms each) while the tab is on show, for a tab whose
     /// words change with time and no event (Usage's "resets 34m").
     pub refresh_ticks: Option<u64>,
     /// The tab is offered only while something holds (Usage: an agent is on screen). The window
     /// remembers the tab it came from when this one is opened, and goes back there when it is gone.
     pub returns_to_previous: bool,
-    /// **Temporary, for Changes only, until 5d.** When set, the frame draws, shows, walks and presses
-    /// the tab through this instead of `view`, `on_show` and `walk`. See the end of the module comment.
-    pub window_side: Option<&'static WindowSideTab>,
-}
-
-/// The side door: a tab whose state is still the window's is handed the window itself. Same questions
-/// as [`TabDef::view`], [`TabDef::on_show`] and [`WalkFns`], answered over the `Workspace` the frame is
-/// already inside of, so no lease is taken twice. **Temporary**: Changes only, gone in 5d. A feature
-/// with an entity of its own never needs one.
-pub(in crate::window) struct WindowSideTab {
-    /// The tab's content, built inline from `Workspace::render`.
-    pub view: fn(&Workspace, &mut Window, &mut Context<Workspace>) -> AnyElement,
-    /// What showing the tab does, for the session shown.
-    pub on_show: fn(&mut Workspace, session: i64, &mut Context<Workspace>),
-    /// The rows the keys can be on.
-    pub walkable: fn(&Workspace) -> Vec<Walkable>,
-    /// ↩ or Space on a row of `session`; whether the keys stay in the list.
-    pub press: fn(
-        &mut Workspace,
-        session: i64,
-        row: usize,
-        Activate,
-        following: bool,
-        &mut Window,
-        &mut Context<Workspace>,
-    ) -> bool,
-    /// → ← on a row.
-    pub fold: fn(&mut Workspace, session: i64, row: usize, &mut Context<Workspace>),
-    /// Scrolls a row into view.
-    pub reveal: fn(&Workspace, row: usize),
 }
 
 /// F-70's four questions about a tab's rows, each over the feature's entity: a `&'static` table of
@@ -278,7 +309,7 @@ pub(in crate::window) struct WalkFns {
     /// the keys stay in the list.
     pub press: PressFn,
     /// → ← on a row.
-    pub fold: fn(&AnyEntity, session: i64, row: usize, &mut App),
+    pub fold: FoldFn,
     /// Scrolls a row into view.
     pub reveal: fn(&AnyEntity, &WindowFacts<'_>, row: usize, &App),
 }

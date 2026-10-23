@@ -33,7 +33,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         actions: None,
         refresh_ticks: Some(REDRAW_TICKS),
         returns_to_previous: true,
-        window_side: None,
+        pick_branch: None,
     }],
     bind: None,
     row_extras: None,
@@ -50,6 +50,9 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     profiles: Some(ProfileHooks { deleted: Some(profile_deleted), ..ProfileHooks::DEFAULT }),
     refresh: None,
     approves_programs: None,
+    cover: None,
+    tab_changed: None,
+    repo: None,
     spawn: None,
     state: Some(STATE),
 };

@@ -6,6 +6,7 @@ use wormhole_core::view::focus::Area;
 
 use super::SidebarStop;
 use crate::app_state::OpenWindow;
+use crate::window::features::git::changes::Changes;
 use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start};
 use wormhole_core::config::TabId;
@@ -235,10 +236,14 @@ fn esc_closes_a_diff_over_the_terminal_first(cx: &mut TestAppContext) {
             submodule: None,
         };
         let spec = wormhole_core::git::DiffSpec { old: "HEAD".into(), new: None };
-        ws.open_diff("/nonexistent".into(), change, spec, std::rc::Rc::default(), None, cx);
+        let session = ws.active_session().id;
+        let changes = ws.feature::<Changes>().expect("in the table");
+        changes.update(cx, |changes, cx| {
+            changes.open_diff(session, "/nonexistent".into(), change, spec, std::rc::Rc::default(), None, cx);
+        });
     });
     assert_eq!(area(cx, &window), Some(Area::Terminal), "the click left the keys in the terminal");
     key(cx, &window, "escape");
-    assert!(read(cx, &window, |ws| ws.diff_view.is_none()), "Esc closed the diff");
+    assert!(!read_cx(cx, &window, |ws, cx| ws.covered(cx)), "Esc closed the diff");
     assert_eq!(area(cx, &window), Some(Area::Terminal));
 }

@@ -1,7 +1,7 @@
 //! A submodule's row in the Changes list and under a History commit: `style::submodule_row` drawn
 //! from the file's change, with the button that opens a terminal in its folder.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
@@ -10,7 +10,7 @@ use gpui_kit::*;
 use super::file_line::Placement;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
-use crate::window::Workspace;
+use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
 use wormhole_core::git::FileChange;
 
 /// A tooltip wraps at this width rather than running across the window.
@@ -21,7 +21,7 @@ pub(super) fn submodule_row(
     file: &FileChange,
     place: Placement,
     root: &Path,
-    this: WeakEntity<Workspace>,
+    open_terminal: impl Fn(PathBuf, &mut Window, &mut App) + 'static,
     ui: UiColors,
     cx: &App,
 ) -> Stateful<Div> {
@@ -35,17 +35,10 @@ pub(super) fn submodule_row(
     // Entering needs a folder with a repository in it; a removed submodule's is gone or about to be.
     let enter =
         (sub.checked_out() && !matches!(file.kind, wormhole_core::git::ChangeKind::Deleted)).then(|| {
-            let (folder, this) = (root.join(&file.path), this);
+            let folder = root.join(&file.path);
             style::Enter {
                 tooltip: format!("Open a terminal in {name}").into(),
-                on_click: Box::new(move |_, window, cx| {
-                    let folder = folder.clone();
-                    let cwd = Some(folder.to_string_lossy().into_owned());
-                    this.update(cx, |this, cx| {
-                        this.open_session(None, cwd, window, cx);
-                    })
-                    .ok();
-                }),
+                on_click: Box::new(move |_, window, cx| open_terminal(folder.clone(), window, cx)),
             }
         });
     let row = style::submodule_row(
@@ -76,4 +69,15 @@ pub(super) fn submodule_row(
         })
         .build(window, cx)
     })
+}
+
+/// What the Enter button of a submodule's row does for an entity that talks to the window by events: a
+/// new terminal in the submodule's folder, beside the selected one.
+pub(super) fn open_terminal_by_event<H: EventEmitter<FeatureEvent>>(
+    this: WeakEntity<H>,
+) -> impl Fn(PathBuf, &mut Window, &mut App) + 'static {
+    move |folder, _, cx| {
+        let target = TerminalTarget::Beside { cwd: Some(folder) };
+        this.update(cx, |_, cx| cx.emit(FeatureEvent::Terminal { target, input: TerminalInput::None })).ok();
+    }
 }
