@@ -12,6 +12,7 @@
 //!
 //! Section 4 measured the bare socket (C, socketpair): 2 hops p50 3.2 to 4.7 us, p99 19 to 23 us,
 //! 64 KiB streaming 11.9 to 12.7 GB/s. The budget (section 13) is +50 us p50 over in-process.
+#![allow(clippy::disallowed_methods, reason = "a bench tool, not the app: it makes its own scratch socket")]
 #![allow(clippy::print_stdout)]
 #![allow(unsafe_code)] // one setsockopt, below
 
