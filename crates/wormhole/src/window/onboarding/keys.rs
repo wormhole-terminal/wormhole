@@ -12,9 +12,8 @@ use wormhole_core::onboarding::intro::Start;
 use wormhole_core::onboarding::intro::page::Entrance;
 use wormhole_core::onboarding::{Event, Step};
 
-use super::FADE_OUT;
+use super::{FADE_OUT, FirstRun};
 use crate::actions;
-use crate::window::Workspace;
 
 /// The most buttons the page is walked through when ⇥ looks for its stops.
 const STOPS_MAX: usize = 32;
@@ -32,13 +31,11 @@ pub(crate) fn init(cx: &mut App) {
     ]);
 }
 
-impl Workspace {
+impl FirstRun {
     /// Whether the page is still coming in: a key or a click then cuts the animation short instead
     /// of acting.
     pub(in crate::window) fn intro_is_entering(&self, cx: &App) -> bool {
-        self.first_run.is_open()
-            && self.intro_entrance(cx).least() < 1.0
-            && crate::intro::progress(cx).is_some()
+        self.is_open() && self.intro_entrance(cx).least() < 1.0 && crate::intro::progress(cx).is_some()
     }
 
     /// How far each part of the page has entered now.
@@ -61,7 +58,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(intro) = &self.first_run.intro else { return };
+        let Some(intro) = &self.intro else { return };
         let keys = &event.keystroke;
         let m = &keys.modifiers;
         let key = keys.key.as_str();
@@ -124,7 +121,7 @@ impl Workspace {
     /// ⇥ (or ⇧⇥ when `back`): the next button of the page, wrapping from its last to its first.
     /// The window's own ⇥ would go on into the sidebar under the page.
     pub(super) fn tab_within_intro(&mut self, back: bool, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(intro) = &self.first_run.intro else { return };
+        let Some(intro) = &self.intro else { return };
         let page = intro.focus.clone();
         let current = window.focused(cx);
         // The page's stops in order: what ⇥ visits from the page itself, until it would leave it.
@@ -155,7 +152,7 @@ impl Workspace {
     /// Esc that reached the page from a button or a menu that left it alone: the keyboard goes back
     /// to the page, and a second Esc skips (the Esc ladder, one layer at a time).
     pub(super) fn intro_escape(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(intro) = &self.first_run.intro else { return };
+        let Some(intro) = &self.intro else { return };
         if event.keystroke.key != "escape" || event.keystroke.modifiers.modified() {
             return;
         }

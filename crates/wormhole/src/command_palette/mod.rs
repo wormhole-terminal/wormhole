@@ -70,7 +70,7 @@ impl Global for Chosen {}
 /// there. Runs outside any window's update (the action handler defers it).
 pub(crate) fn toggle(cx: &mut App) {
     let Some(front) = AppState::front_window(cx) else { return };
-    let state = front.workspace.read_with(cx, |ws, _| (ws.palette_open(), ws.first_run_open()));
+    let state = front.workspace.read_with(cx, |ws, cx| (ws.palette_open(), ws.first_run_open(cx)));
     match state {
         // The first-run sheet holds the keyboard until it is done.
         Ok((_, true)) | Err(_) => {}

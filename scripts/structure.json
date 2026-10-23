@@ -63,9 +63,7 @@
       "homes": [
         "src/window/"
       ],
-      "pending": [
-        "src/window/onboarding/"
-      ]
+      "pending": []
     },
     "layers": {
       "wormhole": [
@@ -263,14 +261,6 @@
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
-    "impl-outside": {
-      "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/look_step.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/mod.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/page.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/steps.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/welcome_page.rs :: impl Workspace": 1
-    }
+    "impl-outside": {}
   }
 }

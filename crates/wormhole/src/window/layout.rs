@@ -174,10 +174,16 @@ impl Render for Workspace {
             .when_some(own_font, |d, family| d.font_family(family))
             .key_context("Workspace");
         // While the intro window is open the window's actions wait: its keys go to it.
-        let root = if self.first_run.is_open() { root } else { self.with_actions(root, cx) };
+        let intro_open = self.first_run_open(cx);
+        let root = if intro_open { root } else { self.with_actions(root, cx) };
+        // What the intro window needs of this one is told before it is drawn.
+        self.push_first_run(cx);
+        let intro = self.first_run.clone();
         root
             // The intro window holds the keyboard while it is open.
-            .capture_key_down(cx.listener(Self::intro_keys))
+            .capture_key_down(move |event: &KeyDownEvent, window, cx| {
+                intro.update(cx, |intro, cx| intro.intro_keys(event, window, cx))
+            })
             .capture_key_down(cx.listener(Self::on_key_down))
             .on_modifiers_changed(cx.listener(Self::on_modifiers))
             .on_mouse_move(cx.listener(Self::on_resize_move))
@@ -276,7 +282,7 @@ impl Render for Workspace {
             // GPUI's own menu and popover, where a native one can't open (`style::menu_layer`).
             .child(crate::style::menu_layer::layer(window, cx))
             .child(crate::style::popover_layer::layer(window, cx))
-            .children(self.render_intro(window, cx))
+            .when(intro_open, |d| d.child(self.first_run.clone()))
             .child(self.column_probe(cx))
     }
 }

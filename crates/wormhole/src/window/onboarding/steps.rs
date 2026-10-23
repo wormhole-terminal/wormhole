@@ -14,10 +14,9 @@ use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::{Event, Place, Step};
 use wormhole_core::onboarding::{PlaceKind, STEPS};
 
-use super::Intro;
+use super::{FirstRun, Intro};
 use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::window::Workspace;
 
 // The sheet's card size.
 const SHEET_W: f32 = 432.0;
@@ -31,7 +30,7 @@ const DOT_BAR: f32 = 16.0;
 /// The dashed box a folder can be dropped on.
 const DROP_ZONE_H: f32 = 40.0;
 
-impl Workspace {
+impl FirstRun {
     pub(super) fn render_sheet(
         &self,
         sheet: &Intro,

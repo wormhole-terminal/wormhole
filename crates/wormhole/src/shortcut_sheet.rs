@@ -62,7 +62,7 @@ impl OverlayContent for ShortcutSheet {
 /// or close it there. Runs outside any window's update.
 pub(crate) fn toggle(cx: &mut App) {
     let Some(front) = AppState::front_window(cx) else { return };
-    match front.workspace.read_with(cx, |ws, _| (ws.sheet_open(), ws.first_run_open())) {
+    match front.workspace.read_with(cx, |ws, cx| (ws.sheet_open(), ws.first_run_open(cx))) {
         Ok((_, true)) | Err(_) => {}
         Ok((true, false)) => {
             AppState::with_workspace(&front, cx, |ws, window, cx| ws.close_overlay(window, cx));

@@ -10,14 +10,13 @@ use wormhole_core::agents::{AGENTS, Agent};
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::Event;
 
-use super::Intro;
+use super::{FirstRun, Intro};
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::window::Workspace;
 use crate::window::features::project;
 
-impl Workspace {
+impl FirstRun {
     /// Step 3: each agent on PATH with its own Install, the notifications switch, and the folder's
     /// trust when it has a `.wormhole/` folder that isn't trusted.
     pub(super) fn render_agents_step(
@@ -169,10 +168,10 @@ impl Workspace {
         }
         let root = match sheet.model.folder() {
             Some(folder) => wormhole_core::project::find_project(folder).map(|f| f.root),
-            None => project::api::active_root(self, cx),
+            None => self.facts.active_root.clone(),
         }?;
         let project::api::TrustPrompt { name, dir, commands, approving } =
-            project::api::trust_prompt(self.profile(), &root, cx)?;
+            project::api::trust_prompt(&self.facts.profile, &root, cx)?;
         let waits = match commands {
             0 => "Nothing in it runs commands yet.".to_string(),
             1 => "Its action runs a command, so it waits until you trust the folder.".to_string(),
@@ -228,7 +227,7 @@ impl Workspace {
                         .child(
                             Button::new("onboarding-trust-later").ghost().small().label("Later").on_click(
                                 cx.listener(|this, _, _, cx| {
-                                    if let Some(sheet) = &mut this.first_run.intro {
+                                    if let Some(sheet) = &mut this.intro {
                                         sheet.trust_later = true;
                                     }
                                     cx.notify();

@@ -1,0 +1,115 @@
+//! The window's side of the first run (`onboarding::FirstRun`, an entity of its own): what it is told
+//! before it is drawn, what the window does when it asks for something (`FirstRunEvent`), and the few
+//! calls the rest of the window makes into it (Help → Welcome to Wormhole, the sidebar's note, devctl).
+//! The first run never reads the `Workspace`; this is where the two meet.
+
+use gpui_kit::*;
+use wormhole_core::onboarding::Onboarding;
+#[cfg(any(test, feature = "devctl"))]
+use wormhole_core::onboarding::Step;
+use wormhole_core::onboarding::intro::{Handover, Start};
+
+use crate::window::Workspace;
+use crate::window::features::project;
+use crate::window::onboarding::{Facts, FirstRunEvent, welcome};
+
+impl Workspace {
+    /// The first launch's window, never shown: the intro window opens over it and it arrives out of the
+    /// animation.
+    pub(in crate::window) fn open_first_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let first = self.sessions.first().map(|session| session.id);
+        self.first_run.update(cx, |first_run, cx| {
+            first_run.open_intro(Onboarding::new(true), true, first, Some(Start::Hidden), window, cx)
+        });
+    }
+
+    /// Open the intro window at `step`, with nothing played (devctl and the tests).
+    #[cfg(any(test, feature = "devctl"))]
+    pub(crate) fn open_onboarding(&mut self, step: Step, window: &mut Window, cx: &mut Context<Self>) {
+        let model = if step == Step::Welcome { Onboarding::new(true) } else { Onboarding::at(step) };
+        let first = self.sessions.first().map(|session| session.id);
+        self.first_run.update(cx, |first_run, cx| first_run.open_intro(model, true, first, None, window, cx));
+    }
+
+    /// Welcome to Wormhole (Help menu, palette): the intro again, its welcome page alone.
+    pub(crate) fn show_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // With the terminal welcome on, it is the welcome: a new terminal runs it, with the cursor
+        // hand-over.
+        if welcome::enabled(cx) {
+            self.replay_welcome(Handover::Cursor, window, cx);
+            return;
+        }
+        let first = self.sessions.first().map(|session| session.id);
+        self.first_run.update(cx, |first_run, cx| {
+            if first_run.is_open() {
+                // It is up already: replay it.
+                first_run.replay_intro(window, cx);
+            } else {
+                // The window is showing: it leaves, the animation plays, and it arrives.
+                first_run.open_intro(Onboarding::replay(), false, first, Some(Start::Shown), window, cx);
+            }
+        });
+    }
+
+    /// Close the intro window (devctl `onboarding close`), as Skip does but without remembering it,
+    /// and skip a terminal welcome that is running (Esc, as the person would), so a fresh data dir's
+    /// first launch is out of the way whichever of the two it opens.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn close_onboarding(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.skip_welcomes(cx);
+        self.first_run.update(cx, |first_run, cx| first_run.close(window, cx));
+        window.focus(&self.active_terminal().focus_handle(cx), cx);
+        cx.notify();
+    }
+
+    /// What the intro window is doing, for devctl's `state`.
+    #[cfg(feature = "devctl")]
+    pub(crate) fn devctl_intro_state(&self, cx: &App) -> Option<String> {
+        self.first_run.read(cx).devctl_intro_state(cx)
+    }
+
+    /// Tell the first run how the window stands, while its page is up.
+    pub(super) fn push_first_run(&self, cx: &mut Context<Self>) {
+        if !self.first_run.read(cx).is_open() {
+            return;
+        }
+        let facts = Facts { profile: self.profile.clone(), active_root: project::api::active_root(self, cx) };
+        self.first_run.update(cx, |first_run, _| first_run.set_facts(facts));
+    }
+
+    /// The sidebar's note after a first run without agents, while it is up.
+    pub(super) fn render_no_agents_note(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.first_run.read(cx).note_wanted(cx) {
+            return None;
+        }
+        let agent_seen = self.sessions.iter().any(|session| session.terminal().read(cx).agent.is_some());
+        self.first_run.update(cx, |first_run, cx| first_run.render_no_agents_note(agent_seen, cx))
+    }
+
+    /// The first run asks for something. Handled when the update that raised it ends.
+    pub(super) fn on_first_run_event(
+        &mut self,
+        _: &Entity<crate::window::onboarding::FirstRun>,
+        event: &FirstRunEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match event {
+            FirstRunEvent::Ended { replace } => {
+                if let Some((first, folder)) = replace
+                    && let Some(ix) = self.sessions.iter().position(|session| session.id == *first)
+                {
+                    let there =
+                        self.sessions[ix].terminal().read(cx).cwd.as_deref() == Some(folder.as_path());
+                    if !there && self.sessions.len() == 1 {
+                        self.spawn_session(None, Some(folder.clone()), window, cx);
+                        self.close_session(ix, window, cx);
+                    }
+                }
+                window.focus(&self.active_terminal().focus_handle(cx), cx);
+                self.mark_dirty(cx);
+            }
+            FirstRunEvent::OpenWelcome { plan, play } => self.open_welcome_session(*plan, *play, window, cx),
+        }
+    }
+}

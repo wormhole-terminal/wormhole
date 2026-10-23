@@ -15,7 +15,7 @@ use wormhole_core::onboarding::{Event, ONBOARDED_KEY, Step};
 use wormhole_core::project::{ProjectFolder, TrustStatus};
 use wormhole_core::storage::store::Store;
 
-use super::{AgentsNote, FADE_OUT};
+use super::{AgentsNote, FADE_OUT, FirstRun};
 use crate::app_state::{OpenWindow, app, app_mut};
 use crate::settings::update_settings;
 use crate::window::view_tests::{draw, drive, isolate_in, press, read, read_cx, start, with_window};
@@ -26,8 +26,22 @@ fn key(cx: &mut TestAppContext, window: &OpenWindow, keys: &str) {
     press(cx, window, keys);
 }
 
+/// The window's first run, to read.
+fn first_run<R>(cx: &mut TestAppContext, window: &OpenWindow, f: impl FnOnce(&FirstRun) -> R) -> R {
+    read_cx(cx, window, |ws, cx| f(ws.first_run.read(cx)))
+}
+
+/// The window's first run, to change, as a window's update would.
+fn first_run_mut(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    f: impl FnOnce(&mut FirstRun, &mut gpui_kit::Context<FirstRun>),
+) {
+    drive(cx, window, |ws, _, cx| ws.first_run.update(cx, f));
+}
+
 fn step(cx: &mut TestAppContext, window: &OpenWindow) -> Option<Step> {
-    read(cx, window, |ws| ws.first_run.intro.as_ref().map(|intro| intro.model.step()))
+    first_run(cx, window, |first_run| first_run.intro.as_ref().map(|intro| intro.model.step()))
 }
 
 /// Whether the keyboard is on the page or one of its buttons.
@@ -36,8 +50,8 @@ fn in_page(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
     cx.update(|cx| {
         window.handle.update(cx, |_, win, cx| {
             let workspace = window.workspace.upgrade()?;
-            let workspace = workspace.read(cx);
-            Some(workspace.first_run.intro.as_ref()?.focus.contains_focused(win, cx))
+            let first_run = workspace.read(cx).first_run.clone();
+            Some(first_run.read(cx).intro.as_ref()?.focus.contains_focused(win, cx))
         })
     })
     .ok()
@@ -53,7 +67,7 @@ fn the_arrows_and_return_walk_the_pages_and_esc_leaves(cx: &mut TestAppContext) 
     let window = start(cx, 1);
     drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Welcome, window, cx));
     assert_eq!(step(cx, &window), Some(Step::Welcome));
-    assert!(read(cx, &window, |ws| ws.first_run.is_open()));
+    assert!(first_run(cx, &window, FirstRun::is_open));
 
     key(cx, &window, "right");
     assert_eq!(step(cx, &window), Some(Step::Folder), "→: the next page");
@@ -70,7 +84,7 @@ fn the_arrows_and_return_walk_the_pages_and_esc_leaves(cx: &mut TestAppContext) 
 
     key(cx, &window, "escape");
     assert_eq!(step(cx, &window), None, "Esc skips the intro");
-    read(cx, &window, |ws| assert!(!ws.first_run.is_open()));
+    assert!(!first_run(cx, &window, FirstRun::is_open));
 }
 
 #[gpui_kit::test]
@@ -128,8 +142,8 @@ fn the_intro_can_be_shown_again_as_the_welcome_page_alone(cx: &mut TestAppContex
     cx.executor().advance_clock(FADE_OUT + Duration::from_millis(50));
     cx.run_until_parked();
     assert_eq!(step(cx, &window), Some(Step::Welcome));
-    read(cx, &window, |ws| {
-        let intro = ws.first_run.intro.as_ref().expect("open");
+    first_run(cx, &window, |first_run| {
+        let intro = first_run.intro.as_ref().expect("open");
         assert!(!intro.first_run, "a replay, not the first run");
         assert!(intro.model.is_last(), "its one button ends it");
     });
@@ -138,7 +152,7 @@ fn the_intro_can_be_shown_again_as_the_welcome_page_alone(cx: &mut TestAppContex
     assert_eq!(step(cx, &window), Some(Step::Welcome));
     key(cx, &window, "enter");
     assert_eq!(step(cx, &window), None);
-    read(cx, &window, |ws| assert!(ws.first_run.agents_note == super::AgentsNote::Off));
+    first_run(cx, &window, |first_run| assert!(first_run.agents_note == super::AgentsNote::Off));
 }
 
 // ------------------------------------------------------------------------------ the first run
@@ -174,8 +188,8 @@ fn folder(name: &str) -> PathBuf {
 /// The agents the third step lists are looked for on the real PATH, which a test must not depend on:
 /// say whether any was found.
 fn agents_on_path(cx: &mut TestAppContext, window: &OpenWindow, found: bool) {
-    drive(cx, window, |ws, _, _| {
-        if let Some(intro) = &mut ws.first_run.intro {
+    first_run_mut(cx, window, |first_run, _| {
+        if let Some(intro) = &mut first_run.intro {
             intro.model.set_agents_found(found);
         }
     });
@@ -183,7 +197,9 @@ fn agents_on_path(cx: &mut TestAppContext, window: &OpenWindow, found: bool) {
 
 /// Press the buttons: an event, as a click or a key makes it.
 fn event(cx: &mut TestAppContext, window: &OpenWindow, event: Event) {
-    drive(cx, window, |ws, window, cx| ws.onboarding_event(event, window, cx));
+    drive(cx, window, |ws, window, cx| {
+        ws.first_run.update(cx, |first_run, cx| first_run.onboarding_event(event, window, cx))
+    });
 }
 
 #[gpui_kit::test]
@@ -200,8 +216,8 @@ fn the_first_launch_opens_the_intro_window_when_the_terminal_welcome_is_off(cx: 
     cx.update(super::start_if_first_launch);
     cx.run_until_parked();
     assert_eq!(step(cx, &window), Some(Step::Welcome), "the intro window, on its welcome page");
-    read(cx, &window, |ws| {
-        let intro = ws.first_run.intro.as_ref().expect("open");
+    first_run(cx, &window, |first_run| {
+        let intro = first_run.intro.as_ref().expect("open");
         assert!(intro.first_run, "the first run, not a replay");
         assert!(!intro.model.is_last(), "with its steps to come");
     });
@@ -278,7 +294,9 @@ fn the_steps_walk_to_start_which_remembers_the_run_and_moves_the_first_terminal(
         assert_eq!(ws.sessions.len(), 1);
         assert_ne!(ws.sessions[0].id, 1, "the first terminal was replaced by one in the folder");
         assert_eq!(ws.sessions[0].terminal().read(cx).cwd.as_deref(), Some(work.as_path()));
-        assert!(ws.first_run.agents_note == AgentsNote::Off, "agents were found: no note");
+    });
+    first_run(cx, &window, |first_run| {
+        assert!(first_run.agents_note == AgentsNote::Off, "agents were found: no note")
     });
     // Start itself installs nothing: the agents' home is as empty as before.
     let home = integrations::home();
@@ -333,7 +351,7 @@ fn ending_on_the_primer_puts_up_the_no_agents_note(cx: &mut TestAppContext) {
     event(cx, &window, Event::Start);
     assert_eq!(step(cx, &window), None);
     assert!(remembered(cx));
-    read(cx, &window, |ws| assert!(ws.first_run.agents_note == AgentsNote::Shown));
+    first_run(cx, &window, |first_run| assert!(first_run.agents_note == AgentsNote::Shown));
 }
 
 #[gpui_kit::test]
@@ -347,9 +365,9 @@ fn only_an_agents_own_install_writes_its_hooks(cx: &mut TestAppContext) {
     let home = integrations::home();
     let spec = integrations::spec(AgentId::Claude).expect("Claude has hooks");
     assert!(spec.state(&home).is_ok_and(|state| state != integrations::State::Installed));
-    drive(cx, &window, |ws, _, _| {
+    first_run_mut(cx, &window, |first_run, _| {
         // The list of agents a PATH lookup found is the test's own.
-        if let Some(intro) = &mut ws.first_run.intro {
+        if let Some(intro) = &mut first_run.intro {
             intro.agents = Some(super::Agents {
                 found: vec![super::FoundAgent {
                     agent: wormhole_core::agents::AGENTS
@@ -371,8 +389,8 @@ fn only_an_agents_own_install_writes_its_hooks(cx: &mut TestAppContext) {
 
     event(cx, &window, Event::Install(AgentId::Claude));
     assert_eq!(spec.state(&home), Ok(integrations::State::Installed), "its Install button wrote them");
-    read(cx, &window, |ws| {
-        let intro = ws.first_run.intro.as_ref().expect("open");
+    first_run(cx, &window, |first_run| {
+        let intro = first_run.intro.as_ref().expect("open");
         assert!(intro.problem.is_none());
         let found = &intro.agents.as_ref().expect("looked for").found;
         assert_eq!(found[0].state, Some(integrations::State::Installed), "and the row reads them back");

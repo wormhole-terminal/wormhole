@@ -7,9 +7,9 @@ use gpui_kit::*;
 use wormhole_core::onboarding::Step;
 use wormhole_core::onboarding::intro::page::Entrance;
 
+use super::FirstRun;
 use crate::settings::{UiColors, ui};
 use crate::style;
-use crate::window::Workspace;
 use crate::window::aux_window;
 
 /// How far a part rises as it comes in, points.
@@ -28,15 +28,17 @@ pub(super) trait Entering: Styled + Sized {
 
 impl<T: Styled> Entering for T {}
 
-impl Workspace {
+impl Render for FirstRun {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.render_intro(window, cx).unwrap_or_else(|| div().into_any_element())
+    }
+}
+
+impl FirstRun {
     /// The intro window over the window: the page, its drag strip along the top and the replay
     /// button in the corner. `None` when it isn't open.
-    pub(in crate::window) fn render_intro(
-        &self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
-        let intro = self.first_run.intro.as_ref()?;
+    fn render_intro(&self, window: &mut Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let intro = self.intro.as_ref()?;
         let ui = ui(cx);
         let entrance = self.intro_entrance(cx);
         // While the animation plays the page is drawn every frame, to come in with it.

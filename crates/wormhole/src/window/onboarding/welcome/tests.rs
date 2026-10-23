@@ -20,7 +20,7 @@ use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
-use crate::window::view_tests::{draw, drive, isolate_in, read, start};
+use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
     isolate_in(module_path!(), name)
@@ -110,9 +110,9 @@ fn help_welcome_is_the_terminal_welcome_while_its_flag_is_on(cx: &mut TestAppCon
     }
     let window = start(cx, 1);
     drive(cx, &window, |ws, window, cx| ws.show_intro(window, cx));
-    read(cx, &window, |ws| {
+    read_cx(cx, &window, |ws, cx| {
         assert_eq!(ws.sessions.len(), 2, "a new terminal runs the welcome");
-        assert!(!ws.first_run.is_open(), "and no intro window opens");
+        assert!(!ws.first_run_open(cx), "and no intro window opens");
     });
     let (tab, token) = welcome_terminal(cx);
     assert_eq!(state_of(&ask(cx, Some(tab), &token, state())).handover, Handover::Cursor.key());
@@ -126,9 +126,9 @@ fn help_welcome_is_the_terminal_welcome_while_its_flag_is_on(cx: &mut TestAppCon
     drive(cx, &window, |ws, window, cx| ws.show_intro(window, cx));
     cx.executor().advance_clock(std::time::Duration::from_millis(400));
     cx.run_until_parked();
-    read(cx, &window, |ws| {
+    read_cx(cx, &window, |ws, cx| {
         assert_eq!(ws.sessions.len(), 2, "no terminal this time");
-        assert!(ws.first_run.is_open(), "the intro window");
+        assert!(ws.first_run_open(cx), "the intro window");
     });
 }
 

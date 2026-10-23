@@ -37,11 +37,11 @@
 //! The welcome's agents step opens Settings by dispatching an action that carries the section
 //! (`actions::OpenSettingsAt`), which the app root answers.
 //!
-//! The nested areas `sidebar/` and `onboarding/` still keep their state in `Workspace` (the features no
-//! longer do: each owns its state in an entity):
-//! their `impl Workspace` blocks are the `impl-outside` rule's `pending` list in
-//! `scripts/structure.json`, phase 5's shrink-only counter. Outside `window/` no `impl Workspace`
-//! is allowed.
+//! The nested areas `sidebar/` and `onboarding/` each keep their state in an entity of their own that
+//! the window hosts: it is told how the window stands (`sidebar_host`, `onboarding_host`) and heard
+//! through its events, and the terminal welcome's window side is `welcome_host`. Outside `window/` no
+//! `impl Workspace` is allowed, and none is left in those two folders (the `impl-outside` rule's
+//! `pending` list is empty).
 
 use std::time::{Duration, Instant};
 
@@ -91,6 +91,7 @@ pub(crate) mod menu_state;
 #[cfg(test)]
 mod menu_tests;
 pub(crate) mod onboarding;
+mod onboarding_host;
 pub(crate) mod open_in;
 pub(crate) mod overlay;
 #[cfg(test)]
@@ -238,8 +239,9 @@ pub struct Workspace {
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
-    /// The first-run sheet while it is open, and what it leaves behind.
-    first_run: self::onboarding::FirstRun,
+    /// The first run: the intro window while it is open, and the note it leaves in the sidebar. An
+    /// entity of its own, told how the window stands (`onboarding_host`) and heard through its events.
+    first_run: Entity<self::onboarding::FirstRun>,
     /// The command palette or the shortcut sheet, while one is open over the window.
     overlay: Option<self::overlay::Overlay>,
     /// The sidebar or the right panel sliding in or out.
@@ -300,6 +302,11 @@ impl Workspace {
         // The list draws itself (a hover, a rename, a menu): so does the window around it.
         cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
 
+        let first_run = cx.new(|_| self::onboarding::FirstRun::default());
+        cx.subscribe_in(&first_run, window, Self::on_first_run_event).detach();
+        // The intro draws itself (a page, a hover): so does the window it covers.
+        cx.observe(&first_run, |_, _, cx| cx.notify()).detach();
+
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
 
@@ -348,7 +355,7 @@ impl Workspace {
             closing_session_prompt: false,
             discarded: false,
             dirty: false,
-            first_run: Default::default(),
+            first_run,
             overlay: None,
             slide: None,
             last_scrollback_save: Instant::now(),

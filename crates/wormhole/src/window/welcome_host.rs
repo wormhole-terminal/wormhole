@@ -12,6 +12,7 @@ use wormhole_core::onboarding::welcome::{self as core_welcome, DockCell};
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::window::Workspace;
+use crate::window::onboarding::FirstRunEvent;
 use crate::window::onboarding::welcome::{self, Plan, Play, Run};
 
 #[cfg(feature = "devctl")]
@@ -138,14 +139,21 @@ impl Workspace {
         }
         // The terminal opens once the window is out of sight, so it never shows its first moments
         // (the cursor before the program hides it); the program waits out the rest of the run.
-        self.after_fade(window, cx, move |this, window, cx| {
-            this.open_welcome_session(plan, play, window, cx);
+        self.first_run.update(cx, |first_run, cx| {
+            first_run
+                .after_fade(window, cx, move |_, _, cx| cx.emit(FirstRunEvent::OpenWelcome { plan, play }));
         });
     }
 
     /// A new terminal that runs the welcome: its token, its place among the welcomes, and the cell
     /// the ship is to dock on. Falls back to a plain terminal when there is no random token to be had.
-    fn open_welcome_session(&mut self, plan: Plan, play: Play, window: &mut Window, cx: &mut Context<Self>) {
+    pub(in crate::window) fn open_welcome_session(
+        &mut self,
+        plan: Plan,
+        play: Play,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(token) = core_welcome::new_token() else {
             tracing::warn!("no random token for the welcome: starting a plain terminal instead");
             self.new_session(window, cx);
@@ -199,7 +207,7 @@ impl Workspace {
         }
         self.end_welcome_demo(tab, cx);
         if primer {
-            self.first_run.show_no_agents_note();
+            self.first_run.update(cx, |first_run, cx| first_run.show_no_agents_note(cx));
         }
         cx.notify();
     }

@@ -7,11 +7,11 @@ use wormhole_core::onboarding;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
 use wormhole_core::theme::tokens::{Appearance, ThemeTokens, builtins};
 
+use super::FirstRun;
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge::{hsla, token};
-use crate::window::Workspace;
 
 /// The terminal font's face, so the size stepper beside it fits the row.
 const FONT_FACE_W: f32 = 132.0;
@@ -30,7 +30,7 @@ const PRIMARY_ANSI: [usize; 5] = [2, 5, 1, 3, 6];
 const SAMPLE: [&str; 4] =
     ["~/Projects/app on main", "$ git status --short", " M src/main.rs", "?? docs/notes.md"];
 
-impl Workspace {
+impl FirstRun {
     /// Step 2: a few themes, the primary, the terminal font's size and ligatures, and a sample.
     pub(super) fn render_look_step(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let store = cx.global::<SettingsStore>();

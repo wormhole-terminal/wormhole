@@ -114,8 +114,8 @@ impl Workspace {
 
     /// Whether the first-run sheet is up: it holds the keyboard until it is done, so no overlay
     /// opens over it.
-    pub(crate) fn first_run_open(&self) -> bool {
-        self.first_run.is_open()
+    pub(crate) fn first_run_open(&self, cx: &App) -> bool {
+        self.first_run.read(cx).is_open()
     }
 
     /// The open overlay as a `T`, if it is one (devctl types into the palette and the sheet).
