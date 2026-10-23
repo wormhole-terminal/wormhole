@@ -418,6 +418,12 @@ fn the_trust_button_asks_and_a_cancelled_ask_trusts_nothing(cx: &mut TestAppCont
     )
     .expect("write");
     drive(cx, &window, |ws, window, cx| ws.open_onboarding(Step::Agents, window, cx));
+    // The intro looks for agents on the real PATH off the UI thread and moves the third step to the primer
+    // when it finds none, which is what a CI runner finds: let that land, then say an agent is there, or
+    // the button is not on the page and the press is ignored.
+    cx.run_until_parked();
+    agents_on_path(cx, &window, true);
+    assert_eq!(step(cx, &window), Some(Step::Agents), "the trust card is on the agents step");
     event(cx, &window, Event::Trust(dir.clone()));
     cx.run_until_parked();
     let status = cx.update(|cx| {
