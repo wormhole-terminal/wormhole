@@ -102,7 +102,7 @@ impl AppState {
         let id = state.next_id;
         state.next_id += 1;
         // Belt and braces with the hubs' start ids: a fresh id never comes with a notes base.
-        crate::window::features::id_allocated(profile, id, cx);
+        crate::window::feature::FeatureTable::id_allocated(profile, id, cx);
         id
     }
 
@@ -130,7 +130,7 @@ impl AppState {
             let _ = window.handle.update(cx, |_, win, _| win.remove_window());
         }
         cx.default_global::<ParkedSettings>().remove(id);
-        crate::window::features::profile_deleted(id, cx);
+        crate::window::feature::FeatureTable::profile_deleted(id, cx);
         let state = app_mut(cx);
         // Its database closes before its folder goes, and its saved text's key with it.
         state.parked.remove(id);
@@ -151,7 +151,7 @@ impl AppState {
         let (data, settings) = open_beside(&state.root.profile(profile));
         app_mut(cx).parked.insert(profile.clone(), data);
         cx.default_global::<ParkedSettings>().park(profile.clone(), settings);
-        crate::window::features::profile_opened(profile, cx);
+        crate::window::feature::FeatureTable::profile_opened(profile, cx);
     }
 
     /// A new window in `target` ("Open a window in…"), stepped away from the window in front. When
@@ -303,7 +303,7 @@ impl AppState {
 
         // The features that keep app-wide data per profile take the target's, before any of its windows
         // is drawn or a report is recorded.
-        crate::window::features::profile_shown(cx);
+        crate::window::feature::FeatureTable::profile_shown(cx);
         Self::show_profile_windows(&from, target, cx);
         crate::app_state::look::sync_system_look(cx);
         crate::app_state::look::apply_theme(cx);

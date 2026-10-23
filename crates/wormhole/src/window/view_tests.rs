@@ -114,7 +114,7 @@ pub(crate) fn set_shared_state(cx: &mut App) {
     cx.set_global(AppState::for_test(100));
     cx.set_global(crate::updates::Updates::new(None, None));
     crate::window::features::install(cx);
-    crate::window::features::profile_shown(cx);
+    crate::window::feature::FeatureTable::profile_shown(cx);
 }
 
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).

@@ -68,7 +68,7 @@ mod drag_tests;
 mod facts;
 #[cfg(test)]
 mod failed_tests;
-mod feature;
+pub(crate) mod feature;
 mod feature_host;
 mod feature_terminals;
 #[cfg(test)]

@@ -14,7 +14,6 @@ pub(crate) mod project;
 pub(crate) mod usage;
 
 use gpui_kit::App;
-use wormhole_core::storage::paths::ProfileId;
 
 use crate::window::feature::{FeatureDef, FeatureTable};
 
@@ -27,35 +26,4 @@ pub(in crate::window) const TABLE: &[FeatureDef] =
 pub(crate) fn install(cx: &mut App) {
     usage::install(cx);
     FeatureTable::install(TABLE, cx);
-}
-
-/// The shown profile's data is in `AppState` now (at launch, after a profile switch): each feature that
-/// keeps app-wide data reads this profile's.
-pub(crate) fn profile_shown(cx: &mut App) {
-    for profile_shown in TABLE.iter().filter_map(|def| def.profile_shown) {
-        profile_shown(cx);
-    }
-}
-
-/// A profile other than the shown one was opened (a window lives in it): each feature that keeps data for
-/// each profile reads this one's.
-pub(crate) fn profile_opened(profile: &ProfileId, cx: &mut App) {
-    for opened in TABLE.iter().filter_map(|def| def.profiles.as_ref()?.opened) {
-        opened(profile, cx);
-    }
-}
-
-/// A profile was deleted: its data goes.
-pub(crate) fn profile_deleted(profile: &ProfileId, cx: &mut App) {
-    for deleted in TABLE.iter().filter_map(|def| def.profiles.as_ref()?.deleted) {
-        deleted(profile, cx);
-    }
-}
-
-/// `id` was just handed out for a terminal in `profile`: whatever is kept under it there belongs to one
-/// that is gone.
-pub(crate) fn id_allocated(profile: &ProfileId, id: i64, cx: &mut App) {
-    for id_allocated in TABLE.iter().filter_map(|def| def.profiles.as_ref()?.id_allocated) {
-        id_allocated(profile, id, cx);
-    }
 }

@@ -44,11 +44,42 @@ use crate::window::repo::Observed;
 /// ([`features::install`](super::features::install)) and each `Workspace` copies the slice into a field
 /// when it is made, so the frame never reads the global.
 #[derive(Clone, Copy)]
-pub(in crate::window) struct FeatureTable(pub(in crate::window) &'static [FeatureDef]);
+pub(crate) struct FeatureTable(pub(in crate::window) &'static [FeatureDef]);
 
 impl Global for FeatureTable {}
 
 impl FeatureTable {
+    /// The shown profile's data is in `AppState` now (at launch, after a profile switch): each feature that
+    /// keeps app-wide data reads this profile's.
+    pub(crate) fn profile_shown(cx: &mut App) {
+        for profile_shown in Self::installed(cx).iter().filter_map(|def| def.profile_shown) {
+            profile_shown(cx);
+        }
+    }
+
+    /// A profile other than the shown one was opened (a window lives in it): each feature that keeps data
+    /// for each profile reads this one's.
+    pub(crate) fn profile_opened(profile: &ProfileId, cx: &mut App) {
+        for opened in Self::installed(cx).iter().filter_map(|def| def.profiles.as_ref()?.opened) {
+            opened(profile, cx);
+        }
+    }
+
+    /// A profile was deleted: its data goes.
+    pub(crate) fn profile_deleted(profile: &ProfileId, cx: &mut App) {
+        for deleted in Self::installed(cx).iter().filter_map(|def| def.profiles.as_ref()?.deleted) {
+            deleted(profile, cx);
+        }
+    }
+
+    /// `id` was just handed out for a terminal in `profile`: whatever is kept under it there belongs to one
+    /// that is gone.
+    pub(crate) fn id_allocated(profile: &ProfileId, id: i64, cx: &mut App) {
+        for id_allocated in Self::installed(cx).iter().filter_map(|def| def.profiles.as_ref()?.id_allocated) {
+            id_allocated(profile, id, cx);
+        }
+    }
+
     pub(in crate::window) fn install(table: &'static [FeatureDef], cx: &mut App) {
         cx.set_global(Self(table));
     }
