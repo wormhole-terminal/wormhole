@@ -1,103 +1,57 @@
 //! The Coding agents section, and the Project folders and Feature flags sections that hold one setting each.
 
-use super::{literal_entry, literal_group};
-use crate::config::settings_index::{Group, Word};
+use super::{entry, group, untitled};
+use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const AGENTS: &[Group] = &[
-    literal_group(
-        "",
-        &[literal_entry("agents-summary", "Agents found", "", "installed hooks repair path summary", &[])],
+    untitled(&[
+        entry("agents-summary", SETTINGS_AGENTS_SUMMARY, &[]).with_keywords(SETTINGS_AGENTS_SUMMARY_KEYWORDS)
+    ]),
+    group(
+        SETTINGS_AGENTS_GROUP_NOTIFICATIONS,
+        &[entry("agents-notifications", SETTINGS_AGENTS_NOTIFICATIONS, &[])
+            .with_description(SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS)],
     ),
-    literal_group(
-        "Notifications",
-        &[literal_entry(
-            "agents-notifications",
-            "Notify me when an agent needs you or finishes",
-            "These, and notifications about long commands and the bell, have their own section",
-            "notifications alerts banner",
-            &[],
-        )],
+    group(
+        SETTINGS_AGENTS_GROUP_INSTALLED,
+        &[entry("agents-installed", SETTINGS_AGENTS_INSTALLED, &[])
+            .with_keywords(SETTINGS_AGENTS_INSTALLED_KEYWORDS)],
     ),
-    literal_group(
-        "Installed",
-        &[literal_entry(
-            "agents-installed",
-            "Installed agents",
-            "",
-            "claude code codex gemini copilot cursor opencode aider amp goose qwen hooks status install \
-             remove repair",
-            &[],
-        )],
+    group(
+        SETTINGS_AGENTS_GROUP_OTHER_AGENTS,
+        &[entry("agents-other", SETTINGS_AGENTS_OTHER, &[])
+            .with_description(SETTINGS_AGENTS_OTHER_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_OTHER_KEYWORDS)],
     ),
-    literal_group(
-        "Other agents",
-        &[literal_entry(
-            "agents-other",
-            "Other agents",
-            "Agents Wormhole recognises that aren't on this Mac's PATH",
-            "not installed path",
-            &[],
-        )],
+    group(
+        SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS,
+        &[entry("agents-how", SETTINGS_AGENTS_HOW, &[])
+            .with_description(SETTINGS_AGENTS_HOW_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_HOW_KEYWORDS)],
     ),
-    literal_group(
-        "How status works",
-        &[literal_entry(
-            "agents-how",
-            "How status works",
-            "With status hooks the agent tells Wormhole the moment it starts working, waits for you or \
-             finishes; without them the status is read from the terminal output",
-            "hooks output heuristic backup",
-            &[],
-        )],
-    ),
-    Group {
-        title: Word::Literal("Command line"),
-        blurb: Word::Literal(
-            "Scripts and agents can drive Wormhole from the command line: list terminals, read a \
-                status and send notifications.",
-        ),
-        aside: Word::Literal(""),
-        entries: &[
+    group(
+        SETTINGS_AGENTS_GROUP_COMMAND_LINE,
+        &[
             // The command's name is on the row itself (`ipc::control::COMMAND_NAME`); the keywords
             // carry the names it has been called, so a search finds the row by either.
-            literal_entry(
-                "cli-tool",
-                "Command line tool",
-                "The Wormhole command in any terminal",
-                "wh wht cli command install uninstall path shell alias symlink bin usr local terminal",
-                &[],
-            ),
-            literal_entry(
-                "control-write",
-                "Let the command line type and open terminals",
-                "send-text types into a terminal and new-terminal opens one, as a paste; never into the \
-                 terminal that asks, nor one waiting for your answer",
-                "cli command line control api socket send-text new-terminal scripts agents automation \
-                 remote type",
-                &["control_write"],
-            ),
+            entry("cli-tool", SETTINGS_AGENTS_CLI_TOOL, &[])
+                .with_description(SETTINGS_AGENTS_CLI_TOOL_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_CLI_TOOL_KEYWORDS),
+            entry("control-write", SETTINGS_AGENTS_CONTROL_WRITE, &["control_write"])
+                .with_description(SETTINGS_AGENTS_CONTROL_WRITE_DESCRIPTION)
+                .with_keywords(SETTINGS_AGENTS_CONTROL_WRITE_KEYWORDS),
         ],
-    },
+    )
+    .with_blurb(SETTINGS_AGENTS_GROUP_COMMAND_LINE_BLURB),
 ];
 
-pub(super) const PROJECTS: &[Group] = &[literal_group(
-    "",
-    &[literal_entry(
-        "projects",
-        "Project folders",
-        "The .wormhole folder of a project: trust, and which of its files you use",
-        ".wormhole project folder trust touch id actions prompts layout notes theme settings",
-        &[],
-    )],
-)];
+pub(super) const PROJECTS: &[Group] = &[untitled(&[entry("projects", SETTINGS_PROJECTS_PROJECTS, &[])
+    .with_description(SETTINGS_PROJECTS_PROJECTS_DESCRIPTION)
+    .with_keywords(SETTINGS_PROJECTS_PROJECTS_KEYWORDS)])];
 
-pub(super) const FEATURE_FLAGS: &[Group] = &[literal_group(
-    "",
-    &[literal_entry(
-        "feature-flags",
-        "Feature flags",
-        "Turn features that are still being built on or off in this build",
-        "feature flag preview experimental development dev in progress beta unstable project folders",
-        &["feature_flags"],
-    )],
-)];
+pub(super) const FEATURE_FLAGS: &[Group] =
+    &[untitled(&[entry("feature-flags", SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS, &["feature_flags"])
+        .with_description(SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_DESCRIPTION)
+        .with_keywords(SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_KEYWORDS)])];

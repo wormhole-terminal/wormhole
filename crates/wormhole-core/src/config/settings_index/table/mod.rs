@@ -123,26 +123,18 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::Work,
         },
         SectionId::Agents => &SectionInfo {
-            title: Word::Literal("Coding agents"),
-            intro: Word::Literal(
-                "Wormhole recognises the agent running in each terminal. With status hooks it \
-                    knows exactly when it's working, waiting for you, or done.",
-            ),
+            title: Word::Key(SETTINGS_SECTION_AGENTS),
+            intro: Word::Key(SETTINGS_SECTION_AGENTS_INTRO),
             nav: NavGroup::Agents,
         },
         SectionId::Projects => &SectionInfo {
-            title: Word::Literal("Project folders"),
-            intro: Word::Literal(
-                "Change the defaults for every project, or pick one to set it up just for you.",
-            ),
+            title: Word::Key(SETTINGS_SECTION_PROJECTS),
+            intro: Word::Key(SETTINGS_SECTION_PROJECTS_INTRO),
             nav: NavGroup::Preview,
         },
         SectionId::FeatureFlags => &SectionInfo {
-            title: Word::Literal("Feature flags"),
-            intro: Word::Literal(
-                "Features still being built. They show here in a development build and on the \
-                    Unstable update channel; otherwise a release has them off until they're finished.",
-            ),
+            title: Word::Key(SETTINGS_SECTION_FEATURE_FLAGS),
+            intro: Word::Key(SETTINGS_SECTION_FEATURE_FLAGS_INTRO),
             nav: NavGroup::Preview,
         },
         SectionId::Notifications => &SectionInfo {
