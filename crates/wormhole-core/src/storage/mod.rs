@@ -6,9 +6,6 @@
 //! talks to the running app; what it saves comes to it as values.
 
 pub mod files;
-/// The old name of [`files`], until the app's last paths say `files` (removed in the next commit).
-#[doc(hidden)]
-pub use files as fsutil;
 pub mod jsonc;
 pub mod paths;
 pub mod store;

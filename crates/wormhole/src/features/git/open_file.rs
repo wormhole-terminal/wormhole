@@ -7,7 +7,7 @@
 //! As for Open in… itself, the person asks an app they chose to open a file, so nothing from the
 //! project runs and project trust (`ProjectHub::enabled`) doesn't come into it. What the path
 //! names is checked first, though: repository content is hostile, so a path that leads out of
-//! the repository (a planted symlink) is refused (`fsutil::resolve_within`).
+//! the repository (a planted symlink) is refused (`files::resolve_within`).
 
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -21,7 +21,7 @@ use crate::settings::UiColors;
 use crate::style::{self, IconButton};
 use wormhole_core::platform::open_file;
 use wormhole_core::platform::open_in::Installed;
-use wormhole_core::storage::fsutil;
+use wormhole_core::storage::files;
 use wormhole_core::view::spoken;
 
 /// The repository, and the app a click opens its files in: worked out once per frame of a list,
@@ -122,7 +122,7 @@ impl OpenFile {
 
 /// Open `relative` (a path of the repository at `root`) in the app with this bundle identifier.
 pub(crate) fn open(bundle: &str, root: &Path, relative: &str, line: Option<u32>) {
-    let path = match fsutil::resolve_within(root, relative) {
+    let path = match files::resolve_within(root, relative) {
         Ok(path) => path,
         Err(err) => {
             tracing::warn!("not opening {relative} from {}: {err}", root.display());

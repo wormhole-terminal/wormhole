@@ -27,7 +27,7 @@ pub fn init() -> Option<WorkerGuard> {
     let dir = dir();
     // The appender prunes old files on start and complains if the folder is missing. Owner-only:
     // the appender makes its files with the umask's mode, so the folder is what keeps them private.
-    if wormhole_core::storage::fsutil::ensure_private_dir(&dir).is_err() {
+    if wormhole_core::storage::files::ensure_private_dir(&dir).is_err() {
         let _ = std::fs::create_dir_all(&dir);
     }
     let appender = Builder::new()
@@ -67,10 +67,10 @@ pub fn install_panic_hook() {
         tracing::error!("{report}");
         let path = dir().join(LAST_PANIC);
         // Nothing to do if this fails: the default hook below still prints it.
-        let _ = wormhole_core::storage::fsutil::write_atomic(
+        let _ = wormhole_core::storage::files::write_atomic(
             &path,
             report.as_bytes(),
-            wormhole_core::storage::fsutil::LinkPolicy::Follow,
+            wormhole_core::storage::files::LinkPolicy::Follow,
         );
         default(info);
     }));

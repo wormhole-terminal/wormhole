@@ -20,7 +20,7 @@ const PRESENT_CHECKED: usize = 2000;
 /// commit deleted, or one removed since, is not).
 fn present_files(root: &Path, files: &[FileChange]) -> HashSet<String> {
     (files.iter().take(PRESENT_CHECKED))
-        .filter(|file| wormhole_core::storage::fsutil::resolve_within(root, &file.path).is_ok())
+        .filter(|file| wormhole_core::storage::files::resolve_within(root, &file.path).is_ok())
         .map(|file| file.path.clone())
         .collect()
 }

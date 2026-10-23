@@ -10,7 +10,7 @@ use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use style::BannerKind;
 use wormhole_core::project::ProjectFolder;
-use wormhole_core::storage::fsutil::{self, LinkPolicy};
+use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::ThemeFile;
 
 use super::draft::{changes, copy_name, export_dir, export_file_name, export_json};
@@ -148,7 +148,7 @@ impl StudioWindow {
         self.export = Some(cx.spawn(async move |this, cx| {
             let Ok(Ok(Some(path))) = chosen.await else { return };
             // The person's own file: a link there is theirs to keep.
-            let notice = match fsutil::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow) {
+            let notice = match files::write_atomic(&path, json.as_bytes(), LinkPolicy::Follow) {
                 Ok(()) => {
                     let text = format!("Exported to {}.", display_path(&path));
                     Notice::Saved { path, text: text.into() }

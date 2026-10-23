@@ -760,7 +760,7 @@ impl SettingsWindow {
 // GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
 // test that clicks this needs a stand-in first.
 fn open_folder(dir: &Path, cx: &App) {
-    match wormhole_core::storage::fsutil::create_dir_all_private(dir) {
+    match wormhole_core::storage::files::create_dir_all_private(dir) {
         Ok(()) => cx.open_with_system(dir),
         Err(err) => tracing::warn!("opening {}: {err}", dir.display()),
     }
