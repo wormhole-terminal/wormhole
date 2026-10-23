@@ -19,6 +19,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::config::settings_index::{self, Entry, Hit, Query, Values};
+use wormhole_text::{Key, text};
 
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
 use crate::settings::update_settings;
@@ -35,19 +36,45 @@ pub(super) type Chip = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Opti
 /// question).
 pub(super) type Below = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Option<AnyElement>;
 
+/// The name of an option: a message of the catalogs, or, while its page still has its words in Rust,
+/// the literal. A table of options is a `const`, which cannot read the language in use, so a key is
+/// looked up as the control is drawn.
+#[derive(Clone, Copy)]
+pub(super) enum Label {
+    Key(Key),
+    Literal(&'static str),
+}
+
+impl Label {
+    fn get(self) -> &'static str {
+        match self {
+            Label::Key(key) => text(key),
+            Label::Literal(literal) => literal,
+        }
+    }
+}
+
 /// One option of a [`Control::Segmented`].
 pub(super) struct Segment {
-    pub label: &'static str,
+    pub label: Label,
     pub icon: Option<IconName>,
 }
 
 impl Segment {
-    pub(super) const fn text(label: &'static str) -> Self {
-        Self { label, icon: None }
+    pub(super) const fn text(label: Key) -> Self {
+        Self { label: Label::Key(label), icon: None }
     }
 
-    pub(super) const fn icon(icon: IconName, label: &'static str) -> Self {
-        Self { label, icon: Some(icon) }
+    pub(super) const fn icon(icon: IconName, label: Key) -> Self {
+        Self { label: Label::Key(label), icon: Some(icon) }
+    }
+
+    pub(super) const fn literal(label: &'static str) -> Self {
+        Self { label: Label::Literal(label), icon: None }
+    }
+
+    pub(super) const fn icon_literal(icon: IconName, label: &'static str) -> Self {
+        Self { label: Label::Literal(label), icon: Some(icon) }
     }
 }
 
@@ -384,7 +411,7 @@ impl SettingsWindow {
                 let set = *set;
                 style::segmented_form(ui)
                     .children(options.iter().enumerate().map(|(ix, option)| {
-                        style::form_segment((id, ix), ui, option.icon, option.label, ix == active)
+                        style::form_segment((id, ix), ui, option.icon, option.label.get(), ix == active)
                             .on_click(move |_, _, cx| update_settings(cx, |s| set(s, ix)))
                     }))
                     .into_any_element()

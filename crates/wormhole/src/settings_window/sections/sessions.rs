@@ -14,7 +14,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("sidebar-preview", preview::draw_sidebar_preview),
     Setting::segmented(
         "terminals-in",
-        &[Segment::text("Sidebar"), Segment::text("Tabs")],
+        &[Segment::literal("Sidebar"), Segment::literal("Tabs")],
         |s| usize::from(s.terminals_in == TerminalsIn::Tabs),
         |s, ix| s.terminals_in = if ix == 0 { TerminalsIn::Sidebar } else { TerminalsIn::Tabs },
     ),
@@ -24,7 +24,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("show-group-folders", show_group_folders),
     Setting::segmented(
         "sidebar-numbers",
-        &[Segment::text("Stay with the terminal"), Segment::text("Follow the list")],
+        &[Segment::literal("Stay with the terminal"), Segment::literal("Follow the list")],
         |s| usize::from(s.sidebar_numbers == SidebarNumbers::List),
         |s, ix| s.sidebar_numbers = if ix == 0 { SidebarNumbers::Terminal } else { SidebarNumbers::List },
     ),

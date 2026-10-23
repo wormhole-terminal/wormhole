@@ -80,7 +80,9 @@ fn marked(code: &str, n: usize) -> bool {
 /// The ways to make a plural in code, which a Fluent select replaces.
 fn old_plural(line: &str) -> Option<&'static str> {
     let code = line.split("//").next().unwrap_or("");
-    if code.contains("== 1 {") || code.contains("!= 1 {") {
+    let counts_one =
+        ["== 1 {", "!= 1 {"].iter().find_map(|test| code.find(test).map(|at| &code[at + test.len()..]));
+    if counts_one.is_some_and(|rest| rest.contains('"')) {
         return Some("a plural by `if n == 1`");
     }
     if code.contains("else { \"s\" }") || code.contains("else { \"es\" }") {
@@ -139,8 +141,11 @@ fn files_of(entry: &str) -> Vec<(String, std::path::PathBuf)> {
 
 #[test]
 fn the_migrated_folders_have_their_words_in_the_catalogs() {
+    // `TEXT_RULES_ALSO=settings_window cargo test -p wormhole --test text_rules` lists what a folder still
+    // has in Rust, to plan moving it.
+    let also = std::env::var("TEXT_RULES_ALSO").unwrap_or_default();
     let mut found = Vec::new();
-    for entry in MIGRATED {
+    for entry in MIGRATED.iter().copied().chain(also.split(',').filter(|entry| !entry.is_empty())) {
         let files = files_of(entry);
         assert!(!files.is_empty(), "MIGRATED names {entry}, which is not under src/");
         for (relative, file) in files {

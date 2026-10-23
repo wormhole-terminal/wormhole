@@ -14,7 +14,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),
     Setting::segmented(
         "menu-bar-icon",
-        &[Segment::text("Status and count"), Segment::text("Status"), Segment::text("Icon only")],
+        &[Segment::literal("Status and count"), Segment::literal("Status"), Segment::literal("Icon only")],
         |s| match s.menu_bar_icon {
             MenuBarIcon::StatusCount => 0,
             MenuBarIcon::Status => 1,
@@ -37,7 +37,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::segmented(
         "hotkey-action",
-        &[Segment::text("Quick panel"), Segment::text("Show or hide Wormhole")],
+        &[Segment::literal("Quick panel"), Segment::literal("Show or hide Wormhole")],
         |s| usize::from(s.hotkey_action == HotkeyAction::ToggleApp),
         |s, ix| s.hotkey_action = if ix == 1 { HotkeyAction::ToggleApp } else { HotkeyAction::QuickPanel },
     ),

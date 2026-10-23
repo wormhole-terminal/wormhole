@@ -24,9 +24,9 @@ use crate::style::{self, Edges};
 use crate::theme_bridge;
 
 const MODES: &[Segment] = &[
-    Segment::icon(IconName::Moon, "Dark"),
-    Segment::icon(IconName::Sun, "Light"),
-    Segment::icon(IconName::Monitor, "Match system"),
+    Segment::icon_literal(IconName::Moon, "Dark"),
+    Segment::icon_literal(IconName::Sun, "Light"),
+    Segment::icon_literal(IconName::Monitor, "Match system"),
 ];
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -57,7 +57,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("translucent", draw_translucent),
     Setting::segmented(
         "title-border",
-        &[Segment::text("Always"), Segment::text("When scrolled"), Segment::text("Never")],
+        &[Segment::literal("Always"), Segment::literal("When scrolled"), Segment::literal("Never")],
         |s| TitleBorder::ALL.iter().position(|b| *b == s.title_border).unwrap_or(1),
         |s, ix| s.title_border = TitleBorder::ALL.get(ix).copied().unwrap_or_default(),
     ),

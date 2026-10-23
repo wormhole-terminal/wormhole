@@ -30,7 +30,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("auto-update", auto_update),
     Setting::segmented(
         "update-channel",
-        &[Segment::text("Stable"), Segment::text("Unstable")],
+        &[Segment::literal("Stable"), Segment::literal("Unstable")],
         |s| usize::from(s.update_channel == UpdateChannel::Unstable),
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),

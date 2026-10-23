@@ -49,7 +49,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("notify-only-unseen", notify_only_unseen),
     Setting::segmented(
         "notify-in-front",
-        &[Segment::text("Banner"), Segment::text("Nothing")],
+        &[Segment::literal("Banner"), Segment::literal("Nothing")],
         |s| match s.notify_in_front {
             InFront::Banner => 0,
             InFront::None => 1,
@@ -58,7 +58,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::segmented(
         "notify-sound",
-        &[Segment::text("Needs you only"), Segment::text("All"), Segment::text("None")],
+        &[Segment::literal("Needs you only"), Segment::literal("All"), Segment::literal("None")],
         |s| match s.notify_sound {
             NotifySound::NeedsYou => 0,
             NotifySound::All => 1,
@@ -69,7 +69,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("notify-group-bursts", notify_group_bursts),
     Setting::segmented(
         "dock-badge",
-        &[Segment::text("Off"), Segment::text("Needs you"), Segment::text("Needs you + finished")],
+        &[Segment::literal("Off"), Segment::literal("Needs you"), Segment::literal("Needs you + finished")],
         |s| match s.dock_badge {
             DockBadge::Off => 0,
             DockBadge::NeedsYou => 1,

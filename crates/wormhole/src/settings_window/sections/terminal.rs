@@ -36,7 +36,12 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("split-gaps", split_gaps),
     Setting::segmented(
         "meta",
-        &[Segment::text("Off"), Segment::text("Left"), Segment::text("Right"), Segment::text("Both")],
+        &[
+            Segment::literal("Off"),
+            Segment::literal("Left"),
+            Segment::literal("Right"),
+            Segment::literal("Both"),
+        ],
         |s| OptionAsMeta::ALL.iter().position(|o| *o == s.option_as_meta).unwrap_or(0),
         |s, ix| s.option_as_meta = OptionAsMeta::ALL.get(ix).copied().unwrap_or_default(),
     ),
@@ -66,13 +71,13 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("bell-visual", bell_visual),
     Setting::segmented(
         "clipboard-read",
-        &[Segment::text("Ask"), Segment::text("Allow"), Segment::text("Deny")],
+        &[Segment::literal("Ask"), Segment::literal("Allow"), Segment::literal("Deny")],
         |s| ClipboardRead::ALL.iter().position(|o| *o == s.clipboard_read).unwrap_or(0),
         |s, ix| s.clipboard_read = ClipboardRead::ALL.get(ix).copied().unwrap_or_default(),
     ),
     Setting::segmented(
         "clipboard-write",
-        &[Segment::text("Allow"), Segment::text("Deny")],
+        &[Segment::literal("Allow"), Segment::literal("Deny")],
         |s| ClipboardWrite::ALL.iter().position(|o| *o == s.clipboard_write).unwrap_or(0),
         |s, ix| s.clipboard_write = ClipboardWrite::ALL.get(ix).copied().unwrap_or_default(),
     ),
