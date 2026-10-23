@@ -453,10 +453,16 @@ impl EventProxy {
         let _ = self.tx.try_send(event);
     }
 
+    /// The program printed something the UI won't show yet (a synchronized update holds the
+    /// screen back): bump the revision, which counts output for whoever reads it, and wake nobody.
+    pub(super) fn revise(&self) {
+        self.shared.revision.fetch_add(1, Ordering::AcqRel);
+    }
+
     /// The program printed (the engine sends one per read burst): bump the revision and, unless
     /// the UI hasn't taken the last one yet, say so.
     pub(super) fn wakeup(&self) {
-        self.shared.revision.fetch_add(1, Ordering::AcqRel);
+        self.revise();
         if !self.shared.output_pending.swap(true, Ordering::AcqRel) {
             self.send(PtyEvent::Output);
         }

@@ -249,6 +249,24 @@ fn credit_is_acknowledged_after_each_batch_and_at_least_every_64_kib() {
 }
 
 #[test]
+fn the_replica_wakes_the_app_for_a_synchronized_update_when_it_begins_and_ends_and_not_between() {
+    let (pty, events, mut script) = connected(StreamMode::Raw);
+    let mut offset = 0;
+    let mut send = |script: &mut Script, bytes: &[u8]| {
+        script.send(&Message::Out(wire::Out { offset, bytes }));
+        offset += bytes.len() as u64;
+    };
+    send(&mut script, b"\x1b[?2026h");
+    next_event(&events, "the update's begin", |e| matches!(e, PtyEvent::Output));
+    send(&mut script, b"inside");
+    wait_for("the update's text", || pty.screen_text().contains("inside"));
+    assert_eq!(events.queued(), 0, "nothing to draw while the update holds the screen");
+    send(&mut script, b"\x1b[?2026l");
+    next_event(&events, "the update's end", |e| matches!(e, PtyEvent::Output));
+    drop(pty);
+}
+
+#[test]
 fn input_goes_in_frames_of_64_kib_with_at_most_256_kib_in_flight() {
     let (pty, _events, mut script) = connected(StreamMode::Raw);
     let total = 600 * 1024;

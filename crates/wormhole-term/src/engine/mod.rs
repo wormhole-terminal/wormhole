@@ -87,6 +87,10 @@ impl Feed<Screen> for OwnFeed {
         screen.hold = Hold::GaveUp;
         self.deadline = None;
     }
+
+    fn held_back(&self, screen: &Screen) -> bool {
+        screen.held_back()
+    }
 }
 
 /// What starting a terminal made.

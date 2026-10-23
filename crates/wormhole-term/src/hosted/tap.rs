@@ -333,6 +333,10 @@ impl Feed<Screen> for HostedFeed {
     fn expire(&mut self, screen: &mut Screen) {
         self.inner.expire(screen);
     }
+
+    fn held_back(&self, screen: &Screen) -> bool {
+        self.inner.held_back(screen)
+    }
 }
 
 impl Drop for HostedFeed {
