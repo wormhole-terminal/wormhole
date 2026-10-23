@@ -6,12 +6,14 @@
 
 use std::fs;
 use std::io;
-use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
-use std::os::unix::process::CommandExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use tempfile::TempDir;
+
+use crate::platform::fs::{is_executable, mode};
+use crate::platform::process::own_process_group;
+use crate::platform::user::UserId;
 
 use super::archive::extract;
 use super::{DownloadedUpdate, UpdateError, UpdaterConfig, parse_lenient_version};
@@ -129,7 +131,8 @@ fn spawn_relaunch_helper(
         sleep "$5"
         exec "$2" -n "$0"
     ) </dev/null >/dev/null 2>&1 &"#;
-    let status = Command::new("/bin/sh")
+    let mut command = Command::new("/bin/sh");
+    command
         .arg("-c")
         .arg(SCRIPT)
         .arg(app_bundle)
@@ -140,10 +143,9 @@ fn spawn_relaunch_helper(
         .arg(settle_secs)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        // Own process group, so a signal to ours (e.g. Ctrl-C in a dev terminal) doesn't kill it.
-        .process_group(0)
-        .status()?;
+        .stderr(Stdio::null());
+    // Own process group, so a signal to ours (e.g. Ctrl-C in a dev terminal) doesn't kill it.
+    let status = own_process_group(&mut command).status()?;
     if status.success() { Ok(()) } else { Err(io::Error::other(format!("relaunch helper failed: {status}"))) }
 }
 
@@ -174,14 +176,14 @@ fn create_staging(app_bundle: &Path) -> Result<TempDir, UpdateError> {
 /// Renaming the bundle only needs a writable parent, but deleting the old version afterwards
 /// needs every directory inside it to be ours. A root-owned install (e.g. from a pkg) would
 /// otherwise swap fine and then leave the old copy stuck in /Applications, so refuse up front.
-/// Our uid is read off the staging dir we just created, which avoids an `unsafe` getuid call.
+/// Our uid is read off the staging dir we just created.
 fn check_bundle_removable(app_bundle: &Path, staging: &TempDir) -> Result<(), UpdateError> {
-    let uid = fs::metadata(staging.path())?.uid();
+    let uid = UserId::owner_of(&fs::metadata(staging.path())?);
     let mut stack = vec![app_bundle.to_path_buf()];
     while let Some(dir) = stack.pop() {
         let meta = fs::symlink_metadata(&dir)?;
-        if meta.uid() != uid || meta.mode() & 0o200 == 0 {
-            tracing::warn!(dir = %dir.display(), owner = meta.uid(), "bundle directory not writable by us");
+        if UserId::owner_of(&meta) != uid || mode(&meta) & 0o200 == 0 {
+            tracing::warn!(dir = %dir.display(), owner = %UserId::owner_of(&meta), "bundle directory not writable by us");
             return Err(UpdateError::NotWritable(app_bundle.to_path_buf()));
         }
         for entry in fs::read_dir(&dir)? {
@@ -212,7 +214,7 @@ fn validate_bundle(app: &Path, config: &UpdaterConfig, version: &semver::Version
     }
     let exe = app.join("Contents/MacOS").join(&config.bundle_executable);
     match fs::symlink_metadata(&exe) {
-        Ok(m) if m.is_file() && m.permissions().mode() & 0o111 != 0 => {}
+        Ok(m) if m.is_file() && is_executable(&m) => {}
         _ => return Err(bad(format!("missing executable Contents/MacOS/{}", config.bundle_executable))),
     }
 
@@ -274,11 +276,11 @@ pub(crate) fn swap_into_place(app_bundle: &Path, new_app: &Path, backup: &Path) 
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::os::unix::fs::PermissionsExt as _;
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
     use super::{bundle_from_exe, is_translocated, spawn_relaunch_helper};
+    use crate::platform::fs::permissions;
 
     #[test]
     fn bundle_detection() {
@@ -306,7 +308,7 @@ mod tests {
             m = marker.display()
         );
         fs::write(&opener, script).unwrap();
-        fs::set_permissions(&opener, fs::Permissions::from_mode(0o755)).unwrap();
+        fs::set_permissions(&opener, permissions(0o755)).unwrap();
         (opener, marker)
     }
 

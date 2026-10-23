@@ -6,8 +6,9 @@
 //! nothing is looked up by `PATH`: a program found elsewhere would be one the app never shipped.
 
 use std::ffi::{OsStr, OsString};
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
+
+use crate::platform::fs::is_executable;
 
 /// The host's file name, next to the app's executable (`HOST_BINARY` in packaging/app.env).
 pub const HOST_BINARY_NAME: &str = "wormhole-host";
@@ -54,22 +55,22 @@ fn runs_from_a_disposable_copy(exe: &Path) -> bool {
 
 fn is_executable_file(path: &Path) -> bool {
     // Not `exists()`: a directory or a file without the execute bit would fail at spawn instead.
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+    std::fs::metadata(path).is_ok_and(|m| m.is_file() && is_executable(&m))
 }
 
 #[cfg(test)]
 mod tests {
     use std::ffi::OsStr;
     use std::fs;
-    use std::os::unix::fs::PermissionsExt as _;
     use std::path::Path;
 
     use super::{HOST_BINARY_NAME, host_binary_for, runs_from_a_disposable_copy};
+    use crate::platform::fs::permissions;
 
     fn touch(path: &Path, mode: u32) {
         fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
         fs::write(path, b"#!/bin/sh\n").expect("write");
-        fs::set_permissions(path, fs::Permissions::from_mode(mode)).expect("chmod");
+        fs::set_permissions(path, permissions(mode)).expect("chmod");
     }
 
     #[test]

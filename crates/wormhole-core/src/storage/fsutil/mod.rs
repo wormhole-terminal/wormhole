@@ -26,6 +26,8 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
+use crate::platform::fs::{self as platform_fs, Stamp};
+
 /// How symlinks are treated.
 #[derive(Clone, Copy, Debug)]
 pub enum LinkPolicy<'a> {
@@ -137,20 +139,16 @@ fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: boo
 
     let mut builder = tempfile::Builder::new();
     builder.prefix(".wormhole-").suffix(".tmp");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // A new file of the user's or Wormhole's own (`Follow`: settings, profiles, the data
-        // folder's files) is owner-only; one in a repository (`Within`) gets the usual
-        // 0666 &! umask, as any tool there would make it.
-        // A program is `0777` less the umask either way (see `write_atomic_executable`).
-        let mode = match (policy, executable) {
-            (_, true) => 0o777,
-            (LinkPolicy::Follow, false) => private::PRIVATE_FILE,
-            (LinkPolicy::Within(_), false) => 0o666,
-        };
-        builder.permissions(fs::Permissions::from_mode(mode));
-    }
+    // A new file of the user's or Wormhole's own (`Follow`: settings, profiles, the data
+    // folder's files) is owner-only; one in a repository (`Within`) gets the usual
+    // 0666 &! umask, as any tool there would make it.
+    // A program is `0777` less the umask either way (see `write_atomic_executable`).
+    let mode = match (policy, executable) {
+        (_, true) => 0o777,
+        (LinkPolicy::Follow, false) => private::PRIVATE_FILE,
+        (LinkPolicy::Within(_), false) => 0o666,
+    };
+    builder.permissions(platform_fs::permissions(mode));
     let mut tmp = builder.tempfile_in(&dir)?;
     tmp.write_all(bytes)?;
     // Keep what the user had: a 0600 settings file must not become world-readable. Under
@@ -163,11 +161,9 @@ fn write_file(path: &Path, bytes: &[u8], policy: LinkPolicy<'_>, executable: boo
         && existing.is_file()
     {
         let mut mode = existing.permissions();
-        #[cfg(unix)]
         if executable {
-            use std::os::unix::fs::PermissionsExt;
-            let bits = mode.mode();
-            mode.set_mode(bits | ((bits & 0o444) >> 2));
+            let bits = platform_fs::mode(&existing);
+            mode = platform_fs::permissions(bits | ((bits & 0o444) >> 2));
         }
         tmp.as_file().set_permissions(mode)?;
     }
@@ -269,8 +265,8 @@ pub fn read_tail_capped(path: &Path, cap: u64, policy: LinkPolicy<'_>) -> io::Re
 fn open_regular(path: &Path, policy: LinkPolicy<'_>) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true);
-    #[cfg(unix)]
-    let mut flags = libc::O_NONBLOCK; // opening a FIFO blocks until a writer shows up
+    // Opening a FIFO blocks until a writer shows up.
+    platform_fs::no_block(&mut options);
     let open_path = match policy {
         LinkPolicy::Follow => path.to_path_buf(),
         LinkPolicy::Within(root) => {
@@ -279,18 +275,10 @@ fn open_regular(path: &Path, policy: LinkPolicy<'_>) -> io::Result<File> {
                 return Err(escapes(path, root));
             }
             // Open what was checked; a link swapped in at the last component since then fails.
-            #[cfg(unix)]
-            {
-                flags |= libc::O_NOFOLLOW;
-            }
+            platform_fs::no_block_no_follow(&mut options);
             real
         }
     };
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.custom_flags(flags);
-    }
     let file = options.open(&open_path)?;
     if !file.metadata()?.is_file() {
         return Err(refuse(path, Refusal::NotRegularFile));
@@ -316,51 +304,9 @@ fn too_large(path: &Path, cap: u64) -> io::Error {
 /// set it, and the inode because `git checkout` and atomic saves replace the file.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileStamp {
-    path: MetaKey,
+    path: Stamp,
     /// The link's target, for a symlink.
-    target: Option<MetaKey>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct MetaKey {
-    dev: u64,
-    ino: u64,
-    mode: u32,
-    len: u64,
-    mtime: (i64, i64),
-    ctime: (i64, i64),
-}
-
-impl MetaKey {
-    #[cfg(unix)]
-    fn of(meta: &fs::Metadata) -> Self {
-        use std::os::unix::fs::MetadataExt;
-        Self {
-            dev: meta.dev(),
-            ino: meta.ino(),
-            mode: meta.mode(),
-            len: meta.len(),
-            mtime: (meta.mtime(), meta.mtime_nsec()),
-            ctime: (meta.ctime(), meta.ctime_nsec()),
-        }
-    }
-
-    #[cfg(not(unix))]
-    fn of(meta: &fs::Metadata) -> Self {
-        let since_epoch = |t: io::Result<std::time::SystemTime>| {
-            t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or((0, 0), |d| {
-                (i64::try_from(d.as_secs()).unwrap_or(i64::MAX), i64::from(d.subsec_nanos()))
-            })
-        };
-        Self {
-            dev: 0,
-            ino: 0,
-            mode: u32::from(meta.is_dir()),
-            len: meta.len(),
-            mtime: since_epoch(meta.modified()),
-            ctime: since_epoch(meta.created()),
-        }
-    }
+    target: Option<Stamp>,
 }
 
 impl FileStamp {
@@ -369,18 +315,17 @@ impl FileStamp {
     pub fn of(path: &Path) -> Option<Self> {
         let meta = fs::symlink_metadata(path).ok()?;
         let target = if meta.file_type().is_symlink() {
-            fs::metadata(path).ok().as_ref().map(MetaKey::of)
+            fs::metadata(path).ok().as_ref().map(Stamp::of)
         } else {
             None
         };
-        Some(Self { path: MetaKey::of(&meta), target })
+        Some(Self { path: Stamp::of(&meta), target })
     }
 }
 
 #[cfg(test)]
-#[cfg(unix)]
 mod tests {
-    use std::os::unix::fs::{PermissionsExt, symlink};
+    use crate::platform::fs::{mode, permissions, symlink};
 
     use super::{
         FileStamp, LinkPolicy, Refusal, fs, read_capped, read_to_string_capped, refusal, resolve_within,
@@ -424,29 +369,29 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("settings.json");
         fs::write(&file, "{}").unwrap();
-        fs::set_permissions(&file, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::set_permissions(&file, permissions(0o600)).unwrap();
         write_atomic(&file, b"{\"k\":1}", LinkPolicy::Follow).unwrap();
-        assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(mode(&fs::metadata(&file).unwrap()) & 0o777, 0o600);
     }
 
     #[test]
     fn an_executable_write_can_be_run_whether_the_file_is_new_or_replaced() {
         let dir = tempfile::tempdir().unwrap();
-        let mode = |file: &std::path::Path| fs::metadata(file).unwrap().permissions().mode() & 0o777;
+        let bits = |file: &std::path::Path| mode(&fs::metadata(file).unwrap()) & 0o777;
         let file = dir.path().join("tool");
         write_atomic_executable(&file, b"#!/bin/sh\n", LinkPolicy::Follow).unwrap();
-        assert_eq!(mode(&file) & 0o100, 0o100, "new: executable by its owner");
+        assert_eq!(bits(&file) & 0o100, 0o100, "new: executable by its owner");
         // A plain file of the user's, 0640: it keeps who can read it and gains execute for them only.
         let plain = dir.path().join("plain");
         fs::write(&plain, "old").unwrap();
-        fs::set_permissions(&plain, fs::Permissions::from_mode(0o640)).unwrap();
+        fs::set_permissions(&plain, permissions(0o640)).unwrap();
         write_atomic_executable(&plain, b"new", LinkPolicy::Follow).unwrap();
-        assert_eq!(mode(&plain), 0o750);
+        assert_eq!(bits(&plain), 0o750);
         assert_eq!(fs::read_to_string(&plain).unwrap(), "new");
         // The plain write leaves a new file as it was: not executable.
         let data = dir.path().join("data");
         write_atomic(&data, b"x", LinkPolicy::Follow).unwrap();
-        assert_eq!(mode(&data) & 0o111, 0);
+        assert_eq!(bits(&data) & 0o111, 0);
     }
 
     #[test]
@@ -496,13 +441,13 @@ mod tests {
         let victim_dir = tempfile::tempdir().unwrap();
         let victim = victim_dir.path().join("secret");
         fs::write(&victim, "original").unwrap();
-        fs::set_permissions(&victim, fs::Permissions::from_mode(0o604)).unwrap();
+        fs::set_permissions(&victim, permissions(0o604)).unwrap();
         symlink(&victim, repo.path().join("notes.md")).unwrap();
         write_atomic(&repo.path().join("notes.md"), b"x", LinkPolicy::Within(repo.path())).unwrap();
         write_atomic(&repo.path().join("fresh.md"), b"x", LinkPolicy::Within(repo.path())).unwrap();
-        let mode = |name: &str| fs::metadata(repo.path().join(name)).unwrap().permissions().mode() & 0o777;
-        assert_eq!(mode("notes.md"), mode("fresh.md"));
-        assert_eq!(fs::metadata(&victim).unwrap().permissions().mode() & 0o777, 0o604);
+        let bits = |name: &str| mode(&fs::metadata(repo.path().join(name)).unwrap()) & 0o777;
+        assert_eq!(bits("notes.md"), bits("fresh.md"));
+        assert_eq!(mode(&fs::metadata(&victim).unwrap()) & 0o777, 0o604);
     }
 
     #[test]

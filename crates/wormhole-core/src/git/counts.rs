@@ -7,12 +7,12 @@
 
 use std::collections::HashMap;
 use std::fs::Metadata;
-use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, SystemTime};
 
 use super::{ChangeKind, FileChange, MAX_TEXT_BYTES};
+use crate::platform::fs::{inode, mtime};
 use crate::storage::fsutil::{self, LinkPolicy};
 
 /// A file modified more recently than this is counted again next time even if it looks the
@@ -29,14 +29,13 @@ const MAX_ROOTS: usize = 32;
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Stamp {
     len: u64,
-    mtime: i64,
-    mtime_nsec: i64,
+    mtime: (i64, i64),
     ino: u64,
 }
 
 impl Stamp {
     fn of(meta: &Metadata) -> Self {
-        Self { len: meta.len(), mtime: meta.mtime(), mtime_nsec: meta.mtime_nsec(), ino: meta.ino() }
+        Self { len: meta.len(), mtime: mtime(meta), ino: inode(meta) }
     }
 }
 
@@ -207,8 +206,8 @@ mod tests {
         let root = dir.path();
         write(root, "big.txt", &"line\n".repeat(1_000_000)); // 5 MB, over the 4 MiB limit
         write(root, "bin.dat", "a\0b\n");
-        std::os::unix::fs::symlink("elsewhere", root.join("link")).expect("symlink");
-        std::os::unix::fs::symlink(root.join("pipe"), root.join("link-to-nothing")).expect("symlink");
+        crate::platform::fs::symlink("elsewhere", root.join("link")).expect("symlink");
+        crate::platform::fs::symlink(root.join("pipe"), root.join("link-to-nothing")).expect("symlink");
         let (counts, read) = refresh(root, &["big.txt", "bin.dat", "link", "link-to-nothing", "missing.txt"]);
         assert_eq!(counts, [None, None, Some(1), Some(1), None]);
         assert_eq!(read, 1, "only the small binary file was opened, to look for a NUL");

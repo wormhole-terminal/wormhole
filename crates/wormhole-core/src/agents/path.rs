@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use super::integrations::{self, State};
 use super::{AGENTS, Agent, AgentId};
+use crate::platform::fs as platform_fs;
 
 /// Whether the agent's command is on `PATH` (plus the usual install spots
 /// that apps launched from Finder don't see).
@@ -45,8 +46,7 @@ fn search_dirs(agent_path: Option<OsString>, path: OsString, home: &Path) -> Vec
 }
 
 fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+    std::fs::metadata(path).is_ok_and(|m| m.is_file() && platform_fs::is_executable(&m))
 }
 
 /// One agent's row in Settings → Coding agents.

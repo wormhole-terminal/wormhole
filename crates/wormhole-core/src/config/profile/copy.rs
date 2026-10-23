@@ -7,9 +7,9 @@
 
 use std::fs;
 use std::io;
-use std::os::unix::fs::symlink;
 use std::path::Path;
 
+use crate::platform::fs::symlink;
 use crate::storage::fsutil::{self, LinkPolicy};
 use crate::storage::paths::ProfilePaths;
 

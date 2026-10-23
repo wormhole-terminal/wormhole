@@ -9,9 +9,11 @@
 use std::ffi::OsStr;
 use std::fs::{self, OpenOptions};
 use std::io;
-use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 
+use crate::platform::fs::{
+    self as platform_fs, mode, no_block_no_follow, permissions, private_dir, private_file, same_file,
+};
 use crate::platform::user::UserId;
 
 /// A folder's mode.
@@ -27,7 +29,7 @@ const MAX_ENTRIES: usize = 50_000;
 /// Create `dir` (and missing parents) owner-only. Folders that already exist are left as they are:
 /// this is for paths that may lead through the user's own folders (`~/.codex/…`).
 pub fn create_dir_all_private(dir: &Path) -> io::Result<()> {
-    fs::DirBuilder::new().recursive(true).mode(PRIVATE_DIR).create(dir)
+    private_dir(fs::DirBuilder::new().recursive(true)).create(dir)
 }
 
 /// `dir`, created owner-only when missing; one that exists must be a real folder (not a link) of
@@ -49,8 +51,8 @@ pub fn ensure_private_dir(dir: &Path) -> io::Result<()> {
             format!("{} belongs to another user", dir.display()),
         ));
     }
-    if meta.mode() & 0o777 != PRIVATE_DIR {
-        fs::set_permissions(dir, fs::Permissions::from_mode(PRIVATE_DIR))?;
+    if mode(&meta) & 0o777 != PRIVATE_DIR {
+        platform_fs::set_mode(dir, PRIVATE_DIR)?;
     }
     Ok(())
 }
@@ -59,7 +61,7 @@ pub fn ensure_private_dir(dir: &Path) -> io::Result<()> {
 /// group and other access off it if it exists: for a file another library then opens and writes
 /// (SQLite gives a database's `-wal` and `-shm` the database file's mode).
 pub fn create_private_file(path: &Path) -> io::Result<()> {
-    match OpenOptions::new().write(true).create_new(true).mode(PRIVATE_FILE).open(path) {
+    match private_file(OpenOptions::new().write(true).create_new(true)).open(path) {
         Ok(_) => Ok(()),
         Err(err) if err.kind() == io::ErrorKind::AlreadyExists => make_private(path),
         Err(err) => Err(err),
@@ -74,7 +76,7 @@ pub fn make_private(path: &Path) -> io::Result<()> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(err) => return Err(err),
     };
-    if meta.is_file() && UserId::owner_of(&meta) == UserId::current() && meta.mode() & 0o077 != 0 {
+    if meta.is_file() && UserId::owner_of(&meta) == UserId::current() && mode(&meta) & 0o077 != 0 {
         tighten_nofollow(path, PRIVATE_DIR)?;
     }
     Ok(())
@@ -138,25 +140,22 @@ struct Tightened {
 /// refused rather than its target changed. A folder gets `dir_mode`; a file keeps its owner's
 /// bits. Anything else, or another user's, is left alone.
 fn tighten_nofollow(path: &Path, dir_mode: u32) -> io::Result<Tightened> {
-    let file = OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC)
-        .open(path)?;
+    // (The close-on-exec flag is the standard library's own.)
+    let file = no_block_no_follow(OpenOptions::new().read(true)).open(path)?;
     let meta = file.metadata()?;
-    let (is_dir, mode) = (meta.is_dir(), meta.mode() & 0o7777);
+    let (is_dir, bits) = (meta.is_dir(), mode(&meta) & 0o7777);
     if !(is_dir || meta.is_file()) || UserId::owner_of(&meta) != UserId::current() {
         return Ok(Tightened { changed: false, dir: false });
     }
-    let wanted = if is_dir { dir_mode } else { mode & 0o700 };
-    let changed = mode != wanted;
+    let wanted = if is_dir { dir_mode } else { bits & 0o700 };
+    let changed = bits != wanted;
     if changed {
         // `fchmod` on the descriptor: the file that was checked is the one changed.
-        file.set_permissions(fs::Permissions::from_mode(wanted))?;
+        file.set_permissions(permissions(wanted))?;
     }
     // Recursing goes by path again: only into the folder that was opened, not one swapped in since.
-    let still_dir = is_dir
-        && fs::symlink_metadata(path)
-            .is_ok_and(|now| now.is_dir() && now.ino() == meta.ino() && now.dev() == meta.dev());
+    let still_dir =
+        is_dir && fs::symlink_metadata(path).is_ok_and(|now| now.is_dir() && same_file(&now, &meta));
     Ok(Tightened { changed, dir: still_dir })
 }
 
@@ -164,13 +163,13 @@ fn tighten_nofollow(path: &Path, dir_mode: u32) -> io::Result<Tightened> {
 mod tests {
     use std::ffi::OsStr;
     use std::fs;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
 
     use super::{create_private_file, ensure_private_dir, make_tree_private};
+    use crate::platform::fs::{mode as mode_of, permissions, symlink};
 
     fn mode(path: &Path) -> u32 {
-        fs::symlink_metadata(path).expect("exists").permissions().mode() & 0o777
+        mode_of(&fs::symlink_metadata(path).expect("exists")) & 0o777
     }
 
     #[test]
@@ -179,16 +178,16 @@ mod tests {
         let elsewhere = tempfile::tempdir().expect("temp dir");
         let data = root.path().join("data");
         fs::create_dir_all(data.join("logs")).expect("dirs");
-        fs::set_permissions(&data, fs::Permissions::from_mode(0o755)).expect("chmod");
-        fs::set_permissions(data.join("logs"), fs::Permissions::from_mode(0o775)).expect("chmod");
+        fs::set_permissions(&data, permissions(0o755)).expect("chmod");
+        fs::set_permissions(data.join("logs"), permissions(0o775)).expect("chmod");
         fs::write(data.join("config.json"), "{}").expect("writes");
-        fs::set_permissions(data.join("config.json"), fs::Permissions::from_mode(0o644)).expect("chmod");
+        fs::set_permissions(data.join("config.json"), permissions(0o644)).expect("chmod");
         fs::write(data.join("tool"), "#!/bin/sh").expect("writes");
-        fs::set_permissions(data.join("tool"), fs::Permissions::from_mode(0o755)).expect("chmod");
+        fs::set_permissions(data.join("tool"), permissions(0o755)).expect("chmod");
         let outside = elsewhere.path().join("theirs.txt");
         fs::write(&outside, "x").expect("writes");
-        fs::set_permissions(&outside, fs::Permissions::from_mode(0o644)).expect("chmod");
-        std::os::unix::fs::symlink(&outside, data.join("link")).expect("links");
+        fs::set_permissions(&outside, permissions(0o644)).expect("chmod");
+        symlink(&outside, data.join("link")).expect("links");
 
         assert_eq!(
             make_tree_private(&data, &|_| true).expect("walks"),
@@ -211,11 +210,11 @@ mod tests {
         fs::create_dir_all(data.join("someone-elses")).expect("dirs");
         for (name, mode) in [("config.json", 0o644), ("notes.txt", 0o644), ("logs/locked.log", 0o244)] {
             fs::write(data.join(name), "x").expect("writes");
-            fs::set_permissions(data.join(name), fs::Permissions::from_mode(mode)).expect("chmod");
+            fs::set_permissions(data.join(name), permissions(mode)).expect("chmod");
         }
         fs::write(data.join("logs/today.log"), "x").expect("writes");
-        fs::set_permissions(data.join("logs/today.log"), fs::Permissions::from_mode(0o644)).expect("chmod");
-        fs::set_permissions(data.join("someone-elses"), fs::Permissions::from_mode(0o755)).expect("chmod");
+        fs::set_permissions(data.join("logs/today.log"), permissions(0o644)).expect("chmod");
+        fs::set_permissions(data.join("someone-elses"), permissions(0o755)).expect("chmod");
 
         let ours = |name: &OsStr| name == "logs" || name == "config.json";
         make_tree_private(&data, &ours).expect("walks");
@@ -234,9 +233,9 @@ mod tests {
     fn a_link_in_place_of_a_private_folder_is_refused() {
         let root = tempfile::tempdir().expect("temp dir");
         let elsewhere = tempfile::tempdir().expect("temp dir");
-        fs::set_permissions(elsewhere.path(), fs::Permissions::from_mode(0o755)).expect("chmod");
+        fs::set_permissions(elsewhere.path(), permissions(0o755)).expect("chmod");
         let link = root.path().join("data");
-        std::os::unix::fs::symlink(elsewhere.path(), &link).expect("links");
+        symlink(elsewhere.path(), &link).expect("links");
         assert!(ensure_private_dir(&link).is_err());
         assert!(make_tree_private(&link, &|_| true).is_err());
         assert_eq!(mode(elsewhere.path()), 0o755);
@@ -249,7 +248,7 @@ mod tests {
         create_private_file(&file).expect("creates");
         assert_eq!(mode(&file), 0o600);
         fs::write(&file, "data").expect("writes");
-        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).expect("chmod");
+        fs::set_permissions(&file, permissions(0o644)).expect("chmod");
         create_private_file(&file).expect("tightens");
         assert_eq!(mode(&file), 0o600);
         assert_eq!(fs::read_to_string(&file).expect("reads"), "data");

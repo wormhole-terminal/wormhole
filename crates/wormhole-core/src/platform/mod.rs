@@ -13,4 +13,6 @@ pub mod open_in;
 pub mod process;
 pub mod quit_signal;
 pub mod socket;
+#[cfg(unix)]
+mod unix;
 pub mod user;
