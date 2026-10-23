@@ -11,7 +11,7 @@ use wormhole_core::storage::paths::ProfileId;
 
 use super::hub::{LoadedProject, ProjectHub, load_project};
 use super::{hub, hub_of, hub_of_mut, profiles, shown_profile};
-use crate::app_state::{AppState, app};
+use crate::app_state::app;
 
 /// Bring the copy of each project in `roots` that `profile`'s hub holds up to date. A project is read again
 /// only when a file it was read from changed (a few `stat`s otherwise); its trust status is recomputed
@@ -116,12 +116,7 @@ pub(super) fn projects_changed(profile: &ProfileId, cx: &mut App) {
 /// Every window looks again for the project each of its terminals is in (one was made, or what a
 /// view shows of one changed).
 pub(super) fn reload_projects(cx: &mut App) {
-    // Deferred: this may run inside a window's own update.
-    cx.defer(|cx| {
-        for window in app(cx).windows.clone() {
-            AppState::with_workspace(&window, cx, |ws, _, cx| ws.refresh_features(cx));
-        }
-    });
+    crate::window::refresh_all_features(cx);
     cx.refresh_windows();
 }
 

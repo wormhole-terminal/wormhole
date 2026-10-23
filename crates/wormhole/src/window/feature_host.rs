@@ -13,6 +13,7 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::actions::gpui_action;
+use crate::app_state::{AppState, app};
 use crate::sidebar::{RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
@@ -20,6 +21,17 @@ use crate::window::feature::{
     CloseAlso, CloseExtra, CloseOf, CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake,
     TabDef,
 };
+
+/// Every window looks again at what its features show of the world outside the app, for a change that
+/// concerns them all (a project's trust or files). Deferred: it may be called from inside a window's own
+/// update, and each window's lease is taken in turn.
+pub(crate) fn refresh_all_features(cx: &mut App) {
+    cx.defer(|cx| {
+        for window in app(cx).windows.clone() {
+            AppState::with_workspace(&window, cx, |ws, _, cx| ws.refresh_features(cx));
+        }
+    });
+}
 
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the

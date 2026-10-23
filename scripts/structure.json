@@ -205,7 +205,13 @@
       "api": [
         "feature",
         "facts",
-        "repo"
+        "repo",
+        "refresh_all_features"
+      ],
+      "workspace_files": [
+        "def.rs",
+        "api.rs",
+        "devctl.rs"
       ],
       "frame": [
         "src/window/",

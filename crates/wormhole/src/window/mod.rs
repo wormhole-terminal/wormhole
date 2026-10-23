@@ -61,6 +61,7 @@ pub(crate) mod facts;
 mod failed_tests;
 pub(crate) mod feature;
 mod feature_host;
+pub(crate) use self::feature_host::refresh_all_features;
 mod feature_terminals;
 #[cfg(test)]
 mod feature_tests;

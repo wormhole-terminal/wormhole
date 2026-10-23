@@ -38,10 +38,13 @@ crates/<crate>/src, tests included:
   impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate); the
                     `pending` folders inside a home are not exempt: their blocks are counted in the allowlist
   feature-api       a file of the features folder naming a module of the window other than the ones its
-                    contract lists (`feature_rules.api`; `Workspace` as a path is allowed): the features reach
-                    the window through the contract, the facts and the repository read, not its insides
-  features-siblings a file of one feature naming another (`crate::features::<b>`), except the `bridges` the
-                    config lists with a reason (a bridge that no longer names its sibling is stale)
+                    contract lists (`feature_rules.api`; `Workspace` only in the file names of
+                    `feature_rules.workspace_files`): the features reach the window through the contract, the
+                    facts and the repository read, not its insides. A bare `use crate::window;` and a
+                    `super::super::...` path that climbs out of the features folder count too
+  features-siblings a file of one feature naming another (`crate::features::<b>`, also as `super::super::<b>` or
+                    a bare `use crate::features;`), except the `bridges` the config lists with a reason (a bridge
+                    that no longer names its sibling is stale)
   frame-names-no-feature
                     a file of the frame (window, sidebar, onboarding) containing a word that names a feature:
                     the flags and helpers a feature owns, a panel tab by its variant (`feature_rules.frame_bans`)
@@ -956,21 +959,47 @@ def _not_in(regions: List[Tuple[int, int]], offset: int) -> bool:
     return not any(x <= offset < y for x, y in regions)
 
 
+def root_paths(crate: Crate, rel: str, src: "Src", limit: int) -> List[Tuple[List[str], int]]:
+    """Every path a non-test part of a file names, from the crate root, each cut to `limit` names, with
+    where it is: `crate::a::b` as written, and `super::super::a` or `self::a` resolved from the file's module
+    (so a path that climbs out of a folder is the same as one that starts at `crate`). A bare `crate::a` is
+    the one-name path `[a]`."""
+    regions = crate.test_regions(rel)
+    out: List[Tuple[List[str], int]] = []
+    for m in scan(_CRATE_REF, src.clean):
+        if _not_in(regions, m.start()):
+            out.extend((path, m.start()) for path in crate_paths(src.clean, m, limit))
+    for m in scan(_RELATIVE_REF, src.clean):
+        before = src.clean[m.start() - 1:m.start()]
+        if before == ":" or before.isalnum() or before == "_" or not _not_in(regions, m.start()):
+            continue
+        base = scope_at(crate, rel, m.start())
+        n = len(re.findall(r"\bsuper\b", src.clean[m.start():m.start(1)]))
+        if n > len(base):
+            continue
+        base = base[:len(base) - n]
+        out.extend((base + path, m.start()) for path in crate_paths(src.clean, m, limit))
+    return out
+
+
 def rule_feature_api(crate: Crate, cfg: dict, found: Findings) -> None:
     conf = cfg.get("feature_rules") or {}
     if crate.name != conf.get("crate"):
         return
-    allowed = set(conf["api"]) | {"Workspace"}
+    allowed = set(conf["api"])
+    workspace_files = set(conf.get("workspace_files", []))
     for rel, src in crate.files.items():
         if not rel.startswith(conf["features"]) or crate.is_test_file(rel):
             continue
-        regions = crate.test_regions(rel)
-        for m in scan(_CRATE_REF, src.clean):
-            if not _not_in(regions, m.start()):
+        for path, at in root_paths(crate, rel, src, 2):
+            if not path or path[0] != "window":
                 continue
-            for path in crate_paths(src.clean, m, 2):
-                if len(path) >= 2 and path[0] == "window" and path[1] not in allowed:
-                    _add(found, "%s :: crate::window::%s" % (src.rel, path[1]), crate.name, src.at(m.start()))
+            # `use crate::window;` names nothing yet but lets `window::x` reach anything after it.
+            name = path[1] if len(path) >= 2 else "(bare)"
+            if name == "Workspace" and rel.rsplit("/", 1)[-1] in workspace_files:
+                continue
+            if name not in allowed:
+                _add(found, "%s :: crate::window::%s" % (src.rel, name), crate.name, src.at(at))
 
 
 def bridge_uses(crate: Crate, conf: dict) -> Dict[Tuple[str, str], int]:
@@ -980,13 +1009,9 @@ def bridge_uses(crate: Crate, conf: dict) -> Dict[Tuple[str, str], int]:
         bridged = conf.get("bridges", {}).get(rel)
         if not bridged or crate.is_test_file(rel):
             continue
-        regions = crate.test_regions(rel)
-        for m in scan(_CRATE_REF, src.clean):
-            if not _not_in(regions, m.start()):
-                continue
-            for path in crate_paths(src.clean, m, 2):
-                if len(path) >= 2 and path[0] == "features" and path[1] in bridged:
-                    uses[(rel, path[1])] = uses.get((rel, path[1]), 0) + 1
+        for path, _ in root_paths(crate, rel, src, 2):
+            if len(path) >= 2 and path[0] == "features" and path[1] in bridged:
+                uses[(rel, path[1])] = uses.get((rel, path[1]), 0) + 1
     return uses
 
 
@@ -1003,13 +1028,13 @@ def rule_features_siblings(crate: Crate, cfg: dict, found: Findings) -> None:
         if own == "mod":  # the table itself lists every feature
             continue
         bridged = conf.get("bridges", {}).get(rel, {})
-        regions = crate.test_regions(rel)
-        for m in scan(_CRATE_REF, src.clean):
-            if not _not_in(regions, m.start()):
+        for path, at in root_paths(crate, rel, src, 2):
+            if not path or path[0] != "features":
                 continue
-            for path in crate_paths(src.clean, m, 2):
-                if len(path) >= 2 and path[0] == "features" and path[1] != own and path[1] not in bridged:
-                    _add(found, "%s :: crate::features::%s" % (src.rel, path[1]), crate.name, src.at(m.start()))
+            # `use crate::features;` lets `features::b` through, unseen.
+            name = path[1] if len(path) >= 2 else "(bare)"
+            if name != own and name not in bridged:
+                _add(found, "%s :: crate::features::%s" % (src.rel, name), crate.name, src.at(at))
 
 
 def stale_bridges(crate: Crate, cfg: dict) -> List[str]:
@@ -1690,7 +1715,7 @@ def selftest() -> int:
 
         # feature-api, features-siblings, frame-names-no-feature, state-fields: the window and its features.
         rules_cfg = dict(_fixture_cfg(), feature_rules={
-            "crate": "app", "features": "src/features/", "api": ["feature", "facts"],
+            "crate": "app", "features": "src/features/", "api": ["feature", "facts"], "workspace_files": ["def.rs"],
             "frame": ["src/window/", "src/sidebar/"],
             "frame_bans": {"notes_on": r"\bnotes_on\s*\(", "TabId variant": r"TabId\s*::\s*(?:Changes|Notes)\b"},
             "bridges": {"src/features/a/bridge.rs": {"b": "a needs b once"}},
@@ -1707,22 +1732,33 @@ def selftest() -> int:
             "crates/app/src/big.rs": "struct Big<T: Clone> {\n    a: T,\n    b: Vec<fn(u8) -> u8>,\n}\nstruct Small { a: u8 }\n",
             "crates/app/src/features/mod.rs": "mod a;\nmod b;\nuse crate::features::a::X;\nuse crate::features::b::Y;\n",
             "crates/app/src/features/a/mod.rs":
-                "mod bridge;\nuse crate::window::feature::F;\nuse crate::window::Workspace;\n"
+                "mod bridge;\nmod def;\nmod holes;\nuse crate::window::feature::F;\nuse crate::window::Workspace;\n"
                 "use crate::window::{facts::W, sessions::S, focus::G};\nuse crate::features::a::own::Z;\n"
                 "use crate::features::b::Y;\n// use crate::window::sessions::C;\n"
                 "#[cfg(test)]\nmod tests {\n    use crate::window::view_tests::V;\n    use crate::features::b::T;\n}\n",
             "crates/app/src/features/a/bridge.rs": "use crate::features::b::Y;\nuse crate::features::c::W;\n",
             "crates/app/src/features/b.rs": "use crate::features::a::A;\n",
+            # Workspace is the one file name's business; the bare and relative forms are caught.
+            "crates/app/src/features/a/def.rs": "use crate::window::Workspace;\nuse crate::window::feature::F;\n",
+            "crates/app/src/features/a/holes.rs":
+                "use crate::window;\nuse crate::features;\nuse super::super::super::window::sessions::S;\n"
+                "use super::super::b::Y;\nuse super::super::a::own::Z;\nuse super::sibling::Q;\n"
+                "use crate::{window, features::b::T};\nfn f() { let myself::x = 1; }\n",
         }
         an = make(files, rules_cfg)
         expect("feature-api", {k: it.count for k, it in an.found["feature-api"].items()},
                {"crates/app/src/features/a/mod.rs :: crate::window::sessions": 1,
-                "crates/app/src/features/a/mod.rs :: crate::window::focus": 1})
+                "crates/app/src/features/a/mod.rs :: crate::window::focus": 1,
+                "crates/app/src/features/a/mod.rs :: crate::window::Workspace": 1,
+                "crates/app/src/features/a/holes.rs :: crate::window::(bare)": 2,
+                "crates/app/src/features/a/holes.rs :: crate::window::sessions": 1})
         expect("features-siblings",
                {k: it.count for k, it in an.found["features-siblings"].items()},
                {"crates/app/src/features/a/mod.rs :: crate::features::b": 1,
                 "crates/app/src/features/a/bridge.rs :: crate::features::c": 1,
-                "crates/app/src/features/b.rs :: crate::features::a": 1})
+                "crates/app/src/features/b.rs :: crate::features::a": 1,
+                "crates/app/src/features/a/holes.rs :: crate::features::(bare)": 1,
+                "crates/app/src/features/a/holes.rs :: crate::features::b": 2})
         expect("frame-names-no-feature",
                {k: it.count for k, it in an.found["frame-names-no-feature"].items()},
                {"crates/app/src/window/mod.rs :: notes_on": 1, "crates/app/src/window/mod.rs :: TabId variant": 1,
