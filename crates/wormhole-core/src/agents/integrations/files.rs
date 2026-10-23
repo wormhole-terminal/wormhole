@@ -5,13 +5,14 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
+use crate::platform::paths;
 use crate::storage::files::{self, LinkPolicy};
 
 /// Suffix of the copy kept next to a config file before we change it.
 pub(crate) const BACKUP_SUFFIX: &str = "wormhole-backup";
 
 pub(super) fn display(path: &Path) -> String {
-    let home = dirs::home_dir().unwrap_or_default();
+    let home = paths::home().unwrap_or_default();
     match path.strip_prefix(&home) {
         Ok(rest) if !home.as_os_str().is_empty() => format!("~/{}", rest.display()),
         _ => path.display().to_string(),

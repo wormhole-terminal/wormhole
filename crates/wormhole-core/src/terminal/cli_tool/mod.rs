@@ -26,7 +26,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::ipc::control::COMMAND_NAME;
-use crate::platform::shell;
+use crate::platform::{paths, shell};
 use crate::storage::files::{self, LinkPolicy};
 pub use path::{Advice, advice, login_path, login_shell_path, on_path, path_with_first};
 
@@ -216,7 +216,7 @@ impl Targets {
 
     /// [`DIR_VAR`]'s folder when it is set, the system's otherwise.
     pub fn from_env() -> Self {
-        Self::resolve(std::env::var_os(DIR_VAR), dirs::home_dir().as_deref())
+        Self::resolve(std::env::var_os(DIR_VAR), paths::home().as_deref())
     }
 
     fn resolve(over: Option<std::ffi::OsString>, home: Option<&Path>) -> Self {

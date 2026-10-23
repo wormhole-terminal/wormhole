@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use super::paths;
 use super::user::UserId;
 
 pub use super::unix::socket::{Listener, Stream};
@@ -27,7 +28,7 @@ pub fn fits(path: &Path) -> bool {
 /// (`$TMPDIR`, when it is absolute), else in `/tmp`. A socket outside the folder it was meant for is in a
 /// directory others may write to, so whoever connects there checks the peer ([`peer_is_same_user`]).
 pub fn socket_in(preferred: &Path, fallback_name: &str) -> PathBuf {
-    socket_in_with(preferred, fallback_name, std::env::var_os("TMPDIR").as_deref())
+    socket_in_with(preferred, fallback_name, Some(paths::temp().as_os_str()))
 }
 
 /// [`socket_in`] with the temporary folder given.

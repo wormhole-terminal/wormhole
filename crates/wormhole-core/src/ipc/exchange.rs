@@ -15,6 +15,7 @@ use super::control::sessions;
 use super::control::{
     Action, PROTOCOL_VERSION, Reply, Request, SEND_TEXT_MAX_BYTES, help, parse, print, print_err, render,
 };
+use crate::platform::paths;
 use crate::platform::socket::Stream;
 
 /// Why no reply came.
@@ -74,7 +75,7 @@ pub fn run(args: &[String]) -> i32 {
         return sessions::run(&args[1..]);
     }
     let cwd = std::env::current_dir().unwrap_or_default();
-    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let home = paths::home();
     let cli = match parse(args, &cwd, home.as_deref()) {
         Ok(Parsed::Help) => {
             print(&help());

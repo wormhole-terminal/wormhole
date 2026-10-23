@@ -238,7 +238,7 @@ impl Pty {
             .into_iter()
             .map(|(name, value)| (name.to_string(), value.to_string()))
             .collect();
-        let cwd = std::env::var_os("HOME").map(PathBuf::from);
+        let cwd = sys::paths::home();
         Self::start(size, options, Launch { shell, cwd, env })
     }
 

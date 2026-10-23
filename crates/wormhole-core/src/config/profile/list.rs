@@ -7,6 +7,7 @@ use serde_json::Value;
 
 use super::copy::copy_settings;
 use super::model::{Profile, ProfileError, first_letter};
+use crate::platform::paths;
 use crate::storage::files::{self, LinkPolicy};
 use crate::storage::paths::{DataRoot, ProfileId};
 use crate::view::sidebar::GroupColor;
@@ -277,7 +278,7 @@ impl ProfileList {
     /// in Work too"): the one with the deepest matching folder. `None` leaves it to the profile
     /// the window is in.
     pub fn profile_for_folder(&self, path: &Path) -> Option<&Profile> {
-        self.profile_for_folder_with_home(path, dirs::home_dir().as_deref())
+        self.profile_for_folder_with_home(path, paths::home().as_deref())
     }
 
     pub(super) fn profile_for_folder_with_home(&self, path: &Path, home: Option<&Path>) -> Option<&Profile> {

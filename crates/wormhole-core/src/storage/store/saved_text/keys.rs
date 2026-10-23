@@ -21,6 +21,7 @@ use anyhow::{Context as _, Result, bail};
 
 use super::cipher::{KEY_LEN, Key, new_key};
 use crate::platform::keychain;
+use crate::platform::paths;
 
 /// The development build's key file, in the profile's folder. For testing only: a key next to the
 /// text it seals keeps nothing from anyone who can read the folder.
@@ -76,7 +77,7 @@ fn to_key(bytes: &[u8], what: &str) -> Result<Key> {
 
 /// The real data folder (the one without `WORMHOLE_DATA_DIR`).
 fn real_data_dir() -> Option<PathBuf> {
-    dirs::data_dir().map(|base| base.join(crate::storage::paths::data_dir_name()))
+    paths::data_base().map(|base| base.join(crate::storage::paths::data_dir_name()))
 }
 
 /// Whether `dir` is the real data folder or inside it.

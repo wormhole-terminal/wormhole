@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::platform::paths as platform_paths;
+
 /// The Default profile's id. It always exists and keeps the data folder's own files.
 pub const DEFAULT_ID: &str = "default";
 
@@ -85,7 +87,7 @@ pub fn data_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("WORMHOLE_DATA_DIR") {
         return PathBuf::from(dir);
     }
-    dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
+    platform_paths::data_base().unwrap_or_else(|| PathBuf::from(".")).join(data_dir_name())
 }
 
 /// The data folder's name in Application Support.

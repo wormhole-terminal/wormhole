@@ -8,6 +8,7 @@ use crate::agents::integrations::{self, State};
 use crate::agents::{self, AGENTS};
 use crate::ipc::control::{AgentFact, AgentsFacts, HooksFact, LookFacts, WelcomeState};
 use crate::onboarding::intro::Handover;
+use crate::platform::paths;
 
 /// The agents on PATH, each with the state of its hooks under `home`, and how many others are
 /// recognised. A few hundred `stat`s and a few small reads, so off the UI thread.
@@ -59,7 +60,7 @@ pub fn tour_state(home: &Path) -> WelcomeState {
 
 /// The home folder, as the program sees it.
 pub fn home() -> PathBuf {
-    std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default()
+    paths::home().unwrap_or_default()
 }
 
 #[cfg(test)]

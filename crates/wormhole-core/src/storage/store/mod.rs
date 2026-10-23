@@ -28,6 +28,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
 
+use crate::platform::paths;
 use crate::storage::paths::{data_dir, data_dir_name};
 use saved_text::platform::{self, Platform};
 
@@ -79,7 +80,7 @@ pub fn migrate_legacy_data() -> Result<Option<PathBuf>> {
     if std::env::var_os("WORMHOLE_DATA_DIR").is_some() {
         return Ok(None);
     }
-    let Some(base) = dirs::data_dir() else { return Ok(None) };
+    let Some(base) = paths::data_base() else { return Ok(None) };
     migrate_legacy_data_in(&base)
 }
 

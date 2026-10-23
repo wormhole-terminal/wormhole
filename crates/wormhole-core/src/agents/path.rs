@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use super::integrations::{self, State};
 use super::{AGENTS, Agent, AgentId};
 use crate::platform::fs as platform_fs;
+use crate::platform::paths;
 
 /// Whether the agent's command is on `PATH` (plus the usual install spots
 /// that apps launched from Finder don't see).
@@ -18,7 +19,7 @@ pub(crate) fn find_on_path(command: &str) -> Option<PathBuf> {
     let dirs = search_dirs(
         std::env::var_os("WORMHOLE_AGENT_PATH"),
         std::env::var_os("PATH").unwrap_or_default(),
-        &dirs::home_dir().unwrap_or_default(),
+        &paths::home().unwrap_or_default(),
     );
     dirs.into_iter().map(|dir| dir.join(command)).find(|p| is_executable(p))
 }

@@ -19,6 +19,8 @@ use std::path::{Path, PathBuf};
 
 use super::AgentId;
 
+use crate::platform::paths;
+
 pub use payload::describe;
 pub use signals::{Signal, answer_key, signal};
 
@@ -77,7 +79,7 @@ pub fn spec(agent: AgentId) -> Option<&'static Spec> {
 pub fn home() -> PathBuf {
     std::env::var_os("WORMHOLE_AGENT_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|| dirs::home_dir().unwrap_or_default())
+        .unwrap_or_else(|| paths::home().unwrap_or_default())
 }
 
 impl Spec {

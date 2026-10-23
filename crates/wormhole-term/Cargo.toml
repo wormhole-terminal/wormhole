@@ -13,6 +13,8 @@ wormhole-vt.workspace = true
 # A hosted terminal's host side (`hosted`) speaks the session host's protocol types.
 wormhole-wire.workspace = true
 anyhow.workspace = true
+# Where the person's home, the data folder and the temporary folder are (`sys::paths`).
+dirs.workspace = true
 libc.workspace = true
 # The agent registry's ids are stored and sent by name.
 serde.workspace = true

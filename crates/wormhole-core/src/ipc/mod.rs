@@ -40,6 +40,7 @@ use std::sync::OnceLock;
 
 use sha2::{Digest, Sha256};
 
+use crate::platform::paths;
 use crate::platform::socket::socket_in_with;
 use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
@@ -77,7 +78,7 @@ pub fn tab_var(name: &str) -> Option<String> {
 }
 
 pub fn socket_path() -> PathBuf {
-    SOCKET_PATH.get_or_init(|| socket_path_in(&std::env::temp_dir(), &data_dir())).clone()
+    SOCKET_PATH.get_or_init(|| socket_path_in(&paths::temp(), &data_dir())).clone()
 }
 
 /// `<temp>/wormhole-<uid>-<hash of the data dir>.sock`: one per user and data

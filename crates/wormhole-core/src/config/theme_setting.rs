@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use super::{Config, Settings, ThemeMode};
+use crate::platform::paths;
 use crate::storage::files::{self, LinkPolicy};
 use crate::theme;
 use crate::theme::registry::{self, DEFAULT_THEME, ThemeSource, UserTheme, UserThemes, load_theme_path};
@@ -236,8 +237,8 @@ impl ThemeStamp {
 }
 
 fn expand_home(path: &str) -> String {
-    match (path.strip_prefix("~/"), std::env::var("HOME")) {
-        (Some(rest), Ok(home)) => format!("{home}/{rest}"),
+    match (path.strip_prefix("~/"), paths::home()) {
+        (Some(rest), Some(home)) => format!("{}/{rest}", home.display()),
         _ => path.to_string(),
     }
 }

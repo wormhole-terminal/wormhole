@@ -9509,6 +9509,7 @@ dependencies = [
  "anyhow",
  "async-channel",
  "base64 0.22.1",
+ "dirs 7.0.0",
  "flate2",
  "image",
  "libc",

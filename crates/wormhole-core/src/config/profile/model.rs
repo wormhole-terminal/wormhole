@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::agents::AgentId;
+use crate::platform::paths;
 use crate::storage::paths::ProfileId;
 use crate::view::sidebar::GroupColor;
 
@@ -222,7 +223,7 @@ impl Profile {
     /// the git identity, the agents' login folders, then the environment the person wrote, which
     /// has the last word over the first two.
     pub fn terminal_env(&self) -> BTreeMap<String, String> {
-        self.terminal_env_with_home(dirs::home_dir().as_deref())
+        self.terminal_env_with_home(paths::home().as_deref())
     }
 
     pub(super) fn terminal_env_with_home(&self, home: Option<&Path>) -> BTreeMap<String, String> {
@@ -259,11 +260,7 @@ impl Profile {
 
     /// Where new terminals start, if the profile says.
     pub fn start_folder(&self) -> Option<PathBuf> {
-        if self.start_dir.is_empty() {
-            None
-        } else {
-            expand_home(&self.start_dir, dirs::home_dir().as_deref())
-        }
+        if self.start_dir.is_empty() { None } else { expand_home(&self.start_dir, paths::home().as_deref()) }
     }
 
     /// Whether `path` is inside one of the folders that open in this profile, and how deep that

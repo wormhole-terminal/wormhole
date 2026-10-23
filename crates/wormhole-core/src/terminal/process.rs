@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use wormhole_term::{Launch, Shell, types};
 
+use crate::platform::paths;
 use crate::terminal::shells::{self, ShellCommand, program_name};
 
 /// How to start a tab's shell. It lives here because what runs and its environment are read from
@@ -212,7 +213,7 @@ fn launch_options_with(options: &SpawnOptions, shell: Shell, command_dir: Option
             env.insert((*old).into(), value);
         }
     }
-    Launch { shell, cwd: cwd.clone().or_else(|| std::env::var_os("HOME").map(PathBuf::from)), env }
+    Launch { shell, cwd: cwd.clone().or_else(paths::home), env }
 }
 
 #[cfg(test)]
