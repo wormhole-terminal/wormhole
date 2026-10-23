@@ -31,7 +31,7 @@ impl Workspace {
     /// terminal in front isn't handled at all, which is what greys its menu item out.
     pub(super) fn with_actions(&self, root: Div, cx: &mut Context<Self>) -> Div {
         use wormhole_core::view::panes::{Axis, Direction, Preset};
-        let has_folder = self.active_terminal().read(cx).cwd.is_some();
+        let has_folder = self.active_session().pane.summary.cwd.is_some();
         let split = self.active_split().is_some();
         let root = root
             .on_action(cx.listener(|this, _: &NewSession, window, cx| this.new_session(window, cx)))

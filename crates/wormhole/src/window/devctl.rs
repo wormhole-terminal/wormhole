@@ -156,7 +156,7 @@ impl Workspace {
                         "row {} id={} {:?} {position}/{of}{}{bracket}{}{}{}{}\n",
                         session + 1,
                         own.id,
-                        own.name(cx),
+                        own.name(),
                         number.map(|n| format!(" cmd={n}")).unwrap_or_default(),
                         if marks.chain { " chain" } else { "" },
                         if marks.on_screen { " on_screen" } else { "" },
@@ -309,7 +309,7 @@ impl Workspace {
                 // exit code (the row's cue).
                 terminal.program_name().map(|name| format!(" program={name:?}")).unwrap_or_default(),
                 terminal.failure().map(|failure| format!(" failed=exit {}", failure.code)).unwrap_or_default(),
-                session.name(cx),
+                session.name(),
                 terminal.cwd,
                 if session.pinned { " pinned" } else { "" },
                 session.split.map(|id| format!(" split={id}")).unwrap_or_default(),

@@ -26,7 +26,7 @@ impl Workspace {
     pub(crate) fn tick(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.ticks += 1;
         self.sync_appearance(cx);
-        self.track_window(window, cx);
+        self.track_window(window);
         // Folders are also re-read when a terminal prints (see `TerminalView`); this
         // is the backstop. Agent detection walks the process tree, so less often.
         let refresh_agent = self.ticks % 5 == 1;
@@ -63,6 +63,9 @@ impl Workspace {
                 attention::tell(Attention::Seen(pane.id), cx);
             }
         }
+        // What the window shows of each terminal, taken again where the terminal didn't say so itself
+        // (this tick changed some above): then it is drawn.
+        self.sync_summaries(cx);
         // A tab whose words change with time (Usage's "resets 34m") is redrawn on its own period.
         if changed || self.tab_refresh_due() {
             cx.notify();

@@ -25,7 +25,7 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         action: ActionId::ShowUsage,
         on_show: None,
         // It reads the same `TerminalView::agent` the title row's context status is keyed on.
-        shown: |facts, cx| facts.agent_on_screen(cx),
+        shown: |facts, _| facts.agent_on_screen(),
         count: None,
         spoken: |_, _, _| spoken::panel_tab(PanelTab::Usage),
         view: view::tab,
@@ -35,8 +35,8 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         returns_to_previous: true,
     }],
     // The key is the window's (it binds each offered tab's action); its menu line goes with the tab.
-    menu: Some(|_, facts, state, cx| {
-        if !facts.agent_on_screen(cx) {
+    menu: Some(|_, facts, state, _| {
+        if !facts.agent_on_screen() {
             state.hidden.push(ActionId::ShowUsage);
         }
     }),

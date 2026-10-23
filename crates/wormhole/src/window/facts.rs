@@ -15,7 +15,7 @@ use gpui_kit::*;
 use wormhole_core::config::{FeatureMask, TabId};
 use wormhole_core::storage::paths::ProfileId;
 
-use crate::terminal_view::TerminalView;
+use crate::terminal_view::{TerminalSummary, TerminalView};
 use crate::window::Workspace;
 use crate::window::repo::GitState;
 use crate::window::session::{RepoRoot, Session};
@@ -54,6 +54,9 @@ pub(crate) struct WindowFacts<'a> {
 pub(crate) struct SessionFacts<'a> {
     pub id: i64,
     pub terminal: &'a Entity<TerminalView>,
+    /// What the window knows of the terminal (`window::summaries`): read this, not the terminal,
+    /// so the window is drawn when a fact changes and not for every frame of output.
+    pub summary: &'a TerminalSummary,
     /// `Session.git` stays on the session (the sidebar's rows, the title row and the status bar read
     /// it too, so it is not a feature's); the facts lend it, so the Changes tab reads the status
     /// without the window naming its types and without a copy.
@@ -66,20 +69,21 @@ impl<'a> SessionFacts<'a> {
         Self {
             id: session.id,
             terminal: session.terminal(),
+            summary: &session.pane.summary,
             git: &session.git,
             repo_root: &session.repo_root,
         }
     }
 
-    /// The terminal's folder, if it reports one. Reads the terminal, so it takes the caller's `cx`.
-    pub fn folder<'c>(&self, cx: &'c App) -> Option<&'c Path> {
-        self.terminal.read(cx).cwd.as_deref()
+    /// The terminal's folder, if it reports one.
+    pub fn folder(&self) -> Option<&'a Path> {
+        self.summary.cwd.as_deref()
     }
 
     /// The folder the terminal belongs to as the sidebar's bands name it: its repository's root, else the
     /// folder itself. `None` until its shell has said where it is.
-    pub fn band_folder(&self, cx: &App) -> Option<PathBuf> {
-        Some(self.repo_root.of(self.folder(cx)?))
+    pub fn band_folder(&self) -> Option<PathBuf> {
+        Some(self.repo_root.of(self.folder()?))
     }
 }
 
@@ -113,8 +117,8 @@ impl<'a> WindowFacts<'a> {
     }
 
     /// Whether a coding agent is detected in a terminal on screen.
-    pub fn agent_on_screen(&self, cx: &App) -> bool {
-        self.on_screen().any(|session| session.terminal.read(cx).agent.is_some())
+    pub fn agent_on_screen(&self) -> bool {
+        self.on_screen().any(|session| session.summary.agent.is_some())
     }
 }
 

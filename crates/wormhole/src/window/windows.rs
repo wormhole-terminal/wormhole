@@ -207,7 +207,7 @@ impl Workspace {
         }
         detail.push_str(&note);
         let question = dialog::CloseQuestion {
-            title: session::close_session_title(&session.name(cx)).into(),
+            title: session::close_session_title(&session.name()).into(),
             detail: detail.into(),
             confirm: "Close",
         };
@@ -278,12 +278,12 @@ impl Workspace {
     }
 
     /// Per tick: remember where the window is, and name it after the session.
-    pub(super) fn track_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn track_window(&mut self, window: &mut Window) {
         if let Some(moved) = self.bounds_watch.moved(window.window_bounds(), self.bounds.as_deref()) {
             self.bounds = Some(moved);
             self.dirty = true;
         }
-        let title = self.active_session().name(cx);
+        let title = self.active_session().name();
         if title != self.title {
             window.set_window_title(&title);
             self.title = title;

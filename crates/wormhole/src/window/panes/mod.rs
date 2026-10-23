@@ -71,6 +71,7 @@ impl Workspace {
             self.dirty = true;
         }
         self.sessions[ix].terminal().update(cx, |t, _| t.acknowledge());
+        self.sync_summary_at(ix, cx);
         attention::tell(Attention::Seen(id), cx);
         cx.notify();
     }
@@ -85,6 +86,7 @@ impl Workspace {
     ) {
         let Some(ix) = self.find_session(id) else { return };
         match event {
+            // Taken when the terminal notified (`Pane::new`), which is also when it said so.
             TerminalEvent::SummaryChanged => {}
             // Its row names the host it has now (none, after a fallback or a lost host).
             TerminalEvent::HostChanged => self.dirty = true,
@@ -99,7 +101,10 @@ impl Workspace {
                 }
             }
             // The workspace draws the find bar.
-            TerminalEvent::FindChanged => cx.notify(),
+            TerminalEvent::FindChanged => {
+                self.sync_summary_at(ix, cx);
+                cx.notify();
+            }
             TerminalEvent::Restart => self.restart_pane(ix, window, cx),
             // A program (with `allow_window_ops`) asks the window for something: it is read as
             // being about the pane that asked.
@@ -444,17 +449,17 @@ impl Workspace {
         let gaps = settings_in(&self.profile, cx).split_gaps;
         let id = pane.id;
         let (status, told, agent, folder) = {
-            let terminal = pane.terminal.read(cx);
+            let summary = &pane.summary;
             // Cut from the front, as the sidebar's rows do: the end tells two folders apart.
             let folder = wormhole_core::view::sidebar::wording::place_detail(
-                terminal.cwd.as_deref(),
+                summary.cwd.as_deref(),
                 home_dir(),
                 PANE_PATH_MAX,
             );
-            (terminal.status(), terminal.source().told(), terminal.agent, folder)
+            (summary.status, summary.source.told(), summary.agent, folder)
         };
         // The terminal's own name, as its sidebar row says it (a rename shows here too).
-        let name = self.find_session(id).map_or_else(|| pane.label(cx), |ix| self.sessions[ix].name(cx));
+        let name = self.find_session(id).map_or_else(|| pane.label(), |ix| self.sessions[ix].name());
         let zoomed = split.layout.zoomed() == Some(id);
         let menu_anchor = Anchor::default();
         let zoom_tip = keymap::with_key(if zoomed { "Unzoom pane" } else { "Zoom pane" }, ActionId::ZoomPane);

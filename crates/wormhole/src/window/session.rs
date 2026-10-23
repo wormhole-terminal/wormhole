@@ -11,7 +11,7 @@ use wormhole_core::view::sidebar::{SplitId, names};
 
 use crate::app_state::app;
 use crate::dialog::shortened;
-use crate::terminal_view::{Status, TerminalEvent, TerminalView};
+use crate::terminal_view::{GridProbe, Status, TerminalEvent, TerminalSummary, TerminalView};
 use crate::window::Workspace;
 use crate::window::feature::Stake;
 use crate::window::repo::GitState;
@@ -25,6 +25,11 @@ pub(crate) struct Pane {
     /// restart and a restored session run the same thing.
     pub shell: Option<String>,
     pub terminal: Entity<TerminalView>,
+    /// What the window shows of the terminal, as of its last change (`window::summaries`): its
+    /// rows, bars and headers read this, never the terminal, so output alone doesn't draw them.
+    pub summary: TerminalSummary,
+    /// Its grid's size as of its last paint: no notification says when it changes.
+    pub grid: GridProbe,
     _observer: Subscription,
     _events: Subscription,
     _focus: Subscription,
@@ -38,7 +43,11 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) -> Self {
-        let observer = cx.observe(&terminal, |_, _, cx| cx.notify());
+        // Whatever the terminal notifies (output, a title, a status): the window hears of it only if
+        // what it shows of the terminal changed.
+        let observer = cx.observe(&terminal, move |this, _, cx| {
+            this.sync_summary(id, cx);
+        });
         let events = cx.subscribe_in(&terminal, window, move |this, _, event: &TerminalEvent, window, cx| {
             this.on_terminal_event(id, *event, window, cx)
         });
@@ -46,18 +55,22 @@ impl Pane {
         // whose notes, git state and keys the window is about, and ⌘D, ⌘W and the find bar act on.
         let handle = terminal.read(cx).focus_handle.clone();
         let focus = cx.on_focus(&handle, window, move |this, window, cx| this.pane_focused(id, window, cx));
-        Self { id, shell, terminal, _observer: observer, _events: events, _focus: focus }
+        let (summary, grid) = {
+            let terminal = terminal.read(cx);
+            (terminal.summary(), terminal.grid_probe())
+        };
+        Self { id, shell, terminal, summary, grid, _observer: observer, _events: events, _focus: focus }
     }
 
     /// The terminal's own name: the title its program set, else what runs in it, the agent,
     /// the program in front or the shell.
-    pub(crate) fn label(&self, cx: &App) -> SharedString {
-        names::process_name(&name_facts(self.terminal.read(cx))).into()
+    pub(crate) fn label(&self) -> SharedString {
+        names::process_name(&self.summary.name_facts()).into()
     }
 
     /// What runs in front, whatever title it set: the agent, the running command or the shell.
-    pub(crate) fn program(&self, cx: &App) -> SharedString {
-        names::program_name(&name_facts(self.terminal.read(cx))).into()
+    pub(crate) fn program(&self) -> SharedString {
+        names::program_name(&self.summary.name_facts()).into()
     }
 }
 
@@ -96,11 +109,11 @@ impl Session {
     }
 
     /// The session's name: the project's, else what runs in its terminal.
-    pub(crate) fn name(&self, cx: &App) -> SharedString {
+    pub(crate) fn name(&self) -> SharedString {
         if let Some(name) = &self.custom_name {
             return name.clone().into();
         }
-        let name = self.pane.label(cx);
+        let name = self.pane.label();
         if name.is_empty() { format!("Terminal {}", self.number).into() } else { name }
     }
 
@@ -169,15 +182,6 @@ impl Session {
     }
 }
 
-/// What runs in a terminal, for its name.
-fn name_facts(terminal: &TerminalView) -> names::NameFacts<'_> {
-    names::NameFacts {
-        title: terminal.title.as_deref(),
-        agent: terminal.agent.map(|id| wormhole_core::agents::agent(id).command),
-        command: terminal.naming_command(),
-        shell: terminal.shell_name(),
-    }
-}
 /// Whether closing a session whose terminal is in `status`, and which has a command running if
 /// `command_running`, asks first. Closing a window asks by the same rule for each of its
 /// sessions.

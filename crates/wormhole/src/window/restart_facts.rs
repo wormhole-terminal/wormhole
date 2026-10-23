@@ -31,7 +31,7 @@ impl Workspace {
             .map(|session| {
                 let terminal = session.terminal().read(cx);
                 RestartFacts {
-                    name: session.name(cx).to_string(),
+                    name: session.name().to_string(),
                     agent: terminal.agent,
                     status: terminal.status(),
                     program: terminal.foreground().map(|foreground| foreground.command.clone()),

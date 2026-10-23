@@ -33,8 +33,8 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         // Whenever the terminal has a folder: its colour is set there, and its project made. It stays while
         // it is the tab on show, so a terminal whose folder isn't known for a moment doesn't pull it out
         // from under the person.
-        shown: |facts, cx| {
-            facts.tab == TabId::Project || facts.active().is_some_and(|session| session.folder(cx).is_some())
+        shown: |facts, _| {
+            facts.tab == TabId::Project || facts.active().is_some_and(|session| session.folder().is_some())
         },
         count: None,
         spoken: |_, _, _| spoken::panel_tab(PanelTab::Project),
@@ -95,7 +95,7 @@ fn menu(
     cx: &App,
 ) {
     let active = facts.active();
-    if active.is_none_or(|session| session.folder(cx).is_none()) || !project_folders_on(facts.profile, cx) {
+    if active.is_none_or(|session| session.folder().is_none()) || !project_folders_on(facts.profile, cx) {
         state.disabled.push(ActionId::ShowProject);
     }
     let Some(active) = active else { return };

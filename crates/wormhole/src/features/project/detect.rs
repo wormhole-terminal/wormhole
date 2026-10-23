@@ -47,12 +47,12 @@ impl Project {
         let mut moved = false;
         let mut folders = Vec::new();
         for session in facts.sessions() {
-            let root = session.folder(cx).and_then(proj::find_project).map(|folder| folder.root);
+            let root = session.folder().and_then(proj::find_project).map(|folder| folder.root);
             let of = self.of.entry(session.id).or_default();
             moved |= of.root != root;
             of.root = root;
             roots.extend(of.root.clone());
-            folders.extend(session.band_folder(cx));
+            folders.extend(session.band_folder());
         }
         // The project that governs each folder a band names holds that folder's colour; it may be above
         // the terminal's own (a terminal in a nested project) or none.

@@ -75,7 +75,11 @@ pub(crate) fn drawn(cx: &mut TestAppContext, window: &OpenWindow, name: &str) ->
 pub(crate) fn on_usage(cx: &mut TestAppContext) -> OpenWindow {
     let window = start(cx, 1);
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+        ws.sessions()[0].terminal().update(cx, |t, cx| {
+            t.agent = Some(AgentId::Claude);
+            cx.notify();
+        });
+        ws.sync_summaries(cx);
         ws.show_tab(TabId::Usage, cx);
     });
     assert_eq!(read(cx, &window, |ws| ws.right_tab()), TabId::Usage);
@@ -132,7 +136,11 @@ fn the_tab_redraws_on_the_tick_only_while_it_shows(cx: &mut TestAppContext) {
         drive(cx, &window, |ws, _, cx| {
             // The tick looks for the agent in the terminal's process tree, where `cat` runs and none
             // does, so it is told again before each.
-            ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+            ws.sessions()[0].terminal().update(cx, |t, cx| {
+                t.agent = Some(AgentId::Claude);
+                cx.notify();
+            });
+            ws.sync_summaries(cx);
             ws.show_tab(tab, cx);
         });
         redraws.set(0);
@@ -250,7 +258,10 @@ fn the_entry_offers_the_tab_and_its_menu_line_while_an_agent_is_on_screen(cx: &m
     };
     assert_eq!(asked(cx), (false, true, "Usage".to_string()), "no agent");
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions()[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Codex));
+        ws.sessions()[0].terminal().update(cx, |t, cx| {
+            t.agent = Some(AgentId::Codex);
+            cx.notify();
+        });
     });
     assert_eq!(asked(cx), (true, false, "Usage".to_string()), "an agent");
 }

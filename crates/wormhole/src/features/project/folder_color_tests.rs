@@ -47,7 +47,11 @@ fn folder_paint(ws: &Workspace, folder: &Path, cx: &gpui_kit::App) -> FolderPain
 /// The terminal in front is in `dir`, and the window has looked for its project.
 fn go(ws: &mut Workspace, dir: &Path, cx: &mut gpui_kit::Context<Workspace>) {
     let dir = dir.to_path_buf();
-    ws.active_terminal().update(cx, |terminal, _| terminal.cwd = Some(dir));
+    ws.active_terminal().update(cx, |terminal, cx| {
+        terminal.cwd = Some(dir);
+        cx.notify();
+    });
+    ws.sync_summaries(cx);
     ws.refresh_features(cx);
 }
 

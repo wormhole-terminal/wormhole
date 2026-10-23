@@ -6,7 +6,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -56,45 +55,44 @@ impl Workspace {
         found
     }
 
-    /// Every terminal's row facts, in the window's (manual) order.
+    /// Every terminal's row facts, in the window's (manual) order. From each pane's summary, not
+    /// the terminal: a terminal's output changes nothing here.
     pub(super) fn row_infos(&self, cx: &App) -> Vec<RowInfo> {
-        let now = SystemTime::now();
         let mut rows: Vec<RowInfo> = self
             .sessions
             .iter()
             .enumerate()
             .map(|(ix, session)| {
-                let terminal = session.terminal().read(cx);
-                let status = terminal.status();
-                let foreground = terminal.foreground();
-                let agent = terminal.agent;
-                let source = terminal.source();
+                let summary = &session.pane.summary;
+                let status = summary.status;
+                let foreground = summary.foreground.as_ref();
+                let source = summary.source;
                 let told = source.told();
                 let command = foreground.map(|f| f.command.clone()).filter(|_| !told);
                 let program_running = command.is_some();
-                let git = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
-                let root = terminal.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
+                let git = session.git.status.as_ref().filter(|_| session.git.cwd == summary.cwd);
+                let root = summary.cwd.as_deref().map(|cwd| session.repo_root.of(cwd));
                 RowInfo {
                     ix,
                     id: session.id,
-                    name: session.name(cx),
-                    agent,
+                    name: session.name(),
+                    agent: summary.agent,
                     source,
                     state: RowState::of(told, status, command.is_some()),
-                    message: terminal.agent_message.clone(),
-                    since: terminal.status_since().elapsed(),
-                    cwd: terminal.cwd.clone(),
+                    message: summary.agent_message.clone(),
+                    since_at: summary.status_since,
+                    cwd: summary.cwd.clone(),
                     worktree: root.as_deref().and_then(|root| self.worktree_of(root)),
                     repo: root.clone(),
-                    running: foreground
+                    running_since: foreground
                         .filter(|f| !told && ends_by_itself(&f.command))
-                        .and_then(|f| now.duration_since(f.started).ok()),
+                        .map(|f| f.started),
                     command,
-                    bell: !told && terminal.bell_rang(),
-                    failure: terminal.failure().filter(|_| !told).map(|failure| RowFailure {
+                    bell: !told && summary.bell_rang,
+                    failure: summary.failure.as_ref().filter(|_| !told).map(|failure| RowFailure {
                         code: failure.code,
                         command: failure.command.clone(),
-                        since: failure.at.elapsed(),
+                        at: failure.at,
                     }),
                     unread: has_new_output(OutputFacts {
                         agent: told,
@@ -416,7 +414,7 @@ impl Workspace {
                     // Emptied, it is called what runs in it again; left as it was, it keeps no name of its own.
                     if typed.is_empty() {
                         self.sessions[ix].custom_name = None;
-                    } else if typed != self.sessions[ix].name(cx).as_ref() {
+                    } else if typed != self.sessions[ix].name().as_ref() {
                         self.sessions[ix].custom_name = Some(typed.clone());
                     }
                     self.mark_dirty(cx);

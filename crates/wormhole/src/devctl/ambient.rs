@@ -73,7 +73,7 @@ fn kind(name: &str) -> Result<Kind> {
 /// The n-th terminal of this window (as `state` numbers them).
 fn terminal(ctx: &mut Ctx, n: &str) -> Result<TabFacts> {
     let key = ctx.window.is_window_active();
-    let terminals = ctx.workspace.tab_facts(key, ctx.cx);
+    let terminals = ctx.workspace.tab_facts(key);
     terminals.into_iter().nth(nth(n)).ok_or_else(|| anyhow!("no terminal {n:?} in this window"))
 }
 

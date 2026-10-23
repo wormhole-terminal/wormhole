@@ -13,7 +13,6 @@ use wormhole_core::storage::paths::ProfileId;
 
 use crate::settings::store_in;
 use wormhole_core::agents::{AgentId, Foreground};
-use wormhole_core::notify::Source;
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_term::input::app_selection::AppSelection;
 use wormhole_term::input::{keys, mouse};
@@ -57,6 +56,19 @@ const PADDING_Y: f32 = crate::style::TERMINAL_PAD;
 pub const MIN_WIDTH: f32 = wormhole_core::view::layout::TERMINAL_MIN;
 /// The font sizes a terminal draws at: what Settings allows, the window's ⌘+ / ⌘- included.
 pub use wormhole_core::theme::fonts::TERMINAL_FONT_SIZES as FONT_SIZES;
+
+/// The size of a terminal's grid as of the last frame it painted, which a terminal sets while
+/// painting (nothing notifies when it changes: a reader of it redraws on a clock of its own).
+#[derive(Clone)]
+pub struct GridProbe(Rc<Cell<Layout>>);
+
+impl GridProbe {
+    /// Columns and rows.
+    pub fn size(&self) -> (usize, usize) {
+        let layout = self.0.get();
+        (layout.cols, layout.rows)
+    }
+}
 /// Geometry of the last painted frame, shared with mouse handlers.
 #[derive(Clone, Copy, Default)]
 struct Layout {
@@ -241,7 +253,7 @@ impl TerminalView {
         cx: &mut Context<Self>,
     ) -> Self {
         let initial = GridSize { cols: 100, rows: 30, cell_width: 8.0, cell_height: 18.0 };
-        let shell = wormhole_core::terminal::shell_name(&options).into();
+        let shell: SharedString = wormhole_core::terminal::shell_name(&options).into();
         let store = store_in(&profile, cx);
         options.scrollback_lines = store.settings.scrollback_lines;
         options.allow_screen_checksum = store.settings.allow_screen_checksum;
@@ -275,15 +287,7 @@ impl TerminalView {
         ];
 
         let now = Instant::now();
-        let announced = TerminalSummary {
-            status: Status::Idle,
-            title: None,
-            cwd: cwd.clone(),
-            agent: None,
-            agent_message: None,
-            source: Source::Plain,
-            failed: None,
-        };
+        let announced = TerminalSummary::idle(now, cwd.clone(), shell.clone());
         let mut this = Self {
             focus_handle,
             pty,
@@ -434,6 +438,12 @@ impl TerminalView {
     pub fn grid_size(&self) -> (usize, usize) {
         let layout = self.layout.get();
         (layout.cols, layout.rows)
+    }
+
+    /// A handle on the grid's size that outlives a read of the terminal: what the window shows of
+    /// it (the status bar's "120×30") is read from here, so it doesn't read the terminal.
+    pub fn grid_probe(&self) -> GridProbe {
+        GridProbe(self.layout.clone())
     }
 
     pub fn write(&mut self, bytes: Vec<u8>) {

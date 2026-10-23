@@ -48,9 +48,9 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
 
 /// New Terminal in New Worktree… for the terminal in front. A worktree needs a repository: the action is
 /// not handled (so the menu greys it out) while the terminal's folder has no git status.
-fn bind(entity: &AnyEntity, facts: &WindowFacts<'_>, root: Root, cx: &App) -> Root {
+fn bind(entity: &AnyEntity, facts: &WindowFacts<'_>, root: Root, _: &App) -> Root {
     let Some(active) = facts.active().filter(|active| active.git.status.is_some()) else { return root };
-    let (this, folder, profile) = (typed(entity), active.band_folder(cx), facts.profile.clone());
+    let (this, folder, profile) = (typed(entity), active.band_folder(), facts.profile.clone());
     root.on_action(move |_: &NewTerminalInWorktree, window, cx| {
         this.update(cx, |worktrees, cx| {
             worktrees.new_terminal_in_worktree(&profile, folder.clone(), window, cx)

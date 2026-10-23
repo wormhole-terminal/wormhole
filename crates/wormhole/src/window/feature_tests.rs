@@ -107,7 +107,7 @@ static STAND_IN: &[FeatureDef] = &[
                 list: |_, _, _| None,
             }),
             actions: Some(|entity, facts, _, cx| {
-                let on = facts.agent_on_screen(cx);
+                let on = facts.agent_on_screen();
                 marker(entity).update(cx, |marker, _| marker.count += 10);
                 on.then(|| gpui_kit::div().into_any_element())
             }),
@@ -214,9 +214,9 @@ fn a_window_makes_its_features_state_and_hands_facts_to_its_hooks(cx: &mut TestA
         assert!(facts.features.has(FeatureId::Usage), "an always-on feature is on");
         assert_eq!(facts.panel_width, gpui_kit::px(ws.columns().panel));
         let active = facts.active().expect("a terminal is selected");
-        assert_eq!(active.folder(cx), active.terminal.read(cx).cwd.as_deref());
+        assert_eq!(active.folder(), active.terminal.read(cx).cwd.as_deref());
         assert_eq!(facts.on_screen().map(|s| s.id).collect::<Vec<_>>(), [active.id]);
-        assert!(!facts.agent_on_screen(cx), "a plain terminal");
+        assert!(!facts.agent_on_screen(), "a plain terminal");
 
         let tab = &def.tabs[0];
         assert!((tab.shown)(&facts, cx));
@@ -523,7 +523,10 @@ fn showing_a_tab_runs_the_features_on_show_hook(cx: &mut TestAppContext) {
     // A folder to ask git about: the refresh only starts for a terminal that reports one.
     let folder = std::env::temp_dir();
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(folder.clone()));
+        ws.sessions[0].terminal().update(cx, |terminal, cx| {
+            terminal.cwd = Some(folder.clone());
+            cx.notify();
+        });
         ws.show_tab(TabId::History, cx);
     });
     assert!(read(cx, &window, |ws| ws.sessions[0].git.cwd.is_none()), "History's refresh is not git's");
@@ -640,7 +643,11 @@ fn a_window_frame_on_usage_stays_within_its_allocation_budget(cx: &mut TestAppCo
         record(report(AgentId::Gemini, Vec::new(), None, Some(1234)), cx);
     });
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+        ws.sessions[0].terminal().update(cx, |t, cx| {
+            t.agent = Some(AgentId::Claude);
+            cx.notify();
+        });
+        ws.sync_summaries(cx);
         ws.show_tab(TabId::Usage, cx);
     });
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Usage);

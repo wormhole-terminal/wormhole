@@ -56,15 +56,17 @@ fn the_shortcut_keys_reach_their_actions(cx: &mut TestAppContext) {
     read(cx, &window, |ws| assert!(ws.right_tab == TabId::Notes, "⌃⌘3: Notes"));
     // Usage is there while an agent is.
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[ws.active]
-            .terminal()
-            .update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude));
+        ws.sessions[ws.active].terminal().update(cx, |t, cx| {
+            t.agent = Some(wormhole_core::agents::AgentId::Claude);
+            cx.notify();
+        });
     });
     // Usage is there while an agent is.
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[ws.active]
-            .terminal()
-            .update(cx, |t, _| t.agent = Some(wormhole_core::agents::AgentId::Claude));
+        ws.sessions[ws.active].terminal().update(cx, |t, cx| {
+            t.agent = Some(wormhole_core::agents::AgentId::Claude);
+            cx.notify();
+        });
     });
     key(cx, &window, "ctrl-cmd-4");
     read(cx, &window, |ws| assert!(ws.right_tab == TabId::Usage, "⌃⌘4: Usage"));
@@ -154,7 +156,7 @@ fn the_menus_follow_the_window_in_front(cx: &mut TestAppContext) {
                 let numbered = ws.session_listing(cx).numbered();
                 let current = numbered.iter().position(|&ix| ix == ws.active);
                 let names: Vec<String> =
-                    numbered.iter().map(|&ix| ws.sessions[ix].name(cx).to_string()).collect();
+                    numbered.iter().map(|&ix| ws.sessions[ix].name().to_string()).collect();
                 names
                     .into_iter()
                     .enumerate()
@@ -231,7 +233,10 @@ fn a_menu_item_that_cannot_act_is_not_available(cx: &mut TestAppContext) {
     assert!(available(cx, &crate::actions::ShowChanges));
     assert!(!available(cx, &crate::actions::RevealInFinder), "the shell hasn't said where it is yet");
     drive(cx, &window, |ws, _, cx| {
-        ws.active_terminal().update(cx, |t, _| t.cwd = Some(std::env::temp_dir()));
+        ws.active_terminal().update(cx, |t, cx| {
+            t.cwd = Some(std::env::temp_dir());
+            cx.notify();
+        });
     });
     draw(cx, &window);
     assert!(available(cx, &crate::actions::RevealInFinder), "now it has a folder");

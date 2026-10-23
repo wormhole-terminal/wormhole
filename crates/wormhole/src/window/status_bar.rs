@@ -117,27 +117,27 @@ const ATTENTION_NAME_MAX: f32 = 220.0;
 
 impl Workspace {
     /// This window's terminals.
-    pub(super) fn status_terminals(&self, cx: &App) -> Vec<Counted> {
+    pub(super) fn status_terminals(&self) -> Vec<Counted> {
         self.sessions
             .iter()
             .map(|session| {
-                let terminal = session.terminal().read(cx);
+                let summary = &session.pane.summary;
                 Counted {
                     tab: session.id,
-                    activity: match terminal.status() {
+                    activity: match summary.status {
                         Status::Busy => Activity::Working,
                         Status::Attention => Activity::NeedsYou,
                         Status::Done => Activity::Done,
                         Status::Failed => Activity::Failed,
                         Status::Idle | Status::Exited => Activity::Quiet,
                     },
-                    since: terminal.status_since(),
-                    agent: terminal
+                    since: summary.status_since,
+                    agent: summary
                         .agent
                         .map(|id| SharedString::from(wormhole_core::agents::agent(id).short_name()))
-                        .or_else(|| terminal.program_name().map(SharedString::from)),
-                    name: session.name(cx),
-                    face: match terminal.agent.map(wormhole_core::agents::agent) {
+                        .or_else(|| summary.program.clone().map(SharedString::from)),
+                    name: session.name(),
+                    face: match summary.agent.map(wormhole_core::agents::agent) {
                         Some(agent) => match agent.icon() {
                             Some(path) => TileFace::Logo(path),
                             None => TileFace::Monogram(agent.monogram.into()),
@@ -159,7 +159,7 @@ impl Workspace {
             .iter()
             .filter(|window| window.id != self.window_id && !window.hidden)
             .filter_map(|window| {
-                window.workspace.read_with(cx, |ws, cx| (window.id, ws.status_terminals(cx))).ok()
+                window.workspace.read_with(cx, |ws, _| (window.id, ws.status_terminals())).ok()
             })
             .collect();
     }
@@ -175,14 +175,14 @@ impl Workspace {
         let mut seen_self = false;
         for window in app(cx).windows.iter().filter(|w| !w.hidden) {
             if window.id == self.window_id {
-                counted.extend(self.status_terminals(cx));
+                counted.extend(self.status_terminals());
                 seen_self = true;
             } else if let Some((_, theirs)) = self.status_others.iter().find(|(id, _)| *id == window.id) {
                 counted.extend(theirs.iter().cloned());
             }
         }
         if !seen_self {
-            counted.extend(self.status_terminals(cx));
+            counted.extend(self.status_terminals());
         }
         let entries: Vec<Entry> = counted
             .iter()
@@ -192,12 +192,11 @@ impl Workspace {
         let detail = Detail::at(self.window_width);
 
         let session = self.active_session();
-        let terminal = session.terminal().read(cx);
-        let (cols, rows) = terminal.grid_size();
+        let (cols, rows) = session.pane.grid.size();
         // What runs in front (the agent, or the command), as the title row names it, not the shell.
-        let program = session.pane.program(cx);
+        let program = session.pane.program();
         let size = detail.size().then(|| rules::size(&program, cols, rows));
-        let state = crate::window::title::breadcrumb::crumb_words(terminal);
+        let state = crate::window::title::breadcrumb::crumb_words(&session.pane.summary);
         let now = Instant::now();
         let attention = summary.attention().map(|ix| {
             let (entry, counted) = (&entries[ix], &counted[ix]);

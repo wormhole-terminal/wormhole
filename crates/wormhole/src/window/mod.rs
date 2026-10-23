@@ -11,7 +11,8 @@
 //! areas, the stops, the Esc ladder and the ring; `repo/` what git says of each terminal's folder.
 //!
 //! and by file: what a feature is to the window (`feature`, `feature_host`, its facts in `facts`), the
-//! session (`session`), the window's terminals (`terminals`), its tick (`tick`), its saves (`save`,
+//! session (`session`), the window's terminals (`terminals`) and its copy of what each shows of itself
+//! (`summaries`: everything the window draws of a terminal comes from it, never from the terminal), its tick (`tick`), its saves (`save`,
 //! `saved_layout`, `window_bounds`), its life (`windows`, `window_lifecycle`, `hosting` for the
 //! persistent terminals), what it answers from outside (`window_control`, `restart_facts`, `ambient`,
 //! `menu_state`, and `devctl` in a devctl build), its actions and keys (`window_actions`, `shortcuts`),
@@ -122,6 +123,9 @@ mod slide;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
+mod summaries;
+#[cfg(test)]
+mod summary_tests;
 #[cfg(test)]
 mod terminal_tests;
 mod terminals;
@@ -418,6 +422,7 @@ impl Workspace {
             // At once rather than on the next tick; after this update, so this window can be read.
             attention::tell(Attention::Changed, cx);
         }
+        self.sync_summary_at(ix, cx);
         cx.notify();
     }
 

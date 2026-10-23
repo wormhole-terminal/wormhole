@@ -61,7 +61,11 @@ pub(super) fn write(root: &Path, files: &[(&str, &str)]) {
 /// The terminal in front is in `dir`.
 pub(super) fn go(ws: &mut Workspace, dir: &Path, cx: &mut Context<Workspace>) {
     let dir = dir.to_path_buf();
-    ws.active_terminal().update(cx, |terminal, _| terminal.cwd = Some(dir));
+    ws.active_terminal().update(cx, |terminal, cx| {
+        terminal.cwd = Some(dir);
+        cx.notify();
+    });
+    ws.sync_summaries(cx);
 }
 
 /// The window asks git about the terminal in front, and the answer is in.
@@ -124,7 +128,7 @@ pub(super) fn ask_for_worktree(
     window: &mut gpui_kit::Window,
     cx: &mut Context<Workspace>,
 ) {
-    let folder = ws.facts(cx).active().and_then(|active| active.band_folder(cx));
+    let folder = ws.facts(cx).active().and_then(|active| active.band_folder());
     let worktrees = ws.feature::<super::worktree::Worktrees>().expect("in the table");
     let profile = ws.profile().clone();
     worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&profile, folder, window, cx));

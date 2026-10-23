@@ -68,7 +68,7 @@ impl Workspace {
                 self.sessions[ix].terminal().clone()
             }
             TerminalTarget::Named { name, cwd } => {
-                let existing = self.sessions.iter().position(|s| s.name(cx).as_ref() == name.as_str());
+                let existing = self.sessions.iter().position(|s| s.name().as_ref() == name.as_str());
                 let ix = match existing {
                     Some(ix) => ix,
                     None => self.spawn_session(Some(name), cwd, window, cx),

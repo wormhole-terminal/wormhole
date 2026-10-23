@@ -49,7 +49,7 @@ impl Workspace {
         let folder = terminal.cwd.as_deref().map(|p| p.to_string_lossy().into_owned());
         TerminalInfo {
             id: session.id,
-            name: session.name(cx).to_string(),
+            name: session.name().to_string(),
             status: tab_state(terminal),
             agent: terminal.agent.and_then(agent_id),
             folder: folder.clone(),
@@ -66,7 +66,7 @@ impl Workspace {
             // The protocol still lists tabs: a terminal has the one, itself, with its one pane.
             tabs: vec![TabInfo {
                 id: session.id,
-                name: session.pane.label(cx).to_string(),
+                name: session.pane.label().to_string(),
                 status: tab_state(terminal),
                 agent: terminal.agent.and_then(agent_id),
                 message: terminal.agent_message.clone(),
@@ -84,6 +84,7 @@ impl Workspace {
     pub(crate) fn control_notice(&mut self, tab: i64, words: Notification, cx: &mut Context<Self>) -> bool {
         let Some(terminal) = self.pane_terminal(tab) else { return false };
         terminal.update(cx, |t, _| t.notice_from_control(words));
+        self.sync_summary(tab, cx);
         cx.notify();
         true
     }

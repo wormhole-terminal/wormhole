@@ -93,36 +93,36 @@ fn instant_of(started: SystemTime) -> Instant {
 
 impl Workspace {
     /// Every terminal of this window (`key`: whether the window is the key window).
-    pub(crate) fn tab_facts(&self, key: bool, cx: &App) -> Vec<TabFacts> {
+    pub(crate) fn tab_facts(&self, key: bool) -> Vec<TabFacts> {
         let mut out = Vec::new();
         for (ix, session) in self.sessions.iter().enumerate() {
-            let name = session.name(cx).to_string();
+            let name = session.name().to_string();
             let status = session.git.status.as_ref();
-            let terminal = session.terminal().read(cx);
-            let foreground = terminal.foreground().cloned();
-            let source = terminal.source();
-            let state = state_of(terminal.status(), source.told(), foreground.as_ref());
+            let summary = &session.pane.summary;
+            let foreground = summary.foreground.clone();
+            let source = summary.source;
+            let state = state_of(summary.status, source.told(), foreground.as_ref());
             let since = match (&foreground, state, source) {
                 (Some(f), State::Working, Source::Plain) => instant_of(f.started),
-                _ => terminal.status_since(),
+                _ => summary.status_since,
             };
             // The status is the one read for the folder the terminal is in.
-            let same_folder = session.git.cwd == terminal.cwd;
+            let same_folder = session.git.cwd == summary.cwd;
             out.push(TabFacts {
                 session: session.id,
                 tab: session.id,
                 name,
                 state,
                 since,
-                agent: terminal.agent,
+                agent: summary.agent,
                 source,
-                program: terminal.program_name(),
-                message: terminal.agent_message.clone(),
-                reported: terminal.reported_by_program(),
-                failure: terminal.failure().cloned(),
-                notice: terminal.notice().cloned(),
+                program: summary.program.clone(),
+                message: summary.agent_message.clone(),
+                reported: summary.reported_by_program,
+                failure: summary.failure.clone(),
+                notice: summary.notice.clone(),
                 foreground,
-                folder: terminal
+                folder: summary
                     .cwd
                     .as_deref()
                     .and_then(|cwd| cwd.file_name())
@@ -155,7 +155,7 @@ fn tabs_of(with_hidden: bool, cx: &App) -> Vec<TabFacts> {
     let mut tabs = Vec::new();
     for window in app(cx).windows.iter().filter(|w| with_hidden || !w.hidden) {
         let is_key = key == Some(window.handle.window_id());
-        if let Ok(facts) = window.workspace.read_with(cx, |ws, cx| ws.tab_facts(is_key, cx)) {
+        if let Ok(facts) = window.workspace.read_with(cx, |ws, _| ws.tab_facts(is_key)) {
             tabs.extend(facts);
         }
     }

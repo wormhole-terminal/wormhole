@@ -76,7 +76,10 @@ fn the_usage_tab_follows_the_agent(cx: &mut TestAppContext) {
     assert!(read(cx, &window, |ws| ws.right_tab != TabId::Usage), "and it can't be shown");
 
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |t, _| t.agent = Some(AgentId::Claude));
+        ws.sessions[0].terminal().update(cx, |t, cx| {
+            t.agent = Some(AgentId::Claude);
+            cx.notify();
+        });
     });
     assert_eq!(usage(cx), (true, false), "an agent runs: the tab and its key are there");
 
@@ -99,7 +102,11 @@ fn the_usage_tab_follows_the_agent(cx: &mut TestAppContext) {
         ws.activate(0, window, cx);
         ws.show_tab(TabId::Changes, cx);
         ws.show_tab(TabId::Usage, cx);
-        ws.sessions[0].terminal().update(cx, |t, _| t.agent = None);
+        ws.sessions[0].terminal().update(cx, |t, cx| {
+            t.agent = None;
+            cx.notify();
+        });
+        ws.sync_summaries(cx);
         ws.leave_missing_tab(cx);
     });
     assert!(read(cx, &window, |ws| ws.right_tab == TabId::Changes));

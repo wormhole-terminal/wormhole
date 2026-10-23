@@ -114,7 +114,7 @@ impl Workspace {
             .into_iter()
             .filter(|&other| other != ix && (split.is_none() || self.sessions[other].split != split))
             .filter(|&other| layout.can_join(id, Zone::Right, self.sessions[other].id, room).is_ok())
-            .map(|other| (self.sessions[other].id, self.sessions[other].name(cx)))
+            .map(|other| (self.sessions[other].id, self.sessions[other].name()))
             .collect()
     }
 

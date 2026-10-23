@@ -17,7 +17,7 @@ use wormhole_core::view::layout::title_row::{Chip, Face, PathShown, RowWants, fi
 
 use crate::settings::{UiColors, settings_in, ui_in};
 use crate::style::{self, TextRole};
-use crate::terminal_view::{Status, TerminalView};
+use crate::terminal_view::{Status, TerminalSummary};
 use crate::window::Workspace;
 use crate::window::title::path_card::Over;
 use crate::window::title::{Facts, MORE_W, ROW_GAP, SPLITS_W, Tint, TitlePlan};
@@ -56,8 +56,8 @@ impl Workspace {
     /// What the title row says about the active terminal, as of now.
     fn title_facts(&self, cx: &App) -> Facts {
         let session = self.active_session();
-        let terminal = session.terminal().read(cx);
-        let folder = terminal.cwd.clone();
+        let summary = &session.pane.summary;
+        let folder = summary.cwd.clone();
         let shown = folder
             .as_deref()
             .map(|cwd| wormhole_core::view::sidebar::display_path(cwd, crate::style::home_dir()));
@@ -66,25 +66,25 @@ impl Workspace {
             .git
             .status
             .as_ref()
-            .filter(|_| session.git.cwd == terminal.cwd)
+            .filter(|_| session.git.cwd == summary.cwd)
             .map(|status| status.branch.clone());
         let parent = session
             .git
             .status
             .as_ref()
-            .filter(|_| session.git.cwd == terminal.cwd)
+            .filter(|_| session.git.cwd == summary.cwd)
             .and_then(|status| status.superproject.as_ref())
             .map(|parent| parent.phrase());
         Facts {
             id: session.id,
             folder,
             shown,
-            status: terminal.status(),
-            agent: terminal.agent,
-            told: terminal.source().told(),
-            label: session.pane.label(cx),
+            status: summary.status,
+            agent: summary.agent,
+            told: summary.source.told(),
+            label: session.pane.label(),
             // Shown, the status bar has the state at its end; the title row doesn't repeat it.
-            words: crumb_words(terminal).filter(|_| !settings_in(&self.profile, cx).status_bar),
+            words: crumb_words(summary).filter(|_| !settings_in(&self.profile, cx).status_bar),
             branch,
             parent,
             extras: self.extra_facts(cx),
@@ -399,7 +399,7 @@ impl Workspace {
         if settings_in(&self.profile, cx).status_bar {
             return;
         }
-        let now = crumb_words(self.active_session().terminal().read(cx));
+        let now = crumb_words(&self.active_session().pane.summary);
         // Taken as drawn: if nothing draws it (a diff is over the title row), it asks once.
         if self.crumb_drawn.replace(now.clone()) != now {
             cx.notify();
@@ -409,14 +409,14 @@ impl Workspace {
 
 /// What the breadcrumb says after a terminal's name: how it is doing, working time in whole
 /// minutes ("working · <1m", "working · 4m"), or nothing while it is idle.
-pub(in crate::window) fn crumb_words(terminal: &TerminalView) -> Option<String> {
-    let took = || wormhole_core::view::layout::status_bar::elapsed(terminal.status_since().elapsed());
-    match terminal.status() {
+pub(in crate::window) fn crumb_words(summary: &TerminalSummary) -> Option<String> {
+    let took = || wormhole_core::view::layout::status_bar::elapsed(summary.status_since.elapsed());
+    match summary.status {
         Status::Busy => Some(format!("working · {}", took())),
         Status::Attention => Some("needs you".to_string()),
         Status::Done => Some(format!("done · {}", took())),
         // The exit code when the shell gave one; else how long ago, as for done.
-        Status::Failed => Some(match terminal.failure() {
+        Status::Failed => Some(match &summary.failure {
             Some(failure) => format!("failed · exit {}", failure.code),
             None => format!("failed · {}", took()),
         }),

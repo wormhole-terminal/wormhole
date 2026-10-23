@@ -46,13 +46,18 @@ fn project_of(window: &OpenWindow, ix: usize, cx: &mut TestAppContext) -> Option
 
 /// The window looks for each terminal's project again.
 fn refresh(ws: &mut Workspace, cx: &mut gpui_kit::Context<Workspace>) {
+    // What a test changed in a terminal inside this update is heard by the window after it.
+    ws.sync_summaries(cx);
     ws.refresh_features(cx);
 }
 
 /// The terminal in front is in `dir`, and the window has looked for its project.
 fn go(ws: &mut Workspace, dir: &Path, cx: &mut gpui_kit::Context<Workspace>) {
     let dir = dir.to_path_buf();
-    ws.active_terminal().update(cx, |terminal, _| terminal.cwd = Some(dir));
+    ws.active_terminal().update(cx, |terminal, cx| {
+        terminal.cwd = Some(dir);
+        cx.notify();
+    });
     refresh(ws, cx);
 }
 
@@ -157,15 +162,24 @@ fn a_terminal_is_in_the_project_of_its_folder(cx: &mut TestAppContext) {
     let bare = std::env::current_dir().expect("scratch").join("bare");
     std::fs::create_dir_all(&bare).expect("mkdir");
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions()[0].terminal().update(cx, |t, _| t.cwd = Some(one.clone()));
-        ws.sessions()[1].terminal().update(cx, |t, _| t.cwd = Some(two.join("src")));
+        ws.sessions()[0].terminal().update(cx, |t, cx| {
+            t.cwd = Some(one.clone());
+            cx.notify();
+        });
+        ws.sessions()[1].terminal().update(cx, |t, cx| {
+            t.cwd = Some(two.join("src"));
+            cx.notify();
+        });
         refresh(ws, cx);
     });
     assert_eq!(project_of(&window, 0, cx).as_deref(), Some(one.as_path()));
     assert_eq!(project_of(&window, 1, cx).as_deref(), Some(two.as_path()), "from a folder inside it");
 
     drive(cx, &window, |ws, _, cx| {
-        ws.sessions()[1].terminal().update(cx, |t, _| t.cwd = Some(bare.clone()));
+        ws.sessions()[1].terminal().update(cx, |t, cx| {
+            t.cwd = Some(bare.clone());
+            cx.notify();
+        });
         refresh(ws, cx);
     });
     assert_eq!(project_of(&window, 1, cx), None, "a folder in no project");

@@ -176,7 +176,7 @@ impl Workspace {
             }
             let share = preview_rect(pane, zone);
             let name =
-                self.find_session(target).map_or_else(SharedString::default, |ix| self.sessions[ix].name(cx));
+                self.find_session(target).map_or_else(SharedString::default, |ix| self.sessions[ix].name());
             zones.push(
                 style::pane_drop_zone(ui, style::ZoneLook::Active, zone)
                     .map(|d| at(d, share))

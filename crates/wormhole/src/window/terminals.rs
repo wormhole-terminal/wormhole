@@ -263,11 +263,13 @@ impl Workspace {
 
     /// The selected terminal and the panes shown with it are in front of the user: a finished
     /// agent in any of them turns idle, and its notification goes.
-    fn acknowledge_selected(&self, cx: &mut Context<Self>) {
+    fn acknowledge_selected(&mut self, cx: &mut Context<Self>) {
         for ix in self.on_screen_sessions() {
             let pane = &self.sessions[ix].pane;
             pane.terminal.update(cx, |t, _| t.acknowledge());
-            attention::tell(Attention::Seen(pane.id), cx);
+            let id = pane.id;
+            self.sync_summary_at(ix, cx);
+            attention::tell(Attention::Seen(id), cx);
         }
     }
 
@@ -276,8 +278,8 @@ impl Workspace {
     }
 
     /// The selected terminal's name, as the sidebar shows it.
-    pub(crate) fn active_session_name(&self, cx: &App) -> SharedString {
-        self.active_session().name(cx)
+    pub(crate) fn active_session_name(&self) -> SharedString {
+        self.active_session().name()
     }
 
     /// The profile this window belongs to.

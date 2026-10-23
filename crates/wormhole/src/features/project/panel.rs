@@ -52,7 +52,7 @@ pub(super) fn tab(
     let project =
         entity.clone().downcast::<Project>().expect("the project entity is made by this entry's `make`");
     let Some(active) = facts.active() else { return div().into_any_element() };
-    let folder = active.band_folder(cx);
+    let folder = active.band_folder();
     project.update(cx, |project, cx| project.sync_picker(facts.profile, folder.as_deref(), window, cx));
     let ui = ui_in(facts.profile, cx);
     let tab = Tab {

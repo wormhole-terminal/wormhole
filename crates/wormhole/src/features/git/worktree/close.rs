@@ -36,7 +36,7 @@ pub(super) fn extra(facts: &WindowFacts<'_>, sessions: &[i64], of: CloseOf, cx: 
 /// refused again by git itself if it has some by then.
 fn one(facts: &WindowFacts<'_>, id: i64, cx: &App) -> Option<CloseExtra> {
     let session = facts.sessions().find(|session| session.id == id)?;
-    let made = made_at(session.folder(cx)?, cx)?;
+    let made = made_at(session.folder()?, cx)?;
     let dirty = has_changes(&session);
     let note = format!(
         "Its worktree {} at {} was made by Wormhole. {}",
@@ -61,13 +61,13 @@ fn one(facts: &WindowFacts<'_>, id: i64, cx: &App) -> Option<CloseExtra> {
 fn group(facts: &WindowFacts<'_>, members: &[i64], cx: &App) -> Option<CloseExtra> {
     let mut found: Vec<(Worktree, bool)> = Vec::new();
     for session in facts.sessions().filter(|session| members.contains(&session.id)) {
-        let Some(cwd) = session.folder(cx) else { continue };
+        let Some(cwd) = session.folder() else { continue };
         let Some(made) = made_at(cwd, cx) else { continue };
         if found.iter().any(|(w, _)| w.folder == made.folder) {
             continue;
         }
         let shared = facts.sessions().any(|other| {
-            !members.contains(&other.id) && other.folder(cx).is_some_and(|c| c.starts_with(&made.folder))
+            !members.contains(&other.id) && other.folder().is_some_and(|c| c.starts_with(&made.folder))
         });
         found.push((made, !has_changes(&session) && !shared));
     }

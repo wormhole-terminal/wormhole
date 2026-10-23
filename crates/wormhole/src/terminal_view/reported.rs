@@ -114,6 +114,7 @@ impl TerminalView {
             pty.program_status().apply(report);
         }
         self.handle_event(PtyEvent::ProgramStatus, cx);
+        self.after_events(cx);
     }
 
     /// A shell prompt began (OSC 133 `A`): the PTY thread drops what only the running program could
@@ -125,10 +126,13 @@ impl TerminalView {
         }
         self.handle_event(PtyEvent::ProgramStatus, cx);
         self.handle_event(PtyEvent::Mark(Mark::PromptStart(PromptKind::Initial)), cx);
+        self.after_events(cx);
     }
 
+    /// `event` as the PTY's reader task delivers it: handled, and the batch ended.
     pub(crate) fn event_for_test(&mut self, event: PtyEvent, cx: &mut Context<Self>) {
         self.handle_event(event, cx);
+        self.after_events(cx);
     }
 
     /// The program in front is found to have left the terminal.

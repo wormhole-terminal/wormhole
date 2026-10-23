@@ -9,26 +9,112 @@ use gpui_kit::*;
 use wormhole_core::agents::integrations::{self, Signal};
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::notify::Source;
+use wormhole_core::view::sidebar::names;
 use wormhole_term::{Mark, Notification, PtyEvent, WindowOp};
 
-use super::TerminalView;
+use super::find_bar::FindBar;
+use super::{Failure, TerminalView};
 use crate::settings::settings_in;
 
 pub use wormhole_core::view::sidebar::Status;
 
-/// What the rest of the app shows about a terminal (sidebar, title row, menu
-/// bar). A copy, so readers don't have to hold the terminal during their render.
+/// What the rest of the app shows about a terminal (sidebar, status bar, pane headers, menu bar):
+/// a copy, so the window reads it instead of the terminal (see `window::session::Pane`) and a
+/// terminal's output, which changes none of this, never makes the window draw again.
+///
+/// Everything here is a fact that changes now and then; what moves with time is kept as the
+/// instant it began (`status_since`, the foreground's `started`, a failure's `at`), and read as an
+/// age when it is drawn. A field added here is also compared in [`TerminalSummary::matches`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct TerminalSummary {
     pub status: Status,
+    /// When the status last changed.
+    pub status_since: Instant,
     pub title: Option<String>,
     pub cwd: Option<PathBuf>,
     pub agent: Option<AgentId>,
     pub agent_message: Option<String>,
     /// What tells the status; a program that reports takes the row's agent-style second line.
     pub source: Source,
-    /// The exit code of the last command, while it counts as failed (the row's cue).
-    pub failed: Option<i32>,
+    /// The last command's failure, until the next one starts (the row's cue).
+    pub failure: Option<Failure>,
+    /// The program in the foreground when it isn't the shell, and since when.
+    pub foreground: Option<Foreground>,
+    /// What the terminal is named after: the program in front, or, while its result is unseen,
+    /// the command that finished (`TerminalView::naming_command`).
+    pub naming_command: Option<String>,
+    /// The program the terminal started ("zsh").
+    pub shell: SharedString,
+    /// What a program that reports its status calls itself (`TerminalView::program_name`).
+    pub program: Option<String>,
+    /// The status is what a program reported (not an agent's hook, not a guess).
+    pub reported_by_program: bool,
+    /// A program other than the shell holds the terminal.
+    pub program_in_foreground: bool,
+    /// The bell rang (in a terminal without an agent) and nobody has looked since.
+    pub bell_rang: bool,
+    /// The program's last notification of its own.
+    pub notice: Option<ProgramNotice>,
+    /// The find bar, while it is open (the window draws it).
+    pub find_bar: Option<Entity<FindBar>>,
+}
+
+impl TerminalSummary {
+    /// A terminal's state before anything has happened to it.
+    pub(super) fn idle(since: Instant, cwd: Option<PathBuf>, shell: SharedString) -> Self {
+        Self {
+            status: Status::Idle,
+            status_since: since,
+            title: None,
+            cwd,
+            agent: None,
+            agent_message: None,
+            source: Source::Plain,
+            failure: None,
+            foreground: None,
+            naming_command: None,
+            shell,
+            program: None,
+            reported_by_program: false,
+            program_in_foreground: false,
+            bell_rang: false,
+            notice: None,
+            find_bar: None,
+        }
+    }
+
+    /// What runs in the terminal, for its name.
+    pub fn name_facts(&self) -> names::NameFacts<'_> {
+        names::NameFacts {
+            title: self.title.as_deref(),
+            agent: self.agent.map(|id| wormhole_core::agents::agent(id).command),
+            command: self.naming_command.as_deref(),
+            shell: &self.shell,
+        }
+    }
+
+    /// Whether this is what `terminal` shows now, without making a summary of it: this is asked
+    /// of every terminal's every redraw, and nearly always answers yes.
+    pub fn matches(&self, terminal: &TerminalView) -> bool {
+        self.status == terminal.status
+            && self.status_since == terminal.status_since
+            && self.title == terminal.title
+            && self.cwd == terminal.cwd
+            && self.agent == terminal.agent
+            && self.agent_message == terminal.agent_message
+            && self.source == terminal.source()
+            && self.failure.as_ref() == terminal.failure()
+            && self.foreground.as_ref() == terminal.foreground()
+            && self.naming_command.as_deref() == terminal.naming_command()
+            && self.shell == terminal.shell
+            // Allocates only for a program that reports (`program_name`), the rare terminal.
+            && self.program == terminal.program_name()
+            && self.reported_by_program == terminal.reported_by_program()
+            && self.program_in_foreground == terminal.program_in_foreground
+            && self.bell_rang == terminal.bell_rang()
+            && self.notice.as_ref() == terminal.notice()
+            && self.find_bar == terminal.find_bar()
+    }
 }
 
 /// A program's own notification (OSC 9/99/777), numbered so the notification sweep sees each
@@ -60,27 +146,36 @@ pub enum TerminalEvent {
 }
 
 impl TerminalView {
-    /// What the sidebar, tab strip and menu bar show about this terminal.
+    /// What the sidebar, status bar, pane headers and menu bar show about this terminal.
     pub fn summary(&self) -> TerminalSummary {
         TerminalSummary {
             status: self.status,
+            status_since: self.status_since,
             title: self.title.clone(),
             cwd: self.cwd.clone(),
             agent: self.agent,
             agent_message: self.agent_message.clone(),
             source: self.source(),
-            failed: self.failure.as_ref().map(|failure| failure.code),
+            failure: self.failure.clone(),
+            foreground: self.foreground.clone(),
+            naming_command: self.naming_command().map(str::to_owned),
+            shell: self.shell.clone(),
+            program: self.program_name(),
+            reported_by_program: self.reported_by_program(),
+            program_in_foreground: self.program_in_foreground,
+            bell_rang: self.bell_rang,
+            notice: self.notice.clone(),
+            find_bar: self.find_bar(),
         }
     }
 
     /// Emit `SummaryChanged` (and notify, for observers) if the summary moved
     /// since it was last announced. Returns whether it did.
     pub(super) fn announce_summary(&mut self, cx: &mut Context<Self>) -> bool {
-        let summary = self.summary();
-        if summary == self.announced {
+        if self.announced.matches(self) {
             return false;
         }
-        self.announced = summary;
+        self.announced = self.summary();
         cx.emit(TerminalEvent::SummaryChanged);
         self.notify_redraw(cx);
         true

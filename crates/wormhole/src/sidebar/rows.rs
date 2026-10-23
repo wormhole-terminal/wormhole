@@ -214,7 +214,7 @@ pub(super) fn second_line(
     }
     if info.told() {
         // An agent's, or a program's own report: its state in words.
-        return match agent_detail(info.state, info.message.as_deref(), info.since) {
+        return match agent_detail(info.state, info.message.as_deref(), info.since()) {
             Some(text) => line(Some(text), tone_of(info.state), false, None),
             None => match whereabouts() {
                 Some(place) => line(Some(place), RowTone::Plain, false, None),
@@ -222,7 +222,7 @@ pub(super) fn second_line(
             },
         };
     }
-    let trail = if info.unread { Some("new output".to_string()) } else { info.running.map(clock) };
+    let trail = if info.unread { Some("new output".to_string()) } else { info.running().map(clock) };
     match (&info.command, &info.failure) {
         (Some(command), _) => line(Some(command.clone()), RowTone::Plain, true, trail),
         // The last command failed: what it was and how it ended, in danger, and when, until the
@@ -233,7 +233,7 @@ pub(super) fn second_line(
                 Some(command) => format!("{command} · {exit}"),
                 None => exit,
             };
-            line(Some(text), RowTone::Failed, true, Some(ago(failure.since)))
+            line(Some(text), RowTone::Failed, true, Some(ago(failure.since())))
         }
         (None, None) => match whereabouts() {
             Some(place) => line(Some(place), RowTone::Plain, false, None),
@@ -249,9 +249,9 @@ pub(super) fn time_text(info: &RowInfo, compact: bool) -> Option<String> {
         return None;
     }
     match (info.told(), info.state) {
-        (true, RowState::Working) if info.message.is_none() => took(info.since),
-        (true, RowState::Finished | RowState::Failed) if info.message.is_none() => Some(ago(info.since)),
-        (false, _) => info.running.map(clock).or_else(|| info.failure.as_ref().map(|f| ago(f.since))),
+        (true, RowState::Working) if info.message.is_none() => took(info.since()),
+        (true, RowState::Finished | RowState::Failed) if info.message.is_none() => Some(ago(info.since())),
+        (false, _) => info.running().map(clock).or_else(|| info.failure.as_ref().map(|f| ago(f.since()))),
         _ => None,
     }
 }
@@ -529,7 +529,7 @@ fn row_label(info: &RowInfo, selected: bool, place: &Place) -> String {
         } else {
             RowSpeech::Plain {
                 command: info.command.as_deref(),
-                running: info.running,
+                running: info.running(),
                 bell: info.bell,
                 unread: info.unread,
                 failed: info.failure.as_ref().map(|failure| failure.code),
@@ -563,14 +563,14 @@ fn split_line_x(metrics: style::Metrics) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::time::{Duration, SystemTime};
 
     use wormhole_core::agents::AgentId;
     use wormhole_core::view::sidebar::RowState;
 
     use wormhole_core::notify::Source;
 
-    use super::super::facts::RowFailure;
+    use super::super::facts::{RowFailure, ago};
     use super::{RowInfo, SecondLine, glyph_for, second_line, time_text};
     use crate::style::{RowTone, StatusGlyph};
 
@@ -589,7 +589,7 @@ mod tests {
     }
 
     fn failed(code: i32, command: Option<&str>, secs: u64) -> RowFailure {
-        RowFailure { code, command: command.map(str::to_string), since: Duration::from_secs(secs) }
+        RowFailure { code, command: command.map(str::to_string), at: ago(Duration::from_secs(secs)) }
     }
 
     #[test]
@@ -686,7 +686,10 @@ mod tests {
         let told = RowInfo { message: Some("Editing".into()), ..info(true, RowState::Working) };
         assert_eq!(time_text(&told, false), None, "the agent's own words don't move");
         assert_eq!(time_text(&info(true, RowState::Finished), false).as_deref(), Some("3m ago"));
-        let running = RowInfo { running: Some(Duration::from_secs(72)), ..info(false, RowState::Working) };
+        let running = RowInfo {
+            running_since: Some(SystemTime::now() - Duration::from_secs(72)),
+            ..info(false, RowState::Working)
+        };
         assert_eq!(time_text(&running, false).as_deref(), Some("1:12"));
         assert_eq!(time_text(&running, true), None, "compact rows have no second line");
     }
@@ -720,7 +723,7 @@ mod tests {
         let build = RowInfo {
             name: "web".into(),
             command: Some("cargo build --release".into()),
-            running: Some(Duration::from_secs(72)),
+            running_since: Some(SystemTime::now() - Duration::from_secs(72)),
             ..info(false, RowState::Working)
         };
         assert!(row_label(&build, false, &place(3, 3, None)).starts_with("web, running cargo"));

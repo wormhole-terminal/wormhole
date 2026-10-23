@@ -91,7 +91,7 @@ impl Workspace {
         }
         self.feature_menus(&mut state, cx);
         let numbered = self.session_listing(cx).numbered();
-        state.terminals = numbered.iter().map(|&ix| self.sessions[ix].name(cx).to_string()).collect();
+        state.terminals = numbered.iter().map(|&ix| self.sessions[ix].name().to_string()).collect();
         state.current_terminal = numbered.iter().position(|&ix| ix == self.active);
         state
     }

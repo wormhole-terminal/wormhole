@@ -264,7 +264,7 @@ pub(crate) fn finished_commands(cx: &App) -> Option<&HashMap<i64, (String, std::
 /// "Send test": a real banner, as "needs you" would be, about the terminal in front.
 pub(crate) fn send_test(cx: &mut App) {
     let name = AppState::front_window(cx)
-        .and_then(|front| front.workspace.read_with(cx, |ws, cx| ws.active_session_name(cx)).ok())
+        .and_then(|front| front.workspace.read_with(cx, |ws, _| ws.active_session_name()).ok())
         .unwrap_or_else(|| "Terminal".into());
     let level = notify::interruption_level(Kind::NeedsYou, time_sensitive(cx));
     let sound = notify::sound(Kind::NeedsYou, level, settings(cx).notify_sound);

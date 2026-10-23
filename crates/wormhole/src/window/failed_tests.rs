@@ -30,7 +30,14 @@ fn failure(cx: &mut TestAppContext, t: &Entity<TerminalView>) -> Option<i32> {
 }
 
 fn look(cx: &mut TestAppContext, t: &Entity<TerminalView>) -> bool {
-    cx.update(|cx| t.update(cx, |t, _| t.acknowledge()))
+    cx.update(|cx| {
+        t.update(cx, |t, cx| {
+            let seen = t.acknowledge();
+            // The window's own paths tell it (`Workspace::sync_summary`).
+            cx.notify();
+            seen
+        })
+    })
 }
 
 #[gpui_kit::test]
@@ -46,7 +53,11 @@ fn a_command_that_fails_unseen_is_failed_until_the_terminal_is_opened(cx: &mut T
     cx.update(|cx| t.update(cx, |t, _| t.tick(false, false)));
     assert_eq!(now(cx, &t).0, Status::Failed, "nobody was looking");
     assert_eq!(failure(cx, &t), Some(101));
-    assert_eq!(t.read_with(cx, |t, _| t.summary().failed), Some(101), "the sidebar hears of it");
+    assert_eq!(
+        t.read_with(cx, |t, _| t.summary().failure.map(|failure| failure.code)),
+        Some(101),
+        "the sidebar hears of it"
+    );
 
     // Opened: the status clears like done's, the row's cue stays until the next command.
     assert!(look(cx, &t));
@@ -123,8 +134,7 @@ fn an_exit_code_that_comes_late_turns_done_into_failed(cx: &mut TestAppContext) 
 
 /// The facts the ambient surfaces read about each terminal of the window.
 fn facts(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<TabFacts> {
-    cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.tab_facts(false, cx)))
-        .expect("the window is open")
+    cx.update(|cx| window.workspace.read_with(cx, |ws, _| ws.tab_facts(false))).expect("the window is open")
 }
 
 /// What the banners say now: every terminal's change since the last look, as the tick sweeps.
@@ -165,7 +175,7 @@ fn a_program_that_is_no_agent_works_asks_finishes_and_fails_like_one(cx: &mut Te
     let window = start(cx, 2);
     banners_in_front(cx);
     let t = terminal(cx, &window, 1);
-    let name = drive(cx, &window, |ws, _, cx| ws.sessions[1].name(cx).to_string());
+    let name = drive(cx, &window, |ws, _, _| ws.sessions[1].name().to_string());
     let brew = |cx: &mut TestAppContext| {
         let all = facts(cx, &window);
         (all[1].state, all[1].source, all[1].program.clone(), all[1].agent)

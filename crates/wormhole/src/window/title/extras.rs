@@ -65,12 +65,11 @@ impl Workspace {
     pub(in crate::window) fn extra_facts(&self, cx: &App) -> ExtraFacts {
         let settings = settings_in(&self.profile, cx);
         let session = self.active_session();
-        let terminal = session.terminal().read(cx);
         // Git's answer only while it is about the folder the terminal is in now.
-        let status = session.git.status.as_ref().filter(|_| session.git.cwd == terminal.cwd);
+        let status = session.git.status.as_ref().filter(|_| session.git.cwd == session.pane.summary.cwd);
         ExtraFacts {
             branch: status.filter(|_| settings.title_branch_status).and_then(RepoStatus::branch_status),
-            gauge: self.agent_gauge(cx).filter(|_| settings.title_agent_gauge).cloned(),
+            gauge: self.agent_gauge().filter(|_| settings.title_agent_gauge).cloned(),
             ports: if settings.title_ports { session.extras.ports.clone() } else { Vec::new() },
             pull_request: self.pull_request_branch(cx).and_then(|branch| app(cx).pr.get(&branch).cloned()),
         }
@@ -78,9 +77,9 @@ impl Workspace {
 
     /// The model and context window the active terminal's agent last reported. Only the agent
     /// that reported it: another one in the same terminal has not (yet).
-    pub(in crate::window) fn agent_gauge<'a>(&'a self, cx: &'a App) -> Option<&'a Gauge> {
+    pub(in crate::window) fn agent_gauge(&self) -> Option<&Gauge> {
         let session = self.active_session();
-        let agent = session.terminal().read(cx).agent;
+        let agent = session.pane.summary.agent;
         session.extras.gauge.as_ref().filter(|gauge| agent == Some(gauge.agent))
     }
 
@@ -178,8 +177,7 @@ impl Workspace {
             return None;
         }
         let session = self.sessions.get(ix)?;
-        let status =
-            session.git.status.as_ref().filter(|_| session.git.cwd == session.terminal().read(cx).cwd)?;
+        let status = session.git.status.as_ref().filter(|_| session.git.cwd == session.pane.summary.cwd)?;
         let name = status.branch.clone()?;
         self.programs_approved(session.id, cx).then(|| Branch { root: status.root.clone(), name })
     }

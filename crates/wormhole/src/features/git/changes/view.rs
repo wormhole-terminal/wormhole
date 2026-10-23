@@ -62,7 +62,7 @@ impl Changes {
             // Not a repository: nothing to compare or refresh.
             // "Reading" only until git has answered for this folder: a poll running on top of an
             // answer already shown must not swap the note for it and back.
-            let answered = terminal.read(cx).cwd.as_deref().is_some_and(|c| git.answered_for(c));
+            let answered = active.summary.cwd.as_deref().is_some_and(|c| git.answered_for(c));
             let text = if !answered {
                 "Reading git status…"
             } else {

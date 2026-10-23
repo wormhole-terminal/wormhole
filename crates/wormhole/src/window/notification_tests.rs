@@ -68,7 +68,7 @@ fn a_background_sessions_notification_follows_its_agent(cx: &mut TestAppContext)
     // Read when a notice is checked: an unnamed terminal is named after what runs in it,
     // so the first hook, which names the agent, renames it.
     let name = |cx: &mut TestAppContext| {
-        cx.update(|cx| window.workspace.read_with(cx, |ws, cx| ws.sessions[1].name(cx).to_string()))
+        cx.update(|cx| window.workspace.read_with(cx, |ws, _| ws.sessions[1].name().to_string()))
             .expect("the window is open")
     };
 

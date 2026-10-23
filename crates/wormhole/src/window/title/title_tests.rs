@@ -32,7 +32,12 @@ fn a_long_path_loses_its_middle_before_the_buttons_fold(cx: &mut TestAppContext)
         drive(cx, &window, move |ws, window, cx| {
             ws.panes.panel_wanted = false;
             ws.window_width = width;
-            ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(deep));
+            ws.sessions[0].terminal().update(cx, |terminal, cx| {
+                terminal.cwd = Some(deep);
+                cx.notify();
+            });
+            // The window hears of it once this update ends; the plan is asked for inside it.
+            ws.sync_summaries(cx);
             let plan = ws.title_plan(window, cx);
             let shown = match plan.fit.path {
                 PathShown::Step(ix) => Some(plan.steps[ix].text.full()),
@@ -76,7 +81,10 @@ fn resting_on_the_folder_opens_its_popover_and_a_right_click_its_menu(cx: &mut T
     let folder = PathBuf::from("/Volumes/Work/clients/acme");
     let set = folder.clone();
     drive(cx, &window, move |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(set));
+        ws.sessions[0].terminal().update(cx, |terminal, cx| {
+            terminal.cwd = Some(set);
+            cx.notify();
+        });
     });
     draw(cx, &window);
     draw(cx, &window);
@@ -136,7 +144,10 @@ fn resting_on_the_folder_opens_its_popover_and_a_right_click_its_menu(cx: &mut T
     // The right-click is the path menu.
     let set = folder.clone();
     drive(cx, &window, move |ws, _, cx| {
-        ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(set));
+        ws.sessions[0].terminal().update(cx, |terminal, cx| {
+            terminal.cwd = Some(set);
+            cx.notify();
+        });
     });
     draw(cx, &window);
     draw(cx, &window);
@@ -172,9 +183,10 @@ fn the_extras_give_way_after_the_path_and_in_their_order(cx: &mut TestAppContext
     let gauge = Gauge { agent: AgentId::Claude, model: Some("Opus 4.5".into()), context: Some(41.0) };
     drive(cx, &window, move |ws, _, cx| {
         ws.panes.panel_wanted = false;
-        ws.sessions[0].terminal().update(cx, |terminal, _| {
+        ws.sessions[0].terminal().update(cx, |terminal, cx| {
             terminal.cwd = Some(PathBuf::from("/Volumes/Work/clients/acme/projects/backend"));
             terminal.agent = Some(AgentId::Claude);
+            cx.notify();
         });
         ws.handle_gauge("1", gauge, cx);
         ws.sessions[0].extras.found_ports(vec![3000, 5173, 8080, 9229]);
@@ -249,7 +261,10 @@ fn the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch
     drive(cx, &window, {
         let (root, status) = (root.clone(), status.clone());
         move |ws, _, cx| {
-            ws.sessions[0].terminal().update(cx, |terminal, _| terminal.cwd = Some(root.clone()));
+            ws.sessions[0].terminal().update(cx, |terminal, cx| {
+                terminal.cwd = Some(root.clone());
+                cx.notify();
+            });
             ws.sessions[0].git.status = Some(status);
             ws.sessions[0].git.cwd = Some(root);
             ws.refresh_features(cx);

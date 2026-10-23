@@ -100,9 +100,7 @@ impl Workspace {
     /// The focused terminal's find bar, floating at the terminal's top right, under the
     /// title bar (in a split under its pane's header) and lined up with the grid's right edge.
     fn render_find_bar(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let terminal = self.active_terminal();
-        let terminal = terminal.read(cx);
-        let bar = terminal.find_bar()?;
+        let bar = self.active_session().pane.summary.find_bar.clone()?;
         let right = px(crate::terminal_view::TerminalView::right_inset(&self.profile, cx));
         let (top, right) = match self.active_split() {
             Some(split) => {

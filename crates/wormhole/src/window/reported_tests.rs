@@ -286,7 +286,7 @@ fn a_reported_question_is_told_but_a_program_cannot_flood_the_banners(cx: &mut T
     };
     // An unnamed terminal is named after what runs in it, so the first report, which names the
     // agent, renames it: read when a banner is checked.
-    let name = |cx: &mut TestAppContext| drive(cx, &window, |ws, _, cx| ws.sessions[1].name(cx).to_string());
+    let name = |cx: &mut TestAppContext| drive(cx, &window, |ws, _, _| ws.sessions[1].name().to_string());
 
     report(cx, &t, "state=blocked:kind=permission:app=claude-code:msg={msg:Allow Bash?}");
     let needs_you = format!("{} needs you", name(cx));
