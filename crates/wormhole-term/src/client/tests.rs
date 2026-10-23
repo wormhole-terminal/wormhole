@@ -382,7 +382,8 @@ fn the_end_after_the_programs_exit_inside_a_synchronized_update_leaves_the_last_
     script.event(0, EventKind::Exited(wire::ExitInfo { code: 0, signal: 0, at_ms: 0 }));
     next_event(&events, "exit", |e| matches!(e, PtyEvent::Exited(Some(0))));
     drop(script);
-    std::thread::sleep(Duration::from_millis(50));
+    // Letting go of the held update wakes the proxy: that output event is the release.
+    next_event(&events, "release", |e| matches!(e, PtyEvent::Output));
     pty.snapshot(&mut snapshot, 0);
     assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
 }
