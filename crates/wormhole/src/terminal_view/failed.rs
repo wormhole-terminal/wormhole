@@ -8,7 +8,7 @@
 use std::time::{Duration, Instant};
 
 use wormhole_core::notify::{self, Source};
-use wormhole_core::view::sidebar::names::command_name;
+use wormhole_core::view::sidebar::names::{command_name, command_name_is};
 
 use super::TerminalView;
 
@@ -77,5 +77,25 @@ impl TerminalView {
             command.map(command_name).filter(|name| !name.is_empty())
         };
         app.or_else(command)
+    }
+
+    /// Whether [`program_name`](Self::program_name) is `expected`, without making the name: the
+    /// window compares its copy of a terminal with the terminal on every redraw of it, and a
+    /// reporting program's name is built from the command line when it gave none of its own.
+    pub fn program_name_is(&self, expected: Option<&str>) -> bool {
+        if self.source() != Source::Program {
+            return expected.is_none();
+        }
+        if let Some(app) = self.program.as_ref().and_then(|program| program.app.as_deref()) {
+            return expected == Some(app);
+        }
+        let command =
+            self.foreground.as_ref().map(|f| f.command.as_str()).or(self.finished_command.as_deref());
+        match (command, expected) {
+            (Some(command), Some(name)) => !name.is_empty() && command_name_is(command, name),
+            // A command with no words has no name.
+            (Some(command), None) => command.split_whitespace().next().is_none(),
+            (None, expected) => expected.is_none(),
+        }
     }
 }

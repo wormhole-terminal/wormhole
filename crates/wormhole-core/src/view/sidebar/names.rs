@@ -67,19 +67,38 @@ pub fn title_name(raw: &str) -> Option<String> {
 /// first option, path or value ("cargo test -p core" → "cargo test", "npm run dev" → "npm run
 /// dev", "vim src/main.rs" → "vim"). The rest is for the row's second line, not a name.
 pub fn command_name(command: &str) -> String {
+    command_words(command).collect::<Vec<_>>().join(" ")
+}
+
+/// Whether `name` is what [`command_name`] makes of `command`, without making it: a terminal's
+/// summary is compared with the terminal on every redraw.
+pub fn command_name_is(command: &str, name: &str) -> bool {
+    let mut rest = name;
+    for (at, word) in command_words(command).enumerate() {
+        if at > 0 {
+            let Some(after) = rest.strip_prefix(' ') else { return false };
+            rest = after;
+        }
+        let Some(after) = rest.strip_prefix(word) else { return false };
+        rest = after;
+    }
+    rest.is_empty()
+}
+
+fn command_words(command: &str) -> impl Iterator<Item = &str> {
     const MAX_WORDS: usize = 3;
     let mut words = command.split_whitespace();
-    let Some(program) = words.next() else { return String::new() };
+    let program = words.next();
     let subcommand = |word: &&str| {
         word.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
             && word.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     };
-    std::iter::once(program).chain(words.take_while(subcommand)).take(MAX_WORDS).collect::<Vec<_>>().join(" ")
+    program.into_iter().chain(words.take_while(subcommand)).take(MAX_WORDS)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{NameFacts, command_name, process_name, program_name, title_name};
+    use super::{NameFacts, command_name, command_name_is, process_name, program_name, title_name};
 
     fn shell() -> NameFacts<'static> {
         NameFacts { shell: "zsh", ..NameFacts::default() }
@@ -134,6 +153,17 @@ mod tests {
         assert_eq!(title_name(" ⠂ "), None);
         let long = "x".repeat(500);
         assert_eq!(title_name(&long).map(|t| t.chars().count()), Some(121));
+    }
+
+    #[test]
+    fn a_name_is_checked_against_a_command_without_making_it() {
+        for command in ["cargo test -p core", "npm run dev now", "vim src/main.rs", "htop", "  ", ""] {
+            let name = command_name(command);
+            assert!(command_name_is(command, &name), "{command:?}");
+            for other in [format!("{name} x"), name.replace(' ', ""), "cargo".to_string(), String::new()] {
+                assert_eq!(command_name_is(command, &other), other == name, "{command:?} against {other:?}");
+            }
+        }
     }
 
     #[test]

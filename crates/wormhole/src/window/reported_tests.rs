@@ -139,6 +139,31 @@ fn a_programs_name_gives_the_agent_only_when_none_was_found(cx: &mut TestAppCont
 }
 
 #[gpui_kit::test]
+fn a_programs_name_is_compared_with_the_summary_without_making_it(cx: &mut TestAppContext) {
+    if isolate("a_programs_name_is_compared_with_the_summary_without_making_it") {
+        return;
+    }
+    let window = start(cx, 1);
+    let t = terminal(cx, &window, 0);
+    let agrees = |cx: &mut TestAppContext| {
+        t.read_with(cx, |t, _| {
+            let name = t.program_name();
+            t.program_name_is(name.as_deref())
+                && !t.program_name_is(Some("not-its-name"))
+                && (name.is_some() || t.program_name_is(None))
+                && t.summary().matches(t)
+        })
+    };
+    assert!(agrees(cx), "no program reports");
+    report(cx, &t, "state=working:app=terraform");
+    assert_eq!(t.read_with(cx, |t, _| t.program_name()), Some("terraform".to_string()));
+    assert!(agrees(cx), "a program that names itself");
+    let before = t.read_with(cx, |t, _| t.summary());
+    report(cx, &t, "state=working:app=pulumi");
+    assert!(t.read_with(cx, |t, _| !before.matches(t)), "another name is another summary");
+}
+
+#[gpui_kit::test]
 fn the_output_heuristics_leave_a_reported_status_alone(cx: &mut TestAppContext) {
     if isolate("the_output_heuristics_leave_a_reported_status_alone") {
         return;

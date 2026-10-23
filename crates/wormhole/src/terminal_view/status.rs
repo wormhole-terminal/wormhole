@@ -107,8 +107,7 @@ impl TerminalSummary {
             && self.foreground.as_ref() == terminal.foreground()
             && self.naming_command.as_deref() == terminal.naming_command()
             && self.shell == terminal.shell
-            // Allocates only for a program that reports (`program_name`), the rare terminal.
-            && self.program == terminal.program_name()
+            && terminal.program_name_is(self.program.as_deref())
             && self.reported_by_program == terminal.reported_by_program()
             && self.program_in_foreground == terminal.program_in_foreground
             && self.bell_rang == terminal.bell_rang()
