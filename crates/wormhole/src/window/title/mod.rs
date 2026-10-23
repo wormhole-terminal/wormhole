@@ -63,6 +63,10 @@ pub(super) struct Facts {
 }
 
 /// The project's colour as the row draws it.
+#[cfg_attr(
+    not(feature = "devctl"),
+    expect(dead_code, reason = "only devctl's title dump reads the colour and its strength")
+)]
 pub(super) struct Tint {
     pub(super) color: ProjectColor,
     /// How strong it is at the left edge: 36 %, less where the text would not read.

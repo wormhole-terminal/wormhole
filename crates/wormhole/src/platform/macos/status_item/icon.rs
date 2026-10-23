@@ -22,8 +22,6 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
-use wormhole_core::storage::files::{self, LinkPolicy};
-
 use crate::menubar::model::Mark;
 use crate::menubar::{Rgba, StatusColors};
 
@@ -158,6 +156,8 @@ pub(super) fn save_all(
     prefix: &str,
     colors: StatusColors,
 ) -> anyhow::Result<Vec<std::path::PathBuf>> {
+    use wormhole_core::storage::files::{self, LinkPolicy};
+
     let states: [(&str, bool, Option<usize>, Mark); 9] = [
         ("idle", false, None, Mark::None),
         ("working", true, None, Mark::None),

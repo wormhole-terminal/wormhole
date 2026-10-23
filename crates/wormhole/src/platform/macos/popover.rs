@@ -27,7 +27,6 @@ use objc2_app_kit::{
     NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView, NSViewController,
 };
 use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize, NSString};
-use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::Appearance;
 
 use super::{appkit, rows, swatches};
@@ -527,6 +526,7 @@ fn min_width(view: &NSView, width: f64) {
 pub fn render(popover: &Popover, png: &std::path::Path) -> Option<String> {
     use objc2_app_kit::NSBitmapImageFileType;
     use objc2_foundation::NSDictionary;
+    use wormhole_core::storage::files::{self, LinkPolicy};
 
     let mtm = MainThreadMarker::new()?;
     let (tx, _rx) = smol::channel::unbounded::<Event>();
