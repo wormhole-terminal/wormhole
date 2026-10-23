@@ -10,7 +10,8 @@ use gpui_kit::assets::IconName;
 use gpui_kit::base::{Checkbox as BaseCheckbox, CheckboxIndicator};
 use gpui_kit::component::{Icon, Sizable};
 use gpui_kit::prelude::*;
-use gpui_kit::*;
+// Named: under gpui-fast the prelude and the root each bring a derive called IntoElement.
+use gpui_kit::{IntoElement, *};
 
 use super::controls::{RingPlacement, focus_ring};
 use super::scale::{Edges, HIT_MIN, TextRole};

@@ -6,7 +6,8 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::button::{Button, ButtonCustomVariant, ButtonVariants};
 use gpui_kit::component::{Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
-use gpui_kit::*;
+// Named: under gpui-fast the prelude and the root each bring a derive called IntoElement.
+use gpui_kit::{IntoElement, *};
 
 use super::motion::TOOLTIP_DELAY;
 use super::scale::{CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_GLYPH};

@@ -10,7 +10,8 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::{ActiveTheme as _, Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
-use gpui_kit::*;
+// Named: under gpui-fast the prelude and the root each bring a derive called IntoElement.
+use gpui_kit::{IntoElement, *};
 
 use crate::settings::UiColors;
 use crate::style::{CONTROL_H, Edges, ROW_H, TextRole};

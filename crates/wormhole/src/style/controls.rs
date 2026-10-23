@@ -5,7 +5,8 @@ use gpui_kit::assets::IconName;
 use gpui_kit::base::{Transition, transition};
 use gpui_kit::component::{Icon, Sizable, Size};
 use gpui_kit::prelude::*;
-use gpui_kit::*;
+// Named: under gpui-fast the prelude and the root each bring a derive called IntoElement.
+use gpui_kit::{IntoElement, *};
 
 use super::buttons::tooltip_delay;
 use super::labels::{count_badge, selected_count_badge};

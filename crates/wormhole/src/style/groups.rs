@@ -10,7 +10,8 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, Selectable, Sizable as _};
 use gpui_kit::prelude::*;
-use gpui_kit::*;
+// Named: under gpui-fast the prelude and the root each bring a derive called IntoElement.
+use gpui_kit::{IntoElement, *};
 use wormhole_core::view::sidebar::Density;
 
 use super::buttons::{icon_button, row_actions};
