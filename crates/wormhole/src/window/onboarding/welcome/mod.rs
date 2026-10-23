@@ -23,18 +23,13 @@ mod answers;
 use std::time::Instant;
 
 use gpui_kit::*;
-use wormhole_core::agents::integrations;
 use wormhole_core::ipc::control::AgentsFacts;
 use wormhole_core::onboarding::intro::{Handover, Start};
-use wormhole_core::onboarding::welcome::{self, DockCell, Registry};
+use wormhole_core::onboarding::welcome::Registry;
 use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
-use wormhole_core::storage::store::SessionRecord;
 
-use crate::app_state::{AppState, app, app_mut};
-#[cfg(feature = "devctl")]
-use crate::notifications;
+use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::window::Workspace;
 use crate::window::window_lifecycle::with_front_workspace;
 
 pub(crate) use answers::handle;
@@ -49,7 +44,7 @@ pub(crate) struct Plan {
 
 /// Whether the start animation plays around this welcome, and since when.
 #[derive(Clone, Copy, Debug)]
-enum Play {
+pub(in crate::window) enum Play {
     /// None plays (a test instance's first launch, no Metal): the program has nothing to wait for.
     Never,
     /// About to: the first launch opens its window and then plays; a request that comes in between
@@ -59,27 +54,44 @@ enum Play {
 }
 
 /// One welcome terminal's side in the app.
-struct Run {
-    tab: i64,
-    handover: Handover,
-    first_run: bool,
-    play: Play,
+pub(in crate::window) struct Run {
+    pub(in crate::window) tab: i64,
+    pub(in crate::window) handover: Handover,
+    pub(in crate::window) first_run: bool,
+    pub(in crate::window) play: Play,
     /// The agents found; `None` until the search (off the UI thread) is done.
-    agents: Option<AgentsFacts>,
+    pub(in crate::window) agents: Option<AgentsFacts>,
     /// What went wrong with the last Install, until the next one that works.
-    problem: Option<String>,
+    pub(in crate::window) problem: Option<String>,
     /// devctl's `state` names it, so `welcome-probe` can send a request as the program would (and the
     /// tests do).
     #[cfg(any(test, feature = "devctl"))]
-    token: String,
-    _scan: Option<Task<()>>,
+    pub(in crate::window) token: String,
+    pub(in crate::window) _scan: Option<Task<()>>,
 }
 
-/// Every welcome the app has running, and the doors to them.
+/// Every welcome the app has running, and the doors to them: the first-run welcome's own global, made
+/// the first time a welcome asks for it.
 #[derive(Default)]
 pub(crate) struct Welcomes {
     gates: Registry,
     runs: Vec<Run>,
+    /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as that
+    /// window is being opened.
+    first: Option<Plan>,
+    /// The token of the welcome terminal being made, until its session takes it into its environment.
+    pending: Option<(i64, String)>,
+}
+
+impl Global for Welcomes {}
+
+/// The welcomes, if any ever started.
+fn welcomes(cx: &App) -> Option<&Welcomes> {
+    cx.try_global::<Welcomes>()
+}
+
+fn welcomes_mut(cx: &mut App) -> &mut Welcomes {
+    cx.default_global::<Welcomes>()
 }
 
 impl Welcomes {
@@ -90,6 +102,43 @@ impl Welcomes {
     fn run_mut(&mut self, tab: i64) -> Option<&mut Run> {
         self.runs.iter_mut().find(|run| run.tab == tab)
     }
+}
+
+/// The run of the welcome in terminal `tab`, if it has one.
+pub(in crate::window) fn run_of(tab: i64, cx: &App) -> Option<&Run> {
+    welcomes(cx)?.run(tab)
+}
+
+/// The run of the welcome in terminal `tab`, to change.
+pub(in crate::window) fn run_of_mut(tab: i64, cx: &mut App) -> Option<&mut Run> {
+    welcomes_mut(cx).run_mut(tab)
+}
+
+/// The first launch's window is about to open: its first terminal is the welcome that `plan` says
+/// (`None`: a plain one). Set for as long as that window is being opened.
+pub(crate) fn set_first_launch(plan: Option<Plan>, cx: &mut App) {
+    welcomes_mut(cx).first = plan;
+}
+
+/// The plan for the window being opened for the first launch, taken: only its first terminal is the
+/// welcome.
+pub(in crate::window) fn take_first_launch(cx: &mut App) -> Option<Plan> {
+    welcomes_mut(cx).first.take()
+}
+
+/// The session `record` is made for takes the token of the welcome it is, if it is the welcome's terminal.
+pub(in crate::window) fn take_token(id: i64, cx: &mut App) -> Option<String> {
+    welcomes_mut(cx).pending.take_if(|(pending, _)| *pending == id).map(|(_, token)| token)
+}
+
+/// A welcome terminal `id` starts, with `token`: its door, its run and its token for the session about to
+/// be made.
+pub(in crate::window) fn begin(id: i64, token: String, run: Run, cx: &mut App) {
+    let welcomes = welcomes_mut(cx);
+    welcomes.gates.open(id, token.clone());
+    welcomes.runs.retain(|run| run.tab != id);
+    welcomes.runs.push(run);
+    welcomes.pending = Some((id, token));
 }
 
 /// The plan for the first launch, when the terminal welcome is on and this is one (nothing saved, the
@@ -133,17 +182,16 @@ pub(crate) fn replay_in_front(handover: Handover, cx: &mut App) {
 
 /// Whether the welcome in `tab` is still running (its token still opens the door).
 pub(in crate::window) fn running(tab: i64, cx: &App) -> bool {
-    app(cx).welcomes.gates.running(tab)
+    welcomes(cx).is_some_and(|welcomes| welcomes.gates.running(tab))
 }
 
 /// A welcome terminal is gone (closed, or its window): its token opens nothing, and a first run that
 /// was closed unfinished counts as skipped, so the next launch doesn't start it all over.
 pub(in crate::window) fn forget(tab: i64, cx: &mut App) {
-    let state = app_mut(cx);
-    let first_run =
-        state.welcomes.run(tab).is_some_and(|run| run.first_run && state.welcomes.gates.running(tab));
-    state.welcomes.gates.forget(tab);
-    state.welcomes.runs.retain(|run| run.tab != tab);
+    let welcomes = welcomes_mut(cx);
+    let first_run = welcomes.run(tab).is_some_and(|run| run.first_run && welcomes.gates.running(tab));
+    welcomes.gates.forget(tab);
+    welcomes.runs.retain(|run| run.tab != tab);
     if first_run {
         remember_first_run(cx);
     }
@@ -160,194 +208,3 @@ fn remember_first_run(cx: &mut App) {
 
 #[cfg(test)]
 mod tests;
-
-#[cfg(feature = "devctl")]
-impl Workspace {
-    /// devctl's `onboarding close`: press Esc in every terminal of this window whose welcome runs.
-    pub(crate) fn skip_welcomes(&mut self, cx: &mut Context<Self>) {
-        let running: Vec<_> = self
-            .sessions
-            .iter()
-            .filter(|session| app(cx).welcomes.gates.running(session.id))
-            .map(|session| session.terminal().clone())
-            .collect();
-        for terminal in running {
-            terminal.update(cx, |terminal, _| terminal.write(b"\x1b".to_vec()));
-        }
-    }
-
-    /// devctl's `state`: a line for each terminal that runs a welcome.
-    pub(crate) fn devctl_welcome_state(&self, cx: &App) -> String {
-        let welcomes = &app(cx).welcomes;
-        let mut out = String::new();
-        for (ix, session) in self.sessions.iter().enumerate() {
-            let Some(run) = welcomes.run(session.id) else { continue };
-            let agents = match &run.agents {
-                None => "scanning".to_string(),
-                Some(agents) => format!("{} found", agents.found.len()),
-            };
-            let demo = match self.welcome_demo_rows(cx) {
-                None => "off".to_string(),
-                Some(rows) => rows
-                    .iter()
-                    .map(|row| {
-                        format!(
-                            "{}={}",
-                            row.name,
-                            wormhole_core::view::sidebar::spoken::state_word(row.state)
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join(","),
-            };
-            out += &format!(
-                "welcome terminal={} tab={} token={} handover={} first_run={} running={} play={:?} agents={agents} demo={demo} permission_asks={}\n",
-                ix + 1,
-                session.id,
-                run.token,
-                run.handover.key(),
-                run.first_run,
-                welcomes.gates.running(session.id),
-                run.play,
-                notifications::permission_asks(cx),
-            );
-        }
-        out
-    }
-}
-
-impl Workspace {
-    /// The first terminal of a window opened for the first launch: the welcome, not a plain shell.
-    pub(in crate::window) fn open_first_welcome(
-        &mut self,
-        plan: Plan,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let play = if crate::background::on() { Play::Never } else { Play::Pending };
-        self.open_welcome_session(plan, play, window, cx);
-    }
-
-    /// Play the wormhole run around this window with the hand-over `plan` asks for, from a window that
-    /// is `start`ing shown or hidden (`None`: nothing plays). The welcome terminal is already there.
-    fn start_welcome_animation(
-        &mut self,
-        plan: Plan,
-        start: Option<Start>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let tab = self.sessions.iter().rev().map(|s| s.id).find(|id| app(cx).welcomes.run(*id).is_some());
-        let played = start.is_some_and(|start| self.play_run(plan.handover, start, window, cx));
-        if let Some(run) = tab.and_then(|id| app_mut(cx).welcomes.run_mut(id)) {
-            run.play = if played { Play::Since(Instant::now()) } else { Play::Never };
-        }
-    }
-
-    /// Start the run; whether it is playing.
-    fn play_run(
-        &mut self,
-        handover: Handover,
-        start: Start,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        // The window keeps its chrome: the welcome is in the terminal, the traffic lights stay.
-        crate::intro::play_with(
-            window,
-            handover.style(),
-            crate::intro::Options { start, lights: false, handover: Some(handover) },
-            cx,
-        );
-        crate::intro::progress(cx).is_some()
-    }
-
-    /// Replay: the window leaves into the wormhole and comes back with a new terminal in it that
-    /// runs the welcome with `handover`, as a replay of the first run (the welcome page alone).
-    pub(crate) fn replay_welcome(&mut self, handover: Handover, window: &mut Window, cx: &mut Context<Self>) {
-        self.replay_welcome_from(handover, Start::Shown, window, cx);
-    }
-
-    /// [`replay_welcome`](Self::replay_welcome) from a window that is `start`ing shown (it leaves
-    /// first) or hidden (a first launch's, which devctl's `welcome <hand-over> hidden` imitates).
-    pub(crate) fn replay_welcome_from(
-        &mut self,
-        handover: Handover,
-        start: Start,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let plan = Plan { handover, first_run: false };
-        let playing = self.play_run(handover, start, window, cx);
-        let play = if playing { Play::Since(Instant::now()) } else { Play::Never };
-        if !playing || start == Start::Hidden {
-            self.open_welcome_session(plan, play, window, cx);
-            return;
-        }
-        // The terminal opens once the window is out of sight, so it never shows its first moments
-        // (the cursor before the program hides it); the program waits out the rest of the run.
-        self.after_fade(window, cx, move |this, window, cx| {
-            this.open_welcome_session(plan, play, window, cx);
-        });
-    }
-
-    /// A new terminal that runs the welcome: its token, its place among the welcomes, and the cell
-    /// the ship is to dock on. Falls back to a plain terminal when there is no random token to be had.
-    fn open_welcome_session(&mut self, plan: Plan, play: Play, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(token) = welcome::new_token() else {
-            tracing::warn!("no random token for the welcome: starting a plain terminal instead");
-            self.new_session(window, cx);
-            return;
-        };
-        let id = self.alloc_id(cx);
-        let scan = cx.spawn(async move |this, cx| {
-            let agents = cx
-                .background_executor()
-                .spawn(async move { welcome::facts::scan_agents(&integrations::home()) })
-                .await;
-            this.update(cx, |_, cx| {
-                if let Some(run) = app_mut(cx).welcomes.run_mut(id) {
-                    run.agents = Some(agents);
-                }
-                cx.notify();
-            })
-            .ok();
-        });
-        let state = app_mut(cx);
-        state.welcomes.gates.open(id, token.clone());
-        state.welcomes.runs.retain(|run| run.tab != id);
-        state.welcomes.runs.push(Run {
-            tab: id,
-            handover: plan.handover,
-            first_run: plan.first_run,
-            play,
-            agents: None,
-            problem: None,
-            #[cfg(any(test, feature = "devctl"))]
-            token: token.clone(),
-            _scan: Some(scan),
-        });
-        self.pending_welcome = Some((id, token));
-        let cwd = self.default_cwd(cx);
-        let record = SessionRecord::new(id, None, cwd);
-        let ix = self.add_session(Some(record), window, cx);
-        self.activate(ix, window, cx);
-        self.dirty = true;
-        let dock: Option<DockCell> = welcome::dock(plan.handover);
-        self.sessions[ix].terminal().update(cx, |terminal, cx| terminal.set_dock(dock, cx));
-    }
-
-    /// The terminal the welcome ended in no longer reports a dock, the sidebar's example band goes
-    /// with it, and the sidebar's note for a first run that ended on the primer (no agent on PATH)
-    /// comes up.
-    fn welcome_ended(&mut self, tab: i64, primer: bool, cx: &mut Context<Self>) {
-        if let Some(session) = self.sessions.iter().find(|s| s.id == tab) {
-            session.terminal().update(cx, |terminal, cx| terminal.set_dock(None, cx));
-        }
-        self.end_welcome_demo(tab, cx);
-        if primer {
-            self.first_run.show_no_agents_note();
-        }
-        cx.notify();
-    }
-}

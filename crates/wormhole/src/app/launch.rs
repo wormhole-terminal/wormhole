@@ -20,9 +20,9 @@ use wormhole_core::storage::paths::DataRoot;
 
 use crate::app::menus;
 use crate::app::tick::{dispatch_hook, handle_menu_command, tick};
+use crate::app_state::AppState;
 use crate::app_state::look::{apply_theme, sync_system_look};
 use crate::app_state::profiles;
-use crate::app_state::{AppState, app_mut};
 use crate::settings::ParkedSettings;
 use crate::status_item;
 use crate::window::onboarding;
@@ -130,9 +130,9 @@ pub(crate) fn start(
         // With the terminal welcome on, the window's first terminal runs it and the run plays
         // around the window; otherwise the intro window opens over a plain terminal.
         let welcome = crate::window::onboarding::welcome::first_launch_plan(cx);
-        app_mut(cx).first_welcome = welcome;
+        crate::window::onboarding::welcome::set_first_launch(welcome, cx);
         open_workspace_window(None, None, cx);
-        app_mut(cx).first_welcome = None;
+        crate::window::onboarding::welcome::set_first_launch(None, cx);
         match welcome {
             Some(plan) => crate::window::onboarding::welcome::play_first(plan, cx),
             None => onboarding::start_if_first_launch(cx),

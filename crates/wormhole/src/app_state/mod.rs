@@ -92,11 +92,6 @@ pub(crate) struct AppState {
     /// The side columns as they were last left, in any window: how a window opened with no
     /// layout of its own starts (`open_workspace_window`). Kept in the store's `meta`.
     pub last_panes: RememberedPanes,
-    /// The terminal welcomes running, and the doors to them (core's token rules).
-    pub welcomes: crate::window::onboarding::welcome::Welcomes,
-    /// The first launch's window starts with a welcome terminal, not a plain one: set for as long as
-    /// that window is being opened.
-    pub first_welcome: Option<crate::window::onboarding::welcome::Plan>,
     /// Terminals on their way to another window (a group moved there): the new window takes the
     /// running terminal of a session it is opened with instead of starting a shell.
     pub adopted: HashMap<i64, Entity<crate::terminal_view::TerminalView>>,
@@ -151,8 +146,6 @@ impl AppState {
             pr: Default::default(),
             worktrees,
             last_panes,
-            welcomes: Default::default(),
-            first_welcome: None,
             adopted: HashMap::new(),
             next_id,
             next_window_id,
@@ -202,8 +195,6 @@ impl AppState {
             pr: Default::default(),
             worktrees: Worktrees::default(),
             last_panes: RememberedPanes::default(),
-            welcomes: Default::default(),
-            first_welcome: None,
             adopted: HashMap::new(),
             next_id,
             next_window_id: 2,

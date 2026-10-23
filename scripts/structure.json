@@ -270,7 +270,6 @@
       "crates/wormhole/src/window/onboarding/mod.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/page.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/steps.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/onboarding/welcome/mod.rs :: impl Workspace": 2,
       "crates/wormhole/src/window/onboarding/welcome_page.rs :: impl Workspace": 1
     }
   }

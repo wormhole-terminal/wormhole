@@ -51,7 +51,6 @@ use gpui_kit::*;
 #[cfg(feature = "devctl")]
 pub(crate) use self::focus::set_front;
 pub(crate) use self::windows::{request_quit, request_quit_ending_hosts};
-use crate::app_state::app_mut;
 use crate::platform::vibrancy;
 use crate::settings::settings_in;
 use wormhole_core::agents::AgentId;
@@ -129,6 +128,7 @@ mod tick;
 mod title;
 #[cfg(test)]
 pub(crate) mod view_tests;
+mod welcome_host;
 mod window_actions;
 mod window_bounds;
 mod window_control;
@@ -240,9 +240,6 @@ pub struct Workspace {
     dirty: bool,
     /// The first-run sheet while it is open, and what it leaves behind.
     first_run: self::onboarding::FirstRun,
-    /// The terminal about to be made for a welcome (its session id and token): its shell is started
-    /// through `Wormhole welcome` with the token in its environment (`make_pane`).
-    pending_welcome: Option<(i64, String)>,
     /// The command palette or the shortcut sheet, while one is open over the window.
     overlay: Option<self::overlay::Overlay>,
     /// The sidebar or the right panel sliding in or out.
@@ -352,7 +349,6 @@ impl Workspace {
             discarded: false,
             dirty: false,
             first_run: Default::default(),
-            pending_welcome: None,
             overlay: None,
             slide: None,
             last_scrollback_save: Instant::now(),
@@ -370,7 +366,7 @@ impl Workspace {
         this.restore_splits(&record.splits);
         if this.sessions.is_empty() {
             // The very first launch, with the terminal welcome on: the first terminal is the welcome.
-            match app_mut(cx).first_welcome.take() {
+            match self::onboarding::welcome::take_first_launch(cx) {
                 Some(plan) => this.open_first_welcome(plan, window, cx),
                 None => this.new_session(window, cx),
             }

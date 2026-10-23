@@ -159,7 +159,7 @@ impl Workspace {
         }
         // A welcome terminal: the shell starts through `Wormhole welcome`, and only this terminal's
         // environment has the token that lets that program talk to the app as the welcome.
-        if let Some((_, token)) = self.pending_welcome.take_if(|(id, _)| *id == record.id) {
+        if let Some(token) = crate::window::onboarding::welcome::take_token(record.id, cx) {
             // (Not in the app's own tests: their binary is not Wormhole and would take `welcome` for
             // a test name.)
             options.welcome = !cfg!(test);

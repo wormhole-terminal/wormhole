@@ -38,7 +38,7 @@ pub(super) fn state(ctx: &mut Ctx, _: &str) -> Result<String> {
             .map(|lights| format!("intro closed{}\n", say(lights)))
             .unwrap_or_default(),
     };
-    let welcome = ctx.workspace.devctl_welcome_state(ctx.cx);
+    let welcome = ctx.workspace.devctl_welcome_state(crate::notifications::permission_asks(ctx.cx), ctx.cx);
     Ok(format!("{}focus {focus}\n{find}{studio}{intro}{welcome}", ctx.workspace.debug_state(ctx.cx)))
 }
 

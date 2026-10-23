@@ -22,7 +22,7 @@ use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::{Play, Run, remember_first_run};
-use crate::app_state::{AppState, OpenWindow, app, app_mut};
+use crate::app_state::{AppState, OpenWindow};
 use crate::notifications;
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
@@ -38,7 +38,7 @@ pub(crate) type Budget = fn(Limited, Option<i64>, &mut App) -> Result<(), Reply>
 /// Answer a welcome request. `from` is the tab it says it comes from; `budget` is checked after the
 /// request is authorised, so a request the door refuses does not use any up.
 pub(crate) fn handle(token: String, op: WelcomeOp, from: Option<i64>, budget: Budget, cx: &mut App) -> Reply {
-    if let Err(error) = app(cx).welcomes.gates.authorize(from, &token, &op) {
+    if let Err(error) = super::welcomes_mut(cx).gates.authorize(from, &token, &op) {
         return Reply::error(error.code, error.message);
     }
     let Some(tab) = from else { return Reply::error(ErrorCode::Refused, "outside any terminal") };
@@ -75,7 +75,7 @@ fn state(tab: i64, cx: &mut App) -> WelcomeState {
     let reduce_motion = cx.reduce_motion();
     let look = look_facts(cx);
     let notify = notify_facts(cx);
-    let Some(run) = app(cx).welcomes.run(tab) else {
+    let Some(run) = super::run_of(tab, cx) else {
         // The gate and the run are made and dropped together; a gate without a run is a bug.
         return empty_state(tab);
     };
@@ -251,9 +251,7 @@ fn set_notify(
 
 /// `InstallHooks`: the hooks of this one agent, if it was found on PATH. Nothing else is touched.
 fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
-    let found = app(cx)
-        .welcomes
-        .run(tab)
+    let found = super::run_of(tab, cx)
         .and_then(|run| run.agents.as_ref())
         .is_some_and(|agents| agents.found.iter().any(|f| f.id == agent && f.hooks.installable()));
     let Some(spec) = integrations::spec(agent).filter(|_| found) else {
@@ -269,7 +267,7 @@ fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
         Ok(State::Partial) => HooksFact::Partial,
         Ok(State::NotInstalled) | Err(_) => HooksFact::Missing,
     };
-    if let Some(run) = app_mut(cx).welcomes.run_mut(tab) {
+    if let Some(run) = super::run_of_mut(tab, cx) {
         if let Some(found) = run
             .agents
             .as_mut()
@@ -304,11 +302,11 @@ fn demo(tab: i64, show: bool, cx: &mut App) -> Reply {
 /// that ended on the primer comes up; the example band goes; a run still playing is cut short.
 fn finish(tab: i64, skipped: bool, cx: &mut App) -> Reply {
     tracing::info!(tab, skipped, "the welcome finished");
-    let (first_run, primer) = match app(cx).welcomes.run(tab) {
+    let (first_run, primer) = match super::run_of(tab, cx) {
         Some(run) => (run.first_run, run.agents.as_ref().is_some_and(|agents| agents.found.is_empty())),
         None => (false, false),
     };
-    app_mut(cx).welcomes.gates.finish(tab);
+    super::welcomes_mut(cx).gates.finish(tab);
     if first_run {
         remember_first_run(cx);
     }
