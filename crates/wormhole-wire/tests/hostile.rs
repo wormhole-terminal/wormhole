@@ -2,9 +2,9 @@
 //! garbled, streams of noise. It must never panic, never buffer past its bound and always say
 //! what was wrong with a typed error.
 
-mod common;
+mod support;
 
-use common::*;
+use support::*;
 use wormhole_wire::*;
 
 /// The most a decoder may hold: one maximum frame, its header and one more read.

@@ -1,9 +1,9 @@
 //! Every message survives encode then decode, however the bytes are cut, and the encoder and
 //! decoder keep their limits at the boundaries.
 
-mod common;
+mod support;
 
-use common::*;
+use support::*;
 use wormhole_wire::*;
 
 fn decode_one(bytes: &[u8]) -> String {

@@ -5,12 +5,12 @@
 //! Each test runs one host with a small program (`/bin/cat`, `/bin/sh -c …`), never a login shell,
 //! in a scratch data dir: one PTY per test, far from the system's limit.
 
-mod common;
+mod support;
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use common::{PATIENCE, alive, new_id, signal, wait_gone};
+use support::{PATIENCE, alive, new_id, signal, wait_gone};
 use wormhole_term::client::{self, HostCommand};
 use wormhole_term::{GridSize, Launch, Pty, PtyEvent, PtyEvents, Shell, StartOptions};
 

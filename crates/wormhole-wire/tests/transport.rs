@@ -1,11 +1,11 @@
 //! The codec over `Read` and `Write` (the seam a Unix socket and SSH stdio both plug into), and
 //! the ordering checks a receiver runs on a stream.
 
-mod common;
+mod support;
 
 use std::io::{self, Read, Write};
 
-use common::*;
+use support::*;
 use wormhole_wire::io::{FrameReader, FrameWriter, RecvError};
 use wormhole_wire::*;
 

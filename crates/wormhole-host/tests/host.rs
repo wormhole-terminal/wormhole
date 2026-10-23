@@ -2,7 +2,7 @@
 //! "Integration"): starting and the readiness pipe, the stream, detach and attach, resizes, the
 //! ways a host ends, and the clients that misbehave.
 
-mod common;
+mod support;
 
 use std::fs;
 use std::io::Write as _;
@@ -12,7 +12,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use common::*;
+use support::*;
 use wormhole_wire::{self as wire, CHANNEL_LOCAL, DetachReason, HostState, Message, Role, StreamMode};
 
 fn mode(path: &Path) -> u32 {

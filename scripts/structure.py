@@ -22,7 +22,7 @@ crates/<crate>/src, tests included:
   os-edge-neutral   OS code in the neutral layer of an edge: the files of an `os_edge_neutral` folder that are not
                     under its `unix/`, `macos/` or `linux/` folders may select an OS (`cfg(`, `cfg_attr(`,
                     `cfg!(`) and nothing else: no `libc::`, `std::os::*`, `objc2`, `allow(unsafe_code)`
-  bucket-names      modules named text, utils, util, misc, helpers, helper, common
+  bucket-names      modules named text, utils, util, misc, helpers, helper, common (also under `tests/`)
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
   cycles            strongly connected groups of modules (an edge: a file of A names `crate::B`, or B through
@@ -626,6 +626,18 @@ def rule_bucket_names(crate: Crate, cfg: dict, found: Findings) -> None:
         for it in crate.mods.get(rel, []):
             if it.inline and it.name in buckets:
                 _add(found, "%s :: mod %s" % (src.rel, it.name), crate.name, src.at(it.start))
+    # The integration tests' folder is not in `crate.files`, but a `tests/common/` is as vague as a `common/`.
+    tests = os.path.join(crate.dir, "tests")
+    for folder, _, names in sorted(os.walk(tests)):
+        for file in sorted(names):
+            if not file.endswith(".rs"):
+                continue
+            rel = os.path.relpath(os.path.join(folder, file), crate.dir).replace(os.sep, "/")
+            parts = rel.split("/")
+            stem = parts[-1][:-3]
+            name = parts[-2] if stem == "mod" and len(parts) > 2 else stem
+            if name in buckets:
+                _add(found, crate.prefix + rel, crate.name, "%s%s:1" % (crate.prefix, rel))
 
 
 def rule_orphans(crate: Crate, cfg: dict, found: Findings) -> None:
@@ -1574,6 +1586,10 @@ def selftest() -> int:
                    "crates/app/src/text.rs": "", "crates/app/src/utils/mod.rs": "", "crates/app/src/ok.rs": ""})
         expect("bucket-names", keys(an, "bucket-names"), [
             "crates/app/src/main.rs :: mod helpers", "crates/app/src/text.rs", "crates/app/src/utils/mod.rs"])
+        an = make({"crates/app/src/main.rs": "", "crates/app/tests/common/mod.rs": "", "crates/app/tests/support/mod.rs": "",
+                   "crates/app/tests/util.rs": "", "crates/app/tests/fixtures/data.json": ""})
+        expect("bucket-names under tests/", keys(an, "bucket-names"),
+               ["crates/app/tests/common/mod.rs", "crates/app/tests/util.rs"])
 
         # glob imports: not in tests.rs, *_tests.rs, tests/, cfg(test) modules (inline or file), nor comments.
         an = make({

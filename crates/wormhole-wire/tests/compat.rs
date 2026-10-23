@@ -2,9 +2,9 @@
 //! added; and majors are negotiated by range. The messages of "minor N+1" below are built by hand
 //! with a frame type, a TLV tag, an event kind and enum values this version has never heard of.
 
-mod common;
+mod support;
 
-use common::*;
+use support::*;
 use wormhole_wire::version::{HostFit, PROTO_MAJOR, Range};
 use wormhole_wire::*;
 

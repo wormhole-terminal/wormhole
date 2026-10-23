@@ -8,13 +8,13 @@
 //! `golden.txt` is then reviewed like the protocol change it is. Never bless to make a red test
 //! green without knowing why it was red.
 
-mod common;
+mod support;
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use common::*;
+use support::*;
 use wormhole_wire::*;
 
 fn path() -> PathBuf {

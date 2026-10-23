@@ -5,12 +5,12 @@
 //! Its own test binary, because the allocator is global and a test elsewhere must not count here.
 #![allow(unsafe_code)] // only the counting allocator below, which forwards to the system's
 
-mod common;
+mod support;
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 
-use common::*;
+use support::*;
 use wormhole_wire::*;
 
 thread_local! {
