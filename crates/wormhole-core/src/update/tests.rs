@@ -383,3 +383,9 @@ fn setuid_bits_and_special_files_do_not_survive_extraction() {
         );
     }
 }
+
+#[test]
+fn apple_style_versions_parse_and_words_do_not() {
+    assert_eq!(super::parse_lenient_version("14.5"), Some(semver::Version::new(14, 5, 0)));
+    assert_eq!(super::parse_lenient_version("soon"), None);
+}

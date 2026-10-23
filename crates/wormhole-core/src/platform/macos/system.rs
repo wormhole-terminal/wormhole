@@ -4,7 +4,9 @@ use std::path::Path;
 const SYSTEM_VERSION_PLIST: &str = "/System/Library/CoreServices/SystemVersion.plist";
 
 pub(crate) fn version_text() -> Option<String> {
-    version_in(Path::new(SYSTEM_VERSION_PLIST)).or_else(version_from_sw_vers)
+    version_in(Path::new(SYSTEM_VERSION_PLIST))
+        .filter(|v| v.split('.').all(|p| p.parse::<u64>().is_ok()))
+        .or_else(version_from_sw_vers)
 }
 
 /// `ProductVersion` in a `SystemVersion.plist`.
