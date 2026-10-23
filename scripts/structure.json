@@ -206,7 +206,8 @@
         "feature",
         "facts",
         "repo",
-        "refresh_all_features"
+        "refresh_all_features",
+        "redraw_windows_of"
       ],
       "workspace_files": [
         "def.rs",

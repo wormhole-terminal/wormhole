@@ -428,6 +428,35 @@ fn a_notes_sync_that_fails_wakes_the_window_so_the_tab_says_why(cx: &mut TestApp
     assert_eq!(wakes.get(), after, "the same error again wakes nobody");
 }
 
+/// The hub is the profile's, and each window of it shows the reason in its own Project tab.
+#[gpui_kit::test]
+fn a_notes_sync_that_fails_in_one_window_wakes_the_profiles_other_windows_too(cx: &mut TestAppContext) {
+    if isolate("a_notes_sync_that_fails_in_one_window_wakes_the_profiles_other_windows_too") {
+        return;
+    }
+    let window = start(cx, 1);
+    cx.update(|cx| {
+        let record = WindowRecord { id: 2, ..Default::default() };
+        crate::window::window_lifecycle::open_workspace_window(Some(record), None, cx);
+    });
+    cx.run_until_parked();
+    let other = cx
+        .update(|cx| crate::app_state::app(cx).windows.iter().find(|w| w.id == 2).cloned())
+        .expect("a second window of the profile");
+    let dir = project("sync-fails-two", &[("notes.md", "# Notes\n<!-- wormhole:notes -->\n\n## Notes\n")]);
+    drive(cx, &window, |ws, _, cx| go(ws, &dir, cx));
+    drive(cx, &window, sync_notes);
+    std::fs::write(dir.join(".wormhole/notes.md"), [0xff_u8, 0xfe, 0x00, 0xff]).expect("breaks notes.md");
+    let wakes = std::rc::Rc::new(std::cell::Cell::new(0));
+    cx.update(|cx| {
+        let counted = wakes.clone();
+        let workspace = other.workspace.upgrade().expect("the second window is open");
+        cx.observe(&workspace, move |_, _| counted.set(counted.get() + 1)).detach();
+    });
+    drive(cx, &window, sync_notes);
+    assert!(wakes.get() >= 1, "the other window, which shows the same error, is woken too");
+}
+
 /// Approving asks the owner (here the answer is "cancelled": no Touch ID in a test), revoking and the
 /// per-project switches take effect at once, and the defaults are the hub's.
 #[gpui_kit::test]

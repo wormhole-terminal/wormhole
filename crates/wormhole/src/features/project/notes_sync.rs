@@ -45,7 +45,8 @@ impl Project {
         }
         let Some(notes) = facts.feature::<Notes>() else { return };
         let profile = facts.profile;
-        // The Project tab says why a sync fails; the hub is a global the window does not watch.
+        // The Project tab says why a sync fails; the hub is a global no window watches, and all the profile's
+        // windows show it.
         let mut told = false;
         for session in facts.sessions() {
             let session_id = session.id;
@@ -116,6 +117,7 @@ impl Project {
         }
         if told {
             cx.notify();
+            crate::window::redraw_windows_of(profile, cx);
         }
     }
 

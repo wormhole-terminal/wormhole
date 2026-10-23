@@ -33,6 +33,19 @@ pub(crate) fn refresh_all_features(cx: &mut App) {
     });
 }
 
+/// Every window of `profile` is drawn again, for a change in what they all show that none of them watches
+/// (a global such as the profile's project hub). Deferred for the same reason.
+pub(crate) fn redraw_windows_of(profile: &ProfileId, cx: &mut App) {
+    let profile = profile.clone();
+    cx.defer(move |cx| {
+        let windows: Vec<_> =
+            app(cx).windows.iter().filter(|window| window.profile == profile).cloned().collect();
+        for window in windows {
+            AppState::with_workspace(&window, cx, |ws, _, cx| ws.mark_dirty(cx));
+        }
+    });
+}
+
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the
 /// subscription is the window's and no feature can forget it or keep the entity without it.

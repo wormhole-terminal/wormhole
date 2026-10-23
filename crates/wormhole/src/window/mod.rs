@@ -63,7 +63,7 @@ pub(crate) mod facts;
 mod failed_tests;
 pub(crate) mod feature;
 mod feature_host;
-pub(crate) use self::feature_host::refresh_all_features;
+pub(crate) use self::feature_host::{redraw_windows_of, refresh_all_features};
 #[cfg(all(test, feature = "devctl"))]
 mod devctl_tests;
 mod feature_terminals;
