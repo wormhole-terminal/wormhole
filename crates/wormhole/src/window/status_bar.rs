@@ -239,7 +239,7 @@ impl Workspace {
         } else {
             self.status_others.clear();
         }
-        if self.status_bar(cx) != self.status_bar_drawn {
+        if self.status_bar(cx) != self.regions.drawn.status_bar {
             cx.notify();
         }
     }
@@ -247,7 +247,7 @@ impl Workspace {
     /// A terminal's grid has another size. The bar says the selected terminal's, and was built before
     /// the frame that found it out: draw it again then, not on the tick.
     pub(super) fn grid_resized(&mut self, ix: usize, cx: &mut Context<Self>) {
-        if ix == self.active && self.status_bar(cx) != self.status_bar_drawn {
+        if ix == self.active && self.status_bar(cx) != self.regions.drawn.status_bar {
             cx.notify();
         }
     }
@@ -255,7 +255,7 @@ impl Workspace {
     /// Make the bar drawn last say a size no terminal has, for the tests.
     #[cfg(test)]
     pub(super) fn forget_drawn_size(&mut self) {
-        if let Some(bar) = &mut self.status_bar_drawn {
+        if let Some(bar) = &mut self.regions.drawn.status_bar {
             bar.size = Some("(not yet)".into());
         }
     }
@@ -263,7 +263,7 @@ impl Workspace {
     /// What the bar drew for the terminal's size, for the tests.
     #[cfg(test)]
     pub(super) fn drawn_size(&self) -> Option<String> {
-        self.status_bar_drawn.as_ref().and_then(|bar| bar.size.clone())
+        self.regions.drawn.status_bar.as_ref().and_then(|bar| bar.size.clone())
     }
 
     /// A click on an agent item: that terminal, in whichever window it is.
@@ -278,7 +278,7 @@ impl Workspace {
 
     /// The items the keys move along, left to right.
     pub(super) fn status_items(&self) -> Vec<StatusItem> {
-        let Some(bar) = &self.status_bar_drawn else { return Vec::new() };
+        let Some(bar) = &self.regions.drawn.status_bar else { return Vec::new() };
         bar.attention
             .as_ref()
             .map(|a| StatusItem::Attention(a.tab))

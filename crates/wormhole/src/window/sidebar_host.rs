@@ -299,10 +299,12 @@ impl Workspace {
             .h_full()
             .flex_none()
             .bg(if glass { gpui_kit::transparent_black() } else { ui.panel })
+            .child(crate::sidebar::column_start(&self.glass))
             .child(self.render_sidebar_header(window, cx))
             // The list is a view of its own, drawn after this render returns, from what was pushed above.
             .child(self.sidebar.clone())
             .children(self.render_no_agents_note(cx))
+            .child(crate::sidebar::column_end(&self.glass))
             .into_any_element()
     }
 

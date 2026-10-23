@@ -231,6 +231,10 @@
 //!   frames <n>      draw the window n times (the workspace is not marked dirty) and append the timings
 //!                   to <dir>/frames.txt (out.txt is rewritten per batch); run it once the tab
 //!                   under test has finished loading
+//!   refresh         drop every view GPUI keeps between frames, so the next draw builds the whole window
+//!                   (`shot` after it, against a `shot` before it, shows whether a part replayed from
+//!                   an earlier frame has gone stale); `state` ends with how many times each of the
+//!                   window's cached parts (sidebar, panel, title row, status bar) has been built
 //!   paints          terminal grids drawn since the last `paints` (or launch) and per second: the
 //!                   frame rate on screen, where a program in the terminal only sees what it sent
 //!   perf-profile [seconds] [name]   draw this window again and again for that long (5 s) and record

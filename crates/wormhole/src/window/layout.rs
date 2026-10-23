@@ -149,11 +149,18 @@ impl Render for Workspace {
         // One geometry for both looks: the title bar has its own row and the terminal's rounded surface
         // lies below it, so nothing scrolls under the bar. Glass only changes the material.
         let lifted = self.glass_on(cx);
-        let titlebar = self.render_terminal_title_row(window, cx);
+        let titlebar = self.regions.title_row();
         let [sidebar_toggle, panel_toggle] = self.render_window_controls(window, cx);
-        self.status_bar_drawn = self.status_bar(cx);
-        let status_bar = self.status_bar_drawn.as_ref().map(|bar| self.render_status_bar(bar, window, cx));
+        // The bar itself is built by its region, which keeps what the bar drew (`regions.drawn`).
+        let status_bar = settings_in(&self.profile, cx).status_bar.then(|| self.regions.status_bar());
+        if status_bar.is_none() {
+            self.regions.drawn.status_bar = None;
+        }
         let sidebar_glass = lifted;
+        // A column that is not in the window proposes no glass, and a region keeps its last.
+        if !(self.sidebar_shown() && self.in_flow(Edge::Sidebar)) {
+            crate::sidebar::forget_column(&self.glass);
+        }
         let tabs = self.sidebar_feed.tabs_on;
         let top_tabs = if tabs { self.render_tab_bar(window, cx) } else { None };
         // One terminal and no group to switch to: no tab bar, as in macOS Terminal.
@@ -202,7 +209,7 @@ impl Render for Workspace {
                     .flex_1()
                     .min_h_0()
                     .when(self.sidebar_shown() && self.in_flow(Edge::Sidebar), |d| {
-                        d.child(self.render_sidebar(columns.sidebar, window, cx))
+                        d.child(self.regions.sidebar(columns.sidebar))
                     })
                     .child({
                         let surface = div()
@@ -258,7 +265,7 @@ impl Render for Workspace {
                         self.carry_with_slide(column)
                     })
                     .when(notes_visible && self.in_flow(Edge::Panel), |d| {
-                        d.child(self.render_panel(columns.panel, window, cx))
+                        d.child(self.regions.panel(columns.panel))
                     })
                     // A column sliding in or out lies over the terminal.
                     .children(self.render_slide(window, cx))

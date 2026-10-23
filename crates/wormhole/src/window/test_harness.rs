@@ -166,6 +166,14 @@ pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
         .expect("the window is open");
 }
 
+/// Draw the window once as the display would: views GPUI keeps are replayed unless they were notified.
+/// [`draw`] drops every cache first, which is what most tests want and a test of what a frame leaves
+/// alone cannot have.
+pub(crate) fn draw_replaying(cx: &mut TestAppContext, window: &OpenWindow) {
+    cx.update(|cx| window.handle.update(cx, |_, window, cx| window.draw(cx).clear(cx)))
+        .expect("the window is open");
+}
+
 /// Read the window's sidebar (its list's state), which is an entity of its own.
 pub(crate) fn sidebar_of<R>(
     cx: &mut TestAppContext,

@@ -39,6 +39,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   other Mac apps.
 - Full-screen programs that draw each frame as a synchronized update (many coding-agent interfaces
   and animations do) redraw the terminal less often, so they use less CPU.
+- A frame in which only a terminal's output changes no longer builds the sidebar, the side panel, the
+  title row or the status bar again, which takes about a quarter off the time a full-screen animation's
+  frame spends drawing the window.
 
 ### Fixed
 

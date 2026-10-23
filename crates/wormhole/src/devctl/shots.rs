@@ -219,6 +219,12 @@ mod pick {
     }
 }
 
+/// Drop the views GPUI keeps between frames: the next draw builds everything.
+pub(super) fn refresh(ctx: &mut Ctx, _arg: &str) -> Result<String> {
+    ctx.window.refresh();
+    Ok(String::new())
+}
+
 /// How many terminal grids were painted since the last call, and how many a second.
 pub(super) fn paints(_ctx: &mut Ctx, _arg: &str) -> Result<String> {
     use std::sync::Mutex;

@@ -102,6 +102,9 @@ mod panel_tab_tests;
 mod panes;
 #[cfg(test)]
 mod profile_look_tests;
+mod regions;
+#[cfg(test)]
+mod regions_tests;
 pub(crate) mod repo;
 #[cfg(test)]
 mod reported_tests;
@@ -182,6 +185,8 @@ pub struct Workspace {
     sidebar: Entity<crate::sidebar::Sidebar>,
     /// What the window keeps for the list besides: where the terminals are listed, the traffic lights.
     sidebar_feed: self::sidebar_host::SidebarFeed,
+    /// The chrome around the terminal, kept by GPUI between the frames that change none of it.
+    regions: self::regions::Regions,
     pub(in crate::window) right_tab: TabId,
     /// The features the app has (`feature`), copied from the installed table when the window was
     /// made so the frame never reads the global. A test installs its own before it opens one.
@@ -215,10 +220,6 @@ pub struct Workspace {
     /// The resize handle the pointer has rested on (its line shows), and the timer that sets it.
     resize_hot: Option<Edge>,
     resize_hover: Option<Task<()>>,
-    /// The status bar as last drawn (`None` while it is off), to notice when it is stale.
-    status_bar_drawn: Option<self::status_bar::StatusBar>,
-    /// The breadcrumb's status words as last drawn ("working · 4m"), to notice the minute.
-    crumb_drawn: std::cell::RefCell<Option<String>>,
     /// The "+n" menu of the title row's ports is open.
     ports_menu: bool,
     /// The path's hover card, a popover under the title row's folder.
@@ -334,6 +335,7 @@ impl Workspace {
             beside: 0.0,
             sidebar,
             sidebar_feed: self::sidebar_host::SidebarFeed::new(),
+            regions: self::regions::Regions::new(cx.weak_entity(), cx),
             right_tab: TabId::default(),
             features,
             feature_states,
@@ -349,8 +351,6 @@ impl Workspace {
             pane_area: Bounds::default(),
             resize_hot: None,
             resize_hover: None,
-            status_bar_drawn: None,
-            crumb_drawn: Default::default(),
             ports_menu: false,
             path_card: Default::default(),
             path_anchor: Default::default(),
@@ -398,8 +398,14 @@ impl Workspace {
         // end of every update that notified the window or changed the settings.
         this.sync_sidebar(cx);
         let me = cx.entity();
-        cx.observe(&me, |this, _, cx| this.sync_sidebar_soon(cx)).detach();
+        // The chrome is drawn again whenever the window is notified (or a global it draws from changes).
+        cx.observe(&me, |this, _, cx| {
+            this.regions.notify(cx);
+            this.sync_sidebar_soon(cx);
+        })
+        .detach();
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
+        self::regions::Regions::watch_globals(cx);
         this
     }
 

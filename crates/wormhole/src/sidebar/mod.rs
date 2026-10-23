@@ -30,6 +30,7 @@ mod demo;
 mod drag;
 mod facts;
 mod glass;
+pub(crate) use self::glass::{column_end, column_start, forget_column};
 mod group_head;
 mod group_popover;
 mod groups;

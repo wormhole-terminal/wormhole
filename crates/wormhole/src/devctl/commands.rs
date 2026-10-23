@@ -24,6 +24,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-shot" => shots::settings_shot,
         "frames" => shots::frames,
         "paints" => shots::paints,
+        "refresh" => shots::refresh,
         "perf-profile" => profiling::perf_profile,
         "type" => input::type_text,
         "paste" => input::paste,

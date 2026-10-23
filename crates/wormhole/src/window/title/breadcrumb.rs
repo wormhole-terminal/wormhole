@@ -99,7 +99,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> TitlePlan {
         let facts = self.title_facts(cx);
-        self.crumb_drawn.replace(facts.words.clone());
+        self.regions.drawn.crumb.replace(facts.words.clone());
         let measure = Measure::new(window, cx);
         let steps = facts
             .shown
@@ -401,7 +401,7 @@ impl Workspace {
         }
         let now = crumb_words(&self.active_session().pane.summary);
         // Taken as drawn: if nothing draws it (a diff is over the title row), it asks once.
-        if self.crumb_drawn.replace(now.clone()) != now {
+        if self.regions.drawn.crumb.replace(now.clone()) != now {
             cx.notify();
         }
     }

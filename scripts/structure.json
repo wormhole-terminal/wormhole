@@ -259,7 +259,7 @@
     "state-fields": {
       "wormhole :: AppState": 27,
       "wormhole :: Session": 10,
-      "wormhole :: Workspace": 51
+      "wormhole :: Workspace": 50
     }
   }
 }

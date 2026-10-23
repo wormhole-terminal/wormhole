@@ -77,12 +77,38 @@ impl Blur {
 /// (`commit`); a region nobody proposed is hidden. Pieces proposed under one key (the stretches of
 /// a card) join up. A region may name a clip (`clip_to`, a scrolling list's own room) it is cut
 /// to. Glass views stack by key: a higher key lies over a lower one.
+///
+/// A part of the window that GPUI replays instead of drawing (a cached view) proposes nothing in a
+/// frame it is replayed. Such a part brackets what it proposes ([`begin_region`](Self::begin_region),
+/// [`end_region`](Self::end_region)) and the glass keeps those proposals until the part proposes again
+/// or is [forgotten](Self::forget_region).
 #[derive(Default)]
 pub struct Glass {
     native: std::cell::RefCell<Option<os::GlassViews>>,
-    pending: std::cell::RefCell<std::collections::BTreeMap<u64, (GlassRect, Option<u32>)>>,
-    clips: std::cell::RefCell<std::collections::HashMap<u32, GlassRect>>,
+    /// What this frame proposed outside any region.
+    now: std::cell::RefCell<Proposals>,
+    /// What each region proposed when it was last drawn, kept while it is replayed.
+    kept: std::cell::RefCell<std::collections::HashMap<u32, Proposals>>,
+    /// The region whose proposals are being made, between `begin_region` and `end_region`.
+    recording: std::cell::Cell<Option<u32>>,
     shown: std::cell::RefCell<Vec<GlassRect>>,
+}
+
+/// The glasses and the clips a part of a frame asked for.
+#[derive(Default, Clone)]
+struct Proposals {
+    glasses: std::collections::BTreeMap<u64, (GlassRect, Option<u32>)>,
+    clips: std::collections::HashMap<u32, GlassRect>,
+}
+
+impl Proposals {
+    fn propose(&mut self, key: u64, rect: GlassRect, clip: Option<u32>) {
+        let rect = match self.glasses.get(&key) {
+            Some(&(have, _)) => have.join(rect),
+            None => rect,
+        };
+        self.glasses.insert(key, (rect, clip));
+    }
 }
 
 /// Where a glass sits, in the window's points from its top left, and how round it is.
@@ -139,22 +165,50 @@ impl Glass {
 
     /// Clip `id` is `rect` this frame: the regions that name it are cut to it.
     pub fn clip_to(&self, id: u32, rect: GlassRect) {
-        self.clips.borrow_mut().insert(id, rect);
+        self.with_proposals(|proposals| {
+            proposals.clips.insert(id, rect);
+        });
     }
 
     pub fn propose(&self, key: u64, rect: GlassRect, clip: Option<u32>) {
-        let mut pending = self.pending.borrow_mut();
-        let rect = match pending.get(&key) {
-            Some(&(have, _)) => have.join(rect),
-            None => rect,
-        };
-        pending.insert(key, (rect, clip));
+        self.with_proposals(|proposals| proposals.propose(key, rect, clip));
+    }
+
+    /// `f` on the proposals of the region being recorded, else of this frame.
+    fn with_proposals(&self, f: impl FnOnce(&mut Proposals)) {
+        match self.recording.get() {
+            Some(region) => f(self.kept.borrow_mut().entry(region).or_default()),
+            None => f(&mut self.now.borrow_mut()),
+        }
+    }
+
+    /// What follows, up to [`end_region`](Self::end_region), is `region` drawing itself: its earlier
+    /// proposals are replaced by these.
+    pub fn begin_region(&self, region: u32) {
+        self.kept.borrow_mut().insert(region, Proposals::default());
+        self.recording.set(Some(region));
+    }
+
+    pub fn end_region(&self) {
+        self.recording.set(None);
+    }
+
+    /// `region` is not in the window now: its proposals no longer count.
+    pub fn forget_region(&self, region: u32) {
+        self.kept.borrow_mut().remove(&region);
     }
 
     /// Move the glasses to what this frame proposed, and hide the rest.
     pub fn commit(&self) {
-        let clips = std::mem::take(&mut *self.clips.borrow_mut());
-        let next: Vec<GlassRect> = std::mem::take(&mut *self.pending.borrow_mut())
+        let mut all = std::mem::take(&mut *self.now.borrow_mut());
+        for kept in self.kept.borrow().values() {
+            all.clips.extend(kept.clips.iter().map(|(&id, &rect)| (id, rect)));
+            for (&key, &(rect, clip)) in &kept.glasses {
+                all.propose(key, rect, clip);
+            }
+        }
+        let Proposals { glasses, clips } = all;
+        let next: Vec<GlassRect> = glasses
             .into_values()
             .filter_map(|(rect, clip)| match clip.and_then(|id| clips.get(&id)) {
                 Some(&clip) => rect.clipped(clip),
@@ -176,4 +230,52 @@ impl Glass {
 /// now and the ones that open later.
 pub fn set_material_appearance(appearance: Appearance) {
     os::set_material_appearance(appearance);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Glass, GlassRect};
+
+    fn rect(x: f32) -> GlassRect {
+        GlassRect { x, y: 0.0, w: 10.0, h: 10.0, radius: 0.0 }
+    }
+
+    /// A part GPUI replays proposes nothing in that frame: its glass stays until it draws again or
+    /// leaves the window.
+    #[test]
+    fn a_region_that_is_replayed_keeps_its_glass_until_it_draws_again_or_is_forgotten() {
+        let glass = Glass::default();
+        glass.begin_region(1);
+        glass.propose(10, rect(0.0), None);
+        glass.end_region();
+        glass.propose(20, rect(50.0), None);
+        glass.commit();
+        assert_eq!(*glass.shown.borrow(), [rect(0.0), rect(50.0)]);
+        // A frame in which only a loose probe proposes: the region was replayed.
+        glass.propose(20, rect(60.0), None);
+        glass.commit();
+        assert_eq!(*glass.shown.borrow(), [rect(0.0), rect(60.0)], "the replayed region's glass stays");
+        // Drawn again, it replaces what it proposed before.
+        glass.begin_region(1);
+        glass.propose(10, rect(5.0), None);
+        glass.end_region();
+        glass.commit();
+        assert_eq!(*glass.shown.borrow(), [rect(5.0)], "and the loose one, not proposed, is hidden");
+        glass.forget_region(1);
+        glass.commit();
+        assert!(glass.shown.borrow().is_empty(), "a region that left the window shows no glass");
+    }
+
+    /// A clip named by a region's probe cuts that region's glass in frames it is replayed too.
+    #[test]
+    fn a_replayed_regions_clip_still_cuts_its_glass() {
+        let glass = Glass::default();
+        glass.begin_region(1);
+        glass.clip_to(0, GlassRect { x: 0.0, y: 0.0, w: 10.0, h: 5.0, radius: 0.0 });
+        glass.propose(10, rect(0.0), Some(0));
+        glass.end_region();
+        glass.commit();
+        glass.commit();
+        assert_eq!(glass.shown.borrow()[0].h, 5.0);
+    }
 }

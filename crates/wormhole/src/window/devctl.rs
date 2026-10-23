@@ -284,12 +284,13 @@ impl Workspace {
             self.panes.panel_wanted,
             self.notes_visible(),
             self.resizing.is_some(),
-            self.status_bar_drawn.is_some(),
+            self.regions.drawn.status_bar.is_some(),
             self.sidebar_view(cx).groups.iter().count(),
             self.sidebar_view(cx).folded,
             self.session_order(cx).into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
             self.session_listing(cx).numbered().into_iter().map(|ix| ix + 1).collect::<Vec<_>>(),
         );
+        out.push_str(&format!("regions built {:?}\n", self.regions.builds(cx)));
         for (ix, session) in self.sessions.iter().enumerate() {
             let terminal = session.terminal().read(cx);
             let marker = if ix == self.active {
