@@ -188,6 +188,7 @@ pub(super) fn is_shape(c: char) -> bool {
 
 /// Build one row with what `marks` colors on it. `extras` is what the cells carry beside them
 /// (almost always nothing, which costs a check per cell).
+#[cfg(test)]
 pub(super) fn build_row(
     cells: &[Cell],
     extras: &RowExtras,
@@ -195,7 +196,61 @@ pub(super) fn build_row(
     overrides: &Colors,
     marks: &Marks,
 ) -> BuiltRow {
-    let mut row = BuiltRow::default();
+    let mut builder = RowBuilder::default();
+    builder.build(cells, extras, palette, overrides, marks);
+    builder.row
+}
+
+/// Builds rows one after another, keeping the last row's buffers (its segments' text and runs
+/// too) for the next, so a screen rebuilt every frame stops allocating once they are big enough.
+#[derive(Default)]
+pub(super) struct RowBuilder {
+    row: BuiltRow,
+    /// The segments of earlier rows, emptied, waiting to be filled again.
+    idle: Vec<Segment>,
+}
+
+impl BuiltRow {
+    /// Empty the row for the next build. The segments go to `idle` with their buffers.
+    fn recycle(&mut self, idle: &mut Vec<Segment>) {
+        idle.append(&mut self.segments);
+        self.backgrounds.clear();
+        self.underlines.clear();
+        self.strikes.clear();
+        self.overlines.clear();
+        self.blinks = false;
+        self.shapes.clear();
+        self.images.clear();
+    }
+}
+
+impl RowBuilder {
+    /// The row built from `cells`; it is the builder's own and is emptied by the next build. Its
+    /// vectors may be swapped for spare ones (`std::mem::swap`), which then come back cleared.
+    pub fn build(
+        &mut self,
+        cells: &[Cell],
+        extras: &RowExtras,
+        palette: &Palette,
+        overrides: &Colors,
+        marks: &Marks,
+    ) -> &mut BuiltRow {
+        let Self { row, idle } = self;
+        row.recycle(idle);
+        fill(row, idle, cells, extras, palette, overrides, marks);
+        row
+    }
+}
+
+fn fill(
+    row: &mut BuiltRow,
+    idle: &mut Vec<Segment>,
+    cells: &[Cell],
+    extras: &RowExtras,
+    palette: &Palette,
+    overrides: &Colors,
+    marks: &Marks,
+) {
     let shown = marks.size.visible_columns(cells.len());
     for (col, cell) in cells.iter().enumerate().take(shown) {
         if cell.flags.intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER) {
@@ -283,7 +338,17 @@ pub(super) fn build_row(
 
         let continues = row.segments.last().is_some_and(|seg| seg.wide == wide && seg.end == col);
         if !continues {
-            row.segments.push(Segment { col, wide, text: String::new(), runs: Vec::new(), end: col });
+            let mut segment = idle.pop().unwrap_or_else(|| Segment {
+                col,
+                wide,
+                text: String::new(),
+                runs: Vec::new(),
+                end: col,
+            });
+            (segment.col, segment.wide, segment.end) = (col, wide, col);
+            segment.text.clear();
+            segment.runs.clear();
+            row.segments.push(segment);
         }
         let Some(segment) = row.segments.last_mut() else { continue };
         let start = segment.text.len();
@@ -297,7 +362,6 @@ pub(super) fn build_row(
             _ => segment.runs.push((len, style)),
         }
     }
-    row
 }
 
 #[cfg(test)]
@@ -586,5 +650,34 @@ mod tests {
         extras.set_underline_color(1, Some(Color::Indexed(2)));
         let built = build_with(&row, &extras);
         assert_eq!(texts(&built), [(0, false, "a"), (2, false, "b")]);
+    }
+
+    /// A builder that has built other rows builds the same row as a new one: nothing of an earlier
+    /// row (its words, spans, blink or shapes) is left in the buffers it reuses.
+    #[test]
+    fn a_builder_that_built_other_rows_builds_the_same_as_a_new_one() {
+        use super::RowBuilder;
+
+        let blink = {
+            let mut row = cells("blink ┌─┐ x");
+            row[0].flags = Flags::BLINK | Flags::UNDERLINE | Flags::STRIKEOUT | Flags::OVERLINE;
+            colored(row, 2..8, NamedColor::Red)
+        };
+        let rows = [
+            blink,
+            cells("a b c d e f g"),
+            cells("日本 mixed wide"),
+            colored(cells("short"), 0..2, NamedColor::Green),
+            cells(""),
+            cells("one"),
+        ];
+        let mut builder = RowBuilder::default();
+        let (palette, colors, marks) = (palette(), Colors::default(), Marks::default());
+        for _ in 0..2 {
+            for row in &rows {
+                let again = builder.build(row, &RowExtras::default(), &palette, &colors, &marks);
+                assert_eq!(*again, build(row), "{:?}", row.iter().map(|c| c.c).collect::<String>());
+            }
+        }
     }
 }

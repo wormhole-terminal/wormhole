@@ -37,11 +37,14 @@ pub(super) struct RowCache<K, T> {
     rows: Vec<Option<Entry<T>>>,
     /// Scratch for the entries being replaced.
     pool: Vec<Entry<T>>,
+    /// Scratch for the rows that changed, and for those among them that are built anew.
+    stale: Vec<usize>,
+    unmatched: Vec<(usize, u64, Marks)>,
 }
 
 impl<K, T> Default for RowCache<K, T> {
     fn default() -> Self {
-        Self { key: None, rows: Vec::new(), pool: Vec::new() }
+        Self { key: None, rows: Vec::new(), pool: Vec::new(), stale: Vec::new(), unmatched: Vec::new() }
     }
 }
 
@@ -49,13 +52,18 @@ impl<K: PartialEq, T> RowCache<K, T> {
     /// Bring the cache in line with `snapshot`, building rows it can't reuse. `found` is find's
     /// matches on each row (rows past its end have none); a row `redo` says of is built again,
     /// changed or not (one drawn before all its words were shaped).
+    ///
+    /// `build` is given the spare of a row that was replaced and found no match, if one is left,
+    /// to fill again in place of allocating its buffers afresh. A spare is only handed out after
+    /// every changed row had its chance to match one (a scrolled row is a replaced row's
+    /// content), so recycling never turns a move into a build.
     pub fn sync(
         &mut self,
         key: K,
         snapshot: &ScreenSnapshot,
         found: &[Vec<(usize, usize, bool)>],
         redo: impl Fn(&T) -> bool,
-        mut build: impl FnMut(&[Cell], &RowExtras, &Marks) -> T,
+        mut build: impl FnMut(&[Cell], &RowExtras, &Marks, Option<T>) -> T,
     ) -> SyncStats {
         if self.key.as_ref() != Some(&key) {
             self.rows.clear();
@@ -70,7 +78,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
             found: found.get(row).cloned().unwrap_or_default(),
         };
         let mut stats = SyncStats::default();
-        let mut stale = Vec::new();
+        let mut stale = std::mem::take(&mut self.stale);
+        stale.clear();
         for (row, entry) in self.rows.iter_mut().enumerate() {
             let same_marks = |e: &Entry<T>| {
                 e.marks.size == rows[row].size()
@@ -86,7 +95,9 @@ impl<K: PartialEq, T> RowCache<K, T> {
                 stale.push(row);
             }
         }
-        for row in stale {
+        let mut unmatched = std::mem::take(&mut self.unmatched);
+        unmatched.clear();
+        for &row in &stale {
             let (cells, extras) = (rows[row].cells(), rows[row].extras());
             let marks = marks(row);
             let hash = row_hash(cells, extras, &marks);
@@ -97,19 +108,28 @@ impl<K: PartialEq, T> RowCache<K, T> {
                     && e.extras == *extras
                     && !redo(&e.value)
             });
-            self.rows[row] = Some(match reusable {
+            match reusable {
                 Some(index) => {
                     stats.moved += 1;
-                    self.pool.swap_remove(index)
+                    self.rows[row] = Some(self.pool.swap_remove(index));
                 }
-                None => {
-                    stats.built += 1;
-                    let value = build(cells, extras, &marks);
-                    Entry { cells: cells.to_vec(), extras: extras.clone(), marks, hash, value }
-                }
-            });
+                None => unmatched.push((row, hash, marks)),
+            }
+        }
+        for (row, hash, marks) in unmatched.drain(..) {
+            stats.built += 1;
+            let (cells, extras) = (rows[row].cells(), rows[row].extras());
+            let (mut kept_cells, spare) = match self.pool.pop() {
+                Some(spare) => (spare.cells, Some(spare.value)),
+                None => (Vec::with_capacity(cells.len()), None),
+            };
+            let value = build(cells, extras, &marks, spare);
+            kept_cells.clear();
+            kept_cells.extend_from_slice(cells);
+            self.rows[row] = Some(Entry { cells: kept_cells, extras: extras.clone(), marks, hash, value });
         }
         self.pool.clear();
+        (self.stale, self.unmatched) = (stale, unmatched);
         stats
     }
 
@@ -181,7 +201,7 @@ mod tests {
         let mut snapshot = ScreenSnapshot::default();
         term.snapshot(&mut snapshot, 0);
         let stats =
-            cache.sync(key, &snapshot, &[], |_| false, |cells, _, _| cells.iter().map(|c| c.c).collect());
+            cache.sync(key, &snapshot, &[], |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
         for (row, text) in cache.rows() {
             let expected: String = snapshot.rows()[row].cells().iter().map(|c| c.c).collect();
             assert_eq!(*text, expected, "row {row} shows stale content");
@@ -237,7 +257,7 @@ mod tests {
         let mut sync = |found: &[Vec<(usize, usize, bool)>]| {
             term.snapshot(&mut snapshot, 0);
             cache
-                .sync(0, &snapshot, found, |_| false, |cells, _, _| cells.iter().map(|c| c.c).collect())
+                .sync(0, &snapshot, found, |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect())
                 .built
         };
         sync(&[]);
@@ -256,14 +276,14 @@ mod tests {
         let mut snapshot = ScreenSnapshot::default();
         term.snapshot(&mut snapshot, 0);
         // Row 1 ("b") is drawn provisionally.
-        fn build(cells: &[Cell], _: &RowExtras, _: &Marks) -> String {
+        fn build(cells: &[Cell], _: &RowExtras, _: &Marks, _: Option<String>) -> String {
             let text: String = cells.iter().map(|c| c.c).collect();
             if text.starts_with('b') { format!("{text}?") } else { text }
         }
         let redo = |value: &String| value.ends_with('?');
         assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 3);
         term.snapshot(&mut snapshot, 0);
-        let stats = cache.sync(0, &snapshot, &[], redo, |cells, _, _| cells.iter().map(|c| c.c).collect());
+        let stats = cache.sync(0, &snapshot, &[], redo, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
         assert_eq!((stats.built, stats.kept + stats.moved), (1, 2), "the provisional row, though unchanged");
         term.snapshot(&mut snapshot, 0);
         assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 0, "built in full now");
@@ -292,5 +312,50 @@ mod tests {
         let mut cache = RowCache::default();
         sync(&mut cache, &mut term, 0);
         assert_eq!(sync(&mut cache, &mut term, 1).built, 3);
+    }
+
+    /// A row built again is handed a replaced row's value to fill in place of a new one, and a
+    /// row that scrolled is still found by its content, never built.
+    #[test]
+    fn a_rebuilt_row_gets_a_replaced_rows_buffer_and_a_scrolled_row_is_still_moved() {
+        let mut term = term(10, 4);
+        let mut cache: RowCache<u32, String> = RowCache::default();
+        feed(&mut term, b"one\r\ntwo\r\nthree\r\nfour");
+        let mut spares = Vec::new();
+        // Syncs, noting for each build whether it was handed a spare.
+        fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, spares: &mut Vec<bool>) -> SyncStats {
+            let mut snapshot = ScreenSnapshot::default();
+            term.snapshot(&mut snapshot, 0);
+            cache.sync(
+                0,
+                &snapshot,
+                &[],
+                |_| false,
+                |cells, _, _, spare| {
+                    spares.push(spare.is_some());
+                    let mut text = spare.unwrap_or_default();
+                    text.clear();
+                    text.extend(cells.iter().map(|c| c.c));
+                    text
+                },
+            )
+        }
+        assert_eq!(sync(&mut cache, &mut term, &mut spares).built, 4);
+        assert_eq!(spares, [false; 4], "nothing to recycle in the first frame");
+        spares.clear();
+        // One more line scrolls everything up: three rows move, the new one reuses the spare.
+        feed(&mut term, b"\r\nfive");
+        let stats = sync(&mut cache, &mut term, &mut spares);
+        assert_eq!((stats.built, stats.moved), (1, 3));
+        assert_eq!(spares, [true], "the row that scrolled off is the spare");
+        spares.clear();
+        // Every row replaced by new content: every build has a spare.
+        feed(&mut term, b"\x1b[H\x1b[2Jaaa\r\nbbb\r\nccc\r\nddd");
+        let stats = sync(&mut cache, &mut term, &mut spares);
+        assert_eq!(stats.built, 4);
+        assert_eq!(spares, [true; 4]);
+        for (row, text) in cache.rows() {
+            assert_eq!(text.trim_end(), ["aaa", "bbb", "ccc", "ddd"][row]);
+        }
     }
 }

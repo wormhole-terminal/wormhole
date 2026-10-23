@@ -9,7 +9,7 @@ use wormhole_term::types::{Cell, LineSize};
 use super::blur::blurred_row;
 use super::cache::{RowCache, SyncStats};
 use super::glyphs::GlyphPainter;
-use super::rows::{ImageRun, Segment, Underline, build_row};
+use super::rows::{ImageRun, RowBuilder, Segment, Underline};
 use super::sized;
 use crate::palette::Palette;
 
@@ -48,6 +48,26 @@ pub(super) struct PaintedRow<L> {
     placed: Option<(usize, Geometry)>,
 }
 
+impl<L> Default for PaintedRow<L> {
+    fn default() -> Self {
+        Self {
+            lines: Vec::new(),
+            backgrounds: Vec::new(),
+            underlines: Vec::new(),
+            struck: Vec::new(),
+            overlined: Vec::new(),
+            size: LineSize::default(),
+            blinks: false,
+            images: Vec::new(),
+            provisional: false,
+            shapes: Vec::new(),
+            quads: Vec::new(),
+            strokes: Vec::new(),
+            placed: None,
+        }
+    }
+}
+
 struct Blurred<B> {
     cells: Vec<Cell>,
     line: Option<B>,
@@ -67,6 +87,10 @@ pub(super) struct FrameStats {
 pub(super) struct FrameCache<K, L, B = L> {
     pub snapshot: ScreenSnapshot,
     rows: RowCache<K, PaintedRow<L>>,
+    /// Builds each row's words, keeping the buffers of the last row for the next.
+    builder: RowBuilder,
+    /// Lines of the row being rebuilt that are free to be shaped into again.
+    lines: Vec<L>,
     above: Vec<Blurred<B>>,
     above_key: Option<K>,
     painter: GlyphPainter,
@@ -77,6 +101,8 @@ impl<K, L, B> Default for FrameCache<K, L, B> {
         Self {
             snapshot: ScreenSnapshot::default(),
             rows: RowCache::default(),
+            builder: RowBuilder::default(),
+            lines: Vec::new(),
             above: Vec::new(),
             above_key: None,
             painter: GlyphPainter::default(),
@@ -96,40 +122,40 @@ impl<K: Clone + PartialEq, L, B> FrameCache<K, L, B> {
         geometry: Geometry,
         palette: &Palette,
         found: &[Vec<(usize, usize, bool)>],
-        mut shape: impl FnMut(Segment) -> (L, bool),
+        mut shape: impl FnMut(&Segment, Option<L>) -> (L, bool),
         mut shape_blurred: impl FnMut(String, Vec<(usize, Hsla)>) -> B,
     ) -> FrameStats {
         let mut stats = FrameStats::default();
         let colors = self.snapshot.colors;
         let redo = |painted: &PaintedRow<L>| painted.provisional;
-        stats.rows = self.rows.sync(key.clone(), &self.snapshot, found, redo, |cells, extras, marks| {
-            let built = build_row(cells, extras, palette, &colors, marks);
+        let Self { rows, snapshot, builder, lines, .. } = self;
+        stats.rows = rows.sync(key.clone(), snapshot, found, redo, |cells, extras, marks, spare| {
+            let built = builder.build(cells, extras, palette, &colors, marks);
+            let mut painted = spare.unwrap_or_default();
+            // The words' lines of the row being replaced are the next row's to fill again.
+            lines.extend(painted.lines.drain(..).map(|(_, line)| line));
             let mut provisional = false;
-            let lines = built
-                .segments
-                .into_iter()
-                .map(|segment| {
-                    let col = segment.col;
-                    let (line, whole) = shape(segment);
-                    provisional |= !whole;
-                    (col, line)
-                })
-                .collect();
-            PaintedRow {
-                lines,
-                size: marks.size,
-                provisional,
-                backgrounds: built.backgrounds,
-                underlines: built.underlines,
-                struck: built.strikes,
-                overlined: built.overlines,
-                blinks: built.blinks,
-                images: built.images,
-                shapes: built.shapes,
-                quads: Vec::new(),
-                strokes: Vec::new(),
-                placed: None,
+            for segment in &built.segments {
+                let (line, whole) = shape(segment, lines.pop());
+                provisional |= !whole;
+                painted.lines.push((segment.col, line));
             }
+            lines.clear();
+            // Swapped, not copied: the row keeps what the builder made, and the builder the
+            // buffers the replaced row had, emptied at its next build.
+            std::mem::swap(&mut painted.backgrounds, &mut built.backgrounds);
+            std::mem::swap(&mut painted.underlines, &mut built.underlines);
+            std::mem::swap(&mut painted.struck, &mut built.strikes);
+            std::mem::swap(&mut painted.overlined, &mut built.overlines);
+            std::mem::swap(&mut painted.images, &mut built.images);
+            std::mem::swap(&mut painted.shapes, &mut built.shapes);
+            painted.size = marks.size;
+            painted.blinks = built.blinks;
+            painted.provisional = provisional;
+            painted.quads.clear();
+            painted.strokes.clear();
+            painted.placed = None;
+            painted
         });
         stats.provisional = self.rows.rows().filter(|(_, painted)| painted.provisional).count();
         let painter = &mut self.painter;
@@ -231,7 +257,7 @@ mod tests {
     fn prepare(cache: &mut FrameCache<u8, String>, term: &mut TestTerm, geometry: Geometry) -> FrameStats {
         let palette = Palette::from_theme(&theme::builtin()[0]);
         term.snapshot(&mut cache.snapshot, 2);
-        cache.prepare(0, geometry, &palette, &[], |segment| (segment.text, true), |text, _| text)
+        cache.prepare(0, geometry, &palette, &[], |segment, _| (segment.text.clone(), true), |text, _| text)
     }
 
     #[test]

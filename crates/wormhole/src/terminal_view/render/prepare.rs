@@ -170,8 +170,8 @@ impl Prepare {
             geometry,
             palette,
             &found,
-            |segment| {
-                let glyphs = words.glyphs(&segment, cell_width, |segment| {
+            |segment, spare| {
+                let glyphs = words.glyphs_into(segment, cell_width, spare.unwrap_or_default(), |segment| {
                     let span = perf::span();
                     let shaped =
                         shape_word(segment, &text_system, base_font, font_size, cell_width, outlines);

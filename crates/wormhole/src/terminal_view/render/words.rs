@@ -221,13 +221,27 @@ impl<K: PartialEq> WordCache<K> {
 
     /// The glyphs of `segment` in its colors, placed on a grid of `cell_width`; `shape` shapes a
     /// word (or a part of one) it hasn't seen before.
+    #[cfg(test)]
     pub fn glyphs(
         &mut self,
         segment: &Segment,
         cell_width: Pixels,
+        shape: impl FnMut(&Segment) -> Vec<Shaped>,
+    ) -> Vec<Glyph> {
+        self.glyphs_into(segment, cell_width, Vec::new(), shape)
+    }
+
+    /// [`Self::glyphs`] into `out` (emptied first), a vector that held a word's glyphs before, so
+    /// that a row built again every frame doesn't allocate one per word.
+    pub fn glyphs_into(
+        &mut self,
+        segment: &Segment,
+        cell_width: Pixels,
+        mut out: Vec<Glyph>,
         mut shape: impl FnMut(&Segment) -> Vec<Shaped>,
     ) -> Vec<Glyph> {
-        let mut out = Vec::new();
+        out.clear();
+        out.reserve(segment.cells());
         let per_char = if segment.wide { 2 } else { 1 };
         // Every character in a cell (or two) of its own: no marks or joiners that need a neighbour.
         let one_per_cell = segment.text.chars().count() * per_char == segment.cells();

@@ -16,6 +16,11 @@ use crate::palette::Palette;
 const COLS: usize = 60;
 const ROWS: usize = 12;
 
+/// Allocations a frame may make that replaces the whole screen with words it has seen: none are
+/// measured (the rows are built in the buffers of the rows they replace); a few of slack. Before
+/// the buffers were reused it was 13 a row.
+const REBUILT_FRAME_ALLOCATIONS: usize = 10;
+
 const GEOMETRY: Geometry = Geometry {
     origin: gpui_kit::Point { x: px(0.0), y: px(0.0) },
     cell_width: px(8.0),
@@ -67,11 +72,12 @@ impl Renderer {
             GEOMETRY,
             &self.palette,
             &[],
-            |segment| {
-                let glyphs = words.glyphs(&segment, GEOMETRY.cell_width, |segment| {
-                    shaped.set(shaped.get() + 1);
-                    one_glyph_per_char(segment)
-                });
+            |segment, spare| {
+                let glyphs =
+                    words.glyphs_into(segment, GEOMETRY.cell_width, spare.unwrap_or_default(), |segment| {
+                        shaped.set(shaped.get() + 1);
+                        one_glyph_per_char(segment)
+                    });
                 (glyphs, true)
             },
             |text, _| text,
@@ -139,6 +145,29 @@ fn katakana_rain_shapes_each_character_once_not_each_new_word() {
     }
 }
 
+/// What a screen that is replaced in full each frame costs to build once its characters are
+/// shaped: the rows' buffers (words, runs, glyphs, spans) are reused, so a frame allocates a few
+/// times per row (what a row keeps that is new: its cells copy for comparing it later is reused
+/// too), not once per word.
+#[test]
+fn katakana_rain_builds_its_rows_in_buffers_it_already_has() {
+    let mut renderer = Renderer::new();
+    let mut rng = Rng(0x2545_f491_4f6c_dd1d);
+    for _ in 0..30 {
+        renderer.frame(&katakana_rain(&mut rng));
+    }
+    let mut total = 0;
+    for _ in 0..20 {
+        let bytes = katakana_rain(&mut rng);
+        let before = super::bench::allocations();
+        renderer.frame(&bytes);
+        total += super::bench::allocations() - before;
+    }
+    let per_frame = total / 20;
+    eprintln!("katakana rain, {ROWS} rows replaced: {per_frame} allocations a frame");
+    assert!(per_frame < REBUILT_FRAME_ALLOCATIONS, "a rebuilt frame allocates {per_frame} times");
+}
+
 #[test]
 fn truecolor_half_blocks_are_drawn_without_shaping() {
     let mut renderer = Renderer::new();
@@ -180,7 +209,7 @@ fn an_unchanged_screen_rebuilds_nothing() {
                 GEOMETRY,
                 &renderer.palette,
                 &[],
-                |_| (Vec::new(), true),
+                |_, _| (Vec::new(), true),
                 |text, _| text,
             )
         };
@@ -212,7 +241,7 @@ fn blinking_text_and_overlines_reach_the_painter_and_a_phase_change_rebuilds_not
     for _ in 0..4 {
         renderer.term.snapshot(&mut renderer.frame.snapshot, 0);
         let stats =
-            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_| (Vec::new(), true), |t, _| t);
+            renderer.frame.prepare(0, GEOMETRY, &renderer.palette, &[], |_, _| (Vec::new(), true), |t, _| t);
         assert_eq!((stats.rows.built, stats.rows.moved, stats.rows_placed), (0, 0, 0), "{stats:?}");
     }
 }
