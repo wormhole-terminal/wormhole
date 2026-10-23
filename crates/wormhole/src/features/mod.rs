@@ -4,9 +4,12 @@
 //! the `.wormhole/` folder's panel, trust and sync, and `git` the Changes and diff views, the History
 //! tab and the worktrees.
 //!
-//! [`TABLE`] lists the features as the window's contract (`feature`) sees them. Changes, Notes, Usage and
-//! Project have their entries; a feature gets its entry when it moves out of `Workspace`'s fields, and the
-//! table moves up beside the window when the last one has. Core's `FEATURES` already lists all of them.
+//! [`TABLE`] lists the features as the window's contract (`window::feature`) sees them; the app installs it
+//! at launch and the window holds it without naming a feature. Above the window and below the surfaces
+//! that list them (the palette, Settings, the status item): a feature reaches the window only through the
+//! contract, the facts and the repository read (the `feature-api` rule), and another feature not at all
+//! but for the one bridge the checker's config lists (`project`'s notes sync). Core's `FEATURES` lists
+//! all of them.
 
 pub(crate) mod git;
 pub(crate) mod notes;

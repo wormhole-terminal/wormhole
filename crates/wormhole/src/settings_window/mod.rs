@@ -3,7 +3,7 @@
 //! settings it finds as live rows; Esc clears the search, then closes the window.
 //!
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
-//! item use it (and, until phase 5, the welcome's agents step). The shared state keeps its page untyped.
+//! item use it. The shared state keeps its page untyped.
 
 pub(crate) mod devctl;
 mod font_picker;
