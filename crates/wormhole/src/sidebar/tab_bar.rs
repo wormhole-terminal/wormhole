@@ -52,6 +52,9 @@ pub(super) struct TabBarState {
     /// last brought into view.
     scroll: ScrollHandle,
     scrolled_to: Option<i64>,
+    /// How many times the bar was built, for the tests that check a notification drew it.
+    #[cfg(test)]
+    built: usize,
 }
 
 /// One set as the bar draws it.
@@ -85,6 +88,12 @@ impl Sidebar {
         SetView { sets, looks, current }
     }
 
+    /// How many times the bar was built.
+    #[cfg(test)]
+    pub(crate) fn tab_bar_builds(&self) -> usize {
+        self.tabs.built
+    }
+
     /// The tab bar, as macOS Terminal's: none while there is only one terminal and no group to
     /// switch to. The bar shows once there is more than one set (a group beside another, or beside
     /// the ungrouped terminals), where the group switcher is, or the current set has more than one
@@ -94,6 +103,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
+        #[cfg(test)]
+        {
+            self.tabs.built += 1;
+        }
         let input = self.input.clone();
         let infos = &input.rows;
         let listing = self.listing(cx);

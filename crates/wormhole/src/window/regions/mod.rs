@@ -221,14 +221,16 @@ impl Regions {
     /// hover, a rename being typed, a turn of an agent's spinner, 30 times a second) and the window
     /// is not drawn again for those: the regions read the list's saved view only for the tint of the
     /// selected terminal's group. The tab bar, which the root draws from the list's state when the
-    /// terminals are in tabs, is the one other reader, and is drawn for every notification then.
+    /// terminals are in tabs, is the one other reader. It is not a region: the root reads the list while
+    /// it builds the bar, so GPUI draws the root again for every notification of the list then, and
+    /// the bar with it, without a word from here.
     pub(super) fn watch_sidebar(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
         workspace.regions.paint_seen = workspace.group_paint(cx);
         let sidebar = workspace.sidebar.clone();
         cx.observe(&sidebar, |workspace, _, cx| {
             let paint = workspace.group_paint(cx);
             let moved = std::mem::replace(&mut workspace.regions.paint_seen, paint) != paint;
-            if moved || workspace.tabs_on_top() {
+            if moved {
                 cx.notify();
             }
         })

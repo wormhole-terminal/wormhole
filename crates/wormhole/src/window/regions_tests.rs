@@ -9,7 +9,7 @@ use crate::app_state::{OpenWindow, app, app_mut};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
 use crate::window::reported_tests::terminal;
-use crate::window::test_harness::{draw_replaying as draw, drive, hook, isolate_in, read_cx, start};
+use crate::window::test_harness::{draw_replaying as draw, drive, hook, isolate_in, read, read_cx, start};
 
 const SIDEBAR: usize = 0;
 const PANEL: usize = 1;
@@ -229,6 +229,34 @@ fn the_list_drawing_itself_builds_neither_the_panel_nor_the_title_row_nor_the_ba
         [before[PANEL], before[TITLE_ROW], before[STATUS_BAR]],
         "a hover in the list is the list's: {before:?} -> {after:?}"
     );
+}
+
+/// With the terminals in tabs the root reads the list to build the bar, which is therefore drawn for the list's
+/// every notification (GPUI draws the root again), and the regions are left alone.
+#[gpui_kit::test]
+fn with_tabs_on_the_list_drawing_itself_draws_the_tab_bar_and_builds_no_region(cx: &mut TestAppContext) {
+    if isolate("with_tabs_on_the_list_drawing_itself_draws_the_tab_bar_and_builds_no_region") {
+        return;
+    }
+    use wormhole_core::view::sidebar::TerminalsIn;
+    let window = settled_window(cx);
+    cx.update(|cx| crate::settings::update_settings(cx, |s| s.terminals_in = TerminalsIn::Tabs));
+    cx.run_until_parked();
+    for _ in 0..3 {
+        draw(cx, &window);
+    }
+    assert!(read(cx, &window, |ws| ws.tabs_on_top()), "the terminals are in tabs");
+    let sidebar = cx.update(|cx| window.workspace.read_with(cx, |ws, _| ws.sidebar.clone()).expect("open"));
+    let before = builds(cx, &window);
+    for _ in 0..3 {
+        let bar = |cx: &mut TestAppContext| cx.update(|cx| sidebar.read(cx).tab_bar_builds());
+        let was = bar(cx);
+        cx.update(|cx| sidebar.update(cx, |_, cx| cx.notify()));
+        // The test platform draws a window that is dirty when the effects have run.
+        cx.run_until_parked();
+        assert_eq!(bar(cx), was + 1, "the list's notification drew the tab bar");
+    }
+    assert_eq!(builds(cx, &window), before, "and none of the regions");
 }
 
 #[gpui_kit::test]
