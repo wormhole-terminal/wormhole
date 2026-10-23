@@ -15,7 +15,6 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
 use gpui_kit::*;
-use wormhole_core::storage::paths::ProfileId;
 
 use super::picker::{BranchPicker, Picker, PickerHost};
 use crate::terminal_view::TerminalView;
@@ -47,8 +46,6 @@ pub(crate) struct History {
     /// now, which a read that lands later is checked against.
     terminals: HashMap<i64, Entity<TerminalView>>,
     picker: BranchPicker,
-    /// The window as the feature last heard it.
-    profile: ProfileId,
 }
 
 impl EventEmitter<FeatureEvent> for History {}
@@ -76,15 +73,11 @@ impl History {
             of: HashMap::new(),
             terminals: HashMap::new(),
             picker: BranchPicker::new(Picker::History, window, cx),
-            profile: ProfileId::default_profile(),
         }
     }
 
     /// Takes in what the window says of itself: whose settings it draws with, and the terminals it has.
     pub(super) fn follow(&mut self, facts: &WindowFacts<'_>) {
-        if self.profile != *facts.profile {
-            self.profile = facts.profile.clone();
-        }
         for session in facts.sessions() {
             // A restart puts a new view under the same id: the log is read in the folder of the one
             // that lives, and the dead one is let go.

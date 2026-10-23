@@ -24,12 +24,6 @@ pub fn temp() -> PathBuf {
     std::env::temp_dir()
 }
 
-/// Where runtime files such as sockets go: the system's runtime folder where it has one
-/// (`$XDG_RUNTIME_DIR`), else the per-user temporary folder, as on macOS.
-pub fn runtime() -> PathBuf {
-    dirs::runtime_dir().unwrap_or_else(temp)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,8 +49,7 @@ mod tests {
     }
 
     #[test]
-    fn runtime_files_have_a_folder_even_without_a_runtime_dir() {
-        assert!(runtime().is_absolute());
+    fn the_temporary_folder_is_absolute() {
         assert!(temp().is_absolute());
     }
 }
