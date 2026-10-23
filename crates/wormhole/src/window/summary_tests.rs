@@ -69,11 +69,12 @@ fn output_that_changes_no_fact_does_not_wake_the_window_and_a_change_does_at_onc
     assert_ne!(state(cx), busy, "and its row says so");
 }
 
-/// The times on the rows move on by themselves: the tick tells the sidebar, and only it, when one
-/// would read differently, and tells nothing while none does.
+/// The times on the rows move on by themselves: the tick draws the sidebar when one would read
+/// differently, and draws nothing while none does. (The window around it is notified with the list, as
+/// it is for a hover or a rename: it draws what the list holds, e.g. the title row's group.)
 #[gpui_kit::test]
-fn a_time_that_reads_differently_draws_the_sidebar_alone_on_the_tick(cx: &mut TestAppContext) {
-    if isolate_in(module_path!(), "a_time_that_reads_differently_draws_the_sidebar_alone_on_the_tick") {
+fn a_time_that_reads_differently_draws_the_sidebar_on_the_tick(cx: &mut TestAppContext) {
+    if isolate_in(module_path!(), "a_time_that_reads_differently_draws_the_sidebar_on_the_tick") {
         return;
     }
     let window = start(cx, 2);

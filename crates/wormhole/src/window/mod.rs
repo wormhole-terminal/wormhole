@@ -309,7 +309,9 @@ impl Workspace {
         let sidebar =
             cx.new(|cx| crate::sidebar::Sidebar::new(view, list_focus, Self::profiles_for_chip, window, cx));
         cx.subscribe_in(&sidebar, window, Self::on_sidebar_event).detach();
-        // The list draws itself (a hover, a rename, a menu): so does the window around it.
+        // The list draws itself (a hover, a rename, a menu): so does the window around it, which draws
+        // what the list holds (the title row names the selected terminal's group, the focus ring and
+        // the keys read where the list's keys are). Told only when it changed: a window asleep stays so.
         cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
 
         let first_run = cx.new(|_| crate::onboarding::FirstRun::default());
@@ -392,12 +394,12 @@ impl Workspace {
         }
         // Saved on the first tick, so a window opened just now survives a quit.
         this.dirty = true;
-        // The sidebar is told when the window's facts change, not while it draws: now, and whenever
-        // the window is notified or the settings change.
+        // The sidebar is told when the window's facts change, not while it draws: now, and once at the
+        // end of every update that notified the window or changed the settings.
         this.sync_sidebar(cx);
         let me = cx.entity();
-        cx.observe(&me, |this, _, cx| this.sync_sidebar(cx)).detach();
-        cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar(cx)).detach();
+        cx.observe(&me, |this, _, cx| this.sync_sidebar_soon(cx)).detach();
+        cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
         this
     }
 

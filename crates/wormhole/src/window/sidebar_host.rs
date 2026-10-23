@@ -32,11 +32,13 @@ pub(super) struct SidebarFeed {
     lights_row: Option<f32>,
     /// Which repository a worktree belongs to, by its root (read from disk once per refresh).
     worktrees: RefCell<HashMap<PathBuf, Option<PathBuf>>>,
+    /// A sync is queued for the end of the update that notified the window (`sync_sidebar_soon`).
+    sync_pending: bool,
 }
 
 impl SidebarFeed {
     pub(super) fn new() -> Self {
-        Self { tabs_on: false, lights_row: None, worktrees: RefCell::default() }
+        Self { tabs_on: false, lights_row: None, worktrees: RefCell::default(), sync_pending: false }
     }
 }
 
@@ -146,6 +148,23 @@ impl Workspace {
         self.sidebar.update(cx, |sidebar, cx| sidebar.set_input(input, cx));
     }
 
+    /// [`sync_sidebar`](Self::sync_sidebar) once, when the update that notified the window (or changed
+    /// the settings) has ended: a command that changes several facts notifies the window several times,
+    /// and the sidebar is told how it stands after all of them, not after each.
+    pub(super) fn sync_sidebar_soon(&mut self, cx: &mut Context<Self>) {
+        if std::mem::replace(&mut self.sidebar_feed.sync_pending, true) {
+            return;
+        }
+        let this = cx.weak_entity();
+        cx.defer(move |cx| {
+            this.update(cx, |this, cx| {
+                this.sidebar_feed.sync_pending = false;
+                this.sync_sidebar(cx);
+            })
+            .ok();
+        });
+    }
+
     /// Run `f` on the sidebar after telling it how the window stands now.
     pub(super) fn with_sidebar<R>(
         &self,
@@ -234,6 +253,13 @@ impl Workspace {
 
     /// Tell the sidebar how wide its column is, and the window: layout, known only when the window
     /// lays out, and unchanged from frame to frame.
+    ///
+    /// This is the one push made while the window draws: the width is only known from the layout
+    /// (`columns`), which the draw computes. It notifies only when a width changed (a resize or a
+    /// slide), and only the list, which is drawn after this render returns and so reads the new width
+    /// in this same frame; a window at rest does not draw because of it. A GPUI that keeps views
+    /// between frames (draws only the dirty ones) would draw the list once more after a frame that
+    /// changed it, and no more: nothing here depends on the list drawing before the window does.
     fn fit_sidebar(&self, width: f32, cx: &mut Context<Self>) {
         let window_width = self.window_width;
         self.sidebar.update(cx, |sidebar, cx| sidebar.set_metrics(width, window_width, cx));
@@ -362,7 +388,7 @@ impl Workspace {
         // Only what is on screen: the times on the rows (the tab bar draws them too).
         let shown = self.panes.sidebar_open || self.sidebar_feed.tabs_on;
         // The times on the rows ("Working · 3m", a command's clock) move on their own; the sidebar
-        // alone draws again when one would read differently, but not for a window nobody is looking at.
+        // draws again when one would read differently, but not for a window nobody is looking at.
         if window_active && shown {
             let now = row_times(&self.row_infos(cx), &self.profile, cx);
             self.sidebar.update(cx, |sidebar, cx| {

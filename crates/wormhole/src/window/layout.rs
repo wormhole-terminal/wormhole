@@ -131,7 +131,9 @@ impl Render for Workspace {
         if (self.terminal_drag.is_some() || self.group_drag.is_some()) && !cx.has_active_drag() {
             self.terminal_drag = None;
             self.group_drag = None;
-            // The one fact the frame itself finds out, and the list is drawn after this returns.
+            // The one fact the frame itself finds out (nothing notifies when a drag ends outside every
+            // drop target), and the list is drawn after this returns. It changes the list's input once
+            // per drag, so a GPUI that draws only dirty views draws the list one more time then.
             self.sync_sidebar(cx);
         }
         let notes_visible = self.notes_visible();
