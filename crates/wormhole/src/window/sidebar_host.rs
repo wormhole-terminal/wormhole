@@ -254,15 +254,15 @@ impl Workspace {
     /// Tell the sidebar how wide its column is, and the window: layout, known only when the window
     /// lays out, and unchanged from frame to frame.
     ///
-    /// This is the one push made while the window draws: the width is only known from the layout
-    /// (`columns`), which the draw computes. It notifies only when a width changed (a resize or a
-    /// slide), and only the list, which is drawn after this render returns and so reads the new width
-    /// in this same frame; a window at rest does not draw because of it. A GPUI that keeps views
-    /// between frames (draws only the dirty ones) would draw the list once more after a frame that
-    /// changed it, and no more: nothing here depends on the list drawing before the window does.
+    /// The one push made while the window draws: the width is only known from the layout (`columns`),
+    /// which the draw computes. The sidebar entity is only touched when a width differs (a resize or
+    /// a slide), so a frame of a window at rest leaves it alone; then it draws the list, which comes
+    /// after this render returns and reads the new width in this same frame.
     fn fit_sidebar(&self, width: f32, cx: &mut Context<Self>) {
         let window_width = self.window_width;
-        self.sidebar.update(cx, |sidebar, cx| sidebar.set_metrics(width, window_width, cx));
+        if self.sidebar.read(cx).metrics() != (width, window_width) {
+            self.sidebar.update(cx, |sidebar, cx| sidebar.set_metrics(width, window_width, cx));
+        }
     }
 
     /// What the sidebar was told is what a frame would tell it: every change of a fact reached it

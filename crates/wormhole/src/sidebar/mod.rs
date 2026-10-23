@@ -169,6 +169,11 @@ impl Sidebar {
         &self.input
     }
 
+    /// The column's width and the window's as last said (`set_metrics`).
+    pub(crate) fn metrics(&self) -> (f32, f32) {
+        (self.width, self.window_width)
+    }
+
     /// The column's width (its width at rest while it slides) and the window's, which the tab bar
     /// fits itself to: layout, known when the window lays out. Draws again when one changed.
     pub(crate) fn set_metrics(&mut self, width: f32, window_width: f32, cx: &mut Context<Self>) {
