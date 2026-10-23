@@ -15,15 +15,15 @@ use wormhole_core::view::spoken;
 use super::list::DiffTarget;
 use super::rows::{ChangeRow, Group, file_name};
 use super::{Changes, def::typed};
+use crate::features::git::file_line::{Placement, change_row};
+use crate::features::git::open_file::OpenTarget;
+use crate::features::git::picker::{ChipOf, PickerChip};
+use crate::features::git::problem::{self, GitTab};
+use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
 use crate::settings::{SettingsStore, UiColors, ui as ui_main, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{FeatureEvent, RepoRequest};
-use crate::window::features::git::file_line::{Placement, change_row};
-use crate::window::features::git::open_file::OpenTarget;
-use crate::window::features::git::picker::{ChipOf, PickerChip};
-use crate::window::features::git::problem::{self, GitTab};
-use crate::window::features::git::submodule_row::{open_terminal_by_event, submodule_row};
 
 /// The tab's content, built inline from `Workspace::render` on the feature's entity.
 pub(super) fn tab(

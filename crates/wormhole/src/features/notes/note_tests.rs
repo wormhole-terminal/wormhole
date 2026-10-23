@@ -5,7 +5,7 @@ use gpui_kit::{TestAppContext, TextRun, font, px, rems, size};
 use wormhole_core::view::layout::{PANEL_MIN, SIDEBAR_DEFAULT, TERMINAL_MIN};
 
 use crate::app_state::OpenWindow;
-use crate::window::features::notes::testing as notes;
+use crate::features::notes::testing as notes;
 use crate::window::view_tests::{draw, drive, isolate_in, start};
 
 fn isolate(name: &str) -> bool {

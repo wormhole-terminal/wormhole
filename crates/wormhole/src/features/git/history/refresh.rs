@@ -9,8 +9,8 @@ use wormhole_core::config::TabId;
 use wormhole_core::git::{self, Commit, FileChange, GitError, LOG_LIMIT};
 
 use super::History;
+use crate::features::git::changes::Changes;
 use crate::window::feature::FeatureEvent;
-use crate::window::features::git::changes::Changes;
 
 /// How many of a commit's files are looked for in the working tree; a commit that touches more
 /// shows no icon on the rest.

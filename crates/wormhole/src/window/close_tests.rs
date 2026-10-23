@@ -8,7 +8,7 @@ use gpui_kit::TestAppContext;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
 use crate::app_state::app;
-use crate::window::features::notes::testing as notes;
+use crate::features::notes::testing as notes;
 use crate::window::view_tests::{drive, hook, isolate_in, read, start};
 use crate::window::window_lifecycle::open_workspace_window;
 

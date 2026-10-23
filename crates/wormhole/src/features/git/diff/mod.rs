@@ -25,11 +25,11 @@ use std::sync::Arc;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use crate::features::git::changes::Changes;
+use crate::features::git::open_file::{OpenFile, OpenTarget};
 use crate::settings::SettingsStore;
 use crate::settings::{settings_in, store_in, ui_in};
 use crate::terminal_view::TerminalView;
-use crate::window::features::git::changes::Changes;
-use crate::window::features::git::open_file::{OpenFile, OpenTarget};
 use crate::window::repo::Stamp;
 use crate::window::repo::job::Job;
 use load::Ask;

@@ -3,7 +3,7 @@
 use gpui_kit::TestAppContext;
 use wormhole_core::ipc;
 
-use crate::window::features::usage::tests::{claude, drawn, on_usage};
+use crate::features::usage::tests::{claude, drawn, on_usage};
 use crate::window::view_tests::isolate_in;
 
 #[gpui_kit::test]

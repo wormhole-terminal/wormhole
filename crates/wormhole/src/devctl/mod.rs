@@ -502,13 +502,8 @@ fn command(name: &str) -> Option<Command> {
         "project-init" => panels::project_init,
         "project-trust" => panels::project_trust,
         "comment" => |ctx, arg| {
-            let said = crate::window::features::git::changes::devctl::comment(
-                ctx.workspace,
-                arg,
-                ctx.window,
-                ctx.cx,
-            )
-            .map_err(|e| anyhow!(e))?;
+            let said = crate::features::git::changes::devctl::comment(ctx.workspace, arg, ctx.window, ctx.cx)
+                .map_err(|e| anyhow!(e))?;
             Ok(said)
         },
         "note-seed" => panels::note_seed,

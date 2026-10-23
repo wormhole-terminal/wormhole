@@ -15,14 +15,14 @@ use wormhole_core::project::Feature;
 use wormhole_core::project::{FeatureStanding, TrustStatus, trust_applies};
 
 use super::reveal;
+use crate::features::project;
+use crate::features::project::LoadedProject;
 use crate::select;
 use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, SettingParts, SettingState, TextRole};
-use crate::window::features::project;
-use crate::window::features::project::LoadedProject;
 use crate::window::window_lifecycle::with_front_workspace;
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];

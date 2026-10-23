@@ -277,7 +277,7 @@ fn the_pull_request_chip_shows_a_cached_pull_request_only_for_an_approved_branch
     assert_eq!(shown(cx), None, "the project is not trusted: no lookup, and nothing shown");
     cx.update(|cx| {
         let folder = wormhole_core::project::ProjectFolder::open(&root).expect("a project");
-        crate::window::features::project::hub_mut(cx).trust.trust(&folder);
+        crate::features::project::hub_mut(cx).trust.trust(&folder);
     });
     drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
     let (label, words) = shown(cx).expect("trusted: the cached pull request");

@@ -10,7 +10,7 @@
 //!   through the command line only gets the dialog opened ([`api::control_ask`]).
 //! - A repository with an `.wormhole/` project needs that project trusted and its settings on, as a
 //!   terminal opened there would take its env and shell; the check is the project feature's
-//!   ([`project::api::worktree_allowed`](crate::window::features::project::api)), the one named bridge
+//!   ([`project::api::worktree_allowed`](crate::features::project::api)), the one named bridge
 //!   from here into it, with the project's setup command ([`project::api::worktree_setup`]). A
 //!   repository without one needs nothing.
 //! - A worktree is removed only for a terminal the person closed and chose "Close and Remove Worktree"

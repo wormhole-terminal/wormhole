@@ -7,9 +7,9 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::DiffView;
+use crate::features::git::changes::Changes;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
-use crate::window::features::git::changes::Changes;
 use wormhole_core::git::{COMMITS_SHOWN, Commit, Range, SubmoduleLog, short};
 use wormhole_core::view::limits::count_grouped;
 use wormhole_core::view::panel::age;

@@ -86,7 +86,7 @@ impl FrontWindow {
                 window
                     .workspace
                     .read_with(cx, |ws, cx| Self {
-                        project: crate::window::features::project::api::active_root(ws, cx),
+                        project: crate::features::project::api::active_root(ws, cx),
                     })
                     .ok()
             })

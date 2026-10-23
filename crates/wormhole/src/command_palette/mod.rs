@@ -25,11 +25,11 @@ use wormhole_core::view::search::{self, Scope};
 use wormhole_core::view::sidebar::display_path;
 
 use crate::app_state::{AppState, OpenWindow, app};
+use crate::features::git::history::api as history;
+use crate::features::project;
 use crate::settings::settings;
 use crate::settings_window;
 use crate::window::Workspace;
-use crate::window::features::git::history::api as history;
-use crate::window::features::project;
 use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::window::window_lifecycle::open_tab;
 use crate::window::window_lifecycle::with_front_workspace;

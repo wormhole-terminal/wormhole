@@ -6,8 +6,8 @@ use wormhole_core::agents::AgentId;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::keys::keymap::ActionId;
 
+use crate::features::notes::testing as notes;
 use crate::settings::update_settings;
-use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
 use wormhole_core::config::TabId;
 

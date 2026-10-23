@@ -19,13 +19,13 @@ use wormhole_core::notify::{self, Counts, Terminal};
 use wormhole_core::project::Feature;
 
 use crate::app_state::{AppState, app};
+use crate::features::project;
 use crate::menubar::model::{self, DockEntry, KeyEquivalent};
 use crate::menubar::{ActionItem, MenuCommand, MenuSnapshot, StatusColors};
 use crate::platform::status_item::{self, MenuBar};
 use crate::settings::{settings, ui};
 use crate::settings_window;
 use crate::updates;
-use crate::window::features::project;
 use crate::window::window_lifecycle::open_tab;
 use crate::window::window_lifecycle::with_front_workspace;
 

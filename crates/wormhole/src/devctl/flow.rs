@@ -42,8 +42,7 @@ async fn idle(this: WeakEntity<Workspace>, cx: &mut AsyncWindowContext, timeout:
     let mut steady = 0;
     loop {
         let Ok(busy) = this.update(cx, |workspace, cx| {
-            workspace.devctl_repo_busy(cx)
-                || crate::window::features::git::history::devctl::busy(workspace, cx)
+            workspace.devctl_repo_busy(cx) || crate::features::git::history::devctl::busy(workspace, cx)
         }) else {
             return "wait-idle failed: the window closed\n".into();
         };

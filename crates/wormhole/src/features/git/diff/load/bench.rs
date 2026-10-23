@@ -5,7 +5,7 @@
 use std::time::Instant;
 
 use super::build;
-use crate::window::features::git::diff::rows::BuildKey;
+use crate::features::git::diff::rows::BuildKey;
 use gpui_kit::component::highlighter::HighlightTheme;
 use wormhole_core::git::{DiffLine, FileDiff, Hunk, LineKind};
 

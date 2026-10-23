@@ -45,7 +45,7 @@ pub(crate) fn toggle_commit(ws: &Workspace, ix: usize, cx: &mut Context<Workspac
 
 /// `commit-file <n>`: the diff of the n-th file of the open commit.
 pub(crate) fn commit_file(ws: &Workspace, ix: usize, cx: &mut Context<Workspace>) {
-    let Some(changes) = ws.feature::<crate::window::features::git::changes::Changes>() else { return };
+    let Some(changes) = ws.feature::<crate::features::git::changes::Changes>() else { return };
     run(ws, cx, |history, session, _, cx| {
         let Some(state) = history.of.get(&session) else { return };
         let Some(sha) = state.expanded.clone() else { return };

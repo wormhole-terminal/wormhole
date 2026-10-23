@@ -18,14 +18,14 @@ use wormhole_core::view::focus::list::Item;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::actions::ShowChanges;
+use crate::features::TABLE;
+use crate::features::git::changes;
+use crate::features::notes::testing as notes;
 use crate::focus_keys::Activate;
 use crate::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::feature::Walkable;
 use crate::window::feature::{CloseHooks, FeatureDef, FeatureEvent, Stake, StateDef, TabDef, WalkFns};
-use crate::window::features::TABLE;
-use crate::window::features::git::changes;
-use crate::window::features::notes::testing as notes;
 use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
 
 #[test]
@@ -631,7 +631,7 @@ fn a_window_frame_on_usage_stays_within_its_allocation_budget(cx: &mut TestAppCo
     };
     let limit = |label: &str, used| PlanLimit { label: label.into(), used, resets_at: Some(far) };
     cx.update(|cx| {
-        use crate::window::features::usage::record;
+        use crate::features::usage::record;
         record(report(AgentId::Claude, Vec::new(), Some(Window { used: 85.0, resets_at: far }), None), cx);
         record(
             report(AgentId::Codex, vec![limit("5-hour limit", 30.0), limit("Weekly", 100.0)], None, None),

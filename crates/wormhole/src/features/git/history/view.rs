@@ -13,15 +13,15 @@ use wormhole_core::view::panel::age;
 
 use super::def::typed;
 use super::{CommitFiles, History, HistoryRow};
+use crate::features::git::changes::Changes;
+use crate::features::git::file_line::{Placement, change_row};
+use crate::features::git::open_file::OpenTarget;
+use crate::features::git::picker::{ChipOf, PickerChip};
+use crate::features::git::problem::{self, GitTab};
+use crate::features::git::submodule_row::{open_terminal_by_event, submodule_row};
 use crate::settings::{UiColors, ui_in};
 use crate::style::{self, TextRole};
 use crate::window::facts::WindowFacts;
-use crate::window::features::git::changes::Changes;
-use crate::window::features::git::file_line::{Placement, change_row};
-use crate::window::features::git::open_file::OpenTarget;
-use crate::window::features::git::picker::{ChipOf, PickerChip};
-use crate::window::features::git::problem::{self, GitTab};
-use crate::window::features::git::submodule_row::{open_terminal_by_event, submodule_row};
 
 /// The tab's content, built inline from `Workspace::render` on the feature's entity.
 pub(super) fn tab(

@@ -107,8 +107,8 @@ pub(crate) fn set_feature_default(profile: &ProfileId, feature: Feature, enabled
 
 #[cfg(test)]
 mod tests {
+    use crate::features::project::ProjectHub;
     use crate::platform::auth::AuthError;
-    use crate::window::features::project::ProjectHub;
     use wormhole_core::project::{ProjectFolder, TrustStatus};
 
     /// A fresh directory under the system temp dir, removed when dropped.

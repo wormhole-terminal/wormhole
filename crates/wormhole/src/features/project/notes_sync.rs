@@ -8,8 +8,8 @@ use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFi
 use wormhole_core::storage::paths::ProfileId;
 
 use super::{Project, hub_of, hub_of_mut, project_folders_on};
+use crate::features::notes::Notes;
 use crate::window::facts::WindowFacts;
-use crate::window::features::notes::Notes;
 
 /// The window's notes, as the Project tab's button that copies a prompt into a note holds them, with the
 /// profile the window is in (whose approvals say whether the prompt may be used). The only way the rest of

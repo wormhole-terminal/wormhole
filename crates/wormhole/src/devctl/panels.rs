@@ -3,9 +3,9 @@
 use anyhow::{Result, anyhow};
 
 use super::{Ctx, nth};
-use crate::window::features::git::changes::devctl as changes_panel;
-use crate::window::features::git::history::devctl as history_panel;
-use crate::window::features::notes::devctl as notes;
+use crate::features::git::changes::devctl as changes_panel;
+use crate::features::git::history::devctl as history_panel;
+use crate::features::notes::devctl as notes;
 
 pub(super) fn changes(ctx: &mut Ctx, _: &str) -> Result<String> {
     changes_panel::show(ctx.workspace, ctx.cx);
@@ -68,7 +68,7 @@ pub(super) fn project(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    crate::window::features::project::devctl::show_tab(ctx.workspace, ctx.cx);
+    crate::features::project::devctl::show_tab(ctx.workspace, ctx.cx);
     Ok(String::new())
 }
 
@@ -78,8 +78,7 @@ pub(super) fn project_init(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    let folder =
-        crate::window::features::project::devctl::init(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
+    let folder = crate::features::project::devctl::init(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("creating {}/.wormhole", folder.display()))
 }
 
@@ -88,8 +87,7 @@ pub(super) fn project_trust(ctx: &mut Ctx, _: &str) -> Result<String> {
     if !project_folders_on(ctx) {
         return Ok("project folders feature is off (feature_flags.project_folders)".into());
     }
-    let root =
-        crate::window::features::project::devctl::trust(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
+    let root = crate::features::project::devctl::trust(ctx.workspace, ctx.cx).map_err(|e| anyhow!(e))?;
     Ok(format!("trusting {}", root.display()))
 }
 
@@ -100,14 +98,14 @@ fn project_folders_on(ctx: &Ctx) -> bool {
 
 /// `trust-window`: the window listing everything the active terminal's project wants to run.
 pub(super) fn trust_window(ctx: &mut Ctx, _: &str) -> Result<String> {
-    crate::window::features::project::devctl::trust_window(ctx.workspace, ctx.cx)?;
+    crate::features::project::devctl::trust_window(ctx.workspace, ctx.cx)?;
     Ok(String::new())
 }
 
 /// `trust-shot [name]`: a screenshot of that window.
 pub(super) fn trust_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "trust")?;
-    crate::window::features::project::devctl_trust_shot(name, ctx.dir, ctx.cx)
+    crate::features::project::devctl_trust_shot(name, ctx.dir, ctx.cx)
 }
 
 /// `panel-tab <changes|history|notes|usage|project>`: show that tab of the right panel.

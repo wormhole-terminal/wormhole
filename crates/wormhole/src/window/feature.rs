@@ -41,7 +41,7 @@ use crate::window::feature_host::FeatureState;
 use crate::window::repo::Observed;
 
 /// The features the app has, in the order of their tabs. The app installs it once at launch
-/// ([`features::install`](super::features::install)) and each `Workspace` copies the slice into a field
+/// ([`features::install`](crate::features::install)) and each `Workspace` copies the slice into a field
 /// when it is made, so the frame never reads the global.
 #[derive(Clone, Copy)]
 pub(crate) struct FeatureTable(pub(crate) &'static [FeatureDef]);

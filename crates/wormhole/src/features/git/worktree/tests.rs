@@ -15,9 +15,9 @@ use wormhole_core::storage::paths::ProfileId;
 use super::super::testing::{folder, go, read_repo, repo, write};
 use super::Worktrees;
 use crate::app_state::{OpenWindow, app};
+use crate::features::project::{self, hub_mut};
 use crate::window::Workspace;
 use crate::window::feature::CloseOf;
-use crate::window::features::project::{self, hub_mut};
 use crate::window::view_tests::{drive, isolate_in, read, read_cx, start};
 
 fn isolate(name: &str) -> bool {
@@ -167,7 +167,7 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     // A terminal started in it gets its ports in its environment; one started in the repository does
     // not.
     let (in_worktree, in_repo) = cx.update(|cx| {
-        let table = crate::window::features::TABLE;
+        let table = crate::features::TABLE;
         (
             Workspace::spawn_adds(&ProfileId::default_profile(), Some(worktree.folder.as_path()), table, cx),
             Workspace::spawn_adds(&ProfileId::default_profile(), Some(root.as_path()), table, cx),

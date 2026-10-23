@@ -9,10 +9,10 @@ use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::{Changes, list, view};
+use crate::features::git::diff::DiffView;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{BranchChip, CoverDef, FeatureDef, FeatureEvent, RepoRequest, StateDef, TabDef};
-use crate::window::features::git::diff::DiffView;
 
 /// The window's `Changes`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Changes> {

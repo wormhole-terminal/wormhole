@@ -80,7 +80,7 @@ pub(super) fn folder_color(ctx: &mut Ctx, arg: &str) -> Result<String> {
         return Err(anyhow!("expected an absolute path, got {:?}", path.display()));
     }
     let folder =
-        crate::window::features::project::devctl::folder_color(ctx.workspace, path.as_deref(), color, ctx.cx)
+        crate::features::project::devctl::folder_color(ctx.workspace, path.as_deref(), color, ctx.cx)
             .map_err(|e| anyhow!(e))?;
     Ok(format!("{} {}", color.map_or("no colour".into(), ProjectColorChoice::to_value), folder.display()))
 }

@@ -21,13 +21,13 @@ use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 use wormhole_core::view::sidebar::{Entry, SidebarNumbers, WindowSidebar};
 
 use crate::app_state::{AppState, OpenWindow, app};
+use crate::features::git::changes::Changes;
+use crate::features::git::picker::PickerHost as _;
+use crate::features::notes::testing as notes;
 use crate::notifications;
 use crate::settings::SettingsStore;
 use crate::terminal_view::Status;
 use crate::window::Workspace;
-use crate::window::features::git::changes::Changes;
-use crate::window::features::git::picker::PickerHost as _;
-use crate::window::features::notes::testing as notes;
 use crate::window::status_bar::StatusItem;
 use crate::window::window_lifecycle::open_workspace_window;
 use wormhole_core::config::TabId;
@@ -113,13 +113,13 @@ pub(crate) fn start(cx: &mut TestAppContext, sessions: i64) -> OpenWindow {
 pub(crate) fn set_shared_state(cx: &mut App) {
     cx.set_global(AppState::for_test(100));
     cx.set_global(crate::updates::Updates::new(None, None));
-    crate::window::features::install(cx);
+    crate::features::install(cx);
     crate::window::feature::FeatureTable::profile_shown(cx);
 }
 
 /// [`start`] with the window's sessions as `record` has them (a terminal's scrollback, say).
 pub(crate) fn start_with(cx: &mut TestAppContext, record: WindowRecord) -> OpenWindow {
-    start_with_table(cx, record, crate::window::features::TABLE)
+    start_with_table(cx, record, crate::features::TABLE)
 }
 
 /// [`start_with`] for an app whose feature table is `table`: what the window copies from the global

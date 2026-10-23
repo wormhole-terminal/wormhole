@@ -11,10 +11,10 @@ use gpui_kit::*;
 
 use super::DiffView;
 use super::render::DiffColors;
+use crate::features::git::changes::Changes;
 use crate::settings::UiColors;
 use crate::settings::settings_in;
 use crate::style::{self, Edges, TextRole};
-use crate::window::features::git::changes::Changes;
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{self, Side};
 
@@ -191,7 +191,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::{Note, notes};
-    use crate::window::features::git::diff::{DiffView, Request};
+    use crate::features::git::diff::{DiffView, Request};
     use wormhole_core::config::SizeUnits::{Binary, Decimal};
     use wormhole_core::git::{
         self, ChangeKind, DiffLimits, DiffSpec, FileChange, FileDiff, LfsChange, LfsPointer,

@@ -22,8 +22,8 @@ use super::{
     shown_profile,
 };
 use crate::app_state::{AppState, OpenWindow};
+use crate::features::notes::testing as notes;
 use crate::window::Workspace;
-use crate::window::features::notes::testing as notes;
 use wormhole_core::storage::store::WindowRecord;
 
 use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start, start_with_table};
@@ -484,7 +484,7 @@ fn a_window_follows_the_trust_of_its_own_profile_not_the_shown_ones(cx: &mut Tes
     // whether a worktree of it may be made. Both ask for the profile's own approval.
     let reach = |cx: &mut TestAppContext, profile: &ProfileId| {
         cx.update(|cx| {
-            let added = Workspace::spawn_adds(profile, Some(&dir), crate::window::features::TABLE, cx);
+            let added = Workspace::spawn_adds(profile, Some(&dir), crate::features::TABLE, cx);
             (
                 added.env.contains_key("WH_TWO_PROFILES"),
                 super::api::worktree_allowed(profile, &dir, cx).is_ok(),
@@ -565,7 +565,7 @@ fn a_window_reads_the_feature_switches_of_its_own_profile(cx: &mut TestAppContex
         drive(cx, window, |ws, _, cx| go(ws, &dir, cx));
         let actionable = read_cx(cx, window, |ws, cx| super::api::actionable(ws, cx).is_some());
         let started = cx.update(|cx| {
-            Workspace::spawn_adds(profile, Some(&dir), crate::window::features::TABLE, cx)
+            Workspace::spawn_adds(profile, Some(&dir), crate::features::TABLE, cx)
                 .env
                 .contains_key("WH_TWO_MASKS")
         });

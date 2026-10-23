@@ -11,11 +11,11 @@ use wormhole_core::ipc;
 use crate::app::{control, menus};
 use crate::app_state::look::apply_theme;
 use crate::app_state::{AppState, app_mut};
+use crate::features::project;
 use crate::menubar::MenuCommand;
 use crate::settings::{ParkedSettings, SettingsStore};
 use crate::status_item;
 use crate::updates::restart;
-use crate::window::features::project;
 use crate::window::window_lifecycle::open_workspace_window;
 use crate::{notifications, updates};
 
@@ -44,7 +44,7 @@ pub(super) fn dispatch_hook(incoming: ipc::Incoming, cx: &mut App) {
             }
         }
         // Every window's Usage tab shows it: the reports are one entity the windows watch.
-        ipc::Message::Usage { usage } => crate::window::features::usage::record(usage, cx),
+        ipc::Message::Usage { usage } => crate::features::usage::record(usage, cx),
         // The terminal's own: its model and context window, for its title row.
         ipc::Message::Gauge { tab, gauge } => {
             let Some(owner) = AppState::find_window(cx, |ws, _| ws.owns_terminal(&tab)) else { return };

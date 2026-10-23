@@ -16,11 +16,11 @@ use wormhole_core::storage::paths::ProfileId;
 use super::Worktrees;
 use crate::app_state::{app, app_mut};
 use crate::dialog;
+use crate::features::project;
 use crate::settings::{settings, ui};
 use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
 use crate::window::feature::{FeatureEvent, TerminalInput, TerminalTarget};
-use crate::window::features::project;
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to run in the
 /// terminal once it opens and why the last Create was refused.

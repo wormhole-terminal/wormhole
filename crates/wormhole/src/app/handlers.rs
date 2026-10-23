@@ -27,13 +27,13 @@ use crate::actions::{
 };
 use crate::app::menus;
 use crate::app_state::{AppState, app};
+use crate::features::project;
 use crate::menubar::MenuCommand;
 use crate::onboarding;
 use crate::settings::{SettingsStore, settings, update_settings};
 use crate::settings_window;
 use crate::terminal_view::{TerminalKeys, keystroke_spec};
 use crate::updates;
-use crate::window::features::project;
 use crate::window::window_lifecycle::with_front_workspace;
 use crate::window::{ambient, window_lifecycle};
 use crate::{about, studio};

@@ -4,8 +4,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use super::{Built, Check, Observed, Outcome, Stamp, Work, run};
-use crate::window::features::git::diff::rows::{BuildKey, build_rows};
-use crate::window::features::git::diff::{DiffView, Request};
+use crate::features::git::diff::rows::{BuildKey, build_rows};
+use crate::features::git::diff::{DiffView, Request};
 use crate::window::repo::job::testing::ManualExecutor;
 use crate::window::repo::job::{Job, Wanted};
 use gpui_kit::component::highlighter::HighlightTheme;

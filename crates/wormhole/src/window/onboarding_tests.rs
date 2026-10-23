@@ -426,11 +426,10 @@ fn the_trust_button_asks_and_a_cancelled_ask_trusts_nothing(cx: &mut TestAppCont
     assert_eq!(step(cx, &window), Some(Step::Agents), "the trust card is on the agents step");
     event(cx, &window, Event::Trust(dir.clone()));
     cx.run_until_parked();
-    let status = cx.update(|cx| {
-        crate::window::features::project::hub(cx).projects.get(&dir).map(|project| project.status)
-    });
+    let status =
+        cx.update(|cx| crate::features::project::hub(cx).projects.get(&dir).map(|project| project.status));
     assert_eq!(status, Some(TrustStatus::Untrusted), "the unit-test build cancels the dialog");
-    assert!(!cx.update(|cx| crate::window::features::project::hub(cx).approving), "and nothing waits");
+    assert!(!cx.update(|cx| crate::features::project::hub(cx).approving), "and nothing waits");
     assert_eq!(step(cx, &window), Some(Step::Agents), "the intro stays");
     assert!(ProjectFolder::open(&dir).is_some());
 }

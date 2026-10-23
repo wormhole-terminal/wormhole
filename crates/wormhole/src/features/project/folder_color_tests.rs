@@ -13,10 +13,10 @@ use super::Project;
 use super::folder_color::{FolderPaint, ProjectPaint, set_folder_color};
 use super::{create_project_folder, set_feature_for, shown_profile};
 use crate::app_state::OpenWindow;
+use crate::features::project;
 use crate::settings::{SettingsStore, settings};
 use crate::theme_bridge;
 use crate::window::Workspace;
-use crate::window::features::project;
 use crate::window::view_tests::{draw, drive, isolate_in, read_cx, start};
 use wormhole_core::config::TabId;
 

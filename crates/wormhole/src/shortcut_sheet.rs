@@ -15,10 +15,10 @@ use wormhole_core::keys::keyspec::KeySpec;
 #[cfg(feature = "devctl")]
 use crate::app_state::app;
 use crate::app_state::{AppState, OpenWindow};
+use crate::features::project;
 use crate::settings::{UiColors, settings, ui};
 use crate::style::{self, Edges, TextRole};
 use crate::window::Workspace;
-use crate::window::features::project;
 use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView, scrim};
 
 /// How far below the window's top the sheet opens, its widest, and the room left round it.

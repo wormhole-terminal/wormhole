@@ -5,7 +5,7 @@ use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 
 use super::{Ctx, nth};
-use crate::window::features::notes::devctl as notes;
+use crate::features::notes::devctl as notes;
 
 /// A new terminal, where the selected one is or in the folder given (`~/` is the home folder).
 pub(super) fn new(ctx: &mut Ctx, arg: &str) -> Result<String> {
