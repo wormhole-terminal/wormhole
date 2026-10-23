@@ -258,7 +258,7 @@ impl Sidebar {
                     Hit::Set(at) => HitSnap {
                         hit,
                         label: view.sets[at].label.clone().into(),
-                        note: wormhole_core::view::sidebar::text::count(
+                        note: wormhole_core::view::sidebar::wording::count(
                             view.sets[at].members.len(),
                             "terminal",
                             "terminals",

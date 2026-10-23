@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use super::split::SplitMarks;
 use super::state::RowState;
-use super::text::count;
+use super::wording::count;
 
 /// What a terminal row is about, for its label.
 #[derive(Clone, Copy, Debug)]

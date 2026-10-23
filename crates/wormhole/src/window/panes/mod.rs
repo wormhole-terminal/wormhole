@@ -446,7 +446,7 @@ impl Workspace {
         let (status, told, agent, folder) = {
             let terminal = pane.terminal.read(cx);
             // Cut from the front, as the sidebar's rows do: the end tells two folders apart.
-            let folder = wormhole_core::view::sidebar::text::place_detail(
+            let folder = wormhole_core::view::sidebar::wording::place_detail(
                 terminal.cwd.as_deref(),
                 home_dir(),
                 PANE_PATH_MAX,

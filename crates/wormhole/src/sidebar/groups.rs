@@ -109,7 +109,7 @@ impl Sidebar {
     /// fit, as a row's place is.
     pub(super) fn group_folder_line(&self, group: u32) -> Option<String> {
         let folder = self.view.groups.get(group)?.folder.as_deref()?;
-        wormhole_core::view::sidebar::text::place_detail(
+        wormhole_core::view::sidebar::wording::place_detail(
             Some(Path::new(folder)),
             home_dir(),
             super::rows::PLACE_CHARS,

@@ -248,10 +248,7 @@
       "crates/wormhole/src/menubar/model/mod.rs :: cfg_attr(": 1
     },
     "os-edge-neutral": {},
-    "bucket-names": {
-      "crates/wormhole-core/src/notify/text.rs": 1,
-      "crates/wormhole-core/src/view/sidebar/text.rs": 1
-    },
+    "bucket-names": {},
     "orphans": {},
     "glob-imports": {},
     "cycles": {

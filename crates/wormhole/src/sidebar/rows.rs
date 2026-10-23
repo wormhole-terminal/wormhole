@@ -15,7 +15,7 @@ use wormhole_core::view::sidebar::RowState;
 use wormhole_core::view::sidebar::SplitMarks;
 use wormhole_core::view::sidebar::hints::{keycap, keyshortcut};
 use wormhole_core::view::sidebar::spoken::{self, RowSpeech, SplitSpeech};
-use wormhole_core::view::sidebar::text::{agent_detail, ago, clock, place_detail, took};
+use wormhole_core::view::sidebar::wording::{agent_detail, ago, clock, place_detail, took};
 
 use super::facts::RowInfo;
 use super::input::SidebarInput;

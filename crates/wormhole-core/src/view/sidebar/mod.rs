@@ -23,8 +23,8 @@ pub mod spoken;
 mod stable_tests;
 mod state;
 pub mod tabs;
-pub mod text;
 pub mod urgency;
+pub mod wording;
 
 pub use arrange::Item;
 pub use density::Density;
@@ -37,5 +37,5 @@ pub use place::{Drop, DropInput, Landing, Target, group_drop, terminal_drop};
 pub use split::{Bracket, SplitId, SplitMarks, Splits, gather_splits, split_of};
 pub use state::RowState;
 pub use tabs::TerminalsIn;
-pub use text::display_path;
 pub use urgency::Urgency;
+pub use wording::display_path;

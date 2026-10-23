@@ -13,7 +13,7 @@
 mod announce;
 mod burst;
 mod listing;
-mod text;
+mod wording;
 
 use std::time::Duration;
 
@@ -23,7 +23,7 @@ pub use listing::{
     Counts, ItemState, MENU_BADGE_MAX, Sections, Terminal, badge, item_state, matches, next_waiting,
     sections, tooltip,
 };
-pub use text::{About, Text, duration, elapsed, summary, text};
+pub use wording::{About, Text, duration, elapsed, summary, text};
 
 use crate::config::{DockBadge, InFront, NotifySound, Settings};
 

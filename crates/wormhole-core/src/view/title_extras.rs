@@ -3,7 +3,7 @@
 //! listens on, and the words of each for a tooltip and for VoiceOver. The agent's model and
 //! context are `usage::Gauge`, the branch's pull request `git::pr`; the app draws all four.
 
-use crate::view::sidebar::text::count;
+use crate::view::sidebar::wording::count;
 
 /// What the branch chip's neighbours say: a dot while the tree has uncommitted changes, and how far
 /// the branch is from its upstream. Only the departures are shown: a clean branch that is level

@@ -5,7 +5,7 @@
 use std::time::{Duration, Instant};
 
 use super::{Source, State};
-use crate::view::sidebar::text::count;
+use crate::view::sidebar::wording::count;
 
 /// The status item's count stops here ("9+"), so its width stays put.
 pub const MENU_BADGE_MAX: usize = 9;

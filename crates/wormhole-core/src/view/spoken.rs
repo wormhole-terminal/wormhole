@@ -10,7 +10,7 @@
 use std::time::{Duration, Instant};
 
 use crate::view::layout::status_bar::{Entry, Summary};
-use crate::view::sidebar::text::count;
+use crate::view::sidebar::wording::count;
 use wormhole_term::BlockState;
 
 /// A command block as VoiceOver announces it when ⌘↑ / ⌘↓ lands on it, and as the readout

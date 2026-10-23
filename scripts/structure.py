@@ -429,7 +429,7 @@ class Crate:
 
     def node_of(self, rel: str, depth: int) -> Optional[str]:
         """The module a file counts for at `depth`: its module path's first `depth` names (`view::sidebar`
-        for view/sidebar/text.rs at 2; `config` for config/mod.rs, which has only one)."""
+        for view/sidebar/wording.rs at 2; `config` for config/mod.rs, which has only one)."""
         if self.top_of(rel) is None:
             return None
         path = self.modpath.get(rel, ())

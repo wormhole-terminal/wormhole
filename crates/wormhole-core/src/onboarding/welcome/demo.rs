@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::view::sidebar::RowState;
 use crate::view::sidebar::spoken::state_word;
-use crate::view::sidebar::text::agent_detail;
+use crate::view::sidebar::wording::agent_detail;
 
 /// The band's title.
 pub const BAND: &str = "Example";

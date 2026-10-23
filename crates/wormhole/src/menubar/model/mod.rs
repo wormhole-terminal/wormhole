@@ -349,7 +349,7 @@ pub fn dock_menu(terminals: &[Terminal], now: Instant) -> Vec<DockEntry> {
         for &ix in list.iter().take(MAX_SESSIONS / 2) {
             let terminal = &terminals[ix];
             let waited = now.saturating_duration_since(terminal.since);
-            let time = wormhole_core::view::sidebar::text::took(waited).unwrap_or_else(|| "now".into());
+            let time = wormhole_core::view::sidebar::wording::took(waited).unwrap_or_else(|| "now".into());
             entries.push(DockEntry::Terminal {
                 label: format!("{}   {time}", terminal.name),
                 tab: terminal.tab,

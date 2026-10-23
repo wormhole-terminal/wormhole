@@ -4,7 +4,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
-use super::text::{Text, summary};
+use super::wording::{Text, summary};
 use super::{Kind, NOTIFY_BURST, NOTIFY_BURST_WINDOW};
 
 /// The banners posted lately, to notice a burst.
