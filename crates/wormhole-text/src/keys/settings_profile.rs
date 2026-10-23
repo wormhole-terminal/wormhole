@@ -6,40 +6,40 @@
 use crate::key::Key;
 
 /// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(225);
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(231);
 /// "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins."
-pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(226);
+pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(232);
 /// "Name and colour"
-pub const SETTINGS_PROFILE_NAME: Key = Key::new(227);
+pub const SETTINGS_PROFILE_NAME: Key = Key::new(233);
 /// "profile rename avatar letter swatch colour color edge"
-pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(228);
+pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(234);
 /// "Start new terminals in"
-pub const SETTINGS_PROFILE_START: Key = Key::new(229);
+pub const SETTINGS_PROFILE_START: Key = Key::new(235);
 /// "folder directory cwd home path open also claim"
-pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(230);
+pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(236);
 /// "Environment"
-pub const SETTINGS_PROFILE_ENV: Key = Key::new(231);
+pub const SETTINGS_PROFILE_ENV: Key = Key::new(237);
 /// "Variables this profile's terminals start with"
-pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(232);
+pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(238);
 /// "env variable aws path registry export"
-pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(233);
+pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(239);
 /// "Git identity"
-pub const SETTINGS_PROFILE_GIT: Key = Key::new(234);
+pub const SETTINGS_PROFILE_GIT: Key = Key::new(240);
 /// "Set in its terminals only; Wormhole never writes to a repository."
-pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(235);
+pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(241);
 /// "author committer name email commit user"
-pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(236);
+pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(242);
 /// "Agent logins"
-pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(237);
+pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(243);
 /// "A separate login for each agent."
-pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(238);
+pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(244);
 /// "claude codex account config dir home sign in"
-pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(239);
+pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(245);
 /// "Danger zone"
-pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(240);
+pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(246);
 /// "Delete profile"
-pub const SETTINGS_PROFILE_DELETE: Key = Key::new(241);
+pub const SETTINGS_PROFILE_DELETE: Key = Key::new(247);
 /// "Its terminals, notes, tasks and settings are removed and its windows close."
-pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(242);
+pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(248);
 /// "remove danger"
-pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(243);
+pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(249);

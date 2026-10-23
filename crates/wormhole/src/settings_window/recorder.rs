@@ -17,6 +17,7 @@ use style::RecorderState;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
+use wormhole_text::keys::settings_menu_bar_key_conflict;
 
 use super::{SettingsWindow, registry, ui};
 use crate::settings::update_settings;
@@ -106,7 +107,7 @@ impl SettingsWindow {
             }
             Some(Recording::Taken { id: taken, spec, conflict }) if *taken == id => (
                 RecorderState::Conflict(caps(spec.mods, Some(&spec.key))),
-                Some(format!("{conflict}. Press other keys.")),
+                Some(settings_menu_bar_key_conflict(conflict)),
             ),
             _ => match parsed {
                 Some(spec) if problem.is_some() => {

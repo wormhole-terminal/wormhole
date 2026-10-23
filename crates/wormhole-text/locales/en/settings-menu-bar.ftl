@@ -35,3 +35,17 @@ settings-menu-bar-hotkey-action = Hotkey opens
 settings-menu-bar-jump-waiting-key = Jump to next waiting terminal
     .description = Inside { -brand }, in any window
     .keywords = needs you waiting shortcut
+
+## settings_window/sections/menu_bar.rs (labels, hints and notes drawn by this page's code)
+
+settings-menu-bar-status-and-count = Status and count
+settings-menu-bar-status = Status
+settings-menu-bar-icon-only = Icon only
+settings-menu-bar-quick-panel = Quick panel
+settings-menu-bar-show-or-hide-wormhole = Show or hide { -brand }
+
+## Sentences with a hole in them
+
+# Under the shortcut recorder when the keys are taken. { $conflict } says by what (a sentence, in English
+# for now).
+settings-menu-bar-key-conflict = { $conflict }. Press other keys.

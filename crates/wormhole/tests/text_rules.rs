@@ -30,6 +30,8 @@ const MIGRATED: &[&str] = &[
     "settings_window/sections/git.rs",
     "settings_window/sections/sessions.rs",
     "settings_window/sections/preview.rs",
+    "settings_window/sections/menu_bar.rs",
+    "settings_window/recorder.rs",
 ];
 
 /// A marker that says a literal on its line is not interface text.

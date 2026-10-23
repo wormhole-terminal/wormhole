@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-menu-bar.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Menu bar & hotkey"
 pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(163);
@@ -49,3 +50,20 @@ pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(182);
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(183);
 /// "needs you waiting shortcut"
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(184);
+/// "Status and count"
+pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(185);
+/// "Status"
+pub const SETTINGS_MENU_BAR_STATUS: Key = Key::new(186);
+/// "Icon only"
+pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(187);
+/// "Quick panel"
+pub const SETTINGS_MENU_BAR_QUICK_PANEL: Key = Key::new(188);
+/// "Show or hide Wormhole"
+pub const SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE: Key = Key::new(189);
+
+/// ```text
+/// { $conflict }. Press other keys.
+/// ```
+pub fn settings_menu_bar_key_conflict(conflict: &str) -> String {
+    crate::active::message(190, &[("conflict", Arg::Str(conflict))])
+}

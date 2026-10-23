@@ -5,6 +5,7 @@ use gpui_kit::*;
 use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
+use wormhole_text::keys::*;
 
 use crate::settings::Settings;
 use crate::settings_window::recorder::RecorderRow;
@@ -14,7 +15,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("menu-bar", menu_bar),
     Setting::segmented(
         "menu-bar-icon",
-        &[Segment::literal("Status and count"), Segment::literal("Status"), Segment::literal("Icon only")],
+        &[
+            Segment::text(SETTINGS_MENU_BAR_STATUS_AND_COUNT),
+            Segment::text(SETTINGS_MENU_BAR_STATUS),
+            Segment::text(SETTINGS_MENU_BAR_ICON_ONLY),
+        ],
         |s| match s.menu_bar_icon {
             MenuBarIcon::StatusCount => 0,
             MenuBarIcon::Status => 1,
@@ -37,7 +42,10 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::segmented(
         "hotkey-action",
-        &[Segment::literal("Quick panel"), Segment::literal("Show or hide Wormhole")],
+        &[
+            Segment::text(SETTINGS_MENU_BAR_QUICK_PANEL),
+            Segment::text(SETTINGS_MENU_BAR_SHOW_OR_HIDE_WORMHOLE),
+        ],
         |s| usize::from(s.hotkey_action == HotkeyAction::ToggleApp),
         |s, ix| s.hotkey_action = if ix == 1 { HotkeyAction::ToggleApp } else { HotkeyAction::QuickPanel },
     ),

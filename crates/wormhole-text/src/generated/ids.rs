@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub(crate) const IDS: [&str; 378] = [
+pub(crate) const IDS: [&str; 384] = [
     "settings-section-advanced", "settings-section-advanced.intro", "settings-advanced-group-files",
     "settings-advanced-open-config", "settings-advanced-open-config.description", "settings-advanced-open-config.keywords",
     "settings-advanced-open-data", "settings-advanced-open-data.description", "settings-advanced-open-data.keywords",
@@ -67,7 +67,9 @@ pub(crate) const IDS: [&str; 378] = [
     "settings-menu-bar-animate.keywords", "settings-menu-bar-group-global-hotkey", "settings-menu-bar-hotkey",
     "settings-menu-bar-hotkey.description", "settings-menu-bar-hotkey.keywords", "settings-menu-bar-hotkey-action",
     "settings-menu-bar-hotkey-action.description", "settings-menu-bar-hotkey-action.keywords", "settings-menu-bar-jump-waiting-key",
-    "settings-menu-bar-jump-waiting-key.description", "settings-menu-bar-jump-waiting-key.keywords", "settings-section-notifications",
+    "settings-menu-bar-jump-waiting-key.description", "settings-menu-bar-jump-waiting-key.keywords", "settings-menu-bar-status-and-count",
+    "settings-menu-bar-status", "settings-menu-bar-icon-only", "settings-menu-bar-quick-panel",
+    "settings-menu-bar-show-or-hide-wormhole", "settings-menu-bar-key-conflict", "settings-section-notifications",
     "settings-section-notifications.intro", "settings-notifications-group-macos", "settings-notifications-notify-permission",
     "settings-notifications-notify-permission.keywords", "settings-notifications-group-notify-me-when", "settings-notifications-notify-needs-you",
     "settings-notifications-notify-needs-you.description", "settings-notifications-notify-needs-you.keywords", "settings-notifications-notify-agent-done",
@@ -135,7 +137,7 @@ pub(crate) const IDS: [&str; 378] = [
 ];
 
 /// Whether the message at that place has variables: it is a function and has no `Key`.
-pub(crate) const TAKES_ARGS: [bool; 378] = [
+pub(crate) const TAKES_ARGS: [bool; 384] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
@@ -151,6 +153,7 @@ pub(crate) const TAKES_ARGS: [bool; 378] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, true, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false, false, false, false, true, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
@@ -160,12 +163,11 @@ pub(crate) const TAKES_ARGS: [bool; 378] = [
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, true, true, false, false, false,
+    false, true, true, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, false, false, false, false, false, false, false, false,
-    false, false, false, false, true, true,
+    false, false, false, false, false, false, false, false, false, false, true, true,
 ];
