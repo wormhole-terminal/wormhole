@@ -149,8 +149,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::Preview,
         },
         SectionId::Notifications => &SectionInfo {
-            title: Word::Literal("Notifications"),
-            intro: Word::Literal("What Wormhole tells you about terminals you aren't looking at."),
+            title: Word::Key(SETTINGS_SECTION_NOTIFICATIONS),
+            intro: Word::Key(SETTINGS_SECTION_NOTIFICATIONS_INTRO),
             nav: NavGroup::App,
         },
         SectionId::MenuBar => &SectionInfo {

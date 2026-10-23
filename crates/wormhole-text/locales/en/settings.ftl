@@ -6,7 +6,6 @@ settings-section-terminal = Terminal
 settings-section-sessions = Terminals & sidebar
 settings-section-git = Changes & diffs
 settings-section-agents = Coding agents
-settings-section-notifications = Notifications
 
 # The Mode row of Appearance. The description is the quiet line under the label, the keywords find
 # the row in search besides its label and description.

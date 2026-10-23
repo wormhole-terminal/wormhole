@@ -1,103 +1,72 @@
 //! The Notifications section: the permission, which events notify, delivery and the Dock.
 
-use super::{literal_entry, literal_group};
+use super::{entry, group};
 use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const NOTIFICATIONS: &[Group] = &[
-    literal_group(
-        "macOS",
-        &[literal_entry(
-            "notify-permission",
-            "Notifications in System Settings",
-            "",
-            "permission allow system settings send test banner",
-            &[],
-        )],
+    group(
+        SETTINGS_NOTIFICATIONS_GROUP_MACOS,
+        &[entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])
+            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS)],
     ),
-    literal_group(
-        "Notify me when",
+    group(
+        SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN,
         &[
-            literal_entry(
-                "notify-needs-you",
-                "A terminal needs you",
-                "An agent asks a question or for permission",
-                "time sensitive focus question permission notifications",
-                &["notify_needs_you"],
-            ),
-            literal_entry(
-                "notify-agent-done",
-                "An agent finishes",
-                "Its Stop hook, or its output settles. A program that reports it is done or failed counts too",
-                "notifications done program report failed error",
-                &["notify_agent_done"],
-            ),
-            literal_entry(
+            entry("notify-needs-you", SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU, &["notify_needs_you"])
+                .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_KEYWORDS),
+            entry("notify-agent-done", SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE, &["notify_agent_done"])
+                .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_KEYWORDS),
+            entry(
                 "notify-command-done",
-                "A command finishes",
-                "Any foreground command, agent or not, that ran longer than",
-                "long build threshold seconds notifications",
+                SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE,
                 &["notify_command_done", "notify_command_after"],
-            ),
-            literal_entry(
+            )
+            .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_DESCRIPTION)
+            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_KEYWORDS),
+            entry(
                 "notify-command-failed",
-                "A command fails",
-                "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)",
-                "failed failure error exit code build notifications",
+                SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED,
                 &["notify_command_failed"],
-            ),
-            literal_entry(
-                "notify-bell",
-                "The terminal rings the bell",
-                "Terminals without an agent; at most once a minute each",
-                "bell notifications",
-                &["notify_bell"],
-            ),
+            )
+            .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION)
+            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS),
+            entry("notify-bell", SETTINGS_NOTIFICATIONS_NOTIFY_BELL, &["notify_bell"])
+                .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_BELL_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Delivery",
+    group(
+        SETTINGS_NOTIFICATIONS_GROUP_DELIVERY,
         &[
-            literal_entry(
-                "notify-only-unseen",
-                "Only for terminals I’m not looking at",
-                "Off: the terminal in front notifies too",
-                "unseen front",
-                &["notify_only_unseen"],
-            ),
-            literal_entry(
-                "notify-in-front",
-                "While Wormhole is in front",
-                "A system banner, or nothing",
-                "banner nothing front",
-                &["notify_in_front"],
-            ),
-            literal_entry("notify-sound", "Sound", "", "sound alert", &["notify_sound"]),
-            literal_entry(
+            entry("notify-only-unseen", SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN, &["notify_only_unseen"])
+                .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_KEYWORDS),
+            entry("notify-in-front", SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT, &["notify_in_front"])
+                .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_KEYWORDS),
+            entry("notify-sound", SETTINGS_NOTIFICATIONS_NOTIFY_SOUND, &["notify_sound"])
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_SOUND_KEYWORDS),
+            entry(
                 "notify-group-bursts",
-                "Group bursts",
-                "Three or more within 10 s become one summary",
-                "summary bursts",
+                SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS,
                 &["notify_group_bursts"],
-            ),
+            )
+            .with_description(SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION)
+            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Dock",
+    group(
+        SETTINGS_NOTIFICATIONS_GROUP_DOCK,
         &[
-            literal_entry(
-                "dock-badge",
-                "Badge",
-                "The count on the Dock icon",
-                "dock badge count",
-                &["dock_badge"],
-            ),
-            literal_entry(
-                "dock-bounce",
-                "Bounce once when a terminal needs you",
-                "Only while Wormhole isn’t the active app; never for a bell",
-                "dock bounce",
-                &["dock_bounce"],
-            ),
+            entry("dock-badge", SETTINGS_NOTIFICATIONS_DOCK_BADGE, &["dock_badge"])
+                .with_description(SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS),
+            entry("dock-bounce", SETTINGS_NOTIFICATIONS_DOCK_BOUNCE, &["dock_bounce"])
+                .with_description(SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION)
+                .with_keywords(SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS),
         ],
     ),
 ];

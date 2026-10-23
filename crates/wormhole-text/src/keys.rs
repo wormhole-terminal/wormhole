@@ -89,95 +89,173 @@ pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY: Key = Key::new(38);
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(39);
 /// "needs you waiting shortcut"
 pub const SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(40);
-/// "Profile"
-pub const SETTINGS_SECTION_PROFILE: Key = Key::new(41);
-/// "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins."
-pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(42);
-/// "Name and colour"
-pub const SETTINGS_PROFILE_NAME: Key = Key::new(43);
-/// "profile rename avatar letter swatch colour color edge"
-pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(44);
-/// "Start new terminals in"
-pub const SETTINGS_PROFILE_START: Key = Key::new(45);
-/// "folder directory cwd home path open also claim"
-pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(46);
-/// "Environment"
-pub const SETTINGS_PROFILE_ENV: Key = Key::new(47);
-/// "Variables this profile's terminals start with"
-pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(48);
-/// "env variable aws path registry export"
-pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(49);
-/// "Git identity"
-pub const SETTINGS_PROFILE_GIT: Key = Key::new(50);
-/// "Set in its terminals only; Wormhole never writes to a repository."
-pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(51);
-/// "author committer name email commit user"
-pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(52);
-/// "Agent logins"
-pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(53);
-/// "A separate login for each agent."
-pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(54);
-/// "claude codex account config dir home sign in"
-pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(55);
-/// "Danger zone"
-pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(56);
-/// "Delete profile"
-pub const SETTINGS_PROFILE_DELETE: Key = Key::new(57);
-/// "Its terminals, notes, tasks and settings are removed and its windows close."
-pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(58);
-/// "remove danger"
-pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(59);
-/// "Updates"
-pub const SETTINGS_SECTION_UPDATES: Key = Key::new(60);
-/// "Signed releases, checked in the background."
-pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(61);
-/// "Updates"
-pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(62);
-/// "Version"
-pub const SETTINGS_UPDATES_VERSION: Key = Key::new(63);
-/// "release build"
-pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(64);
-/// "Update automatically"
-pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(65);
-/// "Checks in the background and installs on the next restart"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(66);
-/// "download auto"
-pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(67);
-/// "Channel"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(68);
-/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(69);
-/// "beta nightly unstable stable prerelease dev builds main feature flags"
-pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(70);
-/// "Check for updates"
-pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(71);
-/// "install restart release notes check skip"
-pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(72);
-/// "Appearance"
-pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(73);
-/// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(74);
-/// "Terminal"
-pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(75);
-/// "Terminals & sidebar"
-pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(76);
-/// "Changes & diffs"
-pub const SETTINGS_SECTION_GIT: Key = Key::new(77);
-/// "Coding agents"
-pub const SETTINGS_SECTION_AGENTS: Key = Key::new(78);
 /// "Notifications"
-pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(79);
+pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(41);
+/// "What Wormhole tells you about terminals you aren't looking at."
+pub const SETTINGS_SECTION_NOTIFICATIONS_INTRO: Key = Key::new(42);
+/// "macOS"
+pub const SETTINGS_NOTIFICATIONS_GROUP_MACOS: Key = Key::new(43);
+/// "Notifications in System Settings"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION: Key = Key::new(44);
+/// "permission allow system settings send test banner"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS: Key = Key::new(45);
+/// "Notify me when"
+pub const SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN: Key = Key::new(46);
+/// "A terminal needs you"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU: Key = Key::new(47);
+/// "An agent asks a question or for permission"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION: Key = Key::new(48);
+/// "time sensitive focus question permission notifications"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_KEYWORDS: Key = Key::new(49);
+/// "An agent finishes"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE: Key = Key::new(50);
+/// "Its Stop hook, or its output settles. A program that reports it is done or failed counts too"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_DESCRIPTION: Key = Key::new(51);
+/// "notifications done program report failed error"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_KEYWORDS: Key = Key::new(52);
+/// "A command finishes"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE: Key = Key::new(53);
+/// "Any foreground command, agent or not, that ran longer than"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_DESCRIPTION: Key = Key::new(54);
+/// "long build threshold seconds notifications"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_KEYWORDS: Key = Key::new(55);
+/// "A command fails"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED: Key = Key::new(56);
+/// "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION: Key = Key::new(57);
+/// "failed failure error exit code build notifications"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS: Key = Key::new(58);
+/// "The terminal rings the bell"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL: Key = Key::new(59);
+/// "Terminals without an agent; at most once a minute each"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION: Key = Key::new(60);
+/// "bell notifications"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_BELL_KEYWORDS: Key = Key::new(61);
+/// "Delivery"
+pub const SETTINGS_NOTIFICATIONS_GROUP_DELIVERY: Key = Key::new(62);
+/// "Only for terminals I’m not looking at"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN: Key = Key::new(63);
+/// "Off: the terminal in front notifies too"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_DESCRIPTION: Key = Key::new(64);
+/// "unseen front"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_KEYWORDS: Key = Key::new(65);
+/// "While Wormhole is in front"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT: Key = Key::new(66);
+/// "A system banner, or nothing"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_DESCRIPTION: Key = Key::new(67);
+/// "banner nothing front"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_KEYWORDS: Key = Key::new(68);
+/// "Sound"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND: Key = Key::new(69);
+/// "sound alert"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_SOUND_KEYWORDS: Key = Key::new(70);
+/// "Group bursts"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS: Key = Key::new(71);
+/// "Three or more within 10 s become one summary"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION: Key = Key::new(72);
+/// "summary bursts"
+pub const SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS: Key = Key::new(73);
+/// "Dock"
+pub const SETTINGS_NOTIFICATIONS_GROUP_DOCK: Key = Key::new(74);
+/// "Badge"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE: Key = Key::new(75);
+/// "The count on the Dock icon"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION: Key = Key::new(76);
+/// "dock badge count"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS: Key = Key::new(77);
+/// "Bounce once when a terminal needs you"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE: Key = Key::new(78);
+/// "Only while Wormhole isn’t the active app; never for a bell"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION: Key = Key::new(79);
+/// "dock bounce"
+pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS: Key = Key::new(80);
+/// "Profile"
+pub const SETTINGS_SECTION_PROFILE: Key = Key::new(81);
+/// "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins."
+pub const SETTINGS_SECTION_PROFILE_INTRO: Key = Key::new(82);
+/// "Name and colour"
+pub const SETTINGS_PROFILE_NAME: Key = Key::new(83);
+/// "profile rename avatar letter swatch colour color edge"
+pub const SETTINGS_PROFILE_NAME_KEYWORDS: Key = Key::new(84);
+/// "Start new terminals in"
+pub const SETTINGS_PROFILE_START: Key = Key::new(85);
+/// "folder directory cwd home path open also claim"
+pub const SETTINGS_PROFILE_START_KEYWORDS: Key = Key::new(86);
+/// "Environment"
+pub const SETTINGS_PROFILE_ENV: Key = Key::new(87);
+/// "Variables this profile's terminals start with"
+pub const SETTINGS_PROFILE_ENV_DESCRIPTION: Key = Key::new(88);
+/// "env variable aws path registry export"
+pub const SETTINGS_PROFILE_ENV_KEYWORDS: Key = Key::new(89);
+/// "Git identity"
+pub const SETTINGS_PROFILE_GIT: Key = Key::new(90);
+/// "Set in its terminals only; Wormhole never writes to a repository."
+pub const SETTINGS_PROFILE_GIT_DESCRIPTION: Key = Key::new(91);
+/// "author committer name email commit user"
+pub const SETTINGS_PROFILE_GIT_KEYWORDS: Key = Key::new(92);
+/// "Agent logins"
+pub const SETTINGS_PROFILE_LOGINS: Key = Key::new(93);
+/// "A separate login for each agent."
+pub const SETTINGS_PROFILE_LOGINS_DESCRIPTION: Key = Key::new(94);
+/// "claude codex account config dir home sign in"
+pub const SETTINGS_PROFILE_LOGINS_KEYWORDS: Key = Key::new(95);
+/// "Danger zone"
+pub const SETTINGS_PROFILE_GROUP_DANGER_ZONE: Key = Key::new(96);
+/// "Delete profile"
+pub const SETTINGS_PROFILE_DELETE: Key = Key::new(97);
+/// "Its terminals, notes, tasks and settings are removed and its windows close."
+pub const SETTINGS_PROFILE_DELETE_DESCRIPTION: Key = Key::new(98);
+/// "remove danger"
+pub const SETTINGS_PROFILE_DELETE_KEYWORDS: Key = Key::new(99);
+/// "Updates"
+pub const SETTINGS_SECTION_UPDATES: Key = Key::new(100);
+/// "Signed releases, checked in the background."
+pub const SETTINGS_SECTION_UPDATES_INTRO: Key = Key::new(101);
+/// "Updates"
+pub const SETTINGS_UPDATES_GROUP_UPDATES: Key = Key::new(102);
+/// "Version"
+pub const SETTINGS_UPDATES_VERSION: Key = Key::new(103);
+/// "release build"
+pub const SETTINGS_UPDATES_VERSION_KEYWORDS: Key = Key::new(104);
+/// "Update automatically"
+pub const SETTINGS_UPDATES_AUTO_UPDATE: Key = Key::new(105);
+/// "Checks in the background and installs on the next restart"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_DESCRIPTION: Key = Key::new(106);
+/// "download auto"
+pub const SETTINGS_UPDATES_AUTO_UPDATE_KEYWORDS: Key = Key::new(107);
+/// "Channel"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL: Key = Key::new(108);
+/// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_DESCRIPTION: Key = Key::new(109);
+/// "beta nightly unstable stable prerelease dev builds main feature flags"
+pub const SETTINGS_UPDATES_UPDATE_CHANNEL_KEYWORDS: Key = Key::new(110);
+/// "Check for updates"
+pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(111);
+/// "install restart release notes check skip"
+pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(112);
+/// "Appearance"
+pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(113);
+/// "Fonts"
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(114);
+/// "Terminal"
+pub const SETTINGS_SECTION_TERMINAL: Key = Key::new(115);
+/// "Terminals & sidebar"
+pub const SETTINGS_SECTION_SESSIONS: Key = Key::new(116);
+/// "Changes & diffs"
+pub const SETTINGS_SECTION_GIT: Key = Key::new(117);
+/// "Coding agents"
+pub const SETTINGS_SECTION_AGENTS: Key = Key::new(118);
 /// "Mode"
-pub const SETTINGS_THEME_MODE: Key = Key::new(80);
+pub const SETTINGS_THEME_MODE: Key = Key::new(119);
 /// "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode"
-pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(81);
+pub const SETTINGS_THEME_MODE_DESCRIPTION: Key = Key::new(120);
 /// "dark light system appearance match night day"
-pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(82);
+pub const SETTINGS_THEME_MODE_KEYWORDS: Key = Key::new(121);
 /// "Defaults of Wormhole for this profile"
-pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(86);
+pub const SETTINGS_ABOUT_DEFAULTS: Key = Key::new(125);
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 84] = [
+pub const ALL: [Key; 123] = [
     SETTINGS_SECTION_ADVANCED,
     SETTINGS_SECTION_ADVANCED_INTRO,
     SETTINGS_ADVANCED_GROUP_FILES,
@@ -219,6 +297,46 @@ pub const ALL: [Key; 84] = [
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY,
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY_DESCRIPTION,
     SETTINGS_MENU_BAR_JUMP_WAITING_KEY_KEYWORDS,
+    SETTINGS_SECTION_NOTIFICATIONS,
+    SETTINGS_SECTION_NOTIFICATIONS_INTRO,
+    SETTINGS_NOTIFICATIONS_GROUP_MACOS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN,
+    SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU,
+    SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_NEEDS_YOU_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE,
+    SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_AGENT_DONE_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_DONE_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_COMMAND_FAILED_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_BELL,
+    SETTINGS_NOTIFICATIONS_NOTIFY_BELL_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_BELL_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_GROUP_DELIVERY,
+    SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN,
+    SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_ONLY_UNSEEN_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT,
+    SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_IN_FRONT_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_SOUND,
+    SETTINGS_NOTIFICATIONS_NOTIFY_SOUND_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS,
+    SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_NOTIFY_GROUP_BURSTS_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_GROUP_DOCK,
+    SETTINGS_NOTIFICATIONS_DOCK_BADGE,
+    SETTINGS_NOTIFICATIONS_DOCK_BADGE_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_DOCK_BADGE_KEYWORDS,
+    SETTINGS_NOTIFICATIONS_DOCK_BOUNCE,
+    SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION,
+    SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS,
     SETTINGS_SECTION_PROFILE,
     SETTINGS_SECTION_PROFILE_INTRO,
     SETTINGS_PROFILE_NAME,
@@ -257,7 +375,6 @@ pub const ALL: [Key; 84] = [
     SETTINGS_SECTION_SESSIONS,
     SETTINGS_SECTION_GIT,
     SETTINGS_SECTION_AGENTS,
-    SETTINGS_SECTION_NOTIFICATIONS,
     SETTINGS_THEME_MODE,
     SETTINGS_THEME_MODE_DESCRIPTION,
     SETTINGS_THEME_MODE_KEYWORDS,
@@ -268,7 +385,7 @@ pub const ALL: [Key; 84] = [
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(83, &[("section", Arg::Str(section))])
+    crate::active::message(122, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -278,7 +395,7 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(84, &[("count", Arg::Int(count))])
+    crate::active::message(123, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -288,7 +405,7 @@ pub fn settings_font_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_tab_width(count: i64) -> String {
-    crate::active::message(85, &[("count", Arg::Int(count))])
+    crate::active::message(124, &[("count", Arg::Int(count))])
 }
 
 /// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and
