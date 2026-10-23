@@ -124,6 +124,7 @@ mod title;
 #[cfg(test)]
 pub(crate) mod view_tests;
 mod welcome_host;
+pub(crate) use self::welcome_host::remember_first_run;
 mod window_actions;
 mod window_bounds;
 mod window_control;

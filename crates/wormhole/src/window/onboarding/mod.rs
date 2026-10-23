@@ -42,14 +42,11 @@ use wormhole_core::agents::integrations::{self, Spec, State};
 use wormhole_core::agents::{self, AGENTS, Agent};
 use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::onboarding::intro::Start;
-use wormhole_core::onboarding::{
-    self, Action, Event, ONBOARDED_KEY, Onboarding, Place, Step, Tip, should_show,
-};
+use wormhole_core::onboarding::{self, Action, Event, Onboarding, Place, Step};
 
 use crate::actions::OpenSettingsAt;
 
 use self::welcome::{Plan, Play};
-use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
 
@@ -141,6 +138,20 @@ pub(in crate::window) struct FirstRun {
     facts: Facts,
 }
 
+/// How an intro window opens: what it is of, and what the window knows that it needs from the start.
+pub(in crate::window) struct Opening {
+    pub(in crate::window) model: Onboarding,
+    /// Whether finishing it is the first run (remembered, the first terminal moving to the folder
+    /// picked) or only a replay.
+    pub(in crate::window) first_run: bool,
+    /// The window's terminal that is there now.
+    pub(in crate::window) first: Option<i64>,
+    /// Whether the animation plays around it, and from where.
+    pub(in crate::window) play: Option<Start>,
+    /// The projects opened recently, which the first step offers.
+    pub(in crate::window) recent: Vec<PathBuf>,
+}
+
 /// What the intro needs to know of the window it is in, said before it is drawn.
 #[derive(Default)]
 pub(in crate::window) struct Facts {
@@ -171,7 +182,13 @@ pub(in crate::window) enum FirstRunEvent {
     /// The intro window is over and the keyboard goes back to the terminal. On a first run that picked a
     /// folder, the terminal that was there when it began (`first`) is replaced by one in the folder, if it
     /// is still the window's only one and not there already.
-    Ended { replace: Option<(i64, PathBuf)> },
+    Ended {
+        replace: Option<(i64, PathBuf)>,
+        /// It was the first run: not shown again.
+        onboarded: bool,
+    },
+    /// "Don't show again" on the sidebar's note after a primer: the tip is dismissed for good.
+    DismissNoAgentsTip,
     /// A replay's window has left: the terminal that runs the welcome opens now.
     OpenWelcome { plan: Plan, play: Play },
     /// "Trust with Touch ID…" was pressed on the project at this root: the window asks for the approval,
@@ -207,8 +224,8 @@ impl FirstRun {
     }
 
     /// Whether the sidebar's note is up or offered (the window then says whether an agent runs).
-    pub(in crate::window) fn note_wanted(&self, cx: &App) -> bool {
-        self.agents_note != AgentsNote::Off && !app(cx).tips.contains(Tip::NoAgents)
+    pub(in crate::window) fn note_wanted(&self, tip_dismissed: bool) -> bool {
+        self.agents_note != AgentsNote::Off && !tip_dismissed
     }
 
     /// The terminal welcome ended on the primer (no agent on PATH): the sidebar says so until an
@@ -223,22 +240,6 @@ impl FirstRun {
 /// `wormhole::window_motion` takes 0.3 s).
 const FADE_OUT: Duration = Duration::from_millis(320);
 
-/// On a first launch (nothing saved, the intro never finished or skipped), open the intro window
-/// on the window that was just opened.
-pub(crate) fn start_if_first_launch(cx: &mut App) {
-    let Some(store) = &app(cx).store else { return };
-    let flag = store.meta(ONBOARDED_KEY).ok().flatten();
-    if !should_show(flag.as_deref(), 0) {
-        return;
-    }
-    let Some(window) = app(cx).windows.first().cloned() else { return };
-    // Deferred: the window is still being set up.
-    cx.defer(move |cx| {
-        // The window was never shown: it arrives out of the animation.
-        AppState::with_workspace(&window, cx, |ws, window, cx| ws.open_first_intro(window, cx));
-    });
-}
-
 impl FirstRun {
     /// Open the intro window, with the animation playing around it from a window that is `play`ing
     /// as shown or never shown, or with nothing played when that is `None`. `first_run` is whether
@@ -246,14 +247,12 @@ impl FirstRun {
     /// only a replay; `first` is the window's terminal that is there now.
     pub(in crate::window) fn open_intro(
         &mut self,
-        model: Onboarding,
-        first_run: bool,
-        first: Option<i64>,
-        play: Option<Start>,
+        opening: Opening,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let intro = self.new_intro(model, first_run, first, cx);
+        let Opening { model, first_run, first, play, recent } = opening;
+        let intro = self.new_intro(model, first_run, first, &recent, cx);
         // Test instances stay behind other windows, and their screenshots don't need a show.
         let start = play.filter(|_| !crate::background::on());
         let Some(start) = start else {
@@ -326,12 +325,13 @@ impl FirstRun {
         model: Onboarding,
         first_run: bool,
         first: Option<i64>,
+        recent: &[PathBuf],
         cx: &mut Context<Self>,
     ) -> Intro {
         let focus = cx.focus_handle();
         // A handful of `stat`s, once: the places don't change while the intro is up.
         let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
-        let places = onboarding::places(&home, app(cx).recent_projects.roots(), |path| path.is_dir());
+        let places = onboarding::places(&home, recent, |path| path.is_dir());
         let scan = cx.spawn(async move |this, cx| {
             let home = integrations::home();
             let agents = cx.background_executor().spawn(async move { Agents::scan(&home) }).await;
@@ -450,17 +450,12 @@ impl FirstRun {
         crate::intro::skip(cx);
         let mut replace = None;
         if intro.first_run {
-            if let Some(store) = &app(cx).store
-                && let Err(err) = store.set_meta(ONBOARDED_KEY, "1")
-            {
-                tracing::warn!("remembering the first run: {err:#}");
-            }
             self.agents_note = if primer { AgentsNote::Shown } else { AgentsNote::Off };
             // The first terminal never had the keyboard while the intro was open, so nothing was
             // typed into it: a new one in the folder takes its place.
             replace = intro.first.zip(folder);
         }
-        cx.emit(FirstRunEvent::Ended { replace });
+        cx.emit(FirstRunEvent::Ended { replace, onboarded: intro.first_run });
         cx.notify();
     }
 
@@ -496,7 +491,8 @@ impl FirstRun {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let note = self.agents_note;
-        if !self.note_wanted(cx) || agent_seen {
+        // The window has asked `note_wanted` (the tip not dismissed) before calling.
+        if note == AgentsNote::Off || agent_seen {
             return None;
         }
         let ui = ui(cx);
@@ -564,7 +560,7 @@ impl FirstRun {
             )
             .child(style::link_button("no-agents-never", ui, "Don't show again", false).on_click(
                 cx.listener(|this, _, _, cx| {
-                    app_mut(cx).dismiss_tip(Tip::NoAgents);
+                    cx.emit(FirstRunEvent::DismissNoAgentsTip);
                     this.agents_note = AgentsNote::Off;
                     cx.notify();
                 }),

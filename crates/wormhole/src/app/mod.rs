@@ -18,3 +18,4 @@ mod saved_text_tests;
 mod tick;
 #[cfg(test)]
 mod usage_tests;
+pub(crate) mod welcome;

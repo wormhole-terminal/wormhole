@@ -211,9 +211,9 @@ fn the_first_launch_opens_the_intro_window_when_the_terminal_welcome_is_off(cx: 
     let window = start(cx, 1);
     open_store(cx);
     terminal_flag(cx, false);
-    assert!(cx.update(|cx| super::welcome::first_launch_plan(cx)).is_none(), "no terminal welcome");
+    assert!(cx.update(|cx| crate::app::welcome::first_launch_plan(cx)).is_none(), "no terminal welcome");
 
-    cx.update(super::start_if_first_launch);
+    cx.update(crate::app::welcome::start_if_first_launch);
     cx.run_until_parked();
     assert_eq!(step(cx, &window), Some(Step::Welcome), "the intro window, on its welcome page");
     first_run(cx, &window, |first_run| {
@@ -232,7 +232,7 @@ fn the_first_launch_is_the_terminal_welcome_while_its_flag_is_on(cx: &mut TestAp
     let window = start(cx, 1);
     open_store(cx);
     terminal_flag(cx, true);
-    let plan = cx.update(|cx| super::welcome::first_launch_plan(cx)).expect("a plan");
+    let plan = cx.update(|cx| crate::app::welcome::first_launch_plan(cx)).expect("a plan");
     assert!(plan.first_run);
     // The plan is the window's own first terminal (the launch gives it to the window it opens); the
     // intro window does not open for it.
@@ -250,10 +250,10 @@ fn a_first_run_that_was_dealt_with_is_not_shown_again(cx: &mut TestAppContext) {
     cx.update(|cx| app(cx).store.as_ref().expect("a store").set_meta(ONBOARDED_KEY, "1").expect("saves"));
     for on in [false, true] {
         terminal_flag(cx, on);
-        assert!(cx.update(|cx| super::welcome::first_launch_plan(cx)).is_none());
+        assert!(cx.update(|cx| crate::app::welcome::first_launch_plan(cx)).is_none());
     }
     terminal_flag(cx, false);
-    cx.update(super::start_if_first_launch);
+    cx.update(crate::app::welcome::start_if_first_launch);
     cx.run_until_parked();
     assert_eq!(step(cx, &window), None, "no intro window");
 }

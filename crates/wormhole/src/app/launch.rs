@@ -25,7 +25,6 @@ use crate::app_state::look::{apply_theme, sync_system_look};
 use crate::app_state::profiles;
 use crate::settings::ParkedSettings;
 use crate::status_item;
-use crate::window::onboarding;
 use crate::window::window_lifecycle::{open_workspace_window, save_all, window_closed};
 use crate::{notifications, updates};
 
@@ -129,13 +128,13 @@ pub(crate) fn start(
     if saved.is_empty() {
         // With the terminal welcome on, the window's first terminal runs it and the run plays
         // around the window; otherwise the intro window opens over a plain terminal.
-        let welcome = crate::window::onboarding::welcome::first_launch_plan(cx);
+        let welcome = crate::app::welcome::first_launch_plan(cx);
         crate::window::onboarding::welcome::set_first_launch(welcome, cx);
         open_workspace_window(None, None, cx);
         crate::window::onboarding::welcome::set_first_launch(None, cx);
         match welcome {
-            Some(plan) => crate::window::onboarding::welcome::play_first(plan, cx),
-            None => onboarding::start_if_first_launch(cx),
+            Some(plan) => crate::app::welcome::play_first(plan, cx),
+            None => crate::app::welcome::start_if_first_launch(cx),
         }
     }
     for window in saved {

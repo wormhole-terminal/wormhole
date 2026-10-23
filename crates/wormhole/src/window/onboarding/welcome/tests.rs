@@ -40,6 +40,9 @@ fn ask(cx: &mut TestAppContext, from: Option<i64>, token: &str, op: WelcomeOp) -
         budget: |_, _, _| Ok(()),
         permission: notifications::permission,
         ask_permission: notifications::ask_permission_if_new,
+        demo: crate::app::welcome::demo,
+        ended: crate::app::welcome::ended,
+        remember_first_run: crate::window::remember_first_run,
     };
     cx.update(|cx| handle(token.to_string(), op, from, services, cx))
 }

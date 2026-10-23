@@ -499,7 +499,7 @@ impl Workspace {
     }
 
     /// The welcome in `tab` says its sidebar step is up (`show`) or was left.
-    pub(super) fn set_welcome_demo(&mut self, tab: i64, show: bool, cx: &mut Context<Self>) {
+    pub(crate) fn set_welcome_demo(&mut self, tab: i64, show: bool, cx: &mut Context<Self>) {
         let in_window = self.sessions.iter().any(|session| session.id == tab);
         self.with_sidebar(cx, |sidebar, cx| sidebar.set_welcome_demo(tab, show, in_window, cx));
     }

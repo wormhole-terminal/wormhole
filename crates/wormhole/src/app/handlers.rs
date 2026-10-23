@@ -137,15 +137,9 @@ pub(crate) fn init(cx: &mut App) {
     cx.on_action(|_: &PlayIntroAurora, cx| play_intro_in_front(Style::Aurora, cx));
     cx.on_action(|_: &PlayIntroTentacles, cx| play_intro_in_front(Style::Tentacles, cx));
     cx.on_action(|_: &PlayIntroVoyage, cx| play_intro_in_front(Style::Voyage, cx));
-    cx.on_action(|_: &PlayWelcomeCursor, cx| {
-        crate::window::onboarding::welcome::replay_in_front(Handover::Cursor, cx)
-    });
-    cx.on_action(|_: &PlayWelcomePortal, cx| {
-        crate::window::onboarding::welcome::replay_in_front(Handover::Portal, cx)
-    });
-    cx.on_action(|_: &PlayWelcomeLogo, cx| {
-        crate::window::onboarding::welcome::replay_in_front(Handover::Logo, cx)
-    });
+    cx.on_action(|_: &PlayWelcomeCursor, cx| crate::app::welcome::replay_in_front(Handover::Cursor, cx));
+    cx.on_action(|_: &PlayWelcomePortal, cx| crate::app::welcome::replay_in_front(Handover::Portal, cx));
+    cx.on_action(|_: &PlayWelcomeLogo, cx| crate::app::welcome::replay_in_front(Handover::Logo, cx));
     cx.on_action(|recent: &OpenRecent, cx| {
         let root = recent.0.clone();
         cx.defer(move |cx| status_item::run_command(MenuCommand::OpenProject(root), cx));

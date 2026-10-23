@@ -5,31 +5,42 @@
 
 use gpui_kit::*;
 use wormhole_core::config::FeatureId;
-use wormhole_core::onboarding::Onboarding;
 #[cfg(any(test, feature = "devctl"))]
 use wormhole_core::onboarding::Step;
 use wormhole_core::onboarding::intro::{Handover, Start};
+use wormhole_core::onboarding::{Onboarding, Tip};
 
+use crate::app_state::app_mut;
 use crate::window::Workspace;
 use crate::window::features::project;
-use crate::window::onboarding::{Facts, FirstRunEvent, TrustCard, welcome};
+use crate::window::onboarding::{Facts, FirstRunEvent, Opening, TrustCard, welcome};
 
 impl Workspace {
     /// The first launch's window, never shown: the intro window opens over it and it arrives out of the
     /// animation.
-    pub(in crate::window) fn open_first_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let first = self.sessions.first().map(|session| session.id);
-        self.first_run.update(cx, |first_run, cx| {
-            first_run.open_intro(Onboarding::new(true), true, first, Some(Start::Hidden), window, cx)
-        });
+    pub(crate) fn open_first_intro(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let opening = self.opening(Onboarding::new(true), true, Some(Start::Hidden), cx);
+        self.first_run.update(cx, |first_run, cx| first_run.open_intro(opening, window, cx));
     }
 
     /// Open the intro window at `step`, with nothing played (devctl and the tests).
     #[cfg(any(test, feature = "devctl"))]
     pub(crate) fn open_onboarding(&mut self, step: Step, window: &mut Window, cx: &mut Context<Self>) {
         let model = if step == Step::Welcome { Onboarding::new(true) } else { Onboarding::at(step) };
-        let first = self.sessions.first().map(|session| session.id);
-        self.first_run.update(cx, |first_run, cx| first_run.open_intro(model, true, first, None, window, cx));
+        let opening = self.opening(model, true, None, cx);
+        self.first_run.update(cx, |first_run, cx| first_run.open_intro(opening, window, cx));
+    }
+
+    /// How an intro window opens in this window: over its first terminal, with the projects opened
+    /// recently to offer.
+    fn opening(&self, model: Onboarding, first_run: bool, play: Option<Start>, cx: &App) -> Opening {
+        Opening {
+            model,
+            first_run,
+            first: self.sessions.first().map(|session| session.id),
+            play,
+            recent: crate::app_state::app(cx).recent_projects.roots().to_vec(),
+        }
     }
 
     /// Welcome to Wormhole (Help menu, palette): the intro again, its welcome page alone.
@@ -40,14 +51,14 @@ impl Workspace {
             self.replay_welcome(Handover::Cursor, window, cx);
             return;
         }
-        let first = self.sessions.first().map(|session| session.id);
+        let opening = self.opening(Onboarding::replay(), false, Some(Start::Shown), cx);
         self.first_run.update(cx, |first_run, cx| {
             if first_run.is_open() {
                 // It is up already: replay it.
                 first_run.replay_intro(window, cx);
             } else {
                 // The window is showing: it leaves, the animation plays, and it arrives.
-                first_run.open_intro(Onboarding::replay(), false, first, Some(Start::Shown), window, cx);
+                first_run.open_intro(opening, window, cx);
             }
         });
     }
@@ -91,7 +102,8 @@ impl Workspace {
 
     /// The sidebar's note after a first run without agents, while it is up.
     pub(super) fn render_no_agents_note(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        if !self.first_run.read(cx).note_wanted(cx) {
+        let dismissed = crate::app_state::app(cx).tips.contains(Tip::NoAgents);
+        if !self.first_run.read(cx).note_wanted(dismissed) {
             return None;
         }
         let agent_seen = self.sessions.iter().any(|session| session.terminal().read(cx).agent.is_some());
@@ -107,7 +119,11 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         match event {
-            FirstRunEvent::Ended { replace } => {
+            FirstRunEvent::DismissNoAgentsTip => app_mut(cx).dismiss_tip(Tip::NoAgents),
+            FirstRunEvent::Ended { replace, onboarded } => {
+                if *onboarded {
+                    crate::window::remember_first_run(cx);
+                }
                 if let Some((first, folder)) = replace
                     && let Some(ix) = self.sessions.iter().position(|session| session.id == *first)
                 {

@@ -236,7 +236,9 @@ impl Workspace {
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
         attention::tell(Attention::Seen(closed.pane.id), cx);
-        crate::window::onboarding::welcome::forget(closed.id, cx);
+        if crate::window::onboarding::welcome::forget(closed.id, cx) {
+            crate::window::remember_first_run(cx);
+        }
         self.end_welcome_demo(closed.id, cx);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on

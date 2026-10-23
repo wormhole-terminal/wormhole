@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::agents::integrations;
+use wormhole_core::onboarding::ONBOARDED_KEY;
 use wormhole_core::onboarding::intro::{Handover, Start};
 use wormhole_core::onboarding::welcome::{self as core_welcome, DockCell};
 use wormhole_core::storage::store::SessionRecord;
@@ -69,6 +70,15 @@ impl Workspace {
     }
 }
 
+/// The first run is over: not shown again.
+pub(crate) fn remember_first_run(cx: &mut App) {
+    if let Some(store) = &crate::app_state::app(cx).store
+        && let Err(err) = store.set_meta(ONBOARDED_KEY, "1")
+    {
+        tracing::warn!("remembering the first run: {err:#}");
+    }
+}
+
 impl Workspace {
     /// The first terminal of a window opened for the first launch: the welcome, not a plain shell.
     pub(in crate::window) fn open_first_welcome(
@@ -83,7 +93,7 @@ impl Workspace {
 
     /// Play the wormhole run around this window with the hand-over `plan` asks for, from a window that
     /// is `start`ing shown or hidden (`None`: nothing plays). The welcome terminal is already there.
-    pub(in crate::window) fn start_welcome_animation(
+    pub(crate) fn start_welcome_animation(
         &mut self,
         plan: Plan,
         start: Option<Start>,
@@ -201,7 +211,7 @@ impl Workspace {
     /// The terminal the welcome ended in no longer reports a dock, the sidebar's example band goes
     /// with it, and the sidebar's note for a first run that ended on the primer (no agent on PATH)
     /// comes up.
-    pub(in crate::window) fn welcome_ended(&mut self, tab: i64, primer: bool, cx: &mut Context<Self>) {
+    pub(crate) fn welcome_ended(&mut self, tab: i64, primer: bool, cx: &mut Context<Self>) {
         if let Some(session) = self.sessions.iter().find(|s| s.id == tab) {
             session.terminal().update(cx, |terminal, cx| terminal.set_dock(None, cx));
         }

@@ -57,13 +57,16 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
     }
 }
 
-/// What the welcome is handed: this socket's budgets, and the notifications' permission, which the
-/// window below may not name.
+/// What the welcome is handed: this socket's budgets, the notifications' permission and the windows to
+/// show its example band in, which the first run and the welcome, below the app root, may not name.
 fn welcome_services() -> crate::window::onboarding::welcome::Services {
     crate::window::onboarding::welcome::Services {
         budget,
         permission: crate::notifications::permission,
         ask_permission: crate::notifications::ask_permission_if_new,
+        demo: crate::app::welcome::demo,
+        ended: crate::app::welcome::ended,
+        remember_first_run: crate::window::remember_first_run,
     }
 }
 

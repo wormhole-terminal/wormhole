@@ -21,8 +21,7 @@ use wormhole_core::ipc::control::{
 use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::theme::fonts::FontSlot;
 
-use super::{Play, Run, remember_first_run};
-use crate::app_state::{AppState, OpenWindow};
+use super::{Play, Run};
 use crate::platform::notifications::Permission;
 use crate::settings::settings;
 use crate::settings::update_settings;
@@ -42,6 +41,14 @@ pub(crate) struct Services {
     pub budget: Budget,
     pub permission: fn(&App) -> Permission,
     pub ask_permission: fn(&mut App) -> bool,
+    /// Shows or hides the example band in the sidebar of the window terminal `tab` is in; whether there
+    /// is such a terminal.
+    pub demo: fn(tab: i64, show: bool, &mut App) -> bool,
+    /// The welcome in terminal `tab` is over, in whichever window it is: the example band goes and, with
+    /// `note`, the sidebar's note for a run that ended on the primer comes up.
+    pub ended: fn(tab: i64, note: bool, &mut App),
+    /// The first run is over: not shown again.
+    pub remember_first_run: fn(&mut App),
 }
 
 /// Answer a welcome request. `from` is the tab it says it comes from; `budget` is checked after the
@@ -80,8 +87,8 @@ pub(crate) fn handle(
             set_notify(needs_you, agent_done, sound, allow, &services, cx)
         }
         WelcomeOp::InstallHooks { agent } => install(tab, agent, cx),
-        WelcomeOp::Demo { show } => demo(tab, show, cx),
-        WelcomeOp::Finish { skipped } => finish(tab, skipped, cx),
+        WelcomeOp::Demo { show } => demo(tab, show, &services, cx),
+        WelcomeOp::Finish { skipped } => finish(tab, skipped, &services, cx),
     }
 }
 
@@ -299,24 +306,18 @@ fn install(tab: i64, agent: AgentId, cx: &mut App) -> Reply {
     }
 }
 
-/// The window the welcome's terminal `tab` is in.
-fn in_window(tab: i64, cx: &App) -> Option<OpenWindow> {
-    AppState::find_window(cx, |ws, _| ws.find_session(tab).is_some())
-}
-
 /// `Demo`: the example band in the sidebar of the window the welcome's terminal is in. It is the
-/// window's own, drawn for as long as the welcome runs and the program asks (`Workspace::set_welcome_demo`).
-fn demo(tab: i64, show: bool, cx: &mut App) -> Reply {
-    let Some(window) = in_window(tab, cx) else {
+/// window's own, drawn for as long as the welcome runs and the program asks.
+fn demo(tab: i64, show: bool, services: &Services, cx: &mut App) -> Reply {
+    if !(services.demo)(tab, show, cx) {
         return Reply::error(ErrorCode::NotFound, "no such terminal");
-    };
-    AppState::with_workspace(&window, cx, |ws, _, cx| ws.set_welcome_demo(tab, show, cx));
+    }
     Reply::ok(serde_json::json!({}))
 }
 
 /// `Finish`: the welcome is over. On a first run it is remembered, and the sidebar's note for a run
 /// that ended on the primer comes up; the example band goes; a run still playing is cut short.
-fn finish(tab: i64, skipped: bool, cx: &mut App) -> Reply {
+fn finish(tab: i64, skipped: bool, services: &Services, cx: &mut App) -> Reply {
     tracing::info!(tab, skipped, "the welcome finished");
     let (first_run, primer) = match super::run_of(tab, cx) {
         Some(run) => (run.first_run, run.agents.as_ref().is_some_and(|agents| agents.found.is_empty())),
@@ -324,13 +325,9 @@ fn finish(tab: i64, skipped: bool, cx: &mut App) -> Reply {
     };
     super::welcomes_mut(cx).gates.finish(tab);
     if first_run {
-        remember_first_run(cx);
+        (services.remember_first_run)(cx);
     }
-    if let Some(window) = in_window(tab, cx) {
-        AppState::with_workspace(&window, cx, |ws, _, cx| {
-            ws.welcome_ended(tab, first_run && primer && !skipped, cx)
-        });
-    }
+    (services.ended)(tab, first_run && primer && !skipped, cx);
     crate::intro::skip(cx);
     Reply::ok(serde_json::json!({}))
 }

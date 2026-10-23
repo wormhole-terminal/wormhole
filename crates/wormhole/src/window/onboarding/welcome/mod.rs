@@ -24,13 +24,10 @@ use std::time::Instant;
 
 use gpui_kit::*;
 use wormhole_core::ipc::control::AgentsFacts;
-use wormhole_core::onboarding::intro::{Handover, Start};
+use wormhole_core::onboarding::intro::Handover;
 use wormhole_core::onboarding::welcome::Registry;
-use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
 
-use crate::app_state::{AppState, app};
 use crate::settings::settings;
-use crate::window::window_lifecycle::with_front_workspace;
 
 pub(crate) use answers::{Services, handle};
 
@@ -141,43 +138,9 @@ pub(in crate::window) fn begin(id: i64, token: String, run: Run, cx: &mut App) {
     welcomes.pending = Some((id, token));
 }
 
-/// The plan for the first launch, when the terminal welcome is on and this is one (nothing saved, the
-/// first run never finished or skipped): the window's first terminal is then the welcome.
-pub(crate) fn first_launch_plan(cx: &App) -> Option<Plan> {
-    let store = app(cx).store.as_ref()?;
-    let flag = store.meta(ONBOARDED_KEY).ok().flatten();
-    (should_show(flag.as_deref(), 0) && enabled(cx))
-        .then_some(Plan { handover: Handover::Cursor, first_run: true })
-}
-
 /// Whether the terminal welcome is on (the feature flag).
 pub(crate) fn enabled(cx: &App) -> bool {
     settings(cx).feature_enabled(wormhole_core::config::features::FeatureFlag::TerminalWelcome)
-}
-
-/// The first launch's welcome has its terminal; play the animation around the window that was just
-/// opened (never shown, so it arrives out of the run). Test instances stay behind other windows and
-/// skip the show, as the intro window does.
-pub(crate) fn play_first(plan: Plan, cx: &mut App) {
-    let Some(window) = app(cx).windows.first().cloned() else { return };
-    // Deferred: the window is still being set up.
-    cx.defer(move |cx| {
-        AppState::with_workspace(&window, cx, |ws, window, cx| {
-            let play = !crate::background::on();
-            ws.start_welcome_animation(plan, play.then_some(Start::Hidden), window, cx);
-        });
-    });
-}
-
-/// Help → Welcome to Wormhole and the palette's "Play Welcome" entries: the front window plays the
-/// run and gets a new terminal that runs the welcome with `handover`.
-pub(crate) fn replay_in_front(handover: Handover, cx: &mut App) {
-    cx.defer(move |cx| {
-        with_front_workspace(cx, |ws, window, cx| {
-            crate::background::activate_window(window, cx);
-            ws.replay_welcome(handover, window, cx);
-        });
-    });
 }
 
 /// Whether the welcome in `tab` is still running (its token still opens the door).
@@ -185,25 +148,15 @@ pub(in crate::window) fn running(tab: i64, cx: &App) -> bool {
     welcomes(cx).is_some_and(|welcomes| welcomes.gates.running(tab))
 }
 
-/// A welcome terminal is gone (closed, or its window): its token opens nothing, and a first run that
-/// was closed unfinished counts as skipped, so the next launch doesn't start it all over.
-pub(in crate::window) fn forget(tab: i64, cx: &mut App) {
+/// A welcome terminal is gone (closed, or its window): its token opens nothing. Whether it was a first
+/// run closed unfinished, which counts as skipped, so the next launch doesn't start it all over: the
+/// window remembers that.
+pub(in crate::window) fn forget(tab: i64, cx: &mut App) -> bool {
     let welcomes = welcomes_mut(cx);
     let first_run = welcomes.run(tab).is_some_and(|run| run.first_run && welcomes.gates.running(tab));
     welcomes.gates.forget(tab);
     welcomes.runs.retain(|run| run.tab != tab);
-    if first_run {
-        remember_first_run(cx);
-    }
-}
-
-/// The first run is over: not shown again.
-fn remember_first_run(cx: &mut App) {
-    if let Some(store) = &app(cx).store
-        && let Err(err) = store.set_meta(ONBOARDED_KEY, "1")
-    {
-        tracing::warn!("remembering the first run: {err:#}");
-    }
+    first_run
 }
 
 #[cfg(test)]
