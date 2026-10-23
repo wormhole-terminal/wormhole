@@ -3,7 +3,12 @@
 //! development build, failed), its status and actions on one row.
 
 use std::time::{SystemTime, UNIX_EPOCH};
-use wormhole_text::{keys::*, text, whole};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::{text, whole};
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};

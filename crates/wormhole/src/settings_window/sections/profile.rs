@@ -12,7 +12,12 @@ use gpui_kit::*;
 use wormhole_core::config::profile::Profile;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::view::sidebar::GroupColor;
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::app_state::{AppState, app};

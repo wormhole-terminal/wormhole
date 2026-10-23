@@ -7,7 +7,12 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{Metrics, RowTone, SessionRow, StatusGlyph, TileFace};
 use wormhole_core::view::sidebar::Density;
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};

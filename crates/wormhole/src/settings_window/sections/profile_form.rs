@@ -5,7 +5,12 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use gpui_kit::component::input::{InputEvent, InputState, TextareaState};
 use gpui_kit::*;

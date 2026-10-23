@@ -10,7 +10,12 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use wormhole_text::{keys::*, text, whole};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::{text, whole};
 
 use wormhole_core::theme::catalog::{self, ThemeEntry};
 use wormhole_core::theme::tokens::Appearance;

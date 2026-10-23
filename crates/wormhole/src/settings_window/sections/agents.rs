@@ -5,7 +5,12 @@
 //! Hooks are written only by a row's own button, never by opening the page.
 
 use std::path::{Path, PathBuf};
-use wormhole_text::{keys::*, text, whole};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;

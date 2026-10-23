@@ -6,7 +6,12 @@
 //! The script is written only by the Install (or Update) button, never by opening the page.
 
 use std::path::{Path, PathBuf};
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;

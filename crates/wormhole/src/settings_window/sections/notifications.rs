@@ -9,7 +9,12 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use crate::notifications;
 use crate::platform::notifications::Permission;

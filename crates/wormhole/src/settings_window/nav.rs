@@ -5,7 +5,12 @@
 //! a section shows how many settings it holds that match, and dims when it holds none.
 
 use std::collections::HashMap;
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;

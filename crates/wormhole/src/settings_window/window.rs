@@ -1,7 +1,12 @@
 //! The settings window as a view: making it, the page it draws and what its controls do.
 
 use std::time::Duration;
-use wormhole_text::{keys::*, text, whole};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::{text, whole};
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;

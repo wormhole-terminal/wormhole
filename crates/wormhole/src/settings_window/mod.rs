@@ -8,10 +8,6 @@
 //!
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
 //! item use it. The shared state keeps its page untyped.
-#![allow(
-    clippy::wildcard_imports,
-    reason = "the keys are generated, one constant per message: naming each would list them twice"
-)]
 
 pub(crate) mod devctl;
 mod font_picker;

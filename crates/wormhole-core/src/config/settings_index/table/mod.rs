@@ -1,11 +1,11 @@
 //! The table: what every section and setting is called and says. The sections' names are here; each
 //! section's groups of settings are in a file of their own.
-#![allow(
+
+use wormhole_text::Key;
+#[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
 )]
-
-use wormhole_text::Key;
 use wormhole_text::keys::*;
 
 use super::{Entry, Group, NavGroup, SectionId, SectionInfo};

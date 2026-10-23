@@ -13,7 +13,12 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::config::{ThemeMode, TitleBorder};
 use wormhole_core::theme::tokens::Translucency;
-use wormhole_text::{keys::*, text};
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
+use wormhole_text::keys::*;
+use wormhole_text::text;
 
 use super::{open_button, stage};
 use crate::select::Choice;

@@ -5,6 +5,10 @@ use gpui_kit::*;
 use wormhole_core::config::{HotkeyAction, MenuBarIcon};
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::KeySpec;
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
 use wormhole_text::keys::*;
 
 use crate::settings::Settings;

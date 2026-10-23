@@ -4,6 +4,10 @@
 //! "1 space" (the old text said "1 spaces"). In `en-XA` the same sentences are bracketed and accented,
 //! which shows that none of them is still assembled here.
 
+#[allow(
+    clippy::wildcard_imports,
+    reason = "the keys are generated, one constant per message: naming each would list them twice"
+)]
 use wormhole_text::keys::*;
 use wormhole_text::{Language, with_language};
 
