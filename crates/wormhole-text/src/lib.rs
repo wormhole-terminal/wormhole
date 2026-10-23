@@ -1,7 +1,7 @@
 //! The words of Wormhole's interface.
 //!
 //! English is the source: Fluent catalogs under `locales/<language>/<area>.ftl`. A test generates
-//! `src/keys.rs` (and the id list and the file list in `src/generated/`) from the English files
+//! `src/keys/` (and the id list and the file list in `src/generated/`) from the English files
 //! (`TEXT_BLESS=1 cargo test -p wormhole-text --test generated`), so a message is a constant the
 //! compiler knows ([`text`] takes a [`Key`]), or, when it has variables, a typed function that
 //! returns the formatted `String`. Nothing is looked up by a string

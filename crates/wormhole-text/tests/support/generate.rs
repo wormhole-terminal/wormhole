@@ -1,8 +1,8 @@
-//! Writes `src/generated/keys.rs` and `files.rs` from the English files. No build script and no
+//! Writes `src/keys/`, `src/generated/ids.rs` and `files.rs` from the English files. No build script and no
 //! macro that reads files: a test regenerates them, and fails (or, with `TEXT_BLESS=1`, rewrites
 //! them) when the committed ones differ.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use fluent_bundle::{FluentBundle, FluentResource};
@@ -24,7 +24,8 @@ const KEYWORDS: &[&str] = &[
 
 pub(crate) struct Generated {
     pub ids: String,
-    pub keys: String,
+    /// `(file under src/keys/, its text)`: `mod.rs` and one module for each `.ftl` file of English.
+    pub keys: Vec<(String, String)>,
     pub files: String,
 }
 
@@ -42,6 +43,13 @@ struct Function {
     source: String,
 }
 
+/// What one `.ftl` file of English gives its module in `src/keys/`.
+#[derive(Default)]
+struct Area {
+    constants: String,
+    functions: Vec<Function>,
+}
+
 pub(crate) fn generate() -> Generated {
     let english = super::english();
     let en_files = read_dir(&locales_dir().join("en"));
@@ -49,8 +57,7 @@ pub(crate) fn generate() -> Generated {
 
     let mut ids = Vec::new();
     let mut takes_args = Vec::new();
-    let mut constants = String::new();
-    let mut functions = Vec::new();
+    let mut areas: BTreeMap<String, Area> = BTreeMap::new();
     let mut names = BTreeSet::new();
     let mut all_keys = Vec::new();
     for (index, item) in english.messages.iter().enumerate() {
@@ -59,11 +66,12 @@ pub(crate) fn generate() -> Generated {
         takes_args.push(!vars.is_empty());
         let name = rust_name(&item.id);
         assert!(names.insert(name.clone()), "{}: another id makes the name {name}", item.id);
+        let area = areas.entry(module_name(&item.file)).or_default();
         if vars.is_empty() {
             let text = docs.iter().find(|(id, _)| *id == item.id).map(|(_, t)| t.as_str()).unwrap_or("");
             // `{:?}` keeps the doc on one line, however many lines the text has.
             let _ = write!(
-                constants,
+                area.constants,
                 "/// {text:?}\npub const {}: Key = Key::new({index});\n",
                 name.to_uppercase()
             );
@@ -76,13 +84,13 @@ pub(crate) fn generate() -> Generated {
                     (var.clone(), param_name(&item.id, var), kind)
                 })
                 .collect();
-            functions.push(Function { id: item.id.clone(), index, params, source: item.source.clone() });
+            area.functions.push(Function { id: item.id.clone(), index, params, source: item.source.clone() });
         }
     }
     assert!(ids.len() < usize::from(u16::MAX), "a Key is a u16");
 
     let mut ids_file = String::from(HEADER);
-    ids_file.push_str("//!\n//! The ids and which of them take variables; `keys.rs` names the places.\n\n");
+    ids_file.push_str("//!\n//! The ids and which of them take variables; `keys/` names the places.\n\n");
     let _ = writeln!(
         ids_file,
         "/// Every message and attribute, in the order of the files; a `Key`'s index is a place here.\n\
@@ -90,9 +98,7 @@ pub(crate) fn generate() -> Generated {
          pub(crate) const IDS: [&str; {}] = [",
         ids.len()
     );
-    for id in &ids {
-        let _ = writeln!(ids_file, "    {id:?},");
-    }
+    push_wrapped(&mut ids_file, ids.iter().map(|id| format!("{id:?}")), 3);
     ids_file.push_str("];\n\n");
     let _ = writeln!(
         ids_file,
@@ -100,34 +106,69 @@ pub(crate) fn generate() -> Generated {
          pub(crate) const TAKES_ARGS: [bool; {}] = [",
         takes_args.len()
     );
-    for flag in &takes_args {
-        let _ = writeln!(ids_file, "    {flag},");
-    }
+    push_wrapped(&mut ids_file, takes_args.iter().map(ToString::to_string), 12);
     ids_file.push_str("];\n");
 
-    let mut keys = String::from(HEADER);
-    keys.push_str(
+    // One module for each file, so a file of the generator stays a size a person can read.
+    let mut keys = Vec::new();
+    let mut facade = String::from(HEADER);
+    facade.push_str(
         "//!\n//! One constant per message without variables, one function per message with. The doc\n\
-         //! comment of each is its English text.\n\n\
-         use crate::args::Arg;\nuse crate::key::Key;\n\n",
+         //! comment of each is its English text. One module for each `.ftl` file; they are all\n\
+         //! re-exported here, so a name is `wormhole_text::keys::NAME` wherever it is written.\n\n",
     );
-    keys.push_str(&constants);
+    for module in areas.keys() {
+        let _ = writeln!(facade, "#[rustfmt::skip]\nmod {module};");
+    }
+    facade.push('\n');
+    for module in areas.keys() {
+        let _ = writeln!(facade, "pub use {module}::*;");
+    }
+    facade.push_str("\nuse crate::key::Key;\n");
     let _ = writeln!(
-        keys,
+        facade,
         "\n/// Every key, in the order of the files, for tests that walk them all.\npub const ALL: [Key; {}] = [",
         all_keys.len()
     );
-    for name in &all_keys {
-        let _ = writeln!(keys, "    {name},");
+    push_wrapped(&mut facade, all_keys.iter().cloned(), 3);
+    facade.push_str("];\n");
+    let functions: Vec<&Function> = areas.values().flat_map(|area| &area.functions).collect();
+    facade.push_str(&render_samples(&functions));
+    keys.push(("mod.rs".to_string(), facade));
+    for (module, area) in &areas {
+        let mut text = String::from(HEADER);
+        let _ = writeln!(text, "//!\n//! The messages of `locales/en/{}.ftl`.\n", module.replace('_', "-"));
+        if !area.constants.is_empty() {
+            text.push_str("use crate::key::Key;\n");
+        }
+        if !area.functions.is_empty() {
+            text.push_str("use crate::args::Arg;\n");
+        }
+        text.push('\n');
+        text.push_str(&area.constants);
+        for function in &area.functions {
+            text.push('\n');
+            text.push_str(&render_function(function));
+        }
+        keys.push((format!("{module}.rs"), text));
     }
-    keys.push_str("];\n");
-    for function in &functions {
-        keys.push('\n');
-        keys.push_str(&render_function(function));
-    }
-    keys.push_str(&render_samples(&functions));
 
     Generated { ids: ids_file, keys, files: render_files() }
+}
+
+/// The module a file of English becomes: `settings-agents.ftl` is `settings_agents`.
+fn module_name(file: &str) -> String {
+    let name = rust_name(file.trim_end_matches(".ftl"));
+    assert!(!KEYWORDS.contains(&name.as_str()), "{file}: a Rust keyword as a module name");
+    name
+}
+
+/// `items` joined by commas, `per_line` to a line, indented, each followed by a comma.
+fn push_wrapped(out: &mut String, items: impl Iterator<Item = String>, per_line: usize) {
+    let items: Vec<String> = items.collect();
+    for line in items.chunks(per_line) {
+        let _ = writeln!(out, "    {},", line.join(", "));
+    }
 }
 
 /// The English text of every message and attribute without variables, formatted.
@@ -199,7 +240,7 @@ fn render_function(function: &Function) -> String {
 
 /// Every function once with sample arguments (a number twice, one and many), for the tests that
 /// look at all messages without knowing them: the pseudo-language's brackets, the translations.
-fn render_samples(functions: &[Function]) -> String {
+fn render_samples(functions: &[&Function]) -> String {
     let mut out = String::from(
         "\n/// Each message with variables formatted with sample arguments: text as `Sample`, numbers as 1 and\n\
          /// 5, so a plural shows both of English's forms.\n\

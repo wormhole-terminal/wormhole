@@ -2,7 +2,7 @@
 //! `repo-docs/docs/languages.md` §3 group 1 say it must be.
 //!
 //! A deliberate change to the English files is followed by
-//! `TEXT_BLESS=1 cargo test -p wormhole-text --test generated`, and the diff of `src/keys.rs` and `src/generated/` is
+//! `TEXT_BLESS=1 cargo test -p wormhole-text --test generated`, and the diff of `src/keys/` and `src/generated/` is
 //! reviewed with it. Never bless to make a red test green without knowing why it was red.
 
 #![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
@@ -13,30 +13,51 @@ use std::fs;
 
 use support::{check, crate_dir, generate};
 
-/// Where each generated file lives: the data in `src/generated/`, the keys beside `lib.rs`.
-fn path(name: &str) -> std::path::PathBuf {
-    let src = crate_dir().join("src");
-    if name == "keys.rs" { src.join(name) } else { src.join("generated").join(name) }
+/// Every generated file, by path under the crate's `src/`.
+fn expected() -> Vec<(String, String)> {
+    let now = generate::generate();
+    let mut files =
+        vec![("generated/ids.rs".to_string(), now.ids), ("generated/files.rs".to_string(), now.files)];
+    files.extend(now.keys.into_iter().map(|(name, text)| (format!("keys/{name}"), text)));
+    files
 }
 
-fn committed(name: &str) -> String {
-    fs::read_to_string(path(name)).unwrap_or_default()
+fn on_disk(dir: &str) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(crate_dir().join("src").join(dir))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| format!("{dir}/{}", entry.file_name().to_string_lossy()))
+        .collect();
+    names.sort();
+    names
 }
 
 #[test]
 fn the_generated_files_are_fresh() {
-    let now = generate::generate();
+    let now = expected();
+    let src = crate_dir().join("src");
     if std::env::var_os("TEXT_BLESS").is_some() {
-        for (name, text) in [("ids.rs", &now.ids), ("keys.rs", &now.keys), ("files.rs", &now.files)] {
-            fs::write(path(name), text).unwrap_or_else(|e| panic!("writes {name}: {e}"));
+        fs::create_dir_all(src.join("keys")).expect("makes src/keys");
+        for (name, text) in &now {
+            fs::write(src.join(name), text).unwrap_or_else(|e| panic!("writes {name}: {e}"));
+        }
+        // A module of a file that is gone does not stay.
+        for stale in on_disk("keys").into_iter().filter(|name| !now.iter().any(|(known, _)| known == name)) {
+            fs::remove_file(src.join(&stale)).unwrap_or_else(|e| panic!("removes {stale}: {e}"));
         }
         return;
     }
-    for (name, text) in [("ids.rs", &now.ids), ("keys.rs", &now.keys), ("files.rs", &now.files)] {
+    for (name, text) in &now {
+        let committed = fs::read_to_string(src.join(name)).unwrap_or_default();
         assert!(
-            *text == committed(name),
+            committed == *text,
             "the generated {name} is stale: run TEXT_BLESS=1 cargo test -p wormhole-text --test generated"
         );
+    }
+    let known: Vec<&str> = now.iter().map(|(name, _)| name.as_str()).collect();
+    for name in on_disk("keys") {
+        assert!(known.contains(&name.as_str()), "src/{name} is not generated any more: bless to remove it");
     }
 }
 

@@ -33,7 +33,7 @@ impl Loaded {
         let loaded = Self::build(tag, resources, translated, None, false);
         debug_assert!(
             loaded.translated.iter().all(|&t| t),
-            "keys.rs lists a message the English files lack: run TEXT_BLESS=1 cargo test -p wormhole-text --test generated"
+            "the generated keys list a message the English files lack: run TEXT_BLESS=1 cargo test -p wormhole-text --test generated"
         );
         loaded
     }

@@ -2,7 +2,7 @@
 
 use crate::generated::ids::IDS;
 
-/// An index into the generated id list. Only `keys.rs` makes them, one per message (or attribute)
+/// An index into the generated id list. Only the generated `keys/` make them, one per message (or attribute)
 /// that takes no variables, so a `Key` that does not exist is a compile error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Key(u16);
