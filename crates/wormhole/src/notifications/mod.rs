@@ -55,6 +55,8 @@ use watch::{Event, Watch};
 #[cfg(feature = "devctl")]
 use wormhole_core::notify::Seen;
 
+#[cfg(test)]
+pub(crate) use permission::permission_refreshes;
 pub(crate) use permission::{
     ask_permission, ask_permission_if_new, open_system_settings, permission, refresh_permission,
 };
@@ -93,6 +95,9 @@ struct Notifier {
     /// the question counts as answered yes).
     #[cfg(any(test, feature = "devctl"))]
     asks: u32,
+    /// How many times the permission was read again (the tick does while Settings is open).
+    #[cfg(test)]
+    refreshes: u32,
     center: Option<Center>,
 }
 
@@ -156,7 +161,7 @@ pub(crate) fn init(cx: &mut App) {
 /// allows notifications.
 pub(crate) fn tick(ticks: u64, cx: &mut App) {
     sweep(cx);
-    if ticks.is_multiple_of(5) && app(cx).settings_window.is_some() {
+    if ticks.is_multiple_of(5) && crate::app_state::live(&app(cx).settings_window).is_some() {
         refresh_permission(cx);
     }
 }

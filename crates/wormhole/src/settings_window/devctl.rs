@@ -132,7 +132,7 @@ pub(crate) fn project_menu(query: &str, cx: &mut App) {
 /// devctl: render the settings window to a PNG and append the result to
 /// `out`. Deferred: sections read app state that devctl is updating.
 pub(crate) fn shot(path: PathBuf, out: PathBuf, cx: &mut App) {
-    let window = app(cx).settings_window.clone();
+    let window = crate::app_state::live(&app(cx).settings_window);
     cx.defer(move |cx| {
         let result = window
             .ok_or_else(|| anyhow::anyhow!("settings window not open"))

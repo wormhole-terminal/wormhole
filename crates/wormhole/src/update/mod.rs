@@ -199,7 +199,7 @@ fn should_record(result: &Result<UpdateStatus, UpdateError>) -> bool {
 /// every window, several times a second while downloading). Notifying by id rather than updating
 /// the entity: this is called from the window's own click handlers, which have it leased.
 fn notify_settings(cx: &mut App) {
-    if let Some((_, view)) = &app(cx).settings_window {
+    if let Some((_, view)) = crate::app_state::live(&app(cx).settings_window) {
         let id = view.entity_id();
         cx.notify(id);
     }

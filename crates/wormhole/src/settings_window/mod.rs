@@ -9,6 +9,8 @@
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
 //! item use it. The shared state keeps its page untyped.
 
+#[cfg(test)]
+mod close_tests;
 pub(crate) mod devctl;
 mod font_picker;
 #[cfg(test)]

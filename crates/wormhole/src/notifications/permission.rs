@@ -14,6 +14,10 @@ pub(crate) fn permission(cx: &App) -> Permission {
 
 /// Read the permission again (the answer arrives a moment later).
 pub(crate) fn refresh_permission(cx: &mut App) {
+    #[cfg(test)]
+    {
+        notifier(cx).refreshes += 1;
+    }
     if let Some(center) = &notifier(cx).center {
         center.refresh_permission();
     }
@@ -63,4 +67,10 @@ pub(crate) fn pretend_permission(permission: Permission, cx: &mut App) {
 /// "Open System Settings": Wormhole's page under Notifications.
 pub(crate) fn open_system_settings(cx: &App) {
     system::open_settings(cx);
+}
+
+/// How many times the permission was read again.
+#[cfg(test)]
+pub(crate) fn permission_refreshes(cx: &App) -> u32 {
+    cx.try_global::<Notifier>().map_or(0, |n| n.refreshes)
 }

@@ -190,7 +190,8 @@ fn closing_settings_leaves_the_window_in_front_its_tick(cx: &mut TestAppContext)
         crate::settings_window::open_settings(Some(crate::settings_window::Section::Sessions), cx)
     });
     cx.run_until_parked();
-    let (settings_window, _) = cx.update(|cx| app(cx).settings_window.clone()).expect("Settings opened");
+    let (settings_window, _) =
+        cx.update(|cx| crate::app_state::live(&app(cx).settings_window)).expect("Settings opened");
     draw(cx, &window);
     cx.update(|cx| settings_window.update(cx, |_, window, cx| window.render_frame(cx))).expect("open");
     cx.update(|cx| settings_window.update(cx, |_, window, _| window.remove_window())).expect("open");

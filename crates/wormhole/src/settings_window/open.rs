@@ -18,10 +18,10 @@ use crate::style::{self};
 
 use super::{Section, SettingsWindow, WINDOW_MIN, WINDOW_SIZE};
 
-/// The settings window while it is open, and its page. The shared state keeps the page untyped, so it
-/// doesn't name this window, which sits above it.
+/// The settings window while it is open, and its page; `None` once the window has closed. The shared
+/// state keeps the page untyped and weak, so it doesn't name this window, which sits above it.
 pub(super) fn current_window(cx: &App) -> Option<(AnyWindowHandle, Entity<SettingsWindow>)> {
-    let (handle, page) = app(cx).settings_window.clone()?;
+    let (handle, page) = crate::app_state::live(&app(cx).settings_window)?;
     Some((handle, page.downcast::<SettingsWindow>().ok()?))
 }
 
@@ -55,7 +55,7 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
             cx.new(|cx| SettingsWindow::new(section, window, cx))
         });
         match opened {
-            Ok((handle, page)) => app_mut(cx).settings_window = Some((handle, page.into())),
+            Ok((handle, page)) => app_mut(cx).settings_window = Some((handle, page.downgrade().into())),
             Err(err) => tracing::error!("opening the settings window failed: {err:#}"),
         }
     });

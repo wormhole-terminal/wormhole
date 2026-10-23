@@ -86,6 +86,14 @@ pub(crate) fn shown(cx: &App) -> Option<String> {
     state.applied.clone().filter(|_| registered)
 }
 
+/// Whether the hotkey is held off now, and whether the system holds it (for the tests that close
+/// Settings mid-recording).
+#[cfg(test)]
+pub(crate) fn state_for_test(cx: &App) -> (bool, bool) {
+    let state = cx.global::<GlobalHotkey>();
+    (state.paused, state.hotkey.is_some())
+}
+
 impl GlobalHotkey {
     fn apply(&mut self, spec: &str) {
         // Release the old key first, or re-registering the same combination fails.

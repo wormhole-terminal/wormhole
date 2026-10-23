@@ -54,6 +54,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   the terminals' text first, as ⌘Q does, instead of losing what changed since the last save. Session
   hosts keep running, as with ⌘Q.
 
+- Closing Settings while it records a shortcut no longer leaves the global hotkey switched off until
+  Settings opens again. The menu bar menu also stops showing the hotkey as set when it was not.
+
 ### Security
 
 - **High** · no advisory · affects 0.1.0–1.2.0: the text of a closed terminal stayed on disk. Wormhole
