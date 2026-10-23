@@ -163,7 +163,9 @@ impl Project {
         if facts.is_front(cx)
             && let Some(root) = facts.active().and_then(|session| self.of.get(&session.id)?.root.clone())
         {
-            crate::app_state::app_mut(cx).remember_project(root);
+            if !crate::app_state::app(cx).leads_recent_projects(&root) {
+                crate::app_state::app_mut(cx).remember_project(root);
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ use gpui_kit::{Entity, TestAppContext};
 use wormhole_core::config::TabId;
 use wormhole_term::PtyEvent;
 
-use crate::app_state::{OpenWindow, app_mut};
+use crate::app_state::{OpenWindow, app, app_mut};
 use crate::settings::SettingsStore;
 use crate::terminal_view::TerminalView;
 use crate::window::reported_tests::terminal;
@@ -160,16 +160,43 @@ fn a_setting_that_changes_draws_every_region_again(cx: &mut TestAppContext) {
     }
 }
 
+/// Every write to the shared state marks it changed, whatever the write: callers write it every tick.
 #[gpui_kit::test]
-fn the_apps_shared_state_changing_draws_every_region_again(cx: &mut TestAppContext) {
-    if isolate("the_apps_shared_state_changing_draws_every_region_again") {
+fn writing_the_apps_shared_state_without_changing_a_fact_the_chrome_draws_builds_no_region(
+    cx: &mut TestAppContext,
+) {
+    if isolate("writing_the_apps_shared_state_without_changing_a_fact_the_chrome_draws_builds_no_region") {
         return;
     }
     let window = settled_window(cx);
     let before = builds(cx, &window);
     cx.update(|cx| {
-        app_mut(cx);
+        app_mut(cx).remember_project("/a/project".into());
     });
+    cx.run_until_parked();
+    // The tick's callers write it again each time: the project already leads.
+    for _ in 0..3 {
+        cx.update(|cx| {
+            if !app(cx).leads_recent_projects(std::path::Path::new("/a/project")) {
+                app_mut(cx).remember_project("/a/project".into());
+            }
+            app_mut(cx);
+        });
+        cx.run_until_parked();
+        draw(cx, &window);
+    }
+    assert_eq!(builds(cx, &window), before, "nothing the chrome shows moved");
+}
+
+#[gpui_kit::test]
+fn a_fact_of_the_apps_shared_state_that_changes_draws_every_region_again(cx: &mut TestAppContext) {
+    if isolate("a_fact_of_the_apps_shared_state_that_changes_draws_every_region_again") {
+        return;
+    }
+    let window = settled_window(cx);
+    let before = builds(cx, &window);
+    // The note after a first run without agents is closed for good: the sidebar reads it.
+    cx.update(|cx| app_mut(cx).dismiss_tip(wormhole_core::onboarding::Tip::NoAgents));
     cx.run_until_parked();
     draw(cx, &window);
     let after = builds(cx, &window);

@@ -200,7 +200,9 @@ impl Workspace {
     }
 
     fn ask_for_pull_request(branch: Branch, cx: &mut Context<Self>) {
-        if !app_mut(cx).pr.begin(&branch, Instant::now()) {
+        // Read first: a write marks the shared state changed in every window, and this runs for every
+        // terminal on every tick.
+        if !app(cx).pr.is_due(&branch, Instant::now()) || !app_mut(cx).pr.begin(&branch, Instant::now()) {
             return;
         }
         let task = {

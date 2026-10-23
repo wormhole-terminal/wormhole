@@ -405,7 +405,7 @@ impl Workspace {
         })
         .detach();
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| this.sync_sidebar_soon(cx)).detach();
-        self::regions::Regions::watch_globals(cx);
+        self::regions::Regions::watch_globals(&mut this, cx);
         this
     }
 

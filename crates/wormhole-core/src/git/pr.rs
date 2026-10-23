@@ -383,6 +383,12 @@ impl PrCache {
         self.entries.get(branch)?.found.as_ref()
     }
 
+    /// Whether [`begin`](Self::begin) would start a lookup for the branch now, without starting it: for a
+    /// caller that holds the cache behind something that notices every write.
+    pub fn is_due(&self, branch: &Branch, now: Instant) -> bool {
+        self.entries.get(branch).is_none_or(|entry| !entry.asked && now >= entry.due)
+    }
+
     /// Whether a lookup for the branch should start now; if so it is marked as out, and
     /// [`finish`](Self::finish) ends it. At most one is out per branch.
     pub fn begin(&mut self, branch: &Branch, now: Instant) -> bool {
@@ -517,6 +523,18 @@ mod tests {
         let merged = PullRequest { state: PrState::Merged, ..with_checks(7, Checks::Failing) };
         assert_eq!(merged.words(), "Pull request #7, merged");
         assert_eq!(merged.open_checks(), None);
+    }
+
+    #[test]
+    fn is_due_says_what_begin_would_without_starting_a_lookup() {
+        let (mut cache, main, now) = (PrCache::default(), branch("main"), Instant::now());
+        assert!(cache.is_due(&main, now), "a branch not asked yet");
+        assert!(cache.is_due(&main, now), "asking changes nothing");
+        assert!(cache.begin(&main, now));
+        assert!(!cache.is_due(&main, now), "a lookup is out");
+        cache.finish(&main, Ok(None), now);
+        assert!(!cache.is_due(&main, now + REFRESH_AFTER - Duration::from_secs(1)));
+        assert!(cache.is_due(&main, now + REFRESH_AFTER));
     }
 
     #[test]

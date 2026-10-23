@@ -242,6 +242,13 @@ impl AppState {
         self.recent_projects.remember(root, self.store.as_ref());
     }
 
+    /// Whether `root` already leads the recent projects: remembering it would change nothing. Asked
+    /// first by whatever remembers the project in front on every tick, since writing the state marks it
+    /// changed.
+    pub(crate) fn leads_recent_projects(&self, root: &Path) -> bool {
+        self.recent_projects.roots().first().is_some_and(|first| first == root)
+    }
+
     fn save_tips(&self) {
         if let Some(store) = &self.store
             && let Err(err) = store.set_meta(DISMISSED_TIPS_KEY, &self.tips.to_json())

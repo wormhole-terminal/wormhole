@@ -31,6 +31,8 @@ mod app_facts;
 #[cfg(any(test, debug_assertions))]
 mod oracle;
 
+use self::app_facts::AppFacts;
+
 use gpui_kit::*;
 use wormhole_core::view::layout::status_bar::STATUS_BAR_H;
 
@@ -97,6 +99,8 @@ pub(super) struct Regions {
     status_bar: Entity<Region>,
     /// What the regions last drew of what moves with time, to notice on the tick when it is stale.
     pub(super) drawn: Drawn,
+    /// The shared state's facts as the window last saw them (`watch_globals`).
+    app_seen: Option<AppFacts>,
     /// What each was built from, checked at the end of every frame.
     #[cfg(any(test, debug_assertions))]
     oracle: oracle::Oracle,
@@ -128,6 +132,7 @@ impl Regions {
             title_row: region(Part::TitleRow),
             status_bar: region(Part::StatusBar),
             drawn: Drawn::default(),
+            app_seen: None,
             #[cfg(any(test, debug_assertions))]
             oracle: Default::default(),
         }
@@ -172,10 +177,22 @@ impl Regions {
 
     /// Tell the regions when a global they draw from changes. The workspace's own state notifies the
     /// workspace; a global changes without it, and the regions replay what they drew until told.
-    pub(super) fn watch_globals(cx: &mut Context<Workspace>) {
+    ///
+    /// The settings and the apps Open in… lists are watched whole. The shared state is not: it is marked
+    /// changed by every write, and writes are made for reasons the chrome does not show, so the window
+    /// compares the facts it draws from it ([`AppFacts`]) and notifies when one differs.
+    pub(super) fn watch_globals(workspace: &mut Workspace, cx: &mut Context<Workspace>) {
         watch::<crate::settings::SettingsStore>(cx);
-        watch::<crate::app_state::AppState>(cx);
         watch::<crate::open_in::OpenIn>(cx);
+        workspace.regions.app_seen = Some(AppFacts::of(workspace, cx));
+        cx.observe_global::<crate::app_state::AppState>(|workspace, cx| {
+            let now = AppFacts::of(workspace, cx);
+            if workspace.regions.app_seen.as_ref() != Some(&now) {
+                workspace.regions.app_seen = Some(now);
+                cx.notify();
+            }
+        })
+        .detach();
     }
 
     /// How many times each region has been built, in the order sidebar, panel, title row, status bar.
