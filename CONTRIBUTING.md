@@ -55,9 +55,14 @@ also run `scripts/perf.sh` (a release build timed against your machine's baselin
 - Rust 2024, `rustfmt.toml` (width 110). No `unwrap()` outside tests; `unsafe` only in the few FFI
   functions that carry `#[allow(unsafe_code)]` and a SAFETY note. `anyhow` for errors, `tracing` for
   logs (never `println!`).
-- Files: every read or write of a user or project file goes through `wormhole_core::storage::fsutil`
+- Files: every read or write of a user or project file goes through `wormhole_core::storage::files`
   (atomic writes, size-capped reads, no following links out of a repository). Content from a cloned
-  repository is hostile input.
+  repository is hostile input. Clippy refuses `std::fs::write` outside tests.
+- Processes and places: build a command with `wormhole_term::sys::process::command` (clippy refuses
+  `Command::new` outside tests) and ask `platform::paths` where home, the data folder and the temporary
+  folder are (clippy refuses `dirs::home_dir`, `dirs::data_dir` and `std::env::temp_dir`).
+- Modules: a folder module is `foo/mod.rs` (clippy's `self_named_module_files`), and a `pub` item nothing
+  outside its crate can name is `pub(crate)` (`unreachable_pub`; the app, a binary, allows it).
 - Git is read-only and always goes through `wormhole_core::git` (`GitCmd`), which hardens every call.
   Never spawn `git` yourself.
 - Anything that runs commands or changes the environment because of a project folder checks
