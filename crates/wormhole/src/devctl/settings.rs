@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 
+use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_term::scrollbar::ScrollerStyle;
 
@@ -117,7 +118,7 @@ pub(super) fn set(_: &mut Ctx, arg: &str) -> Result<String> {
         .unwrap_or_else(|_| serde_json::Value::String(value.trim().to_string()));
     config.insert(key.trim().to_string(), value);
     let json = serde_json::to_string_pretty(&config).unwrap_or_default();
-    let _ = std::fs::write(&path, json + "\n");
+    let _ = files::write_atomic(&path, (json + "\n").as_bytes(), LinkPolicy::Follow);
     Ok(String::new())
 }
 

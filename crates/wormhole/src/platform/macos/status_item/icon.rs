@@ -22,6 +22,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 
+use wormhole_core::storage::files::{self, LinkPolicy};
+
 use crate::menubar::model::Mark;
 use crate::menubar::{Rgba, StatusColors};
 
@@ -173,7 +175,7 @@ pub(super) fn save_all(
             .TIFFRepresentation()
             .ok_or_else(|| anyhow::anyhow!("no TIFF for {name}"))?;
         let path = dir.join(format!("{prefix}-{name}.tiff"));
-        std::fs::write(&path, data.to_vec())?;
+        files::write_atomic(&path, &data.to_vec(), LinkPolicy::Follow)?;
         saved.push(path);
     }
     Ok(saved)

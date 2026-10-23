@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
+
 mod about;
 mod actions;
 mod active_profile;

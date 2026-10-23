@@ -7,6 +7,7 @@ use anyhow::{Context as _, Result};
 use gpui_kit::Window;
 use wormhole_core::onboarding::intro::voyage::{self, Landing};
 use wormhole_core::onboarding::intro::{Style, window_motion};
+use wormhole_core::storage::files::{self, LinkPolicy};
 
 use super::{Renderer, Uniforms};
 
@@ -55,7 +56,8 @@ pub fn frames(
             }
         }
         let path = dir.join(format!("intro-{}-{n}.bmp", style.key()));
-        std::fs::write(&path, bmp(w, h, &rgb_out)).with_context(|| path.display().to_string())?;
+        files::write_atomic(&path, &bmp(w, h, &rgb_out), LinkPolicy::Follow)
+            .with_context(|| path.display().to_string())?;
         out += &format!("saved {}\n", path.display());
     }
     Ok(out)

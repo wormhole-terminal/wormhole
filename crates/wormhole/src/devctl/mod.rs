@@ -344,6 +344,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 use gpui_kit::*;
+use wormhole_core::storage::files::{self, LinkPolicy};
 
 use crate::window::Workspace;
 
@@ -675,7 +676,7 @@ fn resume_after(wait: Task<String>, mut batch: Batch, window: &mut Window, cx: &
 }
 
 fn finish(batch: Batch, cx: &mut Context<Workspace>) {
-    let _ = std::fs::write(&batch.out_path, &batch.out);
+    let _ = files::write_atomic(&batch.out_path, batch.out.as_bytes(), LinkPolicy::Follow);
     if !batch.sync.is_empty() {
         // Deferred, so the token comes after what commands of this batch append once the update
         // is over (`settings-shot`): a script that waits for it finds their results too.

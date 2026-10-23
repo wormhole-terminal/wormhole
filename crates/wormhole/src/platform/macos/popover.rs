@@ -27,6 +27,7 @@ use objc2_app_kit::{
     NSTrackingArea, NSTrackingAreaOptions, NSUserInterfaceLayoutOrientation, NSView, NSViewController,
 };
 use objc2_foundation::{NSEdgeInsets, NSNotification, NSRect, NSRectEdge, NSSize, NSString};
+use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::Appearance;
 
 use super::{appkit, rows, swatches};
@@ -546,7 +547,7 @@ pub fn render(popover: &Popover, png: &std::path::Path) -> Option<String> {
     // SAFETY: the properties are an empty dictionary, which the PNG encoder accepts.
     let data =
         unsafe { rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &NSDictionary::new()) }?;
-    std::fs::write(png, data.to_vec()).ok()?;
+    files::write_atomic(png, &data.to_vec(), LinkPolicy::Follow).ok()?;
     let summary = format!(
         "{}x{} points, {} actions, field {}, colours {}",
         bounds.size.width,
