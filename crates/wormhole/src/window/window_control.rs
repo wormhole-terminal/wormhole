@@ -4,8 +4,6 @@
 //!
 //! Part of the window: it must not use `control` or `notifications`, which call it from above.
 
-use std::time::Duration;
-
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::ipc::control::{Opened, PaneInfo, TabInfo, Target, TerminalInfo, TerminalState};
@@ -100,14 +98,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> bool {
         let Some(terminal) = self.pane_terminal(tab) else { return false };
-        terminal.update(cx, |t, _| t.paste(text));
-        if submit {
-            cx.spawn(async move |_, cx| {
-                cx.background_executor().timer(Duration::from_millis(60)).await;
-                terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-            })
-            .detach();
-        }
+        super::feature_terminals::paste_text(&terminal, text, submit, cx);
         true
     }
 
@@ -138,12 +129,7 @@ impl Workspace {
         if text.is_empty() {
             return false;
         }
-        terminal.update(cx, |t, _| t.paste(text));
-        cx.spawn(async move |_, cx| {
-            cx.background_executor().timer(Duration::from_millis(60)).await;
-            terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-        })
-        .detach();
+        super::feature_terminals::paste_text(&terminal, text, true, cx);
         true
     }
 }

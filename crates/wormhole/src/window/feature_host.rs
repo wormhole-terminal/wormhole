@@ -2,8 +2,8 @@
 //! window, hearing their events, and asking the table what the frame needs (the tab list, the action
 //! bindings, the menu, the keys over a list). Nothing here names a feature.
 
+use std::any::TypeId;
 use std::path::Path;
-use std::time::Duration;
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -19,9 +19,6 @@ use crate::window::feature::{
     TabDef,
 };
 use crate::window::sidebar::{RowExtras, RowInfo};
-
-/// The pause between a pasted text and the Enter that submits it.
-const SUBMIT_DELAY: Duration = Duration::from_millis(60);
 
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the
@@ -196,16 +193,7 @@ impl Workspace {
         let text = text.trim();
         let Some(ix) = self.find_session(session).filter(|_| !text.is_empty()) else { return };
         let terminal = self.sessions[ix].terminal().clone();
-        terminal.update(cx, |terminal, _| terminal.paste(text));
-        if submit {
-            // Give the program a moment to take the paste in before Enter.
-            let terminal = terminal.clone();
-            cx.spawn(async move |_, cx| {
-                cx.background_executor().timer(SUBMIT_DELAY).await;
-                terminal.update(cx, |terminal, _| terminal.write(b"\r".to_vec()));
-            })
-            .detach();
-        }
+        super::feature_terminals::paste_text(&terminal, text, submit, cx);
         window.focus(&terminal.focus_handle(cx), cx);
     }
 
@@ -453,7 +441,13 @@ impl Workspace {
     /// from outside the frame (devctl, a bridge between two features); the frame itself goes by the
     /// table.
     pub(crate) fn feature<T: 'static>(&self) -> Option<Entity<T>> {
-        self.feature_states.iter().flatten().find_map(|state| state.entity.clone().downcast::<T>().ok())
+        // The type is compared before the handle is cloned: a feature's view asks every frame.
+        let state = self
+            .feature_states
+            .iter()
+            .flatten()
+            .find(|state| state.entity.entity_type() == TypeId::of::<T>())?;
+        state.entity.clone().downcast::<T>().ok()
     }
 }
 

@@ -124,7 +124,7 @@ pub(super) fn ask_for_worktree(
     window: &mut gpui_kit::Window,
     cx: &mut Context<Workspace>,
 ) {
-    let terminal = ws.active_terminal();
+    let folder = ws.facts(cx).active().and_then(|active| active.band_folder(cx));
     let worktrees = ws.feature::<super::worktree::Worktrees>().expect("in the table");
-    worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&terminal, window, cx));
+    worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(folder, window, cx));
 }

@@ -37,8 +37,8 @@ fn worktrees(ws: &Workspace) -> Entity<Worktrees> {
 
 /// The menu item, or its key: the dialog for the terminal in front.
 fn menu_item(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
-    let terminal = ws.active_terminal();
-    worktrees(ws).update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&terminal, window, cx));
+    let folder = ws.facts(cx).active().and_then(|active| active.band_folder(cx));
+    worktrees(ws).update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(folder, window, cx));
 }
 
 /// The command line's request, as the control socket's handler makes it.

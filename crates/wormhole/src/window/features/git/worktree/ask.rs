@@ -60,25 +60,25 @@ pub(super) fn tell(title: &'static str, message: String, window: &mut Window, cx
 }
 
 impl Worktrees {
-    /// The repository the terminal is in, as the main working tree (a terminal in a worktree makes its
-    /// siblings of the same repository); `None` outside any.
-    fn repo_for_worktree(terminal: &Entity<TerminalView>, cx: &App) -> Option<PathBuf> {
-        let cwd = terminal.read(cx).cwd.clone()?;
-        let root = find_root(&cwd).unwrap_or(cwd);
-        if !root.join(".git").exists() {
+    /// The repository a terminal in `band_folder` (its repository's root, else its folder: the window's
+    /// cached answer) is in, as the main working tree (a terminal in a worktree makes its siblings of the
+    /// same repository); `None` outside any.
+    fn repo_for_worktree(band_folder: PathBuf) -> Option<PathBuf> {
+        if !band_folder.join(".git").exists() {
             return None;
         }
-        Some(worktree_of(&root).unwrap_or(root))
+        Some(worktree_of(&band_folder).unwrap_or(band_folder))
     }
 
-    /// Shell → New Terminal in New Worktree…: ask for the branch, for the terminal in front.
+    /// Shell → New Terminal in New Worktree…: ask for the branch, for the terminal in front, which is in
+    /// `band_folder` (`SessionFacts::band_folder`).
     pub(in crate::window) fn new_terminal_in_worktree(
         &mut self,
-        terminal: &Entity<TerminalView>,
+        band_folder: Option<PathBuf>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(repo) = Self::repo_for_worktree(terminal, cx) else { return };
+        let Some(repo) = band_folder.and_then(Self::repo_for_worktree) else { return };
         if let Err(why) = project::api::worktree_allowed(&repo, cx) {
             tell("Can't make a worktree here", why, window, cx);
             return;

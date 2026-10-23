@@ -16,8 +16,21 @@ use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 use crate::window::feature::{NewTerminal, TerminalInput, TerminalTarget};
 
-/// The pause between a pasted text and the Enter that submits it.
+/// The pause between a pasted text and the Enter that submits it: the program reads the paste first.
 const SUBMIT_DELAY: Duration = Duration::from_millis(60);
+
+/// Pastes `text` into `terminal` and, with `submit`, presses Enter a moment later.
+pub(in crate::window) fn paste_text(terminal: &Entity<TerminalView>, text: &str, submit: bool, cx: &mut App) {
+    terminal.update(cx, |terminal, _| terminal.paste(text));
+    if submit {
+        let terminal = terminal.clone();
+        cx.spawn(async move |cx| {
+            cx.background_executor().timer(SUBMIT_DELAY).await;
+            terminal.update(cx, |terminal, _| terminal.write(b"\r".to_vec()));
+        })
+        .detach();
+    }
+}
 
 impl Workspace {
     /// Open a new session (optionally named, in `cwd`) and focus it.
@@ -80,17 +93,7 @@ impl Workspace {
             TerminalInput::Command(command) => {
                 terminal.update(cx, |t, _| t.write_input(format!("{command}\r").into_bytes()));
             }
-            TerminalInput::Paste { text, submit } => {
-                terminal.update(cx, |t, _| t.paste(&text));
-                if submit {
-                    let terminal = terminal.clone();
-                    cx.spawn(async move |_, cx| {
-                        cx.background_executor().timer(SUBMIT_DELAY).await;
-                        terminal.update(cx, |t, _| t.write(b"\r".to_vec()));
-                    })
-                    .detach();
-                }
-            }
+            TerminalInput::Paste { text, submit } => paste_text(&terminal, &text, submit, cx),
         }
     }
 

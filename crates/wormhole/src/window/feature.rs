@@ -124,7 +124,9 @@ pub(in crate::window) enum TerminalInput {
     None,
     /// Typed in, then Enter.
     Command(String),
-    /// Pasted, then Enter a moment later with `submit`. The terminal doesn't get the keyboard.
+    /// Pasted, then Enter a moment later with `submit`. The keyboard goes where the target puts it: a
+    /// terminal the target makes or selects (`New`, `Beside`, `Named`) has it, the `Active` one keeps
+    /// whatever had it.
     Paste { text: String, submit: bool },
 }
 
