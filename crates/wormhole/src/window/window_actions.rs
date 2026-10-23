@@ -13,13 +13,12 @@ use crate::actions::{
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
     GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewSession,
     NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal, PreviousGroup,
-    PreviousTerminal, RevealInFinder, ShowHistory, Smaller, SplitDown, SplitRight, ToggleRightPanel,
-    ToggleSidebar, UseSelectionForFind, ZoomPane,
+    PreviousTerminal, RevealInFinder, Smaller, SplitDown, SplitRight, ToggleRightPanel, ToggleSidebar,
+    UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
 use crate::window::{Workspace, sidebar};
-use wormhole_core::config::TabId;
 
 /// The zoom (points over the Settings size) after one more step, kept within [`FONT_SIZES`].
 fn zoomed(base: f32, zoom: f32, step: f32) -> f32 {
@@ -119,7 +118,6 @@ impl Workspace {
             })
             .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| this.toggle_sidebar(cx)))
             .on_action(cx.listener(|this, _: &ToggleRightPanel, window, cx| this.toggle_notes(window, cx)))
-            .on_action(cx.listener(|this, _: &ShowHistory, _, cx| this.show_tab(TabId::History, cx)))
             .on_action(
                 cx.listener(|this, _: &FocusTerminalOrPanel, window, cx| this.toggle_focus(window, cx)),
             )

@@ -365,12 +365,18 @@ fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_work
     assert!(!state.hidden.contains(&ActionId::ShowChanges), "Changes' is not");
     assert!(!state.hidden.contains(&ActionId::NewTerminalInWorktree), "nor the worktree's");
 
-    // Its key does nothing, and showing the tab shows Changes.
-    drive(cx, &window, |ws, window, cx| ws.focus_terminal(window, cx));
+    // Its key does nothing: the panel stays on the tab it was on, and as open or shut as it was.
+    drive(cx, &window, |ws, window, cx| {
+        ws.show_tab(TabId::Notes, cx);
+        ws.focus_terminal(window, cx);
+    });
     draw(cx, &window);
+    let before = read(cx, &window, |ws| (ws.right_tab, ws.panes));
+    assert_eq!(before.0, TabId::Notes);
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(ShowHistory), cx));
     cx.run_until_parked();
-    assert_ne!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    assert_eq!(read(cx, &window, |ws| (ws.right_tab, ws.panes)), before, "the key was not handled");
+    // Showing the tab by other means shows Changes.
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
     // The palette's commits have nowhere to go.
