@@ -40,6 +40,7 @@ use std::sync::OnceLock;
 
 use sha2::{Digest, Sha256};
 
+use crate::platform::socket::socket_in_with;
 use crate::platform::user::UserId;
 use crate::storage::paths::data_dir;
 
@@ -82,15 +83,15 @@ pub fn socket_path() -> PathBuf {
 /// `<temp>/wormhole-<uid>-<hash of the data dir>.sock`: one per user and data
 /// dir (isolated test instances don't collide), in the per-user temp folder
 /// where the system has one (macOS `$TMPDIR`), named the same by every build
-/// (unlike std's `DefaultHasher`). Unix socket paths are limited to about 104
-/// bytes, so an unusually long temp folder falls back to `/tmp`.
+/// (unlike std's `DefaultHasher`). A path too long for a socket
+/// falls back to `/tmp` (`platform::socket::socket_in`, which the hosts' sockets follow too).
 fn socket_path_in(temp: &Path, data_dir: &Path) -> PathBuf {
     let digest = Sha256::digest(data_dir.as_os_str().as_encoded_bytes());
     let uid = UserId::current();
     let name =
         format!("wormhole-{uid}-{:02x}{:02x}{:02x}{:02x}.sock", digest[0], digest[1], digest[2], digest[3]);
-    let path = temp.join(&name);
-    if path.as_os_str().len() < 100 { path } else { Path::new("/tmp").join(name) }
+    // The temp folder is the preferred one, so the fallback's own step through it adds nothing.
+    socket_in_with(&temp.join(&name), &name, None)
 }
 
 pub fn remove_socket() {
