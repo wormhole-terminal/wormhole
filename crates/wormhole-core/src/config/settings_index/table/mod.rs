@@ -98,16 +98,13 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             nav: NavGroup::Profile,
         },
         SectionId::Appearance => &SectionInfo {
-            title: Word::Literal("Appearance"),
-            intro: Word::Literal("What every window looks like. Changes apply as you make them."),
+            title: Word::Key(SETTINGS_SECTION_APPEARANCE),
+            intro: Word::Key(SETTINGS_SECTION_APPEARANCE_INTRO),
             nav: NavGroup::Look,
         },
         SectionId::Fonts => &SectionInfo {
-            title: Word::Literal("Fonts"),
-            intro: Word::Literal(
-                "Terminal first: it's what you read most. Code follows it and Interface uses the \
-                    system font until you pick one.",
-            ),
+            title: Word::Key(SETTINGS_SECTION_FONTS),
+            intro: Word::Key(SETTINGS_SECTION_FONTS_INTRO),
             nav: NavGroup::Look,
         },
         SectionId::Terminal => &SectionInfo {

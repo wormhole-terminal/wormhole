@@ -1,221 +1,126 @@
 //! The Appearance and Fonts sections: theme, accent, window, title row, file icons and the type.
 
-use super::{literal_entry, literal_group};
-use crate::config::settings_index::{Group, Word};
+use super::{entry, group, untitled};
+use crate::config::settings_index::Group;
+use wormhole_text::keys::*;
 
 pub(super) const APPEARANCE: &[Group] = &[
-    literal_group(
-        "",
-        &[literal_entry("appearance-preview", "Live preview", "", "preview wallpaper window", &[])],
-    ),
-    literal_group(
-        "Theme",
+    untitled(&[entry("appearance-preview", SETTINGS_APPEARANCE_PREVIEW, &[])
+        .with_keywords(SETTINGS_APPEARANCE_PREVIEW_KEYWORDS)]),
+    group(
+        SETTINGS_APPEARANCE_GROUP_THEME,
         &[
-            literal_entry(
-                "theme-mode",
-                "Mode",
-                "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode",
-                "dark light system appearance match night day",
-                &["theme_mode"],
-            ),
-            literal_entry(
-                "theme",
-                "Theme",
-                "",
-                "colour color scheme palette dark light studio import ghostty iterm2 alacritty",
-                &["theme", "theme_light"],
-            ),
+            entry("theme-mode", SETTINGS_APPEARANCE_THEME_MODE, &["theme_mode"])
+                .with_description(SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_THEME_MODE_KEYWORDS),
+            entry("theme", SETTINGS_APPEARANCE_THEME, &["theme", "theme_light"])
+                .with_keywords(SETTINGS_APPEARANCE_THEME_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Accent",
-        &[literal_entry(
-            "primary-color",
-            "Use the theme's primary colour",
-            "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme",
-            "accent highlight color colour swatch custom own",
-            &["theme_primary", "primary_color"],
-        )],
+    group(
+        SETTINGS_APPEARANCE_GROUP_ACCENT,
+        &[entry("primary-color", SETTINGS_APPEARANCE_PRIMARY_COLOR, &["theme_primary", "primary_color"])
+            .with_description(SETTINGS_APPEARANCE_PRIMARY_COLOR_DESCRIPTION)
+            .with_keywords(SETTINGS_APPEARANCE_PRIMARY_COLOR_KEYWORDS)],
     ),
-    literal_group(
-        "Window",
+    group(
+        SETTINGS_APPEARANCE_GROUP_WINDOW,
         &[
-            literal_entry(
-                "opacity",
-                "Background opacity",
-                "30–100 %. Below 100 % the desktop shows through",
-                "transparency translucent see through",
-                &["opacity"],
-            ),
-            literal_entry(
-                "blur",
-                "Blur what's behind the window",
-                "Only visible below 100 % opacity",
-                "vibrancy frosted",
-                &["blur"],
-            ),
-            literal_entry(
-                "liquid-glass",
-                "Liquid Glass",
-                "Glass under the sidebar's and the panel's cards on macOS 26 and later. Off: every \
-                 surface painted.",
-                "glass translucent material apple tahoe cards",
-                &["liquid_glass"],
-            ),
-            literal_entry(
+            entry("opacity", SETTINGS_APPEARANCE_OPACITY, &["opacity"])
+                .with_description(SETTINGS_APPEARANCE_OPACITY_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_OPACITY_KEYWORDS),
+            entry("blur", SETTINGS_APPEARANCE_BLUR, &["blur"])
+                .with_description(SETTINGS_APPEARANCE_BLUR_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_BLUR_KEYWORDS),
+            entry("liquid-glass", SETTINGS_APPEARANCE_LIQUID_GLASS, &["liquid_glass"])
+                .with_description(SETTINGS_APPEARANCE_LIQUID_GLASS_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_LIQUID_GLASS_KEYWORDS),
+            entry(
                 "translucent",
-                "Also translucent",
-                "Use the opacity and blur above for these windows too",
-                "settings theme studio window",
+                SETTINGS_APPEARANCE_TRANSLUCENT,
                 &["settings_translucent", "studio_translucent"],
-            ),
-            literal_entry(
-                "title-border",
-                "Line under the title row",
-                "Between the bar and the terminal: always, only when output is scrolled under the bar, \
-                 or never",
-                "border hairline rule separator title bar toolbar",
-                &["title_border"],
-            ),
-            literal_entry(
-                "column-dividers",
-                "Column dividers",
-                "The lines between the sidebar, the terminal and the right panel. Off hides them in \
-                 every theme; the edges still resize. Increase Contrast keeps them",
-                "border hairline rule separator edge columns divider",
-                &["column_dividers"],
-            ),
-            literal_entry(
-                "status-bar",
-                "Show status bar",
-                "Branch, agents and terminal size along the bottom of every window",
-                "bottom bar footer",
-                &["status_bar"],
-            ),
+            )
+            .with_description(SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION)
+            .with_keywords(SETTINGS_APPEARANCE_TRANSLUCENT_KEYWORDS),
+            entry("title-border", SETTINGS_APPEARANCE_TITLE_BORDER, &["title_border"])
+                .with_description(SETTINGS_APPEARANCE_TITLE_BORDER_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_TITLE_BORDER_KEYWORDS),
+            entry("column-dividers", SETTINGS_APPEARANCE_COLUMN_DIVIDERS, &["column_dividers"])
+                .with_description(SETTINGS_APPEARANCE_COLUMN_DIVIDERS_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_COLUMN_DIVIDERS_KEYWORDS),
+            entry("status-bar", SETTINGS_APPEARANCE_STATUS_BAR, &["status_bar"])
+                .with_description(SETTINGS_APPEARANCE_STATUS_BAR_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_STATUS_BAR_KEYWORDS),
         ],
     ),
-    literal_group(
-        "Title row",
+    group(
+        SETTINGS_APPEARANCE_GROUP_TITLE_ROW,
         &[
-            literal_entry(
-                "title-branch-status",
-                "Branch status",
-                "A dot while the tree has uncommitted changes, and how many commits the branch is ahead \
-                 of or behind its upstream (↑2 ↓1)",
-                "git dirty uncommitted ahead behind upstream push pull sync commits chip",
-                &["title_branch_status"],
-            ),
-            literal_entry(
-                "title-agent-gauge",
-                "Agent model and context",
-                "The model a coding agent runs and how much of its context window is used, when the \
-                 agent reports it (Claude Code does, through its status line)",
-                "claude model context window tokens percent compact meter usage",
-                &["title_agent_gauge"],
-            ),
-            literal_entry(
-                "title-ports",
-                "Open ports",
-                "The ports a terminal's programs listen on, as chips that open localhost in your browser",
-                "localhost server dev http listen browser network",
-                &["title_ports"],
-            ),
-            literal_entry(
-                "title-pull-request",
-                "Pull request",
-                "The branch's pull request and how its checks and reviews stand: a link in the title \
-                 row and a mark on the folder's band in the sidebar, with a notification when its \
-                 checks finish. Asked of the GitHub CLI (gh), only in a trusted project, and only when \
-                 gh is installed and signed in",
-                "github gh pr merge review link ci checks actions build failed passed draft approved",
-                &["title_pull_request"],
-            ),
+            entry("title-branch-status", SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS, &["title_branch_status"])
+                .with_description(SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_TITLE_BRANCH_STATUS_KEYWORDS),
+            entry("title-agent-gauge", SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE, &["title_agent_gauge"])
+                .with_description(SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_TITLE_AGENT_GAUGE_KEYWORDS),
+            entry("title-ports", SETTINGS_APPEARANCE_TITLE_PORTS, &["title_ports"])
+                .with_description(SETTINGS_APPEARANCE_TITLE_PORTS_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_TITLE_PORTS_KEYWORDS),
+            entry("title-pull-request", SETTINGS_APPEARANCE_TITLE_PULL_REQUEST, &["title_pull_request"])
+                .with_description(SETTINGS_APPEARANCE_TITLE_PULL_REQUEST_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_TITLE_PULL_REQUEST_KEYWORDS),
         ],
     ),
-    literal_group(
-        "File icons",
+    group(
+        SETTINGS_APPEARANCE_GROUP_FILE_ICONS,
         &[
-            literal_entry(
-                "icon-theme",
-                "File icons",
-                "In the Changes and History panels. Zed icon themes work too",
-                "icon theme",
-                &["icon_theme"],
-            ),
-            literal_entry(
-                "icon-themes-folder",
-                "Icon themes folder",
-                "Put a Zed icon theme folder here; it's listed above within seconds",
-                "zed folder",
-                &[],
-            ),
+            entry("icon-theme", SETTINGS_APPEARANCE_ICON_THEME, &["icon_theme"])
+                .with_description(SETTINGS_APPEARANCE_ICON_THEME_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_ICON_THEME_KEYWORDS),
+            entry("icon-themes-folder", SETTINGS_APPEARANCE_ICON_THEMES_FOLDER, &[])
+                .with_description(SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_KEYWORDS),
         ],
     ),
 ];
 
 pub(super) const FONTS: &[Group] = &[
-    literal_group("", &[literal_entry("font-specimen", "Specimen", "", "preview sample", &[])]),
-    literal_group(
-        "Terminal",
+    untitled(&[entry("font-specimen", SETTINGS_FONTS_FONT_SPECIMEN, &[])
+        .with_keywords(SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS)]),
+    group(
+        SETTINGS_APPEARANCE_GROUP_TERMINAL,
         &[
-            literal_entry(
-                "font-terminal",
-                "Font",
-                "The terminal grid",
-                "terminal font typeface size monospace jetbrains bundled",
-                &["font_family", "font_size"],
-            ),
-            literal_entry(
-                "line-height",
-                "Line height",
-                "Terminal rows, as a multiple of the font size",
-                "spacing leading",
-                &["line_height"],
-            ),
-            literal_entry(
-                "font-ligatures",
-                "Ligatures",
-                "Join sequences like => and != into one glyph",
-                "ligature",
-                &["font_ligatures"],
-            ),
+            entry("font-terminal", SETTINGS_FONTS_FONT_TERMINAL, &["font_family", "font_size"])
+                .with_description(SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS),
+            entry("line-height", SETTINGS_FONTS_LINE_HEIGHT, &["line_height"])
+                .with_description(SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS),
+            entry("font-ligatures", SETTINGS_FONTS_FONT_LIGATURES, &["font_ligatures"])
+                .with_description(SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS),
         ],
     ),
-    Group {
-        title: Word::Literal("Code"),
-        blurb: Word::Literal(""),
-        aside: Word::Literal("Follows the terminal until you pick one"),
-        entries: &[literal_entry(
-            "font-code",
-            "Font",
-            "Diffs, commit hashes, file lists, Theme Studio",
-            "code font typeface size monospace diff",
-            &["code_font_family", "code_font_size"],
-        )],
-    },
-    literal_group(
-        "Interface",
-        &[literal_entry(
-            "font-interface",
-            "Font",
-            "Sidebar, panels, settings and controls. The size scales the whole interface",
-            "interface font typeface size system ui",
-            &["ui_font_family", "ui_font_size"],
-        )],
+    group(
+        SETTINGS_APPEARANCE_GROUP_CODE,
+        &[entry("font-code", SETTINGS_FONTS_FONT_CODE, &["code_font_family", "code_font_size"])
+            .with_description(SETTINGS_FONTS_FONT_CODE_DESCRIPTION)
+            .with_keywords(SETTINGS_FONTS_FONT_CODE_KEYWORDS)],
+    )
+    .with_aside(SETTINGS_APPEARANCE_GROUP_CODE_ASIDE),
+    group(
+        SETTINGS_APPEARANCE_GROUP_INTERFACE,
+        &[entry("font-interface", SETTINGS_FONTS_FONT_INTERFACE, &["ui_font_family", "ui_font_size"])
+            .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
+            .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS)],
     ),
-    literal_group(
-        "Your fonts",
+    group(
+        SETTINGS_APPEARANCE_GROUP_YOUR_FONTS,
         &[
-            literal_entry(
-                "fonts-folder",
-                "Fonts folder",
-                "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put \
-                 .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within \
-                 seconds",
-                "custom bundled ttf otf ttc folder",
-                &[],
-            ),
-            literal_entry("custom-fonts", "Custom fonts", "", "custom families", &[]),
+            entry("fonts-folder", SETTINGS_FONTS_FOLDER, &[])
+                .with_description(SETTINGS_FONTS_FOLDER_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_FOLDER_KEYWORDS),
+            entry("custom-fonts", SETTINGS_FONTS_CUSTOM_FONTS, &[])
+                .with_keywords(SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS),
         ],
     ),
 ];
