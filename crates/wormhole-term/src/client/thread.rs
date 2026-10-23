@@ -401,10 +401,11 @@ impl State {
             // Before the exit is reported: the app reads it when it hears that.
             self.link.set_lost();
         }
+        // Nothing runs after this to give up on an update the host never ended, whether or not the
+        // exit was heard first: the connection is the only thing that could have ended it.
+        self.replica.release_sync();
         if !self.exited {
             self.exited = true;
-            // Nothing runs after this to give up on an update the host never ended.
-            self.replica.release_sync();
             self.proxy.exited(None, None);
         }
     }

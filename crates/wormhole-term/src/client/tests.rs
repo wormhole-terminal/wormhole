@@ -372,6 +372,22 @@ fn a_lost_host_inside_a_synchronized_update_leaves_the_last_screen_shown() {
 }
 
 #[test]
+fn the_end_after_the_programs_exit_inside_a_synchronized_update_leaves_the_last_screen_shown() {
+    let (pty, events, mut script) = connected(StreamMode::Raw);
+    let mut snapshot = ScreenSnapshot::default();
+    pty.snapshot(&mut snapshot, 0);
+    script.send(&Message::Out(wire::Out { offset: 0, bytes: b"\x1b[?2026hlast words" }));
+    wait_for("the update's text", || pty.screen_text().contains("last words"));
+    // The exit is heard first, then the connection ends: the update is still held.
+    script.event(0, EventKind::Exited(wire::ExitInfo { code: 0, signal: 0, at_ms: 0 }));
+    next_event(&events, "exit", |e| matches!(e, PtyEvent::Exited(Some(0))));
+    drop(script);
+    std::thread::sleep(Duration::from_millis(50));
+    pty.snapshot(&mut snapshot, 0);
+    assert_eq!(snapshot.rows()[0].cells()[0].c, 'l', "the screen is shown, not the frame from before");
+}
+
+#[test]
 fn the_programs_exit_then_the_end_is_no_lost_host() {
     let (pty, events, mut script) = connected(StreamMode::Raw);
     script.event(0, EventKind::Exited(wire::ExitInfo { code: 3, signal: 0, at_ms: 0 }));
