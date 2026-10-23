@@ -45,13 +45,18 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     menu: None,
     // The log is read again while the tab shows.
     tick: Some(|entity, facts, _, cx| {
-        typed(entity).update(cx, |history, cx| history.tick(facts, cx));
+        if facts.features.has(FeatureId::History) {
+            typed(entity).update(cx, |history, cx| history.tick(facts, cx));
+        }
     }),
     profile_shown: None,
     profiles: None,
     // The window came to the front.
     refresh: Some(|entity, facts, cx| {
-        typed(entity).update(cx, |history, cx| history.came_to_front(facts, cx));
+        // Off, the tab keeps its data and reads nothing.
+        if facts.features.has(FeatureId::History) {
+            typed(entity).update(cx, |history, cx| history.came_to_front(facts, cx));
+        }
     }),
     approves_programs: None,
     spawn: None,

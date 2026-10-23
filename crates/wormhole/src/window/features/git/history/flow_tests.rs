@@ -331,6 +331,28 @@ fn a_folder_that_becomes_a_repository_gets_its_log_at_once(cx: &mut TestAppConte
     assert_eq!(subjects(cx, &window), ["first"]);
 }
 
+/// With History off the window's refresh and tick leave it alone; on again, it takes in the window.
+#[gpui_kit::test]
+fn history_off_runs_neither_the_refresh_nor_the_tick(cx: &mut TestAppContext) {
+    use wormhole_core::config::FeatureId;
+    if isolate("history_off_runs_neither_the_refresh_nor_the_tick") {
+        return;
+    }
+    let window = start(cx, 1);
+    let known = |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| history(ws).read(cx).terminals.len());
+    let before = known(cx);
+    cx.update(|cx| crate::settings::switch_feature(cx, FeatureId::History, false));
+    drive(cx, &window, |ws, window, cx| {
+        ws.new_session(window, cx);
+        ws.refresh_features(cx);
+        ws.tick(window, cx);
+    });
+    assert_eq!(known(cx), before, "it was not told of the new terminal while off");
+    cx.update(|cx| crate::settings::switch_feature(cx, FeatureId::History, true));
+    drive(cx, &window, |ws, _, cx| ws.refresh_features(cx));
+    assert_eq!(known(cx), before + 1, "and takes it in when on");
+}
+
 /// A restart puts a new terminal view under the same id: History reads the log in the folder of the one
 /// that lives now, not of the dead one it first saw.
 #[gpui_kit::test]
