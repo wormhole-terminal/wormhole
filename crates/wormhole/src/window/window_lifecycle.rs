@@ -188,6 +188,8 @@ impl Workspace {
         }
         state.forget_window(&from, self.window_id);
         self.profile = target.clone();
+        // The features that keep something for the profile (an open worktree dialog) follow.
+        self.refresh_features(cx);
         // What it draws with follows: its terminals read their window's profile (an open diff reads it
         // from the window's facts at the next frame).
         for session in &self.sessions {

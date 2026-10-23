@@ -232,6 +232,42 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     assert_eq!(again.expect_err("refused").code, ErrorCode::Failed);
 }
 
+/// A dialog that is up when its window moves to another profile follows that profile's approvals: Create
+/// reads the project's setup as the window's profile is now, not as it was when the dialog opened.
+#[gpui_kit::test]
+fn a_dialog_follows_the_profile_its_window_moves_to(cx: &mut TestAppContext) {
+    if isolate("a_dialog_follows_the_profile_its_window_moves_to") {
+        return;
+    }
+    use wormhole_core::config::profile::{NewProfile, StartFrom};
+    let window = start(cx, 1);
+    base(cx, "worktrees-moves");
+    let root = in_repo(cx, &window, "moves");
+    with_project(&root);
+    trust(cx, &root);
+    let work = cx
+        .update(|cx| {
+            let new =
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults };
+            let id = crate::app_state::AppState::create_profile(new, cx)?;
+            crate::app_state::AppState::ensure_open(&id, cx);
+            Ok::<ProfileId, String>(id)
+        })
+        .expect("makes the profile");
+    drive(cx, &window, menu_item);
+    let asked_as =
+        |cx: &mut TestAppContext| read_cx(cx, &window, |ws, cx| worktrees(ws).read(cx).asked_as().cloned());
+    assert_eq!(asked_as(cx), Some(ProfileId::default_profile()));
+
+    drive(cx, &window, |ws, _, cx| ws.rehome(&work, cx).expect("the window moves"));
+    assert_eq!(asked_as(cx), Some(work.clone()), "the dialog is Work's now");
+    assert_eq!(
+        cx.update(|cx| project::api::worktree_setup(&work, &root, cx)),
+        None,
+        "Work does not trust the project, so no setup runs for it"
+    );
+}
+
 #[gpui_kit::test]
 fn the_command_line_names_what_is_wrong_with_the_folder_or_the_branch(cx: &mut TestAppContext) {
     if isolate("the_command_line_names_what_is_wrong_with_the_folder_or_the_branch") {

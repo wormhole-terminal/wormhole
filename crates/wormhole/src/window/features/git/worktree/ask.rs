@@ -27,7 +27,8 @@ use crate::window::{dialog, session};
 pub(super) struct Asking {
     pub(super) input: Entity<InputState>,
     repo: PathBuf,
-    /// The profile of the window it was asked in: whose approvals the project's setup follows.
+    /// The profile of the window it was asked in, kept up to date if the window moves
+    /// ([`Worktrees::follow_profile`]): whose approvals the project's setup follows.
     profile: ProfileId,
     command: Option<String>,
     pub(super) error: Option<SharedString>,
@@ -247,6 +248,20 @@ impl Worktrees {
                 window.focus(&field, cx);
             }
         });
+    }
+
+    /// The window now lives in `profile` (it was moved to another): the approvals the dialog's Create
+    /// follows are that profile's, not those of the one it was opened in.
+    pub(super) fn follow_profile(&mut self, profile: &ProfileId) {
+        if let Some(ask) = &mut self.asking {
+            ask.profile = profile.clone();
+        }
+    }
+
+    /// The profile whose approvals Create would follow.
+    #[cfg(test)]
+    pub(super) fn asked_as(&self) -> Option<&ProfileId> {
+        self.asking.as_ref().map(|ask| &ask.profile)
     }
 
     /// Create (or ↩): make the worktree the field names. Returns whether the dialog closes: not while

@@ -28,6 +28,10 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
     }),
     bind: Some(bind),
     // A worktree Wormhole made: its own ports, whatever the project says.
+    // A window moved to another profile: a dialog that is up follows that profile's approvals.
+    refresh: Some(|entity, facts, cx| {
+        typed(entity).update(cx, |worktrees, _| worktrees.follow_profile(facts.profile))
+    }),
     spawn: Some(|_, cwd, cx| SpawnAdd {
         env: cwd
             .and_then(|cwd| app(cx).worktrees.find(cwd))
