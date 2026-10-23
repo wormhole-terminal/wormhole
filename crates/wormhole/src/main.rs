@@ -1,4 +1,8 @@
 #![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
+#![allow(
+    unreachable_pub,
+    reason = "a binary crate: a `pub` is crate-wide, and nothing outside can name it anyway"
+)]
 
 mod about;
 mod actions;

@@ -39,6 +39,9 @@ unic-langid = "0.9"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
+# A `pub` nothing outside the crate can name is `pub(crate)` (R-13). The app is a binary, where every `pub`
+# is crate-wide: it allows the lint at its root.
+unreachable_pub = "warn"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"
