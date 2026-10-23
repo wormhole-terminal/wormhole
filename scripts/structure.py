@@ -37,6 +37,16 @@ crates/<crate>/src, tests included:
   cross-reexports   `pub use crate::B::...` in a file of another module A (modules as the cycles rule has them)
   impl-outside      `impl Workspace` / `impl Session` blocks outside their home folder (app crate); the
                     `pending` folders inside a home are not exempt: their blocks are counted in the allowlist
+  feature-api       a file of the features folder naming a module of the window other than the ones its
+                    contract lists (`feature_rules.api`; `Workspace` as a path is allowed): the features reach
+                    the window through the contract, the facts and the repository read, not its insides
+  features-siblings a file of one feature naming another (`crate::features::<b>`), except the `bridges` the
+                    config lists with a reason (a bridge that no longer names its sibling is stale)
+  frame-names-no-feature
+                    a file of the frame (window, sidebar, onboarding) containing a word that names a feature:
+                    the flags and helpers a feature owns, a panel tab by its variant (`feature_rules.frame_bans`)
+  state-fields      the number of fields of the big state structs (`feature_rules.state_types`: type -> file), as a ceiling:
+                    the allowlist holds today's count and only drops
 
 Why a script that reads text: it runs in a second without building anything (tests only run on CI
 here), so check.sh can call it first and every phase of the restructuring has a number that goes to
@@ -79,7 +89,8 @@ CONFIG_NAME = os.path.join("scripts", "structure.json")
 
 RULES = [
     "file-size", "os-edge", "os-edge-neutral", "bucket-names", "orphans", "glob-imports", "cycles", "layers",
-    "cross-reexports", "impl-outside",
+    "cross-reexports", "impl-outside", "feature-api", "features-siblings", "frame-names-no-feature",
+    "state-fields",
 ]
 RULE_HELP = {
     "file-size": "files over {fail} lines",
@@ -92,6 +103,10 @@ RULE_HELP = {
     "layers": "top-level modules using a higher layer",
     "cross-reexports": "re-exports across modules",
     "impl-outside": "impl Workspace/Session outside the home",
+    "feature-api": "features naming the window's insides",
+    "features-siblings": "features naming each other",
+    "frame-names-no-feature": "the frame naming a feature",
+    "state-fields": "fields of the big state structs",
 }
 
 DEFAULT_CONFIG = {
@@ -120,6 +135,8 @@ DEFAULT_CONFIG = {
     "size": {"warn": 600, "fail": 1000},
     # Folders whose size the plan tracks (files and lines, listed by `counts`).
     "track_dirs": ["crates/wormhole/src/window"],
+    # The rules about the window and its features (see the docs above); empty: not checked.
+    "feature_rules": {},
 }
 
 # ---------------------------------------------------------------------------------------------------
@@ -931,11 +948,145 @@ def rule_impl_outside(crate: Crate, cfg: dict, found: Findings) -> None:
             _add(found, "%s :: impl %s" % (src.rel, m.group(1)), crate.name, src.at(m.start()))
 
 
+def _under_dirs(rel: str, dirs: Iterable[str]) -> bool:
+    return any(rel.startswith(d) for d in dirs)
+
+
+def _not_in(regions: List[Tuple[int, int]], offset: int) -> bool:
+    return not any(x <= offset < y for x, y in regions)
+
+
+def rule_feature_api(crate: Crate, cfg: dict, found: Findings) -> None:
+    conf = cfg.get("feature_rules") or {}
+    if crate.name != conf.get("crate"):
+        return
+    allowed = set(conf["api"]) | {"Workspace"}
+    for rel, src in crate.files.items():
+        if not rel.startswith(conf["features"]) or crate.is_test_file(rel):
+            continue
+        regions = crate.test_regions(rel)
+        for m in scan(_CRATE_REF, src.clean):
+            if not _not_in(regions, m.start()):
+                continue
+            for path in crate_paths(src.clean, m, 2):
+                if len(path) >= 2 and path[0] == "window" and path[1] not in allowed:
+                    _add(found, "%s :: crate::window::%s" % (src.rel, path[1]), crate.name, src.at(m.start()))
+
+
+def bridge_uses(crate: Crate, conf: dict) -> Dict[Tuple[str, str], int]:
+    """(file, sibling) -> how many times the file names the sibling feature, for the bridged files only."""
+    uses: Dict[Tuple[str, str], int] = {}
+    for rel, src in crate.files.items():
+        bridged = conf.get("bridges", {}).get(rel)
+        if not bridged or crate.is_test_file(rel):
+            continue
+        regions = crate.test_regions(rel)
+        for m in scan(_CRATE_REF, src.clean):
+            if not _not_in(regions, m.start()):
+                continue
+            for path in crate_paths(src.clean, m, 2):
+                if len(path) >= 2 and path[0] == "features" and path[1] in bridged:
+                    uses[(rel, path[1])] = uses.get((rel, path[1]), 0) + 1
+    return uses
+
+
+def rule_features_siblings(crate: Crate, cfg: dict, found: Findings) -> None:
+    conf = cfg.get("feature_rules") or {}
+    if crate.name != conf.get("crate"):
+        return
+    base = conf["features"]
+    for rel, src in crate.files.items():
+        if not rel.startswith(base) or crate.is_test_file(rel):
+            continue
+        own = rel[len(base):].split("/")[0]
+        own = own[:-3] if own.endswith(".rs") else own
+        if own == "mod":  # the table itself lists every feature
+            continue
+        bridged = conf.get("bridges", {}).get(rel, {})
+        regions = crate.test_regions(rel)
+        for m in scan(_CRATE_REF, src.clean):
+            if not _not_in(regions, m.start()):
+                continue
+            for path in crate_paths(src.clean, m, 2):
+                if len(path) >= 2 and path[0] == "features" and path[1] != own and path[1] not in bridged:
+                    _add(found, "%s :: crate::features::%s" % (src.rel, path[1]), crate.name, src.at(m.start()))
+
+
+def stale_bridges(crate: Crate, cfg: dict) -> List[str]:
+    conf = cfg.get("feature_rules") or {}
+    if crate.name != conf.get("crate"):
+        return []
+    uses = bridge_uses(crate, conf)
+    out = []
+    for rel, siblings in sorted(conf.get("bridges", {}).items()):
+        for sibling, why in sorted(siblings.items()):
+            if not why:
+                out.append("%s%s: the bridge to %s has no reason" % (crate.prefix, rel, sibling))
+            elif (rel, sibling) not in uses:
+                out.append("%s%s no longer names features::%s: take the bridge out" % (crate.prefix, rel, sibling))
+    return out
+
+
+def rule_frame_names_no_feature(crate: Crate, cfg: dict, found: Findings) -> None:
+    conf = cfg.get("feature_rules") or {}
+    if crate.name != conf.get("crate"):
+        return
+    bans = [(name, re.compile(rx)) for name, rx in conf["frame_bans"].items()]
+    for rel, src in crate.files.items():
+        if not _under_dirs(rel, conf["frame"]) or crate.is_test_file(rel):
+            continue
+        regions = crate.test_regions(rel)
+        for name, rx in bans:
+            for m in scan(rx, src.clean):
+                if _not_in(regions, m.start()):
+                    _add(found, "%s :: %s" % (src.rel, name), crate.name, src.at(m.start()))
+
+
+def count_fields(clean: str, open_pos: int) -> int:
+    """The fields of the struct whose `{` is at `open_pos`: names followed by a colon at the top level of
+    its braces (attributes, comments and generics in field types don't count)."""
+    close = match_close(clean, open_pos, _BRACE)
+    body = clean[open_pos + 1:close]
+    depth, count, i = 0, 0, 0
+    field = re.compile(r"\s*(?:#\s*\[(?:[^\[\]]|\[[^\]]*\])*\]\s*)*(?:pub\s*(?:\([^)]*\)\s*)?)?(?:r#)?\w+\s*:(?!:)")
+    start = 0
+    for i, ch in enumerate(body):
+        if ch in "{(<[":
+            depth += 1
+        elif ch in "})>]":
+            # `->` in a fn type is not a closing angle bracket
+            if ch == ">" and body[i - 1:i] == "-":
+                continue
+            depth -= 1
+        elif ch == "," and depth == 0:
+            if field.match(body, start):
+                count += 1
+            start = i + 1
+    if body[start:].strip() and field.match(body, start):
+        count += 1
+    return count
+
+
+def rule_state_fields(crate: Crate, cfg: dict, found: Findings) -> None:
+    conf = cfg.get("feature_rules") or {}
+    if crate.name != conf.get("crate"):
+        return
+    for name, rel in conf["state_types"].items():
+        src = crate.files.get(rel)
+        if src is None:
+            continue
+        rx = re.compile(r"\bstruct\s+%s\b\s*(?:<[^>{]*>)?\s*\{" % re.escape(name))
+        for m in scan(rx, src.clean):
+            _add(found, "%s :: %s" % (crate.name, name), crate.name, src.at(m.start()), count_fields(src.clean, m.end() - 1))
+
+
 RULE_FUNCS = {
     "file-size": rule_file_size, "os-edge": rule_os_edge,
     "os-edge-neutral": rule_os_edge_neutral, "bucket-names": rule_bucket_names,
     "orphans": rule_orphans, "glob-imports": rule_glob_imports, "cycles": rule_cycles, "layers": rule_layers,
     "cross-reexports": rule_cross_reexports, "impl-outside": rule_impl_outside,
+    "feature-api": rule_feature_api, "features-siblings": rule_features_siblings,
+    "frame-names-no-feature": rule_frame_names_no_feature, "state-fields": rule_state_fields,
 }
 
 
@@ -950,6 +1101,7 @@ class Analysis:
             for rule in RULES:
                 RULE_FUNCS[rule](crate, cfg, self.found[rule])
         self.stale_sanctions = [line for crate in self.crates for line in stale_sanctions(crate, cfg)]
+        self.stale_sanctions += [line for crate in self.crates for line in stale_bridges(crate, cfg)]
         warn, fail = cfg["size"]["warn"], cfg["size"]["fail"]
         self.over: Dict[str, Tuple[int, int]] = {}
         self.big: List[Tuple[int, str]] = []
@@ -1021,6 +1173,8 @@ def describe(an: Analysis, rule: str, key: str, item: Item, have: int) -> str:
         if what.startswith("twice "):
             return "`layers` lists %s in two tiers (%s)" % (what[6:], allowed)
         return "%s uses %s, a higher layer (%s)" % (tuple(what.split(" -> ")) + (allowed,))
+    if rule == "state-fields":
+        return "%s has %d fields, over the ceiling (%s)" % (key.split(" :: ", 1)[1], item.count, allowed)
     if rule == "orphans":
         return "no `mod` declaration reaches this file"
     if rule == "bucket-names":
@@ -1060,7 +1214,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         for rule, key, what in v.stale:
             print("  %s: \"%s\": %s" % (rule, key, what))
     if v.stale_sanctions:
-        print("stale os_edge_sanctioned counts in %s (lower them by hand):" % os.path.relpath(args.config, args.root))
+        print("stale sanctions or bridges in %s (fix them by hand):" % os.path.relpath(args.config, args.root))
         for line in v.stale_sanctions:
             print("  " + line)
     if v.ok:
@@ -1116,8 +1270,13 @@ def build_counts(an: Analysis) -> dict:
         if rule == "layers":
             row("layers: violations", {c: pc[c][0] for c in crates})
             continue
+        if rule == "state-fields":
+            for key, item in sorted(an.found[rule].items()):
+                row("state-fields: %s" % key.split(" :: ", 1)[1], {item.crate: item.count})
+            continue
         unit = {"os-edge": "sites", "os-edge-neutral": "sites", "glob-imports": "uses",
-                "cross-reexports": "re-exports", "impl-outside": "impl blocks"}.get(rule)
+                "cross-reexports": "re-exports", "impl-outside": "impl blocks", "feature-api": "sites",
+                "features-siblings": "sites", "frame-names-no-feature": "sites"}.get(rule)
         if unit:
             row("%s: %s" % (rule, unit), {c: pc[c][0] for c in crates})
             row("%s: files" % rule, {c: pc[c][1] for c in crates})
@@ -1528,6 +1687,59 @@ def selftest() -> int:
                {k: it.count for k, it in an.found["impl-outside"].items()},
                {"crates/app/src/window/area/mod.rs :: impl Workspace": 2,
                 "crates/app/src/window/area/mod.rs :: impl Session": 1})
+
+        # feature-api, features-siblings, frame-names-no-feature, state-fields: the window and its features.
+        rules_cfg = dict(_fixture_cfg(), feature_rules={
+            "crate": "app", "features": "src/features/", "api": ["feature", "facts"],
+            "frame": ["src/window/", "src/sidebar/"],
+            "frame_bans": {"notes_on": r"\bnotes_on\s*\(", "TabId variant": r"TabId\s*::\s*(?:Changes|Notes)\b"},
+            "bridges": {"src/features/a/bridge.rs": {"b": "a needs b once"}},
+            "state_types": {"Workspace": "src/window/mod.rs", "Big": "src/big.rs"}})
+        files = {
+            "crates/app/src/main.rs": "mod window;\nmod sidebar;\nmod features;\nmod big;\n",
+            "crates/app/src/window/mod.rs":
+                "use crate::features::a::X;\nfn f(cx: u8) { notes_on(cx); }\nlet notes_on = 1;\n"
+                "// notes_on(cx)\nfn g() -> TabId { TabId::default() }\nlet t = TabId::Changes;\n"
+                "pub struct Workspace {\n    /// a doc: not_a_field: x\n    pub(crate) sessions: Vec<Session>,\n"
+                "    #[allow(dead_code)]\n    map: HashMap<String, (u8, u8)>,\n    hook: fn(u8) -> Option<u8>,\n"
+                "    last: i64\n}\n#[cfg(test)]\nmod tests {\n    fn t() { notes_on(1); let x = TabId::Notes; }\n}\n",
+            "crates/app/src/sidebar/mod.rs": "fn s() { let n = TabId::Notes; }\n",
+            "crates/app/src/big.rs": "struct Big<T: Clone> {\n    a: T,\n    b: Vec<fn(u8) -> u8>,\n}\nstruct Small { a: u8 }\n",
+            "crates/app/src/features/mod.rs": "mod a;\nmod b;\nuse crate::features::a::X;\nuse crate::features::b::Y;\n",
+            "crates/app/src/features/a/mod.rs":
+                "mod bridge;\nuse crate::window::feature::F;\nuse crate::window::Workspace;\n"
+                "use crate::window::{facts::W, sessions::S, focus::G};\nuse crate::features::a::own::Z;\n"
+                "use crate::features::b::Y;\n// use crate::window::sessions::C;\n"
+                "#[cfg(test)]\nmod tests {\n    use crate::window::view_tests::V;\n    use crate::features::b::T;\n}\n",
+            "crates/app/src/features/a/bridge.rs": "use crate::features::b::Y;\nuse crate::features::c::W;\n",
+            "crates/app/src/features/b.rs": "use crate::features::a::A;\n",
+        }
+        an = make(files, rules_cfg)
+        expect("feature-api", {k: it.count for k, it in an.found["feature-api"].items()},
+               {"crates/app/src/features/a/mod.rs :: crate::window::sessions": 1,
+                "crates/app/src/features/a/mod.rs :: crate::window::focus": 1})
+        expect("features-siblings",
+               {k: it.count for k, it in an.found["features-siblings"].items()},
+               {"crates/app/src/features/a/mod.rs :: crate::features::b": 1,
+                "crates/app/src/features/a/bridge.rs :: crate::features::c": 1,
+                "crates/app/src/features/b.rs :: crate::features::a": 1})
+        expect("frame-names-no-feature",
+               {k: it.count for k, it in an.found["frame-names-no-feature"].items()},
+               {"crates/app/src/window/mod.rs :: notes_on": 1, "crates/app/src/window/mod.rs :: TabId variant": 1,
+                "crates/app/src/sidebar/mod.rs :: TabId variant": 1})
+        expect("state-fields", {k: it.count for k, it in an.found["state-fields"].items()},
+               {"app :: Workspace": 4, "app :: Big": 2})
+        expect("a bridge in use is not stale", an.stale_sanctions, [])
+        files2 = dict(files, **{"crates/app/src/features/a/bridge.rs": "use crate::features::c::W;\n"})
+        expect("a bridge that names nothing is stale", make(files2, rules_cfg).stale_sanctions,
+               ["crates/app/src/features/a/bridge.rs no longer names features::b: take the bridge out"])
+        no_reason = dict(rules_cfg, feature_rules=dict(rules_cfg["feature_rules"],
+                                                        bridges={"src/features/a/bridge.rs": {"b": ""}}))
+        expect("a bridge needs a reason", make(files, no_reason).stale_sanctions,
+               ["crates/app/src/features/a/bridge.rs: the bridge to b has no reason"])
+        expect("without feature_rules the four rules are off",
+               [keys(make(files), r) for r in ("feature-api", "features-siblings", "frame-names-no-feature", "state-fields")],
+               [[], [], [], []])
 
         # file size: over 10 fails, over 5 is counted.
         an = make({"crates/app/src/main.rs": "mod a;\nmod b;\nmod c;\n", "crates/app/src/a.rs": "x\n" * 11,

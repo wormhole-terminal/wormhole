@@ -198,7 +198,40 @@
     },
     "track_dirs": [
       "crates/wormhole/src/window"
-    ]
+    ],
+    "feature_rules": {
+      "crate": "wormhole",
+      "features": "src/features/",
+      "api": [
+        "feature",
+        "facts",
+        "repo"
+      ],
+      "frame": [
+        "src/window/",
+        "src/sidebar/",
+        "src/onboarding/"
+      ],
+      "frame_bans": {
+        "FeatureFlag::NotesAndTasks": "FeatureFlag\\s*::\\s*NotesAndTasks",
+        "FeatureFlag::ProjectFolders": "FeatureFlag\\s*::\\s*ProjectFolders",
+        "notes_on": "\\bnotes_on\\s*\\(",
+        "usage_tab_on": "\\busage_tab_on\\s*\\(",
+        "project_folders_on": "\\bproject_folders_on\\s*\\(",
+        "RightTab": "\\bRightTab\\b",
+        "TabId variant": "TabId\\s*::\\s*(?:Changes|History|Notes|Usage|Project)\\b"
+      },
+      "bridges": {
+        "src/features/project/notes_sync.rs": {
+          "notes": "the folder's notes.md and a terminal's notes and tasks are synced by the one file that needs both (notes' api)"
+        }
+      },
+      "state_types": {
+        "Workspace": "src/window/mod.rs",
+        "Session": "src/window/session.rs",
+        "AppState": "src/app_state/mod.rs"
+      }
+    }
   },
   "allowlist": {
     "file-size": {
@@ -249,6 +282,14 @@
     "cross-reexports": {
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
-    "impl-outside": {}
+    "impl-outside": {},
+    "feature-api": {},
+    "features-siblings": {},
+    "frame-names-no-feature": {},
+    "state-fields": {
+      "wormhole :: AppState": 27,
+      "wormhole :: Session": 10,
+      "wormhole :: Workspace": 51
+    }
   }
 }
