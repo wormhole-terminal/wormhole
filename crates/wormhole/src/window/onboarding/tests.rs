@@ -459,3 +459,40 @@ fn the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings(cx: 
     cx.run_until_parked();
     assert!(cx.update(|cx| app(cx).settings_window.is_some()), "Settings opened");
 }
+
+// -------------------------------------------------------------------------------- the frame
+
+/// Allocations the third draw of a one-terminal window under the intro window's welcome page, and under
+/// its look step (the page with the most to draw), may make. Measured: 3,417 and 5,127 allocations
+/// (1.9 MB and 2.8 MB) while the intro was part of the `Workspace`, 3,419 and 5,129 as a child view of
+/// its own. The budget is that plus about a hundredth, so a cost per card or per frame that grows shows
+/// at once.
+const WELCOME_FRAME_ALLOCATIONS: u64 = 3_455;
+const LOOK_FRAME_ALLOCATIONS: u64 = 5_180;
+
+#[gpui_kit::test]
+fn a_frame_under_the_intro_window_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    if isolate_in(module_path!(), "a_frame_under_the_intro_window_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    for (page, budget) in [(Step::Welcome, WELCOME_FRAME_ALLOCATIONS), (Step::Look, LOOK_FRAME_ALLOCATIONS)] {
+        drive(cx, &window, |ws, window, cx| ws.open_onboarding(page, window, cx));
+        // The first draws build what a window keeps; the third is a frame.
+        draw(cx, &window);
+        draw(cx, &window);
+        let before = thread_counts();
+        draw(cx, &window);
+        let drawn = thread_counts().since(before);
+        eprintln!(
+            "window frame under the intro's {page:?} page: {} allocations, {} bytes",
+            drawn.allocations, drawn.bytes
+        );
+        assert!(
+            drawn.allocations <= budget,
+            "a frame under the {page:?} page made {} allocations (budget {budget})",
+            drawn.allocations
+        );
+    }
+}
