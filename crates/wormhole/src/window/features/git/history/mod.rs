@@ -12,6 +12,7 @@
 //! was missing. The status the sidebar shows is the window's (`window::repo`), not read here.
 
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use gpui_kit::*;
 use wormhole_core::storage::paths::ProfileId;
@@ -85,7 +86,17 @@ impl History {
             self.profile = facts.profile.clone();
         }
         for session in facts.sessions() {
-            self.terminals.entry(session.id).or_insert_with(|| session.terminal.clone());
+            // A restart puts a new view under the same id: the log is read in the folder of the one
+            // that lives, and the dead one is let go.
+            match self.terminals.entry(session.id) {
+                Entry::Occupied(mut kept) if *kept.get() != *session.terminal => {
+                    kept.insert(session.terminal.clone());
+                }
+                Entry::Occupied(_) => {}
+                Entry::Vacant(slot) => {
+                    slot.insert(session.terminal.clone());
+                }
+            }
         }
     }
 

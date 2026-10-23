@@ -297,6 +297,41 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
     assert_eq!(subjects(cx, &window).len(), 3);
 }
 
+/// A restart puts a new terminal view under the same id: History reads the log in the folder of the one
+/// that lives now, not of the dead one it first saw.
+#[gpui_kit::test]
+fn the_tab_follows_a_terminal_that_was_restarted(cx: &mut TestAppContext) {
+    if isolate("the_tab_follows_a_terminal_that_was_restarted") {
+        return;
+    }
+    let first = make_two_commits("restart-first");
+    let other = repo("restart-other", &[("z.txt", "z\n")]);
+    let record = WindowRecord {
+        id: 1,
+        sessions: vec![SessionRecord::new(1, None, Some(first.to_string_lossy().into_owned()))],
+        ..Default::default()
+    };
+    let window = start_with(cx, record);
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
+    cx.run_until_parked();
+    assert_eq!(subjects(cx, &window), ["second", "first"]);
+    let old = read(cx, &window, |ws| ws.active_terminal());
+    // The shell goes to another repository and is restarted there; the dead view stays where it was.
+    drive(cx, &window, |ws, window, cx| {
+        go(ws, &other, cx);
+        let id = ws.active_session().id;
+        ws.on_terminal_event(id, crate::terminal_view::TerminalEvent::Restart, window, cx)
+    });
+    assert_ne!(read(cx, &window, |ws| ws.active_terminal()), old, "a new view under the same id");
+    cx.update(|cx| old.update(cx, |terminal, _| terminal.cwd = Some(first.clone())));
+    drive(cx, &window, |ws, window, cx| {
+        ws.ticks = 11;
+        ws.tick(window, cx);
+    });
+    cx.run_until_parked();
+    assert_eq!(subjects(cx, &window), ["first"], "the log of the folder the live terminal is in");
+}
+
 /// The person picks a branch (`None`: HEAD) in the History picker.
 fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<Workspace>) {
     let session = ws.active_session().id;
