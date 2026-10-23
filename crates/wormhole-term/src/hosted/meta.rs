@@ -8,8 +8,9 @@
 use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read as _, Write as _};
-use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::{Path, PathBuf};
+
+use crate::sys::fs::private_file;
 
 /// The file format this build writes and reads.
 pub const FORMAT: u32 = 1;
@@ -179,7 +180,7 @@ impl Meta {
         let temp = dir.join(format!(".{}.meta.{}", self.id, std::process::id()));
         // A leftover of a crashed write by a process with this pid is replaced.
         let _ = fs::remove_file(&temp);
-        let mut file = OpenOptions::new().write(true).create_new(true).mode(0o600).open(&temp)?;
+        let mut file = private_file(OpenOptions::new().write(true).create_new(true)).open(&temp)?;
         let written = file.write_all(text.as_bytes()).and_then(|()| file.flush());
         drop(file);
         let renamed = written.and_then(|()| fs::rename(&temp, &path));
@@ -205,9 +206,8 @@ impl Meta {
 
 #[cfg(test)]
 mod tests {
-    use std::os::unix::fs::PermissionsExt as _;
-
     use super::*;
+    use crate::sys::fs::mode;
 
     fn sample() -> Meta {
         Meta {
@@ -260,7 +260,7 @@ mod tests {
         let meta = sample();
         let path = write(dir.path(), &meta).expect("writes");
         assert_eq!(path, dir.path().join("abcdefghij12.meta"));
-        assert_eq!(fs::metadata(&path).expect("exists").permissions().mode() & 0o777, 0o600);
+        assert_eq!(mode(&fs::metadata(&path).expect("exists")) & 0o777, 0o600);
         let mut later = meta.clone();
         later.child_pid = Some(9);
         later.write(dir.path()).expect("replaces");

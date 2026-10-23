@@ -12,7 +12,8 @@
         "src/peer.rs"
       ],
       "wormhole-term": [
-        "src/pty/"
+        "src/pty/",
+        "src/sys/"
       ],
       "wormhole-text": [],
       "wormhole-wire": []
@@ -24,6 +25,14 @@
             "allow(unsafe_code)": 1
           },
           "why": "a counting global allocator for test and devctl builds: GlobalAlloc is an unsafe trait, not OS code"
+        }
+      },
+      "wormhole-term": {
+        "src/client/thread.rs": {
+          "tokens": {
+            "allow(unsafe_code)": 1
+          },
+          "why": "polling's registration contract (the socket outlives its registration, kept by Drop), not OS code"
         }
       }
     },
@@ -274,25 +283,9 @@
       "crates/wormhole-term/src/client/launch.rs :: std::os::unix": 1,
       "crates/wormhole-term/src/client/launch.rs :: target_vendor": 3,
       "crates/wormhole-term/src/client/open.rs :: libc::": 1,
-      "crates/wormhole-term/src/client/open.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/client/socket.rs :: allow(unsafe_code)": 3,
-      "crates/wormhole-term/src/client/socket.rs :: cfg(target_os": 2,
-      "crates/wormhole-term/src/client/socket.rs :: libc::": 9,
-      "crates/wormhole-term/src/client/socket.rs :: std::os::fd": 1,
-      "crates/wormhole-term/src/client/socket.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/client/tests.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/client/thread.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole-term/src/client/thread.rs :: std::os::unix": 1,
-      "crates/wormhole-term/src/hosted/meta.rs :: std::os::unix": 2,
-      "crates/wormhole-term/src/hosted/paths.rs :: allow(unsafe_code)": 1,
-      "crates/wormhole-term/src/hosted/paths.rs :: libc::": 1,
-      "crates/wormhole-term/src/input/file_drop.rs :: cfg(unix": 1,
       "crates/wormhole-term/src/ports.rs :: allow(unsafe_code)": 1,
       "crates/wormhole-term/src/ports.rs :: cfg(target_os": 5,
       "crates/wormhole-term/src/ports.rs :: libc::": 22,
-      "crates/wormhole-term/src/procinfo.rs :: allow(unsafe_code)": 2,
-      "crates/wormhole-term/src/procinfo.rs :: cfg(target_os": 3,
-      "crates/wormhole-term/src/procinfo.rs :: libc::": 6,
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
     },

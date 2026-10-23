@@ -86,7 +86,6 @@ mod tests {
     }
 
     /// The real check: a shell must read every escaped path back as exactly the original.
-    #[cfg(unix)]
     #[test]
     fn a_shell_reads_the_escaped_path_back_unchanged() {
         let names = [

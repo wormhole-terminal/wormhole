@@ -23,7 +23,6 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
-use std::os::unix::net::UnixStream;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -43,6 +42,7 @@ use crate::events::EventProxy;
 use crate::hosted::ATTACH_HISTORY_LINES;
 use crate::pty::{Flow, Sink};
 use crate::screen::Screen;
+use crate::sys::socket::Stream;
 
 /// The socket's key in the poller.
 const SOCKET: usize = 1;
@@ -433,7 +433,7 @@ impl State {
 
 /// The thread: the socket, its poller and decoder, and the state.
 pub(crate) struct Client {
-    stream: UnixStream,
+    stream: Stream,
     poller: Arc<Poller>,
     dec: Decoder,
     /// The socket is polled for room to write too (only while frames wait).
@@ -444,12 +444,7 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(
-        stream: UnixStream,
-        dec: Decoder,
-        poller: Arc<Poller>,
-        state: State,
-    ) -> io::Result<Self> {
+    pub(crate) fn new(stream: Stream, dec: Decoder, poller: Arc<Poller>, state: State) -> io::Result<Self> {
         stream.set_nonblocking(true)?;
         stream.set_read_timeout(None)?;
         let client = Self { stream, poller, dec, writable: false, broken: false, state };

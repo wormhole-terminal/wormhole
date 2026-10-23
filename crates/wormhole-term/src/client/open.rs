@@ -19,6 +19,7 @@ use crate::engine::OwnFeed;
 use crate::events::EventProxy;
 use crate::hosted::{meta, paths};
 use crate::pty::{self, FairLock, Sink};
+use crate::sys::socket::Stream;
 use crate::{Backend, GridSize, Launch, Pty, PtyEvents, StartOptions};
 
 /// How to start a session host: its binary (inside the app bundle), the folder hosts keep their
@@ -196,10 +197,7 @@ fn spawn_in(
 
 /// Connect to the host just started, once it listens: its meta file names the socket and appears
 /// once it does. The readiness pipe is watched meanwhile, for a host that failed first.
-fn connect_new(
-    host: &HostCommand<'_>,
-    started: &mut launch::Started,
-) -> anyhow::Result<std::os::unix::net::UnixStream> {
+fn connect_new(host: &HostCommand<'_>, started: &mut launch::Started) -> anyhow::Result<Stream> {
     let meta_path = paths::meta_path(host.hosts_dir, host.id);
     let until = Instant::now() + START_TIMEOUT;
     loop {

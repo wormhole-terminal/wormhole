@@ -20,7 +20,8 @@
 //!
 //! - `pty`: the pseudo-terminal, the program on it and the reader thread (`open`, `spawn`,
 //!   `reader`, `hangup`), and the fair lock the thread and the UI share the screen under;
-//! - `procinfo`: what the system says of a process (its folder) and of this machine (its name);
+//! - `sys`: the OS edge besides the PTY: users, sockets and peers, file modes, a process's folder, the
+//!   machine's name (`procinfo` keeps the check that an OSC 7 host is this machine);
 //! - `agents`: the coding agents' registry and which one runs in the foreground of a terminal;
 //! - `ports`: the TCP ports the programs under the shell listen on (libproc);
 //! - `events`: the bridge from the PTY thread to the UI;
@@ -66,6 +67,7 @@ mod screen;
 pub mod scrollbar;
 pub mod sequences;
 mod snapshot;
+pub mod sys;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
 mod text;
@@ -526,7 +528,7 @@ impl Pty {
     /// (ssh) or of a folder that isn't here never get this far (`EventProxy::osc`), so those
     /// terminals show the local shell's folder, as before.
     pub fn cwd(&self) -> Option<PathBuf> {
-        let polled = procinfo::process_cwd(self.pid()?);
+        let polled = sys::process::cwd(self.pid()?);
         let mut reported = self.reported_cwd.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(path) = self.shared.take_cwd_report() {
             *reported = Some(ReportedCwd { path, polled_then: polled.clone() });

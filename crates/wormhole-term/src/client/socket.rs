@@ -4,8 +4,6 @@
 //! whatever it read past the last frame.
 
 use std::io::{self, Write as _};
-use std::os::fd::AsRawFd;
-use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Instant;
 
@@ -13,19 +11,22 @@ use wormhole_wire::{
     self as wire, AppVersion, CHANNEL_LOCAL, Decoder, Features, Message, Role, error_code, version,
 };
 
+use crate::sys::socket::{Stream, peer_user};
+use crate::sys::user::UserId;
+
 /// A connection whose handshake is done.
 pub(crate) struct Joined {
-    pub stream: UnixStream,
+    pub stream: Stream,
     /// With whatever it read past the handshake's last frame.
     pub dec: Decoder,
 }
 
 /// Connect to `socket`, refusing a peer that is not this user.
-pub(super) fn connect(socket: &Path) -> io::Result<UnixStream> {
-    let stream = UnixStream::connect(socket)?;
-    let peer = peer_uid(&stream)?;
-    if peer != euid() {
-        tracing::warn!(peer, "a session host's socket is another user's; not using it");
+pub(super) fn connect(socket: &Path) -> io::Result<Stream> {
+    let stream = Stream::connect(socket)?;
+    let peer = peer_user(&stream)?;
+    if peer != UserId::current() {
+        tracing::warn!(%peer, "a session host's socket is another user's; not using it");
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "the socket belongs to another user"));
     }
     Ok(stream)
@@ -33,7 +34,7 @@ pub(super) fn connect(socket: &Path) -> io::Result<UnixStream> {
 
 /// Say `Hello` as the controller; the host's `Welcome`, which must be for `id`.
 pub(super) fn hello(
-    stream: &UnixStream,
+    stream: &Stream,
     dec: &mut Decoder,
     id: &str,
     until: Instant,
@@ -83,7 +84,7 @@ pub(super) fn hello(
 /// Ask a new host to run `spawn`; its `Info` (the program's pid and size), or the host's text for
 /// why it could not.
 pub(super) fn spawn(
-    stream: &UnixStream,
+    stream: &Stream,
     dec: &mut Decoder,
     spawn: &wire::Spawn<'_>,
     until: Instant,
@@ -97,7 +98,7 @@ pub(super) fn spawn(
 }
 
 /// Write one frame.
-pub(super) fn send(stream: &UnixStream, msg: &Message<'_>) -> io::Result<()> {
+pub(super) fn send(stream: &Stream, msg: &Message<'_>) -> io::Result<()> {
     let mut buf = Vec::new();
     wire::encode(&mut buf, CHANNEL_LOCAL, 0, msg).map_err(io::Error::other)?;
     (&mut &*stream).write_all(&buf)
@@ -105,7 +106,7 @@ pub(super) fn send(stream: &UnixStream, msg: &Message<'_>) -> io::Result<()> {
 
 /// Read frames until `take` makes something of one, by `until`.
 fn recv<T>(
-    stream: &UnixStream,
+    stream: &Stream,
     dec: &mut Decoder,
     until: Instant,
     mut take: impl FnMut(&Message<'_>) -> Option<io::Result<T>>,
@@ -151,41 +152,4 @@ fn client_version() -> AppVersion {
         minor: parts.next().unwrap_or(0),
         patch: parts.next().unwrap_or(0),
     }
-}
-
-#[allow(unsafe_code)] // libc FFI; no arguments.
-fn euid() -> u32 {
-    // SAFETY: geteuid takes nothing and cannot fail.
-    unsafe { libc::geteuid() }
-}
-
-/// The effective uid of the process at the other end of a Unix socket.
-#[cfg(not(target_os = "linux"))]
-#[allow(unsafe_code)] // libc FFI; the descriptor is open for the call, the outputs are locals.
-fn peer_uid(socket: &impl AsRawFd) -> io::Result<u32> {
-    let (mut uid, mut gid) = (0, 0);
-    // SAFETY: getpeereid writes two integers into locals; the descriptor is borrowed and open.
-    if unsafe { libc::getpeereid(socket.as_raw_fd(), &mut uid, &mut gid) } == 0 {
-        Ok(uid)
-    } else {
-        Err(io::Error::last_os_error())
-    }
-}
-
-#[cfg(target_os = "linux")]
-#[allow(unsafe_code)] // libc FFI; the credentials go into a local struct of the size given.
-fn peer_uid(socket: &impl AsRawFd) -> io::Result<u32> {
-    let mut cred = libc::ucred { pid: 0, uid: 0, gid: 0 };
-    let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
-    // SAFETY: getsockopt writes at most `len` bytes into the local struct; the descriptor is open.
-    let rc = unsafe {
-        libc::getsockopt(
-            socket.as_raw_fd(),
-            libc::SOL_SOCKET,
-            libc::SO_PEERCRED,
-            (&mut cred as *mut libc::ucred).cast(),
-            &mut len,
-        )
-    };
-    if rc == 0 { Ok(cred.uid) } else { Err(io::Error::last_os_error()) }
 }

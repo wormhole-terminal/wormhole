@@ -4,7 +4,6 @@
 //! no PTY.
 
 use std::io;
-use std::os::unix::net::UnixStream;
 use std::time::{Duration, Instant};
 
 use wormhole_vt::Terminal;
@@ -16,6 +15,7 @@ use super::open::hosted;
 use super::socket::Joined;
 use super::{ACK_EVERY, INPUT_WINDOW};
 use crate::osc::{Mark, PromptKind};
+use crate::sys::socket::Stream;
 use crate::types::Line;
 use crate::{GridSize, Pty, PtyEvent, PtyEvents, StartOptions};
 
@@ -54,8 +54,8 @@ impl Got {
 
 /// The host's end of the pair.
 struct Script {
-    reader: FrameReader<UnixStream>,
-    writer: FrameWriter<UnixStream>,
+    reader: FrameReader<Stream>,
+    writer: FrameWriter<Stream>,
 }
 
 impl Script {
@@ -103,7 +103,7 @@ fn wire_size(cols: u16, rows: u16) -> wire::Size {
 /// A hosted `Pty` on one end of a socket pair and the scripted host on the other; its first
 /// `Attach` asks for `first`.
 fn connected(first: StreamMode) -> (Pty, PtyEvents, Script) {
-    let (ours, theirs) = UnixStream::pair().expect("a socket pair");
+    let (ours, theirs) = Stream::pair().expect("a socket pair");
     let joined = Joined { stream: ours, dec: Decoder::new() };
     let options = StartOptions { scrollback_lines: 1000, ..StartOptions::default() };
     let (pty, events) =

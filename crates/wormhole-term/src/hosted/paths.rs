@@ -9,7 +9,10 @@
 //! reaches there (its uid) before it believes it is the host the meta names.
 
 use std::ffi::OsStr;
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
+
+use crate::sys::user::UserId;
 
 /// `sun_path`'s size on macOS: the most bytes a socket's path may have, its NUL included.
 pub const SUN_PATH_MAX: usize = 104;
@@ -17,7 +20,7 @@ pub const SUN_PATH_MAX: usize = 104;
 /// Where the host with `id` listens, given its hosts directory (see the module docs).
 pub fn socket_path(hosts_dir: &Path, id: &str) -> PathBuf {
     let tmpdir = std::env::var_os("TMPDIR");
-    socket_path_with(hosts_dir, id, tmpdir.as_deref(), effective_uid())
+    socket_path_with(hosts_dir, id, tmpdir.as_deref(), UserId::current())
 }
 
 /// `<hosts dir>/<id>.meta`.
@@ -31,7 +34,7 @@ pub fn fits(path: &Path) -> bool {
 }
 
 /// [`socket_path`] with the temporary folder and the uid given.
-fn socket_path_with(hosts_dir: &Path, id: &str, tmpdir: Option<&OsStr>, uid: u32) -> PathBuf {
+fn socket_path_with(hosts_dir: &Path, id: &str, tmpdir: Option<&OsStr>, uid: impl Display) -> PathBuf {
     let preferred = hosts_dir.join(format!("{id}.sock"));
     if fits(&preferred) {
         return preferred;
@@ -44,12 +47,6 @@ fn socket_path_with(hosts_dir: &Path, id: &str, tmpdir: Option<&OsStr>, uid: u32
         }
     }
     Path::new("/tmp").join(name)
-}
-
-#[allow(unsafe_code)] // libc FFI; no arguments.
-fn effective_uid() -> u32 {
-    // SAFETY: geteuid takes nothing and cannot fail.
-    unsafe { libc::geteuid() }
 }
 
 #[cfg(test)]
