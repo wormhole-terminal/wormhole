@@ -47,13 +47,11 @@ use wormhole_core::onboarding::{
 };
 
 use crate::actions::OpenSettingsAt;
-use wormhole_core::storage::paths::ProfileId;
 
 use self::welcome::{Plan, Play};
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::{UiColors, ui};
 use crate::style::{self, Edges, TextRole};
-use crate::window::features::project;
 
 pub(crate) use keys::init;
 pub(in crate::window) use look_step::{offered_primaries, offered_themes};
@@ -144,17 +142,27 @@ pub(in crate::window) struct FirstRun {
 }
 
 /// What the intro needs to know of the window it is in, said before it is drawn.
+#[derive(Default)]
 pub(in crate::window) struct Facts {
-    /// The window's profile, whose approvals the trust card follows.
-    pub(in crate::window) profile: ProfileId,
-    /// The project folder of the terminal in front, for the trust card when no folder was picked.
-    pub(in crate::window) active_root: Option<PathBuf>,
+    /// The trust card of the project the intro is about, if it has one to show.
+    pub(in crate::window) trust: Option<TrustCard>,
+    /// Whether the window's profile has Notes on, for the words and keys that name it.
+    pub(in crate::window) notes_on: bool,
 }
 
-impl Default for Facts {
-    fn default() -> Self {
-        Self { profile: ProfileId::default_profile(), active_root: None }
-    }
+/// The project folder's trust card, as the window's profile sees the project (the window asks the project
+/// feature, so the intro names no feature).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::window) struct TrustCard {
+    /// The project's root: what the button trusts.
+    pub(in crate::window) root: PathBuf,
+    /// The project folder's name, and the name of its `.wormhole` directory on disk.
+    pub(in crate::window) name: String,
+    pub(in crate::window) dir: String,
+    /// How many commands trusting it would let run.
+    pub(in crate::window) commands: usize,
+    /// The approval dialog is up.
+    pub(in crate::window) approving: bool,
 }
 
 /// What the intro asks of the window. Delivered when the update that raised it ends.
@@ -166,11 +174,28 @@ pub(in crate::window) enum FirstRunEvent {
     Ended { replace: Option<(i64, PathBuf)> },
     /// A replay's window has left: the terminal that runs the welcome opens now.
     OpenWelcome { plan: Plan, play: Play },
+    /// "Trust with Touch ID…" was pressed on the project at this root: the window asks for the approval,
+    /// as its profile.
+    Trust(PathBuf),
 }
 
 impl EventEmitter<FirstRunEvent> for FirstRun {}
 
 impl FirstRun {
+    /// The project whose trust card the agents step shows: the folder picked in the first step, else the
+    /// project of the terminal in front (`active_root`). `None` when the step shows no card (another
+    /// step, or "Later" was pressed). The window builds the card from it ([`Facts::trust`]).
+    pub(in crate::window) fn trust_root(&self, active_root: Option<PathBuf>) -> Option<PathBuf> {
+        let intro = self.intro.as_ref().filter(|intro| !intro.trust_later)?;
+        if intro.model.step() != Step::Agents {
+            return None;
+        }
+        match intro.model.folder() {
+            Some(folder) => wormhole_core::project::find_project(folder).map(|found| found.root),
+            None => active_root,
+        }
+    }
+
     /// The window's facts, before the intro is drawn.
     pub(in crate::window) fn set_facts(&mut self, facts: Facts) {
         self.facts = facts;
@@ -377,7 +402,6 @@ impl FirstRun {
     }
 
     fn onboarding_event(&mut self, event: Event, window: &mut Window, cx: &mut Context<Self>) {
-        let profile = self.facts.profile.clone();
         let Some(intro) = &mut self.intro else { return };
         let primer = intro.model.step() == Step::Primer;
         let moves = matches!(event, Event::Continue | Event::Back | Event::Start);
@@ -405,7 +429,7 @@ impl FirstRun {
                     found.state = spec.state(&home).ok();
                 }
             }
-            Action::Trust(root) => project::api::approve(&profile, &root, cx),
+            Action::Trust(root) => cx.emit(FirstRunEvent::Trust(root)),
         }
         cx.notify();
     }

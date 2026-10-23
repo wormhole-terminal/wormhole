@@ -10,11 +10,10 @@ use wormhole_core::agents::{AGENTS, Agent};
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::onboarding::Event;
 
-use super::{FirstRun, Intro};
+use super::{FirstRun, Intro, TrustCard};
 use crate::settings::update_settings;
 use crate::settings::{UiColors, settings};
 use crate::style::{self, Edges, TextRole};
-use crate::window::features::project;
 
 impl FirstRun {
     /// Step 3: each agent on PATH with its own Install, the notifications switch, and the folder's
@@ -166,12 +165,7 @@ impl FirstRun {
         if sheet.trust_later {
             return None;
         }
-        let root = match sheet.model.folder() {
-            Some(folder) => wormhole_core::project::find_project(folder).map(|f| f.root),
-            None => self.facts.active_root.clone(),
-        }?;
-        let project::api::TrustPrompt { name, dir, commands, approving } =
-            project::api::trust_prompt(&self.facts.profile, &root, cx)?;
+        let TrustCard { root, name, dir, commands, approving } = self.facts.trust.clone()?;
         let waits = match commands {
             0 => "Nothing in it runs commands yet.".to_string(),
             1 => "Its action runs a command, so it waits until you trust the folder.".to_string(),
@@ -251,7 +245,7 @@ impl FirstRun {
             ("Jot a note for this folder", &[ActionId::NewNote]),
             ("Hide the side panels", &[ActionId::ToggleSidebar, ActionId::ToggleRightPanel]),
         ];
-        let notes_on = crate::settings::features(cx).has(wormhole_core::config::FeatureId::Notes);
+        let notes_on = self.facts.notes_on;
         let command_done = settings(cx).notify_command_done;
         div()
             .flex()

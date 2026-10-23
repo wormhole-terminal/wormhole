@@ -4,6 +4,7 @@
 //! The first run never reads the `Workspace`; this is where the two meet.
 
 use gpui_kit::*;
+use wormhole_core::config::FeatureId;
 use wormhole_core::onboarding::Onboarding;
 #[cfg(any(test, feature = "devctl"))]
 use wormhole_core::onboarding::Step;
@@ -11,7 +12,7 @@ use wormhole_core::onboarding::intro::{Handover, Start};
 
 use crate::window::Workspace;
 use crate::window::features::project;
-use crate::window::onboarding::{Facts, FirstRunEvent, welcome};
+use crate::window::onboarding::{Facts, FirstRunEvent, TrustCard, welcome};
 
 impl Workspace {
     /// The first launch's window, never shown: the intro window opens over it and it arrives out of the
@@ -73,8 +74,19 @@ impl Workspace {
         if !self.first_run.read(cx).is_open() {
             return;
         }
-        let facts = Facts { profile: self.profile.clone(), active_root: project::api::active_root(self, cx) };
-        self.first_run.update(cx, |first_run, _| first_run.set_facts(facts));
+        let active_root = project::api::active_root(self, cx);
+        let trust = self.first_run.read(cx).trust_root(active_root).and_then(|root| {
+            let prompt = project::api::trust_prompt(&self.profile, &root, cx)?;
+            Some(TrustCard {
+                root,
+                name: prompt.name,
+                dir: prompt.dir,
+                commands: prompt.commands,
+                approving: prompt.approving,
+            })
+        });
+        let notes_on = crate::settings::features_in(&self.profile, cx).has(FeatureId::Notes);
+        self.first_run.update(cx, |first_run, _| first_run.set_facts(Facts { trust, notes_on }));
     }
 
     /// The sidebar's note after a first run without agents, while it is up.
@@ -110,6 +122,7 @@ impl Workspace {
                 self.mark_dirty(cx);
             }
             FirstRunEvent::OpenWelcome { plan, play } => self.open_welcome_session(*plan, *play, window, cx),
+            FirstRunEvent::Trust(root) => project::api::approve(&self.profile, root, cx),
         }
     }
 }
