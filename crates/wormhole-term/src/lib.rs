@@ -46,6 +46,7 @@ pub mod agents;
 mod blocks;
 pub mod client;
 mod command_to_prompt;
+mod contents;
 mod engine;
 mod events;
 pub mod find;
@@ -70,7 +71,6 @@ mod snapshot;
 pub mod sys;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
-mod text;
 
 /// The value types the screen is drawn and driven with: cells, colors, positions, modes.
 pub mod types {
@@ -96,6 +96,7 @@ use wormhole_vt::{Colors, Column, Line, Modes, Point, Scroll, SelectionType, Sid
 
 pub use blocks::{Block, BlockState, Ended, readout_text, took_text};
 pub use command_to_prompt::{Refusal, command_to_prompt};
+pub use contents::prompt_in;
 use events::EventProxy;
 use events::Shared;
 pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
@@ -110,7 +111,6 @@ use pty::FairLock;
 pub use pty::{Launch, Shell};
 use screen::Screen;
 pub use snapshot::{BlockSpan, ScreenSnapshot, SnapshotCursor, SnapshotRow};
-pub use text::prompt_in;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GridSize {
@@ -492,12 +492,12 @@ impl Pty {
 
     /// The visible screen as plain text, one line per row.
     pub fn screen_text(&self) -> String {
-        text::screen_text(&self.term.lock())
+        contents::screen_text(&self.term.lock())
     }
 
     /// What's typed in an AI CLI's input box on the screen.
     pub fn grab_prompt(&self) -> Option<String> {
-        text::grab_prompt(&self.term.lock())
+        contents::grab_prompt(&self.term.lock())
     }
 
     /// The link at a grid point: a program's hyperlink (OSC 8), else a URL in the text.
@@ -709,7 +709,7 @@ impl ScrollbackSource {
 
     /// The last `max_lines` lines of history + screen.
     pub fn text(&self, max_lines: usize) -> Option<String> {
-        text::scrollback_text(&self.term.lock(), max_lines)
+        contents::scrollback_text(&self.term.lock(), max_lines)
     }
 
     /// The history and the screen copied for a search ([`find`]), with the output revision it

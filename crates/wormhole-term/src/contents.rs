@@ -3,10 +3,8 @@
 
 use wormhole_vt::{Cell, Flags, Line, Modes, RowExtras};
 
+use super::restore::RESTORED_MARKER;
 use super::screen::Screen;
-
-/// The marker `restore` draws under replayed text.
-pub(super) const RESTORED_MARKER: &str = "──── restored ────";
 
 /// One grid line as text, trailing blanks trimmed. `cells` is scratch for the copy.
 fn line_text(screen: &Screen, line: i32, cells: &mut Vec<Cell>) -> String {

@@ -250,8 +250,7 @@
     "os-edge-neutral": {},
     "bucket-names": {
       "crates/wormhole-core/src/notify/text.rs": 1,
-      "crates/wormhole-core/src/view/sidebar/text.rs": 1,
-      "crates/wormhole-term/src/text.rs": 1
+      "crates/wormhole-core/src/view/sidebar/text.rs": 1
     },
     "orphans": {},
     "glob-imports": {},
@@ -272,11 +271,8 @@
       "wormhole-term: marks -> screen": 1,
       "wormhole-term: pty -> events": 1,
       "wormhole-term: restore -> screen": 1,
-      "wormhole-term: restore -> text": 1,
       "wormhole-term: screen -> engine": 1,
       "wormhole-term: screen -> marks": 1,
-      "wormhole-term: text -> images": 1,
-      "wormhole-term: text -> screen": 1,
       "wormhole: app_state -> window": 1,
       "wormhole: window -> app_state": 1
     },

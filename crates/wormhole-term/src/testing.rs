@@ -82,7 +82,7 @@ impl TestTerm {
 
     /// The visible screen, one line per row, trailing blanks trimmed.
     pub fn screen_text(&self) -> String {
-        super::text::screen_text(self.screen())
+        super::contents::screen_text(self.screen())
     }
 
     pub fn columns(&self) -> usize {
