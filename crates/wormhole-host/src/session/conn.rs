@@ -68,7 +68,7 @@ pub(super) struct Attachment {
 }
 
 impl Attachment {
-    pub fn new(mode: StreamMode, window: u64) -> Self {
+    pub(super) fn new(mode: StreamMode, window: u64) -> Self {
         Self {
             mode,
             cursor: None,
@@ -86,7 +86,7 @@ impl Attachment {
     }
 
     /// The stream bytes it may still be sent.
-    pub fn credit(&self) -> u64 {
+    pub(super) fn credit(&self) -> u64 {
         if self.mode == StreamMode::None { 0 } else { (self.acked + self.window).saturating_sub(self.sent) }
     }
 }
@@ -107,7 +107,7 @@ pub(super) struct Conn {
 }
 
 impl Conn {
-    pub fn new(id: ConnId, hello_deadline: Instant) -> Self {
+    pub(super) fn new(id: ConnId, hello_deadline: Instant) -> Self {
         let mut dec = Decoder::new();
         dec.limit_to_handshake();
         Self {
@@ -123,7 +123,7 @@ impl Conn {
         }
     }
 
-    pub fn role(&self) -> Option<Role> {
+    pub(super) fn role(&self) -> Option<Role> {
         match self.phase {
             Phase::Ready { role } => Some(role),
             Phase::Hello { .. } => None,
@@ -132,7 +132,7 @@ impl Conn {
 
     /// Queue `msg`. A message the codec refuses (an event too large for a frame) is dropped and
     /// logged: it is the program's, not the client's, and must not cost the connection.
-    pub fn send(&mut self, msg: &Message<'_>) {
+    pub(super) fn send(&mut self, msg: &Message<'_>) {
         if self.dead {
             return;
         }
@@ -150,21 +150,21 @@ impl Conn {
     }
 
     /// Queue an error about a message of type `ref_type`.
-    pub fn refuse(&mut self, ref_type: u8, code: u16, text: &'static str) {
+    pub(super) fn refuse(&mut self, ref_type: u8, code: u16, text: &'static str) {
         self.send(&Message::Error(wire::ErrorMsg { ref_type, code, text }));
     }
 
     /// Bytes queued and not yet written.
-    pub fn pending(&self) -> usize {
+    pub(super) fn pending(&self) -> usize {
         self.out.len() - self.out_pos
     }
 
-    pub fn output(&self) -> &[u8] {
+    pub(super) fn output(&self) -> &[u8] {
         &self.out[self.out_pos..]
     }
 
     /// `n` bytes of [`output`](Self::output) were written.
-    pub fn wrote(&mut self, n: usize) {
+    pub(super) fn wrote(&mut self, n: usize) {
         self.out_pos = (self.out_pos + n).min(self.out.len());
         if self.out_pos == self.out.len() {
             self.out.clear();

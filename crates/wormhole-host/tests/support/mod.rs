@@ -7,7 +7,6 @@
 
 #![allow(dead_code)] // each test file uses what it needs
 #![allow(clippy::disallowed_methods, reason = "a test builds its own files and processes")]
-#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 use std::fs;
 use std::io::{self, Read as _};
@@ -25,21 +24,21 @@ use wormhole_wire::{
     StreamMode, StreamOrder,
 };
 
-pub const SIZE: wire::Size = wire::Size { cols: 80, rows: 24, cell_w: 128, cell_h: 256 };
+pub(crate) const SIZE: wire::Size = wire::Size { cols: 80, rows: 24, cell_w: 128, cell_h: 256 };
 /// How long any wait in these tests may take before it fails.
-pub const PATIENCE: Duration = Duration::from_secs(10);
+pub(crate) const PATIENCE: Duration = Duration::from_secs(10);
 
 static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 /// A 12-character id unique to this test process and call.
-pub fn new_id() -> String {
+pub(crate) fn new_id() -> String {
     let n = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let seed = format!("{:06x}{:06x}", std::process::id() & 0xff_ffff, n & 0xff_ffff);
     seed.chars().map(|c| c.to_ascii_lowercase()).collect()
 }
 
 /// A host process and its files.
-pub struct Host {
+pub(crate) struct Host {
     pub data: tempfile::TempDir,
     pub hosts_dir: PathBuf,
     pub id: String,
@@ -51,13 +50,13 @@ pub struct Host {
 impl Host {
     /// Start the host binary as the app does: its own session, an empty environment, the
     /// readiness pipe on descriptor 3.
-    pub fn start() -> Self {
+    pub(crate) fn start() -> Self {
         let data = tempfile::tempdir().expect("a temp dir");
         let hosts_dir = data.path().join("hosts");
         Self::start_in(data, hosts_dir, new_id())
     }
 
-    pub fn start_in(data: tempfile::TempDir, hosts_dir: PathBuf, id: String) -> Self {
+    pub(crate) fn start_in(data: tempfile::TempDir, hosts_dir: PathBuf, id: String) -> Self {
         let (read, write) = pipe();
         let mut command = Command::new(env!("CARGO_BIN_EXE_wormhole-host"));
         command
@@ -75,16 +74,16 @@ impl Host {
         Self { data, hosts_dir, id, child, ready: Some(fs::File::from(read)) }
     }
 
-    pub fn meta_path(&self) -> PathBuf {
+    pub(crate) fn meta_path(&self) -> PathBuf {
         self.hosts_dir.join(format!("{}.meta", self.id))
     }
 
-    pub fn log_path(&self) -> PathBuf {
+    pub(crate) fn log_path(&self) -> PathBuf {
         self.data.path().join("logs").join(format!("host-{}.log", self.id))
     }
 
     /// The meta file, once the host has written it (it listens by then).
-    pub fn meta(&self) -> wormhole_term::hosted::meta::Meta {
+    pub(crate) fn meta(&self) -> wormhole_term::hosted::meta::Meta {
         let until = Instant::now() + PATIENCE;
         loop {
             if let Ok(meta) = wormhole_term::hosted::meta::read(&self.meta_path()) {
@@ -97,7 +96,7 @@ impl Host {
 
     /// The readiness pipe's line, without its newline (blocks until the host says it or closes
     /// the pipe; the host says it within its spawn timeout either way).
-    pub fn ready_line(&mut self) -> String {
+    pub(crate) fn ready_line(&mut self) -> String {
         let mut line = Vec::new();
         if let Some(mut file) = self.ready.take() {
             let mut byte = [0u8; 1];
@@ -112,14 +111,14 @@ impl Host {
     }
 
     /// A connected client that said `Hello` as `role` (and was welcomed, or refused: see its log).
-    pub fn connect(&self, role: Role) -> Client {
+    pub(crate) fn connect(&self, role: Role) -> Client {
         let mut client = self.connect_raw();
         client.hello(role, false);
         client
     }
 
     /// A connected client that has said nothing yet.
-    pub fn connect_raw(&self) -> Client {
+    pub(crate) fn connect_raw(&self) -> Client {
         let socket = self.meta().socket;
         let until = Instant::now() + PATIENCE;
         let stream = loop {
@@ -133,19 +132,19 @@ impl Host {
     }
 
     /// The controller that spawns `program` and attaches `Raw` from its first byte.
-    pub fn spawn(&self, program: &str, args: &[&str]) -> (Client, u32) {
+    pub(crate) fn spawn(&self, program: &str, args: &[&str]) -> (Client, u32) {
         let mut client = self.connect(Role::Controller);
         let pid = client.spawn(program, args);
         client.attach(StreamMode::Raw, 0);
         (client, pid)
     }
 
-    pub fn pid(&self) -> u32 {
+    pub(crate) fn pid(&self) -> u32 {
         self.child.id()
     }
 
     /// Wait for the host to exit; its status.
-    pub fn wait_exit(&mut self) -> std::process::ExitStatus {
+    pub(crate) fn wait_exit(&mut self) -> std::process::ExitStatus {
         let until = Instant::now() + PATIENCE;
         loop {
             if let Some(status) = self.child.try_wait().expect("waits") {
@@ -156,12 +155,12 @@ impl Host {
         }
     }
 
-    pub fn is_running(&mut self) -> bool {
+    pub(crate) fn is_running(&mut self) -> bool {
         self.child.try_wait().expect("waits").is_none()
     }
 
     /// The host's resident memory, from `ps`, in KiB.
-    pub fn rss_kib(&self) -> u64 {
+    pub(crate) fn rss_kib(&self) -> u64 {
         let out = Command::new("/bin/ps").args(["-o", "rss=", "-p", &self.pid().to_string()]).output();
         out.ok().and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse().ok()).unwrap_or(0)
     }
@@ -178,19 +177,19 @@ impl Drop for Host {
 }
 
 /// Whether a process with this pid is still there.
-pub fn alive(pid: u32) -> bool {
+pub(crate) fn alive(pid: u32) -> bool {
     signal(pid, 0)
 }
 
 /// Send `sig` to `pid`; whether it was delivered.
 #[allow(unsafe_code)] // libc FFI; plain integers.
-pub fn signal(pid: u32, sig: libc::c_int) -> bool {
+pub(crate) fn signal(pid: u32, sig: libc::c_int) -> bool {
     // SAFETY: kill takes two integers; the pid is one this test started.
     unsafe { libc::kill(pid as libc::pid_t, sig) == 0 }
 }
 
 /// Wait until `pid` is gone.
-pub fn wait_gone(pid: u32) {
+pub(crate) fn wait_gone(pid: u32) {
     let until = Instant::now() + PATIENCE;
     while alive(pid) {
         assert!(Instant::now() < until, "process {pid} is still there");
@@ -233,7 +232,7 @@ fn add_ready_fd(command: &mut Command, fd: libc::c_int) {
 
 /// A frame as a test reads it.
 #[derive(Clone, Debug, PartialEq)]
-pub enum Got {
+pub(crate) enum Got {
     Welcome(wire::Welcome),
     Info(wire::Welcome),
     Incompatible,
@@ -284,7 +283,7 @@ impl Got {
 }
 
 /// A client: the connection, a replica it keeps from the stream, and the order checker.
-pub struct Client {
+pub(crate) struct Client {
     reader: FrameReader<UnixStream>,
     writer: FrameWriter<UnixStream>,
     pub replica: Terminal,
@@ -297,7 +296,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(stream: UnixStream) -> Self {
+    pub(crate) fn new(stream: UnixStream) -> Self {
         let write = stream.try_clone().expect("a second handle");
         Self {
             reader: FrameReader::new(stream),
@@ -313,12 +312,12 @@ impl Client {
         }
     }
 
-    pub fn send(&mut self, msg: &Message<'_>) {
+    pub(crate) fn send(&mut self, msg: &Message<'_>) {
         self.writer.send(CHANNEL_LOCAL, 0, msg).expect("sends");
     }
 
     /// Read one frame within `timeout`; `None` on timeout or when the host closed the connection.
-    pub fn read(&mut self, timeout: Duration) -> Option<Got> {
+    pub(crate) fn read(&mut self, timeout: Duration) -> Option<Got> {
         self.reader.get_ref().set_read_timeout(Some(timeout.max(Duration::from_millis(1)))).ok()?;
         let got = match self.reader.read_frame() {
             Ok(Some(frame)) => Got::of(&frame.message),
@@ -380,7 +379,7 @@ impl Client {
     }
 
     /// Read until `pred` holds for a frame; that frame. Fails after [`PATIENCE`].
-    pub fn until(&mut self, what: &str, mut pred: impl FnMut(&Got) -> bool) -> Got {
+    pub(crate) fn until(&mut self, what: &str, mut pred: impl FnMut(&Got) -> bool) -> Got {
         let until = Instant::now() + PATIENCE;
         loop {
             let left = until.saturating_duration_since(Instant::now());
@@ -394,7 +393,7 @@ impl Client {
     }
 
     /// The first frame read so far for which `pred` holds, or the next one that comes.
-    pub fn ever(&mut self, what: &str, mut pred: impl FnMut(&Got) -> bool) -> Got {
+    pub(crate) fn ever(&mut self, what: &str, mut pred: impl FnMut(&Got) -> bool) -> Got {
         match self.log.iter().find(|g| pred(g)) {
             Some(got) => got.clone(),
             None => self.until(what, pred),
@@ -402,7 +401,7 @@ impl Client {
     }
 
     /// Read until the host closes the connection.
-    pub fn until_closed(&mut self) {
+    pub(crate) fn until_closed(&mut self) {
         let until = Instant::now() + PATIENCE;
         loop {
             assert!(Instant::now() < until, "the host kept the connection open");
@@ -423,7 +422,7 @@ impl Client {
     }
 
     /// Read until the replica's screen shows `text` somewhere.
-    pub fn until_text(&mut self, text: &str) {
+    pub(crate) fn until_text(&mut self, text: &str) {
         let until = Instant::now() + PATIENCE;
         while !self.screen_text().contains(text) {
             assert!(Instant::now() < until, "{text:?} never showed; the screen:\n{}", self.screen_text());
@@ -432,7 +431,7 @@ impl Client {
     }
 
     /// Read whatever comes within `quiet` of the last frame.
-    pub fn drain(&mut self, quiet: Duration) {
+    pub(crate) fn drain(&mut self, quiet: Duration) {
         while self.read(quiet).is_some() {}
     }
 
@@ -449,7 +448,7 @@ impl Client {
             .collect()
     }
 
-    pub fn hello(&mut self, role: Role, force: bool) -> Got {
+    pub(crate) fn hello(&mut self, role: Role, force: bool) -> Got {
         self.send(&Message::Hello(wire::Hello {
             proto_min: 1,
             proto_max: 1,
@@ -465,7 +464,7 @@ impl Client {
     }
 
     /// Spawn `program`; its pid.
-    pub fn spawn(&mut self, program: &str, args: &[&str]) -> u32 {
+    pub(crate) fn spawn(&mut self, program: &str, args: &[&str]) -> u32 {
         let env = [("TERM", "xterm-256color"), ("PATH", "/usr/bin:/bin"), ("LANG", "en_US.UTF-8")];
         self.send(&Message::Spawn(wire::Spawn {
             size: SIZE,
@@ -483,23 +482,23 @@ impl Client {
     }
 
     /// Attach: a new stream, so the order check starts over (its first frame sets the point).
-    pub fn attach(&mut self, stream: StreamMode, window: u32) {
+    pub(crate) fn attach(&mut self, stream: StreamMode, window: u32) {
         self.order = StreamOrder::new();
         self.send(&Message::Attach(Attach { stream, history_lines: 20_000, window, resume_from: None }));
     }
 
-    pub fn input(&mut self, bytes: &[u8]) {
+    pub(crate) fn input(&mut self, bytes: &[u8]) {
         self.send(&Message::Input(bytes));
     }
 
     /// The replica's visible rows, trimmed, one per line.
-    pub fn screen_text(&self) -> String {
+    pub(crate) fn screen_text(&self) -> String {
         let rows = self.replica.rows() as i32;
         (0..rows).map(|row| self.replica.row_text(Line(row), true)).collect::<Vec<_>>().join("\n")
     }
 
     /// The replica's history and screen rows, and its cursor.
-    pub fn picture(&self) -> (Vec<String>, Point) {
+    pub(crate) fn picture(&self) -> (Vec<String>, Point) {
         let top = -(self.replica.history_len() as i32);
         let rows = self.replica.rows() as i32;
         let text = (top..rows).map(|row| self.replica.row_text(Line(row), true)).collect();

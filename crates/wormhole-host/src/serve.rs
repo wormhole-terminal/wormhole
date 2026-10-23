@@ -32,7 +32,7 @@ const READ_PER_TURN: usize = 1024 * 1024;
 const FLUSH_AT_END: Duration = Duration::from_millis(200);
 
 /// What wakes the driver from another thread: the terminal's stream, its end, a signal.
-pub struct Wakes {
+pub(crate) struct Wakes {
     poller: Arc<Poller>,
     /// A wake is on its way: the next ones until the driver looks cost a load.
     pending: AtomicBool,
@@ -40,31 +40,31 @@ pub struct Wakes {
 }
 
 impl Wakes {
-    pub fn new(poller: Arc<Poller>) -> Arc<Self> {
+    pub(crate) fn new(poller: Arc<Poller>) -> Arc<Self> {
         Arc::new(Self { poller, pending: AtomicBool::new(false), terminate: AtomicBool::new(false) })
     }
 
-    pub fn wake(&self) {
+    pub(crate) fn wake(&self) {
         if !self.pending.swap(true, Ordering::AcqRel) {
             let _ = self.poller.notify();
         }
     }
 
     /// A signal asked the host to end.
-    pub fn terminate(&self) {
+    pub(crate) fn terminate(&self) {
         self.terminate.store(true, Ordering::Release);
         self.wake();
     }
 }
 
 /// The files the host owns besides the socket.
-pub struct Files<'a> {
+pub(crate) struct Files<'a> {
     pub hosts_dir: &'a Path,
     pub meta: Meta,
 }
 
 /// Serve until the session is done.
-pub fn serve<S: Spawner>(
+pub(crate) fn serve<S: Spawner>(
     session: &mut Session<S>,
     listener: &mut Listener,
     wakes: &Arc<Wakes>,

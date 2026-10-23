@@ -9,11 +9,11 @@ use super::linux::codesign as os;
 #[cfg(target_os = "macos")]
 use super::macos::codesign as os;
 
-pub use os::Requirement;
+pub(crate) use os::Requirement;
 
 /// Where a refusal came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Stage {
+pub(crate) enum Stage {
     /// The socket gave no audit token.
     Token,
     /// The system found no code for the token.
@@ -23,7 +23,7 @@ pub enum Stage {
 }
 
 impl Stage {
-    pub fn describe(self) -> &'static str {
+    pub(crate) fn describe(self) -> &'static str {
         match self {
             Self::Token => "no audit token for the peer",
             Self::Code => "no code for the peer's audit token",
@@ -34,7 +34,7 @@ impl Stage {
 
 /// A peer that is not let in.
 #[derive(Debug)]
-pub struct Refusal {
+pub(crate) struct Refusal {
     pub stage: Stage,
     /// The peer's pid, when it could be told.
     pub pid: Option<u32>,
@@ -43,21 +43,21 @@ pub struct Refusal {
 }
 
 /// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
-pub fn requirement(text: &str) -> Option<Requirement> {
+pub(crate) fn requirement(text: &str) -> Option<Requirement> {
     os::requirement(text)
 }
 
 /// Whether this process satisfies `requirement`.
-pub fn self_satisfies(requirement: &Requirement) -> bool {
+pub(crate) fn self_satisfies(requirement: &Requirement) -> bool {
     os::self_satisfies(requirement)
 }
 
 /// The team id in this process's own signature, if it has one.
-pub fn own_team_id() -> Option<String> {
+pub(crate) fn own_team_id() -> Option<String> {
     os::own_team_id()
 }
 
 /// Find the peer's code and check it against `requirement`.
-pub fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
+pub(crate) fn check_peer(stream: &Stream, requirement: &Requirement) -> Result<(), Refusal> {
     os::check_peer(stream, requirement)
 }

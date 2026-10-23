@@ -39,7 +39,7 @@ unsafe extern "C" {
 }
 
 /// A requirement a peer's signature must satisfy, compiled.
-pub struct Requirement(SecRequirement);
+pub(crate) struct Requirement(SecRequirement);
 
 /// A requirement compiled once from its text; `None` (said in the log) when it does not parse.
 pub(crate) fn requirement(text: &str) -> Option<Requirement> {

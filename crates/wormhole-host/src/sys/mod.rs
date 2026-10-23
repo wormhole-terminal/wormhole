@@ -8,11 +8,11 @@
 //! The user, the peer check, sockets and file modes are `wormhole_term::sys`'s: the host links that
 //! crate and never core.
 
-pub mod codesign;
-pub mod fs;
-pub mod process;
-pub mod ready;
-pub mod signals;
+pub(crate) mod codesign;
+pub(crate) mod fs;
+pub(crate) mod process;
+pub(crate) mod ready;
+pub(crate) mod signals;
 
 #[cfg(target_os = "linux")]
 mod linux;

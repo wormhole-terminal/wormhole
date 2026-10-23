@@ -43,7 +43,7 @@ fn peer_requirement(team: &str) -> Option<String> {
 }
 
 /// Which peers the host serves, after the uid check.
-pub enum Policy {
+pub(crate) enum Policy {
     /// Every peer of the same user.
     UidOnly,
     /// Only a peer that satisfies the requirement.
@@ -52,7 +52,7 @@ pub enum Policy {
 
 impl Policy {
     /// Read the host's own signature and choose; says which in the log.
-    pub fn detect() -> Self {
+    pub(crate) fn detect() -> Self {
         let Some(team) = codesign::own_team_id() else {
             tracing::info!(
                 "peer check: uid only (the host has no team id: ad-hoc, unsigned or linker-signed)"
@@ -83,7 +83,7 @@ impl Policy {
     }
 
     /// Whether to serve the peer at the other end of `socket`; says why not in the log.
-    pub fn allows(&self, socket: &Stream) -> bool {
+    pub(crate) fn allows(&self, socket: &Stream) -> bool {
         match self.check(socket) {
             Ok(()) => true,
             Err(refusal) => {
@@ -99,7 +99,7 @@ impl Policy {
     }
 
     /// Check the peer's code, found from its audit token, against the requirement.
-    pub fn check(&self, socket: &Stream) -> Result<(), Refusal> {
+    pub(crate) fn check(&self, socket: &Stream) -> Result<(), Refusal> {
         match self {
             Self::UidOnly => Ok(()),
             Self::Require(requirement) => codesign::check_peer(socket, requirement),
