@@ -11,7 +11,7 @@ use wormhole_core::view::panes::Zone;
 use wormhole_core::view::sidebar::Entry;
 
 use crate::app_state::OpenWindow;
-use crate::window::sidebar::terminal_drag::{Over, PaneHover};
+use crate::sidebar::terminal_drag::{Over, PaneHover};
 use crate::window::view_tests::{draw, drive, isolate_in, read, sidebar_of, start};
 
 fn isolate(name: &str) -> bool {

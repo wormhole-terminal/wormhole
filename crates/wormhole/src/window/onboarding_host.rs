@@ -11,9 +11,9 @@ use wormhole_core::onboarding::intro::{Handover, Start};
 use wormhole_core::onboarding::{Onboarding, Tip};
 
 use crate::app_state::app_mut;
+use crate::onboarding::{Facts, FirstRunEvent, Opening, TrustCard, welcome};
 use crate::window::Workspace;
 use crate::window::features::project;
-use crate::window::onboarding::{Facts, FirstRunEvent, Opening, TrustCard, welcome};
 
 impl Workspace {
     /// The first launch's window, never shown: the intro window opens over it and it arrives out of the
@@ -113,7 +113,7 @@ impl Workspace {
     /// The first run asks for something. Handled when the update that raised it ends.
     pub(super) fn on_first_run_event(
         &mut self,
-        _: &Entity<crate::window::onboarding::FirstRun>,
+        _: &Entity<crate::onboarding::FirstRun>,
         event: &FirstRunEvent,
         window: &mut Window,
         cx: &mut Context<Self>,

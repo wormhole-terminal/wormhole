@@ -17,8 +17,9 @@ use crate::actions::{
     UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
+use crate::sidebar;
 use crate::terminal_view::FONT_SIZES;
-use crate::window::{Workspace, sidebar};
+use crate::window::Workspace;
 
 /// The zoom (points over the Settings size) after one more step, kept within [`FONT_SIZES`].
 fn zoomed(base: f32, zoom: f32, step: f32) -> f32 {

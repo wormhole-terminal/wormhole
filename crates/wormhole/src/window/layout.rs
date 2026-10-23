@@ -246,7 +246,7 @@ impl Render for Workspace {
                                     .min_h_0()
                                     // Terminals as tabs: their bar lies between the title row and the surface.
                                     .mt(px(crate::style::TITLE_ROW_H
-                                        + if tabs_shown { crate::window::sidebar::TAB_ROW_H } else { 0.0 }))
+                                        + if tabs_shown { crate::sidebar::TAB_ROW_H } else { 0.0 }))
                                     .mx(gap)
                                     .mb(gap)
                                     .when(!(split && gaps), |d| d.rounded(ui.radius_lg).overflow_hidden()),

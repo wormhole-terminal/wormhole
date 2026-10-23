@@ -8,10 +8,10 @@ use wormhole_core::view::notes::stake;
 
 use super::{Notes, list, view};
 use crate::actions::{NewNote, StashPrompt};
+use crate::sidebar::{RowExtra, RowExtras};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{CloseHooks, FeatureDef, Root, Stake, StateDef, TabDef};
-use crate::window::sidebar::{RowExtra, RowExtras};
 
 /// The window's `Notes`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Notes> {

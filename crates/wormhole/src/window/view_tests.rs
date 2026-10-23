@@ -179,7 +179,7 @@ pub(crate) fn draw(cx: &mut TestAppContext, window: &OpenWindow) {
 pub(in crate::window) fn sidebar_of<R>(
     cx: &mut TestAppContext,
     window: &OpenWindow,
-    f: impl FnOnce(&crate::window::sidebar::Sidebar) -> R,
+    f: impl FnOnce(&crate::sidebar::Sidebar) -> R,
 ) -> R {
     cx.update(|cx| window.workspace.read_with(cx, |ws, cx| f(ws.sidebar.read(cx))))
         .expect("the window is open")

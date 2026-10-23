@@ -16,15 +16,13 @@ use wormhole_core::view::sidebar::{Listing, RowState, TerminalsIn, WindowSidebar
 
 use crate::app_state::app;
 use crate::settings::{settings_in, ui_in};
+use crate::sidebar::profile_chip::Profiles;
+use crate::sidebar::terminal_drag::TerminalDrag;
+use crate::sidebar::{NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, SidebarInput, row_times};
 use crate::terminal_view::Status;
 use crate::window::Workspace;
 use crate::window::chrome::traffic_light_position;
-use crate::window::sidebar::profile_chip::Profiles;
-use crate::window::sidebar::terminal_drag::TerminalDrag;
-use crate::window::sidebar::{
-    NewTerminal, RowFailure, RowInfo, Sidebar, SidebarEvent, SidebarInput, row_times,
-};
-use crate::{style, window::sidebar::shells};
+use crate::{sidebar::shells, style};
 
 /// What the window keeps for the sidebar that is neither the list's state nor the terminals': where the
 /// terminals are listed, the traffic lights' row, and the repositories worktrees belong to.
@@ -154,7 +152,7 @@ impl Workspace {
                 .sessions
                 .iter()
                 .map(|session| session.id)
-                .filter(|&id| crate::window::onboarding::welcome::running(id, cx))
+                .filter(|&id| crate::onboarding::welcome::running(id, cx))
                 .collect(),
         }
     }

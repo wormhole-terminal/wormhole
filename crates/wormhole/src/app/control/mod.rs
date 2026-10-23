@@ -52,15 +52,15 @@ pub(crate) fn handle(request: Request, cx: &mut App) -> Reply {
         }
         // Not behind `control_write`: the token the app put in the welcome terminal is the key.
         Action::Welcome { token, op } => {
-            crate::window::onboarding::welcome::handle(token, op, from, welcome_services(), cx)
+            crate::onboarding::welcome::handle(token, op, from, welcome_services(), cx)
         }
     }
 }
 
 /// What the welcome is handed: this socket's budgets, the notifications' permission and the windows to
 /// show its example band in, which the first run and the welcome, below the app root, may not name.
-fn welcome_services() -> crate::window::onboarding::welcome::Services {
-    crate::window::onboarding::welcome::Services {
+fn welcome_services() -> crate::onboarding::welcome::Services {
+    crate::onboarding::welcome::Services {
         budget,
         permission: crate::notifications::permission,
         ask_permission: crate::notifications::ask_permission_if_new,

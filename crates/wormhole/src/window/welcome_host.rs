@@ -12,9 +12,9 @@ use wormhole_core::onboarding::intro::{Handover, Start};
 use wormhole_core::onboarding::welcome::{self as core_welcome, DockCell};
 use wormhole_core::storage::store::SessionRecord;
 
+use crate::onboarding::FirstRunEvent;
+use crate::onboarding::welcome::{self, Plan, Play, Run};
 use crate::window::Workspace;
-use crate::window::onboarding::FirstRunEvent;
-use crate::window::onboarding::welcome::{self, Plan, Play, Run};
 
 #[cfg(feature = "devctl")]
 impl Workspace {

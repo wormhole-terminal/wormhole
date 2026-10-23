@@ -8,9 +8,9 @@ use wormhole_core::view::sidebar::Drop;
 #[cfg(any(test, feature = "devctl"))]
 use wormhole_core::view::sidebar::Part;
 
+use crate::sidebar::Sidebar;
+use crate::sidebar::terminal_drag::{DragOrigin, Over};
 use crate::window::Workspace;
-use crate::window::sidebar::Sidebar;
-use crate::window::sidebar::terminal_drag::{DragOrigin, Over};
 
 impl Workspace {
     /// A terminal was dropped on what the pointer was over last (`over`): it moves, joins a split or

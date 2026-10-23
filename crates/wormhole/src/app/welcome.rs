@@ -8,7 +8,7 @@ use wormhole_core::onboarding::intro::{Handover, Start};
 use wormhole_core::onboarding::{ONBOARDED_KEY, should_show};
 
 use crate::app_state::{AppState, app};
-use crate::window::onboarding::welcome::{self, Plan};
+use crate::onboarding::welcome::{self, Plan};
 use crate::window::window_lifecycle::with_front_workspace;
 
 /// On a first launch (nothing saved, the intro never finished or skipped), open the intro window

@@ -44,7 +44,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `terminal_view/render/`. An empty `canvas` that only measures its bounds:
   `window/features/git/diff/render.rs`.
 - Animation (`with_animation`, `Animation::new(…).repeat()`,
-  `pulsating_between`): the status dot in `window/sidebar/`.
+  `pulsating_between`): the status dot in `sidebar/`.
 
 ## Lists and scrolling
 
@@ -76,7 +76,7 @@ scrolling · Input, focus, actions · Components · Async · Tests and checks
   `window/features/notes/tasks.rs`. Multi-line `TextareaState`: `window/features/notes/`.
 - `Switch` in a settings row: `style/setting.rs`; `ColorPicker`:
   `settings_window/sections/appearance.rs`, `studio/token_editor.rs`.
-- `DropdownMenu` and `Tooltip`: `window/sidebar/`; `Tooltip` on icon
+- `DropdownMenu` and `Tooltip`: `sidebar/`; `Tooltip` on icon
   buttons: `style/controls.rs`.
 - Syntax highlighting (`SyntaxHighlighter`, `HighlightTheme`):
   `window/features/git/diff/highlight.rs`.

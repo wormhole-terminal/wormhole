@@ -315,8 +315,8 @@ impl Workspace {
         let at = match area {
             Area::TitleRow => self.title_buttons(cx).get(self.areas.title).map(|b| format!("{b:?}")),
             Area::Sidebar => self.sidebar.read(cx).keys_at().map(|at| match at {
-                crate::window::sidebar::SidebarStop::Group(id) => format!("group {id}"),
-                crate::window::sidebar::SidebarStop::Row(id) => format!("terminal id={id}"),
+                crate::sidebar::SidebarStop::Group(id) => format!("group {id}"),
+                crate::sidebar::SidebarStop::Row(id) => format!("terminal id={id}"),
             }),
             Area::PanelContent => self.areas.panel_at.map(|(tab, row)| format!("{} row {row}", tab.key())),
             Area::StatusBar => self.status_items().get(self.areas.status).map(|item| format!("{item:?}")),

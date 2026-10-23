@@ -24,13 +24,13 @@ use crate::app_state::attention::{self, Attention};
 use crate::menubar::model::KeyEquivalent;
 use crate::platform::{self, Anchor, Item, Menu};
 use crate::settings::{settings_in, ui_in};
+use crate::sidebar::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
 use crate::style;
 use crate::style::home_dir;
 use crate::terminal_view::TerminalEvent;
 use crate::window::Workspace;
 use crate::window::panes::splits::Split;
 use crate::window::session::Pane;
-use crate::window::sidebar::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
 use crate::window::title::breadcrumb::terminal_tile;
 
 /// A drag on a divider, from the press to the release.

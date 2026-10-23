@@ -135,10 +135,6 @@ mod window_control;
 pub(crate) mod window_lifecycle;
 pub(crate) mod windows;
 
-// Old paths, for one commit only: the next commit names every module by its new path and removes them.
-pub(crate) use crate::onboarding;
-pub(crate) use crate::sidebar;
-
 use self::saved_layout::Layout;
 use self::session::Session;
 use wormhole_core::config::TabId;
@@ -173,7 +169,7 @@ pub struct Workspace {
     beside: f32,
     /// The terminal list: an entity of its own, told how the window stands (`sidebar_host`) and heard
     /// through its events.
-    sidebar: Entity<self::sidebar::Sidebar>,
+    sidebar: Entity<crate::sidebar::Sidebar>,
     /// What the window keeps for the list besides: where the terminals are listed, the traffic lights.
     sidebar_feed: self::sidebar_host::SidebarFeed,
     right_tab: TabId,
@@ -198,7 +194,7 @@ pub struct Workspace {
     pane_drag: Option<crate::window::panes::PaneDrag>,
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
-    terminal_drag: Option<self::sidebar::terminal_drag::TerminalDrag>,
+    terminal_drag: Option<crate::sidebar::terminal_drag::TerminalDrag>,
     /// The group being dragged by its head, while it is.
     group_drag: Option<u32>,
     /// The divider the pointer has rested on (its line shows), and the timer that sets it.
@@ -244,7 +240,7 @@ pub struct Workspace {
     dirty: bool,
     /// The first run: the intro window while it is open, and the note it leaves in the sidebar. An
     /// entity of its own, told how the window stands (`onboarding_host`) and heard through its events.
-    first_run: Entity<self::onboarding::FirstRun>,
+    first_run: Entity<crate::onboarding::FirstRun>,
     /// The command palette or the shortcut sheet, while one is open over the window.
     overlay: Option<self::overlay::Overlay>,
     /// The sidebar or the right panel sliding in or out.
@@ -301,12 +297,12 @@ impl Workspace {
         let list_focus = areas.list_focus();
         let view = std::mem::take(&mut layout.sidebar);
         let sidebar =
-            cx.new(|cx| self::sidebar::Sidebar::new(view, list_focus, Self::profiles_for_chip, window, cx));
+            cx.new(|cx| crate::sidebar::Sidebar::new(view, list_focus, Self::profiles_for_chip, window, cx));
         cx.subscribe_in(&sidebar, window, Self::on_sidebar_event).detach();
         // The list draws itself (a hover, a rename, a menu): so does the window around it.
         cx.observe(&sidebar, |_, _, cx| cx.notify()).detach();
 
-        let first_run = cx.new(|_| self::onboarding::FirstRun::default());
+        let first_run = cx.new(|_| crate::onboarding::FirstRun::default());
         cx.subscribe_in(&first_run, window, Self::on_first_run_event).detach();
         // The intro draws itself (a page, a hover): so does the window it covers.
         cx.observe(&first_run, |_, _, cx| cx.notify()).detach();
@@ -377,7 +373,7 @@ impl Workspace {
         this.restore_splits(&record.splits);
         if this.sessions.is_empty() {
             // The very first launch, with the terminal welcome on: the first terminal is the welcome.
-            match self::onboarding::welcome::take_first_launch(cx) {
+            match crate::onboarding::welcome::take_first_launch(cx) {
                 Some(plan) => this.open_first_welcome(plan, window, cx),
                 None => this.new_session(window, cx),
             }

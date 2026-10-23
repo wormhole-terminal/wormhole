@@ -23,8 +23,8 @@ use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbe
 
 use self::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
+use crate::sidebar::terminal_drag::Over;
 use crate::style::{self, TextRole};
-use crate::window::sidebar::terminal_drag::Over;
 
 mod demo;
 mod drag;

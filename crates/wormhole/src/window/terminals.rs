@@ -160,7 +160,7 @@ impl Workspace {
         }
         // A welcome terminal: the shell starts through `Wormhole welcome`, and only this terminal's
         // environment has the token that lets that program talk to the app as the welcome.
-        if let Some(token) = crate::window::onboarding::welcome::take_token(record.id, cx) {
+        if let Some(token) = crate::onboarding::welcome::take_token(record.id, cx) {
             // (Not in the app's own tests: their binary is not Wormhole and would take `welcome` for
             // a test name.)
             options.welcome = !cfg!(test);
@@ -236,7 +236,7 @@ impl Workspace {
         self.edit_sidebar_view(cx, |view| view.groups.leave(closed.id));
         self.features_closed(closed.id, cx);
         attention::tell(Attention::Seen(closed.pane.id), cx);
-        if crate::window::onboarding::welcome::forget(closed.id, cx) {
+        if crate::onboarding::welcome::forget(closed.id, cx) {
             crate::window::remember_first_run(cx);
         }
         self.end_welcome_demo(closed.id, cx);

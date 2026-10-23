@@ -349,7 +349,7 @@ fn the_notes_keep_an_entry_for_exactly_the_terminals_of_the_window(cx: &mut Test
 
 #[gpui_kit::test]
 fn a_terminals_row_counts_what_is_open_and_the_close_question_says_it_is_discarded(cx: &mut TestAppContext) {
-    use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
+    use crate::sidebar::{RowExtra, RowExtras, RowInfo};
     if isolate("a_terminals_row_counts_what_is_open_and_the_close_question_says_it_is_discarded") {
         return;
     }

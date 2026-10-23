@@ -13,13 +13,13 @@ use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::storage::store::SessionRecord;
 
 use crate::actions::gpui_action;
+use crate::sidebar::{RowExtras, RowInfo};
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{
     CloseAlso, CloseExtra, CloseOf, CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake,
     TabDef,
 };
-use crate::window::sidebar::{RowExtras, RowInfo};
 
 /// A feature's entity and the window's hold on its events. Dropping it unsubscribes. The only way to
 /// make one is [`Workspace::listen`] (the subscription field is private to this module), so the

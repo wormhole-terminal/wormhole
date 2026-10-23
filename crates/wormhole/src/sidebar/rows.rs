@@ -21,11 +21,11 @@ use super::facts::RowInfo;
 use super::input::SidebarInput;
 use super::{BODY_REM, CAPTION_REM, Sidebar, SidebarEvent, two_line_tooltip};
 use crate::settings::{UiColors, settings_in, ui_in};
+use crate::sidebar::SidebarStop;
+use crate::sidebar::terminal_drag::DragOrigin;
 use crate::style::home_dir;
 use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
-use crate::window::sidebar::SidebarStop;
-use crate::window::sidebar::terminal_drag::DragOrigin;
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);
