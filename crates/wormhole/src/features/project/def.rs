@@ -52,6 +52,8 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         opened: Some(hubs::profile_opened),
         deleted: Some(hubs::profile_deleted),
         id_allocated: Some(hubs::id_allocated),
+        // Its hub is the new profile's: the projects of the terminals are looked for again.
+        rehomed: Some(look),
     }),
     refresh: Some(look),
     approves_programs: Some(approves_programs),

@@ -308,6 +308,19 @@ impl Workspace {
         }
     }
 
+    /// The window was moved to another profile: the features that keep something of the window for its
+    /// profile follow it. The facts are the new profile's.
+    pub(super) fn rehomed_features(&self, cx: &mut App) {
+        let facts = self.facts(cx);
+        for (at, def) in self.features.iter().enumerate() {
+            if let (Some(rehomed), Some(entity)) =
+                (def.profiles.as_ref().and_then(|profiles| profiles.rehomed), self.feature_entity(at))
+            {
+                rehomed(entity, &facts, cx);
+            }
+        }
+    }
+
     /// What the features add to the start of a terminal in `cwd`: their environment, in the table's
     /// order, and the shell of the last that names one.
     pub(crate) fn spawn_adds(

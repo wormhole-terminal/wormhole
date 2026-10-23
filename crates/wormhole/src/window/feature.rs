@@ -203,6 +203,7 @@ pub(crate) type FocusInFn = fn(&AnyEntity, &WindowFacts<'_>, session: i64, &mut 
 pub(crate) type ProfileShownFn = fn(&mut App);
 pub(crate) type TickFn = fn(&AnyEntity, &WindowFacts<'_>, &mut Window, &mut App);
 pub(crate) type RefreshFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
+pub(crate) type RehomedFn = fn(&AnyEntity, &WindowFacts<'_>, &mut App);
 pub(crate) type ApprovesProgramsFn = fn(&AnyEntity, session: i64, &ProfileId, &App) -> bool;
 pub(crate) type SpawnFn = fn(&ProfileId, Option<&Path>, &mut App) -> SpawnAdd;
 pub(crate) type PressFn = fn(
@@ -443,17 +444,21 @@ pub(crate) struct SpawnAdd {
 
 /// How a feature that keeps data for each profile follows the profiles: when one is opened beside the
 /// shown one, when one is deleted, and when a terminal id is handed out in one (so data kept under an
-/// id of a session that is gone can be dropped).
+/// id of a session that is gone can be dropped), and when a window is moved to another profile.
 /// A feature registers only the hooks it needs.
 pub(crate) struct ProfileHooks {
     pub opened: Option<fn(&ProfileId, &mut App)>,
     pub deleted: Option<fn(&ProfileId, &mut App)>,
     pub id_allocated: Option<fn(&ProfileId, id: i64, &mut App)>,
+    /// This window was moved to another profile ([`Workspace::rehome`]); the facts already say which.
+    /// The feature follows with what it keeps of the window (a dialog that is up, the project of each
+    /// terminal). Unlike the others it is per window, so it gets the window's entity of the feature.
+    pub rehomed: Option<RehomedFn>,
 }
 
 impl ProfileHooks {
     /// No hook, for a table entry to build on in a `const` (`..ProfileHooks::DEFAULT`).
-    pub const DEFAULT: Self = Self { opened: None, deleted: None, id_allocated: None };
+    pub const DEFAULT: Self = Self { opened: None, deleted: None, id_allocated: None, rehomed: None };
 }
 
 /// A feature's part in the question before terminals are closed: both hooks see the whole set being

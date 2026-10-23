@@ -10,7 +10,7 @@ use crate::actions::NewTerminalInWorktree;
 use crate::app_state::app;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
-use crate::window::feature::{CloseHooks, FeatureDef, Root, SpawnAdd, StateDef};
+use crate::window::feature::{CloseHooks, FeatureDef, ProfileHooks, Root, SpawnAdd, StateDef};
 
 /// The window's `Worktrees`, from the handle the window keeps. The entry makes it, so it is one.
 pub(super) fn typed(entity: &AnyEntity) -> Entity<Worktrees> {
@@ -27,11 +27,14 @@ pub(crate) const DEF: FeatureDef = FeatureDef {
         ..CloseHooks::NONE
     }),
     bind: Some(bind),
-    // A worktree Wormhole made: its own ports, whatever the project says.
     // A window moved to another profile: a dialog that is up follows that profile's approvals.
-    refresh: Some(|entity, facts, cx| {
-        typed(entity).update(cx, |worktrees, _| worktrees.follow_profile(facts.profile))
+    profiles: Some(ProfileHooks {
+        rehomed: Some(|entity, facts, cx| {
+            typed(entity).update(cx, |worktrees, _| worktrees.follow_profile(facts.profile))
+        }),
+        ..ProfileHooks::DEFAULT
     }),
+    // A worktree Wormhole made: its own ports, whatever the project says.
     spawn: Some(|_, cwd, cx| SpawnAdd {
         env: cwd
             .and_then(|cwd| app(cx).worktrees.find(cwd))
