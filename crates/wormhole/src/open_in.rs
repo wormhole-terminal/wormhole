@@ -40,14 +40,18 @@ impl OpenIn {
         cx.set_global(Self { found, icons: RefCell::new(HashMap::new()) });
     }
 
-    /// Look again (an app was installed or removed since): the icons already drawn are kept.
+    /// Look again (an app was installed or removed since): the icons already drawn are kept. The
+    /// global is only set when the apps differ, since setting it tells everything that watches it
+    /// (the windows' title rows) and Settings looks again every time it draws.
     pub(crate) fn refresh(cx: &mut App) {
         let found = installed();
-        if let Some(this) = cx.try_global::<Self>() {
-            let icons = this.icons.take();
-            cx.set_global(Self { found, icons: RefCell::new(icons) });
-        } else {
-            cx.set_global(Self { found, icons: RefCell::new(HashMap::new()) });
+        match cx.try_global::<Self>() {
+            Some(this) if this.found == found => {}
+            Some(this) => {
+                let icons = this.icons.take();
+                cx.set_global(Self { found, icons: RefCell::new(icons) });
+            }
+            None => cx.set_global(Self { found, icons: RefCell::new(HashMap::new()) }),
         }
     }
 
