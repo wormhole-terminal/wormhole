@@ -110,6 +110,13 @@ pub(crate) fn start_with_table(
     record: WindowRecord,
     table: &'static [crate::window::feature::FeatureDef],
 ) -> OpenWindow {
+    // The terminals run real programs, whose reader threads wake the terminal's event task when the
+    // program prints (an action's command typed into a new terminal is echoed at once). GPUI's test
+    // scheduler reports a wake from another thread as a non-deterministic test, unless the test allowed
+    // parking once; forbidding it again keeps the clock deterministic (idle waits jump to the next
+    // timer) and leaves only the thread check off. The reader is the one thread that can wake it.
+    cx.executor().allow_parking();
+    cx.executor().forbid_parking();
     cx.update(|cx| {
         gpui_kit::init(cx);
         // The test platform delivers notifications only to an app with an identity.
