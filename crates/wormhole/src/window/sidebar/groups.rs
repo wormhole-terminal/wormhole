@@ -28,11 +28,6 @@ impl Sidebar {
         self.list_rearranged(cx);
     }
 
-    /// The group the selected terminal is in: where a new terminal goes.
-    pub(in crate::window) fn active_group(&self) -> Option<u32> {
-        self.input.active_id().and_then(|id| self.view.groups.group_of(id))
-    }
-
     /// Where a new terminal in `group` starts: the group's folder if it has one that is still a
     /// directory (`None`: the window's choice, where the selected terminal is).
     pub(in crate::window) fn start_folder(&self, group: u32) -> Option<String> {

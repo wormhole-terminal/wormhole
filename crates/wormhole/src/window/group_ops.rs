@@ -18,15 +18,6 @@ use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace};
 
 impl Workspace {
-    /// Terminal `id` and the rest of its split: they move, join and leave groups together.
-    fn with_split_mates(&self, id: i64) -> Vec<i64> {
-        let Some(ix) = self.find_session(id) else { return Vec::new() };
-        match self.sessions[ix].split {
-            Some(split) => self.members(split).into_iter().map(|member| self.sessions[member].id).collect(),
-            None => vec![id],
-        }
-    }
-
     /// Close group `group`: every terminal in it ends, and the group goes (a pinned one stays as a
     /// line). One question first when an agent works or waits in it, or a command runs.
     pub(super) fn close_group(&mut self, group: u32, window: &mut Window, cx: &mut Context<Self>) {
@@ -104,8 +95,9 @@ impl Workspace {
         let Some(found) = self.sidebar_view(cx).groups.get(group).cloned() else { return };
         // The group's terminals and the rest of every split they are in.
         let mut ids: Vec<i64> = Vec::new();
+        let input = self.sidebar_input(0.0, cx);
         for &id in &found.members {
-            for mate in self.with_split_mates(id) {
+            for mate in input.with_split_mates(id) {
                 if !ids.contains(&mate) {
                     ids.push(mate);
                 }
@@ -154,7 +146,7 @@ impl Workspace {
             self.active = usize::MAX;
             self.new_session(window, cx);
         }
-        self.with_sidebar(cx, |sidebar, cx| sidebar.rearranged(cx));
+        self.with_sidebar(cx, |sidebar, cx| sidebar.list_rearranged(cx));
 
         let source = window.bounds();
         // The new window stays in this window's profile: its database, its environment.

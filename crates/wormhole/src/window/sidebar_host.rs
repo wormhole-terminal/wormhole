@@ -142,6 +142,12 @@ impl Workspace {
             asking: self.closing_session_prompt || self.closing_prompt,
             terminal_drag: self.terminal_drag.as_ref().map(|drag| (drag.id, drag.origin)),
             group_drag: self.group_drag,
+            welcomes: self
+                .sessions
+                .iter()
+                .map(|session| session.id)
+                .filter(|&id| crate::window::onboarding::welcome::running(id, cx))
+                .collect(),
         }
     }
 
@@ -338,7 +344,7 @@ impl Workspace {
         // when one would read differently, but not for a window nobody is looking at.
         if window_active && shown {
             let now = row_times(&self.row_infos(cx), &self.profile, cx);
-            if self.sidebar.read(cx).times_changed(now) {
+            if self.sidebar.update(cx, |sidebar, _| sidebar.times_changed(now)) {
                 cx.notify();
             }
         }
@@ -355,9 +361,9 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match event.clone() {
+        match event {
             SidebarEvent::Changed => self.mark_dirty(cx),
-            SidebarEvent::Activate { id, then_focus_list } => {
+            &SidebarEvent::Activate { id, then_focus_list } => {
                 if let Some(ix) = self.find_session(id) {
                     self.activate(ix, window, cx);
                     if then_focus_list {
@@ -367,15 +373,15 @@ impl Workspace {
                     }
                 }
             }
-            SidebarEvent::Close(id) => {
+            &SidebarEvent::Close(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.request_close_session(ix, window, cx);
                 }
             }
             SidebarEvent::NewTerminal(kind) => match kind {
                 NewTerminal::Plain => self.new_session(window, cx),
-                NewTerminal::Shell(key) => self.new_session_with(Some(key), window, cx),
-                NewTerminal::InGroup(group) => self.new_session_in_group(group, window, cx),
+                NewTerminal::Shell(key) => self.new_session_with(Some(key.clone()), window, cx),
+                &NewTerminal::InGroup(group) => self.new_session_in_group(group, window, cx),
                 NewTerminal::InNewGroup => {
                     self.new_session(window, cx);
                     if let Some(id) = self.sessions.get(self.active).map(|session| session.id) {
@@ -383,39 +389,39 @@ impl Workspace {
                     }
                 }
             },
-            SidebarEvent::SplitRight(id) => {
+            &SidebarEvent::SplitRight(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.activate(ix, window, cx);
                     self.split_pane(Axis::Row, window, cx);
                 }
             }
-            SidebarEvent::LeaveSplit(id) => {
+            &SidebarEvent::LeaveSplit(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.leave_split(ix, cx);
                 }
             }
-            SidebarEvent::TogglePin(id) => {
+            &SidebarEvent::TogglePin(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.toggle_pin(ix, cx);
                 }
             }
-            SidebarEvent::ToggleForgetText(id) => {
+            &SidebarEvent::ToggleForgetText(id) => {
                 if let Some(ix) = self.find_session(id) {
                     self.toggle_forget_text(ix, cx);
                 }
             }
-            SidebarEvent::ShowBeside { other, id } => self.show_beside(other, id, window, cx),
-            SidebarEvent::RowMenu { id, at } => {
+            &SidebarEvent::ShowBeside { other, id } => self.show_beside(other, id, window, cx),
+            &SidebarEvent::RowMenu { id, at } => {
                 let beside = self.beside_choices(id, cx);
                 self.sidebar.update(cx, |sidebar, cx| sidebar.show_row_menu(id, at, beside, window, cx));
             }
-            SidebarEvent::Renamed { id, typed } => {
+            &SidebarEvent::Renamed { id, ref typed } => {
                 if let (Some(typed), Some(ix)) = (typed, self.find_session(id)) {
                     // Emptied, it is called what runs in it again; left as it was, it keeps no name of its own.
                     if typed.is_empty() {
                         self.sessions[ix].custom_name = None;
                     } else if typed != self.sessions[ix].name(cx).as_ref() {
-                        self.sessions[ix].custom_name = Some(typed);
+                        self.sessions[ix].custom_name = Some(typed.clone());
                     }
                     self.mark_dirty(cx);
                 }
@@ -423,13 +429,13 @@ impl Workspace {
                 cx.notify();
             }
             SidebarEvent::FocusTerminal => self.focus_terminal(window, cx),
-            SidebarEvent::CloseGroup(group) => self.close_group(group, window, cx),
-            SidebarEvent::MoveGroupToWindow(group) => self.move_group_to_window(group, window, cx),
-            SidebarEvent::TerminalDragStarted { id, origin } => {
+            &SidebarEvent::CloseGroup(group) => self.close_group(group, window, cx),
+            &SidebarEvent::MoveGroupToWindow(group) => self.move_group_to_window(group, window, cx),
+            &SidebarEvent::TerminalDragStarted { id, origin } => {
                 self.terminal_drag = Some(TerminalDrag::new(id, origin));
                 cx.notify();
             }
-            SidebarEvent::GroupDragStarted(group) => {
+            &SidebarEvent::GroupDragStarted(group) => {
                 self.group_drag = Some(group);
                 cx.notify();
             }
@@ -438,9 +444,9 @@ impl Workspace {
                 cx.notify();
             }
             SidebarEvent::TerminalDropped { dragged, origin, over } => {
-                self.finish_terminal_drop(dragged, origin, over, window, cx)
+                self.finish_terminal_drop(*dragged, *origin, *over, window, cx)
             }
-            SidebarEvent::StepStop(delta) => self.step_stop(delta, window, cx),
+            &SidebarEvent::StepStop(delta) => self.step_stop(delta, window, cx),
         }
     }
 

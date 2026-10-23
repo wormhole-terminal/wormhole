@@ -17,25 +17,27 @@ use crate::window::terminal_drag::{DragOrigin, Over};
 /// (manual) order, and the few things about the window the rows depend on.
 pub(in crate::window) struct SidebarInput {
     /// Every terminal's row facts.
-    pub rows: Vec<RowInfo>,
+    pub(in crate::window) rows: Vec<RowInfo>,
     /// The selected terminal's place in `rows` (`usize::MAX` while the window has none).
-    pub active: usize,
+    pub(in crate::window) active: usize,
     /// The profile the window is in, whose settings and theme the list is drawn with.
-    pub profile: ProfileId,
+    pub(in crate::window) profile: ProfileId,
     /// The sidebar column's width (its width at rest while it slides).
-    pub width: f32,
+    pub(in crate::window) width: f32,
     /// The window's width, which the tab bar fits itself to.
-    pub window_width: f32,
+    pub(in crate::window) window_width: f32,
     /// The terminals are in tabs across the top, not in the sidebar.
-    pub tabs_on: bool,
+    pub(in crate::window) tabs_on: bool,
     /// The window's glass, while it is on: each card asks for a glass of its own.
-    pub glass: Option<Rc<Glass>>,
+    pub(in crate::window) glass: Option<Rc<Glass>>,
     /// A question about closing a terminal or the window is up (a × shows no tooltip then).
-    pub asking: bool,
+    pub(in crate::window) asking: bool,
     /// The terminal being dragged, by its row or its pane's header.
-    pub terminal_drag: Option<(i64, DragOrigin)>,
+    pub(in crate::window) terminal_drag: Option<(i64, DragOrigin)>,
     /// The group being dragged by its head.
-    pub group_drag: Option<u32>,
+    pub(in crate::window) group_drag: Option<u32>,
+    /// The terminals whose welcome program is running: the example band is drawn only for one of them.
+    pub(in crate::window) welcomes: Vec<i64>,
 }
 
 impl Default for SidebarInput {
@@ -51,6 +53,7 @@ impl Default for SidebarInput {
             asking: false,
             terminal_drag: None,
             group_drag: None,
+            welcomes: Vec::new(),
         }
     }
 }
@@ -82,7 +85,7 @@ impl SidebarInput {
     }
 
     /// Terminal `id` and the rest of its split: they move, join and leave groups together.
-    pub(super) fn with_split_mates(&self, id: i64) -> Vec<i64> {
+    pub(in crate::window) fn with_split_mates(&self, id: i64) -> Vec<i64> {
         let Some(ix) = self.find(id) else { return Vec::new() };
         match self.rows[ix].split {
             Some(split) => {

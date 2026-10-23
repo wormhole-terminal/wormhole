@@ -67,7 +67,8 @@ impl Sidebar {
         }
         let selected = self.input.active_id().map(SidebarStop::Row);
         // Folded away, the selected terminal is its group's head.
-        let group = self.active_group().map(SidebarStop::Group);
+        let group =
+            self.input.active_id().and_then(|id| self.view.groups.group_of(id)).map(SidebarStop::Group);
         self.keys_at = [selected, group]
             .into_iter()
             .flatten()

@@ -94,7 +94,7 @@ pub(in crate::window) struct Sidebar {
     motion: ListMotion,
     /// The times the rows showed when last drawn ("Working · 3m", "1:12"), so a tick redraws
     /// only when one of them would read differently.
-    times_drawn: RefCell<Vec<Option<String>>>,
+    times_drawn: Vec<Option<String>>,
     /// The terminal welcome's example group while its sidebar step is up (`demo`). Never saved.
     demo: Option<demo::Demo>,
     /// The tab bar, while the terminals are in tabs.
@@ -133,7 +133,7 @@ impl Sidebar {
             order_rev: 0,
             numbers: RefCell::default(),
             motion: ListMotion::default(),
-            times_drawn: RefCell::default(),
+            times_drawn: Vec::new(),
             demo: None,
             tabs: tab_bar::TabBarState::default(),
             profile_menu: None,
@@ -226,11 +226,11 @@ impl Sidebar {
 
     /// Whether the times on the rows read as `now` says: no, and the list wants a redraw (a row's
     /// "Working · 3m" moved on its own).
-    pub(in crate::window) fn times_changed(&self, now: Vec<Option<String>>) -> bool {
-        if *self.times_drawn.borrow() == now {
+    pub(in crate::window) fn times_changed(&mut self, now: Vec<Option<String>>) -> bool {
+        if self.times_drawn == now {
             return false;
         }
-        *self.times_drawn.borrow_mut() = now;
+        self.times_drawn = now;
         true
     }
 
@@ -276,14 +276,9 @@ impl Sidebar {
     }
 
     /// The person rearranged the list: the ⌘ numbers are dealt again, and the window saves.
-    fn list_rearranged(&mut self, cx: &mut Context<Self>) {
+    pub(in crate::window) fn list_rearranged(&mut self, cx: &mut Context<Self>) {
         self.order_rev += 1;
         self.changed(cx);
-    }
-
-    /// The window rearranged the list's terminals (a group moved out): the ⌘ numbers are dealt again.
-    pub(in crate::window) fn rearranged(&mut self, cx: &mut Context<Self>) {
-        self.list_rearranged(cx);
     }
 
     /// The saved view changed: tell the window to save it, and draw.
@@ -303,7 +298,7 @@ impl Sidebar {
         let ui = ui_in(&input.profile, cx);
         let glass = input.glass.clone();
         let listing = self.listing(cx);
-        *self.times_drawn.borrow_mut() = row_times(infos, &input.profile, cx);
+        self.times_drawn = row_times(infos, &input.profile, cx);
         let keys: Vec<ItemKey> = listing
             .entries
             .iter()

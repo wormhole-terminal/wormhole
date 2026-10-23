@@ -78,9 +78,9 @@ impl Sidebar {
 
     /// The band, if it is to be drawn now: asked for, its welcome still running, and its terminal's
     /// program not ended (a welcome that was killed would otherwise leave it up).
-    fn demo_in_view(&self, input: &SidebarInput, cx: &App) -> Option<&Demo> {
+    fn demo_in_view(&self, input: &SidebarInput) -> Option<&Demo> {
         self.demo.as_ref().filter(|demo| {
-            crate::window::onboarding::welcome::running(demo.tab, cx)
+            input.welcomes.contains(&demo.tab)
                 && input.rows.iter().any(|row| row.id == demo.tab && row.state != RowState::Exited)
         })
     }
@@ -92,14 +92,14 @@ impl Sidebar {
         input: &SidebarInput,
         cx: &App,
     ) -> Option<[example::Row; 3]> {
-        let demo = self.demo_in_view(input, cx)?;
+        let demo = self.demo_in_view(input)?;
         Some(example::rows(demo.since.elapsed(), cx.reduce_motion()))
     }
 
     /// The group and its three rows, to follow the list's own entries; none when it is not up. It is
     /// drawn as a card, as any group is.
     pub(super) fn render_demo(&self, frame: &Frame, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let Some(demo) = self.demo_in_view(&self.input, cx) else { return Vec::new() };
+        let Some(demo) = self.demo_in_view(&self.input) else { return Vec::new() };
         let ui = frame.ui;
         let metrics = frame.metrics;
         let rows = example::rows(demo.since.elapsed(), cx.reduce_motion());
