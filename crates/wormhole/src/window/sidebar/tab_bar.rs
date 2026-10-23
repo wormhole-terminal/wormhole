@@ -150,7 +150,7 @@ impl Sidebar {
         let bar = div()
             .id("tab-bar")
             .absolute()
-            .top(px(crate::window::title::SURFACE_TOP))
+            .top(px(style::TITLE_ROW_H))
             .left_0()
             .right_0()
             .flex()

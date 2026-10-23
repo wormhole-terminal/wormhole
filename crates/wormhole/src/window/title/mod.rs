@@ -85,11 +85,9 @@ pub(super) struct TitlePlan {
 /// fold into; each with the gap that separates it from the breadcrumb.
 pub(super) const ROW_GAP: f32 = 4.0;
 /// The title row is a bar this far in from the column's sides and the window's top, centred on the
-/// traffic lights, with as much under it before the terminal's surface ([`SURFACE_TOP`]).
+/// traffic lights, with as much under it before the terminal's surface (under the whole title row,
+/// [`style::TITLE_ROW_H`]: also where the terminals' tab bar starts when they are tabs).
 pub(super) const BAR_INSET: f32 = 4.0;
-/// Where the terminal's surface (or, with terminals as tabs, their bar) starts under the window's top:
-/// under the whole title row.
-pub(super) const SURFACE_TOP: f32 = style::TITLE_ROW_H;
 pub(super) const OPEN_IN_W: f32 = style::HIT_MIN + CHEVRON_W + AFTER_CHEVRON;
 const CHEVRON_W: f32 = 16.0;
 /// After Open in…'s narrow chevron, so its glyph stands as far from the split's as the row's other

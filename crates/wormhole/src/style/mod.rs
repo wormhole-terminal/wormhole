@@ -72,6 +72,7 @@ mod metrics;
 pub mod motion;
 mod palette;
 mod panel;
+pub(crate) mod panel_list;
 mod panes;
 mod popover;
 pub(crate) mod popover_layer;

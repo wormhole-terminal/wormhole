@@ -21,7 +21,7 @@
 //! `window_lifecycle`, `hosting` for the persistent terminals), what it answers from outside
 //! (`window_control`, `restart_facts`, `ambient`, `menu_state`, and `devctl` in a devctl build), its
 //! actions and keys (`window_actions`, `shortcuts`), its look (`layout`, `chrome`, `resize`, `slide`,
-//! `glass`, `status_bar`, `panel_list`), the windows it opens beside itself
+//! `glass`, `status_bar`), the windows it opens beside itself
 //! (`aux_window`), the apps it opens a folder in (`open_in`) and what opens over it (`overlay`,
 //! `dialog`).
 //!
@@ -97,7 +97,6 @@ mod pane_memory_tests;
 #[cfg(test)]
 mod pane_tests;
 mod panel;
-pub(crate) mod panel_list;
 #[cfg(test)]
 mod panel_tab_tests;
 mod panes;
