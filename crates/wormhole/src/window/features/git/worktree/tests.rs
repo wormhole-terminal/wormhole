@@ -6,13 +6,16 @@
 
 use std::path::PathBuf;
 
-use gpui_kit::TestAppContext;
+use gpui_kit::{Context, Entity, TestAppContext, Window};
 use wormhole_core::git::worktree::Worktree;
-use wormhole_core::ipc::control::ErrorCode;
+use wormhole_core::ipc::control::{Asked, Error, ErrorCode};
 use wormhole_core::project::ProjectFolder;
 
 use super::super::testing::{folder, go, read_repo, repo, write};
+use super::Worktrees;
 use crate::app_state::{OpenWindow, app};
+use crate::window::Workspace;
+use crate::window::feature::CloseOf;
 use crate::window::features::project::{self, hub_mut};
 use crate::window::view_tests::{drive, isolate_in, read, read_cx, start};
 
@@ -24,7 +27,31 @@ fn isolate(name: &str) -> bool {
 
 /// Whether the dialog is up.
 fn asking(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
-    read(cx, window, |ws| ws.worktree_ask.is_some())
+    read_cx(cx, window, |ws, cx| worktrees(ws).read(cx).asking.is_some())
+}
+
+/// The window's worktree feature.
+fn worktrees(ws: &Workspace) -> Entity<Worktrees> {
+    ws.feature::<Worktrees>().expect("the window has the worktree feature")
+}
+
+/// The menu item, or its key: the dialog for the terminal in front.
+fn menu_item(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
+    let terminal = ws.active_terminal();
+    worktrees(ws).update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&terminal, window, cx));
+}
+
+/// The command line's request, as the control socket's handler makes it.
+fn command_line(
+    ws: &mut Workspace,
+    folder: &std::path::Path,
+    branch: &str,
+    command: Option<String>,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> Result<Asked, Error> {
+    let folder = Some(folder.to_string_lossy().into_owned());
+    super::api::control_ask(ws, folder, branch, command, window, cx)
 }
 
 fn sessions(cx: &mut TestAppContext, window: &OpenWindow) -> usize {
@@ -33,15 +60,20 @@ fn sessions(cx: &mut TestAppContext, window: &OpenWindow) -> usize {
 
 /// The worktree Wormhole made that terminal `ix` is in.
 fn made(cx: &mut TestAppContext, window: &OpenWindow, ix: usize) -> Option<Worktree> {
-    read_cx(cx, window, |ws, cx| ws.made_worktree_of(ix, cx))
+    read_cx(cx, window, |ws, cx| {
+        let cwd = ws.sessions[ix].terminal().read(cx).cwd.clone()?;
+        app(cx).worktrees.find(&cwd).cloned()
+    })
 }
 
 /// The person types `branch` in the dialog and presses Create; whether the dialog closed.
 fn create(cx: &mut TestAppContext, window: &OpenWindow, branch: &str) -> bool {
     let closed = drive(cx, window, |ws, window, cx| {
-        let input = ws.worktree_ask.as_ref().expect("the dialog is up").input.clone();
-        input.update(cx, |input, cx| input.set_value(branch.to_string(), window, cx));
-        ws.confirm_worktree(window, cx)
+        worktrees(ws).update(cx, |worktrees, cx| {
+            let input = worktrees.asking.as_ref().expect("the dialog is up").input.clone();
+            input.update(cx, |input, cx| input.set_value(branch.to_string(), window, cx));
+            worktrees.confirm_worktree(window, cx)
+        })
     });
     cx.run_until_parked();
     closed
@@ -77,6 +109,16 @@ fn trust(cx: &mut TestAppContext, root: &std::path::Path) {
     });
 }
 
+/// What closing the second terminal's group adds to the question: its words, and whether it offers to
+/// remove the worktree too.
+fn group_question(cx: &mut TestAppContext, window: &OpenWindow) -> (String, bool) {
+    read_cx(cx, window, |ws, cx| {
+        let extras = ws.close_extras(&[ws.sessions[1].id], CloseOf::Group, cx);
+        let extra = extras.into_iter().next().expect("the terminal is in a worktree Wormhole made");
+        (extra.note, extra.also.is_some())
+    })
+}
+
 // ---------------------------------------------------------------- the flow
 
 #[gpui_kit::test]
@@ -87,7 +129,7 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     let window = start(cx, 1);
     let base = base(cx, "worktrees");
     let root = in_repo(cx, &window, "asks");
-    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
+    drive(cx, &window, menu_item);
     assert!(asking(cx, &window), "the dialog is up");
     assert!(
         std::fs::read_dir(&base).expect("the base").next().is_none() && sessions(cx, &window) == 1,
@@ -95,7 +137,11 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     );
     // A name git won't take keeps the dialog up, with the reason.
     assert!(!create(cx, &window, "no good"));
-    assert!(read(cx, &window, |ws| ws.worktree_ask.as_ref().is_some_and(|ask| ask.error.is_some())));
+    assert!(read_cx(cx, &window, |ws, cx| worktrees(ws)
+        .read(cx)
+        .asking
+        .as_ref()
+        .is_some_and(|ask| ask.error.is_some())));
     assert!(std::fs::read_dir(&base).expect("the base").next().is_none());
 
     // Create makes the worktree, opens a terminal in it and remembers it as one of Wormhole's.
@@ -114,6 +160,21 @@ fn the_menu_item_asks_and_makes_nothing_until_the_person_confirms(cx: &mut TestA
     assert_eq!(read(cx, &window, |ws| ws.active), 1, "selected");
     assert!(cx.update(|cx| app(cx).worktrees.find(&worktree.folder).is_some()));
     assert!(worktree.port.is_some(), "with ports of its own");
+
+    // A terminal started in it gets its ports in its environment; one started in the repository does
+    // not.
+    let (in_worktree, in_repo) = cx.update(|cx| {
+        let table = crate::window::features::TABLE;
+        (
+            Workspace::spawn_adds(Some(worktree.folder.as_path()), table, cx),
+            Workspace::spawn_adds(Some(root.as_path()), table, cx),
+        )
+    });
+    let ports: std::collections::BTreeMap<String, String> =
+        worktree.env().into_iter().map(|(name, value)| (name.to_string(), value)).collect();
+    assert!(!ports.is_empty());
+    assert_eq!(in_worktree.env, ports);
+    assert!(in_repo.env.is_empty());
 }
 
 #[gpui_kit::test]
@@ -125,7 +186,7 @@ fn nothing_is_made_without_a_repository(cx: &mut TestAppContext) {
     let plain = folder("not-a-repo");
     drive(cx, &window, |ws, _, cx| go(ws, &plain, cx));
     read_repo(cx, &window);
-    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
+    drive(cx, &window, menu_item);
     assert!(!asking(cx, &window));
 }
 
@@ -138,11 +199,9 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     base(cx, "worktrees-untrusted");
     let root = in_repo(cx, &window, "untrusted");
     with_project(&root);
-    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
+    drive(cx, &window, menu_item);
     assert!(!asking(cx, &window), "the project's settings would run in the new terminal");
-    let asked = drive(cx, &window, |ws, window, cx| {
-        ws.control_ask_worktree(Some(root.to_string_lossy().into_owned()), "x", None, window, cx)
-    });
+    let asked = drive(cx, &window, |ws, window, cx| command_line(ws, &root, "x", None, window, cx));
     assert_eq!(asked.expect_err("refused").code, ErrorCode::Refused);
     assert!(!asking(cx, &window));
     assert_eq!(cx.update(|cx| project::api::worktree_setup(&root, cx)), None, "and no setup runs");
@@ -150,13 +209,7 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
     // Trusted, the dialog opens for either, and the command line makes nothing by itself.
     trust(cx, &root);
     let asked = drive(cx, &window, |ws, window, cx| {
-        ws.control_ask_worktree(
-            Some(root.to_string_lossy().into_owned()),
-            "feature/x",
-            Some("echo hi".into()),
-            window,
-            cx,
-        )
+        command_line(ws, &root, "feature/x", Some("echo hi".into()), window, cx)
     });
     let asked = asked.expect("the dialog is opened");
     assert!(asked.asked && asked.branch == "feature/x");
@@ -168,9 +221,7 @@ fn a_project_that_is_not_trusted_gets_no_worktree_from_the_menu_or_the_command_l
         "a trusted project's setup runs in the new terminal"
     );
     // A second ask while one is up is refused.
-    let again = drive(cx, &window, |ws, window, cx| {
-        ws.control_ask_worktree(Some(root.to_string_lossy().into_owned()), "other", None, window, cx)
-    });
+    let again = drive(cx, &window, |ws, window, cx| command_line(ws, &root, "other", None, window, cx));
     assert_eq!(again.expect_err("refused").code, ErrorCode::Failed);
 }
 
@@ -184,10 +235,8 @@ fn the_command_line_names_what_is_wrong_with_the_folder_or_the_branch(cx: &mut T
     let root = in_repo(cx, &window, "cli");
     let plain = folder("cli-plain");
     let ask = |cx: &mut TestAppContext, folder: &std::path::Path, branch: &'static str| {
-        let folder = folder.to_string_lossy().into_owned();
-        drive(cx, &window, move |ws, window, cx| {
-            ws.control_ask_worktree(Some(folder), branch, None, window, cx)
-        })
+        let folder = folder.to_path_buf();
+        drive(cx, &window, move |ws, window, cx| command_line(ws, &folder, branch, None, window, cx))
     };
     assert_eq!(ask(cx, &plain, "x").expect_err("no repository").code, ErrorCode::NotFound);
     assert_eq!(ask(cx, &root, "-bad").expect_err("a bad name").code, ErrorCode::BadRequest);
@@ -202,7 +251,7 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
     let window = start(cx, 1);
     base(cx, "worktrees-close");
     in_repo(cx, &window, "closing");
-    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
+    drive(cx, &window, menu_item);
     assert!(create(cx, &window, "topic"));
     let worktree = made(cx, &window, 1).expect("made");
 
@@ -212,11 +261,8 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();
-    let (note, removable) = read_cx(cx, &window, |ws, cx| {
-        let group = ws.made_worktrees_of(&[ws.sessions[1].id], cx);
-        (group.note(), group.removable())
-    });
-    assert_eq!(removable.len(), 1, "{note}");
+    let (note, removable) = group_question(cx, &window);
+    assert!(removable, "{note}");
     assert!(note.contains("topic") && note.contains("Close and Remove Worktree"), "{note}");
 
     // The question comes first: the terminal is still there.
@@ -231,9 +277,6 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
         ws.refresh_git(ix, cx);
     });
     cx.run_until_parked();
-    let (note, removable) = read_cx(cx, &window, |ws, cx| {
-        let group = ws.made_worktrees_of(&[ws.sessions[1].id], cx);
-        (group.note(), group.removable())
-    });
-    assert!(removable.is_empty() && note.contains("stay"), "{note}");
+    let (note, removable) = group_question(cx, &window);
+    assert!(!removable && note.contains("stay"), "{note}");
 }

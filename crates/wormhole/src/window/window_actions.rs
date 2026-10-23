@@ -12,9 +12,9 @@ use crate::actions::{
     ActualSize, Bigger, CloseTerminal, CloseWindow, CopyPath, Find, FindNext, FindPrevious, FocusNextArea,
     FocusPaneDown, FocusPaneLeft, FocusPaneRight, FocusPaneUp, FocusPreviousArea, FocusTerminalOrPanel,
     GoToGroup, GoToTerminal, LayoutColumns, LayoutGrid, LayoutRows, LayoutSingle, LeaveSplit, NewSession,
-    NewTerminalInWorktree, NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal,
-    PreviousGroup, PreviousTerminal, RevealInFinder, ShowHistory, Smaller, SplitDown, SplitRight,
-    ToggleRightPanel, ToggleSidebar, UseSelectionForFind, ZoomPane,
+    NewTerminalNoGroup, NewTerminalWith, NextGroup, NextTerminal, PinTerminal, PreviousGroup,
+    PreviousTerminal, RevealInFinder, ShowHistory, Smaller, SplitDown, SplitRight, ToggleRightPanel,
+    ToggleSidebar, UseSelectionForFind, ZoomPane,
 };
 use crate::settings::settings;
 use crate::terminal_view::FONT_SIZES;
@@ -32,8 +32,6 @@ impl Workspace {
     pub(super) fn with_actions(&self, root: Div, cx: &mut Context<Self>) -> Div {
         use wormhole_core::view::panes::{Axis, Direction, Preset};
         let has_folder = self.active_terminal().read(cx).cwd.is_some();
-        // A worktree needs a repository: the terminal's folder has a git status.
-        let has_repo = self.active_session().git.status.is_some();
         let split = self.active_split().is_some();
         let root = root
             .on_action(cx.listener(|this, _: &NewSession, window, cx| this.new_session(window, cx)))
@@ -41,11 +39,6 @@ impl Workspace {
                 let cwd = this.default_cwd(cx);
                 this.open_session_in(Some(None), None, cwd, window, cx);
             }))
-            .when(has_repo, |root| {
-                root.on_action(cx.listener(|this, _: &NewTerminalInWorktree, window, cx| {
-                    this.new_terminal_in_worktree(window, cx)
-                }))
-            })
             // Panes: a split or a layout only with the room for it, the rest only
             // in a split, so the menu greys them out otherwise.
             .when(self.can_split(Axis::Row), |root| {

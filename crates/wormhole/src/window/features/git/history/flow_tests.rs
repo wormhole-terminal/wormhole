@@ -309,7 +309,8 @@ fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<W
 // ---------------------------------------------------------------- the frame
 
 /// Allocations the third draw of a one-terminal window on History (two commits, the newest open with its
-/// two files) may make. Measured: 3,792 allocations (1.8 MB), the same on every run. The budget is that plus
+/// two files) may make. Measured: 3,792 allocations (1.8 MB), the same on every run (3,790 before History
+/// moved into its entity). The budget is that plus
 /// about a hundredth; the tab adds a
 /// row for each commit and file in view, so a cost per commit or per file per frame shows at once.
 const HISTORY_FRAME_ALLOCATIONS: u64 = 3_830;

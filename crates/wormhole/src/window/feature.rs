@@ -144,6 +144,8 @@ pub(in crate::window) struct NewTerminal {
 pub(in crate::window) type BindFn = fn(&AnyEntity, &WindowFacts<'_>, Root, &App) -> Root;
 pub(in crate::window) type RowExtrasFn = fn(&AnyEntity, &WindowFacts<'_>, &mut RowExtras<'_>, &App);
 pub(in crate::window) type CloseStakeFn = fn(&AnyEntity, &[i64], &App) -> Option<Stake>;
+pub(in crate::window) type CloseExtraFn =
+    fn(&AnyEntity, &WindowFacts<'_>, &[i64], CloseOf, &App) -> Option<CloseExtra>;
 pub(in crate::window) type MenuFn = fn(&AnyEntity, &WindowFacts<'_>, &mut MenuState, &App);
 pub(in crate::window) type CountFn = fn(&AnyEntity, &WindowFacts<'_>, &App) -> Option<usize>;
 pub(in crate::window) type TabActionsFn =
@@ -198,6 +200,11 @@ pub(in crate::window) struct FeatureDef {
     /// What closing these terminals would lose (notes' open items, a worktree's changes), for the
     /// whole set being closed (a group, a window).
     pub close_stake: Option<CloseStakeFn>,
+    /// What closing these terminals adds to the question the window asks: a sentence and, if the feature
+    /// can do something more than closing, a button for it (a worktree Wormhole made may go with its
+    /// terminal). Asked of every feature that is on, for the terminal or the group being closed; any
+    /// extra makes the window ask even when nothing would be lost otherwise.
+    pub close_extra: Option<CloseExtraFn>,
     /// Menu, palette and sheet state: actions disabled or hidden right now (Usage without an agent).
     /// Called whether the feature is on or off (the facts carry the mask). What an off feature hides
     /// is not this hook's: the keymap's rows are tagged with their feature, and the window hides the
@@ -335,6 +342,29 @@ pub(in crate::window) struct ProfileHooks {
 impl ProfileHooks {
     /// No hook, for a table entry to build on in a `const` (`..ProfileHooks::DEFAULT`).
     pub const DEFAULT: Self = Self { opened: None, deleted: None, id_allocated: None };
+}
+
+/// What is being closed, for a feature's part in the question.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::window) enum CloseOf {
+    /// One terminal (its row's ×, ⌘W).
+    Terminal,
+    /// A group's terminals.
+    Group,
+}
+
+/// What a feature adds to the question before closing terminals.
+pub(in crate::window) struct CloseExtra {
+    /// Said after the rest of the question's detail.
+    pub note: String,
+    /// A button between the closing one and Cancel, which closes and then does more.
+    pub also: Option<CloseAlso>,
+}
+
+/// An extra button of the close question: its words, and what to do once the terminals are closed.
+pub(in crate::window) struct CloseAlso {
+    pub label: &'static str,
+    pub then: std::rc::Rc<dyn Fn(&mut App)>,
 }
 
 /// What closing some terminals would lose, in the words of the close question.

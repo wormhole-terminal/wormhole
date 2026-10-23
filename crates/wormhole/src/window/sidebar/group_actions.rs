@@ -9,6 +9,8 @@ use wormhole_core::view::sidebar::{Item, SplitId, WindowSidebar, group_key};
 use crate::app_state::app_mut;
 use crate::terminal_view::Status;
 use crate::window::dialog;
+use crate::window::feature::{CloseAlso, CloseOf};
+use crate::window::feature_host::extras_to_ask;
 use crate::window::session::Session;
 use crate::window::session::{close_group_detail, close_group_title};
 use crate::window::window_lifecycle::open_workspace_window_in;
@@ -23,10 +25,10 @@ impl Workspace {
         let sessions: Vec<&Session> =
             members.iter().filter_map(|&id| self.find_session(id)).map(|ix| &self.sessions[ix]).collect();
         let asking: Vec<&&Session> = sessions.iter().filter(|s| s.needs_close_confirmation(cx)).collect();
-        // Closing one terminal in a worktree Wormhole made asks about the worktree; so does closing
-        // the group it is in.
-        let worktrees = self.made_worktrees_of(&members, cx);
-        if asking.is_empty() && worktrees.is_empty() {
+        // A feature may have more to ask (closing a terminal in a worktree Wormhole made asks about the
+        // worktree; so does closing the group it is in).
+        let extras = self.close_extras(&members, CloseOf::Group, cx);
+        if asking.is_empty() && extras.is_empty() {
             self.close_terminals(&members, window, cx);
             return;
         }
@@ -38,9 +40,10 @@ impl Workspace {
         let programs: Vec<String> = asking.iter().flat_map(|s| s.running_programs(false, cx)).collect();
         let stakes = self.close_stakes(&members, cx);
         let mut detail = close_group_detail(sessions.len(), &running, &programs, &stakes);
-        if !worktrees.is_empty() {
+        let (note, also) = extras_to_ask(extras);
+        if !note.is_empty() {
             detail.push(' ');
-            detail.push_str(&worktrees.note());
+            detail.push_str(&note);
         }
         let question = dialog::CloseQuestion {
             title: close_group_title(&name).into(),
@@ -50,16 +53,13 @@ impl Workspace {
         self.closing_session_prompt = true;
         cx.notify();
         let (confirm, remove, dismiss) = (cx.weak_entity(), cx.weak_entity(), cx.weak_entity());
-        let removable = worktrees.removable();
         let close_members = members.clone();
-        let also: Option<dialog::Also> = (!removable.is_empty()).then(|| {
+        let also: Option<dialog::Also> = also.map(|CloseAlso { label, then }| {
             let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
                 let _ = remove.update(cx, |this, cx| this.close_terminals(&close_members, window, cx));
-                for worktree in removable.clone() {
-                    crate::window::features::git::worktree::remove_worktree(worktree, cx);
-                }
+                then(cx);
             });
-            ("Close and Remove Worktrees", on_also)
+            (label, on_also)
         });
         dialog::ask_before_closing_with(
             window,

@@ -36,8 +36,7 @@
       ],
       "pending": [
         "src/window/sidebar/",
-        "src/window/onboarding/",
-        "src/window/features/"
+        "src/window/onboarding/"
       ]
     },
     "layers": {
@@ -357,7 +356,6 @@
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
     "impl-outside": {
-      "crates/wormhole/src/window/features/git/worktree.rs :: impl Workspace": 2,
       "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/look_step.rs :: impl Workspace": 1,

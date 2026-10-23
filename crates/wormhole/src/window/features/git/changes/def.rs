@@ -53,6 +53,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         refresh_ticks: None,
         returns_to_previous: false,
     }],
+    close_extra: None,
     bind: None,
     row_extras: None,
     close_stake: None,

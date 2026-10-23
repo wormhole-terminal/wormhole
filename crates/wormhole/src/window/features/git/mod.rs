@@ -9,7 +9,7 @@ pub(crate) mod open_file;
 pub mod picker;
 mod problem;
 mod submodule_row;
-pub(in crate::window) mod worktree;
+pub(crate) mod worktree;
 
 #[cfg(test)]
 mod flow_tests;

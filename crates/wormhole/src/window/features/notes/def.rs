@@ -38,6 +38,7 @@ pub(in crate::window) const DEF: FeatureDef = FeatureDef {
         returns_to_previous: false,
         pick_branch: None,
     }],
+    close_extra: None,
     bind: Some(bind),
     row_extras: Some(row_extras),
     close_stake: Some(close_stake),

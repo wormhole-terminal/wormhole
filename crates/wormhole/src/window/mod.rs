@@ -10,7 +10,8 @@
 //! - `panes/` the split on screen, its model (`splits`) and the pane drop; `title/` the title rows
 //!   (breadcrumb, chips, extras, the path card and menu); `focus/` keyboard focus: F6's areas, the
 //!   stops, the Esc ladder and the ring.
-//! - `features/` the side panels' contents: a folder each for `notes`, `usage`, `project` and `git`.
+//! - `features/` the side panels' contents, each owning its state: a folder each for `notes`, `usage`,
+//!   `project` and `git` (Changes, History and the worktrees).
 //! - `sidebar/` the terminal list with its groups, rows, menus and drag; `onboarding/` the intro
 //!   window and the welcome.
 //!
@@ -35,7 +36,8 @@
 //! - the welcome's agents step opens Settings (`onboarding`: `settings_window::open_settings`,
 //!   which an action carrying the section will replace).
 //!
-//! The nested areas (`sidebar/`, `onboarding/`, `features/`) still keep their state in `Workspace`:
+//! The nested areas `sidebar/` and `onboarding/` still keep their state in `Workspace` (the features no
+//! longer do: each owns its state in an entity):
 //! their `impl Workspace` blocks are the `impl-outside` rule's `pending` list in
 //! `scripts/structure.json`, phase 5's shrink-only counter. Outside `window/` no `impl Workspace`
 //! is allowed.
@@ -224,8 +226,6 @@ pub struct Workspace {
     close_dot: bool,
     /// A "close this terminal?" question is on screen.
     closing_session_prompt: bool,
-    /// The New Terminal in New Worktree dialog, while it is up.
-    worktree_ask: Option<crate::window::features::git::worktree::Asking>,
     /// The window was closed on purpose: nothing of it is saved any more.
     discarded: bool,
     dirty: bool,
@@ -333,7 +333,6 @@ impl Workspace {
             closing_prompt: false,
             close_dot: false,
             closing_session_prompt: false,
-            worktree_ask: None,
             discarded: false,
             dirty: false,
             first_run: Default::default(),

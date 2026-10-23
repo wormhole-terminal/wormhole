@@ -14,8 +14,8 @@ use wormhole_core::view::spoken::{self, PanelTab};
 
 use super::picker::PickerHost;
 use super::testing::{
-    change_of, changed_paths, changes, diff_path, folder, git, go, open_change, read_repo, repo, walkable,
-    write,
+    ask_for_worktree, change_of, changed_paths, changes, diff_path, folder, git, go, open_change, read_repo,
+    repo, walkable, worktree_dialog_up, write,
 };
 use crate::window::view_tests::{draw, drive, isolate_in, read, read_cx, start};
 
@@ -306,14 +306,14 @@ fn the_worktree_action_is_bound_only_where_the_folder_is_in_a_repository(cx: &mu
     draw(cx, &window);
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(NewTerminalInWorktree), cx));
     cx.run_until_parked();
-    assert!(read(cx, &window, |ws| ws.worktree_ask.is_none()), "no repository: not handled, so greyed");
+    assert!(!read_cx(cx, &window, worktree_dialog_up), "no repository: not handled, so greyed");
     let root = repo("worktree-key-repo", &[("a.txt", "one\n")]);
     drive(cx, &window, |ws, _, cx| go(ws, &root, cx));
     read_repo(cx, &window);
     draw(cx, &window);
     with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(NewTerminalInWorktree), cx));
     cx.run_until_parked();
-    assert!(read(cx, &window, |ws| ws.worktree_ask.is_some()), "in one: the dialog");
+    assert!(read_cx(cx, &window, worktree_dialog_up), "in one: the dialog");
 }
 
 // ---------------------------------------------------------------- the compare picker
@@ -388,8 +388,8 @@ fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_work
     drive(cx, &window, toggle_compare);
     cx.run_until_parked();
     assert!(read_cx(cx, &window, |ws, cx| changes(ws).read(cx).picker().is_open()));
-    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
-    assert!(read(cx, &window, |ws| ws.worktree_ask.is_some()));
+    drive(cx, &window, ask_for_worktree);
+    assert!(read_cx(cx, &window, worktree_dialog_up));
 
     // On again: the log is there as it was left, and the tab and the key are back.
     cx.update(|cx| crate::settings::switch_feature(cx, FeatureId::History, true));

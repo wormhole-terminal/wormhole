@@ -27,23 +27,14 @@ use crate::window::focus::{Activate, Walkable};
 use crate::window::sidebar::{RowExtra, RowExtras, RowInfo};
 use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with_table, with_window};
 
-/// Features core lists that have not moved into the app's table yet. Each phase 5 step takes one off
-/// this list when it adds the entry; the list ends empty.
-const NOT_YET: &[FeatureId] = &[FeatureId::Worktrees];
-
 #[test]
-fn every_feature_is_in_the_table_or_waiting_for_its_step() {
+fn every_feature_core_lists_has_exactly_one_entry_in_the_table() {
     let in_table: HashSet<FeatureId> = TABLE.iter().map(|def| def.id).collect();
     assert_eq!(in_table.len(), TABLE.len(), "a feature has two entries");
     for info in &FEATURES {
-        let waiting = NOT_YET.contains(&info.id);
-        assert!(
-            in_table.contains(&info.id) != waiting,
-            "{}: must be in the table or in NOT_YET, not both and not neither",
-            info.key
-        );
+        assert!(in_table.contains(&info.id), "{} has no entry", info.key);
     }
-    assert_eq!(NOT_YET.iter().collect::<HashSet<_>>().len(), NOT_YET.len());
+    assert_eq!(TABLE.len(), FEATURES.len());
 }
 
 #[test]
@@ -122,6 +113,7 @@ static STAND_IN: &[FeatureDef] = &[
             returns_to_previous: false,
             pick_branch: None,
         }],
+        close_extra: None,
         bind: Some(|_, _, root, _| root),
         row_extras: Some(|_, _, extras, _| {
             for (id, slot) in extras.iter_mut() {
@@ -700,6 +692,7 @@ macro_rules! crowd_member {
                 returns_to_previous: false,
                 pick_branch: None,
             }],
+            close_extra: None,
             bind: Some(|_, _, root, _| root),
             row_extras: None,
             close_stake: None,

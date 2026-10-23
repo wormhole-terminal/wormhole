@@ -112,3 +112,19 @@ pub(super) fn walkable(ws: &Workspace, cx: &App) -> Vec<Walkable> {
     let entity = ws.feature_entity(at).expect("made with the window");
     (tab.walk.as_ref().expect("has a list").walkable)(entity, &ws.facts(cx), cx)
 }
+
+/// Whether the New Terminal in New Worktree dialog is up.
+pub(super) fn worktree_dialog_up(ws: &Workspace, cx: &App) -> bool {
+    ws.feature::<super::worktree::Worktrees>().is_some_and(|worktrees| worktrees.read(cx).is_asking())
+}
+
+/// The menu item, or its key: the dialog for the terminal in front.
+pub(super) fn ask_for_worktree(
+    ws: &mut Workspace,
+    window: &mut gpui_kit::Window,
+    cx: &mut Context<Workspace>,
+) {
+    let terminal = ws.active_terminal();
+    let worktrees = ws.feature::<super::worktree::Worktrees>().expect("in the table");
+    worktrees.update(cx, |worktrees, cx| worktrees.new_terminal_in_worktree(&terminal, window, cx));
+}

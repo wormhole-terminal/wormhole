@@ -87,7 +87,7 @@ pub(super) struct Session {
 
 impl Session {
     /// The session's terminal: what has the keyboard when the session is selected, and whose
-    /// folder the git panel shows.
+    /// folder the panels show the repository of.
     pub(super) fn terminal(&self) -> &Entity<TerminalView> {
         &self.pane.terminal
     }

@@ -15,7 +15,8 @@ use crate::actions::gpui_action;
 use crate::window::Workspace;
 use crate::window::facts::WindowFacts;
 use crate::window::feature::{
-    CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake, TabDef,
+    CloseAlso, CloseExtra, CloseOf, CoverDef, FeatureDef, FeatureEvent, RepoRequest, Root, SpawnAdd, Stake,
+    TabDef,
 };
 use crate::window::sidebar::{RowExtras, RowInfo};
 
@@ -418,6 +419,22 @@ impl Workspace {
         stakes
     }
 
+    /// What each feature that is on adds to the question before closing `sessions` (the terminal, or a
+    /// group's): in the table's order.
+    pub(in crate::window) fn close_extras(&self, sessions: &[i64], of: CloseOf, cx: &App) -> Vec<CloseExtra> {
+        let facts = self.facts(cx);
+        let mut extras = Vec::new();
+        for (at, def) in self.features.iter().enumerate() {
+            if !facts.features.has(def.id) {
+                continue;
+            }
+            if let (Some(close_extra), Some(entity)) = (def.close_extra, self.feature_entity(at)) {
+                extras.extend(close_extra(entity, &facts, sessions, of, cx));
+            }
+        }
+        extras
+    }
+
     /// Lets each feature that is on put its extra on the rows (a count after the status).
     pub(in crate::window) fn feature_row_extras(&self, rows: &mut [RowInfo], cx: &App) {
         let facts = self.facts(cx);
@@ -438,4 +455,12 @@ impl Workspace {
     pub(crate) fn feature<T: 'static>(&self) -> Option<Entity<T>> {
         self.feature_states.iter().flatten().find_map(|state| state.entity.clone().downcast::<T>().ok())
     }
+}
+
+/// What the features' extras make of the close question: the sentence they add after the rest of its
+/// detail, and the button of the first that has one (with what to do once the terminals are closed).
+pub(in crate::window) fn extras_to_ask(extras: Vec<CloseExtra>) -> (String, Option<CloseAlso>) {
+    let note = extras.iter().map(|extra| extra.note.as_str()).collect::<Vec<_>>().join(" ");
+    let also = extras.into_iter().find_map(|extra| extra.also);
+    (note, also)
 }

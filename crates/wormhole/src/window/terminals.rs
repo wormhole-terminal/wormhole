@@ -142,12 +142,8 @@ impl Workspace {
         }
         let cwd = record.cwd.as_ref().map(PathBuf::from);
         // What the features add to a terminal started in the folder (a trusted project's environment and
-        // shell).
-        let SpawnAdd { mut env, shell: project_shell } = Self::spawn_adds(cwd.as_deref(), self.features, cx);
-        // A worktree Wormhole made: its own ports, whatever the project says.
-        if let Some(made) = cwd.as_deref().and_then(|cwd| app(cx).worktrees.find(cwd)) {
-            env.extend(made.env().into_iter().map(|(name, value)| (name.to_string(), value)));
-        }
+        // shell, a worktree's ports).
+        let SpawnAdd { env, shell: project_shell } = Self::spawn_adds(cwd.as_deref(), self.features, cx);
         let shell = wormhole_core::terminal::shells::for_terminal(
             record.shell.as_deref(),
             project_shell.as_deref(),
@@ -242,7 +238,7 @@ impl Workspace {
         self.end_welcome_demo(closed.id);
         self.dirty = true;
         // Selecting a session from `usize::MAX` is what resets what belongs to the session on
-        // screen (its diff and branch picker), so only a real change of session
+        // screen (a feature's diff or picker), so only a real change of session
         // goes that way: closing a background session leaves the one you are in alone.
         match after {
             None => {

@@ -189,7 +189,7 @@ fn new_terminal(
     // A worktree is never made on a script's say alone: the dialog asks the user, in the window.
     if let Some(branch) = worktree {
         let asked = AppState::with_workspace(&target, cx, |ws, window, cx| {
-            ws.control_ask_worktree(folder, &branch, command, window, cx)
+            crate::window::features::git::worktree::api::control_ask(ws, folder, &branch, command, window, cx)
         });
         return match asked {
             Some(Ok(asked)) => Reply::ok(asked),

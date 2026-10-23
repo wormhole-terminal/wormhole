@@ -12,6 +12,8 @@ use crate::app_state::{app, app_mut};
 use crate::notifications;
 use crate::settings::settings;
 use crate::terminal_view::Status;
+use crate::window::feature::{CloseAlso, CloseOf};
+use crate::window::feature_host::extras_to_ask;
 use crate::window::session::{self, Session};
 use crate::window::window_lifecycle::open_workspace_window_in;
 use crate::window::{Layout, Workspace, dialog, window_bounds};
@@ -169,12 +171,12 @@ impl Workspace {
     /// while an agent or a command is running in it; notes and tasks alone don't ask.
     pub(crate) fn request_close_session(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
         let Some(session) = self.sessions.get(ix) else { return };
-        // A terminal in a worktree Wormhole made asks whether the worktree goes with it.
-        if let Some(worktree) = self.made_worktree_of(ix, cx) {
-            self.request_close_worktree_session(ix, worktree, window, cx);
-            return;
-        }
-        if !session.needs_close_confirmation(cx) {
+        // A feature may have more to ask (a terminal in a worktree Wormhole made asks whether the worktree
+        // goes with it), which makes the window ask even when nothing is running.
+        let id = session.id;
+        let extras = self.close_extras(&[id], CloseOf::Terminal, cx);
+        let needs = session.needs_close_confirmation(cx);
+        if extras.is_empty() && !needs {
             self.close_session(ix, window, cx);
             return;
         }
@@ -184,35 +186,52 @@ impl Workspace {
         self.closing_session_prompt = true;
         // The sidebar drops the ×'s tooltip while the question is up.
         cx.notify();
-        // By id: sessions may come and go while the question is up.
-        let id = session.id;
-        let agent = session.told_name(cx);
-        let (status, command) = (session.status(cx), session.command_running(cx));
-        // The agent the question names is not listed again among the programs.
-        let programs = session.running_programs(matches!(status, Status::Busy | Status::Attention), cx);
-        let question = dialog::CloseQuestion {
-            title: session::close_session_title(&session.name(cx)).into(),
-            detail: session::close_session_detail(
+        let mut detail = String::new();
+        if needs {
+            let agent = session.told_name(cx);
+            let (status, command) = (session.status(cx), session.command_running(cx));
+            // The agent the question names is not listed again among the programs.
+            let programs = session.running_programs(matches!(status, Status::Busy | Status::Attention), cx);
+            detail = session::close_session_detail(
                 agent.as_deref(),
                 &self.close_stakes(&[id], cx),
                 status,
                 command,
                 &programs,
-            )
-            .into(),
+            );
+        }
+        let (note, also) = extras_to_ask(extras);
+        if !detail.is_empty() && !note.is_empty() {
+            detail.push(' ');
+        }
+        detail.push_str(&note);
+        let question = dialog::CloseQuestion {
+            title: session::close_session_title(&session.name(cx)).into(),
+            detail: detail.into(),
             confirm: "Close",
         };
         let (confirm, dismiss) = (cx.weak_entity(), cx.weak_entity());
-        dialog::ask_before_closing(
+        // By id: sessions may come and go while the question is up.
+        let close = move |this: &mut Self, window: &mut Window, cx: &mut Context<Self>| {
+            if let Some(ix) = this.sessions.iter().position(|session| session.id == id) {
+                this.close_session(ix, window, cx);
+            }
+        };
+        let also = also.map(|CloseAlso { label, then }| -> dialog::Also {
+            let also_close = cx.weak_entity();
+            let on_also: dialog::OnConfirm = std::rc::Rc::new(move |window: &mut Window, cx: &mut App| {
+                let _ = also_close.update(cx, |this, cx| close(this, window, cx));
+                then(cx);
+            });
+            (label, on_also)
+        });
+        dialog::ask_before_closing_with(
             window,
             cx,
             question,
+            also,
             move |window, cx| {
-                let _ = confirm.update(cx, |this, cx| {
-                    if let Some(ix) = this.sessions.iter().position(|session| session.id == id) {
-                        this.close_session(ix, window, cx);
-                    }
-                });
+                let _ = confirm.update(cx, |this, cx| close(this, window, cx));
             },
             move |cx| {
                 let _ = dismiss.update(cx, |this, cx| {
