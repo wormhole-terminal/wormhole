@@ -35,6 +35,7 @@ pub(crate) fn exclude(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn is_excluded(path: &Path) -> bool {
     let Ok(c_path) = CString::new(path.as_os_str().as_bytes()) else { return false };
     // SAFETY: a size query (null buffer) of an attribute by NUL-terminated names.

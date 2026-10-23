@@ -14,6 +14,7 @@ pub fn exclude(path: &Path) -> io::Result<()> {
 }
 
 /// Whether `path` is kept out of backups (for the test that the real call works).
-pub fn is_excluded(path: &Path) -> bool {
+#[cfg(test)]
+pub(crate) fn is_excluded(path: &Path) -> bool {
     os::is_excluded(path)
 }
