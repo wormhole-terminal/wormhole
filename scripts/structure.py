@@ -19,6 +19,9 @@ crates/<crate>/src, tests included:
                     the crate's OS-edge paths, except what a file is sanctioned for (`os_edge_sanctioned`:
                     `allow(unsafe_code)` that isn't OS code, an exact count and a reason each; a higher
                     count fails, a lower one or a gone file is stale)
+  os-edge-neutral   OS code in the neutral layer of an edge: the files of an `os_edge_neutral` folder that are not
+                    under its `unix/`, `macos/` or `linux/` folders may select an OS (`cfg(`, `cfg_attr(`,
+                    `cfg!(`) and nothing else: no `libc::`, `std::os::*`, `objc2`, `allow(unsafe_code)`
   bucket-names      modules named text, utils, util, misc, helpers, helper, common
   orphans           .rs files no `mod` declaration reaches from lib.rs / main.rs / src/bin
   glob-imports      `use super::*;` outside test code
@@ -75,12 +78,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_NAME = os.path.join("scripts", "structure.json")
 
 RULES = [
-    "file-size", "os-edge", "bucket-names", "orphans", "glob-imports", "cycles", "layers", "cross-reexports",
-    "impl-outside",
+    "file-size", "os-edge", "os-edge-neutral", "bucket-names", "orphans", "glob-imports", "cycles", "layers",
+    "cross-reexports", "impl-outside",
 ]
 RULE_HELP = {
     "file-size": "files over {fail} lines",
     "os-edge": "OS code outside the OS edge",
+    "os-edge-neutral": "OS code in the neutral files of an OS edge",
     "bucket-names": "bucket module names",
     "orphans": "files no mod declaration reaches",
     "glob-imports": "`use super::*` outside tests",
@@ -102,6 +106,9 @@ DEFAULT_CONFIG = {
     # Per crate, files that use an OS-edge token for something that isn't OS code: the tokens they may
     # use, and why. A reason is required.
     "os_edge_sanctioned": {},
+    # Per crate, the edge folders whose top-level files are the neutral layer (the OS-specific code is
+    # in their `unix/`, `macos/` and `linux/` folders): those files may only select an OS with `cfg`.
+    "os_edge_neutral": {},
     # The inherent impls of these types belong in the home (a folder or file, relative to the crate).
     "impl_outside": {"crate": "wormhole", "types": ["Workspace", "Session"], "homes": ["src/window/"]},
     # Per crate, its top-level modules in tiers, lowest first; a tier is a module or a list of them.
@@ -572,6 +579,22 @@ def rule_os_edge(crate: Crate, cfg: dict, found: Findings) -> None:
                 _add(found, "%s :: %s" % (src.rel, key), crate.name, src.at(off))
 
 
+# The folders under a neutral edge that hold the OS-specific code.
+OS_FOLDERS = ("unix", "macos", "linux")
+
+
+def rule_os_edge_neutral(crate: Crate, cfg: dict, found: Findings) -> None:
+    for folder in cfg.get("os_edge_neutral", {}).get(crate.name, []):
+        for rel, src in crate.files.items():
+            if not under(rel, [folder]) or rel[len(folder):].split("/")[0] in OS_FOLDERS:
+                continue
+            for key, offsets in os_edge_hits(src).items():
+                if key.startswith("cfg"):
+                    continue
+                for off in offsets:
+                    _add(found, "%s :: %s" % (src.rel, key), crate.name, src.at(off))
+
+
 def rule_bucket_names(crate: Crate, cfg: dict, found: Findings) -> None:
     buckets = set(cfg["bucket_names"])
     for rel, src in crate.files.items():
@@ -909,7 +932,8 @@ def rule_impl_outside(crate: Crate, cfg: dict, found: Findings) -> None:
 
 
 RULE_FUNCS = {
-    "file-size": rule_file_size, "os-edge": rule_os_edge, "bucket-names": rule_bucket_names,
+    "file-size": rule_file_size, "os-edge": rule_os_edge,
+    "os-edge-neutral": rule_os_edge_neutral, "bucket-names": rule_bucket_names,
     "orphans": rule_orphans, "glob-imports": rule_glob_imports, "cycles": rule_cycles, "layers": rule_layers,
     "cross-reexports": rule_cross_reexports, "impl-outside": rule_impl_outside,
 }
@@ -1092,7 +1116,8 @@ def build_counts(an: Analysis) -> dict:
         if rule == "layers":
             row("layers: violations", {c: pc[c][0] for c in crates})
             continue
-        unit = {"os-edge": "sites", "glob-imports": "uses", "cross-reexports": "re-exports", "impl-outside": "impl blocks"}.get(rule)
+        unit = {"os-edge": "sites", "os-edge-neutral": "sites", "glob-imports": "uses",
+                "cross-reexports": "re-exports", "impl-outside": "impl blocks"}.get(rule)
         if unit:
             row("%s: %s" % (rule, unit), {c: pc[c][0] for c in crates})
             row("%s: files" % rule, {c: pc[c][1] for c in crates})
@@ -1339,6 +1364,26 @@ def selftest() -> int:
                 expect("os-edge sanction refused: %r %r" % (bad, why), "accepted", "refused")
             except SystemExit:
                 pass
+
+        # os-edge-neutral: the files of a neutral edge folder outside unix/, macos/ and linux/ may only
+        # select an OS with cfg; any other OS token fails there, in a subfolder too, but not in unix/.
+        neutral = ('#[cfg(target_os = "macos")]\n#[path = "macos/x.rs"]\nmod os;\n#[cfg_attr(unix, inline)]\nfn a() {}\n'
+                   'fn b() { if cfg!(unix) {} }\n')
+        cfg = _fixture_cfg()
+        cfg["os_edge_neutral"] = {"app": ["src/native/"]}
+        an = make({"crates/app/src/main.rs": "mod native;\nmod other;\n",
+                   "crates/app/src/native/mod.rs": neutral + "mod unix;\nmod rest;\n",
+                   "crates/app/src/native/rest/mod.rs": neutral + os_file,
+                   "crates/app/src/native/unix/mod.rs": os_file,
+                   "crates/app/src/other.rs": os_file}, cfg)
+        expect("os-edge-neutral files", sorted({k.split(" :: ")[0] for k in an.found["os-edge-neutral"]}),
+               ["crates/app/src/native/rest/mod.rs"])
+        expect("os-edge-neutral tokens", sorted(k.split(" :: ")[1] for k in an.found["os-edge-neutral"]),
+               ["allow(unsafe_code)", "libc::", "objc2", "std::os::unix", "target_vendor"])
+        expect("os-edge-neutral reports a line", an.found["os-edge-neutral"]["crates/app/src/native/rest/mod.rs :: objc2"].locs,
+               ["crates/app/src/native/rest/mod.rs:20"])
+        an = make({"crates/app/src/main.rs": "mod native;\n", "crates/app/src/native/mod.rs": neutral}, cfg)
+        expect("os-edge-neutral clean", an.found["os-edge-neutral"], {})
 
         # bucket names: files, mod.rs folders, inline modules.
         an = make({"crates/app/src/main.rs": "mod text;\nmod utils;\nmod ok;\nmod inl { mod helpers {} }\n",

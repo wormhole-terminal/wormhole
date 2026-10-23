@@ -4,7 +4,9 @@
       "wormhole": [
         "src/platform/"
       ],
-      "wormhole-core": [],
+      "wormhole-core": [
+        "src/platform/"
+      ],
       "wormhole-host": [
         "src/sys.rs",
         "src/peer.rs"
@@ -24,6 +26,14 @@
           "why": "a counting global allocator for test and devctl builds: GlobalAlloc is an unsafe trait, not OS code"
         }
       }
+    },
+    "os_edge_neutral": {
+      "wormhole-host": [
+        "src/sys/"
+      ],
+      "wormhole-term": [
+        "src/sys/"
+      ]
     },
     "impl_outside": {
       "crate": "wormhole",
@@ -209,8 +219,6 @@
       "crates/wormhole-core/src/onboarding/welcome/run.rs :: std::os::unix": 1,
       "crates/wormhole-core/src/onboarding/welcome/tty.rs :: allow(unsafe_code)": 5,
       "crates/wormhole-core/src/onboarding/welcome/tty.rs :: libc::": 23,
-      "crates/wormhole-core/src/platform/quit_signal.rs :: allow(unsafe_code)": 2,
-      "crates/wormhole-core/src/platform/quit_signal.rs :: libc::": 10,
       "crates/wormhole-core/src/project/create.rs :: cfg(unix": 2,
       "crates/wormhole-core/src/project/create.rs :: std::os::unix": 2,
       "crates/wormhole-core/src/project/edit.rs :: cfg(unix": 1,
@@ -288,6 +296,7 @@
       "crates/wormhole/src/menubar/mod.rs :: cfg_attr(": 3,
       "crates/wormhole/src/menubar/model.rs :: cfg_attr(": 1
     },
+    "os-edge-neutral": {},
     "bucket-names": {
       "crates/wormhole-core/src/notify/text.rs": 1,
       "crates/wormhole-core/src/view/sidebar/text.rs": 1,
