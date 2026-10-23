@@ -280,3 +280,43 @@ fn closing_a_terminal_in_a_made_worktree_asks_and_keeps_a_worktree_with_changes(
     let (note, removable) = group_question(cx, &window);
     assert!(!removable && note.contains("stay"), "{note}");
 }
+
+/// Create refused by git (the branch is checked out in the repository): the dialog closes, the reason
+/// shows in a sheet, and once that is read the keys are in the terminal again, not nowhere.
+#[gpui_kit::test]
+fn a_worktree_that_git_refuses_leaves_the_keys_in_the_terminal(cx: &mut TestAppContext) {
+    use gpui_kit::component::dialog::Confirm;
+    use std::time::Duration;
+
+    use crate::window::view_tests::with_window;
+    if isolate("a_worktree_that_git_refuses_leaves_the_keys_in_the_terminal") {
+        return;
+    }
+    let window = start(cx, 1);
+    base(cx, "worktrees-refused");
+    in_repo(cx, &window, "refused");
+    drive(cx, &window, menu_item);
+    drive(cx, &window, |ws, window, cx| {
+        worktrees(ws).update(cx, |worktrees, cx| {
+            let input = worktrees.asking.as_ref().expect("the dialog is up").input.clone();
+            input.update(cx, |input, cx| input.set_value("main".to_string(), window, cx));
+        });
+    });
+    // Create, as the key does: the dialog closes and git is asked off the UI thread.
+    let press = |cx: &mut TestAppContext| {
+        with_window(cx, &window, |window, cx| {
+            window.dispatch_action(Box::new(Confirm { secondary: false }), cx)
+        });
+        cx.run_until_parked();
+        cx.executor().advance_clock(Duration::from_secs(1));
+        cx.run_until_parked();
+    };
+    press(cx);
+    assert!(!asking(cx, &window), "the dialog closed");
+    assert_eq!(sessions(cx, &window), 1, "and nothing was made");
+    // The sheet that says why; reading it is OK.
+    press(cx);
+    let terminal = read(cx, &window, |ws| ws.active_terminal());
+    let focused = with_window(cx, &window, |window, cx| terminal.read(cx).focus_handle.is_focused(window));
+    assert!(focused, "the terminal has the keys");
+}

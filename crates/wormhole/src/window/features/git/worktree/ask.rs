@@ -22,14 +22,12 @@ use crate::window::features::project;
 use crate::window::{dialog, session};
 
 /// The dialog's state while it is up: the branch field, what the worktree would be of, what to run in the
-/// terminal once it opens, why the last Create was refused, and the terminal that gets the keys back
-/// when the dialog goes.
+/// terminal once it opens and why the last Create was refused.
 pub(super) struct Asking {
     pub(super) input: Entity<InputState>,
     repo: PathBuf,
     command: Option<String>,
     pub(super) error: Option<SharedString>,
-    terminal: Entity<TerminalView>,
     /// ↩ in the field presses Create.
     _enter: Subscription,
 }
@@ -85,7 +83,7 @@ impl Worktrees {
             tell("Can't make a worktree here", why, window, cx);
             return;
         }
-        self.ask_worktree(repo, None, None, terminal, window, cx);
+        self.ask_worktree(repo, None, None, window, cx);
     }
 
     /// The command line's `new-terminal --worktree <branch>`: the dialog, filled in, in this window;
@@ -120,7 +118,7 @@ impl Worktrees {
         if self.asking.is_some() {
             return Err(refuse(ErrorCode::Failed, "a worktree dialog is already up in that window".into()));
         }
-        self.ask_worktree(repo, Some(plan.branch.clone()), command, terminal, window, cx);
+        self.ask_worktree(repo, Some(plan.branch.clone()), command, window, cx);
         Ok(Asked {
             asked: true,
             window: window_id,
@@ -137,7 +135,6 @@ impl Worktrees {
         repo: PathBuf,
         branch: Option<String>,
         command: Option<String>,
-        terminal: &Entity<TerminalView>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -153,14 +150,8 @@ impl Worktrees {
                 window.dispatch_action(Box::new(Confirm { secondary: false }), cx);
             }
         });
-        self.asking = Some(Asking {
-            input: input.clone(),
-            repo: repo.clone(),
-            command,
-            error: None,
-            terminal: terminal.clone(),
-            _enter: enter,
-        });
+        self.asking =
+            Some(Asking { input: input.clone(), repo: repo.clone(), command, error: None, _enter: enter });
         let repo_name = repo.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let weak = cx.weak_entity();
         // The Kit gives the keys back to whatever had them when the dialog opened, a quarter
@@ -212,15 +203,12 @@ impl Worktrees {
                 })
                 .on_close(move |_, window, cx| {
                     let _ = dismiss.update(cx, |this, cx| {
-                        let terminal = this.asking.take().map(|ask| ask.terminal);
+                        this.asking = None;
                         cx.notify();
-                        // The dialog had the keys; once it is gone (deferred: it is still
-                        // closing), they go back to the terminal, or nothing has them.
-                        cx.defer_in(window, move |_, window, cx| {
-                            if let Some(terminal) = terminal {
-                                window.focus(&terminal.focus_handle(cx), cx);
-                            }
-                        });
+                        // The dialog had the keys; once it is gone (deferred: it is still closing)
+                        // they go to the terminal in front, or nothing has them: a Create that git
+                        // refuses opens no terminal to take them.
+                        cx.defer_in(window, |_, _, cx| cx.emit(FeatureEvent::FocusTerminal));
                     });
                 })
                 .footer(
