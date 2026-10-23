@@ -21,14 +21,15 @@ use wormhole_core::view::sidebar::hints::CmdHold;
 use wormhole_core::view::sidebar::order::FrozenNumbers;
 use wormhole_core::view::sidebar::{Card, Entry, ListInput, Listing, SidebarNumbers, Splits, WindowSidebar};
 
+use self::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
 use crate::settings::{UiColors, settings_in, store_in, ui_in};
 use crate::style::{self, TextRole};
-use crate::window::glass::{GlassKind, Insets, LIST_CLIP, clip_probe, glass_key, probe};
-use crate::window::terminal_drag::Over;
+use crate::window::sidebar::terminal_drag::Over;
 
 mod demo;
 mod drag;
 mod facts;
+mod glass;
 mod group_head;
 mod group_popover;
 mod groups;
@@ -45,6 +46,7 @@ pub(crate) mod shells;
 mod sidebar_tests;
 mod switcher;
 mod tab_bar;
+pub(in crate::window) mod terminal_drag;
 
 pub(in crate::window) use facts::row_times;
 pub(in crate::window) use facts::{RowExtra, RowExtras, RowFailure, RowInfo};

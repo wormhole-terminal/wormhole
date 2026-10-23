@@ -18,7 +18,7 @@ use wormhole_core::view::sidebar::SplitId;
 use crate::settings::ui_in;
 use crate::style;
 use crate::window::Workspace;
-use crate::window::terminal_drag::{DraggedTerminal, PaneHover};
+use crate::window::sidebar::terminal_drag::{DraggedTerminal, PaneHover};
 
 /// What a hint on a zone says a drop will do.
 fn hint_text(zone: Zone, moving: bool, target: &str) -> String {

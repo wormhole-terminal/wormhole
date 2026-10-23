@@ -10,7 +10,7 @@ use wormhole_core::view::sidebar::Part;
 
 use crate::window::Workspace;
 use crate::window::sidebar::Sidebar;
-use crate::window::terminal_drag::{DragOrigin, Over};
+use crate::window::sidebar::terminal_drag::{DragOrigin, Over};
 
 impl Workspace {
     /// A terminal was dropped on what the pointer was over last (`over`): it moves, joins a split or

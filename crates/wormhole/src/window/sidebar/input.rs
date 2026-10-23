@@ -11,7 +11,7 @@ use wormhole_core::view::sidebar::SplitId;
 
 use super::facts::RowInfo;
 use crate::platform::vibrancy::Glass;
-use crate::window::terminal_drag::{DragOrigin, Over};
+use crate::window::sidebar::terminal_drag::{DragOrigin, Over};
 
 /// The window's facts the list is drawn and acted on from: its terminals as rows, in the window's
 /// (manual) order, and the few things about the window the rows depend on.

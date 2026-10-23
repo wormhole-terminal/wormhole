@@ -30,7 +30,7 @@ use crate::terminal_view::TerminalEvent;
 use crate::window::Workspace;
 use crate::window::panes::splits::Split;
 use crate::window::session::Pane;
-use crate::window::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
+use crate::window::sidebar::terminal_drag::{DragOrigin, DraggedTerminal, TerminalDrag, pane_glyph};
 use crate::window::title::breadcrumb::terminal_tile;
 
 /// A drag on a divider, from the press to the release.

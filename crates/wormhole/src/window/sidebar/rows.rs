@@ -25,7 +25,7 @@ use crate::style::home_dir;
 use crate::style::{self, TextRole};
 use crate::style::{Metrics, RowTone, SessionRow, StatusGlyph, StatusTile, TileFace};
 use crate::window::sidebar::SidebarStop;
-use crate::window::terminal_drag::DragOrigin;
+use crate::window::sidebar::terminal_drag::DragOrigin;
 
 /// How long the row that moved to another band stays highlighted, fading out.
 const MOVE_FLASH: Duration = Duration::from_millis(600);

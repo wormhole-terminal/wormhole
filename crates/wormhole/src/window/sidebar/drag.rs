@@ -19,7 +19,7 @@ use super::motion::ItemKey;
 use super::{Sidebar, SidebarEvent};
 use crate::settings::UiColors;
 use crate::style;
-use crate::window::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over};
+use crate::window::sidebar::terminal_drag::{DragOrigin, DraggedGroup, DraggedTerminal, Over};
 
 /// Where a dragged thing would land, as a line on the list.
 #[derive(Clone, Debug, PartialEq, Eq)]

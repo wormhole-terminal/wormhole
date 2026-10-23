@@ -118,7 +118,6 @@ mod slide;
 #[cfg(test)]
 mod stable_list_tests;
 mod status_bar;
-mod terminal_drag;
 mod terminals;
 mod tick;
 mod title;
@@ -190,7 +189,7 @@ pub struct Workspace {
     pane_drag: Option<crate::window::panes::PaneDrag>,
     /// A terminal being dragged by its row or its pane's header, and what the pointer is over
     /// (`terminal_drag`); gone once the drag is.
-    terminal_drag: Option<self::terminal_drag::TerminalDrag>,
+    terminal_drag: Option<self::sidebar::terminal_drag::TerminalDrag>,
     /// The group being dragged by its head, while it is.
     group_drag: Option<u32>,
     /// The divider the pointer has rested on (its line shows), and the timer that sets it.
