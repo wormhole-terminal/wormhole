@@ -1,27 +1,26 @@
 //! What the catalog tests share: reading `.ftl` files into a model, the generator, the rules.
 //! Included by each test binary with `mod support;`, which uses only part of it.
 #![allow(dead_code)]
-#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
-pub mod catalog;
-pub mod check;
-pub mod generate;
+pub(crate) mod catalog;
+pub(crate) mod check;
+pub(crate) mod generate;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 /// The crate's folder; tests run with it as the working directory, but a path from the manifest
 /// does not depend on that.
-pub fn crate_dir() -> PathBuf {
+pub(crate) fn crate_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-pub fn locales_dir() -> PathBuf {
+pub(crate) fn locales_dir() -> PathBuf {
     crate_dir().join("locales")
 }
 
 /// `(file name, source)` of every `.ftl` in `dir`, sorted by name.
-pub fn read_dir(dir: &Path) -> Vec<(String, String)> {
+pub(crate) fn read_dir(dir: &Path) -> Vec<(String, String)> {
     let mut files: Vec<(String, String)> = fs::read_dir(dir)
         .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
         .filter_map(Result::ok)
@@ -36,7 +35,7 @@ pub fn read_dir(dir: &Path) -> Vec<(String, String)> {
 }
 
 /// Every language directory under `locales/`: English first, the others by tag.
-pub fn languages() -> Vec<String> {
+pub(crate) fn languages() -> Vec<String> {
     let mut tags: Vec<String> = fs::read_dir(locales_dir())
         .expect("locales/ exists")
         .filter_map(Result::ok)
@@ -47,6 +46,6 @@ pub fn languages() -> Vec<String> {
     tags
 }
 
-pub fn english() -> catalog::Catalog {
+pub(crate) fn english() -> catalog::Catalog {
     catalog::Catalog::parse(&read_dir(&locales_dir().join("en")))
 }

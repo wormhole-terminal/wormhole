@@ -22,7 +22,7 @@ const KEYWORDS: &[&str] = &[
     "virtual", "where", "while", "yield", "union", "_",
 ];
 
-pub struct Generated {
+pub(crate) struct Generated {
     pub ids: String,
     pub keys: String,
     pub files: String,
@@ -42,7 +42,7 @@ struct Function {
     source: String,
 }
 
-pub fn generate() -> Generated {
+pub(crate) fn generate() -> Generated {
     let english = super::english();
     let en_files = read_dir(&locales_dir().join("en"));
     let docs = english_texts(&en_files);
@@ -87,7 +87,7 @@ pub fn generate() -> Generated {
         ids_file,
         "/// Every message and attribute, in the order of the files; a `Key`'s index is a place here.\n\
          /// Each language's table is built by looking these ids up, never by position in a file.\n\
-         pub const IDS: [&str; {}] = [",
+         pub(crate) const IDS: [&str; {}] = [",
         ids.len()
     );
     for id in &ids {

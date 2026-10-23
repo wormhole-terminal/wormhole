@@ -13,7 +13,6 @@
 //! layer) can all use it, and the session host never links it. See `repo-docs/docs/languages.md`.
 #![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::disallowed_methods, reason = "tests build their own files and processes"))]
-#![allow(unreachable_pub, reason = "not yet cleaned (R-13)")]
 
 mod active;
 mod args;

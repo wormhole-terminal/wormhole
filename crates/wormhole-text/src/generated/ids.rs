@@ -5,7 +5,7 @@
 
 /// Every message and attribute, in the order of the files; a `Key`'s index is a place here.
 /// Each language's table is built by looking these ids up, never by position in a file.
-pub const IDS: [&str; 18] = [
+pub(crate) const IDS: [&str; 18] = [
     "settings-section-profile",
     "settings-section-appearance",
     "settings-section-fonts",

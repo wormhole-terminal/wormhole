@@ -10,7 +10,7 @@ use super::catalog::{CATEGORIES, Catalog, Item, VariantKeyText};
 
 /// The categories of a language's cardinal plural rule, found by selecting over sample numbers
 /// (`intl_pluralrules` does not list them): whole numbers up to 1,000 and some decimals.
-pub fn plural_categories(tag: &str) -> Result<BTreeSet<&'static str>, String> {
+pub(crate) fn plural_categories(tag: &str) -> Result<BTreeSet<&'static str>, String> {
     let language: LanguageIdentifier = tag.parse().map_err(|e| format!("{tag}: not a language tag ({e})"))?;
     let rules = PluralRules::create(language, PluralRuleType::CARDINAL)
         .map_err(|e| format!("{tag}: intl_pluralrules has no rules for it ({e})"))?;
@@ -117,7 +117,7 @@ fn dangling(catalog: &Catalog, also: Option<&Catalog>, language: &str) -> Vec<St
 
 /// The rules of the source language, on top of [`well_formed`]: references resolve, and a message
 /// with variables carries a comment saying what they are, for the translator.
-pub fn english_problems(english: &Catalog) -> Vec<String> {
+pub(crate) fn english_problems(english: &Catalog) -> Vec<String> {
     let mut problems = well_formed(english, "en");
     problems.extend(dangling(english, None, "en"));
     for item in &english.messages {
@@ -135,7 +135,7 @@ pub fn english_problems(english: &Catalog) -> Vec<String> {
 /// The rules of a translation against English: nothing English lacks, the same variables, terms and
 /// references in each message, no term of English's redefined, and the rules of [`well_formed`].
 /// A message it lacks is not a problem: English's text shows.
-pub fn translation_problems(english: &Catalog, language: &str, translation: &Catalog) -> Vec<String> {
+pub(crate) fn translation_problems(english: &Catalog, language: &str, translation: &Catalog) -> Vec<String> {
     let mut problems = well_formed(translation, language);
     problems.extend(dangling(translation, Some(english), language));
     problems.extend(plural_selects(english, language, translation));
@@ -191,7 +191,7 @@ fn same_sets(language: &str, original: &Item, item: &Item) -> Vec<String> {
 }
 
 /// How much of English a language has translated, as one line for `-- --nocapture`.
-pub fn coverage(english: &Catalog, language: &str, translation: &Catalog) -> String {
+pub(crate) fn coverage(english: &Catalog, language: &str, translation: &Catalog) -> String {
     let have = english.messages.iter().filter(|m| translation.message(&m.id).is_some()).count();
     let total = english.messages.len();
     format!("{language}: {have}/{total} messages ({}%)", (100 * have).checked_div(total).unwrap_or(100))

@@ -7,12 +7,12 @@ use fluent_syntax::ast::{self, Entry, Expression, InlineExpression, PatternEleme
 use fluent_syntax::{parser, serializer};
 
 /// The words CLDR calls plural categories.
-pub const CATEGORIES: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+pub(crate) const CATEGORIES: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
 
 /// A message's value or one of its attributes (an id `name` or `name.attribute`), or a term's
 /// (`-name`, `-name.attribute`).
 #[derive(Default, Clone, Debug)]
-pub struct Item {
+pub(crate) struct Item {
     pub id: String,
     pub file: String,
     /// Variables the pattern itself uses, in order of first use.
@@ -32,20 +32,20 @@ pub struct Item {
 }
 
 #[derive(Clone, Debug)]
-pub struct Select {
+pub(crate) struct Select {
     pub on_variable: Option<String>,
     pub keys: Vec<VariantKeyText>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum VariantKeyText {
+pub(crate) enum VariantKeyText {
     Name(String),
     Number(String),
 }
 
 impl Select {
     /// A select whose keys are plural categories or numbers (`[one]`, `[0]`), not words like `[male]`.
-    pub fn is_plural(&self) -> bool {
+    pub(crate) fn is_plural(&self) -> bool {
         self.keys.iter().any(|key| match key {
             VariantKeyText::Number(_) => true,
             VariantKeyText::Name(name) => CATEGORIES.contains(&name.as_str()),
@@ -54,7 +54,7 @@ impl Select {
 }
 
 #[derive(Default)]
-pub struct Catalog {
+pub(crate) struct Catalog {
     /// Messages' values and attributes, in file order.
     pub messages: Vec<Item>,
     pub terms: Vec<Item>,
@@ -65,7 +65,7 @@ pub struct Catalog {
 }
 
 impl Catalog {
-    pub fn parse(files: &[(String, String)]) -> Catalog {
+    pub(crate) fn parse(files: &[(String, String)]) -> Catalog {
         let mut catalog = Catalog::default();
         let mut seen = BTreeSet::new();
         for (file, source) in files {
@@ -114,17 +114,17 @@ impl Catalog {
         catalog
     }
 
-    pub fn message(&self, id: &str) -> Option<&Item> {
+    pub(crate) fn message(&self, id: &str) -> Option<&Item> {
         self.messages.iter().find(|item| item.id == id)
     }
 
-    pub fn has_term(&self, id: &str) -> bool {
+    pub(crate) fn has_term(&self, id: &str) -> bool {
         self.terms.iter().any(|item| item.id == id)
     }
 
     /// The variables a message needs from its caller: its own, and those of every message it
     /// refers to (a reference passes the caller's arguments on). A term does not: it has its own.
-    pub fn variables(&self, id: &str) -> Vec<String> {
+    pub(crate) fn variables(&self, id: &str) -> Vec<String> {
         let mut out = Vec::new();
         let mut visited = BTreeSet::new();
         self.collect(id, &mut visited, &mut out);
@@ -147,7 +147,7 @@ impl Catalog {
     }
 
     /// Whether the message needs a whole number for `var`, here or in a message it refers to.
-    pub fn counted(&self, id: &str, var: &str) -> bool {
+    pub(crate) fn counted(&self, id: &str, var: &str) -> bool {
         let mut visited = BTreeSet::new();
         self.counted_in(id, var, &mut visited)
     }
@@ -161,7 +161,7 @@ impl Catalog {
     }
 
     /// Ids by item, for comparisons.
-    pub fn by_id(&self) -> BTreeMap<&str, &Item> {
+    pub(crate) fn by_id(&self) -> BTreeMap<&str, &Item> {
         self.messages.iter().map(|item| (item.id.as_str(), item)).collect()
     }
 }
