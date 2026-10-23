@@ -4,6 +4,7 @@
 //! The messages of `locales/en/settings-notifications.ftl`.
 
 use crate::key::Key;
+use crate::args::Arg;
 
 /// "Notifications"
 pub const SETTINGS_SECTION_NOTIFICATIONS: Key = Key::new(202);
@@ -85,3 +86,65 @@ pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE: Key = Key::new(239);
 pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_DESCRIPTION: Key = Key::new(240);
 /// "dock bounce"
 pub const SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS: Key = Key::new(241);
+/// "Time Sensitive"
+pub const SETTINGS_NOTIFICATIONS_TIME_SENSITIVE: Key = Key::new(242);
+/// "Banner"
+pub const SETTINGS_NOTIFICATIONS_BANNER: Key = Key::new(243);
+/// "Nothing"
+pub const SETTINGS_NOTIFICATIONS_NOTHING: Key = Key::new(244);
+/// "Needs you only"
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY: Key = Key::new(245);
+/// "All"
+pub const SETTINGS_NOTIFICATIONS_ALL: Key = Key::new(246);
+/// "None"
+pub const SETTINGS_NOTIFICATIONS_NONE: Key = Key::new(247);
+/// "Off"
+pub const SETTINGS_NOTIFICATIONS_OFF: Key = Key::new(248);
+/// "Needs you"
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU: Key = Key::new(249);
+/// "Needs you + finished"
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED: Key = Key::new(250);
+/// "Asking macOS…"
+pub const SETTINGS_NOTIFICATIONS_ASKING_MACOS: Key = Key::new(251);
+/// "Not asked yet"
+pub const SETTINGS_NOTIFICATIONS_NOT_ASKED_YET: Key = Key::new(252);
+/// "macOS asks once; nothing is sent before"
+pub const SETTINGS_NOTIFICATIONS_MACOS_ASKS_ONCE_NOTHING_IS_SENT: Key = Key::new(253);
+/// "Allowed in System Settings"
+pub const SETTINGS_NOTIFICATIONS_ALLOWED_IN_SYSTEM_SETTINGS: Key = Key::new(254);
+/// "Banners, sounds and Time Sensitive"
+pub const SETTINGS_NOTIFICATIONS_BANNERS_SOUNDS_AND_TIME_SENSITIVE: Key = Key::new(255);
+/// "Banners and sounds"
+pub const SETTINGS_NOTIFICATIONS_BANNERS_AND_SOUNDS: Key = Key::new(256);
+/// "Off in System Settings"
+pub const SETTINGS_NOTIFICATIONS_OFF_IN_SYSTEM_SETTINGS: Key = Key::new(257);
+/// "Nothing is delivered until turned on there"
+pub const SETTINGS_NOTIFICATIONS_OFF_HINT: Key = Key::new(258);
+/// "Outside the app bundle"
+pub const SETTINGS_NOTIFICATIONS_OUTSIDE_THE_APP_BUNDLE: Key = Key::new(259);
+/// "cargo run: osascript, no actions or grouping"
+pub const SETTINGS_NOTIFICATIONS_OUTSIDE_BUNDLE_HINT: Key = Key::new(260);
+/// "Send test"
+pub const SETTINGS_NOTIFICATIONS_SEND_TEST: Key = Key::new(261);
+/// "Open System Settings"
+pub const SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS: Key = Key::new(262);
+/// "Allow notifications"
+pub const SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS: Key = Key::new(263);
+/// "An agent asks a question or for permission"
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT: Key = Key::new(264);
+/// "An agent asks a question or for permission. Delivered as a normal notification in this build"
+pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT_PLAIN: Key = Key::new(265);
+
+/// ```text
+/// { $count } min
+/// ```
+pub fn settings_notifications_after_minutes(count: &str) -> String {
+    crate::active::message(266, &[("count", Arg::Str(count))])
+}
+
+/// ```text
+/// { $count } s
+/// ```
+pub fn settings_notifications_after_seconds(count: &str) -> String {
+    crate::active::message(267, &[("count", Arg::Str(count))])
+}

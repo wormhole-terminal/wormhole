@@ -9,6 +9,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::*;
 use wormhole_core::config::{DockBadge, InFront, NotifySound};
+use wormhole_text::{keys::*, text};
 
 use crate::notifications;
 use crate::platform::notifications::Permission;
@@ -29,7 +30,9 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s, on| set_kind(s, |s| s.notify_needs_you = on),
     )
     .describe(describe_needs_you)
-    .chip(|_, cx| notifications::time_sensitive(cx).then(|| "Time Sensitive".into())),
+    .chip(|_, cx| {
+        notifications::time_sensitive(cx).then(|| text(SETTINGS_NOTIFICATIONS_TIME_SENSITIVE).into())
+    }),
     Setting::toggle(
         "notify-agent-done",
         |s| kind_on(s, s.notify_agent_done),
@@ -49,7 +52,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("notify-only-unseen", notify_only_unseen),
     Setting::segmented(
         "notify-in-front",
-        &[Segment::literal("Banner"), Segment::literal("Nothing")],
+        &[Segment::text(SETTINGS_NOTIFICATIONS_BANNER), Segment::text(SETTINGS_NOTIFICATIONS_NOTHING)],
         |s| match s.notify_in_front {
             InFront::Banner => 0,
             InFront::None => 1,
@@ -58,7 +61,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     ),
     Setting::segmented(
         "notify-sound",
-        &[Segment::literal("Needs you only"), Segment::literal("All"), Segment::literal("None")],
+        &[
+            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_ONLY),
+            Segment::text(SETTINGS_NOTIFICATIONS_ALL),
+            Segment::text(SETTINGS_NOTIFICATIONS_NONE),
+        ],
         |s| match s.notify_sound {
             NotifySound::NeedsYou => 0,
             NotifySound::All => 1,
@@ -69,7 +76,11 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("notify-group-bursts", notify_group_bursts),
     Setting::segmented(
         "dock-badge",
-        &[Segment::literal("Off"), Segment::literal("Needs you"), Segment::literal("Needs you + finished")],
+        &[
+            Segment::text(SETTINGS_NOTIFICATIONS_OFF),
+            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU),
+            Segment::text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_FINISHED),
+        ],
         |s| match s.dock_badge {
             DockBadge::Off => 0,
             DockBadge::NeedsYou => 1,
@@ -94,16 +105,26 @@ fn kind_on(s: &Settings, on: bool) -> bool {
 /// What the permission row says and offers, by state.
 fn permission_text(permission: Permission) -> (&'static str, &'static str) {
     match permission {
-        Permission::Checking => ("Asking macOS…", ""),
-        Permission::NotAsked => ("Not asked yet", "macOS asks once; nothing is sent before"),
-        Permission::Allowed { time_sensitive: true } => {
-            ("Allowed in System Settings", "Banners, sounds and Time Sensitive")
+        Permission::Checking => (text(SETTINGS_NOTIFICATIONS_ASKING_MACOS), ""),
+        Permission::NotAsked => (
+            text(SETTINGS_NOTIFICATIONS_NOT_ASKED_YET),
+            text(SETTINGS_NOTIFICATIONS_MACOS_ASKS_ONCE_NOTHING_IS_SENT),
+        ),
+        Permission::Allowed { time_sensitive: true } => (
+            text(SETTINGS_NOTIFICATIONS_ALLOWED_IN_SYSTEM_SETTINGS),
+            text(SETTINGS_NOTIFICATIONS_BANNERS_SOUNDS_AND_TIME_SENSITIVE),
+        ),
+        Permission::Allowed { time_sensitive: false } => (
+            text(SETTINGS_NOTIFICATIONS_ALLOWED_IN_SYSTEM_SETTINGS),
+            text(SETTINGS_NOTIFICATIONS_BANNERS_AND_SOUNDS),
+        ),
+        Permission::Denied => {
+            (text(SETTINGS_NOTIFICATIONS_OFF_IN_SYSTEM_SETTINGS), text(SETTINGS_NOTIFICATIONS_OFF_HINT))
         }
-        Permission::Allowed { time_sensitive: false } => ("Allowed in System Settings", "Banners and sounds"),
-        Permission::Denied => ("Off in System Settings", "Nothing is delivered until turned on there"),
-        Permission::OutsideBundle => {
-            ("Outside the app bundle", "cargo run: osascript, no actions or grouping")
-        }
+        Permission::OutsideBundle => (
+            text(SETTINGS_NOTIFICATIONS_OUTSIDE_THE_APP_BUNDLE),
+            text(SETTINGS_NOTIFICATIONS_OUTSIDE_BUNDLE_HINT),
+        ),
     }
 }
 
@@ -116,14 +137,14 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         Button::new("notify-send-test")
             .small()
             .outline()
-            .label("Send test")
+            .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
             .on_click(|_, _, cx| notifications::send_test(cx))
     };
     let system_settings = || {
         Button::new("notify-open-settings")
             .small()
             .outline()
-            .label("Open System Settings")
+            .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
             .on_click(|_, _, cx| notifications::open_system_settings(cx))
     };
     let buttons: Vec<AnyElement> = match permission {
@@ -134,7 +155,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             Button::new("notify-allow")
                 .small()
                 .primary()
-                .label("Allow notifications")
+                .label(text(SETTINGS_NOTIFICATIONS_ALLOW_NOTIFICATIONS))
                 .on_click(|_, _, cx| notifications::ask_permission(cx))
                 .into_any_element(),
         ],
@@ -167,9 +188,9 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
 fn describe_needs_you(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {
     let entitled = notifications::time_sensitive(cx);
     Some(if entitled {
-        "An agent asks a question or for permission".into()
+        text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT).into()
     } else {
-        "An agent asks a question or for permission. Delivered as a normal notification in this build".into()
+        text(SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT_PLAIN).into()
     })
 }
 
@@ -179,7 +200,11 @@ fn after_step(secs: u32) -> usize {
 }
 
 fn after_label(secs: u32) -> String {
-    if secs >= 60 { format!("{} min", secs / 60) } else { format!("{secs} s") }
+    if secs >= 60 {
+        settings_notifications_after_minutes(&(secs / 60).to_string())
+    } else {
+        settings_notifications_after_seconds(&secs.to_string())
+    }
 }
 
 /// "A command finishes": the threshold (5 s … 5 min) beside the switch.

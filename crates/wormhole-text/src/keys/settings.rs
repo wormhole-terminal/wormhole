@@ -7,21 +7,21 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(388);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(414);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(389);
+pub const SETTINGS_NAV_WORK: Key = Key::new(415);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(390);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(416);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(391);
+pub const SETTINGS_NAV_APP: Key = Key::new(417);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(392);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(418);
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_open_section(section: &str) -> String {
-    crate::active::message(393, &[("section", Arg::Str(section))])
+    crate::active::message(419, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -31,5 +31,5 @@ pub fn settings_open_section(section: &str) -> String {
 /// }
 /// ```
 pub fn settings_font_count(count: i64) -> String {
-    crate::active::message(394, &[("count", Arg::Int(count))])
+    crate::active::message(420, &[("count", Arg::Int(count))])
 }
