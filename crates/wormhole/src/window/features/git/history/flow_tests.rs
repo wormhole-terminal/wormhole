@@ -3,12 +3,14 @@
 //! revealing a commit, and the tab's refresh on the tick. The helpers at the top are the only place a
 //! test names where the state is kept.
 
-use gpui_kit::TestAppContext;
+use gpui_kit::{Context, Entity, TestAppContext, Window};
 use wormhole_core::config::TabId;
 use wormhole_core::git::Commit;
 
+use super::super::changes::Changes;
 use super::super::picker::PickerHost;
 use super::super::testing::{changes, folder, git, go, repo, write};
+use super::{History, HistoryState};
 use crate::app_state::OpenWindow;
 use wormhole_core::storage::store::{SessionRecord, WindowRecord};
 
@@ -21,21 +23,78 @@ fn isolate(name: &str) -> bool {
 
 // ---------------------------------------------------------------- where the state is kept
 
+/// The window's History.
+fn history(ws: &Workspace) -> Entity<History> {
+    ws.feature::<History>().expect("the window has the History feature")
+}
+
+/// What the tab keeps for the terminal in front.
+fn with_state<R>(
+    cx: &mut TestAppContext,
+    window: &OpenWindow,
+    f: impl FnOnce(&HistoryState, &gpui_kit::App) -> R,
+) -> R {
+    read_cx(cx, window, |ws, cx| {
+        let entity = history(ws);
+        let state = entity.read(cx).of.get(&ws.active_session().id).expect("a state for the terminal");
+        f(state, cx)
+    })
+}
+
 /// The subjects of the commits the tab lists, newest first.
 fn subjects(cx: &mut TestAppContext, window: &OpenWindow) -> Vec<String> {
-    read(cx, window, |ws| ws.active_session().history.commits.iter().map(|c| c.subject.clone()).collect())
+    with_state(cx, window, |state, _| state.commits.iter().map(|c| c.subject.clone()).collect())
 }
 
 fn history_branch(cx: &mut TestAppContext, window: &OpenWindow) -> Option<String> {
-    read(cx, window, |ws| ws.active_session().history.rev.clone())
+    with_state(cx, window, |state, _| state.rev.clone())
 }
 
 fn expanded(cx: &mut TestAppContext, window: &OpenWindow) -> Option<String> {
-    read(cx, window, |ws| ws.active_session().history.expanded.clone())
+    with_state(cx, window, |state, _| state.expanded.clone())
 }
 
 fn first_commit(cx: &mut TestAppContext, window: &OpenWindow) -> Commit {
-    read(cx, window, |ws| ws.active_session().history.commits.first().cloned().expect("a commit"))
+    with_state(cx, window, |state, _| state.commits.first().cloned().expect("a commit"))
+}
+
+/// Whether the History picker is open.
+fn picker_open(cx: &mut TestAppContext, window: &OpenWindow) -> bool {
+    read_cx(cx, window, |ws, cx| history(ws).read(cx).picker().is_open())
+}
+
+/// The person opens the History picker of the terminal in front.
+fn open_picker(ws: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
+    let (session, terminal) = (ws.active_session().id, ws.active_terminal());
+    history(ws).update(cx, |history, cx| history.picker_mut().toggle(session, &terminal, window, cx));
+}
+
+/// The person opens (or closes) a commit in the list.
+fn toggle_commit(cx: &mut TestAppContext, window: &OpenWindow, sha: &str) {
+    drive(cx, window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        history(ws).update(cx, |history, cx| history.toggle_commit(session, sha.to_string(), cx));
+    });
+    cx.run_until_parked();
+}
+
+/// A click on the first file of `commit`, which is open: its diff opens.
+fn open_first_file(cx: &mut TestAppContext, window: &OpenWindow, commit: &Commit) {
+    drive(cx, window, |ws, _, cx| {
+        let session = ws.active_session().id;
+        let changes = ws.feature::<Changes>().expect("in the table");
+        history(ws).update(cx, |history, cx| {
+            let file = history.of[&session].loaded(&commit.sha).and_then(|f| f.first().cloned());
+            history.open_commit_file(session, commit.clone(), file.expect("a file"), &changes, cx);
+        });
+    });
+    cx.run_until_parked();
+}
+
+/// The palette shows a commit.
+fn reveal(cx: &mut TestAppContext, window: &OpenWindow, root: &std::path::Path, commit: &Commit) {
+    drive(cx, window, |ws, _, cx| super::api::reveal_commit(ws, root.to_path_buf(), commit.clone(), cx));
+    cx.run_until_parked();
 }
 
 /// A repository of two commits (`first`, `second`) with `other` one commit further (`on other`), and the
@@ -74,7 +133,7 @@ fn the_history_tab_lists_the_commits_of_the_terminals_branch(cx: &mut TestAppCon
     two_commits(cx, &window, "log");
     assert_eq!(subjects(cx, &window), ["second", "first"]);
     assert_eq!(history_branch(cx, &window), None, "HEAD");
-    assert!(read(cx, &window, |ws| ws.active_session().history.root.is_some()));
+    assert!(with_state(cx, &window, |state, _| state.root.is_some()));
     draw(cx, &window);
     let words = drive(cx, &window, |ws, _, cx| {
         let (at, tab) = ws.tab_entry(TabId::History).map_or((0, None), |(at, tab)| (at, Some(tab)));
@@ -95,8 +154,7 @@ fn a_folder_outside_any_repository_has_no_history(cx: &mut TestAppContext) {
         ws.show_tab(TabId::History, cx);
     });
     cx.run_until_parked();
-    read(cx, &window, |ws| {
-        let history = &ws.active_session().history;
+    with_state(cx, &window, |history, _| {
         assert!(history.root.is_none() && history.commits.is_empty());
         assert!(history.answered_for(&plain), "answered, so the tab says so rather than reading");
     });
@@ -111,21 +169,15 @@ fn a_commit_opens_to_its_files_and_a_file_opens_its_diff(cx: &mut TestAppContext
     let window = start(cx, 1);
     two_commits(cx, &window, "files");
     let second = first_commit(cx, &window);
-    drive(cx, &window, |ws, _, cx| ws.toggle_commit(second.sha.clone(), cx));
-    cx.run_until_parked();
+    toggle_commit(cx, &window, &second.sha);
     assert_eq!(expanded(cx, &window), Some(second.sha.clone()));
-    let files: Vec<String> = read(cx, &window, |ws| {
-        let history = &ws.active_session().history;
+    let files: Vec<String> = with_state(cx, &window, |history, _| {
         history.loaded(&second.sha).map(|f| f.iter().map(|f| f.path.clone()).collect()).unwrap_or_default()
     });
     assert_eq!(files, ["a.txt", "src/b.txt"]);
 
     // A file opens its diff, with the commit's short name before the path; it is not the working tree's.
-    drive(cx, &window, |ws, _, cx| {
-        let file = ws.active_session().history.loaded(&second.sha).and_then(|f| f.first().cloned());
-        ws.open_commit_file(second.clone(), file.expect("a file"), cx);
-    });
-    cx.run_until_parked();
+    open_first_file(cx, &window, &second);
     read_cx(cx, &window, |ws, cx| {
         let entity = changes(ws);
         let on_view = entity.read(cx).diff.as_ref().expect("a diff").on_view();
@@ -133,7 +185,7 @@ fn a_commit_opens_to_its_files_and_a_file_opens_its_diff(cx: &mut TestAppContext
         assert_eq!(on_view, ("a.txt".to_string(), false, 2));
     });
     // Closing the commit again.
-    drive(cx, &window, |ws, _, cx| ws.toggle_commit(second.sha.clone(), cx));
+    toggle_commit(cx, &window, &second.sha);
     assert_eq!(expanded(cx, &window), None);
 }
 
@@ -146,14 +198,13 @@ fn another_branchs_log_is_shown_when_it_is_picked(cx: &mut TestAppContext) {
     }
     let window = start(cx, 1);
     two_commits(cx, &window, "branch-log");
-    drive(cx, &window, |ws, window, cx| {
-        let (session, terminal) = (ws.active_session().id, ws.active_terminal());
-        ws.history_picker.toggle(session, &terminal, window, cx);
-    });
+    drive(cx, &window, open_picker);
     cx.run_until_parked();
-    read(cx, &window, |ws| {
-        assert!(ws.history_picker.is_open());
-        let mut branches = ws.history_picker.branches().to_vec();
+    read_cx(cx, &window, |ws, cx| {
+        let entity = history(ws);
+        let history = entity.read(cx);
+        assert!(history.picker().is_open());
+        let mut branches = history.picker().branches().to_vec();
         branches.sort();
         assert_eq!(branches, ["main", "other"]);
     });
@@ -161,7 +212,7 @@ fn another_branchs_log_is_shown_when_it_is_picked(cx: &mut TestAppContext) {
     cx.run_until_parked();
     assert_eq!(history_branch(cx, &window).as_deref(), Some("other"));
     assert_eq!(subjects(cx, &window), ["on other", "second", "first"]);
-    assert!(!read(cx, &window, |ws| ws.history_picker.is_open()));
+    assert!(!picker_open(cx, &window));
     // Back to HEAD.
     drive(cx, &window, |ws, _, cx| pick(ws, None, cx));
     cx.run_until_parked();
@@ -176,15 +227,14 @@ fn a_commit_found_in_the_palette_is_revealed_on_its_branch_or_on_head(cx: &mut T
     let window = start(cx, 1);
     two_commits(cx, &window, "reveal");
     let second = first_commit(cx, &window);
-    let root = read(cx, &window, |ws| ws.active_session().history.root.clone().expect("a root"));
+    let root = with_state(cx, &window, |state, _| state.root.clone().expect("a root"));
     // On another tab, with the log on `other`: `second` is on it, so the branch stays.
     drive(cx, &window, |ws, _, cx| {
         pick(ws, Some("other".into()), cx);
         ws.show_tab(TabId::Notes, cx);
     });
     cx.run_until_parked();
-    drive(cx, &window, |ws, _, cx| ws.reveal_commit(root.clone(), second.clone(), cx));
-    cx.run_until_parked();
+    reveal(cx, &window, &root, &second);
     assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
     assert_eq!(expanded(cx, &window), Some(second.sha.clone()));
     assert_eq!(history_branch(cx, &window).as_deref(), Some("other"));
@@ -200,8 +250,7 @@ fn a_commit_found_in_the_palette_is_revealed_on_its_branch_or_on_head(cx: &mut T
         pick(ws, Some("main".into()), cx);
     });
     cx.run_until_parked();
-    drive(cx, &window, |ws, _, cx| ws.reveal_commit(root.clone(), on_other.clone(), cx));
-    cx.run_until_parked();
+    reveal(cx, &window, &root, &on_other);
     assert_eq!(history_branch(cx, &window), None, "not on main: the log goes back to HEAD");
     assert_eq!(expanded(cx, &window), Some(on_other.sha));
 }
@@ -251,6 +300,41 @@ fn the_tab_reads_the_log_again_on_the_tick_while_it_shows(cx: &mut TestAppContex
 /// The person picks a branch (`None`: HEAD) in the History picker.
 fn pick(ws: &mut Workspace, branch: Option<String>, cx: &mut gpui_kit::Context<Workspace>) {
     let session = ws.active_session().id;
-    ws.history_picker.close();
-    ws.pick(session, branch, cx);
+    history(ws).update(cx, |history, cx| {
+        history.picker_mut().close();
+        history.pick(session, branch, cx);
+    });
+}
+
+// ---------------------------------------------------------------- the frame
+
+/// Allocations the third draw of a one-terminal window on History (two commits, the newest open with its
+/// two files) may make. Measured: 3,792 allocations (1.8 MB), the same on every run. The budget is that plus
+/// about a hundredth; the tab adds a
+/// row for each commit and file in view, so a cost per commit or per file per frame shows at once.
+const HISTORY_FRAME_ALLOCATIONS: u64 = 3_830;
+
+#[gpui_kit::test]
+fn a_window_frame_on_history_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
+    use crate::perf::allocations::thread_counts;
+    if isolate("a_window_frame_on_history_stays_within_its_allocation_budget") {
+        return;
+    }
+    let window = start(cx, 1);
+    two_commits(cx, &window, "history-frame");
+    let second = first_commit(cx, &window);
+    toggle_commit(cx, &window, &second.sha);
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    // The first draws build what a window keeps; the third is a frame.
+    draw(cx, &window);
+    draw(cx, &window);
+    let before = thread_counts();
+    draw(cx, &window);
+    let drawn = thread_counts().since(before);
+    eprintln!("window frame on History: {} allocations, {} bytes", drawn.allocations, drawn.bytes);
+    assert!(
+        drawn.allocations <= HISTORY_FRAME_ALLOCATIONS,
+        "a window frame on History made {} allocations (budget {HISTORY_FRAME_ALLOCATIONS})",
+        drawn.allocations
+    );
 }

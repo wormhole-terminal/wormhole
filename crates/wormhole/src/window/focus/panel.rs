@@ -12,7 +12,7 @@ use wormhole_core::view::focus::Area;
 use wormhole_core::view::focus::list::{Item, Move, band_folds, walk};
 
 use super::{activation, list_key};
-use crate::settings::UiColors;
+
 use crate::window::Workspace;
 use crate::window::feature::WalkFns;
 use wormhole_core::config::TabId;
@@ -52,11 +52,8 @@ impl Workspace {
         if let Some(Walker(walk, entity)) = self.walker() {
             return (walk.walkable)(entity, &self.facts(cx), cx);
         }
-        match self.right_tab {
-            TabId::History => self.history_walkable(),
-            // The others are walked through the table, or have no list.
-            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => Vec::new(),
-        }
+        // A tab without a list has no rows.
+        Vec::new()
     }
 
     /// Where each of the tab's lists starts, as indices into its walkable rows: one ⇥ stop per
@@ -159,10 +156,7 @@ impl Workspace {
                 let facts = self.facts(cx);
                 (walk.press)(&entity, &facts, session, row, press, following, window, cx)
             }
-            None => match self.right_tab {
-                TabId::History => self.history_press(row, following, cx),
-                TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => true,
-            },
+            None => true,
         };
         if keeps {
             self.refocus(Area::PanelContent, window, cx);
@@ -174,33 +168,15 @@ impl Workspace {
         let session = self.active_session().id;
         if let Some(Walker(walk, entity)) = self.walker().map(Walker::cloned) {
             let facts = self.facts(cx);
-            return (walk.fold)(&entity, &facts, session, row, cx);
-        }
-        match self.right_tab {
-            TabId::History => self.history_fold(row, cx),
-            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => {}
+            (walk.fold)(&entity, &facts, session, row, cx);
         }
     }
 
     /// Scroll the tab's list to show row `row`.
     fn panel_reveal(&self, row: usize, cx: &App) {
         if let Some(Walker(walk, entity)) = self.walker() {
-            return (walk.reveal)(entity, &self.facts(cx), row, cx);
+            (walk.reveal)(entity, &self.facts(cx), row, cx);
         }
-        match self.right_tab {
-            TabId::History => self.history_reveal(row),
-            TabId::Changes | TabId::Notes | TabId::Project | TabId::Usage => {}
-        }
-    }
-
-    /// The row of the tab on show the keys are on, and the ring's colors while it shows.
-    pub(in crate::window) fn panel_ring(
-        &self,
-        window: &Window,
-        ui: UiColors,
-    ) -> Option<(usize, Option<UiColors>)> {
-        let (tab, row) = self.areas.panel_at?;
-        (tab == self.right_tab).then(|| (row, self.ring(Area::PanelContent, window).then_some(ui)))
     }
 
     /// The panel's list area, holding the keyboard for it: a list VoiceOver names after

@@ -23,7 +23,10 @@ impl Workspace {
                 Some(list) => list,
                 None => return,
             },
-            TabId::History => self.devctl_history_list(),
+            TabId::History => match crate::window::features::git::history::devctl::list(self, cx) {
+                Some(list) => list,
+                None => return,
+            },
             TabId::Notes => match crate::window::features::notes::devctl::list(self, cx) {
                 Some(list) => list,
                 None => return,
@@ -52,11 +55,11 @@ impl Workspace {
     /// whose status was read for another folder than the one it is in now (the next tick asks
     /// again). A diff being read has no flag here; `wait-idle` waits for the picture instead.
     pub(crate) fn devctl_git_busy(&self, cx: &App) -> bool {
-        self.sessions.iter().any(|session| {
-            session.git.loading()
-                || session.history.loading()
-                || session.git.cwd != session.terminal().read(cx).cwd
-        })
+        crate::window::features::git::history::devctl::busy(self, cx)
+            || self
+                .sessions
+                .iter()
+                .any(|session| session.git.loading() || session.git.cwd != session.terminal().read(cx).cwd)
     }
 
     /// The selected terminal's id (devctl `pane-close` without an id): the focused pane.

@@ -255,9 +255,6 @@ impl Workspace {
         if self.sessions[ix].git.waits_for_retry() {
             self.refresh_git(ix, cx);
         }
-        if self.sessions[ix].history.waits_for_retry() {
-            self.refresh_history(ix, cx);
-        }
     }
 
     /// Per tick: remember where the window is, and name it after the session.

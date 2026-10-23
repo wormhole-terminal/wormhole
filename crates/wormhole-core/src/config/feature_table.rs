@@ -156,6 +156,18 @@ impl FeatureMask {
         self.0 & (1 << id as u8) != 0
     }
 
+    /// The mask with `id` switched on or off, as a person's own switch will do it. An always-on feature
+    /// stays on: there is no switch for it.
+    #[must_use]
+    pub const fn with(self, id: FeatureId, on: bool) -> Self {
+        let bit = 1u16 << id as u8;
+        if on || matches!(FEATURES[id as usize].kind, FeatureKind::Always) {
+            Self(self.0 | bit)
+        } else {
+            Self(self.0 & !bit)
+        }
+    }
+
     /// Which features `settings` leave on: an always-on one whatever they say; an optional one
     /// when its gate (if it has one) passes in this build and the person's own switch is on. That
     /// switch is not in `config.json` yet, so it is the feature's default.
@@ -165,7 +177,7 @@ impl FeatureMask {
 
     /// [`Self::resolve`] for a given [`FlagMode`], so the tests can ask what a release does.
     pub fn resolve_in(settings: &Settings, mode: FlagMode) -> Self {
-        let mut bits = 0;
+        let mut mask = Self(0);
         for info in &FEATURES {
             let on = match info.kind {
                 FeatureKind::Always => true,
@@ -173,9 +185,9 @@ impl FeatureMask {
                     default_on && info.gate.is_none_or(|flag| enabled_in(flag, &settings.feature_flags, mode))
                 }
             };
-            bits |= u16::from(on) << info.id as u8;
+            mask = mask.with(info.id, on);
         }
-        Self(bits)
+        mask
     }
 }
 
@@ -223,6 +235,16 @@ mod tests {
         let on = FeatureMask::resolve_in(&settings_with(&[("notes_and_tasks", true)]), FlagMode::Dev);
         assert!(on.hidden_actions().next().is_none());
         assert!(!hidden.contains(&ShowChanges), "an always-on feature hides nothing");
+    }
+
+    #[test]
+    fn a_switch_turns_an_optional_feature_off_and_never_an_always_on_one() {
+        let all = FeatureMask::resolve_in(&settings_with(&[]), FlagMode::Dev);
+        let off = all.with(FeatureId::History, false);
+        assert!(!off.has(FeatureId::History) && off.has(FeatureId::Changes) && off.has(FeatureId::Worktrees));
+        assert_eq!(off.with(FeatureId::History, true), all, "and on again");
+        assert_eq!(all.with(FeatureId::Changes, false), all, "no switch for an always-on feature");
+        assert_eq!(all.with(FeatureId::Worktrees, false), all);
     }
 
     #[test]

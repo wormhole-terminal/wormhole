@@ -246,11 +246,17 @@ fn a_picker_belongs_to_the_terminal_and_the_tab_it_was_opened_in(cx: &mut TestAp
     // The History tab's picker: gone with the tab too.
     drive(cx, &window, |ws, window, cx| {
         let (session, terminal) = (ws.active_session().id, ws.active_terminal());
-        ws.history_picker.toggle(session, &terminal, window, cx);
+        let history = ws.feature::<super::history::History>().expect("in the table");
+        history.update(cx, |history, cx| history.picker_mut().toggle(session, &terminal, window, cx));
     });
-    assert!(read(cx, &window, |ws| ws.history_picker.is_open()));
+    let history_open = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| {
+            ws.feature::<super::history::History>().is_some_and(|h| h.read(cx).picker().is_open())
+        })
+    };
+    assert!(history_open(cx));
     drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::Changes, cx));
-    assert!(!read(cx, &window, |ws| ws.history_picker.is_open()));
+    assert!(!history_open(cx));
     // Another terminal: the same for the compare picker, and an open diff goes too.
     drive(cx, &window, toggle_compare);
     assert!(compare_open(cx));
@@ -325,4 +331,69 @@ fn pick_compare(ws: &mut Workspace, branch: Option<String>, cx: &mut Context<Wor
         changes.picker_mut().close();
         changes.pick(session, branch, cx);
     });
+}
+
+// ---------------------------------------------------------------- History off
+
+#[gpui_kit::test]
+fn history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_worktrees(
+    cx: &mut TestAppContext,
+) {
+    use crate::actions::ShowHistory;
+    use crate::window::view_tests::with_window;
+    use wormhole_core::config::FeatureId;
+    if isolate("history_off_hides_its_tab_key_menu_line_and_commits_and_never_changes_or_worktrees") {
+        return;
+    }
+    let window = start(cx, 1);
+    let root = dirty_repo(cx, &window, "history-off");
+    // The log is read once while History is on, and kept while it is off.
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
+    cx.run_until_parked();
+    let commits = |cx: &mut TestAppContext| {
+        read_cx(cx, &window, |ws, cx| {
+            let history = ws.feature::<super::history::History>().expect("in the table");
+            history.read(cx).commit_count(ws.active_session().id)
+        })
+    };
+    assert_eq!(commits(cx), 1, "the one commit on main");
+
+    cx.update(|cx| crate::settings::switch_feature(cx, FeatureId::History, false));
+    let (tabs, state) = read_cx(cx, &window, |ws, cx| (ws.panel_tab_list(cx), ws.menu_state(cx)));
+    assert!(!tabs.contains(&TabId::History) && tabs.contains(&TabId::Changes), "{tabs:?}");
+    assert!(state.hidden.contains(&ActionId::ShowHistory), "its menu line is hidden");
+    assert!(!state.hidden.contains(&ActionId::ShowChanges), "Changes' is not");
+    assert!(!state.hidden.contains(&ActionId::NewTerminalInWorktree), "nor the worktree's");
+
+    // Its key does nothing, and showing the tab shows Changes.
+    drive(cx, &window, |ws, window, cx| ws.focus_terminal(window, cx));
+    draw(cx, &window);
+    with_window(cx, &window, |window, cx| window.dispatch_action(Box::new(ShowHistory), cx));
+    cx.run_until_parked();
+    assert_ne!(read(cx, &window, |ws| ws.right_tab), TabId::History);
+    drive(cx, &window, |ws, _, cx| ws.show_tab(TabId::History, cx));
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+    // The palette's commits have nowhere to go.
+    let second = read_cx(cx, &window, |ws, cx| {
+        let history = ws.feature::<super::history::History>().expect("in the table");
+        history.read(cx).first_commit(ws.active_session().id).expect("a commit")
+    });
+    drive(cx, &window, |ws, _, cx| super::history::api::reveal_commit(ws, root.clone(), second.clone(), cx));
+    cx.run_until_parked();
+    assert_eq!(read(cx, &window, |ws| ws.right_tab), TabId::Changes);
+
+    // Changes and its compare picker, and the worktree dialog, are as they were.
+    draw(cx, &window);
+    assert_eq!(read(cx, &window, changed_paths), Some(vec!["a.txt".to_string(), "b.txt".to_string()]));
+    drive(cx, &window, toggle_compare);
+    cx.run_until_parked();
+    assert!(read_cx(cx, &window, |ws, cx| changes(ws).read(cx).picker().is_open()));
+    drive(cx, &window, |ws, window, cx| ws.new_terminal_in_worktree(window, cx));
+    assert!(read(cx, &window, |ws| ws.worktree_ask.is_some()));
+
+    // On again: the log is there as it was left, and the tab and the key are back.
+    cx.update(|cx| crate::settings::switch_feature(cx, FeatureId::History, true));
+    assert_eq!(commits(cx), 1);
+    let (tabs, state) = read_cx(cx, &window, |ws, cx| (ws.panel_tab_list(cx), ws.menu_state(cx)));
+    assert!(tabs.contains(&TabId::History) && !state.hidden.contains(&ActionId::ShowHistory));
 }

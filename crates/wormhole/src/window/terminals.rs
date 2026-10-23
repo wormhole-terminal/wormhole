@@ -18,7 +18,6 @@ use crate::settings::settings_in;
 use crate::terminal_view::TerminalView;
 use crate::window::Workspace;
 use crate::window::feature::SpawnAdd;
-use crate::window::features::git::history;
 use crate::window::repo::GitState;
 use crate::window::session::{Pane, Session};
 
@@ -99,7 +98,6 @@ impl Workspace {
             pane,
             split: record.split_id,
             git: GitState::default(),
-            history: history::HistoryState::default(),
             repo_root: Default::default(),
             pinned: record.pinned,
             forget_text: record.forget_text,
@@ -200,8 +198,6 @@ impl Workspace {
             // A feature's field belonged to the terminal it was opened for.
             self.feature_editing = false;
             self.features_selected(self.sessions[ix].id, cx);
-            // The History picker belongs to the terminal it was opened from.
-            self.history_picker.close();
             self.dirty = true;
         }
         self.active = ix;

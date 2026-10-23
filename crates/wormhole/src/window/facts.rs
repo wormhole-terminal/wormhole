@@ -33,6 +33,8 @@ pub(in crate::window) struct WindowFacts<'a> {
     pub panel_width: Pixels,
     /// The terminal's column's width: what a diff is laid out in beside the panel.
     pub terminal_width: Pixels,
+    /// Whether the panel is drawn at all (there is room for it, and it is wanted).
+    pub panel_shown: bool,
     /// The row of the shown tab the keys are on, and whether its ring shows (the keys, not a click,
     /// were last used, and the window is in front). Only for facts made for drawing a frame
     /// ([`Workspace::frame_facts`]); `None` otherwise.
@@ -125,6 +127,7 @@ impl Workspace {
             tab: self.right_tab,
             panel_width: px(columns.panel),
             terminal_width: px(columns.terminal),
+            panel_shown: self.notes_visible(),
             panel_cursor: None,
             ticks: self.ticks,
             panel_scroll: &self.panel_scroll,

@@ -10,7 +10,6 @@ use crate::style;
 use crate::window::Workspace;
 use crate::window::panes;
 use crate::window::resize::edge_rule;
-use wormhole_core::config::TabId;
 
 impl Workspace {
     pub(crate) fn toggle_sidebar(&mut self, cx: &mut Context<Self>) {
@@ -138,11 +137,6 @@ impl Render for Workspace {
         }
         let notes_visible = self.notes_visible();
         let columns = self.columns();
-        if notes_visible && self.right_tab == TabId::History {
-            // The panel's long lists are virtualized; bring their rows up to date first. The table's
-            // features build their own in their frames.
-            self.sync_history_list();
-        }
         // What a feature lays over the terminal (a diff), built for this frame.
         let cover = self.render_cover(window, cx);
         let covered = cover.is_some();

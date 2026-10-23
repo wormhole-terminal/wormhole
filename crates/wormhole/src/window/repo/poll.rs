@@ -95,13 +95,7 @@ impl Workspace {
                 })
                 .detach();
             }
-            Sighting::AskGit => {
-                self.refresh_git(ix, cx);
-                // History would otherwise find out at its next poll.
-                if self.sessions[ix].history.root.is_none() {
-                    self.refresh_history(ix, cx);
-                }
-            }
+            Sighting::AskGit => self.refresh_git(ix, cx),
         }
     }
 

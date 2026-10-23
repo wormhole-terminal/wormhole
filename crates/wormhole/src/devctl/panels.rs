@@ -4,6 +4,7 @@ use anyhow::{Result, anyhow};
 
 use super::{Ctx, nth};
 use crate::window::features::git::changes::devctl as changes_panel;
+use crate::window::features::git::history::devctl as history_panel;
 use crate::window::features::notes::devctl as notes;
 
 pub(super) fn changes(ctx: &mut Ctx, _: &str) -> Result<String> {
@@ -31,31 +32,28 @@ pub(super) fn diff_scroll_x(ctx: &mut Ctx, arg: &str) -> Result<String> {
 /// The History tab; on `branch` when one is named (HEAD goes back to the current branch). A branch
 /// that doesn't exist shows git's error, as one that was deleted does.
 pub(super) fn history(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_history(ctx.cx);
     let branch = arg.trim();
-    if !branch.is_empty() {
-        let branch = (branch != "HEAD").then(|| branch.to_string());
-        ctx.workspace.devctl_history_branch(branch, ctx.cx);
-    }
+    let branch = (!branch.is_empty()).then(|| (branch != "HEAD").then(|| branch.to_string()));
+    history_panel::show(ctx.workspace, branch, ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let (which, query) = arg.trim().split_once(' ').unwrap_or((arg.trim(), ""));
     match which {
-        "history" => ctx.workspace.devctl_history_picker(query, ctx.window, ctx.cx),
+        "history" => history_panel::picker(ctx.workspace, query, ctx.window, ctx.cx),
         _ => changes_panel::picker(ctx.workspace, query, ctx.window, ctx.cx),
     }
     Ok(String::new())
 }
 
 pub(super) fn commit(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_toggle_commit(nth(arg), ctx.cx);
+    history_panel::toggle_commit(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())
 }
 
 pub(super) fn commit_file(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    ctx.workspace.devctl_commit_file(nth(arg), ctx.cx);
+    history_panel::commit_file(ctx.workspace, nth(arg), ctx.cx);
     Ok(String::new())
 }
 

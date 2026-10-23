@@ -1,0 +1,269 @@
+//! How the History tab draws: the log as a card of commits, the opened commit's files under it, and
+//! what stands in for the list (git is missing, the folder is no repository, still reading).
+
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::rc::Rc;
+
+use gpui_kit::prelude::*;
+use gpui_kit::*;
+use wormhole_core::git::{Commit, FileChange};
+use wormhole_core::view::limits::count_grouped;
+use wormhole_core::view::panel::age;
+
+use super::def::typed;
+use super::{CommitFiles, History, HistoryRow};
+use crate::settings::{UiColors, ui_in};
+use crate::style::{self, TextRole};
+use crate::window::facts::WindowFacts;
+use crate::window::features::git::changes::Changes;
+use crate::window::features::git::file_line::{Placement, change_row};
+use crate::window::features::git::open_file::OpenTarget;
+use crate::window::features::git::picker::{ChipOf, PickerChip};
+use crate::window::features::git::problem::{self, GitTab};
+use crate::window::features::git::submodule_row::{open_terminal_by_event, submodule_row};
+
+/// The tab's content, built inline from `Workspace::render` on the feature's entity.
+pub(super) fn tab(
+    entity: &AnyEntity,
+    facts: &WindowFacts<'_>,
+    window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    typed(entity).update(cx, |history, cx| history.render_tab(facts, window, cx))
+}
+
+impl History {
+    fn render_tab(&mut self, facts: &WindowFacts<'_>, _: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.follow(facts);
+        let Some(active) = facts.active() else { return div().into_any_element() };
+        let (session, terminal) = (active.id, active.terminal);
+        let ui = ui_in(facts.profile, cx);
+        let panel = div().flex().flex_col().flex_1().min_h_0();
+        // The rows are rebuilt for this frame's log; the entity is not notified, this draw is the redraw.
+        let Some(state) = self.of.get_mut(&session) else { return div().into_any_element() };
+        let rows = state.rows();
+        state.list.set(rows);
+        let history = &*state;
+
+        if history.root.is_none() {
+            if let Some(problem) = &history.problem {
+                let this = cx.weak_entity();
+                let retry = move |cx: &mut App| {
+                    this.update(cx, |history, cx| history.refresh(session, cx)).ok();
+                };
+                return panel
+                    .child(style::panel_card(
+                        ui,
+                        problem::render_git_problem(facts.profile, GitTab::History, problem, retry, cx),
+                    ))
+                    .into_any_element();
+            }
+            let answered = terminal.read(cx).cwd.as_deref().is_some_and(|cwd| history.answered_for(cwd));
+            let text = if answered {
+                "This terminal's folder isn't inside a git repository."
+            } else {
+                "Reading history…"
+            };
+            return panel.child(style::panel_card(ui, style::empty_note(ui, text))).into_any_element();
+        }
+
+        let changes = facts.feature::<Changes>();
+        let view = HistoryView {
+            commits: history.commits.clone(),
+            expanded: history.expanded.clone(),
+            expanded_commit: history
+                .expanded
+                .as_ref()
+                .and_then(|sha| history.commits.iter().find(|c| &c.sha == sha).cloned()),
+            files: history.expanded.as_ref().and_then(|sha| history.loaded(sha).cloned()),
+            present: history.expanded.as_ref().and_then(|sha| history.present.get(sha).cloned()),
+            open: history.root.as_deref().map(|root| OpenTarget::new(root, cx)),
+            files_error: history.expanded.as_ref().and_then(|sha| match history.files.get(sha) {
+                Some(CommitFiles::Failed(err)) => Some(err.clone()),
+                _ => None,
+            }),
+            error: history.error.clone(),
+            root: history.root.clone(),
+            open_path: changes
+                .as_ref()
+                .and_then(|changes| changes.read(cx).diff.as_ref().map(|diff| diff.file().path.clone())),
+            code_font: crate::fonts::code_font_in(facts.profile, cx).0,
+            now: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0),
+            width: f32::from(facts.panel_width),
+            picker: self.picker.chip(
+                cx.weak_entity(),
+                ChipOf {
+                    session,
+                    terminal,
+                    prefix: "",
+                    branch: history.rev.as_deref(),
+                    current: history.rev.clone(),
+                },
+                ui.branch,
+            ),
+            changes,
+            session,
+            this: cx.weak_entity(),
+        };
+
+        let profile = facts.profile.clone();
+        let ring = facts.panel_cursor.map(|(row, shown)| (row, shown.then_some(ui)));
+        // A column that fills the panel, so the list gets a bounded height.
+        panel
+            .child(history.list.with_edges(
+                history.list.element_carded(ring, ui, HistoryRow::part, move |row, window, cx| {
+                    view.render_row(row, ui_in(&profile, cx), window, cx)
+                }),
+                ui,
+                "history-scrollbar",
+                cx,
+            ))
+            .into_any_element()
+    }
+}
+
+/// Where a commit's files and the lines about them start: one level in (x 40).
+const FILES_X: f32 = style::CARD_INSET + style::INDENT;
+
+/// What the History list's rows draw from, captured for the render callback.
+struct HistoryView {
+    commits: Rc<Vec<Commit>>,
+    expanded: Option<String>,
+    expanded_commit: Option<Commit>,
+    /// Files of the expanded commit, once loaded.
+    files: Option<Rc<Vec<FileChange>>>,
+    /// Which of them are in the working tree now, and the icon that opens one in the editor.
+    present: Option<Rc<HashSet<String>>>,
+    open: Option<OpenTarget>,
+    /// Why they could not be listed.
+    files_error: Option<SharedString>,
+    error: Option<SharedString>,
+    /// The repository, which a submodule's folder is under.
+    root: Option<PathBuf>,
+    open_path: Option<String>,
+    code_font: SharedString,
+    now: i64,
+    /// The panel's width, which file names are fitted to.
+    width: f32,
+    picker: PickerChip<History>,
+    /// Changes, which a commit's file opens its diff in.
+    changes: Option<Entity<Changes>>,
+    session: i64,
+    this: WeakEntity<History>,
+}
+
+impl HistoryView {
+    fn render_row(&self, row: &HistoryRow, ui: UiColors, window: &mut Window, cx: &App) -> AnyElement {
+        match row {
+            HistoryRow::Head => style::section_card(
+                "history-band",
+                ui,
+                style::BandParts {
+                    kind: style::BandKind::Section,
+                    section: style::Section::Empty,
+                    title: "History".into(),
+                    detail: None,
+                    count: match self.commits.len() {
+                        0 => None,
+                        n => Some(count_grouped(n).into()),
+                    },
+                    waiting: None,
+                    add: None,
+                    on_toggle: None,
+                    drop_target: false,
+                    sticky: false,
+                    joined: false,
+                },
+                vec![self.picker.render(ui, cx)],
+            )
+            .into_any_element(),
+            // The branch is gone (or git can't read its log): git's words where the list would be.
+            HistoryRow::Error => div()
+                .px(px(style::CARD_INSET))
+                .py_2()
+                .text_caption()
+                .text_color(ui.danger_text)
+                .child(self.error.clone().unwrap_or_default())
+                .into_any_element(),
+            HistoryRow::Commit(ix) => {
+                let Some(commit) = self.commits.get(*ix) else { return div().into_any_element() };
+                let (this, sha, session) = (self.this.clone(), commit.sha.clone(), self.session);
+                style::commit_row(
+                    SharedString::from(format!("commit-{}", commit.sha)),
+                    ui,
+                    style::CommitRow {
+                        subject: commit.subject.clone().into(),
+                        sha: commit.short.clone().into(),
+                        author: commit.author.clone().into(),
+                        age: age(self.now - commit.time).into(),
+                        code_font: self.code_font.clone(),
+                        expanded: self.expanded.as_deref() == Some(commit.sha.as_str()),
+                    },
+                )
+                .on_click(move |_, _, cx| {
+                    this.update(cx, |this, cx| this.toggle_commit(session, sha.clone(), cx)).ok();
+                })
+                .into_any_element()
+            }
+            HistoryRow::Note(text) => files_line(ui.muted).child(*text).into_any_element(),
+            HistoryRow::FilesError => files_line(ui.danger_text)
+                .child(self.files_error.clone().unwrap_or_default())
+                .into_any_element(),
+            HistoryRow::File(ix) => {
+                let commit = self.expanded_commit.clone();
+                let file = self.files.as_ref().and_then(|files| files.get(*ix)).cloned();
+                let (Some(commit), Some(file)) = (commit, file) else { return div().into_any_element() };
+                let (this, clicked) = (self.changes.clone(), file.clone());
+                let (history, session) = (self.this.clone(), self.session);
+                let place = Placement {
+                    in_tree: false,
+                    depth: 1,
+                    selected: self.open_path.as_deref() == Some(file.path.as_str()),
+                    width: self.width,
+                };
+                let row = match (&file.submodule, &self.root) {
+                    (Some(_), Some(root)) => {
+                        submodule_row(&file, place, root, open_terminal_by_event(self.this.clone()), ui, cx)
+                    }
+                    _ => {
+                        let row = change_row(&file, place, ui, window, cx);
+                        // The file as it is now: none for one that is gone from the working tree.
+                        match (&self.open, &self.present) {
+                            (Some(open), Some(present)) if present.contains(&file.path) => {
+                                open.file(&file.path).on_row(row, ui, &format!("history-{}", file.path))
+                            }
+                            _ => row,
+                        }
+                    }
+                };
+                row.on_click(move |_, _, cx| {
+                    let Some(changes) = this.clone() else { return };
+                    history
+                        .update(cx, |history, cx| {
+                            history.open_commit_file(session, commit.clone(), clicked.clone(), &changes, cx)
+                        })
+                        .ok();
+                })
+                .into_any_element()
+            }
+            HistoryRow::Spacer => div().h(px(16.0)).into_any_element(),
+        }
+    }
+}
+
+/// A quiet line under the expanded commit, where its files go ("Loading files…").
+#[track_caller]
+fn files_line(color: Hsla) -> Div {
+    div()
+        .flex()
+        .items_center()
+        .min_h(px(style::ROW_H))
+        .pl(px(FILES_X))
+        .pr(px(style::CARD_INSET))
+        .text_caption()
+        .text_color(color)
+}

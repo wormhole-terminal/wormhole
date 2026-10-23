@@ -548,6 +548,17 @@ pub fn features(cx: &App) -> FeatureMask {
     cx.global::<SettingsStore>().features()
 }
 
+/// Switches a feature on or off in the shown profile, as a person's own switch will once Settings has a
+/// page for it (there is none yet, so nothing in the app does this). A test of what an off feature hides
+/// uses it; a later change to the settings works the mask out again from them.
+#[cfg(test)]
+pub fn switch_feature(cx: &mut App, id: wormhole_core::config::FeatureId, on: bool) {
+    let store = cx.global_mut::<SettingsStore>();
+    store.features = store.features.with(id, on);
+    store.revisions.features += 1;
+    cx.refresh_windows();
+}
+
 /// Update settings and notify every view (they re-read the global).
 pub fn update_settings(cx: &mut App, f: impl FnOnce(&mut Settings)) {
     SettingsStore::update(cx, f);

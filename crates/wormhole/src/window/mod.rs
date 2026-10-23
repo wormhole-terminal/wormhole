@@ -129,7 +129,6 @@ pub(crate) mod windows;
 
 use self::saved_layout::Layout;
 use self::session::Session;
-use crate::window::features::git::picker;
 use wormhole_core::config::TabId;
 
 use crate::terminal_view::Status;
@@ -178,8 +177,6 @@ pub struct Workspace {
     /// Scrolls the panel's short tabs (Project, Usage; the lists keep their own), from the top
     /// again whenever another tab is shown.
     panel_scroll: ScrollHandle,
-    /// The History tab's branch picker, until History keeps its own state.
-    history_picker: picker::BranchPicker,
     /// A drag on a panel's edge, while the button is down.
     resizing: Option<self::resize::ResizeDrag>,
     /// A drag on a divider between two panes, while the button is down.
@@ -291,8 +288,6 @@ impl Workspace {
         let mut layout = saved.unwrap_or_default();
         let sidebar = self::sidebar::SidebarState::new(std::mem::take(&mut layout.sidebar), window, cx);
 
-        let history_picker = picker::BranchPicker::new(picker::Picker::History, window, cx);
-
         let features = self::feature::FeatureTable::installed(cx);
         let feature_states = Self::make_feature_states(features, window, cx);
 
@@ -313,7 +308,6 @@ impl Workspace {
             feature_editing: false,
             tab_before_previous: None,
             panel_scroll: ScrollHandle::new(),
-            history_picker,
             resizing: None,
             pane_drag: None,
             terminal_drag: None,

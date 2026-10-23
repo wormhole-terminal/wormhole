@@ -10,7 +10,6 @@ use gpui_kit::*;
 use wormhole_core::keys::keymap::{self, ActionId};
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::{Edge, PanelToggle};
-use wormhole_core::view::spoken::{self, PanelTab};
 
 use crate::app_state::app;
 use crate::settings::{store_in, ui_in};
@@ -332,20 +331,8 @@ impl Workspace {
                     let count = def.count.and_then(|count| count(entity, &facts, cx));
                     Some(tab(def.icon, def.label, def.action, count, (def.spoken)(entity, &facts, cx), id))
                 }
-                None => Some(match id {
-                    TabId::Changes => return None,
-                    TabId::History => tab(
-                        IconName::GitCommitHorizontal,
-                        "History",
-                        ActionId::ShowHistory,
-                        None,
-                        spoken::panel_tab(PanelTab::History),
-                        id,
-                    ),
-                    // In the table.
-                    TabId::Notes => return None,
-                    TabId::Usage | TabId::Project => return None,
-                }),
+                // Every tab is a feature's; a window made without it has no such tab.
+                None => None,
             }));
         self.area_container(Area::PanelTabs, bar, cx).into_any_element()
     }

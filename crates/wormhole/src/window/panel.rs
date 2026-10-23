@@ -40,20 +40,8 @@ impl Workspace {
                     }
                     None => div().into_any_element(),
                 },
-                None => match tab {
-                    // Virtualized lists fill the panel and scroll themselves; the list area holds the
-                    // keyboard for them.
-                    TabId::History => {
-                        let list = self.render_history_tab(window, cx);
-                        self.panel_content(list, cx)
-                    }
-                    // Notes is in the table.
-                    TabId::Notes => div().into_any_element(),
-                    // In the table.
-                    TabId::Project | TabId::Usage => div().into_any_element(),
-                    // Changes is always in the table; a window made without it has nothing to show.
-                    TabId::Changes => div().into_any_element(),
-                },
+                // Every tab is a feature's; a window made without it has nothing to show.
+                None => div().into_any_element(),
             }))
     }
 
@@ -113,21 +101,14 @@ impl Workspace {
         self.set_right_tab(tab);
         self.reveal_notes();
         self.remember_panes(cx);
-        self.history_picker.close();
         self.tabs_changed(tab, cx);
         let session = self.active_session().id;
-        match self.tab_entry(tab) {
-            // The feature in the table says what showing its tab does.
-            Some((at, entry)) => {
-                if let (Some(on_show), Some(entity)) = (entry.on_show, self.feature_entity(at).cloned()) {
-                    let facts = self.facts(cx);
-                    on_show(&entity, &facts, session, cx);
-                }
-            }
-            None => match tab {
-                TabId::History => self.refresh_history(self.active, cx),
-                TabId::Changes | TabId::Notes | TabId::Usage | TabId::Project => {}
-            },
+        // The feature in the table says what showing its tab does.
+        if let Some((at, entry)) = self.tab_entry(tab)
+            && let (Some(on_show), Some(entity)) = (entry.on_show, self.feature_entity(at).cloned())
+        {
+            let facts = self.facts(cx);
+            on_show(&entity, &facts, session, cx);
         }
         self.mark_dirty(cx);
     }

@@ -29,7 +29,7 @@ use crate::window::view_tests::{draw, drive, isolate_in, read, start, start_with
 
 /// Features core lists that have not moved into the app's table yet. Each phase 5 step takes one off
 /// this list when it adds the entry; the list ends empty.
-const NOT_YET: &[FeatureId] = &[FeatureId::History, FeatureId::Worktrees];
+const NOT_YET: &[FeatureId] = &[FeatureId::Worktrees];
 
 #[test]
 fn every_feature_is_in_the_table_or_waiting_for_its_step() {

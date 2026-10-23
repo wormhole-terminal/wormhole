@@ -221,13 +221,11 @@ impl Workspace {
         self.feature_states.get(at)?.as_ref().map(|state| &state.entity)
     }
 
-    /// Whether the panel offers `tab` now, by the table's entry when it has one and by the window's
-    /// own rule when the feature has not moved into the table yet.
+    /// Whether the panel offers `tab` now: its feature is in the table and on, and the tab says it is
+    /// `shown`. A window made without the feature has no such tab.
     pub(in crate::window) fn tab_offered(&self, tab: TabId, facts: &WindowFacts<'_>, cx: &App) -> bool {
-        match self.tab_entry(tab) {
-            Some((at, entry)) => facts.features.has(self.features[at].id) && (entry.shown)(facts, cx),
-            None => self.legacy_tab_offered(tab),
-        }
+        self.tab_entry(tab)
+            .is_some_and(|(at, entry)| facts.features.has(self.features[at].id) && (entry.shown)(facts, cx))
     }
 
     /// The window's actions for the table's tabs and its features' own, bound on `root`: every

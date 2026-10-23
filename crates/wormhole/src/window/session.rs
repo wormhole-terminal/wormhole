@@ -15,7 +15,6 @@ use crate::terminal_view::{Status, TerminalEvent, TerminalView};
 use crate::window::Workspace;
 use crate::window::dialog::shortened;
 use crate::window::feature::Stake;
-use crate::window::features::git::history;
 use crate::window::repo::GitState;
 
 /// A session's terminal: what the shell's agent hooks report is its id.
@@ -76,7 +75,6 @@ pub(super) struct Session {
     pub split: Option<SplitId>,
     /// What git last said of its folder.
     pub git: GitState,
-    pub history: history::HistoryState,
     /// Where the session's folder lives on disk, for grouping the sidebar by folder.
     pub repo_root: RepoRoot,
     /// Pinned to the top of its group in the sidebar (saved). Every member of a split carries it.

@@ -28,6 +28,7 @@ use crate::app_state::{AppState, OpenWindow, app};
 use crate::settings::settings;
 use crate::settings_window;
 use crate::window::Workspace;
+use crate::window::features::git::history::api as history;
 use crate::window::features::project;
 use crate::window::overlay::{OverlayContent, OverlayKind, OverlayView};
 use crate::window::window_lifecycle::open_tab;
@@ -279,6 +280,10 @@ impl CommandPalette {
 
     /// The commits of the branch the palette's terminal (in `cwd`) is on: once, off the UI thread.
     fn load_commits(&mut self, cwd: Option<PathBuf>, cx: &mut Context<Self>) {
+        // The commits are for the History tab to show: with History off there is nowhere to show one.
+        if !crate::settings::features(cx).has(wormhole_core::config::FeatureId::History) {
+            return;
+        }
         let Some(cwd) = cwd else { return };
         let task = cx.background_executor().spawn(async move {
             let root = git::repo_root(&cwd).ok().flatten()?;
@@ -443,7 +448,7 @@ impl CommandPalette {
                 else {
                     return;
                 };
-                let _ = self.workspace.update(cx, |ws, cx| ws.reveal_commit(root, commit, cx));
+                let _ = self.workspace.update(cx, |ws, cx| history::reveal_commit(ws, root, commit, cx));
             }
             // The row itself, scrolled to and marked, not a search for its label.
             Item::Setting(id) => cx.defer(move |cx| settings_window::reveal_row(id, cx)),
@@ -510,7 +515,7 @@ impl CommandPalette {
             // The window opens on the next turn and is then the one in front.
             if let Some((Some(root), commit)) = commit {
                 cx.defer(move |cx| {
-                    with_front_workspace(cx, |ws, _, cx| ws.reveal_commit(root, commit, cx));
+                    with_front_workspace(cx, |ws, _, cx| history::reveal_commit(ws, root, commit, cx));
                 });
             }
         });

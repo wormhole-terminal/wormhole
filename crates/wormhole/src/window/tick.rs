@@ -11,7 +11,6 @@ use gpui_kit::*;
 use crate::settings::{settings_in, ui_in};
 use crate::window::Workspace;
 use crate::window::save::SCROLLBACK_SAVE_INTERVAL;
-use wormhole_core::config::TabId;
 
 impl Workspace {
     /// Apply settings that live outside GPUI's render tree.
@@ -70,15 +69,6 @@ impl Workspace {
         }
         self.sync_close_dot(window, cx);
         self.leave_missing_tab(cx);
-        if self.notes_visible()
-            && self.right_tab == TabId::History
-            && (self.ticks.is_multiple_of(12) || self.history_unanswered(cx))
-            && !self.active_session().history.waits_for_retry()
-            && !self.history_absent(cx)
-        {
-            let ix = self.active;
-            self.refresh_history(ix, cx);
-        }
         self.poll_repos(cx);
         if self.ticks % 5 == 1 {
             // A `git init` in the folder a session is already in changes its root without a `cd`.

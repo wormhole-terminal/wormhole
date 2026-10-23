@@ -104,28 +104,11 @@ impl Workspace {
         self.show_tab(back, cx);
     }
 
-    /// The right panel's tabs as they are on screen, in the panel's order: a tab of a feature in the
-    /// table is offered when its feature is on and the tab says it is `shown`; the rest follow
-    /// [`Self::legacy_tab_offered`] until their feature moves into the table.
+    /// The right panel's tabs as they are on screen, in the panel's order: a tab is offered when its
+    /// feature is in the table, on, and the tab says it is `shown`.
     pub(in crate::window) fn panel_tab_list(&self, cx: &App) -> Vec<TabId> {
         let facts = self.facts(cx);
         TabId::ALL.into_iter().filter(|&tab| self.tab_offered(tab, &facts, cx)).collect()
-    }
-
-    /// The window's own rule for a tab whose feature has not moved into the table: only History is
-    /// left, which is offered always. A tab whose feature is in the table is offered by the table's
-    /// entry (`tab_offered`); a window made without the entry has no such tab.
-    pub(in crate::window) fn legacy_tab_offered(&self, tab: TabId) -> bool {
-        match tab {
-            TabId::Changes => false,
-            TabId::History => true,
-            // In the table.
-            TabId::Notes => false,
-            // In the table.
-            TabId::Usage => false,
-            // In the table.
-            TabId::Project => false,
-        }
     }
 
     /// The panel's tabs: ← → switch at once, ↩ / Space / ↓ go into the tab's list.

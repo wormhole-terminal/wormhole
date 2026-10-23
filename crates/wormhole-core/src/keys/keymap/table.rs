@@ -172,7 +172,7 @@ pub(super) fn entries() -> Vec<Entry> {
             .toggle("Show Status Bar", "Show / Hide Status Bar"),
         row(ToggleMinimap, "Hide Minimap", &[]).toggle("Show Minimap", "Show / Hide Minimap"),
         row(ShowChanges, "Changes", &[(CTRL_CMD, "1")]).named("Show Changes"),
-        row(ShowHistory, "History", &[(CTRL_CMD, "2")]).named("Show History"),
+        row(ShowHistory, "History", &[(CTRL_CMD, "2")]).named("Show History").feature("history"),
         row(ShowNotes, "Notes", &[(CTRL_CMD, "3")]).named("Show Notes").feature("notes"),
         row(ShowUsage, "Usage", &[(CTRL_CMD, "4")]).named("Show Usage"),
         row(ShowProject, "Project", &[(CTRL_CMD, "5")]).named("Show Project"),

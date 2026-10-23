@@ -357,8 +357,6 @@
       "crates/wormhole/src/platform/menu.rs :: crate::menubar": 1
     },
     "impl-outside": {
-      "crates/wormhole/src/window/features/git/history.rs :: impl Workspace": 1,
-      "crates/wormhole/src/window/features/git/history/keys.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/features/git/worktree.rs :: impl Workspace": 2,
       "crates/wormhole/src/window/onboarding/agents_step.rs :: impl Workspace": 1,
       "crates/wormhole/src/window/onboarding/keys.rs :: impl Workspace": 1,
